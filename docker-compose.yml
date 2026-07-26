@@ -1,0 +1,15 @@
+services:
+  comfyui:
+    build: .
+    image: ghcr.io/alxb1t/isekai:latest
+    ports:
+      - "127.0.0.1:8188:8188"
+    volumes:
+      - ./models:/opt/ComfyUI/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
