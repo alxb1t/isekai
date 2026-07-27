@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 
 # System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git python3 python3-pip curl \
+        git python3 python3-pip curl openssh-server \
     && rm -rf /var/lib/apt/lists/*
 
 # uv
@@ -26,6 +26,9 @@ RUN uv pip install torch torchvision torchaudio --index-url https://download.pyt
 # ComfyUI python deps
 RUN uv pip install -r requirements.txt
 
-EXPOSE 8188
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-CMD [ "python", "main.py", "--listen", "0.0.0.0", "--port", "8188" ]
+EXPOSE 8188 22
+
+CMD ["/start.sh"]
