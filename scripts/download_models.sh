@@ -31,4 +31,8 @@ download Comfy-Org/Qwen-Image_ComfyUI \
     split_files/vae/qwen_image_vae.safetensors \
     vae
 
+download lightx2v/Qwen-Image-Edit-2511-Lightning \
+    Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors \
+    loras
+
 echo "Models downloaded into $MODELS_DIR"

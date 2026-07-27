@@ -108,9 +108,13 @@ def main():
     load_id = find_node(workflow, class_type="LoadImage")
     workflow[load_id]["inputs"]["image"] = image_name
 
-    # Inject the prompt into the positive text-encode node
-    pos_id = find_node(workflow, title="positive")
-    workflow[pos_id]["inputs"]["text"] = args.prompt
+    # Inject the prompt into the POSITIVE text-encode node. The exported graph
+    # has two same-titled encoders (positive + negative), so we follow the wiring:
+    # KSampler's "positive" input points at the node we want.
+    sampler_id = find_node(workflow, class_type="KSampler")
+    pos_id = workflow[sampler_id]["inputs"]["positive"][0]
+    workflow[pos_id]["inputs"]["prompt"] = args.prompt
+
 
     # Submit the graph to ComfyUI's queue
     try:
