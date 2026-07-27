@@ -8,6 +8,11 @@ MODELS_DIR="${MODELS_DIR:-./models}"
 # Download <repo> <path-in-repo> <target-subfolder>
 download() {
     local repo="$1" path="$2" dest="$3"
+    local fname; fname="$(basename "$path")"
+    if [ -f "$MODELS_DIR/$dest/$fname" ]; then
+        echo "✓ $dest/$fname present — skipping"
+        return
+    fi
     mkdir -p "$MODELS_DIR/$dest"
     hf download "$repo" "$path" --local-dir "$MODELS_DIR/.hf"
     mv "$MODELS_DIR/.hf/$path" "$MODELS_DIR/$dest/"

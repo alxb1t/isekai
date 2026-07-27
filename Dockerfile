@@ -27,7 +27,8 @@ RUN uv pip install torch torchvision torchaudio --index-url https://download.pyt
 RUN uv pip install -r requirements.txt
 
 COPY start.sh /start.sh
-RUN chmod +x /start.sh
+COPY scripts/download_models.sh /download_models.sh
+RUN chmod +x /start.sh /download_models.sh
 
 EXPOSE 8188 22
 
