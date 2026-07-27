@@ -20,8 +20,9 @@ ENV VIRTUAL_ENV=/opt/ComfyUI/.venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN uv venv "$VIRTUAL_ENV"
 
-# CUDA-matched PyTorch
-RUN uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+# CUDA-matched PyTorch — cu128 build ships sm_120 kernels for the Blackwell GPU
+RUN uv pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
+    --index-url https://download.pytorch.org/whl/cu128
 
 # ComfyUI python deps
 RUN uv pip install -r requirements.txt
