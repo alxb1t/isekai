@@ -1,5 +1,34 @@
 # photo-to-anime
 
+## Quickstart
+
+Run `cp .env.example .env` and fill your RunPod values.
+
+On each session we do:
+up the infra -> setup tunnel -> convert image -> tear down infra
+
+1. Create the pod. Once done it should output the ssh for the tunnel.
+`$ ./infra/up.sh`
+
+2. In the second terminal paste to open a tunnel:
+`ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@<ip> -p <port>`
+
+3. In the first terminal run the command to convert the image:
+`python convert.py me.jpg -o out.png --prompt "turn this into anime"`
+
+4. Once the session is completed remove the pod to stop billing
+`./infra/down.sh`
+
+
+## Setup
+
+**Prerequisites:**
+
+1. A **RunPod account** with an API key and a small prepaid balance.
+2. A **network volume** — required before `up.sh` will work.
+3. An SSH key registered with RunPod.
+
+
 Turn a photo of a person into an anime image — while keeping the person **recognizable** —
 using **open models** on a **rented GPU, on demand**. A reproducible, provider-agnostic
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
