@@ -13,3 +13,8 @@ def load_fixture(name):
 @pytest.fixture
 def qwen_workflow():
     return load_fixture("qwen-image-edit.json")
+
+
+@pytest.fixture
+def animagine_workflow():
+    return load_fixture("animagine-instantid.json")

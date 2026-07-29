@@ -20,3 +20,6 @@ venv/
 .vscode/
 
 .runpod_pod_id
+
+.ruff_cache
+.pytest_cache

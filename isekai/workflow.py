@@ -23,7 +23,7 @@ def find_node(
     return matches[0]
 
 
-def inject(workflow: Workflow, image_name: str, prompt: str) -> None:
+def inject_qwen(workflow: Workflow, image_name: str, prompt: str) -> None:
     """Wire the uploaded photo + prompt into the Qwen graph (mutates workflow in place)."""
     load_id = find_node(workflow, class_type="LoadImage")
     workflow[load_id]["inputs"]["image"] = image_name
@@ -33,3 +33,16 @@ def inject(workflow: Workflow, image_name: str, prompt: str) -> None:
     sampler_id = find_node(workflow, class_type="KSampler")
     pos_id = workflow[sampler_id]["inputs"]["positive"][0]
     workflow[pos_id]["inputs"]["prompt"] = prompt
+
+
+def inject_animagine(workflow: Workflow, image_name: str, prompt: str) -> None:
+    """Wire the uploaded photo + prompt into the Animagine + InstantID graph (mutates in place)."""
+    load_id = find_node(workflow, class_type="LoadImage")
+    workflow[load_id]["inputs"]["image"] = image_name
+
+    # KSampler.positive points at ApplyInstantID (identity is injected into the
+    # conditioning), so trace one hop further to reach the real positive encoder.
+    sampler_id = find_node(workflow, class_type="KSampler")
+    apply_id = workflow[sampler_id]["inputs"]["positive"][0]
+    pos_id = workflow[apply_id]["inputs"]["positive"][0]
+    workflow[pos_id]["inputs"]["text"] = prompt

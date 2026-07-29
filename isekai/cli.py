@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
+from isekai.models import get_model
 from isekai.pipeline import run
 
 
@@ -14,9 +15,15 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("-o", "--output", default="out.png", help="output image path")
     p.add_argument("--prompt", required=True, help="edit instruction")
     p.add_argument(
+        "--model",
+        choices=["qwen", "animagine"],
+        default="qwen",
+        help="which pipeline to run",
+    )
+    p.add_argument(
         "--workflow",
-        default="workflows/qwen-image-edit.json",
-        help="API-format ComfyUI workflow JSON",
+        default=None,
+        help="override the model's default workflow JSON (advanced)",
     )
     p.add_argument(
         "--server",
@@ -29,6 +36,7 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
-    workflow = json.loads(Path(args.workflow).read_text())
+    model = get_model(args.model)
+    workflow = json.loads(Path(args.workflow or model.workflow_path).read_text())
     client = ComfyClient(args.server)
-    run(client, workflow, args.input, args.prompt, args.output)
+    run(client, workflow, model.inject, args.input, args.prompt, args.output)

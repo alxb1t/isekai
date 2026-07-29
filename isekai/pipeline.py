@@ -4,12 +4,13 @@ from pathlib import Path
 from urllib import error
 
 from isekai.comfy_types import ComfyTransport, Workflow
-from isekai.workflow import inject
+from isekai.models import Injector
 
 
 def run(
     client: ComfyTransport,
     workflow: Workflow,
+    inject: Injector,
     input_path: str,
     prompt: str,
     output_path: str,

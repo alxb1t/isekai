@@ -1,7 +1,9 @@
+from collections.abc import Callable
 from typing import Any, Protocol
 
 Workflow = dict[str, Any]
 Image = dict[str, str]
+Injector = Callable[[Workflow, str, str], None]
 
 
 class ComfyTransport(Protocol):

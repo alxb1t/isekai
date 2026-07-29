@@ -1,7 +1,7 @@
 import pytest
 
 from isekai.comfy_types import Workflow
-from isekai.workflow import find_node, inject
+from isekai.workflow import find_node, inject_animagine, inject_qwen
 
 
 def test_find_node_locates_a_node_by_class_type():
@@ -52,7 +52,7 @@ def test_find_node_is_ambiguous_for_the_two_qwen_text_encoders(qwen_workflow):
 
 
 def test_inject_points_load_image_at_the_uploaded_file(qwen_workflow: Workflow) -> None:
-    inject(qwen_workflow, image_name="uploaded.png", prompt="make it anime")
+    inject_qwen(qwen_workflow, image_name="uploaded.png", prompt="make it anime")
     load_id = find_node(qwen_workflow, class_type="LoadImage")
     assert qwen_workflow[load_id]["inputs"]["image"] == "uploaded.png"
 
@@ -60,6 +60,24 @@ def test_inject_points_load_image_at_the_uploaded_file(qwen_workflow: Workflow) 
 def test_inject_sets_the_prompt_on_the_positive_encoder_only(
     qwen_workflow: Workflow,
 ) -> None:
-    inject(qwen_workflow, image_name="uploaded.png", prompt="make it anime")
+    inject_qwen(qwen_workflow, image_name="uploaded.png", prompt="make it anime")
     assert qwen_workflow["102:76"]["inputs"]["prompt"] == "make it anime"  # positive
     assert qwen_workflow["102:77"]["inputs"]["prompt"] == ""  # negative untouched
+
+
+def test_inject_animagine_points_load_image_at_the_reference_face(
+    animagine_workflow: Workflow,
+) -> None:
+    inject_animagine(animagine_workflow, image_name="face.png", prompt="1girl, anime")
+    load_id = find_node(animagine_workflow, class_type="LoadImage")
+    assert animagine_workflow[load_id]["inputs"]["image"] == "face.png"
+
+
+def test_inject_animagine_sets_the_prompt_on_the_positive_encoder_only(
+    animagine_workflow: Workflow,
+) -> None:
+    inject_animagine(animagine_workflow, image_name="face.png", prompt="1girl, anime")
+    assert animagine_workflow["11"]["inputs"]["text"] == "1girl, anime"  # positive
+    assert (
+        animagine_workflow["12"]["inputs"]["text"] == "lowres, bad anatomy"
+    )  # negative untouched
