@@ -7,6 +7,19 @@ and set up open models*, not to ship fast. Optimize for understanding.
 - **The human writes every line of code.** Do NOT write code into files. Instead:
   suggest the next step, show small illustrative snippets in chat to explain, then let
   the human type it. Review what they wrote.
+- **Test-first (TDD) for any deterministic logic.** From v0.2 on, for logic we control
+  (model dispatch, per-model workflow injection, multipart build, polling, CLI parsing) we
+  **write the failing test first, then implement to green.** Suggest the test before the
+  implementation; let the human type both. The suite doubles as executable documentation —
+  name tests as behavioural sentences (`test_dispatch_selects_animagine_workflow`).
+- **Test the seam, not the GPU.** The HTTP transport to ComfyUI is an injectable dependency:
+  tests pass a `FakeComfyClient`, production passes the real `urllib` client — no network, no
+  GPU in tests. Actual diffusion / image quality / identity fidelity is verified **live on a
+  pod**, judged by eye — never mocked or asserted.
+- **Golden fixtures.** Capture the real workflow JSON and a real `/history` response once,
+  freeze under `tests/fixtures/`, and mock against those ("discover the real shape once →
+  freeze → test against it"). `pytest` is a **dev-only** dependency; the runtime stays
+  zero-dep (stdlib only). CI runs `pytest` on every push (fast, free, no GPU).
 - Work the plan phase by phase; after each step, say what comes next.
 - When the human asks a question, TEACH — explain the *why*, not just the *how*.
 - When we learn something transferable, write a vault note (see below) and explain it back.
@@ -28,5 +41,17 @@ If `.env` is absent, ask the human for the vault paths (or proceed code-only wit
 
 ## What this project is
 Reproducible, provider-agnostic, on-demand GPU pipeline: photo of a person → anime image,
-using open models (Qwen-Image-Edit in ComfyUI), deployed on a rented RunPod GPU (per-second
-billing; the Docker image runs directly as the pod).
+using open models in ComfyUI, deployed on a rented RunPod GPU (per-second billing; the Docker
+image runs directly as the pod). The hard constraint is **identity preservation** — the result
+must stay recognizably the same person.
+
+Two model paths, selectable at the CLI (`convert.py --model {qwen,animagine}`), each owning its
+own workflow JSON + injection adapter (strategy pattern):
+- **qwen** (v0.1, ✅ done) — **Qwen-Image-Edit** instruction-edit model; identity preserved "for
+  free" via denoise-1 image-conditioning.
+- **animagine** (v0.2, 🔨 active) — **Animagine XL 4.0** (SDXL anime) **+ InstantID + InsightFace**;
+  identity is an *injected* signal (face embedding + keypoints) on top of from-noise SDXL.
+
+v0.2 extends v0.1 — nothing is removed, both models stay available. It is built **test-first (TDD)**
+with the ComfyUI client fully mocked (see "How we work here"). `VAULT_PLAN` (the v0.2 plan) is the
+source of truth for the phases — read it first each session.
