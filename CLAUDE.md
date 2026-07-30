@@ -45,13 +45,18 @@ using open models in ComfyUI, deployed on a rented RunPod GPU (per-second billin
 image runs directly as the pod). The hard constraint is **identity preservation** — the result
 must stay recognizably the same person.
 
-Two model paths, selectable at the CLI (`convert.py --model {qwen,animagine}`), each owning its
-own workflow JSON + injection adapter (strategy pattern):
+Three model paths, selectable at the CLI (`convert.py --model {qwen,animagine,animagine-i2i}`),
+each owning its own workflow JSON + injection adapter (strategy pattern):
 - **qwen** (v0.1, ✅ done) — **Qwen-Image-Edit** instruction-edit model; identity preserved "for
   free" via denoise-1 image-conditioning.
-- **animagine** (v0.2, 🔨 active) — **Animagine XL 4.0** (SDXL anime) **+ InstantID + InsightFace**;
+- **animagine** (v0.2, ✅ done) — **Animagine XL 4.0** (SDXL anime) **+ InstantID + InsightFace**;
   identity is an *injected* signal (face embedding + keypoints) on top of from-noise SDXL.
+- **animagine-i2i** (v0.3, 🔨 active) — same Animagine base + InstantID, but **img2img** (latent
+  init from the photo via `VAEEncode`, `denoise < 1`) so the photo's composition survives — pose,
+  hair, eyes, clothes, **tattoo**. `denoise` is the identity↔style dial. Reuses the `animagine`
+  injection adapter (the node-trace is unchanged). The ControlNet stack (OpenPose/Lineart/Depth/
+  tile) is an additive tuning layer, deferred.
 
-v0.2 extends v0.1 — nothing is removed, both models stay available. It is built **test-first (TDD)**
-with the ComfyUI client fully mocked (see "How we work here"). `VAULT_PLAN` (the v0.2 plan) is the
-source of truth for the phases — read it first each session.
+Each version extends the previous — nothing is removed, all models stay available. Built
+**test-first (TDD)** with the ComfyUI client fully mocked (see "How we work here"). `VAULT_PLAN`
+(the v0.3 plan) is the source of truth for the phases — read it first each session.
