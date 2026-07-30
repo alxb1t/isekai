@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 # System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git python3 python3-pip curl openssh-server \
+        libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # uv
@@ -18,7 +19,7 @@ WORKDIR /opt/ComfyUI
 # Isolated venv
 ENV VIRTUAL_ENV=/opt/ComfyUI/.venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN uv venv "$VIRTUAL_ENV"
+RUN uv venv --python 3.12 "$VIRTUAL_ENV"
 
 # CUDA-matched PyTorch — cu128 build ships sm_120 kernels for the Blackwell GPU
 RUN uv pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
@@ -26,6 +27,15 @@ RUN uv pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
 
 # ComfyUI python deps
 RUN uv pip install -r requirements.txt
+
+# InstantID custom nodes — pinned (pack is maintenance-only since Apr 2025)
+RUN git clone https://github.com/cubiq/ComfyUI_InstantID.git \
+        /opt/ComfyUI/custom_nodes/ComfyUI_InstantID \
+    && cd /opt/ComfyUI/custom_nodes/ComfyUI_InstantID \
+    && git checkout 72495e806bc2ab9c41581e15ccaa1bcf83c477e8
+
+# InstantID's runtime deps — CPU onnxruntime only (never -gpu; face pass is a tiny CPU op)
+RUN uv pip install insightface==0.7.3 onnxruntime==1.20.1
 
 COPY start.sh /start.sh
 COPY scripts/download_models.sh /download_models.sh
