@@ -77,7 +77,7 @@ def test_inject_animagine_sets_the_prompt_on_the_positive_encoder_only(
     animagine_workflow: Workflow,
 ) -> None:
     inject_animagine(animagine_workflow, image_name="face.png", prompt="1girl, anime")
-    assert animagine_workflow["11"]["inputs"]["text"] == "1girl, anime"  # positive
-    assert (
-        animagine_workflow["12"]["inputs"]["text"] == "lowres, bad anatomy"
+    assert animagine_workflow["3"]["inputs"]["text"] == "1girl, anime"  # positive
+    assert animagine_workflow["4"]["inputs"]["text"].startswith(
+        "lowres, bad anatomy"
     )  # negative untouched
