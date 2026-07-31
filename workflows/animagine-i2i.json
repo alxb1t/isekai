@@ -5,12 +5,12 @@
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
-      "title": "animagine-xl-4.0.safetensors"
+      "title": "Load Checkpoint"
     }
   },
   "2": {
     "inputs": {
-      "image": "photo_2569-07-30 15.14.07.jpeg"
+      "image": "photo_2569-07-31 14.49.42.jpeg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -19,7 +19,7 @@
   },
   "3": {
     "inputs": {
-      "text": "1girl, solo, upper body, anime screencap, detailed eyes, soft lighting, masterpiece, high score, great score, white dress",
+      "text": "1girl, solo, arms crossed, anime screencap, detailed eyes, soft lighting, masterpiece, high score, great score, black dress",
       "clip": [
         "1",
         1
@@ -32,7 +32,7 @@
   },
   "4": {
     "inputs": {
-      "text": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, signature, watermark, blurry",
+      "text": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, signature, watermark, blurry, realistic, photorealistic",
       "clip": [
         "1",
         1
@@ -114,8 +114,14 @@
   },
   "9": {
     "inputs": {
-        "pixels": ["2", 0],
-        "vae": ["1", 2]
+      "pixels": [
+        "2",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
     },
     "class_type": "VAEEncode",
     "_meta": {
@@ -124,7 +130,7 @@
   },
   "10": {
     "inputs": {
-      "seed": 769346097699487,
+      "seed": 1109743124186958,
       "steps": 28,
       "cfg": 5,
       "sampler_name": "euler_ancestral",
