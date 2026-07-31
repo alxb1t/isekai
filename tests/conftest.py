@@ -18,3 +18,8 @@ def qwen_workflow():
 @pytest.fixture
 def animagine_workflow():
     return load_fixture("animagine-instantid.json")
+
+
+@pytest.fixture
+def animagine_i2i_workflow():
+    return load_fixture("animagine-i2i.json")

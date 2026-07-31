@@ -81,3 +81,40 @@ def test_inject_animagine_sets_the_prompt_on_the_positive_encoder_only(
     assert animagine_workflow["4"]["inputs"]["text"].startswith(
         "lowres, bad anatomy"
     )  # negative untouched
+
+
+def test_inject_animagine_wires_the_single_load_image_in_the_img2img_graph(
+    animagine_i2i_workflow: Workflow,
+) -> None:
+    # One LoadImage fans out to BOTH VAEEncode and InstantID, so find_node stays unique:
+    # convert.py's exactly-one-LoadImage invariant holds and inject_animagine is unchanged.
+    inject_animagine(
+        animagine_i2i_workflow, image_name="face.png", prompt="1girl, anime"
+    )
+    load_id = find_node(animagine_i2i_workflow, class_type="LoadImage")
+    assert animagine_i2i_workflow[load_id]["inputs"]["image"] == "face.png"
+
+
+def test_inject_animagine_sets_the_prompt_on_the_img2img_positive_encoder(
+    animagine_i2i_workflow: Workflow,
+) -> None:
+    inject_animagine(
+        animagine_i2i_workflow, image_name="face.png", prompt="1girl, anime"
+    )
+    assert animagine_i2i_workflow["3"]["inputs"]["text"] == "1girl, anime"
+    assert animagine_i2i_workflow["4"]["inputs"]["text"].startswith(
+        "lowres, bad anatomy"
+    )  # negative untouched
+
+
+def test_img2img_graph_inits_the_latent_from_the_photo_at_denoise_below_one(
+    animagine_i2i_workflow: Workflow,
+) -> None:
+    # The topology delta vs v0.2: one LoadImage feeds VAEEncode, which seeds the
+    # KSampler latent at denoise < 1 (from-photo, not from-noise).
+    load_id = find_node(animagine_i2i_workflow, class_type="LoadImage")
+    vae_id = find_node(animagine_i2i_workflow, class_type="VAEEncode")
+    sampler_id = find_node(animagine_i2i_workflow, class_type="KSampler")
+    assert animagine_i2i_workflow[vae_id]["inputs"]["pixels"][0] == load_id
+    assert animagine_i2i_workflow[sampler_id]["inputs"]["latent_image"][0] == vae_id
+    assert animagine_i2i_workflow[sampler_id]["inputs"]["denoise"] < 1

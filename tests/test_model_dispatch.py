@@ -23,3 +23,11 @@ def test_dispatch_pairs_qwen_with_its_injection_adapter():
 
 def test_dispatch_pairs_animagine_with_its_injection_adapter():
     assert get_model("animagine").inject is inject_animagine
+
+
+def test_dispatch_selects_the_animagine_i2i_workflow():
+    assert get_model("animagine-i2i").workflow_path == "workflows/animagine-i2i.json"
+
+
+def test_dispatch_reuses_the_animagine_injector_for_img2img():
+    assert get_model("animagine-i2i").inject is inject_animagine

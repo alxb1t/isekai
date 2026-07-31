@@ -14,6 +14,7 @@ class Model:
 MODELS: dict[str, Model] = {
     "qwen": Model("workflows/qwen-image-edit.json", inject_qwen),
     "animagine": Model("workflows/animagine-instantid.json", inject_animagine),
+    "animagine-i2i": Model("workflows/animagine-i2i.json", inject_animagine),
 }
 
 

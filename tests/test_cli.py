@@ -61,3 +61,46 @@ def test_main_dispatches_the_animagine_workflow_and_injector(
     assert recorded["workflow_path"] == "workflows/animagine-instantid.json"
     assert captured["inject"] is inject_animagine
     assert captured["input_path"] == "face.jpg"
+
+
+def test_parse_args_accepts_the_animagine_i2i_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine-i2i"],
+    )
+    assert cli.parse_args().model == "animagine-i2i"
+
+
+def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "face.jpg", "--prompt", "anime", "--model", "animagine-i2i"],
+    )
+
+    recorded = {}
+
+    class FakePath:
+        def __init__(self, path) -> None:
+            recorded["workflow_path"] = path
+
+        def read_text(self):
+            return "{}"
+
+    monkeypatch.setattr(cli, "Path", FakePath)
+    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
+
+    captured = {}
+
+    def fake_run(client, workflow, inject, input_path, prompt, output_path):
+        captured["inject"] = inject
+
+    monkeypatch.setattr(cli, "run", fake_run)
+
+    cli.main()
+
+    assert recorded["workflow_path"] == "workflows/animagine-i2i.json"
+    assert captured["inject"] is inject_animagine
