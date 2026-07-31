@@ -3,6 +3,20 @@
 This is a **learning + portfolio** project. The human is doing this to *learn how to run
 and set up open models*, not to ship fast. Optimize for understanding.
 
+## Response style (read every session)
+Be concise. Short replies by default. The human is here to learn — long answers cause fatigue
+and bury the signal under noise. Keep the focus on what's relevant to the current step.
+- **No preamble, no filler, no restating the request.** Give the result; skip the reasoning
+  unless asked.
+- **Default to the short form.** State the full idea — the full derivation, the whole trade-off,
+  the background — **only when asked**. Otherwise give the short answer and stop.
+- **One next step at a time**, in a line or two — not a wall of options or a multi-paragraph tour.
+- **Teaching is pull, not push.** Explain the *why* when the human asks (a question, "why?",
+  "explain"), or when a step would otherwise be silently wrong. Don't pre-emptively teach.
+- **Snippets stay minimal** — the smallest illustrative bit that makes the point.
+- If the human doesn't understand something, they will ask. Answer *that*, then stop. Trust them
+  to pull for more.
+
 ## How we work here (read every session)
 - **The human writes every line of code.** Do NOT write code into files. Instead:
   suggest the next step, show small illustrative snippets in chat to explain, then let
@@ -20,9 +34,10 @@ and set up open models*, not to ship fast. Optimize for understanding.
   freeze under `tests/fixtures/`, and mock against those ("discover the real shape once →
   freeze → test against it"). `pytest` is a **dev-only** dependency; the runtime stays
   zero-dep (stdlib only). CI runs `pytest` on every push (fast, free, no GPU).
-- Work the plan phase by phase; after each step, say what comes next.
-- When the human asks a question, TEACH — explain the *why*, not just the *how*.
-- When we learn something transferable, write a vault note (see below) and explain it back.
+- Work the plan phase by phase; after each step, say what comes next — briefly.
+- When the human asks a question, TEACH — explain the *why*, not just the *how* (but stay tight;
+  go deep only as far as the question reaches).
+- When we learn something transferable, write a vault note (see below); explain it back only if asked.
 
 ## Where the plan and notes live
 The human keeps an Obsidian vault where the implementation plan lives and where transferable
@@ -45,18 +60,27 @@ using open models in ComfyUI, deployed on a rented RunPod GPU (per-second billin
 image runs directly as the pod). The hard constraint is **identity preservation** — the result
 must stay recognizably the same person.
 
-Three model paths, selectable at the CLI (`convert.py --model {qwen,animagine,animagine-i2i}`),
+Model paths, selectable at the CLI (`convert.py --model {qwen,animagine,animagine-i2i,animagine-i2i-cn}`),
 each owning its own workflow JSON + injection adapter (strategy pattern):
 - **qwen** (v0.1, ✅ done) — **Qwen-Image-Edit** instruction-edit model; identity preserved "for
   free" via denoise-1 image-conditioning.
 - **animagine** (v0.2, ✅ done) — **Animagine XL 4.0** (SDXL anime) **+ InstantID + InsightFace**;
   identity is an *injected* signal (face embedding + keypoints) on top of from-noise SDXL.
-- **animagine-i2i** (v0.3, 🔨 active) — same Animagine base + InstantID, but **img2img** (latent
+- **animagine-i2i** (v0.3, ✅ done) — same Animagine base + InstantID, but **img2img** (latent
   init from the photo via `VAEEncode`, `denoise < 1`) so the photo's composition survives — pose,
   hair, eyes, clothes, **tattoo**. `denoise` is the identity↔style dial. Reuses the `animagine`
-  injection adapter (the node-trace is unchanged). The ControlNet stack (OpenPose/Lineart/Depth/
-  tile) is an additive tuning layer, deferred.
+  injection adapter (the node-trace is unchanged).
+- **animagine-i2i-cn** (v0.4, 🔨 active) — `animagine-i2i` **+ a full ControlNet stack** (tile →
+  OpenPose → Lineart/Depth). The structural conditioning anchors pose/structure/detail so `denoise`
+  can push higher for a stronger anime look; **tile** relieves the tattoo⟷anime tension. The CN
+  apply nodes sit *in* the conditioning path, so the injection adapter is resolved test-first
+  (generalize the trace, or a dedicated `inject_animagine_cn`).
+
+**v0.4 also adds variety, cross-cutting (not a model path):** a **workflow-mutation seam**
+`mutate(workflow, rng)` — *separate from* `inject_*` (injection wires image+prompt; mutation varies
+dials) — with an **injectable `random.Random`** so it's deterministically testable. `--seed` /
+`--variations` on the CLI; the seed used is printed (reproducibility contract).
 
 Each version extends the previous — nothing is removed, all models stay available. Built
 **test-first (TDD)** with the ComfyUI client fully mocked (see "How we work here"). `VAULT_PLAN`
-(the v0.3 plan) is the source of truth for the phases — read it first each session.
+(the v0.4 plan) is the source of truth for the phases — read it first each session.
