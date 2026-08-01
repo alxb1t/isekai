@@ -1,9 +1,11 @@
 from collections.abc import Callable
+from random import Random
 from typing import Any, Protocol
 
 Workflow = dict[str, Any]
 Image = dict[str, str]
 Injector = Callable[[Workflow, str, str], None]
+Mutator = Callable[[Workflow, Random], None]
 
 
 class ComfyTransport(Protocol):

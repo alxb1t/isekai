@@ -4,9 +4,11 @@ from isekai import cli
 from isekai.workflow import inject_animagine
 
 
-def test_parse_args_defaults_to_the_qwen_model(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_parse_args_defaults_to_the_animagine_i2i_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
-    assert cli.parse_args().model == "qwen"
+    assert cli.parse_args().model == "animagine-i2i"
 
 
 def test_parse_args_accepts_the_animagine_model(
@@ -50,7 +52,17 @@ def test_main_dispatches_the_animagine_workflow_and_injector(
 
     captured = {}
 
-    def fake_run(client, workflow, inject, input_path, prompt, output_path):
+    def fake_run(
+        client,
+        workflow,
+        inject,
+        input_path,
+        prompt,
+        output_path,
+        mutate=None,
+        seed=None,
+        variations=1,
+    ):
         captured["inject"] = inject
         captured["input_path"] = input_path
 
@@ -95,7 +107,17 @@ def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
 
     captured = {}
 
-    def fake_run(client, workflow, inject, input_path, prompt, output_path):
+    def fake_run(
+        client,
+        workflow,
+        inject,
+        input_path,
+        prompt,
+        output_path,
+        mutate=None,
+        seed=None,
+        variations=1,
+    ):
         captured["inject"] = inject
 
     monkeypatch.setattr(cli, "run", fake_run)
@@ -104,3 +126,28 @@ def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
 
     assert recorded["workflow_path"] == "workflows/animagine-i2i.json"
     assert captured["inject"] is inject_animagine
+
+
+def test_parse_args_defaults_seed_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
+    assert cli.parse_args().seed is None
+
+
+def test_parse_args_accepts_a_seed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime", "--seed", "42"]
+    )
+    assert cli.parse_args().seed == 42
+
+
+def test_parse_args_defaults_variations_to_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
+    assert cli.parse_args().variations == 1
+
+
+def test_parse_args_accepts_a_variation_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--variations", "3"],
+    )
+    assert cli.parse_args().variations == 3

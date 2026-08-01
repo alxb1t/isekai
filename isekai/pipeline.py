@@ -1,9 +1,11 @@
+import copy
+import random
 import sys
 import time
 from pathlib import Path
 from urllib import error
 
-from isekai.comfy_types import ComfyTransport, Workflow
+from isekai.comfy_types import ComfyTransport, Mutator, Workflow
 from isekai.models import Injector
 
 
@@ -14,11 +16,32 @@ def run(
     input_path: str,
     prompt: str,
     output_path: str,
+    mutate: Mutator | None = None,
+    seed: int | None = None,
+    variations: int = 1,
 ) -> None:
-    """Orchestrate one conversion against an injected ComfyUI client."""
+    """Orchestrate one or more conversions against an injected ComfyUI client."""
     image_name = client.upload_image(input_path)
-    inject(workflow, image_name, prompt)
 
+    for i in range(variations):
+        wf = copy.deepcopy(workflow)
+        inject(wf, image_name, prompt)
+
+        if mutate is not None:
+            s = seed if (i == 0 and seed is not None) else random.getrandbits(64)
+            mutate(wf, random.Random(s))
+            print(f"variation {i}: seed {s}")
+
+        out = output_path if variations == 1 else _numbered(output_path, i)
+        _render(client, wf, out)
+
+
+def _numbered(path: str, i: int) -> str:
+    p = Path(path)
+    return str(p.with_stem(f"{p.stem}_{i}"))
+
+
+def _render(client: ComfyTransport, workflow: Workflow, output_path: str) -> None:
     try:
         prompt_id = client.submit(workflow)
     except error.HTTPError as e:
