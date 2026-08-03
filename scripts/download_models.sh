@@ -63,4 +63,17 @@ download_folder DIAMONIK7777/antelopev2 \
     insightface/models/antelopev2 \
     "*.onnx"
 
+# SDXL ControlNet stack (v0.4, --model animagine-i2i-cn)
+download TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic \
+    TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors \
+    controlnet
+
+download xinsir/controlnet-openpose-sdxl-1.0 \
+    diffusion_pytorch_model.safetensors \
+    controlnet/openpose
+
+download TheMistoAI/MistoLine \
+    mistoLine_rank256.safetensors \
+    controlnet
+
 echo "Models downloaded into $MODELS_DIR"

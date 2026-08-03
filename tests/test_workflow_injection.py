@@ -118,3 +118,31 @@ def test_img2img_graph_inits_the_latent_from_the_photo_at_denoise_below_one(
     assert animagine_i2i_workflow[vae_id]["inputs"]["pixels"][0] == load_id
     assert animagine_i2i_workflow[sampler_id]["inputs"]["latent_image"][0] == vae_id
     assert animagine_i2i_workflow[sampler_id]["inputs"]["denoise"] < 1
+
+
+def test_inject_animagine_traces_through_the_controlnet_chain_to_the_encoder(
+    animagine_i2i_cn_workflow: Workflow,
+) -> None:
+    # CN apply nodes deepen the conditioning path
+    # (KSampler.positive -> ControlNetApply(s) -> ApplyInstantID -> CLIPTextEncode),
+    # so the fixed 2-hop trace no longer lands. The generalized walk must still
+    # reach the real positive encoder.
+    inject_animagine(
+        animagine_i2i_cn_workflow, image_name="face.png", prompt="1girl, anime"
+    )
+    assert animagine_i2i_cn_workflow["3"]["inputs"]["text"] == "1girl, anime"
+    assert animagine_i2i_cn_workflow["4"]["inputs"]["text"].startswith(
+        "lowres, bad anatomy"
+    )  # negative untouched
+
+
+def test_inject_animagine_cn_wires_the_single_load_image_across_the_stack(
+    animagine_i2i_cn_workflow: Workflow,
+) -> None:
+    # One LoadImage fans out to VAEEncode + InstantID + all three CN preprocessors,
+    # so find_node stays unique and convert.py's exactly-one-LoadImage rule holds.
+    inject_animagine(
+        animagine_i2i_cn_workflow, image_name="face.png", prompt="1girl, anime"
+    )
+    load_id = find_node(animagine_i2i_cn_workflow, class_type="LoadImage")
+    assert animagine_i2i_cn_workflow[load_id]["inputs"]["image"] == "face.png"

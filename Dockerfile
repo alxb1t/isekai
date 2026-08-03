@@ -37,6 +37,16 @@ RUN git clone https://github.com/cubiq/ComfyUI_InstantID.git \
 # InstantID's runtime deps — CPU onnxruntime only (never -gpu; face pass is a tiny CPU op)
 RUN uv pip install insightface==0.7.3 onnxruntime==1.20.1
 
+# ControlNet preprocessors — pinned (repos drift; v1.1.5)
+RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
+        /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux \
+    && cd /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux \
+    && git checkout e8b689a513c3e6b63edc44066560ca5919c0576e
+
+# Preprocessor runtime deps (DWPose, lineart, depth, tile)
+RUN uv pip install -r \
+    /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux/requirements.txt
+
 COPY start.sh /start.sh
 COPY scripts/download_models.sh /download_models.sh
 RUN chmod +x /start.sh /download_models.sh

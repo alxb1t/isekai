@@ -41,3 +41,17 @@ def test_dispatch_pairs_animagine_i2i_with_the_mutation_seam():
 def test_dispatch_leaves_earlier_models_without_a_mutator():
     assert get_model("qwen").mutate is None
     assert get_model("animagine").mutate is None
+
+
+def test_dispatch_selects_the_animagine_i2i_cn_workflow():
+    assert (
+        get_model("animagine-i2i-cn").workflow_path == "workflows/animagine-i2i-cn.json"
+    )
+
+
+def test_dispatch_reuses_the_animagine_injector_for_the_cn_path():
+    assert get_model("animagine-i2i-cn").inject is inject_animagine
+
+
+def test_dispatch_pairs_animagine_i2i_cn_with_the_mutation_seam():
+    assert get_model("animagine-i2i-cn").mutate is mutate

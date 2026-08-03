@@ -23,3 +23,8 @@ def animagine_workflow():
 @pytest.fixture
 def animagine_i2i_workflow():
     return load_fixture("animagine-i2i.json")
+
+
+@pytest.fixture
+def animagine_i2i_cn_workflow():
+    return load_fixture("animagine-i2i-cn.json")

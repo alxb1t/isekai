@@ -36,13 +36,17 @@ def inject_qwen(workflow: Workflow, image_name: str, prompt: str) -> None:
 
 
 def inject_animagine(workflow: Workflow, image_name: str, prompt: str) -> None:
-    """Wire the uploaded photo + prompt into the Animagine + InstantID graph (mutates in place)."""
+    """Wire the uploaded photo + prompt into an Animagine + InstantID graph (mutates in place).
+
+    Handles any depth of conditioning chain: KSampler.positive may point at
+    ApplyInstantID directly, or through a stack of ControlNetApply nodes. Walk
+    .positive until the real positive CLIPTextEncode.
+    """
     load_id = find_node(workflow, class_type="LoadImage")
     workflow[load_id]["inputs"]["image"] = image_name
 
-    # KSampler.positive points at ApplyInstantID (identity is injected into the
-    # conditioning), so trace one hop further to reach the real positive encoder.
     sampler_id = find_node(workflow, class_type="KSampler")
-    apply_id = workflow[sampler_id]["inputs"]["positive"][0]
-    pos_id = workflow[apply_id]["inputs"]["positive"][0]
-    workflow[pos_id]["inputs"]["text"] = prompt
+    node_id = workflow[sampler_id]["inputs"]["positive"][0]
+    while workflow[node_id]["class_type"] != "CLIPTextEncode":
+        node_id = workflow[node_id]["inputs"]["positive"][0]
+    workflow[node_id]["inputs"]["text"] = prompt

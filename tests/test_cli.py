@@ -151,3 +151,11 @@ def test_parse_args_accepts_a_variation_count(monkeypatch: pytest.MonkeyPatch) -
         ["convert.py", "photo.jpg", "--prompt", "anime", "--variations", "3"],
     )
     assert cli.parse_args().variations == 3
+
+
+def test_cli_accepts_the_animagine_i2i_cn_model(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine-i2i-cn"],
+    )
+    assert cli.parse_args().model == "animagine-i2i-cn"

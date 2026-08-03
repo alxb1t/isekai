@@ -19,6 +19,9 @@ MODELS: dict[str, Model] = {
     "animagine-i2i": Model(
         "workflows/animagine-i2i.json", inject_animagine, mutate=mutate
     ),
+    "animagine-i2i-cn": Model(
+        "workflows/animagine-i2i-cn.json", inject_animagine, mutate=mutate
+    ),
 }
 
 
