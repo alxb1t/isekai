@@ -48,3 +48,48 @@ def test_mutate_differs_for_distinct_rng_states(animagine_i2i_workflow):
     mutate(a, random.Random(1))
     mutate(b, random.Random(2))
     assert a["10"]["inputs"]["seed"] != b["10"]["inputs"]["seed"]
+
+
+def test_mutate_jitters_the_controlnet_strenghts(
+    animagine_i2i_cn_workflow,
+) -> None:
+    before = {
+        nid: n["inputs"]["strength"]
+        for nid, n in animagine_i2i_cn_workflow.items()
+        if n["class_type"] == "ControlNetApplyAdvanced"
+    }
+    assert before
+
+    wf = copy.deepcopy(animagine_i2i_cn_workflow)
+    mutate(wf, random.Random(3))
+    after = {nid: wf[nid]["inputs"]["strength"] for nid in before}
+
+    assert after != before
+    for nid, base in before.items():
+        assert max(0.0, base - 0.1) <= after[nid] <= min(1.0, base + 0.1)
+
+
+def test_mutate_keeps_every_controlnet_strength_in_its_band(
+    animagine_i2i_cn_workflow,
+) -> None:
+    bases = {
+        nid: n["inputs"]["strength"]
+        for nid, n in animagine_i2i_cn_workflow.items()
+        if n["class_type"] == "ControlNetApplyAdvanced"
+    }
+    for i in range(100):
+        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        mutate(wf, random.Random(i))
+        for nid, base in bases.items():
+            s = wf[nid]["inputs"]["strength"]
+            assert max(0.0, base - 0.1) <= s <= min(1.0, base + 0.1)
+
+
+def test_mutate_in_reproducible_on_the_controlnet_path(
+    animagine_i2i_cn_workflow,
+) -> None:
+    a = copy.deepcopy(animagine_i2i_cn_workflow)
+    b = copy.deepcopy(animagine_i2i_cn_workflow)
+    mutate(a, random.Random(7))
+    mutate(b, random.Random(7))
+    assert a == b
