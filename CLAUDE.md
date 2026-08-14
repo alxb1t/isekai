@@ -1,86 +1,101 @@
-# Photo to Anime — Repository Guide
+# isekai — shared context for Claude Code
 
-This is a **learning + portfolio** project. The human is doing this to *learn how to run
-and set up open models*, not to ship fast. Optimize for understanding.
+A self-hosted, headless pipeline: **photo of a person → anime image of that same person** (open models
+via ComfyUI on an on-demand RunPod GPU, deployed as our own Docker image). The hard constraint is
+**identity preservation** — the result must stay recognizably *the same person*. Everything runs on open
+models; the runtime is zero-dependency (stdlib `urllib`) and the ComfyUI transport is an injectable seam.
 
-## Response style (read every session)
-Be concise. Short replies by default. The human is here to learn — long answers cause fatigue
-and bury the signal under noise. Keep the focus on what's relevant to the current step.
-- **No preamble, no filler, no restating the request.** Give the result; skip the reasoning
-  unless asked.
-- **Default to the short form.** State the full idea — the full derivation, the whole trade-off,
-  the background — **only when asked**. Otherwise give the short answer and stop.
-- **One next step at a time**, in a line or two — not a wall of options or a multi-paragraph tour.
-- **Teaching is pull, not push.** Explain the *why* when the human asks (a question, "why?",
-  "explain"), or when a step would otherwise be silently wrong. Don't pre-emptively teach.
-- **Snippets stay minimal** — the smallest illustrative bit that makes the point.
-- If the human doesn't understand something, they will ask. Answer *that*, then stop. Trust them
-  to pull for more.
+> **This file is shared, role-independent context — what is *true* about this repo. It is not a script.**
+> What you should *do* comes from the **prompt/task you were given** (build a phase, review the branch diff,
+> run a security pass, apply fixes). If your prompt conflicts with this file, **the prompt wins.** Read this
+> for the facts; follow your prompt for the actions — don't infer a workflow from this file alone.
 
-## How we work here (read every session)
-- **The human writes every line of code.** Do NOT write code into files. Instead:
-  suggest the next step, show small illustrative snippets in chat to explain, then let
-  the human type it. Review what they wrote.
-- **Test-first (TDD) for any deterministic logic.** From v0.2 on, for logic we control
-  (model dispatch, per-model workflow injection, multipart build, polling, CLI parsing) we
-  **write the failing test first, then implement to green.** Suggest the test before the
-  implementation; let the human type both. The suite doubles as executable documentation —
-  name tests as behavioural sentences (`test_dispatch_selects_animagine_workflow`).
-- **Test the seam, not the GPU.** The HTTP transport to ComfyUI is an injectable dependency:
-  tests pass a `FakeComfyClient`, production passes the real `urllib` client — no network, no
-  GPU in tests. Actual diffusion / image quality / identity fidelity is verified **live on a
-  pod**, judged by eye — never mocked or asserted.
-- **Golden fixtures.** Capture the real workflow JSON and a real `/history` response once,
-  freeze under `tests/fixtures/`, and mock against those ("discover the real shape once →
-  freeze → test against it"). `pytest` is a **dev-only** dependency; the runtime stays
-  zero-dep (stdlib only). CI runs `pytest` on every push (fast, free, no GPU).
-- Work the plan phase by phase; after each step, say what comes next — briefly.
-- When the human asks a question, TEACH — explain the *why*, not just the *how* (but stay tight;
-  go deep only as far as the question reaches).
-- When we learn something transferable, write a vault note (see below); explain it back only if asked.
+---
 
-## Where the plan and notes live
-The human keeps an Obsidian vault where the implementation plan lives and where transferable
-knowledge is filed. The machine-specific paths are in a gitignored `.env` (copy `.env.example`
-and fill in). Read `.env` to resolve them:
-- `VAULT_PLAN` — the implementation plan (source of truth for the phases; read it first)
-- `VAULT_SCHEMA` — the vault's own CLAUDE.md (the note-writing schema to follow)
-- `VAULT_LAB_DIR` — this Lab project (operational log / tasks / overview)
-- `VAULT_LEARNING_DIR` — where Learning notes (transferable knowledge) go
+## The plan lives in a private vault — read it first
 
-When writing a note: follow `VAULT_SCHEMA`, create/update the Learning page under
-`VAULT_LEARNING_DIR`, back-link it from the Lab project's `overview.md` (Related knowledge),
-and append a `graduate` entry to the Lab `log.md`.
+The full, canonical implementation plan is **not in this repo** (this repo is public — it must never
+contain the vault's absolute path). The plan lives in a private Obsidian vault whose location is stored in
+**`.env`** (gitignored) as **`VAULT_PROJECT_DIR`**.
 
-If `.env` is absent, ask the human for the vault paths (or proceed code-only without notes).
+1. Read `.env` and load `VAULT_PROJECT_DIR` — the absolute path to the vault project folder. If it is
+   missing, copy `.env.example` → `.env` and ask the human to fill it in. **Never hardcode or print the real
+   path in committed files.**
+2. Read the **latest implementation plan** in `$VAULT_PROJECT_DIR/implementation_plans/` — the
+   `vX.Y_implementation_plan.md` with the **highest version number** (ignore `archive/`). It is the source of
+   truth for scope, decisions, architecture, the engineering conventions, the per-phase steps, **and the
+   phase workflow contract**. Lower-versioned plans are completed predecessors — historical record only.
+3. The plan tracks progress via its **Progress ledger** (bottom of the plan); the project's **`overview.md`**
+   carries a machine-readable **`current_phase`** + per-phase flags in its frontmatter, and the newest entries
+   sit at the **top** of `$VAULT_PROJECT_DIR/log.md` (this log is **newest-first**) — read these to see where
+   the work stands. If the plan references a Phase-0 research file, read that too.
 
-## What this project is
-Reproducible, provider-agnostic, on-demand GPU pipeline: photo of a person → anime image,
-using open models in ComfyUI, deployed on a rented RunPod GPU (per-second billing; the Docker
-image runs directly as the pod). The hard constraint is **identity preservation** — the result
-must stay recognizably the same person.
+Plans and their research/findings files live in `$VAULT_PROJECT_DIR/implementation_plans/` (version-prefixed,
+e.g. `v0.5_implementation_plan.md`, `v0.5_research.md`); the project's `overview.md`, `log.md`, `backlog.md`,
+and `release_log.md` sit at `$VAULT_PROJECT_DIR/`. Do not re-derive decisions already settled in the plan. If
+something there conflicts with reality, raise it with the human rather than silently diverging. Any vault
+writes stay **inside `$VAULT_PROJECT_DIR`** and follow the conventions already visible in that folder (the
+`log.md` / `overview.md` / `backlog.md` shapes) — `VAULT_PROJECT_DIR` is the only vault path this repo knows.
 
-Model paths, selectable at the CLI (`convert.py --model {qwen,animagine,animagine-i2i,animagine-i2i-cn}`),
-each owning its own workflow JSON + injection adapter (strategy pattern):
-- **qwen** (v0.1, ✅ done) — **Qwen-Image-Edit** instruction-edit model; identity preserved "for
-  free" via denoise-1 image-conditioning.
-- **animagine** (v0.2, ✅ done) — **Animagine XL 4.0** (SDXL anime) **+ InstantID + InsightFace**;
-  identity is an *injected* signal (face embedding + keypoints) on top of from-noise SDXL.
-- **animagine-i2i** (v0.3, ✅ done) — same Animagine base + InstantID, but **img2img** (latent
-  init from the photo via `VAEEncode`, `denoise < 1`) so the photo's composition survives — pose,
-  hair, eyes, clothes, **tattoo**. `denoise` is the identity↔style dial. Reuses the `animagine`
-  injection adapter (the node-trace is unchanged).
-- **animagine-i2i-cn** (v0.4, 🔨 active) — `animagine-i2i` **+ a full ControlNet stack** (tile →
-  OpenPose → Lineart/Depth). The structural conditioning anchors pose/structure/detail so `denoise`
-  can push higher for a stronger anime look; **tile** relieves the tattoo⟷anime tension. The CN
-  apply nodes sit *in* the conditioning path, so the injection adapter is resolved test-first
-  (generalize the trace, or a dedicated `inject_animagine_cn`).
+---
 
-**v0.4 also adds variety, cross-cutting (not a model path):** a **workflow-mutation seam**
-`mutate(workflow, rng)` — *separate from* `inject_*` (injection wires image+prompt; mutation varies
-dials) — with an **injectable `random.Random`** so it's deterministically testable. `--seed` /
-`--variations` on the CLI; the seed used is printed (reproducibility contract).
+## What the pipeline is (the facts)
 
-Each version extends the previous — nothing is removed, all models stay available. Built
-**test-first (TDD)** with the ComfyUI client fully mocked (see "How we work here"). `VAULT_PLAN`
-(the v0.4 plan) is the source of truth for the phases — read it first each session.
+`convert.py` uploads a photo + injects a prompt into a ComfyUI workflow, runs it headless over an SSH tunnel
+to the pod, and downloads the result. Models are **selectable at the CLI** (`--model …`), each owning its own
+workflow JSON + injection adapter (a plain-function **Strategy**, resolved via a name→`Model` **registry**):
+
+- **qwen** — **Qwen-Image-Edit** instruction-edit model; identity preserved "for free" via denoise-1
+  image-conditioning.
+- **animagine** — **Animagine XL 4.0** (SDXL anime) **+ InstantID + InsightFace**; identity is an *injected*
+  signal (face embedding + keypoints) on top of a from-noise SDXL base.
+- **animagine-i2i** — the Animagine base + InstantID, but **img2img** (latent init from the photo via
+  `VAEEncode`, `denoise < 1`) so the photo's composition survives (pose, hair, eyes, clothes, tattoo).
+  `denoise` is the identity↔style dial. Reuses the `animagine` injection adapter (node-trace unchanged).
+- **animagine-i2i-cn** — `animagine-i2i` **+ a ControlNet stack** (tile → OpenPose → Lineart). Structural
+  conditioning anchors pose/structure/detail. The CN apply nodes sit *in* the conditioning path, so injection
+  uses a **generalized trace** (walk `.positive` to the first `CLIPTextEncode`) that serves all
+  InstantID-family injectors.
+
+A cross-cutting **workflow-mutation seam** `mutate(workflow, rng)` — *separate from* `inject_*` (injection
+wires image+prompt; mutation varies dials) — takes an **injected `random.Random`** so it's deterministically
+testable. `--seed` / `--variations` on the CLI; the seed used is printed (reproducibility contract).
+
+Each version extends the previous — nothing is removed, all models stay selectable. The active plan's scope
+(e.g. new `--model` paths, multi-input plumbing) is authoritative for what's being built now.
+
+---
+
+## The quality gate (a phase is done only when all are green)
+
+- `pytest` — all tests pass. **Test-first (red → green)** for every unit of logic we control (model dispatch,
+  per-model workflow injection, multipart build, polling, mutation seam, CLI parsing). The suite doubles as
+  executable documentation — name tests as behavioural sentences.
+- `ruff check` (+ `ruff format`) — lint/format clean.
+- `ty` — type-check clean.
+- Image-as-code phases also: `bash -n` on shell scripts + `docker build --check` clean.
+
+The ComfyUI transport is **fully mocked** in tests (`FakeComfyClient` behind a `ComfyTransport` Protocol);
+the workflow/API contract is **fixture-locked** (placeholder golden fixtures first, relocked to real node IDs
+after the live GPU export). **No test hits a real GPU or the network.** Actual diffusion / image quality /
+identity fidelity is verified **live on a pod, judged by eye** — never mocked or asserted. CI (`ci.yml`) runs
+ruff + ty + pytest on every push.
+
+---
+
+## Guardrails (invariants — hold for every role)
+
+- **Never commit `.env` or any secret** (RunPod key, volume id, the vault path). `.env` is gitignored; keep
+  the vault path and all secrets there only. The committed `CLAUDE.md`/`.env.example` stay path-free.
+- Runtime code is **stdlib-only** (the ComfyUI transport uses `urllib`). Face detection runs *in the image*
+  (`insightface` + **CPU** `onnxruntime` / antelopev2 — never `onnxruntime-gpu`), not as a runtime Python dep
+  of `convert.py`. pytest/ruff/ty stay dev-only. Don't add runtime deps unless the plan sanctions them.
+- **Some phases spend real money.** The plan marks metered (⚠️ GPU) phases and defines the
+  stop-before-spending protocol (announce, wait for an explicit human "go", `up.sh` → tunnel → `convert.py` →
+  `down.sh`, tear down, log cost). Respect it — **never bring up a paid pod on your own initiative.** GPU
+  renders live on the pod's ephemeral disk; only the models volume persists — `scp`/download before teardown.
+- The **Blackwell (sm_120) pod needs cu128 PyTorch** (cu124 gives "no kernel image"); this is pinned in the
+  image — keep it.
+- The **vault is the single source of truth** for "where are we." If your role updates it, keep it accurate
+  (newest-first `log.md`, `overview.md` `current_phase`/flags, the plan's Progress ledger, `backlog.md`); a
+  fresh session relies on it.
