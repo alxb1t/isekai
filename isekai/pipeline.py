@@ -5,8 +5,9 @@ import time
 from pathlib import Path
 from urllib import error
 
-from isekai.comfy_types import ComfyTransport, Mutator, Workflow
+from isekai.comfy_types import ComfyTransport, Mutator, Overrides, Workflow
 from isekai.models import Injector
+from isekai.overrides import apply_overrides
 
 
 def run(
@@ -19,6 +20,7 @@ def run(
     mutate: Mutator | None = None,
     seed: int | None = None,
     variations: int = 1,
+    overrides: Overrides | None = None,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client."""
     image_name = client.upload_image(input_path)
@@ -26,6 +28,9 @@ def run(
     for i in range(variations):
         wf = copy.deepcopy(workflow)
         inject(wf, image_name, prompt)
+
+        if overrides:
+            apply_overrides(wf, **overrides)
 
         if mutate is not None:
             s = seed if (i == 0 and seed is not None) else random.getrandbits(64)

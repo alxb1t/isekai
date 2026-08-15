@@ -62,6 +62,7 @@ def test_main_dispatches_the_animagine_workflow_and_injector(
         mutate=None,
         seed=None,
         variations=1,
+        overrides=None,
     ):
         captured["inject"] = inject
         captured["input_path"] = input_path
@@ -117,6 +118,7 @@ def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
         mutate=None,
         seed=None,
         variations=1,
+        overrides=None,
     ):
         captured["inject"] = inject
 
@@ -159,3 +161,153 @@ def test_cli_accepts_the_animagine_i2i_cn_model(monkeypatch: pytest.MonkeyPatch)
         ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine-i2i-cn"],
     )
     assert cli.parse_args().model == "animagine-i2i-cn"
+
+
+# --- Phase 2: --denoise / --cfg / --ip-weight flags ---
+
+
+def test_parse_args_defaults_denoise_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
+    assert cli.parse_args().denoise is None
+
+
+def test_parse_args_defaults_cfg_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
+    assert cli.parse_args().cfg is None
+
+
+def test_parse_args_defaults_ip_weight_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
+    assert cli.parse_args().ip_weight is None
+
+
+def test_parse_args_accepts_denoise_in_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--denoise", "0.7"],
+    )
+    assert cli.parse_args().denoise == pytest.approx(0.7)
+
+
+def test_parse_args_accepts_cfg_in_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--cfg", "7.5"],
+    )
+    assert cli.parse_args().cfg == pytest.approx(7.5)
+
+
+def test_parse_args_accepts_ip_weight_in_range(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--ip-weight", "0.85"],
+    )
+    assert cli.parse_args().ip_weight == pytest.approx(0.85)
+
+
+def test_parse_args_rejects_denoise_above_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--denoise", "1.1"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+def test_parse_args_rejects_denoise_below_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--denoise", "-0.1"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+def test_parse_args_rejects_cfg_above_thirty(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--cfg", "31.0"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+def test_parse_args_rejects_cfg_below_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--cfg", "-1.0"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+def test_parse_args_rejects_ip_weight_above_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--ip-weight", "1.5"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+def test_parse_args_rejects_ip_weight_below_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--prompt", "anime", "--ip-weight", "-0.5"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+def test_main_passes_override_flags_to_pipeline_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "convert.py",
+            "photo.jpg",
+            "--prompt",
+            "anime",
+            "--denoise",
+            "0.8",
+            "--cfg",
+            "6.0",
+        ],
+    )
+
+    class FakePath:
+        def __init__(self, path) -> None:
+            pass
+
+        def read_text(self):
+            return "{}"
+
+    monkeypatch.setattr(cli, "Path", FakePath)
+    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
+
+    captured: dict = {}
+
+    def fake_run(
+        client,
+        workflow,
+        inject,
+        input_path,
+        prompt,
+        output_path,
+        mutate=None,
+        seed=None,
+        variations=1,
+        overrides=None,
+    ):
+        captured["overrides"] = overrides
+
+    monkeypatch.setattr(cli, "run", fake_run)
+
+    cli.main()
+
+    assert captured["overrides"] == {"denoise": 0.8, "cfg": 6.0}
