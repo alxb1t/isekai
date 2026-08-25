@@ -12,30 +12,48 @@ models; the runtime is zero-dependency (stdlib `urllib`) and the ComfyUI transpo
 
 ---
 
-## The plan lives in a private vault — read it first
+## The contract lives in-tree — read it first
 
-The full, canonical implementation plan is **not in this repo** (this repo is public — it must never
-contain the vault's absolute path). The plan lives in a private Obsidian vault whose location is stored in
-**`.env`** (gitignored) as **`VAULT_PROJECT_DIR`**.
+This repo follows the **MinionsFactory SDD standard**. The authority for what is being built, and how far
+along it is, is **in this repository** — not in a document you have to be told about.
 
-1. Read `.env` and load `VAULT_PROJECT_DIR` — the absolute path to the vault project folder. If it is
-   missing, copy `.env.example` → `.env` and ask the human to fill it in. **Never hardcode or print the real
-   path in committed files.**
-2. Read the **latest implementation plan** in `$VAULT_PROJECT_DIR/implementation_plans/` — the
-   `vX.Y_implementation_plan.md` with the **highest version number** (ignore `archive/`). It is the source of
-   truth for scope, decisions, architecture, the engineering conventions, the per-phase steps, **and the
-   phase workflow contract**. Lower-versioned plans are completed predecessors — historical record only.
-3. The plan tracks progress via its **Progress ledger** (bottom of the plan); the project's **`overview.md`**
-   carries a machine-readable **`current_phase`** + per-phase flags in its frontmatter, and the newest entries
-   sit at the **top** of `$VAULT_PROJECT_DIR/log.md` (this log is **newest-first**) — read these to see where
-   the work stands. If the plan references a Phase-0 research file, read that too.
+1. **`openspec/specs/<capability>/spec.md`** — the **living spec**: the behaviour this repo already has,
+   stated as keyed scenarios. Five capabilities: `model-registry`, `workflow-injection`,
+   `workflow-mutation`, `comfy-transport`, `cli`. Every `#### Scenario:` carries a `- **Key:**` and a
+   `- **Layers:**` bullet, and the key is `<capability>:<requirement-slug>:<scenario-slug>` — so a key
+   locates its own file.
+2. **`openspec/changes/<NNNN-name>/`** — the **active change**, which is the unit of work *and* the unit of
+   release. Each carries four artifacts: `proposal.md` (with a `version: vX.Y` frontmatter key),
+   `design.md`, `tasks.md`, and a `specs/` delta. **This is the source of truth for current scope.**
+   Released changes move to `openspec/changes/archive/` — they are never deleted.
+3. **Progress lives in `tasks.md`**, in its `## Progress` checklist. **The current phase is the first
+   unchecked box.** That is the only progress marker that counts; a phase checks its own box in its own
+   commit.
 
-Plans and their research/findings files live in `$VAULT_PROJECT_DIR/implementation_plans/` (version-prefixed,
-e.g. `v0.5_implementation_plan.md`, `v0.5_research.md`); the project's `overview.md`, `log.md`, `backlog.md`,
-and `release_log.md` sit at `$VAULT_PROJECT_DIR/`. Do not re-derive decisions already settled in the plan. If
-something there conflicts with reality, raise it with the human rather than silently diverging. Any vault
-writes stay **inside `$VAULT_PROJECT_DIR`** and follow the conventions already visible in that folder (the
-`log.md` / `overview.md` / `backlog.md` shapes) — `VAULT_PROJECT_DIR` is the only vault path this repo knows.
+**Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
+proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both markers are registered
+in `[tool.pytest.ini_options] markers` — registration is load-bearing, because pytest silently ignores an
+unregistered marker, and an unregistered one would bind nothing while looking exactly like a binding. When
+you add a test, bind it; when you add behaviour, give it a scenario first.
+
+### The vault holds the thinking, not the contract
+
+A private Obsidian vault still carries the research, the findings reports and the running log. Its location
+is in **`.env`** (gitignored) as **`VAULT_PROJECT_DIR`** — this repo is public and **must never contain the
+vault's absolute path**. If `.env` is missing, copy `.env.example` → `.env` and ask the human to fill it in.
+
+- `$VAULT_PROJECT_DIR/findings/` — role and audit reports, including `teardown.md` (the compliance gap
+  report this repo's v0.7 milestone was driven by).
+- `$VAULT_PROJECT_DIR/log.md` — the running log, **newest-first**.
+- `$VAULT_PROJECT_DIR/backlog.md`, `release_log.md`, `overview.md` — supporting bookkeeping.
+- `$VAULT_PROJECT_DIR/implementation_plans/` — **historical**. Versions up to v0.6 were planned this way,
+  and those files remain a useful record of *why* things are as they are. They are **not** the source of
+  truth for current work; `openspec/changes/` is.
+
+Any vault writes stay **inside `$VAULT_PROJECT_DIR`** and follow the conventions already visible there.
+`VAULT_PROJECT_DIR` is the only vault path this repo knows. If something in the vault conflicts with the
+repo, the repo wins for *what is true now* — raise the conflict with the human rather than silently
+diverging.
 
 ---
 
@@ -60,26 +78,56 @@ workflow JSON + injection adapter (a plain-function **Strategy**, resolved via a
 A cross-cutting **workflow-mutation seam** `mutate(workflow, rng)` — *separate from* `inject_*` (injection
 wires image+prompt; mutation varies dials) — takes an **injected `random.Random`** so it's deterministically
 testable. `--seed` / `--variations` on the CLI; the seed used is printed (reproducibility contract).
+`apply_overrides` sets the user's **base** dial values (`--denoise` / `--cfg` / `--ip-weight`) and `mutate`
+jitters **around that base** — the order is load → override → mutate.
 
-Each version extends the previous — nothing is removed, all models stay selectable. The active plan's scope
-(e.g. new `--model` paths, multi-input plumbing) is authoritative for what's being built now.
+Each version extends the previous — nothing is removed, all models stay selectable. **The active change under
+`openspec/changes/` is authoritative for what's being built now.**
 
 ---
 
-## The quality gate (a phase is done only when all are green)
+## The quality gate (a phase is done only when it is green)
 
-- `pytest` — all tests pass. **Test-first (red → green)** for every unit of logic we control (model dispatch,
-  per-model workflow injection, multipart build, polling, mutation seam, CLI parsing). The suite doubles as
-  executable documentation — name tests as behavioural sentences.
-- `ruff check` (+ `ruff format`) — lint/format clean.
-- `ty` — type-check clean.
-- Image-as-code phases also: `bash -n` on shell scripts + `docker build --check` clean.
+The gate is declared **once**, as the `gate` array in **`.minions/minions.toml`** — the path the orchestrator
+reads, and no other. The root **`Makefile` `gate` target mirrors it**, same commands in the same order, so
+the gate a human types and the gate the loop runs cannot drift apart. **Change one and you change both, in
+the same commit.**
+
+```bash
+make gate
+```
+
+runs exactly these five, in this order:
+
+1. `uv sync --locked`
+2. `uv run ruff format --check .`
+3. `uv run ruff check .`
+4. `uv run ty check`
+5. `uv run pytest`
+
+That is the whole gate — all five green, or the phase is not done. Notes on the axes:
+
+- **`pytest`** — **test-first (red → green)** for every unit of logic we control (model dispatch, per-model
+  workflow injection, multipart build, polling, mutation seam, overrides, CLI parsing). The suite doubles as
+  executable documentation — name tests as behavioural sentences, and bind each to its scenario key.
+- **`ruff`** — `format --check` and `check` are **separate axes** and both must pass. The lint selection is
+  explicit in `pyproject.toml`: `[tool.ruff.lint] select = ["E", "F", "I"]`. Note this is broader than ruff's
+  default (`E4`/`E7`/`E9`/`F`) — in particular `E501` line-length is enforced, and the formatter does **not**
+  wrap comments or docstrings, so those you wrap by hand.
+- **`ty`** — type-check clean.
+- **`uv sync --locked`** — the lockfile is authoritative and is **tracked**; the run fails rather than
+  silently re-resolving.
+
+Beyond the gate array, **image-as-code work also runs `bash -n` on shell scripts and `docker build --check`**.
+These are a convention for those phases, not entries in the gate array — don't add them to the array without
+adding them to the `Makefile` in the same commit.
 
 The ComfyUI transport is **fully mocked** in tests (`FakeComfyClient` behind a `ComfyTransport` Protocol);
 the workflow/API contract is **fixture-locked** (placeholder golden fixtures first, relocked to real node IDs
-after the live GPU export). **No test hits a real GPU or the network.** Actual diffusion / image quality /
-identity fidelity is verified **live on a pod, judged by eye** — never mocked or asserted. CI (`ci.yml`) runs
-ruff + ty + pytest on every push.
+after the live GPU export). **No test hits a real GPU or the network** — which is why every scenario declares
+`Layers: unit` and none declares `e2e`. Actual diffusion / image quality / identity fidelity is verified
+**live on a pod, judged by eye** — never mocked or asserted. CI (`ci.yml`) runs ruff + ty + pytest on every
+push.
 
 ---
 
@@ -89,13 +137,16 @@ ruff + ty + pytest on every push.
   the vault path and all secrets there only. The committed `CLAUDE.md`/`.env.example` stay path-free.
 - Runtime code is **stdlib-only** (the ComfyUI transport uses `urllib`). Face detection runs *in the image*
   (`insightface` + **CPU** `onnxruntime` / antelopev2 — never `onnxruntime-gpu`), not as a runtime Python dep
-  of `convert.py`. pytest/ruff/ty stay dev-only. Don't add runtime deps unless the plan sanctions them.
-- **Some phases spend real money.** The plan marks metered (⚠️ GPU) phases and defines the
-  stop-before-spending protocol (announce, wait for an explicit human "go", `up.sh` → tunnel → `convert.py` →
-  `down.sh`, tear down, log cost). Respect it — **never bring up a paid pod on your own initiative.** GPU
-  renders live on the pod's ephemeral disk; only the models volume persists — `scp`/download before teardown.
+  of `convert.py`. pytest/ruff/ty stay dev-only. Don't add runtime deps unless the active change sanctions
+  them.
+- **Some phases spend real money.** The active change's `tasks.md` marks metered (⚠️ GPU) phases, and the
+  stop-before-spending protocol holds: announce, wait for an explicit human "go", `up.sh` → tunnel →
+  `convert.py` → `down.sh`, tear down, log cost. Respect it — **never bring up a paid pod on your own
+  initiative.** GPU renders live on the pod's ephemeral disk; only the models volume persists —
+  `scp`/download before teardown.
 - The **Blackwell (sm_120) pod needs cu128 PyTorch** (cu124 gives "no kernel image"); this is pinned in the
   image — keep it.
-- The **vault is the single source of truth** for "where are we." If your role updates it, keep it accurate
-  (newest-first `log.md`, `overview.md` `current_phase`/flags, the plan's Progress ledger, `backlog.md`); a
-  fresh session relies on it.
+- **`openspec/` is the single source of truth for "where are we."** The `## Progress` checklist in the active
+  change's `tasks.md` is the progress marker, and the first unchecked box is the current phase. Keep it
+  accurate in the phase's own commit — a fresh session relies on it. The vault's `log.md` and `backlog.md`
+  stay useful as narrative and as a parking lot, but they do not define the state.

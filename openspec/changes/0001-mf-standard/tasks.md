@@ -8,7 +8,7 @@
 - [x] 4 — Mirror the gate in a root `Makefile`
 - [x] 5 — Backfill `openspec/specs/` across the five capabilities
 - [x] 6 — Bind the 87 tests: register both markers, mark every test
-- [ ] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
+- [x] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
 - [ ] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
 
 ## The per-phase ritual
@@ -90,6 +90,15 @@ Re-point the source of truth from the vault's `implementation_plans/vX.Y_impleme
 gate account so it matches the array command for command, **flags included**.
 **Keep:** the vault (`VAULT_PROJECT_DIR`, research/findings, `log.md`), the `.env` hygiene rules, the
 metered-GPU protocol and the guardrails — all still accurate.
+**Outcome:** all three (J) clauses now hold, each verified mechanically rather than by eye — the five commands
+in the doc's gate list were compared against the parsed `gate` array and match on **order and flags**, and the
+`Makefile` recipe was compared against the same array. `implementation_plans/` survives only as explicitly
+**historical** (it is genuinely useful for *why* v0.6 and earlier are as they are), never as the authority.
+Progress is now stated as the `## Progress` checklist with the first unchecked box as the current phase.
+Confirmed path-free and placeholder-free.
+**Kept as it was:** the pipeline facts, the metered-GPU protocol, the stdlib-only rule, the cu128 pin and the
+`.env` hygiene — all still accurate, so the edit stayed narrow rather than becoming a rewrite of the repo's
+description of itself.
 **Closes:** `wiring:claude-md` (blocking). Last, because its clauses assert the end state of phases 2–6.
 
 ### 8 — Verify
