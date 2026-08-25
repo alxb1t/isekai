@@ -9,7 +9,7 @@
 - [x] 5 — Backfill `openspec/specs/` across the five capabilities
 - [x] 6 — Bind the 87 tests: register both markers, mark every test
 - [x] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
-- [ ] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
+- [x] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
 
 ## The per-phase ritual
 
@@ -107,3 +107,12 @@ Re-run `mf-teardown` against this branch. Expected: `verdict: compliant`, `open_
 `sdd:checker-in-gate` at `advisory`, unsatisfiable by any target repo today for the reason the rubric states
 inline. The re-run is the independent checker for this milestone; it is not a formality and its report is the
 acceptance record.
+**Outcome — `verdict: compliant`** at `9ace528`, round 2. `open_blocking: 0`, `open_required: 0`,
+`criteria_total: 23 — 23 − 0 not measured`: every criterion in the baseline was assessed, because the relocated
+gate config made round 1's four withheld criteria readable. **22 of 23 pass** (A 6/6 · B 5/6 · C 4/4 ·
+`python-uv` 7/7). All 9 round-1 gaps verified closed and cleared into the resolution log.
+**One open gap, `sdd:checker-in-gate` at `advisory`** — measured for the first time this round and left open
+deliberately: it is unsatisfiable by any target repo while MinionsFactory ships no packaging metadata, which is
+why the rubric grades it advisory and why it does not withhold `compliant`. The binding it would enforce does
+exist and is complete; only its automated enforcement is missing.
+Measured by two fresh subagents, blind to this change and to the prior report, split by group.
