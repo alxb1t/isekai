@@ -1,11 +1,17 @@
 from collections.abc import Callable
 from random import Random
-from typing import Any, Protocol
+from typing import Any, Protocol, TypedDict
 
 Workflow = dict[str, Any]
 Image = dict[str, str]
 Injector = Callable[[Workflow, str, str], None]
 Mutator = Callable[[Workflow, Random], None]
+
+
+class Overrides(TypedDict, total=False):
+    denoise: float
+    cfg: float
+    ip_weight: float
 
 
 class ComfyTransport(Protocol):
