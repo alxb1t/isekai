@@ -87,7 +87,8 @@ def test_inject_animagine_wires_the_single_load_image_in_the_img2img_graph(
     animagine_i2i_workflow: Workflow,
 ) -> None:
     # One LoadImage fans out to BOTH VAEEncode and InstantID, so find_node stays unique:
-    # convert.py's exactly-one-LoadImage invariant holds and inject_animagine is unchanged.
+    # convert.py's exactly-one-LoadImage invariant holds and
+    # inject_animagine is unchanged.
     inject_animagine(
         animagine_i2i_workflow, image_name="face.png", prompt="1girl, anime"
     )

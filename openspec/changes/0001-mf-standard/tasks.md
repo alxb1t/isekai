@@ -4,7 +4,7 @@
 
 - [x] 1 — SDD scaffold: `openspec/changes/` + `archive/` + this change's four artifacts
 - [x] 2 — Relocate the gate config to `.minions/minions.toml`; ignore `.minions/` run artifacts
-- [ ] 3 — Pin the toolchain: `.python-version` + explicit ruff `select`
+- [x] 3 — Pin the toolchain: `.python-version` + explicit ruff `select`
 - [ ] 4 — Mirror the gate in a root `Makefile`
 - [ ] 5 — Backfill `openspec/specs/` across the five capabilities
 - [ ] 6 — Bind the 86 tests: register both markers, mark every test
@@ -45,9 +45,10 @@ scaffold.
 
 ### 3 — Pin the toolchain
 Write `.python-version` = `3.12`. Add `[tool.ruff.lint] select = ["E", "F", "I"]` to `pyproject.toml`.
-**Expect `ruff check` to go red on import ordering** — `I` was not in ruff's default set, so this is a real
-change across the ten modules and eight test files. Run `uv run ruff check --fix .` and `uv run ruff format .`;
-the reordering belongs in **this** commit. Touch nothing in `isekai/` but import order.
+**Outcome:** `I` flagged nothing — imports were already ordered. The 7 errors were all `E501`, because ruff's
+default set is the `E4`/`E7`/`E9` subset and selecting `E` whole enables line-length. All 7 were one-line
+docstrings and comments at 89–91 chars, wrapped by hand in this commit; no logic touched, and
+`ruff format --check` confirmed no reformatting followed. See `design.md` §6.
 **Closes:** `py:pinned-runtime` · `py:lint-select`.
 
 ### 4 — Mirror the gate

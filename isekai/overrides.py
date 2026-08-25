@@ -18,7 +18,8 @@ def apply_overrides(
             workflow[sampler_id]["inputs"]["cfg"] = cfg
 
     if ip_weight is not None:
-        # Silent no-op when no ApplyInstantIDAdvanced node (qwen, future non-InstantID paths)
+        # Silent no-op when no ApplyInstantIDAdvanced node
+        # (qwen, future non-InstantID paths)
         apply_ids = [
             nid
             for nid, node in workflow.items()

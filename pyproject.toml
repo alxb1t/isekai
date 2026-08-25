@@ -11,6 +11,11 @@ dev = [
     "ty>=0.0.64",
 ]
 
+[tool.ruff.lint]
+# Explicit, because ruff's default set covers E and F but not I. Import
+# ordering was previously unenforced.
+select = ["E", "F", "I"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]

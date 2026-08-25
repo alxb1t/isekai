@@ -103,11 +103,18 @@ real change and not a formality:
 select = ["E", "F", "I"]
 ```
 
-**Known risk, handled in-phase:** enabling `I` (isort) will likely flag import ordering across the ten modules
-and eight test files, so `ruff check` goes red the moment the table lands. The phase is not done until
-`ruff check --fix` has been run and the full gate is green again — the import reordering is part of that commit,
-not a follow-up. This is the one phase that touches files under `isekai/`, and it must touch **only** import
-order.
+**What this actually cost, recorded after the fact.** The predicted risk was import churn from `I`. That is
+**not** what happened: `I` flagged nothing — imports were already ordered — and the 7 errors that appeared were
+all **`E501` (line too long)**. The cause is that ruff's default selection is `E4`, `E7`, `E9` and `F`, a
+*subset* of `E`; selecting `E` whole newly enables the `E5` line-length family. Selecting the narrower subset
+would dodge this, but the criterion asks for at least `E`, so the broad selection is the compliant one and the
+7 lines are the price.
+
+All 7 were **one-line docstrings and comments** at 89–91 characters, in `comfy_client.py`, `comfy_types.py`,
+`overrides.py`, `workflow.py` (×3) and `test_workflow_injection.py`. The formatter never wraps prose, which is
+why they had survived at 88-column formatting all along. They were wrapped by hand in the phase-3 commit; **no
+statement, signature or logic was touched**, and `ruff format --check` reported no reformatting needed
+afterwards, confirming the edits were confined to comment text.
 
 ## 7. `CLAUDE.md`, and why it is last
 

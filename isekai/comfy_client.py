@@ -14,7 +14,8 @@ class ComfyClient(ComfyTransport):
         self.server = server.rstrip("/")
 
     def upload_image(self, path: str) -> str:
-        """Upload a local image into ComfyUI's input/ folder; return the stored filename."""
+        """Upload a local image into ComfyUI's input/ folder; return the
+        stored filename."""
         body, content_type = build_multipart(
             fields={"overwrite": "true"},
             files={

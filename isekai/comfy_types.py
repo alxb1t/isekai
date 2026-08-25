@@ -15,7 +15,8 @@ class Overrides(TypedDict, total=False):
 
 
 class ComfyTransport(Protocol):
-    """The transport seam as a type: anything with these four methods can drive `run`."""
+    """The transport seam as a type: anything with these four methods can
+    drive `run`."""
 
     def upload_image(self, path: str) -> str: ...
     def submit(self, workflow: Workflow) -> str: ...
