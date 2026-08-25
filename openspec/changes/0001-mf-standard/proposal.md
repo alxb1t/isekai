@@ -44,7 +44,7 @@ This is a **wiring and contract** milestone, not a rewrite.
    `model-registry`, `workflow-injection`, `workflow-mutation`, `comfy-transport`, `cli` — every scenario keyed
    and layered. *(`sdd:specs-tree`, `sdd:scenario-shape`)*
 6. **Bind the tests to the specs**: register `spec` and `spec_exempt` markers in the pytest manifest and mark all
-   86 existing tests with one of them. *(`sdd:test-binding`)*
+   87 existing tests with one of them. *(`sdd:test-binding`)*
 7. **Rewrite `CLAUDE.md`** onto the in-tree contract: drop the retired `implementation_plans/vX.Y_…` model as the
    source of truth, describe progress where it will actually live, and make its gate account match the array
    command for command. *(`wiring:claude-md`)*
@@ -92,4 +92,4 @@ A fresh `mf-teardown` run against this branch reports:
   orchestrator uses;
 - at most one open gap, `sdd:checker-in-gate` at `advisory`, for the stated reason above;
 - and the full gate — `uv sync --locked`, `ruff format --check`, `ruff check`, `ty check`, `pytest` — green at
-  each phase commit, with all 86 tests still passing and bound.
+  each phase commit, with all 87 tests still passing and bound.

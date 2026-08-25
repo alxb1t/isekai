@@ -6,8 +6,8 @@
 - [x] 2 — Relocate the gate config to `.minions/minions.toml`; ignore `.minions/` run artifacts
 - [x] 3 — Pin the toolchain: `.python-version` + explicit ruff `select`
 - [x] 4 — Mirror the gate in a root `Makefile`
-- [ ] 5 — Backfill `openspec/specs/` across the five capabilities
-- [ ] 6 — Bind the 86 tests: register both markers, mark every test
+- [x] 5 — Backfill `openspec/specs/` across the five capabilities
+- [ ] 6 — Bind the 87 tests: register both markers, mark every test
 - [ ] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
 - [ ] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
 
@@ -20,7 +20,7 @@ Every phase, without exception:
    phase that does grow logic: red → green.
 2. **Gate green before the commit** — `make gate` once phase 4 lands, and until then the five commands directly:
    `uv sync --locked` · `uv run ruff format --check .` · `uv run ruff check .` · `uv run ty check` ·
-   `uv run pytest`. All 86 tests pass at every phase; a phase that leaves the gate red is not done.
+   `uv run pytest`. All 87 tests pass at every phase; a phase that leaves the gate red is not done.
 3. **One commit per phase**, carrying the trailer `Change: 0001-mf-standard` **contiguous** with
    `Co-Authored-By:` — no blank line between them, or git stops parsing the trailer block.
 4. **Check the box** in the `## Progress` list above, in that phase's own commit. The first unchecked entry is
@@ -63,10 +63,17 @@ and a `- **Layers:**` bullet; every key is `<capability>:<requirement-slug>:<sce
 `unit`.
 **Descriptive only** — these state behaviour that already ships and already passes. A scenario that turns out not
 to match the code is a **backlog finding**, never a silent edit to the code or a softened scenario.
+**Outcome:** 85 scenarios across 22 requirements, in 5 capability files — `cli` 24, `workflow-mutation` 28,
+`workflow-injection` 15, `model-registry` 13, `comfy-transport` 5. All keys unique, all three-segment lower-kebab
+and capability-prefixed, every scenario carrying both required bullets, every layer `unit`.
+**One mismatch found, and it was raised rather than absorbed:** the unknown-model exit message carried a stray
+`$` (`isekai/models.py:30`). Per the rule above it was **not** fixed inside this phase — the human was asked, and
+elected to repair it test-first in its own pre-phase commit, which is why the scenario now states the behaviour
+plainly with no defect note.
 **Closes:** `sdd:specs-tree` (blocking) · keeps `sdd:scenario-shape` satisfied.
 
 ### 6 — Bind the tests
-Register both markers in `[tool.pytest.ini_options] markers` (see `design.md` §4), then mark all 86 tests:
+Register both markers in `[tool.pytest.ini_options] markers` (see `design.md` §4), then mark all 87 tests:
 `@pytest.mark.spec("<key>")` for behavioural, `@pytest.mark.spec_exempt("<reason>")` for genuinely structural
 ones. Verify with `uv run pytest -q --strict-markers` that nothing is silently unregistered.
 **Closes:** `sdd:test-binding`.
