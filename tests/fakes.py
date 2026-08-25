@@ -27,6 +27,9 @@ class FakeComfyClient:
         # recorded calls, for assertions
         self.uploaded: str | None = None
         self.submitted_workflow: Workflow | None = None
+        # every submission, in order — `submitted_workflow` keeps only the last,
+        # which cannot see a multi-variation run's earlier workflows.
+        self.submissions: list[Workflow] = []
         self.history_calls = 0
         self.viewed: Image | None = None
 
@@ -36,6 +39,7 @@ class FakeComfyClient:
 
     def submit(self, workflow: Workflow) -> str:
         self.submitted_workflow = workflow
+        self.submissions.append(workflow)
         return self.prompt_id
 
     def history(self, prompt_id: str) -> dict[str, Any]:

@@ -8,6 +8,11 @@
 .minions/*
 !.minions/minions.toml
 
+# Written per-machine by Claude Code; contains this operator's absolute paths.
+# CLAUDE.md makes "no absolute vault path in this public repo" an invariant, so
+# the repo enforces it here rather than relying on a personal global ignore.
+.claude/settings.local.json
+
 # Downloaded model weights (tens of GB; live on the RunPod network volume)
 models/
 

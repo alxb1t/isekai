@@ -19,17 +19,9 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install dependencies (locked)
-        run: uv sync --locked
-
-      - name: Format (ruff)
-        run: uv run ruff format --check
-
-      - name: Lint (ruff)
-        run: uv run ruff check
-
-      - name: Type check (ty)
-        run: uv run ty check
-
-      - name: Tests (pytest)
-        run: uv run pytest
+      # The gate is declared once, as the `gate` array in .minions/minions.toml,
+      # and mirrored by the root Makefile. CI invokes that mirror rather than
+      # keeping a third copy: these steps had already drifted, running
+      # `ruff format --check` and `ruff check` without the `.` the array names.
+      - name: Gate
+        run: make gate

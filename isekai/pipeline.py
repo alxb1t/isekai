@@ -25,6 +25,11 @@ def run(
     """Orchestrate one or more conversions against an injected ComfyUI client."""
     image_name = client.upload_image(input_path)
 
+    # Every variation's seed derives from this one source, so `--seed` is a
+    # contract over the whole run rather than only its first render. Seeded with
+    # None it draws from OS entropy, which is the unseeded behaviour.
+    seeds = random.Random(seed)
+
     for i in range(variations):
         wf = copy.deepcopy(workflow)
         inject(wf, image_name, prompt)
@@ -33,7 +38,9 @@ def run(
             apply_overrides(wf, **overrides)
 
         if mutate is not None:
-            s = seed if (i == 0 and seed is not None) else random.getrandbits(64)
+            # Variation 0 keeps using the seed verbatim: it is what the user
+            # typed, what gets printed, and what earlier releases rendered from.
+            s = seed if (i == 0 and seed is not None) else seeds.getrandbits(64)
             mutate(wf, random.Random(s))
             print(f"variation {i}: seed {s}")
 

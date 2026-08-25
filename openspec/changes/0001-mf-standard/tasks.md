@@ -10,6 +10,7 @@
 - [x] 6 — Bind the 87 tests: register both markers, mark every test
 - [x] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
 - [x] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
+- [x] 9 — Close the release-gate review findings (Tier A + B)
 
 ## The per-phase ritual
 
@@ -20,7 +21,7 @@ Every phase, without exception:
    phase that does grow logic: red → green.
 2. **Gate green before the commit** — `make gate` once phase 4 lands, and until then the five commands directly:
    `uv sync --locked` · `uv run ruff format --check .` · `uv run ruff check .` · `uv run ty check` ·
-   `uv run pytest`. All 87 tests pass at every phase; a phase that leaves the gate red is not done.
+   `uv run pytest`. All tests pass at every phase (87 at phase 8, 97 after phase 9); a phase that leaves the gate red is not done.
 3. **One commit per phase**, carrying the trailer `Change: 0001-mf-standard` **contiguous** with
    `Co-Authored-By:` — no blank line between them, or git stops parsing the trailer block.
 4. **Check the box** in the `## Progress` list above, in that phase's own commit. The first unchecked entry is
@@ -116,3 +117,45 @@ deliberately: it is unsatisfiable by any target repo while MinionsFactory ships 
 why the rubric grades it advisory and why it does not withhold `compliant`. The binding it would enforce does
 exist and is complete; only its automated enforcement is missing.
 Measured by two fresh subagents, blind to this change and to the prior report, split by group.
+
+### 9 — Close the release-gate review findings
+Cutting the release ran the repo's own gate from `release_log.md`, which requires **Review: clean** and
+**Security: clean**. Security came back clean (two candidates, both refuted under adversarial filtering). The
+**code review came back `changes-requested` with 11 findings** — no functional regression, but a suite weaker
+than its pass count and, worse, **three phase-5 specs that overstated the code**. Tier A and B closed here; Tier
+C triaged to the backlog.
+
+**A1 — `--seed` now covers the whole run.** `pipeline.py` derived only variation 0 from the seed; variations 1+
+drew from the global unseeded `random`, so `--seed 77 --variations 3` reproduced one render of three while the
+spec claimed all of them. Fixed the **code**, not the spec: every variation's seed now derives from a single
+`random.Random(seed)`. **Variation 0 still uses the seed verbatim**, so the v0.4 byte-identical golden and every
+other golden test stay valid. Test-first, confirmed red on variation 1 before the fix.
+
+**A2 — `main()`'s plumbing is now asserted.** The three `run` doubles declared `mutate`/`seed`/`variations` as
+defaults and never captured them, so deleting `mutate=model.mutate` left all 87 tests green while silently
+disabling every dial. Replaced with one shared `*args, **kwargs` double that records everything. `--ip-weight`
+had **zero** end-to-end coverage and now has it. Verified by deleting each of the four plumbing lines in turn:
+all four now fail, none did before.
+
+**A3 / A4 — specs trimmed to what is actually proven.** Five `cli` scenarios claimed run-level effects their
+parse-only tests never reached, and one clause belonged to a `workflow-mutation` scenario entirely. The
+ControlNet scenario asserted "no random values are drawn" — unobservable, since the CN loop runs last and stray
+draws would leave every asserted value untouched. Restated as the byte-for-byte property its test does prove,
+and the requirement sentence above it corrected to match.
+
+**B1–B4 — four tests that could not fail.** The override-before-mutate test asserted a band containing the
+override itself, so a reversed order passed; now pins the exact value. The seed-report test asserted `"7" in out`
+— a different random number satisfies that ~86% of the time; now pins the line. The v0.6 clamps were asserted by
+four scenarios and exercised by nothing, every base being strictly interior; added boundary tests at 0.0/1.0 and
+0.0/30.0. Dial validation never pinned the inclusive edges, so `lo <= v <= hi` → `lo < v < hi` passed while
+rejecting the documented `--denoise 1.0`; added edge acceptance plus one message assertion.
+
+**Every fix was mutation-tested** — the defect was reintroduced and the new test confirmed failing — rather than
+assumed to work. 87 → **97 tests**.
+
+**Tier C, triaged rather than deferred wholesale.** Two were folded in because they are branch-introduced and the
+backlog's no-tech-debt policy would otherwise require formally *accepting* them: `ci.yml` was a third
+transcription of the gate that **had already drifted** (running `ruff format --check` and `ruff check` without
+the `.` the array names) and now invokes `make gate`; and `.claude/settings.local.json`, which holds the
+operator's absolute paths, was protected only by a machine-local global ignore and is now ignored by the repo
+itself. The remaining three are genuinely pre-existing and went to the backlog's unversioned section.

@@ -147,3 +147,65 @@ def test_mutate_jitters_ip_weight_around_its_current_base(animagine_i2i_workflow
         wf = copy.deepcopy(animagine_i2i_workflow)
         mutate(wf, random.Random(i))
         assert 0.75 <= wf["8"]["inputs"]["ip_weight"] <= 0.85
+
+
+# --- Clamp boundaries -------------------------------------------------------
+# Every fixture base and every base-relative test above sits strictly interior,
+# so `min(hi, max(lo, ...))` never fires and dropping it keeps the suite green.
+# These pin the boundaries the CLI explicitly accepts.
+
+
+@pytest.mark.spec("workflow-mutation:jitter:denoise-within-band")
+def test_mutate_clamps_denoise_at_the_top_of_its_range(animagine_i2i_workflow):
+    animagine_i2i_workflow["10"]["inputs"]["denoise"] = 1.0
+    for i in range(100):
+        wf = copy.deepcopy(animagine_i2i_workflow)
+        mutate(wf, random.Random(i))
+        assert 0.0 <= wf["10"]["inputs"]["denoise"] <= 1.0
+
+
+@pytest.mark.spec("workflow-mutation:jitter:denoise-within-band")
+def test_mutate_clamps_denoise_at_the_bottom_of_its_range(animagine_i2i_workflow):
+    animagine_i2i_workflow["10"]["inputs"]["denoise"] = 0.0
+    for i in range(100):
+        wf = copy.deepcopy(animagine_i2i_workflow)
+        mutate(wf, random.Random(i))
+        assert 0.0 <= wf["10"]["inputs"]["denoise"] <= 1.0
+
+
+@pytest.mark.spec("workflow-mutation:jitter:cfg-within-band")
+def test_mutate_clamps_cfg_at_the_edges_of_its_range(animagine_i2i_workflow):
+    for base in (0.0, 30.0):
+        animagine_i2i_workflow["10"]["inputs"]["cfg"] = base
+        for i in range(100):
+            wf = copy.deepcopy(animagine_i2i_workflow)
+            mutate(wf, random.Random(i))
+            assert 0.0 <= wf["10"]["inputs"]["cfg"] <= 30.0
+
+
+@pytest.mark.spec("workflow-mutation:jitter:ip-weight-within-band")
+def test_mutate_clamps_ip_weight_at_the_edges_of_its_range(animagine_i2i_workflow):
+    for base in (0.0, 1.0):
+        animagine_i2i_workflow["8"]["inputs"]["ip_weight"] = base
+        for i in range(100):
+            wf = copy.deepcopy(animagine_i2i_workflow)
+            mutate(wf, random.Random(i))
+            assert 0.0 <= wf["8"]["inputs"]["ip_weight"] <= 1.0
+
+
+@pytest.mark.spec("workflow-mutation:controlnet:strengths-stay-in-band")
+def test_mutate_clamps_controlnet_strengths_at_the_edges(animagine_i2i_cn_workflow):
+    cn_ids = [
+        nid
+        for nid, n in animagine_i2i_cn_workflow.items()
+        if n["class_type"] == "ControlNetApplyAdvanced"
+    ]
+    assert cn_ids
+    for base in (0.0, 1.0):
+        for nid in cn_ids:
+            animagine_i2i_cn_workflow[nid]["inputs"]["strength"] = base
+        for i in range(100):
+            wf = copy.deepcopy(animagine_i2i_cn_workflow)
+            mutate(wf, random.Random(i))
+            for nid in cn_ids:
+                assert 0.0 <= wf[nid]["inputs"]["strength"] <= 1.0

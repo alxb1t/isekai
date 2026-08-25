@@ -73,7 +73,8 @@ variation.
 - **Key:** `cli:reproducibility:seed-defaults-to-unset`
 - **Layers:** unit
 - **WHEN** no seed is supplied
-- **THEN** the seed is unset, and the run chooses one and reports it
+- **THEN** the parsed seed is unset
+- **AND** the run is handed no seed, leaving it to draw and report one of its own
 
 #### Scenario: an explicit seed is accepted
 - **Key:** `cli:reproducibility:accepts-a-seed`
@@ -85,13 +86,14 @@ variation.
 - **Key:** `cli:reproducibility:variations-default-to-one`
 - **Layers:** unit
 - **WHEN** no variation count is supplied
-- **THEN** exactly one variation is produced
+- **THEN** the parsed variation count is one
+- **AND** the run is handed that count
 
 #### Scenario: an explicit variation count is accepted
 - **Key:** `cli:reproducibility:accepts-a-variation-count`
 - **Layers:** unit
 - **WHEN** a variation count is supplied
-- **THEN** that many variations are produced
+- **THEN** the run is handed that count
 
 ### Requirement: Dial flags default to unset
 
@@ -125,7 +127,7 @@ zero-to-one, cfg in zero-to-thirty — because these runs cost real money and a 
 - **Key:** `cli:dial-validation:accepts-denoise-in-range`
 - **Layers:** unit
 - **WHEN** a denoise within zero to one is supplied
-- **THEN** it is accepted and carried into the run
+- **THEN** it is accepted
 
 #### Scenario: an in-range cfg is accepted
 - **Key:** `cli:dial-validation:accepts-cfg-in-range`
@@ -185,4 +187,3 @@ what is submitted.
 - **Layers:** unit
 - **WHEN** dial override flags are supplied on the command line
 - **THEN** the run receives those values
-- **AND** they become the base the seeded jitter is drawn around

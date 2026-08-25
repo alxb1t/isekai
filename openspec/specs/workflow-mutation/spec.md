@@ -129,9 +129,9 @@ so that a user-supplied override moves the band with it instead of being overwri
 
 ### Requirement: ControlNet strength jitter
 
-The system SHALL jitter each ControlNet strength around its own tuned baseline, and SHALL draw nothing at all on
-graphs that carry no ControlNet nodes — so adding the ControlNet path leaves the earlier models' output
-untouched.
+The system SHALL jitter each ControlNet strength around its own tuned baseline, and SHALL leave the output of
+graphs that carry no ControlNet nodes byte-for-byte unchanged — so adding the ControlNet path is additive for
+the models that predate it.
 
 #### Scenario: each ControlNet strength is jittered
 - **Key:** `workflow-mutation:controlnet:strengths-are-jittered`
@@ -157,8 +157,8 @@ untouched.
 - **Key:** `workflow-mutation:controlnet:no-draw-without-controlnet-nodes`
 - **Layers:** unit
 - **WHEN** mutation runs against a graph carrying no ControlNet apply nodes
-- **THEN** no random values are drawn for ControlNet strengths
-- **AND** the earlier img2img model's output is byte-for-byte what it was before the ControlNet path existed
+- **THEN** the earlier img2img model's output is byte-for-byte what it was before the ControlNet path existed
+- **AND** adding the ControlNet path is therefore proven additive for the models that predate it
 
 ### Requirement: Reproducibility contract
 
