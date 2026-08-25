@@ -3,6 +3,7 @@ import random
 
 import pytest
 
+from isekai.comfy_types import Workflow
 from isekai.mutate import mutate
 
 
@@ -226,3 +227,94 @@ def test_mutate_refuses_a_dial_wired_to_another_node(qwen_workflow):
     message = str(exit_info.value)
     assert "cfg" in message
     assert "102:109" in message
+
+
+@pytest.mark.spec("workflow-mutation:jitter:linked-dial-refused-legibly")
+@pytest.mark.parametrize("bad", [None, {"nested": 1}, "0.65", []])
+def test_mutate_refuses_any_non_numeric_dial_without_crashing(bad):
+    # The guard must not reach for value[0] unconditionally: a null or an object
+    # would then raise the raw TypeError/KeyError the guard exists to replace.
+    wf = {"10": {"class_type": "KSampler", "inputs": {"seed": 0, "denoise": bad}}}
+    with pytest.raises(SystemExit) as exit_info:
+        mutate(wf, random.Random(1))
+    assert "denoise" in str(exit_info.value)
+
+
+@pytest.mark.spec("workflow-mutation:controlnet:strengths-are-jittered")
+def test_mutate_handles_subgraph_style_controlnet_node_ids():
+    # ComfyUI subgraph exports use "102:14"-style ids -- qwen-image-edit.json
+    # already ships them -- and find_node handles those fine, so nothing else in
+    # the codebase signals that node ids must be integers.
+    wf: Workflow = {
+        "102:3": {
+            "class_type": "KSampler",
+            "inputs": {"seed": 0, "denoise": 0.65, "cfg": 5.0},
+        },
+        "102:8": {"class_type": "ApplyInstantIDAdvanced", "inputs": {"ip_weight": 0.9}},
+        "102:14": {
+            "class_type": "ControlNetApplyAdvanced",
+            "inputs": {"strength": 0.6},
+        },
+        "102:2": {"class_type": "ControlNetApplyAdvanced", "inputs": {"strength": 0.2}},
+    }
+    mutate(wf, random.Random(5))
+    for nid in ("102:14", "102:2"):
+        assert 0.0 <= wf[nid]["inputs"]["strength"] <= 1.0
+
+
+@pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
+def test_mutate_pins_each_controlnet_strength_for_a_fixed_seed(
+    animagine_i2i_cn_workflow,
+) -> None:
+    # Comparing two mutations of the same dict shares one iteration order by
+    # construction, so it cannot detect order-dependence. Pin the actual values:
+    # the node sort is the only thing making seed -> strength canonical, and a
+    # re-export of the workflow JSON in a different node order must not silently
+    # change what a given seed renders.
+    mutate(animagine_i2i_cn_workflow, random.Random(3))
+    assert animagine_i2i_cn_workflow["14"]["inputs"]["strength"] == 0.22514406082161081
+    assert animagine_i2i_cn_workflow["18"]["inputs"]["strength"] == 0.5131057718479626
+    assert animagine_i2i_cn_workflow["21"]["inputs"]["strength"] == 0.10263359831097484
+
+
+@pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
+def test_mutate_draws_controlnet_strengths_in_numeric_node_order():
+    # The shipped fixture's ids ("14", "18", "21") sort the same lexicographically
+    # as numerically, so it cannot tell a numeric sort from a plain one -- or from
+    # no sort at all. These ids diverge: numerically 2 < 10, lexicographically
+    # "10" < "2". Pinning them is what makes the node ordering, and therefore the
+    # seed -> strength mapping, actually load-bearing.
+    wf: Workflow = {
+        "1": {
+            "class_type": "KSampler",
+            "inputs": {"seed": 0, "denoise": 0.65, "cfg": 5.0},
+        },
+        "3": {"class_type": "ApplyInstantIDAdvanced", "inputs": {"ip_weight": 0.9}},
+        "10": {"class_type": "ControlNetApplyAdvanced", "inputs": {"strength": 0.20}},
+        "2": {"class_type": "ControlNetApplyAdvanced", "inputs": {"strength": 0.60}},
+    }
+    mutate(wf, random.Random(3))
+    assert wf["2"]["inputs"]["strength"] == 0.6251440608216108
+    assert wf["10"]["inputs"]["strength"] == 0.11310577184796262
+
+
+@pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
+def test_mutate_is_independent_of_the_json_node_order(animagine_i2i_cn_workflow):
+    # The golden above cannot catch a DROPPED sort key, because the shipped
+    # fixture already happens to be stored in ascending order. This builds the
+    # same graph with the node keys inserted in reverse and asserts the same seed
+    # still yields the same strengths -- which is precisely what survives a
+    # re-export of the workflow JSON from ComfyUI.
+    shuffled = {
+        nid: animagine_i2i_cn_workflow[nid]
+        for nid in reversed(list(animagine_i2i_cn_workflow))
+    }
+    a = copy.deepcopy(animagine_i2i_cn_workflow)
+    b = copy.deepcopy(shuffled)
+    mutate(a, random.Random(3))
+    mutate(b, random.Random(3))
+
+    cn = [nid for nid, n in a.items() if n["class_type"] == "ControlNetApplyAdvanced"]
+    assert cn
+    for nid in cn:
+        assert a[nid]["inputs"]["strength"] == b[nid]["inputs"]["strength"]

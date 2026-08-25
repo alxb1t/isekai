@@ -440,3 +440,100 @@ def test_main_passes_zero_valued_override_flags_to_pipeline_run(
     cli.main()
 
     assert captured["overrides"] == {"denoise": 0.0, "cfg": 0.0, "ip_weight": 0.0}
+
+
+@pytest.mark.spec("cli:reproducibility:variations-must-be-positive")
+def test_parse_args_rejects_a_non_positive_variation_count(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # --variations 0 previously uploaded the photo, submitted nothing, wrote no
+    # file and exited 0, leaving the user believing a render had happened.
+    for bad in ("0", "-1"):
+        monkeypatch.setattr(
+            "sys.argv",
+            ["convert.py", "photo.jpg", "--prompt", "anime", "--variations", bad],
+        )
+        with pytest.raises(SystemExit):
+            cli.parse_args()
+
+
+@pytest.mark.spec("cli:reproducibility:variations-rejected-without-a-mutator")
+def test_main_refuses_several_variations_on_a_model_that_cannot_vary(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    # qwen and animagine carry no mutation seam, so every variation would submit
+    # the identical graph -- N renders billed for one image.
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "convert.py",
+            "photo.jpg",
+            "--prompt",
+            "anime",
+            "--model",
+            "qwen",
+            "--variations",
+            "3",
+        ],
+    )
+
+    class FakePath:
+        def __init__(self, path) -> None:
+            pass
+
+        def read_text(self):
+            return "{}"
+
+    monkeypatch.setattr(cli, "Path", FakePath)
+    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
+
+    called = {"run": False}
+
+    def fake_run(*args, **kwargs):
+        called["run"] = True
+
+    monkeypatch.setattr(cli, "run", fake_run)
+
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main()
+
+    # It must refuse BEFORE the photo is uploaded, not after.
+    assert called["run"] is False
+    assert "qwen" in str(exit_info.value)
+
+
+@pytest.mark.spec("cli:reproducibility:accepts-a-variation-count")
+def test_main_allows_several_variations_on_a_model_that_can_vary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "convert.py",
+            "photo.jpg",
+            "--prompt",
+            "anime",
+            "--model",
+            "animagine-i2i",
+            "--variations",
+            "3",
+        ],
+    )
+
+    class FakePath:
+        def __init__(self, path) -> None:
+            pass
+
+        def read_text(self):
+            return "{}"
+
+    monkeypatch.setattr(cli, "Path", FakePath)
+    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
+
+    captured: dict = {}
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+
+    cli.main()
+
+    assert captured["variations"] == 3
+    assert captured["mutate"] is mutate_fn

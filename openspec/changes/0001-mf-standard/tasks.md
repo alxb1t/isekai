@@ -12,6 +12,7 @@
 - [x] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
 - [x] 9 — Close the release-gate review findings (Tier A + B)
 - [x] 10 — Close review round 2 (findings 1–6); defer 7–8
+- [x] 11 — Close review round 3 (all 6 findings)
 
 ## The per-phase ritual
 
@@ -191,3 +192,43 @@ two new run-level-clause mismatches; those clauses are in fact proven, by `main(
 the keys are now **stacked onto the tests that prove them** rather than the true claims being deleted.
 
 88 scenarios, 105 markers, every scenario bound, no unmarked tests. 97 → **99 tests**.
+
+### 11 — Close review round 3
+Round 3 ran 25 mutation probes against a scratch copy; 21 died, **3 survived**, 1 was an equivalent mutant.
+Verdict `changes-requested`, 6 findings — **all closed here**, including two that were defects in phase 10's own
+fixes.
+
+**The high one: `--variations N` billed N renders for one image.** `qwen` and `animagine` are registered with
+`mutate=None`, and `run()` only varies the graph inside `if mutate is not None`. So
+`--model qwen --variations 3` deep-copied the same pristine workflow three times and submitted three byte-identical
+jobs — verified: `submissions[0] == submissions[1] == submissions[2]`. Nothing warned. `--seed` was accepted,
+validated and silently discarded on those models too. Now refused **before the photo is uploaded**, naming the
+model and the alternatives, on the CLI spec's own stated reasoning that a rejected flag should cost nothing.
+
+**Two defects in phase 10's fixes, owned:**
+- The `_base()` guard added for the crash *reached for `value[0]` unconditionally* to write its message, so a
+  `null` dial raised `TypeError: 'NoneType' object is not subscriptable` and an object raised `KeyError: 0` —
+  from inside the error path meant to replace exactly those. The scenario asserting "does not fail with a raw
+  type error" was therefore false. Now branches on the value's shape, with the link wording reserved for links.
+- The zero-value test claimed in its own comment to close the `--denoise 0.0` hole, but asserted on the dict
+  `main()` builds — it never called `apply_overrides`, so a truthiness guard one layer down still survived the
+  whole suite. Pinned at the layer it actually lives in.
+
+**A latent crash on an export format already in the repo.** `sorted(cn_ids, key=int)` raises `ValueError` on
+subgraph-style ids like `102:14` — and `workflows/qwen-image-edit.json` ships exactly that format, while
+`find_node` handles it fine, so nothing signalled ids must be numeric. Replaced with a `(kind, value)` natural
+key that gives a total order over any id ComfyUI emits.
+
+**Draw order is now genuinely locked.** The reproducibility scenario was satisfied vacuously — comparing two
+mutations of the *same* dict shares one iteration order by construction. Getting a test that actually fails took
+three attempts: a golden on the shipped fixture kills a *reversed* sort but not a *dropped* one, and neither does
+a reversed-insertion-order graph, because `"14" < "18" < "21"` sorts identically lexicographically. Only ids that
+straddle a digit boundary (`"2"` vs `"10"`) distinguish them. Both mutants die now.
+
+**`--variations 0`** uploaded the photo, submitted nothing, wrote no file and exited 0 — rejected at parse time.
+
+**One asymmetry documented rather than "fixed".** `apply_overrides` overwrites a dial wired to another node while
+`mutate` refuses one. That is now a deliberate, stated distinction: jitter needs a numeric base to vary around,
+whereas an override *is* the value the user asked for.
+
+91 scenarios, 117 markers, every scenario bound, no unmarked tests. 99 → **114 tests**.

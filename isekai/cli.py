@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
@@ -16,6 +17,13 @@ def _bounded_float(lo: float, hi: float):
         return v
 
     return parse
+
+
+def _positive_int(value: str) -> int:
+    v = int(value)
+    if v < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {v}")
+    return v
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,7 +56,10 @@ def parse_args() -> argparse.Namespace:
         help="RNG seed for reproducible variation (random if unset)",
     )
     p.add_argument(
-        "--variations", type=int, default=1, help="number of varied outputs to generate"
+        "--variations",
+        type=_positive_int,
+        default=1,
+        help="number of varied outputs to generate",
     )
     p.add_argument(
         "--denoise",
@@ -75,6 +86,17 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
     model = get_model(args.model)
+
+    # Without a mutation seam every variation submits the identical graph, so
+    # `--variations 3` would bill three renders for one image. Refuse before the
+    # photo is uploaded -- a rejected flag should cost nothing.
+    if args.variations > 1 and model.mutate is None:
+        sys.exit(
+            f"--model {args.model} does not vary between renders, so "
+            f"--variations {args.variations} would submit {args.variations} "
+            f"identical jobs; use --variations 1, or a model with a mutation "
+            f"seam (animagine-i2i, animagine-i2i-cn)"
+        )
     workflow = json.loads(Path(args.workflow or model.workflow_path).read_text())
     client = ComfyClient(args.server)
 

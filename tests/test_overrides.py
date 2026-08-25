@@ -72,3 +72,36 @@ def test_apply_overrides_mutates_in_place(animagine_i2i_workflow):
     original = animagine_i2i_workflow
     apply_overrides(animagine_i2i_workflow, denoise=0.90)
     assert original["10"]["inputs"]["denoise"] == 0.90
+
+
+@pytest.mark.spec("workflow-mutation:overrides:sets-denoise")
+def test_apply_overrides_sets_a_zero_denoise(animagine_i2i_workflow):
+    # Zero is a valid dial value and must survive: a truthiness guard
+    # (`if denoise:`) instead of `is not None` would discard it silently and
+    # render at the workflow's baked value instead.
+    apply_overrides(animagine_i2i_workflow, denoise=0.0)
+    assert animagine_i2i_workflow["10"]["inputs"]["denoise"] == 0.0
+
+
+@pytest.mark.spec("workflow-mutation:overrides:sets-cfg")
+def test_apply_overrides_sets_a_zero_cfg(animagine_i2i_workflow):
+    apply_overrides(animagine_i2i_workflow, cfg=0.0)
+    assert animagine_i2i_workflow["10"]["inputs"]["cfg"] == 0.0
+
+
+@pytest.mark.spec("workflow-mutation:overrides:sets-ip-weight")
+def test_apply_overrides_sets_a_zero_ip_weight(animagine_i2i_workflow):
+    apply_overrides(animagine_i2i_workflow, ip_weight=0.0)
+    assert animagine_i2i_workflow["8"]["inputs"]["ip_weight"] == 0.0
+
+
+@pytest.mark.spec("workflow-mutation:overrides:linked-dial-is-overwritten")
+def test_apply_overrides_replaces_a_dial_wired_to_another_node(qwen_workflow):
+    # qwen-image-edit.json drives cfg from a Switch node. Unlike jitter -- which
+    # needs a numeric base and refuses -- an override IS the value the user asked
+    # for, so it replaces the link rather than erroring.
+    assert isinstance(qwen_workflow["102:3"]["inputs"]["cfg"], list)
+
+    apply_overrides(qwen_workflow, cfg=7.0)
+
+    assert qwen_workflow["102:3"]["inputs"]["cfg"] == 7.0

@@ -9,6 +9,19 @@ _CFG_DELTA: float = 0.5
 _IP_WEIGHT_DELTA: float = 0.05
 
 
+def _node_order(node_id: str) -> tuple:
+    """A total order over node ids that survives every id format ComfyUI emits.
+
+    Plain graphs number nodes "1", "2", ... but subgraph exports use "102:14",
+    which `int` cannot parse. Each dot-separated part becomes a (kind, value)
+    pair so numeric parts still sort numerically ("2" before "10") while any
+    non-numeric part still compares without raising.
+    """
+    return tuple(
+        (0, int(part)) if part.isdigit() else (1, part) for part in node_id.split(":")
+    )
+
+
 def _base(workflow: Workflow, node_id: str, key: str) -> float:
     """Read a dial's current value, refusing one that is wired to another node.
 
@@ -19,11 +32,16 @@ def _base(workflow: Workflow, node_id: str, key: str) -> float:
     a message naming the dial and the node driving it instead.
     """
     value = workflow[node_id]["inputs"][key]
-    if not isinstance(value, (int, float)):
-        sys.exit(
-            f"cannot jitter {key!r} on node {node_id}: it is wired to node "
-            f"{value[0]!r}, not set to a value"
-        )
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        # Only a [node_id, slot] link can be described as "wired"; anything else
+        # (null, an object, a string) gets the generic wording. Reaching for
+        # value[0] unconditionally would raise the very error this guard exists
+        # to prevent.
+        if isinstance(value, list) and value:
+            detail = f"it is wired to node {value[0]!r}"
+        else:
+            detail = f"it is {value!r}"
+        sys.exit(f"cannot jitter {key!r} on node {node_id}: {detail}, not a number")
     return value
 
 
@@ -58,7 +76,7 @@ def mutate(workflow: Workflow, rng: Random) -> None:
             for nid, node in workflow.items()
             if node.get("class_type") == "ControlNetApplyAdvanced"
         ),
-        key=int,
+        key=_node_order,
     )
     for nid in cn_ids:
         base = _base(workflow, nid, "strength")

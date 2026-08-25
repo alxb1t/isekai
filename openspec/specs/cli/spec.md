@@ -94,6 +94,19 @@ variation.
 - **WHEN** a variation count is supplied
 - **THEN** the run is handed that count
 
+#### Scenario: a non-positive variation count is rejected
+- **Key:** `cli:reproducibility:variations-must-be-positive`
+- **Layers:** unit
+- **WHEN** a variation count below one is supplied
+- **THEN** parsing fails rather than the run uploading the photo and rendering nothing
+
+#### Scenario: several variations are refused on a model that cannot vary
+- **Key:** `cli:reproducibility:variations-rejected-without-a-mutator`
+- **Layers:** unit
+- **WHEN** more than one variation is asked of a model carrying no mutation seam
+- **THEN** the run stops before the photo is uploaded, naming the model and the alternatives
+- **AND** no render is billed, because every variation would have submitted the identical graph
+
 ### Requirement: Dial flags default to unset
 
 The system SHALL leave each dial override unset when its flag is absent, so that omitting a flag preserves the

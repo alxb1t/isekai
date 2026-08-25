@@ -56,6 +56,14 @@ a no-op rather than a reset to a default, and SHALL mutate the workflow in place
 - **THEN** the override is a silent no-op rather than an error
 - **AND** the dial stays meaningful on the models that have it without breaking those that do not
 
+#### Scenario: a dial wired to another node is overwritten, not refused
+- **Key:** `workflow-mutation:overrides:linked-dial-is-overwritten`
+- **Layers:** unit
+- **WHEN** an override targets a dial that is wired to another node rather than set to a value
+- **THEN** the requested value replaces the link, bypassing the graph's own source for that dial
+- **AND** this is deliberate asymmetry with jitter, which refuses such a dial: jitter needs a numeric base to
+  vary around, whereas an override *is* the value the user asked for
+
 #### Scenario: overrides mutate the workflow in place
 - **Key:** `workflow-mutation:overrides:mutates-in-place`
 - **Layers:** unit
@@ -187,8 +195,9 @@ and SHALL report the seed it used so a run can be reproduced.
 #### Scenario: the seed used is printed
 - **Key:** `workflow-mutation:reproducibility:seed-is-printed`
 - **Layers:** unit
-- **WHEN** a run completes
-- **THEN** the seed it used is reported, so the run can be repeated exactly
+- **WHEN** a run **that varies its dials** completes a variation
+- **THEN** the seed that variation used is reported, so it can be repeated exactly
+- **AND** a model with no mutation seam draws no seed and reports none, having nothing to vary
 
 #### Scenario: the seed covers every variation, not only the first
 - **Key:** `workflow-mutation:reproducibility:seed-covers-every-variation`
