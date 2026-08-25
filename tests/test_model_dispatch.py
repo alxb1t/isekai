@@ -18,6 +18,20 @@ def test_dispatch_exits_on_an_unknown_model():
         get_model("midjourney")
 
 
+def test_dispatch_names_the_unknown_model_and_lists_the_valid_ones():
+    with pytest.raises(SystemExit) as exit_info:
+        get_model("midjourney")
+
+    message = str(exit_info.value)
+
+    assert "'midjourney'" in message
+    # Guards the shell-style "${name}" typo: the f-string interpolates, so a
+    # literal $ in the rendered message means the brace form leaked through.
+    assert "$" not in message
+    for known in ("qwen", "animagine", "animagine-i2i", "animagine-i2i-cn"):
+        assert known in message
+
+
 def test_dispatch_pairs_qwen_with_its_injection_adapter():
     assert get_model("qwen").inject is inject_qwen
 

@@ -65,6 +65,15 @@ bug, that is a finding for the backlog, not a silent edit to make the spec true.
 
 - **Any change to pipeline behaviour.** No new `--model`, no dial changes, no workflow JSON edits. If the gate
   goes red, the fix is the wiring, never the code under test.
+
+  **One approved exception, recorded rather than smuggled.** Writing the `model-registry` spec surfaced a stray
+  `$` in the unknown-model exit message (`isekai/models.py:30`, rendering `unknown model $'midjourney'`) — a
+  shell-style `${…}` leaking into an f-string. It shipped because the existing test asserted only that the
+  process exits, never what it said. The human elected to **fix it before the backfill**, in its own commit,
+  test-first, so the scenario could state the behaviour plainly with no defect note attached. That is the whole
+  exception: a one-character correction plus the regression test that now pins the message. It does not license
+  further source edits in later phases — the backfill stays descriptive, and any further mismatch it turns up is
+  raised for the same explicit call rather than fixed in passing.
 - **`sdd:checker-in-gate`.** It is `advisory` precisely because it is unsatisfiable by any target repo today —
   MinionsFactory ships no packaging metadata, so the checker cannot be installed here. It stays open and does
   not withhold `compliant`.

@@ -27,6 +27,6 @@ MODELS: dict[str, Model] = {
 
 def get_model(name: str) -> Model:
     if name not in MODELS:
-        sys.exit(f"unknown model ${name!r}; choose from {', '.join(MODELS)}")
+        sys.exit(f"unknown model {name!r}; choose from {', '.join(MODELS)}")
 
     return MODELS[name]
