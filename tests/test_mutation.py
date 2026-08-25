@@ -79,6 +79,9 @@ def test_mutate_jitters_the_controlnet_strenghts(
 
     assert after != before
     for nid, base in before.items():
+        # Per node, not just over the dict: a whole-dict comparison passes when
+        # only one of the three ControlNets moved, leaving the rest frozen.
+        assert after[nid] != base
         assert max(0.0, base - 0.1) <= after[nid] <= min(1.0, base + 0.1)
 
 
@@ -209,3 +212,17 @@ def test_mutate_clamps_controlnet_strengths_at_the_edges(animagine_i2i_cn_workfl
             mutate(wf, random.Random(i))
             for nid in cn_ids:
                 assert 0.0 <= wf[nid]["inputs"]["strength"] <= 1.0
+
+
+@pytest.mark.spec("workflow-mutation:jitter:linked-dial-refused-legibly")
+def test_mutate_refuses_a_dial_wired_to_another_node(qwen_workflow):
+    # In ComfyUI API format an input may legally be a [node_id, slot] link rather
+    # than a scalar -- qwen-image-edit.json drives cfg from a Switch node. Since
+    # v0.6 made the jitter base-relative, mutate READS the dial, so such a graph
+    # must stop legibly instead of raising a raw TypeError from the arithmetic.
+    with pytest.raises(SystemExit) as exit_info:
+        mutate(qwen_workflow, random.Random(1))
+
+    message = str(exit_info.value)
+    assert "cfg" in message
+    assert "102:109" in message

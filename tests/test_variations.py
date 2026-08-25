@@ -33,6 +33,7 @@ def test_run_mutates_the_submitted_workflow_when_a_mutator_is_given(
 
 
 @pytest.mark.spec("workflow-mutation:variations:no-mutator-stays-deterministic")
+@pytest.mark.spec("model-registry:mutation-pairing:earlier-models-have-no-mutator")
 def test_run_leaves_the_workflow_deterministic_without_a_mutator(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -183,7 +184,8 @@ def test_run_without_overrides_is_byte_identical_to_v04(
     assert wf["8"]["inputs"]["ip_weight"] == 0.8748431318500969
 
 
-@pytest.mark.spec("workflow-mutation:reproducibility:override-plus-seed-reproduces")
+@pytest.mark.spec("workflow-mutation:reproducibility:seed-covers-every-variation")
+@pytest.mark.spec("workflow-mutation:variations:variations-differ-from-each-other")
 def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -210,3 +212,8 @@ def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
     assert len(a) == len(b) == 3
     for i, (wf_a, wf_b) in enumerate(zip(a, b)):
         assert wf_a == wf_b, f"variation {i} is not reproducible from the seed"
+
+    # Reproducibility alone is satisfied by a run that emits the SAME workflow
+    # three times -- which would bill three renders for one image. The variations
+    # must also differ from each other.
+    assert len({wf["10"]["inputs"]["seed"] for wf in a}) == 3

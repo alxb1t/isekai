@@ -11,6 +11,7 @@
 - [x] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
 - [x] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
 - [x] 9 — Close the release-gate review findings (Tier A + B)
+- [x] 10 — Close review round 2 (findings 1–6); defer 7–8
 
 ## The per-phase ritual
 
@@ -159,3 +160,34 @@ transcription of the gate that **had already drifted** (running `ruff format --c
 the `.` the array names) and now invokes `make gate`; and `.claude/settings.local.json`, which holds the
 operator's absolute paths, was protected only by a machine-local global ignore and is now ignored by the repo
 itself. The remaining three are genuinely pre-existing and went to the backlog's unversioned section.
+
+### 10 — Close review round 2
+The round-2 blind review returned **`changes-requested` with 8 findings**, and confirmed round 1's closures hold
+under re-probing. Findings 1–6 closed here; 7–8 documented in the backlog.
+
+**A real crash, and a regression we were about to ship.** v0.6 made the jitter base-relative, turning `mutate`
+from write-only into read-modify-write — with no check that the dial it reads is a number. In ComfyUI API format
+an input may legally be a `[node_id, slot]` link, and **this repo already ships such a graph**:
+`workflows/qwen-image-edit.json` drives `cfg` from a Switch node. So
+`convert.py photo.jpg --prompt anime --workflow workflows/qwen-image-edit.json` — a documented flag combination —
+died with a bare `TypeError: unsupported operand type(s) for -: 'list' and 'float'`. Pre-v0.6 it exited cleanly.
+Added a `_base()` guard that stops with a message naming the dial and the node driving it, applied at all four
+read sites, which also collapses the duplicated reads.
+
+**Three more tests that could not fail**, each confirmed by probe:
+- `--seed X --variations 5` could collapse to **five identical paid renders**: the reproducibility test compared
+  run A to run B element-wise, which an all-identical run satisfies. Now also asserts the variations differ from
+  each other.
+- Freezing two of three ControlNet nodes passed, because the assertion compared the whole dict and the band
+  admitted an unchanged value. Now asserts per node.
+- `--denoise 0.0` was silently discardable: switching the `is not None` guards to truthiness kept every test
+  green while the workflow's baked value was used instead. Now pinned.
+
+**Two spec-fidelity gaps of my own making.** Phase 9 fixed the seed behaviour but never wrote a scenario for it,
+so the spec *understated* the release's headline change — and the test proving it was bound to a key whose WHEN
+describes overrides the test does not supply. Added
+`workflow-mutation:reproducibility:seed-covers-every-variation` and rebound it. Phase 9's A3 trim also introduced
+two new run-level-clause mismatches; those clauses are in fact proven, by `main()` tests bound to other keys, so
+the keys are now **stacked onto the tests that prove them** rather than the true claims being deleted.
+
+88 scenarios, 105 markers, every scenario bound, no unmarked tests. 97 → **99 tests**.

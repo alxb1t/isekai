@@ -38,7 +38,6 @@ unregistered one at parse time.
 - **Layers:** unit
 - **WHEN** the ControlNet model is named
 - **THEN** it is selected
-- **AND** every previously shipped model remains selectable alongside it
 
 #### Scenario: an unregistered model name is rejected at parse time
 - **Key:** `cli:model-selection:rejects-unknown-model`

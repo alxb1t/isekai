@@ -97,6 +97,13 @@ source, so a run's variation is reproducible from its seed.
 - **WHEN** mutation runs
 - **THEN** the resulting ip_weight lies within the defined delta of its starting value, clamped to a valid range
 
+#### Scenario: a dial wired to another node is refused legibly
+- **Key:** `workflow-mutation:jitter:linked-dial-refused-legibly`
+- **Layers:** unit
+- **WHEN** mutation runs against a graph whose dial is a link to another node rather than a value
+- **THEN** the run stops with a message naming the dial and the node driving it
+- **AND** does not fail with a raw type error out of the jitter arithmetic
+
 ### Requirement: Jitter is relative to the current base
 
 The system SHALL centre every dial's jitter on that dial's **current** value rather than on a hardcoded constant,
@@ -183,6 +190,13 @@ and SHALL report the seed it used so a run can be reproduced.
 - **WHEN** a run completes
 - **THEN** the seed it used is reported, so the run can be repeated exactly
 
+#### Scenario: the seed covers every variation, not only the first
+- **Key:** `workflow-mutation:reproducibility:seed-covers-every-variation`
+- **Layers:** unit
+- **WHEN** a run supplies a seed and asks for several variations
+- **THEN** every variation's dials derive from that seed
+- **AND** re-running the same command reproduces all of them, not only the first
+
 #### Scenario: an override plus a seed reproduces exactly
 - **Key:** `workflow-mutation:reproducibility:override-plus-seed-reproduces`
 - **Layers:** unit
@@ -212,6 +226,13 @@ untouched when it does not.
 - **Layers:** unit
 - **WHEN** a run executes with a model carrying no mutator
 - **THEN** the submitted workflow is exactly the one loaded from disk
+
+#### Scenario: variations differ from one another
+- **Key:** `workflow-mutation:variations:variations-differ-from-each-other`
+- **Layers:** unit
+- **WHEN** a run asks for several variations
+- **THEN** each is drawn from its own distinct seed
+- **AND** the run cannot collapse into the same render repeated, which would bill once per copy
 
 #### Scenario: each variation produces its own output
 - **Key:** `workflow-mutation:variations:one-output-per-variation`

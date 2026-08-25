@@ -59,6 +59,8 @@ def test_parse_args_rejects_an_unknown_model(monkeypatch: pytest.MonkeyPatch) ->
 
 
 @pytest.mark.spec("cli:dispatch:animagine-workflow-and-injector")
+@pytest.mark.spec("cli:reproducibility:seed-defaults-to-unset")
+@pytest.mark.spec("cli:reproducibility:variations-default-to-one")
 def test_main_dispatches_the_animagine_workflow_and_injector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -290,6 +292,8 @@ def test_parse_args_rejects_ip_weight_below_zero(
 
 
 @pytest.mark.spec("cli:dial-plumbing:overrides-reach-the-run")
+@pytest.mark.spec("cli:reproducibility:accepts-a-seed")
+@pytest.mark.spec("cli:reproducibility:accepts-a-variation-count")
 def test_main_passes_override_flags_to_pipeline_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -394,3 +398,45 @@ def test_parse_args_says_which_range_a_rejected_denoise_violated(
         cli.parse_args()
 
     assert "must be in [0.0, 1.0], got 1.1" in capsys.readouterr().err
+
+
+@pytest.mark.spec("cli:dial-plumbing:overrides-reach-the-run")
+def test_main_passes_zero_valued_override_flags_to_pipeline_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Zero is a valid value for all three dials and the parser accepts it, but
+    # every plumbing test above uses non-zero values. A truthiness guard
+    # (`if args.denoise:`) instead of `is not None` would silently discard 0.0
+    # and fall back to the workflow's baked value with no error.
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "convert.py",
+            "photo.jpg",
+            "--prompt",
+            "anime",
+            "--denoise",
+            "0.0",
+            "--cfg",
+            "0.0",
+            "--ip-weight",
+            "0.0",
+        ],
+    )
+
+    class FakePath:
+        def __init__(self, path) -> None:
+            pass
+
+        def read_text(self):
+            return "{}"
+
+    monkeypatch.setattr(cli, "Path", FakePath)
+    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
+
+    captured: dict = {}
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+
+    cli.main()
+
+    assert captured["overrides"] == {"denoise": 0.0, "cfg": 0.0, "ip_weight": 0.0}

@@ -3,7 +3,7 @@
 Talking to a running ComfyUI over HTTP: uploading the photo, queueing the workflow, waiting for the render, and
 downloading the result.
 
-**Source:** `isekai/multipart.py`, `isekai/comfy_client.py` ·
+**Source:** `isekai/multipart.py`, `isekai/comfy_client.py`, `isekai/pipeline.py` ·
 **Tests:** `tests/test_multipart.py`, `tests/test_polling.py`
 
 The transport is an **injectable seam** behind a Protocol, so the pipeline can be driven by a fake. The runtime
@@ -39,6 +39,9 @@ matches the body it produced and encoding fields and files in the wire format th
 - **WHEN** a file part carries arbitrary binary data
 - **THEN** those bytes appear in the body unchanged
 - **AND** no text encoding is applied to them, so a photo is not corrupted in transit
+
+> Polling and output selection live in `isekai/pipeline.py::_render`; `comfy_client.history()` is a single
+> unconditional GET. The transport module supplies the calls, the pipeline supplies the loop.
 
 ### Requirement: Render completion polling
 
