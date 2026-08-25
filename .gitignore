@@ -1,6 +1,13 @@
 # Local config & secrets — NEVER commit
 .env
 
+# MinionsFactory: run artifacts out, gate config in.
+# The glob must be `.minions/*`, not `.minions/` — git cannot re-include a
+# file whose parent directory is itself excluded, so the negation below
+# would never fire.
+.minions/*
+!.minions/minions.toml
+
 # Downloaded model weights (tens of GB; live on the RunPod network volume)
 models/
 

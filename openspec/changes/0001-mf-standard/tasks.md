@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — SDD scaffold: `openspec/changes/` + `archive/` + this change's four artifacts
-- [ ] 2 — Relocate the gate config to `.minions/minions.toml`; ignore `.minions/` run artifacts
+- [x] 2 — Relocate the gate config to `.minions/minions.toml`; ignore `.minions/` run artifacts
 - [ ] 3 — Pin the toolchain: `.python-version` + explicit ruff `select`
 - [ ] 4 — Mirror the gate in a root `Makefile`
 - [ ] 5 — Backfill `openspec/specs/` across the five capabilities
