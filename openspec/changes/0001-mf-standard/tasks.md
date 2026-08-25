@@ -13,6 +13,7 @@
 - [x] 9 — Close the release-gate review findings (Tier A + B)
 - [x] 10 — Close review round 2 (findings 1–6); defer 7–8
 - [x] 11 — Close review round 3 (all 6 findings)
+- [ ] 12 — Round-4 blind review → `clean`, then cut the release
 
 ## The per-phase ritual
 
@@ -232,3 +233,31 @@ straddle a digit boundary (`"2"` vs `"10"`) distinguish them. Both mutants die n
 whereas an override *is* the value the user asked for.
 
 91 scenarios, 117 markers, every scenario bound, no unmarked tests. 99 → **114 tests**.
+
+### 12 — Round-4 blind review, then release  *(NOT STARTED — this is the resume point)*
+**Paused 2026-08-25 on token budget, with the release deliberately uncut.**
+
+Every finding from review rounds 1–3 (11 + 8 + 6 = 25) is fixed, and the gate is green at 114 tests. What is
+missing is **independent confirmation of round 3's fixes**: a round-4 blind review was launched and cancelled.
+`release_log.md` requires `Review: clean` and no round has returned it, so the tag is withheld rather than the
+requirement waived.
+
+**To resume, in order:**
+1. Spawn a **fresh blind** reviewer over `ec37e3b..HEAD` — the wider range, since v0.6's two never-reviewed
+   commits ship in this release. Give it no prior findings. Mutation probing in a `/tmp` scratch copy is what has
+   caught every real defect here; ask for it explicitly.
+2. If `changes-requested`, fix and repeat. If `clean`, set `<vault>/implementation_plans/v0.7_review.md` to
+   round 4 / `clean`.
+3. Then the release, all of which is mechanical and none of which is done:
+   - `git mv openspec/changes/0001-mf-standard openspec/changes/archive/` (its spec delta is **N-A**, so there is
+     nothing to fold into `openspec/specs/`);
+   - prepend an entry to `<vault>/release_log.md` in its documented format — `**Tag:** v0.7.0` (three-part, per
+     that file's own template; the `v0.1`–`v0.3` tags predate the release role), `**Branch:** v0.7_mf_standard →
+     main`, gate green at 114 tests, `**Review:** clean round 4`, `**Security:** clean round 1 —
+     [[v0.7_security]]`, and `**Backlog closed:** none open`;
+   - `git tag v0.7.0` **locally only** — `release_log.md` states the tag is created by the release role but
+     **merged and pushed by a human**;
+   - update `overview.md` `current_phase` and prepend a release entry to `log.md`.
+
+**Already done and needing nothing:** `pyproject.toml` + `uv.lock` are at `0.7.0`; `backlog.md` has **zero** open
+release-gating items; the v0.8 renumber is complete.
