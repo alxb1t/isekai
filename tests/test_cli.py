@@ -4,6 +4,7 @@ from isekai import cli
 from isekai.workflow import inject_animagine
 
 
+@pytest.mark.spec("cli:model-selection:defaults-to-animagine-i2i")
 def test_parse_args_defaults_to_the_animagine_i2i_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -11,6 +12,7 @@ def test_parse_args_defaults_to_the_animagine_i2i_model(
     assert cli.parse_args().model == "animagine-i2i"
 
 
+@pytest.mark.spec("cli:model-selection:accepts-animagine")
 def test_parse_args_accepts_the_animagine_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -21,6 +23,7 @@ def test_parse_args_accepts_the_animagine_model(
     assert cli.parse_args().model == "animagine"
 
 
+@pytest.mark.spec("cli:model-selection:rejects-unknown-model")
 def test_parse_args_rejects_an_unknown_model(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -30,6 +33,7 @@ def test_parse_args_rejects_an_unknown_model(monkeypatch: pytest.MonkeyPatch) ->
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dispatch:animagine-workflow-and-injector")
 def test_main_dispatches_the_animagine_workflow_and_injector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -76,6 +80,7 @@ def test_main_dispatches_the_animagine_workflow_and_injector(
     assert captured["input_path"] == "face.jpg"
 
 
+@pytest.mark.spec("cli:model-selection:accepts-animagine-i2i")
 def test_parse_args_accepts_the_animagine_i2i_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -86,6 +91,7 @@ def test_parse_args_accepts_the_animagine_i2i_model(
     assert cli.parse_args().model == "animagine-i2i"
 
 
+@pytest.mark.spec("cli:dispatch:img2img-workflow-reuses-injector")
 def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -130,11 +136,13 @@ def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
     assert captured["inject"] is inject_animagine
 
 
+@pytest.mark.spec("cli:reproducibility:seed-defaults-to-unset")
 def test_parse_args_defaults_seed_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
     assert cli.parse_args().seed is None
 
 
+@pytest.mark.spec("cli:reproducibility:accepts-a-seed")
 def test_parse_args_accepts_a_seed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime", "--seed", "42"]
@@ -142,11 +150,13 @@ def test_parse_args_accepts_a_seed(monkeypatch: pytest.MonkeyPatch) -> None:
     assert cli.parse_args().seed == 42
 
 
+@pytest.mark.spec("cli:reproducibility:variations-default-to-one")
 def test_parse_args_defaults_variations_to_one(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
     assert cli.parse_args().variations == 1
 
 
+@pytest.mark.spec("cli:reproducibility:accepts-a-variation-count")
 def test_parse_args_accepts_a_variation_count(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -155,6 +165,7 @@ def test_parse_args_accepts_a_variation_count(monkeypatch: pytest.MonkeyPatch) -
     assert cli.parse_args().variations == 3
 
 
+@pytest.mark.spec("cli:model-selection:accepts-animagine-i2i-cn")
 def test_cli_accepts_the_animagine_i2i_cn_model(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "sys.argv",
@@ -166,21 +177,25 @@ def test_cli_accepts_the_animagine_i2i_cn_model(monkeypatch: pytest.MonkeyPatch)
 # --- Phase 2: --denoise / --cfg / --ip-weight flags ---
 
 
+@pytest.mark.spec("cli:dial-defaults:denoise-defaults-to-unset")
 def test_parse_args_defaults_denoise_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
     assert cli.parse_args().denoise is None
 
 
+@pytest.mark.spec("cli:dial-defaults:cfg-defaults-to-unset")
 def test_parse_args_defaults_cfg_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
     assert cli.parse_args().cfg is None
 
 
+@pytest.mark.spec("cli:dial-defaults:ip-weight-defaults-to-unset")
 def test_parse_args_defaults_ip_weight_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
     assert cli.parse_args().ip_weight is None
 
 
+@pytest.mark.spec("cli:dial-validation:accepts-denoise-in-range")
 def test_parse_args_accepts_denoise_in_range(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -189,6 +204,7 @@ def test_parse_args_accepts_denoise_in_range(monkeypatch: pytest.MonkeyPatch) ->
     assert cli.parse_args().denoise == pytest.approx(0.7)
 
 
+@pytest.mark.spec("cli:dial-validation:accepts-cfg-in-range")
 def test_parse_args_accepts_cfg_in_range(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -197,6 +213,7 @@ def test_parse_args_accepts_cfg_in_range(monkeypatch: pytest.MonkeyPatch) -> Non
     assert cli.parse_args().cfg == pytest.approx(7.5)
 
 
+@pytest.mark.spec("cli:dial-validation:accepts-ip-weight-in-range")
 def test_parse_args_accepts_ip_weight_in_range(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -205,6 +222,7 @@ def test_parse_args_accepts_ip_weight_in_range(monkeypatch: pytest.MonkeyPatch) 
     assert cli.parse_args().ip_weight == pytest.approx(0.85)
 
 
+@pytest.mark.spec("cli:dial-validation:rejects-denoise-above-one")
 def test_parse_args_rejects_denoise_above_one(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -214,6 +232,7 @@ def test_parse_args_rejects_denoise_above_one(monkeypatch: pytest.MonkeyPatch) -
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dial-validation:rejects-denoise-below-zero")
 def test_parse_args_rejects_denoise_below_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -223,6 +242,7 @@ def test_parse_args_rejects_denoise_below_zero(monkeypatch: pytest.MonkeyPatch) 
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dial-validation:rejects-cfg-above-thirty")
 def test_parse_args_rejects_cfg_above_thirty(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -232,6 +252,7 @@ def test_parse_args_rejects_cfg_above_thirty(monkeypatch: pytest.MonkeyPatch) ->
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dial-validation:rejects-cfg-below-zero")
 def test_parse_args_rejects_cfg_below_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "sys.argv",
@@ -241,6 +262,7 @@ def test_parse_args_rejects_cfg_below_zero(monkeypatch: pytest.MonkeyPatch) -> N
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dial-validation:rejects-ip-weight-above-one")
 def test_parse_args_rejects_ip_weight_above_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -252,6 +274,7 @@ def test_parse_args_rejects_ip_weight_above_one(
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dial-validation:rejects-ip-weight-below-zero")
 def test_parse_args_rejects_ip_weight_below_zero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -263,6 +286,7 @@ def test_parse_args_rejects_ip_weight_below_zero(
         cli.parse_args()
 
 
+@pytest.mark.spec("cli:dial-plumbing:overrides-reach-the-run")
 def test_main_passes_override_flags_to_pipeline_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

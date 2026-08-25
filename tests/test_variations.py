@@ -10,6 +10,7 @@ from isekai.workflow import inject_animagine
 from tests.fakes import FakeComfyClient
 
 
+@pytest.mark.spec("workflow-mutation:variations:mutator-varies-submission")
 def test_run_mutates_the_submitted_workflow_when_a_mutator_is_given(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -30,6 +31,7 @@ def test_run_mutates_the_submitted_workflow_when_a_mutator_is_given(
     ).getrandbits(64)
 
 
+@pytest.mark.spec("workflow-mutation:variations:no-mutator-stays-deterministic")
 def test_run_leaves_the_workflow_deterministic_without_a_mutator(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -47,6 +49,7 @@ def test_run_leaves_the_workflow_deterministic_without_a_mutator(
     assert client.submitted_workflow["10"]["inputs"]["seed"] == baked
 
 
+@pytest.mark.spec("workflow-mutation:reproducibility:seed-is-printed")
 def test_run_prints_the_seed_as_the_reproducibility_contract(
     animagine_i2i_workflow: Workflow, tmp_path: Path, capsys: pytest.CaptureFixture
 ) -> None:
@@ -64,6 +67,7 @@ def test_run_prints_the_seed_as_the_reproducibility_contract(
     assert "7" in capsys.readouterr().out
 
 
+@pytest.mark.spec("workflow-mutation:variations:one-output-per-variation")
 def test_run_writes_one_output_per_variation(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -88,6 +92,7 @@ def test_run_writes_one_output_per_variation(
 # --- Phase 2: apply_overrides integration ---
 
 
+@pytest.mark.spec("workflow-mutation:base-relative:override-applied-before-jitter")
 def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -107,6 +112,7 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
     assert 0.75 <= client.submitted_workflow["10"]["inputs"]["denoise"] <= 0.85
 
 
+@pytest.mark.spec("workflow-mutation:reproducibility:override-plus-seed-reproduces")
 def test_run_with_override_and_seed_is_reproducible(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:
@@ -144,6 +150,9 @@ def test_run_with_override_and_seed_is_reproducible(
     assert client_a.submitted_workflow == client_b.submitted_workflow
 
 
+@pytest.mark.spec(
+    "workflow-mutation:reproducibility:no-override-matches-previous-release"
+)
 def test_run_without_overrides_is_byte_identical_to_v04(
     animagine_i2i_workflow: Workflow, tmp_path: Path
 ) -> None:

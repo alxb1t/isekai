@@ -7,7 +7,7 @@
 - [x] 3 — Pin the toolchain: `.python-version` + explicit ruff `select`
 - [x] 4 — Mirror the gate in a root `Makefile`
 - [x] 5 — Backfill `openspec/specs/` across the five capabilities
-- [ ] 6 — Bind the 87 tests: register both markers, mark every test
+- [x] 6 — Bind the 87 tests: register both markers, mark every test
 - [ ] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
 - [ ] 8 — Verify: re-run `mf-teardown`, confirm `compliant`
 
@@ -76,6 +76,12 @@ plainly with no defect note.
 Register both markers in `[tool.pytest.ini_options] markers` (see `design.md` §4), then mark all 87 tests:
 `@pytest.mark.spec("<key>")` for behavioural, `@pytest.mark.spec_exempt("<reason>")` for genuinely structural
 ones. Verify with `uv run pytest -q --strict-markers` that nothing is silently unregistered.
+**Outcome:** 87 tests bound to 85 scenarios; **zero exemptions** — `spec_exempt` is registered but unused,
+because every test turned out to prove a stated behaviour. The three `test_multipart.py` tests were expected to
+need exemption and did not: wire-format assertions are behaviour, and the spec states them.
+Two tests-per-scenario in three places: the three "unspecified dial is left alone" tests share one scenario, as
+`design.md` §4 anticipated. Cross-checked both directions — no key bound that the specs do not define, no
+scenario left without a test — and `-m "not spec"` collects nothing.
 **Closes:** `sdd:test-binding`.
 
 ### 7 — Rewrite `CLAUDE.md`

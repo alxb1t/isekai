@@ -19,3 +19,10 @@ select = ["E", "F", "I"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# Registration is load-bearing, not bookkeeping: pytest silently ignores an
+# unregistered marker, so an unregistered `spec` would bind nothing while
+# looking exactly like a binding.
+markers = [
+    "spec(key): binds this test to a keyed scenario in openspec/specs/",
+    "spec_exempt(reason): declares this test structural — it proves no scenario",
+]
