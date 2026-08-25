@@ -5,7 +5,7 @@
 - [x] 1 — SDD scaffold: `openspec/changes/` + `archive/` + this change's four artifacts
 - [x] 2 — Relocate the gate config to `.minions/minions.toml`; ignore `.minions/` run artifacts
 - [x] 3 — Pin the toolchain: `.python-version` + explicit ruff `select`
-- [ ] 4 — Mirror the gate in a root `Makefile`
+- [x] 4 — Mirror the gate in a root `Makefile`
 - [ ] 5 — Backfill `openspec/specs/` across the five capabilities
 - [ ] 6 — Bind the 86 tests: register both markers, mark every test
 - [ ] 7 — Rewrite `CLAUDE.md` onto the in-tree contract
