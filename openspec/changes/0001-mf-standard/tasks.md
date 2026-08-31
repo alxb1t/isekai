@@ -14,7 +14,7 @@
 - [x] 10 — Close review round 2 (findings 1–6); defer 7–8
 - [x] 11 — Close review round 3 (all 6 findings)
 - [x] 12 — `CLAUDE.md` onto the standard's template, incl. `## How a change is cut here`
-- [ ] 13 — Declare the N-A delta the way the CLI reads it; `openspec validate --strict` green
+- [x] 13 — Declare the N-A delta the way the CLI reads it; `openspec validate --strict` green
 - [ ] 14 — `.env.example` path-free
 - [ ] 15 — `README.md`: the gate array, verbatim, and a current status line
 - [ ] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
@@ -261,10 +261,18 @@ repository, and the notebook's location is not recorded. `.env.example` is phase
 `specs/README.md`, which the validator cannot see, so it reports "Change must have at least one delta". The
 standard's step 5 is a green strict validate, so this is a real open gap, not a cosmetic one.
 Add a tracked `openspec/changes/0001-mf-standard/.openspec.yaml` carrying `skip_specs: true`, plus
-`specs/.gitkeep`. Keep `specs/README.md` — the *reasoning* for the N-A is worth having, and the standard asks a
-zero-delta change to **declare** the absence, which the two together now do: the flag for the validator, the
-prose for the reader.
-**Verification:** `openspec validate 0001-mf-standard --strict` exits 0.
+`specs/.gitkeep`.
+**Two corrections this phase had to make to its own plan, both from running the validator rather than reasoning
+about it:**
+1. `skip_specs` alone is **not** honoured. `.openspec.yaml` must be valid change metadata, which needs a
+   `schema:` key naming a resolvable schema — `spec-driven`, the packaged default. Without it the marker is
+   parsed, rejected, and `--strict` fails exactly as if it were absent. The file now carries a comment saying so,
+   because a bare two-line marker looks complete and is not.
+2. The plan said "keep `specs/README.md` — the flag for the validator, the prose for the reader." **That is
+   wrong and the validator says so:** every `.md` under `specs/` is read as a delta file, so `skip_specs` plus a
+   README is the error the README exists to explain. The README is deleted and its reasoning folded into
+   `design.md` §1, which is the decision record and the right home for it anyway.
+**Verification:** `openspec validate 0001-mf-standard --strict` → `is valid`, exit 0 (was exit 1).
 
 ### 14 — `.env.example` path-free
 The standard requires `.env.example` tracked and **path-free, declaring shape only**. It currently ships

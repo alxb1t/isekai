@@ -1,0 +1,8 @@
+# This change carries no spec delta. See specs/README.md for why.
+#
+# `skip_specs` is only honoured when this file is valid change metadata, which
+# requires `schema` naming a resolvable schema -- without it the marker is read,
+# rejected and the change fails `openspec validate --strict` exactly as if the
+# marker were absent.
+schema: spec-driven
+skip_specs: true

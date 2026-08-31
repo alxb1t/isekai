@@ -8,8 +8,16 @@ This change adds **no behaviour**. It moves a config file, pins a toolchain, add
 documentation, and annotates tests. `convert.py` and every module under `isekai/` come out byte-identical except
 for import ordering that `ruff --select I` may normalise.
 
-So `specs/` here holds a `README.md` marking the delta **N-A**, on the `0004-planning-skills` precedent — **not**
-an `## ADDED Requirements` block.
+So the absence is **declared** rather than papered over with an invented requirement: the change's tracked
+`.openspec.yaml` carries `skip_specs: true`, and `specs/` holds only `.gitkeep`.
+
+**Two mechanical facts about that marker, both learned by running the validator rather than assumed** (phase 13).
+`skip_specs` is honoured only when `.openspec.yaml` is *valid change metadata*, which requires a `schema:` key
+naming a resolvable schema (`spec-driven`, the packaged default); without it the marker is parsed, rejected, and
+the change fails `--strict` exactly as if it were absent. And the marker is **mutually exclusive with any `.md`
+under `specs/`** — the validator treats every one as a delta file, so a `specs/README.md` explaining the N-A is
+itself the error it explains. This section is therefore the only home for that reasoning, which is why the
+paragraph above absorbed it. Precedent for an N-A delta: `0004-planning-skills`.
 
 **The backfill is written directly into `openspec/specs/`, not routed through this change's delta.** That is the
 substantive decision, and the reason is mechanical rather than stylistic: a delta is folded into the living spec
