@@ -16,7 +16,7 @@
 - [x] 12 — `CLAUDE.md` onto the standard's template, incl. `## How a change is cut here`
 - [x] 13 — Declare the N-A delta the way the CLI reads it; `openspec validate --strict` green
 - [x] 14 — `.env.example` path-free
-- [ ] 15 — `README.md`: the gate array, verbatim, and a current status line
+- [x] 15 — `README.md`: the gate array, verbatim, and a current status line
 - [ ] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
 - [ ] 17 — `CHANGELOG.md`, backfilled from the git log
 - [ ] 18 — Align the version line: proposal = CHANGELOG = pyproject = tag
@@ -293,8 +293,18 @@ the array's order, alongside `make gate` as the one command a human types.
 Also fix the status banner, which is stale by four versions: it reads "Phases 0–3 done; Phase 4 (first
 conversion) next" while the repo is at v0.7 with four models. The standard asks the front door to be re-checked
 every release; this is that check, run late.
-**Verification:** the five commands in `README.md` match `.minions/minions.toml` in content and order · the
-status line names the current version.
+**The phase found more than it went looking for, and fixed it rather than leaving a front door that lies.** The
+file had **duplicate `## Quickstart` and `## Setup` sections** — one working pair near the top, one stub pair at
+the bottom reading "_(planned — will be a three-command flow)_" for a flow that has shipped since v0.2. The
+layout block marked `convert.py`, `infra/`, `scripts/`, `workflows/`, the Dockerfile and CI **all `(planned)`**,
+listed a `docs/blog.md` that does not exist, and omitted `isekai/`, `tests/`, `openspec/`, `.minions/` and the
+`Makefile`. "How it works" named **one** model where four ship. The title said `photo-to-anime`; the repo,
+the image and the package are all `isekai`.
+Everything worth keeping is kept — both ASCII diagrams, the provisioning table, the cost section — and a
+`## The models` table and a `## Development` section carrying the gate are added.
+**Verification:** the five commands in `README.md` match `.minions/minions.toml` in content and order · `grep -c
+'(planned)'` = 0 · no duplicate `##` heading · every path in the layout block resolves on disk (checked with a
+`for` loop, not by eye) · the default `--model` in the table matches `cli.py`'s `default=`.
 
 ### 16 — Widen ruff to `D` + `ANN`
 The standard's `pyproject.toml` contract is `select = ["E","F","I","D","ANN"]`; this repo has `["E","F","I"]`,
