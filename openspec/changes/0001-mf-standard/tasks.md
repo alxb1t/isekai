@@ -13,7 +13,14 @@
 - [x] 9 — Close the release-gate review findings (Tier A + B)
 - [x] 10 — Close review round 2 (findings 1–6); defer 7–8
 - [x] 11 — Close review round 3 (all 6 findings)
-- [ ] 12 — Round-4 blind review → `clean`, then cut the release
+- [x] 12 — `CLAUDE.md` onto the standard's template, incl. `## How a change is cut here`
+- [ ] 13 — Declare the N-A delta the way the CLI reads it; `openspec validate --strict` green
+- [ ] 14 — `.env.example` path-free
+- [ ] 15 — `README.md`: the gate array, verbatim, and a current status line
+- [ ] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
+- [ ] 17 — `CHANGELOG.md`, backfilled from the git log
+- [ ] 18 — Align the version line: proposal = CHANGELOG = pyproject = tag
+- [ ] 19 — Round-4 blind review → `clean`, then cut the release
 
 ## The per-phase ritual
 
@@ -234,7 +241,78 @@ whereas an override *is* the value the user asked for.
 
 91 scenarios, 117 markers, every scenario bound, no unmarked tests. 99 → **114 tests**.
 
-### 12 — Round-4 blind review, then release  *(NOT STARTED — this is the resume point)*
+### 12 — `CLAUDE.md` onto the standard's template
+Rewrite `CLAUDE.md` against the template in the repo standard (`claude_md_template.md`): the gate quoted
+command-for-command from the array, the seams, **`## How a change is cut here`**, the layout, the guardrails.
+Facts, never a script.
+**One deliberate deviation from the template:** the template delegates the method to a separate page and has
+`CLAUDE.md` point at it. This repo does not carry that page and is not going to invent one — the method it runs
+is **OpenSpec SDD**, named as such, and `## How a change is cut here` states the contract in-tree and stands
+alone. The consequence is that this file carries method the template would delegate, landing at ~175 lines
+against a ~100 target; that is accepted, not overlooked.
+**The vault comes out entirely** — the `### The vault holds the thinking` section and all six `VAULT_PROJECT_DIR`
+references are gone, replaced by the template's own line: nothing tracked here resolves a path outside the
+repository, and the notebook's location is not recorded. `.env.example` is phase 14.
+**Verification:** `grep -c VAULT_PROJECT_DIR CLAUDE.md` = 0 · the five gate bullets `diff` clean by eye against
+`.minions/minions.toml` · every directory named under `## Layout` exists, or is marked owed · `make gate` green.
+
+### 13 — Declare the N-A delta the way the CLI reads it
+`openspec validate 0001-mf-standard --strict` **fails today**: the change's zero delta is declared as prose in
+`specs/README.md`, which the validator cannot see, so it reports "Change must have at least one delta". The
+standard's step 5 is a green strict validate, so this is a real open gap, not a cosmetic one.
+Add a tracked `openspec/changes/0001-mf-standard/.openspec.yaml` carrying `skip_specs: true`, plus
+`specs/.gitkeep`. Keep `specs/README.md` — the *reasoning* for the N-A is worth having, and the standard asks a
+zero-delta change to **declare** the absence, which the two together now do: the flag for the validator, the
+prose for the reader.
+**Verification:** `openspec validate 0001-mf-standard --strict` exits 0.
+
+### 14 — `.env.example` path-free
+The standard requires `.env.example` tracked and **path-free, declaring shape only**. It currently ships
+`VAULT_PROJECT_DIR="/path/to/vault/Lab/isekai"` — a shaped path, and its comment describes the
+`implementation_plans/` workflow that `openspec/changes/` replaced in phase 1. Both go. The RunPod keys stay,
+valueless.
+**Verification:** `grep -n VAULT_PROJECT_DIR .env.example` finds nothing · no `/` path literal remains in the
+file · `.env` itself is untouched and still gitignored.
+
+### 15 — `README.md`: the gate, and a current status
+The standard names `README.md` as one of the **four places the gate array is restated** — and it currently
+mentions the gate nowhere at all (`grep -i gate README.md` is empty). Add a section quoting the five commands in
+the array's order, alongside `make gate` as the one command a human types.
+Also fix the status banner, which is stale by four versions: it reads "Phases 0–3 done; Phase 4 (first
+conversion) next" while the repo is at v0.7 with four models. The standard asks the front door to be re-checked
+every release; this is that check, run late.
+**Verification:** the five commands in `README.md` match `.minions/minions.toml` in content and order · the
+status line names the current version.
+
+### 16 — Widen ruff to `D` + `ANN`
+The standard's `pyproject.toml` contract is `select = ["E","F","I","D","ANN"]`; this repo has `["E","F","I"]`,
+so docstrings and annotations are unenforced. Widen the selection, then **write the code that satisfies it** —
+docstrings where they are missing, annotations where they are absent.
+**This phase must not weaken the gate to pass.** A blanket `ignore` of a rule the standard names is the
+cheapest-possible-green the guardrails forbid. A *specific*, argued per-rule exclusion (`D203` vs `D211` and
+`D212` vs `D213` are mutually exclusive by construction, and one of each pair must go) is a decision — record it
+in `design.md` with its reasoning, not as a bare line in `pyproject.toml`.
+**Verification:** `uv run ruff check .` green with the widened selection · the diff to `isekai/` adds docstrings
+and annotations and changes no behaviour · `uv run pytest` still green at 114 tests.
+
+### 17 — `CHANGELOG.md`, backfilled from the git log
+The repo has **no `CHANGELOG.md`**. The standard requires Keep a Changelog + SemVer, an entry appended per phase
+under `## [Unreleased]`, cut at release. Eleven phases and two prior versions shipped without one.
+Backfill it from `git log` — the commit bodies are unusually complete, so this is transcription and grouping,
+not reconstruction from memory. Scope: the v0.7 phases under `## [Unreleased]`, and whatever the tags `v0.1`,
+`v0.2` and `v0.3` can be honestly reconstructed as. **Anything the log does not support is not written.**
+**Verification:** every v0.7 phase commit is represented · every entry traces to a commit sha · the file parses
+as Keep a Changelog (`## [Unreleased]` present, `### Added/Changed/Fixed` subheads).
+
+### 18 — Align the version line
+The standard's version line is one line in four places. Today: `proposal.md` says `v0.7`, `pyproject.toml` says
+`0.7.0`, `CHANGELOG.md` does not exist (phase 17), and there is no tag — the existing tags are `v0.1`–`v0.3`, the
+two-part form that predates the release role. Cut `## [0.7.0]` in the CHANGELOG and confirm all four agree. The
+**tag itself belongs to phase 19**, not here — it is created only after the review returns clean.
+**Verification:** `proposal.md` `version:` · `CHANGELOG.md` heading · `pyproject.toml` `version` all read the
+same `0.7`/`0.7.0`, checked in one pass and quoted in the commit message.
+
+### 19 — Round-4 blind review, then release
 **Paused 2026-08-25 on token budget, with the release deliberately uncut.**
 
 Every finding from review rounds 1–3 (11 + 8 + 6 = 25) is fixed, and the gate is green at 114 tests. What is
