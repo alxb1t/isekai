@@ -1,6 +1,9 @@
+"""Argument parsing and the `main` entry point: flags in, a configured `run` out."""
+
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
@@ -9,7 +12,9 @@ from isekai.models import get_model
 from isekai.pipeline import run
 
 
-def _bounded_float(lo: float, hi: float):
+def _bounded_float(lo: float, hi: float) -> Callable[[str], float]:
+    """Build an argparse type that parses a float and rejects one outside [lo, hi]."""
+
     def parse(value: str) -> float:
         v = float(value)
         if not (lo <= v <= hi):
@@ -27,6 +32,7 @@ def _positive_int(value: str) -> int:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse the command line, rejecting out-of-range and unusable flag values."""
     p = argparse.ArgumentParser(
         description="Photo -> anime via ComfyUI (Qwen-Image-Edit)."
     )
@@ -83,7 +89,8 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main():
+def main() -> None:
+    """Run one conversion: parse the flags, resolve the model, drive the pipeline."""
     args = parse_args()
     model = get_model(args.model)
 

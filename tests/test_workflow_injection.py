@@ -5,7 +5,7 @@ from isekai.workflow import find_node, inject_animagine, inject_qwen
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-class-type")
-def test_find_node_locates_a_node_by_class_type():
+def test_find_node_locates_a_node_by_class_type() -> None:
     wf = {
         "7": {"class_type": "LoadImage", "_meta": {"title": "Load Image"}},
         "9": {"class_type": "KSampler", "_meta": {"title": "KSampler"}},
@@ -15,7 +15,7 @@ def test_find_node_locates_a_node_by_class_type():
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-title")
-def test_find_node_locates_a_node_by_title():
+def test_find_node_locates_a_node_by_title() -> None:
     wf = {
         "7": {"class_type": "LoadImage", "_meta": {"title": "Load Image"}},
         "9": {"class_type": "KSampler", "_meta": {"title": "KSampler"}},
@@ -25,7 +25,7 @@ def test_find_node_locates_a_node_by_title():
 
 
 @pytest.mark.spec("workflow-injection:node-location:exits-when-no-node-matches")
-def test_find_node_exits_when_no_node_matches():
+def test_find_node_exits_when_no_node_matches() -> None:
     wf = {"7": {"class_type": "LoadImage", "_meta": {"title": "Load Image"}}}
 
     with pytest.raises(SystemExit):
@@ -33,7 +33,7 @@ def test_find_node_exits_when_no_node_matches():
 
 
 @pytest.mark.spec("workflow-injection:node-location:exits-when-ambiguous")
-def test_find_node_exits_when_the_match_is_ambiguous():
+def test_find_node_exits_when_the_match_is_ambiguous() -> None:
     wf = {
         "1": {"class_type": "CLIPTextEncode", "_meta": {"title": "Positive"}},
         "2": {"class_type": "CLIPTextEncode", "_meta": {"title": "Negative"}},
@@ -44,12 +44,16 @@ def test_find_node_exits_when_the_match_is_ambiguous():
 
 
 @pytest.mark.spec("workflow-injection:node-location:single-load-image-in-real-workflow")
-def test_find_node_locates_the_single_load_image_in_the_real_workflow(qwen_workflow):
+def test_find_node_locates_the_single_load_image_in_the_real_workflow(
+    qwen_workflow: Workflow,
+) -> None:
     assert find_node(qwen_workflow, class_type="LoadImage") == "78"
 
 
 @pytest.mark.spec("workflow-injection:node-location:qwen-text-encoders-are-ambiguous")
-def test_find_node_is_ambiguous_for_the_two_qwen_text_encoders(qwen_workflow):
+def test_find_node_is_ambiguous_for_the_two_qwen_text_encoders(
+    qwen_workflow: Workflow,
+) -> None:
     # The exported graph has two TextEncodeQwenImageEdit nodes (positive + negative)
     # sharing a title — exactly why convert.py traces KSampler.positive instead of
     # searching for the encoder by class_type/title.

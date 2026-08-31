@@ -1,3 +1,5 @@
+"""The ComfyUI HTTP transport -- the one place this package touches the network."""
+
 import json
 from pathlib import Path
 from typing import Any
@@ -11,11 +13,14 @@ class ComfyClient(ComfyTransport):
     """Thin HTTP transport to a running ComfyUI."""
 
     def __init__(self, server: str) -> None:
+        """Point the client at a ComfyUI base URL, trailing slash optional."""
         self.server = server.rstrip("/")
 
     def upload_image(self, path: str) -> str:
-        """Upload a local image into ComfyUI's input/ folder; return the
-        stored filename."""
+        """Upload a local image into ComfyUI's input/ folder.
+
+        Returns the stored filename.
+        """
         body, content_type = build_multipart(
             fields={"overwrite": "true"},
             files={
@@ -38,7 +43,7 @@ class ComfyClient(ComfyTransport):
             return json.loads(resp.read())["name"]
 
     def submit(self, workflow: Workflow) -> str:
-        """Queue a workflow; return its prompt_id"""
+        """Queue a workflow and return its prompt_id."""
         req = request.Request(
             f"{self.server}/prompt",
             data=json.dumps({"prompt": workflow}).encode(),
@@ -50,7 +55,7 @@ class ComfyClient(ComfyTransport):
             return json.loads(resp.read())["prompt_id"]
 
     def history(self, prompt_id: str) -> dict[str, Any]:
-        """Return the /history record for prompt_id"""
+        """Return the /history record for prompt_id."""
         with request.urlopen(f"{self.server}/history/{prompt_id}") as resp:
             return json.loads(resp.read())
 

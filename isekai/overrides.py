@@ -1,3 +1,5 @@
+"""Apply the user's base dial values, before any mutation jitters around them."""
+
 from isekai.comfy_types import Workflow
 from isekai.workflow import find_node
 

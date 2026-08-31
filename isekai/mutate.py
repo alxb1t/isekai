@@ -1,3 +1,5 @@
+"""The mutation seam: jitter a graph's dials around their base, via an injected RNG."""
+
 import sys
 from random import Random
 
@@ -10,7 +12,7 @@ _IP_WEIGHT_DELTA: float = 0.05
 
 
 def _node_order(node_id: str) -> tuple:
-    """A total order over node ids that survives every id format ComfyUI emits.
+    """Build a total order over node ids that survives every id format ComfyUI emits.
 
     Plain graphs number nodes "1", "2", ... but subgraph exports use "102:14",
     which `int` cannot parse. Each dot-separated part becomes a (kind, value)

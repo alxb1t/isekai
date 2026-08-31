@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 from isekai import cli
@@ -5,8 +8,8 @@ from isekai.mutate import mutate as mutate_fn
 from isekai.workflow import inject_animagine
 
 
-def _capturing_run(captured: dict):
-    """A `run` double recording EVERY argument `main()` passes.
+def _capturing_run(captured: dict[str, Any]) -> Callable[..., None]:
+    """Build a `run` double recording EVERY argument `main()` passes.
 
     Capturing all of them is the point. A double that merely declares
     `mutate=None, seed=None, variations=1` as defaults cannot distinguish
@@ -14,7 +17,7 @@ def _capturing_run(captured: dict):
     plumbing in main() would leave the suite green.
     """
 
-    def fake_run(*args, **kwargs):
+    def fake_run(*args: object, **kwargs: object) -> None:
         names = (
             "client",
             "workflow",
@@ -72,10 +75,10 @@ def test_main_dispatches_the_animagine_workflow_and_injector(
     recorded = {}
 
     class FakePath:
-        def __init__(self, path) -> None:
+        def __init__(self, path: str) -> None:
             recorded["workflow_path"] = path
 
-        def read_text(self):
+        def read_text(self) -> str:
             return "{}"
 
     monkeypatch.setattr(cli, "Path", FakePath)
@@ -119,10 +122,10 @@ def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
     recorded = {}
 
     class FakePath:
-        def __init__(self, path) -> None:
+        def __init__(self, path: str) -> None:
             recorded["workflow_path"] = path
 
-        def read_text(self):
+        def read_text(self) -> str:
             return "{}"
 
     monkeypatch.setattr(cli, "Path", FakePath)
@@ -171,7 +174,9 @@ def test_parse_args_accepts_a_variation_count(monkeypatch: pytest.MonkeyPatch) -
 
 
 @pytest.mark.spec("cli:model-selection:accepts-animagine-i2i-cn")
-def test_cli_accepts_the_animagine_i2i_cn_model(monkeypatch: pytest.MonkeyPatch):
+def test_cli_accepts_the_animagine_i2i_cn_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         "sys.argv",
         ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine-i2i-cn"],
@@ -318,10 +323,10 @@ def test_main_passes_override_flags_to_pipeline_run(
     )
 
     class FakePath:
-        def __init__(self, path) -> None:
+        def __init__(self, path: str) -> None:
             pass
 
-        def read_text(self):
+        def read_text(self) -> str:
             return "{}"
 
     monkeypatch.setattr(cli, "Path", FakePath)
@@ -425,10 +430,10 @@ def test_main_passes_zero_valued_override_flags_to_pipeline_run(
     )
 
     class FakePath:
-        def __init__(self, path) -> None:
+        def __init__(self, path: str) -> None:
             pass
 
-        def read_text(self):
+        def read_text(self) -> str:
             return "{}"
 
     monkeypatch.setattr(cli, "Path", FakePath)
@@ -478,10 +483,10 @@ def test_main_refuses_several_variations_on_a_model_that_cannot_vary(
     )
 
     class FakePath:
-        def __init__(self, path) -> None:
+        def __init__(self, path: str) -> None:
             pass
 
-        def read_text(self):
+        def read_text(self) -> str:
             return "{}"
 
     monkeypatch.setattr(cli, "Path", FakePath)
@@ -489,7 +494,7 @@ def test_main_refuses_several_variations_on_a_model_that_cannot_vary(
 
     called = {"run": False}
 
-    def fake_run(*args, **kwargs):
+    def fake_run(*args: object, **kwargs: object) -> None:
         called["run"] = True
 
     monkeypatch.setattr(cli, "run", fake_run)
@@ -521,10 +526,10 @@ def test_main_allows_several_variations_on_a_model_that_can_vary(
     )
 
     class FakePath:
-        def __init__(self, path) -> None:
+        def __init__(self, path: str) -> None:
             pass
 
-        def read_text(self):
+        def read_text(self) -> str:
             return "{}"
 
     monkeypatch.setattr(cli, "Path", FakePath)

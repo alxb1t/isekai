@@ -17,7 +17,7 @@
 - [x] 13 — Declare the N-A delta the way the CLI reads it; `openspec validate --strict` green
 - [x] 14 — `.env.example` path-free
 - [x] 15 — `README.md`: the gate array, verbatim, and a current status line
-- [ ] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
+- [x] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
 - [ ] 17 — `CHANGELOG.md`, backfilled from the git log
 - [ ] 18 — Align the version line: proposal = CHANGELOG = pyproject = tag
 - [ ] 19 — Round-4 blind review → `clean`, then cut the release
@@ -314,8 +314,15 @@ docstrings where they are missing, annotations where they are absent.
 cheapest-possible-green the guardrails forbid. A *specific*, argued per-rule exclusion (`D203` vs `D211` and
 `D212` vs `D213` are mutually exclusive by construction, and one of each pair must go) is a decision — record it
 in `design.md` with its reasoning, not as a bare line in `pyproject.toml`.
-**Verification:** `uv run ruff check .` green with the widened selection · the diff to `isekai/` adds docstrings
-and annotations and changes no behaviour · `uv run pytest` still green at 114 tests.
+**Outcome:** 289 errors — **36 in `isekai/`, 253 in `tests/`**. The runtime 36 are fixed outright, with no
+exclusion applying to `isekai/`. The tests needed two scoping decisions, both recorded in `design.md` §8 with
+their reasoning: the forced `ignore = ["D203", "D213"]` (mutually exclusive pairs, one of each must go), and
+`per-file-ignores` waiving **only** `D1xx` in `tests/` — because this repo's tests are named as behavioural
+sentences and the name *is* the description. `D2xx`/`D4xx` style and all of `ANN` stay on there, so the waiver
+cannot hide a malformed docstring or a wrong fixture type.
+**Verification:** `make gate` green on all five axes · 114 tests passing · **117 spec markers before and 117
+after, zero unmarked test functions** — checked by `ast` walk, so the annotation pass moved no binding · every
+line the diff removes from `isekai/` is docstring prose, so no runtime behaviour changed.
 
 ### 17 — `CHANGELOG.md`, backfilled from the git log
 The repo has **no `CHANGELOG.md`**. The standard requires Keep a Changelog + SemVer, an entry appended per phase

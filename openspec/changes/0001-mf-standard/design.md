@@ -143,3 +143,45 @@ is populated. Writing it earlier would mean writing it twice, and the intermedia
 research/findings files, `log.md` and the metered-GPU protocol all stay, and the guardrails section is accurate
 as it stands. The edit is narrow — it re-points *"where does the contract live"* in-tree and corrects the gate
 account. It does not rewrite the repo's description of itself.
+
+## 8. Ruff `D` + `ANN` — the two scoping decisions, and why they are not waivers
+
+Widening `select` to `["E", "F", "I", "D", "ANN"]` raised **289 errors: 36 in `isekai/`, 253 in `tests/`.** The
+runtime 36 are all fixed outright — module docstrings on all ten modules, docstrings on `Model`, `Overrides`,
+`ComfyTransport`'s four methods and `get_model`, return annotations on `main` and `_bounded_float`, and D205/D209
+style repairs. No exclusion applies to `isekai/`.
+
+The 253 in `tests/` needed two decisions. The guardrail is that a loosened config is a *plan* problem, so each is
+recorded here with its reasoning rather than left as a bare line in `pyproject.toml`.
+
+**8.1 `ignore = ["D203", "D213"]` — forced, not chosen freely.** `D203`/`D211` and `D212`/`D213` are mutually
+exclusive **by construction**: selecting `D` whole enables both halves of each pair, and ruff resolves them itself
+while printing a warning on every single run. One of each pair must go. Choosing explicitly silences the warning
+and makes the choice reviewable, and both picks match what the code already does — `D211` (no blank line before a
+class docstring) and `D212` (multi-line summary starts on the first line). Zero code changed as a result. This is
+the only blanket `ignore` in the file.
+
+**8.2 `per-file-ignores = {"tests/*" = ["D1"]}` — the one real scoping call.** 132 of the 253 were "missing
+docstring" on test functions. This repo's stated convention, in `CLAUDE.md` and in the standard, is that **tests
+are named as behavioural sentences and double as documentation**. A docstring on
+`test_unknown_model_exits_with_a_legible_message` restates the name, adds nothing, and rots independently of it.
+So `D1xx` is waived, in `tests/` only.
+
+**What is deliberately *not* waived there, because the waiver would then be a real weakening:** the `D2xx`/`D4xx`
+style rules stay on, so any docstring that *is* written must still be well-formed — and two were repaired under
+that rule (`D401`, imperative mood). All of `ANN` stays on: a wrong fixture annotation is a genuine defect, and
+`-> None` on a test costs nothing.
+
+**The annotation work itself surfaced one method note.** The first attempt annotated fixture parameters by regex
+on the parameter name, which matched **call sites inside test bodies** as well as signatures and produced 100+
+syntax errors. It was reverted wholesale and redone with an `ast` walk that edits only `arg` nodes of a
+`FunctionDef`. Machine-editing Python by regex on an identifier is not safe; the parser already knows which
+occurrence is a parameter.
+
+`ANN401` then rejected `*args: Any` on the two `run` doubles in `test_cli.py`. The fix is `object`, not an
+exclusion: those doubles only *record* their arguments, so `object` is both accepted and strictly more precise
+than `Any`.
+
+**Verified after the change:** gate green on all five axes · 114 tests still passing · **117 spec markers before
+and 117 after, with zero unmarked test functions** — the annotation pass moved no binding · and every line
+removed from `isekai/` by the diff is docstring prose, so no runtime behaviour changed.

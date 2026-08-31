@@ -1,3 +1,5 @@
+"""Drive a conversion end to end: upload, inject, override, mutate, render, save."""
+
 import copy
 import random
 import sys
