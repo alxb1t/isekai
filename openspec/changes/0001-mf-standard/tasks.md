@@ -15,7 +15,7 @@
 - [x] 11 — Close review round 3 (all 6 findings)
 - [x] 12 — `CLAUDE.md` onto the standard's template, incl. `## How a change is cut here`
 - [x] 13 — Declare the N-A delta the way the CLI reads it; `openspec validate --strict` green
-- [ ] 14 — `.env.example` path-free
+- [x] 14 — `.env.example` path-free
 - [ ] 15 — `README.md`: the gate array, verbatim, and a current status line
 - [ ] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
 - [ ] 17 — `CHANGELOG.md`, backfilled from the git log
@@ -279,8 +279,12 @@ The standard requires `.env.example` tracked and **path-free, declaring shape on
 `VAULT_PROJECT_DIR="/path/to/vault/Lab/isekai"` — a shaped path, and its comment describes the
 `implementation_plans/` workflow that `openspec/changes/` replaced in phase 1. Both go. The RunPod keys stay,
 valueless.
-**Verification:** `grep -n VAULT_PROJECT_DIR .env.example` finds nothing · no `/` path literal remains in the
-file · `.env` itself is untouched and still gitignored.
+**The declared set is re-measured, not copied.** `grep -o 'RUNPOD_[A-Z_]*' infra/ scripts/ *.sh` returns exactly
+the four the file declares — `RUNPOD_API_KEY`, `RUNPOD_VOLUME_ID`, `RUNPOD_GPU_TYPE`, `RUNPOD_DATACENTER`. The
+other shell variables (`PUBKEY`, `PUBLIC_KEY`, `SSH_PUBLIC_KEY`, `MODELS_DIR`) are derived or set in-script, not
+`.env` inputs, so they are correctly absent.
+**Verification:** `grep -n VAULT_PROJECT_DIR .env.example` finds nothing · `grep -n '/' .env.example` finds
+nothing · `git check-ignore .env` still reports it ignored.
 
 ### 15 — `README.md`: the gate, and a current status
 The standard names `README.md` as one of the **four places the gate array is restated** — and it currently
