@@ -8,6 +8,7 @@ from isekai.workflow import inject_qwen
 from tests.fakes import FakeComfyClient
 
 
+@pytest.mark.spec("comfy-transport:polling:polls-history-until-complete")
 def test_run_polls_history_until_the_prompt_completes(
     qwen_workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -21,6 +22,7 @@ def test_run_polls_history_until_the_prompt_completes(
     assert output.read_bytes() == client.view_bytes
 
 
+@pytest.mark.spec("comfy-transport:retrieval:downloads-image-named-in-history")
 def test_run_downloads_the_image_named_in_the_history(
     qwen_workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

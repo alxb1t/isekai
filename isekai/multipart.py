@@ -1,3 +1,6 @@
+"""A hand-rolled multipart/form-data encoder, so the runtime stays stdlib-only."""
+
+
 def build_multipart(
     fields: dict[str, str], files: dict[str, tuple[str, bytes, str]]
 ) -> tuple[bytes, str]:

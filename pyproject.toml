@@ -1,6 +1,6 @@
 [project]
 name = "isekai"
-version = "0.1.0"
+version = "0.7.0"
 requires-python = ">=3.12"
 dependencies = []
 
@@ -11,6 +11,37 @@ dev = [
     "ty>=0.0.64",
 ]
 
+[tool.ruff.lint]
+# Explicit, because ruff's default set covers E and F but not I, D or ANN.
+# Import ordering, docstrings and annotations were each previously unenforced.
+select = ["E", "F", "I", "D", "ANN"]
+
+# D203/D211 and D212/D213 are mutually exclusive BY CONSTRUCTION -- selecting `D`
+# whole enables both halves of each pair, and ruff resolves them itself with a
+# warning on every run. Choosing explicitly silences that warning and, more to the
+# point, makes the choice reviewable. Both picks match what the code already does:
+# D211 (no blank line before a class docstring) and D212 (multi-line summary starts
+# on the first line). This is the only blanket `ignore` in the file.
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are named as behavioural sentences and double as documentation -- that is
+# this repo's stated convention, and the name IS the description. A docstring
+# restating `test_unknown_model_exits_with_a_legible_message` adds nothing and rots
+# separately from the name. So "missing docstring" (D1xx) is waived, HERE ONLY.
+#
+# Deliberately NOT waived for tests: the D2xx/D4xx style rules, so a docstring that
+# IS written must still be well-formed; and all of ANN, because a wrong fixture
+# annotation is a real defect and `-> None` on a test is nearly free.
+"tests/*" = ["D1"]
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# Registration is load-bearing, not bookkeeping: pytest silently ignores an
+# unregistered marker, so an unregistered `spec` would bind nothing while
+# looking exactly like a binding.
+markers = [
+    "spec(key): binds this test to a keyed scenario in openspec/specs/",
+    "spec_exempt(reason): declares this test structural — it proves no scenario",
+]

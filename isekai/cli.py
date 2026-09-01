@@ -1,5 +1,9 @@
+"""Argument parsing and the `main` entry point: flags in, a configured `run` out."""
+
 import argparse
 import json
+import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
@@ -8,7 +12,9 @@ from isekai.models import get_model
 from isekai.pipeline import run
 
 
-def _bounded_float(lo: float, hi: float):
+def _bounded_float(lo: float, hi: float) -> Callable[[str], float]:
+    """Build an argparse type that parses a float and rejects one outside [lo, hi]."""
+
     def parse(value: str) -> float:
         v = float(value)
         if not (lo <= v <= hi):
@@ -18,7 +24,15 @@ def _bounded_float(lo: float, hi: float):
     return parse
 
 
+def _positive_int(value: str) -> int:
+    v = int(value)
+    if v < 1:
+        raise argparse.ArgumentTypeError(f"must be at least 1, got {v}")
+    return v
+
+
 def parse_args() -> argparse.Namespace:
+    """Parse the command line, rejecting out-of-range and unusable flag values."""
     p = argparse.ArgumentParser(
         description="Photo -> anime via ComfyUI (Qwen-Image-Edit)."
     )
@@ -48,7 +62,10 @@ def parse_args() -> argparse.Namespace:
         help="RNG seed for reproducible variation (random if unset)",
     )
     p.add_argument(
-        "--variations", type=int, default=1, help="number of varied outputs to generate"
+        "--variations",
+        type=_positive_int,
+        default=1,
+        help="number of varied outputs to generate",
     )
     p.add_argument(
         "--denoise",
@@ -72,9 +89,21 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main():
+def main() -> None:
+    """Run one conversion: parse the flags, resolve the model, drive the pipeline."""
     args = parse_args()
     model = get_model(args.model)
+
+    # Without a mutation seam every variation submits the identical graph, so
+    # `--variations 3` would bill three renders for one image. Refuse before the
+    # photo is uploaded -- a rejected flag should cost nothing.
+    if args.variations > 1 and model.mutate is None:
+        sys.exit(
+            f"--model {args.model} does not vary between renders, so "
+            f"--variations {args.variations} would submit {args.variations} "
+            f"identical jobs; use --variations 1, or a model with a mutation "
+            f"seam (animagine-i2i, animagine-i2i-cn)"
+        )
     workflow = json.loads(Path(args.workflow or model.workflow_path).read_text())
     client = ComfyClient(args.server)
 

@@ -1,12 +1,16 @@
+import pytest
+
 from isekai.multipart import build_multipart
 
 
-def test_multipart_content_type_declares_the_boundary():
+@pytest.mark.spec("comfy-transport:multipart:content-type-declares-boundary")
+def test_multipart_content_type_declares_the_boundary() -> None:
     _, content_type = build_multipart(fields={}, files={})
     assert content_type.startswith("multipart/form-data; boundary=")
 
 
-def test_multipart_encodes_fields_and_files_as_wire_format():
+@pytest.mark.spec("comfy-transport:multipart:encodes-fields-and-files")
+def test_multipart_encodes_fields_and_files_as_wire_format() -> None:
     body, content_type = build_multipart(
         fields={"overwrite": "true"},
         files={"image": ("cat.png", b"\x89PNG\r\n\x1a\n", "application/octet-stream")},
@@ -30,7 +34,8 @@ def test_multipart_encodes_fields_and_files_as_wire_format():
     assert body == expected
 
 
-def test_multipart_preserves_binary_file_data_verbatim():
+@pytest.mark.spec("comfy-transport:multipart:preserves-binary-verbatim")
+def test_multipart_preserves_binary_file_data_verbatim() -> None:
     raw = bytes(range(256))
     body, _ = build_multipart(
         fields={},

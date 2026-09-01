@@ -1,3 +1,5 @@
+"""Locate nodes in a ComfyUI graph, and wire the photo and prompt into one."""
+
 import sys
 
 from isekai.comfy_types import Workflow
@@ -6,7 +8,10 @@ from isekai.comfy_types import Workflow
 def find_node(
     workflow: Workflow, *, class_type: str | None = None, title: str | None = None
 ) -> str:
-    """Return the single node ID matching class_type and/or title. Fail if not exactly one."""
+    """Return the single node ID matching class_type and/or title.
+
+    Fail if the match is not exactly one node.
+    """
     matches = [
         nid
         for nid, node in workflow.items()
@@ -24,7 +29,10 @@ def find_node(
 
 
 def inject_qwen(workflow: Workflow, image_name: str, prompt: str) -> None:
-    """Wire the uploaded photo + prompt into the Qwen graph (mutates workflow in place)."""
+    """Wire the uploaded photo and prompt into the Qwen graph.
+
+    Mutates `workflow` in place.
+    """
     load_id = find_node(workflow, class_type="LoadImage")
     workflow[load_id]["inputs"]["image"] = image_name
 
@@ -36,11 +44,11 @@ def inject_qwen(workflow: Workflow, image_name: str, prompt: str) -> None:
 
 
 def inject_animagine(workflow: Workflow, image_name: str, prompt: str) -> None:
-    """Wire the uploaded photo + prompt into an Animagine + InstantID graph (mutates in place).
+    """Wire the uploaded photo and prompt into an Animagine + InstantID graph.
 
-    Handles any depth of conditioning chain: KSampler.positive may point at
-    ApplyInstantID directly, or through a stack of ControlNetApply nodes. Walk
-    .positive until the real positive CLIPTextEncode.
+    Mutates `workflow` in place. Handles any depth of conditioning chain:
+    KSampler.positive may point at ApplyInstantID directly, or through a stack of
+    ControlNetApply nodes. Walk .positive until the real positive CLIPTextEncode.
     """
     load_id = find_node(workflow, class_type="LoadImage")
     workflow[load_id]["inputs"]["image"] = image_name
