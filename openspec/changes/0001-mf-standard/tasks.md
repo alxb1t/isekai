@@ -18,7 +18,7 @@
 - [x] 14 — `.env.example` path-free
 - [x] 15 — `README.md`: the gate array, verbatim, and a current status line
 - [x] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
-- [ ] 17 — `CHANGELOG.md`, backfilled from the git log
+- [x] 17 — `CHANGELOG.md`, backfilled from the git log
 - [ ] 18 — Align the version line: proposal = CHANGELOG = pyproject
 
 ## The per-phase ritual
@@ -329,8 +329,21 @@ under `## [Unreleased]`, cut at release. Eleven phases and two prior versions sh
 Backfill it from `git log` — the commit bodies are unusually complete, so this is transcription and grouping,
 not reconstruction from memory. Scope: the v0.7 phases under `## [Unreleased]`, and whatever the tags `v0.1`,
 `v0.2` and `v0.3` can be honestly reconstructed as. **Anything the log does not support is not written.**
-**Verification:** every v0.7 phase commit is represented · every entry traces to a commit sha · the file parses
-as Keep a Changelog (`## [Unreleased]` present, `### Added/Changed/Fixed` subheads).
+**Two gaps in the record are stated in the file rather than smoothed over**, because a backfill that invents
+continuity is exactly the "release-day fiction" the artifact exists to prevent:
+1. **There is no 0.5.0.** The history goes v0.4 (2026-08-04) straight to v0.6 (2026-08-15); no tag, branch or
+   commit anywhere references a v0.5. Recorded as skipped, with a `## [0.5.0]` heading saying so — visible in
+   sequence, rather than a silent hole a later reader has to re-derive.
+2. **0.4.0 and 0.6.0 were never tagged.** They are real, completed, merged versions, so they are recorded as
+   releases and dated by their last commit; the file says that is what their dates mean. Tags `v0.1`–`v0.3` also
+   use the two-part form that predates the current release contract, which the file notes.
+A header block states the file's own provenance: backfilled at v0.7, reconstructed from commit messages and
+diffs, and **anything the log does not support is not written**. Several v0.2/v0.3 commits have empty bodies, so
+those entries stay at the level their subjects support.
+**Verification:** every version boundary traced to a sha before writing · the four quantitative claims in the
+`Unreleased` section **re-measured, not copied from the older commit messages** — 91 scenarios, 22 requirements,
+5 capabilities, 117 markers all confirmed against the tree · `## [Unreleased]` present with
+`### Added/Changed/Fixed` subheads · `make gate` green.
 
 ### 18 — Align the version line
 The standard's version line is one line in four places. Today: `proposal.md` says `v0.7`, `pyproject.toml` says
