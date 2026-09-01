@@ -19,7 +19,7 @@
 - [x] 15 — `README.md`: the gate array, verbatim, and a current status line
 - [x] 16 — Widen ruff to `D` + `ANN`, and write the code that satisfies them
 - [x] 17 — `CHANGELOG.md`, backfilled from the git log
-- [ ] 18 — Align the version line: proposal = CHANGELOG = pyproject
+- [x] 18 — Align the version line: proposal = CHANGELOG = pyproject
 
 ## The per-phase ritual
 
@@ -352,5 +352,12 @@ two-part form that predates the release role. Cut `## [0.7.0]` in the CHANGELOG 
 places agree.
 **The tag is out of scope for this change.** A tag is a release act, and this change is the last phase of the
 work rather than the release of it; whoever cuts the release creates `v0.7.0` then, against these three.
-**Verification:** `proposal.md` `version:` · `CHANGELOG.md` heading · `pyproject.toml` `version` all read the
-same `0.7`/`0.7.0`, checked in one pass and quoted in the commit message.
+**On cutting the heading without a tag.** Cutting `## [0.7.0]` is not itself a release claim getting ahead of
+the tag: the heading is cut in the commit that *completes the work*, and the annotated tag is then created
+**against that same commit**. That is the ordering that makes the four places agree — a tag cannot point at a
+commit that does not exist yet, so the changelog necessarily moves first. The file says so explicitly, so a
+reader who finds `## [0.7.0]` with no `v0.7.0` tag knows which step is outstanding rather than reading it as a
+contradiction.
+**Verification:** checked in one pass and quoted here — `proposal.md` `version: v0.7` · `CHANGELOG.md`
+`## [0.7.0] - 2026-09-01` · `pyproject.toml` `version = "0.7.0"` · tag not yet created, which is the release
+act. `make gate` green, `openspec validate --strict` valid.

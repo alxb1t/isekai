@@ -18,8 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > - **0.4.0 and 0.6.0 were never tagged.** They are real, completed, merged versions and are
 >   recorded as releases here; their dates are their last commit rather than a tag date.
 >   Tags `v0.1`–`v0.3` also use the two-part form that predates the current release contract.
+>
+> `0.7.0`'s heading is cut here, in the commit that completes the work; the annotated `v0.7.0`
+> tag is the release act and is created against **this** commit, so the four places the
+> version line lives — proposal, changelog, `pyproject.toml`, tag — all name the same thing.
 
 ## [Unreleased]
+
+## [0.7.0] - 2026-09-01
 
 Adoption of the OpenSpec SDD repository standard, plus the defects that adopting it exposed.
 
@@ -168,7 +174,8 @@ Skipped — see the note at the top of this file.
 - **Blackwell (sm_120) GPUs could not run the image.** cu124 kernels gave "no kernel image is
   available"; PyTorch is pinned to 2.8.0 / cu128, whose wheels ship sm_120 kernels.
 
-[Unreleased]: https://github.com/alxb1t/isekai/compare/v0.3...HEAD
+[Unreleased]: https://github.com/alxb1t/isekai/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/alxb1t/isekai/compare/v0.3...v0.7.0
 [0.6.0]: https://github.com/alxb1t/isekai/compare/dffdd63...bbe6924
 [0.4.0]: https://github.com/alxb1t/isekai/compare/v0.3...dffdd63
 [0.3.0]: https://github.com/alxb1t/isekai/compare/v0.2...v0.3
