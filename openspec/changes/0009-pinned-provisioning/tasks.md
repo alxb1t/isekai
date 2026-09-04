@@ -9,7 +9,7 @@
 - [x] 5 — The annotator redirect: 386 MB moves onto the volume
 - [x] 6 — The namespace: one mount, one symlink, every node
 - [x] 7 — The docs: `README.md` and `CLAUDE.md` describe a pinned stack
-- [ ] 8 — ⚠️ **GPU · HALT** — inventory the existing volume, run by the operator
+- [x] 8 — ⚠️ **GPU · HALT** — inventory the existing volume, run by the operator
 - [ ] 9 — ⚠️ **GPU · HALT** — provision a new volume by script alone, render, then destroy the old
 
 ## The per-phase ritual

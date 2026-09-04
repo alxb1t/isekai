@@ -27,6 +27,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The 62 GB models volume was inventoried, and nothing on it is unaccounted for.** One pod,
+  read-only, 6.6 minutes, $0.08; teardown confirmed through the RunPod MCP, which returned an
+  empty pod list and `404 pod not found` for the pod's id. 48 files, 55.85 GiB, classified
+  exhaustively:
+
+  | class | files | size | |
+  |---|---|---|---|
+  | placed by this project's script | 11 | 16.15 GiB | every non-annotator entry of the v0.9 manifest |
+  | placed by the sibling project | 10 | 10.81 GiB | nested one level deeper, under `models/` |
+  | orphaned Qwen weights | 4 | 28.89 GiB | removed from the script by v0.8, never from disk |
+  | staging and cache leftovers | 23 | ~1 KB | the `.hf` tree, three `.cache/huggingface` trees, one 0-byte `.partial` |
+  | **unaccounted for** | **0** | **—** | **the gate on phase 9's destroy** |
+
+  Both projects' scripts are pinned and checksummed, so everything the first two classes hold is
+  re-downloadable; the remaining 28.89 GiB answers to nothing.
+- **The annotator gap is confirmed empirically.** All four annotator checkpoints —
+  `yolox_l.onnx`, `dw-ll_ucoco_384_bs5.torchscript.pt`, `sk_model.pth`, `sk_model2.pth` — are
+  **absent from the volume**. They were being re-fetched to container disk on every pod's first
+  render, exactly as the proposal argued from reading the graph.
+- **The antelopev2 pin is confirmed from the volume itself.** The leftover cache tree names
+  `ba0c3e10f4548361eb9a63265d87ce1140ab5a05` — the same DIAMONIK7777 revision the manifest pins,
+  recorded independently by a download this change did not make.
+- **The volume was extended from 62 GB to 80 GB** by the operator during this phase, so the
+  "98% full" pressure recorded in `proposal.md` is relieved. It does not change the plan: the
+  volume is still replaced rather than pruned, because pruning proves nothing about the manifest.
+- **Correction to `proposal.md` and `design.md`: the two repositories' `.env` files do *not*
+  disagree.** Both name the same volume id, and it is the account's only volume. What differs is
+  the **key name** — this repo uses `RUNPOD_VOLUME_ID`, the sibling `RUNPOD_NETWORK_VOLUME_ID` —
+  which is almost certainly what was mistaken for a stale id. There is no stale id to reconcile;
+  phase 9 still updates both.
+- **Phase 9's open question is answered.** Both manifests together are ~27.3 GiB
+  (this project 16.5 GiB across 15 entries, the sibling 10.8 GiB), so the new volume needs
+  roughly 40 GB for comfortable headroom — half of what the current one now carries, once the
+  orphaned Qwen weights are gone.
+
 - **`README.md` and `CLAUDE.md` describe a pinned stack.** The weights line now says the stack is
   provisioned from a pinned, checksummed manifest and that the volume is namespaced per project;
   the layout gains `scripts/models.json`, `scripts/derive_manifest.py` and `isekai/provision.py`;
