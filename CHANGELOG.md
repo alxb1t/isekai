@@ -27,6 +27,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The volume mounts at `/runpod-volume` and the models directory is one symlink into this
+  project's namespace.** `infra/up.sh`'s `volumeMountPath` moves off `/opt/ComfyUI/models`, and
+  `start.sh` points `/opt/ComfyUI/models` at `/runpod-volume/isekai`. Because
+  `folder_paths.models_dir` is then itself inside the namespace, **every** node resolves there —
+  including the InstantID node and the Impact Subpack, which ignore `extra_model_paths.yaml` and,
+  unredirected, auto-download a broken nested antelopev2 pack. One symlink also makes a scratch
+  namespace and a rollback the same operation.
+- **The volume is shared, so nothing here reaches outside `/runpod-volume/isekai`.** Artifacts
+  the sibling project also uses are duplicated rather than shared: at $0.07/GB/month that is
+  about 32¢/month, and it keeps this project's manifest describing bytes this project's pins
+  control.
+
 - **`AUX_ANNOTATOR_CKPTS_PATH` moves 386 MB of annotator checkpoints onto the volume.**
   `comfyui_controlnet_aux` writes them to `<node dir>/ckpts` — the pod's container disk, which
   does not survive the pod — so `yolox_l.onnx`, `dw-ll_ucoco_384_bs5.torchscript.pt`,

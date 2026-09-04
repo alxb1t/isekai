@@ -12,7 +12,9 @@ import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.provision import (
+    MODELS_NAMESPACE,
     MODELS_ROOT,
+    VOLUME_MOUNT,
     Manifest,
     annotator_files,
     load_manifest,
@@ -91,3 +93,60 @@ def test_the_annotator_checkpoints_are_the_four_the_preprocessors_fetch(
         "sk_model.pth",
         "sk_model2.pth",
     }
+
+
+@pytest.fixture(scope="session")
+def up_sh() -> str:
+    """Read the shipped `infra/up.sh` once for the whole session."""
+    return (REPO / "infra" / "up.sh").read_text()
+
+
+@pytest.fixture(scope="session")
+def start_sh() -> str:
+    """Read the shipped `start.sh` once for the whole session."""
+    return (REPO / "start.sh").read_text()
+
+
+@pytest.mark.spec_exempt(
+    "structural: the mount is a precondition of the namespace, not a scenario"
+)
+def test_the_pod_mounts_the_volume_at_its_own_root(up_sh: str) -> None:
+    assert f'volumeMountPath: "{VOLUME_MOUNT}"' in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: the mount is a precondition of the namespace, not a scenario"
+)
+def test_the_pod_no_longer_mounts_the_volume_over_the_models_directory(
+    up_sh: str,
+) -> None:
+    assert f'volumeMountPath: "{MODELS_ROOT}"' not in up_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:namespace:annotator-checkpoints-resolve-onto-the-models-tree"
+)
+def test_the_pod_symlinks_the_models_directory_onto_this_project_namespace(
+    start_sh: str,
+) -> None:
+    assert MODELS_NAMESPACE.startswith(f"{VOLUME_MOUNT}/")
+    assert MODELS_NAMESPACE != VOLUME_MOUNT
+    assert 'ln -s "$MODELS_NAMESPACE" "$MODELS_ROOT"' in start_sh
+    assert f"MODELS_NAMESPACE={MODELS_NAMESPACE}" in start_sh
+    assert f"MODELS_ROOT={MODELS_ROOT}" in start_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: nothing in this project reaches outside its own namespace"
+)
+def test_the_pod_startup_touches_nothing_outside_the_project_namespace(
+    start_sh: str,
+) -> None:
+    reaches_out = [
+        line
+        for line in start_sh.splitlines()
+        if not line.lstrip().startswith("#")
+        and VOLUME_MOUNT in line
+        and MODELS_NAMESPACE not in line
+    ]
+    assert reaches_out == []

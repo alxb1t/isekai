@@ -21,7 +21,7 @@ body=$(jq -n \
      gpuTypeIds: [$gpu],
      gpuCount: 1,
      networkVolumeId: $vol,
-     volumeMountPath: "/opt/ComfyUI/models",
+     volumeMountPath: "/runpod-volume",
      ports: ["22/tcp"],
      containerDiskInGb: 30,
      dataCenterIds: [$dc],

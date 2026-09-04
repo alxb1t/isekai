@@ -402,6 +402,12 @@ def undeclared_files(filenames: list[str], manifest: Manifest) -> list[str]:
 # relative to this, and `folder_paths` resolves every node's models from it.
 MODELS_ROOT = "/opt/ComfyUI/models"
 
+# Where the network volume mounts, and this project's slice of it. The volume is
+# shared with another project under a different convention, so nothing here
+# reaches outside `MODELS_NAMESPACE` (design.md D9).
+VOLUME_MOUNT = "/runpod-volume"
+MODELS_NAMESPACE = f"{VOLUME_MOUNT}/isekai"
+
 # The preprocessor nodes whose checkpoints `comfyui_controlnet_aux` fetches into
 # its own `ckpts` directory -- container disk, unless AUX_ANNOTATOR_CKPTS_PATH
 # says otherwise (design.md D7).

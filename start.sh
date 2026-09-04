@@ -14,8 +14,28 @@ mkdir -p /run/sshd
 ssh-keygen -A
 /usr/sbin/sshd
 
-# 3. Ensure models are on the volume — downloads once, skipped on later boots.
-MODELS_DIR=/opt/ComfyUI/models bash /opt/isekai/scripts/download_models.sh
+# 3. Namespace the models directory onto this project's slice of the volume.
+#
+# One symlink, not one per model folder: `folder_paths.models_dir` is then itself
+# inside the namespace, so EVERY node resolves there — including the InstantID
+# node and the Impact Subpack, which ignore `extra_model_paths.yaml` and, without
+# this, auto-download a broken nested antelopev2 pack (design.md D8).
+#
+# The directory being replaced is the image's own empty models tree on container
+# disk. The volume mounts at /runpod-volume and nothing here touches anything
+# outside $MODELS_NAMESPACE — a second project lives on the same volume.
+MODELS_NAMESPACE=/runpod-volume/isekai
+MODELS_ROOT=/opt/ComfyUI/models
 
-# 4. ComfyUI in the foreground — the main process. If it exits, the pod stops.
+mkdir -p "$MODELS_NAMESPACE"
+if [ ! -L "$MODELS_ROOT" ]; then
+    rm -rf "$MODELS_ROOT"
+    ln -s "$MODELS_NAMESPACE" "$MODELS_ROOT"
+fi
+echo "models namespace: $MODELS_ROOT -> $(readlink "$MODELS_ROOT")"
+
+# 4. Ensure models are on the volume — downloads once, re-verified on later boots.
+MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/scripts/download_models.sh
+
+# 5. ComfyUI in the foreground — the main process. If it exits, the pod stops.
 exec python main.py --listen 0.0.0.0 --port 8188
