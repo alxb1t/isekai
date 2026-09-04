@@ -4,7 +4,7 @@ Turn a photo of a person into an anime image — while keeping the person **reco
 using **open models** on a **rented GPU, on demand**. A reproducible, provider-agnostic
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
-> **Status: v0.8.0, in development.** The pipeline works end to end: one path, five seeded
+> **Status: v0.8.0, released.** The pipeline works end to end: one path, five seeded
 > variations per run, and a CLI whose whole required surface is the photo. Development follows
 > OpenSpec SDD — `openspec/` is authoritative for what the code does and what is being built
 > next.

@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-04
+
 ### Removed
 
 - **The `qwen`, `animagine` and `animagine-i2i` paths.** All three are superseded by

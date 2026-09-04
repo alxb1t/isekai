@@ -11,23 +11,57 @@ shares one generalised conditioning trace.
 
 ## Requirements
 
-### Requirement: Unambiguous node location
+### Requirement: The positive prompt is graph configuration
 
-The system SHALL locate a workflow node by class type and/or title, and SHALL refuse to guess when the query does
-not identify exactly one node — an injection that edits the wrong node produces a silently wrong render rather
-than an error.
+The system SHALL commit the positive prompt to the workflow graph and SHALL expose no way to set it
+from the command line — the prompt is the highest-leverage input to a Danbooru-trained base, and a
+value a human retypes each run makes every render unattributable. It is configuration, in the same
+category as `steps` and `cfg`.
+
+#### Scenario: no command-line path sets the positive prompt
+- **Key:** `workflow-injection:committed-prompt:not-settable-from-the-cli`
+- **Layers:** unit
+- **WHEN** the command line is parsed
+- **THEN** no flag carries a prompt
+- **AND** injection takes no prompt argument, so there is no path by which typed text reaches the
+  encoder
+
+#### Scenario: the committed positive string is pinned
+- **Key:** `workflow-injection:committed-prompt:string-is-pinned`
+- **Layers:** unit
+- **WHEN** the shipped graph's positive encoder is inspected
+- **THEN** its text equals a literal pinned by the suite
+- **AND** changing the prompt therefore requires a deliberate test edit, which is what makes "not
+  typeable" a property rather than a convention
+
+#### Scenario: the committed string carries no typed subject text
+- **Key:** `workflow-injection:committed-prompt:carries-no-pose-tag`
+- **Layers:** unit
+- **WHEN** the pinned positive string is read
+- **THEN** it contains no pose tag
+- **AND** pose is carried by the OpenPose ControlNet, so a pose tag in the prompt competes with the
+  mechanism that owns that axis
+
+#### Scenario: the negative encoder is left as the graph committed it
+- **Key:** `workflow-injection:committed-prompt:negative-is-untouched`
+- **Layers:** unit
+- **WHEN** injection runs
+- **THEN** the negative encoder's text is exactly what the graph shipped with
+
+### Requirement: Node location on the one graph
+
+The system SHALL locate a workflow node by class type, and SHALL refuse to guess when the query does
+not identify exactly one node — an injection that edits the wrong node produces a silently wrong
+render rather than an error.
+
+This replaces the previous *Unambiguous node location* requirement. Title-based lookup is removed
+with its last caller, and the two Qwen scenarios describe a graph this change deletes.
 
 #### Scenario: a node is located by its class type
 - **Key:** `workflow-injection:node-location:locates-by-class-type`
 - **Layers:** unit
 - **WHEN** a graph is queried for a node of a given class type that appears exactly once
 - **THEN** that node's ID is returned
-
-#### Scenario: a node is located by its title
-- **Key:** `workflow-injection:node-location:locates-by-title`
-- **Layers:** unit
-- **WHEN** a graph is queried by the title recorded in a node's metadata
-- **THEN** the matching node's ID is returned
 
 #### Scenario: a query matching nothing is refused
 - **Key:** `workflow-injection:node-location:exits-when-no-node-matches`
@@ -41,92 +75,50 @@ than an error.
 - **WHEN** a query matches more than one node
 - **THEN** the process exits rather than silently picking the first match
 
-#### Scenario: the real Qwen workflow has exactly one image loader
+#### Scenario: the shipped graph has exactly one image loader
 - **Key:** `workflow-injection:node-location:single-load-image-in-real-workflow`
 - **Layers:** unit
-- **WHEN** the shipped Qwen workflow is queried for its image-loading node
+- **WHEN** the shipped workflow is queried for its image-loading node
 - **THEN** exactly one is found, which is what makes an unqualified lookup safe for the photo
 
-#### Scenario: the two Qwen text encoders are genuinely ambiguous
-- **Key:** `workflow-injection:node-location:qwen-text-encoders-are-ambiguous`
+#### Scenario: the two text encoders are genuinely ambiguous
+- **Key:** `workflow-injection:node-location:text-encoders-are-ambiguous`
 - **Layers:** unit
-- **WHEN** the shipped Qwen workflow is queried for a text encoder by class type alone
-- **THEN** the query is refused as ambiguous, because the graph carries a positive and a negative encoder
-- **AND** this is why the prompt is placed by following the sampler's positive link rather than by class lookup
+- **WHEN** the shipped workflow is queried for a text encoder by class type alone
+- **THEN** the query is refused as ambiguous, because the graph carries a positive and a negative
+  encoder
+- **AND** this is why neither encoder is reached by class lookup, and why the positive string is
+  committed to the graph rather than placed by injection
 
-### Requirement: Photo wiring
+### Requirement: Photo wiring into the one graph
 
-The system SHALL point the workflow's image loader at the uploaded file, for every model family, so the graph
-reads the photo the run actually uploaded.
+The system SHALL point the workflow's image loader at the uploaded file, so the graph reads the
+photo the run actually uploaded.
 
-#### Scenario: the Qwen graph loads the uploaded file
-- **Key:** `workflow-injection:photo-wiring:qwen-loads-the-uploaded-file`
+This replaces the previous *Photo wiring* requirement, whose four scenarios wired four graphs. One
+graph remains, and one loader feeds every consumer in it.
+
+#### Scenario: one loader feeds the whole stack
+- **Key:** `workflow-injection:photo-wiring:single-loader-fans-out`
 - **Layers:** unit
-- **WHEN** the Qwen injector runs against its workflow with an uploaded filename
-- **THEN** the graph's image loader is pointed at that filename
+- **WHEN** injection runs against the shipped workflow, where one loader feeds the latent encoder,
+  the identity node and every ControlNet preprocessor
+- **THEN** that single loader is wired to the uploaded filename
+- **AND** the exactly-one-loader invariant holds across the entire stack, which is why injection
+  needs no per-consumer branch
 
-#### Scenario: the Animagine graph loads the reference face
-- **Key:** `workflow-injection:photo-wiring:animagine-loads-the-reference-face`
-- **Layers:** unit
-- **WHEN** the Animagine injector runs against the InstantID workflow
-- **THEN** the graph's image loader is pointed at the uploaded filename, which is the face the identity signal is
-  derived from
+### Requirement: Latent initialisation from the photo
 
-#### Scenario: one loader feeds both consumers in the img2img graph
-- **Key:** `workflow-injection:photo-wiring:img2img-single-loader-fans-out`
-- **Layers:** unit
-- **WHEN** the Animagine injector runs against the img2img workflow, where one loader feeds both the latent
-  encoder and the identity node
-- **THEN** the single loader is wired to the uploaded file
-- **AND** the exactly-one-loader invariant still holds, so the injector needs no img2img-specific branch
-
-#### Scenario: one loader feeds the whole ControlNet stack
-- **Key:** `workflow-injection:photo-wiring:controlnet-single-loader-across-stack`
-- **Layers:** unit
-- **WHEN** the Animagine injector runs against the ControlNet workflow
-- **THEN** the single image loader is wired to the uploaded file across the entire stack
-
-### Requirement: Prompt placement on the positive conditioning path
-
-The system SHALL place the prompt on the **positive** conditioning encoder and no other, found by following the
-sampler's positive link rather than by class lookup — the graphs carry a negative encoder of the same class, and
-writing the prompt into it would invert the render's meaning.
-
-#### Scenario: the Qwen prompt lands on the positive encoder only
-- **Key:** `workflow-injection:prompt-placement:qwen-positive-encoder-only`
-- **Layers:** unit
-- **WHEN** the Qwen injector runs with a prompt
-- **THEN** the encoder the sampler's positive input points at receives the prompt
-- **AND** the negative encoder is left untouched
-
-#### Scenario: the Animagine prompt lands on the positive encoder only
-- **Key:** `workflow-injection:prompt-placement:animagine-positive-encoder-only`
-- **Layers:** unit
-- **WHEN** the Animagine injector runs with a prompt
-- **THEN** only the positive encoder reached through the sampler's positive link receives it
-
-#### Scenario: the img2img prompt lands on the positive encoder
-- **Key:** `workflow-injection:prompt-placement:img2img-positive-encoder`
-- **Layers:** unit
-- **WHEN** the Animagine injector runs against the img2img workflow
-- **THEN** the prompt reaches the positive encoder through the identity node in the conditioning path
-
-#### Scenario: the trace walks through the ControlNet chain to the encoder
-- **Key:** `workflow-injection:prompt-placement:traces-through-controlnet-chain`
-- **Layers:** unit
-- **WHEN** the Animagine injector runs against a graph whose positive path passes through a stack of ControlNet
-  apply nodes before reaching the encoder
-- **THEN** the trace follows the positive link through every intermediate node until it reaches the text encoder
-- **AND** places the prompt there, so one generalised trace serves the whole InstantID family at any chain depth
-
-### Requirement: img2img latent initialisation
-
-The system SHALL initialise the img2img graph's latent from the photo rather than from noise, at a denoise
+The system SHALL initialise the graph's latent from the photo rather than from noise, at a denoise
 strength below one, so the photograph's composition survives into the render.
 
-#### Scenario: the img2img graph inits its latent from the photo below full denoise
-- **Key:** `workflow-injection:latent-init:img2img-inits-from-photo-below-one`
+This replaces the previous *img2img latent initialisation* requirement. The behaviour is unchanged;
+the name and its scenario key drop the `img2img` qualifier, which distinguished one of four graphs
+that no longer exist.
+
+#### Scenario: the graph inits its latent from the photo below full denoise
+- **Key:** `workflow-injection:latent-init:inits-from-photo-below-one`
 - **Layers:** unit
-- **WHEN** the img2img workflow is inspected
+- **WHEN** the shipped workflow is inspected
 - **THEN** its latent is encoded from the loaded photo rather than generated as empty noise
 - **AND** the sampler's denoise is below one, which is the dial trading identity against style
