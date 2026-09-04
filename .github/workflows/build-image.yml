@@ -1,8 +1,19 @@
 name: build-image
 
+# A push to `main` publishes `:latest` — that is the released image, and it is the
+# only thing that may claim that tag. A manual run publishes whatever tag you name
+# and defaults to a release candidate, so a pre-release build (a metered phase that
+# needs the branch's image on a pod, before the branch is merged) can never clobber
+# the image a rollback would reach for.
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to publish — a release candidate, never `latest`
+        required: true
+        default: v0.9-rc
 
 jobs:
   build:
@@ -23,4 +34,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/alxb1t/isekai:latest
+          tags: ghcr.io/alxb1t/isekai:${{ inputs.tag || 'latest' }}
