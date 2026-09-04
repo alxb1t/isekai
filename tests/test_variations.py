@@ -7,19 +7,19 @@ import pytest
 from isekai.comfy_types import Workflow
 from isekai.mutate import mutate
 from isekai.pipeline import run
-from isekai.workflow import inject_animagine
+from isekai.workflow import inject
 from tests.fakes import FakeComfyClient
 
 
 @pytest.mark.spec("workflow-mutation:variations:mutator-varies-submission")
 def test_run_mutates_the_submitted_workflow_when_a_mutator_is_given(
-    animagine_i2i_cn_workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path
 ) -> None:
     client = FakeComfyClient()
     run(
         client,
-        animagine_i2i_cn_workflow,
-        inject_animagine,
+        workflow,
+        inject,
         "photo.jpg",
         "anime",
         str(tmp_path / "out.png"),
@@ -34,13 +34,13 @@ def test_run_mutates_the_submitted_workflow_when_a_mutator_is_given(
 
 @pytest.mark.spec("workflow-mutation:reproducibility:seed-is-printed")
 def test_run_prints_the_seed_as_the_reproducibility_contract(
-    animagine_i2i_cn_workflow: Workflow, tmp_path: Path, capsys: pytest.CaptureFixture
+    workflow: Workflow, tmp_path: Path, capsys: pytest.CaptureFixture
 ) -> None:
     client = FakeComfyClient()
     run(
         client,
-        animagine_i2i_cn_workflow,
-        inject_animagine,
+        workflow,
+        inject,
         "photo.jpg",
         "anime",
         str(tmp_path / "out.png"),
@@ -55,13 +55,13 @@ def test_run_prints_the_seed_as_the_reproducibility_contract(
 
 @pytest.mark.spec("workflow-mutation:variations:one-output-per-variation")
 def test_run_writes_one_output_per_variation(
-    animagine_i2i_cn_workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path
 ) -> None:
     client = FakeComfyClient()
     run(
         client,
-        animagine_i2i_cn_workflow,
-        inject_animagine,
+        workflow,
+        inject,
         "photo.jpg",
         "anime",
         str(tmp_path / "out.png"),
@@ -80,13 +80,13 @@ def test_run_writes_one_output_per_variation(
 
 @pytest.mark.spec("workflow-mutation:base-relative:override-applied-before-jitter")
 def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
-    animagine_i2i_cn_workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path
 ) -> None:
     client = FakeComfyClient()
     run(
         client,
-        animagine_i2i_cn_workflow,
-        inject_animagine,
+        workflow,
+        inject,
         "photo.jpg",
         "anime",
         str(tmp_path / "out.png"),
@@ -105,18 +105,18 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
 
 @pytest.mark.spec("workflow-mutation:reproducibility:override-plus-seed-reproduces")
 def test_run_with_override_and_seed_is_reproducible(
-    animagine_i2i_cn_workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path
 ) -> None:
     import copy as _copy
 
-    wf_a = _copy.deepcopy(animagine_i2i_cn_workflow)
-    wf_b = _copy.deepcopy(animagine_i2i_cn_workflow)
+    wf_a = _copy.deepcopy(workflow)
+    wf_b = _copy.deepcopy(workflow)
 
     client_a = FakeComfyClient()
     run(
         client_a,
         wf_a,
-        inject_animagine,
+        inject,
         "photo.jpg",
         "anime",
         str(tmp_path / "out_a.png"),
@@ -129,7 +129,7 @@ def test_run_with_override_and_seed_is_reproducible(
     run(
         client_b,
         wf_b,
-        inject_animagine,
+        inject,
         "photo.jpg",
         "anime",
         str(tmp_path / "out_b.png"),
@@ -144,7 +144,7 @@ def test_run_with_override_and_seed_is_reproducible(
 @pytest.mark.spec("workflow-mutation:reproducibility:seed-covers-every-variation")
 @pytest.mark.spec("workflow-mutation:variations:variations-differ-from-each-other")
 def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
-    animagine_i2i_cn_workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path
 ) -> None:
     # The seed is a reproducibility contract for the whole run. Variations after
     # the first must derive from it too, or `--seed X --variations 3` reproduces
@@ -153,8 +153,8 @@ def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
         client = FakeComfyClient()
         run(
             client,
-            copy.deepcopy(animagine_i2i_cn_workflow),
-            inject_animagine,
+            copy.deepcopy(workflow),
+            inject,
             "photo.jpg",
             "anime",
             str(tmp_path / f"{tag}.png"),

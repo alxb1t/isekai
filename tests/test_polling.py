@@ -4,13 +4,13 @@ import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.pipeline import run
-from isekai.workflow import inject_animagine
+from isekai.workflow import inject
 from tests.fakes import FakeComfyClient
 
 
 @pytest.mark.spec("comfy-transport:polling:polls-history-until-complete")
 def test_run_polls_history_until_the_prompt_completes(
-    animagine_i2i_cn_workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr("time.sleep", lambda *_: None)
     client = FakeComfyClient(pending_polls=2)
@@ -18,8 +18,8 @@ def test_run_polls_history_until_the_prompt_completes(
 
     run(
         client,
-        animagine_i2i_cn_workflow,
-        inject_animagine,
+        workflow,
+        inject,
         "photo.jpg",
         "1girl, anime",
         str(output),
@@ -31,7 +31,7 @@ def test_run_polls_history_until_the_prompt_completes(
 
 @pytest.mark.spec("comfy-transport:retrieval:downloads-image-named-in-history")
 def test_run_downloads_the_image_named_in_the_history(
-    animagine_i2i_cn_workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setattr("time.sleep", lambda *_: None)
     client = FakeComfyClient(
@@ -41,8 +41,8 @@ def test_run_downloads_the_image_named_in_the_history(
 
     run(
         client,
-        animagine_i2i_cn_workflow,
-        inject_animagine,
+        workflow,
+        inject,
         "photo.jpg",
         "1girl, anime",
         str(output),

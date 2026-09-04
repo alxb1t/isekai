@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from isekai.comfy_types import Injector, Mutator
 from isekai.mutate import mutate
-from isekai.workflow import inject_animagine
+from isekai.workflow import inject
 
 
 @dataclass(frozen=True)
@@ -18,9 +18,7 @@ class Model:
 
 
 MODELS: dict[str, Model] = {
-    "animagine-i2i-cn": Model(
-        "workflows/animagine-i2i-cn.json", inject_animagine, mutate=mutate
-    ),
+    "pipeline": Model("workflows/pipeline.json", inject, mutate=mutate),
 }
 
 

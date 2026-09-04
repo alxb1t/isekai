@@ -39,8 +39,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--prompt", required=True, help="edit instruction")
     p.add_argument(
         "--model",
-        choices=["animagine-i2i-cn"],
-        default="animagine-i2i-cn",
+        choices=["pipeline"],
+        default="pipeline",
         help="which pipeline to run",
     )
     p.add_argument(

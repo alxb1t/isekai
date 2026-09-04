@@ -28,8 +28,8 @@ def find_node(
     return matches[0]
 
 
-def inject_animagine(workflow: Workflow, image_name: str, prompt: str) -> None:
-    """Wire the uploaded photo and prompt into an Animagine + InstantID graph.
+def inject(workflow: Workflow, image_name: str, prompt: str) -> None:
+    """Wire the uploaded photo and prompt into the pipeline graph.
 
     Mutates `workflow` in place. Handles any depth of conditioning chain:
     KSampler.positive may point at ApplyInstantID directly, or through a stack of

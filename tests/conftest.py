@@ -5,13 +5,16 @@ import pytest
 
 from isekai.comfy_types import Workflow
 
-FIXTURES = Path(__file__).parent / "fixtures"
+# The suite reads the shipped graph itself: a byte-identical fixture copy with no
+# drift check is a second thing to rename and a silent divergence waiting to
+# happen (design.md D9).
+WORKFLOWS = Path(__file__).parent.parent / "workflows"
 
 
-def load_fixture(name: str) -> Workflow:
-    return json.loads((FIXTURES / name).read_text())
+def load_workflow(name: str) -> Workflow:
+    return json.loads((WORKFLOWS / name).read_text())
 
 
 @pytest.fixture
-def animagine_i2i_cn_workflow() -> Workflow:
-    return load_fixture("animagine-i2i-cn.json")
+def workflow() -> Workflow:
+    return load_workflow("pipeline.json")

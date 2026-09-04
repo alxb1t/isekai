@@ -9,54 +9,52 @@ from isekai.mutate import mutate
 
 @pytest.mark.spec("workflow-mutation:jitter:seed-comes-from-the-rng")
 def test_mutate_sets_the_ksampler_seed_from_the_rng(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    mutate(animagine_i2i_cn_workflow, random.Random(0))
-    assert animagine_i2i_cn_workflow["10"]["inputs"]["seed"] == random.Random(
-        0
-    ).getrandbits(64)
+    mutate(workflow, random.Random(0))
+    assert workflow["10"]["inputs"]["seed"] == random.Random(0).getrandbits(64)
 
 
 @pytest.mark.spec("workflow-mutation:jitter:seed-is-64-bit")
-def test_mutate_draws_a_64_bit_seed(animagine_i2i_cn_workflow: Workflow) -> None:
-    mutate(animagine_i2i_cn_workflow, random.Random(1))
-    assert 0 <= animagine_i2i_cn_workflow["10"]["inputs"]["seed"] < 2**64
+def test_mutate_draws_a_64_bit_seed(workflow: Workflow) -> None:
+    mutate(workflow, random.Random(1))
+    assert 0 <= workflow["10"]["inputs"]["seed"] < 2**64
 
 
 @pytest.mark.spec("workflow-mutation:jitter:denoise-within-band")
 def test_mutate_jitters_denoise_within_range(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 0.60 <= wf["10"]["inputs"]["denoise"] <= 0.70
 
 
 @pytest.mark.spec("workflow-mutation:jitter:cfg-within-band")
-def test_mutate_jitters_cfg_within_range(animagine_i2i_cn_workflow: Workflow) -> None:
+def test_mutate_jitters_cfg_within_range(workflow: Workflow) -> None:
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 4.5 <= wf["10"]["inputs"]["cfg"] <= 5.5
 
 
 @pytest.mark.spec("workflow-mutation:jitter:ip-weight-within-band")
 def test_mutate_jitters_ip_weight_within_range(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 0.85 <= wf["8"]["inputs"]["ip_weight"] <= 0.95
 
 
 @pytest.mark.spec("workflow-mutation:reproducibility:same-seed-same-result")
 def test_mutate_is_reproducible_for_the_same_seed(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    a = copy.deepcopy(animagine_i2i_cn_workflow)
-    b = copy.deepcopy(animagine_i2i_cn_workflow)
+    a = copy.deepcopy(workflow)
+    b = copy.deepcopy(workflow)
     mutate(a, random.Random(42))
     mutate(b, random.Random(42))
     assert a == b
@@ -64,10 +62,10 @@ def test_mutate_is_reproducible_for_the_same_seed(
 
 @pytest.mark.spec("workflow-mutation:reproducibility:distinct-states-diverge")
 def test_mutate_differs_for_distinct_rng_states(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    a = copy.deepcopy(animagine_i2i_cn_workflow)
-    b = copy.deepcopy(animagine_i2i_cn_workflow)
+    a = copy.deepcopy(workflow)
+    b = copy.deepcopy(workflow)
     mutate(a, random.Random(1))
     mutate(b, random.Random(2))
     assert a["10"]["inputs"]["seed"] != b["10"]["inputs"]["seed"]
@@ -75,16 +73,16 @@ def test_mutate_differs_for_distinct_rng_states(
 
 @pytest.mark.spec("workflow-mutation:controlnet:strengths-are-jittered")
 def test_mutate_jitters_the_controlnet_strenghts(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     before = {
         nid: n["inputs"]["strength"]
-        for nid, n in animagine_i2i_cn_workflow.items()
+        for nid, n in workflow.items()
         if n["class_type"] == "ControlNetApplyAdvanced"
     }
     assert before
 
-    wf = copy.deepcopy(animagine_i2i_cn_workflow)
+    wf = copy.deepcopy(workflow)
     mutate(wf, random.Random(3))
     after = {nid: wf[nid]["inputs"]["strength"] for nid in before}
 
@@ -98,15 +96,15 @@ def test_mutate_jitters_the_controlnet_strenghts(
 
 @pytest.mark.spec("workflow-mutation:controlnet:strengths-stay-in-band")
 def test_mutate_keeps_every_controlnet_strength_in_its_band(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     bases = {
         nid: n["inputs"]["strength"]
-        for nid, n in animagine_i2i_cn_workflow.items()
+        for nid, n in workflow.items()
         if n["class_type"] == "ControlNetApplyAdvanced"
     }
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         for nid, base in bases.items():
             s = wf[nid]["inputs"]["strength"]
@@ -115,10 +113,10 @@ def test_mutate_keeps_every_controlnet_strength_in_its_band(
 
 @pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
 def test_mutate_in_reproducible_on_the_controlnet_path(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    a = copy.deepcopy(animagine_i2i_cn_workflow)
-    b = copy.deepcopy(animagine_i2i_cn_workflow)
+    a = copy.deepcopy(workflow)
+    b = copy.deepcopy(workflow)
     mutate(a, random.Random(7))
     mutate(b, random.Random(7))
     assert a == b
@@ -129,33 +127,33 @@ def test_mutate_in_reproducible_on_the_controlnet_path(
 
 @pytest.mark.spec("workflow-mutation:base-relative:denoise-around-current-base")
 def test_mutate_jitters_denoise_around_its_current_base(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    animagine_i2i_cn_workflow["10"]["inputs"]["denoise"] = 0.70
+    workflow["10"]["inputs"]["denoise"] = 0.70
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 0.65 <= wf["10"]["inputs"]["denoise"] <= 0.75
 
 
 @pytest.mark.spec("workflow-mutation:base-relative:cfg-around-current-base")
 def test_mutate_jitters_cfg_around_its_current_base(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    animagine_i2i_cn_workflow["10"]["inputs"]["cfg"] = 6.0
+    workflow["10"]["inputs"]["cfg"] = 6.0
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 5.5 <= wf["10"]["inputs"]["cfg"] <= 6.5
 
 
 @pytest.mark.spec("workflow-mutation:base-relative:ip-weight-around-current-base")
 def test_mutate_jitters_ip_weight_around_its_current_base(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    animagine_i2i_cn_workflow["8"]["inputs"]["ip_weight"] = 0.80
+    workflow["8"]["inputs"]["ip_weight"] = 0.80
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 0.75 <= wf["8"]["inputs"]["ip_weight"] <= 0.85
 
@@ -168,65 +166,65 @@ def test_mutate_jitters_ip_weight_around_its_current_base(
 
 @pytest.mark.spec("workflow-mutation:jitter:denoise-within-band")
 def test_mutate_clamps_denoise_at_the_top_of_its_range(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    animagine_i2i_cn_workflow["10"]["inputs"]["denoise"] = 1.0
+    workflow["10"]["inputs"]["denoise"] = 1.0
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 0.0 <= wf["10"]["inputs"]["denoise"] <= 1.0
 
 
 @pytest.mark.spec("workflow-mutation:jitter:denoise-within-band")
 def test_mutate_clamps_denoise_at_the_bottom_of_its_range(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    animagine_i2i_cn_workflow["10"]["inputs"]["denoise"] = 0.0
+    workflow["10"]["inputs"]["denoise"] = 0.0
     for i in range(100):
-        wf = copy.deepcopy(animagine_i2i_cn_workflow)
+        wf = copy.deepcopy(workflow)
         mutate(wf, random.Random(i))
         assert 0.0 <= wf["10"]["inputs"]["denoise"] <= 1.0
 
 
 @pytest.mark.spec("workflow-mutation:jitter:cfg-within-band")
 def test_mutate_clamps_cfg_at_the_edges_of_its_range(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     for base in (0.0, 30.0):
-        animagine_i2i_cn_workflow["10"]["inputs"]["cfg"] = base
+        workflow["10"]["inputs"]["cfg"] = base
         for i in range(100):
-            wf = copy.deepcopy(animagine_i2i_cn_workflow)
+            wf = copy.deepcopy(workflow)
             mutate(wf, random.Random(i))
             assert 0.0 <= wf["10"]["inputs"]["cfg"] <= 30.0
 
 
 @pytest.mark.spec("workflow-mutation:jitter:ip-weight-within-band")
 def test_mutate_clamps_ip_weight_at_the_edges_of_its_range(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     for base in (0.0, 1.0):
-        animagine_i2i_cn_workflow["8"]["inputs"]["ip_weight"] = base
+        workflow["8"]["inputs"]["ip_weight"] = base
         for i in range(100):
-            wf = copy.deepcopy(animagine_i2i_cn_workflow)
+            wf = copy.deepcopy(workflow)
             mutate(wf, random.Random(i))
             assert 0.0 <= wf["8"]["inputs"]["ip_weight"] <= 1.0
 
 
 @pytest.mark.spec("workflow-mutation:controlnet:strengths-stay-in-band")
 def test_mutate_clamps_controlnet_strengths_at_the_edges(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     cn_ids = [
         nid
-        for nid, n in animagine_i2i_cn_workflow.items()
+        for nid, n in workflow.items()
         if n["class_type"] == "ControlNetApplyAdvanced"
     ]
     assert cn_ids
     for base in (0.0, 1.0):
         for nid in cn_ids:
-            animagine_i2i_cn_workflow[nid]["inputs"]["strength"] = base
+            workflow[nid]["inputs"]["strength"] = base
         for i in range(100):
-            wf = copy.deepcopy(animagine_i2i_cn_workflow)
+            wf = copy.deepcopy(workflow)
             mutate(wf, random.Random(i))
             for nid in cn_ids:
                 assert 0.0 <= wf[nid]["inputs"]["strength"] <= 1.0
@@ -267,17 +265,17 @@ def test_mutate_handles_subgraph_style_controlnet_node_ids() -> None:
 
 @pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
 def test_mutate_pins_each_controlnet_strength_for_a_fixed_seed(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     # Comparing two mutations of the same dict shares one iteration order by
     # construction, so it cannot detect order-dependence. Pin the actual values:
     # the node sort is the only thing making seed -> strength canonical, and a
     # re-export of the workflow JSON in a different node order must not silently
     # change what a given seed renders.
-    mutate(animagine_i2i_cn_workflow, random.Random(3))
-    assert animagine_i2i_cn_workflow["14"]["inputs"]["strength"] == 0.22514406082161081
-    assert animagine_i2i_cn_workflow["18"]["inputs"]["strength"] == 0.5131057718479626
-    assert animagine_i2i_cn_workflow["21"]["inputs"]["strength"] == 0.10263359831097484
+    mutate(workflow, random.Random(3))
+    assert workflow["14"]["inputs"]["strength"] == 0.22514406082161081
+    assert workflow["18"]["inputs"]["strength"] == 0.5131057718479626
+    assert workflow["21"]["inputs"]["strength"] == 0.10263359831097484
 
 
 @pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
@@ -303,18 +301,15 @@ def test_mutate_draws_controlnet_strengths_in_numeric_node_order() -> None:
 
 @pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
 def test_mutate_is_independent_of_the_json_node_order(
-    animagine_i2i_cn_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
     # The golden above cannot catch a DROPPED sort key, because the shipped
     # fixture already happens to be stored in ascending order. This builds the
     # same graph with the node keys inserted in reverse and asserts the same seed
     # still yields the same strengths -- which is precisely what survives a
     # re-export of the workflow JSON from ComfyUI.
-    shuffled = {
-        nid: animagine_i2i_cn_workflow[nid]
-        for nid in reversed(list(animagine_i2i_cn_workflow))
-    }
-    a = copy.deepcopy(animagine_i2i_cn_workflow)
+    shuffled = {nid: workflow[nid] for nid in reversed(list(workflow))}
+    a = copy.deepcopy(workflow)
     b = copy.deepcopy(shuffled)
     mutate(a, random.Random(3))
     mutate(b, random.Random(3))

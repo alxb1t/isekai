@@ -8,22 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **On this record's provenance.** This file was **backfilled during v0.7**, from the git
 > history, after eleven phases and three releases had already shipped without it. Entries are
 > reconstructed from commit messages and diffs; **anything the log does not support is not
-> written here.** From v0.7 on, an entry is appended per phase under `## [Unreleased]` and cut
-> at release, as the project's change contract requires.
->
-> Two gaps in the record, stated rather than smoothed over:
->
-> - **There is no 0.5.0.** The history goes v0.4 (2026-08-04) directly to v0.6 (2026-08-15).
->   No tag, branch or commit references a v0.5, so the version was skipped rather than lost.
-> - **0.4.0 and 0.6.0 were never tagged.** They are real, completed, merged versions and are
->   recorded as releases here; their dates are their last commit rather than a tag date.
->   Tags `v0.1`–`v0.3` also use the two-part form that predates the current release contract.
->
-> `0.7.0`'s heading is cut here, in the commit that completes the work; the annotated `v0.7.0`
-> tag is the release act and is created against **this** commit, so the four places the
-> version line lives — proposal, changelog, `pyproject.toml`, tag — all name the same thing.
-
-## [Unreleased]
+> written here.** From v0.7 on, an entry is appended per phase under `## [Unreleased]
 
 ### Removed
 
@@ -36,15 +21,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pairing and mutation pairing — all describe a choice that no longer exists, so
   `openspec/specs/model-registry/` and `tests/test_model_dispatch.py` are deleted. The living
   spec goes from five capabilities to four.
-- **Tests bound to the deleted paths**, including `test_run_without_overrides_is_byte_identical_to_v04`,
-  which pinned v0.4's output for a path that is now gone, and the Qwen-only guards for a
-  wired `cfg` dial and a graph with no identity node. The suite moves from 114 tests to 81;
-  the count going down is the work, not a weakened gate.
+- **Tests bound to the deleted paths**, including
+  `test_run_without_overrides_is_byte_identical_to_v04`, which pinned v0.4's output for a path
+  that is now gone, and the Qwen-only guards for a wired `cfg` dial and a graph with no identity
+  node. The suite moves from 114 tests to 81; the count going down is the work, not a weakened
+  gate.
+- **`tests/fixtures/`.** The fixtures were byte-identical copies of the shipped graphs with no
+  drift check — a second thing to rename and a silent divergence waiting to happen.
+  `tests/conftest.py` now loads `workflows/pipeline.json` directly.
 
 ### Changed
 
-- `--model` now accepts a single value, `animagine-i2i-cn`, which is also its default. The
-  flag itself is removed in a later phase of this change.
+- **The surviving path is renamed to nothing.** `workflows/animagine-i2i-cn.json` →
+  `workflows/pipeline.json`, `workflows/animagine-i2i-cn_ui.json` →
+  `workflows/pipeline_ui.json`, `inject_animagine` → `inject`, and the one remaining `--model`
+  value → `pipeline`. Every name available today describes the base or the technique, and v0.9
+  replaces the base; the only name that version cannot invalidate is no name. The flag itself is
+  removed in a later phase of this change.
+- **Spec keys lose their model segment**:
+  `workflow-injection:photo-wiring:controlnet-single-loader-across-stack` →
+  `…:single-loader-fans-out`, and
+  `workflow-injection:latent-init:img2img-inits-from-photo-below-one` →
+  `…:inits-from-photo-below-one`.
 
 ## [0.7.0] - 2026-09-01
 
