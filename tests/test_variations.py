@@ -14,7 +14,7 @@ from tests.fakes import FakeComfyClient
 def test_run_mutates_the_submitted_workflow(workflow: Workflow, tmp_path: Path) -> None:
     baked = workflow["10"]["inputs"]["seed"]
     client = FakeComfyClient()
-    run(client, workflow, "photo.jpg", tmp_path / "run", seed=7)
+    run(client, workflow, "photo.jpg", tmp_path / "run", variations=1, seed=7)
     assert client.submitted_workflow is not None
     assert client.submitted_workflow["10"]["inputs"]["seed"] != baked
 
@@ -81,21 +81,21 @@ def test_run_writes_one_numbered_image_per_variation(
 
 
 @pytest.mark.spec("workflow-mutation:output-layout:run-gets-its-own-directory")
-def test_run_creates_its_own_directory_and_leaves_a_previous_one_alone(
+def test_a_second_run_leaves_the_first_run_s_directory_untouched(
     workflow: Workflow, tmp_path: Path
 ) -> None:
     first = tmp_path / "20260904T141530Z"
     second = tmp_path / "20260904T141600Z"
-    run(FakeComfyClient(), workflow, "p.jpg", first, variations=1)
-    run(
-        FakeComfyClient(),
-        workflow,
-        "p.jpg",
-        second,
-        variations=1,
-    )
-    assert (first / "0.png").exists()
-    assert (second / "0.png").exists()
+    run(FakeComfyClient(), workflow, "p.jpg", first, variations=2)
+    before = {p.name: p.read_bytes() for p in sorted(first.iterdir())}
+
+    run(FakeComfyClient(), workflow, "p.jpg", second, variations=2)
+
+    # Asserting the first directory byte for byte, not merely that both exist:
+    # a run writing into a shared directory would still leave both paths
+    # present while silently overwriting the earlier renders.
+    assert {p.name: p.read_bytes() for p in sorted(first.iterdir())} == before
+    assert {p.name for p in second.iterdir()} == {"0.png", "1.png", "run.json"}
 
 
 @pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-run")

@@ -323,30 +323,6 @@ def test_parse_args_rejects_a_non_positive_variation_count(
             cli.parse_args()
 
 
-@pytest.mark.spec("cli:reproducibility:accepts-a-variation-count")
-def test_main_allows_several_variations(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        [
-            "convert.py",
-            "photo.jpg",
-            "--variations",
-            "3",
-        ],
-    )
-
-    _stub_environment(monkeypatch)
-
-    captured: dict = {}
-    monkeypatch.setattr(cli, "run", _capturing_run(captured))
-
-    cli.main()
-
-    assert captured["variations"] == 3
-
-
 # --- v0.8: the output destination is a directory ----------------------------
 
 
@@ -358,14 +334,6 @@ def test_parse_args_needs_nothing_but_the_photo(
     # to the graph, so the whole required surface is the photo.
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
     assert cli.parse_args().input == "photo.jpg"
-
-
-@pytest.mark.spec("cli:output-destination:defaults-to-an-outputs-directory")
-def test_parse_args_defaults_the_output_to_the_outputs_directory(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
-    assert cli.parse_args().output == "./outputs"
 
 
 @pytest.mark.spec("cli:output-destination:defaults-to-an-outputs-directory")

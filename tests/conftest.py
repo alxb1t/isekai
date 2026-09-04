@@ -1,20 +1,24 @@
+import copy
 import json
-from pathlib import Path
 
 import pytest
 
 from isekai.comfy_types import Workflow
-
-# The suite reads the shipped graph itself: a byte-identical fixture copy with no
-# drift check is a second thing to rename and a silent divergence waiting to
-# happen (design.md D9).
-WORKFLOWS = Path(__file__).parent.parent / "workflows"
+from isekai.workflow import PIPELINE_PATH
 
 
-def load_workflow(name: str) -> Workflow:
-    return json.loads((WORKFLOWS / name).read_text())
+@pytest.fixture(scope="session")
+def _shipped_workflow() -> Workflow:
+    """Read and parse the shipped graph once for the whole session.
+
+    The suite reads the shipped graph itself: a byte-identical fixture copy with
+    no drift check is a second thing to rename and a silent divergence waiting to
+    happen (design.md D9).
+    """
+    return json.loads(PIPELINE_PATH.read_text())
 
 
 @pytest.fixture
-def workflow() -> Workflow:
-    return load_workflow("pipeline.json")
+def workflow(_shipped_workflow: Workflow) -> Workflow:
+    """Return a private copy of the shipped graph, so a test may mutate it freely."""
+    return copy.deepcopy(_shipped_workflow)

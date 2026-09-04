@@ -270,11 +270,10 @@ def test_mutate_draws_controlnet_strengths_in_numeric_node_order() -> None:
 def test_mutate_is_independent_of_the_json_node_order(
     workflow: Workflow,
 ) -> None:
-    # The golden above cannot catch a DROPPED sort key, because the shipped
-    # fixture already happens to be stored in ascending order. This builds the
-    # same graph with the node keys inserted in reverse and asserts the same seed
-    # still yields the same strengths -- which is precisely what survives a
-    # re-export of the workflow JSON from ComfyUI.
+    # The goldens above pin seed -> strength for one stored node order. This
+    # asserts the weaker but differently-shaped property: the same graph with its
+    # keys inserted in REVERSE yields the same strengths from the same seed --
+    # which is precisely what survives a re-export of the graph from ComfyUI.
     shuffled = {nid: workflow[nid] for nid in reversed(list(workflow))}
     a = copy.deepcopy(workflow)
     b = copy.deepcopy(shuffled)

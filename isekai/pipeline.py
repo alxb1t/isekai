@@ -19,8 +19,8 @@ def run(
     workflow: Workflow,
     input_path: str,
     output_dir: Path,
+    variations: int,
     seed: int | None = None,
-    variations: int = 5,
     overrides: Overrides | None = None,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client.
@@ -31,7 +31,9 @@ def run(
     `mutate` never had a second implementation, so they are imported (design.md
     D3).
 
-    `output_dir` is this run's own directory, already resolved by the caller.
+    `output_dir` is this run's own directory, already resolved by the caller, and
+    `variations` is required: the count is a spend decision, and its default and
+    its ceiling belong together in the CLI that carries the flag.
     """
     image_name = client.upload_image(input_path)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -57,15 +59,14 @@ def run(
         mutate(wf, random.Random(s))
         print(f"variation {i}: seed {s}")
 
-        _render(client, wf, str(output_dir / f"{i}.png"))
+        _render(client, wf, output_dir / f"{i}.png")
 
-    _write_manifest(output_dir, seed, variations, used, overrides)
+    _write_manifest(output_dir, seed, used, overrides)
 
 
 def _write_manifest(
     output_dir: Path,
     seed: int | None,
-    variations: int,
     used: list[int],
     overrides: Overrides | None,
 ) -> None:
@@ -77,14 +78,16 @@ def _write_manifest(
     """
     manifest = {
         "seed": seed,
-        "variations": variations,
+        # Derived from the seeds actually drawn rather than from the count asked
+        # for: a manifest claiming five renders beside four seeds would lie.
+        "variations": len(used),
         "seeds": used,
         "overrides": dict(overrides) if overrides else {},
     }
     (output_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def _render(client: ComfyTransport, workflow: Workflow, output_path: str) -> None:
+def _render(client: ComfyTransport, workflow: Workflow, output_path: Path) -> None:
     try:
         prompt_id = client.submit(workflow)
     except error.HTTPError as e:
@@ -106,5 +109,5 @@ def _render(client: ComfyTransport, workflow: Workflow, output_path: str) -> Non
     else:
         sys.exit("no image found in the workflow outputs")
 
-    Path(output_path).write_bytes(client.view(img))
+    output_path.write_bytes(client.view(img))
     print(f"saved {output_path}")

@@ -103,11 +103,13 @@ def test_the_committed_positive_string_is_pinned(workflow: Workflow) -> None:
 
 
 @pytest.mark.spec("workflow-injection:committed-prompt:carries-no-pose-tag")
-def test_the_committed_positive_carries_no_pose_tag() -> None:
+def test_the_committed_positive_carries_no_pose_tag(workflow: Workflow) -> None:
     # Pose is the OpenPose ControlNet's axis. A pose tag in the prompt competes
     # with the mechanism that owns it, so it is removed on that argument alone --
-    # no render is needed to justify it.
-    assert "arms crossed" not in COMMITTED_POSITIVE
+    # no render is needed to justify it. Read the shipped graph, not the literal
+    # above: a test asserting against its own constant can only fail if someone
+    # edits the test.
+    assert "arms crossed" not in workflow["3"]["inputs"]["text"]
 
 
 @pytest.mark.spec("workflow-injection:committed-prompt:not-settable-from-the-cli")
