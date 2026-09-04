@@ -27,6 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The provisioning policy, in `isekai/provision.py` and reachable by `pytest`.** For each
+  manifest entry the module returns exactly one decision: **skip** (present and its digest
+  matches), **abort** (present and it does not — and the file is *left on disk*, because the
+  volume is shared and a file this run did not write is not this run's to remove), or **fetch**
+  from a named source. A file already at its destination is hashed, never taken on its name:
+  verification that ran only on the download path would leave a warm volume permanently
+  unchecked, which is the case the digest exists for. `land()` verifies a transferred file and
+  only then moves it into place, so an interrupted or tampered transfer never occupies the final
+  name — the next run sees the file as absent rather than as present-and-trusted.
+- **A pre-flight seam.** Hugging Face publishes a file's SHA-256 in the `x-linked-etag` response
+  header, so a source whose published digest already disagrees with the manifest is rejected in a
+  second rather than after a multi-gigabyte transfer, and the entry's next declared source is
+  offered instead. This is an optimisation, never a check: a source that publishes nothing — or
+  a header that cannot be read — degrades to download-and-post-verify, never to trust. The seam
+  is injected and `FakeFetcher` is what keeps the suite offline, the same argument and the same
+  shape as `FakeComfyClient`.
 - **`scripts/models.json`, a pinned and checksummed manifest of every model artifact the
   shipped graph needs — fifteen files across eleven sources.** Each entry names a destination
   under the models tree, a SHA-256, and an ordered list of `resolve/<commit-sha>/` URLs, so a

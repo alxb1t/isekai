@@ -51,3 +51,24 @@ class FakeComfyClient:
     def view(self, image: Image) -> bytes:
         self.viewed = image
         return self.view_bytes
+
+
+class FakeFetcher:
+    """In-memory stand-in for the pre-flight seam: canned answers, no network.
+
+    Structurally satisfies `Fetcher`, so `decide` cannot tell it from the real
+    thing. `published` maps a source URL to the digest that source claims it
+    would serve; a URL absent from the map publishes nothing, which is the case
+    where pre-flight has to degrade to post-download verification rather than to
+    trust (design.md D10).
+    """
+
+    def __init__(self, published: dict[str, str] | None = None) -> None:
+        self.published = published or {}
+        # every URL asked about, in order — so a test can assert that a source
+        # rejected before transfer was still pre-flighted.
+        self.asked: list[str] = []
+
+    def published_digest(self, url: str) -> str | None:
+        self.asked.append(url)
+        return self.published.get(url)
