@@ -25,6 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The graph and the manifest are bound by a test.** Every model filename `pipeline.json` names
+  in a node's input must have a manifest entry, matched against the tail of a destination so
+  `instantid/diffusion_pytorch_model.safetensors` and `openpose/diffusion_pytorch_model.safetensors`
+  stay two files rather than one. This is the only mechanism that would have caught the annotator
+  gap, and the only one that stops it reopening when v0.10 edits the graph.
+- **A tracked mapping from node class to the files that node fetches for itself**
+  (`PREPROCESSOR_MODELS`), carrying the half of the binding the graph cannot supply.
+  `LineArtPreprocessor` names no file and downloads two. A graph containing a preprocessor whose
+  class is absent from the mapping **fails** rather than passing silently — an unmapped
+  preprocessor is an unknown quantity, not a safe default. An empty tuple is a real answer:
+  `TilePreprocessor` fetches nothing, and `DWPreprocessor` names its two files in its own inputs.
+  The reverse direction is deliberately not asserted — the manifest legitimately carries the
+  antelopev2 pack, which `InstantIDFaceAnalysis` resolves by directory and no graph field names.
+
 ### Changed
 
 - **`scripts/download_models.sh` is a thin driver over the manifest.** It asks

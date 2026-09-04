@@ -322,3 +322,77 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
+
+
+# What a model file is called, for the purpose of reading one out of the graph.
+# A `.jpeg` on a LoadImage node is an input photograph, not an artifact to pin.
+MODEL_SUFFIXES = (".safetensors", ".bin", ".onnx", ".pt", ".pth", ".ckpt")
+
+# Node class -> the model files that node downloads for itself and exposes no
+# field for. This is the half of the binding the graph cannot supply, and it is
+# the gap this whole capability was found through: `LineArtPreprocessor` names no
+# file and fetches two -- both of them, unconditionally, regardless of `coarse`.
+#
+# An empty tuple is a real answer, not a placeholder: `TilePreprocessor` fetches
+# nothing at all, and `DWPreprocessor` names its two files in its own inputs, so
+# the graph half already covers them. What matters is that the class is *here* --
+# a preprocessor absent from this mapping fails the check rather than passing
+# silently (design.md D6).
+PREPROCESSOR_MODELS: dict[str, tuple[str, ...]] = {
+    "TilePreprocessor": (),
+    "DWPreprocessor": (),
+    "LineArtPreprocessor": ("sk_model.pth", "sk_model2.pth"),
+}
+
+
+def graph_model_files(workflow: dict[str, Any]) -> list[str]:
+    """Return every model filename the graph names in a node's inputs."""
+    return [
+        value
+        for node in workflow.values()
+        for value in node.get("inputs", {}).values()
+        if isinstance(value, str) and value.endswith(MODEL_SUFFIXES)
+    ]
+
+
+def unmapped_preprocessors(workflow: dict[str, Any]) -> list[str]:
+    """Return preprocessor classes in the graph that `PREPROCESSOR_MODELS` omits.
+
+    A preprocessor may fetch models with no field to name them, so an unmapped one
+    is an unknown quantity, not a safe default.
+    """
+    return sorted(
+        {
+            node["class_type"]
+            for node in workflow.values()
+            if node["class_type"].endswith("Preprocessor")
+            and node["class_type"] not in PREPROCESSOR_MODELS
+        }
+    )
+
+
+def preprocessor_model_files(workflow: dict[str, Any]) -> list[str]:
+    """Return the files the graph's preprocessors fetch without naming them."""
+    return [
+        filename
+        for node in workflow.values()
+        for filename in PREPROCESSOR_MODELS.get(node["class_type"], ())
+    ]
+
+
+def undeclared_files(filenames: list[str], manifest: Manifest) -> list[str]:
+    """Return the filenames with no manifest entry, in order, without duplicates.
+
+    A graph name is a path relative to its model folder, so it is matched against
+    the tail of a destination -- `instantid/diffusion_pytorch_model.safetensors`
+    is one entry and `openpose/diffusion_pytorch_model.safetensors` is another,
+    and a bare basename match would confuse the two.
+    """
+    dests = [entry["dest"] for entry in manifest["entries"]]
+    missing: list[str] = []
+    for filename in filenames:
+        if filename in missing:
+            continue
+        if not any(dest == filename or dest.endswith(f"/{filename}") for dest in dests):
+            missing.append(filename)
+    return missing
