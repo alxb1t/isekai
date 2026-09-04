@@ -15,7 +15,7 @@ ssh-keygen -A
 /usr/sbin/sshd
 
 # 3. Ensure models are on the volume — downloads once, skipped on later boots.
-MODELS_DIR=/opt/ComfyUI/models bash /download_models.sh
+MODELS_DIR=/opt/ComfyUI/models bash /opt/isekai/scripts/download_models.sh
 
 # 4. ComfyUI in the foreground — the main process. If it exits, the pod stops.
 exec python main.py --listen 0.0.0.0 --port 8188

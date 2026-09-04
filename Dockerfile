@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 
 # System packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git python3 python3-pip curl openssh-server \
+        git python3 python3-pip curl wget openssh-server \
         libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -47,9 +47,16 @@ RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
 RUN uv pip install -r \
     /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux/requirements.txt
 
+# Provisioning is three tracked files, not one: the driver, the pinned manifest it
+# reads, and the module that owns every decision taken about it. Copying only the
+# script would put a downloader on the pod without the two things it depends on
+# (design.md D15). The layout is preserved because provision.py resolves the
+# manifest relative to itself.
 COPY start.sh /start.sh
-COPY scripts/download_models.sh /download_models.sh
-RUN chmod +x /start.sh /download_models.sh
+COPY scripts/download_models.sh /opt/isekai/scripts/download_models.sh
+COPY scripts/models.json /opt/isekai/scripts/models.json
+COPY isekai/provision.py /opt/isekai/isekai/provision.py
+RUN chmod +x /start.sh /opt/isekai/scripts/download_models.sh
 
 EXPOSE 8188 22
 

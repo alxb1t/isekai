@@ -6,9 +6,11 @@ import pytest
 from isekai.provision import (
     DigestMismatch,
     Entry,
+    Manifest,
     decide,
     digest_of,
     land,
+    plan,
     verify,
 )
 from tests.fakes import FakeFetcher
@@ -28,6 +30,10 @@ def _entry(sources: list[str] | None = None) -> Entry:
         "bytes": len(PAYLOAD),
         "sources": sources if sources is not None else [PRIMARY, ALTERNATE],
     }
+
+
+def _manifest(entries: list[Entry]) -> Manifest:
+    return {"pinned": "2026-09-04", "publishers": [], "entries": entries}
 
 
 def _place(models_dir: Path, entry: Entry, payload: bytes) -> Path:
@@ -199,3 +205,38 @@ def test_a_source_publishing_the_declared_digest_is_offered_first(
     decision = decide(entry, tmp_path, FakeFetcher({PRIMARY: DIGEST}))
     assert decision.action == "fetch"
     assert decision.url == PRIMARY
+
+
+@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
+def test_plan_reports_a_present_and_verified_entry_as_a_skip(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry = _entry()
+    _place(tmp_path, entry, PAYLOAD)
+    manifest = _manifest([entry])
+    assert plan(manifest, tmp_path, FakeFetcher()) == 0
+    assert capsys.readouterr().out.splitlines() == [f"SKIP\t{entry['dest']}"]
+
+
+@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
+def test_plan_reports_an_absent_entry_as_a_fetch_with_its_url(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry = _entry()
+    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"FETCH\t{entry['dest']}\t{PRIMARY}"
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
+def test_plan_exits_non_zero_before_emitting_any_transfer_when_an_entry_aborts(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = _entry()
+    _place(tmp_path, bad, b"somebody else's bytes")
+    absent: Entry = {**_entry(), "dest": "controlnet/other.onnx"}
+    assert plan(_manifest([bad, absent]), tmp_path, FakeFetcher()) == 1
+    captured = capsys.readouterr()
+    assert "FETCH" not in captured.out
+    assert bad["dest"] in captured.err

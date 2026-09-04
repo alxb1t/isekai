@@ -25,6 +25,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`scripts/download_models.sh` is a thin driver over the manifest.** It asks
+  `provision.py` for a plan, runs `wget` for whatever URL it is handed, and asks the module to
+  verify and land the result. Every entry is decided before any byte moves, so a mismatch on a
+  warm volume stops the run instead of surfacing halfway through a 6.9 GB transfer. The inline
+  per-model shell variables are gone — every source is now a URL string the manifest carries and
+  the suite can inspect.
+- **The image carries provisioning's three files, not one.** The `Dockerfile` copied only the
+  script; it now also copies `scripts/models.json` and `isekai/provision.py`, preserving their
+  relative layout because the module resolves the manifest relative to itself. `start.sh` invokes
+  the driver at its new path.
+- **`wget` is installed in the image.** The previous downloader used the `hf` CLI, so the image
+  never needed it; the ported one does, and the image shipped `curl` alone.
+- **Pre-flight does not follow the redirect.** `resolve/<sha>/<path>` answers 302 and carries
+  `x-linked-etag` on *that* response — the CDN it points at does not repeat it — so following the
+  redirect loses the header and silently degrades every entry to post-download verification. All
+  fifteen entries were confirmed live to pre-flight and match.
+
+### Removed
+
+- **The `hf` CLI dependency.** Sources are plain `resolve/<commit-sha>/` URLs fetched with
+  `wget`. The cost is `hf`'s resumable, parallel transfer; the `.partial` discipline means an
+  interrupted transfer restarts from zero rather than being trusted.
+
 ### Added
 
 - **The provisioning policy, in `isekai/provision.py` and reachable by `pytest`.** For each

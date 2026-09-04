@@ -14,10 +14,13 @@ module is `json`, `re` and `pathlib` -- but the import graph stays narrow too.
 import hashlib
 import json
 import re
+import sys
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from http.client import HTTPMessage
 from pathlib import Path
-from typing import Any, Literal, Protocol, TypedDict
+from typing import IO, Any, Literal, Protocol, TypedDict
 
 MANIFEST_PATH = Path(__file__).resolve().parent.parent / "scripts" / "models.json"
 
@@ -127,11 +130,32 @@ class Fetcher(Protocol):
         ...
 
 
+class _KeepRedirect(urllib.request.HTTPRedirectHandler):
+    """Stop urllib from following a redirect, so the 302's own headers survive."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: HTTPMessage,
+        newurl: str,
+    ) -> None:
+        """Never produce a follow-up request."""
+        return None
+
+
 class HuggingFaceFetcher:
     """Reads the SHA-256 Hugging Face returns in `x-linked-etag` on a HEAD request.
 
-    Observed behaviour, not a documented contract, so every failure mode here —
-    a missing header, a redirect that drops it, a network error — returns None
+    `resolve/<sha>/<path>` answers **302** and puts `x-linked-etag` on *that*
+    response; the CDN it points at does not repeat it. Following the redirect
+    therefore loses the header and every entry degrades to post-verification
+    silently, so the redirect is deliberately not followed.
+
+    Observed behaviour, not a documented contract, so every failure mode here --
+    a missing header, a changed redirect shape, a network error -- returns None
     and the entry degrades to download-and-post-verify. It must never degrade to
     trust (design.md D10).
     """
@@ -139,9 +163,12 @@ class HuggingFaceFetcher:
     def published_digest(self, url: str) -> str | None:
         """Return the published SHA-256, or None if it cannot be read cheaply."""
         request = urllib.request.Request(url, method="HEAD")
+        opener = urllib.request.build_opener(_KeepRedirect)
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with opener.open(request, timeout=30) as response:
                 header = response.headers.get("x-linked-etag") or ""
+        except urllib.error.HTTPError as redirected:
+            header = redirected.headers.get("x-linked-etag") or ""
         except OSError:
             return None
         candidate = header.strip().strip('"')
@@ -236,3 +263,62 @@ def land(entry: Entry, models_dir: Path, partial: Path) -> None:
     dest = models_dir / entry["dest"]
     dest.parent.mkdir(parents=True, exist_ok=True)
     partial.replace(dest)
+
+
+def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
+    """Print one line per entry for the shell driver to act on; 0 if it may proceed.
+
+    `SKIP<TAB><dest>` or `FETCH<TAB><dest><TAB><url>`. Every entry is decided
+    before any line is printed, so an abort anywhere stops the run before a single
+    byte is transferred rather than in the middle of a 6.9 GB download.
+    """
+    lines: list[str] = []
+    aborts: list[str] = []
+    for entry in manifest["entries"]:
+        decision = decide(entry, models_dir, fetcher)
+        if decision.action == "abort":
+            aborts.append(decision.reason)
+        elif decision.action == "skip":
+            lines.append(f"SKIP\t{entry['dest']}")
+        else:
+            lines.append(f"FETCH\t{entry['dest']}\t{decision.url}")
+    if aborts:
+        for reason in aborts:
+            print(f"ERROR: {reason}", file=sys.stderr)
+        return 1
+    for line in lines:
+        print(line)
+    return 0
+
+
+def _entry_for(manifest: Manifest, dest: str) -> Entry:
+    """Return the manifest entry with this destination, or exit non-zero."""
+    for entry in manifest["entries"]:
+        if entry["dest"] == dest:
+            return entry
+    raise SystemExit(f"ERROR: {dest} is not declared in {MANIFEST_PATH}")
+
+
+def main(argv: list[str]) -> int:
+    """Run the two commands the shell driver uses: `plan` and `land`."""
+    match argv:
+        case ["plan", models_dir]:
+            return plan(load_manifest(), Path(models_dir), HuggingFaceFetcher())
+        case ["land", models_dir, dest, partial]:
+            manifest = load_manifest()
+            try:
+                land(_entry_for(manifest, dest), Path(models_dir), Path(partial))
+            except DigestMismatch as mismatch:
+                print(f"ERROR: {mismatch}", file=sys.stderr)
+                return 1
+            print(f"saved (verified): {dest}")
+            return 0
+        case _:
+            raise SystemExit(
+                "usage: provision.py plan <models-dir>\n"
+                "       provision.py land <models-dir> <dest> <partial>"
+            )
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

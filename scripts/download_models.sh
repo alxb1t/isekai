@@ -1,62 +1,52 @@
 #!/usr/bin/env bash
+# Provision the model stack onto the volume, from the pinned manifest beside this file.
+#
+# Idempotent: an entry already present and verified is skipped, so a re-boot on a warm
+# volume is a no-op. NOT skipped by name — `provision.py` hashes every file it finds, so
+# an out-of-band swap is caught rather than trusted. A present file that fails is left on
+# disk and the run aborts: the volume is shared with another project, and a file this run
+# did not write is not this run's to remove.
+#
+# The split is deliberate (design.md D14): `provision.py` owns every decision and this
+# script owns only the transfer. It asks for a plan, runs `wget` for whatever URL it is
+# handed, and asks the module to verify and land the result. Nothing lands under its final
+# name until its SHA-256 matches the manifest.
 
 set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROVISION="${HERE}/../isekai/provision.py"
 
 # ComfyUI's models root
 MODELS_DIR="${MODELS_DIR:-./models}"
 
-# Download <repo> <path-in-repo> <target-subfolder>
-download() {
-    local repo="$1" path="$2" dest="$3"
-    local fname; fname="$(basename "$path")"
-    if [ -f "$MODELS_DIR/$dest/$fname" ]; then
-        echo "✓ $dest/$fname present — skipping"
-        return
-    fi
-    mkdir -p "$MODELS_DIR/$dest"
-    hf download "$repo" "$path" --local-dir "$MODELS_DIR/.hf"
-    mv "$MODELS_DIR/.hf/$path" "$MODELS_DIR/$dest/"
-}
+mkdir -p "$MODELS_DIR"
 
-# Download a folder: <repo> <target-subfolder> <include-glob>
-download_folder() {
-    local repo="$1" dest="$2" glob="$3"
-    mkdir -p "$MODELS_DIR/$dest"
-    if compgen -G "$MODELS_DIR/$dest/$glob" >/dev/null; then
-        echo "✓ $dest/$glob present — skipping"
-        return
-    fi
-    hf download "$repo" --include "$glob" --local-dir "$MODELS_DIR/$dest"
-}
+# Decide everything first: an abort anywhere stops the run before a single byte moves.
+plan="$(python3 "$PROVISION" plan "$MODELS_DIR")"
 
-# Animagine XL 4.0 + InstantID + InsightFace
-download cagliostrolab/animagine-xl-4.0 \
-    animagine-xl-4.0.safetensors \
-    checkpoints
+while IFS=$'\t' read -r action dest url; do
+    [ -n "$action" ] || continue
+    case "$action" in
+        SKIP)
+            echo "skip (present, verified): $dest"
+            ;;
+        FETCH)
+            target="${MODELS_DIR}/${dest}"
+            mkdir -p "$(dirname "$target")"
+            echo "downloading: $url"
+            if ! wget -q --show-progress -O "${target}.partial" "$url"; then
+                rm -f "${target}.partial"
+                echo "ERROR: transfer failed for $dest" >&2
+                exit 1
+            fi
+            python3 "$PROVISION" land "$MODELS_DIR" "$dest" "${target}.partial"
+            ;;
+        *)
+            echo "ERROR: unrecognised plan line: $action" >&2
+            exit 1
+            ;;
+    esac
+done <<< "$plan"
 
-download InstantX/InstantID \
-    ip-adapter.bin \
-    instantid
-
-download InstantX/InstantID \
-    ControlNetModel/diffusion_pytorch_model.safetensors \
-    controlnet/instantid
-
-download_folder DIAMONIK7777/antelopev2 \
-    insightface/models/antelopev2 \
-    "*.onnx"
-
-# SDXL ControlNet stack
-download TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic \
-    TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors \
-    controlnet
-
-download xinsir/controlnet-openpose-sdxl-1.0 \
-    diffusion_pytorch_model.safetensors \
-    controlnet/openpose
-
-download TheMistoAI/MistoLine \
-    mistoLine_rank256.safetensors \
-    controlnet
-
-echo "Models downloaded into $MODELS_DIR"
+echo "models ready under $MODELS_DIR"
