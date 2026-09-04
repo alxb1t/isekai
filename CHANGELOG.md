@@ -28,8 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The 62 GB models volume was inventoried, and nothing on it is unaccounted for.** One pod,
-  read-only, 6.6 minutes, $0.08; teardown confirmed through the RunPod MCP, which returned an
-  empty pod list and `404 pod not found` for the pod's id. 48 files, 55.85 GiB, classified
+  read-only, 6.6 minutes of wall clock; teardown confirmed through the RunPod MCP, which returned
+  an empty pod list and `404 pod not found` for the pod's id. On cost the two available figures
+  disagree and both are recorded rather than one being chosen: 6.6 minutes at the pod's quoted
+  $0.72/hr is $0.08, while RunPod's daily aggregate reports $0.19 of pod GPU for the day, and the
+  per-pod hourly breakdown had not settled at the time of writing. Either figure is inside the
+  ceiling. 48 files, 55.85 GiB, classified
   exhaustively:
 
   | class | files | size | |
