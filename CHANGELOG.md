@@ -92,6 +92,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `workflows/pipeline_ui.json` with the version that owns its register. "The string holds no
   subject text" has no mechanical form — a blacklist assertion is defeated silently by any
   rewrite — so equality makes every future prompt edit a deliberate test edit.
+- **`README.md` and `CLAUDE.md` describe one path.** The four-row model table, `--model` and
+  `--prompt` in the quickstart, and the "four selectable models" status line all go; the run
+  directory layout is shown instead. `CLAUDE.md` retires the additive-models invariant — **"there
+  is one path; a version may replace it, it may not add a second"** — and replaces the registry
+  seam with the rule this change learned: *a parameter is a seam only if something else is
+  actually passed through it.* The conditioning-trace insight the deleted code carried is
+  preserved there by name.
+- The `README.md` license line no longer claims to match a model license the repo does not ship;
+  it states the repository's own licence and that weights are licensed by their publishers.
 
 ### Known defects
 

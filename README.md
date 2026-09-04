@@ -4,9 +4,10 @@ Turn a photo of a person into an anime image — while keeping the person **reco
 using **open models** on a **rented GPU, on demand**. A reproducible, provider-agnostic
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
-> **Status: v0.7.0, released.** The pipeline works end to end: four selectable models,
-> seeded variations, and a CLI with dial overrides. Development follows OpenSpec SDD —
-> `openspec/` is authoritative for what the code does and what is being built next.
+> **Status: v0.8.0, in development.** The pipeline works end to end: one path, five seeded
+> variations per run, and a CLI whose whole required surface is the photo. Development follows
+> OpenSpec SDD — `openspec/` is authoritative for what the code does and what is being built
+> next.
 
 ## Why this exists
 
@@ -17,8 +18,8 @@ learning** are the point.
 
 ## How it works
 
-- **Models:** four, selectable with `--model` (see below). Base weights are Apache-2.0 /
-  open — [Qwen-Image-Edit](https://huggingface.co/Qwen) and Animagine XL 4.0.
+- **Model:** one path (see below), on open weights — Animagine XL 4.0 with InstantID and an
+  SDXL ControlNet stack.
 - **Runtime:** [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in a Docker container.
 - **Compute:** [RunPod](https://www.runpod.io/) GPU pod, **per-second** billing. The Docker
   image runs directly as the pod — no VM to provision.
@@ -43,14 +44,17 @@ Local (your machine)                          RunPod
 **Lifecycle:** `up.sh` (create pod from the image + attach volume) → `convert.py photo.jpg`
 → `down.sh` (remove pod, billing stops). Only the pod is ephemeral and metered.
 
-## The models
+## The path
 
-| `--model` | Base | How identity survives |
-|---|---|---|
-| `qwen` | Qwen-Image-Edit | Instruction edit at denoise 1 — identity comes free from image conditioning |
-| `animagine` | Animagine XL 4.0 + InstantID | Identity is *injected*: face embedding + keypoints onto a from-noise SDXL base |
-| `animagine-i2i` **(default)** | the above, img2img | Latent init from the photo (`denoise < 1`), so pose, hair and clothes survive |
-| `animagine-i2i-cn` | `animagine-i2i` + ControlNet | Tile → OpenPose → Lineart anchor pose, structure and detail |
+There is one, `workflows/pipeline.json`, and nothing about it is typed at the command line.
+Identity is four axes, and each is carried by a mechanism rather than by a sentence:
+
+| Axis | Carried by |
+|---|---|
+| Face | InstantID — face embedding + keypoints, on an Animagine XL 4.0 base |
+| Composition | img2img: latent init from the photo (`VAEEncode`, `denoise < 1`) |
+| Pose & structure | a ControlNet stack — Tile → OpenPose → Lineart |
+| Register | the positive prompt, **committed to the graph** and pinned by a test |
 
 ## Quickstart
 
@@ -68,16 +72,23 @@ Each session is: **up the pod → open the tunnel → convert → tear down.**
    ```
 3. Back in the first terminal, convert:
    ```sh
-   python convert.py me.jpg -o out.png --prompt "turn this into anime"
+   python convert.py me.jpg
+   ```
+   Five renders and a manifest land in a directory named for the run's UTC start instant:
+   ```
+   outputs/20260904T141530Z/
+   ├── 0.png … 4.png     one image per variation
+   └── run.json          the seed, the five derived seeds, the dials in force
    ```
 4. Tear the pod down to stop billing — **this is the step that costs money if you skip it**:
    ```sh
    ./infra/down.sh
    ```
 
-Useful flags: `--model` picks the pipeline · `--variations N` renders N varied outputs and
-`--seed` makes them reproducible (the seed used is always printed) · `--denoise`, `--cfg`
-and `--ip-weight` set the base dial values that variations jitter around.
+Useful flags: `-o DIR` picks the output directory (default `./outputs`) · `--variations N`
+renders N varied outputs, five by default and 25 at most, and `--seed` makes them reproducible
+(every seed used is printed and recorded in `run.json`) · `--denoise`, `--cfg` and `--ip-weight`
+set the base dial values that variations jitter around.
 
 ## Setup
 
@@ -121,9 +132,9 @@ living, test-backed spec, and `openspec/changes/` is the work in flight.
 ```
 isekai/
 ├── convert.py                 # headless CLI: photo in → anime out via ComfyUI API
-├── isekai/                    # the package: registry, injection, mutation, transport
-├── tests/                     # the suite, its fakes and golden fixtures
-├── workflows/                 # ComfyUI graphs, one per model
+├── isekai/                    # the package: injection, mutation, overrides, transport
+├── tests/                     # the suite and its fakes
+├── workflows/                 # pipeline.json (the API graph) + pipeline_ui.json (the export)
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
@@ -196,4 +207,4 @@ session). A full working pipeline costs on the order of **$10 or less** to stand
 
 ## License
 
-[Apache-2.0](LICENSE) — matching the Qwen-Image-Edit model license.
+[Apache-2.0](LICENSE). Model weights are licensed separately by their publishers.

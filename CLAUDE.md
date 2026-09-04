@@ -14,7 +14,8 @@ Hard constraints that shape the code here:
 - **Identity preservation is the product.** A beautiful anime image of someone else is a failed run.
 - **The runtime is stdlib-only** — the ComfyUI transport is `urllib`, and nothing in `convert.py`'s import
   graph may need a wheel. Face detection runs *in the image*, never as a runtime dep.
-- **Every version extends the previous.** Models are additive and all stay selectable; nothing is removed.
+- **There is one path. A version may replace it; it may not add a second.** Four selectable models were
+  how the product was *found*; carrying three dead ones was the cost of not deciding.
 
 > **This file is shared, role-independent context — what is *true* about this repo. It is not a script.**
 > What you should *do* comes from the **prompt/task you were given**. If your prompt conflicts with this
@@ -43,8 +44,8 @@ That is a convention for those phases, not an entry in the array; adding it to o
 `Makefile` in the same commit.
 
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
-Protocol (`FakeComfyClient`), the workflow/API contract is fixture-locked, and mutation takes an injected
-`random.Random`. No test hits a GPU or the network — which is why every scenario declares `Layers: unit`
+Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
+and mutation takes an injected `random.Random`. No test hits a GPU or the network — which is why every scenario declares `Layers: unit`
 and none declares `e2e`. Diffusion quality and identity fidelity are verified **live on a pod, by eye**,
 never mocked and never asserted.
 
@@ -56,11 +57,15 @@ The active change's **`design.md`** is authoritative, with this file behind it �
 decision record: the reasoning that settled a decision, and the measurement behind it, are written there
 and nowhere else. In brief, the load-bearing seams are:
 
-- **The model registry** (`isekai/models.py`) — a name→`Model` map resolved from `--model`. Each model owns
-  its workflow JSON and its injection adapter, so adding a model is a registry entry, not a branch.
-- **Injection as a Strategy** (`isekai/workflow.py`) — a plain function that wires image + prompt into a
-  graph. The InstantID family shares a **generalized trace** (walk `.positive` to the first
-  `CLIPTextEncode`), so a ControlNet stack in the conditioning path does not need its own injector.
+- **A parameter is a seam only if something else is actually passed through it.** That is why `client` is a
+  parameter of `pipeline.run` — `FakeComfyClient` is what makes the whole suite offline — and `workflow` is
+  one, keeping file I/O in the CLI, while `inject` and `mutate` are **imported**: neither ever had a second
+  implementation or a test double. A one-entry registry is a dispatch mechanism with nothing to dispatch.
+- **Injection** (`isekai/workflow.py`) — a plain function that wires the photo into the graph, and nothing
+  else. The positive prompt is committed to the graph, so there is nothing to place. The non-obvious fact a
+  future tagger will need: `KSampler.positive` may point at `ApplyInstantIDAdvanced` directly **or** through
+  a stack of `ControlNetApplyAdvanced` nodes, so the encoder must be found by following the link, never by
+  class lookup.
 - **`mutate(workflow, rng)`** (`isekai/mutate.py`) — variation, kept *separate from* injection: injection
   wires, mutation jitters dials. The `rng` is injected, which is the whole reason it is testable.
 - **`apply_overrides`** (`isekai/overrides.py`) — the user's **base** dial values. The order is
@@ -127,8 +132,9 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 ## Layout — where things live here
 
 - **`convert.py`** — the CLI entry point. **`isekai/`** — the package: registry, injection, mutation,
-  overrides, transport, pipeline. **`tests/`** — the suite, its fakes and its golden fixtures.
-  **`workflows/`** — the ComfyUI graphs, one per model, fixture-locked. **`infra/`** — `up.sh` / `down.sh`,
+  overrides, transport, pipeline. **`tests/`** — the suite and its fakes.
+  **`workflows/`** — `pipeline.json`, the API graph the run loads, and `pipeline_ui.json`, the ComfyUI
+  export it is regenerated from by hand. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — model download, run *on the pod*. **`Dockerfile`** — the image that
   *is* the pod.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
@@ -140,18 +146,21 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   anything tracked here. Research notes and the running log live in the operator's own notebook; nothing
   in this repo reaches into it, and its location is not recorded here.
 
-## The models
+## The path
 
-Selectable at the CLI with `--model`; each owns a workflow JSON and an injection adapter.
+One graph, `workflows/pipeline.json`, on an Animagine XL 4.0 (SDXL anime) base. Nothing about it is typed
+at the command line: the whole required surface is `convert.py photo.jpg`. Identity is four axes, and each
+is carried by a mechanism rather than by a sentence someone types:
 
-- **qwen** — Qwen-Image-Edit, an instruction-edit model. Identity is preserved "for free", via denoise-1
-  image conditioning.
-- **animagine** — Animagine XL 4.0 (SDXL anime) + InstantID + InsightFace. Identity is an *injected* signal
-  — face embedding and keypoints — on top of a from-noise SDXL base.
-- **animagine-i2i** — the same base and InstantID, but **img2img**: latent init from the photo
-  (`VAEEncode`, `denoise < 1`), so composition survives. `denoise` is the identity↔style dial.
-- **animagine-i2i-cn** — `animagine-i2i` **+ a ControlNet stack** (tile → OpenPose → Lineart) anchoring
-  pose, structure and detail.
+- **Face** — InstantID + InsightFace: face embedding and keypoints. `ip_weight` is its dial.
+- **Composition** — **img2img**: latent init from the photo (`VAEEncode`, `denoise < 1`). `denoise` is the
+  identity↔style dial.
+- **Pose and structure** — a **ControlNet stack** (tile → OpenPose → Lineart), each with its own tuned
+  strength.
+- **Register** — the positive prompt, **committed to the graph** and pinned by equality in the suite, so
+  changing it is a deliberate test edit. `1girl, solo` is the Danbooru mode selector for this base; that
+  `1girl` fixes the gender of every input photo is a known defect, recorded in `CHANGELOG.md` and owned by
+  the version that changes the base.
 
 ---
 
