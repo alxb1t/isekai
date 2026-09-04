@@ -101,6 +101,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preserved there by name.
 - The `README.md` license line no longer claims to match a model license the repo does not ship;
   it states the repository's own licence and that weights are licensed by their publishers.
+- **`CLAUDE.md`'s metered-work guardrail is rewritten.** Teardown confirmed through the RunPod
+  MCP replaces the blanket "wait for an explicit human go". The new rule states all four things
+  the old protocol got for free from a human being present: who **creates** (`infra/up.sh`), who
+  **tears down** (`infra/down.sh` — teardown is the act), who **confirms** (the MCP — and
+  confirmation is *not* the act), and what it **degrades to** when the MCP is unreachable (the
+  human "go", unchanged, for the whole session). It carries a stated ceiling: **45 minutes,
+  ~$0.30** per pod session. This is an authority *expansion* in an otherwise subtractive change,
+  which is why it is its own entry rather than folded into the docs one.
 
 ### Known defects
 

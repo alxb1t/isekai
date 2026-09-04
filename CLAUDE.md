@@ -177,9 +177,22 @@ is carried by a mechanism rather than by a sentence someone types:
   each is a *plan* problem, not a coding shortcut. **Halt and say so.**
 - **State lives on disk.** Reconstruct "where are we" from the active change's `tasks.md` + git — never
   from memory.
-- **Some phases spend real money.** The active change's `tasks.md` marks metered (⚠️ GPU) phases, and the
-  stop-before-spending protocol holds: announce, wait for an explicit human "go", `up.sh` → tunnel →
-  `convert.py` → `down.sh`, tear down, log the cost. **Never bring up a paid pod on your own initiative.**
+- **Some phases spend real money**, and the active change's `tasks.md` marks them (⚠️ GPU). The protocol
+  names four things, because a rule that leaves any of them implicit is not a rule:
+  1. **Who creates the pod** — `infra/up.sh`, and nothing else. Announce before you run it.
+  2. **Who tears it down** — `infra/down.sh`. **Teardown is the act**: it is the call that stops the
+     billing, and it belongs to the same session that created the pod.
+  3. **Who confirms** — the RunPod MCP, by checking the pod is gone. **Confirmation is not the act.** A
+     rule that only names the check has not said what stops the billing, and an unconfirmed teardown is
+     not one you may report as done. Record what the MCP returned.
+  4. **What happens when the MCP is unreachable** — it must be authorized from an *interactive* session,
+     so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
+     unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.
+
+  **The ceiling is 45 minutes and ~$0.30 for a single pod session** — numbers, not "promptly", so a human
+  can hold you to it. Exceeding it is a halt, not a judgement call. And whichever route applies, the
+  authority to spend comes from the **phase**, never from the agent: **a pod goes up only for a phase
+  `tasks.md` marks metered.**
 - **GPU renders live on the pod's ephemeral disk**; only the models volume persists. Download before
   teardown or the output is gone.
 - **The Blackwell (sm_120) pod needs cu128 PyTorch** — cu124 gives "no kernel image". It is pinned in the
