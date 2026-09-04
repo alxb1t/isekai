@@ -8,7 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **On this record's provenance.** This file was **backfilled during v0.7**, from the git
 > history, after eleven phases and three releases had already shipped without it. Entries are
 > reconstructed from commit messages and diffs; **anything the log does not support is not
-> written here.** From v0.7 on, an entry is appended per phase under `## [Unreleased]
+> written here.** From v0.7 on, an entry is appended per phase under `## [Unreleased]` and cut
+> at release, as the project's change contract requires.
+>
+> Two gaps in the record, stated rather than smoothed over:
+>
+> - **There is no 0.5.0.** The history goes v0.4 (2026-08-04) directly to v0.6 (2026-08-15).
+>   No tag, branch or commit references a v0.5, so the version was skipped rather than lost.
+> - **0.4.0 and 0.6.0 were never tagged.** They are real, completed, merged versions and are
+>   recorded as releases here; their dates are their last commit rather than a tag date.
+>   Tags `v0.1`–`v0.3` also use the two-part form that predates the current release contract.
+>
+> `0.7.0`'s heading is cut here, in the commit that completes the work; the annotated `v0.7.0`
+> tag is the release act and is created against **this** commit, so the four places the
+> version line lives — proposal, changelog, `pyproject.toml`, tag — all name the same thing.
+
+## [Unreleased]
 
 ### Removed
 
