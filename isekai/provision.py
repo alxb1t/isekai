@@ -396,3 +396,38 @@ def undeclared_files(filenames: list[str], manifest: Manifest) -> list[str]:
         if not any(dest == filename or dest.endswith(f"/{filename}") for dest in dests):
             missing.append(filename)
     return missing
+
+
+# ComfyUI's models root on the pod. Everything the manifest declares is a path
+# relative to this, and `folder_paths` resolves every node's models from it.
+MODELS_ROOT = "/opt/ComfyUI/models"
+
+# The preprocessor nodes whose checkpoints `comfyui_controlnet_aux` fetches into
+# its own `ckpts` directory -- container disk, unless AUX_ANNOTATOR_CKPTS_PATH
+# says otherwise (design.md D7).
+ANNOTATOR_NODES = ("DWPreprocessor", "LineArtPreprocessor")
+
+
+def annotator_files(workflow: dict[str, Any]) -> list[str]:
+    """Return every checkpoint the graph's annotator nodes fetch for themselves.
+
+    Both halves of the binding, for these nodes only: what `DWPreprocessor` names
+    in its own inputs, and what `LineArtPreprocessor` fetches while naming nothing.
+    """
+    files: list[str] = []
+    for node in workflow.values():
+        if node["class_type"] not in ANNOTATOR_NODES:
+            continue
+        for value in node.get("inputs", {}).values():
+            if isinstance(value, str) and value.endswith(MODEL_SUFFIXES):
+                files.append(value)
+        files.extend(PREPROCESSOR_MODELS.get(node["class_type"], ()))
+    return files
+
+
+def manifest_dest(filename: str, manifest: Manifest) -> str | None:
+    """Return the destination the manifest declares for a graph filename."""
+    for entry in manifest["entries"]:
+        if entry["dest"] == filename or entry["dest"].endswith(f"/{filename}"):
+            return entry["dest"]
+    return None

@@ -25,6 +25,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`AUX_ANNOTATOR_CKPTS_PATH` moves 386 MB of annotator checkpoints onto the volume.**
+  `comfyui_controlnet_aux` writes them to `<node dir>/ckpts` — the pod's container disk, which
+  does not survive the pod — so `yolox_l.onnx`, `dw-ll_ucoco_384_bs5.torchscript.pt`,
+  `sk_model.pth` and `sk_model2.pth` were re-fetched from Hugging Face, unpinned, during the
+  first render of every pod, on metered time. Redirected onto the models tree they are ordinary
+  manifest entries, fetched and verified ahead of time. The pack reads the variable as
+  `os.getenv(NAME, default)`, so the environment wins over its own `config.yaml`.
+- **⚠️ The pack's own log cannot confirm this.** It prints `Using ckpts path: …` from the
+  *config-derived* value, not from the override, so it will report the old path while writing to
+  the new one. Confirmation is a directory listing on the pod, never a log line. A future reader
+  will otherwise reach for the log and conclude the redirect failed.
+
 ### Added
 
 - **The graph and the manifest are bound by a test.** Every model filename `pipeline.json` names

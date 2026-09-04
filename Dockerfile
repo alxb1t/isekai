@@ -52,6 +52,19 @@ RUN uv pip install -r \
 # script would put a downloader on the pod without the two things it depends on
 # (design.md D15). The layout is preserved because provision.py resolves the
 # manifest relative to itself.
+# `comfyui_controlnet_aux` writes annotator checkpoints to `<node dir>/ckpts` --
+# the pod's container disk, which does not survive the pod. That is 386 MB
+# re-fetched from Hugging Face, unpinned, during the first render of every pod,
+# on metered time. Redirected onto the models tree they become ordinary manifest
+# entries, fetched and verified ahead of time (design.md D7).
+#
+# The pack reads this as `os.getenv(NAME, default)`, so the environment wins over
+# its own `config.yaml`. It also logs `Using ckpts path: ...` from the
+# config-derived value, NOT from this override -- so the log will report the old
+# path while writing to the new one. Confirm this on the filesystem, never from
+# the log.
+ENV AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts
+
 COPY start.sh /start.sh
 COPY scripts/download_models.sh /opt/isekai/scripts/download_models.sh
 COPY scripts/models.json /opt/isekai/scripts/models.json

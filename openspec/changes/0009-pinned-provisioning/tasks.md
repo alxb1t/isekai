@@ -6,7 +6,7 @@
 - [x] 2 — The provisioning module: the policy, the injected fetcher, the offline tests
 - [x] 3 — Port the downloader: the shell becomes a thin driver, and the image carries what it needs
 - [x] 4 — Bind the graph to the manifest, including what the graph never names
-- [ ] 5 — The annotator redirect: 386 MB moves onto the volume
+- [x] 5 — The annotator redirect: 386 MB moves onto the volume
 - [ ] 6 — The namespace: one mount, one symlink, every node
 - [ ] 7 — The docs: `README.md` and `CLAUDE.md` describe a pinned stack
 - [ ] 8 — ⚠️ **GPU · HALT** — inventory the existing volume, run by the operator
