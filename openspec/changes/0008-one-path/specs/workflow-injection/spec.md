@@ -96,6 +96,22 @@ graph remains, and one loader feeds every consumer in it.
 - **AND** the exactly-one-loader invariant holds across the entire stack, which is why injection
   needs no per-consumer branch
 
+### Requirement: Latent initialisation from the photo
+
+The system SHALL initialise the graph's latent from the photo rather than from noise, at a denoise
+strength below one, so the photograph's composition survives into the render.
+
+This replaces the previous *img2img latent initialisation* requirement. The behaviour is unchanged;
+the name and its scenario key drop the `img2img` qualifier, which distinguished one of four graphs
+that no longer exist.
+
+#### Scenario: the graph inits its latent from the photo below full denoise
+- **Key:** `workflow-injection:latent-init:inits-from-photo-below-one`
+- **Layers:** unit
+- **WHEN** the shipped workflow is inspected
+- **THEN** its latent is encoded from the loaded photo rather than generated as empty noise
+- **AND** the sampler's denoise is below one, which is the dial trading identity against style
+
 ## REMOVED Requirements
 
 ### Requirement: Unambiguous node location
@@ -125,3 +141,13 @@ preserved in this change's `design.md` and in the capability's own header: the s
 input may point at the identity node directly or through a stack of ControlNet apply nodes, so the
 encoder is found by following that link, never by class lookup. A future tagger that generates a
 prompt rebuilds this deliberately, as a purpose-built entry point.
+
+### Requirement: img2img latent initialisation
+
+**Reason**: Replaced by *Latent initialisation from the photo*. `img2img` named one graph among four;
+with one graph left the qualifier distinguishes nothing, and phase 2 renames the scenario key to
+match.
+
+**Migration**: None — the latent is initialised exactly as before. Only the requirement name and the
+scenario key change: `workflow-injection:latent-init:img2img-inits-from-photo-below-one` becomes
+`workflow-injection:latent-init:inits-from-photo-below-one`.

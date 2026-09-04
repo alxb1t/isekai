@@ -106,7 +106,7 @@ A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `d
 unchecked box**. A phase is advanced by a commit **and** a ticked box, in that phase's own commit — either
 alone is not an advance.
 
-**The living spec** is `openspec/specs/<capability>/spec.md` — five capabilities: `model-registry`,
+**The living spec** is `openspec/specs/<capability>/spec.md` — four capabilities:
 `workflow-injection`, `workflow-mutation`, `comfy-transport`, `cli`. Every `#### Scenario:` carries a
 `- **Key:**` and a `- **Layers:**` bullet, and the key is
 `<capability>:<requirement-slug>:<scenario-slug>` — so a key locates its own file. On release the delta is
@@ -131,10 +131,12 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## Layout — where things live here
 
-- **`convert.py`** — the CLI entry point. **`isekai/`** — the package: registry, injection, mutation,
+- **`convert.py`** — the CLI entry point. **`isekai/`** — the package: injection, mutation,
   overrides, transport, pipeline. **`tests/`** — the suite and its fakes.
-  **`workflows/`** — `pipeline.json`, the API graph the run loads, and `pipeline_ui.json`, the ComfyUI
-  export it is regenerated from by hand. **`infra/`** — `up.sh` / `down.sh`,
+  **`workflows/`** — `pipeline.json`, the API graph the run loads and the **source of truth**, and
+  `pipeline_ui.json`, a **stale** ComfyUI editor snapshot kept for reference only — it lags the API
+  graph (no Lineart branch, older strengths), so never regenerate `pipeline.json` from it without
+  re-exporting it from the current graph first. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — model download, run *on the pod*. **`Dockerfile`** — the image that
   *is* the pod.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far

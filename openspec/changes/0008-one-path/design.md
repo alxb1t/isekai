@@ -224,8 +224,11 @@ does not. Scenario **keys** are the stable identifier and are unchanged except f
 phase 2, so `@pytest.mark.spec` bindings are unaffected by this decision.
 
 *Requirements genuinely unchanged are simply absent from the delta* — `workflow-mutation`'s "Jitter is
-relative to the current base", `workflow-injection`'s "img2img latent initialisation", and the whole
-of `comfy-transport`.
+relative to the current base" and the whole of `comfy-transport`. `workflow-injection`'s "img2img
+latent initialisation" is **not** among them: its behaviour is unchanged, but phase 2 renames its
+scenario key, and a key rename is a spec edit — so it too is REMOVED and re-ADDED, as *Latent
+initialisation from the photo*. A binding whose key exists only in a test resolves to nothing once
+the delta is folded.
 
 ### D12 — This is not a pure refactor, and the record says so
 

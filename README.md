@@ -134,7 +134,8 @@ isekai/
 ├── convert.py                 # headless CLI: photo in → anime out via ComfyUI API
 ├── isekai/                    # the package: injection, mutation, overrides, transport
 ├── tests/                     # the suite and its fakes
-├── workflows/                 # pipeline.json (the API graph) + pipeline_ui.json (the export)
+├── workflows/                 # pipeline.json = the API graph & source of truth;
+│                              # pipeline_ui.json = a stale ComfyUI editor snapshot
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
