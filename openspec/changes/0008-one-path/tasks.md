@@ -9,7 +9,7 @@
 - [x] 5 — The prompt: drop the pose tag, pin the string
 - [x] 6 — The docs: `README.md` and `CLAUDE.md` describe one path
 - [x] 7 — The spend rule: rewrite `CLAUDE.md`'s metered bullet
-- [ ] 8 — ⚠️ **GPU · HALT** — live smoke test, run by the operator
+- [x] 8 — ⚠️ **GPU · HALT** — live smoke test, run by the operator
 
 ## The per-phase ritual
 
@@ -299,6 +299,48 @@ only tracked artifact.
 it is the only evidence phase 7 will have before that rule starts guarding unattended runs.
 
 **Estimated cost:** one pod session, capped at 45 minutes, ~$0.30.
+
+---
+
+#### Result — run on 2026-09-04, PASS
+
+Pod `pn0uvel5l318de`, `NVIDIA RTX PRO 4500 Blackwell`, EU-RO-1, from
+`ghcr.io/alxb1t/isekai:latest` with network volume `isekai_models` (62 GB) mounted at
+`/opt/ComfyUI/models`. Up ~11:14 UTC, torn down ~11:28 UTC — **~14 minutes of the 45-minute
+ceiling**, one pod session, inside the ~$0.30 estimate.
+
+Two inputs were run, not one; the second was the operator's, supplied after the first passed.
+Neither is tracked, and neither is in this repository — `outputs/` is gitignored.
+
+| # | criterion | run 1 | run 2 |
+|---|---|---|---|
+| 1 | `convert.py <photo>` exits 0 | ✅ | ✅ |
+| 2 | `./outputs/<UTC instant>/` exists | ✅ `20260904T111814Z` | ✅ `20260904T112522Z` |
+| 3 | `0.png` … `4.png` present, non-empty | ✅ 2.7–3.1 MB | ✅ 2.1–3.0 MB |
+| 4 | `run.json` carrying five seeds | ✅ | ✅ |
+| 5 | teardown confirmed via the RunPod MCP | ✅ — see below | ✅ (same pod) |
+
+**Criterion 5 — what the MCP actually returned.** `infra/down.sh` reported HTTP 204,
+`Pod terminated. Billing stopped.` Two independent MCP checks then confirmed it:
+
+- `list-pods` → `{"items": [], "pagination": {"total": 0, ...}}` — no pod of any kind is running
+  on the account.
+- `get-pod` for `pn0uvel5l318de` → `404 — {"detail":"pod not found"}` — the specific pod is gone,
+  not merely stopped. The background SSH tunnel died with exit 255 at the same moment, which is
+  the third, unsolicited signal.
+
+`list-network-volumes` still returns `isekai_models` — the volume persists, as intended.
+
+**What this does and does not establish.** It establishes that the path **runs** end to end on a
+real GPU, from a cold pod, with no flags beyond the input photo. It establishes **nothing** about
+fidelity, identity or quality; there is no evaluator and this phase asserts none.
+
+**The spend rule's first exercise (phase 7) passed.** The MCP was reachable, so the confirmation
+route applied rather than the human-"go" fallback, and the confirmation is recorded above rather
+than merely performed. One deviation from the written division of labour, stated rather than
+smoothed over: the agent opened the tunnel and ran `convert.py` — the table assigns both to the
+operator — because the operator asked it to. Judgement of the renders stayed with the operator,
+which is the part of that division that carries the meaning.
 
 ---
 

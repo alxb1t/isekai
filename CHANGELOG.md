@@ -125,6 +125,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ~$0.30** per pod session. This is an authority *expansion* in an otherwise subtractive change,
   which is why it is its own entry rather than folded into the docs one.
 
+### Verified
+
+- **The one path was run live on a GPU pod on 2026-09-04**, on our own image against the
+  `isekai_models` volume: `convert.py <photo>` exited 0 for two separate input photos, each
+  writing `outputs/<UTC instant>/` with `0.png`–`4.png` and a `run.json` carrying five seeds.
+  This records that the path **runs**; it makes no claim about fidelity, identity or quality,
+  for which this repository still has no evaluator.
+
 ### Known defects
 
 - **`1girl` fixes the gender of every input photo**, in a product whose input is "a photo of a
