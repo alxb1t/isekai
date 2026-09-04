@@ -25,6 +25,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/models.json`, a pinned and checksummed manifest of every model artifact the
+  shipped graph needs — fifteen files across eleven sources.** Each entry names a destination
+  under the models tree, a SHA-256, and an ordered list of `resolve/<commit-sha>/` URLs, so a
+  source addresses bytes that cannot move. Four of the entries are the annotator checkpoints
+  `DWPreprocessor` and `LineArtPreprocessor` fetched for themselves at graph-execution time —
+  386 MB that nothing in this repository named, and that every fresh pod re-downloaded onto
+  ephemeral disk during a metered render. `LineArtPreprocessor` fetches both `sk_model.pth` and
+  `sk_model2.pth` unconditionally, regardless of the graph's `coarse: "disable"`, so both are
+  declared.
+- **`scripts/derive_manifest.py`, the helper that produced it.** Digests are *derived*, never
+  transcribed: Hugging Face publishes each LFS object's SHA-256 as its object id, so no artifact
+  is downloaded to learn its digest, and every alternate source is cross-checked against its
+  primary at derivation time. Revisions are data in the helper rather than resolved from a
+  branch, so re-running it is byte-identical — `git diff --exit-code scripts/models.json` is the
+  check that the tool and the committed data have not diverged.
+- **`isekai/provision.py`, the manifest's reader and its offline checks** — no source resolves a
+  mutable ref, every entry carries a well-formed SHA-256, and every entry whose primary source is
+  a mirror rather than the artifact's publisher declares an alternate. Each check is proven
+  against a deliberately malformed entry as well as against the tracked file. The module is
+  stdlib-only (`json`, `re`, `pathlib`) and is not in `convert.py`'s import graph.
+
 ## [0.8.0] - 2026-09-04
 
 ### Removed
