@@ -9,9 +9,16 @@ set -a; source ./.env; set +a    # load RUNPOD_* config
 
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 
+# `:latest` is the released image and the default. A metered phase that has to
+# boot a branch's image before the branch is merged sets RUNPOD_IMAGE in .env
+# instead — untracked, so the tag a pod runs is never a commit away from the tag
+# a release means.
+RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/alxb1t/isekai:latest}"
+
 echo "Creating pod in $RUNPOD_DATACENTER on '$RUNPOD_GPU_TYPE' ..."
+echo "  image: $RUNPOD_IMAGE"
 body=$(jq -n \
-  --arg image  "ghcr.io/alxb1t/isekai:latest" \
+  --arg image  "$RUNPOD_IMAGE" \
   --arg gpu    "$RUNPOD_GPU_TYPE" \
   --arg vol    "$RUNPOD_VOLUME_ID" \
   --arg dc     "$RUNPOD_DATACENTER" \

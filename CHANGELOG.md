@@ -27,6 +27,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The stack now provisions from the manifest alone, and the unchanged path renders off it.**
+  One pod, 23.3 minutes of wall clock, on a volume created empty for this purpose. All 15 entries
+  were fetched from their pinned `resolve/<sha>/` URLs and SHA-256 verified before landing; the
+  volume ended holding **exactly the manifest and nothing else** — 15 files, 16.51 GiB, every size
+  byte-identical to its declared `bytes`, zero `.partial` files, zero unexpected extras. Then
+  `convert.py` rendered the untouched Animagine path: exit 0, `0.png`–`4.png` and `run.json`.
+  Cost: 23.3 minutes at the pod's quoted $0.72/hr is ~$0.28, and RunPod's billing aggregate had
+  not settled at the time of writing — it still reported the pre-session figure. The operator
+  raised this session's ceiling to ~$0.48 in advance; the wall-clock figure is inside it.
+  **What this establishes is exactly two things**: that the stack is reproducible from a pinned
+  manifest, and that the unchanged path renders from a volume whose entire contents were placed
+  by the script. It establishes **nothing** about identity, fidelity, quality or the base —
+  `ckpt_name` is still Animagine XL 4.0 and the graph, the CLI and the transport are untouched.
+- **The skip path was proven on the warm volume, in the same session.** Re-running the driver
+  printed `skip (present, verified)` for all 15 — each one re-hashed off the volume and compared,
+  not accepted by name. That is the case a pinned manifest exists for and the one a
+  download-path-only check would never reach.
+- **The annotator redirect was confirmed on the filesystem, and the log did contradict it** —
+  exactly as `design.md` D7 warned. `comfyui_controlnet_aux` printed
+  `Using ckpts path: /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux/ckpts`, its pre-override
+  value, while `/proc/<pid>/environ` on the running ComfyUI showed
+  `AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts` and all four checkpoints sat on
+  the volume under it. Trusting the log would have produced the wrong conclusion. Note also that
+  the variable reads **empty in an SSH session**, because a login shell does not inherit Docker
+  `ENV`; only the container's main process does, which is why `/proc` is the check and not `echo`.
+- **The 80 GB volume was destroyed**, after and only after that render. Confirmed through the
+  RunPod MCP: `204` on delete, absent from the volume list, `404 network volume not found` on
+  lookup. The replacement is 40 GB, sized from both projects' manifests (~27.3 GiB together).
+
+### Removed
+
+- **`ghcr.io/alxb1t/isekai:latest` was not touched by this phase.** The metered pod ran
+  `:v0.9-rc`, published by a manual CI run, and the two tags resolve to different digests — so the
+  image a rollback would reach for is still the released v0.8 one.
+
+### Added
+
 - **The 62 GB models volume was inventoried, and nothing on it is unaccounted for.** One pod,
   read-only, 6.6 minutes of wall clock; teardown confirmed through the RunPod MCP, which returned
   an empty pod list and `404 pod not found` for the pod's id. On cost the two available figures
