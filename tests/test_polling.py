@@ -4,7 +4,6 @@ import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.pipeline import run
-from isekai.workflow import inject
 from tests.fakes import FakeComfyClient
 
 
@@ -16,7 +15,7 @@ def test_run_polls_history_until_the_prompt_completes(
     client = FakeComfyClient(pending_polls=2)
     run_dir = tmp_path / "20260904T141530Z"
 
-    run(client, workflow, inject, "photo.jpg", run_dir, variations=1)
+    run(client, workflow, "photo.jpg", run_dir, variations=1)
 
     assert client.history_calls == 3
     assert (run_dir / "0.png").read_bytes() == client.view_bytes
@@ -32,7 +31,7 @@ def test_run_downloads_the_image_named_in_the_history(
     )
     run_dir = tmp_path / "20260904T141530Z"
 
-    run(client, workflow, inject, "photo.jpg", run_dir, variations=1)
+    run(client, workflow, "photo.jpg", run_dir, variations=1)
 
     assert client.viewed == {
         "filename": "anime_00001.png",

@@ -14,16 +14,6 @@ def test_find_node_locates_a_node_by_class_type() -> None:
     assert find_node(wf, class_type="LoadImage") == "7"
 
 
-@pytest.mark.spec("workflow-injection:node-location:locates-by-title")
-def test_find_node_locates_a_node_by_title() -> None:
-    wf = {
-        "7": {"class_type": "LoadImage", "_meta": {"title": "Load Image"}},
-        "9": {"class_type": "KSampler", "_meta": {"title": "KSampler"}},
-    }
-
-    assert find_node(wf, title="KSampler") == "9"
-
-
 @pytest.mark.spec("workflow-injection:node-location:exits-when-no-node-matches")
 def test_find_node_exits_when_no_node_matches() -> None:
     wf = {"7": {"class_type": "LoadImage", "_meta": {"title": "Load Image"}}}

@@ -6,9 +6,7 @@ from pathlib import Path
 import pytest
 
 from isekai.comfy_types import Workflow
-from isekai.mutate import mutate
 from isekai.pipeline import run
-from isekai.workflow import inject
 from tests.fakes import FakeComfyClient
 
 
@@ -16,7 +14,7 @@ from tests.fakes import FakeComfyClient
 def test_run_mutates_the_submitted_workflow(workflow: Workflow, tmp_path: Path) -> None:
     baked = workflow["10"]["inputs"]["seed"]
     client = FakeComfyClient()
-    run(client, workflow, inject, "photo.jpg", tmp_path / "run", mutate=mutate, seed=7)
+    run(client, workflow, "photo.jpg", tmp_path / "run", seed=7)
     assert client.submitted_workflow is not None
     assert client.submitted_workflow["10"]["inputs"]["seed"] != baked
 
@@ -31,10 +29,8 @@ def test_run_derives_every_seed_including_the_first(
     run(
         client,
         workflow,
-        inject,
         "photo.jpg",
         tmp_path / "run",
-        mutate=mutate,
         seed=7,
         variations=3,
     )
@@ -54,10 +50,8 @@ def test_run_prints_the_seed_of_every_variation(
     run(
         client,
         workflow,
-        inject,
         "photo.jpg",
         tmp_path / "run",
-        mutate=mutate,
         seed=7,
         variations=2,
     )
@@ -77,7 +71,7 @@ def test_run_writes_one_numbered_image_per_variation(
 ) -> None:
     run_dir = tmp_path / "20260904T141530Z"
     client = FakeComfyClient()
-    run(client, workflow, inject, "photo.jpg", run_dir, mutate=mutate, variations=3)
+    run(client, workflow, "photo.jpg", run_dir, variations=3)
     assert {p.name for p in run_dir.iterdir()} == {
         "0.png",
         "1.png",
@@ -92,16 +86,12 @@ def test_run_creates_its_own_directory_and_leaves_a_previous_one_alone(
 ) -> None:
     first = tmp_path / "20260904T141530Z"
     second = tmp_path / "20260904T141600Z"
-    run(
-        FakeComfyClient(), workflow, inject, "p.jpg", first, mutate=mutate, variations=1
-    )
+    run(FakeComfyClient(), workflow, "p.jpg", first, variations=1)
     run(
         FakeComfyClient(),
         workflow,
-        inject,
         "p.jpg",
         second,
-        mutate=mutate,
         variations=1,
     )
     assert (first / "0.png").exists()
@@ -117,10 +107,8 @@ def test_run_writes_a_manifest_recording_the_seeds_and_the_dials(
     run(
         client,
         workflow,
-        inject,
         "photo.jpg",
         run_dir,
-        mutate=mutate,
         seed=99,
         variations=5,
         overrides={"denoise": 0.72},
@@ -151,10 +139,8 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
     run(
         client,
         workflow,
-        inject,
         "photo.jpg",
         tmp_path / "run",
-        mutate=mutate,
         seed=42,
         variations=1,
         overrides={"denoise": 0.80},
@@ -180,10 +166,8 @@ def test_run_with_override_and_seed_is_reproducible(
         run(
             client,
             copy.deepcopy(workflow),
-            inject,
             "photo.jpg",
             tmp_path / tag,
-            mutate=mutate,
             seed=77,
             variations=1,
             overrides={"denoise": 0.72, "cfg": 6.5},
@@ -209,10 +193,8 @@ def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
         run(
             client,
             copy.deepcopy(workflow),
-            inject,
             "photo.jpg",
             tmp_path / tag,
-            mutate=mutate,
             seed=77,
             variations=3,
         )

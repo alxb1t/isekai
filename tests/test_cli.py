@@ -7,26 +7,19 @@ from typing import Any
 import pytest
 
 from isekai import cli
-from isekai.mutate import mutate as mutate_fn
 
 
 def _capturing_run(captured: dict[str, Any]) -> Callable[..., None]:
     """Build a `run` double recording EVERY argument `main()` passes.
 
     Capturing all of them is the point. A double that merely declares
-    `mutate=None, seed=None, variations=1` as defaults cannot distinguish
-    "main() passed this" from "main() passed nothing", so deleting the
-    plumbing in main() would leave the suite green.
+    `seed=None, variations=5` as defaults cannot distinguish "main() passed
+    this" from "main() passed nothing", so deleting the plumbing in main()
+    would leave the suite green.
     """
 
     def fake_run(*args: object, **kwargs: object) -> None:
-        names = (
-            "client",
-            "workflow",
-            "inject",
-            "input_path",
-            "output_dir",
-        )
+        names = ("client", "workflow", "input_path", "output_dir")
         captured.update(dict(zip(names, args)))
         captured.update(kwargs)
 
@@ -222,7 +215,6 @@ def test_main_passes_override_flags_to_pipeline_run(
     # were never observed reaching run().
     assert captured["seed"] == 42
     assert captured["variations"] == 3
-    assert captured["mutate"] is mutate_fn
 
 
 # --- Dial range boundaries --------------------------------------------------
@@ -272,8 +264,8 @@ def test_parse_args_accepts_ip_weight_at_both_inclusive_bounds(
 def test_parse_args_says_which_range_a_rejected_denoise_violated(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:
-    # The other rejection tests assert only that SystemExit is raised -- the same
-    # shape that let a typo survive in get_model's message. Pin the text once.
+    # The other rejection tests assert only that SystemExit is raised, which is
+    # the shape a message typo survives unnoticed. Pin the text once.
     monkeypatch.setattr(
         "sys.argv",
         ["convert.py", "photo.jpg", "--denoise", "1.1"],
@@ -353,7 +345,6 @@ def test_main_allows_several_variations(
     cli.main()
 
     assert captured["variations"] == 3
-    assert captured["mutate"] is mutate_fn
 
 
 # --- v0.8: the output destination is a directory ----------------------------

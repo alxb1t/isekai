@@ -5,23 +5,19 @@ import sys
 from isekai.comfy_types import Workflow
 
 
-def find_node(
-    workflow: Workflow, *, class_type: str | None = None, title: str | None = None
-) -> str:
-    """Return the single node ID matching class_type and/or title.
+def find_node(workflow: Workflow, *, class_type: str) -> str:
+    """Return the single node ID with this class_type.
 
-    Fail if the match is not exactly one node.
+    Fail if the match is not exactly one node: an injection that edits the wrong
+    node produces a silently wrong render rather than an error.
     """
     matches = [
-        nid
-        for nid, node in workflow.items()
-        if (class_type is None or node.get("class_type") == class_type)
-        and (title is None or node.get("_meta", {}).get("title") == title)
+        nid for nid, node in workflow.items() if node.get("class_type") == class_type
     ]
 
     if len(matches) != 1:
         sys.exit(
-            f"find_node(class_type={class_type!r}, title={title!r}): "
+            f"find_node(class_type={class_type!r}): "
             f"expected exactly 1 match, found {len(matches)}"
         )
 

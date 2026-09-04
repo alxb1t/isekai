@@ -8,7 +8,6 @@ from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
 from isekai.comfy_types import Overrides
-from isekai.models import get_model
 from isekai.pipeline import run
 
 # `-o` named a file up to v0.7. Accepting the old form would silently create a
@@ -19,6 +18,9 @@ _IMAGE_SUFFIXES = frozenset(
 )
 
 _MAX_VARIATIONS = 25
+
+# The one graph. There is no name to resolve and nothing to select between.
+_WORKFLOW = "workflows/pipeline.json"
 
 
 def _bounded_float(lo: float, hi: float) -> Callable[[str], float]:
@@ -120,8 +122,7 @@ def _run_directory(output_dir: str) -> Path:
 def main() -> None:
     """Run one conversion: parse the flags, resolve the run directory, drive it."""
     args = parse_args()
-    model = get_model("pipeline")
-    workflow = json.loads(Path(model.workflow_path).read_text())
+    workflow = json.loads(Path(_WORKFLOW).read_text())
     client = ComfyClient(args.server)
 
     overrides: Overrides = {}
@@ -135,10 +136,8 @@ def main() -> None:
     run(
         client,
         workflow,
-        model.inject,
         args.input,
         _run_directory(args.output),
-        mutate=model.mutate,
         seed=args.seed,
         variations=args.variations,
         overrides=overrides or None,

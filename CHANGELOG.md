@@ -42,6 +42,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that the sampler's positive input may reach the encoder through a stack of ControlNet apply
   nodes, so it must be followed rather than looked up — is recorded in the change's `design.md`
   and in the `workflow-injection` capability header.
+- **The model registry and every seam with nothing passing through it.**
+  `isekai/models.py`, `Model` and `get_model` are deleted, and `Injector` and `Mutator` go with
+  them from `isekai/comfy_types.py`. `pipeline.run` loses its `inject` and `mutate` parameters
+  and imports them instead. `ComfyTransport` **stays** a parameter — `FakeComfyClient` is what
+  makes the suite offline — and so does `workflow`, which keeps file I/O in the CLI. The rule
+  this change learned: *a parameter is a seam only if something else is actually passed through
+  it.*
+- **Every branch with no reachable caller**: `overrides.py`'s silent no-op when a graph carries
+  no `ApplyInstantIDAdvanced`, `mutate.py`'s wired-dial guard (it existed because Qwen wired
+  `cfg`) and its `"102:14"` subgraph-id ordering, the `mutate is None` branch in `run`, and
+  `find_node`'s `title` parameter — which no caller ever passed.
 
 ### Changed
 

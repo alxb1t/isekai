@@ -230,39 +230,6 @@ def test_mutate_clamps_controlnet_strengths_at_the_edges(
                 assert 0.0 <= wf[nid]["inputs"]["strength"] <= 1.0
 
 
-@pytest.mark.spec("workflow-mutation:jitter:linked-dial-refused-legibly")
-@pytest.mark.parametrize("bad", [None, {"nested": 1}, "0.65", []])
-def test_mutate_refuses_any_non_numeric_dial_without_crashing(bad: object) -> None:
-    # The guard must not reach for value[0] unconditionally: a null or an object
-    # would then raise the raw TypeError/KeyError the guard exists to replace.
-    wf = {"10": {"class_type": "KSampler", "inputs": {"seed": 0, "denoise": bad}}}
-    with pytest.raises(SystemExit) as exit_info:
-        mutate(wf, random.Random(1))
-    assert "denoise" in str(exit_info.value)
-
-
-@pytest.mark.spec("workflow-mutation:controlnet:strengths-are-jittered")
-def test_mutate_handles_subgraph_style_controlnet_node_ids() -> None:
-    # ComfyUI subgraph exports use "102:14"-style ids, and find_node handles
-    # those fine, so nothing else in the codebase signals that node ids must be
-    # integers.
-    wf: Workflow = {
-        "102:3": {
-            "class_type": "KSampler",
-            "inputs": {"seed": 0, "denoise": 0.65, "cfg": 5.0},
-        },
-        "102:8": {"class_type": "ApplyInstantIDAdvanced", "inputs": {"ip_weight": 0.9}},
-        "102:14": {
-            "class_type": "ControlNetApplyAdvanced",
-            "inputs": {"strength": 0.6},
-        },
-        "102:2": {"class_type": "ControlNetApplyAdvanced", "inputs": {"strength": 0.2}},
-    }
-    mutate(wf, random.Random(5))
-    for nid in ("102:14", "102:2"):
-        assert 0.0 <= wf[nid]["inputs"]["strength"] <= 1.0
-
-
 @pytest.mark.spec("workflow-mutation:controlnet:reproducible-from-seed")
 def test_mutate_pins_each_controlnet_strength_for_a_fixed_seed(
     workflow: Workflow,

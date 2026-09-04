@@ -8,23 +8,28 @@ import time
 from pathlib import Path
 from urllib import error
 
-from isekai.comfy_types import ComfyTransport, Mutator, Overrides, Workflow
-from isekai.models import Injector
+from isekai.comfy_types import ComfyTransport, Overrides, Workflow
+from isekai.mutate import mutate
 from isekai.overrides import apply_overrides
+from isekai.workflow import inject
 
 
 def run(
     client: ComfyTransport,
     workflow: Workflow,
-    inject: Injector,
     input_path: str,
     output_dir: Path,
-    mutate: Mutator | None = None,
     seed: int | None = None,
     variations: int = 5,
     overrides: Overrides | None = None,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client.
+
+    `client` and `workflow` stay parameters because something else is actually
+    passed through them: `FakeComfyClient` is what makes the suite offline, and
+    keeping the graph an argument is what keeps file I/O in the CLI. `inject` and
+    `mutate` never had a second implementation, so they are imported (design.md
+    D3).
 
     `output_dir` is this run's own directory, already resolved by the caller.
     """
@@ -44,14 +49,13 @@ def run(
         if overrides:
             apply_overrides(wf, **overrides)
 
-        if mutate is not None:
-            # Uniformly derived, variation 0 included: the run seed has exactly
-            # one meaning -- the source every variation derives from -- rather
-            # than doubling as the first render's sampler seed (design.md D5).
-            s = seeds.getrandbits(64)
-            used.append(s)
-            mutate(wf, random.Random(s))
-            print(f"variation {i}: seed {s}")
+        # Uniformly derived, variation 0 included: the run seed has exactly one
+        # meaning -- the source every variation derives from -- rather than
+        # doubling as the first render's sampler seed (design.md D5).
+        s = seeds.getrandbits(64)
+        used.append(s)
+        mutate(wf, random.Random(s))
+        print(f"variation {i}: seed {s}")
 
         _render(client, wf, str(output_dir / f"{i}.png"))
 
