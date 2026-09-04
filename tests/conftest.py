@@ -4,6 +4,7 @@ import json
 import pytest
 
 from isekai.comfy_types import Workflow
+from isekai.provision import Manifest, load_manifest
 from isekai.workflow import PIPELINE_PATH
 
 
@@ -22,3 +23,19 @@ def _shipped_workflow() -> Workflow:
 def workflow(_shipped_workflow: Workflow) -> Workflow:
     """Return a private copy of the shipped graph, so a test may mutate it freely."""
     return copy.deepcopy(_shipped_workflow)
+
+
+@pytest.fixture(scope="session")
+def _shipped_manifest() -> Manifest:
+    """Read and parse the tracked manifest once for the whole session.
+
+    Same argument as the shipped graph above: the suite reads the tracked file
+    itself, so there is no second copy to drift.
+    """
+    return load_manifest()
+
+
+@pytest.fixture
+def manifest(_shipped_manifest: Manifest) -> Manifest:
+    """Return a private copy of the manifest, so a test may malform it freely."""
+    return copy.deepcopy(_shipped_manifest)

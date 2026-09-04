@@ -31,14 +31,12 @@ DIGEST = re.compile(r"^[0-9a-f]{64}$")
 # the same URL on two different days, so it matches deliberately narrowly: the
 # 40-hex commit, and nothing that merely looks like one.
 PINNED_SOURCE = re.compile(
-    r"^https://huggingface\.co/(?P<org>[^/]+)/[^/]+/resolve/[0-9a-f]{40}/.+$"
+    r"^https://huggingface\.co/[^/]+/[^/]+/resolve/[0-9a-f]{40}/.+$"
 )
 
 # The org of a source URL, whether or not the URL is pinned -- so a malformed
 # source is reported once, by the pin check, rather than twice.
 SOURCE_ORG = re.compile(r"^https://huggingface\.co/(?P<org>[^/]+)/")
-
-ENTRY_KEYS = frozenset({"dest", "sha256", "bytes", "sources"})
 
 
 class Entry(TypedDict):
@@ -56,6 +54,11 @@ class Manifest(TypedDict):
     pinned: str
     publishers: list[str]
     entries: list[Entry]
+
+
+# Derived from the type rather than restated, so a field added to `Entry` is
+# shape-checked at runtime too -- a second hand-written list would keep passing.
+ENTRY_KEYS = frozenset(Entry.__required_keys__)
 
 
 def load_manifest(path: Path = MANIFEST_PATH) -> Manifest:
@@ -222,15 +225,11 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     """
     dest = models_dir / entry["dest"]
     if dest.exists():
-        actual = digest_of(dest)
-        if actual == entry["sha256"]:
-            return Decision("skip", None, f"present and verified: {entry['dest']}")
-        return Decision(
-            "abort",
-            None,
-            f"SHA-256 mismatch for {entry['dest']}: expected {entry['sha256']}, "
-            f"computed {actual} — left on disk for inspection",
-        )
+        try:
+            verify(dest, entry["sha256"])
+        except DigestMismatch as mismatch:
+            return Decision("abort", None, f"{mismatch} — left on disk for inspection")
+        return Decision("skip", None, f"present and verified: {entry['dest']}")
 
     rejected: list[str] = []
     for url in entry["sources"]:
@@ -320,10 +319,6 @@ def main(argv: list[str]) -> int:
             )
 
 
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
-
-
 # What a model file is called, for the purpose of reading one out of the graph.
 # A `.jpeg` on a LoadImage node is an input photograph, not an artifact to pin.
 MODEL_SUFFIXES = (".safetensors", ".bin", ".onnx", ".pt", ".pth", ".ckpt")
@@ -345,14 +340,23 @@ PREPROCESSOR_MODELS: dict[str, tuple[str, ...]] = {
 }
 
 
-def graph_model_files(workflow: dict[str, Any]) -> list[str]:
-    """Return every model filename the graph names in a node's inputs."""
+def _named_model_files(node: dict[str, Any]) -> list[str]:
+    """Return the model files this node names in its own inputs."""
     return [
         value
-        for node in workflow.values()
         for value in node.get("inputs", {}).values()
         if isinstance(value, str) and value.endswith(MODEL_SUFFIXES)
     ]
+
+
+def _fetched_model_files(node: dict[str, Any]) -> list[str]:
+    """Return the model files this node fetches without naming them anywhere."""
+    return list(PREPROCESSOR_MODELS.get(node["class_type"], ()))
+
+
+def graph_model_files(workflow: dict[str, Any]) -> list[str]:
+    """Return every model filename the graph names in a node's inputs."""
+    return [f for node in workflow.values() for f in _named_model_files(node)]
 
 
 def unmapped_preprocessors(workflow: dict[str, Any]) -> list[str]:
@@ -373,27 +377,14 @@ def unmapped_preprocessors(workflow: dict[str, Any]) -> list[str]:
 
 def preprocessor_model_files(workflow: dict[str, Any]) -> list[str]:
     """Return the files the graph's preprocessors fetch without naming them."""
-    return [
-        filename
-        for node in workflow.values()
-        for filename in PREPROCESSOR_MODELS.get(node["class_type"], ())
-    ]
+    return [f for node in workflow.values() for f in _fetched_model_files(node)]
 
 
 def undeclared_files(filenames: list[str], manifest: Manifest) -> list[str]:
-    """Return the filenames with no manifest entry, in order, without duplicates.
-
-    A graph name is a path relative to its model folder, so it is matched against
-    the tail of a destination -- `instantid/diffusion_pytorch_model.safetensors`
-    is one entry and `openpose/diffusion_pytorch_model.safetensors` is another,
-    and a bare basename match would confuse the two.
-    """
-    dests = [entry["dest"] for entry in manifest["entries"]]
+    """Return the filenames with no manifest entry, in order, without duplicates."""
     missing: list[str] = []
     for filename in filenames:
-        if filename in missing:
-            continue
-        if not any(dest == filename or dest.endswith(f"/{filename}") for dest in dests):
+        if filename not in missing and manifest_dest(filename, manifest) is None:
             missing.append(filename)
     return missing
 
@@ -420,20 +411,27 @@ def annotator_files(workflow: dict[str, Any]) -> list[str]:
     Both halves of the binding, for these nodes only: what `DWPreprocessor` names
     in its own inputs, and what `LineArtPreprocessor` fetches while naming nothing.
     """
-    files: list[str] = []
-    for node in workflow.values():
-        if node["class_type"] not in ANNOTATOR_NODES:
-            continue
-        for value in node.get("inputs", {}).values():
-            if isinstance(value, str) and value.endswith(MODEL_SUFFIXES):
-                files.append(value)
-        files.extend(PREPROCESSOR_MODELS.get(node["class_type"], ()))
-    return files
+    return [
+        filename
+        for node in workflow.values()
+        if node["class_type"] in ANNOTATOR_NODES
+        for filename in _named_model_files(node) + _fetched_model_files(node)
+    ]
 
 
 def manifest_dest(filename: str, manifest: Manifest) -> str | None:
-    """Return the destination the manifest declares for a graph filename."""
+    """Return the destination the manifest declares for a graph filename, if any.
+
+    A graph name is a path relative to its model folder, so it is matched against
+    the tail of a destination -- `instantid/diffusion_pytorch_model.safetensors`
+    is one entry and `openpose/diffusion_pytorch_model.safetensors` is another,
+    and a bare basename match would confuse the two.
+    """
     for entry in manifest["entries"]:
         if entry["dest"] == filename or entry["dest"].endswith(f"/{filename}"):
             return entry["dest"]
     return None
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

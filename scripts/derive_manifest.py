@@ -259,8 +259,7 @@ def main() -> None:
     manifest = derive()
     MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
     entries = manifest["entries"]
-    assert isinstance(entries, list)
-    total = sum(int(entry["bytes"]) for entry in entries)
+    total = sum(entry["bytes"] for entry in entries)
     print(
         f"wrote {MANIFEST_PATH.name}: {len(entries)} entries, {total / 2**30:.1f} GiB"
     )

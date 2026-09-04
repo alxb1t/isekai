@@ -17,7 +17,6 @@ from isekai.provision import (
     VOLUME_MOUNT,
     Manifest,
     annotator_files,
-    load_manifest,
     manifest_dest,
 )
 
@@ -39,12 +38,6 @@ def aux_annotator_ckpts_path(dockerfile: str) -> str | None:
 def dockerfile() -> str:
     """Read the shipped `Dockerfile` once for the whole session."""
     return DOCKERFILE.read_text()
-
-
-@pytest.fixture(scope="session")
-def manifest() -> Manifest:
-    """Read and parse the tracked manifest once for the whole session."""
-    return load_manifest()
 
 
 @pytest.mark.spec(

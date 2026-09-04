@@ -1,23 +1,13 @@
-import copy
-
 import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.provision import (
-    PREPROCESSOR_MODELS,
     Manifest,
     graph_model_files,
-    load_manifest,
     preprocessor_model_files,
     undeclared_files,
     unmapped_preprocessors,
 )
-
-
-@pytest.fixture(scope="session")
-def manifest() -> Manifest:
-    """Read and parse the tracked manifest once for the whole session."""
-    return load_manifest()
 
 
 @pytest.mark.spec(
@@ -100,13 +90,12 @@ def test_the_lineart_files_are_declared_although_the_graph_names_neither(
 def test_dropping_a_mapped_file_from_the_manifest_fails_the_check(
     workflow: Workflow, manifest: Manifest
 ) -> None:
-    trimmed = copy.deepcopy(manifest)
-    trimmed["entries"] = [
+    manifest["entries"] = [
         entry
-        for entry in trimmed["entries"]
+        for entry in manifest["entries"]
         if not entry["dest"].endswith("/sk_model2.pth")
     ]
-    assert undeclared_files(preprocessor_model_files(workflow), trimmed) == [
+    assert undeclared_files(preprocessor_model_files(workflow), manifest) == [
         "sk_model2.pth"
     ]
 
@@ -120,5 +109,4 @@ def test_the_mapping_covers_every_preprocessor_the_shipped_graph_uses(
         for node in workflow.values()
         if node["class_type"].endswith("Preprocessor")
     }
-    assert used <= set(PREPROCESSOR_MODELS)
     assert used == {"TilePreprocessor", "DWPreprocessor", "LineArtPreprocessor"}

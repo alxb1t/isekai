@@ -1,37 +1,29 @@
-import copy
 from typing import Any, cast
 
 import pytest
 
 from isekai.provision import (
+    SOURCE_ORG,
     Entry,
     Manifest,
     entries_with_missing_keys,
     entries_without_a_digest,
-    load_manifest,
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
 
 
-@pytest.fixture(scope="session")
-def _shipped_manifest() -> Manifest:
-    """Read and parse the tracked manifest once for the whole session."""
-    return load_manifest()
-
-
-@pytest.fixture
-def manifest(_shipped_manifest: Manifest) -> Manifest:
-    """Return a private copy of the tracked manifest, so a test may malform it."""
-    return copy.deepcopy(_shipped_manifest)
+def _org_of(source: str) -> str | None:
+    """Return the org a source URL belongs to, exactly as the module reads it."""
+    match = SOURCE_ORG.match(source)
+    return match.group("org") if match else None
 
 
 def _first_mirror_entry(manifest: Manifest) -> Entry:
     """Return the first entry whose primary source is a mirror, not a publisher."""
     publishers = set(manifest["publishers"])
     for entry in manifest["entries"]:
-        org = entry["sources"][0].removeprefix("https://huggingface.co/").split("/")[0]
-        if org not in publishers:
+        if _org_of(entry["sources"][0]) not in publishers:
             return entry
     raise AssertionError("the manifest declares no mirror-primary entry")
 
@@ -116,9 +108,7 @@ def test_a_publisher_primary_entry_needs_no_alternate(manifest: Manifest) -> Non
     single = [
         entry
         for entry in manifest["entries"]
-        if len(entry["sources"]) == 1
-        and entry["sources"][0].removeprefix("https://huggingface.co/").split("/")[0]
-        in publishers
+        if len(entry["sources"]) == 1 and _org_of(entry["sources"][0]) in publishers
     ]
     assert single
     assert mirror_entries_without_an_alternate(manifest) == []
