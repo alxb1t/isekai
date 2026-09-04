@@ -23,7 +23,10 @@ learning** are the point.
 - **Runtime:** [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in a Docker container.
 - **Compute:** [RunPod](https://www.runpod.io/) GPU pod, **per-second** billing. The Docker
   image runs directly as the pod — no VM to provision.
-- **Weights:** kept on a persistent RunPod **network volume**, not baked into the image.
+- **Weights:** kept on a persistent RunPod **network volume**, not baked into the image, and
+  provisioned from a **pinned, checksummed manifest** — every artifact is addressed by an
+  immutable revision and verified by SHA-256 before anything loads it. The volume is
+  **namespaced per project**, so a volume shared with another project has no shared files.
 - **Interface:** a headless CLI (`convert.py`) that drives ComfyUI over its API. The runtime
   is **stdlib-only** — no wheels needed to run a conversion.
 
@@ -35,7 +38,8 @@ Local (your machine)                          RunPod
 │ ssh -L 8188 (tunnel)   │ ◀── tunnel :8188   │  (host is already GPU-ready)         │
 │ convert.py me.jpg      │ ── API call ─────▶ │        │ mounts ▼                     │
 └────────────────────────┘                    │   ┌─────────────────────────────┐    │
-        ▲                                     │   │ network volume: models/     │    │
+        ▲                                     │   │ volume: /runpod-volume/     │    │
+        │                                     │   │   isekai/ ← this project    │    │
         │ ghcr.io/alxb1t/isekai (free)        │   └─────────────────────────────┘    │
         │ (RunPod pulls it as the pod)        └──────────────────────────────────────┘
                                                      │  down.sh → remove pod; volume persists
@@ -132,7 +136,8 @@ living, test-backed spec, and `openspec/changes/` is the work in flight.
 ```
 isekai/
 ├── convert.py                 # headless CLI: photo in → anime out via ComfyUI API
-├── isekai/                    # the package: injection, mutation, overrides, transport
+├── isekai/                    # the package: injection, mutation, overrides, transport,
+│                              # provisioning (manifest, verification, graph↔manifest binding)
 ├── tests/                     # the suite and its fakes
 ├── workflows/                 # pipeline.json = the API graph & source of truth;
 │                              # pipeline_ui.json = a stale ComfyUI editor snapshot
@@ -140,7 +145,9 @@ isekai/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
 ├── scripts/
-│   └── download_models.sh     # pull weights onto the network volume (runs on the pod)
+│   ├── download_models.sh     # thin driver: plan → wget → verify & land (runs on the pod)
+│   ├── models.json            # the pinned, checksummed manifest — what the stack IS
+│   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)
 ├── Makefile                   # `make gate`
@@ -184,7 +191,9 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │ 4  run container → CMD = /start.sh:
     │                                  │      • authorized_keys ← PUBLIC_KEY
     │                                  │      • start sshd            (:22)
-    │                                  │      • mount volume → /opt/ComfyUI/models
+    │                                  │      • mount volume → /runpod-volume
+    │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
+    │                                  │      • provision from scripts/models.json (verified)
     │                                  │      • exec ComfyUI          (:8188)
     │ 5  poll GET /v1/pods ───────────▶│
     │    ◀──── publicIp + port(22) ────┘

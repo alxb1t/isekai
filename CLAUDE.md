@@ -107,7 +107,9 @@ unchecked box**. A phase is advanced by a commit **and** a ticked box, in that p
 alone is not an advance.
 
 **The living spec** is `openspec/specs/<capability>/spec.md` — four capabilities:
-`workflow-injection`, `workflow-mutation`, `comfy-transport`, `cli`. Every `#### Scenario:` carries a
+`workflow-injection`, `workflow-mutation`, `comfy-transport`, `cli`. A fifth,
+`model-provisioning`, is written and test-backed on the v0.9 branch and joins the living spec when
+that change is archived, which is `mf-release`'s act. Every `#### Scenario:` carries a
 `- **Key:**` and a `- **Layers:**` bullet, and the key is
 `<capability>:<requirement-slug>:<scenario-slug>` — so a key locates its own file. On release the delta is
 folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
@@ -132,13 +134,19 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 ## Layout — where things live here
 
 - **`convert.py`** — the CLI entry point. **`isekai/`** — the package: injection, mutation,
-  overrides, transport, pipeline. **`tests/`** — the suite and its fakes.
+  overrides, transport, pipeline, and `provision.py` — the manifest's reader, the byte
+  verification, the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is
+  **not** in `convert.py`'s import graph, so the stdlib-only runtime rule is untouched either way.
+  **`tests/`** — the suite and its fakes.
   **`workflows/`** — `pipeline.json`, the API graph the run loads and the **source of truth**, and
   `pipeline_ui.json`, a **stale** ComfyUI editor snapshot kept for reference only — it lags the API
   graph (no Lineart branch, older strengths), so never regenerate `pipeline.json` from it without
   re-exporting it from the current graph first. **`infra/`** — `up.sh` / `down.sh`,
-  the pod lifecycle. **`scripts/`** — model download, run *on the pod*. **`Dockerfile`** — the image that
-  *is* the pod.
+  the pod lifecycle. **`scripts/`** — `models.json`, the pinned and checksummed manifest of every
+  model artifact the graph needs and the source of truth for what the stack *is*;
+  `download_models.sh`, the thin driver that provisions it, run *on the pod*; and
+  `derive_manifest.py`, which re-derives every revision and digest — the manifest is its output, so
+  a re-run must leave the file byte-identical. **`Dockerfile`** — the image that *is* the pod.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one

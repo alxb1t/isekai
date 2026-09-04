@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`README.md` and `CLAUDE.md` describe a pinned stack.** The weights line now says the stack is
+  provisioned from a pinned, checksummed manifest and that the volume is namespaced per project;
+  the layout gains `scripts/models.json`, `scripts/derive_manifest.py` and `isekai/provision.py`;
+  the pod-lifecycle diagram shows the `/runpod-volume` mount and the namespace symlink.
+  `CLAUDE.md` records that the living spec goes to five capabilities when `model-provisioning` is
+  archived, and that `provision.py` is not in `convert.py`'s import graph, so the stdlib-only
+  runtime rule is untouched. **No claim is made about identity, quality or the base** — this
+  version changed none of them. The five-command gate array is unchanged.
+
 - **The volume mounts at `/runpod-volume` and the models directory is one symlink into this
   project's namespace.** `infra/up.sh`'s `volumeMountPath` moves off `/opt/ComfyUI/models`, and
   `start.sh` points `/opt/ComfyUI/models` at `/runpod-volume/isekai`. Because
