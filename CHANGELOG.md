@@ -25,6 +25,125 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-04
+
+### Removed
+
+- **The `qwen`, `animagine` and `animagine-i2i` paths.** All three are superseded by
+  `animagine-i2i-cn`, which alone preserves identity, composition and pose. Gone with them:
+  `workflows/qwen-image-edit.json`, `workflows/qwen-image-edit.reference.json`,
+  `workflows/animagine-instantid.json`, `workflows/animagine-i2i.json`, their test fixtures,
+  `inject_qwen`, and the four Qwen downloads in `scripts/download_models.sh`.
+- **The `model-registry` capability.** Its three requirements — name resolution, injector
+  pairing and mutation pairing — all describe a choice that no longer exists, so
+  `openspec/specs/model-registry/` and `tests/test_model_dispatch.py` are deleted. The living
+  spec goes from five capabilities to four.
+- **Tests bound to the deleted paths**, including
+  `test_run_without_overrides_is_byte_identical_to_v04`, which pinned v0.4's output for a path
+  that is now gone, and the Qwen-only guards for a wired `cfg` dial and a graph with no identity
+  node. Deleting them took the suite from v0.7's 114 tests to 81; the count going down is the
+  work, not a weakened gate.
+- **`tests/fixtures/`.** The fixtures were byte-identical copies of the shipped graphs with no
+  drift check — a second thing to rename and a silent divergence waiting to happen.
+  `tests/conftest.py` now loads `workflows/pipeline.json` directly.
+- **`--model`, `--workflow` and `--prompt`.** The whole required surface becomes
+  `convert.py photo.jpg`. `--prompt` was **required**, so this is **BREAKING** for every
+  existing invocation: the positive prompt is now committed to the graph, which is what makes a
+  render attributable. `--workflow` has no equivalent — edit `workflows/pipeline.json`.
+- **Variation 0's verbatim-seed exemption.** Its stated reason was back-compat with releases
+  this change deletes, and it left `--seed` with two meanings: a stream seed for variations
+  1..N and a literal sampler seed for variation 0. **BREAKING**: `--seed 42` no longer
+  reproduces v0.7's first render.
+- **The conditioning trace in `inject`.** With no prompt to place, the walk from
+  `KSampler.positive` to the first `CLIPTextEncode` has no caller. Its non-obvious insight —
+  that the sampler's positive input may reach the encoder through a stack of ControlNet apply
+  nodes, so it must be followed rather than looked up — is recorded in the change's `design.md`
+  and in the `workflow-injection` capability header.
+- **The model registry and every seam with nothing passing through it.**
+  `isekai/models.py`, `Model` and `get_model` are deleted, and `Injector` and `Mutator` go with
+  them from `isekai/comfy_types.py`. `pipeline.run` loses its `inject` and `mutate` parameters
+  and imports them instead. `ComfyTransport` **stays** a parameter — `FakeComfyClient` is what
+  makes the suite offline — and so does `workflow`, which keeps file I/O in the CLI. The rule
+  this change learned: *a parameter is a seam only if something else is actually passed through
+  it.*
+- **Every branch with no reachable caller**: `overrides.py`'s silent no-op when a graph carries
+  no `ApplyInstantIDAdvanced`, `mutate.py`'s wired-dial guard (it existed because Qwen wired
+  `cfg`) and its `"102:14"` subgraph-id ordering, the `mutate is None` branch in `run`, and
+  `find_node`'s `title` parameter — which no caller ever passed.
+- **`arms crossed` from the committed positive prompt.** Pose is the OpenPose ControlNet's axis;
+  a pose tag in the prompt competes with the mechanism that owns it. That is an architectural
+  argument and needs no render to justify it — **this change makes no claim about what the graph
+  now renders.**
+
+### Changed
+
+- **The surviving path is renamed to nothing.** `workflows/animagine-i2i-cn.json` →
+  `workflows/pipeline.json`, `workflows/animagine-i2i-cn_ui.json` →
+  `workflows/pipeline_ui.json`, `inject_animagine` → `inject`, and the one remaining `--model`
+  value → `pipeline`. Every name available today describes the base or the technique, and v0.9
+  replaces the base; the only name that version cannot invalidate is no name. The flag itself
+  is then removed outright — see below.
+- **Spec keys lose their model segment**:
+  `workflow-injection:photo-wiring:controlnet-single-loader-across-stack` →
+  `…:single-loader-fans-out`, and
+  `workflow-injection:latent-init:img2img-inits-from-photo-below-one` →
+  `…:inits-from-photo-below-one`.
+- **BREAKING: `-o` names a directory, not a file**, defaulting to `./outputs`. A run writes
+  `<output-dir>/<UTC instant>/0.png` … and a `run.json` beside them. An `-o` naming a file with
+  an image extension is **rejected at parse time** — otherwise an upgrading caller silently gets
+  a directory called `out.png`.
+- **BREAKING: `--variations` defaults to 5**, capped at 25. Five renders to choose between is
+  the product rather than an option; the ceiling exists because every variation is one billed
+  GPU render, so an unbounded count bills a mistyped digit at GPU rates.
+- **Every variation's seed is derived uniformly** from `--seed`, variation 0 included. The
+  per-variation seed is still printed, and is now also recorded in `run.json`.
+- `main()` resolves the run directory and hands the **resolved** path to `run`, which draws no
+  clock of its own — which is what keeps the suite offline and deterministic.
+
+### Added
+
+- **Timestamped run directories and `run.json`.** The manifest records the seed the run was
+  given, the per-variation seeds actually drawn and the dial values in force, so a run describes
+  itself instead of depending on the operator still having the terminal it was printed to.
+- **The positive prompt is pinned by equality** in the suite, and commented in
+  `workflows/pipeline_ui.json` with the version that owns its register. "The string holds no
+  subject text" has no mechanical form — a blacklist assertion is defeated silently by any
+  rewrite — so equality makes every future prompt edit a deliberate test edit.
+- **`README.md` and `CLAUDE.md` describe one path.** The four-row model table, `--model` and
+  `--prompt` in the quickstart, and the "four selectable models" status line all go; the run
+  directory layout is shown instead. `CLAUDE.md` retires the additive-models invariant — **"there
+  is one path; a version may replace it, it may not add a second"** — and replaces the registry
+  seam with the rule this change learned: *a parameter is a seam only if something else is
+  actually passed through it.* The conditioning-trace insight the deleted code carried is
+  preserved there by name.
+- The `README.md` license line no longer claims to match a model license the repo does not ship;
+  it states the repository's own licence and that weights are licensed by their publishers.
+- **`CLAUDE.md`'s metered-work guardrail is rewritten.** Teardown confirmed through the RunPod
+  MCP replaces the blanket "wait for an explicit human go". The new rule states all four things
+  the old protocol got for free from a human being present: who **creates** (`infra/up.sh`), who
+  **tears down** (`infra/down.sh` — teardown is the act), who **confirms** (the MCP — and
+  confirmation is *not* the act), and what it **degrades to** when the MCP is unreachable (the
+  human "go", unchanged, for the whole session). It carries a stated ceiling: **45 minutes,
+  ~$0.30** per pod session. This is an authority *expansion* in an otherwise subtractive change,
+  which is why it is its own entry rather than folded into the docs one.
+
+### Verified
+
+- **The one path was run live on a GPU pod on 2026-09-04**, on our own image against the
+  persistent models volume: `convert.py <photo>` exited 0 for two separate input photos, each
+  writing `outputs/<UTC instant>/` with `0.png`–`4.png` and a `run.json` carrying five seeds.
+  This records that the path **runs**; it makes no claim about fidelity, identity or quality,
+  for which this repository still has no evaluator.
+
+### Known defects
+
+- **`1girl` fixes the gender of every input photo**, in a product whose input is "a photo of a
+  person". `1girl, solo` is the Danbooru mode selector for this base rather than subject text,
+  and an empty positive is not neutral on a Danbooru-trained checkpoint, so removing it would be
+  a register decision. v0.8 changes no base and therefore decides no register: the defect is
+  stated here and owned by **v0.9**, the version that can probe a replacement against real
+  renders.
+
 ## [0.7.0] - 2026-09-01
 
 Adoption of the OpenSpec SDD repository standard, plus the defects that adopting it exposed.

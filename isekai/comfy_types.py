@@ -1,13 +1,9 @@
 """The shared vocabulary: graph aliases, the dial overrides, and the transport seam."""
 
-from collections.abc import Callable
-from random import Random
 from typing import Any, Protocol, TypedDict
 
 Workflow = dict[str, Any]
 Image = dict[str, str]
-Injector = Callable[[Workflow, str, str], None]
-Mutator = Callable[[Workflow, Random], None]
 
 
 class Overrides(TypedDict, total=False):

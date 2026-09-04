@@ -1,32 +1,24 @@
+import copy
 import json
-from pathlib import Path
 
 import pytest
 
 from isekai.comfy_types import Workflow
-
-FIXTURES = Path(__file__).parent / "fixtures"
-
-
-def load_fixture(name: str) -> Workflow:
-    return json.loads((FIXTURES / name).read_text())
+from isekai.workflow import PIPELINE_PATH
 
 
-@pytest.fixture
-def qwen_workflow() -> Workflow:
-    return load_fixture("qwen-image-edit.json")
+@pytest.fixture(scope="session")
+def _shipped_workflow() -> Workflow:
+    """Read and parse the shipped graph once for the whole session.
 
-
-@pytest.fixture
-def animagine_workflow() -> Workflow:
-    return load_fixture("animagine-instantid.json")
+    The suite reads the shipped graph itself: a byte-identical fixture copy with
+    no drift check is a second thing to rename and a silent divergence waiting to
+    happen (design.md D9).
+    """
+    return json.loads(PIPELINE_PATH.read_text())
 
 
 @pytest.fixture
-def animagine_i2i_workflow() -> Workflow:
-    return load_fixture("animagine-i2i.json")
-
-
-@pytest.fixture
-def animagine_i2i_cn_workflow() -> Workflow:
-    return load_fixture("animagine-i2i-cn.json")
+def workflow(_shipped_workflow: Workflow) -> Workflow:
+    """Return a private copy of the shipped graph, so a test may mutate it freely."""
+    return copy.deepcopy(_shipped_workflow)

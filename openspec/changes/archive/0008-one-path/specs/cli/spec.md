@@ -1,107 +1,4 @@
-# Capability: `cli`
-
-The command-line surface: parsing flags, validating their ranges before any GPU work starts, and dispatching the
-chosen model into a run.
-
-**Source:** `isekai/cli.py` · **Tests:** `tests/test_cli.py`
-
-The CLI is where a bad value is cheapest to catch. Every dial is range-checked **at parse time**, so an
-out-of-range flag fails before a pod is touched rather than after a paid render.
-
-## Requirements
-
-### Requirement: Dial flags default to unset
-
-The system SHALL leave each dial override unset when its flag is absent, so that omitting a flag preserves the
-workflow's own tuned value rather than imposing a CLI default.
-
-#### Scenario: denoise defaults to unset
-- **Key:** `cli:dial-defaults:denoise-defaults-to-unset`
-- **Layers:** unit
-- **WHEN** no denoise flag is supplied
-- **THEN** no denoise override is applied and the workflow keeps its own value
-
-#### Scenario: cfg defaults to unset
-- **Key:** `cli:dial-defaults:cfg-defaults-to-unset`
-- **Layers:** unit
-- **WHEN** no cfg flag is supplied
-- **THEN** no cfg override is applied
-
-#### Scenario: ip_weight defaults to unset
-- **Key:** `cli:dial-defaults:ip-weight-defaults-to-unset`
-- **Layers:** unit
-- **WHEN** no ip_weight flag is supplied
-- **THEN** no ip_weight override is applied
-
-### Requirement: Dial range validation at parse time
-
-The system SHALL reject a dial value outside its valid range **before the run starts** — denoise and ip_weight in
-zero-to-one, cfg in zero-to-thirty — because these runs cost real money and a rejected flag should cost none.
-
-#### Scenario: an in-range denoise is accepted
-- **Key:** `cli:dial-validation:accepts-denoise-in-range`
-- **Layers:** unit
-- **WHEN** a denoise within zero to one is supplied
-- **THEN** it is accepted
-
-#### Scenario: an in-range cfg is accepted
-- **Key:** `cli:dial-validation:accepts-cfg-in-range`
-- **Layers:** unit
-- **WHEN** a cfg within zero to thirty is supplied
-- **THEN** it is accepted
-
-#### Scenario: an in-range ip_weight is accepted
-- **Key:** `cli:dial-validation:accepts-ip-weight-in-range`
-- **Layers:** unit
-- **WHEN** an ip_weight within zero to one is supplied
-- **THEN** it is accepted
-
-#### Scenario: a denoise above one is rejected
-- **Key:** `cli:dial-validation:rejects-denoise-above-one`
-- **Layers:** unit
-- **WHEN** a denoise greater than one is supplied
-- **THEN** parsing fails before any run begins
-
-#### Scenario: a denoise below zero is rejected
-- **Key:** `cli:dial-validation:rejects-denoise-below-zero`
-- **Layers:** unit
-- **WHEN** a denoise less than zero is supplied
-- **THEN** parsing fails
-
-#### Scenario: a cfg above thirty is rejected
-- **Key:** `cli:dial-validation:rejects-cfg-above-thirty`
-- **Layers:** unit
-- **WHEN** a cfg greater than thirty is supplied
-- **THEN** parsing fails
-
-#### Scenario: a cfg below zero is rejected
-- **Key:** `cli:dial-validation:rejects-cfg-below-zero`
-- **Layers:** unit
-- **WHEN** a cfg less than zero is supplied
-- **THEN** parsing fails
-
-#### Scenario: an ip_weight above one is rejected
-- **Key:** `cli:dial-validation:rejects-ip-weight-above-one`
-- **Layers:** unit
-- **WHEN** an ip_weight greater than one is supplied
-- **THEN** parsing fails
-
-#### Scenario: an ip_weight below zero is rejected
-- **Key:** `cli:dial-validation:rejects-ip-weight-below-zero`
-- **Layers:** unit
-- **WHEN** an ip_weight less than zero is supplied
-- **THEN** parsing fails
-
-### Requirement: Dial flags reach the run
-
-The system SHALL pass the parsed dial overrides through to the run, so a flag the user typed actually changes
-what is submitted.
-
-#### Scenario: the override flags are handed to the run
-- **Key:** `cli:dial-plumbing:overrides-reach-the-run`
-- **Layers:** unit
-- **WHEN** dial override flags are supplied on the command line
-- **THEN** the run receives those values
+## ADDED Requirements
 
 ### Requirement: The output destination is a directory
 
@@ -189,3 +86,33 @@ deletes.
 - **THEN** parsing fails before the photo is uploaded
 - **AND** no render is billed, because a mistyped count would otherwise bill one GPU render per
   digit
+
+## REMOVED Requirements
+
+### Requirement: Model selection
+
+**Reason**: `--model` is removed. Three of the four paths are deleted and the survivor is the only
+thing the CLI can run, so there is no default to fall back to, no name to accept and no unregistered
+name to refuse.
+
+**Migration**: Drop the flag. `--model animagine-i2i-cn` becomes no flag at all; the other three
+values name deleted paths and have no equivalent.
+
+### Requirement: Model dispatch into a run
+
+**Reason**: Dispatch existed to hand the run whichever workflow and injector the selected model
+owned. With one graph and one injector, both are reached directly and there is nothing to select
+between; `--workflow`, which overrode the dispatched graph, is removed with it.
+
+**Migration**: None. A caller who used `--workflow` to substitute a graph must edit
+`workflows/pipeline.json`, which is the committed graph the run loads.
+
+### Requirement: Reproducibility flags
+
+**Reason**: Replaced by *Seed and variation-count flags*. Two of its scenarios describe behaviour
+this change deletes: the variation count no longer defaults to one, and the refusal of several
+variations on a model carrying no mutation seam protected models that no longer exist. The
+surviving path always varies.
+
+**Migration**: `--seed` and `--variations` are unchanged in spelling. A caller relying on
+`--variations` defaulting to one must now pass `--variations 1` explicitly.

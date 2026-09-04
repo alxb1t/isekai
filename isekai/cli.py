@@ -2,53 +2,65 @@
 
 import argparse
 import json
-import sys
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
 from isekai.comfy_types import Overrides
-from isekai.models import get_model
 from isekai.pipeline import run
+from isekai.workflow import PIPELINE_PATH
+
+# `-o` named a file up to v0.7. Accepting the old form would silently create a
+# directory called `out.png` full of images, so a value that looks like an image
+# is refused at parse time instead.
+_IMAGE_SUFFIXES = frozenset(
+    {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
+)
+
+_VARIATIONS = 5
+_MAX_VARIATIONS = 25
 
 
-def _bounded_float(lo: float, hi: float) -> Callable[[str], float]:
-    """Build an argparse type that parses a float and rejects one outside [lo, hi]."""
+def _bounded[T: (int, float)](
+    parse: Callable[[str], T], lo: T, hi: T
+) -> Callable[[str], T]:
+    """Build an argparse type that parses a value and rejects one outside [lo, hi].
 
-    def parse(value: str) -> float:
-        v = float(value)
+    One factory for every ranged dial and for --variations, so the rejection
+    wording -- which the suite pins -- has a single spelling.
+    """
+
+    def bounded(value: str) -> T:
+        v = parse(value)
         if not (lo <= v <= hi):
             raise argparse.ArgumentTypeError(f"must be in [{lo}, {hi}], got {v}")
         return v
 
-    return parse
+    return bounded
 
 
-def _positive_int(value: str) -> int:
-    v = int(value)
-    if v < 1:
-        raise argparse.ArgumentTypeError(f"must be at least 1, got {v}")
-    return v
+def _output_directory(value: str) -> Path:
+    """Parse -o as a directory, refusing a value that names an image file."""
+    path = Path(value)
+    if path.suffix.lower() in _IMAGE_SUFFIXES:
+        raise argparse.ArgumentTypeError(
+            f"-o now names a directory, not an image file; {value!r} looks like a "
+            f"file. A run writes its images into <dir>/<UTC instant>/."
+        )
+    return path
 
 
 def parse_args() -> argparse.Namespace:
     """Parse the command line, rejecting out-of-range and unusable flag values."""
-    p = argparse.ArgumentParser(
-        description="Photo -> anime via ComfyUI (Qwen-Image-Edit)."
-    )
+    p = argparse.ArgumentParser(description="Photo -> anime via ComfyUI.")
     p.add_argument("input", help="input photo (jpg/png)")
-    p.add_argument("-o", "--output", default="out.png", help="output image path")
-    p.add_argument("--prompt", required=True, help="edit instruction")
     p.add_argument(
-        "--model",
-        choices=["qwen", "animagine", "animagine-i2i", "animagine-i2i-cn"],
-        default="animagine-i2i",
-        help="which pipeline to run",
-    )
-    p.add_argument(
-        "--workflow",
-        default=None,
-        help="override the model's default workflow JSON (advanced)",
+        "-o",
+        "--output",
+        type=_output_directory,
+        default=Path("./outputs"),
+        help="output directory; each run writes into <dir>/<UTC instant>/",
     )
     p.add_argument(
         "--server",
@@ -63,25 +75,25 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--variations",
-        type=_positive_int,
-        default=1,
-        help="number of varied outputs to generate",
+        type=_bounded(int, 1, _MAX_VARIATIONS),
+        default=_VARIATIONS,
+        help=f"number of varied outputs to generate [1, {_MAX_VARIATIONS}]",
     )
     p.add_argument(
         "--denoise",
-        type=_bounded_float(0.0, 1.0),
+        type=_bounded(float, 0.0, 1.0),
         default=None,
         help="denoise base value [0, 1] (jitter window for --variations)",
     )
     p.add_argument(
         "--cfg",
-        type=_bounded_float(0.0, 30.0),
+        type=_bounded(float, 0.0, 30.0),
         default=None,
         help="CFG scale base value [0, 30]",
     )
     p.add_argument(
         "--ip-weight",
-        type=_bounded_float(0.0, 1.0),
+        type=_bounded(float, 0.0, 1.0),
         default=None,
         help="InstantID ip_weight base value [0, 1]",
     )
@@ -89,22 +101,22 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main() -> None:
-    """Run one conversion: parse the flags, resolve the model, drive the pipeline."""
-    args = parse_args()
-    model = get_model(args.model)
+def _run_directory(output_dir: Path) -> Path:
+    """Resolve this run's own directory: <output-dir>/<UTC instant>/.
 
-    # Without a mutation seam every variation submits the identical graph, so
-    # `--variations 3` would bill three renders for one image. Refuse before the
-    # photo is uploaded -- a rejected flag should cost nothing.
-    if args.variations > 1 and model.mutate is None:
-        sys.exit(
-            f"--model {args.model} does not vary between renders, so "
-            f"--variations {args.variations} would submit {args.variations} "
-            f"identical jobs; use --variations 1, or a model with a mutation "
-            f"seam (animagine-i2i, animagine-i2i-cn)"
-        )
-    workflow = json.loads(Path(args.workflow or model.workflow_path).read_text())
+    Compact basic ISO -- colons are legal on APFS but Finder renders them as `/`
+    and they are illegal on Windows checkouts. Resolved HERE rather than inside
+    `run`, so `run` draws no clock and stays a pure function of its arguments
+    (design.md D4).
+    """
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return output_dir / stamp
+
+
+def main() -> None:
+    """Run one conversion: parse the flags, resolve the run directory, drive it."""
+    args = parse_args()
+    workflow = json.loads(PIPELINE_PATH.read_text())
     client = ComfyClient(args.server)
 
     overrides: Overrides = {}
@@ -118,11 +130,8 @@ def main() -> None:
     run(
         client,
         workflow,
-        model.inject,
         args.input,
-        args.prompt,
-        args.output,
-        mutate=model.mutate,
+        _run_directory(args.output),
         seed=args.seed,
         variations=args.variations,
         overrides=overrides or None,

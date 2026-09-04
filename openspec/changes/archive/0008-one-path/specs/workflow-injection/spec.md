@@ -1,15 +1,4 @@
-# Capability: `workflow-injection`
-
-Wiring the uploaded photo and the text prompt into a ComfyUI workflow graph before it is queued — locating the
-nodes that need editing, and setting the right inputs on exactly the right ones.
-
-**Source:** `isekai/workflow.py` · **Tests:** `tests/test_workflow_injection.py`
-
-Injection is **separate from mutation**: injection wires *image + prompt*, mutation varies *dials*. Each model
-family owns an injection adapter, but the adapters share a node-locating primitive and the InstantID family
-shares one generalised conditioning trace.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: The positive prompt is graph configuration
 
@@ -122,3 +111,43 @@ that no longer exist.
 - **WHEN** the shipped workflow is inspected
 - **THEN** its latent is encoded from the loaded photo rather than generated as empty noise
 - **AND** the sampler's denoise is below one, which is the dial trading identity against style
+
+## REMOVED Requirements
+
+### Requirement: Unambiguous node location
+
+**Reason**: Replaced by *Node location on the one graph*. Its title-lookup scenario described a
+parameter with no caller, and two of its scenarios were about the Qwen graph, which this change
+deletes.
+
+**Migration**: None — node location behaves identically for the surviving graph; only the deleted
+graphs' scenarios and the unused title argument are gone.
+
+### Requirement: Photo wiring
+
+**Reason**: Replaced by *Photo wiring into the one graph*. Three of its four scenarios named deleted
+graphs.
+
+**Migration**: None. The photo is wired exactly as before for the surviving path.
+
+### Requirement: Prompt placement on the positive conditioning path
+
+**Reason**: There is no prompt to place. The positive string is committed to the graph, so injection
+wires the photo and nothing else, and the conditioning trace that walked `positive` links to find
+the encoder has no caller. Its four scenarios described a behaviour the CLI can no longer trigger.
+
+**Migration**: None for a caller — `--prompt` is removed. The trace's non-obvious insight is
+preserved in this change's `design.md` and in the capability's own header: the sampler's positive
+input may point at the identity node directly or through a stack of ControlNet apply nodes, so the
+encoder is found by following that link, never by class lookup. A future tagger that generates a
+prompt rebuilds this deliberately, as a purpose-built entry point.
+
+### Requirement: img2img latent initialisation
+
+**Reason**: Replaced by *Latent initialisation from the photo*. `img2img` named one graph among four;
+with one graph left the qualifier distinguishes nothing, and phase 2 renames the scenario key to
+match.
+
+**Migration**: None — the latent is initialised exactly as before. Only the requirement name and the
+scenario key change: `workflow-injection:latent-init:img2img-inits-from-photo-below-one` becomes
+`workflow-injection:latent-init:inits-from-photo-below-one`.

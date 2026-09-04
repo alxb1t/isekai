@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Headless photo -> anime via a running ComfyUI (Qwen-Image-Edit) over its HTTP API."""
+"""Headless photo -> anime via a running ComfyUI over its HTTP API."""
 
 from isekai.cli import main
 

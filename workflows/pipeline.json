@@ -10,7 +10,7 @@
   },
   "2": {
     "inputs": {
-      "image": "photo_2569-07-31 14.49.42.jpeg"
+      "image": "photo_2569-08-04 13.12.45.jpeg"
     },
     "class_type": "LoadImage",
     "_meta": {
@@ -19,7 +19,7 @@
   },
   "3": {
     "inputs": {
-      "text": "1girl, solo, arms crossed, anime screencap, detailed eyes, soft lighting, masterpiece, high score, great score, black dress",
+      "text": "1girl, solo, anime screencap, detailed eyes, soft lighting, masterpiece, high score, great score",
       "clip": [
         "1",
         1
@@ -130,7 +130,7 @@
   },
   "10": {
     "inputs": {
-      "seed": 1109743124186958,
+      "seed": 569136955238428,
       "steps": 28,
       "cfg": 5,
       "sampler_name": "euler_ancestral",
@@ -141,12 +141,12 @@
         0
       ],
       "positive": [
-        "8",
-        1
+        "21",
+        0
       ],
       "negative": [
-        "8",
-        2
+        "21",
+        1
       ],
       "latent_image": [
         "9",
@@ -185,6 +185,161 @@
     "class_type": "SaveImage",
     "_meta": {
       "title": "Save Image"
+    }
+  },
+  "13": {
+    "inputs": {
+      "pyrUp_iters": 3,
+      "resolution": 1024,
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "TilePreprocessor",
+    "_meta": {
+      "title": "Tile"
+    }
+  },
+  "14": {
+    "inputs": {
+      "strength": 0.2,
+      "start_percent": 0,
+      "end_percent": 1,
+      "positive": [
+        "8",
+        1
+      ],
+      "negative": [
+        "8",
+        2
+      ],
+      "control_net": [
+        "15",
+        0
+      ],
+      "image": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
+    }
+  },
+  "15": {
+    "inputs": {
+      "control_net_name": "TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "16": {
+    "inputs": {
+      "detect_hand": "enable",
+      "detect_body": "enable",
+      "detect_face": "enable",
+      "resolution": 512,
+      "bbox_detector": "yolox_l.onnx",
+      "pose_estimator": "dw-ll_ucoco_384_bs5.torchscript.pt",
+      "scale_stick_for_xinsr_cn": "enable",
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "DWPreprocessor",
+    "_meta": {
+      "title": "DWPose Estimator"
+    }
+  },
+  "17": {
+    "inputs": {
+      "control_net_name": "openpose/diffusion_pytorch_model.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "18": {
+    "inputs": {
+      "strength": 0.6,
+      "start_percent": 0,
+      "end_percent": 1,
+      "positive": [
+        "14",
+        0
+      ],
+      "negative": [
+        "14",
+        1
+      ],
+      "control_net": [
+        "17",
+        0
+      ],
+      "image": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
+    }
+  },
+  "19": {
+    "inputs": {
+      "coarse": "disable",
+      "resolution": 1024,
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "LineArtPreprocessor",
+    "_meta": {
+      "title": "Realistic Lineart"
+    }
+  },
+  "20": {
+    "inputs": {
+      "control_net_name": "mistoLine_rank256.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "21": {
+    "inputs": {
+      "strength": 0.2,
+      "start_percent": 0,
+      "end_percent": 1,
+      "positive": [
+        "18",
+        0
+      ],
+      "negative": [
+        "18",
+        1
+      ],
+      "control_net": [
+        "20",
+        0
+      ],
+      "image": [
+        "19",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
     }
   }
 }

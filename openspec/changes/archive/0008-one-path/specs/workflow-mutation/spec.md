@@ -1,47 +1,4 @@
-# Capability: `workflow-mutation`
-
-Determining the dial values a render actually runs with — the user's explicit choices, and the seeded jitter
-applied around them.
-
-**Source:** `isekai/overrides.py`, `isekai/mutate.py` ·
-**Tests:** `tests/test_overrides.py`, `tests/test_mutation.py`, `tests/test_variations.py`
-
-Two halves of one observable behaviour. `apply_overrides` sets the **base** values the user asked for; `mutate`
-jitters **around that base**. The order is load → override → mutate, so a user-supplied base is what the jitter
-centres on. Mutation is a seam distinct from injection: injection wires image and prompt, mutation varies dials.
-The RNG is **injected**, which is what makes any of this deterministically testable.
-
-## Requirements
-
-### Requirement: Jitter is relative to the current base
-
-The system SHALL centre every dial's jitter on that dial's **current** value rather than on a hardcoded constant,
-so that a user-supplied override moves the band with it instead of being overwritten by it.
-
-#### Scenario: denoise jitter centres on the current base
-- **Key:** `workflow-mutation:base-relative:denoise-around-current-base`
-- **Layers:** unit
-- **WHEN** the workflow's denoise is changed before mutation runs
-- **THEN** the jittered result falls around that new value, not around a fixed constant
-
-#### Scenario: cfg jitter centres on the current base
-- **Key:** `workflow-mutation:base-relative:cfg-around-current-base`
-- **Layers:** unit
-- **WHEN** the workflow's cfg is changed before mutation runs
-- **THEN** the jittered result falls around that new value
-
-#### Scenario: ip_weight jitter centres on the current base
-- **Key:** `workflow-mutation:base-relative:ip-weight-around-current-base`
-- **Layers:** unit
-- **WHEN** the workflow's ip_weight is changed before mutation runs
-- **THEN** the jittered result falls around that new value
-
-#### Scenario: an override is applied before jitter, so jitter surrounds the new base
-- **Key:** `workflow-mutation:base-relative:override-applied-before-jitter`
-- **Layers:** unit
-- **WHEN** a run supplies both an explicit dial override and a mutator
-- **THEN** the override is applied first and the jitter is drawn around the overridden value
-- **AND** the user's choice sets the centre of the variation rather than being discarded by it
+## ADDED Requirements
 
 ### Requirement: Run output layout
 
@@ -280,3 +237,43 @@ is unreachable.
 - **Layers:** unit
 - **WHEN** a run requests several variations
 - **THEN** one output is written per variation, into the run's own directory
+
+## REMOVED Requirements
+
+### Requirement: Explicit dial overrides
+
+**Reason**: Replaced by *Dial overrides on the one graph*. Two scenarios described deleted graphs —
+a graph with no identity apply node, and a dial wired to another node instead of holding a value.
+
+**Migration**: None. Override behaviour for the surviving graph is unchanged.
+
+### Requirement: Seeded dial jitter
+
+**Reason**: Replaced by *Seeded dial jitter from an injected source*. Its wired-dial refusal guarded
+against a graph this change deletes.
+
+**Migration**: None. Jitter behaviour for the surviving graph is unchanged.
+
+### Requirement: ControlNet strength jitter
+
+**Reason**: Replaced by *ControlNet strength jitter around per-node baselines*. Its additivity
+scenario asserted that graphs without ControlNet nodes were untouched; no such graph remains.
+
+**Migration**: None.
+
+### Requirement: Reproducibility contract
+
+**Reason**: Replaced by *Reproducibility contract for a varied run*, which adds uniform seed
+derivation across every variation. Its byte-identity-with-v0.4 scenario pinned output for a deleted
+path.
+
+**Migration**: A caller relying on `--seed N` producing v0.7's first render must accept a different
+render: variation 0 no longer uses the seed verbatim. Per-variation seeds are printed and recorded
+in the run manifest.
+
+### Requirement: Variation runs
+
+**Reason**: Replaced by *Variation runs always vary*. Its no-mutator scenario described paths this
+change deletes.
+
+**Migration**: None. Every run now varies.

@@ -1,7 +1,10 @@
+import inspect
+
 import pytest
 
+from isekai import cli
 from isekai.comfy_types import Workflow
-from isekai.workflow import find_node, inject_animagine, inject_qwen
+from isekai.workflow import find_node, inject
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-class-type")
@@ -12,16 +15,6 @@ def test_find_node_locates_a_node_by_class_type() -> None:
     }
 
     assert find_node(wf, class_type="LoadImage") == "7"
-
-
-@pytest.mark.spec("workflow-injection:node-location:locates-by-title")
-def test_find_node_locates_a_node_by_title() -> None:
-    wf = {
-        "7": {"class_type": "LoadImage", "_meta": {"title": "Load Image"}},
-        "9": {"class_type": "KSampler", "_meta": {"title": "KSampler"}},
-    }
-
-    assert find_node(wf, title="KSampler") == "9"
 
 
 @pytest.mark.spec("workflow-injection:node-location:exits-when-no-node-matches")
@@ -45,126 +38,99 @@ def test_find_node_exits_when_the_match_is_ambiguous() -> None:
 
 @pytest.mark.spec("workflow-injection:node-location:single-load-image-in-real-workflow")
 def test_find_node_locates_the_single_load_image_in_the_real_workflow(
-    qwen_workflow: Workflow,
+    workflow: Workflow,
 ) -> None:
-    assert find_node(qwen_workflow, class_type="LoadImage") == "78"
+    assert find_node(workflow, class_type="LoadImage") == "2"
 
 
-@pytest.mark.spec("workflow-injection:node-location:qwen-text-encoders-are-ambiguous")
-def test_find_node_is_ambiguous_for_the_two_qwen_text_encoders(
-    qwen_workflow: Workflow,
+@pytest.mark.spec("workflow-injection:node-location:text-encoders-are-ambiguous")
+def test_find_node_is_ambiguous_for_the_two_text_encoders(
+    workflow: Workflow,
 ) -> None:
-    # The exported graph has two TextEncodeQwenImageEdit nodes (positive + negative)
-    # sharing a title — exactly why convert.py traces KSampler.positive instead of
-    # searching for the encoder by class_type/title.
+    # The shipped graph carries a positive and a negative CLIPTextEncode, so a
+    # class-type lookup cannot name either — which is why the positive string is
+    # committed to the graph rather than reached by lookup.
     with pytest.raises(SystemExit):
-        find_node(qwen_workflow, class_type="TextEncodeQwenImageEdit")
+        find_node(workflow, class_type="CLIPTextEncode")
 
 
-@pytest.mark.spec("workflow-injection:photo-wiring:qwen-loads-the-uploaded-file")
-def test_inject_points_load_image_at_the_uploaded_file(qwen_workflow: Workflow) -> None:
-    inject_qwen(qwen_workflow, image_name="uploaded.png", prompt="make it anime")
-    load_id = find_node(qwen_workflow, class_type="LoadImage")
-    assert qwen_workflow[load_id]["inputs"]["image"] == "uploaded.png"
-
-
-@pytest.mark.spec("workflow-injection:prompt-placement:qwen-positive-encoder-only")
-def test_inject_sets_the_prompt_on_the_positive_encoder_only(
-    qwen_workflow: Workflow,
+@pytest.mark.spec("workflow-injection:latent-init:inits-from-photo-below-one")
+def test_graph_inits_the_latent_from_the_photo_at_denoise_below_one(
+    workflow: Workflow,
 ) -> None:
-    inject_qwen(qwen_workflow, image_name="uploaded.png", prompt="make it anime")
-    assert qwen_workflow["102:76"]["inputs"]["prompt"] == "make it anime"  # positive
-    assert qwen_workflow["102:77"]["inputs"]["prompt"] == ""  # negative untouched
+    # One LoadImage feeds VAEEncode, which seeds the KSampler latent at
+    # denoise < 1 (from-photo, not from-noise).
+    load_id = find_node(workflow, class_type="LoadImage")
+    vae_id = find_node(workflow, class_type="VAEEncode")
+    sampler_id = find_node(workflow, class_type="KSampler")
+    assert workflow[vae_id]["inputs"]["pixels"][0] == load_id
+    assert workflow[sampler_id]["inputs"]["latent_image"][0] == vae_id
+    assert workflow[sampler_id]["inputs"]["denoise"] < 1
 
 
-@pytest.mark.spec("workflow-injection:photo-wiring:animagine-loads-the-reference-face")
-def test_inject_animagine_points_load_image_at_the_reference_face(
-    animagine_workflow: Workflow,
-) -> None:
-    inject_animagine(animagine_workflow, image_name="face.png", prompt="1girl, anime")
-    load_id = find_node(animagine_workflow, class_type="LoadImage")
-    assert animagine_workflow[load_id]["inputs"]["image"] == "face.png"
-
-
-@pytest.mark.spec("workflow-injection:prompt-placement:animagine-positive-encoder-only")
-def test_inject_animagine_sets_the_prompt_on_the_positive_encoder_only(
-    animagine_workflow: Workflow,
-) -> None:
-    inject_animagine(animagine_workflow, image_name="face.png", prompt="1girl, anime")
-    assert animagine_workflow["3"]["inputs"]["text"] == "1girl, anime"  # positive
-    assert animagine_workflow["4"]["inputs"]["text"].startswith(
-        "lowres, bad anatomy"
-    )  # negative untouched
-
-
-@pytest.mark.spec("workflow-injection:photo-wiring:img2img-single-loader-fans-out")
-def test_inject_animagine_wires_the_single_load_image_in_the_img2img_graph(
-    animagine_i2i_workflow: Workflow,
-) -> None:
-    # One LoadImage fans out to BOTH VAEEncode and InstantID, so find_node stays unique:
-    # convert.py's exactly-one-LoadImage invariant holds and
-    # inject_animagine is unchanged.
-    inject_animagine(
-        animagine_i2i_workflow, image_name="face.png", prompt="1girl, anime"
-    )
-    load_id = find_node(animagine_i2i_workflow, class_type="LoadImage")
-    assert animagine_i2i_workflow[load_id]["inputs"]["image"] == "face.png"
-
-
-@pytest.mark.spec("workflow-injection:prompt-placement:img2img-positive-encoder")
-def test_inject_animagine_sets_the_prompt_on_the_img2img_positive_encoder(
-    animagine_i2i_workflow: Workflow,
-) -> None:
-    inject_animagine(
-        animagine_i2i_workflow, image_name="face.png", prompt="1girl, anime"
-    )
-    assert animagine_i2i_workflow["3"]["inputs"]["text"] == "1girl, anime"
-    assert animagine_i2i_workflow["4"]["inputs"]["text"].startswith(
-        "lowres, bad anatomy"
-    )  # negative untouched
-
-
-@pytest.mark.spec("workflow-injection:latent-init:img2img-inits-from-photo-below-one")
-def test_img2img_graph_inits_the_latent_from_the_photo_at_denoise_below_one(
-    animagine_i2i_workflow: Workflow,
-) -> None:
-    # The topology delta vs v0.2: one LoadImage feeds VAEEncode, which seeds the
-    # KSampler latent at denoise < 1 (from-photo, not from-noise).
-    load_id = find_node(animagine_i2i_workflow, class_type="LoadImage")
-    vae_id = find_node(animagine_i2i_workflow, class_type="VAEEncode")
-    sampler_id = find_node(animagine_i2i_workflow, class_type="KSampler")
-    assert animagine_i2i_workflow[vae_id]["inputs"]["pixels"][0] == load_id
-    assert animagine_i2i_workflow[sampler_id]["inputs"]["latent_image"][0] == vae_id
-    assert animagine_i2i_workflow[sampler_id]["inputs"]["denoise"] < 1
-
-
-@pytest.mark.spec("workflow-injection:prompt-placement:traces-through-controlnet-chain")
-def test_inject_animagine_traces_through_the_controlnet_chain_to_the_encoder(
-    animagine_i2i_cn_workflow: Workflow,
-) -> None:
-    # CN apply nodes deepen the conditioning path
-    # (KSampler.positive -> ControlNetApply(s) -> ApplyInstantID -> CLIPTextEncode),
-    # so the fixed 2-hop trace no longer lands. The generalized walk must still
-    # reach the real positive encoder.
-    inject_animagine(
-        animagine_i2i_cn_workflow, image_name="face.png", prompt="1girl, anime"
-    )
-    assert animagine_i2i_cn_workflow["3"]["inputs"]["text"] == "1girl, anime"
-    assert animagine_i2i_cn_workflow["4"]["inputs"]["text"].startswith(
-        "lowres, bad anatomy"
-    )  # negative untouched
-
-
-@pytest.mark.spec(
-    "workflow-injection:photo-wiring:controlnet-single-loader-across-stack"
-)
-def test_inject_animagine_cn_wires_the_single_load_image_across_the_stack(
-    animagine_i2i_cn_workflow: Workflow,
+@pytest.mark.spec("workflow-injection:photo-wiring:single-loader-fans-out")
+def test_inject_wires_the_single_load_image_across_the_stack(
+    workflow: Workflow,
 ) -> None:
     # One LoadImage fans out to VAEEncode + InstantID + all three CN preprocessors,
-    # so find_node stays unique and convert.py's exactly-one-LoadImage rule holds.
-    inject_animagine(
-        animagine_i2i_cn_workflow, image_name="face.png", prompt="1girl, anime"
-    )
-    load_id = find_node(animagine_i2i_cn_workflow, class_type="LoadImage")
-    assert animagine_i2i_cn_workflow[load_id]["inputs"]["image"] == "face.png"
+    # so find_node stays unique and the exactly-one-LoadImage rule holds.
+    inject(workflow, image_name="face.png")
+    load_id = find_node(workflow, class_type="LoadImage")
+    assert workflow[load_id]["inputs"]["image"] == "face.png"
+
+
+# --- v0.8: the positive prompt is graph configuration -----------------------
+
+# The committed positive string, pinned by equality rather than by a blacklist:
+# "the string holds no subject text" has no mechanical form, and a test asserting
+# `"arms crossed" not in text` is defeated silently by any rewrite. Equality
+# makes every future prompt edit a deliberate test edit, which is what makes
+# "not typeable" a property rather than a convention (design.md D7).
+#
+# The register tags -- `1girl, solo` -- are the Danbooru mode selector for this
+# base, not subject text, and are OWNED BY v0.9, the version that changes the
+# base and can probe a replacement against real renders. `1girl` fixing the
+# gender of every input photo is a known, recorded defect of this version.
+COMMITTED_POSITIVE = (
+    "1girl, solo, anime screencap, detailed eyes, soft lighting, "
+    "masterpiece, high score, great score"
+)
+
+
+@pytest.mark.spec("workflow-injection:committed-prompt:string-is-pinned")
+def test_the_committed_positive_string_is_pinned(workflow: Workflow) -> None:
+    assert workflow["3"]["inputs"]["text"] == COMMITTED_POSITIVE
+
+
+@pytest.mark.spec("workflow-injection:committed-prompt:carries-no-pose-tag")
+def test_the_committed_positive_carries_no_pose_tag(workflow: Workflow) -> None:
+    # Pose is the OpenPose ControlNet's axis. A pose tag in the prompt competes
+    # with the mechanism that owns it, so it is removed on that argument alone --
+    # no render is needed to justify it. Read the shipped graph, not the literal
+    # above: a test asserting against its own constant can only fail if someone
+    # edits the test.
+    assert "arms crossed" not in workflow["3"]["inputs"]["text"]
+
+
+@pytest.mark.spec("workflow-injection:committed-prompt:not-settable-from-the-cli")
+def test_no_command_line_path_sets_the_positive_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Two halves, both needed: no flag carries a prompt, AND injection takes no
+    # prompt argument -- so there is no path by which typed text reaches the
+    # encoder even if a flag were added back.
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+    assert list(inspect.signature(inject).parameters) == ["workflow", "image_name"]
+
+
+@pytest.mark.spec("workflow-injection:committed-prompt:negative-is-untouched")
+def test_injection_leaves_the_negative_encoder_as_the_graph_committed_it(
+    workflow: Workflow,
+) -> None:
+    before = workflow["4"]["inputs"]["text"]
+    inject(workflow, image_name="face.png")
+    assert workflow["4"]["inputs"]["text"] == before
+    assert before.startswith("lowres, bad anatomy")

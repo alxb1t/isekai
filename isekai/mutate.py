@@ -1,50 +1,29 @@
 """The mutation seam: jitter a graph's dials around their base, via an injected RNG."""
 
-import sys
 from random import Random
 
 from isekai.comfy_types import Workflow
-from isekai.workflow import find_node
+from isekai.workflow import find_node, find_nodes
 
 _DENOISE_DELTA: float = 0.05
 _CFG_DELTA: float = 0.5
 _IP_WEIGHT_DELTA: float = 0.05
+_CN_STRENGTH_DELTA: float = 0.1
 
 
-def _node_order(node_id: str) -> tuple:
-    """Build a total order over node ids that survives every id format ComfyUI emits.
+def _jitter(
+    workflow: Workflow, node_id: str, key: str, delta: float, hi: float, rng: Random
+) -> None:
+    """Draw one dial uniformly within ±delta of its current value, clamped to [0, hi].
 
-    Plain graphs number nodes "1", "2", ... but subgraph exports use "102:14",
-    which `int` cannot parse. Each dot-separated part becomes a (kind, value)
-    pair so numeric parts still sort numerically ("2" before "10") while any
-    non-numeric part still compares without raising.
+    Base-relative, so it reads the dial before writing it: each dial has its own
+    tuned value and a shared constant would erase that tuning. One draw per call,
+    which is what makes the RNG stream -- and therefore a seed -- canonical.
     """
-    return tuple(
-        (0, int(part)) if part.isdigit() else (1, part) for part in node_id.split(":")
+    base = workflow[node_id]["inputs"][key]
+    workflow[node_id]["inputs"][key] = min(
+        hi, max(0.0, rng.uniform(base - delta, base + delta))
     )
-
-
-def _base(workflow: Workflow, node_id: str, key: str) -> float:
-    """Read a dial's current value, refusing one that is wired to another node.
-
-    Jitter is base-relative, so it reads the dial before writing it. In ComfyUI
-    API format an input may legally be a `[node_id, slot]` link instead of a
-    scalar, and a graph like qwen-image-edit.json drives `cfg` that way. Reading
-    it as a number would raise a bare TypeError out of the arithmetic; stop with
-    a message naming the dial and the node driving it instead.
-    """
-    value = workflow[node_id]["inputs"][key]
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        # Only a [node_id, slot] link can be described as "wired"; anything else
-        # (null, an object, a string) gets the generic wording. Reaching for
-        # value[0] unconditionally would raise the very error this guard exists
-        # to prevent.
-        if isinstance(value, list) and value:
-            detail = f"it is wired to node {value[0]!r}"
-        else:
-            detail = f"it is {value!r}"
-        sys.exit(f"cannot jitter {key!r} on node {node_id}: {detail}, not a number")
-    return value
 
 
 def mutate(workflow: Workflow, rng: Random) -> None:
@@ -52,36 +31,24 @@ def mutate(workflow: Workflow, rng: Random) -> None:
     sampler_id = find_node(workflow, class_type="KSampler")
     workflow[sampler_id]["inputs"]["seed"] = rng.getrandbits(64)
 
-    base = _base(workflow, sampler_id, "denoise")
-    workflow[sampler_id]["inputs"]["denoise"] = min(
-        1.0, max(0.0, rng.uniform(base - _DENOISE_DELTA, base + _DENOISE_DELTA))
-    )
-
-    base = _base(workflow, sampler_id, "cfg")
-    workflow[sampler_id]["inputs"]["cfg"] = min(
-        30.0, max(0.0, rng.uniform(base - _CFG_DELTA, base + _CFG_DELTA))
-    )
+    _jitter(workflow, sampler_id, "denoise", _DENOISE_DELTA, 1.0, rng)
+    _jitter(workflow, sampler_id, "cfg", _CFG_DELTA, 30.0, rng)
 
     apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
-    base = _base(workflow, apply_id, "ip_weight")
-    workflow[apply_id]["inputs"]["ip_weight"] = min(
-        1.0, max(0.0, rng.uniform(base - _IP_WEIGHT_DELTA, base + _IP_WEIGHT_DELTA))
-    )
+    _jitter(workflow, apply_id, "ip_weight", _IP_WEIGHT_DELTA, 1.0, rng)
 
-    # Jitter each ControlNet strength ±0.1 around its tuned baseline, clamped to
-    # [0, 1]. Base-relative because each CN has its own tuned value (tile/pose/
-    # lineart). Runs last and draws nothing on graphs without CN apply nodes, so
-    # animagine-i2i stays byte-for-byte unchanged (back-compat).
-    cn_ids = sorted(
-        (
-            nid
-            for nid, node in workflow.items()
-            if node.get("class_type") == "ControlNetApplyAdvanced"
-        ),
-        key=_node_order,
-    )
+    # Jitter each ControlNet strength around its own tuned baseline (tile/pose/
+    # lineart are tuned differently). Runs last, so the dials drawn above keep a
+    # fixed position in the RNG stream; sorted, so a re-export of the graph in a
+    # different node order cannot change what a given seed renders.
+    #
+    # Deliberately NOT routed through _jitter: `base + uniform(-d, d)` and
+    # `uniform(base - d, base + d)` are equal in exact arithmetic but differ in
+    # the last ulp, and this draw is pinned by a golden. Unifying the spelling
+    # would silently change what a given seed renders.
+    cn_ids = sorted(find_nodes(workflow, class_type="ControlNetApplyAdvanced"), key=int)
     for nid in cn_ids:
-        base = _base(workflow, nid, "strength")
+        base = workflow[nid]["inputs"]["strength"]
         workflow[nid]["inputs"]["strength"] = min(
-            1.0, max(0.0, base + rng.uniform(-0.1, 0.1))
+            1.0, max(0.0, base + rng.uniform(-_CN_STRENGTH_DELTA, _CN_STRENGTH_DELTA))
         )
