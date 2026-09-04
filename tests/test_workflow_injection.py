@@ -75,27 +75,12 @@ def test_graph_inits_the_latent_from_the_photo_at_denoise_below_one(
     assert workflow[sampler_id]["inputs"]["denoise"] < 1
 
 
-@pytest.mark.spec("workflow-injection:prompt-placement:traces-through-controlnet-chain")
-def test_inject_traces_through_the_controlnet_chain_to_the_encoder(
-    workflow: Workflow,
-) -> None:
-    # CN apply nodes deepen the conditioning path
-    # (KSampler.positive -> ControlNetApply(s) -> ApplyInstantID -> CLIPTextEncode),
-    # so a fixed 2-hop trace no longer lands. The generalized walk must still
-    # reach the real positive encoder.
-    inject(workflow, image_name="face.png", prompt="1girl, anime")
-    assert workflow["3"]["inputs"]["text"] == "1girl, anime"
-    assert workflow["4"]["inputs"]["text"].startswith(
-        "lowres, bad anatomy"
-    )  # negative untouched
-
-
 @pytest.mark.spec("workflow-injection:photo-wiring:single-loader-fans-out")
 def test_inject_wires_the_single_load_image_across_the_stack(
     workflow: Workflow,
 ) -> None:
     # One LoadImage fans out to VAEEncode + InstantID + all three CN preprocessors,
     # so find_node stays unique and the exactly-one-LoadImage rule holds.
-    inject(workflow, image_name="face.png", prompt="1girl, anime")
+    inject(workflow, image_name="face.png")
     load_id = find_node(workflow, class_type="LoadImage")
     assert workflow[load_id]["inputs"]["image"] == "face.png"

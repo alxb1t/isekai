@@ -24,11 +24,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tests bound to the deleted paths**, including
   `test_run_without_overrides_is_byte_identical_to_v04`, which pinned v0.4's output for a path
   that is now gone, and the Qwen-only guards for a wired `cfg` dial and a graph with no identity
-  node. The suite moves from 114 tests to 81; the count going down is the work, not a weakened
-  gate.
+  node. Deleting them took the suite from v0.7's 114 tests to 81; the count going down is the
+  work, not a weakened gate.
 - **`tests/fixtures/`.** The fixtures were byte-identical copies of the shipped graphs with no
   drift check — a second thing to rename and a silent divergence waiting to happen.
   `tests/conftest.py` now loads `workflows/pipeline.json` directly.
+- **`--model`, `--workflow` and `--prompt`.** The whole required surface becomes
+  `convert.py photo.jpg`. `--prompt` was **required**, so this is **BREAKING** for every
+  existing invocation: the positive prompt is now committed to the graph, which is what makes a
+  render attributable. `--workflow` has no equivalent — edit `workflows/pipeline.json`.
+- **Variation 0's verbatim-seed exemption.** Its stated reason was back-compat with releases
+  this change deletes, and it left `--seed` with two meanings: a stream seed for variations
+  1..N and a literal sampler seed for variation 0. **BREAKING**: `--seed 42` no longer
+  reproduces v0.7's first render.
+- **The conditioning trace in `inject`.** With no prompt to place, the walk from
+  `KSampler.positive` to the first `CLIPTextEncode` has no caller. Its non-obvious insight —
+  that the sampler's positive input may reach the encoder through a stack of ControlNet apply
+  nodes, so it must be followed rather than looked up — is recorded in the change's `design.md`
+  and in the `workflow-injection` capability header.
 
 ### Changed
 
@@ -36,13 +49,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `workflows/pipeline.json`, `workflows/animagine-i2i-cn_ui.json` →
   `workflows/pipeline_ui.json`, `inject_animagine` → `inject`, and the one remaining `--model`
   value → `pipeline`. Every name available today describes the base or the technique, and v0.9
-  replaces the base; the only name that version cannot invalidate is no name. The flag itself is
-  removed in a later phase of this change.
+  replaces the base; the only name that version cannot invalidate is no name. The flag itself
+  is then removed outright — see below.
 - **Spec keys lose their model segment**:
   `workflow-injection:photo-wiring:controlnet-single-loader-across-stack` →
   `…:single-loader-fans-out`, and
   `workflow-injection:latent-init:img2img-inits-from-photo-below-one` →
   `…:inits-from-photo-below-one`.
+- **BREAKING: `-o` names a directory, not a file**, defaulting to `./outputs`. A run writes
+  `<output-dir>/<UTC instant>/0.png` … and a `run.json` beside them. An `-o` naming a file with
+  an image extension is **rejected at parse time** — otherwise an upgrading caller silently gets
+  a directory called `out.png`.
+- **BREAKING: `--variations` defaults to 5**, capped at 25. Five renders to choose between is
+  the product rather than an option; the ceiling exists because every variation is one billed
+  GPU render, so an unbounded count bills a mistyped digit at GPU rates.
+- **Every variation's seed is derived uniformly** from `--seed`, variation 0 included. The
+  per-variation seed is still printed, and is now also recorded in `run.json`.
+- `main()` resolves the run directory and hands the **resolved** path to `run`, which draws no
+  clock of its own — which is what keeps the suite offline and deterministic.
+
+### Added
+
+- **Timestamped run directories and `run.json`.** The manifest records the seed the run was
+  given, the per-variation seeds actually drawn and the dial values in force, so a run describes
+  itself instead of depending on the operator still having the terminal it was printed to.
 
 ## [0.7.0] - 2026-09-01
 

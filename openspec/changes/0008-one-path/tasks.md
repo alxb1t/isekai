@@ -4,7 +4,7 @@
 
 - [x] 1 — Delete the three dead paths: `qwen`, `animagine`, `animagine-i2i`
 - [x] 2 — Rename the survivor to nothing: `workflows/pipeline.json`, `inject()`, model-free spec keys
-- [ ] 3 — The CLI becomes the product: flags out, directory output, five derived variations
+- [x] 3 — The CLI becomes the product: flags out, directory output, five derived variations
 - [ ] 4 — The sweep: the registry, the aliases and every branch with no reachable caller
 - [ ] 5 — The prompt: drop the pose tag, pin the string
 - [ ] 6 — The docs: `README.md` and `CLAUDE.md` describe one path

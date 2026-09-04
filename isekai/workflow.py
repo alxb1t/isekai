@@ -1,4 +1,4 @@
-"""Locate nodes in a ComfyUI graph, and wire the photo and prompt into one."""
+"""Locate nodes in a ComfyUI graph, and wire the photo into one."""
 
 import sys
 
@@ -28,18 +28,11 @@ def find_node(
     return matches[0]
 
 
-def inject(workflow: Workflow, image_name: str, prompt: str) -> None:
-    """Wire the uploaded photo and prompt into the pipeline graph.
+def inject(workflow: Workflow, image_name: str) -> None:
+    """Wire the uploaded photo into the pipeline graph.
 
-    Mutates `workflow` in place. Handles any depth of conditioning chain:
-    KSampler.positive may point at ApplyInstantID directly, or through a stack of
-    ControlNetApply nodes. Walk .positive until the real positive CLIPTextEncode.
+    Mutates `workflow` in place. The positive prompt is committed to the graph,
+    so the photo is the only thing injection wires.
     """
     load_id = find_node(workflow, class_type="LoadImage")
     workflow[load_id]["inputs"]["image"] = image_name
-
-    sampler_id = find_node(workflow, class_type="KSampler")
-    node_id = workflow[sampler_id]["inputs"]["positive"][0]
-    while workflow[node_id]["class_type"] != "CLIPTextEncode":
-        node_id = workflow[node_id]["inputs"]["positive"][0]
-    workflow[node_id]["inputs"]["text"] = prompt

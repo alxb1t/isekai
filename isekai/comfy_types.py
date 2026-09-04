@@ -6,7 +6,7 @@ from typing import Any, Protocol, TypedDict
 
 Workflow = dict[str, Any]
 Image = dict[str, str]
-Injector = Callable[[Workflow, str, str], None]
+Injector = Callable[[Workflow, str], None]
 Mutator = Callable[[Workflow, Random], None]
 
 

@@ -1,4 +1,5 @@
 import copy
+import json
 import random
 from pathlib import Path
 
@@ -12,28 +13,41 @@ from tests.fakes import FakeComfyClient
 
 
 @pytest.mark.spec("workflow-mutation:variations:mutator-varies-submission")
-def test_run_mutates_the_submitted_workflow_when_a_mutator_is_given(
+def test_run_mutates_the_submitted_workflow(workflow: Workflow, tmp_path: Path) -> None:
+    baked = workflow["10"]["inputs"]["seed"]
+    client = FakeComfyClient()
+    run(client, workflow, inject, "photo.jpg", tmp_path / "run", mutate=mutate, seed=7)
+    assert client.submitted_workflow is not None
+    assert client.submitted_workflow["10"]["inputs"]["seed"] != baked
+
+
+@pytest.mark.spec("workflow-mutation:reproducibility:every-variation-seed-is-derived")
+def test_run_derives_every_seed_including_the_first(
     workflow: Workflow, tmp_path: Path
 ) -> None:
+    # v0.7 used --seed verbatim for variation 0, so the flag had two meanings:
+    # a stream seed for 1..N and a literal sampler seed for 0. One meaning now.
     client = FakeComfyClient()
     run(
         client,
         workflow,
         inject,
         "photo.jpg",
-        "anime",
-        str(tmp_path / "out.png"),
+        tmp_path / "run",
         mutate=mutate,
         seed=7,
+        variations=3,
     )
-    assert client.submitted_workflow is not None
-    assert client.submitted_workflow["10"]["inputs"]["seed"] == random.Random(
-        7
-    ).getrandbits(64)
+    stream = random.Random(7)
+    expected = [random.Random(stream.getrandbits(64)).getrandbits(64) for _ in range(3)]
+    submitted = [wf["10"]["inputs"]["seed"] for wf in client.submissions]
+
+    assert 7 not in submitted
+    assert submitted == expected
 
 
 @pytest.mark.spec("workflow-mutation:reproducibility:seed-is-printed")
-def test_run_prints_the_seed_as_the_reproducibility_contract(
+def test_run_prints_the_seed_of_every_variation(
     workflow: Workflow, tmp_path: Path, capsys: pytest.CaptureFixture
 ) -> None:
     client = FakeComfyClient()
@@ -42,40 +56,91 @@ def test_run_prints_the_seed_as_the_reproducibility_contract(
         workflow,
         inject,
         "photo.jpg",
-        "anime",
-        str(tmp_path / "out.png"),
+        tmp_path / "run",
         mutate=mutate,
         seed=7,
+        variations=2,
     )
-    # Assert the seed that was actually used, not just that the character "7"
-    # appears somewhere: a run printing a different random number would satisfy
-    # a substring check most of the time while breaking reproducibility.
-    assert "variation 0: seed 7\n" in capsys.readouterr().out
+    # Assert the seeds that were actually used, not just that a number appeared:
+    # a run printing a different random number would satisfy a substring check
+    # most of the time while breaking reproducibility.
+    expected = random.Random(7)
+    out = capsys.readouterr().out
+    for i in range(2):
+        assert f"variation {i}: seed {expected.getrandbits(64)}\n" in out
 
 
+@pytest.mark.spec("workflow-mutation:output-layout:images-numbered-by-variation")
 @pytest.mark.spec("workflow-mutation:variations:one-output-per-variation")
-def test_run_writes_one_output_per_variation(
+def test_run_writes_one_numbered_image_per_variation(
     workflow: Workflow, tmp_path: Path
 ) -> None:
+    run_dir = tmp_path / "20260904T141530Z"
+    client = FakeComfyClient()
+    run(client, workflow, inject, "photo.jpg", run_dir, mutate=mutate, variations=3)
+    assert {p.name for p in run_dir.iterdir()} == {
+        "0.png",
+        "1.png",
+        "2.png",
+        "run.json",
+    }
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:run-gets-its-own-directory")
+def test_run_creates_its_own_directory_and_leaves_a_previous_one_alone(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    first = tmp_path / "20260904T141530Z"
+    second = tmp_path / "20260904T141600Z"
+    run(
+        FakeComfyClient(), workflow, inject, "p.jpg", first, mutate=mutate, variations=1
+    )
+    run(
+        FakeComfyClient(),
+        workflow,
+        inject,
+        "p.jpg",
+        second,
+        mutate=mutate,
+        variations=1,
+    )
+    assert (first / "0.png").exists()
+    assert (second / "0.png").exists()
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-run")
+def test_run_writes_a_manifest_recording_the_seeds_and_the_dials(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    run_dir = tmp_path / "20260904T141530Z"
     client = FakeComfyClient()
     run(
         client,
         workflow,
         inject,
         "photo.jpg",
-        "anime",
-        str(tmp_path / "out.png"),
+        run_dir,
         mutate=mutate,
-        variations=3,
+        seed=99,
+        variations=5,
+        overrides={"denoise": 0.72},
     )
-    assert {p.name for p in tmp_path.iterdir()} == {
-        "out_0.png",
-        "out_1.png",
-        "out_2.png",
-    }
+    manifest = json.loads((run_dir / "run.json").read_text())
+
+    assert manifest["seed"] == 99
+    assert manifest["variations"] == 5
+    assert manifest["overrides"] == {"denoise": 0.72}
+    # The recorded seeds must reproduce the renders beside them, not merely be
+    # five numbers: a manifest that does not match its own directory is worse
+    # than no manifest. Each entry is the per-variation seed the run drew, and
+    # the sampler seed on the submitted graph derives from it.
+    assert len(manifest["seeds"]) == 5
+    assert [random.Random(s).getrandbits(64) for s in manifest["seeds"]] == [
+        wf["10"]["inputs"]["seed"] for wf in client.submissions
+    ]
 
 
-# --- Phase 2: apply_overrides integration ---
+# --- Overrides applied before jitter ----------------------------------------
 
 
 @pytest.mark.spec("workflow-mutation:base-relative:override-applied-before-jitter")
@@ -88,10 +153,10 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
         workflow,
         inject,
         "photo.jpg",
-        "anime",
-        str(tmp_path / "out.png"),
+        tmp_path / "run",
         mutate=mutate,
         seed=42,
+        variations=1,
         overrides={"denoise": 0.80},
     )
     assert client.submitted_workflow is not None
@@ -99,7 +164,10 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
     # Pin the exact value, not just the band: 0.80 is itself inside [0.75, 0.85],
     # so a band assertion also passes when mutate runs BEFORE apply_overrides and
     # the jitter is overwritten by the override.
-    assert denoise == pytest.approx(0.7525010755222667)
+    seed_0 = random.Random(42).getrandbits(64)
+    rng = random.Random(seed_0)
+    rng.getrandbits(64)  # the sampler seed mutate draws first
+    assert denoise == pytest.approx(min(1.0, max(0.0, rng.uniform(0.75, 0.85))))
     assert denoise != 0.80
 
 
@@ -107,41 +175,28 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
 def test_run_with_override_and_seed_is_reproducible(
     workflow: Workflow, tmp_path: Path
 ) -> None:
-    import copy as _copy
+    def once(tag: str) -> Workflow | None:
+        client = FakeComfyClient()
+        run(
+            client,
+            copy.deepcopy(workflow),
+            inject,
+            "photo.jpg",
+            tmp_path / tag,
+            mutate=mutate,
+            seed=77,
+            variations=1,
+            overrides={"denoise": 0.72, "cfg": 6.5},
+        )
+        return client.submitted_workflow
 
-    wf_a = _copy.deepcopy(workflow)
-    wf_b = _copy.deepcopy(workflow)
-
-    client_a = FakeComfyClient()
-    run(
-        client_a,
-        wf_a,
-        inject,
-        "photo.jpg",
-        "anime",
-        str(tmp_path / "out_a.png"),
-        mutate=mutate,
-        seed=77,
-        overrides={"denoise": 0.72, "cfg": 6.5},
-    )
-
-    client_b = FakeComfyClient()
-    run(
-        client_b,
-        wf_b,
-        inject,
-        "photo.jpg",
-        "anime",
-        str(tmp_path / "out_b.png"),
-        mutate=mutate,
-        seed=77,
-        overrides={"denoise": 0.72, "cfg": 6.5},
-    )
-
-    assert client_a.submitted_workflow == client_b.submitted_workflow
+    assert once("a") == once("b")
 
 
 @pytest.mark.spec("workflow-mutation:reproducibility:seed-covers-every-variation")
+@pytest.mark.spec(
+    "workflow-mutation:reproducibility:seeded-run-is-reproducible-and-distinct"
+)
 @pytest.mark.spec("workflow-mutation:variations:variations-differ-from-each-other")
 def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
     workflow: Workflow, tmp_path: Path
@@ -156,8 +211,7 @@ def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
             copy.deepcopy(workflow),
             inject,
             "photo.jpg",
-            "anime",
-            str(tmp_path / f"{tag}.png"),
+            tmp_path / tag,
             mutate=mutate,
             seed=77,
             variations=3,
