@@ -33,16 +33,14 @@ def _positive_int(value: str) -> int:
 
 def parse_args() -> argparse.Namespace:
     """Parse the command line, rejecting out-of-range and unusable flag values."""
-    p = argparse.ArgumentParser(
-        description="Photo -> anime via ComfyUI (Qwen-Image-Edit)."
-    )
+    p = argparse.ArgumentParser(description="Photo -> anime via ComfyUI.")
     p.add_argument("input", help="input photo (jpg/png)")
     p.add_argument("-o", "--output", default="out.png", help="output image path")
     p.add_argument("--prompt", required=True, help="edit instruction")
     p.add_argument(
         "--model",
-        choices=["qwen", "animagine", "animagine-i2i", "animagine-i2i-cn"],
-        default="animagine-i2i",
+        choices=["animagine-i2i-cn"],
+        default="animagine-i2i-cn",
         help="which pipeline to run",
     )
     p.add_argument(
@@ -101,8 +99,7 @@ def main() -> None:
         sys.exit(
             f"--model {args.model} does not vary between renders, so "
             f"--variations {args.variations} would submit {args.variations} "
-            f"identical jobs; use --variations 1, or a model with a mutation "
-            f"seam (animagine-i2i, animagine-i2i-cn)"
+            f"identical jobs; use --variations 1"
         )
     workflow = json.loads(Path(args.workflow or model.workflow_path).read_text())
     client = ComfyClient(args.server)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from isekai.comfy_types import Injector, Mutator
 from isekai.mutate import mutate
-from isekai.workflow import inject_animagine, inject_qwen
+from isekai.workflow import inject_animagine
 
 
 @dataclass(frozen=True)
@@ -18,11 +18,6 @@ class Model:
 
 
 MODELS: dict[str, Model] = {
-    "qwen": Model("workflows/qwen-image-edit.json", inject_qwen),
-    "animagine": Model("workflows/animagine-instantid.json", inject_animagine),
-    "animagine-i2i": Model(
-        "workflows/animagine-i2i.json", inject_animagine, mutate=mutate
-    ),
     "animagine-i2i-cn": Model(
         "workflows/animagine-i2i-cn.json", inject_animagine, mutate=mutate
     ),

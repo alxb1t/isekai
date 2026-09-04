@@ -29,9 +29,9 @@ def _base(workflow: Workflow, node_id: str, key: str) -> float:
 
     Jitter is base-relative, so it reads the dial before writing it. In ComfyUI
     API format an input may legally be a `[node_id, slot]` link instead of a
-    scalar, and a graph like qwen-image-edit.json drives `cfg` that way. Reading
-    it as a number would raise a bare TypeError out of the arithmetic; stop with
-    a message naming the dial and the node driving it instead.
+    scalar. Reading such a value as a number would raise a bare TypeError out of
+    the arithmetic; stop with a message naming the dial and the node driving it
+    instead.
     """
     value = workflow[node_id]["inputs"][key]
     if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -70,8 +70,8 @@ def mutate(workflow: Workflow, rng: Random) -> None:
 
     # Jitter each ControlNet strength ±0.1 around its tuned baseline, clamped to
     # [0, 1]. Base-relative because each CN has its own tuned value (tile/pose/
-    # lineart). Runs last and draws nothing on graphs without CN apply nodes, so
-    # animagine-i2i stays byte-for-byte unchanged (back-compat).
+    # lineart). Runs last, so the dials drawn above keep a fixed position in the
+    # RNG stream.
     cn_ids = sorted(
         (
             nid

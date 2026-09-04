@@ -28,21 +28,6 @@ def find_node(
     return matches[0]
 
 
-def inject_qwen(workflow: Workflow, image_name: str, prompt: str) -> None:
-    """Wire the uploaded photo and prompt into the Qwen graph.
-
-    Mutates `workflow` in place.
-    """
-    load_id = find_node(workflow, class_type="LoadImage")
-    workflow[load_id]["inputs"]["image"] = image_name
-
-    # The graph has two same-titled encoders; the positive one is whatever
-    # KSampler.positive points at.
-    sampler_id = find_node(workflow, class_type="KSampler")
-    pos_id = workflow[sampler_id]["inputs"]["positive"][0]
-    workflow[pos_id]["inputs"]["prompt"] = prompt
-
-
 def inject_animagine(workflow: Workflow, image_name: str, prompt: str) -> None:
     """Wire the uploaded photo and prompt into an Animagine + InstantID graph.
 

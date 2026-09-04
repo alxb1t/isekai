@@ -29,24 +29,7 @@ download_folder() {
     hf download "$repo" --include "$glob" --local-dir "$MODELS_DIR/$dest"
 }
 
-# Download Qwen model
-download Comfy-Org/Qwen-Image-Edit_ComfyUI \
-    split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors \
-    diffusion_models
-
-download Comfy-Org/Qwen-Image_ComfyUI \
-    split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors \
-    text_encoders
-
-download Comfy-Org/Qwen-Image_ComfyUI \
-    split_files/vae/qwen_image_vae.safetensors \
-    vae
-
-download lightx2v/Qwen-Image-Edit-2511-Lightning \
-    Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors \
-    loras
-
-# Animagine XL 4.0 + InstantID + InsightFace (v0.2, --model animagine)
+# Animagine XL 4.0 + InstantID + InsightFace
 download cagliostrolab/animagine-xl-4.0 \
     animagine-xl-4.0.safetensors \
     checkpoints
@@ -63,7 +46,7 @@ download_folder DIAMONIK7777/antelopev2 \
     insightface/models/antelopev2 \
     "*.onnx"
 
-# SDXL ControlNet stack (v0.4, --model animagine-i2i-cn)
+# SDXL ControlNet stack
 download TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic \
     TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors \
     controlnet

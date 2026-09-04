@@ -25,6 +25,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **The `qwen`, `animagine` and `animagine-i2i` paths.** All three are superseded by
+  `animagine-i2i-cn`, which alone preserves identity, composition and pose. Gone with them:
+  `workflows/qwen-image-edit.json`, `workflows/qwen-image-edit.reference.json`,
+  `workflows/animagine-instantid.json`, `workflows/animagine-i2i.json`, their test fixtures,
+  `inject_qwen`, and the four Qwen downloads in `scripts/download_models.sh`.
+- **The `model-registry` capability.** Its three requirements — name resolution, injector
+  pairing and mutation pairing — all describe a choice that no longer exists, so
+  `openspec/specs/model-registry/` and `tests/test_model_dispatch.py` are deleted. The living
+  spec goes from five capabilities to four.
+- **Tests bound to the deleted paths**, including `test_run_without_overrides_is_byte_identical_to_v04`,
+  which pinned v0.4's output for a path that is now gone, and the Qwen-only guards for a
+  wired `cfg` dial and a graph with no identity node. The suite moves from 114 tests to 81;
+  the count going down is the work, not a weakened gate.
+
+### Changed
+
+- `--model` now accepts a single value, `animagine-i2i-cn`, which is also its default. The
+  flag itself is removed in a later phase of this change.
+
 ## [0.7.0] - 2026-09-01
 
 Adoption of the OpenSpec SDD repository standard, plus the defects that adopting it exposed.

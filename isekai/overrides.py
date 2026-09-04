@@ -21,7 +21,6 @@ def apply_overrides(
 
     if ip_weight is not None:
         # Silent no-op when no ApplyInstantIDAdvanced node
-        # (qwen, future non-InstantID paths)
         apply_ids = [
             nid
             for nid, node in workflow.items()

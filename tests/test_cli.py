@@ -5,7 +5,6 @@ import pytest
 
 from isekai import cli
 from isekai.mutate import mutate as mutate_fn
-from isekai.workflow import inject_animagine
 
 
 def _capturing_run(captured: dict[str, Any]) -> Callable[..., None]:
@@ -30,118 +29,6 @@ def _capturing_run(captured: dict[str, Any]) -> Callable[..., None]:
         captured.update(kwargs)
 
     return fake_run
-
-
-@pytest.mark.spec("cli:model-selection:defaults-to-animagine-i2i")
-def test_parse_args_defaults_to_the_animagine_i2i_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--prompt", "anime"])
-    assert cli.parse_args().model == "animagine-i2i"
-
-
-@pytest.mark.spec("cli:model-selection:accepts-animagine")
-def test_parse_args_accepts_the_animagine_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine"],
-    )
-    assert cli.parse_args().model == "animagine"
-
-
-@pytest.mark.spec("cli:model-selection:rejects-unknown-model")
-def test_parse_args_rejects_an_unknown_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "midjourney"],
-    )
-    with pytest.raises(SystemExit):
-        cli.parse_args()
-
-
-@pytest.mark.spec("cli:dispatch:animagine-workflow-and-injector")
-@pytest.mark.spec("cli:reproducibility:seed-defaults-to-unset")
-@pytest.mark.spec("cli:reproducibility:variations-default-to-one")
-def test_main_dispatches_the_animagine_workflow_and_injector(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["convert.py", "face.jpg", "--prompt", "anime", "--model", "animagine"],
-    )
-
-    recorded = {}
-
-    class FakePath:
-        def __init__(self, path: str) -> None:
-            recorded["workflow_path"] = path
-
-        def read_text(self) -> str:
-            return "{}"
-
-    monkeypatch.setattr(cli, "Path", FakePath)
-    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
-
-    captured = {}
-
-    monkeypatch.setattr(cli, "run", _capturing_run(captured))
-
-    cli.main()
-
-    assert recorded["workflow_path"] == "workflows/animagine-instantid.json"
-    assert captured["inject"] is inject_animagine
-    assert captured["input_path"] == "face.jpg"
-    # animagine carries no mutator, so main() must hand run() None explicitly.
-    assert captured["mutate"] is None
-    assert captured["seed"] is None
-    assert captured["variations"] == 1
-
-
-@pytest.mark.spec("cli:model-selection:accepts-animagine-i2i")
-def test_parse_args_accepts_the_animagine_i2i_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine-i2i"],
-    )
-    assert cli.parse_args().model == "animagine-i2i"
-
-
-@pytest.mark.spec("cli:dispatch:img2img-workflow-reuses-injector")
-def test_main_dispatches_the_animagine_i2i_workflow_and_reuses_the_injector(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["convert.py", "face.jpg", "--prompt", "anime", "--model", "animagine-i2i"],
-    )
-
-    recorded = {}
-
-    class FakePath:
-        def __init__(self, path: str) -> None:
-            recorded["workflow_path"] = path
-
-        def read_text(self) -> str:
-            return "{}"
-
-    monkeypatch.setattr(cli, "Path", FakePath)
-    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
-
-    captured = {}
-
-    monkeypatch.setattr(cli, "run", _capturing_run(captured))
-
-    cli.main()
-
-    assert recorded["workflow_path"] == "workflows/animagine-i2i.json"
-    assert captured["inject"] is inject_animagine
-    # The img2img model carries the mutation seam; dropping `mutate=model.mutate`
-    # from main() would silently disable all jitter for every run.
-    assert captured["mutate"] is mutate_fn
 
 
 @pytest.mark.spec("cli:reproducibility:seed-defaults-to-unset")
@@ -171,17 +58,6 @@ def test_parse_args_accepts_a_variation_count(monkeypatch: pytest.MonkeyPatch) -
         ["convert.py", "photo.jpg", "--prompt", "anime", "--variations", "3"],
     )
     assert cli.parse_args().variations == 3
-
-
-@pytest.mark.spec("cli:model-selection:accepts-animagine-i2i-cn")
-def test_cli_accepts_the_animagine_i2i_cn_model(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        "sys.argv",
-        ["convert.py", "photo.jpg", "--prompt", "anime", "--model", "animagine-i2i-cn"],
-    )
-    assert cli.parse_args().model == "animagine-i2i-cn"
 
 
 # --- Phase 2: --denoise / --cfg / --ip-weight flags ---
@@ -462,53 +338,8 @@ def test_parse_args_rejects_a_non_positive_variation_count(
             cli.parse_args()
 
 
-@pytest.mark.spec("cli:reproducibility:variations-rejected-without-a-mutator")
-def test_main_refuses_several_variations_on_a_model_that_cannot_vary(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
-) -> None:
-    # qwen and animagine carry no mutation seam, so every variation would submit
-    # the identical graph -- N renders billed for one image.
-    monkeypatch.setattr(
-        "sys.argv",
-        [
-            "convert.py",
-            "photo.jpg",
-            "--prompt",
-            "anime",
-            "--model",
-            "qwen",
-            "--variations",
-            "3",
-        ],
-    )
-
-    class FakePath:
-        def __init__(self, path: str) -> None:
-            pass
-
-        def read_text(self) -> str:
-            return "{}"
-
-    monkeypatch.setattr(cli, "Path", FakePath)
-    monkeypatch.setattr(cli, "ComfyClient", lambda server: None)
-
-    called = {"run": False}
-
-    def fake_run(*args: object, **kwargs: object) -> None:
-        called["run"] = True
-
-    monkeypatch.setattr(cli, "run", fake_run)
-
-    with pytest.raises(SystemExit) as exit_info:
-        cli.main()
-
-    # It must refuse BEFORE the photo is uploaded, not after.
-    assert called["run"] is False
-    assert "qwen" in str(exit_info.value)
-
-
 @pytest.mark.spec("cli:reproducibility:accepts-a-variation-count")
-def test_main_allows_several_variations_on_a_model_that_can_vary(
+def test_main_allows_several_variations(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
@@ -518,8 +349,6 @@ def test_main_allows_several_variations_on_a_model_that_can_vary(
             "photo.jpg",
             "--prompt",
             "anime",
-            "--model",
-            "animagine-i2i",
             "--variations",
             "3",
         ],
