@@ -304,8 +304,8 @@ it is the only evidence phase 7 will have before that rule starts guarding unatt
 
 #### Result — run on 2026-09-04, PASS
 
-Pod `pn0uvel5l318de`, `NVIDIA RTX PRO 4500 Blackwell`, EU-RO-1, from
-`ghcr.io/alxb1t/isekai:latest` with network volume `isekai_models` (62 GB) mounted at
+The pod created by `infra/up.sh` — `NVIDIA RTX PRO 4500 Blackwell`, EU-RO-1 — from
+`ghcr.io/alxb1t/isekai:latest`, with the models network volume (62 GB) mounted at
 `/opt/ComfyUI/models`. Up ~11:14 UTC, torn down ~11:28 UTC — **~14 minutes of the 45-minute
 ceiling**, one pod session, inside the ~$0.30 estimate.
 
@@ -325,11 +325,11 @@ Neither is tracked, and neither is in this repository — `outputs/` is gitignor
 
 - `list-pods` → `{"items": [], "pagination": {"total": 0, ...}}` — no pod of any kind is running
   on the account.
-- `get-pod` for `pn0uvel5l318de` → `404 — {"detail":"pod not found"}` — the specific pod is gone,
+- `get-pod` for that pod's id → `404 — {"detail":"pod not found"}` — the specific pod is gone,
   not merely stopped. The background SSH tunnel died with exit 255 at the same moment, which is
   the third, unsolicited signal.
 
-`list-network-volumes` still returns `isekai_models` — the volume persists, as intended.
+`list-network-volumes` still returns the models volume — it persists, as intended.
 
 **What this does and does not establish.** It establishes that the path **runs** end to end on a
 real GPU, from a cold pod, with no flags beyond the input photo. It establishes **nothing** about
