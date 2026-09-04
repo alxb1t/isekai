@@ -6,7 +6,7 @@
 - [x] 2 — Rename the survivor to nothing: `workflows/pipeline.json`, `inject()`, model-free spec keys
 - [x] 3 — The CLI becomes the product: flags out, directory output, five derived variations
 - [x] 4 — The sweep: the registry, the aliases and every branch with no reachable caller
-- [ ] 5 — The prompt: drop the pose tag, pin the string
+- [x] 5 — The prompt: drop the pose tag, pin the string
 - [ ] 6 — The docs: `README.md` and `CLAUDE.md` describe one path
 - [ ] 7 — The spend rule: rewrite `CLAUDE.md`'s metered bullet
 - [ ] 8 — ⚠️ **GPU · HALT** — live smoke test, run by the operator

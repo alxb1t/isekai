@@ -122,8 +122,9 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "1girl, solo, arms crossed, anime screencap, detailed eyes, soft lighting, masterpiece, high score, great score"
-      ]
+        "1girl, solo, anime screencap, detailed eyes, soft lighting, masterpiece, high score, great score"
+      ],
+      "title": "Positive \u2014 committed prompt (register owned by v0.9)"
     },
     {
       "id": 5,

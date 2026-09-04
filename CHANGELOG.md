@@ -53,6 +53,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no `ApplyInstantIDAdvanced`, `mutate.py`'s wired-dial guard (it existed because Qwen wired
   `cfg`) and its `"102:14"` subgraph-id ordering, the `mutate is None` branch in `run`, and
   `find_node`'s `title` parameter — which no caller ever passed.
+- **`arms crossed` from the committed positive prompt.** Pose is the OpenPose ControlNet's axis;
+  a pose tag in the prompt competes with the mechanism that owns it. That is an architectural
+  argument and needs no render to justify it — **this change makes no claim about what the graph
+  now renders.**
 
 ### Changed
 
@@ -84,6 +88,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Timestamped run directories and `run.json`.** The manifest records the seed the run was
   given, the per-variation seeds actually drawn and the dial values in force, so a run describes
   itself instead of depending on the operator still having the terminal it was printed to.
+- **The positive prompt is pinned by equality** in the suite, and commented in
+  `workflows/pipeline_ui.json` with the version that owns its register. "The string holds no
+  subject text" has no mechanical form — a blacklist assertion is defeated silently by any
+  rewrite — so equality makes every future prompt edit a deliberate test edit.
+
+### Known defects
+
+- **`1girl` fixes the gender of every input photo**, in a product whose input is "a photo of a
+  person". `1girl, solo` is the Danbooru mode selector for this base rather than subject text,
+  and an empty positive is not neutral on a Danbooru-trained checkpoint, so removing it would be
+  a register decision. v0.8 changes no base and therefore decides no register: the defect is
+  stated here and owned by **v0.9**, the version that can probe a replacement against real
+  renders.
 
 ## [0.7.0] - 2026-09-01
 
