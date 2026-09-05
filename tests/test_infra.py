@@ -143,3 +143,62 @@ def test_the_pod_startup_touches_nothing_outside_the_project_namespace(
         and MODELS_NAMESPACE not in line
     ]
     assert reaches_out == []
+
+
+@pytest.fixture(scope="session")
+def download_models_sh() -> str:
+    """Read the shipped `scripts/download_models.sh` once for the whole session."""
+    return (REPO / "scripts" / "download_models.sh").read_text()
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_the_driver_walks_every_source_the_plan_carries(
+    download_models_sh: str,
+) -> None:
+    assert "read -r action dest urls" in download_models_sh
+    assert "for url in $urls" in download_models_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_the_driver_aborts_only_once_every_source_is_exhausted(
+    download_models_sh: str,
+) -> None:
+    lines = [line.strip() for line in download_models_sh.splitlines()]
+    # a transfer failure and a verification failure each continue the walk ...
+    assert lines.count("continue") == 2
+    # ... and the only abort on the fetch path is the one after the loop.
+    assert "ERROR: every source for $dest failed" in download_models_sh
+    assert "landed=0" in download_models_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open"
+)
+def test_a_provisioning_failure_does_not_take_the_container_down(
+    start_sh: str,
+) -> None:
+    provisioning = [
+        line for line in start_sh.splitlines() if "download_models.sh" in line
+    ]
+    assert len(provisioning) == 1
+    # guarded, so `set -e` cannot terminate the shell that owns sshd
+    assert provisioning[0].lstrip().startswith("if !")
+    assert "exec tail -f /dev/null" in start_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open"
+)
+def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
+    start_sh: str,
+) -> None:
+    lines = start_sh.splitlines()
+    hold = next(i for i, line in enumerate(lines) if "exec tail -f /dev/null" in line)
+    serve = next(i for i, line in enumerate(lines) if "exec python main.py" in line)
+    assert hold < serve
+    # nothing on the volume is removed on the failure path
+    assert "rm " not in "\n".join(lines[hold - 6 : serve])

@@ -35,7 +35,18 @@ fi
 echo "models namespace: $MODELS_ROOT -> $(readlink "$MODELS_ROOT")"
 
 # 4. Ensure models are on the volume — downloads once, re-verified on later boots.
-MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/scripts/download_models.sh
+#
+# A provisioning abort must NOT take the container down. The abort policy leaves a
+# mismatched file on disk for a human to inspect (design.md D4), and under `set -e`
+# a non-zero exit here would kill PID 1 — taking the sshd started at step 2 with it
+# and dying again seconds into every subsequent boot, so there is no way in. Hold
+# the pod open in the foreground instead: reachable, ComfyUI not started, nothing
+# deleted (design.md D17).
+if ! MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/scripts/download_models.sh; then
+    echo "ERROR: provisioning failed — holding the pod open for inspection." >&2
+    echo "Nothing was deleted. SSH in and look under $MODELS_NAMESPACE." >&2
+    exec tail -f /dev/null
+fi
 
 # 5. ComfyUI in the foreground — the main process. If it exits, the pod stops.
 exec python main.py --listen 0.0.0.0 --port 8188

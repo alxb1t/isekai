@@ -108,6 +108,41 @@ mismatch costs the same as one that ends in success.
 - **THEN** provisioning rejects the source without transferring the file
 - **AND** the next declared source for that entry is tried
 
+### Requirement: A transfer that fails advances to the next declared source
+
+Where an entry declares more than one source, provisioning SHALL try them in the manifest's order
+and abort only when every one of them has failed. An alternate that is never reached buys no
+availability: the failure it exists for — a mirror that has gone away — is exactly the one that
+stops the run.
+
+#### Scenario: the plan carries every source that survives the pre-flight
+- **Key:** `model-provisioning:source-fallback:the-plan-carries-every-surviving-source`
+- **Layers:** unit
+- **WHEN** an entry is absent and more than one of its sources survives the pre-flight
+- **THEN** the plan carries all of them, in the manifest's order
+- **AND** a source the pre-flight rejected is absent from that list
+
+#### Scenario: a failed transfer advances to the next source
+- **Key:** `model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source`
+- **Layers:** unit
+- **WHEN** a transfer from one source fails, or the bytes it served fail verification
+- **THEN** the driver moves on to the next source the plan carries for that entry
+- **AND** the run aborts only once every source for the entry has been exhausted
+
+### Requirement: A provisioning failure leaves the pod reachable
+
+When provisioning aborts, the pod SHALL stay up with its SSH daemon running rather than terminating.
+The abort policy leaves a mismatched file on disk for a human to inspect, and that is only true if
+the human can get in: a container whose entrypoint exits takes its daemon with it and dies again on
+every subsequent boot, within seconds of start.
+
+#### Scenario: a provisioning abort holds the pod open instead of stopping it
+- **Key:** `model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open`
+- **Layers:** unit
+- **WHEN** the pod entrypoint's provisioning step exits non-zero
+- **THEN** the entrypoint reports the failure and holds in the foreground with the SSH daemon alive
+- **AND** the inference server is not started, and nothing on the volume is removed
+
 ### Requirement: Model artifacts resolve inside the project's own namespace
 
 Every artifact this project provisions SHALL resolve within a directory tree belonging to this

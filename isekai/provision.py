@@ -183,11 +183,17 @@ class Decision:
     """What provisioning should do about one manifest entry.
 
     `skip` — present and verified. `abort` — stop the run and let a human look;
-    nothing is deleted. `fetch` — transfer `url`, then hand the result to `land`.
+    nothing is deleted. `fetch` — transfer from `urls`, in order, until one of
+    them yields bytes that verify, then hand the result to `land`.
+
+    `urls` is the whole ordered list rather than a single winner because that is
+    what makes D10's ordered fallback real: the pre-flight can only reject a
+    source that answers, and the failure the alternates exist for — a mirror that
+    has gone away — is one the pre-flight collapses to "publishes no digest".
     """
 
     action: Literal["skip", "abort", "fetch"]
-    url: str | None
+    urls: tuple[str, ...]
     reason: str
 
 
@@ -222,26 +228,36 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     leave a warm volume permanently unchecked (design.md D4). A present file that
     fails is left exactly where it is: the volume is shared, and a file this run
     did not write is not this run's to remove.
+
+    An absent file is offered *every* source that survives the pre-flight, in the
+    manifest's order, so the driver can walk them (design.md D16). Only a source
+    that positively disagrees is dropped; a source that publishes nothing is kept,
+    because the pre-flight is an optimisation and never a substitute for hashing
+    the bytes that landed.
     """
     dest = models_dir / entry["dest"]
     if dest.exists():
         try:
             verify(dest, entry["sha256"])
         except DigestMismatch as mismatch:
-            return Decision("abort", None, f"{mismatch} — left on disk for inspection")
-        return Decision("skip", None, f"present and verified: {entry['dest']}")
+            return Decision("abort", (), f"{mismatch} — left on disk for inspection")
+        return Decision("skip", (), f"present and verified: {entry['dest']}")
 
     rejected: list[str] = []
+    offered: list[str] = []
     for url in entry["sources"]:
         published = fetcher.published_digest(url)
         if published is not None and published != entry["sha256"]:
             rejected.append(f"{url} publishes {published}")
             continue
-        return Decision("fetch", url, f"absent: {entry['dest']}")
+        offered.append(url)
+
+    if offered:
+        return Decision("fetch", tuple(offered), f"absent: {entry['dest']}")
 
     return Decision(
         "abort",
-        None,
+        (),
         f"every source for {entry['dest']} was rejected before transfer "
         f"(expected {entry['sha256']}): " + "; ".join(rejected),
     )
@@ -267,9 +283,11 @@ def land(entry: Entry, models_dir: Path, partial: Path) -> None:
 def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     """Print one line per entry for the shell driver to act on; 0 if it may proceed.
 
-    `SKIP<TAB><dest>` or `FETCH<TAB><dest><TAB><url>`. Every entry is decided
-    before any line is printed, so an abort anywhere stops the run before a single
-    byte is transferred rather than in the middle of a 6.9 GB download.
+    `SKIP<TAB><dest>` or `FETCH<TAB><dest><TAB><url>[<TAB><url>...]` — a fetch
+    line carries every source that survived the pre-flight, in order, and the
+    driver walks them until one verifies. Every entry is decided before any line
+    is printed, so an abort anywhere stops the run before a single byte is
+    transferred rather than in the middle of a 6.9 GB download.
     """
     lines: list[str] = []
     aborts: list[str] = []
@@ -280,7 +298,7 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
         elif decision.action == "skip":
             lines.append(f"SKIP\t{entry['dest']}")
         else:
-            lines.append(f"FETCH\t{entry['dest']}\t{decision.url}")
+            lines.append("\t".join(["FETCH", entry["dest"], *decision.urls]))
     if aborts:
         for reason in aborts:
             print(f"ERROR: {reason}", file=sys.stderr)

@@ -25,7 +25,10 @@ mkdir -p "$MODELS_DIR"
 # Decide everything first: an abort anywhere stops the run before a single byte moves.
 plan="$(python3 "$PROVISION" plan "$MODELS_DIR")"
 
-while IFS=$'\t' read -r action dest url; do
+# A FETCH line carries every source that survived the pre-flight, tab-separated
+# and in the manifest's order, so `$urls` is the remainder of the line. It is left
+# unquoted below on purpose: that is the word split that turns it back into a list.
+while IFS=$'\t' read -r action dest urls; do
     [ -n "$action" ] || continue
     case "$action" in
         SKIP)
@@ -34,13 +37,28 @@ while IFS=$'\t' read -r action dest url; do
         FETCH)
             target="${MODELS_DIR}/${dest}"
             mkdir -p "$(dirname "$target")"
-            echo "downloading: $url"
-            if ! wget -q --show-progress -O "${target}.partial" "$url"; then
-                rm -f "${target}.partial"
-                echo "ERROR: transfer failed for $dest" >&2
+            landed=0
+            # Walk the sources in order: a dead mirror or bytes that do not verify
+            # advance to the next one, and only exhausting them all aborts the run.
+            # shellcheck disable=SC2086
+            for url in $urls; do
+                echo "downloading: $url"
+                if ! wget -q --show-progress -O "${target}.partial" "$url"; then
+                    rm -f "${target}.partial"
+                    echo "WARNING: transfer failed from $url" >&2
+                    continue
+                fi
+                if ! python3 "$PROVISION" land "$MODELS_DIR" "$dest" "${target}.partial"; then
+                    echo "WARNING: bytes served by $url did not verify" >&2
+                    continue
+                fi
+                landed=1
+                break
+            done
+            if [ "$landed" -eq 0 ]; then
+                echo "ERROR: every source for $dest failed" >&2
                 exit 1
             fi
-            python3 "$PROVISION" land "$MODELS_DIR" "$dest" "${target}.partial"
             ;;
         *)
             echo "ERROR: unrecognised plan line: $action" >&2

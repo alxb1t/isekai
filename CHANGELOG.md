@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The ordered fallback list is now walked at transfer time, not only at pre-flight.** A FETCH
+  plan line carries every source that survived the pre-flight, in the manifest's order, and the
+  driver walks them: a dead mirror or bytes that fail verification advance to the next source, and
+  only exhausting all of them aborts the entry. Previously the plan named a single URL, so the one
+  failure the alternates existed for — a mirror that has gone away, which the pre-flight cannot
+  distinguish from "publishes no digest" — aborted the pod boot with the alternate untouched
+  (`design.md` D16).
+- **A provisioning abort now holds the pod open instead of stopping the container.** `start.sh`
+  guards the provisioning call; on failure it prints the reason and `exec`s a foreground hold with
+  `sshd` still alive, ComfyUI not started and nothing deleted. Under `set -e` the non-zero exit
+  previously killed PID 1 and took the SSH daemon with it, so the file the abort policy leaves "on
+  disk for a human to inspect" was unreachable and every re-boot died at the same line
+  (`design.md` D17).
 - **The stack now provisions from the manifest alone, and the unchanged path renders off it.**
   One pod, 23.3 minutes of wall clock, on a volume created empty for this purpose. All 15 entries
   were fetched from their pinned `resolve/<sha>/` URLs and SHA-256 verified before landing; the

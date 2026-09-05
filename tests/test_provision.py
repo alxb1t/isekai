@@ -166,7 +166,7 @@ def test_a_source_publishing_a_different_digest_is_rejected_and_the_next_offered
     fetcher = FakeFetcher({PRIMARY: OTHER, ALTERNATE: DIGEST})
     decision = decide(entry, tmp_path, fetcher)
     assert decision.action == "fetch"
-    assert decision.url == ALTERNATE
+    assert decision.urls[0] == ALTERNATE
     assert fetcher.asked == [PRIMARY, ALTERNATE]
 
 
@@ -192,7 +192,7 @@ def test_a_source_publishing_no_digest_is_downloaded_and_post_verified(
     entry = _entry()
     decision = decide(entry, tmp_path, FakeFetcher())
     assert decision.action == "fetch"
-    assert decision.url == PRIMARY
+    assert decision.urls[0] == PRIMARY
 
 
 @pytest.mark.spec(
@@ -204,7 +204,42 @@ def test_a_source_publishing_the_declared_digest_is_offered_first(
     entry = _entry()
     decision = decide(entry, tmp_path, FakeFetcher({PRIMARY: DIGEST}))
     assert decision.action == "fetch"
-    assert decision.url == PRIMARY
+    assert decision.urls[0] == PRIMARY
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:the-plan-carries-every-surviving-source"
+)
+def test_every_source_surviving_the_pre_flight_is_offered_in_manifest_order(
+    tmp_path: Path,
+) -> None:
+    decision = decide(_entry(), tmp_path, FakeFetcher())
+    assert decision.action == "fetch"
+    assert decision.urls == (PRIMARY, ALTERNATE)
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:the-plan-carries-every-surviving-source"
+)
+def test_a_source_rejected_before_transfer_is_absent_from_the_offered_sources(
+    tmp_path: Path,
+) -> None:
+    decision = decide(_entry(), tmp_path, FakeFetcher({PRIMARY: OTHER}))
+    assert decision.action == "fetch"
+    assert decision.urls == (ALTERNATE,)
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:the-plan-carries-every-surviving-source"
+)
+def test_the_plan_line_carries_the_whole_ordered_source_list(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry = _entry()
+    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
+    assert capsys.readouterr().out.splitlines() == [
+        f"FETCH\t{entry['dest']}\t{PRIMARY}\t{ALTERNATE}"
+    ]
 
 
 @pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
@@ -222,7 +257,7 @@ def test_plan_reports_a_present_and_verified_entry_as_a_skip(
 def test_plan_reports_an_absent_entry_as_a_fetch_with_its_url(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    entry = _entry()
+    entry = _entry([PRIMARY])
     assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
     assert capsys.readouterr().out.splitlines() == [
         f"FETCH\t{entry['dest']}\t{PRIMARY}"

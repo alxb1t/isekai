@@ -200,8 +200,9 @@ apart, which is luck rather than design.
 
 A digest makes the *source* interchangeable: any host serving matching bytes is acceptable, and one
 that does not is rejected whoever it is. So each entry carries an ordered list of sources and tries
-the next on failure. This adds availability without adding trust, which is the same argument that
-justifies pulling a third-party mirror at all.
+the next on failure — at the pre-flight *and* at the transfer, which D16 records after the first
+implementation only did the former. This adds availability without adding trust, which is the same
+argument that justifies pulling a third-party mirror at all.
 
 Hugging Face returns the file's SHA-256 in an `x-linked-etag` response header, so a mismatch can be
 detected with a ranged request before a multi-gigabyte transfer starts. This is an **optimisation,
@@ -240,6 +241,45 @@ offline, which keeps this repository's property that no test reaches a GPU or th
 thing that can only be shown on a pod — that a volume filled *solely by the script* renders — is a
 metered task with an explicit acceptance criterion, verified once and recorded, in the same way
 diffusion quality has always been handled here.
+
+### D16 — The fallback is walked at transfer time, not only at pre-flight
+
+The first implementation of D10 returned a single URL: `decide` walked the sources, dropped any whose
+*published* digest disagreed, and handed the shell the first survivor. `wget` then failed against
+that one URL and the run aborted with the alternates untouched.
+
+That gets the fallback exactly backwards. `published_digest` collapses every failure mode to `None`
+by design — a 404, a gated repo, a network error and "publishes no digest" are indistinguishable —
+so a source that has *gone away* is precisely the one the pre-flight cannot reject. The availability
+D10 buys was therefore unreachable by construction: it existed only against a mirror that was up and
+answering with the wrong digest.
+
+So `Decision.urls` carries **every** source that survived the pre-flight, in the manifest's order,
+and a FETCH line carries the whole list. The shell walks it: a non-zero `wget` **or** a `land` that
+fails verification advances to the next source, and only exhausting all of them aborts the entry.
+The split of D14 is unchanged — the module still decides which sources are acceptable, the shell
+still only moves bytes.
+
+*Cost:* one HEAD per source per absent entry instead of one per entry, because the pre-flight no
+longer short-circuits at the first survivor. Fifteen entries, at most two sources each, once per cold
+volume.
+
+### D17 — A provisioning abort holds the pod open; it does not stop the container
+
+D4 leaves a mismatched file on disk "for a human to inspect". That is only true if the human can get
+in. `start.sh` runs under `set -euo pipefail` and starts `sshd` as a child of PID 1, so a non-zero
+exit from the provisioning step terminated the container *and its SSH daemon* — and every subsequent
+boot died at the same line within seconds, leaving no window to attach. Recovery meant overriding the
+container command from the RunPod console.
+
+The failure mode was new to this change: the previous script skipped by name and never re-checked a
+warm volume, so a corrupt-but-present file booted fine. Re-verifying on the skip path is right; making
+it fatal to reachability is not.
+
+The provisioning call is therefore guarded, and a failure prints the reason and `exec`s a foreground
+hold. `sshd` stays alive, ComfyUI is not started, and nothing is deleted — the pod is exactly the
+inspectable state D4 describes. A held pod still bills, which is the trade: an unreachable one bills
+too, and cannot be diagnosed.
 
 ## Risks / Trade-offs
 
