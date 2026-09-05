@@ -93,15 +93,7 @@ class Spec(NamedTuple):
 # The byte count discriminates nothing: every published WAI version reports the same
 # one.
 WAI_SHA256 = "f116b0c78ff441467b0cdc8f1936e1ed18ea31e9997c7b132b1b8db533f0bd04"
-WAI = "5ef4e2da7173a160ad04aebcaa2fdcd6d20ed792"
-WAI_ALTS = (
-    ("frankjoshua/waiIllustriousSDXL_v170", "9303ce49345822823717889e3677b6ffd43fc6a9"),
-    ("zhenshipo/waiIllustriousSDXL_v170", "81274954afbade01cfbbb68008dfe84fc9e6adb2"),
-    ("mogaru99/waiIllustriousSDXL_v170", "a39fd9086cf0d20c99233d94546a6468c83dffab"),
-    ("hiusduh/waiIllustriousSDXL_v170", "3e2d67a43d078b1860fbc80984235906b1823101"),
-    ("yufusoft/WAI-illustrious-SDXL", "921c723bf2d4e7350f80a362c9de8a23c1377fc9"),
-    ("zhuhai1234/waiIllustriousSDXL-dimo", "606eb271fcd4ff213272f0e1a1c4bcdaf4d19475"),
-)
+WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
 
 # From the sibling project, which pins the same repo and the same files (design.md D2).
 INSTANTID = "57b32dfee076092ad2930c71fd6d439c2c3b1820"
@@ -124,14 +116,46 @@ ANTELOPE_FILES = (
     "scrfd_10g_bnkps.onnx",
 )
 
-WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
-
 SPECS: tuple[Spec, ...] = (
+    # Primary first, then the byte-identical mirrors v0.9's fallback walks in order.
     Spec(
         f"checkpoints/{WAI_FILE}",
         (
-            Source("LyliaEngine/waiIllustriousSDXL_v170", WAI, WAI_FILE),
-            *(Source(repo, revision, WAI_FILE) for repo, revision in WAI_ALTS),
+            Source(
+                "LyliaEngine/waiIllustriousSDXL_v170",
+                "5ef4e2da7173a160ad04aebcaa2fdcd6d20ed792",
+                WAI_FILE,
+            ),
+            Source(
+                "frankjoshua/waiIllustriousSDXL_v170",
+                "9303ce49345822823717889e3677b6ffd43fc6a9",
+                WAI_FILE,
+            ),
+            Source(
+                "zhenshipo/waiIllustriousSDXL_v170",
+                "81274954afbade01cfbbb68008dfe84fc9e6adb2",
+                WAI_FILE,
+            ),
+            Source(
+                "mogaru99/waiIllustriousSDXL_v170",
+                "a39fd9086cf0d20c99233d94546a6468c83dffab",
+                WAI_FILE,
+            ),
+            Source(
+                "hiusduh/waiIllustriousSDXL_v170",
+                "3e2d67a43d078b1860fbc80984235906b1823101",
+                WAI_FILE,
+            ),
+            Source(
+                "yufusoft/WAI-illustrious-SDXL",
+                "921c723bf2d4e7350f80a362c9de8a23c1377fc9",
+                WAI_FILE,
+            ),
+            Source(
+                "zhuhai1234/waiIllustriousSDXL-dimo",
+                "606eb271fcd4ff213272f0e1a1c4bcdaf4d19475",
+                WAI_FILE,
+            ),
         ),
         WAI_SHA256,
     ),

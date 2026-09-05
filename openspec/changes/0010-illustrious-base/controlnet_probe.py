@@ -25,13 +25,16 @@ Run it from the repository root, against the tunnel:
 
 It writes one PNG per render plus a `probe.json` recording exactly what was
 submitted, so the verdicts in `CHANGELOG.md` point at a reproducible artifact.
+
+Submission and polling are `pipeline._render`'s, not a copy of them: the probe
+must talk to ComfyUI on the same terms the product does, or a comparison run here
+would not be evidence about the path the product takes.
 """
 
 import argparse
 import copy
 import json
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +43,15 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from isekai.comfy_client import ComfyClient  # noqa: E402
 from isekai.comfy_types import ComfyTransport, Workflow  # noqa: E402
-from isekai.workflow import PIPELINE_PATH, find_node, find_nodes, inject  # noqa: E402
+from isekai.pipeline import _render  # noqa: E402
+from isekai.workflow import (  # noqa: E402
+    PIPELINE_PATH,
+    find_node,
+    find_nodes,
+    image_dimensions,
+    inject,
+    working_resolution,
+)
 
 # The strength a ControlNet is taken to when it is the one under test. Exactly
 # zero, not a small number: the question is whether the conditioning arrives, and
@@ -71,27 +82,6 @@ def _controlnets(workflow: Workflow) -> dict[str, str]:
     return names
 
 
-def _render(client: ComfyTransport, workflow: Workflow, destination: Path) -> None:
-    """Submit one graph, wait for it, and write the image it produced."""
-    prompt_id = client.submit(workflow)
-    print(f"  queued {prompt_id} ...", flush=True)
-
-    while True:
-        history = client.history(prompt_id)
-        if prompt_id in history:
-            break
-        time.sleep(1)
-
-    outputs = history[prompt_id]["outputs"]
-    for node_output in outputs.values():
-        if "images" in node_output:
-            destination.write_bytes(client.view(node_output["images"][0]))
-            print(f"  saved {destination}", flush=True)
-            return
-
-    sys.exit(f"{destination.name}: no image in the workflow outputs")
-
-
 def probe(
     client: ComfyTransport,
     workflow: Workflow,
@@ -113,11 +103,12 @@ def probe(
 
     renders: list[dict[str, Any]] = []
     for label in ["baseline", *applies]:
+        zeroed = None if label == "baseline" else label
         wf = copy.deepcopy(workflow)
         inject(wf, image_name, image_path)
         wf[sampler_id]["inputs"]["seed"] = seed
-        if label != "baseline":
-            wf[applies[label]]["inputs"]["strength"] = ZERO
+        if zeroed is not None:
+            wf[applies[zeroed]]["inputs"]["strength"] = ZERO
 
         strengths = {
             name: wf[apply_id]["inputs"]["strength"]
@@ -125,20 +116,12 @@ def probe(
         }
         print(f"{label}: {strengths}", flush=True)
         _render(client, wf, output_dir / f"{label}.png")
-        renders.append({"label": label, "zeroed": None, "strengths": strengths})
-        if label != "baseline":
-            renders[-1]["zeroed"] = label
+        renders.append({"label": label, "zeroed": zeroed, "strengths": strengths})
 
-    scale_id = find_node(workflow, class_type="ImageScale")
-    example = copy.deepcopy(workflow)
-    inject(example, image_name, image_path)
     record = {
         "photo": image_path,
         "seed": seed,
-        "working_resolution": [
-            example[scale_id]["inputs"]["width"],
-            example[scale_id]["inputs"]["height"],
-        ],
+        "working_resolution": list(working_resolution(*image_dimensions(image_path))),
         "tuned_strengths": tuned,
         "renders": renders,
     }

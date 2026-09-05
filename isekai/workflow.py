@@ -56,9 +56,7 @@ def find_node(workflow: Workflow, *, class_type: str) -> str:
 
 def _png_dimensions(data: bytes) -> tuple[int, int] | None:
     """Return the width and height in a PNG's IHDR, or None if it is not readable."""
-    if not data.startswith(_PNG_SIGNATURE) or data[12:16] != b"IHDR":
-        return None
-    if len(data) < 24:
+    if len(data) < 24 or not data.startswith(_PNG_SIGNATURE) or data[12:16] != b"IHDR":
         return None
     width, height = struct.unpack(">II", data[16:24])
     return width, height
@@ -134,7 +132,6 @@ def working_resolution(width: int, height: int) -> tuple[int, int]:
     """
     scale = WORKING_SCALE / min(width, height)
     long_side = round(max(width, height) * scale / DIMENSION_STEP) * DIMENSION_STEP
-    long_side = max(long_side, WORKING_SCALE)
     return (long_side, WORKING_SCALE) if width >= height else (WORKING_SCALE, long_side)
 
 

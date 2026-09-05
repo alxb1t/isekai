@@ -384,10 +384,10 @@ def test_the_samplers_positive_input_reaches_the_encoder_through_the_stack(
     sampler_id = find_node(workflow, class_type="KSampler")
     identity_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
 
-    node_id, slot = workflow[sampler_id]["inputs"]["positive"]
+    node_id = workflow[sampler_id]["inputs"]["positive"][0]
     hops = 0
     while workflow[node_id]["class_type"] == "ControlNetApplyAdvanced":
-        node_id, slot = workflow[node_id]["inputs"]["positive"]
+        node_id = workflow[node_id]["inputs"]["positive"][0]
         hops += 1
 
     assert node_id == identity_id
