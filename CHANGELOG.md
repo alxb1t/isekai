@@ -25,6 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The probe's verdicts are applied, and both are "no change to the graph".** The chosen
+  `denoise` 0.65 and `ip_weight` 0.9 are the values already committed, and the tile ControlNet is
+  kept because the strength-to-zero comparison found it strongly distinguishable from absent. They
+  are now **pinned by the suite** rather than merely present, so the evaluator version inherits a
+  baseline it can measure against and a silent re-tune becomes a deliberate test edit.
+- **The stack walk is under test.** `KSampler.positive` may point at `ApplyInstantIDAdvanced`
+  directly *or* through a stack of `ControlNetApplyAdvanced` nodes, so the encoder must be found by
+  following the link and never by class lookup. The probe could have shortened that stack, which is
+  exactly when the property would have broken unnoticed; a test now walks it end to end and asserts
+  the hop count matches the number of ControlNets in the graph.
+- **`scripts/models.json` is unchanged, so the image is not republished.** Nothing dropped out of
+  the graph, so the manifest the pod provisions from still matches it and `:v0.10-rc` stays the
+  image the final renders boot.
+
 ### Notes
 
 - **The v0.10 probe ran on a pod and its results are recorded** in

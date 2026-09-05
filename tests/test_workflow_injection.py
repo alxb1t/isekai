@@ -10,6 +10,7 @@ from isekai.workflow import (
     DIMENSION_STEP,
     WORKING_SCALE,
     find_node,
+    find_nodes,
     image_dimensions,
     inject,
     working_resolution,
@@ -346,3 +347,54 @@ def test_both_encoders_take_their_clip_through_the_committed_layer(
     # the layer node conditions the two halves against different text towers.
     for encoder_id in ("3", "4"):
         assert workflow[encoder_id]["inputs"]["clip"] == [clip_id, 0]
+
+
+# --- v0.10: what the phase-5 probe settled, held in place -------------------
+
+# The dials the probe chose, by eye, against one photo at a fixed seed. They are
+# the values that were already in the graph -- tuned on Animagine, with no reason
+# to expect they would transfer, so this is a real search with a null result
+# rather than a decision skipped. Pinned so the evaluator version inherits a
+# baseline it can measure against, and so a silent re-tune is a test edit.
+# `probe/README.md` records what they were chosen against. Chosen is not best.
+PROBE_DENOISE = 0.65
+PROBE_IP_WEIGHT = 0.9
+
+
+@pytest.mark.spec_exempt("structural: pins the dials the phase-5 probe chose")
+def test_the_graph_carries_the_dials_the_probe_chose(workflow: Workflow) -> None:
+    sampler_id = find_node(workflow, class_type="KSampler")
+    apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
+    assert workflow[sampler_id]["inputs"]["denoise"] == PROBE_DENOISE
+    assert workflow[apply_id]["inputs"]["ip_weight"] == PROBE_IP_WEIGHT
+
+
+@pytest.mark.spec_exempt(
+    "structural: the sampler must reach the encoder through whatever stack remains"
+)
+def test_the_samplers_positive_input_reaches_the_encoder_through_the_stack(
+    workflow: Workflow,
+) -> None:
+    # The non-obvious property this graph has always had: `KSampler.positive` may
+    # point at `ApplyInstantIDAdvanced` directly OR through a stack of
+    # `ControlNetApplyAdvanced` nodes, so the encoder is found by following the
+    # link, never by class lookup. A shortened stack -- which the phase-5 probe
+    # could have produced, had a ControlNet come back indistinguishable from
+    # absent -- is exactly when that would break unnoticed.
+    sampler_id = find_node(workflow, class_type="KSampler")
+    identity_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
+
+    node_id, slot = workflow[sampler_id]["inputs"]["positive"]
+    hops = 0
+    while workflow[node_id]["class_type"] == "ControlNetApplyAdvanced":
+        node_id, slot = workflow[node_id]["inputs"]["positive"]
+        hops += 1
+
+    assert node_id == identity_id
+    assert workflow[identity_id]["inputs"]["positive"] == ["3", 0]
+    assert workflow["3"]["inputs"]["text"] == COMMITTED_POSITIVE
+
+    # The probe kept all three ControlNets, so the walk is three hops long. If a
+    # later version deletes one, this number moves and the walk above still holds.
+    assert hops == len(find_nodes(workflow, class_type="ControlNetApplyAdvanced"))
+    assert hops == 3
