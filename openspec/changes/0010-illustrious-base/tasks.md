@@ -6,7 +6,7 @@
 - [x] 2 — The working resolution: injection reads the photo and the graph scales before anything else
 - [x] 3 — The base and the register: `ckpt_name`, the CLIP layer, both prompts, `1girl` out
 - [x] 4 — Publish `:v0.10-rc`, the image the metered phases boot
-- [ ] 5 — ⚠️ **GPU · HALT** — the probe: ControlNet comparisons, the dials, the gender check
+- [x] 5 — ⚠️ **GPU · HALT** — the probe: ControlNet comparisons, the dials, the gender check
 - [ ] 6 — Apply the probe's verdicts: the dials into the graph, tile kept or dropped
 - [ ] 7 — ⚠️ **GPU · HALT** — the final renders on WAI, at stated input resolutions
 - [ ] 8 — Animagine leaves, and the docs describe an Illustrious base

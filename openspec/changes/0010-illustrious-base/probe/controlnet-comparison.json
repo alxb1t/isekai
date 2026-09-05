@@ -1,0 +1,51 @@
+{
+  "photo": "outputs/original/darya_original.jpeg",
+  "seed": 1,
+  "working_resolution": [
+    1024,
+    1600
+  ],
+  "tuned_strengths": {
+    "TTPLANET_Controlnet_Tile_realistic_v2_fp16": 0.2,
+    "openpose": 0.6,
+    "mistoLine_rank256": 0.2
+  },
+  "renders": [
+    {
+      "label": "baseline",
+      "zeroed": null,
+      "strengths": {
+        "TTPLANET_Controlnet_Tile_realistic_v2_fp16": 0.2,
+        "openpose": 0.6,
+        "mistoLine_rank256": 0.2
+      }
+    },
+    {
+      "label": "TTPLANET_Controlnet_Tile_realistic_v2_fp16",
+      "zeroed": "TTPLANET_Controlnet_Tile_realistic_v2_fp16",
+      "strengths": {
+        "TTPLANET_Controlnet_Tile_realistic_v2_fp16": 0.0,
+        "openpose": 0.6,
+        "mistoLine_rank256": 0.2
+      }
+    },
+    {
+      "label": "openpose",
+      "zeroed": "openpose",
+      "strengths": {
+        "TTPLANET_Controlnet_Tile_realistic_v2_fp16": 0.2,
+        "openpose": 0.0,
+        "mistoLine_rank256": 0.2
+      }
+    },
+    {
+      "label": "mistoLine_rank256",
+      "zeroed": "mistoLine_rank256",
+      "strengths": {
+        "TTPLANET_Controlnet_Tile_realistic_v2_fp16": 0.2,
+        "openpose": 0.6,
+        "mistoLine_rank256": 0.0
+      }
+    }
+  ]
+}

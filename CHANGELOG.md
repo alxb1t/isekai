@@ -25,6 +25,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Notes
+
+- **The v0.10 probe ran on a pod and its results are recorded** in
+  `openspec/changes/0010-illustrious-base/probe/`. WAI provisioned alongside Animagine at boot from
+  the manifest, verified: 6,938,040,682 bytes, exactly the count the manifest declares. Session
+  18 min 27 s at $0.72/hr = **$0.22**, inside the 45-minute / ~$0.30 ceiling; teardown confirmed
+  through the RunPod MCP (`get-pod` → 404 "pod not found", `list-pods` → 0 items).
+- **Every ControlNet is kept.** A strength-to-zero comparison at a fixed seed, with no mutation and
+  every other dial held, asked one falsifiable question per ControlNet: does the conditioning reach
+  the sampler at all? Tile is **strongly** distinguishable from absent — hair length, garment and
+  framing all change — and OpenPose and MistoLine are distinguishable subtly. None is
+  indistinguishable, so none is deleted, **including tile**, which `design.md` D7 named as the
+  likely deletion and left to the comparison to decide. TTPlanet's own card disclaimer — "no comic,
+  animation application are promised", recommended strength 0.9 against the 0.2 this graph runs —
+  is therefore recorded against it as a **known deviation**, not resolved. This establishes only
+  that each retained ControlNet measurably *changes* the render, never that it improves it.
+- **`denoise` 0.65 and `ip_weight` 0.9 are chosen — a preference, not a measurement.** Found by eye
+  against one photo at a fixed seed, over three denoise points and one ip_weight point. They are
+  the values already in the graph: they were tuned on Animagine with no reason to expect they would
+  transfer, so this is a real search with a null result. **Chosen is not best**, and the search was
+  coarse — four renders inside a 25-minute budget.
+- **The gender check passes.** A male-presenting input photo, at the new register with `1girl`
+  removed and a fixed seed, produced an unambiguously male-presenting output. This is the one
+  falsifiable acceptance criterion the register change gets and it could have failed. One photo is
+  an existence proof that the identity embedding supplies the axis, not a rate.
+- **The first thing to check next version.** As `design.md` D4 predicted, dropping `realistic,
+  photorealistic` from the negative removed a push away from the photograph, and these outputs read
+  as semi-realistic digital painting rather than flat anime screencap. Recorded as a finding for
+  the evaluator version, not as a reason to reinstate a gender tag.
+
 ### Added
 
 - **`ghcr.io/alxb1t/isekai:v0.10-rc` is published**, and it is the image both metered phases boot.
