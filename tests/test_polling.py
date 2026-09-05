@@ -9,13 +9,13 @@ from tests.fakes import FakeComfyClient
 
 @pytest.mark.spec("comfy-transport:polling:polls-history-until-complete")
 def test_run_polls_history_until_the_prompt_completes(
-    workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, photo: str
 ) -> None:
     monkeypatch.setattr("time.sleep", lambda *_: None)
     client = FakeComfyClient(pending_polls=2)
     run_dir = tmp_path / "20260904T141530Z"
 
-    run(client, workflow, "photo.jpg", run_dir, variations=1)
+    run(client, workflow, photo, run_dir, variations=1)
 
     assert client.history_calls == 3
     assert (run_dir / "0.png").read_bytes() == client.view_bytes
@@ -23,7 +23,7 @@ def test_run_polls_history_until_the_prompt_completes(
 
 @pytest.mark.spec("comfy-transport:retrieval:downloads-image-named-in-history")
 def test_run_downloads_the_image_named_in_the_history(
-    workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    workflow: Workflow, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, photo: str
 ) -> None:
     monkeypatch.setattr("time.sleep", lambda *_: None)
     client = FakeComfyClient(
@@ -31,7 +31,7 @@ def test_run_downloads_the_image_named_in_the_history(
     )
     run_dir = tmp_path / "20260904T141530Z"
 
-    run(client, workflow, "photo.jpg", run_dir, variations=1)
+    run(client, workflow, photo, run_dir, variations=1)
 
     assert client.viewed == {
         "filename": "anime_00001.png",

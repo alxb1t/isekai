@@ -27,6 +27,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The photo is scaled to a working resolution before any node reads it.** An `ImageScale` node
+  sits between the image loader and every consumer — the latent encoder, the identity node and all
+  three ControlNet preprocessors — so one pixel grid feeds the whole graph and no control hint is
+  registered against a different one. Previously the render happened at whatever size the input
+  happened to be, so "the path runs" was a claim about the photos that were tried.
+- **`isekai.workflow` derives the render target from the photo's own header.** `image_dimensions`
+  parses JPEG and PNG headers directly — stdlib only, nothing new enters `convert.py`'s import
+  graph — and `working_resolution` preserves aspect, puts the short side at 1024 and rounds both
+  dimensions to a multiple of 64, in **both** directions, so a small photo is scaled up as well as
+  a large one down. A short side rather than a pixel budget: at a fixed megapixel count the short
+  side moves with the aspect ratio, so a wide photo would land below MistoLine's floor while a
+  squarer one cleared it, and nothing in the run would say so (`design.md` D2). An unreadable or
+  truncated header stops the run naming the file; there is no default size, because a silently
+  wrong resolution is a wrong render rather than an error.
+
+### Changed
+
+- **`inject` takes the photo's local path.** No node available to this pipeline can derive a target
+  from the image it is given, so the dimensions are computed by injection and written into the
+  scale node. The path is passed from the `input_path` `pipeline.run` already holds, so it stays an
+  argument rather than becoming state.
+
+### Added
+
 - **WAI-illustrious-SDXL v17.0 is declared in the manifest**, alongside Animagine rather than in
   place of it. The bytes come from pinned Hugging Face mirror revisions — WAI has no first-party
   Hugging Face repo — and the digest verified against them is **the SHA-256 Civitai itself

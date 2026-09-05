@@ -46,7 +46,7 @@ def run(
 
     for i in range(variations):
         wf = copy.deepcopy(workflow)
-        inject(wf, image_name)
+        inject(wf, image_name, input_path)
 
         if overrides:
             apply_overrides(wf, **overrides)

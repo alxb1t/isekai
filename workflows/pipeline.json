@@ -91,7 +91,7 @@
         0
       ],
       "image": [
-        "2",
+        "22",
         0
       ],
       "model": [
@@ -115,7 +115,7 @@
   "9": {
     "inputs": {
       "pixels": [
-        "2",
+        "22",
         0
       ],
       "vae": [
@@ -192,7 +192,7 @@
       "pyrUp_iters": 3,
       "resolution": 1024,
       "image": [
-        "2",
+        "22",
         0
       ]
     },
@@ -247,7 +247,7 @@
       "pose_estimator": "dw-ll_ucoco_384_bs5.torchscript.pt",
       "scale_stick_for_xinsr_cn": "enable",
       "image": [
-        "2",
+        "22",
         0
       ]
     },
@@ -297,7 +297,7 @@
       "coarse": "disable",
       "resolution": 1024,
       "image": [
-        "2",
+        "22",
         0
       ]
     },
@@ -340,6 +340,22 @@
     "class_type": "ControlNetApplyAdvanced",
     "_meta": {
       "title": "Apply ControlNet"
+    }
+  },
+  "22": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "width": 1024,
+      "height": 1024,
+      "crop": "disabled",
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Scale to the working resolution"
     }
   }
 }

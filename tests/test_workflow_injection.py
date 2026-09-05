@@ -1,10 +1,20 @@
 import inspect
+from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 
 from isekai import cli
 from isekai.comfy_types import Workflow
-from isekai.workflow import find_node, inject
+from isekai.workflow import (
+    DIMENSION_STEP,
+    WORKING_SCALE,
+    find_node,
+    image_dimensions,
+    inject,
+    working_resolution,
+)
+from tests.images import jpeg_bytes, png_bytes
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-class-type")
@@ -58,23 +68,26 @@ def test_find_node_is_ambiguous_for_the_two_text_encoders(
 def test_graph_inits_the_latent_from_the_photo_at_denoise_below_one(
     workflow: Workflow,
 ) -> None:
-    # One LoadImage feeds VAEEncode, which seeds the KSampler latent at
-    # denoise < 1 (from-photo, not from-noise).
+    # One LoadImage feeds VAEEncode through the scale node, which seeds the
+    # KSampler latent at denoise < 1 (from-photo, not from-noise).
     load_id = find_node(workflow, class_type="LoadImage")
+    scale_id = find_node(workflow, class_type="ImageScale")
     vae_id = find_node(workflow, class_type="VAEEncode")
     sampler_id = find_node(workflow, class_type="KSampler")
-    assert workflow[vae_id]["inputs"]["pixels"][0] == load_id
+    assert workflow[scale_id]["inputs"]["image"][0] == load_id
+    assert workflow[vae_id]["inputs"]["pixels"][0] == scale_id
     assert workflow[sampler_id]["inputs"]["latent_image"][0] == vae_id
     assert workflow[sampler_id]["inputs"]["denoise"] < 1
 
 
 @pytest.mark.spec("workflow-injection:photo-wiring:single-loader-fans-out")
 def test_inject_wires_the_single_load_image_across_the_stack(
-    workflow: Workflow,
+    workflow: Workflow, photo: str
 ) -> None:
-    # One LoadImage fans out to VAEEncode + InstantID + all three CN preprocessors,
-    # so find_node stays unique and the exactly-one-LoadImage rule holds.
-    inject(workflow, image_name="face.png")
+    # One LoadImage fans out, through the scale node, to VAEEncode + InstantID +
+    # all three CN preprocessors, so find_node stays unique and the
+    # exactly-one-LoadImage rule holds.
+    inject(workflow, image_name="face.png", image_path=photo)
     load_id = find_node(workflow, class_type="LoadImage")
     assert workflow[load_id]["inputs"]["image"] == "face.png"
 
@@ -123,14 +136,164 @@ def test_no_command_line_path_sets_the_positive_prompt(
     with pytest.raises(SystemExit):
         cli.parse_args()
 
-    assert list(inspect.signature(inject).parameters) == ["workflow", "image_name"]
+    assert list(inspect.signature(inject).parameters) == [
+        "workflow",
+        "image_name",
+        "image_path",
+    ]
 
 
 @pytest.mark.spec("workflow-injection:committed-prompt:negative-is-untouched")
 def test_injection_leaves_the_negative_encoder_as_the_graph_committed_it(
-    workflow: Workflow,
+    workflow: Workflow, photo: str
 ) -> None:
     before = workflow["4"]["inputs"]["text"]
-    inject(workflow, image_name="face.png")
+    inject(workflow, image_name="face.png", image_path=photo)
     assert workflow["4"]["inputs"]["text"] == before
     assert before.startswith("lowres, bad anatomy")
+
+
+# --- v0.10: the photo is scaled to a working resolution ---------------------
+
+
+def _write(directory: Path, name: str, data: bytes) -> str:
+    """Write `data` to `directory/name` and return the path as injection takes it."""
+    path = directory / name
+    path.write_bytes(data)
+    return str(path)
+
+
+# Every node that reads the photo, by the input that carries it. Named rather
+# than discovered: the scenario is that *these* consumers read one pixel grid,
+# and a check that derives its own list from the graph would pass an empty one.
+PHOTO_CONSUMERS = (
+    ("8", "image"),  # ApplyInstantIDAdvanced
+    ("9", "pixels"),  # VAEEncode
+    ("13", "image"),  # TilePreprocessor
+    ("16", "image"),  # DWPreprocessor
+    ("19", "image"),  # LineArtPreprocessor
+)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:scale-precedes-every-consumer")
+def test_a_scale_node_sits_between_the_loader_and_every_consumer(
+    workflow: Workflow,
+) -> None:
+    load_id = find_node(workflow, class_type="LoadImage")
+    scale_id = find_node(workflow, class_type="ImageScale")
+    assert workflow[scale_id]["inputs"]["image"] == [load_id, 0]
+
+    for node_id, key in PHOTO_CONSUMERS:
+        assert workflow[node_id]["inputs"][key] == [scale_id, 0]
+
+    # And nothing else reaches the loader, so there is exactly one pixel grid in
+    # the graph and no control hint is registered against a different one.
+    readers = {
+        node_id
+        for node_id, node in workflow.items()
+        for value in node["inputs"].values()
+        if isinstance(value, list) and value[0] == load_id
+    }
+    assert readers == {scale_id}
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:short-side-at-the-working-scale"
+)
+@pytest.mark.parametrize(
+    ("width", "height"),
+    [(4032, 3024), (3024, 4032), (2000, 2000), (1920, 1080), (1080, 1920)],
+)
+def test_the_target_preserves_aspect_with_the_short_side_at_the_working_scale(
+    width: int, height: int
+) -> None:
+    out_width, out_height = working_resolution(width, height)
+
+    assert min(out_width, out_height) == WORKING_SCALE
+    assert out_width % DIMENSION_STEP == 0
+    assert out_height % DIMENSION_STEP == 0
+
+    # Aspect to within one rounding step: the long side is snapped to the step,
+    # so the ratio may move by at most half a step over the short side.
+    exact = max(width, height) / min(width, height)
+    got = max(out_width, out_height) / WORKING_SCALE
+    assert abs(got - exact) <= DIMENSION_STEP / WORKING_SCALE
+
+    # Orientation survives: a landscape photo does not come back portrait.
+    assert (out_width >= out_height) == (width >= height)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:small-photos-are-scaled-up")
+def test_a_photo_below_the_working_scale_is_scaled_up() -> None:
+    width, height = 640, 480
+    out_width, out_height = working_resolution(width, height)
+
+    assert out_width > width
+    assert out_height > height
+    assert min(out_width, out_height) == WORKING_SCALE
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:dimensions-are-written-by-injection"
+)
+def test_injection_writes_the_computed_dimensions_into_the_scale_node(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "portrait.png", png_bytes(3024, 4032))
+    inject(workflow, image_name="face.png", image_path=path)
+
+    scale_id = find_node(workflow, class_type="ImageScale")
+    expected_width, expected_height = working_resolution(3024, 4032)
+    assert workflow[scale_id]["inputs"]["width"] == expected_width
+    assert workflow[scale_id]["inputs"]["height"] == expected_height
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:dimensions-are-written-by-injection"
+)
+@pytest.mark.parametrize("builder", [png_bytes, jpeg_bytes])
+@pytest.mark.parametrize(("width", "height"), [(1600, 1200), (1200, 1600), (900, 900)])
+def test_dimensions_are_read_from_landscape_portrait_and_square_headers(
+    builder: Callable[[int, int], bytes], width: int, height: int, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "photo.bin", builder(width, height))
+    assert image_dimensions(path) == (width, height)
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:unreadable-dimensions-are-refused"
+)
+@pytest.mark.parametrize(
+    ("name", "data"),
+    [
+        ("truncated.png", png_bytes(1600, 1200)[:20]),
+        ("truncated.jpg", jpeg_bytes(1600, 1200)[:8]),
+        ("not-an-image.txt", b"this is not a photo"),
+        ("empty.jpg", b""),
+    ],
+)
+def test_a_photo_whose_dimensions_cannot_be_read_stops_the_run(
+    name: str, data: bytes, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, name, data)
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    # The message names the file, and there is no fallback size: a silently wrong
+    # resolution is a wrong render rather than an error.
+    assert path in str(excinfo.value)
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:unreadable-dimensions-are-refused"
+)
+def test_injection_stops_when_the_photo_is_not_on_disk(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    missing = str(tmp_path / "absent.jpg")
+
+    with pytest.raises(SystemExit) as excinfo:
+        inject(workflow, image_name="face.png", image_path=missing)
+
+    assert missing in str(excinfo.value)

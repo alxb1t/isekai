@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The manifest: WAI in, verified against the publisher's digest, Animagine still declared
-- [ ] 2 — The working resolution: injection reads the photo and the graph scales before anything else
+- [x] 2 — The working resolution: injection reads the photo and the graph scales before anything else
 - [ ] 3 — The base and the register: `ckpt_name`, the CLIP layer, both prompts, `1girl` out
 - [ ] 4 — Publish `:v0.10-rc`, the image the metered phases boot
 - [ ] 5 — ⚠️ **GPU · HALT** — the probe: ControlNet comparisons, the dials, the gender check
