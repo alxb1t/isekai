@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`ghcr.io/alxb1t/isekai:v0.10-rc` is published**, and it is the image both metered phases boot.
+  The pod provisions from the manifest baked into whatever image it runs, and `:latest` is v0.9's
+  — so a pod on `:latest` would provision v0.9's manifest and never fetch the checkpoint the graph
+  now names. No `Dockerfile` change was needed: `ImageScale` and `CLIPSetLastLayer` are core
+  ComfyUI, so this is a rebuild rather than a change. `:latest` is deliberately **not** touched;
+  CI publishes it from a push to `main` and nowhere else, and the manual dispatch requires a tag
+  and names it "never `latest`", precisely so a pre-release build cannot clobber the image a
+  rollback reaches for. The tag becomes v0.10's on merge, by the mechanism that already exists
+  (`design.md` D8). `RUNPOD_IMAGE` is set in the untracked `.env` and is cleared after the last
+  metered phase, since a stale value would silently pin every later pod to an unreleased image.
+
 ### Changed
 
 - **BREAKING — the base is WAI-illustrious-SDXL v17.0, and the register is its publisher's.** The
