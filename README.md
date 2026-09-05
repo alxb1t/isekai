@@ -19,8 +19,8 @@ learning** are the point.
 
 ## How it works
 
-- **Model:** one path (see below), on open weights — Animagine XL 4.0 with InstantID and an
-  SDXL ControlNet stack.
+- **Model:** one path (see below), on open weights — WAI-illustrious-SDXL v17.0 with InstantID
+  and an SDXL ControlNet stack.
 - **Runtime:** [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in a Docker container.
 - **Compute:** [RunPod](https://www.runpod.io/) GPU pod, **per-second** billing. The Docker
   image runs directly as the pod — no VM to provision.
@@ -56,10 +56,14 @@ Identity is four axes, and each is carried by a mechanism rather than by a sente
 
 | Axis | Carried by |
 |---|---|
-| Face | InstantID — face embedding + keypoints, on an Animagine XL 4.0 base |
+| Face | InstantID — face embedding + keypoints, on a WAI-illustrious-SDXL v17.0 base |
 | Composition | img2img: latent init from the photo (`VAEEncode`, `denoise < 1`) |
 | Pose & structure | a ControlNet stack — Tile → OpenPose → Lineart |
 | Register | the positive prompt, **committed to the graph** and pinned by a test |
+
+Before any of them reads the photo, it is scaled to a working resolution derived from its own
+dimensions: aspect preserved, short side at 1024, both dimensions a multiple of 64. One pixel grid
+feeds the whole graph, so no control hint is registered against a different one.
 
 ## Quickstart
 

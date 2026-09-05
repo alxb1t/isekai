@@ -25,6 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Animagine XL 4.0 leaves the manifest.** It had been the rollback and the probe's comparison
+  base since the WAI entry landed; with the swap proven, a declared checkpoint nothing renders with
+  is a second path in everything but name, which this repository's one-path rule forbids
+  (`design.md` D3). `cagliostrolab` leaves the `publishers` list with it. The manifest is now 15
+  entries and 16.5 GiB, down from 16 and 23.0 GiB. **A re-provision after this point removes
+  Animagine from the volume**, so rolling back to it means reverting the manifest, not just
+  `ckpt_name`.
+
+### Changed
+
+- **`README.md` and `CLAUDE.md` describe an Illustrious base.** The path table and the "How it
+  works" line name WAI-illustrious-SDXL v17.0, the working-resolution rule and the committed CLIP
+  layer are written down, and the ControlNet stack is described as the strength-to-zero comparison
+  left it — including that "changes the render" is not "improves the render", and that tile carries
+  its publisher's animation disclaimer as a known deviation. `1girl`'s defect is recorded as
+  **closed**, with the mechanism that closed it named: the identity node's face embedding, not a
+  tagger. **Neither document makes any claim about identity or quality.**
+
 ### Notes
 
 - **The path runs on WAI-illustrious-SDXL v17.0, at stated input resolutions.** Two photos of

@@ -158,19 +158,30 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## The path
 
-One graph, `workflows/pipeline.json`, on an Animagine XL 4.0 (SDXL anime) base. Nothing about it is typed
-at the command line: the whole required surface is `convert.py photo.jpg`. Identity is four axes, and each
-is carried by a mechanism rather than by a sentence someone types:
+One graph, `workflows/pipeline.json`, on a **WAI-illustrious-SDXL v17.0** (Illustrious/SDXL anime) base.
+Nothing about it is typed at the command line: the whole required surface is `convert.py photo.jpg`.
+Identity is four axes, and each is carried by a mechanism rather than by a sentence someone types:
 
 - **Face** — InstantID + InsightFace: face embedding and keypoints. `ip_weight` is its dial.
 - **Composition** — **img2img**: latent init from the photo (`VAEEncode`, `denoise < 1`). `denoise` is the
   identity↔style dial.
 - **Pose and structure** — a **ControlNet stack** (tile → OpenPose → Lineart), each with its own tuned
-  strength.
-- **Register** — the positive prompt, **committed to the graph** and pinned by equality in the suite, so
-  changing it is a deliberate test edit. `1girl, solo` is the Danbooru mode selector for this base; that
-  `1girl` fixes the gender of every input photo is a known defect, recorded in `CHANGELOG.md` and owned by
-  the version that changes the base.
+  strength. All three were kept in v0.10 on a strength-to-zero comparison at a fixed seed: each measurably
+  changes the render, so none is deletable with evidence. That is *changes*, not *improves*. Tile carries
+  its publisher's "no comic, animation application are promised" disclaimer as a known deviation.
+- **Register** — both prompts, **committed to the graph** and pinned by equality in the suite, so changing
+  either is a deliberate test edit. They are the base publisher's own: the content tags with WAI's ladder
+  appended last, and WAI's short negative, which its model page asks for in the same breath as warning that
+  long negatives reduce quality. `solo` is the Danbooru mode selector; **`1girl` is gone**, and the gender
+  it used to assert now comes from the identity node's face embedding — a mechanism already in the graph.
+  v0.8's defect is closed, and the check that closed it is falsifiable: a male photo yields a
+  male-presenting output.
+
+Before any of those read the photo, an `ImageScale` node puts it on one working resolution, computed by
+injection from the photo's own JPEG or PNG header: aspect preserved, short side at 1024, both dimensions a
+multiple of 64, in both directions. No node available here can derive that, and a header it cannot read
+stops the run rather than defaulting. A `CLIPSetLastLayer` at -2 feeds both text encoders, because every
+published WAI v17 sample generates at clip skip 2 and none of its prose says so.
 
 ---
 

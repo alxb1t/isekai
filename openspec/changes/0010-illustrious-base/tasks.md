@@ -9,7 +9,7 @@
 - [x] 5 — ⚠️ **GPU · HALT** — the probe: ControlNet comparisons, the dials, the gender check
 - [x] 6 — Apply the probe's verdicts: the dials into the graph, tile kept or dropped
 - [x] 7 — ⚠️ **GPU · HALT** — the final renders on WAI, at stated input resolutions
-- [ ] 8 — Animagine leaves, and the docs describe an Illustrious base
+- [x] 8 — Animagine leaves, and the docs describe an Illustrious base
 
 ## The per-phase ritual
 

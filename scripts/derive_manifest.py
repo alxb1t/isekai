@@ -32,7 +32,6 @@ PINNED = "2026-09-05"
 # Hugging Face orgs that publish the artifact they serve. A primary source outside
 # this set is a mirror, and a mirror must declare an alternate (design.md D10).
 PUBLISHERS = (
-    "cagliostrolab",
     "InstantX",
     "TTPlanet",
     "xinsir",
@@ -104,7 +103,6 @@ WAI_ALTS = (
     ("zhuhai1234/waiIllustriousSDXL-dimo", "606eb271fcd4ff213272f0e1a1c4bcdaf4d19475"),
 )
 
-ANIMAGINE = "2b7c1b397761bf5bd3cc42e5b39ec99314a75a96"
 # From the sibling project, which pins the same repo and the same files (design.md D2).
 INSTANTID = "57b32dfee076092ad2930c71fd6d439c2c3b1820"
 ANTELOPE = "ba0c3e10f4548361eb9a63265d87ce1140ab5a05"
@@ -136,19 +134,6 @@ SPECS: tuple[Spec, ...] = (
             *(Source(repo, revision, WAI_FILE) for repo, revision in WAI_ALTS),
         ),
         WAI_SHA256,
-    ),
-    # Animagine stays declared until the swap is proven: it is the rollback and the
-    # probe's comparison base, and it leaves in this change's final phase (design.md
-    # D3).
-    Spec(
-        "checkpoints/animagine-xl-4.0.safetensors",
-        (
-            Source(
-                "cagliostrolab/animagine-xl-4.0",
-                ANIMAGINE,
-                "animagine-xl-4.0.safetensors",
-            ),
-        ),
     ),
     Spec(
         "instantid/ip-adapter.bin",

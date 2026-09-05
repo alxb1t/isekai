@@ -1,7 +1,6 @@
 {
   "pinned": "2026-09-05",
   "publishers": [
-    "cagliostrolab",
     "InstantX",
     "TTPlanet",
     "xinsir",
@@ -21,14 +20,6 @@
         "https://huggingface.co/hiusduh/waiIllustriousSDXL_v170/resolve/3e2d67a43d078b1860fbc80984235906b1823101/waiIllustriousSDXL_v170.safetensors",
         "https://huggingface.co/yufusoft/WAI-illustrious-SDXL/resolve/921c723bf2d4e7350f80a362c9de8a23c1377fc9/waiIllustriousSDXL_v170.safetensors",
         "https://huggingface.co/zhuhai1234/waiIllustriousSDXL-dimo/resolve/606eb271fcd4ff213272f0e1a1c4bcdaf4d19475/waiIllustriousSDXL_v170.safetensors"
-      ]
-    },
-    {
-      "dest": "checkpoints/animagine-xl-4.0.safetensors",
-      "sha256": "1d5b43ff75b6ab598502d4c779d2fbfa3dceca51c60c3b609640a60772333916",
-      "bytes": 6938434056,
-      "sources": [
-        "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/2b7c1b397761bf5bd3cc42e5b39ec99314a75a96/animagine-xl-4.0.safetensors"
       ]
     },
     {
