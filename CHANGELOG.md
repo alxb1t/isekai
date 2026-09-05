@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-05
+
 ### Fixed
 
 - **A rotated phone photo is measured as it will be loaded, not as its header states.** ComfyUI's
