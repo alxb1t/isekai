@@ -25,6 +25,212 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-05
+
+### Changed
+
+- **The ordered fallback list is now walked at transfer time, not only at pre-flight.** A FETCH
+  plan line carries every source that survived the pre-flight, in the manifest's order, and the
+  driver walks them: a dead mirror or bytes that fail verification advance to the next source, and
+  only exhausting all of them aborts the entry. Previously the plan named a single URL, so the one
+  failure the alternates existed for — a mirror that has gone away, which the pre-flight cannot
+  distinguish from "publishes no digest" — aborted the pod boot with the alternate untouched
+  (`design.md` D16).
+- **A provisioning abort now holds the pod open instead of stopping the container.** `start.sh`
+  guards the provisioning call; on failure it prints the reason and `exec`s a foreground hold with
+  `sshd` still alive, ComfyUI not started and nothing deleted. Under `set -e` the non-zero exit
+  previously killed PID 1 and took the SSH daemon with it, so the file the abort policy leaves "on
+  disk for a human to inspect" was unreachable and every re-boot died at the same line
+  (`design.md` D17).
+- **The stack now provisions from the manifest alone, and the unchanged path renders off it.**
+  One pod, 23.3 minutes of wall clock, on a volume created empty for this purpose. All 15 entries
+  were fetched from their pinned `resolve/<sha>/` URLs and SHA-256 verified before landing; the
+  volume ended holding **exactly the manifest and nothing else** — 15 files, 16.51 GiB, every size
+  byte-identical to its declared `bytes`, zero `.partial` files, zero unexpected extras. Then
+  `convert.py` rendered the untouched Animagine path: exit 0, `0.png`–`4.png` and `run.json`.
+  Cost: 23.3 minutes at the pod's quoted $0.72/hr is ~$0.28, and RunPod's billing aggregate had
+  not settled at the time of writing — it still reported the pre-session figure. The operator
+  raised this session's ceiling to ~$0.48 in advance; the wall-clock figure is inside it.
+  **What this establishes is exactly two things**: that the stack is reproducible from a pinned
+  manifest, and that the unchanged path renders from a volume whose entire contents were placed
+  by the script. It establishes **nothing** about identity, fidelity, quality or the base —
+  `ckpt_name` is still Animagine XL 4.0 and the graph, the CLI and the transport are untouched.
+- **The skip path was proven on the warm volume, in the same session.** Re-running the driver
+  printed `skip (present, verified)` for all 15 — each one re-hashed off the volume and compared,
+  not accepted by name. That is the case a pinned manifest exists for and the one a
+  download-path-only check would never reach.
+- **The annotator redirect was confirmed on the filesystem, and the log did contradict it** —
+  exactly as `design.md` D7 warned. `comfyui_controlnet_aux` printed
+  `Using ckpts path: /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux/ckpts`, its pre-override
+  value, while `/proc/<pid>/environ` on the running ComfyUI showed
+  `AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts` and all four checkpoints sat on
+  the volume under it. Trusting the log would have produced the wrong conclusion. Note also that
+  the variable reads **empty in an SSH session**, because a login shell does not inherit Docker
+  `ENV`; only the container's main process does, which is why `/proc` is the check and not `echo`.
+- **The 80 GB volume was destroyed**, after and only after that render. Confirmed through the
+  RunPod MCP: `204` on delete, absent from the volume list, `404 network volume not found` on
+  lookup. The replacement is 40 GB, sized from both projects' manifests (~27.3 GiB together).
+
+### Removed
+
+- **`ghcr.io/alxb1t/isekai:latest` was not touched by this phase.** The metered pod ran
+  `:v0.9-rc`, published by a manual CI run, and the two tags resolve to different digests — so the
+  image a rollback would reach for is still the released v0.8 one.
+
+### Added
+
+- **The 62 GB models volume was inventoried, and nothing on it is unaccounted for.** One pod,
+  read-only, 6.6 minutes of wall clock; teardown confirmed through the RunPod MCP, which returned
+  an empty pod list and `404 pod not found` for the pod's id. On cost the two available figures
+  disagree and both are recorded rather than one being chosen: 6.6 minutes at the pod's quoted
+  $0.72/hr is $0.08, while RunPod's daily aggregate reports $0.19 of pod GPU for the day, and the
+  per-pod hourly breakdown had not settled at the time of writing. Either figure is inside the
+  ceiling. 48 files, 55.85 GiB, classified
+  exhaustively:
+
+  | class | files | size | |
+  |---|---|---|---|
+  | placed by this project's script | 11 | 16.15 GiB | every non-annotator entry of the v0.9 manifest |
+  | placed by the sibling project | 10 | 10.81 GiB | nested one level deeper, under `models/` |
+  | orphaned Qwen weights | 4 | 28.89 GiB | removed from the script by v0.8, never from disk |
+  | staging and cache leftovers | 23 | ~1 KB | the `.hf` tree, three `.cache/huggingface` trees, one 0-byte `.partial` |
+  | **unaccounted for** | **0** | **—** | **the gate on phase 9's destroy** |
+
+  Both projects' scripts are pinned and checksummed, so everything the first two classes hold is
+  re-downloadable; the remaining 28.89 GiB answers to nothing.
+- **The annotator gap is confirmed empirically.** All four annotator checkpoints —
+  `yolox_l.onnx`, `dw-ll_ucoco_384_bs5.torchscript.pt`, `sk_model.pth`, `sk_model2.pth` — are
+  **absent from the volume**. They were being re-fetched to container disk on every pod's first
+  render, exactly as the proposal argued from reading the graph.
+- **The antelopev2 pin is confirmed from the volume itself.** The leftover cache tree names
+  `ba0c3e10f4548361eb9a63265d87ce1140ab5a05` — the same DIAMONIK7777 revision the manifest pins,
+  recorded independently by a download this change did not make.
+- **The volume was extended from 62 GB to 80 GB** by the operator during this phase, so the
+  "98% full" pressure recorded in `proposal.md` is relieved. It does not change the plan: the
+  volume is still replaced rather than pruned, because pruning proves nothing about the manifest.
+- **Correction to `proposal.md` and `design.md`: the two repositories' `.env` files do *not*
+  disagree.** Both name the same volume id, and it is the account's only volume. What differs is
+  the **key name** — this repo uses `RUNPOD_VOLUME_ID`, the sibling `RUNPOD_NETWORK_VOLUME_ID` —
+  which is almost certainly what was mistaken for a stale id. There is no stale id to reconcile;
+  phase 9 still updates both.
+- **Phase 9's open question is answered.** Both manifests together are ~27.3 GiB
+  (this project 16.5 GiB across 15 entries, the sibling 10.8 GiB), so the new volume needs
+  roughly 40 GB for comfortable headroom — half of what the current one now carries, once the
+  orphaned Qwen weights are gone.
+
+- **`README.md` and `CLAUDE.md` describe a pinned stack.** The weights line now says the stack is
+  provisioned from a pinned, checksummed manifest and that the volume is namespaced per project;
+  the layout gains `scripts/models.json`, `scripts/derive_manifest.py` and `isekai/provision.py`;
+  the pod-lifecycle diagram shows the `/runpod-volume` mount and the namespace symlink.
+  `CLAUDE.md` records that the living spec goes to five capabilities when `model-provisioning` is
+  archived, and that `provision.py` is not in `convert.py`'s import graph, so the stdlib-only
+  runtime rule is untouched. **No claim is made about identity, quality or the base** — this
+  version changed none of them. The five-command gate array is unchanged.
+
+- **The volume mounts at `/runpod-volume` and the models directory is one symlink into this
+  project's namespace.** `infra/up.sh`'s `volumeMountPath` moves off `/opt/ComfyUI/models`, and
+  `start.sh` points `/opt/ComfyUI/models` at `/runpod-volume/isekai`. Because
+  `folder_paths.models_dir` is then itself inside the namespace, **every** node resolves there —
+  including the InstantID node and the Impact Subpack, which ignore `extra_model_paths.yaml` and,
+  unredirected, auto-download a broken nested antelopev2 pack. One symlink also makes a scratch
+  namespace and a rollback the same operation.
+- **The volume is shared, so nothing here reaches outside `/runpod-volume/isekai`.** Artifacts
+  the sibling project also uses are duplicated rather than shared: at $0.07/GB/month that is
+  about 32¢/month, and it keeps this project's manifest describing bytes this project's pins
+  control.
+
+- **`AUX_ANNOTATOR_CKPTS_PATH` moves 386 MB of annotator checkpoints onto the volume.**
+  `comfyui_controlnet_aux` writes them to `<node dir>/ckpts` — the pod's container disk, which
+  does not survive the pod — so `yolox_l.onnx`, `dw-ll_ucoco_384_bs5.torchscript.pt`,
+  `sk_model.pth` and `sk_model2.pth` were re-fetched from Hugging Face, unpinned, during the
+  first render of every pod, on metered time. Redirected onto the models tree they are ordinary
+  manifest entries, fetched and verified ahead of time. The pack reads the variable as
+  `os.getenv(NAME, default)`, so the environment wins over its own `config.yaml`.
+- **⚠️ The pack's own log cannot confirm this.** It prints `Using ckpts path: …` from the
+  *config-derived* value, not from the override, so it will report the old path while writing to
+  the new one. Confirmation is a directory listing on the pod, never a log line. A future reader
+  will otherwise reach for the log and conclude the redirect failed.
+
+### Added
+
+- **The graph and the manifest are bound by a test.** Every model filename `pipeline.json` names
+  in a node's input must have a manifest entry, matched against the tail of a destination so
+  `instantid/diffusion_pytorch_model.safetensors` and `openpose/diffusion_pytorch_model.safetensors`
+  stay two files rather than one. This is the only mechanism that would have caught the annotator
+  gap, and the only one that stops it reopening when v0.10 edits the graph.
+- **A tracked mapping from node class to the files that node fetches for itself**
+  (`PREPROCESSOR_MODELS`), carrying the half of the binding the graph cannot supply.
+  `LineArtPreprocessor` names no file and downloads two. A graph containing a preprocessor whose
+  class is absent from the mapping **fails** rather than passing silently — an unmapped
+  preprocessor is an unknown quantity, not a safe default. An empty tuple is a real answer:
+  `TilePreprocessor` fetches nothing, and `DWPreprocessor` names its two files in its own inputs.
+  The reverse direction is deliberately not asserted — the manifest legitimately carries the
+  antelopev2 pack, which `InstantIDFaceAnalysis` resolves by directory and no graph field names.
+
+### Changed
+
+- **`scripts/download_models.sh` is a thin driver over the manifest.** It asks
+  `provision.py` for a plan, runs `wget` for whatever URL it is handed, and asks the module to
+  verify and land the result. Every entry is decided before any byte moves, so a mismatch on a
+  warm volume stops the run instead of surfacing halfway through a 6.9 GB transfer. The inline
+  per-model shell variables are gone — every source is now a URL string the manifest carries and
+  the suite can inspect.
+- **The image carries provisioning's three files, not one.** The `Dockerfile` copied only the
+  script; it now also copies `scripts/models.json` and `isekai/provision.py`, preserving their
+  relative layout because the module resolves the manifest relative to itself. `start.sh` invokes
+  the driver at its new path.
+- **`wget` is installed in the image.** The previous downloader used the `hf` CLI, so the image
+  never needed it; the ported one does, and the image shipped `curl` alone.
+- **Pre-flight does not follow the redirect.** `resolve/<sha>/<path>` answers 302 and carries
+  `x-linked-etag` on *that* response — the CDN it points at does not repeat it — so following the
+  redirect loses the header and silently degrades every entry to post-download verification. All
+  fifteen entries were confirmed live to pre-flight and match.
+
+### Removed
+
+- **The `hf` CLI dependency.** Sources are plain `resolve/<commit-sha>/` URLs fetched with
+  `wget`. The cost is `hf`'s resumable, parallel transfer; the `.partial` discipline means an
+  interrupted transfer restarts from zero rather than being trusted.
+
+### Added
+
+- **The provisioning policy, in `isekai/provision.py` and reachable by `pytest`.** For each
+  manifest entry the module returns exactly one decision: **skip** (present and its digest
+  matches), **abort** (present and it does not — and the file is *left on disk*, because the
+  volume is shared and a file this run did not write is not this run's to remove), or **fetch**
+  from a named source. A file already at its destination is hashed, never taken on its name:
+  verification that ran only on the download path would leave a warm volume permanently
+  unchecked, which is the case the digest exists for. `land()` verifies a transferred file and
+  only then moves it into place, so an interrupted or tampered transfer never occupies the final
+  name — the next run sees the file as absent rather than as present-and-trusted.
+- **A pre-flight seam.** Hugging Face publishes a file's SHA-256 in the `x-linked-etag` response
+  header, so a source whose published digest already disagrees with the manifest is rejected in a
+  second rather than after a multi-gigabyte transfer, and the entry's next declared source is
+  offered instead. This is an optimisation, never a check: a source that publishes nothing — or
+  a header that cannot be read — degrades to download-and-post-verify, never to trust. The seam
+  is injected and `FakeFetcher` is what keeps the suite offline, the same argument and the same
+  shape as `FakeComfyClient`.
+- **`scripts/models.json`, a pinned and checksummed manifest of every model artifact the
+  shipped graph needs — fifteen files across eleven sources.** Each entry names a destination
+  under the models tree, a SHA-256, and an ordered list of `resolve/<commit-sha>/` URLs, so a
+  source addresses bytes that cannot move. Four of the entries are the annotator checkpoints
+  `DWPreprocessor` and `LineArtPreprocessor` fetched for themselves at graph-execution time —
+  386 MB that nothing in this repository named, and that every fresh pod re-downloaded onto
+  ephemeral disk during a metered render. `LineArtPreprocessor` fetches both `sk_model.pth` and
+  `sk_model2.pth` unconditionally, regardless of the graph's `coarse: "disable"`, so both are
+  declared.
+- **`scripts/derive_manifest.py`, the helper that produced it.** Digests are *derived*, never
+  transcribed: Hugging Face publishes each LFS object's SHA-256 as its object id, so no artifact
+  is downloaded to learn its digest, and every alternate source is cross-checked against its
+  primary at derivation time. Revisions are data in the helper rather than resolved from a
+  branch, so re-running it is byte-identical — `git diff --exit-code scripts/models.json` is the
+  check that the tool and the committed data have not diverged.
+- **`isekai/provision.py`, the manifest's reader and its offline checks** — no source resolves a
+  mutable ref, every entry carries a well-formed SHA-256, and every entry whose primary source is
+  a mirror rather than the artifact's publisher declares an alternate. Each check is proven
+  against a deliberately malformed entry as well as against the tracked file. The module is
+  stdlib-only (`json`, `re`, `pathlib`) and is not in `convert.py`'s import graph.
+
 ## [0.8.0] - 2026-09-04
 
 ### Removed

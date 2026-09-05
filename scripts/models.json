@@ -1,0 +1,140 @@
+{
+  "pinned": "2026-09-04",
+  "publishers": [
+    "cagliostrolab",
+    "InstantX",
+    "TTPlanet",
+    "xinsir",
+    "TheMistoAI",
+    "lllyasviel"
+  ],
+  "entries": [
+    {
+      "dest": "checkpoints/animagine-xl-4.0.safetensors",
+      "sha256": "1d5b43ff75b6ab598502d4c779d2fbfa3dceca51c60c3b609640a60772333916",
+      "bytes": 6938434056,
+      "sources": [
+        "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/2b7c1b397761bf5bd3cc42e5b39ec99314a75a96/animagine-xl-4.0.safetensors"
+      ]
+    },
+    {
+      "dest": "instantid/ip-adapter.bin",
+      "sha256": "02b3618e36d803784166660520098089a81388e61a93ef8002aa79a5b1c546e1",
+      "bytes": 1691134141,
+      "sources": [
+        "https://huggingface.co/InstantX/InstantID/resolve/57b32dfee076092ad2930c71fd6d439c2c3b1820/ip-adapter.bin"
+      ]
+    },
+    {
+      "dest": "controlnet/instantid/diffusion_pytorch_model.safetensors",
+      "sha256": "c8127be9f174101ebdafee9964d856b49b634435cf6daa396d3f593cf0bbbb05",
+      "bytes": 2502139136,
+      "sources": [
+        "https://huggingface.co/InstantX/InstantID/resolve/57b32dfee076092ad2930c71fd6d439c2c3b1820/ControlNetModel/diffusion_pytorch_model.safetensors"
+      ]
+    },
+    {
+      "dest": "insightface/models/antelopev2/1k3d68.onnx",
+      "sha256": "df5c06b8a0c12e422b2ed8947b8869faa4105387f199c477af038aa01f9a45cc",
+      "bytes": 143607619,
+      "sources": [
+        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/ba0c3e10f4548361eb9a63265d87ce1140ab5a05/1k3d68.onnx",
+        "https://huggingface.co/MonsterMMORPG/InstantID_Models/resolve/397cafa6d8310e96e302e96528c20a4c92a884f2/models/antelopev2/1k3d68.onnx"
+      ]
+    },
+    {
+      "dest": "insightface/models/antelopev2/2d106det.onnx",
+      "sha256": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf",
+      "bytes": 5030888,
+      "sources": [
+        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/ba0c3e10f4548361eb9a63265d87ce1140ab5a05/2d106det.onnx",
+        "https://huggingface.co/MonsterMMORPG/InstantID_Models/resolve/397cafa6d8310e96e302e96528c20a4c92a884f2/models/antelopev2/2d106det.onnx"
+      ]
+    },
+    {
+      "dest": "insightface/models/antelopev2/genderage.onnx",
+      "sha256": "4fde69b1c810857b88c64a335084f1c3fe8f01246c9a191b48c7bb756d6652fb",
+      "bytes": 1322532,
+      "sources": [
+        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/ba0c3e10f4548361eb9a63265d87ce1140ab5a05/genderage.onnx",
+        "https://huggingface.co/MonsterMMORPG/InstantID_Models/resolve/397cafa6d8310e96e302e96528c20a4c92a884f2/models/antelopev2/genderage.onnx"
+      ]
+    },
+    {
+      "dest": "insightface/models/antelopev2/glintr100.onnx",
+      "sha256": "4ab1d6435d639628a6f3e5008dd4f929edf4c4124b1a7169e1048f9fef534cdf",
+      "bytes": 260665334,
+      "sources": [
+        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/ba0c3e10f4548361eb9a63265d87ce1140ab5a05/glintr100.onnx",
+        "https://huggingface.co/MonsterMMORPG/InstantID_Models/resolve/397cafa6d8310e96e302e96528c20a4c92a884f2/models/antelopev2/glintr100.onnx"
+      ]
+    },
+    {
+      "dest": "insightface/models/antelopev2/scrfd_10g_bnkps.onnx",
+      "sha256": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91",
+      "bytes": 16923827,
+      "sources": [
+        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/ba0c3e10f4548361eb9a63265d87ce1140ab5a05/scrfd_10g_bnkps.onnx",
+        "https://huggingface.co/MonsterMMORPG/InstantID_Models/resolve/397cafa6d8310e96e302e96528c20a4c92a884f2/models/antelopev2/scrfd_10g_bnkps.onnx"
+      ]
+    },
+    {
+      "dest": "controlnet/TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors",
+      "sha256": "3d7db14f6b82c981f506be138774f6d9324dd2087a193e79682b4856ec90a622",
+      "bytes": 2502139104,
+      "sources": [
+        "https://huggingface.co/TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic/resolve/37f1c4575b543fb2036e39f5763d082fdd135318/TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors"
+      ]
+    },
+    {
+      "dest": "controlnet/openpose/diffusion_pytorch_model.safetensors",
+      "sha256": "b8524e557a7df60d081f5d4a0eb109967d107df217943bf88c2d99b9ebcc06c5",
+      "bytes": 2502139104,
+      "sources": [
+        "https://huggingface.co/xinsir/controlnet-openpose-sdxl-1.0/resolve/23f966cd5cfdd3f7729c903e243d87152162d2b7/diffusion_pytorch_model.safetensors"
+      ]
+    },
+    {
+      "dest": "controlnet/mistoLine_rank256.safetensors",
+      "sha256": "6c46c871a49bf9e74114f0e1f87d818426203fd62847e78043e4ce2d40834d53",
+      "bytes": 774423024,
+      "sources": [
+        "https://huggingface.co/TheMistoAI/MistoLine/resolve/1d9d0b3d48b295cf70d80a0f839a3055672f8393/mistoLine_rank256.safetensors"
+      ]
+    },
+    {
+      "dest": "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx",
+      "sha256": "7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411",
+      "bytes": 216746733,
+      "sources": [
+        "https://huggingface.co/yzd-v/DWPose/resolve/1a7144101628d69ee7a3768d1ee3a094070dc388/yolox_l.onnx",
+        "https://huggingface.co/hr16/yolox-onnx/resolve/a124b32c3b7c5cebda1c7cd96178f0f9d2050125/yolox_l.onnx"
+      ]
+    },
+    {
+      "dest": "annotator_ckpts/hr16/DWPose-TorchScript-BatchSize5/dw-ll_ucoco_384_bs5.torchscript.pt",
+      "sha256": "d86a0b2b59fddc0901a7076e9f59c9f8602602133ed72511c693fd11eea23d91",
+      "bytes": 135059124,
+      "sources": [
+        "https://huggingface.co/hr16/DWPose-TorchScript-BatchSize5/resolve/359d662a9b33b73f6d0f21732baf8845f17bb4be/dw-ll_ucoco_384_bs5.torchscript.pt",
+        "https://huggingface.co/Pictorial/DWPose-TorchScript-BatchSize5/resolve/31098820c4d5d126b92e28517380ea1b088f8d53/dw-ll_ucoco_384_bs5.torchscript.pt"
+      ]
+    },
+    {
+      "dest": "annotator_ckpts/lllyasviel/Annotators/sk_model.pth",
+      "sha256": "c686ced2a666b4850b4bb6ccf0748031c3eda9f822de73a34b8979970d90f0c6",
+      "bytes": 17173511,
+      "sources": [
+        "https://huggingface.co/lllyasviel/Annotators/resolve/982e7edaec38759d914a963c48c4726685de7d96/sk_model.pth"
+      ]
+    },
+    {
+      "dest": "annotator_ckpts/lllyasviel/Annotators/sk_model2.pth",
+      "sha256": "30a534781061f34e83bb9406b4335da4ff2616c95d22a585c1245aa8363e74e0",
+      "bytes": 17173511,
+      "sources": [
+        "https://huggingface.co/lllyasviel/Annotators/resolve/982e7edaec38759d914a963c48c4726685de7d96/sk_model2.pth"
+      ]
+    }
+  ]
+}
