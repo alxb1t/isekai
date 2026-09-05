@@ -83,3 +83,54 @@ the negative removed a push *away* from the photograph, and these outputs read a
 digital painting rather than flat anime screencap**. The register also lost `1girl`, which
 under-specifies further (D5's stated risk). Neither is a reason to reinstate a gender tag. It is the
 first finding for the evaluator version, which is the one that can measure it.
+
+---
+
+# Phase 7 — the final renders on WAI, at stated input resolutions
+
+A second pod session, same image, no rebuild: nothing dropped out of the graph in phase 6, so the
+manifest `:v0.10-rc` carries still matches it. WAI was already on the volume, so ComfyUI answered
+67 seconds after boot rather than after a 7-minute download.
+
+| | |
+|---|---|
+| Pod | `x6uekk15wpmjso` |
+| Created | 2026-09-05T13:56:19Z |
+| Torn down | 2026-09-05T14:04:42Z |
+| Wall clock | **8 min 23 s** (ceiling 45 min) |
+| Rate / cost | $0.72/hr → **$0.10** (ceiling ~$0.30) |
+| Teardown confirmed | RunPod MCP `get-pod` → `404 {"detail":"pod not found"}`; `list-pods` → `{"items": [], "total": 0}` |
+
+`RUNPOD_IMAGE` was cleared from the untracked `.env` afterwards. A stale value silently pins every
+later pod to an unreleased image.
+
+Two photos, two aspect ratios, the full `convert.py` path at its default five variations and a fixed
+`--seed 7`. Both runs exited 0 and wrote `0.png`–`4.png` plus `run.json`.
+
+| Photo | Input | Aspect | Rendered | Run |
+|---|---|---|---|---|
+| `darya_original.jpeg` | 982×1559 | 1:1.588 | **1024×1600**, all five | `final-darya.run.json` |
+| `synthetic_portrait_00004_.png` | 832×1216 | 1:1.462 | **1024×1472**, all five | `final-synthetic.run.json` |
+
+Every rendered dimension equals the target `working_resolution` computes from the photo's own
+header — the first live confirmation of phase 2's scale node and header parser, on real files
+rather than fixtures. **Both photos were scaled up** (832 and 982 short sides, to 1024), so these
+two exercise only that direction. A photo above 1024 on its short side is not covered here; the
+down direction is proven by the suite and not on a GPU.
+
+## What this establishes, and what it does not
+
+**Establishes:** the path runs end to end on WAI-illustrious-SDXL v17.0, at the two stated input
+resolutions, through the unmodified CLI, writing five variations and a run manifest per photo.
+
+**Does not establish** — stated because v0.8's Verified block implied a generality it never tested:
+
+- **Nothing about identity, fidelity or quality.** No evaluator exists; none was run.
+- **Not that the chosen dials are good**, let alone optimal. They are a preference from four
+  renders (phase 5).
+- **Not that any ControlNet improves the output** — only that each retained one measurably changes
+  it.
+- **Not that the register improves anything.** What the register change earned is one falsifiable
+  result: a male photo yields a male-presenting output.
+- **Not that the path runs at any resolution.** Two portrait inputs, both below the working scale.
+  A landscape photo and a photo above 1024 on its short side are untested.

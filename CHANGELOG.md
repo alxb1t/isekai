@@ -25,6 +25,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Notes
+
+- **The path runs on WAI-illustrious-SDXL v17.0, at stated input resolutions.** Two photos of
+  different aspect ratios through the unmodified `convert.py`, both exiting 0 and writing
+  `0.png`–`4.png` plus `run.json`: 982×1559 rendered at **1024×1600** and 832×1216 at
+  **1024×1472**, every variation. Each rendered dimension equals the target the injector computes
+  from the photo's own header — the first live confirmation of the scale node on real files.
+  Session 8 min 23 s at $0.72/hr = **$0.10**; teardown confirmed through the RunPod MCP (`get-pod`
+  → 404 "pod not found", `list-pods` → 0 items). `RUNPOD_IMAGE` was cleared from `.env` afterwards.
+- **What this version does not establish**, stated plainly because v0.8's Verified block implied a
+  generality it never tested: **nothing** about identity, fidelity or quality — no evaluator exists
+  and none was run; **not** that the chosen dials are good, let alone optimal; **not** that any
+  ControlNet improves output, only that each retained one measurably changes it; **not** that the
+  register improves anything. It also does not establish that the path runs at *any* resolution —
+  both photos were portrait and both below the working scale, so a landscape input and a photo
+  above 1024 on its short side remain untested on a GPU.
+  What it establishes is that the path runs on WAI at the two stated input resolutions, and that a
+  male photo yields a male-presenting output.
+
 ### Changed
 
 - **The probe's verdicts are applied, and both are "no change to the graph".** The chosen
