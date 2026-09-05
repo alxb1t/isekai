@@ -25,6 +25,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING — the base is WAI-illustrious-SDXL v17.0, and the register is its publisher's.** The
+  positive is the content tags with WAI's own ladder appended last, where every published sample
+  puts it; the negative is the publisher's own short form. WAI's page warns that too many quality
+  tags and over-long negative prompts *reduce* image quality, so taking its positive while keeping
+  v0.8's eighteen-token negative would have taken half the guidance and ignored the half stated as
+  a warning (`design.md` D4). One consequence, recorded rather than absorbed: `realistic,
+  photorealistic` is gone from the negative, which removes a push *away* from the photograph on a
+  product whose whole subject is a photograph — if renders come back more photographic than v0.8's,
+  that is the first place to look. Both literals stay pinned by equality, so changing either is a
+  deliberate test edit.
+- **The graph stops CLIP at the second-to-last layer.** Every one of WAI v17's published sample
+  images carries `clipSkip: 2` and none of the publisher's prose mentions it, so a graph without a
+  `CLIPSetLastLayer` ships a configuration the publisher never tested while looking identical to
+  one that does (`design.md` D6). Both text encoders take their CLIP through it — routing only the
+  positive would condition the two halves against different text towers. The value is pinned like
+  the prompt: configuration, not a dial.
+
+### Removed
+
+- **`1girl` is out of the committed positive; `solo` stays.** `solo` is what does the Danbooru
+  mode-selection work, while `1girl` additionally asserted a gender that the identity node's face
+  embedding already carries — so that axis now belongs to a mechanism already in the graph rather
+  than to a tagger that does not exist (`design.md` D5). This closes the defect v0.8 recorded and
+  named a later version as the owner of. **It is not yet demonstrated**: whether a male photo
+  yields a male-presenting output is this version's one falsifiable acceptance criterion for the
+  register change, and it is checked on a pod, not here.
+
+### Notes
+
+- The negative carries one tag beyond the publisher's quoted short form: `nsfw`, which the same
+  model page instructs users to add to filter its four safety-rating tags. On a product that
+  converts photographs of real people, omitting an instruction the publisher gives by name would
+  be a defect rather than fidelity to the quote.
+
 ### Added
 
 - **The photo is scaled to a working resolution before any node reads it.** An `ImageScale` node

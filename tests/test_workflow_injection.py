@@ -94,25 +94,56 @@ def test_inject_wires_the_single_load_image_across_the_stack(
 
 # --- v0.8: the positive prompt is graph configuration -----------------------
 
-# The committed positive string, pinned by equality rather than by a blacklist:
-# "the string holds no subject text" has no mechanical form, and a test asserting
+# The committed prompts, pinned by equality rather than by a blacklist: "the
+# string holds no subject text" has no mechanical form, and a test asserting
 # `"arms crossed" not in text` is defeated silently by any rewrite. Equality
 # makes every future prompt edit a deliberate test edit, which is what makes
-# "not typeable" a property rather than a convention (design.md D7).
+# "not typeable" a property rather than a convention (0008's design.md D7).
 #
-# The register tags -- `1girl, solo` -- are the Danbooru mode selector for this
-# base, not subject text, and are OWNED BY v0.9, the version that changes the
-# base and can probe a replacement against real renders. `1girl` fixing the
-# gender of every input photo is a known, recorded defect of this version.
+# v0.10 rewrote both to WAI's register: the content tags with the publisher's own
+# ladder appended last, and the publisher's own short negative. `1girl` is gone --
+# `solo` is what does the mode-selection work, while `1girl` additionally asserted
+# a gender the identity node's embedding already carries, so that axis now belongs
+# to a mechanism in the graph rather than to a tag (0010's design.md D5). That
+# closes the defect v0.8 recorded; v0.9 changed no base and decided no register.
 COMMITTED_POSITIVE = (
-    "1girl, solo, anime screencap, detailed eyes, soft lighting, "
-    "masterpiece, high score, great score"
+    "solo, anime screencap, detailed eyes, soft lighting, "
+    "masterpiece, best quality, amazing quality"
 )
+
+# The publisher's short form, plus the `nsfw` tag the same model page instructs
+# users to add. Deliberately short: WAI's page warns that over-long negatives
+# reduce image quality, so taking its positive while keeping v0.8's eighteen-token
+# negative would have taken half the guidance and ignored the half stated as a
+# warning. One consequence is recorded rather than absorbed -- `realistic,
+# photorealistic` is gone, which removes a push away from the photograph on a
+# product whose whole subject is a photograph (design.md D4).
+COMMITTED_NEGATIVE = "bad quality, worst quality, worst detail, sketch, censor, nsfw"
+
+# Tags that name the subject's gender. The register must select the single-subject
+# mode without deciding who the photo is of.
+GENDER_TAGS = ("1girl", "1boy", "girl", "boy", "male", "female", "woman", "man")
+
+# Clip skip 2, in ComfyUI's negative-index spelling. Every published WAI v17 sample
+# generates at it and none of the publisher's prose mentions it, so a graph that
+# does not set it ships a configuration the publisher never tested while looking
+# identical to one that does (design.md D6).
+COMMITTED_CLIP_LAYER = -2
 
 
 @pytest.mark.spec("workflow-injection:committed-prompt:string-is-pinned")
 def test_the_committed_positive_string_is_pinned(workflow: Workflow) -> None:
     assert workflow["3"]["inputs"]["text"] == COMMITTED_POSITIVE
+
+
+@pytest.mark.spec("workflow-injection:committed-prompt:asserts-no-gender")
+def test_the_committed_positive_asserts_no_gender(workflow: Workflow) -> None:
+    # Read the shipped graph, not the literal above. `solo` is the mode selector
+    # and names no gender; the axis `1girl` used to fix is carried by the face
+    # embedding the identity node computes, which is documented as holding it.
+    tags = [tag.strip() for tag in workflow["3"]["inputs"]["text"].split(",")]
+    assert "solo" in tags
+    assert not [tag for tag in tags if tag in GENDER_TAGS]
 
 
 @pytest.mark.spec("workflow-injection:committed-prompt:carries-no-pose-tag")
@@ -150,7 +181,7 @@ def test_injection_leaves_the_negative_encoder_as_the_graph_committed_it(
     before = workflow["4"]["inputs"]["text"]
     inject(workflow, image_name="face.png", image_path=photo)
     assert workflow["4"]["inputs"]["text"] == before
-    assert before.startswith("lowres, bad anatomy")
+    assert before == COMMITTED_NEGATIVE
 
 
 # --- v0.10: the photo is scaled to a working resolution ---------------------
@@ -297,3 +328,21 @@ def test_injection_stops_when_the_photo_is_not_on_disk(
         inject(workflow, image_name="face.png", image_path=missing)
 
     assert missing in str(excinfo.value)
+
+
+@pytest.mark.spec(
+    "workflow-injection:clip-layer:conditioning-stops-at-the-expected-layer"
+)
+def test_both_encoders_take_their_clip_through_the_committed_layer(
+    workflow: Workflow,
+) -> None:
+    loader_id = find_node(workflow, class_type="CheckpointLoaderSimple")
+    clip_id = find_node(workflow, class_type="CLIPSetLastLayer")
+
+    assert workflow[clip_id]["inputs"]["clip"] == [loader_id, 1]
+    assert workflow[clip_id]["inputs"]["stop_at_clip_layer"] == COMMITTED_CLIP_LAYER
+
+    # Both encoders, not one: a graph where only the positive is routed through
+    # the layer node conditions the two halves against different text towers.
+    for encoder_id in ("3", "4"):
+        assert workflow[encoder_id]["inputs"]["clip"] == [clip_id, 0]
