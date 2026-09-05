@@ -27,7 +27,7 @@ from typing import NamedTuple, TypedDict
 MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
-PINNED = "2026-09-04"
+PINNED = "2026-09-05"
 
 # Hugging Face orgs that publish the artifact they serve. A primary source outside
 # this set is a mirror, and a mirror must declare an alternate (design.md D10).
@@ -71,13 +71,38 @@ class Source(NamedTuple):
 
 
 class Spec(NamedTuple):
-    """A destination under the models tree, and the ordered sources that fill it."""
+    """A destination under the models tree, and the ordered sources that fill it.
+
+    `expect_sha256` is for an artifact whose publisher is not the host: the
+    publisher states a digest, every source is a mirror, and the derived digest
+    is checked against the stated one. That check is what makes the mirrors
+    interchangeable CDNs rather than trust roots (design.md D1).
+    """
 
     dest: str
     sources: tuple[Source, ...]
+    expect_sha256: str | None = None
 
 
 # --- the authored spec: destinations, and where each one's bytes come from ---
+
+# WAI-illustrious-SDXL v17.0 (Civitai model 827184, version 2883731). The model is
+# published on Civitai and has no first-party Hugging Face repo, so every source below
+# is a mirror and the digest is the acceptance test (design.md D1). `WAI_SHA256` is the
+# SHA-256 Civitai itself publishes for the version -- computed by the platform after
+# upload, so an independent cross-check of the mirrors, not a signature by the author.
+# The byte count discriminates nothing: every published WAI version reports the same
+# one.
+WAI_SHA256 = "f116b0c78ff441467b0cdc8f1936e1ed18ea31e9997c7b132b1b8db533f0bd04"
+WAI = "5ef4e2da7173a160ad04aebcaa2fdcd6d20ed792"
+WAI_ALTS = (
+    ("frankjoshua/waiIllustriousSDXL_v170", "9303ce49345822823717889e3677b6ffd43fc6a9"),
+    ("zhenshipo/waiIllustriousSDXL_v170", "81274954afbade01cfbbb68008dfe84fc9e6adb2"),
+    ("mogaru99/waiIllustriousSDXL_v170", "a39fd9086cf0d20c99233d94546a6468c83dffab"),
+    ("hiusduh/waiIllustriousSDXL_v170", "3e2d67a43d078b1860fbc80984235906b1823101"),
+    ("yufusoft/WAI-illustrious-SDXL", "921c723bf2d4e7350f80a362c9de8a23c1377fc9"),
+    ("zhuhai1234/waiIllustriousSDXL-dimo", "606eb271fcd4ff213272f0e1a1c4bcdaf4d19475"),
+)
 
 ANIMAGINE = "2b7c1b397761bf5bd3cc42e5b39ec99314a75a96"
 # From the sibling project, which pins the same repo and the same files (design.md D2).
@@ -101,7 +126,20 @@ ANTELOPE_FILES = (
     "scrfd_10g_bnkps.onnx",
 )
 
+WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
+
 SPECS: tuple[Spec, ...] = (
+    Spec(
+        f"checkpoints/{WAI_FILE}",
+        (
+            Source("LyliaEngine/waiIllustriousSDXL_v170", WAI, WAI_FILE),
+            *(Source(repo, revision, WAI_FILE) for repo, revision in WAI_ALTS),
+        ),
+        WAI_SHA256,
+    ),
+    # Animagine stays declared until the swap is proven: it is the rollback and the
+    # probe's comparison base, and it leaves in this change's final phase (design.md
+    # D3).
     Spec(
         "checkpoints/animagine-xl-4.0.safetensors",
         (
@@ -232,6 +270,11 @@ def derive() -> Manifest:
     for spec in SPECS:
         primary, *alternates = spec.sources
         sha256, size = published_digest(primary)
+        if spec.expect_sha256 is not None and sha256 != spec.expect_sha256:
+            raise SystemExit(
+                f"{spec.dest}: {primary.url()} publishes {sha256}, "
+                f"but the publisher states {spec.expect_sha256}"
+            )
         for alternate in alternates:
             alt_sha, _ = published_digest(alternate)
             if alt_sha != sha256:

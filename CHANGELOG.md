@@ -25,6 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **WAI-illustrious-SDXL v17.0 is declared in the manifest**, alongside Animagine rather than in
+  place of it. The bytes come from pinned Hugging Face mirror revisions — WAI has no first-party
+  Hugging Face repo — and the digest verified against them is **the SHA-256 Civitai itself
+  publishes** for the model version, checked mechanically by `derive_manifest.py` against the
+  digest the primary mirror serves. That is what makes a mirror a CDN rather than a trust root:
+  the digest is the acceptance test, so any host serving matching bytes is equally acceptable
+  (`design.md` D1). Six byte-identical alternates are declared, so v0.9's fallback walking has
+  somewhere to go if the primary disappears mid-version. Two things the record deliberately does
+  **not** claim: the byte count discriminates nothing, since every published WAI version reports
+  the identical one, and Civitai's digest is computed by the platform after upload — an
+  independent cross-check of the mirrors, not a signature by the model's author. Civitai's own
+  download is **not** declared as a source: `provision.py` accepts only a Hugging Face
+  `resolve/<40-hex>/` URL, and widening that for one entry would weaken the no-mutable-ref check
+  to buy availability six mirrors already supply.
+- **Animagine's entry stays.** It is the rollback and the probe's comparison base until the swap
+  is proven, and the graph↔manifest binding runs one way, so an extra entry is legal. It is
+  removed in this change's final phase (`design.md` D3). Nothing is removed here.
+
 ## [0.9.0] - 2026-09-05
 
 ### Changed
