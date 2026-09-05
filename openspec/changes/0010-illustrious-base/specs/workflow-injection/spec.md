@@ -59,6 +59,12 @@ that resolution from the photo's own dimensions. Without it the render happens a
 input happened to be, so "the path runs" is a claim about the photos that were tried rather than
 about the path.
 
+The dimensions it derives SHALL be the ones the image loader will present, which are not always the
+ones the file's frame header states: a photo taken upright on a phone is stored rotated with a tag
+recording the rotation, and the loader applies that tag before any node sees the pixels. It SHALL
+also read those dimensions however deep in the file the header sits, because an ordinary camera
+writes a thumbnail, a colour profile and rights metadata ahead of it.
+
 The target SHALL preserve the photo's aspect ratio, place its short side at the base family's
 working scale, and keep both dimensions a multiple of 64. A short side chosen this way holds for
 every aspect ratio, which a target expressed as a total pixel count does not: at a fixed megapixel
@@ -97,6 +103,23 @@ would say so.
 - **THEN** the scaling node's width and height carry the computed values
 - **AND** they are computed by injection rather than by the graph, because no node available to this
   pipeline can derive a target from the image it is given
+
+#### Scenario: a rotated photo is measured as it will be loaded
+- **Key:** `workflow-injection:working-resolution:orientation-is-honoured`
+- **Layers:** unit
+- **WHEN** the photo records a rotation that transposes it
+- **THEN** the dimensions derived are the transposed ones the loader will present
+- **AND** a photo recording no rotation, or one that only flips it, is measured as its header states,
+  because the scale node scales to the exact target given rather than fitting to it — so a target
+  computed against the untransposed size would squash the photo non-uniformly with nothing reporting it
+
+#### Scenario: a photo whose frame header sits behind large metadata is still read
+- **Key:** `workflow-injection:working-resolution:a-deep-header-is-still-read`
+- **Layers:** unit
+- **WHEN** the photo carries metadata larger than any fixed prefix ahead of its frame header
+- **THEN** its dimensions are still read and the run proceeds
+- **AND** the refusal is reserved for a file that genuinely has no readable frame header, because a
+  valid camera photo refused as unreadable is a false report of a defect in the input
 
 #### Scenario: a photo whose dimensions cannot be read is refused
 - **Key:** `workflow-injection:working-resolution:unreadable-dimensions-are-refused`

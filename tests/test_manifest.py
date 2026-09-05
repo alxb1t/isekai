@@ -139,22 +139,32 @@ WAI_PUBLISHED_SHA256 = (
 )
 
 
-@pytest.mark.spec("model-provisioning:immutable-pins:every-entry-carries-a-digest")
-def test_the_base_checkpoint_carries_the_digest_its_publisher_states(
-    manifest: Manifest,
-) -> None:
-    checkpoints = [
+def _checkpoints(manifest: Manifest) -> list[Entry]:
+    """Return every entry the manifest lands on the checkpoints tree."""
+    return [
         entry
         for entry in manifest["entries"]
         if entry["dest"].startswith("checkpoints/")
     ]
-    # One base, because there is one path. A second declared checkpoint would be a
-    # second path in everything but name (design.md D3).
-    assert len(checkpoints) == 1
-    assert checkpoints[0]["sha256"] == WAI_PUBLISHED_SHA256
+
+
+@pytest.mark.spec_exempt(
+    "the one-path rule, not a provisioning scenario: design.md D3 admits one base"
+)
+def test_the_manifest_declares_exactly_one_base_checkpoint(manifest: Manifest) -> None:
+    # A second declared checkpoint would be a second path in everything but name.
+    assert len(_checkpoints(manifest)) == 1
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_the_base_checkpoint_carries_the_digest_its_publisher_states(
+    manifest: Manifest,
+) -> None:
+    (checkpoint,) = _checkpoints(manifest)
+    assert checkpoint["sha256"] == WAI_PUBLISHED_SHA256
 
     # Every source is a mirror, which is why the digest above is load-bearing.
     publishers = set(manifest["publishers"])
-    assert all(
-        _org_of(source) not in publishers for source in checkpoints[0]["sources"]
-    )
+    assert all(_org_of(source) not in publishers for source in checkpoint["sources"])

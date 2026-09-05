@@ -81,6 +81,9 @@ Three things the swap forces, which are therefore this version's and not a later
 - `workflow-injection`: the committed positive string changes and must assert no gender, not merely
   no pose tag; injection gains the duty of computing a working resolution and writing it into the
   graph; and the graph's conditioning gains a committed CLIP-layer setting.
+- `model-provisioning`: the base checkpoint's publisher hosts no copy of it, so the digest stops
+  being a check on the transfer and becomes the trust root — the manifest must pin the digest the
+  publisher itself states, and that tie must be checked offline by the gate.
 
 ## Impact
 

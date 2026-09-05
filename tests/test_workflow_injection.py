@@ -15,7 +15,7 @@ from isekai.workflow import (
     inject,
     working_resolution,
 )
-from tests.images import jpeg_bytes, png_bytes
+from tests.images import jpeg_bytes, jpeg_with_header, png_bytes
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-class-type")
@@ -292,6 +292,47 @@ def test_dimensions_are_read_from_landscape_portrait_and_square_headers(
     assert image_dimensions(path) == (width, height)
 
 
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.parametrize("orientation", [5, 6, 7, 8])
+def test_a_rotated_photo_reports_the_dimensions_the_loader_will_present(
+    orientation: int, tmp_path: Path
+) -> None:
+    # The loader transposes on these four values, so the frame header's landscape
+    # dimensions are not the ones the graph will see. Reporting the header's own
+    # would scale a portrait photo into a landscape frame with crop disabled --
+    # a non-uniform squash, silently, since every node still succeeds.
+    path = _write(
+        tmp_path, "rotated.jpg", jpeg_with_header(4032, 3024, orientation=orientation)
+    )
+    assert image_dimensions(path) == (3024, 4032)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.parametrize("orientation", [1, 2, 3, 4])
+def test_an_upright_orientation_leaves_the_header_dimensions_alone(
+    orientation: int, tmp_path: Path
+) -> None:
+    # 1-4 are the identity and the flips and the half turn: none transposes, so
+    # the header's dimensions are already the ones the loader will present.
+    path = _write(
+        tmp_path, "upright.jpg", jpeg_with_header(4032, 3024, orientation=orientation)
+    )
+    assert image_dimensions(path) == (4032, 3024)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:a-deep-header-is-still-read")
+def test_dimensions_are_read_past_a_metadata_block_larger_than_a_prefix(
+    tmp_path: Path,
+) -> None:
+    data = jpeg_with_header(4032, 3024, orientation=6, header_padding=200_000)
+    # The premise of the test: the frame header is past any short prefix, which is
+    # ordinary for a camera JPEG carrying a thumbnail, an ICC profile and XMP.
+    assert len(data) > 65536
+    path = _write(tmp_path, "deep-header.jpg", data)
+
+    assert image_dimensions(path) == (3024, 4032)
+
+
 @pytest.mark.spec(
     "workflow-injection:working-resolution:unreadable-dimensions-are-refused"
 )
@@ -300,6 +341,10 @@ def test_dimensions_are_read_from_landscape_portrait_and_square_headers(
     [
         ("truncated.png", png_bytes(1600, 1200)[:20]),
         ("truncated.jpg", jpeg_bytes(1600, 1200)[:8]),
+        # A segment length below 2 is malformed -- the field counts itself -- and
+        # walking past it lands inside a payload, where arbitrary bytes would be
+        # read as a frame header and returned as dimensions.
+        ("zero-length-segment.jpg", b"\xff\xd8\xff\xe0\x00\x00" + b"\xff" * 64),
         ("not-an-image.txt", b"this is not a photo"),
         ("empty.jpg", b""),
     ],

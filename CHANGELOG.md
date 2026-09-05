@@ -25,6 +25,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A rotated phone photo is measured as it will be loaded, not as its header states.** ComfyUI's
+  `LoadImage` applies the EXIF `Orientation` tag before any node sees the pixels, so for the ordinary
+  case of a phone held upright the frame header's 4032x3024 is transposed to 3024x4032 by the time
+  the graph has it. Injection computed its target from the untransposed pair and `ImageScale` runs
+  with `crop: "disabled"`, which scales to the exact target rather than fitting to it — so the photo
+  was squashed non-uniformly into a landscape frame, silently, and the distorted face was fed to
+  InstantID, the VAE encoder and all three preprocessors at once. The header parser now reads the tag
+  and swaps the pair on the four values that transpose.
+- **A camera JPEG whose frame header sits past 64 KiB is read rather than refused.** The parser read
+  a fixed 64 KiB prefix on the premise that the frame header is near the front; an EXIF segment
+  carrying an embedded thumbnail may alone be 65 533 bytes, and cameras write ICC and XMP segments
+  besides. Such a file walked off the end of the prefix and hard-exited with "cannot read the image
+  dimensions from its header" — a well-formed photo reported as a defective one. The marker walk now
+  runs against the open file, reading each segment's header and seeking over its payload, so it is
+  bounded by the file rather than by a guess. Standalone markers and a segment length below 2 are
+  now rejected in the same pass, both of which previously stepped the walk into a payload where
+  arbitrary bytes could be read back as a frame header.
+
+### Added
+
+- **The publisher-stated digest of a mirror-only artifact is a spec'd requirement.** The base
+  checkpoint's tie to the SHA-256 Civitai publishes was checked by the gate but bound to a scenario
+  about digests being present, which it does not prove. `model-provisioning`'s immutable-pins
+  requirement gains the case the base actually depends on — an artifact its publisher does not host
+  is pinned to the digest the publisher states — and the one-checkpoint assertion is split into its
+  own test against the one-path rule.
+
 ### Removed
 
 - **Animagine XL 4.0 leaves the manifest.** It had been the rollback and the probe's comparison
