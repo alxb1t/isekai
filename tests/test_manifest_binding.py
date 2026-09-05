@@ -24,7 +24,7 @@ def test_every_model_file_the_graph_names_has_a_manifest_entry(
 )
 def test_the_shipped_graph_names_model_files_at_all(workflow: Workflow) -> None:
     named = graph_model_files(workflow)
-    assert "animagine-xl-4.0.safetensors" in named
+    assert "waiIllustriousSDXL_v170.safetensors" in named
     assert "ip-adapter.bin" in named
     assert len(named) >= 7
 

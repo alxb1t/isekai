@@ -117,3 +117,54 @@ def test_a_publisher_primary_entry_needs_no_alternate(manifest: Manifest) -> Non
 @pytest.mark.spec_exempt("structural: every alternate must serve the declared digest")
 def test_every_entry_declares_at_least_one_source(manifest: Manifest) -> None:
     assert all(entry["sources"] for entry in manifest["entries"])
+
+
+# The SHA-256 Civitai publishes for WAI-illustrious-SDXL v17.0 (model 827184,
+# version 2883731). WAI has no first-party Hugging Face repo, so every source the
+# manifest declares for it is a mirror and this digest is the acceptance test:
+# any host serving matching bytes is equally acceptable, and one serving anything
+# else is rejected whoever it is (design.md D1).
+#
+# `derive_manifest.py` asserts the same equality when it re-derives, but that runs
+# only when a human points it at the network. Pinned here as well so the tie
+# between the shipped bytes and the publisher's own digest is checked by the gate,
+# and so changing it is a deliberate test edit -- the same idiom the prompts, the
+# clip layer and the probe's dials are held by.
+#
+# It is a cross-check, not a signature: Civitai computes it after upload, so it
+# attests the mirrors agree with the publisher's copy, not that the author signed
+# anything.
+WAI_PUBLISHED_SHA256 = (
+    "f116b0c78ff441467b0cdc8f1936e1ed18ea31e9997c7b132b1b8db533f0bd04"
+)
+
+
+def _checkpoints(manifest: Manifest) -> list[Entry]:
+    """Return every entry the manifest lands on the checkpoints tree."""
+    return [
+        entry
+        for entry in manifest["entries"]
+        if entry["dest"].startswith("checkpoints/")
+    ]
+
+
+@pytest.mark.spec_exempt(
+    "the one-path rule, not a provisioning scenario: design.md D3 admits one base"
+)
+def test_the_manifest_declares_exactly_one_base_checkpoint(manifest: Manifest) -> None:
+    # A second declared checkpoint would be a second path in everything but name.
+    assert len(_checkpoints(manifest)) == 1
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_the_base_checkpoint_carries_the_digest_its_publisher_states(
+    manifest: Manifest,
+) -> None:
+    (checkpoint,) = _checkpoints(manifest)
+    assert checkpoint["sha256"] == WAI_PUBLISHED_SHA256
+
+    # Every source is a mirror, which is why the digest above is load-bearing.
+    publishers = set(manifest["publishers"])
+    assert all(_org_of(source) not in publishers for source in checkpoint["sources"])

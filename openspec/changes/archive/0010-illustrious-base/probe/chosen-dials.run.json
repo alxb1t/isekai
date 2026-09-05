@@ -1,0 +1,11 @@
+{
+  "seed": 1,
+  "variations": 1,
+  "seeds": [
+    10499958131665514997
+  ],
+  "overrides": {
+    "denoise": 0.65,
+    "ip_weight": 0.9
+  }
+}

@@ -1,15 +1,4 @@
-# Capability: `workflow-injection`
-
-Wiring the uploaded photo and the text prompt into a ComfyUI workflow graph before it is queued — locating the
-nodes that need editing, and setting the right inputs on exactly the right ones.
-
-**Source:** `isekai/workflow.py` · **Tests:** `tests/test_workflow_injection.py`
-
-Injection is **separate from mutation**: injection wires *image + prompt*, mutation varies *dials*. Each model
-family owns an injection adapter, but the adapters share a node-locating primitive and the InstantID family
-shares one generalised conditioning trace.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The positive prompt is graph configuration
 
@@ -61,80 +50,7 @@ tag asserting one of them overrides the photo for every input that disagrees wit
 - **WHEN** injection runs
 - **THEN** the negative encoder's text is exactly what the graph shipped with
 
-### Requirement: Node location on the one graph
-
-The system SHALL locate a workflow node by class type, and SHALL refuse to guess when the query does
-not identify exactly one node — an injection that edits the wrong node produces a silently wrong
-render rather than an error.
-
-This replaces the previous *Unambiguous node location* requirement. Title-based lookup is removed
-with its last caller, and the two Qwen scenarios describe a graph this change deletes.
-
-#### Scenario: a node is located by its class type
-- **Key:** `workflow-injection:node-location:locates-by-class-type`
-- **Layers:** unit
-- **WHEN** a graph is queried for a node of a given class type that appears exactly once
-- **THEN** that node's ID is returned
-
-#### Scenario: a query matching nothing is refused
-- **Key:** `workflow-injection:node-location:exits-when-no-node-matches`
-- **Layers:** unit
-- **WHEN** a graph is queried for a node that does not exist
-- **THEN** the process exits rather than returning nothing for the caller to mishandle
-
-#### Scenario: an ambiguous query is refused
-- **Key:** `workflow-injection:node-location:exits-when-ambiguous`
-- **Layers:** unit
-- **WHEN** a query matches more than one node
-- **THEN** the process exits rather than silently picking the first match
-
-#### Scenario: the shipped graph has exactly one image loader
-- **Key:** `workflow-injection:node-location:single-load-image-in-real-workflow`
-- **Layers:** unit
-- **WHEN** the shipped workflow is queried for its image-loading node
-- **THEN** exactly one is found, which is what makes an unqualified lookup safe for the photo
-
-#### Scenario: the two text encoders are genuinely ambiguous
-- **Key:** `workflow-injection:node-location:text-encoders-are-ambiguous`
-- **Layers:** unit
-- **WHEN** the shipped workflow is queried for a text encoder by class type alone
-- **THEN** the query is refused as ambiguous, because the graph carries a positive and a negative
-  encoder
-- **AND** this is why neither encoder is reached by class lookup, and why the positive string is
-  committed to the graph rather than placed by injection
-
-### Requirement: Photo wiring into the one graph
-
-The system SHALL point the workflow's image loader at the uploaded file, so the graph reads the
-photo the run actually uploaded.
-
-This replaces the previous *Photo wiring* requirement, whose four scenarios wired four graphs. One
-graph remains, and one loader feeds every consumer in it.
-
-#### Scenario: one loader feeds the whole stack
-- **Key:** `workflow-injection:photo-wiring:single-loader-fans-out`
-- **Layers:** unit
-- **WHEN** injection runs against the shipped workflow, where one loader feeds the latent encoder,
-  the identity node and every ControlNet preprocessor
-- **THEN** that single loader is wired to the uploaded filename
-- **AND** the exactly-one-loader invariant holds across the entire stack, which is why injection
-  needs no per-consumer branch
-
-### Requirement: Latent initialisation from the photo
-
-The system SHALL initialise the graph's latent from the photo rather than from noise, at a denoise
-strength below one, so the photograph's composition survives into the render.
-
-This replaces the previous *img2img latent initialisation* requirement. The behaviour is unchanged;
-the name and its scenario key drop the `img2img` qualifier, which distinguished one of four graphs
-that no longer exist.
-
-#### Scenario: the graph inits its latent from the photo below full denoise
-- **Key:** `workflow-injection:latent-init:inits-from-photo-below-one`
-- **Layers:** unit
-- **WHEN** the shipped workflow is inspected
-- **THEN** its latent is encoded from the loaded photo rather than generated as empty noise
-- **AND** the sampler's denoise is below one, which is the dial trading identity against style
+## ADDED Requirements
 
 ### Requirement: The photo is scaled to a working resolution
 

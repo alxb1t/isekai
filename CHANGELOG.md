@@ -25,6 +25,215 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-05
+
+### Fixed
+
+- **A rotated phone photo is measured as it will be loaded, not as its header states.** ComfyUI's
+  `LoadImage` applies the EXIF `Orientation` tag before any node sees the pixels, so for the ordinary
+  case of a phone held upright the frame header's 4032x3024 is transposed to 3024x4032 by the time
+  the graph has it. Injection computed its target from the untransposed pair and `ImageScale` runs
+  with `crop: "disabled"`, which scales to the exact target rather than fitting to it — so the photo
+  was squashed non-uniformly into a landscape frame, silently, and the distorted face was fed to
+  InstantID, the VAE encoder and all three preprocessors at once. The header parser now reads the tag
+  and swaps the pair on the four values that transpose.
+- **A camera JPEG whose frame header sits past 64 KiB is read rather than refused.** The parser read
+  a fixed 64 KiB prefix on the premise that the frame header is near the front; an EXIF segment
+  carrying an embedded thumbnail may alone be 65 533 bytes, and cameras write ICC and XMP segments
+  besides. Such a file walked off the end of the prefix and hard-exited with "cannot read the image
+  dimensions from its header" — a well-formed photo reported as a defective one. The marker walk now
+  runs against the open file, reading each segment's header and seeking over its payload, so it is
+  bounded by the file rather than by a guess. Standalone markers and a segment length below 2 are
+  now rejected in the same pass, both of which previously stepped the walk into a payload where
+  arbitrary bytes could be read back as a frame header.
+
+### Added
+
+- **The publisher-stated digest of a mirror-only artifact is a spec'd requirement.** The base
+  checkpoint's tie to the SHA-256 Civitai publishes was checked by the gate but bound to a scenario
+  about digests being present, which it does not prove. `model-provisioning`'s immutable-pins
+  requirement gains the case the base actually depends on — an artifact its publisher does not host
+  is pinned to the digest the publisher states — and the one-checkpoint assertion is split into its
+  own test against the one-path rule.
+
+### Removed
+
+- **Animagine XL 4.0 leaves the manifest.** It had been the rollback and the probe's comparison
+  base since the WAI entry landed; with the swap proven, a declared checkpoint nothing renders with
+  is a second path in everything but name, which this repository's one-path rule forbids
+  (`design.md` D3). `cagliostrolab` leaves the `publishers` list with it. The manifest is now 15
+  entries and 16.5 GiB, down from 16 and 23.0 GiB. **A re-provision after this point removes
+  Animagine from the volume**, so rolling back to it means reverting the manifest, not just
+  `ckpt_name`.
+
+### Changed
+
+- **`README.md` and `CLAUDE.md` describe an Illustrious base.** The path table and the "How it
+  works" line name WAI-illustrious-SDXL v17.0, the working-resolution rule and the committed CLIP
+  layer are written down, and the ControlNet stack is described as the strength-to-zero comparison
+  left it — including that "changes the render" is not "improves the render", and that tile carries
+  its publisher's animation disclaimer as a known deviation. `1girl`'s defect is recorded as
+  **closed**, with the mechanism that closed it named: the identity node's face embedding, not a
+  tagger. **Neither document makes any claim about identity or quality.**
+
+### Notes
+
+- **The path runs on WAI-illustrious-SDXL v17.0, at stated input resolutions.** Two photos of
+  different aspect ratios through the unmodified `convert.py`, both exiting 0 and writing
+  `0.png`–`4.png` plus `run.json`: 982×1559 rendered at **1024×1600** and 832×1216 at
+  **1024×1472**, every variation. Each rendered dimension equals the target the injector computes
+  from the photo's own header — the first live confirmation of the scale node on real files.
+  Session 8 min 23 s at $0.72/hr = **$0.10**; teardown confirmed through the RunPod MCP (`get-pod`
+  → 404 "pod not found", `list-pods` → 0 items). `RUNPOD_IMAGE` was cleared from `.env` afterwards.
+- **What this version does not establish**, stated plainly because v0.8's Verified block implied a
+  generality it never tested: **nothing** about identity, fidelity or quality — no evaluator exists
+  and none was run; **not** that the chosen dials are good, let alone optimal; **not** that any
+  ControlNet improves output, only that each retained one measurably changes it; **not** that the
+  register improves anything. It also does not establish that the path runs at *any* resolution —
+  both photos were portrait and both below the working scale, so a landscape input and a photo
+  above 1024 on its short side remain untested on a GPU.
+  What it establishes is that the path runs on WAI at the two stated input resolutions, and that a
+  male photo yields a male-presenting output.
+
+### Changed
+
+- **The probe's verdicts are applied, and both are "no change to the graph".** The chosen
+  `denoise` 0.65 and `ip_weight` 0.9 are the values already committed, and the tile ControlNet is
+  kept because the strength-to-zero comparison found it strongly distinguishable from absent. They
+  are now **pinned by the suite** rather than merely present, so the evaluator version inherits a
+  baseline it can measure against and a silent re-tune becomes a deliberate test edit.
+- **The stack walk is under test.** `KSampler.positive` may point at `ApplyInstantIDAdvanced`
+  directly *or* through a stack of `ControlNetApplyAdvanced` nodes, so the encoder must be found by
+  following the link and never by class lookup. The probe could have shortened that stack, which is
+  exactly when the property would have broken unnoticed; a test now walks it end to end and asserts
+  the hop count matches the number of ControlNets in the graph.
+- **`scripts/models.json` is unchanged, so the image is not republished.** Nothing dropped out of
+  the graph, so the manifest the pod provisions from still matches it and `:v0.10-rc` stays the
+  image the final renders boot.
+
+### Notes
+
+- **The v0.10 probe ran on a pod and its results are recorded** in
+  `openspec/changes/0010-illustrious-base/probe/`. WAI provisioned alongside Animagine at boot from
+  the manifest, verified: 6,938,040,682 bytes, exactly the count the manifest declares. Session
+  18 min 27 s at $0.72/hr = **$0.22**, inside the 45-minute / ~$0.30 ceiling; teardown confirmed
+  through the RunPod MCP (`get-pod` → 404 "pod not found", `list-pods` → 0 items).
+- **Every ControlNet is kept.** A strength-to-zero comparison at a fixed seed, with no mutation and
+  every other dial held, asked one falsifiable question per ControlNet: does the conditioning reach
+  the sampler at all? Tile is **strongly** distinguishable from absent — hair length, garment and
+  framing all change — and OpenPose and MistoLine are distinguishable subtly. None is
+  indistinguishable, so none is deleted, **including tile**, which `design.md` D7 named as the
+  likely deletion and left to the comparison to decide. TTPlanet's own card disclaimer — "no comic,
+  animation application are promised", recommended strength 0.9 against the 0.2 this graph runs —
+  is therefore recorded against it as a **known deviation**, not resolved. This establishes only
+  that each retained ControlNet measurably *changes* the render, never that it improves it.
+- **`denoise` 0.65 and `ip_weight` 0.9 are chosen — a preference, not a measurement.** Found by eye
+  against one photo at a fixed seed, over three denoise points and one ip_weight point. They are
+  the values already in the graph: they were tuned on Animagine with no reason to expect they would
+  transfer, so this is a real search with a null result. **Chosen is not best**, and the search was
+  coarse — four renders inside a 25-minute budget.
+- **The gender check passes.** A male-presenting input photo, at the new register with `1girl`
+  removed and a fixed seed, produced an unambiguously male-presenting output. This is the one
+  falsifiable acceptance criterion the register change gets and it could have failed. One photo is
+  an existence proof that the identity embedding supplies the axis, not a rate.
+- **The first thing to check next version.** As `design.md` D4 predicted, dropping `realistic,
+  photorealistic` from the negative removed a push away from the photograph, and these outputs read
+  as semi-realistic digital painting rather than flat anime screencap. Recorded as a finding for
+  the evaluator version, not as a reason to reinstate a gender tag.
+
+### Added
+
+- **`ghcr.io/alxb1t/isekai:v0.10-rc` is published**, and it is the image both metered phases boot.
+  The pod provisions from the manifest baked into whatever image it runs, and `:latest` is v0.9's
+  — so a pod on `:latest` would provision v0.9's manifest and never fetch the checkpoint the graph
+  now names. No `Dockerfile` change was needed: `ImageScale` and `CLIPSetLastLayer` are core
+  ComfyUI, so this is a rebuild rather than a change. `:latest` is deliberately **not** touched;
+  CI publishes it from a push to `main` and nowhere else, and the manual dispatch requires a tag
+  and names it "never `latest`", precisely so a pre-release build cannot clobber the image a
+  rollback reaches for. The tag becomes v0.10's on merge, by the mechanism that already exists
+  (`design.md` D8). `RUNPOD_IMAGE` is set in the untracked `.env` and is cleared after the last
+  metered phase, since a stale value would silently pin every later pod to an unreleased image.
+
+### Changed
+
+- **BREAKING — the base is WAI-illustrious-SDXL v17.0, and the register is its publisher's.** The
+  positive is the content tags with WAI's own ladder appended last, where every published sample
+  puts it; the negative is the publisher's own short form. WAI's page warns that too many quality
+  tags and over-long negative prompts *reduce* image quality, so taking its positive while keeping
+  v0.8's eighteen-token negative would have taken half the guidance and ignored the half stated as
+  a warning (`design.md` D4). One consequence, recorded rather than absorbed: `realistic,
+  photorealistic` is gone from the negative, which removes a push *away* from the photograph on a
+  product whose whole subject is a photograph — if renders come back more photographic than v0.8's,
+  that is the first place to look. Both literals stay pinned by equality, so changing either is a
+  deliberate test edit.
+- **The graph stops CLIP at the second-to-last layer.** Every one of WAI v17's published sample
+  images carries `clipSkip: 2` and none of the publisher's prose mentions it, so a graph without a
+  `CLIPSetLastLayer` ships a configuration the publisher never tested while looking identical to
+  one that does (`design.md` D6). Both text encoders take their CLIP through it — routing only the
+  positive would condition the two halves against different text towers. The value is pinned like
+  the prompt: configuration, not a dial.
+
+### Removed
+
+- **`1girl` is out of the committed positive; `solo` stays.** `solo` is what does the Danbooru
+  mode-selection work, while `1girl` additionally asserted a gender that the identity node's face
+  embedding already carries — so that axis now belongs to a mechanism already in the graph rather
+  than to a tagger that does not exist (`design.md` D5). This closes the defect v0.8 recorded and
+  named a later version as the owner of. **It is not yet demonstrated**: whether a male photo
+  yields a male-presenting output is this version's one falsifiable acceptance criterion for the
+  register change, and it is checked on a pod, not here.
+
+### Notes
+
+- The negative carries one tag beyond the publisher's quoted short form: `nsfw`, which the same
+  model page instructs users to add to filter its four safety-rating tags. On a product that
+  converts photographs of real people, omitting an instruction the publisher gives by name would
+  be a defect rather than fidelity to the quote.
+
+### Added
+
+- **The photo is scaled to a working resolution before any node reads it.** An `ImageScale` node
+  sits between the image loader and every consumer — the latent encoder, the identity node and all
+  three ControlNet preprocessors — so one pixel grid feeds the whole graph and no control hint is
+  registered against a different one. Previously the render happened at whatever size the input
+  happened to be, so "the path runs" was a claim about the photos that were tried.
+- **`isekai.workflow` derives the render target from the photo's own header.** `image_dimensions`
+  parses JPEG and PNG headers directly — stdlib only, nothing new enters `convert.py`'s import
+  graph — and `working_resolution` preserves aspect, puts the short side at 1024 and rounds both
+  dimensions to a multiple of 64, in **both** directions, so a small photo is scaled up as well as
+  a large one down. A short side rather than a pixel budget: at a fixed megapixel count the short
+  side moves with the aspect ratio, so a wide photo would land below MistoLine's floor while a
+  squarer one cleared it, and nothing in the run would say so (`design.md` D2). An unreadable or
+  truncated header stops the run naming the file; there is no default size, because a silently
+  wrong resolution is a wrong render rather than an error.
+
+### Changed
+
+- **`inject` takes the photo's local path.** No node available to this pipeline can derive a target
+  from the image it is given, so the dimensions are computed by injection and written into the
+  scale node. The path is passed from the `input_path` `pipeline.run` already holds, so it stays an
+  argument rather than becoming state.
+
+### Added
+
+- **WAI-illustrious-SDXL v17.0 is declared in the manifest**, alongside Animagine rather than in
+  place of it. The bytes come from pinned Hugging Face mirror revisions — WAI has no first-party
+  Hugging Face repo — and the digest verified against them is **the SHA-256 Civitai itself
+  publishes** for the model version, checked mechanically by `derive_manifest.py` against the
+  digest the primary mirror serves. That is what makes a mirror a CDN rather than a trust root:
+  the digest is the acceptance test, so any host serving matching bytes is equally acceptable
+  (`design.md` D1). Six byte-identical alternates are declared, so v0.9's fallback walking has
+  somewhere to go if the primary disappears mid-version. Two things the record deliberately does
+  **not** claim: the byte count discriminates nothing, since every published WAI version reports
+  the identical one, and Civitai's digest is computed by the platform after upload — an
+  independent cross-check of the mirrors, not a signature by the model's author. Civitai's own
+  download is **not** declared as a source: `provision.py` accepts only a Hugging Face
+  `resolve/<40-hex>/` URL, and widening that for one entry would weaken the no-mutable-ref check
+  to buy availability six mirrors already supply.
+- **Animagine's entry stays.** It is the rollback and the probe's comparison base until the swap
+  is proven, and the graph↔manifest binding runs one way, so an extra entry is legal. It is
+  removed in this change's final phase (`design.md` D3). Nothing is removed here.
+
 ## [0.9.0] - 2026-09-05
 
 ### Changed

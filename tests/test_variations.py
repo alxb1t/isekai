@@ -11,17 +11,19 @@ from tests.fakes import FakeComfyClient
 
 
 @pytest.mark.spec("workflow-mutation:variations:mutator-varies-submission")
-def test_run_mutates_the_submitted_workflow(workflow: Workflow, tmp_path: Path) -> None:
+def test_run_mutates_the_submitted_workflow(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
     baked = workflow["10"]["inputs"]["seed"]
     client = FakeComfyClient()
-    run(client, workflow, "photo.jpg", tmp_path / "run", variations=1, seed=7)
+    run(client, workflow, photo, tmp_path / "run", variations=1, seed=7)
     assert client.submitted_workflow is not None
     assert client.submitted_workflow["10"]["inputs"]["seed"] != baked
 
 
 @pytest.mark.spec("workflow-mutation:reproducibility:every-variation-seed-is-derived")
 def test_run_derives_every_seed_including_the_first(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     # v0.7 used --seed verbatim for variation 0, so the flag had two meanings:
     # a stream seed for 1..N and a literal sampler seed for 0. One meaning now.
@@ -29,7 +31,7 @@ def test_run_derives_every_seed_including_the_first(
     run(
         client,
         workflow,
-        "photo.jpg",
+        photo,
         tmp_path / "run",
         seed=7,
         variations=3,
@@ -44,13 +46,13 @@ def test_run_derives_every_seed_including_the_first(
 
 @pytest.mark.spec("workflow-mutation:reproducibility:seed-is-printed")
 def test_run_prints_the_seed_of_every_variation(
-    workflow: Workflow, tmp_path: Path, capsys: pytest.CaptureFixture
+    workflow: Workflow, tmp_path: Path, capsys: pytest.CaptureFixture, photo: str
 ) -> None:
     client = FakeComfyClient()
     run(
         client,
         workflow,
-        "photo.jpg",
+        photo,
         tmp_path / "run",
         seed=7,
         variations=2,
@@ -67,11 +69,11 @@ def test_run_prints_the_seed_of_every_variation(
 @pytest.mark.spec("workflow-mutation:output-layout:images-numbered-by-variation")
 @pytest.mark.spec("workflow-mutation:variations:one-output-per-variation")
 def test_run_writes_one_numbered_image_per_variation(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     run_dir = tmp_path / "20260904T141530Z"
     client = FakeComfyClient()
-    run(client, workflow, "photo.jpg", run_dir, variations=3)
+    run(client, workflow, photo, run_dir, variations=3)
     assert {p.name for p in run_dir.iterdir()} == {
         "0.png",
         "1.png",
@@ -82,14 +84,14 @@ def test_run_writes_one_numbered_image_per_variation(
 
 @pytest.mark.spec("workflow-mutation:output-layout:run-gets-its-own-directory")
 def test_a_second_run_leaves_the_first_run_s_directory_untouched(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     first = tmp_path / "20260904T141530Z"
     second = tmp_path / "20260904T141600Z"
-    run(FakeComfyClient(), workflow, "p.jpg", first, variations=2)
+    run(FakeComfyClient(), workflow, photo, first, variations=2)
     before = {p.name: p.read_bytes() for p in sorted(first.iterdir())}
 
-    run(FakeComfyClient(), workflow, "p.jpg", second, variations=2)
+    run(FakeComfyClient(), workflow, photo, second, variations=2)
 
     # Asserting the first directory byte for byte, not merely that both exist:
     # a run writing into a shared directory would still leave both paths
@@ -100,14 +102,14 @@ def test_a_second_run_leaves_the_first_run_s_directory_untouched(
 
 @pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-run")
 def test_run_writes_a_manifest_recording_the_seeds_and_the_dials(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     run_dir = tmp_path / "20260904T141530Z"
     client = FakeComfyClient()
     run(
         client,
         workflow,
-        "photo.jpg",
+        photo,
         run_dir,
         seed=99,
         variations=5,
@@ -133,13 +135,13 @@ def test_run_writes_a_manifest_recording_the_seeds_and_the_dials(
 
 @pytest.mark.spec("workflow-mutation:base-relative:override-applied-before-jitter")
 def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     client = FakeComfyClient()
     run(
         client,
         workflow,
-        "photo.jpg",
+        photo,
         tmp_path / "run",
         seed=42,
         variations=1,
@@ -159,14 +161,14 @@ def test_run_applies_override_before_mutate_so_jitter_is_around_the_new_base(
 
 @pytest.mark.spec("workflow-mutation:reproducibility:override-plus-seed-reproduces")
 def test_run_with_override_and_seed_is_reproducible(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     def once(tag: str) -> Workflow | None:
         client = FakeComfyClient()
         run(
             client,
             copy.deepcopy(workflow),
-            "photo.jpg",
+            photo,
             tmp_path / tag,
             seed=77,
             variations=1,
@@ -183,7 +185,7 @@ def test_run_with_override_and_seed_is_reproducible(
 )
 @pytest.mark.spec("workflow-mutation:variations:variations-differ-from-each-other")
 def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
-    workflow: Workflow, tmp_path: Path
+    workflow: Workflow, tmp_path: Path, photo: str
 ) -> None:
     # The seed is a reproducibility contract for the whole run. Variations after
     # the first must derive from it too, or `--seed X --variations 3` reproduces
@@ -193,7 +195,7 @@ def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
         run(
             client,
             copy.deepcopy(workflow),
-            "photo.jpg",
+            photo,
             tmp_path / tag,
             seed=77,
             variations=3,
