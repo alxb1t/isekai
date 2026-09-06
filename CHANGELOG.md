@@ -27,6 +27,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`baseline/build_subjects.py` and the six subjects it produces**, given `probe/build_inputs.py`'s
+  treatment because one version does not silently reverse a convention the previous one wrote down: a
+  tracked recipe, digests recorded in `baseline/README.md`, **pixels not committed**. Two consecutive
+  runs produce byte-identical digests, which is the only thing that makes a recorded digest worth
+  recording.
+- **Each subject earns its slot adversarially, not representatively.** Two controls that differ in hair
+  colour so they are not one case counted twice; two multi-tone subjects that stress the
+  dominant-colour metric in *different* ways — one by extreme dark-root-to-blonde bimodality, one by a
+  small hair region rather than a large one; one full-length figure whose face is ~1.3% of the canvas;
+  and one landscape. Four are labelled in phase 9 (4 × 10 within-subject pairs = 40) and the two
+  refusal-path subjects are not, because a subject whose axes are expected to refuse cannot calibrate
+  anything.
+- **The landscape gap v0.11 named is closed.** The source set is entirely portrait, so `s6` is derived
+  by cropping, reusing v0.11's own 832×554 landscape geometry — the crop origin keeps the face in the
+  band, since a centred crop of a standing figure is a crop of its chest. It resolves to a
+  **1536×1024** target, an aspect ratio this pipeline has never rendered.
+- **All six were read by the real scorer on CPU before any pod was created.** Hair areas span 0.0198 to
+  0.3104 — a factor of fifteen, every one above the 0.005 floor — so no subject refuses its region axes
+  for lack of pixels before the renders exist. **`s5`'s refusal is therefore not yet demonstrated**:
+  what was measured is the anime detector against a *photograph*, and whether it locates a face in
+  `s5`'s stylized renders is a phase-8 question, left unprejudged.
+- **The sources deliberately unused are recorded with their reasons**, so the selection is reviewable
+  rather than asserted — one candidate was the same person and shoot as `s5`, and two others repeated
+  the easy uniform-blonde case a control already covers.
+- **Residual risk stated rather than discovered later:** if the source photographs are lost this
+  baseline becomes unreproducible and the labels are the only surviving artifact, with the digests
+  proving that some file once existed and nothing about what it contained. That is the accepted cost of
+  not committing derived faces, and there is no mitigation beyond keeping the sources.
+
 ### Fixed
 
 - **Three real plumbing failures, found on the renders already on disk, before any pod was created.**
