@@ -155,14 +155,24 @@ every aspect ratio, which a target expressed as a total pixel count does not: at
 budget a wide photo falls below the floor its line-art ControlNet requires, and nothing in the run
 would say so.
 
+Because a short-side rule places no bound on the other axis and a header field is an unverified
+number, the system SHALL state every ceiling it enforces rather than leaving one implied. It SHALL
+refuse a photo whose aspect ratio would drive the long side past a stated bound, refuse a header
+declaring a dimension past a stated maximum, and stop reading a file's header past a stated byte
+budget — each with a message naming the file and the limit. An unbounded target reaches a metered
+GPU as an allocation failure partway through a render rather than as a refusal at the command line,
+and a limit the operator cannot read is not a limit they can work around.
+
 #### Scenario: the photo is scaled before any consumer reads it
 - **Key:** `workflow-injection:working-resolution:scale-precedes-every-consumer`
 - **Layers:** unit
 - **WHEN** the shipped workflow is inspected
 - **THEN** a scaling node sits between the image loader and every node that reads the photo — the
   latent encoder, the identity node and each ControlNet preprocessor
-- **AND** no consumer reads the loader directly, so one pixel grid feeds the whole graph and no
-  control hint is registered against a different one
+- **AND** no consumer reads the loader directly, so every node is handed the same scaled image
+- **AND** this is a claim about which image each consumer receives and not about what a consumer
+  then does with it internally: a preprocessor's own working resolution is a separate dial on that
+  node, and one of them derives its hint below the graph's scale today
 
 #### Scenario: the target preserves aspect and places the short side at the working scale
 - **Key:** `workflow-injection:working-resolution:short-side-at-the-working-scale`
@@ -191,11 +201,15 @@ would say so.
 #### Scenario: a rotated photo is measured as it will be loaded
 - **Key:** `workflow-injection:working-resolution:orientation-is-honoured`
 - **Layers:** unit
-- **WHEN** the photo records a rotation that transposes it
+- **WHEN** the photo records a rotation that transposes it, **in either supported codec**
 - **THEN** the dimensions derived are the transposed ones the loader will present
 - **AND** a photo recording no rotation, or one that only flips it, is measured as its header states,
   because the scale node scales to the exact target given rather than fitting to it — so a target
   computed against the untransposed size would squash the photo non-uniformly with nothing reporting it
+- **AND** the rule holds wherever the codec puts the tag, because the loader reads it from both and
+  the mismatch this prevents is a property of the loader rather than of the container: a rule applied
+  to one codec and not the other leaves the defect open in whichever codec the project actually feeds
+  it, while looking closed
 
 #### Scenario: a photo whose frame header sits behind large metadata is still read
 - **Key:** `workflow-injection:working-resolution:a-deep-header-is-still-read`
@@ -212,6 +226,34 @@ would say so.
 - **THEN** the run stops with a message naming the file
 - **AND** it does not fall back to a default size, because a silently wrong resolution is a wrong
   render rather than an error
+
+#### Scenario: a photo whose aspect ratio drives the target past the long-side bound is refused
+- **Key:** `workflow-injection:working-resolution:an-extreme-aspect-ratio-is-refused`
+- **Layers:** unit
+- **WHEN** placing the photo's short side at the working scale would put its long side past the
+  stated bound
+- **THEN** the run stops with a message naming the file, both computed dimensions and the bound
+- **AND** it does not clamp the target instead, because a clamped target no longer preserves the
+  aspect ratio and would squash the photo in the way the orientation rule exists to prevent
+
+#### Scenario: a header declaring an impossible dimension is refused
+- **Key:** `workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused`
+- **Layers:** unit
+- **WHEN** a header declares a dimension past the stated maximum
+- **THEN** the run stops with a message naming the file and the maximum, before any target is
+  computed from it
+- **AND** the maximum is the same for every format the system reads, so a file is not accepted in one
+  codec and refused in another for a dimension neither can render
+
+#### Scenario: a file whose header walk exceeds the byte budget is refused
+- **Key:** `workflow-injection:working-resolution:an-unbounded-header-walk-is-refused`
+- **Layers:** unit
+- **WHEN** reading a file's header consumes more than the stated byte budget without reaching a frame
+  header
+- **THEN** the run stops with a message naming the file and the budget
+- **AND** the budget is generous enough for any camera's metadata, so this bounds the work a
+  malformed or hostile file can demand without refusing a valid one
+</content>
 
 ### Requirement: The base's CLIP layer is committed to the graph
 

@@ -1,6 +1,12 @@
+import json
 from typing import Any, cast
 
 import pytest
+
+# `scripts/` is declared a source root in `pyproject.toml` -- operator tooling, not
+# a package. It is not on `convert.py`'s import graph, so the stdlib-only runtime
+# rule is untouched either way.
+from derive_manifest import civitai_file
 
 from isekai.provision import (
     SOURCE_ORG,
@@ -125,8 +131,11 @@ def test_every_entry_declares_at_least_one_source(manifest: Manifest) -> None:
 # any host serving matching bytes is equally acceptable, and one serving anything
 # else is rejected whoever it is (design.md D1).
 #
-# `derive_manifest.py` asserts the same equality when it re-derives, but that runs
-# only when a human points it at the network. Pinned here as well so the tie
+# `derive_manifest.py` now *fetches* this value from Civitai's own record and holds
+# the mirrors against it, so no human transcribes it into the derivation. But that
+# runs only when a human points the tool at the network. Pinned here as well, by
+# hand and on purpose: this copy is the offline anchor, and an anchor that fetches
+# is not one. It is what makes the tie
 # between the shipped bytes and the publisher's own digest is checked by the gate,
 # and so changing it is a deliberate test edit -- the same idiom the prompts, the
 # clip layer and the probe's dials are held by.
@@ -168,3 +177,100 @@ def test_the_base_checkpoint_carries_the_digest_its_publisher_states(
     # Every source is a mirror, which is why the digest above is load-bearing.
     publishers = set(manifest["publishers"])
     assert all(_org_of(source) not in publishers for source in checkpoint["sources"])
+
+
+# --- the trust root, derived rather than transcribed ---
+#
+# `derive_manifest.py` claimed the manifest is "derived, never transcribed", and
+# then read the one digest that matters most -- the base checkpoint's, which is
+# the whole trust root for an artifact no publisher hosts -- out of a constant a
+# human typed. Three copies of one transcription cross-check the copying, not the
+# value. The parse is a pure function so the suite can hold it offline; only the
+# fetch around it touches the network.
+
+CIVITAI_PAYLOAD = {
+    "name": "v17.0",
+    "files": [
+        {
+            "name": "waiIllustriousSDXL_v170.safetensors",
+            "sizeKB": 6775430.353515625,
+            "hashes": {
+                "AutoV2": "F116B0C78F",
+                "SHA256": (
+                    "F116B0C78FF441467B0CDC8F1936E1ED18EA31E9997C7B132B1B8DB533F0BD04"
+                ),
+                "BLAKE3": (
+                    "1762AFDFBC3F22A1BB34C6AA85405414FE838828F771CA444776DEEA141F8BE8"
+                ),
+            },
+        }
+    ],
+}
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_the_published_digest_is_read_from_the_publishers_own_record() -> None:
+    digest = civitai_file(CIVITAI_PAYLOAD, "waiIllustriousSDXL_v170.safetensors")
+    # lowercased, because the manifest's own `DIGEST` pattern is lowercase and a
+    # digest that differs only in case would fail a check it should pass
+    assert digest == WAI_PUBLISHED_SHA256
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_a_version_not_serving_that_file_is_refused() -> None:
+    with pytest.raises(SystemExit):
+        civitai_file(CIVITAI_PAYLOAD, "somebodyElsesCheckpoint.safetensors")
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_a_file_publishing_no_sha256_is_refused_rather_than_downgraded() -> None:
+    payload = {
+        "files": [
+            {
+                "name": "waiIllustriousSDXL_v170.safetensors",
+                "sizeKB": 1.0,
+                "hashes": {"AutoV2": "F116B0C78F", "CRC32": "BBAEFE08"},
+            }
+        ]
+    }
+    # AutoV2 is a truncation and CRC32 is not a digest of anything; degrading to
+    # either would put a value in a SHA-256 field that verifies nothing.
+    with pytest.raises(SystemExit):
+        civitai_file(payload, "waiIllustriousSDXL_v170.safetensors")
+
+
+@pytest.mark.spec_exempt(
+    "structural: BLAKE3 is published and deliberately not recorded (design.md D13)"
+)
+def test_the_derived_manifest_records_no_blake3(manifest: Manifest) -> None:
+    # Verifying it would need a wheel the runtime rule forbids, and a field
+    # nothing reads is the same smell as a one-entry registry.
+    assert "BLAKE3" not in json.dumps(manifest)
+    assert "blake3" not in json.dumps(manifest)
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_a_record_omitting_its_size_still_yields_the_digest() -> None:
+    # The size was read with a subscript where every sibling read uses `.get` with
+    # a `SystemExit`, and no caller consumed it -- so an omitted `sizeKB` aborted
+    # derivation with a raw `KeyError` for a number nobody wanted. What this
+    # function is for is the digest.
+    payload = {
+        "files": [
+            {
+                "name": "waiIllustriousSDXL_v170.safetensors",
+                "hashes": {"SHA256": WAI_PUBLISHED_SHA256},
+            }
+        ]
+    }
+    assert civitai_file(payload, "waiIllustriousSDXL_v170.safetensors") == (
+        WAI_PUBLISHED_SHA256
+    )

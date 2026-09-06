@@ -8,6 +8,9 @@ from isekai import cli
 from isekai.comfy_types import Workflow
 from isekai.workflow import (
     DIMENSION_STEP,
+    MAX_HEADER_BYTES,
+    MAX_HEADER_DIMENSION,
+    MAX_TARGET_LONG_SIDE,
     WORKING_SCALE,
     find_node,
     find_nodes,
@@ -15,7 +18,7 @@ from isekai.workflow import (
     inject,
     working_resolution,
 )
-from tests.images import jpeg_bytes, jpeg_with_header, png_bytes
+from tests.images import jpeg_bytes, jpeg_with_header, png_bytes, png_with_exif
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-class-type")
@@ -406,7 +409,9 @@ PROBE_DENOISE = 0.65
 PROBE_IP_WEIGHT = 0.9
 
 
-@pytest.mark.spec_exempt("structural: pins the dials the phase-5 probe chose")
+@pytest.mark.spec_exempt(
+    "preference, not a scenario: holds the dials design.md D9 records as by-eye"
+)
 def test_the_graph_carries_the_dials_the_probe_chose(workflow: Workflow) -> None:
     sampler_id = find_node(workflow, class_type="KSampler")
     apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
@@ -443,3 +448,159 @@ def test_the_samplers_positive_input_reaches_the_encoder_through_the_stack(
     # later version deletes one, this number moves and the walk above still holds.
     assert hops == len(find_nodes(workflow, class_type="ControlNetApplyAdvanced"))
     assert hops == 3
+
+
+# Three stated ceilings. A short-side rule places no bound on the other axis, and
+# a header field is an unverified number until something bounds it (design.md D8).
+# Each refuses rather than clamping: a clamped target no longer preserves the
+# aspect ratio, and would squash the photo the way the orientation rule exists to
+# prevent.
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-extreme-aspect-ratio-is-refused"
+)
+def test_a_photo_whose_target_long_side_exceeds_the_ceiling_is_refused(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    # 1:8 at a 1024 short side computes to 8192 on the long axis — already a
+    # heavy SDXL allocation at 4096, and past any real photo.
+    path = _write(tmp_path, "panorama.png", png_bytes(1024, 8192))
+
+    with pytest.raises(SystemExit) as excinfo:
+        inject(workflow, image_name="face.png", image_path=path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_TARGET_LONG_SIDE) in message
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-extreme-aspect-ratio-is-refused"
+)
+def test_an_aspect_ratio_at_the_ceiling_is_still_rendered(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "wide.png", png_bytes(4096, 1024))
+    inject(workflow, image_name="face.png", image_path=path)
+
+    scale_id = find_node(workflow, class_type="ImageScale")
+    assert workflow[scale_id]["inputs"]["width"] == MAX_TARGET_LONG_SIDE
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused"
+)
+def test_a_header_dimension_past_the_ceiling_is_refused(tmp_path: Path) -> None:
+    # JPEG's own two-byte frame field enforces this already, so a PNG is the only
+    # codec that can declare it — and both refuse the same input.
+    path = _write(tmp_path, "absurd.png", png_bytes(70_000, 1_000))
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_HEADER_DIMENSION) in message
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused"
+)
+def test_a_header_dimension_at_the_ceiling_is_read(tmp_path: Path) -> None:
+    path = _write(tmp_path, "at-the-limit.png", png_bytes(MAX_HEADER_DIMENSION, 1_000))
+    assert image_dimensions(path) == (MAX_HEADER_DIMENSION, 1_000)
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-unbounded-header-walk-is-refused"
+)
+def test_a_header_walk_past_the_byte_ceiling_is_refused(tmp_path: Path) -> None:
+    # The walk is bounded by the file, which is not a bound: a camera's EXIF,
+    # thumbnail, ICC and XMP together are a few hundred KiB, so a frame header
+    # this deep is a file being used to make the parser read the whole of it.
+    data = jpeg_with_header(4032, 3024, header_padding=MAX_HEADER_BYTES + 1024)
+    path = _write(tmp_path, "unbounded.jpg", data)
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_HEADER_BYTES) in message
+
+
+# The PNG half of the orientation rule. v0.10 closed the JPEG branch and left this
+# one open; the phase-6 loader probe measured the pod and found `LoadImage`
+# transposes a PNG carrying an `eXIf` chunk exactly as it transposes a tagged
+# JPEG -- and every input this project has ever rendered is a PNG.
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.parametrize("orientation", [5, 6, 7, 8])
+def test_a_rotated_png_reports_the_dimensions_the_loader_will_present(
+    orientation: int, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "rotated.png", png_with_exif(4032, 3024, orientation))
+    assert image_dimensions(path) == (3024, 4032)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.parametrize("orientation", [1, 2, 3, 4])
+def test_an_upright_png_orientation_leaves_the_header_dimensions_alone(
+    orientation: int, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "upright.png", png_with_exif(4032, 3024, orientation))
+    assert image_dimensions(path) == (4032, 3024)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+def test_a_png_with_no_exif_chunk_is_measured_as_its_header_states(
+    tmp_path: Path,
+) -> None:
+    path = _write(tmp_path, "plain.png", png_bytes(4032, 3024))
+    assert image_dimensions(path) == (4032, 3024)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+def test_the_exif_chunk_is_found_wherever_the_writer_put_it(tmp_path: Path) -> None:
+    # A writer may put `eXIf` anywhere before the pixel data, so a parser that
+    # looks only straight after IHDR would report the untransposed pair.
+    path = _write(tmp_path, "late.png", png_with_exif(4032, 3024, 6, chunks_before=5))
+    assert image_dimensions(path) == (3024, 4032)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+def test_both_codecs_agree_on_the_same_rotation(tmp_path: Path) -> None:
+    # The mismatch this rule prevents is a property of the loader, not of the
+    # container: the phase-6 probe measured both and both transposed.
+    as_jpeg = _write(tmp_path, "r.jpg", jpeg_with_header(4032, 3024, orientation=6))
+    as_png = _write(tmp_path, "r.png", png_with_exif(4032, 3024, 6))
+    assert image_dimensions(as_jpeg) == image_dimensions(as_png) == (3024, 4032)
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-unbounded-header-walk-is-refused"
+)
+def test_a_png_declaring_an_unbounded_exif_chunk_is_refused(tmp_path: Path) -> None:
+    # The `eXIf` payload is the one thing the walk reads rather than seeks over,
+    # so it is the one place a header-declared length is materialised. A chunk
+    # header may state up to 4 GiB; reading it on the header's word alone is a
+    # `MemoryError` no refusal names.
+    data = bytearray(png_with_exif(4032, 3024, 6))
+    at = data.index(b"eXIf")
+    data[at - 4 : at] = b"\xff\xff\xff\xff"
+    path = _write(tmp_path, "unbounded-chunk.png", bytes(data))
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_HEADER_BYTES) in message
+    # and it says which walk gave up: this refusal is reachable from the PNG
+    # chunk walk as well as the JPEG marker walk, so a message naming only a
+    # JPEG's frame header tells an operator handed a corrupt PNG that the file
+    # lacks a structure PNG does not have.
+    assert "PNG" in message
+    assert "frame header" not in message

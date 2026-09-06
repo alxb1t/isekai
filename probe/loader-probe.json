@@ -1,0 +1,23 @@
+[
+  {
+    "input": "c_rotated.jpg",
+    "uploaded_as": "c_rotated.jpg",
+    "saved_as": "c_rotated.saved.png",
+    "saved_width": 832,
+    "saved_height": 1216
+  },
+  {
+    "input": "e_png_exif.png",
+    "uploaded_as": "e_png_exif.png",
+    "saved_as": "e_png_exif.saved.png",
+    "saved_width": 1216,
+    "saved_height": 832
+  },
+  {
+    "input": "d_control.jpg",
+    "uploaded_as": "d_control.jpg",
+    "saved_as": "d_control.saved.png",
+    "saved_width": 832,
+    "saved_height": 1216
+  }
+]

@@ -8,6 +8,7 @@ dimensions a test asserts against.
 """
 
 import struct
+import zlib
 
 
 def png_bytes(width: int, height: int) -> bytes:
@@ -41,20 +42,30 @@ def jpeg_bytes(width: int, height: int) -> bytes:
     return b"\xff\xd8" + app0 + sof0 + b"\xff\xd9"
 
 
-def _exif_app1(orientation: int) -> bytes:
-    """Return an APP1 segment whose TIFF IFD0 declares this Orientation."""
+def exif_tiff(orientation: int) -> bytes:
+    r"""Return a big-endian TIFF block whose IFD0 declares this Orientation.
+
+    The block itself, without a container: JPEG wraps it in an APP1 segment
+    behind an `Exif\x00\x00` marker, and PNG's `eXIf` chunk carries it raw. The
+    probe builds both from this one function, so a rotated JPEG and a rotated PNG
+    differ only in the container.
+    """
     # A single big-endian IFD entry: tag 0x0112, type 3 (SHORT), count 1. A SHORT
     # value is left-justified in the entry's four value bytes, which is why the
     # orientation is packed ahead of the padding rather than after it.
     entry = struct.pack(">HHI", 0x0112, 3, 1) + struct.pack(">HH", orientation, 0)
-    tiff = (
+    return (
         b"MM\x00\x2a"
         + struct.pack(">I", 8)
         + struct.pack(">H", 1)
         + entry
         + struct.pack(">I", 0)
     )
-    payload = b"Exif\x00\x00" + tiff
+
+
+def _exif_app1(orientation: int) -> bytes:
+    """Return an APP1 segment whose TIFF IFD0 declares this Orientation."""
+    payload = b"Exif\x00\x00" + exif_tiff(orientation)
     return b"\xff\xe1" + struct.pack(">H", len(payload) + 2) + payload
 
 
@@ -92,3 +103,45 @@ def jpeg_with_header(
         prefix += _exif_app1(orientation)
     prefix += _filler_app2(header_padding)
     return body[:2] + prefix + body[2:]
+
+
+def png_with_exif(
+    width: int, height: int, orientation: int, *, chunks_before: int = 0
+) -> bytes:
+    r"""Return a PNG declaring this size and carrying an `eXIf` Orientation chunk.
+
+    PNG's `eXIf` chunk holds the TIFF stream raw -- the `Exif\x00\x00` marker is
+    JPEG's container, not this one. `chunks_before` pads the walk with ancillary
+    chunks ahead of it, because a writer is free to put `eXIf` anywhere before the
+    pixel data and a parser that only looks straight after IHDR would miss it.
+    """
+    base = png_bytes(width, height)
+    # Signature, then IHDR's own length word, type, payload and CRC. Computed
+    # rather than counted back from the end, because splicing a chunk inside
+    # IHDR's CRC produces a file that parses as garbage rather than as a PNG
+    # carrying orientation.
+    ihdr_end = 8 + 4 + 4 + struct.unpack(">I", base[8:12])[0] + 4
+    padding = b"".join(
+        png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
+    )
+    return (
+        base[:ihdr_end]
+        + padding
+        + png_chunk(b"eXIf", exif_tiff(orientation))
+        + base[ihdr_end:]
+    )
+
+
+def png_chunk(kind: bytes, payload: bytes) -> bytes:
+    """Return one length-prefixed, CRC-suffixed PNG chunk.
+
+    Public because `probe/build_inputs.py` splices an `eXIf` chunk into a real
+    photograph with it: the framing rule is the same one, and two spellings of it
+    would drift.
+    """
+    return (
+        struct.pack(">I", len(payload))
+        + kind
+        + payload
+        + struct.pack(">I", zlib.crc32(kind + payload))
+    )

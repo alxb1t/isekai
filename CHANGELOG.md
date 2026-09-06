@@ -25,6 +25,232 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-06
+
+### Fixed
+
+- **The capacity floor is raised clear of the container disk as well as the volume disk.** Moving the
+  floor from free space to capacity widened the passing set, and one wrong disk entered it: the case
+  the pod-side guard exists for at all is the one `up.sh` cannot see — the volume id is set and the
+  mount silently failed — where `/runpod-volume` falls through to the container overlay, whose backing
+  disk is `containerDiskInGb: 30` (`infra/up.sh`). `avail` on that overlay, already carrying the
+  image, was far under the old 20 GiB floor and refused; `size` reports ~27.9 GiB regardless of what
+  the image occupies, and passed. The floor is now **40 GiB**, derived against both wrong disks —
+  20 GB volume disk ≈ 18.6 GiB, 30 GB container overlay ≈ 27.9 GiB — and against the right one, the
+  80 GB network volume ≈ 74.5 GiB. It is one measurement still, not two: the rejected alternative was
+  a second free-space check beside it. The error text now names what it measured and which two
+  ephemeral disks a reading that small means. `design.md` D5 and D5a and `tasks.md` are reworded off
+  the free-space mechanism they still described.
+- **A manifest destination is held to the same whitespace rule as a source, and one that resolves to
+  the models root itself is refused rather than crashed on.** `resolve_dest` is the single site the
+  containment rule is enforced at, and it had two holes: a `dest` containing `\n` or `\t` survived
+  `normpath` into the tab-delimited plan line, where an embedded newline starts a fresh record whose
+  target is absolute and whose URL never meets `PINNED_SOURCE` — that check lives in `decide`, which
+  an injected record bypasses; and a `dest` normalising to `"."` (`"."`, `"./"`, `"a/.."`) raised
+  `IndexError` off `PurePosixPath(".").parts` being empty, instead of returning `None` as the
+  function's own contract says. `plan` additionally refuses to emit any target carrying `\n` or `\t`,
+  which covers the half of the target that comes from `MODELS_DIR` rather than from the manifest.
+- **The header-walk refusal names the codec that gave up.** `_HeaderTooDeep`'s message was
+  JPEG-worded — "no frame header" — but the PNG chunk walk raises it too, from two places, so an
+  operator handed a corrupt PNG was told the file lacks a structure PNG does not have. The exception
+  now carries its codec and the message renders it, still naming the file and the byte budget.
+- **`civitai_file` returns the digest alone.** Its size was read with a subscript where every sibling
+  read uses `.get` with a `SystemExit`, so a record omitting `sizeKB` aborted derivation with a raw
+  `KeyError` — for a number the one call site discarded and the manifest never used, its `bytes`
+  coming from Hugging Face. Dropped rather than defended.
+- **The probe's JPEG segment walk no longer indexes past the end of the file.** `segments()` read the
+  marker's code byte having tested only that the marker byte itself was in range, so a JPEG ending on
+  a lone `0xFF` raised `IndexError`. A file that ends there has no segment left to report.
+- **The pod-side volume guard measures capacity, which is what it is trying to prove, rather than
+  free space.** The 20 GiB floor was read off `df -k --output=avail` while its error text claimed to
+  have proved *identity* — "this is not network volume ${RUNPOD_VOLUME_ID}". Free space on a
+  correctly-attached volume is whatever this project's 16.5 GiB of models plus the second project
+  sharing that volume have left of it, so the guard was coupled to fill level and degraded
+  monotonically as the volume filled. A warm boot on which every manifest entry would `SKIP` — a pod
+  that needed to download nothing — would have been refused, written the failure marker and billed
+  the whole 900 s hold. The floor is now on `--output=size`: total capacity discriminates the pod's
+  own 20 GB ephemeral disk from the network volume whatever either currently holds, and the message
+  says what is measured. Free space is not checked at all; if it ever should be, it is a second check
+  with its own message, which is why it is not smuggled into this one.
+- **A PNG declaring an `eXIf` chunk longer than the header budget is refused by name.** The chunk
+  walk seeks over every payload but one: the `eXIf` branch called `read(length)` on the raw uint32 out
+  of the chunk header, bounded by nothing. `MAX_HEADER_BYTES` is tested at the top of the loop and
+  that branch returns before the next iteration, so a chunk declaring 0xFFFFFFFF asked for a 4 GiB
+  read whose `MemoryError` neither `except` clause catches — a traceback instead of the refusal that
+  names the file and the budget. It was the fourth ceiling in a phase whose subject was stating the
+  three the header parse left open. The length is now checked against the budget before the read, and
+  a chunk that overruns it raises the same `_HeaderTooDeep` the other ceilings do rather than
+  truncating to a silently wrong orientation.
+
+- **A rotated PNG is measured as it will be loaded, in the codec every input this project has ever
+  used.** v0.10 closed this for JPEG and left PNG open, because `_png_dimensions` read IHDR and
+  stopped. PNG can carry an `eXIf` chunk holding the same TIFF stream JPEG's APP1 does, and the
+  phase-6 loader probe measured the pinned build rather than reasoning about it: a portrait PNG
+  tagged Orientation 6 came back from `LoadImage` as **1216×832**, transposed, against an untagged
+  control that did not move. Injection was therefore measuring such a file as its header states while
+  the loader handed the graph the transposed pixels — and `ImageScale` runs with `crop: "disabled"`,
+  so the photo would be squashed non-uniformly into the wrong frame and the distorted face fed to
+  InstantID, the VAE encoder and all three preprocessors at once. Exactly the defect v0.10 called
+  blocking, in the branch that was not fixed. The parser now walks the PNG's chunks to the pixel data
+  looking for `eXIf`, and both codecs share one TIFF orientation reader rather than each having its
+  own. The scenario the fix is bound to now names both codecs, because the mismatch is a property of
+  the loader and not of the container.
+
+### Added
+
+- **The base checkpoint's digest is derived from its publisher's own record, not transcribed.**
+  `derive_manifest.py`'s docstring claimed the manifest is "derived, never transcribed" while the one
+  digest that matters most was a constant a human typed — and it is the entry where the digest is not
+  merely a check on the transfer but the **whole trust root**, because WAI has no first-party host
+  and every source is a mirror. It existed in three places that compared against each other, which
+  cross-checks the copying and not the value. The deriver now fetches it from Civitai's public
+  model-version record (`https://civitai.com/api/v1/model-versions/2883731`, read 2026-09-06), like
+  every other digest, and holds the mirrors against that. The parse is a pure function so the suite
+  checks it offline; only the fetch touches the network.
+
+  The residual is unchanged and stated: **Civitai is still the trust root**, it publishes no
+  signature, and the digest is computed by the platform after upload — an independent cross-check of
+  the mirrors, not an attestation by the author. **BLAKE3 is deliberately not recorded** although the
+  same API publishes it: verifying it would need a wheel the stdlib-only runtime rule forbids, and a
+  field nothing reads is the same smell as a one-entry registry. The hand-written copy in the suite
+  stays, on purpose — it is the *offline* anchor the gate holds, and an anchor that fetches is not
+  one.
+- **CI enforces the `latest` protection its own header comment claims.** `build-image.yml` asserted
+  that a manual run "can never clobber the image a rollback would reach for" while interpolating an
+  unvalidated `workflow_dispatch` string straight into `tags` — so a dispatch naming `latest` did
+  exactly that, and a newline in the input would have been honoured as a second tag by
+  `docker/build-push-action`'s newline-separated `tags` field, which a `gh workflow run` or a REST
+  dispatch can supply. A first step now fails unless the input matches `^[A-Za-z0-9._-]+$` and is not
+  `latest`, and assigns the validated value to a step output the build step reads, so the raw input
+  is never interpolated into `tags` at all. The dispatch default, still `v0.9-rc` two versions on,
+  now names `v0.11-rc`.
+- **Three stated ceilings on measuring a photo, each a refusal rather than a clamp.** The short-side
+  rule bounds one axis and says nothing about the other, and a header field was an unverified number
+  until something bounded it. The computed target's **long side** is capped at 4096 — 4:1 at a 1024
+  short side, past any real photo, and 1024×4096 is already a heavy SDXL allocation. A
+  **header-declared dimension** is capped at 65535, which JPEG's own two-byte frame field already
+  enforces, so both codecs now refuse the same input. The **marker walk** stops after 4 MiB, so a
+  file whose frame header sits arbitrarily deep is refused rather than read to its end. Each names
+  the file and the limit. None clamps: a clamped target no longer preserves the aspect ratio, and
+  would squash the photo the way the orientation rule exists to prevent.
+- **A pod is refused before it is created if it was not told which network volume to use.**
+  `infra/up.sh` now checks `RUNPOD_VOLUME_ID` before the create call and passes it into the
+  container, so the entrypoint is told which volume to expect rather than inferring it. The failure
+  this prevents — the full 16.5 GiB model stack downloaded onto storage that dies at teardown —
+  renders correctly, bills fully, and is discovered only on the next metered session. The suggested
+  pod-side fix, `mountpoint -q`, does **not** work: RunPod defaults `volumeInGb` to 20 and mounts the
+  pod's own volume disk at `volumeMountPath` when no network volume is attached, so the path exists
+  and *is* a mountpoint — the wrong one. The entrypoint therefore keeps a second check as defence in
+  depth, with a free-space floor above what that 20 GB disk could ever report as the discriminator.
+- **The provisioning guards moved from the suite into the module, where they can bite on a pod.**
+  Four manifest checks had no caller outside `tests/test_manifest.py`: they constrain the manifest
+  this repository tracks, and constrain nothing about a manifest the module is handed on the pod —
+  which is what joins a destination onto the filesystem and hands a URL to a transfer. `decide` now
+  refuses, before any byte moves and naming the entry, a destination that is absolute or resolves
+  outside the models root, a source that is not a pinned URL free of whitespace, and an entry that
+  declares no sources at all. The last is refused **by name** rather than reported as "every source
+  was rejected" with an empty reason list: an entry that offered nothing and an entry whose every
+  offer was refused are different failures with different fixes.
+- **The plan line carries the already-resolved destination.** `provision.py` resolves it once and
+  `scripts/download_models.sh` no longer assembles `"${MODELS_DIR}/${dest}"`, so a manifest-controlled
+  field can no longer reach a path join and the containment rule has exactly one site. The resolution
+  is lexical, because the models root on the pod *is* a symlink onto the namespace.
+- **The driver reads its sources as an array rather than word-splitting a string.** `IFS=$'\t' read
+  -r -a` makes the sources a list from the moment the line is read, so a source's own shape cannot
+  change how many arguments `wget` is given. The `# shellcheck disable=SC2086` that made the split
+  legal is gone with it — the suppression was the marker, and the split was contained only by an
+  argument-parsing accident.
+- **The graph↔manifest binding keys on an explicit set of class names, not a `*Preprocessor`
+  suffix.** A suffix rule binds the nodes spelled that way and silently passes the ones that are not:
+  `InstantIDFaceAnalysis` fetches the whole antelopev2 pack and matches no pattern at all. The
+  mapping is now a census of every class the shipped graph uses, so a node added to the graph fails
+  the check until someone answers whether it fetches for itself, and the five antelopev2 destinations
+  are bound to the node that fetches them.
+- **The provisioning hold is bounded and leaves a marker.** A provisioning abort used to hold the pod
+  open with `tail -f /dev/null` — reachable, but reporting as running and healthy while it billed
+  indefinitely. It now holds for 900 s (~$0.19 at the rate this project runs on, inside the ~$0.30
+  per-session ceiling) and writes a failure marker to **container disk**, never into the models
+  namespace: the namespace is exactly the thing that may have failed, and a marker a broken volume
+  prevents you from writing does not make the failure legible.
+
+### Changed
+
+- **ComfyUI's core is pinned to a commit — the last unpinned link in the change whose thesis was
+  pinning.** `Dockerfile` cloned the default branch head while both custom-node packs beside it were
+  already pinned, so an image rebuilt a month later ran a different inference engine with no record
+  that it had. The pin is `250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a`, **recovered from
+  `ghcr.io/alxb1t/isekai:v0.10-rc` itself** rather than taken from upstream today: it is a record of
+  what already ran, so the core is not a new variable. Bumping it forward is a separate, deliberate
+  act that must carry a render comparison at a fixed seed.
+- **The reachability hold covers preparing the namespace, not only fetching into it.** Creating the
+  namespace and relinking the models root now sit inside the same guarded step as the download, so a
+  failure there reports and holds instead of terminating the entrypoint — which under `set -e` took
+  the SSH daemon with it and left no way in. Preparing the volume is provisioning by any reading a
+  human would give the word; the guarantee is about provisioning and not about one of its steps.
+- **The `rm -rf` of the models root is guarded on its premise rather than on its proxy.** What made
+  the delete safe was that the tree is the image's own, on container disk; the check was that the
+  path is not yet a symlink. A non-empty tree someone has mounted there is a real models tree, and
+  the entrypoint now refuses rather than deleting it. Deleting one is an explicit operator act.
+
+- **A metered pod session exercised four input shapes v0.10 named as untested, and a loader probe
+  settled a question exit codes cannot.** `probe/README.md` is the record. One session on
+  `:v0.11-rc`, 9 min 33 s and ~$0.11 against a 45-minute, ~$0.30 ceiling; teardown confirmed through
+  the RunPod MCP with its response recorded. All four renders exited 0, and each render's dimensions
+  equal the target `working_resolution` computes from that file's own header — including 1536×1024,
+  the first target produced by rounding on the **height** axis, and 1024×1152, an aspect no prior run
+  produced. The pinned ComfyUI core was confirmed on the pod itself.
+
+  **What the session did not establish is stated in the same breath**, in `probe/README.md` and here:
+  nothing about identity, fidelity or quality, because no evaluator exists and none was run; **not**
+  that renders are unchanged from v0.10, because the dependency closure was re-resolved at build and
+  no v0.10 PNG baseline was kept, so there is nothing to diff against; **not** the volume guard and
+  **not** the bounded hold, both of which ship suite-bound and were never reached on a healthy pod;
+  and nothing about mutation, since each photo ran at one variation.
+
+### Notes
+
+- **The unreconciled 1152, recorded and left unverified.** v0.10's proposal says the working scale
+  targets a short side of **1152**, on the reading that MistoLine's card requires *above* 1024;
+  `WORKING_SCALE = 1024` shipped, under a comment calling 1024 "the floor MistoLine's card names".
+  Two readings of one sentence, and one of them is wrong. The reading this repository runs on is
+  1024, and every render it has ever shipped was made at it. **Which reading is right is a rendering
+  question, so it waits for the evaluator and was not re-tested here** — nothing in this version
+  should be read as saying the 1024 was validated. What changed is that the disagreement is written
+  down where a reader following the version chain will hit it, rather than sitting unremarked between
+  an archived proposal and a code comment. v0.10's own documents are not edited: an archived change
+  records what was decided then.
+- **The pose-grid sentence is corrected in both places it was written.** `workflow-injection`'s
+  `scale-precedes-every-consumer` claimed "no control hint is registered against a different one",
+  and `README.md` repeated it. It is false: `DWPreprocessor` derives its hint at `resolution: 512`
+  where tile and lineart carry 1024, and the test bound to the scenario checks image links only — so
+  the false clause was unenforced. The scenario is narrowed to what the suite proves, that every
+  consumer is handed the same scaled image, with a preprocessor's own working resolution named as the
+  separate dial it is. **The graph is unchanged**: moving that dial measurably changes the render, and
+  rendering questions wait for the evaluator.
+- **A `spec_exempt` label now says what it is.** `"structural: pins the dials the phase-5 probe
+  chose"` described a by-eye value pin as structural, which is the opposite of what it is. It reads
+  `"preference, not a scenario: holds the dials design.md D9 records as by-eye"`. No behaviour
+  changes; the point is that a reader auditing the exemptions is told the truth about which ones are
+  load-bearing.
+- **Pinning the core moves the floating link rather than removing it, and this change does not claim
+  otherwise.** `Dockerfile` still runs `uv pip install -r requirements.txt` against ComfyUI's own
+  requirement file and against the preprocessor pack's, and neither is version-locked: both resolve
+  at build time, so after this pin the core is fixed and its dependency closure is not, and two
+  builds of an identical tracked `Dockerfile` still differ. **The image is not reproducible.** Locking
+  both closures needs a new tracked artifact, a derive-and-verify step and a full rebuild to
+  validate — its own change, and named here as the next pinning target.
+- The comment above the models namespace no longer calls the tree it replaces empty. The ComfyUI
+  clone tracks `models/configs/*.yaml`, so it is not; the delete drops them **knowingly**, because
+  the graph uses `CheckpointLoaderSimple`, which takes no config. Copying them in would add a write
+  at boot to be ordered against the new volume guard, and would restore a config dropdown only for
+  loader classes this repository's one-path rule forbids ever using. The defect was a false comment,
+  and the comment is what is fixed.
+- **Both new guards ship suite-bound and unexercised on a pod.** Exercising the pod-side volume check
+  would mean deliberately defeating the client check added beside it, in order to test a
+  configuration this repository no longer produces; exercising the bounded hold would mean breaking
+  provisioning on metered time. This is a real residual, and it is written down rather than smoothed
+  over.
+
 ## [0.10.0] - 2026-09-05
 
 ### Fixed

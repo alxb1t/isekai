@@ -18,6 +18,7 @@ models/
 
 # Generated outputs
 outputs/
+.inputs/
 
 # Python
 __pycache__/
