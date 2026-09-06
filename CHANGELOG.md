@@ -27,6 +27,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`evaluate.py`, a second entry point beside `convert.py` and never on its import graph.** Four axes
+  over a canvas the photograph and the render provably share: face (StyleID, plus ArcFace tagged
+  falsify-only), pose (PCK), hair colour (CIEDE2000), and a face-location guard. It is deliberately not
+  a subcommand — a subcommand would put the `[eval]` extra one misplaced import away from breaking
+  `convert.py`'s `dependencies = []`.
+- **Every rule the scorer applies is stdlib-only and therefore tested in CI with the stack absent.**
+  `isekai/evaluate.py` holds the canvas, the guard, the refusals and the report and imports nothing
+  third-party; the models arrive through Protocols that `isekai/eval_backends.py` implements. That is
+  the same seam `ComfyTransport` is under, for the same reason — 47 tests over the scorer's behaviour
+  run offline against fakes.
+- **The canvas comes from the injector, and a mismatched render is refused naming both sizes.**
+  `canvas_for` calls `working_resolution` and `image_dimensions` rather than restating the rule, and
+  the photograph's pixels are transposed for a rotating EXIF tag **before any region is parsed** — the
+  header parser returns dimensions, and `LoadImage` transposes both codecs, so a photograph parsed
+  upright against transposed pixels would place every region wrong with all four numbers still looking
+  plausible. The canvas is settled before any model is asked anything, which a test asserts.
+- **Regions come from the photograph only.** The render is sampled inside the photograph's own mask and
+  never handed to a parser — a human parser is trained on photographs and its behaviour on a drawing is
+  unknown. A region under a **measured area floor** refuses naming itself and its area, rather than
+  reporting a number derived from too few pixels; the per-class accuracy filter is not here, because it
+  would have discarded classes on someone else's test-set numbers.
+- **The guard computes both methods on every run** — box IoU and landmark-centroid alignment — and
+  names which one was authoritative. Which one ships is decided by measurement in phase 8, not by
+  argument. A failed guard refuses every region axis naming the guard as the cause, while the pose axis,
+  which needs no region, still reports: a guard failure does not deprive the operator of the
+  measurements it does not invalidate.
+- **Absence is its own field and never a low score.** `face_detected` and `render_face_detected` are
+  separate from every value, a pose reader that read nothing reports its own absence rather than a
+  zero, and low-confidence keypoints are dropped and counted rather than scored at a guessed
+  coordinate.
+- **A cross-base comparison refuses per axis, not globally.** The embedding axes refuse with the reason
+  in the record while colour, area and keypoints still report. **A run recording no base is treated as
+  unknown rather than as matching** — the case this exists for is an old manifest that predates the
+  provenance keys, where assuming a match would compare across bases silently.
+- **The report emits no combined score, no verdict and no percentage.** One JSON record per render and
+  one table per run; every column states its direction and whether it is absolute or relative; the run,
+  the base and the image are named so a table read months later can be attributed. Every claim the
+  numbers do **not** support is printed beside them, including that no axis isolates one dial.
+- **CIEDE2000 is implemented in-tree and checked against Sharma, Wu & Dalal (2005)'s own 34-pair
+  reference table**, to four decimals, plus symmetry and the neutral-chroma cases. That table was
+  constructed to catch exactly the discontinuities an implementation gets wrong, which makes it a
+  stronger check than trusting a transitive dependency — and it keeps scipy, networkx and imageio out
+  of the lock for one closed-form function of six numbers.
+- **The `[eval]` extra is five packages and CI never installs it.** `torch` and `transformers` are
+  unavoidable rather than convenient: StyleID publishes only a `CLIPModel` safetensors and the DWPose
+  artifact `models.json` pins is a TorchScript `.pt`. `onnxruntime` (MIT) carries the region parser and
+  the anime-face detector. The gate array stays five commands and `convert.py` keeps
+  `dependencies = []`.
+- **`ultralytics` is absent from `pyproject.toml`, from `uv.lock` and from the scorer's import graph**,
+  asserted by three tests rather than left to a licence review nobody runs. Verified with the whole
+  extra installed: it is not importable.
+- **The stdlib guard uses `-S`, and the AST fallback was not needed.** `design.md` D12 left the
+  mechanism open because `-S` inside a uv venv was unverified. It was verified here, both ways: `-S`
+  leaves no site-packages on `sys.path`, `import convert` succeeds under it, and `import pytest` fails
+  under it — so the guard is falsifiable rather than passing for the wrong reason.
 - **`run.json` becomes a provenance record, not only a reproduction one.** It recorded `seed`,
   `variations`, `seeds` and `overrides`, and so could not name the photograph, the graph, the base or
   the resolution — the two batches in `outputs/final/` are identifiable only from this file's prose,

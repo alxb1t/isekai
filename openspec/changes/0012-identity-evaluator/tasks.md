@@ -5,7 +5,7 @@
 - [x] 1 — The licences, read and recorded; every eval artifact pinned — **before any code**
 - [x] 2 — A render with the graph's own dials, and `cn_strength` made settable and pinned
 - [x] 3 — `run.json` becomes a provenance record
-- [ ] 4 — `evaluate.py`, the `[eval]` extra, and the stdlib guard on `convert.py`
+- [x] 4 — `evaluate.py`, the `[eval]` extra, and the stdlib guard on `convert.py`
 - [ ] 5 — Prove the scorer on the renders already on disk, before any money is spent
 - [ ] 6 — 🛑 **HUMAN** — the six subjects: a tracked builder, digests recorded, pixels not committed
 - [ ] 7 — ⚠️ **GPU · HALT** — one session on `:v0.11-rc`, thirty fixed-dial renders
