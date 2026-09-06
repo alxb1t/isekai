@@ -13,13 +13,14 @@ module is `json`, `re` and `pathlib` -- but the import graph stays narrow too.
 
 import hashlib
 import json
+import posixpath
 import re
 import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from http.client import HTTPMessage
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import IO, Any, Literal, Protocol, TypedDict
 
 MANIFEST_PATH = Path(__file__).resolve().parent.parent / "scripts" / "models.json"
@@ -37,6 +38,11 @@ PINNED_SOURCE = re.compile(
 # The org of a source URL, whether or not the URL is pinned -- so a malformed
 # source is reported once, by the pin check, rather than twice.
 SOURCE_ORG = re.compile(r"^https://huggingface\.co/(?P<org>[^/]+)/")
+
+# Any whitespace at all. `PINNED_SOURCE` ends in `.+$`, and neither `.` nor `$`
+# rules out a newline in the middle of a value: a source carrying one would pass
+# the pin check and then arrive at the transfer as two arguments.
+WHITESPACE = re.compile(r"\s")
 
 
 class Entry(TypedDict):
@@ -220,6 +226,28 @@ def verify(path: Path, expected: str) -> None:
         )
 
 
+def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
+    """Return the destination resolved under `models_dir`, or None if it escapes.
+
+    The one place a manifest destination is joined onto the filesystem, so the
+    containment rule has exactly one site to be enforced at (design.md D7). The
+    digest offers no protection here: whoever supplies the destination supplies
+    the digest beside it, and a second project shares the volume this tree lives
+    on.
+
+    Lexical on purpose — `normpath` rather than `resolve` — because `MODELS_ROOT`
+    on the pod IS a symlink onto the namespace, so resolving would report the
+    target through a path the driver was never handed.
+    """
+    dest = entry["dest"]
+    if not dest or dest.startswith(("/", "~")) or "\\" in dest:
+        return None
+    normalized = PurePosixPath(posixpath.normpath(dest))
+    if normalized.is_absolute() or normalized.parts[:1] in ((".",), ("..",)):
+        return None
+    return models_dir / normalized
+
+
 def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     """Decide what to do about one entry: skip it, abort the run, or fetch it.
 
@@ -235,7 +263,14 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     because the pre-flight is an optimisation and never a substitute for hashing
     the bytes that landed.
     """
-    dest = models_dir / entry["dest"]
+    dest = resolve_dest(entry, models_dir)
+    if dest is None:
+        return Decision(
+            "abort",
+            (),
+            f"destination {entry['dest']!r} does not resolve inside {models_dir}",
+        )
+
     if dest.exists():
         try:
             verify(dest, entry["sha256"])
@@ -243,9 +278,15 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
             return Decision("abort", (), f"{mismatch} — left on disk for inspection")
         return Decision("skip", (), f"present and verified: {entry['dest']}")
 
+    if not entry["sources"]:
+        return Decision("abort", (), f"no source is declared for {entry['dest']}")
+
     rejected: list[str] = []
     offered: list[str] = []
     for url in entry["sources"]:
+        if WHITESPACE.search(url) or not PINNED_SOURCE.match(url):
+            rejected.append(f"{url} is not a pinned URL free of whitespace")
+            continue
         published = fetcher.published_digest(url)
         if published is not None and published != entry["sha256"]:
             rejected.append(f"{url} publishes {published}")
@@ -270,12 +311,17 @@ def land(entry: Entry, models_dir: Path, partial: Path) -> None:
     interrupted or tampered transfer never occupies the final name and the next
     run sees the file as absent rather than as present-and-trusted.
     """
+    dest = resolve_dest(entry, models_dir)
+    if dest is None:
+        partial.unlink(missing_ok=True)
+        raise SystemExit(
+            f"ERROR: destination {entry['dest']!r} does not resolve inside {models_dir}"
+        )
     try:
         verify(partial, entry["sha256"])
     except DigestMismatch:
         partial.unlink(missing_ok=True)
         raise
-    dest = models_dir / entry["dest"]
     dest.parent.mkdir(parents=True, exist_ok=True)
     partial.replace(dest)
 
@@ -283,7 +329,8 @@ def land(entry: Entry, models_dir: Path, partial: Path) -> None:
 def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     """Print one line per entry for the shell driver to act on; 0 if it may proceed.
 
-    `SKIP<TAB><dest>` or `FETCH<TAB><dest><TAB><url>[<TAB><url>...]` — a fetch
+    `SKIP<TAB><target>` or `FETCH<TAB><target><TAB><url>[<TAB><url>...]`, where
+    the target is the destination already resolved under `models_dir` — a fetch
     line carries every source that survived the pre-flight, in order, and the
     driver walks them until one verifies. Every entry is decided before any line
     is printed, so an abort anywhere stops the run before a single byte is
@@ -295,10 +342,15 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
         decision = decide(entry, models_dir, fetcher)
         if decision.action == "abort":
             aborts.append(decision.reason)
-        elif decision.action == "skip":
-            lines.append(f"SKIP\t{entry['dest']}")
         else:
-            lines.append("\t".join(["FETCH", entry["dest"], *decision.urls]))
+            # The already-resolved path, so the shell joins nothing and the
+            # containment rule has one site rather than one per assembly.
+            target = resolve_dest(entry, models_dir)
+            assert target is not None  # an unresolvable dest aborted above
+            if decision.action == "skip":
+                lines.append(f"SKIP\t{target}")
+            else:
+                lines.append("\t".join(["FETCH", str(target), *decision.urls]))
     if aborts:
         for reason in aborts:
             print(f"ERROR: {reason}", file=sys.stderr)
@@ -308,12 +360,18 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     return 0
 
 
-def _entry_for(manifest: Manifest, dest: str) -> Entry:
-    """Return the manifest entry with this destination, or exit non-zero."""
+def _entry_for(manifest: Manifest, models_dir: Path, target: str) -> Entry:
+    """Return the entry whose resolved destination is `target`, or exit non-zero.
+
+    The driver is handed resolved targets and hands them straight back, so the
+    lookup resolves the manifest side rather than asking the shell to un-join
+    what it never joined.
+    """
     for entry in manifest["entries"]:
-        if entry["dest"] == dest:
+        resolved = resolve_dest(entry, models_dir)
+        if resolved is not None and str(resolved) == target:
             return entry
-    raise SystemExit(f"ERROR: {dest} is not declared in {MANIFEST_PATH}")
+    raise SystemExit(f"ERROR: {target} is not declared in {MANIFEST_PATH}")
 
 
 def main(argv: list[str]) -> int:
@@ -321,19 +379,20 @@ def main(argv: list[str]) -> int:
     match argv:
         case ["plan", models_dir]:
             return plan(load_manifest(), Path(models_dir), HuggingFaceFetcher())
-        case ["land", models_dir, dest, partial]:
+        case ["land", models_dir, target, partial]:
             manifest = load_manifest()
+            root = Path(models_dir)
             try:
-                land(_entry_for(manifest, dest), Path(models_dir), Path(partial))
+                land(_entry_for(manifest, root, target), root, Path(partial))
             except DigestMismatch as mismatch:
                 print(f"ERROR: {mismatch}", file=sys.stderr)
                 return 1
-            print(f"saved (verified): {dest}")
+            print(f"saved (verified): {target}")
             return 0
         case _:
             raise SystemExit(
                 "usage: provision.py plan <models-dir>\n"
-                "       provision.py land <models-dir> <dest> <partial>"
+                "       provision.py land <models-dir> <target> <partial>"
             )
 
 
@@ -341,20 +400,48 @@ def main(argv: list[str]) -> int:
 # A `.jpeg` on a LoadImage node is an input photograph, not an artifact to pin.
 MODEL_SUFFIXES = (".safetensors", ".bin", ".onnx", ".pt", ".pth", ".ckpt")
 
-# Node class -> the model files that node downloads for itself and exposes no
-# field for. This is the half of the binding the graph cannot supply, and it is
-# the gap this whole capability was found through: `LineArtPreprocessor` names no
-# file and fetches two -- both of them, unconditionally, regardless of `coarse`.
+# Every node class the shipped graph uses -> the model files that class downloads
+# for itself and exposes no field for. This is the half of the binding the graph
+# cannot supply, and it is the gap this whole capability was found through:
+# `LineArtPreprocessor` names no file and fetches two -- both of them,
+# unconditionally, regardless of `coarse`.
+#
+# Membership is **by name, over every class in the graph**, not by a
+# `*Preprocessor` suffix. A suffix rule binds the nodes that happen to be spelled
+# that way and silently passes the ones that are not:
+# `InstantIDFaceAnalysis` fetches the whole antelopev2 pack and matches no
+# pattern at all. So a class in the graph that is absent from this mapping fails
+# the check, and adding a node forces the question to be answered once.
 #
 # An empty tuple is a real answer, not a placeholder: `TilePreprocessor` fetches
 # nothing at all, and `DWPreprocessor` names its two files in its own inputs, so
-# the graph half already covers them. What matters is that the class is *here* --
-# a preprocessor absent from this mapping fails the check rather than passing
-# silently (design.md D6).
-PREPROCESSOR_MODELS: dict[str, tuple[str, ...]] = {
-    "TilePreprocessor": (),
-    "DWPreprocessor": (),
+# the graph half already covers them.
+SELF_FETCHING_MODELS: dict[str, tuple[str, ...]] = {
+    # Nodes that fetch models nothing in the graph names.
+    "InstantIDFaceAnalysis": (
+        "1k3d68.onnx",
+        "2d106det.onnx",
+        "genderage.onnx",
+        "glintr100.onnx",
+        "scrfd_10g_bnkps.onnx",
+    ),
     "LineArtPreprocessor": ("sk_model.pth", "sk_model2.pth"),
+    # Nodes that fetch nothing, or name in their own inputs everything they load.
+    "ApplyInstantIDAdvanced": (),
+    "CLIPSetLastLayer": (),
+    "CLIPTextEncode": (),
+    "CheckpointLoaderSimple": (),
+    "ControlNetApplyAdvanced": (),
+    "ControlNetLoader": (),
+    "DWPreprocessor": (),
+    "ImageScale": (),
+    "InstantIDModelLoader": (),
+    "KSampler": (),
+    "LoadImage": (),
+    "SaveImage": (),
+    "TilePreprocessor": (),
+    "VAEDecode": (),
+    "VAEEncode": (),
 }
 
 
@@ -369,7 +456,7 @@ def _named_model_files(node: dict[str, Any]) -> list[str]:
 
 def _fetched_model_files(node: dict[str, Any]) -> list[str]:
     """Return the model files this node fetches without naming them anywhere."""
-    return list(PREPROCESSOR_MODELS.get(node["class_type"], ()))
+    return list(SELF_FETCHING_MODELS.get(node["class_type"], ()))
 
 
 def graph_model_files(workflow: dict[str, Any]) -> list[str]:
@@ -377,24 +464,24 @@ def graph_model_files(workflow: dict[str, Any]) -> list[str]:
     return [f for node in workflow.values() for f in _named_model_files(node)]
 
 
-def unmapped_preprocessors(workflow: dict[str, Any]) -> list[str]:
-    """Return preprocessor classes in the graph that `PREPROCESSOR_MODELS` omits.
+def unclassified_node_classes(workflow: dict[str, Any]) -> list[str]:
+    """Return classes in the graph that `SELF_FETCHING_MODELS` does not classify.
 
-    A preprocessor may fetch models with no field to name them, so an unmapped one
-    is an unknown quantity, not a safe default.
+    A node may fetch models with no field to name them, so an unclassified one is
+    an unknown quantity, not a safe default -- and it cannot be recognised by how
+    its class is spelled.
     """
     return sorted(
         {
             node["class_type"]
             for node in workflow.values()
-            if node["class_type"].endswith("Preprocessor")
-            and node["class_type"] not in PREPROCESSOR_MODELS
+            if node["class_type"] not in SELF_FETCHING_MODELS
         }
     )
 
 
-def preprocessor_model_files(workflow: dict[str, Any]) -> list[str]:
-    """Return the files the graph's preprocessors fetch without naming them."""
+def self_fetched_model_files(workflow: dict[str, Any]) -> list[str]:
+    """Return the files the graph's nodes fetch for themselves without naming them."""
     return [f for node in workflow.values() for f in _fetched_model_files(node)]
 
 

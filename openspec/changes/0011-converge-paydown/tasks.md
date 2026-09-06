@@ -4,7 +4,7 @@
 
 - [x] 1 — `start.sh` and `up.sh`: the namespace block, the volume guard, the bounded hold
 - [x] 2 — Pin ComfyUI's core to the commit `:v0.10-rc` was built from
-- [ ] 3 — The provisioning guards move from the suite into the module
+- [x] 3 — The provisioning guards move from the suite into the module
 - [ ] 4 — `workflow.py`: three stated ceilings
 - [ ] 5 — CI enforces the `latest` protection it documents
 - [ ] 6 — Publish `:v0.11-rc`, then ⚠️ **GPU · HALT** — the smoke test and the loader probe

@@ -36,6 +36,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pod's own volume disk at `volumeMountPath` when no network volume is attached, so the path exists
   and *is* a mountpoint — the wrong one. The entrypoint therefore keeps a second check as defence in
   depth, with a free-space floor above what that 20 GB disk could ever report as the discriminator.
+- **The provisioning guards moved from the suite into the module, where they can bite on a pod.**
+  Four manifest checks had no caller outside `tests/test_manifest.py`: they constrain the manifest
+  this repository tracks, and constrain nothing about a manifest the module is handed on the pod —
+  which is what joins a destination onto the filesystem and hands a URL to a transfer. `decide` now
+  refuses, before any byte moves and naming the entry, a destination that is absolute or resolves
+  outside the models root, a source that is not a pinned URL free of whitespace, and an entry that
+  declares no sources at all. The last is refused **by name** rather than reported as "every source
+  was rejected" with an empty reason list: an entry that offered nothing and an entry whose every
+  offer was refused are different failures with different fixes.
+- **The plan line carries the already-resolved destination.** `provision.py` resolves it once and
+  `scripts/download_models.sh` no longer assembles `"${MODELS_DIR}/${dest}"`, so a manifest-controlled
+  field can no longer reach a path join and the containment rule has exactly one site. The resolution
+  is lexical, because the models root on the pod *is* a symlink onto the namespace.
+- **The driver reads its sources as an array rather than word-splitting a string.** `IFS=$'\t' read
+  -r -a` makes the sources a list from the moment the line is read, so a source's own shape cannot
+  change how many arguments `wget` is given. The `# shellcheck disable=SC2086` that made the split
+  legal is gone with it — the suppression was the marker, and the split was contained only by an
+  argument-parsing accident.
+- **The graph↔manifest binding keys on an explicit set of class names, not a `*Preprocessor`
+  suffix.** A suffix rule binds the nodes spelled that way and silently passes the ones that are not:
+  `InstantIDFaceAnalysis` fetches the whole antelopev2 pack and matches no pattern at all. The
+  mapping is now a census of every class the shipped graph uses, so a node added to the graph fails
+  the check until someone answers whether it fetches for itself, and the five antelopev2 destinations
+  are bound to the node that fetches them.
 - **The provisioning hold is bounded and leaves a marker.** A provisioning abort used to hold the pod
   open with `tail -f /dev/null` — reachable, but reporting as running and healthy while it billed
   indefinitely. It now holds for 900 s (~$0.19 at the rate this project runs on, inside the ~$0.30

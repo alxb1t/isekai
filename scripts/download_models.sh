@@ -25,30 +25,37 @@ mkdir -p "$MODELS_DIR"
 # Decide everything first: an abort anywhere stops the run before a single byte moves.
 plan="$(python3 "$PROVISION" plan "$MODELS_DIR")"
 
-# A FETCH line carries every source that survived the pre-flight, tab-separated
-# and in the manifest's order, so `$urls` is the remainder of the line. It is left
-# unquoted below on purpose: that is the word split that turns it back into a list.
-while IFS=$'\t' read -r action dest urls; do
+# Every line is read into an array on tabs. A FETCH line carries the already-
+# resolved target and then every source that survived the pre-flight, in the
+# manifest's order, so the sources are a list from the moment they are read: no
+# word split, and therefore no way for a source's own shape to change how many
+# arguments the transfer is given.
+#
+# The target arrives resolved because `provision.py` resolved it. Nothing here
+# joins `$MODELS_DIR` onto a manifest-controlled field, so the containment rule
+# has exactly one site (design.md D7).
+while IFS=$'\t' read -r -a fields; do
+    action="${fields[0]:-}"
     [ -n "$action" ] || continue
+    target="${fields[1]:-}"
+    urls=("${fields[@]:2}")
     case "$action" in
         SKIP)
-            echo "skip (present, verified): $dest"
+            echo "skip (present, verified): $target"
             ;;
         FETCH)
-            target="${MODELS_DIR}/${dest}"
             mkdir -p "$(dirname "$target")"
             landed=0
             # Walk the sources in order: a dead mirror or bytes that do not verify
             # advance to the next one, and only exhausting them all aborts the run.
-            # shellcheck disable=SC2086
-            for url in $urls; do
+            for url in "${urls[@]}"; do
                 echo "downloading: $url"
                 if ! wget -q --show-progress -O "${target}.partial" "$url"; then
                     rm -f "${target}.partial"
                     echo "WARNING: transfer failed from $url" >&2
                     continue
                 fi
-                if ! python3 "$PROVISION" land "$MODELS_DIR" "$dest" "${target}.partial"; then
+                if ! python3 "$PROVISION" land "$MODELS_DIR" "$target" "${target}.partial"; then
                     echo "WARNING: bytes served by $url did not verify" >&2
                     continue
                 fi
@@ -56,7 +63,7 @@ while IFS=$'\t' read -r action dest urls; do
                 break
             done
             if [ "$landed" -eq 0 ]; then
-                echo "ERROR: every source for $dest failed" >&2
+                echo "ERROR: every source for $target failed" >&2
                 exit 1
             fi
             ;;
