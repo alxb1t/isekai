@@ -104,6 +104,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   path is not yet a symlink. A non-empty tree someone has mounted there is a real models tree, and
   the entrypoint now refuses rather than deleting it. Deleting one is an explicit operator act.
 
+- **A metered pod session exercised four input shapes v0.10 named as untested, and a loader probe
+  settled a question exit codes cannot.** `probe/README.md` is the record. One session on
+  `:v0.11-rc`, 9 min 33 s and ~$0.11 against a 45-minute, ~$0.30 ceiling; teardown confirmed through
+  the RunPod MCP with its response recorded. All four renders exited 0, and each render's dimensions
+  equal the target `working_resolution` computes from that file's own header — including 1536×1024,
+  the first target produced by rounding on the **height** axis, and 1024×1152, an aspect no prior run
+  produced. The pinned ComfyUI core was confirmed on the pod itself.
+
+  **What the session did not establish is stated in the same breath**, in `probe/README.md` and here:
+  nothing about identity, fidelity or quality, because no evaluator exists and none was run; **not**
+  that renders are unchanged from v0.10, because the dependency closure was re-resolved at build and
+  no v0.10 PNG baseline was kept, so there is nothing to diff against; **not** the volume guard and
+  **not** the bounded hold, both of which ship suite-bound and were never reached on a healthy pod;
+  and nothing about mutation, since each photo ran at one variation.
+
 ### Notes
 
 - **Pinning the core moves the floating link rather than removing it, and this change does not claim

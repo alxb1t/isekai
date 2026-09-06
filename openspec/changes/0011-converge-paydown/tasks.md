@@ -7,7 +7,7 @@
 - [x] 3 — The provisioning guards move from the suite into the module
 - [x] 4 — `workflow.py`: three stated ceilings
 - [x] 5 — CI enforces the `latest` protection it documents
-- [ ] 6 — Publish `:v0.11-rc`, then ⚠️ **GPU · HALT** — the smoke test and the loader probe
+- [x] 6 — Publish `:v0.11-rc`, then ⚠️ **GPU · HALT** — the smoke test and the loader probe
 - [ ] 7 — The PNG `eXIf` question, answered by phase 6's probe
 - [ ] 8 — The trust root: WAI's digest is derived, not transcribed
 - [ ] 9 — The record: the 1152, the pose grid, the probe artifacts, the exemption label

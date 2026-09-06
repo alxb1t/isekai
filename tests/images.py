@@ -41,20 +41,30 @@ def jpeg_bytes(width: int, height: int) -> bytes:
     return b"\xff\xd8" + app0 + sof0 + b"\xff\xd9"
 
 
-def _exif_app1(orientation: int) -> bytes:
-    """Return an APP1 segment whose TIFF IFD0 declares this Orientation."""
+def exif_tiff(orientation: int) -> bytes:
+    r"""Return a big-endian TIFF block whose IFD0 declares this Orientation.
+
+    The block itself, without a container: JPEG wraps it in an APP1 segment
+    behind an `Exif\x00\x00` marker, and PNG's `eXIf` chunk carries it raw. The
+    probe builds both from this one function, so a rotated JPEG and a rotated PNG
+    differ only in the container.
+    """
     # A single big-endian IFD entry: tag 0x0112, type 3 (SHORT), count 1. A SHORT
     # value is left-justified in the entry's four value bytes, which is why the
     # orientation is packed ahead of the padding rather than after it.
     entry = struct.pack(">HHI", 0x0112, 3, 1) + struct.pack(">HH", orientation, 0)
-    tiff = (
+    return (
         b"MM\x00\x2a"
         + struct.pack(">I", 8)
         + struct.pack(">H", 1)
         + entry
         + struct.pack(">I", 0)
     )
-    payload = b"Exif\x00\x00" + tiff
+
+
+def _exif_app1(orientation: int) -> bytes:
+    """Return an APP1 segment whose TIFF IFD0 declares this Orientation."""
+    payload = b"Exif\x00\x00" + exif_tiff(orientation)
     return b"\xff\xe1" + struct.pack(">H", len(payload) + 2) + payload
 
 
