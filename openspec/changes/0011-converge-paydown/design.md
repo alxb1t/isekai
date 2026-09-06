@@ -422,3 +422,38 @@ continues to boot the v0.10 image throughout.
   `0009`'s `design.md`, exported on the **unscheduled** track with a trigger rather than to a version.
   Not reopened here.
 </content>
+
+## Addenda — recorded during the build
+
+### D13a — the Civitai record the trust root is now read from
+
+Phase 8's fetch reads
+`https://civitai.com/api/v1/model-versions/2883731`, on **2026-09-06**, and takes
+`files[].hashes.SHA256` and `files[].sizeKB` for `waiIllustriousSDXL_v170.safetensors`. What it
+returned:
+
+```
+SHA256   F116B0C78FF441467B0CDC8F1936E1ED18EA31E9997C7B132B1B8DB533F0BD04
+sizeKB   6775430.353515625   ->   6938040682 bytes
+BLAKE3   1762AFDFBC3F22A1BB34C6AA85405414FE838828F771CA444776DEEA141F8BE8
+```
+
+Lowercased, that is the value D13 pre-verified, and `git diff --exit-code scripts/models.json` is
+clean after the re-derive. BLAKE3 is recorded **here, in prose, and nowhere in the manifest** — it is
+noted so a human re-verifying by hand can cross-check it, and it is not a field, because verifying it
+would need a wheel the runtime rule forbids.
+
+### D12a — the probe answered the PNG question, and it answered it the other way
+
+D12 left phase 7 two legitimate outcomes and said the probe would decide. It decided: **PNGs are
+transposed**, so the fix branch was taken and the `orientation-is-honoured` scenario now names both
+codecs. `probe/README.md` holds the measurement. The design note D12 offered as the alternative
+outcome — "the codecs differ and the parser is right to differ with them" — is **not** written
+anywhere, because it is false.
+
+### D5a — the two guards were not exercised, as predicted
+
+D5 and D6 each recorded that the guard they add ships suite-bound. The metered session confirms it by
+omission: the pod booted with its volume attached, provisioning succeeded, and neither the free-space
+floor nor the bounded hold was reached. Nothing about that was discovered on the clock; it is written
+here so the residual is not read as an oversight.

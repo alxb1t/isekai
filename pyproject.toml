@@ -35,8 +35,15 @@ ignore = ["D203", "D213"]
 # annotation is a real defect and `-> None` on a test is nearly free.
 "tests/*" = ["D1"]
 
+# `scripts/` is operator tooling rather than a package, so nothing imports it by
+# installation. Declaring it a source root here lets the type checker and the
+# suite see `derive_manifest` the way a human running it does. It widens where
+# real code is looked for; it suppresses no check.
+[tool.ty.environment]
+extra-paths = ["scripts"]
+
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [".", "scripts"]
 testpaths = ["tests"]
 # Registration is load-bearing, not bookkeeping: pytest silently ignores an
 # unregistered marker, so an unregistered `spec` would bind nothing while

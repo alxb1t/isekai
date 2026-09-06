@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Re-derive `scripts/models.json` from the authored source spec below.
 
-The manifest is *derived*, never transcribed: Hugging Face publishes each LFS
-object's SHA-256 as its object id, so every digest in the committed file came
-out of the `paths-info` API rather than out of a human reading a web page. An
-upgrade is therefore a revision bump plus a re-run, not fifteen manual lookups.
+The manifest is *derived*, never transcribed, and that now holds for every entry
+without exception. Hugging Face publishes each LFS object's SHA-256 as its object
+id, so every mirrored digest comes out of the `paths-info` API rather than out of
+a human reading a web page; and the base checkpoint -- the one artifact no
+publisher hosts, where the digest is not a check on the transfer but the whole
+trust root -- comes out of Civitai's own model-version record for the same
+reason. An upgrade is a revision bump plus a re-run, not fifteen manual lookups.
 
 Run it from the repository root:
 
@@ -20,14 +23,20 @@ property the pins exist to remove.
 """
 
 import json
+import re
 import urllib.request
 from pathlib import Path
-from typing import NamedTuple, TypedDict
+from typing import Any, NamedTuple, TypedDict
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
 PINNED = "2026-09-05"
+
+# A lowercase SHA-256 in full, matched case-insensitively because Civitai serves
+# its own uppercase. Spelled here rather than imported: this script is operator
+# tooling and is not on the runtime's import graph.
+DIGEST_PATTERN = re.compile(r"[0-9a-fA-F]{64}")
 
 # Hugging Face orgs that publish the artifact they serve. A primary source outside
 # this set is a mirror, and a mirror must declare an alternate (design.md D10).
@@ -87,12 +96,21 @@ class Spec(NamedTuple):
 
 # WAI-illustrious-SDXL v17.0 (Civitai model 827184, version 2883731). The model is
 # published on Civitai and has no first-party Hugging Face repo, so every source below
-# is a mirror and the digest is the acceptance test (design.md D1). `WAI_SHA256` is the
-# SHA-256 Civitai itself publishes for the version -- computed by the platform after
-# upload, so an independent cross-check of the mirrors, not a signature by the author.
-# The byte count discriminates nothing: every published WAI version reports the same
-# one.
-WAI_SHA256 = "f116b0c78ff441467b0cdc8f1936e1ed18ea31e9997c7b132b1b8db533f0bd04"
+# is a mirror and the digest is the acceptance test (design.md D1).
+#
+# That digest is *fetched*, not typed. It used to be a constant here, copied by a
+# human into three files that then compared against each other -- which cross-checks
+# the copying and not the value, in the one entry where the digest is not merely a
+# check on the transfer but the whole trust root. Civitai publishes it per version,
+# so it joins every other digest in this file and the human leaves the loop
+# (design.md D13).
+#
+# The residual is unchanged and stated: Civitai is still the trust root, it publishes
+# no signature, and WAI has no first-party host. The digest is computed by the
+# platform after upload, so it is an independent cross-check of the mirrors rather
+# than an attestation by the author. The byte count discriminates nothing on its own:
+# every published WAI version reports the same one.
+WAI_VERSION_ID = 2883731
 WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
 
 # From the sibling project, which pins the same repo and the same files (design.md D2).
@@ -157,7 +175,7 @@ SPECS: tuple[Spec, ...] = (
                 WAI_FILE,
             ),
         ),
-        WAI_SHA256,
+        None,  # filled from Civitai below; see `derive`
     ),
     Spec(
         "instantid/ip-adapter.bin",
@@ -247,6 +265,44 @@ SPECS: tuple[Spec, ...] = (
 )
 
 
+def civitai_file(payload: dict[str, Any], filename: str) -> tuple[str, int]:
+    """Return the SHA-256 and byte count Civitai publishes for one file of a version.
+
+    Pure, so the suite holds it offline; `civitai_version` is the thin fetch
+    around it. The digest is lowercased because Civitai serves it uppercase and
+    every other digest in this manifest is lowercase -- a value differing only in
+    case would fail a check it should pass.
+
+    A missing file, or a file publishing no SHA-256, raises. Civitai also
+    publishes AutoV2 (a truncation), CRC32 and BLAKE3, and none of them may stand
+    in: a value in a SHA-256 field that is not one verifies nothing. BLAKE3 is
+    deliberately not recorded either -- verifying it would need a wheel the
+    runtime rule forbids, and a field nothing reads is a one-entry registry
+    (design.md D13).
+    """
+    for item in payload.get("files", []):
+        if item.get("name") != filename:
+            continue
+        digest = str(item.get("hashes", {}).get("SHA256", ""))
+        if not DIGEST_PATTERN.fullmatch(digest):
+            raise SystemExit(
+                f"Civitai publishes no usable SHA-256 for {filename}: {digest!r}"
+            )
+        return digest.lower(), int(round(float(item["sizeKB"]) * 1024))
+    raise SystemExit(f"Civitai version does not serve {filename}")
+
+
+def civitai_version(version_id: int) -> dict[str, Any]:
+    """Fetch one Civitai model version's public record."""
+    request = urllib.request.Request(
+        f"https://civitai.com/api/v1/model-versions/{version_id}",
+        headers={"User-Agent": "isekai-derive"},
+    )
+    with urllib.request.urlopen(request, timeout=120) as response:
+        parsed: Any = json.load(response)
+    return parsed
+
+
 def published_digest(source: Source) -> tuple[str, int]:
     """Return the SHA-256 and size Hugging Face publishes for `source`.
 
@@ -275,8 +331,14 @@ def published_digest(source: Source) -> tuple[str, int]:
 
 def derive() -> Manifest:
     """Build the whole manifest, cross-checking every alternate against the primary."""
+    # The one artifact no publisher hosts, so its publisher's own record is what
+    # the mirrors are held against.
+    wai_sha256, _ = civitai_file(civitai_version(WAI_VERSION_ID), WAI_FILE)
+
     entries: list[ManifestEntry] = []
     for spec in SPECS:
+        if spec.dest == f"checkpoints/{WAI_FILE}":
+            spec = spec._replace(expect_sha256=wai_sha256)
         primary, *alternates = spec.sources
         sha256, size = published_digest(primary)
         if spec.expect_sha256 is not None and sha256 != spec.expect_sha256:

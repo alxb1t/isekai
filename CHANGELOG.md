@@ -43,6 +43,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The base checkpoint's digest is derived from its publisher's own record, not transcribed.**
+  `derive_manifest.py`'s docstring claimed the manifest is "derived, never transcribed" while the one
+  digest that matters most was a constant a human typed — and it is the entry where the digest is not
+  merely a check on the transfer but the **whole trust root**, because WAI has no first-party host
+  and every source is a mirror. It existed in three places that compared against each other, which
+  cross-checks the copying and not the value. The deriver now fetches it from Civitai's public
+  model-version record (`https://civitai.com/api/v1/model-versions/2883731`, read 2026-09-06), like
+  every other digest, and holds the mirrors against that. The parse is a pure function so the suite
+  checks it offline; only the fetch touches the network.
+
+  The residual is unchanged and stated: **Civitai is still the trust root**, it publishes no
+  signature, and the digest is computed by the platform after upload — an independent cross-check of
+  the mirrors, not an attestation by the author. **BLAKE3 is deliberately not recorded** although the
+  same API publishes it: verifying it would need a wheel the stdlib-only runtime rule forbids, and a
+  field nothing reads is the same smell as a one-entry registry. The hand-written copy in the suite
+  stays, on purpose — it is the *offline* anchor the gate holds, and an anchor that fetches is not
+  one.
 - **CI enforces the `latest` protection its own header comment claims.** `build-image.yml` asserted
   that a manual run "can never clobber the image a rollback would reach for" while interpolating an
   unvalidated `workflow_dispatch` string straight into `tags` — so a dispatch naming `latest` did
