@@ -145,6 +145,13 @@ def _png_dimensions(handle: BinaryIO) -> _Header | None:
         if kind in _PNG_PIXEL_CHUNKS:
             break
         if kind == _PNG_EXIF_CHUNK:
+            # The one payload this walk materialises instead of seeking over, so
+            # the one place a header-declared length is bounded before it is
+            # read rather than after: a chunk header may state 4 GiB, and a read
+            # on that word alone is a `MemoryError` that escapes as a traceback
+            # instead of the refusal that names the file and the budget.
+            if handle.tell() + length > MAX_HEADER_BYTES:
+                raise _HeaderTooDeep
             return _Header(width, height, _tiff_orientation(handle.read(length)))
         # payload, then the chunk's own four-byte CRC
         handle.seek(length + 4, 1)

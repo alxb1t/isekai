@@ -27,6 +27,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The pod-side volume guard measures capacity, which is what it is trying to prove, rather than
+  free space.** The 20 GiB floor was read off `df -k --output=avail` while its error text claimed to
+  have proved *identity* — "this is not network volume ${RUNPOD_VOLUME_ID}". Free space on a
+  correctly-attached volume is whatever this project's 16.5 GiB of models plus the second project
+  sharing that volume have left of it, so the guard was coupled to fill level and degraded
+  monotonically as the volume filled. A warm boot on which every manifest entry would `SKIP` — a pod
+  that needed to download nothing — would have been refused, written the failure marker and billed
+  the whole 900 s hold. The floor is now on `--output=size`: total capacity discriminates the pod's
+  own 20 GB ephemeral disk from the network volume whatever either currently holds, and the message
+  says what is measured. Free space is not checked at all; if it ever should be, it is a second check
+  with its own message, which is why it is not smuggled into this one.
+- **A PNG declaring an `eXIf` chunk longer than the header budget is refused by name.** The chunk
+  walk seeks over every payload but one: the `eXIf` branch called `read(length)` on the raw uint32 out
+  of the chunk header, bounded by nothing. `MAX_HEADER_BYTES` is tested at the top of the loop and
+  that branch returns before the next iteration, so a chunk declaring 0xFFFFFFFF asked for a 4 GiB
+  read whose `MemoryError` neither `except` clause catches — a traceback instead of the refusal that
+  names the file and the budget. It was the fourth ceiling in a phase whose subject was stating the
+  three the header parse left open. The length is now checked against the budget before the read, and
+  a chunk that overruns it raises the same `_HeaderTooDeep` the other ceilings do rather than
+  truncating to a silently wrong orientation.
+
 - **A rotated PNG is measured as it will be loaded, in the codec every input this project has ever
   used.** v0.10 closed this for JPEG and left PNG open, because `_png_dimensions` read IHDR and
   stopped. PNG can carry an `eXIf` chunk holding the same TIFF stream JPEG's APP1 does, and the

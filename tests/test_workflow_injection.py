@@ -577,3 +577,24 @@ def test_both_codecs_agree_on_the_same_rotation(tmp_path: Path) -> None:
     as_jpeg = _write(tmp_path, "r.jpg", jpeg_with_header(4032, 3024, orientation=6))
     as_png = _write(tmp_path, "r.png", png_with_exif(4032, 3024, 6))
     assert image_dimensions(as_jpeg) == image_dimensions(as_png) == (3024, 4032)
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-unbounded-header-walk-is-refused"
+)
+def test_a_png_declaring_an_unbounded_exif_chunk_is_refused(tmp_path: Path) -> None:
+    # The `eXIf` payload is the one thing the walk reads rather than seeks over,
+    # so it is the one place a header-declared length is materialised. A chunk
+    # header may state up to 4 GiB; reading it on the header's word alone is a
+    # `MemoryError` no refusal names.
+    data = bytearray(png_with_exif(4032, 3024, 6))
+    at = data.index(b"eXIf")
+    data[at - 4 : at] = b"\xff\xff\xff\xff"
+    path = _write(tmp_path, "unbounded-chunk.png", bytes(data))
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_HEADER_BYTES) in message

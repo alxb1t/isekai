@@ -321,16 +321,36 @@ def test_the_pod_is_told_which_volume_to_expect(up_sh: str) -> None:
 def test_the_entrypoint_refuses_before_preparing_the_namespace(start_sh: str) -> None:
     body = provision_body(start_sh).splitlines()
     named = next(i for i, line in enumerate(body) if 'RUNPOD_VOLUME_ID:-}" ]' in line)
-    floor = next(i for i, line in enumerate(body) if "VOLUME_FREE_FLOOR_KIB" in line)
+    floor = next(i for i, line in enumerate(body) if "VOLUME_SIZE_FLOOR_KIB" in line)
     prepares = next(
         i for i, line in enumerate(body) if 'mkdir -p "$MODELS_NAMESPACE"' in line
     )
     assert named < prepares
     assert floor < prepares
-    # a free-space floor, not `mountpoint`: RunPod mounts the pod's own volume
+    # a capacity floor, not `mountpoint`: RunPod mounts the pod's own volume
     # disk at the same path when no network volume is attached, so the path is a
     # mountpoint either way.
-    assert "df -k --output=avail" in "\n".join(body)
+    assert "df -k --output=size" in "\n".join(body)
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:provisioning-requires-the-network-volume"
+)
+def test_the_volume_guard_measures_capacity_rather_than_fill_level(
+    start_sh: str,
+) -> None:
+    # What the guard proves is identity -- the 20 GB ephemeral container disk is
+    # not the network volume -- and capacity discriminates those two whatever the
+    # volume's fill level is. Free space does not: this project already put
+    # 16.5 GiB on a volume it shares with a second project, so a floor on
+    # availability degrades as the volume fills and would refuse a warm boot that
+    # needed to download nothing.
+    body = provision_body(start_sh)
+    assert "--output=avail" not in body
+    floor = re.search(r"^VOLUME_SIZE_FLOOR_KIB=", start_sh, re.M)
+    assert floor is not None
+    # and the message says what is measured
+    assert "free" not in body.lower()
 
 
 @pytest.mark.spec_exempt(

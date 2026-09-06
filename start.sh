@@ -34,10 +34,17 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 # `mountpoint -q` does NOT discriminate here. RunPod mounts the pod's own 20 GB
 # volume disk at volumeMountPath when no network volume is attached, so the path
 # exists and IS a mountpoint — the wrong one (design.md D5). Capacity does
-# discriminate: that disk is 20 GB, so it can never report more than 18.6 GiB
-# free, while the volume this project provisions onto has to hold 16.5 GiB of
-# models with room over. The floor sits above the first and below the second.
-VOLUME_FREE_FLOOR_KIB=$((20 * 1024 * 1024))
+# discriminate, and capacity is what is measured: that disk is 20 GB, so its
+# filesystem can never report more than 18.6 GiB of total size, while the volume
+# this project provisions onto is far larger. The floor sits between the two.
+#
+# Deliberately NOT free space. This guard proves identity, and a volume already
+# holding 16.5 GiB of this project's models plus a second project's is a
+# correctly-attached volume whose free space says nothing about which disk it is.
+# Flooring on availability would refuse a warm boot where every entry would SKIP,
+# write the failure marker and bill the whole hold, for a pod that needed to
+# download nothing — and it would degrade as the shared volume filled.
+VOLUME_SIZE_FLOOR_KIB=$((20 * 1024 * 1024))
 
 # 4. Provisioning: prepare this project's namespace on the volume, then ensure the
 #    models are on it.
@@ -56,21 +63,21 @@ provision() {
         return 1
     fi
 
-    local volume free_kib
+    local volume size_kib
     volume="$(dirname "$MODELS_NAMESPACE")"
-    free_kib="$(df -k --output=avail "$volume" | tail -n 1 | tr -d ' ')"
-    case "$free_kib" in
+    size_kib="$(df -k --output=size "$volume" | tail -n 1 | tr -d ' ')"
+    case "$size_kib" in
         '' | *[!0-9]*)
-            echo "ERROR: could not read the free space on $volume." >&2
+            echo "ERROR: could not read the total size of $volume." >&2
             echo "Refusing to provision onto a volume that cannot be measured." >&2
             return 1
             ;;
     esac
-    if [ "$free_kib" -lt "$VOLUME_FREE_FLOOR_KIB" ]; then
-        echo "ERROR: $volume reports ${free_kib} KiB free, below the" >&2
-        echo "${VOLUME_FREE_FLOOR_KIB} KiB floor — this is not network volume" >&2
-        echo "${RUNPOD_VOLUME_ID}. Refusing to download 16.5 GiB onto storage" >&2
-        echo "that does not survive the pod." >&2
+    if [ "$size_kib" -lt "$VOLUME_SIZE_FLOOR_KIB" ]; then
+        echo "ERROR: $volume has a total size of ${size_kib} KiB, below the" >&2
+        echo "${VOLUME_SIZE_FLOOR_KIB} KiB floor — a disk that small is the pod's" >&2
+        echo "own ephemeral one, not network volume ${RUNPOD_VOLUME_ID}. Refusing" >&2
+        echo "to download 16.5 GiB onto storage that does not survive the pod." >&2
         return 1
     fi
 
