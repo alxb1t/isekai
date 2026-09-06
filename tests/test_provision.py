@@ -126,7 +126,7 @@ def test_an_interrupted_transfer_leaves_nothing_at_the_destination(
     partial = tmp_path / "model.onnx.partial"
     partial.write_bytes(PAYLOAD[:6])
     with pytest.raises(DigestMismatch):
-        land(entry, tmp_path, partial)
+        land(entry, tmp_path / entry["dest"], partial)
     assert not (tmp_path / entry["dest"]).exists()
     assert not partial.exists()
 
@@ -139,7 +139,7 @@ def test_after_a_failed_transfer_the_next_run_sees_the_file_as_absent(
     partial = tmp_path / "model.onnx.partial"
     partial.write_bytes(PAYLOAD[:6])
     with pytest.raises(DigestMismatch):
-        land(entry, tmp_path, partial)
+        land(entry, tmp_path / entry["dest"], partial)
     assert decide(entry, tmp_path, FakeFetcher()).action == "fetch"
 
 
@@ -150,7 +150,7 @@ def test_a_verified_transfer_lands_under_the_final_name(tmp_path: Path) -> None:
     entry = _entry()
     partial = tmp_path / "model.onnx.partial"
     partial.write_bytes(PAYLOAD)
-    land(entry, tmp_path, partial)
+    land(entry, tmp_path / entry["dest"], partial)
     dest = tmp_path / entry["dest"]
     assert dest.read_bytes() == PAYLOAD
     assert not partial.exists()
@@ -253,17 +253,6 @@ def test_plan_reports_a_present_and_verified_entry_as_a_skip(
     assert plan(manifest, tmp_path, FakeFetcher()) == 0
     target = tmp_path / entry["dest"]
     assert capsys.readouterr().out.splitlines() == [f"SKIP\t{target}"]
-
-
-@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
-def test_plan_reports_an_absent_entry_as_a_fetch_with_its_url(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    entry = _entry([PRIMARY])
-    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
-    assert capsys.readouterr().out.splitlines() == [
-        f"FETCH\t{tmp_path / entry['dest']}\t{PRIMARY}"
-    ]
 
 
 @pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")

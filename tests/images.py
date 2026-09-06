@@ -122,18 +122,23 @@ def png_with_exif(
     # carrying orientation.
     ihdr_end = 8 + 4 + 4 + struct.unpack(">I", base[8:12])[0] + 4
     padding = b"".join(
-        _png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
+        png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
     )
     return (
         base[:ihdr_end]
         + padding
-        + _png_chunk(b"eXIf", exif_tiff(orientation))
+        + png_chunk(b"eXIf", exif_tiff(orientation))
         + base[ihdr_end:]
     )
 
 
-def _png_chunk(kind: bytes, payload: bytes) -> bytes:
-    """Return one length-prefixed, CRC-suffixed PNG chunk."""
+def png_chunk(kind: bytes, payload: bytes) -> bytes:
+    """Return one length-prefixed, CRC-suffixed PNG chunk.
+
+    Public because `probe/build_inputs.py` splices an `eXIf` chunk into a real
+    photograph with it: the framing rule is the same one, and two spellings of it
+    would drift.
+    """
     return (
         struct.pack(">I", len(payload))
         + kind

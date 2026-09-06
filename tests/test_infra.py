@@ -160,6 +160,9 @@ def test_the_driver_walks_every_source_the_plan_carries(
     assert "read -r -a fields" in download_models_sh
     assert 'urls=("${fields[@]:2}")' in download_models_sh
     assert 'for url in "${urls[@]}"' in download_models_sh
+    # the word split is gone, and so is the suppression that made it legal
+    assert "SC2086" not in download_models_sh
+    assert "for url in $urls" not in download_models_sh
 
 
 @pytest.mark.spec(
@@ -339,18 +342,6 @@ def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> 
     # ComfyUI's core and the two custom-node packs, each on a full commit sha
     assert len(clones) == 3
     assert len(checkouts) == 3
-
-
-@pytest.mark.spec(
-    "model-provisioning:immutable-pins:a-malformed-source-is-refused-at-runtime"
-)
-def test_the_driver_receives_the_sources_as_a_list_it_never_splits(
-    download_models_sh: str,
-) -> None:
-    assert "read -r -a fields" in download_models_sh
-    # the word split is gone, and so is the suppression that made it legal
-    assert "SC2086" not in download_models_sh
-    assert "for url in $urls" not in download_models_sh
 
 
 @pytest.mark.spec(

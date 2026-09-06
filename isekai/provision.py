@@ -196,11 +196,17 @@ class Decision:
     what makes D10's ordered fallback real: the pre-flight can only reject a
     source that answers, and the failure the alternates exist for — a mirror that
     has gone away — is one the pre-flight collapses to "publishes no digest".
+
+    `target` is the resolved destination, carried rather than recomputed: deciding
+    required resolving it, so the decision is what should hold it. It is None
+    exactly when the action is `abort`, which is the only case in which no
+    destination was arrived at.
     """
 
     action: Literal["skip", "abort", "fetch"]
     urls: tuple[str, ...]
     reason: str
+    target: Path | None = None
 
 
 def digest_of(path: Path) -> str:
@@ -240,10 +246,13 @@ def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
     target through a path the driver was never handed.
     """
     dest = entry["dest"]
-    if not dest or dest.startswith(("/", "~")) or "\\" in dest:
+    if not dest or dest.startswith("~") or "\\" in dest:
         return None
     normalized = PurePosixPath(posixpath.normpath(dest))
-    if normalized.is_absolute() or normalized.parts[:1] in ((".",), ("..",)):
+    # `normpath` cannot turn a relative path absolute, so one test covers both
+    # a leading slash and anything that normalises to one; `..` first is the
+    # only way a relative path climbs out.
+    if normalized.is_absolute() or normalized.parts[0] == "..":
         return None
     return models_dir / normalized
 
@@ -276,7 +285,7 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
             verify(dest, entry["sha256"])
         except DigestMismatch as mismatch:
             return Decision("abort", (), f"{mismatch} — left on disk for inspection")
-        return Decision("skip", (), f"present and verified: {entry['dest']}")
+        return Decision("skip", (), f"present and verified: {entry['dest']}", dest)
 
     if not entry["sources"]:
         return Decision("abort", (), f"no source is declared for {entry['dest']}")
@@ -294,7 +303,7 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
         offered.append(url)
 
     if offered:
-        return Decision("fetch", tuple(offered), f"absent: {entry['dest']}")
+        return Decision("fetch", tuple(offered), f"absent: {entry['dest']}", dest)
 
     return Decision(
         "abort",
@@ -304,19 +313,17 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     )
 
 
-def land(entry: Entry, models_dir: Path, partial: Path) -> None:
-    """Verify a just-transferred file and only then move it to its destination.
+def land(entry: Entry, dest: Path, partial: Path) -> None:
+    """Verify a just-transferred file and only then move it to `dest`.
 
     Raises `DigestMismatch` and removes `partial` if the bytes are wrong, so an
     interrupted or tampered transfer never occupies the final name and the next
     run sees the file as absent rather than as present-and-trusted.
+
+    Takes the destination rather than deriving one, so `resolve_dest` really is
+    the single site the containment rule is enforced at (design.md D7) instead of
+    being the single site plus everywhere that calls it again.
     """
-    dest = resolve_dest(entry, models_dir)
-    if dest is None:
-        partial.unlink(missing_ok=True)
-        raise SystemExit(
-            f"ERROR: destination {entry['dest']!r} does not resolve inside {models_dir}"
-        )
     try:
         verify(partial, entry["sha256"])
     except DigestMismatch:
@@ -342,15 +349,13 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
         decision = decide(entry, models_dir, fetcher)
         if decision.action == "abort":
             aborts.append(decision.reason)
+            continue
+        # The path `decide` already resolved, so the shell joins nothing and the
+        # containment rule has one site rather than one per assembly.
+        if decision.action == "skip":
+            lines.append(f"SKIP\t{decision.target}")
         else:
-            # The already-resolved path, so the shell joins nothing and the
-            # containment rule has one site rather than one per assembly.
-            target = resolve_dest(entry, models_dir)
-            assert target is not None  # an unresolvable dest aborted above
-            if decision.action == "skip":
-                lines.append(f"SKIP\t{target}")
-            else:
-                lines.append("\t".join(["FETCH", str(target), *decision.urls]))
+            lines.append("\t".join(["FETCH", str(decision.target), *decision.urls]))
     if aborts:
         for reason in aborts:
             print(f"ERROR: {reason}", file=sys.stderr)
@@ -360,17 +365,18 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     return 0
 
 
-def _entry_for(manifest: Manifest, models_dir: Path, target: str) -> Entry:
-    """Return the entry whose resolved destination is `target`, or exit non-zero.
+def _entry_for(manifest: Manifest, models_dir: Path, target: str) -> tuple[Entry, Path]:
+    """Return the entry whose resolved destination is `target`, and that path.
 
     The driver is handed resolved targets and hands them straight back, so the
-    lookup resolves the manifest side rather than asking the shell to un-join
-    what it never joined.
+    lookup resolves the manifest side rather than asking the shell to un-join what
+    it never joined — and returns the path it matched on, so `land` is handed a
+    destination this function has already contained.
     """
     for entry in manifest["entries"]:
         resolved = resolve_dest(entry, models_dir)
         if resolved is not None and str(resolved) == target:
-            return entry
+            return entry, resolved
     raise SystemExit(f"ERROR: {target} is not declared in {MANIFEST_PATH}")
 
 
@@ -380,10 +386,9 @@ def main(argv: list[str]) -> int:
         case ["plan", models_dir]:
             return plan(load_manifest(), Path(models_dir), HuggingFaceFetcher())
         case ["land", models_dir, target, partial]:
-            manifest = load_manifest()
-            root = Path(models_dir)
+            entry, dest = _entry_for(load_manifest(), Path(models_dir), target)
             try:
-                land(_entry_for(manifest, root, target), root, Path(partial))
+                land(entry, dest, Path(partial))
             except DigestMismatch as mismatch:
                 print(f"ERROR: {mismatch}", file=sys.stderr)
                 return 1

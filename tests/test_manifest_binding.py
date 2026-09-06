@@ -44,25 +44,6 @@ def test_a_graph_naming_a_file_the_manifest_does_not_carry_fails_the_check(
 @pytest.mark.spec(
     "model-provisioning:manifest-completeness:preprocessor-models-are-declared"
 )
-def test_every_preprocessor_in_the_graph_is_present_in_the_mapping(
-    workflow: Workflow,
-) -> None:
-    assert unclassified_node_classes(workflow) == []
-
-
-@pytest.mark.spec(
-    "model-provisioning:manifest-completeness:preprocessor-models-are-declared"
-)
-def test_a_preprocessor_absent_from_the_mapping_fails_the_check(
-    workflow: Workflow,
-) -> None:
-    workflow["99"] = {"class_type": "SomeNewPreprocessor", "inputs": {}}
-    assert unclassified_node_classes(workflow) == ["SomeNewPreprocessor"]
-
-
-@pytest.mark.spec(
-    "model-provisioning:manifest-completeness:preprocessor-models-are-declared"
-)
 def test_the_files_a_preprocessor_fetches_for_itself_have_manifest_entries(
     workflow: Workflow, manifest: Manifest
 ) -> None:

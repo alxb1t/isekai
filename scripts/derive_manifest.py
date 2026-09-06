@@ -112,6 +112,7 @@ class Spec(NamedTuple):
 # every published WAI version reports the same one.
 WAI_VERSION_ID = 2883731
 WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
+WAI_DEST = f"checkpoints/{WAI_FILE}"
 
 # From the sibling project, which pins the same repo and the same files (design.md D2).
 INSTANTID = "57b32dfee076092ad2930c71fd6d439c2c3b1820"
@@ -137,7 +138,7 @@ ANTELOPE_FILES = (
 SPECS: tuple[Spec, ...] = (
     # Primary first, then the byte-identical mirrors v0.9's fallback walks in order.
     Spec(
-        f"checkpoints/{WAI_FILE}",
+        WAI_DEST,
         (
             Source(
                 "LyliaEngine/waiIllustriousSDXL_v170",
@@ -337,7 +338,7 @@ def derive() -> Manifest:
 
     entries: list[ManifestEntry] = []
     for spec in SPECS:
-        if spec.dest == f"checkpoints/{WAI_FILE}":
+        if spec.dest == WAI_DEST:
             spec = spec._replace(expect_sha256=wai_sha256)
         primary, *alternates = spec.sources
         sha256, size = published_digest(primary)

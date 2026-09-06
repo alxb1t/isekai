@@ -26,22 +26,17 @@ untouched.
 
 import argparse
 import json
-import struct
 import sys
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from build_inputs import png_dimensions  # noqa: E402
+
 from isekai.comfy_client import ComfyClient  # noqa: E402
 
 PROBE_GRAPH_PATH = Path(__file__).resolve().parent / "loader_probe_graph.json"
-
-
-def png_dimensions(data: bytes) -> tuple[int, int]:
-    """Return the width and height a PNG's IHDR declares."""
-    width, height = struct.unpack(">II", data[16:24])
-    return width, height
 
 
 def probe_one(client: ComfyClient, path: Path, out: Path) -> dict[str, object]:

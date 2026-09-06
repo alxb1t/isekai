@@ -3,7 +3,7 @@
 import struct
 import sys
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, NamedTuple
 
 from isekai.comfy_types import Workflow
 
@@ -70,6 +70,20 @@ class _HeaderTooDeep(Exception):
     """The marker walk passed `MAX_HEADER_BYTES` without reaching a frame header."""
 
 
+class _Header(NamedTuple):
+    """What an image's header states: the stored size, and the loader's correction.
+
+    Both codec parsers report this rather than each applying the correction, so
+    the loader's behaviour -- that it transposes on four of the eight orientation
+    values before any node sees the pixels -- is stated once, in
+    `image_dimensions`, instead of once per codec. A third codec would inherit it.
+    """
+
+    width: int
+    height: int
+    orientation: int
+
+
 def find_nodes(workflow: Workflow, *, class_type: str) -> list[str]:
     """Return every node ID with this class_type, in the graph's own order."""
     return [
@@ -94,14 +108,13 @@ def find_node(workflow: Workflow, *, class_type: str) -> str:
     return matches[0]
 
 
-def _png_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
-    """Return the dimensions a PNG will be loaded at, or None if it is not one.
+def _png_dimensions(handle: BinaryIO) -> _Header | None:
+    """Return what a PNG's header states, or None if the file is not one.
 
-    IHDR states the stored size; an `eXIf` chunk may then say the loader will
-    transpose it. Both are read, because the phase-6 loader probe measured the
-    pinned build and found `LoadImage` applies the orientation to a PNG exactly as
-    it applies it to a tagged JPEG -- and every input this project has ever
-    rendered is a PNG.
+    IHDR states the stored size; an `eXIf` chunk may then declare an orientation.
+    Both are read, because the phase-6 loader probe measured the pinned build and
+    found `LoadImage` applies the orientation to a PNG exactly as it applies it to
+    a tagged JPEG -- and every input this project has ever rendered is a PNG.
 
     The chunk walk reads each chunk's header and seeks over its payload, so this
     stays a header parse: a writer may put `eXIf` anywhere before the pixel data,
@@ -117,7 +130,10 @@ def _png_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
         return None
     width, height = struct.unpack(">II", header[16:24])
 
-    handle.seek(len(_PNG_SIGNATURE))
+    # Past IHDR, whose length word is already in hand: signature, length, type,
+    # payload, CRC.
+    (ihdr_length,) = struct.unpack(">I", header[8:12])
+    handle.seek(len(_PNG_SIGNATURE) + 8 + ihdr_length + 4)
     while True:
         if handle.tell() > MAX_HEADER_BYTES:
             raise _HeaderTooDeep
@@ -129,14 +145,11 @@ def _png_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
         if kind in _PNG_PIXEL_CHUNKS:
             break
         if kind == _PNG_EXIF_CHUNK:
-            orientation = _tiff_orientation(handle.read(length))
-            if orientation in _EXIF_TRANSPOSING_ORIENTATIONS:
-                width, height = height, width
-            break
+            return _Header(width, height, _tiff_orientation(handle.read(length)))
         # payload, then the chunk's own four-byte CRC
         handle.seek(length + 4, 1)
 
-    return width, height
+    return _Header(width, height, 1)
 
 
 def _exif_orientation(segment: bytes) -> int:
@@ -183,18 +196,14 @@ def _tiff_orientation(tiff: bytes) -> int:
     return 1
 
 
-def _jpeg_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
-    """Return the dimensions a JPEG's frame header declares, or None if unreadable.
+def _jpeg_dimensions(handle: BinaryIO) -> _Header | None:
+    """Return what a JPEG's header states, or None if it is unreadable.
 
     Walks the marker segments against the open file rather than over a fixed
     prefix: an EXIF segment carrying an embedded thumbnail is alone allowed to be
     65 533 bytes, and a camera writes ICC and XMP segments besides, so the frame
     header's offset is bounded by nothing in particular. Only each segment's
     header is read; the payloads are seeked over, so this stays a header parse.
-
-    The dimensions returned are the ones the image loader will present, not the
-    ones the frame header states: the loader applies the EXIF orientation, and a
-    photo taken upright on a phone is stored landscape with a transposing tag.
     """
     handle.seek(0)
     if handle.read(2) != b"\xff\xd8":
@@ -240,9 +249,7 @@ def _jpeg_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
             if len(frame) < 5:
                 return None
             height, width = struct.unpack(">HH", frame[1:5])
-            if orientation in _EXIF_TRANSPOSING_ORIENTATIONS:
-                width, height = height, width
-            return width, height
+            return _Header(width, height, orientation)
 
         if code == _JPEG_APP1 and orientation == 1:
             orientation = _exif_orientation(handle.read(length - 2))
@@ -271,7 +278,7 @@ def image_dimensions(path: str) -> tuple[int, int]:
             # over a prefix guessed to be long enough: PNG's orientation chunk and
             # JPEG's frame header alike sit after however much metadata the writer
             # put in front of them.
-            size = _png_dimensions(handle) or _jpeg_dimensions(handle)
+            header = _png_dimensions(handle) or _jpeg_dimensions(handle)
     except OSError as e:
         sys.exit(f"{path}: cannot be read ({e.strerror})")
     except _HeaderTooDeep:
@@ -280,16 +287,19 @@ def image_dimensions(path: str) -> tuple[int, int]:
             f"refusing to walk further"
         )
 
-    if size is None or 0 in size:
+    if header is None or 0 in (header.width, header.height):
         sys.exit(f"{path}: cannot read the image dimensions from its header")
 
-    if max(size) > MAX_HEADER_DIMENSION:
+    if max(header.width, header.height) > MAX_HEADER_DIMENSION:
         sys.exit(
-            f"{path}: header declares {size[0]}x{size[1]}, past the "
+            f"{path}: header declares {header.width}x{header.height}, past the "
             f"{MAX_HEADER_DIMENSION} limit either dimension may state"
         )
 
-    return size
+    # The one statement of what the loader does with the tag, for every codec.
+    if header.orientation in _EXIF_TRANSPOSING_ORIENTATIONS:
+        return header.height, header.width
+    return header.width, header.height
 
 
 def working_resolution(width: int, height: int) -> tuple[int, int]:

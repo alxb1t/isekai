@@ -35,12 +35,12 @@ import shutil
 import struct
 import subprocess
 import sys
-import zlib
+from collections.abc import Iterator
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from tests.images import exif_tiff  # noqa: E402
+from tests.images import exif_tiff, png_chunk  # noqa: E402
 
 # The face sits in the upper third of the source portrait, so the landscape band
 # is taken from y=110 rather than from the centre: a centred crop of a standing
@@ -61,6 +61,11 @@ ORIENTATION_ROTATED = 6
 _APPN = range(0xE0, 0xF0)
 _STANDALONE = {0x01, *range(0xD0, 0xD8)}
 _START_OF_SCAN = 0xDA
+
+# The SOFn markers that carry a frame's dimensions. 0xC4, 0xC8 and 0xCC are DHT,
+# JPG and DAC, which are not frame headers and whose payloads would decode to
+# nonsense sizes if read as one.
+_SOF_MARKERS = frozenset(set(range(0xC0, 0xD0)) - {0xC4, 0xC8, 0xCC})
 
 
 # ImageMagick stamps a PNG with the time it wrote it, so two runs of an identical
@@ -89,30 +94,35 @@ def _crop(source: Path, out: Path, box: tuple[int, int, int, int]) -> None:
     _convert(str(source), "-crop", f"{width}x{height}+{x}+{y}", "+repage", str(out))
 
 
-def strip_app_segments(jpeg: bytes) -> bytes:
-    """Return the JPEG with every APPn segment removed.
+def segments(jpeg: bytes) -> Iterator[tuple[int, int, int]]:
+    """Yield `(marker code, offset, whole-segment length)` for each segment.
 
-    Walks the marker segments and copies everything but APPn, stopping at the
-    scan -- past which there are no segments, only entropy-coded data that would
-    decode to nonsense if read as one.
+    One walk, because both consumers below need the same one: the marker byte, and
+    how far to step. It stops at the scan -- past which there are no segments,
+    only entropy-coded data that would decode to nonsense if read as one -- and
+    reports the scan itself last so a caller can copy the remainder.
     """
-    out = bytearray(jpeg[:2])
     i = 2
-    while i < len(jpeg):
-        if jpeg[i] != 0xFF:
-            break
+    while i < len(jpeg) and jpeg[i] == 0xFF:
         code = jpeg[i + 1]
         if code in _STANDALONE:
-            out += jpeg[i : i + 2]
+            yield code, i, 2
             i += 2
             continue
         if code == _START_OF_SCAN:
-            out += jpeg[i:]
-            break
+            yield code, i, len(jpeg) - i
+            return
         (length,) = struct.unpack(">H", jpeg[i + 2 : i + 4])
-        if code not in _APPN:
-            out += jpeg[i : i + 2 + length]
+        yield code, i, 2 + length
         i += 2 + length
+
+
+def strip_app_segments(jpeg: bytes) -> bytes:
+    """Return the JPEG with every APPn segment removed."""
+    out = bytearray(jpeg[:2])
+    for code, offset, length in segments(jpeg):
+        if code not in _APPN:
+            out += jpeg[offset : offset + length]
     return bytes(out)
 
 
@@ -134,21 +144,30 @@ def png_with_exif(png: bytes, orientation: int) -> bytes:
     itself. Inserted straight after IHDR, which is where a writer puts it and
     where a reader will find it before any pixel data.
     """
+    # Signature, then IHDR's length word, type, payload and CRC.
     ihdr_end = 8 + 8 + struct.unpack(">I", png[8:12])[0] + 4
-    payload = exif_tiff(orientation)
-    chunk = (
-        struct.pack(">I", len(payload))
-        + b"eXIf"
-        + payload
-        + struct.pack(">I", zlib.crc32(b"eXIf" + payload))
-    )
-    return png[:ihdr_end] + chunk + png[ihdr_end:]
+    return png[:ihdr_end] + png_chunk(b"eXIf", exif_tiff(orientation)) + png[ihdr_end:]
 
 
 def png_dimensions(data: bytes) -> tuple[int, int]:
     """Return the width and height a PNG's IHDR declares."""
     width, height = struct.unpack(">II", data[16:24])
     return width, height
+
+
+def jpeg_stored_size(jpeg: bytes) -> tuple[int, int]:
+    """Return the dimensions the JPEG's frame header states, the tag ignored.
+
+    The stored size on purpose: the probe's whole question is what a reader does
+    with the orientation beside it, so applying it here would erase the thing
+    being measured. `isekai.workflow.image_dimensions` is therefore not the helper
+    to call -- it answers the opposite question.
+    """
+    for code, offset, _ in segments(jpeg):
+        if code in _SOF_MARKERS:
+            height, width = struct.unpack(">HH", jpeg[offset + 5 : offset + 9])
+            return width, height
+    raise SystemExit("no frame header in the built JPEG")
 
 
 def main() -> int:
@@ -204,26 +223,10 @@ def main() -> int:
         else:
             # The stored size of a JPEG is what the frame header says; the probe
             # is about what a reader does with the tag beside it.
-            width, height = _jpeg_stored_size(data)
+            width, height = jpeg_stored_size(data)
         digest = hashlib.sha256(data).hexdigest()
         print(f"{path.name:<20} {f'{width}x{height}':>11}  {digest}")
     return 0
-
-
-def _jpeg_stored_size(jpeg: bytes) -> tuple[int, int]:
-    """Return the dimensions the JPEG's frame header states, tag ignored."""
-    i = 2
-    while i < len(jpeg):
-        code = jpeg[i + 1]
-        if code in _STANDALONE:
-            i += 2
-            continue
-        (length,) = struct.unpack(">H", jpeg[i + 2 : i + 4])
-        if 0xC0 <= code <= 0xCF and code not in {0xC4, 0xC8, 0xCC}:
-            height, width = struct.unpack(">HH", jpeg[i + 5 : i + 9])
-            return width, height
-        i += 2 + length
-    raise SystemExit("no frame header in the built JPEG")
 
 
 if __name__ == "__main__":
