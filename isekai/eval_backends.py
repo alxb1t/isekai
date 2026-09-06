@@ -26,6 +26,7 @@ Whoever installs the extra can run `uv run --extra eval ty check` and get the
 resolution these markers stand in for.
 """
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -46,7 +47,7 @@ ANIMEFACE_CONFIDENCE = 0.25
 def _numpy() -> Any:
     """Import numpy on demand, with a message that names the extra."""
     try:
-        import numpy  # ty: ignore[unresolved-import]
+        import numpy
     except ModuleNotFoundError as absent:  # pragma: no cover - environment
         raise Refusal(
             "the evaluator's stack is not installed; run "
@@ -58,7 +59,7 @@ def _numpy() -> Any:
 def _pil() -> Any:
     """Import Pillow on demand."""
     try:
-        from PIL import Image, ImageOps  # ty: ignore[unresolved-import]
+        from PIL import Image, ImageOps
     except ModuleNotFoundError as absent:  # pragma: no cover - environment
         raise Refusal(
             "the evaluator's stack is not installed; run `uv sync --extra eval`."
@@ -115,7 +116,7 @@ class OnnxSession:
     def __init__(self, dest: str, models_dir: Path) -> None:
         """Verify the pinned artifact's digest, then load it onto the CPU."""
         try:
-            import onnxruntime  # ty: ignore[unresolved-import]
+            import onnxruntime
         except ModuleNotFoundError as absent:  # pragma: no cover - environment
             raise Refusal(
                 "the evaluator's stack is not installed; run `uv sync --extra eval`."
@@ -127,8 +128,13 @@ class OnnxSession:
             str(path), providers=["CPUExecutionProvider"]
         )
 
-    def run(self, feed: dict[str, Any]) -> list[Any]:
-        """Run the session on one prepared feed."""
+    def run(self, feed: dict[str, Any]) -> Sequence[Any]:
+        """Run the session on one prepared feed.
+
+        A `Sequence`, not a `list`: `onnxruntime` declares exactly that, and
+        narrowing it here would be this file claiming something about the library
+        that the library does not.
+        """
         return self.session.run(None, feed)
 
 
@@ -291,8 +297,8 @@ class StyleIdEncoder:
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:
         """Verify every pinned StyleID artifact, then load the encoder."""
         try:
-            import torch  # ty: ignore[unresolved-import]
-            from transformers import (  # ty: ignore[unresolved-import]
+            import torch
+            from transformers import (
                 CLIPImageProcessor,
                 CLIPModel,
             )
@@ -321,8 +327,22 @@ class StyleIdEncoder:
             return None
         inputs = self.processor(images=crop, return_tensors="pt")
         with self.torch.no_grad():
-            features = self.model.get_image_features(**inputs)[0]
-        return tuple(float(v) for v in features)
+            features = self.model.get_image_features(**inputs)
+        # transformers 4.x returns the projected embedding as a plain tensor;
+        # 5.x returns a `BaseModelOutputWithPooling` whose `pooler_output` is
+        # that same already-projected vector. Both are accepted rather than one
+        # pinned, because the extra declares `transformers>=4.49` and a silent
+        # shape change here would surface as a cosine over the wrong axis rather
+        # than as an error. Found by running this against real renders before any
+        # pod was created, which is what that ordering is for (design.md D13).
+        vector = getattr(features, "pooler_output", features)
+        if vector.ndim != 2 or vector.shape[0] != 1:
+            raise Refusal(
+                f"StyleID returned {tuple(vector.shape)} for one crop; expected a "
+                "single projected embedding. The installed transformers version "
+                "has changed what `get_image_features` returns."
+            )
+        return tuple(float(v) for v in vector[0])
 
 
 class ArcFaceEncoder:
@@ -365,16 +385,42 @@ class ArcFaceEncoder:
 class DwPoseReader:
     """The pose axis: DWPose, Apache-2.0, reusing the graph's own pins.
 
+    **Top-down, so it needs the person detector as well as the pose model**, and
+    both are already pinned: `yolox_l.onnx` finds the person, the TorchScript
+    module reads keypoints inside that crop. Feeding it a whole image was the
+    first thing phase 5 caught -- it produced no keypoints at all and the axis
+    dutifully reported its own absence, which is the right behaviour for the
+    wrong reason (design.md D13).
+
+    Two properties of the pinned artifact that are not negotiable and were both
+    measured rather than assumed:
+
+    - **The batch size is fixed at five.** `dw-ll_ucoco_384_bs5` is traced at
+      batch 5 and raises on batch 1, so one crop is repeated to fill it and only
+      the first row is read.
+    - **The output is SimCC, not heatmaps** -- `(5, 133, 576)` of x logits beside
+      `(5, 133, 768)` of y logits, over 133 whole-body keypoints. The coordinate
+      is the argmax along each axis divided by that axis's split ratio, and the
+      confidence is the smaller of the two peaks.
+
     Returns None rather than an empty result when the model reads nothing at all,
     so the axis reports **its own absence** rather than a zero. A pose model that
     failed to run and a render whose pose is completely wrong are not the same
     finding, and one number cannot say both.
     """
 
+    # What the pinned module was traced at. Both are properties of the artifact.
+    BATCH = 5
+    INPUT_WIDTH = 288
+    INPUT_HEIGHT = 384
+
+    # SimCC splits each axis into 2x its input extent, so a bin is half a pixel.
+    SIMCC_SPLIT = 2.0
+
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:
-        """Verify and load the pinned DWPose TorchScript module."""
+        """Verify and load both pinned DWPose artifacts: detector and pose model."""
         try:
-            import torch  # ty: ignore[unresolved-import]
+            import torch
         except ModuleNotFoundError as absent:  # pragma: no cover - environment
             raise Refusal(
                 "the evaluator's stack is not installed; run `uv sync --extra eval`."
@@ -386,43 +432,135 @@ class DwPoseReader:
         self.torch = torch
         self.model = torch.jit.load(str(resolve(dest, models_dir)))
         self.model.eval()
+        self.detector = OnnxSession(
+            "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx", models_dir
+        )
         self.canvas = canvas
+
+    def _person_box(self, pixels: Any) -> Box | None:
+        """Return the highest-scoring person box from yolox_l, or None.
+
+        The pinned `yolox_l.onnx` emits **undecoded** predictions -- `(1, 8400,
+        85)` of per-anchor offsets, not coordinates. Reading columns 0-3 as
+        pixels produces a plausible-looking box in entirely the wrong place, and
+        a pose read inside it comes back as 133 keypoints all under confidence.
+        That is precisely the failure phase 5 exists to find for free, and it was
+        found by looking at the value ranges rather than at the shape.
+
+        So the standard YOLOX decode is done here: centres are offsets from their
+        anchor's grid cell scaled by that cell's stride, and extents are
+        exponentiated and scaled the same way. The input is letterboxed rather
+        than stretched, because the model was trained that way and a distorted
+        person is a distorted box.
+
+        COCO class 0 is `person`. A frame with nobody in it returns None rather
+        than the whole canvas: a pose read over a crop containing no person is a
+        measurement of nothing, and absence is the honest outcome.
+        """
+        numpy = _numpy()
+        image_module, _ = _pil()
+        side = 640
+        height, width = pixels.shape[:2]
+        ratio = min(side / width, side / height)
+        resized = image_module.fromarray(pixels).resize(
+            (int(width * ratio), int(height * ratio)), image_module.BILINEAR
+        )
+        # 114 is YOLOX's own padding value, not an arbitrary grey.
+        canvas_in = image_module.new("RGB", (side, side), (114, 114, 114))
+        canvas_in.paste(resized, (0, 0))
+        feed = {
+            self.detector.session.get_inputs()[0].name: numpy.ascontiguousarray(
+                numpy.asarray(canvas_in, dtype="float32").transpose(2, 0, 1)[None]
+            )
+        }
+        try:
+            raw = numpy.asarray(self.detector.run(feed)[0])
+        except Exception:
+            return None
+        predictions = raw[0] if raw.ndim == 3 else raw
+        if predictions.ndim != 2 or predictions.shape[-1] < 6:
+            return None
+
+        # One grid per stride, in the order the model concatenates them.
+        grids = []
+        expanded = []
+        for stride in (8, 16, 32):
+            cells = side // stride
+            ys, xs = numpy.meshgrid(
+                numpy.arange(cells), numpy.arange(cells), indexing="ij"
+            )
+            grids.append(numpy.stack((xs, ys), axis=-1).reshape(-1, 2))
+            expanded.append(numpy.full((cells * cells, 1), stride))
+        grid = numpy.concatenate(grids, axis=0).astype("float32")
+        strides = numpy.concatenate(expanded, axis=0).astype("float32")
+        if grid.shape[0] != predictions.shape[0]:
+            return None
+
+        centres = (predictions[:, 0:2] + grid) * strides
+        extents = numpy.exp(predictions[:, 2:4]) * strides
+        scores = predictions[:, 4] * predictions[:, 5]
+        best = int(numpy.argmax(scores))
+        if float(scores[best]) < 0.3:
+            return None
+
+        cx, cy = (float(v) for v in centres[best])
+        w, h = (float(v) for v in extents[best])
+        return (
+            max(0.0, (cx - w / 2) / ratio),
+            max(0.0, (cy - h / 2) / ratio),
+            min(float(self.canvas.width), (cx + w / 2) / ratio),
+            min(float(self.canvas.height), (cy + h / 2) / ratio),
+        )
 
     def keypoints(self, image_path: str) -> tuple[Keypoint, ...] | None:
         """Return the keypoints read, or None if the model read none at all."""
         numpy = _numpy()
         image_module, _ = _pil()
         pixels = load_canvas_pixels(image_path, self.canvas)
+        box = self._person_box(pixels)
+        if box is None:
+            return None
+        left, top, right, bottom = box
+        if right - left < 2 or bottom - top < 2:
+            return None
+
+        crop = image_module.fromarray(pixels).crop(
+            (int(left), int(top), int(right), int(bottom))
+        )
         resized = numpy.asarray(
-            image_module.fromarray(pixels).resize((288, 384), image_module.BILINEAR),
+            crop.resize((self.INPUT_WIDTH, self.INPUT_HEIGHT), image_module.BILINEAR),
             dtype="float32",
         )
+        one = ((resized - 127.5) / 127.5).transpose(2, 0, 1)[None]
         batch = self.torch.from_numpy(
-            numpy.ascontiguousarray(
-                ((resized - 127.5) / 127.5).transpose(2, 0, 1)[None]
-            )
+            numpy.ascontiguousarray(numpy.repeat(one, self.BATCH, axis=0))
         )
         try:
             with self.torch.no_grad():
-                output = self.model(batch)
+                simcc_x, simcc_y = self.model(batch)
         except RuntimeError:
             # The axis reports its own absence rather than a zero. That this
             # happens at all is a phase-8 finding, not a caught-and-ignored error.
             return None
-        heatmaps = numpy.asarray(output[0] if isinstance(output, tuple) else output)
-        if heatmaps.ndim != 4 or heatmaps.shape[1] == 0:
+
+        xs = numpy.asarray(simcc_x)[0]
+        ys = numpy.asarray(simcc_y)[0]
+        if xs.ndim != 2 or ys.ndim != 2 or xs.shape[0] == 0:
             return None
+
+        # Back out of the crop and onto the canvas, so every keypoint is in the
+        # same coordinates the face box and the regions are in.
+        scale_x = (right - left) / self.INPUT_WIDTH
+        scale_y = (bottom - top) / self.INPUT_HEIGHT
         points: list[Keypoint] = []
-        _, joints, height, width = heatmaps.shape
-        for j in range(joints):
-            plane = heatmaps[0, j]
-            flat = int(numpy.argmax(plane))
-            y, x = divmod(flat, width)
+        for j in range(xs.shape[0]):
+            xi = int(numpy.argmax(xs[j]))
+            yi = int(numpy.argmax(ys[j]))
             points.append(
                 Keypoint(
-                    x=float(x) / width * self.canvas.width,
-                    y=float(y) / height * self.canvas.height,
-                    confidence=float(plane.flat[flat]),
+                    x=left + (xi / self.SIMCC_SPLIT) * scale_x,
+                    y=top + (yi / self.SIMCC_SPLIT) * scale_y,
+                    confidence=float(min(xs[j][xi], ys[j][yi])),
                 )
             )
         return tuple(points)

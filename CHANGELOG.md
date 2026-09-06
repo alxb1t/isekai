@@ -27,6 +27,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Fixed
+
+- **Three real plumbing failures, found on the renders already on disk, before any pod was created.**
+  Running the scorer against `outputs/final/`'s ten 1024-canvas PNGs cost nothing and paid for itself
+  three times. This is what ordering the metered session *last* is for.
+  - **StyleID returned a `ModelOutput`, not a tensor.** `get_image_features` gives a bare tensor in
+    transformers 4.x and a `BaseModelOutputWithPooling` in 5.x, whose `pooler_output` is the same
+    already-projected vector. Both are now accepted, and a shape that is neither refuses loudly —
+    because the extra declares `transformers>=4.49` and a silent change here would surface as a cosine
+    over the wrong axis rather than as an error.
+  - **DWPose is top-down, fixed at batch five, and emits SimCC rather than heatmaps.** It was being
+    handed a whole image at batch one, which raises — so the axis correctly reported its own absence,
+    for entirely the wrong reason. It now uses the person detector that was already pinned but never
+    called, repeats the crop to fill the traced batch of five, and decodes `(5, 133, 576)` x-logits
+    against `(5, 133, 768)` y-logits over 133 whole-body keypoints.
+  - **`yolox_l.onnx` emits undecoded predictions.** Its `(1, 8400, 85)` output carries per-anchor
+    offsets, not coordinates; reading columns 0–3 as pixels produced a confident-looking box in
+    entirely the wrong place, and the pose read inside it came back as 133 keypoints every one of which
+    fell under confidence. Found by looking at the value ranges rather than the shapes — the columns
+    were negative. The standard YOLOX grid/stride decode is now done here, over a letterboxed input
+    rather than a stretched one, because the model was trained that way.
+  - **After the three: the scorer runs to completion on both directories, all five axes reporting.**
+    No claim is made about the numbers — the dials moved six ways per render and these are the wrong
+    subjects. What was proven is the plumbing.
+- **`ty check` is green whether or not the extra is installed.** `eval_backends.py`'s unresolvable
+  imports are scoped with a `[[tool.ty.overrides]]` block rather than per-line `ty: ignore` comments,
+  which cannot be right in both environments: absent the extra they are load-bearing, present it they
+  are "unused directive" warnings, and ty exits non-zero on warnings. `make gate` must not depend on
+  what the operator happens to have synced. Every other check still applies to that file, which is how
+  a genuine `invalid-return-type` on `OnnxSession.run` was caught and fixed — `onnxruntime` returns a
+  `Sequence`, not a `list` — rather than suppressed.
+
+### Added
+
 - **`evaluate.py`, a second entry point beside `convert.py` and never on its import graph.** Four axes
   over a canvas the photograph and the render provably share: face (StyleID, plus ArcFace tagged
   falsify-only), pose (PCK), hair colour (CIEDE2000), and a face-location guard. It is deliberately not
@@ -180,6 +214,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   method. Recorded residual, not relied on silently: deepghs's MIT tag is their own declaration over
   weights trained with `ultralytics` tooling, and Ultralytics asserts AGPL over such weights — an
   assertion about *weights*, which this repository distributes none of and links no code from.
+- **A pre-v0.12 `run.json` is refused by name, not guessed at.** Both directories in `outputs/final/`
+  were rendered before the provenance record existed, and the scorer says exactly what it lacks — no
+  `photo_sha256`, so the photograph supplied cannot be confirmed; no `base`; no `renders` — and exits
+  1. Guessing would be worse than refusing: a comparison against the wrong photograph produces four
+  plausible numbers and no way to notice one of them is about somebody else.
+- **All twelve pinned eval artifacts were fetched and verified against `scripts/eval_models.json`**
+  before anything was scored. Every digest matched.
 - **No scorer code, no axis and no render change.** This phase pins artifacts and records licences;
   `workflows/pipeline.json`, `scripts/models.json` and the `Dockerfile` are untouched, no image is
   rebuilt and no volume is re-provisioned.
