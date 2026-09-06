@@ -501,6 +501,26 @@ class DwPoseReader:
     # SimCC splits each axis into 2x its input extent, so a bin is half a pixel.
     SIMCC_SPLIT = 2.0
 
+    # What the reference pipeline feeds these two artifacts, and therefore what
+    # they were exported to be fed. Both are properties of the published
+    # pipeline, read off it rather than guessed:
+    #
+    # - the person box is padded by 1.25 and extended to the model's aspect
+    #   ratio before an aspect-preserving warp -- `bbox_xyxy2cs(padding=1.25)`
+    #   then `top_down_affine` in `comfyui_controlnet_aux`'s `jit_pose.py`;
+    # - the crop is normalised with ImageNet's mean and standard deviation on a
+    #   0-255 scale, the same convention `SegformerParser` already uses;
+    # - and both models are fed **BGR**, which `Wholebody.__call__` produces once
+    #   by reversing the channels and then hands to the detector and the pose
+    #   model alike.
+    #
+    # Read on 2026-09-06 from `comfyui_controlnet_aux` at `main`, which is the
+    # pipeline that publishes these exact artifacts and the same preprocessor
+    # the graph's own OpenPose branch runs on the pod.
+    BBOX_PADDING = 1.25
+    IMAGENET_MEAN = (123.675, 116.28, 103.53)
+    IMAGENET_STD = (58.395, 57.12, 57.375)
+
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:
         """Verify and load both pinned DWPose artifacts: detector and pose model."""
         torch = _require("torch")
@@ -532,6 +552,12 @@ class DwPoseReader:
         exponentiated and scaled the same way. The input is letterboxed rather
         than stretched, because the model was trained that way and a distorted
         person is a distorted box.
+
+        `pixels` is **BGR**, not RGB: the reference pipeline reverses the
+        channels once and feeds the reversed array to this detector and to the
+        pose model both. Fed RGB, yolox still returns a box -- a plausible one,
+        on a person whose colours it was never trained on -- which is exactly the
+        kind of wrong that a shape check cannot catch.
 
         COCO class 0 is `person`. A frame with nobody in it returns None rather
         than the whole canvas: a pose read over a crop containing no person is a
@@ -587,11 +613,40 @@ class DwPoseReader:
             self._read[image_path] = self._read_pose(image_path)
         return self._read[image_path]
 
+    def _input_window(self, box: Box) -> tuple[float, float, float, float]:
+        """Return the source rectangle the reference pipeline actually reads.
+
+        The person box is padded by 1.25 and then **extended**, never cropped, to
+        the model's 288x384 aspect ratio, so the warp that follows is a pure
+        scale: a body keeps its proportions, and what a taller-than-wide box
+        gains is context on either side rather than a stretch.
+
+        Returned as `(centre_x, centre_y, width, height)` in canvas coordinates,
+        which is the same pair `bbox_xyxy2cs` and `_fix_aspect_ratio` produce and
+        is what the keypoints are mapped back through afterwards.
+        """
+        left, top, right, bottom = box
+        centre_x = (left + right) / 2
+        centre_y = (top + bottom) / 2
+        width = (right - left) * self.BBOX_PADDING
+        height = (bottom - top) * self.BBOX_PADDING
+        aspect = self.INPUT_WIDTH / self.INPUT_HEIGHT
+        if width > height * aspect:
+            height = width / aspect
+        else:
+            width = height * aspect
+        return centre_x, centre_y, width, height
+
     def _read_pose(self, image_path: str) -> tuple[Keypoint, ...] | None:
         """Read one image's keypoints: detect the person, then read inside it."""
         numpy = _numpy()
         image_module, _ = _pil()
-        pixels = load_canvas_pixels(image_path, self.canvas)
+        # BGR once, for both models, exactly as `Wholebody.__call__` does it.
+        # Copied rather than left as a reversed view: PIL reads the buffer, and
+        # a negative stride is not a buffer.
+        pixels = numpy.ascontiguousarray(
+            load_canvas_pixels(image_path, self.canvas)[:, :, ::-1]
+        )
         box = self._person_box(pixels)
         if box is None:
             return None
@@ -599,14 +654,29 @@ class DwPoseReader:
         if right - left < 2 or bottom - top < 2:
             return None
 
-        crop = image_module.fromarray(pixels).crop(
-            (int(left), int(top), int(right), int(bottom))
+        centre_x, centre_y, window_w, window_h = self._input_window(box)
+        # An affine warp rather than a crop-and-resize: the coefficients are the
+        # inverse map PIL wants (destination pixel -> source pixel), which for a
+        # rotation-free window is the same scale-and-shift `get_warp_matrix`
+        # builds. Whatever falls outside the image arrives as black, which is
+        # what `cv2.warpAffine`'s default border does in the reference.
+        warped = image_module.fromarray(pixels).transform(
+            (self.INPUT_WIDTH, self.INPUT_HEIGHT),
+            image_module.AFFINE,
+            (
+                window_w / self.INPUT_WIDTH,
+                0.0,
+                centre_x - window_w / 2,
+                0.0,
+                window_h / self.INPUT_HEIGHT,
+                centre_y - window_h / 2,
+            ),
+            resample=image_module.BILINEAR,
         )
-        resized = numpy.asarray(
-            crop.resize((self.INPUT_WIDTH, self.INPUT_HEIGHT), image_module.BILINEAR),
-            dtype="float32",
-        )
-        one = ((resized - 127.5) / 127.5).transpose(2, 0, 1)[None]
+        resized = numpy.asarray(warped, dtype="float32")
+        mean = numpy.asarray(self.IMAGENET_MEAN, dtype="float32")
+        std = numpy.asarray(self.IMAGENET_STD, dtype="float32")
+        one = ((resized - mean) / std).transpose(2, 0, 1)[None]
         batch = self.torch.from_numpy(
             numpy.ascontiguousarray(numpy.repeat(one, self.BATCH, axis=0))
         )
@@ -623,18 +693,22 @@ class DwPoseReader:
         if xs.ndim != 2 or ys.ndim != 2 or xs.shape[0] == 0:
             return None
 
-        # Back out of the crop and onto the canvas, so every keypoint is in the
-        # same coordinates the face box and the regions are in.
-        scale_x = (right - left) / self.INPUT_WIDTH
-        scale_y = (bottom - top) / self.INPUT_HEIGHT
+        # Back out of the warped window and onto the canvas, so every keypoint is
+        # in the same coordinates the face box and the regions are in. This is
+        # the inverse of the window above, and it has to stay that way: the
+        # reference undoes its own affine with the same centre and scale.
+        scale_x = window_w / self.INPUT_WIDTH
+        scale_y = window_h / self.INPUT_HEIGHT
+        origin_x = centre_x - window_w / 2
+        origin_y = centre_y - window_h / 2
         points: list[Keypoint] = []
         for j in range(xs.shape[0]):
             xi = int(numpy.argmax(xs[j]))
             yi = int(numpy.argmax(ys[j]))
             points.append(
                 Keypoint(
-                    x=left + (xi / self.SIMCC_SPLIT) * scale_x,
-                    y=top + (yi / self.SIMCC_SPLIT) * scale_y,
+                    x=origin_x + (xi / self.SIMCC_SPLIT) * scale_x,
+                    y=origin_y + (yi / self.SIMCC_SPLIT) * scale_y,
                     confidence=float(min(xs[j][xi], ys[j][yi])),
                 )
             )

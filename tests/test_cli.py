@@ -532,3 +532,39 @@ def test_main_carries_cn_strength_through_to_the_overrides(
         monkeypatch, ["convert.py", "photo.jpg", "--cn-strength", "0.35"]
     )
     assert captured["overrides"] == {"cn_strength": 0.35}
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_parse_args_takes_the_pod_image_from_the_environment_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # `$RUNPOD_IMAGE` is the same variable `infra/up.sh` boots the pod from, so
+    # the manifest records what was booted rather than a second spelling of it.
+    monkeypatch.setenv("RUNPOD_IMAGE", "ghcr.io/owner/isekai:v0.11-rc")
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().pod_image == "ghcr.io/owner/isekai:v0.11-rc"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_parse_args_leaves_the_pod_image_unknown_when_nothing_states_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("RUNPOD_IMAGE", raising=False)
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().pod_image is None
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_main_passes_the_pod_image_through_to_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+    _stub_environment(monkeypatch)
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--pod-image", "ghcr.io/owner/isekai:v0.11-rc"],
+    )
+    cli.main()
+
+    assert captured["pod_image"] == "ghcr.io/owner/isekai:v0.11-rc"

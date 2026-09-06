@@ -24,7 +24,13 @@ import json
 import sys
 from pathlib import Path
 
-from isekai.evaluate import AUTHORITATIVE_GUARD_METHOD, Refusal, score_render, table
+from isekai.evaluate import (
+    AUTHORITATIVE_GUARD_METHOD,
+    Refusal,
+    pod_image_of,
+    score_render,
+    table,
+)
 from isekai.provision import digest_of
 
 # Where the scorer's own artifacts live, verified against
@@ -167,9 +173,7 @@ def main() -> None:
         out = args.run_dir / f"{Path(report.image or report.render).stem}.eval.json"
         out.write_text(json.dumps(report.as_record(), indent=2) + "\n")
 
-    rendered = table(
-        reports, args.run_dir.name, base, manifest.get("image", "unrecorded")
-    )
+    rendered = table(reports, args.run_dir.name, base, pod_image_of(manifest))
     (args.run_dir / "eval.txt").write_text(rendered)
     print(rendered)
 

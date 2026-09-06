@@ -99,6 +99,14 @@ looking at, and a baseline nothing can identify is not a baseline.
 - **THEN** the manifest records a digest of the graph as submitted and the base checkpoint named in it
 - **AND** a comparison across two different bases is detectable rather than silent
 
+#### Scenario: the manifest records the image the run was produced on
+- **Key:** `workflow-mutation:output-layout:manifest-records-the-pod-image`
+- **Layers:** unit
+- **WHEN** a run completes and was told which container image it is driving
+- **THEN** the manifest records that image verbatim
+- **AND** a run that was not told records that it does not know, rather than naming an image it was
+  not produced on
+
 #### Scenario: the manifest records the resolved dials per variation
 - **Key:** `workflow-mutation:output-layout:manifest-records-resolved-dials`
 - **Layers:** unit

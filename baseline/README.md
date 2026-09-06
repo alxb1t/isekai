@@ -245,13 +245,20 @@ StyleID outscores ArcFace on both AUC and median separation, which is consistent
 But the value is **saturated**, and that is the real finding:
 
 ```
-PCK   median 1.000   min 0.987   max 1.000   across all 30 renders
+PCK   median 1.000   min 0.976   max 1.000   across all 30 renders
 ```
 
 Every render's pose agrees with its photograph almost perfectly. The OpenPose ControlNet sits at
-strength 0.6 and holds the pose so tightly that, **at fixed dials, this axis has no variance** — and
-an axis with no variance cannot correlate with anything. Phase 10 will therefore report its
-correlation as undefined rather than as a number, which is the honest output for a constant column.
+strength 0.6 and holds the pose so tightly that, **at fixed dials, this axis has almost no
+variance** — twenty-one of the thirty renders sit at exactly 1.000, so most within-subject pairs are
+metric ties and the correlation is computed over the few that are not.
+
+**These numbers were recomputed at converge**, after the pose reader's preprocessing was brought onto
+the pinned artifacts' reference pipeline (a 1.25-padded aspect-preserving warp, ImageNet
+normalisation, BGR input — see `CHANGELOG.md`). The re-run is local and free: the same renders, the
+same photographs, the same models. **Only the pose axis moved**; every other axis in all thirty
+records is byte-identical to what the metered session produced, which is what makes this a
+recomputation rather than a new measurement.
 
 **The pose axis is not removed.** Probe 3's stated question was whether DWPose can read these renders
 at all, and it can; nothing was killed by the probe it was given. The saturation is a finding *about
@@ -259,7 +266,7 @@ the pipeline* — pose is not where identity varies here — rather than a defec
 deleting the column would hide that it was measured. It is likely to become informative the moment
 the pose ControlNet's strength is searched, which is v0.13's business.
 
-The keypoint-confidence floor is doing real work: 34–56 of the 133 whole-body keypoints are dropped
+The keypoint-confidence floor is doing real work: 33–56 of the 133 whole-body keypoints are dropped
 on four of the six subjects, and reported as dropped rather than scored at a guessed coordinate.
 `s3` and `s5`, the two full-length subjects, keep all 133.
 

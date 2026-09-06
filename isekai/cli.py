@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -104,6 +105,14 @@ def parse_args() -> argparse.Namespace:
         help="InstantID cn_strength base value [0, 1] (the keypoint route)",
     )
     p.add_argument(
+        "--pod-image",
+        default=os.environ.get("RUNPOD_IMAGE"),
+        help="the container image the ComfyUI being driven is running, recorded "
+        "verbatim into the run's manifest; defaults to $RUNPOD_IMAGE, the same "
+        "variable infra/up.sh boots the pod from. Unset means the run records "
+        "that it does not know, which is not the same as knowing it was :latest",
+    )
+    p.add_argument(
         "--fixed-dials",
         action="store_true",
         help="render the graph's committed dials, jittering nothing; each "
@@ -150,4 +159,5 @@ def main() -> None:
         variations=args.variations,
         overrides=overrides or None,
         fixed_dials=args.fixed_dials,
+        pod_image=args.pod_image,
     )

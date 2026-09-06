@@ -13,7 +13,7 @@ Forty blind pairwise judgements, recorded and committed **before any score for t
 |---|---|---:|---:|---|---:|
 | `face_styleid` | relative | **0.450** | 18 / 40 | 0.295 – 0.605 | 0.636 |
 | `face_arcface` | relative, falsify-only | **0.625** | 25 / 40 | 0.470 – 0.780 | 0.154 |
-| `pose_pck` | absolute | **0.286** | 4 / 14 | 0.024 – 0.548 | 0.180 |
+| `pose_pck` | absolute | **0.636** | 14 / 22 | 0.427 – 0.845 | 0.286 |
 | `hair_colour_delta_e` | absolute | **0.425** | 17 / 40 | 0.270 – 0.580 | 0.430 |
 | `hair_mask_area` | absolute | **undefined** | 0 / 40 | — | — |
 
@@ -24,8 +24,9 @@ is not the same as noise and is worth more than it looks.
 ## What this says
 
 **No axis is shown to track the operator's eye. Every 95% confidence interval contains 0.5, and every
-*p* is far above any threshold anyone would accept.** At n=40 the interval is roughly ±0.155 wide, so
-this experiment could only have detected a very strong effect — and it did not find one.
+*p* is far above any threshold anyone would accept.** At n=40 the interval is roughly ±0.155 wide —
+and ±0.209 on the pose row, which only 22 pairs could be scored on at all — so this experiment could
+only have detected a very strong effect, and it did not find one.
 
 Read individually:
 
@@ -33,22 +34,34 @@ Read individually:
   StyleID separates *different people* well enough (AUC 0.847 in phase 8's probe), and it still cannot
   say which of two renders **of the same person** looks more like them. Those are different questions,
   and this version is what established that the second one is the hard one.
-- **`face_arcface` is the highest at 0.625, and it is the axis allowed to claim the least.** It is the
-  encoder the generator injects identity with, marked falsify-only for exactly that reason, and *p* =
-  0.154 does not license reading it as a result. If it survives replication at a real n it would be a
+- **`face_arcface` is the highest of the axes scored on all forty pairs, at 0.625, and it is the axis
+  allowed to claim the least.** It is the encoder the generator injects identity with, marked
+  falsify-only for exactly that reason, and *p* = 0.154 does not license reading it as a result. If it survives replication at a real n it would be a
   genuinely awkward finding — that the contaminated sanity channel beats the purpose-built metric — and
   it is recorded here so that a later version can go looking.
 - **`hair_colour_delta_e` at 0.425** is below chance. The metric returns one dominant colour and two of
   the four labelled subjects have two-tone hair, which is the limitation `design.md` D5 named in
   advance and put those subjects in the batch to catch.
-- **`pose_pck` is undefined in practice.** Phase 8 found it saturated — PCK median 1.000 across all
-  thirty renders — so 26 of the 40 pairs are exact metric ties and only 14 could be scored at all. The
-  0.286 over those 14 is noise from a rounding difference, not a measurement.
+- **`pose_pck` is saturated, and what is left of it says nothing either.** Phase 8 found PCK median
+  1.000 across all thirty renders — twenty-one of them at exactly 1.000 — so 18 of the 40 pairs are
+  exact metric ties and only 22 could be scored at all. The 0.636 over those 22 is the highest figure
+  in the table and it is still a coin flip: *p* = 0.286, and its interval runs from 0.427 to 0.845.
+  An axis that cannot separate the renders in half the pairs put to it has not been shown to measure
+  them in the other half.
 - **`hair_mask_area` cannot participate by construction, and that is a design defect this table
   exposes.** The axis reports how much of the canvas the photograph's hair mask covers — context for
   the colour distance rather than a comparison — so it is *identical for every render of a subject* and
   every within-subject pair is a tie. It should not have been listed as a correlatable axis. It is left
   in the table rather than quietly dropped, because it is the table that revealed the mistake.
+
+**On the pose row.** These pose figures were recomputed at converge, after the pose reader's
+preprocessing was brought onto the pinned artifacts' reference pipeline — the previous ones were
+produced by a reader that stretched the person crop, normalised it on the wrong constants and fed the
+detector RGB where its reference feeds BGR. The re-run is local and free, over the same committed
+renders and the same photographs, and **only the pose axis moved**: every other axis in all thirty
+records came back byte-identical, which is why the other four rows are the metered session's own
+numbers. The labels were not re-collected and were not re-read; they predate every score here, as
+`correlate` requires.
 
 ## Per subject
 

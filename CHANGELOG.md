@@ -25,6 +25,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The pose reader's input now matches what the pinned artifacts are published to be fed.** Three
+  deviations from `comfyui_controlnet_aux`'s reference pipeline — the one that publishes
+  `dw-ll_ucoco_384_bs5.torchscript.pt` and `yolox_l.onnx`, and the same preprocessor the graph's own
+  OpenPose branch runs on the pod: the person crop was **stretched** to 288x384 where the reference
+  applies an aspect-preserving affine over a **1.25-padded** box; the crop was normalised
+  `(x - 127.5) / 127.5` where the reference uses **ImageNet mean and standard deviation**, the same
+  convention `SegformerParser` in that file already used; and `yolox_l` was fed **RGB** where its
+  reference feeds **BGR**. All three are corrected, and the keypoints are mapped back through the
+  inverse of the window they were read in.
+- **The pose axis was recomputed over the thirty committed renders, locally and for nothing.** Only
+  the pose axis moved: every other axis in all thirty `*.eval.json` records came back byte-identical,
+  which is what makes this a recomputation rather than a new measurement. **The saturation finding
+  stands** — PCK median **1.000**, twenty-one of thirty at exactly 1.000, min now 0.976 — and it is now
+  attributable to the pipeline rather than to the reader. The correlation's pose row moves from
+  **0.286 (4/14)** to **0.636 (14/22)**, *p* = 0.286, interval 0.427 – 0.845: still a coin flip, and
+  every 95% interval in the table still contains 0.5. `baseline/correlation/agreement.json` and both
+  `baseline` READMEs carry the recomputed figures.
+- **A run records the container image it was rendered on, and the report reads it.** The table's
+  fourth line read `manifest.get("image", ...)`, a key nothing ever wrote — `renders[].image` is a PNG
+  filename — so every real table printed `image: unrecorded` while the unit test, handed a literal,
+  printed a tag. `run.json` now carries `pod_image`, `convert.py` takes `--pod-image` (defaulting to
+  `$RUNPOD_IMAGE`, the same variable `infra/up.sh` boots from), and the table is now proven against a
+  manifest the pipeline actually wrote rather than against a literal. A run that was not told records
+  `null` and the table says `unrecorded`: nothing guesses at a tag, and the required command line is
+  still `convert.py photo.jpg`.
+
 ### Added
 
 - **The guard's authoritative method is settled by measurement: box IoU.** Both methods were computed
@@ -42,9 +70,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   have killed StyleID and did not; it cannot license it either, and no threshold is set. StyleID
   outscores ArcFace on both AUC and separation, consistent with the roles D8 assigns them.
 - **DWPose reads all thirty renders — and the pose axis is saturated.** PCK median **1.000**, min
-  0.987. The OpenPose ControlNet at strength 0.6 holds pose so tightly that at fixed dials this axis has
-  **no variance**, and an axis with no variance cannot correlate with anything; phase 10 will report its
-  correlation as undefined rather than as a number. The axis is **not** removed: probe 3 asked whether
+  **0.976** (recomputed at converge, see *Fixed*). The OpenPose ControlNet at strength 0.6 holds pose so
+  tightly that at fixed dials this axis has **almost no variance** — twenty-one of thirty renders sit at
+  exactly 1.000, so most within-subject pairs are metric ties and only 22 of 40 could be scored at all.
+  The axis is **not** removed: probe 3 asked whether
   DWPose could read these renders and it can, so nothing was killed by the probe it was given, and
   deleting the column would hide that it was measured. It should become informative the moment the pose
   strength is searched, which is v0.13's business.
@@ -105,13 +134,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The correlation, which is what v0.12 actually ships. No axis is shown to track the operator's
   eye.** Forty blind pairwise judgements against each axis separately, never rolled up, with the count
   beside every figure: `face_styleid` **0.450** (18/40), `face_arcface` **0.625** (25/40), `pose_pck`
-  **0.286** (4/14), `hair_colour_delta_e` **0.425** (17/40), `hair_mask_area` **undefined**. **Every
-  95% interval contains 0.5 and every binomial *p* is ≥ 0.15.** At n=40 the interval is ±0.155, so this
-  could only ever have detected a very strong effect, and there was not one.
+  **0.636** (14/22), `hair_colour_delta_e` **0.425** (17/40), `hair_mask_area` **undefined**. **Every
+  95% interval contains 0.5 and every binomial *p* is ≥ 0.15.** At n=40 the interval is ±0.155 — ±0.209
+  on the pose row, which only 22 pairs could be scored on — so this could only ever have detected a very
+  strong effect, and there was not one.
 - **The primary face axis lands below a coin flip.** StyleID separates *different people* well enough —
   AUC 0.847 in phase 8 — and still cannot say which of two renders **of the same person** looks more
   like them. Those are different questions, and this version is what established that the second is the
-  hard one. The highest agreement belongs to `face_arcface`, the channel permitted to claim the least;
+  hard one. The highest agreement over all forty pairs belongs to `face_arcface`, the channel permitted
+  to claim the least;
   at *p* = 0.154 that licenses nothing, and it is recorded so a later version can go looking.
 - **`hair_mask_area` cannot participate by construction — a design defect this table exposed.** It
   reports the photograph's own mask area, so it is identical for every render of a subject and every

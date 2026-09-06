@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from isekai.comfy_types import Workflow
 from isekai.evaluate import (
     AUTHORITATIVE_GUARD_METHOD,
     CLAIMS,
@@ -21,12 +22,14 @@ from isekai.evaluate import (
     canvas_for,
     check_render_matches,
     pck,
+    pod_image_of,
     refuse_embedding_axes_across_bases,
     run_guard,
     score_render,
     table,
     usable_regions,
 )
+from isekai.pipeline import run
 from isekai.workflow import working_resolution
 from tests.eval_fakes import (
     FakeDetector,
@@ -35,6 +38,7 @@ from tests.eval_fakes import (
     FakePoseReader,
     FakeSampler,
 )
+from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, jpeg_with_header, png_bytes
 
 # A face filling a plausible slice of the canvas, and the same face nudged by a
@@ -99,7 +103,7 @@ def _score(
         subject="subject-1",
         photo_base=photo_base,
         render_base=render_base,
-        image="isekai:v0.11-rc",
+        image="0.png",
         guard_method=guard_method,
     )
     fakes: dict[str, object] = {
@@ -568,7 +572,7 @@ def test_the_axes_are_never_rolled_up_into_one_number(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec("evaluation:report:names-its-run")
-def test_the_report_names_the_subject_the_base_and_the_image(
+def test_the_report_names_the_subject_the_base_and_the_render(
     tmp_path: Path,
 ) -> None:
     report, _ = _score(tmp_path)
@@ -576,7 +580,10 @@ def test_the_report_names_the_subject_the_base_and_the_image(
 
     assert record["subject"] == "subject-1"
     assert record["base"] == "wai.safetensors"
-    assert record["image"] == "isekai:v0.11-rc"
+    # The record's `image` is the render's own file name -- the same key
+    # `renders[]` uses in `run.json`, and what the labels correlate by. The
+    # container image is the run's, not the render's, and is named on the table.
+    assert record["image"] == "0.png"
 
 
 @pytest.mark.spec("evaluation:report:names-its-run")
@@ -589,6 +596,45 @@ def test_the_table_names_the_run_the_base_and_the_image_it_was_produced_on(
     assert "run: 20260906T101500Z" in rendered
     assert "base: wai.safetensors" in rendered
     assert "image: isekai:v0.11-rc" in rendered
+
+
+@pytest.mark.spec("evaluation:report:names-its-run")
+def test_the_table_names_the_image_the_pipeline_itself_recorded(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # Driven off a manifest the pipeline actually wrote, never a literal handed
+    # to the formatter: the placeholder this closes was invisible for exactly
+    # that reason -- the formatter was proven while the key it reads was not.
+    run_dir = tmp_path / "run"
+    run(
+        FakeComfyClient(),
+        workflow,
+        photo,
+        run_dir,
+        variations=1,
+        seed=7,
+        pod_image="ghcr.io/owner/isekai:v0.11-rc",
+    )
+    manifest = json.loads((run_dir / "run.json").read_text())
+    report, _ = _score(tmp_path)
+
+    rendered = table([report], run_dir.name, manifest["base"], pod_image_of(manifest))
+
+    assert "image: ghcr.io/owner/isekai:v0.11-rc" in rendered
+
+
+@pytest.mark.spec("evaluation:report:names-its-run")
+def test_the_table_says_unrecorded_when_the_run_never_learned_its_image(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    run_dir = tmp_path / "run"
+    run(FakeComfyClient(), workflow, photo, run_dir, variations=1, seed=7)
+    manifest = json.loads((run_dir / "run.json").read_text())
+    report, _ = _score(tmp_path)
+
+    rendered = table([report], run_dir.name, manifest["base"], pod_image_of(manifest))
+
+    assert "image: unrecorded" in rendered
 
 
 @pytest.mark.spec("evaluation:report:names-its-run")

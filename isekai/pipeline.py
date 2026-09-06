@@ -25,6 +25,7 @@ def run(
     seed: int | None = None,
     overrides: Overrides | None = None,
     fixed_dials: bool = False,
+    pod_image: str | None = None,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client.
 
@@ -37,6 +38,12 @@ def run(
     `output_dir` is this run's own directory, already resolved by the caller, and
     `variations` is required: the count is a spend decision, and its default and
     its ceiling belong together in the CLI that carries the flag.
+
+    `pod_image` is the container image the ComfyUI on the other end of `client` is
+    running, as the operator states it: nothing on the wire reports it, so it is
+    passed in or it is not known. It is recorded verbatim and never guessed --
+    `None` is written through as `null`, which is a run saying it does not know
+    rather than a run claiming an image it was not produced on (design.md D14).
 
     `fixed_dials` holds the graph's committed dials still, and defaults to off so
     every existing invocation behaves exactly as it did. It is what a baseline
@@ -112,6 +119,10 @@ def run(
             "overrides": dict(overrides) if overrides else {},
             "dials_mode": "held" if fixed_dials else "jittered",
             "photo_sha256": _digest_of_file(input_path),
+            # The container image the render was produced on, spelled
+            # `pod_image` because `renders[].image` already means a PNG
+            # filename in this same file. `null` when the run was not told.
+            "pod_image": pod_image,
             "base": base,
             "resolution": resolution,
             "renders": renders,

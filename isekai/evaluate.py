@@ -21,6 +21,7 @@ offline.
 second way to render (design.md D12).
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import Literal, Protocol
 
@@ -534,6 +535,23 @@ CLAIMS = (
     "There is no combined score, no verdict and no threshold. Averaging the axes "
     "would hide the identity-versus-style trade-off they exist to expose.",
 )
+
+
+def pod_image_of(manifest: Mapping[str, object]) -> str:
+    """Return the container image a run's manifest records, or `unrecorded`.
+
+    Spelled here rather than at the call site so the table's fourth column is
+    read out of the manifest by something the offline suite can drive with a
+    manifest the pipeline actually wrote. It was a `manifest.get("image", ...)`
+    inline, which read a key nothing writes -- `renders[].image` is a PNG
+    filename -- so every real table printed the placeholder while the unit test,
+    handed a literal, printed a tag.
+
+    `null` and absent are both `unrecorded`: a run is told what it was rendered
+    on or it is not, and neither is a licence to name an image.
+    """
+    recorded = manifest.get("pod_image")
+    return recorded if isinstance(recorded, str) and recorded else "unrecorded"
 
 
 def table(reports: list[Report], run_name: str, base: str | None, image: str) -> str:

@@ -476,6 +476,37 @@ def test_the_manifest_names_the_image_each_render_was_written_to(
         assert (run_dir / render["image"]).exists()
 
 
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_the_manifest_records_the_container_image_the_run_was_told_it_drives(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, _ = _manifest_of(
+        workflow,
+        tmp_path / "run",
+        photo,
+        variations=1,
+        seed=7,
+        pod_image="ghcr.io/owner/isekai:v0.11-rc",
+    )
+
+    # Verbatim, and under its own key: `renders[].image` is a PNG filename in
+    # this same manifest, and the two are not the same thing.
+    assert manifest["pod_image"] == "ghcr.io/owner/isekai:v0.11-rc"
+    assert manifest["renders"][0]["image"] == "0.png"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_a_run_that_was_not_told_its_image_records_that_it_does_not_know(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # Nothing on the wire reports the image the ComfyUI is running, so a run that
+    # was not told records null rather than guessing at the released tag.
+    manifest, _ = _manifest_of(workflow, tmp_path / "run", photo, variations=1, seed=7)
+
+    assert "pod_image" in manifest
+    assert manifest["pod_image"] is None
+
+
 @pytest.mark.spec("cli:fixed-dials:mode-is-recorded")
 def test_the_manifest_records_that_a_jittered_run_jittered(
     workflow: Workflow, tmp_path: Path, photo: str
