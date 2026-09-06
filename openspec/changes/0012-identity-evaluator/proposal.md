@@ -31,6 +31,11 @@ the version's finding is a correlation, not a score.**
 - **`run.json` becomes a provenance record.** It records `seed`, `variations`, `seeds` and `overrides`,
   and therefore cannot name the photo that produced it, the graph, the checkpoint, the working
   resolution or the resolved dials. A baseline nothing can identify is not a baseline.
+- **`scripts/eval_models.json`** — a pinned, checksummed manifest of every model the scorer loads, a
+  **sibling** of `scripts/models.json` rather than an addition to it: that file is what the pod
+  provisions the *graph* from. The recognizer the scorer reports as a sanity channel reuses the
+  graph's own `glintr100` pin byte for byte. Licences are read and recorded **before any scorer code
+  is written**, so a model a licence forbids is dropped before an axis is built on it.
 - **`evaluate.py`** — a second entry point, never on `convert.py`'s import graph, behind an optional
   `isekai[eval]` extra. Four axes over a shared canvas: face (StyleID, with ArcFace as a sanity
   channel), pose (PCK), hair colour (CIEDE2000 + mask area), and a face-location guard that refuses the
@@ -80,7 +85,7 @@ None.
 
 - **Code** — `isekai/pipeline.py`, `isekai/mutate.py`, `isekai/overrides.py`, `isekai/cli.py`,
   `workflows/pipeline.json` (no dial moves; `cn_strength` is pinned where it stands), `evaluate.py` and
-  `isekai/evaluate.py` (new), `pyproject.toml`, `tests/`.
+  `isekai/evaluate.py` and `scripts/eval_models.json` (new), `pyproject.toml`, `tests/`.
 - **Not touched** — `convert.py`'s import graph, `isekai/workflow.py`'s injection and header parsing,
   `isekai/comfy_client.py`, `isekai/provision.py`, `Dockerfile`, `scripts/models.json`. No model
   artifact moves, so **no image is rebuilt and no volume is re-provisioned**.

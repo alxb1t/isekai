@@ -2,21 +2,22 @@
 
 ## Progress
 
-- [ ] 1 — A render with the graph's own dials, and `cn_strength` made settable and pinned
-- [ ] 2 — `run.json` becomes a provenance record
-- [ ] 3 — `evaluate.py`, the `[eval]` extra, and the stdlib guard on `convert.py`
-- [ ] 4 — Prove the scorer on the renders already on disk, before any money is spent
-- [ ] 5 — The six subjects: a tracked builder, digests recorded, pixels not committed
-- [ ] 6 — ⚠️ **GPU · HALT** — one session on `:v0.11-rc`, thirty fixed-dial renders
-- [ ] 7 — The three probes, local and free; the guard is decided here
-- [ ] 8 — The pairwise sheet, and forty blind judgements committed alone
-- [ ] 9 — The correlation, reported whatever it says
+- [ ] 1 — The licences, read and recorded; every eval artifact pinned — **before any code**
+- [ ] 2 — A render with the graph's own dials, and `cn_strength` made settable and pinned
+- [ ] 3 — `run.json` becomes a provenance record
+- [ ] 4 — `evaluate.py`, the `[eval]` extra, and the stdlib guard on `convert.py`
+- [ ] 5 — Prove the scorer on the renders already on disk, before any money is spent
+- [ ] 6 — 🛑 **HUMAN** — the six subjects: a tracked builder, digests recorded, pixels not committed
+- [ ] 7 — ⚠️ **GPU · HALT** — one session on `:v0.11-rc`, thirty fixed-dial renders
+- [ ] 8 — The three probes, local and free; the guard is decided here
+- [ ] 9 — 🛑 **HUMAN** — the pairwise sheet, and forty blind judgements committed alone
+- [ ] 10 — The correlation, reported whatever it says
 
 ## The per-phase ritual
 
 Every phase, without exception:
 
-1. **Test-first where there is logic.** Phases 1–5 and 7–9 have it. Red → green.
+1. **Test-first where there is logic.** Phases 1–6 and 8–10 have it. Red → green.
 2. **Run each phase's stated verification — run it, never summarize it.** Paste real output.
 3. **Gate green before the commit** — `make gate`, the five commands in `.minions/minions.toml`'s
    `gate` array, in order. **Never weaken the gate to pass**; halt and say so.
@@ -32,27 +33,68 @@ moves, not the register, not a ControlNet strength, not `cn_strength` (design.md
 built an instrument and moved the thing it measures would have measured nothing.
 
 **No image build and no volume re-provision.** `scripts/models.json` and `Dockerfile` are untouched;
-phase 6 boots the already-built `:v0.11-rc` (design.md D14).
+phase 7 boots the already-built `:v0.11-rc` (design.md D14).
 
-**One phase spends real money.** Phase 6. A pod goes up only for a phase marked ⚠️ GPU here,
+**One phase spends real money.** Phase 7. A pod goes up only for a phase marked ⚠️ GPU here,
 `infra/up.sh` creates it, `infra/down.sh` tears it down, and teardown is confirmed through the RunPod
 MCP with what it returned recorded. The ceiling is **45 minutes and ~$0.30 per pod session**;
 exceeding it is a halt, not a judgement call. At $0.72/hr the money ceiling binds at **25 minutes**,
 so plan against 25 and treat 45 as the halt. Budget: ~4 min boot + 30 renders at ~30 s ≈ **19 min ≈
 $0.23**, derived from v0.11's measured 10 renders in an 8 min 23 s session.
 
-**Phase 6 must set `RUNPOD_IMAGE`** to `:v0.11-rc` in `.env`, and clear it afterwards.
+**Phase 7 must set `RUNPOD_IMAGE`** to `:v0.11-rc` in `.env`, and clear it afterwards.
 
 **The release criterion is that the correlation was computed, not that it was good** (design.md D17).
-If the numbers do not track the operator's eye, phase 9 records that and the version ships. Re-running
+If the numbers do not track the operator's eye, phase 10 records that and the version ships. Re-running
 the labelling after seeing scores is forbidden.
 
-**Phase 8 is not delegable.** The forty judgements are the operator's, made blind, before phase 9
-computes anything.
+**Three phases are the operator's, not the agent's.** Phase 6 needs six source photographs, phase 7
+needs the announcement and the "go", and phase 9 is forty blind judgements. A build loop **halts** at
+each and says what it is waiting for; none of the three may be simulated, sampled or stood in for.
 
 ## Phase detail
 
-### 1 — A render with the graph's own dials, and `cn_strength` made settable and pinned
+### 1 — The licences, read and recorded; every eval artifact pinned — **before any code**
+
+The one phase that can kill a model before a line is written against it (design.md D16, D18). No
+scorer code is written here.
+
+**Read and record each licence**, in a tracked note beside the manifest, with the URL and the date it
+was read:
+
+- **StyleID** — its project page and its model card disagree (CC BY-SA 4.0 versus non-commercial
+  research). Record both readings verbatim rather than picking one. The conflict is not ours to
+  resolve, so it is carried as a **recorded deviation**, in the manner of the tile ControlNet's
+  animation disclaimer — under the hard rule that a model with a contradictory licence may not be the
+  **sole carrier of an axis**. StyleID therefore ships beside ArcFace or not at all.
+- **`segformer_b2_clothes`**, **`yolov8_animeface`**, and the perceptual metric if one is added later.
+- **DWPose and `glintr100`** are already in `scripts/models.json` and already carry pins; record their
+  licences too, because the pod manifest never had to state them and the scorer's does.
+
+**If a licence forbids the use outright, the model is dropped here** and the axis it carried is
+re-planned before phase 4 writes any code against it. That is the phase's whole point.
+
+**Pin every eval artifact** in `scripts/eval_models.json` — a **sibling** of `scripts/models.json`,
+never merged into it: that file is the pinned manifest of what **the graph** needs on the pod, and
+these run locally on the operator's machine. Same shape, same rules — a pinned revision URL, a
+SHA-256, a byte count, and mirrors where they exist.
+
+- **`glintr100` and DWPose reuse the pins `scripts/models.json` already carries**, byte for byte. The
+  scorer's ArcFace must be the *same* artifact the generator injects identity with, or design.md D8's
+  claim about self-grading is about two different models and is simply wrong.
+- **StyleID, `segformer_b2_clothes` and `yolov8_animeface` are new pins**, resolved to a commit or
+  revision and checksummed. A branch name is not a pin.
+- The scorer verifies each artifact's digest when it loads it and **refuses on a mismatch**, which is
+  what makes the pin a check rather than a note.
+
+**Verify:** every licence recorded with its URL and read-date, including the StyleID conflict quoted
+from both sources; `scripts/eval_models.json` present, every entry carrying a pinned URL and a
+SHA-256, and the DWPose and `glintr100` entries **byte-identical** to `scripts/models.json`'s; a test
+bound to `evaluation:pinned-artifacts:digest-mismatch-is-refused` and
+`:recognizer-matches-the-generators-pin`; `make gate` green. **Halt and say so** if any licence
+forbids the use — that is a plan decision, not a coding one.
+
+### 2 — A render with the graph's own dials, and `cn_strength` made settable and pinned
 
 Today `isekai/pipeline.py` calls `mutate` on every variation and `isekai/mutate.py` moves six dials at
 once, so nothing this repository has rendered differs from its neighbour in one thing. A baseline is
@@ -79,7 +121,7 @@ impossible until this changes (design.md D3).
 `cli:dial-validation:accepts-cn-strength-in-range`, `:rejects-cn-strength-above-one`,
 `:rejects-cn-strength-below-zero`. Every existing mutation and CLI test passes unchanged.
 
-### 2 — `run.json` becomes a provenance record
+### 3 — `run.json` becomes a provenance record
 
 It records `seed`, `variations`, `seeds` and `overrides`, and therefore cannot name the photograph, the
 graph, the base or the resolution — the two batches in `outputs/final/` are identifiable only from
@@ -98,7 +140,7 @@ exactly as `probe/README.md` already does.
 `:manifest-identifies-the-graph-and-base`, `:manifest-records-resolved-dials`,
 `:manifest-records-the-resolution`, and `cli:fixed-dials:mode-is-recorded`.
 
-### 3 — `evaluate.py`, the `[eval]` extra, and the stdlib guard on `convert.py`
+### 4 — `evaluate.py`, the `[eval]` extra, and the stdlib guard on `convert.py`
 
 A second entry point beside `convert.py`, never on its import graph (design.md D12).
 
@@ -112,7 +154,7 @@ A second entry point beside `convert.py`, never on its import graph (design.md D
   (design.md D8); pose — PCK normalised by the person bbox diagonal, low-confidence keypoints dropped
   and counted; hair — CIEDE2000 dominant-colour distance and mask-area ratio; and the guard.
 - **The guard implements both methods** — box IoU and landmark-centroid alignment. Which one is
-  authoritative is decided in phase 7, not here (design.md D9).
+  authoritative is decided in phase 8, not here (design.md D9).
 - **Absence is its own field.** `face_detected: false` is never a low score.
 - **Cross-base** refuses the embedding axes per axis, with the reason in the record, and still reports
   colour, area and PCK.
@@ -126,16 +168,17 @@ A second entry point beside `convert.py`, never on its import graph (design.md D
   why.**
 
 **Verify:** `make gate` green with the extra absent; `uv run --extra eval pytest` green with it
-present; tests bound to every `evaluation:` scenario except the labelling ones, which are phase 8.
+present; tests bound to every `evaluation:` scenario except the `pinned-artifacts:` ones (phase 1) and
+the `labels:` ones (phase 9).
 
-### 4 — Prove the scorer on the renders already on disk, before any money is spent
+### 5 — Prove the scorer on the renders already on disk, before any money is spent
 
 `outputs/final/20260905T135736Z/` and `.../20260905T140151Z/` hold five renders each at **1024×1600**
 and **1024×1472** — two different subjects, jittered dials, from this exact pipeline. Wrong dials and
 wrong subjects, but real 1024-canvas PNGs, and they will surface every plumbing failure for free
 (design.md D13). They are untracked; confirm they are still there before planning around them.
 
-Run `evaluate.py` end to end against both. Their `run.json` predates phase 2, so it names no
+Run `evaluate.py` end to end against both. Their `run.json` predates phase 3, so it names no
 photograph — the scorer must **report the missing provenance rather than guess**, and that path is
 exercised here for the first time.
 
@@ -143,7 +186,7 @@ exercised here for the first time.
 missing-provenance path is exercised and its message recorded in the CHANGELOG entry. No claim is made
 about the numbers — the dials moved six ways per render and these are two different people.
 
-### 5 — The six subjects: a tracked builder, digests recorded, pixels not committed
+### 6 — 🛑 **HUMAN · HALT** — the six subjects: a tracked builder, digests recorded, pixels not committed
 
 `probe/build_inputs.py`'s treatment, because one version does not silently reverse a convention the
 previous one wrote down (design.md D15). Byte-reproducible recipe, SHA-256 recorded per file, pixels
@@ -153,18 +196,18 @@ Six subjects, each earning its slot adversarially (design.md D11): **two** with 
 non-uniform hair, against the dominant-colour metric's known limitation; **one** non-frontal or
 occluded face, exercising the guard's refusal path and the absent-face field; **one landscape input**,
 which closes a gap `CHANGELOG.md` v0.11 names explicitly — landscape is still untested on a GPU; **two**
-controls. The four to be labelled in phase 8 are named here, and the two refusal-path subjects are
+controls. The four to be labelled in phase 9 are named here, and the two refusal-path subjects are
 not among them.
 
 **Verify:** two consecutive runs of the builder produce identical digests; the digests are recorded;
 `make gate` green. Residual risk stated in the CHANGELOG: if the source photographs are lost, the
 baseline becomes unreproducible and the labels are the only surviving artifact.
 
-### 6 — ⚠️ **GPU · HALT** — one session on `:v0.11-rc`, thirty fixed-dial renders
+### 7 — ⚠️ **GPU · HALT** — one session on `:v0.11-rc`, thirty fixed-dial renders
 
 **Announce before `infra/up.sh`. Wait for the human "go" if the RunPod MCP is unreachable.**
 
-Six subjects × five seeds, **dials held** (phase 1's flag), on the already-built `:v0.11-rc` so
+Six subjects × five seeds, **dials held** (phase 2's flag), on the already-built `:v0.11-rc` so
 rebuild drift is held constant rather than measured (design.md D14). Set `RUNPOD_IMAGE` to
 `:v0.11-rc` before, clear it after.
 
@@ -179,9 +222,9 @@ target the injector computes from its own photograph; the landscape subject rend
 new; wall clock and cost recorded against the 25-minute money ceiling; teardown confirmed with the MCP
 response transcribed.
 
-### 7 — The three probes, local and free; the guard is decided here
+### 8 — The three probes, local and free; the guard is decided here
 
-CPU, `$0`, against phase 6's renders.
+CPU, `$0`, against phase 7's renders.
 
 1. **The guard, both ways.** Box IoU and landmark-centroid alignment, on the same renders, at the
    working denoise. **Whichever holds ships as the guard; if neither holds, the region axes refuse and
@@ -197,7 +240,7 @@ CPU, `$0`, against phase 6's renders.
 bound to `evaluation:guard:method-is-reported`; any axis a probe kills is removed from the report in
 this phase, with its removal recorded.
 
-### 8 — The pairwise sheet, and forty blind judgements committed alone
+### 9 — 🛑 **HUMAN · HALT** — the pairwise sheet, and forty blind judgements committed alone
 
 The scorer emits a sheet of within-subject pairs carrying **no scores**: four subjects × ten pairs =
 forty, order randomised (design.md D10).
@@ -215,7 +258,7 @@ judgements recorded; the commit that adds them touches no score file. Tests boun
 `evaluation:labels:sheet-carries-no-scores`, `:pairs-are-within-one-subject`,
 `:correlation-requires-prior-labels`.
 
-### 9 — The correlation, reported whatever it says
+### 10 — The correlation, reported whatever it says
 
 Run the scorer over the thirty renders. Correlate the forty judgements against each axis separately,
 never rolled up, with the count of judgements printed beside every figure (design.md D2, D17).

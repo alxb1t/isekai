@@ -225,3 +225,34 @@ collected after the scores were seen cannot check them.
 - **WHEN** labels are correlated against scores
 - **THEN** the agreement is reported separately for every axis
 - **AND** the count of judgements behind it is reported with it
+
+### Requirement: Every model the scorer loads is pinned and verified
+
+The system SHALL resolve each model it loads from a pinned manifest carrying a revision and a digest,
+SHALL verify that digest before use, and SHALL refuse rather than score when it does not match. The
+recognizer the scorer reports as a sanity channel SHALL be the same pinned artifact the generator
+injects identity with.
+
+A score produced by an unverified model is a number from an unknown thing. And a sanity channel drawn
+from a *different* build of the generator's recognizer would make the claim about self-grading a claim
+about two different models.
+
+#### Scenario: a digest mismatch refuses the run
+- **Key:** `evaluation:pinned-artifacts:digest-mismatch-is-refused`
+- **Layers:** unit
+- **WHEN** a model artifact on disk does not match the digest the manifest pins
+- **THEN** the run is refused naming the artifact and both digests
+- **AND** no axis is scored from it
+
+#### Scenario: the sanity recognizer is the generator's own pinned artifact
+- **Key:** `evaluation:pinned-artifacts:recognizer-matches-the-generators-pin`
+- **Layers:** unit
+- **WHEN** the scorer resolves the recognizer it reports as a sanity channel
+- **THEN** the pin it resolves is the one the render pipeline's own manifest carries
+- **AND** the two manifests cannot drift apart unnoticed
+
+#### Scenario: an unpinned entry is refused
+- **Key:** `evaluation:pinned-artifacts:unpinned-source-is-refused`
+- **Layers:** unit
+- **WHEN** a manifest entry names a source that is not a pinned revision
+- **THEN** it is refused rather than fetched

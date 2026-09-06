@@ -205,6 +205,26 @@ the only thing carrying an axis. StyleID therefore ships beside ArcFace or not a
 Written into `tasks.md` before the labelling happens. If the numbers do not track the operator's eye, that is
 a successful version: it will have prevented tuning a pipeline against noise, for ~$0.23.
 
+### D18 — The eval models get their own pinned manifest, a sibling of the graph's.
+
+`scripts/eval_models.json`, never merged into `scripts/models.json`. That file is, in this
+repository's own words, the manifest of every artifact **the graph** needs on the pod; the scorer's
+models run locally on the operator's machine and are a different stack for a different purpose.
+Merging them would make one file answer two questions and would put a local-only artifact into what
+the pod provisions from.
+
+Same shape and same rules — pinned revision URL, SHA-256, byte count, mirrors — because a score from
+an unverified model is a number from an unknown thing, and because this repository already decided
+that question once.
+
+**`glintr100` and DWPose reuse the pins `scripts/models.json` already carries, byte for byte.** For
+DWPose that is convenience; for `glintr100` it is load-bearing, because D8's claim is about the
+generator's *own* recognizer, and a different build of ArcFace would make that claim describe two
+different models.
+
+*Alternative:* fetch from a library's default cache and pin nothing — rejected. It is the posture this
+repository spent a whole version (`0009-pinned-provisioning`) replacing.
+
 ## Risks / Trade-offs
 
 - **Every axis is noise at n=40** → the most likely single outcome, and it is a reportable result under D17,
@@ -224,6 +244,9 @@ a successful version: it will have prevented tuning a pipeline against noise, fo
   the wrong subjects, so a subject-specific gap could still survive to the session.
 - **The `[eval]` stack is multi-gigabyte** → D12 keeps it out of CI entirely; the cost falls on the operator's
   machine once.
+- **A licence forbids a model outright** → phase 1 is before any code for exactly this reason; the
+  axis is re-planned rather than written and then torn out. If StyleID falls, D16's rule means the face
+  axis reports ArcFace as a falsifier only, and the version's finding narrows rather than disappears.
 - **`-S` may not work inside a uv venv** → D12 names two fallbacks and defers the choice to the phase that
   writes the test, which is the only place it can be verified.
 
