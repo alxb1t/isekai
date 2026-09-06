@@ -1,0 +1,101 @@
+{
+  "seed": 20260906,
+  "variations": 5,
+  "seeds": [
+    6916296457446257011,
+    8401620442256918673,
+    1803983968747358271,
+    10850336190260268796,
+    4684025042353782312
+  ],
+  "overrides": {},
+  "dials_mode": "held",
+  "photo_sha256": "8eb8668b09c1b3e5271566c3a87416a93dda89589cbba4bb1b38321f235776b5",
+  "base": "waiIllustriousSDXL_v170.safetensors",
+  "resolution": [
+    1024,
+    1472
+  ],
+  "renders": [
+    {
+      "image": "0.png",
+      "sampler_seed": 7160464492297888726,
+      "graph_sha256": "958f09f644e0c784607abe5b2b026b10a09ec50dae127ccd71cf3766c88f8206",
+      "dials": {
+        "denoise": 0.65,
+        "cfg": 5,
+        "ip_weight": 0.9,
+        "cn_strength": 0.5,
+        "controlnet_strength": {
+          "14": 0.2,
+          "18": 0.6,
+          "21": 0.2
+        }
+      }
+    },
+    {
+      "image": "1.png",
+      "sampler_seed": 15453556040725488856,
+      "graph_sha256": "2b10f550e8c001fcffd1b8ff6ca2d2470a6fdc876397466b365baf332c61aac8",
+      "dials": {
+        "denoise": 0.65,
+        "cfg": 5,
+        "ip_weight": 0.9,
+        "cn_strength": 0.5,
+        "controlnet_strength": {
+          "14": 0.2,
+          "18": 0.6,
+          "21": 0.2
+        }
+      }
+    },
+    {
+      "image": "2.png",
+      "sampler_seed": 1904032714626951958,
+      "graph_sha256": "4f055f160381cc1223aebc7801bdb644656c55bc9611bb5bb75f3311416e9efb",
+      "dials": {
+        "denoise": 0.65,
+        "cfg": 5,
+        "ip_weight": 0.9,
+        "cn_strength": 0.5,
+        "controlnet_strength": {
+          "14": 0.2,
+          "18": 0.6,
+          "21": 0.2
+        }
+      }
+    },
+    {
+      "image": "3.png",
+      "sampler_seed": 9316864387761044150,
+      "graph_sha256": "3cae01b9e237d77d84374291c52d4ee5d0fe3d2d2a51c9eb48cff333d392e906",
+      "dials": {
+        "denoise": 0.65,
+        "cfg": 5,
+        "ip_weight": 0.9,
+        "cn_strength": 0.5,
+        "controlnet_strength": {
+          "14": 0.2,
+          "18": 0.6,
+          "21": 0.2
+        }
+      }
+    },
+    {
+      "image": "4.png",
+      "sampler_seed": 3465489456349526137,
+      "graph_sha256": "42452461cecab74169ebe4a048faabfd991c4bb6c958be43eea2f66c3cea53da",
+      "dials": {
+        "denoise": 0.65,
+        "cfg": 5,
+        "ip_weight": 0.9,
+        "cn_strength": 0.5,
+        "controlnet_strength": {
+          "14": 0.2,
+          "18": 0.6,
+          "21": 0.2
+        }
+      }
+    }
+  ]
+}

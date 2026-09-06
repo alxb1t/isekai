@@ -103,3 +103,72 @@ surviving artifact.** The digests above would then prove that some file once exi
 what it contained. That is the accepted cost of not committing derived faces (`design.md` D15); there
 is no mitigation beyond keeping the sources, and it is written here so the trade is visible rather than
 implicit.
+
+---
+
+# The metered session
+
+One pod session, on `ghcr.io/alxb1t/isekai:v0.11-rc`, RTX PRO 4500 Blackwell in EU-RO-1.
+
+| | |
+|---|---|
+| Pod | `91nijtpzpfgfq2` |
+| Created | 2026-09-06T17:15:53Z |
+| Torn down | 2026-09-06T17:35:51Z |
+| Wall clock | **19 min 58 s** (planned against 25 min, ceiling 45 min) |
+| Rate / cost | $0.72/hr → **~$0.24** (ceiling ~$0.30) |
+| Teardown confirmed | RunPod MCP `list-pods` → `{"items": [], "pagination": {"total": 0, ...}}`; `get-pod 91nijtpzpfgfq2` → `404 {"detail":"pod not found","status":404,"title":"Not Found"}` |
+
+Boot to a reachable ComfyUI took 5 min 10 s; the thirty renders took 13 min 16 s, about 26 s each.
+The estimate in `tasks.md` was ~19 min ≈ $0.23, derived from v0.11's measured session — it was right
+to within a minute.
+
+The volume mounted and the models were already on it: `/opt/ComfyUI/models -> /runpod-volume/isekai`,
+no fetch, and no failure marker at `/opt/isekai/provisioning-failed`. ComfyUI reported version
+`0.34.0`, and the pinned core was confirmed on the pod itself —
+`git -C /opt/ComfyUI rev-parse HEAD` → `250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a`, the commit
+`Dockerfile` names.
+
+**`RUNPOD_IMAGE` was set to `:v0.11-rc` for this session and cleared immediately after**, so no later
+pod silently boots an unreleased image.
+
+## What was rendered
+
+Six subjects × five seeds, **dials held** — the first fixed-dial renders this project has ever
+produced. `convert.py` pulls each image over the tunnel and writes it locally, so nothing ever lived
+only on the pod's ephemeral disk; the renders were verified complete before teardown, not after.
+
+**The images are not here**, following v0.10's and v0.11's precedent: this repository claims
+reproducibility over the submitted workflow JSON and never over pixels. What is committed is each
+run's `run.json`, which now carries the provenance to identify what produced it.
+
+| subject | renders | target | matches the injector | distinct seeds | dial sets |
+|---|---|---|---|---|---|
+| `s1_control_blonde` | 5 | 1024×1472 | ✅ | 5 | 1 |
+| `s2_control_brunette` | 5 | 1024×1472 | ✅ | 5 | 1 |
+| `s3_multitone_balayage` | 5 | 1024×1472 | ✅ | 5 | 1 |
+| `s4_multitone_bob` | 5 | 1024×1472 | ✅ | 5 | 1 |
+| `s5_small_face` | 5 | 1024×1472 | ✅ | 5 | 1 |
+| `s6_landscape` | 5 | **1536×1024** | ✅ | 5 | 1 |
+
+Every render's dimensions equal the target the injector computes from that subject's own photograph,
+and every `run.json`'s `photo_sha256` matches the digest the builder recorded — so each batch is
+provably the subject it claims to be.
+
+**The landscape rendered.** `s6` is the first landscape input this project has ever put through a GPU,
+at an aspect ratio — 1536×1024 — the pipeline had never produced. That closes the gap `CHANGELOG.md`
+v0.11 named explicitly.
+
+**The dials were held, and identically across all six subjects:**
+
+```
+denoise 0.65   cfg 5   ip_weight 0.9   cn_strength 0.5
+controlnet_strength  tile 0.2   pose 0.6   lineart 0.2
+```
+
+One dial set per subject, five distinct sampler seeds per subject. That is what makes these thirty
+renders a baseline rather than thirty samples of a distribution: within a subject they differ in
+exactly one thing.
+
+**No quality claim is made here.** Whether these renders preserve identity is what phases 8–10 are for,
+and the answer is the operator's eye rather than this table.

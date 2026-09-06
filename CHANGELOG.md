@@ -27,6 +27,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Thirty fixed-dial renders, from one metered pod session: 19 min 58 s, ~$0.24.** Six subjects × five
+  seeds on the already-built `:v0.11-rc`, so rebuild drift is held constant rather than measured. These
+  are **the first renders this project has ever produced with the graph's committed dials** — within a
+  subject they differ in exactly one thing, which is what makes them a baseline rather than thirty
+  samples of a distribution. Planned against 25 min against a 45 min ceiling; the estimate derived from
+  v0.11's session was right to within a minute. Teardown confirmed through the RunPod MCP with the
+  response transcribed in `baseline/README.md` — `list-pods` empty and `get-pod` a 404.
+- **The landscape gap is closed on a GPU, not just on paper.** `s6` rendered at **1536×1024**, an aspect
+  ratio this pipeline had never produced, and every one of the thirty renders' dimensions equals the
+  target the injector computes from that subject's own photograph. Every `run.json`'s `photo_sha256`
+  matches the digest the builder recorded, so each batch is provably the subject it claims to be.
+- **`RUNPOD_IMAGE` was set to the release candidate for the session and cleared immediately after**, so
+  no later pod silently boots an unreleased image. The renders arrive over the tunnel and are written
+  locally by `convert.py`, so nothing ever lived only on the pod's ephemeral disk — and they were
+  verified complete *before* teardown rather than after.
+- **The run manifests are committed and the pixels are not**, following v0.10's and v0.11's precedent:
+  this repository claims reproducibility over the submitted workflow JSON, never over pixels.
 - **`baseline/build_subjects.py` and the six subjects it produces**, given `probe/build_inputs.py`'s
   treatment because one version does not silently reverse a convention the previous one wrote down: a
   tracked recipe, digests recorded in `baseline/README.md`, **pixels not committed**. Two consecutive
