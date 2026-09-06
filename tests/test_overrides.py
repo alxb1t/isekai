@@ -4,6 +4,7 @@ import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.overrides import apply_overrides
+from isekai.workflow import find_node, find_nodes
 
 
 @pytest.mark.spec("workflow-mutation:overrides:sets-denoise")
@@ -96,3 +97,27 @@ def test_apply_overrides_sets_a_zero_ip_weight(
 ) -> None:
     apply_overrides(workflow, ip_weight=0.0)
     assert workflow["8"]["inputs"]["ip_weight"] == 0.0
+
+
+@pytest.mark.spec("workflow-mutation:overrides:sets-cn-strength")
+def test_apply_overrides_sets_cn_strength_on_the_identity_node(
+    workflow: Workflow,
+) -> None:
+    apply_overrides(workflow, cn_strength=0.25)
+    apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
+    assert workflow[apply_id]["inputs"]["cn_strength"] == 0.25
+
+
+@pytest.mark.spec("workflow-mutation:overrides:sets-cn-strength")
+def test_apply_overrides_leaves_every_controlnet_strength_alone(
+    workflow: Workflow,
+) -> None:
+    # `cn_strength` and a ControlNet's `strength` are different dials that share a
+    # word. Setting one on the other would move pose and structure while claiming
+    # to move identity, and both dials sit in the same graph.
+    cn_ids = find_nodes(workflow, class_type="ControlNetApplyAdvanced")
+    before = {nid: workflow[nid]["inputs"]["strength"] for nid in cn_ids}
+
+    apply_overrides(workflow, cn_strength=0.25)
+
+    assert {nid: workflow[nid]["inputs"]["strength"] for nid in cn_ids} == before

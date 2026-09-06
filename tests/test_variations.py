@@ -212,3 +212,134 @@ def test_run_with_a_seed_reproduces_every_variation_not_just_the_first(
     # three times -- which would bill three renders for one image. The variations
     # must also differ from each other.
     assert len({wf["10"]["inputs"]["seed"] for wf in a}) == 3
+
+
+# --- v0.12: the fixed-dial render, which is what a baseline means --------------
+
+
+@pytest.mark.spec("workflow-mutation:variations:fixed-dials-are-the-graphs-own")
+def test_a_fixed_dial_run_submits_the_graphs_own_dials(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # Every dial `mutate` moves, read off the graph before the run and compared
+    # against what was submitted. Named by node and key rather than by a copy of
+    # the values, so a re-tune of the graph cannot make this test vacuous.
+    dials = [("10", "denoise"), ("10", "cfg"), ("8", "ip_weight")]
+    dials += [(nid, "strength") for nid in ("14", "18", "21")]
+    committed = {(nid, key): workflow[nid]["inputs"][key] for nid, key in dials}
+
+    client = FakeComfyClient()
+    run(
+        client,
+        workflow,
+        photo,
+        tmp_path / "run",
+        variations=3,
+        seed=7,
+        fixed_dials=True,
+    )
+
+    for submitted in client.submissions:
+        for (nid, key), value in committed.items():
+            assert submitted[nid]["inputs"][key] == value
+
+
+@pytest.mark.spec("workflow-mutation:variations:fixed-dials-are-the-graphs-own")
+def test_a_fixed_dial_run_still_applies_the_users_overrides(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # An override sets the base; holding the dials means not jittering *around*
+    # that base, never ignoring it. Otherwise `--fixed-dials --denoise 0.4` would
+    # silently render at the graph's 0.65.
+    client = FakeComfyClient()
+    run(
+        client,
+        workflow,
+        photo,
+        tmp_path / "run",
+        variations=2,
+        seed=7,
+        overrides={"denoise": 0.4, "cn_strength": 0.25},
+        fixed_dials=True,
+    )
+
+    for submitted in client.submissions:
+        assert submitted["10"]["inputs"]["denoise"] == 0.4
+        assert submitted["8"]["inputs"]["cn_strength"] == 0.25
+
+
+@pytest.mark.spec("workflow-mutation:variations:fixed-dials-still-vary-the-seed")
+def test_a_fixed_dial_run_still_draws_a_seed_per_variation(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    client = FakeComfyClient()
+    run(
+        client,
+        workflow,
+        photo,
+        tmp_path / "run",
+        variations=4,
+        seed=7,
+        fixed_dials=True,
+    )
+    seeds = [wf["10"]["inputs"]["seed"] for wf in client.submissions]
+
+    assert len(set(seeds)) == 4
+    assert workflow["10"]["inputs"]["seed"] not in seeds
+
+
+@pytest.mark.spec("workflow-mutation:variations:fixed-dials-still-vary-the-seed")
+def test_a_fixed_dial_run_draws_the_same_seeds_as_a_jittered_one(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # The sampler seed is drawn identically in both modes, so a held run and a
+    # jittered run from one run seed differ in the jitter alone. That is what
+    # makes the two directly comparable rather than merely both reproducible.
+    held, jittered = FakeComfyClient(), FakeComfyClient()
+    for client, fixed in ((held, True), (jittered, False)):
+        run(
+            client,
+            copy.deepcopy(workflow),
+            photo,
+            tmp_path / f"run-{fixed}",
+            variations=3,
+            seed=7,
+            fixed_dials=fixed,
+        )
+
+    assert [wf["10"]["inputs"]["seed"] for wf in held.submissions] == [
+        wf["10"]["inputs"]["seed"] for wf in jittered.submissions
+    ]
+
+
+@pytest.mark.spec("workflow-mutation:variations:fixed-dials-reproduce-from-the-seed")
+def test_two_fixed_dial_runs_from_one_seed_submit_identical_workflows(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    clients = [FakeComfyClient(), FakeComfyClient()]
+    for i, client in enumerate(clients):
+        run(
+            client,
+            copy.deepcopy(workflow),
+            photo,
+            tmp_path / f"run-{i}",
+            variations=3,
+            seed=7,
+            fixed_dials=True,
+        )
+
+    assert clients[0].submissions == clients[1].submissions
+
+
+@pytest.mark.spec("workflow-mutation:variations:mutator-varies-submission")
+def test_jitter_is_still_what_a_run_does_when_it_is_not_asked_otherwise(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # The default is unchanged, and this asserts it against the graph's own dials
+    # rather than against the absence of a flag.
+    client = FakeComfyClient()
+    run(client, workflow, photo, tmp_path / "run", variations=1, seed=7)
+
+    submitted = client.submissions[0]
+    assert submitted["10"]["inputs"]["denoise"] != workflow["10"]["inputs"]["denoise"]
+    assert submitted["8"]["inputs"]["ip_weight"] != workflow["8"]["inputs"]["ip_weight"]

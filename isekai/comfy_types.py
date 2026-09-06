@@ -12,6 +12,7 @@ class Overrides(TypedDict, total=False):
     denoise: float
     cfg: float
     ip_weight: float
+    cn_strength: float
 
 
 class ComfyTransport(Protocol):

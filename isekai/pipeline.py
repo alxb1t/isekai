@@ -9,7 +9,7 @@ from pathlib import Path
 from urllib import error
 
 from isekai.comfy_types import ComfyTransport, Overrides, Workflow
-from isekai.mutate import mutate
+from isekai.mutate import draw_seed, mutate
 from isekai.overrides import apply_overrides
 from isekai.workflow import inject
 
@@ -22,6 +22,7 @@ def run(
     variations: int,
     seed: int | None = None,
     overrides: Overrides | None = None,
+    fixed_dials: bool = False,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client.
 
@@ -34,6 +35,13 @@ def run(
     `output_dir` is this run's own directory, already resolved by the caller, and
     `variations` is required: the count is a spend decision, and its default and
     its ceiling belong together in the CLI that carries the flag.
+
+    `fixed_dials` holds the graph's committed dials still, and defaults to off so
+    every existing invocation behaves exactly as it did. It is what a baseline
+    means: the mutator moves six dials at once, so until this existed no two
+    renders this repository had produced differed in one thing (design.md D3). A
+    held run still draws its own sampler seed per variation -- otherwise it would
+    be one render billed N times -- so its variations differ in exactly that.
     """
     image_name = client.upload_image(input_path)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -56,7 +64,12 @@ def run(
         # doubling as the first render's sampler seed (design.md D5).
         s = seeds.getrandbits(64)
         used.append(s)
-        mutate(wf, random.Random(s))
+        # The same first draw either way, so a held run and a jittered run from
+        # one run seed share their sampler seeds and differ in the jitter alone.
+        if fixed_dials:
+            draw_seed(wf, random.Random(s))
+        else:
+            mutate(wf, random.Random(s))
         print(f"variation {i}: seed {s}")
 
         _render(client, wf, output_dir / f"{i}.png")

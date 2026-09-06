@@ -26,10 +26,23 @@ def _jitter(
     )
 
 
-def mutate(workflow: Workflow, rng: Random) -> None:
-    """Vary the workflow's dials in place using an injected RNG."""
+def draw_seed(workflow: Workflow, rng: Random) -> None:
+    """Draw this variation's sampler seed, and touch no dial.
+
+    Split out of `mutate` so a fixed-dial run can have the one thing every
+    variation needs -- its own seed -- without the six that make it not a
+    baseline. It stays the *first* draw `mutate` makes, so a held run and a
+    jittered run from the same run seed render the same seeds and differ in the
+    jitter alone.
+    """
     sampler_id = find_node(workflow, class_type="KSampler")
     workflow[sampler_id]["inputs"]["seed"] = rng.getrandbits(64)
+
+
+def mutate(workflow: Workflow, rng: Random) -> None:
+    """Vary the workflow's dials in place using an injected RNG."""
+    draw_seed(workflow, rng)
+    sampler_id = find_node(workflow, class_type="KSampler")
 
     _jitter(workflow, sampler_id, "denoise", _DENOISE_DELTA, 1.0, rng)
     _jitter(workflow, sampler_id, "cfg", _CFG_DELTA, 30.0, rng)

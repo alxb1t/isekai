@@ -27,6 +27,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A render with the graph's own dials is possible for the first time.** `pipeline.run` called
+  `mutate` unconditionally on every variation, and `mutate` moves six dials at once — `denoise`,
+  `cfg`, `ip_weight` and all three ControlNet strengths — so **nothing this repository has ever
+  rendered differs from its neighbour in one thing**, and "same subject, one thing moved" was not a
+  claim it could make. `run` gains `fixed_dials` and the CLI gains `--fixed-dials`, **off by default**,
+  so every existing invocation behaves exactly as it did.
+- **A held run still draws its own sampler seed per variation**, because otherwise it would be one
+  render billed N times. The seed draw is split out of `mutate` as `draw_seed` and stays the *first*
+  draw `mutate` makes, so a held run and a jittered run from the same run seed carry the **same**
+  sampler seeds and differ in the jitter alone — which makes the two directly comparable rather than
+  merely both reproducible. An override still applies under `--fixed-dials`: holding the dials means
+  not jittering *around* the base, never ignoring the base the user set.
+- **`cn_strength` becomes settable.** The identity node's second dial — the keypoint route, beside
+  `ip_weight`'s embedding route — sat at 0.5 in the graph and was referenced nowhere else in the tree:
+  not in `apply_overrides`, not in `mutate`, not in any test. It joins `apply_overrides` and the CLI as
+  `--cn-strength`, range-checked at parse time in zero-to-one like its neighbours. It is set on
+  `ApplyInstantIDAdvanced` and **never** on a `ControlNetApplyAdvanced`, which is a different dial that
+  happens to share a word — setting it there would move pose and structure while claiming to move
+  identity, and a test asserts every ControlNet strength is untouched.
+- **`cn_strength` is pinned** beside `PROBE_DENOISE` and `PROBE_IP_WEIGHT`, so a silent re-tune becomes
+  a deliberate test edit. Unlike those two it was never *chosen* by anybody — it is the value the graph
+  arrived with — so the pin records where the baseline was rendered rather than a preference. **0.5 is
+  unsearched: this version makes it searchable and deliberately does not search it**, because searching
+  a dial with the same renders that validate the instrument would leave neither result clean.
 - **Every model the evaluator will load is pinned, before a line of scorer code exists.**
   `scripts/eval_models.json` — twelve entries, each with an immutable-revision URL, a SHA-256 and a
   byte count — is a **sibling** of `scripts/models.json` and never a section of it: that file is what

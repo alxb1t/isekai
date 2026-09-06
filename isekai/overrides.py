@@ -10,6 +10,7 @@ def apply_overrides(
     denoise: float | None = None,
     cfg: float | None = None,
     ip_weight: float | None = None,
+    cn_strength: float | None = None,
 ) -> None:
     """Set user-chosen base values on the workflow by class_type. None = no-op."""
     if denoise is not None or cfg is not None:
@@ -19,6 +20,14 @@ def apply_overrides(
         if cfg is not None:
             workflow[sampler_id]["inputs"]["cfg"] = cfg
 
-    if ip_weight is not None:
+    # Both of the identity node's dials, found once. `cn_strength` is its
+    # keypoint route, beside `ip_weight`'s embedding route -- and it is
+    # deliberately NOT a `ControlNetApplyAdvanced` strength, which is a different
+    # dial that happens to share a word. Setting it there would move pose and
+    # structure while claiming to move identity.
+    if ip_weight is not None or cn_strength is not None:
         apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
-        workflow[apply_id]["inputs"]["ip_weight"] = ip_weight
+        if ip_weight is not None:
+            workflow[apply_id]["inputs"]["ip_weight"] = ip_weight
+        if cn_strength is not None:
+            workflow[apply_id]["inputs"]["cn_strength"] = cn_strength

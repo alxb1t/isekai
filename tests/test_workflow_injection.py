@@ -408,6 +408,15 @@ def test_both_encoders_take_their_clip_through_the_committed_layer(
 PROBE_DENOISE = 0.65
 PROBE_IP_WEIGHT = 0.9
 
+# v0.12: the identity node's *other* dial -- the keypoint route, beside
+# `ip_weight`'s embedding route. Unlike the two above it was never chosen: it is
+# the value the graph arrived with, settable by nothing, jittered by nothing and
+# pinned by nothing until now. v0.12 makes it searchable and deliberately does
+# not search it, so this pin records where the baseline was rendered rather than
+# a preference anybody formed. It is what a later sweep will be read against, and
+# a floor that can move unremarked moves every measurement above it.
+PROBE_CN_STRENGTH = 0.5
+
 
 @pytest.mark.spec_exempt(
     "preference, not a scenario: holds the dials design.md D9 records as by-eye"
@@ -417,6 +426,14 @@ def test_the_graph_carries_the_dials_the_probe_chose(workflow: Workflow) -> None
     apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
     assert workflow[sampler_id]["inputs"]["denoise"] == PROBE_DENOISE
     assert workflow[apply_id]["inputs"]["ip_weight"] == PROBE_IP_WEIGHT
+
+
+@pytest.mark.spec("workflow-mutation:pinned-dials:cn-strength-is-pinned")
+def test_the_graph_carries_the_cn_strength_the_baseline_was_rendered_at(
+    workflow: Workflow,
+) -> None:
+    apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
+    assert workflow[apply_id]["inputs"]["cn_strength"] == PROBE_CN_STRENGTH
 
 
 @pytest.mark.spec_exempt(

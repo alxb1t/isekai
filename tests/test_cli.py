@@ -422,3 +422,113 @@ def test_parse_args_accepts_the_ceiling_itself(
 ) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--variations", "25"])
     assert cli.parse_args().variations == 25
+
+
+# --- v0.12: cn_strength joins the dials, and the flag that holds them all still ---
+
+
+def _capture_run(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> dict[str, Any]:
+    """Drive `main()` with `argv` and return every argument it handed `run`."""
+    monkeypatch.setattr("sys.argv", argv)
+    _stub_environment(monkeypatch)
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+    cli.main()
+    return captured
+
+
+@pytest.mark.spec("cli:dial-defaults:cn-strength-defaults-to-unset")
+def test_parse_args_defaults_cn_strength_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().cn_strength is None
+
+
+@pytest.mark.spec("cli:dial-validation:accepts-cn-strength-in-range")
+def test_parse_args_accepts_cn_strength_in_range(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--cn-strength", "0.35"],
+    )
+    assert cli.parse_args().cn_strength == pytest.approx(0.35)
+
+
+@pytest.mark.spec("cli:dial-validation:accepts-cn-strength-in-range")
+def test_parse_args_accepts_cn_strength_at_both_inclusive_bounds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for edge in ("0.0", "1.0"):
+        monkeypatch.setattr(
+            "sys.argv",
+            ["convert.py", "photo.jpg", "--cn-strength", edge],
+        )
+        assert cli.parse_args().cn_strength == float(edge)
+
+
+@pytest.mark.spec("cli:dial-validation:rejects-cn-strength-above-one")
+def test_parse_args_rejects_cn_strength_above_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--cn-strength", "1.5"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("cli:dial-validation:rejects-cn-strength-below-zero")
+def test_parse_args_rejects_cn_strength_below_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--cn-strength", "-0.1"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("cli:fixed-dials:jitter-is-the-default")
+def test_parse_args_defaults_fixed_dials_to_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().fixed_dials is False
+
+
+@pytest.mark.spec("cli:fixed-dials:jitter-is-the-default")
+def test_main_leaves_the_run_jittering_when_the_flag_is_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_run(monkeypatch, ["convert.py", "photo.jpg"])
+    assert captured["fixed_dials"] is False
+
+
+@pytest.mark.spec("cli:fixed-dials:flag-reaches-the-run")
+def test_parse_args_accepts_the_fixed_dials_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--fixed-dials"])
+    assert cli.parse_args().fixed_dials is True
+
+
+@pytest.mark.spec("cli:fixed-dials:flag-reaches-the-run")
+def test_main_hands_the_fixed_dials_flag_to_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_run(monkeypatch, ["convert.py", "photo.jpg", "--fixed-dials"])
+    assert captured["fixed_dials"] is True
+
+
+@pytest.mark.spec("cli:dial-validation:accepts-cn-strength-in-range")
+def test_main_carries_cn_strength_through_to_the_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_run(
+        monkeypatch, ["convert.py", "photo.jpg", "--cn-strength", "0.35"]
+    )
+    assert captured["overrides"] == {"cn_strength": 0.35}

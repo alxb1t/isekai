@@ -97,6 +97,18 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="InstantID ip_weight base value [0, 1]",
     )
+    p.add_argument(
+        "--cn-strength",
+        type=_bounded(float, 0.0, 1.0),
+        default=None,
+        help="InstantID cn_strength base value [0, 1] (the keypoint route)",
+    )
+    p.add_argument(
+        "--fixed-dials",
+        action="store_true",
+        help="render the graph's committed dials, jittering nothing; each "
+        "variation still draws its own sampler seed",
+    )
 
     return p.parse_args()
 
@@ -126,6 +138,8 @@ def main() -> None:
         overrides["cfg"] = args.cfg
     if args.ip_weight is not None:
         overrides["ip_weight"] = args.ip_weight
+    if args.cn_strength is not None:
+        overrides["cn_strength"] = args.cn_strength
 
     run(
         client,
@@ -135,4 +149,5 @@ def main() -> None:
         seed=args.seed,
         variations=args.variations,
         overrides=overrides or None,
+        fixed_dials=args.fixed_dials,
     )
