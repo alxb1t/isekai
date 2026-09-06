@@ -25,6 +25,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A pod is refused before it is created if it was not told which network volume to use.**
+  `infra/up.sh` now checks `RUNPOD_VOLUME_ID` before the create call and passes it into the
+  container, so the entrypoint is told which volume to expect rather than inferring it. The failure
+  this prevents — the full 16.5 GiB model stack downloaded onto storage that dies at teardown —
+  renders correctly, bills fully, and is discovered only on the next metered session. The suggested
+  pod-side fix, `mountpoint -q`, does **not** work: RunPod defaults `volumeInGb` to 20 and mounts the
+  pod's own volume disk at `volumeMountPath` when no network volume is attached, so the path exists
+  and *is* a mountpoint — the wrong one. The entrypoint therefore keeps a second check as defence in
+  depth, with a free-space floor above what that 20 GB disk could ever report as the discriminator.
+- **The provisioning hold is bounded and leaves a marker.** A provisioning abort used to hold the pod
+  open with `tail -f /dev/null` — reachable, but reporting as running and healthy while it billed
+  indefinitely. It now holds for 900 s (~$0.19 at the rate this project runs on, inside the ~$0.30
+  per-session ceiling) and writes a failure marker to **container disk**, never into the models
+  namespace: the namespace is exactly the thing that may have failed, and a marker a broken volume
+  prevents you from writing does not make the failure legible.
+
+### Changed
+
+- **The reachability hold covers preparing the namespace, not only fetching into it.** Creating the
+  namespace and relinking the models root now sit inside the same guarded step as the download, so a
+  failure there reports and holds instead of terminating the entrypoint — which under `set -e` took
+  the SSH daemon with it and left no way in. Preparing the volume is provisioning by any reading a
+  human would give the word; the guarantee is about provisioning and not about one of its steps.
+- **The `rm -rf` of the models root is guarded on its premise rather than on its proxy.** What made
+  the delete safe was that the tree is the image's own, on container disk; the check was that the
+  path is not yet a symlink. A non-empty tree someone has mounted there is a real models tree, and
+  the entrypoint now refuses rather than deleting it. Deleting one is an explicit operator act.
+
+### Notes
+
+- The comment above the models namespace no longer calls the tree it replaces empty. The ComfyUI
+  clone tracks `models/configs/*.yaml`, so it is not; the delete drops them **knowingly**, because
+  the graph uses `CheckpointLoaderSimple`, which takes no config. Copying them in would add a write
+  at boot to be ordered against the new volume guard, and would restore a config dropdown only for
+  loader classes this repository's one-path rule forbids ever using. The defect was a false comment,
+  and the comment is what is fixed.
+- **Both new guards ship suite-bound and unexercised on a pod.** Exercising the pod-side volume check
+  would mean deliberately defeating the client check added beside it, in order to test a
+  configuration this repository no longer produces; exercising the bounded hold would mean breaking
+  provisioning on metered time. This is a real residual, and it is written down rather than smoothed
+  over.
+
 ## [0.10.0] - 2026-09-05
 
 ### Fixed

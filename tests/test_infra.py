@@ -185,9 +185,11 @@ def test_a_provisioning_failure_does_not_take_the_container_down(
         line for line in start_sh.splitlines() if "download_models.sh" in line
     ]
     assert len(provisioning) == 1
-    # guarded, so `set -e` cannot terminate the shell that owns sshd
-    assert provisioning[0].lstrip().startswith("if !")
-    assert "exec tail -f /dev/null" in start_sh
+    # It returns rather than exits, and the step it belongs to is itself guarded,
+    # so `set -e` cannot terminate the shell that owns sshd.
+    assert provisioning[0].rstrip().endswith("|| return 1")
+    assert "if ! provision; then" in start_sh
+    assert 'exec sleep "$HOLD_SECONDS"' in start_sh
 
 
 @pytest.mark.spec(
@@ -197,8 +199,131 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
     start_sh: str,
 ) -> None:
     lines = start_sh.splitlines()
-    hold = next(i for i, line in enumerate(lines) if "exec tail -f /dev/null" in line)
+    hold = next(
+        i for i, line in enumerate(lines) if 'exec sleep "$HOLD_SECONDS"' in line
+    )
     serve = next(i for i, line in enumerate(lines) if "exec python main.py" in line)
     assert hold < serve
     # nothing on the volume is removed on the failure path
     assert "rm " not in "\n".join(lines[hold - 6 : serve])
+
+
+# The pod entrypoint's provisioning step, and the two halves of the volume guard.
+#
+# These are text checks over the shipped shell, for the same reason the checks
+# above are: the suite is offline and there is no pod to run the entrypoint on.
+# What they hold is the *shape* the scenarios name -- one guarded provisioning
+# step, a bounded hold, a marker off the volume, and a refusal on each side of
+# the boundary.
+
+# The repository's per-session spending ceiling, in seconds at the halt.
+SESSION_CEILING_SECONDS = 45 * 60
+
+
+def provision_body(start_sh: str) -> str:
+    """Return the body of `start.sh`'s `provision` function.
+
+    The scenario is about provisioning as a whole rather than about one of its
+    steps, so what the test needs is which lines are *inside* the guarded unit.
+    """
+    lines = start_sh.splitlines()
+    opens = next(i for i, line in enumerate(lines) if line.startswith("provision()"))
+    closes = next(i for i, line in enumerate(lines[opens:], opens) if line == "}")
+    return "\n".join(lines[opens : closes + 1])
+
+
+@pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
+def test_preparing_the_namespace_is_inside_the_guarded_provisioning_step(
+    start_sh: str,
+) -> None:
+    body = provision_body(start_sh)
+    # every step of preparing the namespace, and the fetch, in one unit ...
+    assert 'mkdir -p "$MODELS_NAMESPACE"' in body
+    assert 'ln -s "$MODELS_NAMESPACE" "$MODELS_ROOT"' in body
+    assert "download_models.sh" in body
+    # ... and no step of it can exit the shell that owns sshd.
+    assert "exit " not in body
+
+
+@pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
+def test_the_whole_provisioning_step_is_guarded_exactly_once(start_sh: str) -> None:
+    calls = [
+        line.strip()
+        for line in start_sh.splitlines()
+        if line.strip().startswith(("provision", "if ! provision"))
+        and not line.startswith("provision()")
+    ]
+    assert calls == ["if ! provision; then"]
+
+
+@pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
+def test_deleting_a_non_empty_mounted_models_tree_is_refused(start_sh: str) -> None:
+    body = provision_body(start_sh)
+    guard = next(line for line in body.splitlines() if "mountpoint -q" in line)
+    # the premise of the delete: the image's own tree on container disk. A
+    # non-empty mount here is somebody's real models tree.
+    assert 'mountpoint -q "$MODELS_ROOT"' in guard
+    assert 'ls -A "$MODELS_ROOT"' in guard
+    delete = next(i for i, line in enumerate(body.splitlines()) if "rm -rf" in line)
+    assert body.splitlines().index(guard) < delete
+
+
+@pytest.mark.spec("model-provisioning:reachability:the-hold-is-bounded-and-marked")
+def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
+    start_sh: str,
+) -> None:
+    bound = re.search(r"^HOLD_SECONDS=(\d+)$", start_sh, re.M)
+    assert bound is not None
+    assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
+    assert 'exec sleep "$HOLD_SECONDS"' in start_sh
+    # an indefinite hold bills until a human notices it
+    assert "tail -f /dev/null" not in start_sh
+
+
+@pytest.mark.spec("model-provisioning:reachability:the-hold-is-bounded-and-marked")
+def test_the_failure_marker_is_written_off_the_volume(start_sh: str) -> None:
+    marker = re.search(r"^FAILURE_MARKER=(\S+)$", start_sh, re.M)
+    assert marker is not None
+    # the volume is exactly the thing that may have failed
+    assert not marker.group(1).startswith(f"{VOLUME_MOUNT}/")
+    assert '> "$FAILURE_MARKER"' in start_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:provisioning-requires-the-network-volume"
+)
+def test_the_client_refuses_to_create_a_pod_without_a_named_volume(
+    up_sh: str,
+) -> None:
+    lines = up_sh.splitlines()
+    guard = next(i for i, line in enumerate(lines) if 'RUNPOD_VOLUME_ID:-}" ]' in line)
+    creates = next(
+        i for i, line in enumerate(lines) if "POST https://rest.runpod.io" in line
+    )
+    assert guard < creates
+    assert "exit 1" in "\n".join(lines[guard : guard + 6])
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:provisioning-requires-the-network-volume"
+)
+def test_the_pod_is_told_which_volume_to_expect(up_sh: str) -> None:
+    assert "RUNPOD_VOLUME_ID: $vol" in up_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:provisioning-requires-the-network-volume"
+)
+def test_the_entrypoint_refuses_before_preparing_the_namespace(start_sh: str) -> None:
+    body = provision_body(start_sh).splitlines()
+    named = next(i for i, line in enumerate(body) if 'RUNPOD_VOLUME_ID:-}" ]' in line)
+    floor = next(i for i, line in enumerate(body) if "VOLUME_FREE_FLOOR_KIB" in line)
+    prepares = next(
+        i for i, line in enumerate(body) if 'mkdir -p "$MODELS_NAMESPACE"' in line
+    )
+    assert named < prepares
+    assert floor < prepares
+    # a free-space floor, not `mountpoint`: RunPod mounts the pod's own volume
+    # disk at the same path when no network volume is attached, so the path is a
+    # mountpoint either way.
+    assert "df -k --output=avail" in "\n".join(body)

@@ -15,6 +15,19 @@ PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 # a release means.
 RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/alxb1t/isekai:latest}"
 
+# The client half of the volume guard, and the half that is certain. The pod-side
+# check cannot see whether a network volume was ever requested: RunPod defaults
+# `volumeInGb` to 20 and mounts the pod's OWN volume disk at volumeMountPath when
+# none is attached, so the mount point exists either way (design.md D5). Here the
+# question is answerable and tripping it costs nothing, because no pod exists yet.
+if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
+  echo "ERROR: RUNPOD_VOLUME_ID is empty in .env — refusing to create a pod." >&2
+  echo "Without the network volume, provisioning downloads 16.5 GiB onto storage" >&2
+  echo "that dies at teardown: it renders correctly, bills fully, and is noticed" >&2
+  echo "only on the next metered session." >&2
+  exit 1
+fi
+
 echo "Creating pod in $RUNPOD_DATACENTER on '$RUNPOD_GPU_TYPE' ..."
 echo "  image: $RUNPOD_IMAGE"
 body=$(jq -n \
@@ -33,7 +46,8 @@ body=$(jq -n \
      containerDiskInGb: 30,
      dataCenterIds: [$dc],
      cloudType: "SECURE",
-     env: { PUBLIC_KEY: $pubkey } }')
+     env: { PUBLIC_KEY: $pubkey,
+            RUNPOD_VOLUME_ID: $vol } }')
 
 resp=$(curl -s -X POST https://rest.runpod.io/v1/pods \
   -H "Authorization: Bearer $RUNPOD_API_KEY" \
