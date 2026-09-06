@@ -409,7 +409,9 @@ PROBE_DENOISE = 0.65
 PROBE_IP_WEIGHT = 0.9
 
 
-@pytest.mark.spec_exempt("structural: pins the dials the phase-5 probe chose")
+@pytest.mark.spec_exempt(
+    "preference, not a scenario: holds the dials design.md D9 records as by-eye"
+)
 def test_the_graph_carries_the_dials_the_probe_chose(workflow: Workflow) -> None:
     sampler_id = find_node(workflow, class_type="KSampler")
     apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")

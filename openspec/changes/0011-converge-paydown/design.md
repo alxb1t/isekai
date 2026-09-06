@@ -457,3 +457,36 @@ D5 and D6 each recorded that the guard they add ships suite-bound. The metered s
 omission: the pod booted with its volume attached, provisioning succeeded, and neither the free-space
 floor nor the bounded hold was reached. Nothing about that was discovered on the clock; it is written
 here so the residual is not read as an oversight.
+
+### D15a — the unreconciled 1152, recorded and left unverified
+
+`0010`'s proposal says the scale targets a short side of **1152**, on the reading that MistoLine's
+card requires *above* 1024. `WORKING_SCALE = 1024` shipped, under a code comment calling 1024 "the
+floor MistoLine's card names". Those are two different readings of the same sentence on the same
+card — a floor you must exceed, or a floor you may sit on — and **one of them is wrong**.
+
+The reading this repository runs on is the second: 1024, at the floor. Every render this project has
+shipped was made at it, including v0.10's and phase 6's.
+
+**This is recorded, not resolved.** Which reading is right is a *rendering* question — it is answered
+by comparing renders at 1024 and at 1152, and by this change's own rule rendering questions wait for
+the evaluator. It is not re-tested here, and no sentence in this version should be read as saying the
+1024 was validated. What is fixed is that the disagreement is now written down somewhere a reader
+following the version chain will hit, instead of sitting unremarked between an archived proposal and
+a code comment.
+
+`0010-illustrious-base` is archived and is not edited to say this. An archived change is a record of
+what was decided *then*; editing it to say what was decided later destroys the property that makes it
+a record (D15).
+
+### D9a — the pose grid: the sentence is corrected in both places it was written
+
+The living spec's `scale-precedes-every-consumer` said "no control hint is registered against a
+different one", and `README.md` carried the same sentence. It is **false as written**:
+`DWPreprocessor` derives its hint at `resolution: 512` where tile and lineart carry 1024, and the
+test bound to that scenario checks image links only, so the false clause was unenforced.
+
+The scenario is narrowed to what the suite actually proves — every consumer receives the same scaled
+image — with a preprocessor's internal working resolution named as the separate dial it is. The
+`README.md` sentence moves with it. **The graph is not touched**: setting `DWPreprocessor` to 1024
+measurably changes the render, which is a rendering question, which waits for the evaluator (D9, D16).

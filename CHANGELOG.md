@@ -154,6 +154,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
+- **The unreconciled 1152, recorded and left unverified.** v0.10's proposal says the working scale
+  targets a short side of **1152**, on the reading that MistoLine's card requires *above* 1024;
+  `WORKING_SCALE = 1024` shipped, under a comment calling 1024 "the floor MistoLine's card names".
+  Two readings of one sentence, and one of them is wrong. The reading this repository runs on is
+  1024, and every render it has ever shipped was made at it. **Which reading is right is a rendering
+  question, so it waits for the evaluator and was not re-tested here** — nothing in this version
+  should be read as saying the 1024 was validated. What changed is that the disagreement is written
+  down where a reader following the version chain will hit it, rather than sitting unremarked between
+  an archived proposal and a code comment. v0.10's own documents are not edited: an archived change
+  records what was decided then.
+- **The pose-grid sentence is corrected in both places it was written.** `workflow-injection`'s
+  `scale-precedes-every-consumer` claimed "no control hint is registered against a different one",
+  and `README.md` repeated it. It is false: `DWPreprocessor` derives its hint at `resolution: 512`
+  where tile and lineart carry 1024, and the test bound to the scenario checks image links only — so
+  the false clause was unenforced. The scenario is narrowed to what the suite proves, that every
+  consumer is handed the same scaled image, with a preprocessor's own working resolution named as the
+  separate dial it is. **The graph is unchanged**: moving that dial measurably changes the render, and
+  rendering questions wait for the evaluator.
+- **A `spec_exempt` label now says what it is.** `"structural: pins the dials the phase-5 probe
+  chose"` described a by-eye value pin as structural, which is the opposite of what it is. It reads
+  `"preference, not a scenario: holds the dials design.md D9 records as by-eye"`. No behaviour
+  changes; the point is that a reader auditing the exemptions is told the truth about which ones are
+  load-bearing.
 - **Pinning the core moves the floating link rather than removing it, and this change does not claim
   otherwise.** `Dockerfile` still runs `uv pip install -r requirements.txt` against ComfyUI's own
   requirement file and against the preprocessor pack's, and neither is version-locked: both resolve

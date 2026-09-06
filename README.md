@@ -63,7 +63,10 @@ Identity is four axes, and each is carried by a mechanism rather than by a sente
 
 Before any of them reads the photo, it is scaled to a working resolution derived from its own
 dimensions: aspect preserved, short side at 1024, both dimensions a multiple of 64. One pixel grid
-feeds the whole graph, so no control hint is registered against a different one.
+feeds the whole graph, so every consumer is handed the same scaled image. That is a claim about
+which image each consumer *receives*, not about what it then does internally — a preprocessor's own
+working resolution is a separate dial on that node, and `DWPreprocessor` derives its pose hint at
+512 today.
 
 ## Quickstart
 
