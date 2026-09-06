@@ -35,11 +35,18 @@ shaped differently from the graph's:
 
 import hashlib
 import json
+import sys
 import urllib.request
 from pathlib import Path
 from typing import NamedTuple
 
 from derive_manifest import Manifest, ManifestEntry, Source, published_digest
+
+# Run as a script from the repository root, `scripts/` is on the path and the
+# root is not -- the same hop `probe/build_inputs.py` makes, for the same reason.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from isekai.eval_models import SHARED_WITH_THE_GRAPH  # noqa: E402
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
 GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
@@ -84,14 +91,14 @@ SEGFORMER = "584abc1e1d260e23c0fc627c5217a09b2b461046"
 # routing around it. The `_s` variant is the larger of the two the repo ships.
 ANIMEFACE = "784dc4c0bb692351ddcdbe6131a050b17d3025d5"
 
-# The three destinations copied out of `scripts/models.json` byte for byte, in the
-# order they are emitted. `glintr100` is the load-bearing one (design.md D8); the
-# two DWPose artifacts are convenience, and are copied for the same reason anyway.
-SHARED_WITH_THE_GRAPH = (
-    "insightface/models/antelopev2/glintr100.onnx",
-    "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx",
-    "annotator_ckpts/hr16/DWPose-TorchScript-BatchSize5/dw-ll_ucoco_384_bs5.torchscript.pt",
-)
+# The destinations copied out of `scripts/models.json` byte for byte, in the order
+# they are emitted. `glintr100` is the load-bearing one (design.md D8); the two
+# DWPose artifacts are convenience, and are copied for the same reason anyway.
+#
+# Imported rather than restated. The whole purpose of this list is that the two
+# manifests cannot drift apart, so keeping two copies of the list of things that
+# must not drift would be the same failure one level up -- and the reader that
+# enforces it at load time is the one that should own it.
 
 
 class Spec(NamedTuple):

@@ -93,16 +93,29 @@ def run(
         renders.append(_provenance_of(wf, image))
         _render(client, wf, output_dir / image)
 
+    # Recorded so a later comparison can identify what produced these images: a
+    # baseline nothing can identify is not a baseline. Keys are added and none
+    # removed, so a manifest written by an earlier version stays readable.
+    #
+    # **The photograph is a digest, never pixels.** A digest of a face is not a
+    # face, so the rule that derived faces are not committed is untouched -- and
+    # the digest is what makes an uncommitted input checkable rather than merely
+    # trusted.
     _write_manifest(
         output_dir,
-        seed,
-        used,
-        overrides,
-        renders,
-        fixed_dials,
-        input_path,
-        base,
-        resolution,
+        {
+            "seed": seed,
+            # From the seeds actually drawn rather than the count asked for: a
+            # manifest claiming five renders beside four seeds would lie.
+            "variations": len(used),
+            "seeds": used,
+            "overrides": dict(overrides) if overrides else {},
+            "dials_mode": "held" if fixed_dials else "jittered",
+            "photo_sha256": _digest_of_file(input_path),
+            "base": base,
+            "resolution": resolution,
+            "renders": renders,
+        },
     )
 
 
@@ -164,47 +177,14 @@ def _provenance_of(workflow: Workflow, image: str) -> dict[str, Any]:
     }
 
 
-def _write_manifest(
-    output_dir: Path,
-    seed: int | None,
-    used: list[int],
-    overrides: Overrides | None,
-    renders: list[dict[str, Any]],
-    fixed_dials: bool,
-    input_path: str,
-    base: str,
-    resolution: list[int],
-) -> None:
-    """Record what produced this run, beside the images it produced.
+def _write_manifest(output_dir: Path, manifest: dict[str, Any]) -> None:
+    """Write this run's manifest beside the images it produced.
 
-    With the per-variation seeds printed and nowhere else, reproducing render 3
-    next week means still having the terminal. The manifest moves that from a
-    property of the operator's scrollback to a property of the artifact.
-
-    v0.12 makes it a *provenance* record as well as a reproduction one, because a
-    baseline nothing can identify is not a baseline: it now names the photograph,
-    the graph, the base, the resolution and the dials each render actually
-    carried. Keys are added and none removed, so a manifest written by an earlier
-    version stays readable and a reader written against it keeps working.
-
-    **The photograph is recorded as a digest, never as pixels.** A digest of a
-    face is not a face, so the rule that derived faces are not committed is
-    untouched -- and the digest is what makes an uncommitted input checkable
-    rather than merely trusted.
+    Takes the assembled record rather than nine positional arguments to
+    reassemble it from: `run` already holds every field, and threading them
+    through a signature only to rebuild the same dict on the other side made the
+    call site a list of nine bare positionals whose order nothing checked.
     """
-    manifest = {
-        "seed": seed,
-        # Derived from the seeds actually drawn rather than from the count asked
-        # for: a manifest claiming five renders beside four seeds would lie.
-        "variations": len(used),
-        "seeds": used,
-        "overrides": dict(overrides) if overrides else {},
-        "dials_mode": "held" if fixed_dials else "jittered",
-        "photo_sha256": _digest_of_file(input_path),
-        "base": base,
-        "resolution": resolution,
-        "renders": renders,
-    }
     (output_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 

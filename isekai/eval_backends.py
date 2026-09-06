@@ -27,6 +27,8 @@ resolution these markers stand in for.
 """
 
 from collections.abc import Sequence
+from functools import cache
+from importlib import import_module
 from pathlib import Path
 from typing import Any
 
@@ -39,32 +41,61 @@ from isekai.evaluate import Box, Canvas, FaceReading, Keypoint, Refusal, Region
 # model emits them either way and naming them is what makes "hair" a choice.
 SEGFORMER_HAIR = 2
 
+# The regions this version measures, by name. Named rather than inlined so the
+# sampler can resolve a `Region` back to the class it came from, instead of
+# carrying a mask fixed at construction and ignoring the region it is handed.
+SEGFORMER_LABELS = {"hair": SEGFORMER_HAIR}
+
 # `face_detect_v1.4_s` emits one class. Read from the pinned `labels.json` rather
 # than assumed, so a repointed manifest cannot silently change what is detected.
 ANIMEFACE_CONFIDENCE = 0.25
 
 
-def _numpy() -> Any:
-    """Import numpy on demand, with a message that names the extra."""
+@cache
+def _require(module: str) -> Any:
+    """Import one module of the `[eval]` extra, or refuse naming how to get it.
+
+    One spelling of the message, because five copies of it drift into five
+    slightly different sentences -- which is what had already happened. Cached,
+    so the import machinery is consulted once per module rather than once per
+    call on a hot path.
+    """
     try:
-        import numpy
+        return import_module(module)
     except ModuleNotFoundError as absent:  # pragma: no cover - environment
         raise Refusal(
-            "the evaluator's stack is not installed; run "
-            "`uv sync --extra eval`. It is deliberately not in CI."
+            f"the evaluator's stack is not installed ({module} is missing); run "
+            "`uv sync --extra eval`. It is deliberately not installed in CI."
         ) from absent
-    return numpy
+
+
+def _numpy() -> Any:
+    """Return numpy, or refuse."""
+    return _require("numpy")
 
 
 def _pil() -> Any:
-    """Import Pillow on demand."""
-    try:
-        from PIL import Image, ImageOps
-    except ModuleNotFoundError as absent:  # pragma: no cover - environment
-        raise Refusal(
-            "the evaluator's stack is not installed; run `uv sync --extra eval`."
-        ) from absent
-    return Image, ImageOps
+    """Return Pillow's `Image` and `ImageOps`, or refuse."""
+    return _require("PIL.Image"), _require("PIL.ImageOps")
+
+
+@cache
+def _decode(image_path: str, width: int, height: int) -> Any:
+    """Decode and scale one image once. Keyed by path and canvas, so it is safe.
+
+    A run scores N renders against ONE photograph, and every axis reaches for the
+    photograph's pixels: the detector, both encoders, the parser, the sampler and
+    the pose reader. Without this, a five-render run decodes and LANCZOS-resizes
+    the same photograph about twenty-five times. LANCZOS is the expensive
+    resampler, which is why it is worth not doing twenty-four times.
+    """
+    image_module, ops = _pil()
+    numpy = _require("numpy")
+    with image_module.open(image_path) as handle:
+        upright = ops.exif_transpose(handle).convert("RGB")
+        if upright.size != (width, height):
+            upright = upright.resize((width, height), image_module.LANCZOS)
+        return numpy.asarray(upright)
 
 
 def load_canvas_pixels(image_path: str, canvas: Canvas) -> Any:
@@ -77,13 +108,7 @@ def load_canvas_pixels(image_path: str, canvas: Canvas) -> Any:
     render was produced from transposed pixels would place every region in the
     wrong place, silently, with every number still looking plausible.
     """
-    image_module, ops = _pil()
-    numpy = _numpy()
-    with image_module.open(image_path) as handle:
-        upright = ops.exif_transpose(handle).convert("RGB")
-        if upright.size != canvas.size:
-            upright = upright.resize(canvas.size, image_module.LANCZOS)
-        return numpy.asarray(upright)
+    return _decode(image_path, canvas.width, canvas.height)
 
 
 def _srgb_to_lab(rgb: tuple[float, float, float]) -> Lab:
@@ -115,12 +140,7 @@ class OnnxSession:
 
     def __init__(self, dest: str, models_dir: Path) -> None:
         """Verify the pinned artifact's digest, then load it onto the CPU."""
-        try:
-            import onnxruntime
-        except ModuleNotFoundError as absent:  # pragma: no cover - environment
-            raise Refusal(
-                "the evaluator's stack is not installed; run `uv sync --extra eval`."
-            ) from absent
+        onnxruntime = _require("onnxruntime")
         # Verified before it is loaded, never after: the digest is the only
         # reason to believe these are the bytes the manifest names.
         path = resolve(dest, models_dir)
@@ -150,10 +170,19 @@ class AnimeFaceDetector:
         """Load the pinned detector, bound to the canvas it will read at."""
         self.session = OnnxSession("anime_face_detection/model.onnx", models_dir)
         self.canvas = canvas
-        self.models_dir = models_dir
+        # A run scores N renders against ONE photograph, and the photograph's
+        # face is asked for once per render. Memoised per path, so it is read
+        # once. Bounded by the number of images in a run.
+        self._seen: dict[str, FaceReading] = {}
 
     def read_face(self, image_path: str) -> FaceReading:
         """Return the highest-confidence face box, or absence."""
+        if image_path not in self._seen:
+            self._seen[image_path] = self._detect(image_path)
+        return self._seen[image_path]
+
+    def _detect(self, image_path: str) -> FaceReading:
+        """Run the detector once on one image."""
         numpy = _numpy()
         pixels = load_canvas_pixels(image_path, self.canvas)
         # YOLOv8's ONNX graph takes NCHW float32 in [0, 1] at a fixed side.
@@ -184,7 +213,7 @@ class AnimeFaceDetector:
             (cx + w / 2) * sx,
             (cy + h / 2) * sy,
         )
-        return FaceReading(box=box, landmarks=((cx * sx, cy * sy),))
+        return FaceReading(box=box)
 
 
 class SegformerParser:
@@ -198,12 +227,15 @@ class SegformerParser:
     def __init__(self, models_dir: Path) -> None:
         """Load the pinned region parser."""
         self.session = OnnxSession("segformer_b2_clothes/model.onnx", models_dir)
+        # The photograph is parsed once per render by `score_render` and once
+        # more by the sampler, for an identical result each time. One SegFormer
+        # pass per image is what that should cost.
+        self._segmented: dict[str, Any] = {}
 
     def parse(self, image_path: str, canvas: Canvas) -> dict[str, Region]:
         """Return the photograph's regions, keyed by name."""
         pixels = load_canvas_pixels(image_path, canvas)
-        mask = self._segment(pixels, canvas)
-        hair = mask == SEGFORMER_HAIR
+        hair = self.mask_for(image_path, canvas, SEGFORMER_HAIR)
         area = float(hair.mean())
         return {
             "hair": Region(
@@ -212,6 +244,19 @@ class SegformerParser:
                 colour=_dominant_lab(pixels, hair) or (0.0, 0.0, 0.0),
             )
         }
+
+    def mask_for(self, image_path: str, canvas: Canvas, label: int) -> Any:
+        """Return the boolean mask of one class, from a cached segmentation.
+
+        The public way to reach a mask, so the sampler no longer has to reach
+        into a private method and re-run the model to recover a mask this parser
+        had already computed.
+        """
+        if image_path not in self._segmented:
+            self._segmented[image_path] = self._segment(
+                load_canvas_pixels(image_path, canvas), canvas
+            )
+        return self._segmented[image_path] == label
 
     def _segment(self, pixels: Any, canvas: Canvas) -> Any:
         """Return a per-pixel class map at the canvas's own size."""
@@ -264,22 +309,30 @@ def _dominant_lab(pixels: Any, mask: Any) -> Lab | None:
 class MaskSampler:
     """Reads a colour out of a mask that was derived from the photograph.
 
-    Re-parses the photograph to recover the mask rather than carrying pixels
-    across the seam, so the render is still never handed to a parser.
+    Asks the parser for the photograph's mask rather than re-deriving one, so
+    the render is still never handed to a parser and the model runs once.
     """
 
     def __init__(
         self, parser: SegformerParser, photo_path: str, canvas: Canvas
     ) -> None:
-        """Derive the photograph's mask once, so the render is never parsed."""
+        """Bind to the parser holding the photograph's own segmentation."""
         self.parser = parser
         self.canvas = canvas
-        pixels = load_canvas_pixels(photo_path, canvas)
-        self.mask = self.parser._segment(pixels, canvas) == SEGFORMER_HAIR
+        self.photo_path = photo_path
 
     def dominant_colour(self, image_path: str, region: Region) -> Lab | None:
-        """Return the render's dominant colour inside the photograph's own mask."""
-        return _dominant_lab(load_canvas_pixels(image_path, self.canvas), self.mask)
+        """Return the render's dominant colour inside the photograph's own mask.
+
+        The mask is chosen by the region's *name*, so the region argument is the
+        thing that selects it rather than being ignored while a mask fixed at
+        construction is used instead.
+        """
+        label = SEGFORMER_LABELS.get(region.name)
+        if label is None:
+            return None
+        mask = self.parser.mask_for(self.photo_path, self.canvas, label)
+        return _dominant_lab(load_canvas_pixels(image_path, self.canvas), mask)
 
 
 class StyleIdEncoder:
@@ -296,16 +349,10 @@ class StyleIdEncoder:
 
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:
         """Verify every pinned StyleID artifact, then load the encoder."""
-        try:
-            import torch
-            from transformers import (
-                CLIPImageProcessor,
-                CLIPModel,
-            )
-        except ModuleNotFoundError as absent:  # pragma: no cover - environment
-            raise Refusal(
-                "the evaluator's stack is not installed; run `uv sync --extra eval`."
-            ) from absent
+        torch = _require("torch")
+        transformers = _require("transformers")
+        CLIPImageProcessor = transformers.CLIPImageProcessor
+        CLIPModel = transformers.CLIPModel
         for dest in (
             "styleid/model.safetensors",
             "styleid/config.json",
@@ -317,8 +364,16 @@ class StyleIdEncoder:
         self.model = CLIPModel.from_pretrained(root).eval()
         self.processor = CLIPImageProcessor.from_pretrained(root)
         self.canvas = canvas
+        self._embedded: dict[tuple[str, Box], tuple[float, ...] | None] = {}
 
     def embed(self, image_path: str, box: Box) -> tuple[float, ...] | None:
+        """Return the embedding, computing it at most once per image and box."""
+        key = (image_path, box)
+        if key not in self._embedded:
+            self._embedded[key] = self._embed(image_path, box)
+        return self._embedded[key]
+
+    def _embed(self, image_path: str, box: Box) -> tuple[float, ...] | None:
         """Return the unit-normalised embedding of the face crop, or None."""
         image_module, _ = _pil()
         pixels = load_canvas_pixels(image_path, self.canvas)
@@ -362,8 +417,16 @@ class ArcFaceEncoder:
         """Load the graph's own pinned recognizer, byte for byte."""
         self.session = OnnxSession(RECOGNIZER, models_dir)
         self.canvas = canvas
+        self._embedded: dict[tuple[str, Box], tuple[float, ...] | None] = {}
 
     def embed(self, image_path: str, box: Box) -> tuple[float, ...] | None:
+        """Return the embedding, computing it at most once per image and box."""
+        key = (image_path, box)
+        if key not in self._embedded:
+            self._embedded[key] = self._embed(image_path, box)
+        return self._embedded[key]
+
+    def _embed(self, image_path: str, box: Box) -> tuple[float, ...] | None:
         """Return the unit-normalised 512-d embedding of the face crop, or None."""
         numpy = _numpy()
         image_module, _ = _pil()
@@ -380,6 +443,27 @@ class ArcFaceEncoder:
             )
         }
         return tuple(float(v) for v in self.session.run(feed)[0][0])
+
+
+@cache
+def _yolox_anchors(side: int) -> tuple[Any, Any]:
+    """Return YOLOX's anchor grid and per-anchor strides for one input size.
+
+    A pure function of `side`, so it is built once rather than rebuilt with
+    three `meshgrid` calls on every person detection.
+    """
+    numpy = _numpy()
+    grids = []
+    expanded = []
+    for stride in (8, 16, 32):
+        cells = side // stride
+        ys, xs = numpy.meshgrid(numpy.arange(cells), numpy.arange(cells), indexing="ij")
+        grids.append(numpy.stack((xs, ys), axis=-1).reshape(-1, 2))
+        expanded.append(numpy.full((cells * cells, 1), stride))
+    return (
+        numpy.concatenate(grids, axis=0).astype("float32"),
+        numpy.concatenate(expanded, axis=0).astype("float32"),
+    )
 
 
 class DwPoseReader:
@@ -419,12 +503,7 @@ class DwPoseReader:
 
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:
         """Verify and load both pinned DWPose artifacts: detector and pose model."""
-        try:
-            import torch
-        except ModuleNotFoundError as absent:  # pragma: no cover - environment
-            raise Refusal(
-                "the evaluator's stack is not installed; run `uv sync --extra eval`."
-            ) from absent
+        torch = _require("torch")
         dest = (
             "annotator_ckpts/hr16/DWPose-TorchScript-BatchSize5/"
             "dw-ll_ucoco_384_bs5.torchscript.pt"
@@ -436,6 +515,7 @@ class DwPoseReader:
             "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx", models_dir
         )
         self.canvas = canvas
+        self._read: dict[str, tuple[Keypoint, ...] | None] = {}
 
     def _person_box(self, pixels: Any) -> Box | None:
         """Return the highest-scoring person box from yolox_l, or None.
@@ -481,18 +561,7 @@ class DwPoseReader:
         if predictions.ndim != 2 or predictions.shape[-1] < 6:
             return None
 
-        # One grid per stride, in the order the model concatenates them.
-        grids = []
-        expanded = []
-        for stride in (8, 16, 32):
-            cells = side // stride
-            ys, xs = numpy.meshgrid(
-                numpy.arange(cells), numpy.arange(cells), indexing="ij"
-            )
-            grids.append(numpy.stack((xs, ys), axis=-1).reshape(-1, 2))
-            expanded.append(numpy.full((cells * cells, 1), stride))
-        grid = numpy.concatenate(grids, axis=0).astype("float32")
-        strides = numpy.concatenate(expanded, axis=0).astype("float32")
+        grid, strides = _yolox_anchors(side)
         if grid.shape[0] != predictions.shape[0]:
             return None
 
@@ -514,6 +583,12 @@ class DwPoseReader:
 
     def keypoints(self, image_path: str) -> tuple[Keypoint, ...] | None:
         """Return the keypoints read, or None if the model read none at all."""
+        if image_path not in self._read:
+            self._read[image_path] = self._read_pose(image_path)
+        return self._read[image_path]
+
+    def _read_pose(self, image_path: str) -> tuple[Keypoint, ...] | None:
+        """Read one image's keypoints: detect the person, then read inside it."""
         numpy = _numpy()
         image_module, _ = _pil()
         pixels = load_canvas_pixels(image_path, self.canvas)

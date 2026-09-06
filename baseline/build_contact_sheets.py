@@ -25,6 +25,7 @@ is pixels twice over.
 
 import argparse
 import csv
+from functools import cache
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -47,6 +48,7 @@ INK = (245, 245, 245)
 CAPTIONS = ("REFERENCE", "A", "B")
 
 
+@cache
 def _font(size: int) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
     """Return a legible font, falling back to PIL's built-in if none is installed."""
     for candidate in (
@@ -59,8 +61,13 @@ def _font(size: int) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
+@cache
 def _scaled(path: Path) -> Image.Image:
-    """Open an image and scale it to the common panel height."""
+    """Open an image and scale it to the common panel height.
+
+    Cached: forty rows draw on six reference photographs, so without this the
+    same reference is decoded and LANCZOS-resized thirty-four extra times.
+    """
     with Image.open(path) as handle:
         image = handle.convert("RGB")
         width = round(image.width * PANEL_HEIGHT / image.height)

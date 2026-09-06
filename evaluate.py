@@ -20,12 +20,12 @@ that case this **reports what it lacks and refuses**, rather than guessing.
 """
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
 
 from isekai.evaluate import AUTHORITATIVE_GUARD_METHOD, Refusal, score_render, table
+from isekai.provision import digest_of
 
 # Where the scorer's own artifacts live, verified against
 # `scripts/eval_models.json` before any of them is loaded. Local to the
@@ -86,15 +86,6 @@ def missing_provenance(manifest: dict) -> list[str]:
     return lacking
 
 
-def digest_of_file(path: str) -> str:
-    """Return a file's SHA-256, read in chunks."""
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def main() -> None:
     """Score one run directory, or say what it lacks."""
     args = parse_args()
@@ -115,7 +106,7 @@ def main() -> None:
         )
 
     photo = args.photo
-    actual = digest_of_file(photo)
+    actual = digest_of(Path(photo))
     if actual != manifest["photo_sha256"]:
         sys.exit(
             f"{photo} hashes to {actual}, but this run was rendered from "

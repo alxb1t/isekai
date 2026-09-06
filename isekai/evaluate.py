@@ -46,7 +46,7 @@ PCK_TOLERANCE = 0.05
 # What the box-IoU guard method demands before it will call a face located.
 MIN_GUARD_IOU = 0.3
 
-# What the landmark-centroid method demands, as a fraction of the face box's
+# What the centroid method demands, as a fraction of the face box's
 # diagonal. The two are alternatives, and which one is authoritative was decided
 # by measurement in phase 8, not by argument (design.md D9).
 MAX_GUARD_CENTROID_OFFSET = 0.25
@@ -57,7 +57,7 @@ MAX_GUARD_CENTROID_OFFSET = 0.25
 # **both hold** -- 30/30 either way:
 #
 #     box IoU            median 0.950, min 0.857   against a 0.30 floor
-#     landmark centroid  median 0.012, max 0.024   against a 0.25 ceiling
+#     box centroid       median 0.012, max 0.024   against a 0.25 ceiling
 #
 # So the pre-committed fallback in D9 -- if neither holds, the region axes refuse
 # and that refusal is what v0.12 reports -- did not fire.
@@ -105,7 +105,6 @@ class FaceReading:
     """
 
     box: Box | None
-    landmarks: tuple[Point, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -137,6 +136,14 @@ class Axis:
     optimises, measured by the loss it optimises against, and asserts nothing
     about identity; a **low** value on a run that should have preserved identity
     is a real finding. That asymmetry is printed beside the number (design.md D8).
+
+    `needs_region` is the axis's own statement that it is measured over the face
+    region, and is therefore invalidated when the guard cannot find the face.
+    It lives here rather than in the caller because the producer of an axis is
+    the only thing that knows what the axis is measured over -- with the
+    knowledge in `score_render` instead, adding an axis meant knowing which of
+    three existing patterns to copy, and one of them silently dropped an axis
+    rather than refusing it.
     """
 
     name: str
@@ -145,6 +152,7 @@ class Axis:
     value: float | None = None
     refused: str | None = None
     falsifies_only: bool = False
+    needs_region: bool = False
 
 
 @dataclass(frozen=True)
@@ -166,7 +174,7 @@ class Canvas:
 
 
 class Detector(Protocol):
-    """Locates a face and its landmarks in one image."""
+    """Locates a face in one image."""
 
     def read_face(self, image_path: str) -> FaceReading:
         """Return what was found in `image_path`, with `box=None` for absence."""
@@ -398,7 +406,7 @@ def pck(
     return (agreed / used if used else None), used, dropped
 
 
-def hair_axes(photo: Region, render_colour: Lab | None) -> list[Axis]:
+def region_axes(photo: Region, render_colour: Lab | None) -> list[Axis]:
     """Return the hair axes: a colour distance, and the area it was measured over.
 
     Both are absolute -- a colour distance and an area fraction mean the same
@@ -412,7 +420,8 @@ def hair_axes(photo: Region, render_colour: Lab | None) -> list[Axis]:
     """
     return [
         Axis(
-            name="hair_colour_delta_e",
+            name=f"{photo.name}_colour_delta_e",
+            needs_region=True,
             kind="absolute",
             direction="lower-is-closer",
             value=(
@@ -428,10 +437,11 @@ def hair_axes(photo: Region, render_colour: Lab | None) -> list[Axis]:
             ),
         ),
         Axis(
-            name="hair_mask_area",
+            name=f"{photo.name}_mask_area",
             kind="absolute",
             direction="higher-is-closer",
             value=photo.area,
+            needs_region=True,
         ),
     ]
 
@@ -533,16 +543,14 @@ def table(reports: list[Report], run_name: str, base: str | None, image: str) ->
     months later can be attributed to what produced it. States the direction of
     every column, and emits **no** average, verdict or percentage.
     """
-    names: list[str] = []
+    # One pass: dicts preserve insertion order, so the column order and both
+    # column properties come out of the same walk rather than three that have to
+    # agree with each other.
+    columns: dict[str, Axis] = {}
     for report in reports:
         for axis in report.axes:
-            if axis.name not in names:
-                names.append(axis.name)
-
-    directions = {
-        axis.name: axis.direction for report in reports for axis in report.axes
-    }
-    kinds = {axis.name: axis.kind for report in reports for axis in report.axes}
+            columns.setdefault(axis.name, axis)
+    names = list(columns)
 
     lines = [
         f"run: {run_name}",
@@ -552,7 +560,7 @@ def table(reports: list[Report], run_name: str, base: str | None, image: str) ->
         "columns:",
     ]
     for name in names:
-        lines.append(f"  {name}: {kinds[name]}, {directions[name]}")
+        lines.append(f"  {name}: {columns[name].kind}, {columns[name].direction}")
     lines.append("")
 
     header = ["render", *names]
@@ -654,24 +662,29 @@ def score_render(
     # --- the pose axis: measured over the whole image, so it survives ----------
     report.axes.append(_pose_axis(pose, photo_path, render_path, canvas, report))
 
-    # --- the hair axes: region-dependent, so a failed guard refuses them -------
+    # --- the region axes, from the photograph's own regions ---------------
     regions = parser.parse(photo_path, canvas)
     usable, too_small = usable_regions(regions)
     report.axes.extend(too_small)
-    for name, region in usable.items():
-        if not guard.located:
-            report.axes.append(
-                Axis(
-                    name=f"{name}_colour_delta_e",
-                    kind="absolute",
-                    direction="lower-is-closer",
-                    refused=_guard_refusal(guard),
-                )
-            )
-            continue
+    for region in usable.values():
         report.axes.extend(
-            hair_axes(region, sampler.dominant_colour(render_path, region))
+            region_axes(region, sampler.dominant_colour(render_path, region))
         )
+
+    # One uniform pass, at the end, over every axis that declared it is measured
+    # over the face region. Previously this knowledge sat in three places -- a
+    # check inside the face axis, an inline branch that hand-rebuilt a stand-in
+    # `Axis` for hair, and a comment explaining that pose survives -- and the
+    # hand-rebuilt one emitted a single axis where the producer emits two, so a
+    # failed guard silently *dropped* an axis instead of refusing it.
+    if not guard.located:
+        refusal = _guard_refusal(guard)
+        report.axes = [
+            replace(axis, value=None, refused=axis.refused or refusal)
+            if axis.needs_region
+            else axis
+            for axis in report.axes
+        ]
 
     return report
 
@@ -708,6 +721,7 @@ def _face_axis(
         kind="relative",
         direction="higher-is-closer",
         falsifies_only=falsifies_only,
+        needs_region=True,
     )
     if photo_face.box is None or render_face.box is None:
         missing = "photograph" if photo_face.box is None else "render"
@@ -716,8 +730,6 @@ def _face_axis(
         return replace(axis, refused=f"no face was found in the {missing}")
     if cross_base is not None:
         return replace(axis, refused=cross_base)
-    if not guard.located:
-        return replace(axis, refused=_guard_refusal(guard))
 
     photo_vector = encoder.embed(photo_path, photo_face.box)
     render_vector = encoder.embed(render_path, render_face.box)
