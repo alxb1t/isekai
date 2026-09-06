@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from isekai.evaluate import (
+    AUTHORITATIVE_GUARD_METHOD,
     CLAIMS,
     MIN_KEYPOINT_CONFIDENCE,
     MIN_REGION_AREA,
@@ -736,3 +737,53 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
 
     assert result.returncode != 0
     assert "No module named 'pytest'" in result.stderr
+
+
+# --- phase 8: the guard's method, settled by measurement and pinned here -------
+
+
+@pytest.mark.spec("evaluation:guard:method-is-reported")
+def test_the_authoritative_guard_method_is_the_one_phase_eight_measured() -> None:
+    # Pinned the way the graph's dials are pinned: both methods held on all
+    # thirty baseline renders, IoU was chosen because it constrains size as well
+    # as position, and changing that is a deliberate test edit rather than a
+    # quiet one. `baseline/README.md` records the measurement.
+    assert AUTHORITATIVE_GUARD_METHOD == "iou"
+
+
+@pytest.mark.spec("evaluation:guard:method-is-reported")
+def test_the_report_uses_the_authoritative_method_by_default(
+    tmp_path: Path,
+) -> None:
+    report, _ = _score(tmp_path)
+    guard_note = next(n for n in report.notes if n.startswith("guard: "))
+
+    assert f"authoritative method: {AUTHORITATIVE_GUARD_METHOD}" in guard_note
+
+
+@pytest.mark.spec("evaluation:guard:method-is-reported")
+def test_the_method_not_chosen_is_still_measured_and_reported(
+    tmp_path: Path,
+) -> None:
+    # The centroid method stays computed on every run, so the day the two
+    # disagree is a visible event rather than a silent one.
+    report, _ = _score(tmp_path)
+    guard_note = next(n for n in report.notes if n.startswith("guard: "))
+
+    assert "IoU" in guard_note
+    assert "landmark-centroid offset" in guard_note
+
+
+@pytest.mark.spec("evaluation:guard:method-is-reported")
+def test_size_is_what_the_two_guard_methods_disagree_about(
+    tmp_path: Path,
+) -> None:
+    # The reason IoU ships, made falsifiable: a face centred correctly but at the
+    # wrong scale passes the centroid test and fails IoU. If that ever stopped
+    # being true, the justification recorded beside the constant would be wrong.
+    photo = FaceReading(box=(400.0, 200.0, 700.0, 560.0))
+    # Same centre, three times the size.
+    scaled = FaceReading(box=(250.0, 20.0, 850.0, 740.0))
+
+    assert run_guard(photo, scaled, method="centroid").located is True
+    assert run_guard(photo, scaled, method="iou").located is False

@@ -9,7 +9,7 @@
 - [x] 5 — Prove the scorer on the renders already on disk, before any money is spent
 - [x] 6 — 🛑 **HUMAN** — the six subjects: a tracked builder, digests recorded, pixels not committed
 - [x] 7 — ⚠️ **GPU · HALT** — one session on `:v0.11-rc`, thirty fixed-dial renders
-- [ ] 8 — The three probes, local and free; the guard is decided here
+- [x] 8 — The three probes, local and free; the guard is decided here
 - [ ] 9 — 🛑 **HUMAN** — the pairwise sheet, and forty blind judgements committed alone
 - [ ] 10 — The correlation, reported whatever it says
 

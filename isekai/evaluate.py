@@ -47,9 +47,36 @@ PCK_TOLERANCE = 0.05
 MIN_GUARD_IOU = 0.3
 
 # What the landmark-centroid method demands, as a fraction of the face box's
-# diagonal. The two are alternatives, and which one is authoritative is decided
-# by measurement in phase 8, not here (design.md D9).
+# diagonal. The two are alternatives, and which one is authoritative was decided
+# by measurement in phase 8, not by argument (design.md D9).
 MAX_GUARD_CENTROID_OFFSET = 0.25
+
+# **The guard's authoritative method, settled on the thirty baseline renders.**
+#
+# Both methods were computed on all thirty, at the working denoise of 0.65, and
+# **both hold** -- 30/30 either way:
+#
+#     box IoU            median 0.950, min 0.857   against a 0.30 floor
+#     landmark centroid  median 0.012, max 0.024   against a 0.25 ceiling
+#
+# So the pre-committed fallback in D9 -- if neither holds, the region axes refuse
+# and that refusal is what v0.12 reports -- did not fire.
+#
+# IoU ships, for a reason that is about the measurement rather than the margins:
+# **it constrains size as well as position, and the centroid method constrains
+# only position.** A render that placed a correctly-centred face at twice the
+# scale would pass the centroid test and fail IoU, and that render is exactly the
+# kind the guard exists to catch. IoU also sits nearer its own threshold here
+# (2.9x headroom against the centroid method's 10.4x), so it is the less
+# permissive of two methods that currently agree on everything.
+#
+# **What this does NOT show**, stated because the numbers invite the opposite
+# reading: no render in the baseline recomposed the subject, so this measures
+# that the guard does not produce *false refusals*. It does not show that either
+# method catches a genuinely recomposed render, because there was not one to
+# catch. The centroid method stays computed and reported on every run, so the day
+# the two disagree is a visible event rather than a silent one.
+AUTHORITATIVE_GUARD_METHOD = "iou"
 
 Box = tuple[float, float, float, float]
 Point = tuple[float, float]
@@ -284,7 +311,9 @@ class GuardResult:
 
 
 def run_guard(
-    photo_face: FaceReading, render_face: FaceReading, method: str = "iou"
+    photo_face: FaceReading,
+    render_face: FaceReading,
+    method: str = AUTHORITATIVE_GUARD_METHOD,
 ) -> GuardResult:
     """Confirm on the render itself that a face sits where the photograph's does.
 
@@ -570,7 +599,7 @@ def score_render(
     photo_base: str | None,
     render_base: str | None,
     image: str | None = None,
-    guard_method: str = "iou",
+    guard_method: str = AUTHORITATIVE_GUARD_METHOD,
 ) -> Report:
     """Score one render against the photograph that produced it.
 

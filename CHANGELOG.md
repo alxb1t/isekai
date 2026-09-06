@@ -27,6 +27,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The guard's authoritative method is settled by measurement: box IoU.** Both methods were computed
+  on all thirty baseline renders at the working denoise of 0.65 and **both hold** — IoU median 0.950
+  against a 0.30 floor, landmark-centroid median 0.012 against a 0.25 ceiling, 30/30 either way. So
+  D9's pre-committed fallback, where neither holds and the region axes refuse, did not fire. IoU ships
+  because it constrains **size** as well as position: a correctly-centred face at three times the scale
+  passes the centroid test and fails IoU, and a test asserts exactly that. It is pinned as
+  `AUTHORITATIVE_GUARD_METHOD` and the method not chosen is still computed and printed on every run, so
+  the day the two disagree is visible rather than silent.
+- **StyleID carries real signal but does not separate cleanly, and n=6 cannot license it.** Across 30
+  same-subject and 150 different-subject pairs: AUC **0.847**, medians 0.467 against 0.207 — a long way
+  from a coin flip. But 98 of 150 different-subject pairs score at or above the worst same-subject
+  pair, and **two of six subjects are nearer somebody else's renders than their own**. The probe could
+  have killed StyleID and did not; it cannot license it either, and no threshold is set. StyleID
+  outscores ArcFace on both AUC and separation, consistent with the roles D8 assigns them.
+- **DWPose reads all thirty renders — and the pose axis is saturated.** PCK median **1.000**, min
+  0.987. The OpenPose ControlNet at strength 0.6 holds pose so tightly that at fixed dials this axis has
+  **no variance**, and an axis with no variance cannot correlate with anything; phase 10 will report its
+  correlation as undefined rather than as a number. The axis is **not** removed: probe 3 asked whether
+  DWPose could read these renders and it can, so nothing was killed by the probe it was given, and
+  deleting the column would hide that it was measured. It should become informative the moment the pose
+  strength is searched, which is v0.13's business.
+- **No axis was removed and no dial was moved to make a meter work.** `denoise` stays at 0.65 and the
+  guard was measured at the denoise the product actually uses.
+- **`s5`'s refusal path was not exercised.** It was chosen as a refusal-path subject and the detector
+  found its face in all five of its renders — the batch's lowest IoU at 0.857–0.898, but far above the
+  floor. The absent-face and guard-failure paths remain covered by unit tests and by nothing in the
+  baseline. Stated as a gap rather than papered over.
 - **Thirty fixed-dial renders, from one metered pod session: 19 min 58 s, ~$0.24.** Six subjects × five
   seeds on the already-built `:v0.11-rc`, so rebuild drift is held constant rather than measured. These
   are **the first renders this project has ever produced with the graph's committed dials** — within a

@@ -25,7 +25,7 @@ import json
 import sys
 from pathlib import Path
 
-from isekai.evaluate import Refusal, score_render, table
+from isekai.evaluate import AUTHORITATIVE_GUARD_METHOD, Refusal, score_render, table
 
 # Where the scorer's own artifacts live, verified against
 # `scripts/eval_models.json` before any of them is loaded. Local to the
@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--guard",
         choices=("iou", "centroid"),
-        default="iou",
+        default=AUTHORITATIVE_GUARD_METHOD,
         help="which guard method is authoritative; both are always measured",
     )
     p.add_argument(

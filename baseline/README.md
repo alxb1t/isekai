@@ -172,3 +172,101 @@ exactly one thing.
 
 **No quality claim is made here.** Whether these renders preserve identity is what phases 8–10 are for,
 and the answer is the operator's eye rather than this table.
+
+---
+
+# The three probes
+
+CPU, local, **$0**, against the thirty renders above. Their purpose is to decide what the instrument
+is allowed to claim before any of it is correlated against a human judgement.
+
+## Probe 1 — the guard, both ways. **Both hold.**
+
+Computed on all thirty renders at the working denoise of 0.65.
+
+| method | median | worst | threshold | passes |
+|---|---|---|---|---|
+| box IoU | 0.950 | 0.857 (min) | ≥ 0.30 | **30 / 30** |
+| landmark centroid | 0.012 | 0.024 (max) | ≤ 0.25 | **30 / 30** |
+
+So `design.md` D9's pre-committed fallback — *if neither holds, the region axes refuse and that
+refusal is what v0.12 ships* — **did not fire**. Both methods locate the face in every render, with
+wide margins.
+
+**Box IoU ships as the authoritative guard**, pinned in `isekai/evaluate.py` as
+`AUTHORITATIVE_GUARD_METHOD` and held by a test. The reason is about the measurement, not the
+margins: **IoU constrains size as well as position, and the centroid method constrains only
+position.** A render that placed a correctly-centred face at three times the scale passes the
+centroid test and fails IoU — there is a test asserting exactly that — and such a render is the kind
+the guard exists to catch. IoU is also the less permissive of the two here, sitting 2.9× from its
+threshold where the centroid method sits 10.4× from its own.
+
+**What this does not show.** No render in the baseline recomposed the subject, so this measures that
+the guard does not produce **false refusals**. It does **not** show that either method catches a
+genuinely recomposed render, because there was not one to catch. The centroid method stays computed
+and printed on every run, so the day the two disagree is a visible event rather than a silent one.
+
+**`s5`'s refusal path was not exercised.** It was chosen as a refusal-path subject, and the detector
+found its face in all five of its renders (IoU 0.857–0.898 — the batch's lowest, but far above the
+floor). The absent-face and guard-failure paths therefore remain covered by unit tests and by nothing
+in the baseline. That is a gap in the baseline, stated rather than papered over.
+
+## Probe 2 — does StyleID separate a same-subject batch from a different subject?
+
+Six subjects: 30 same-subject pairs (a photograph against its own renders) and 150 different-subject
+pairs (a photograph against another subject's renders).
+
+| | StyleID | ArcFace *(sanity channel)* |
+|---|---|---|
+| same-subject median | 0.4667 | 0.3056 |
+| different-subject median | 0.2068 | 0.1176 |
+| clean separation (min same > max diff) | **No** | **No** |
+| overlap | 98 / 150 | 106 / 150 |
+| **AUC** | **0.847** | 0.788 |
+| rank-1 identification | **4 / 6** | 4 / 6 |
+
+**The answer is a qualified yes, and the qualification is the point.** StyleID carries real signal —
+an AUC of 0.847 is a long way from the 0.5 of a coin flip, and the two medians are more than two-fold
+apart. But it does **not** separate cleanly: 98 of 150 different-subject pairs score at or above the
+worst same-subject pair, and two of the six subjects are closer to somebody else's renders than to
+their own. `s3_multitone_balayage` and `s5_small_face` both miss.
+
+**This probe could have killed StyleID and did not. It cannot license it either, and n=6 is why.**
+Six subjects is far too few to establish a threshold, and no threshold is set here. What the probe
+buys is the knowledge that the axis is not noise before it is correlated against human judgement.
+
+StyleID outscores ArcFace on both AUC and median separation, which is consistent with the role
+`design.md` D8 assigns each: StyleID is the primary and ArcFace only falsifies.
+
+## Probe 3 — does DWPose read one of these renders at all?
+
+**Yes — all thirty, with no refusals.** The axis reports a value for every render.
+
+But the value is **saturated**, and that is the real finding:
+
+```
+PCK   median 1.000   min 0.987   max 1.000   across all 30 renders
+```
+
+Every render's pose agrees with its photograph almost perfectly. The OpenPose ControlNet sits at
+strength 0.6 and holds the pose so tightly that, **at fixed dials, this axis has no variance** — and
+an axis with no variance cannot correlate with anything. Phase 10 will therefore report its
+correlation as undefined rather than as a number, which is the honest output for a constant column.
+
+**The pose axis is not removed.** Probe 3's stated question was whether DWPose can read these renders
+at all, and it can; nothing was killed by the probe it was given. The saturation is a finding *about
+the pipeline* — pose is not where identity varies here — rather than a defect in the axis, and
+deleting the column would hide that it was measured. It is likely to become informative the moment
+the pose ControlNet's strength is searched, which is v0.13's business.
+
+The keypoint-confidence floor is doing real work: 34–56 of the 133 whole-body keypoints are dropped
+on four of the six subjects, and reported as dropped rather than scored at a guessed coordinate.
+`s3` and `s5`, the two full-length subjects, keep all 133.
+
+## What no probe changed
+
+No dial was moved to make a meter work. `denoise` stays at 0.65, and the guard was measured at the
+denoise the product actually uses — `design.md` D9 disqualifies the alternative in terms, and the
+question did not arise, because both methods held.
+
+**No axis was removed.** No probe killed the axis it tested.
