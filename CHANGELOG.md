@@ -100,6 +100,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   proving that some file once existed and nothing about what it contained. That is the accepted cost of
   not committing derived faces, and there is no mitigation beyond keeping the sources.
 
+### Notes
+
+- **The correlation, which is what v0.12 actually ships. No axis is shown to track the operator's
+  eye.** Forty blind pairwise judgements against each axis separately, never rolled up, with the count
+  beside every figure: `face_styleid` **0.450** (18/40), `face_arcface` **0.625** (25/40), `pose_pck`
+  **0.286** (4/14), `hair_colour_delta_e` **0.425** (17/40), `hair_mask_area` **undefined**. **Every
+  95% interval contains 0.5 and every binomial *p* is ≥ 0.15.** At n=40 the interval is ±0.155, so this
+  could only ever have detected a very strong effect, and there was not one.
+- **The primary face axis lands below a coin flip.** StyleID separates *different people* well enough —
+  AUC 0.847 in phase 8 — and still cannot say which of two renders **of the same person** looks more
+  like them. Those are different questions, and this version is what established that the second is the
+  hard one. The highest agreement belongs to `face_arcface`, the channel permitted to claim the least;
+  at *p* = 0.154 that licenses nothing, and it is recorded so a later version can go looking.
+- **`hair_mask_area` cannot participate by construction — a design defect this table exposed.** It
+  reports the photograph's own mask area, so it is identical for every render of a subject and every
+  within-subject pair is a tie. It is left in the report rather than quietly dropped, because the
+  report is what revealed the mistake.
+- **This is a successful version by its own pre-committed criterion (D17): the correlation was
+  computed, never that it was good.** Had v0.13 opened by searching `cn_strength` against
+  `face_styleid`, it would have been optimising against a coin flip, at real money, and the result
+  would have looked plausible. **This version cost ~$0.24 and prevented that.**
+
+### What v0.12 does NOT establish
+
+Drafted in `tasks.md` before any number existed, and reproduced here unchanged now that they do:
+
+- **No metric here is shown to measure identity.** Four axes were built and none of them agrees with
+  the operator's eye better than chance.
+- **No score is comparable across bases or across batches.** An embedding cosine has no zero point
+  across the photograph-to-drawing gap; it ranks within one batch on one base and nothing more.
+- **No dial is shown to be better than another.** Nothing here compares dial settings at all.
+- **`cn_strength` 0.5 is unsearched.** It is merely now *searchable* — settable, pinned, and recorded
+  in every manifest.
+- **Rebuild drift is recorded and unmeasured.** The baseline is pinned to `:v0.11-rc` so drift is held
+  constant rather than quantified; `run.json` records the image so a later version can measure it.
+- **There is no percentage, no verdict and no threshold**, and this version deliberately produces none.
+- **Additionally, discovered rather than predicted:** the guard is shown not to produce false refusals,
+  but is **not** shown to catch a recomposed render, because no render recomposed. And `s5`'s refusal
+  path never fired.
+
 ### Fixed
 
 - **Three real plumbing failures, found on the renders already on disk, before any pod was created.**
