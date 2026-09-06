@@ -70,7 +70,8 @@ half and neither is meaningful alone (design.md D5).
   own 20 GB volume disk at `volumeMountPath` when no network volume is attached, so the path exists
   and *is* a mountpoint — the wrong one (design.md D5). *(0009:R4, client half)*
 - **`start.sh` refuses before preparing the namespace** if what it finds is not the volume it was
-  told to expect — a free-space floor, not `mountpoint`. *(0009:R4, pod half)*
+  told to expect — a capacity floor clear of both the pod's own
+  volume disk and its container disk, not `mountpoint`. *(0009:R4, pod half)*
 - **The `rm -rf` is guarded on its premise, not its proxy.** Refuse to delete `$MODELS_ROOT` unless
   it is empty or not a mountpoint, and abort with a clear message otherwise. Deleting a non-empty
   models tree is an explicit operator act, never a silent entrypoint step. *(0009:S4)*

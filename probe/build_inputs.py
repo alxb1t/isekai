@@ -103,7 +103,9 @@ def segments(jpeg: bytes) -> Iterator[tuple[int, int, int]]:
     reports the scan itself last so a caller can copy the remainder.
     """
     i = 2
-    while i < len(jpeg) and jpeg[i] == 0xFF:
+    # `i + 1`, because the code byte is what is read: a file ending on a lone
+    # 0xFF has no segment left to report, and indexing past it is not a walk.
+    while i + 1 < len(jpeg) and jpeg[i] == 0xFF:
         code = jpeg[i + 1]
         if code in _STANDALONE:
             yield code, i, 2

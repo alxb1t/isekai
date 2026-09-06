@@ -598,3 +598,9 @@ def test_a_png_declaring_an_unbounded_exif_chunk_is_refused(tmp_path: Path) -> N
     message = str(excinfo.value)
     assert path in message
     assert str(MAX_HEADER_BYTES) in message
+    # and it says which walk gave up: this refusal is reachable from the PNG
+    # chunk walk as well as the JPEG marker walk, so a message naming only a
+    # JPEG's frame header tells an operator handed a corrupt PNG that the file
+    # lacks a structure PNG does not have.
+    assert "PNG" in message
+    assert "frame header" not in message

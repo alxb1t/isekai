@@ -370,3 +370,27 @@ def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> 
 def test_the_driver_joins_no_path_of_its_own(download_models_sh: str) -> None:
     assert 'target="${MODELS_DIR}/${dest}"' not in download_models_sh
     assert 'target="${fields[1]:-}"' in download_models_sh
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:provisioning-requires-the-network-volume"
+)
+def test_the_capacity_floor_clears_the_container_disk_as_well(
+    start_sh: str, up_sh: str
+) -> None:
+    # The one case this pod-side guard still exists for is the one `up.sh` cannot
+    # see: the id is set and the mount silently failed, so `/runpod-volume`
+    # resolves to the container overlay rather than to the volume (design.md D5).
+    # That overlay's backing disk is `containerDiskInGb`, which is LARGER than the
+    # pod's own volume disk, so a floor that only clears the volume disk lets the
+    # overlay through and 16.5 GiB lands on storage that dies at teardown.
+    floor = re.search(
+        r"^VOLUME_SIZE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)", start_sh, re.M
+    )
+    assert floor is not None
+    container_disk = re.search(r"containerDiskInGb:\s*(\d+)", up_sh)
+    assert container_disk is not None
+    # RunPod states those sizes in decimal GB, and decimal is the reading that
+    # makes the disk look BIGGEST in KiB, so it is the one the floor must clear.
+    largest_container_kib = int(container_disk.group(1)) * 1000**3 // 1024
+    assert int(floor.group(1)) * 1024 * 1024 > largest_container_kib

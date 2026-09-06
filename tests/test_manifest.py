@@ -212,11 +212,10 @@ CIVITAI_PAYLOAD = {
     "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
 )
 def test_the_published_digest_is_read_from_the_publishers_own_record() -> None:
-    digest, size = civitai_file(CIVITAI_PAYLOAD, "waiIllustriousSDXL_v170.safetensors")
+    digest = civitai_file(CIVITAI_PAYLOAD, "waiIllustriousSDXL_v170.safetensors")
     # lowercased, because the manifest's own `DIGEST` pattern is lowercase and a
     # digest that differs only in case would fail a check it should pass
     assert digest == WAI_PUBLISHED_SHA256
-    assert size == 6938040682
 
 
 @pytest.mark.spec(
@@ -254,3 +253,24 @@ def test_the_derived_manifest_records_no_blake3(manifest: Manifest) -> None:
     # nothing reads is the same smell as a one-entry registry.
     assert "BLAKE3" not in json.dumps(manifest)
     assert "blake3" not in json.dumps(manifest)
+
+
+@pytest.mark.spec(
+    "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
+)
+def test_a_record_omitting_its_size_still_yields_the_digest() -> None:
+    # The size was read with a subscript where every sibling read uses `.get` with
+    # a `SystemExit`, and no caller consumed it -- so an omitted `sizeKB` aborted
+    # derivation with a raw `KeyError` for a number nobody wanted. What this
+    # function is for is the digest.
+    payload = {
+        "files": [
+            {
+                "name": "waiIllustriousSDXL_v170.safetensors",
+                "hashes": {"SHA256": WAI_PUBLISHED_SHA256},
+            }
+        ]
+    }
+    assert civitai_file(payload, "waiIllustriousSDXL_v170.safetensors") == (
+        WAI_PUBLISHED_SHA256
+    )

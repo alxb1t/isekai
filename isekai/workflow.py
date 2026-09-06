@@ -67,7 +67,16 @@ _PNG_PIXEL_CHUNKS = frozenset({b"IDAT", b"IEND"})
 
 
 class _HeaderTooDeep(Exception):
-    """The marker walk passed `MAX_HEADER_BYTES` without reaching a frame header."""
+    """A header walk passed `MAX_HEADER_BYTES` without reaching what it sought.
+
+    Carries the codec, because both walks raise it: a PNG's chunk walk and a
+    JPEG's marker walk look for different structures, and a refusal that names
+    the wrong one tells an operator their file lacks something it never had.
+    """
+
+    def __init__(self, codec: str) -> None:
+        super().__init__(codec)
+        self.codec = codec
 
 
 class _Header(NamedTuple):
@@ -136,7 +145,7 @@ def _png_dimensions(handle: BinaryIO) -> _Header | None:
     handle.seek(len(_PNG_SIGNATURE) + 8 + ihdr_length + 4)
     while True:
         if handle.tell() > MAX_HEADER_BYTES:
-            raise _HeaderTooDeep
+            raise _HeaderTooDeep("PNG")
         chunk = handle.read(8)
         if len(chunk) < 8:
             break
@@ -151,7 +160,7 @@ def _png_dimensions(handle: BinaryIO) -> _Header | None:
             # on that word alone is a `MemoryError` that escapes as a traceback
             # instead of the refusal that names the file and the budget.
             if handle.tell() + length > MAX_HEADER_BYTES:
-                raise _HeaderTooDeep
+                raise _HeaderTooDeep("PNG")
             return _Header(width, height, _tiff_orientation(handle.read(length)))
         # payload, then the chunk's own four-byte CRC
         handle.seek(length + 4, 1)
@@ -221,7 +230,7 @@ def _jpeg_dimensions(handle: BinaryIO) -> _Header | None:
         # Bounded by a stated number rather than by the file, which is not a
         # bound: a 100 MB file walked to its end takes seconds to refuse.
         if handle.tell() > MAX_HEADER_BYTES:
-            raise _HeaderTooDeep
+            raise _HeaderTooDeep("JPEG")
         byte = handle.read(1)
         if byte != b"\xff":
             return None
@@ -288,10 +297,10 @@ def image_dimensions(path: str) -> tuple[int, int]:
             header = _png_dimensions(handle) or _jpeg_dimensions(handle)
     except OSError as e:
         sys.exit(f"{path}: cannot be read ({e.strerror})")
-    except _HeaderTooDeep:
+    except _HeaderTooDeep as deep:
         sys.exit(
-            f"{path}: no frame header in the first {MAX_HEADER_BYTES} bytes; "
-            f"refusing to walk further"
+            f"{path}: its {deep.codec} header is not resolved within the first "
+            f"{MAX_HEADER_BYTES} bytes; refusing to walk further"
         )
 
     if header is None or 0 in (header.width, header.height):

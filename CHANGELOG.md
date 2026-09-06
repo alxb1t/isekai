@@ -27,6 +27,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The capacity floor is raised clear of the container disk as well as the volume disk.** Moving the
+  floor from free space to capacity widened the passing set, and one wrong disk entered it: the case
+  the pod-side guard exists for at all is the one `up.sh` cannot see — the volume id is set and the
+  mount silently failed — where `/runpod-volume` falls through to the container overlay, whose backing
+  disk is `containerDiskInGb: 30` (`infra/up.sh`). `avail` on that overlay, already carrying the
+  image, was far under the old 20 GiB floor and refused; `size` reports ~27.9 GiB regardless of what
+  the image occupies, and passed. The floor is now **40 GiB**, derived against both wrong disks —
+  20 GB volume disk ≈ 18.6 GiB, 30 GB container overlay ≈ 27.9 GiB — and against the right one, the
+  80 GB network volume ≈ 74.5 GiB. It is one measurement still, not two: the rejected alternative was
+  a second free-space check beside it. The error text now names what it measured and which two
+  ephemeral disks a reading that small means. `design.md` D5 and D5a and `tasks.md` are reworded off
+  the free-space mechanism they still described.
+- **A manifest destination is held to the same whitespace rule as a source, and one that resolves to
+  the models root itself is refused rather than crashed on.** `resolve_dest` is the single site the
+  containment rule is enforced at, and it had two holes: a `dest` containing `\n` or `\t` survived
+  `normpath` into the tab-delimited plan line, where an embedded newline starts a fresh record whose
+  target is absolute and whose URL never meets `PINNED_SOURCE` — that check lives in `decide`, which
+  an injected record bypasses; and a `dest` normalising to `"."` (`"."`, `"./"`, `"a/.."`) raised
+  `IndexError` off `PurePosixPath(".").parts` being empty, instead of returning `None` as the
+  function's own contract says. `plan` additionally refuses to emit any target carrying `\n` or `\t`,
+  which covers the half of the target that comes from `MODELS_DIR` rather than from the manifest.
+- **The header-walk refusal names the codec that gave up.** `_HeaderTooDeep`'s message was
+  JPEG-worded — "no frame header" — but the PNG chunk walk raises it too, from two places, so an
+  operator handed a corrupt PNG was told the file lacks a structure PNG does not have. The exception
+  now carries its codec and the message renders it, still naming the file and the byte budget.
+- **`civitai_file` returns the digest alone.** Its size was read with a subscript where every sibling
+  read uses `.get` with a `SystemExit`, so a record omitting `sizeKB` aborted derivation with a raw
+  `KeyError` — for a number the one call site discarded and the manifest never used, its `bytes`
+  coming from Hugging Face. Dropped rather than defended.
+- **The probe's JPEG segment walk no longer indexes past the end of the file.** `segments()` read the
+  marker's code byte having tested only that the marker byte itself was in range, so a JPEG ending on
+  a lone `0xFF` raised `IndexError`. A file that ends there has no segment left to report.
 - **The pod-side volume guard measures capacity, which is what it is trying to prove, rather than
   free space.** The 20 GiB floor was read off `df -k --output=avail` while its error text claimed to
   have proved *identity* — "this is not network volume ${RUNPOD_VOLUME_ID}". Free space on a

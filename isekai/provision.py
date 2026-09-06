@@ -246,13 +246,18 @@ def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
     target through a path the driver was never handed.
     """
     dest = entry["dest"]
-    if not dest or dest.startswith("~") or "\\" in dest:
+    # Whitespace is refused for the same reason `sources` refuses it: the plan
+    # this destination ends up in is a line- and tab-delimited protocol, so a
+    # `\n` inside one field does not stay one field.
+    if not dest or dest.startswith("~") or "\\" in dest or WHITESPACE.search(dest):
         return None
     normalized = PurePosixPath(posixpath.normpath(dest))
     # `normpath` cannot turn a relative path absolute, so one test covers both
     # a leading slash and anything that normalises to one; `..` first is the
-    # only way a relative path climbs out.
-    if normalized.is_absolute() or normalized.parts[0] == "..":
+    # only way a relative path climbs out. The empty `parts` is `"."` — the
+    # models root itself rather than a file under it, which is equally not a
+    # path this may land on, and which indexing `parts[0]` crashed on.
+    if normalized.is_absolute() or normalized.parts[:1] in ((), ("..",)):
         return None
     return models_dir / normalized
 
@@ -351,11 +356,18 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
             aborts.append(decision.reason)
             continue
         # The path `decide` already resolved, so the shell joins nothing and the
-        # containment rule has one site rather than one per assembly.
+        # containment rule has one site rather than one per assembly. It is still
+        # re-checked for a delimiter here: `resolve_dest` covers the manifest's
+        # half of the target, and `models_dir` — handed in by the shell — is the
+        # other half, so a record-splitting byte can arrive from either.
+        target = str(decision.target)
+        if "\n" in target or "\t" in target:
+            aborts.append(f"target {target!r} would not stay one plan record")
+            continue
         if decision.action == "skip":
-            lines.append(f"SKIP\t{decision.target}")
+            lines.append(f"SKIP\t{target}")
         else:
-            lines.append("\t".join(["FETCH", str(decision.target), *decision.urls]))
+            lines.append("\t".join(["FETCH", target, *decision.urls]))
     if aborts:
         for reason in aborts:
             print(f"ERROR: {reason}", file=sys.stderr)

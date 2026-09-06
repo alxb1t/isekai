@@ -137,8 +137,21 @@ an empty volume id boots with `/runpod-volume` present and *being* a mountpoint 
 The guard therefore goes where it costs nothing to trip: **`infra/up.sh` refuses to create a pod when
 `RUNPOD_VOLUME_ID` is empty**, and passes it into the container so the entrypoint knows which volume
 to expect. The pod-side check remains as defence in depth for the case the client cannot see — id
-set, mount silently failed — with a free-space floor as the discriminator rather than
+set, mount silently failed — with a **capacity floor** as the discriminator rather than
 `mountpoint`.
+
+**Capacity, not free space, and the floor must clear two wrong disks rather than one.** Free space
+was rejected because this guard proves *identity*: a volume already holding 16.5 GiB of this
+project's models plus the second project's is a correctly-attached volume, so flooring on
+availability refuses a warm boot that needed to download nothing, bills the whole hold for it, and
+degrades monotonically as the shared volume fills. But capacity is also independent of how much of a
+disk is already occupied — which is what the free-space reading had been accidentally discriminating
+on — so the floor must be sized against **both** disks this path can resolve to: the pod's own
+`volumeInGb: 20` volume disk (≈ 18.6 GiB) *and* the `containerDiskInGb: 30` container overlay
+(≈ 27.9 GiB, `infra/up.sh`) that a silently-failed mount actually falls through to. The network
+volume is 80 GB (≈ 74.5 GiB), so **40 GiB** sits clear of both with headroom no decimal/binary
+reading of RunPod's sizes and no filesystem overhead can close. A second, free-space check sized to
+the download was considered and rejected: one measurement, one message, one meaning.
 
 The consequence is recorded rather than hidden: **the pod-side guard ships suite-bound and
 unexercised on a pod.** Exercising it would mean deliberately defeating the client check that phase 1
@@ -454,7 +467,7 @@ anywhere, because it is false.
 ### D5a — the two guards were not exercised, as predicted
 
 D5 and D6 each recorded that the guard they add ships suite-bound. The metered session confirms it by
-omission: the pod booted with its volume attached, provisioning succeeded, and neither the free-space
+omission: the pod booted with its volume attached, provisioning succeeded, and neither the capacity
 floor nor the bounded hold was reached. Nothing about that was discovered on the clock; it is written
 here so the residual is not read as an oversight.
 

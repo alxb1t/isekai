@@ -266,7 +266,7 @@ SPECS: tuple[Spec, ...] = (
 )
 
 
-def civitai_file(payload: dict[str, Any], filename: str) -> tuple[str, int]:
+def civitai_file(payload: dict[str, Any], filename: str) -> str:
     """Return the SHA-256 and byte count Civitai publishes for one file of a version.
 
     Pure, so the suite holds it offline; `civitai_version` is the thin fetch
@@ -289,7 +289,7 @@ def civitai_file(payload: dict[str, Any], filename: str) -> tuple[str, int]:
             raise SystemExit(
                 f"Civitai publishes no usable SHA-256 for {filename}: {digest!r}"
             )
-        return digest.lower(), int(round(float(item["sizeKB"]) * 1024))
+        return digest.lower()
     raise SystemExit(f"Civitai version does not serve {filename}")
 
 
@@ -334,7 +334,7 @@ def derive() -> Manifest:
     """Build the whole manifest, cross-checking every alternate against the primary."""
     # The one artifact no publisher hosts, so its publisher's own record is what
     # the mirrors are held against.
-    wai_sha256, _ = civitai_file(civitai_version(WAI_VERSION_ID), WAI_FILE)
+    wai_sha256 = civitai_file(civitai_version(WAI_VERSION_ID), WAI_FILE)
 
     entries: list[ManifestEntry] = []
     for spec in SPECS:

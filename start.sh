@@ -34,9 +34,19 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 # `mountpoint -q` does NOT discriminate here. RunPod mounts the pod's own 20 GB
 # volume disk at volumeMountPath when no network volume is attached, so the path
 # exists and IS a mountpoint — the wrong one (design.md D5). Capacity does
-# discriminate, and capacity is what is measured: that disk is 20 GB, so its
-# filesystem can never report more than 18.6 GiB of total size, while the volume
-# this project provisions onto is far larger. The floor sits between the two.
+# discriminate, and capacity is what is measured. There are exactly two wrong
+# disks this path can resolve to, and the floor clears BOTH:
+#
+#   * the pod's own volume disk, `volumeInGb: 20`  →  20e9 B  ≈ 18.6 GiB
+#   * the container overlay, `containerDiskInGb: 30` (infra/up.sh) → ≈ 27.9 GiB
+#
+# The second is the case this pod-side check exists for at all — id set, mount
+# silently failed, so the path falls through to the overlay — and a floor sized
+# only against the first lets it pass. The network volume this project actually
+# provisions onto is 80 GB (≈ 74.5 GiB), so 40 GiB sits clear of both wrong disks
+# with ~12 GiB of headroom above the larger and ~34 GiB below the right one:
+# wide enough that neither a decimal/binary reading of RunPod's sizes nor a
+# filesystem's metadata overhead can move a disk across it.
 #
 # Deliberately NOT free space. This guard proves identity, and a volume already
 # holding 16.5 GiB of this project's models plus a second project's is a
@@ -44,7 +54,7 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 # Flooring on availability would refuse a warm boot where every entry would SKIP,
 # write the failure marker and bill the whole hold, for a pod that needed to
 # download nothing — and it would degrade as the shared volume filled.
-VOLUME_SIZE_FLOOR_KIB=$((20 * 1024 * 1024))
+VOLUME_SIZE_FLOOR_KIB=$((40 * 1024 * 1024))
 
 # 4. Provisioning: prepare this project's namespace on the volume, then ensure the
 #    models are on it.
@@ -74,10 +84,11 @@ provision() {
             ;;
     esac
     if [ "$size_kib" -lt "$VOLUME_SIZE_FLOOR_KIB" ]; then
-        echo "ERROR: $volume has a total size of ${size_kib} KiB, below the" >&2
-        echo "${VOLUME_SIZE_FLOOR_KIB} KiB floor — a disk that small is the pod's" >&2
-        echo "own ephemeral one, not network volume ${RUNPOD_VOLUME_ID}. Refusing" >&2
-        echo "to download 16.5 GiB onto storage that does not survive the pod." >&2
+        echo "ERROR: measured $volume at a total size of ${size_kib} KiB, below" >&2
+        echo "the ${VOLUME_SIZE_FLOOR_KIB} KiB floor — a disk that small is the" >&2
+        echo "pod's own ephemeral storage, either its 20 GB volume disk or its" >&2
+        echo "30 GB container disk, not network volume ${RUNPOD_VOLUME_ID}." >&2
+        echo "Refusing to download 16.5 GiB onto storage that dies at teardown." >&2
         return 1
     fi
 
