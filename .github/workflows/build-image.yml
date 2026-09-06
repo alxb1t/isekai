@@ -13,7 +13,7 @@ on:
       tag:
         description: Image tag to publish — a release candidate, never `latest`
         required: true
-        default: v0.9-rc
+        default: v0.11-rc
 
 jobs:
   build:
@@ -22,6 +22,35 @@ jobs:
       contents: read
       packages: write
     steps:
+      # The header above asserts a protection the workflow did not enforce: a
+      # `workflow_dispatch` string went straight into `tags`, so a manual run
+      # naming `latest` clobbered the released image, and a newline in the input
+      # would have been honoured as a second tag by the action's newline-separated
+      # `tags` field. Validate before use, and let the build step read a step
+      # output so the raw input is never interpolated into `tags` at all.
+      - name: Resolve and validate the image tag
+        id: tag
+        env:
+          EVENT: ${{ github.event_name }}
+          REQUESTED: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "workflow_dispatch" ]; then
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$REQUESTED" = "latest" ]; then
+            echo "::error::'latest' is the released image; only a push to main may claim it."
+            exit 1
+          fi
+          case "$REQUESTED" in
+            '' | *[!A-Za-z0-9._-]*)
+              echo "::error::tag must match ^[A-Za-z0-9._-]+\$"
+              exit 1
+              ;;
+          esac
+          echo "tag=$REQUESTED" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
 
       - uses: docker/login-action@v3
@@ -34,4 +63,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/alxb1t/isekai:${{ inputs.tag || 'latest' }}
+          tags: ghcr.io/alxb1t/isekai:${{ steps.tag.outputs.tag }}

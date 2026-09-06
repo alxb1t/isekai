@@ -6,7 +6,7 @@
 - [x] 2 — Pin ComfyUI's core to the commit `:v0.10-rc` was built from
 - [x] 3 — The provisioning guards move from the suite into the module
 - [x] 4 — `workflow.py`: three stated ceilings
-- [ ] 5 — CI enforces the `latest` protection it documents
+- [x] 5 — CI enforces the `latest` protection it documents
 - [ ] 6 — Publish `:v0.11-rc`, then ⚠️ **GPU · HALT** — the smoke test and the loader probe
 - [ ] 7 — The PNG `eXIf` question, answered by phase 6's probe
 - [ ] 8 — The trust root: WAI's digest is derived, not transcribed

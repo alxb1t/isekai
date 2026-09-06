@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **CI enforces the `latest` protection its own header comment claims.** `build-image.yml` asserted
+  that a manual run "can never clobber the image a rollback would reach for" while interpolating an
+  unvalidated `workflow_dispatch` string straight into `tags` — so a dispatch naming `latest` did
+  exactly that, and a newline in the input would have been honoured as a second tag by
+  `docker/build-push-action`'s newline-separated `tags` field, which a `gh workflow run` or a REST
+  dispatch can supply. A first step now fails unless the input matches `^[A-Za-z0-9._-]+$` and is not
+  `latest`, and assigns the validated value to a step output the build step reads, so the raw input
+  is never interpolated into `tags` at all. The dispatch default, still `v0.9-rc` two versions on,
+  now names `v0.11-rc`.
 - **Three stated ceilings on measuring a photo, each a refusal rather than a clamp.** The short-side
   rule bounds one axis and says nothing about the other, and a header field was an unverified number
   until something bounded it. The computed target's **long side** is capped at 4096 — 4:1 at a 1024
