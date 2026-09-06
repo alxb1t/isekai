@@ -193,12 +193,53 @@ Tracked builder script, digests recorded, pixels not committed. This is already 
 previous one wrote down. Residual risk accepted and stated: if the source photographs are lost, the baseline
 becomes unreproducible and the labels are the only surviving artifact.
 
-### D16 — Licences are read and recorded before code, and no ambiguous model is the sole carrier of an axis.
+### D16 — Every model's licence is read and recorded; non-commercial is a recorded deviation, copyleft is not.
 
-StyleID's project page and its model card disagree (CC BY-SA 4.0 versus non-commercial research). That
-conflict is not ours to resolve, so it is carried as a **recorded deviation**, in the manner of the tile
-ControlNet's animation disclaimer — with the hard rule that a model under a contradictory licence may not be
-the only thing carrying an axis. StyleID therefore ships beside ArcFace or not at all.
+Read on 2026-09-06, before this change was scoped, because a licence that forbids the use should kill a model
+before an axis is built on it.
+
+**The conflict this change was cut believing in does not exist.** StyleID's project page carries CC BY-SA 4.0
+on **the website**, which is academic-page boilerplate; the repository and the model card agree with each
+other — *"StyleID is released for non-commercial research use"*, plus *"Do not use FFHQ-derived data for
+biometric human recognition"*. That second clause governs the **dataset**, not the encoder, and this project
+runs the encoder over its own photographs; it is recorded because it is adjacent, not because it binds.
+
+What was found instead:
+
+| artifact | licence | reading |
+|---|---|---|
+| StyleID | non-commercial research | recorded deviation |
+| `segformer_b2_clothes` | NVIDIA Source Code License — non-commercial, inherited from SegFormer | recorded deviation |
+| `glintr100` / antelopev2 | non-commercial research; InsightFace's *library* is MIT, its **weights are not** | recorded deviation, and **already shipping since v0.9** |
+| DWPose | unresolved — phase 1 finishes it | — |
+| `yolov8_animeface` | **AGPL-3.0**, via Ultralytics | **not a deviation.** See D19. |
+
+Every non-commercial entry is fine for the same reason and it is worth stating once: this project is a
+personal learning exercise, it distributes **no weights**, and `README.md` already says model weights are
+licensed separately by their publishers. Each is recorded in the manner of the tile ControlNet's animation
+disclaimer. The rule that survives from the original decision is the one that was always the load-bearing
+half: **a model whose licence is restrictive may not be the sole carrier of an axis** — StyleID ships beside
+ArcFace or not at all.
+
+If the project ever becomes commercial, every row but the last bites at once, and retroactively against a
+committed baseline. That is the standing cost of this decision and it is stated rather than discovered later.
+
+### D19 — Copyleft is a different problem from non-commercial, and it is solved by not linking.
+
+`yolov8_animeface` is **AGPL-3.0**. AGPL does not restrict use; it restricts *distribution*, and it is
+copyleft. This repository is public and Apache-2.0 (`LICENSE`, `README.md`). Importing the `ultralytics`
+package into `evaluate.py` would combine an Apache-2.0 work with AGPL code and, on the standard reading,
+force the combined work to AGPL. Every other licence here is safe precisely because no weights are
+distributed; this one is not, because code *is*.
+
+**The detector is loaded through `onnxruntime`, and the `ultralytics` package is never imported and never
+enters the `[eval]` extra.** `onnxruntime` is MIT and is already in the image (`Dockerfile:45`). Loading
+weights is not linking AGPL code.
+
+*Alternatives:* relicense the repository AGPL — rejected, it would relicense a project over one detector.
+Drop the anime-face detector and guard on landmarks alone — held in reserve; D9 already measures both
+methods, so if the ONNX route does not work the landmark method is the guard and nothing is lost but a
+comparison.
 
 ### D17 — The release criterion is that the correlation was computed, never that it was good.
 
@@ -244,9 +285,15 @@ repository spent a whole version (`0009-pinned-provisioning`) replacing.
   the wrong subjects, so a subject-specific gap could still survive to the session.
 - **The `[eval]` stack is multi-gigabyte** → D12 keeps it out of CI entirely; the cost falls on the operator's
   machine once.
-- **A licence forbids a model outright** → phase 1 is before any code for exactly this reason; the
-  axis is re-planned rather than written and then torn out. If StyleID falls, D16's rule means the face
-  axis reports ArcFace as a falsifier only, and the version's finding narrows rather than disappears.
+- **A licence forbids a model outright** → checked before this change was scoped (D16); none does. DWPose is
+  the one entry still open and phase 1 closes it. If it were to fall, D9 already measures the guard two ways
+  and the pose axis reports its own absence rather than a zero.
+- **The AGPL constraint is violated by an innocent import** → `ultralytics` is a one-line convenience and
+  exactly the thing an implementer reaches for. Phase 4 asserts it is absent from the extra and from the
+  import graph, so the violation is a red test rather than a licence review nobody runs.
+- **This project becomes commercial later** → four of the five artifacts are non-commercial-research, and the
+  breach would be retroactive against a committed baseline. Stated in D16; no mitigation is available beyond
+  knowing it.
 - **`-S` may not work inside a uv venv** → D12 names two fallbacks and defers the choice to the phase that
   writes the test, which is the only place it can be verified.
 

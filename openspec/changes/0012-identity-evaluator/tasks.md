@@ -59,20 +59,27 @@ each and says what it is waiting for; none of the three may be simulated, sample
 The one phase that can kill a model before a line is written against it (design.md D16, D18). No
 scorer code is written here.
 
-**Read and record each licence**, in a tracked note beside the manifest, with the URL and the date it
-was read:
+**Transcribe the licence findings** into a tracked note beside the manifest, with each URL and the date it
+was read. **They were read on 2026-09-06 and are recorded in design.md D16** — this phase transcribes them
+into the repository, closes the one entry left open, and verifies the constraint they imply. It does not
+re-litigate them.
 
-- **StyleID** — its project page and its model card disagree (CC BY-SA 4.0 versus non-commercial
-  research). Record both readings verbatim rather than picking one. The conflict is not ours to
-  resolve, so it is carried as a **recorded deviation**, in the manner of the tile ControlNet's
-  animation disclaimer — under the hard rule that a model with a contradictory licence may not be the
-  **sole carrier of an axis**. StyleID therefore ships beside ArcFace or not at all.
-- **`segformer_b2_clothes`**, **`yolov8_animeface`**, and the perceptual metric if one is added later.
-- **DWPose and `glintr100`** are already in `scripts/models.json` and already carry pins; record their
-  licences too, because the pod manifest never had to state them and the scorer's does.
-
-**If a licence forbids the use outright, the model is dropped here** and the axis it carried is
-re-planned before phase 4 writes any code against it. That is the phase's whole point.
+- **The conflict this change was cut believing in does not exist.** StyleID's CC BY-SA 4.0 is on **the
+  website**; the repository and the model card agree — non-commercial research use, plus *"Do not use
+  FFHQ-derived data for biometric human recognition"*, which governs the dataset rather than the encoder.
+  Record both, and record that the second clause does not bind this use.
+- **Four artifacts are non-commercial research**: StyleID, `segformer_b2_clothes` (NVIDIA Source Code
+  License, inherited from SegFormer), and `glintr100`/antelopev2 (InsightFace's library is MIT; its
+  **weights are not** — a restriction this project has been shipping since v0.9). Each is a **recorded
+  deviation**, in the manner of the tile ControlNet's animation disclaimer. Record also that all four bite
+  at once, retroactively, if this project ever becomes commercial.
+- **`yolov8_animeface` is AGPL-3.0** and is a different problem — see phase 4 and design.md D19. Record the
+  finding and the constraint here; the test that enforces it lives with the code.
+- **DWPose is the one entry still open.** Resolve its licence and record it. If it forbids the use, halt and
+  say so: D9 already measures the guard two ways, and the pose axis would report its own absence rather than
+  a zero.
+- The rule that survives: **a model whose licence is restrictive may not be the sole carrier of an axis.**
+  StyleID ships beside ArcFace or not at all.
 
 **Pin every eval artifact** in `scripts/eval_models.json` — a **sibling** of `scripts/models.json`,
 never merged into it: that file is the pinned manifest of what **the graph** needs on the pod, and
@@ -87,8 +94,8 @@ SHA-256, a byte count, and mirrors where they exist.
 - The scorer verifies each artifact's digest when it loads it and **refuses on a mismatch**, which is
   what makes the pin a check rather than a note.
 
-**Verify:** every licence recorded with its URL and read-date, including the StyleID conflict quoted
-from both sources; `scripts/eval_models.json` present, every entry carrying a pinned URL and a
+**Verify:** every licence recorded with its URL and read-date, including StyleID's website-versus-model-card
+distinction quoted from both sources and DWPose's now resolved; `scripts/eval_models.json` present, every entry carrying a pinned URL and a
 SHA-256, and the DWPose and `glintr100` entries **byte-identical** to `scripts/models.json`'s; a test
 bound to `evaluation:pinned-artifacts:digest-mismatch-is-refused` and
 `:recognizer-matches-the-generators-pin`; `make gate` green. **Halt and say so** if any licence
@@ -155,6 +162,12 @@ A second entry point beside `convert.py`, never on its import graph (design.md D
   and counted; hair — CIEDE2000 dominant-colour distance and mask-area ratio; and the guard.
 - **The guard implements both methods** — box IoU and landmark-centroid alignment. Which one is
   authoritative is decided in phase 8, not here (design.md D9).
+- **The anime-face detector is loaded through `onnxruntime`. The `ultralytics` package is never
+  imported and never enters the `[eval]` extra** (design.md D19). `yolov8_animeface` is **AGPL-3.0**,
+  this repository is public and Apache-2.0, and importing `ultralytics` would combine the two and force
+  the whole work to AGPL. Every other model here is safe because no weights are distributed; this one
+  is not, because code is. `onnxruntime` is MIT and is already in the image. A test asserts the absence
+  — `spec_exempt`, structural — because a licence review nobody runs is not a control.
 - **Absence is its own field.** `face_detected: false` is never a low score.
 - **Cross-base** refuses the embedding axes per axis, with the reason in the record, and still reports
   colour, area and PCK.
@@ -168,8 +181,9 @@ A second entry point beside `convert.py`, never on its import graph (design.md D
   why.**
 
 **Verify:** `make gate` green with the extra absent; `uv run --extra eval pytest` green with it
-present; tests bound to every `evaluation:` scenario except the `pinned-artifacts:` ones (phase 1) and
-the `labels:` ones (phase 9).
+present; `ultralytics` absent from `pyproject.toml` and from the scorer's import graph, asserted by a
+test; tests bound to every `evaluation:` scenario except the `pinned-artifacts:` ones (phase 1) and the
+`labels:` ones (phase 9).
 
 ### 5 — Prove the scorer on the renders already on disk, before any money is spent
 

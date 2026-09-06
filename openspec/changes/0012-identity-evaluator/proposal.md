@@ -34,8 +34,11 @@ the version's finding is a correlation, not a score.**
 - **`scripts/eval_models.json`** — a pinned, checksummed manifest of every model the scorer loads, a
   **sibling** of `scripts/models.json` rather than an addition to it: that file is what the pod
   provisions the *graph* from. The recognizer the scorer reports as a sanity channel reuses the
-  graph's own `glintr100` pin byte for byte. Licences are read and recorded **before any scorer code
-  is written**, so a model a licence forbids is dropped before an axis is built on it.
+  graph's own `glintr100` pin byte for byte. Every licence was read before this change was
+  scoped and none forbids the use: four artifacts are non-commercial research and are carried as
+  recorded deviations, one — `yolov8_animeface`, **AGPL-3.0** — is a copyleft problem rather than a
+  usage one and is solved by loading it through `onnxruntime` and never importing `ultralytics` into an
+  Apache-2.0 public repository.
 - **`evaluate.py`** — a second entry point, never on `convert.py`'s import graph, behind an optional
   `isekai[eval]` extra. Four axes over a shared canvas: face (StyleID, with ArcFace as a sanity
   channel), pose (PCK), hair colour (CIEDE2000 + mask area), and a face-location guard that refuses the
