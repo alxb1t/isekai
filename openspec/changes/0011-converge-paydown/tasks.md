@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — `start.sh` and `up.sh`: the namespace block, the volume guard, the bounded hold
-- [ ] 2 — Pin ComfyUI's core to the commit `:v0.10-rc` was built from
+- [x] 2 — Pin ComfyUI's core to the commit `:v0.10-rc` was built from
 - [ ] 3 — The provisioning guards move from the suite into the module
 - [ ] 4 — `workflow.py`: three stated ceilings
 - [ ] 5 — CI enforces the `latest` protection it documents

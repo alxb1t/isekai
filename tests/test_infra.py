@@ -327,3 +327,14 @@ def test_the_entrypoint_refuses_before_preparing_the_namespace(start_sh: str) ->
     # disk at the same path when no network volume is attached, so the path is a
     # mountpoint either way.
     assert "df -k --output=avail" in "\n".join(body)
+
+
+@pytest.mark.spec_exempt(
+    "structural: a clone with no checkout is not a pin, and this holds all three"
+)
+def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> None:
+    clones = re.findall(r"git clone \S+ \\?\s*(\S+)", dockerfile)
+    checkouts = re.findall(r"git checkout ([0-9a-f]{40})\b", dockerfile)
+    # ComfyUI's core and the two custom-node packs, each on a full commit sha
+    assert len(clones) == 3
+    assert len(checkouts) == 3

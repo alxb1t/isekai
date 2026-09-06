@@ -12,8 +12,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
-# ComfyUI source
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI
+# ComfyUI source — pinned to the commit `:v0.10-rc` was built from, recovered from
+# the image itself (`git -C /opt/ComfyUI rev-parse HEAD`). The pin is a record of
+# what already ran: these are the renders v0.10 shipped. Upstream head would have
+# imported an untested core into a repair version and made "does the core alone
+# shift output at a fixed seed?" a live question (design.md D3). Bumping it forward
+# is a separate, deliberate act that must carry its own render comparison.
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI \
+    && cd /opt/ComfyUI \
+    && git checkout 250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a
 WORKDIR /opt/ComfyUI
 
 # Isolated venv

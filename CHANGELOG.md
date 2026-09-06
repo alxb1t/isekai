@@ -45,6 +45,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **ComfyUI's core is pinned to a commit — the last unpinned link in the change whose thesis was
+  pinning.** `Dockerfile` cloned the default branch head while both custom-node packs beside it were
+  already pinned, so an image rebuilt a month later ran a different inference engine with no record
+  that it had. The pin is `250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a`, **recovered from
+  `ghcr.io/alxb1t/isekai:v0.10-rc` itself** rather than taken from upstream today: it is a record of
+  what already ran, so the core is not a new variable. Bumping it forward is a separate, deliberate
+  act that must carry a render comparison at a fixed seed.
 - **The reachability hold covers preparing the namespace, not only fetching into it.** Creating the
   namespace and relinking the models root now sit inside the same guarded step as the download, so a
   failure there reports and holds instead of terminating the entrypoint — which under `set -e` took
@@ -57,6 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Notes
 
+- **Pinning the core moves the floating link rather than removing it, and this change does not claim
+  otherwise.** `Dockerfile` still runs `uv pip install -r requirements.txt` against ComfyUI's own
+  requirement file and against the preprocessor pack's, and neither is version-locked: both resolve
+  at build time, so after this pin the core is fixed and its dependency closure is not, and two
+  builds of an identical tracked `Dockerfile` still differ. **The image is not reproducible.** Locking
+  both closures needs a new tracked artifact, a derive-and-verify step and a full rebuild to
+  validate — its own change, and named here as the next pinning target.
 - The comment above the models namespace no longer calls the tree it replaces empty. The ComfyUI
   clone tracks `models/configs/*.yaml`, so it is not; the delete drops them **knowingly**, because
   the graph uses `CheckpointLoaderSimple`, which takes no config. Copying them in would add a write
