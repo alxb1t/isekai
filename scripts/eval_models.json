@@ -1,0 +1,109 @@
+{
+  "pinned": "2026-09-06",
+  "publishers": [
+    "kwanY",
+    "mattmdjaga",
+    "deepghs"
+  ],
+  "entries": [
+    {
+      "dest": "insightface/models/antelopev2/glintr100.onnx",
+      "sha256": "4ab1d6435d639628a6f3e5008dd4f929edf4c4124b1a7169e1048f9fef534cdf",
+      "bytes": 260665334,
+      "sources": [
+        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/ba0c3e10f4548361eb9a63265d87ce1140ab5a05/glintr100.onnx",
+        "https://huggingface.co/MonsterMMORPG/InstantID_Models/resolve/397cafa6d8310e96e302e96528c20a4c92a884f2/models/antelopev2/glintr100.onnx"
+      ]
+    },
+    {
+      "dest": "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx",
+      "sha256": "7860ae79de6c89a3c1eb72ae9a2756c0ccfbe04b7791bb5880afabd97855a411",
+      "bytes": 216746733,
+      "sources": [
+        "https://huggingface.co/yzd-v/DWPose/resolve/1a7144101628d69ee7a3768d1ee3a094070dc388/yolox_l.onnx",
+        "https://huggingface.co/hr16/yolox-onnx/resolve/a124b32c3b7c5cebda1c7cd96178f0f9d2050125/yolox_l.onnx"
+      ]
+    },
+    {
+      "dest": "annotator_ckpts/hr16/DWPose-TorchScript-BatchSize5/dw-ll_ucoco_384_bs5.torchscript.pt",
+      "sha256": "d86a0b2b59fddc0901a7076e9f59c9f8602602133ed72511c693fd11eea23d91",
+      "bytes": 135059124,
+      "sources": [
+        "https://huggingface.co/hr16/DWPose-TorchScript-BatchSize5/resolve/359d662a9b33b73f6d0f21732baf8845f17bb4be/dw-ll_ucoco_384_bs5.torchscript.pt",
+        "https://huggingface.co/Pictorial/DWPose-TorchScript-BatchSize5/resolve/31098820c4d5d126b92e28517380ea1b088f8d53/dw-ll_ucoco_384_bs5.torchscript.pt"
+      ]
+    },
+    {
+      "dest": "styleid/model.safetensors",
+      "sha256": "e4f3e264f733f585228880b87e1a22e96fd7fee5731ac3bf6ca37a824642d91c",
+      "bytes": 1710537716,
+      "sources": [
+        "https://huggingface.co/kwanY/styleid/resolve/1967c354f339a636e5b3e16ecab3d0075aa27ab1/model.safetensors"
+      ]
+    },
+    {
+      "dest": "styleid/config.json",
+      "sha256": "20e32dff040fb5ee92ac4822b3e160df65fc1fff0f0f22f3bace7b835717702b",
+      "bytes": 1166,
+      "sources": [
+        "https://huggingface.co/kwanY/styleid/resolve/1967c354f339a636e5b3e16ecab3d0075aa27ab1/config.json"
+      ]
+    },
+    {
+      "dest": "styleid/preprocessor_config.json",
+      "sha256": "8fb547403656e9019b0982d2310b045bef39b9d2a811a0c98756e52d48e25db6",
+      "bytes": 504,
+      "sources": [
+        "https://huggingface.co/kwanY/styleid/resolve/1967c354f339a636e5b3e16ecab3d0075aa27ab1/preprocessor_config.json"
+      ]
+    },
+    {
+      "dest": "segformer_b2_clothes/model.onnx",
+      "sha256": "a93a8dac171b5c1fcc53632a8bfc180bfd9759ea69a3e207451bb07f76add54f",
+      "bytes": 110039290,
+      "sources": [
+        "https://huggingface.co/mattmdjaga/segformer_b2_clothes/resolve/584abc1e1d260e23c0fc627c5217a09b2b461046/onnx/model.onnx"
+      ]
+    },
+    {
+      "dest": "segformer_b2_clothes/config.json",
+      "sha256": "936129706296da80364299e721f506453e492f8348cb54f400e9d769afc90282",
+      "bytes": 1717,
+      "sources": [
+        "https://huggingface.co/mattmdjaga/segformer_b2_clothes/resolve/584abc1e1d260e23c0fc627c5217a09b2b461046/onnx/config.json"
+      ]
+    },
+    {
+      "dest": "segformer_b2_clothes/preprocessor_config.json",
+      "sha256": "b2809158244ec204c8a031976da7851775b53a50028b8a93000ed906184c505b",
+      "bytes": 431,
+      "sources": [
+        "https://huggingface.co/mattmdjaga/segformer_b2_clothes/resolve/584abc1e1d260e23c0fc627c5217a09b2b461046/onnx/preprocessor_config.json"
+      ]
+    },
+    {
+      "dest": "anime_face_detection/model.onnx",
+      "sha256": "403b5bc93b6ff789b7d183418df4a1364049bac00c24acd927604a7ff6891483",
+      "bytes": 44583229,
+      "sources": [
+        "https://huggingface.co/deepghs/anime_face_detection/resolve/784dc4c0bb692351ddcdbe6131a050b17d3025d5/face_detect_v1.4_s/model.onnx"
+      ]
+    },
+    {
+      "dest": "anime_face_detection/labels.json",
+      "sha256": "de28a7114bd98e3847dc12713b7f10c3e7ec2643fde853cb2cf220a94aa0f63c",
+      "bytes": 14,
+      "sources": [
+        "https://huggingface.co/deepghs/anime_face_detection/resolve/784dc4c0bb692351ddcdbe6131a050b17d3025d5/face_detect_v1.4_s/labels.json"
+      ]
+    },
+    {
+      "dest": "anime_face_detection/threshold.json",
+      "sha256": "34bdd0e8eaefbf8ba3d882f48711e66a9b640d05ad7f9ff38cfdbd413966b962",
+      "bytes": 48,
+      "sources": [
+        "https://huggingface.co/deepghs/anime_face_detection/resolve/784dc4c0bb692351ddcdbe6131a050b17d3025d5/face_detect_v1.4_s/threshold.json"
+      ]
+    }
+  ]
+}

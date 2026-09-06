@@ -241,6 +241,24 @@ Drop the anime-face detector and guard on landmarks alone — held in reserve; D
 methods, so if the ONNX route does not work the landmark method is the guard and nothing is lost but a
 comparison.
 
+**Amended 2026-09-06, in phase 1, on a fact this decision assumed and got wrong.**
+`Fuyucchi/yolov8_animeface` publishes **no ONNX export**: its Hugging Face tree at
+`b0841ce930453c0f23ceb8086d6554c17de5fe4a` and its sole GitHub release both carry only
+`yolov8x6_animeface.pt`, under `library_name: ultralytics`. The mechanism above therefore had no
+artifact to point at. Exporting the `.pt` ourselves was rejected — it needs `ultralytics` installed and
+yields an artifact with no upstream revision to pin, which breaks D18. The reserve above was available.
+Resolved instead in favour of **`deepghs/anime_face_detection`**, `face_detect_v1.4_s`, revision
+`784dc4c0bb692351ddcdbe6131a050b17d3025d5`, which is a published ONNX under **MIT**.
+
+This changes the artifact, not the reasoning. The mechanism is unchanged and still enforced — an ONNX
+file through `onnxruntime`, `ultralytics` absent from the extra and from the import graph, asserted by
+a test — and D9's two-way guard comparison survives intact, where the reserve would have collapsed it
+to one method. The AGPL problem is dissolved rather than routed around. Residual, recorded in
+`scripts/eval_licences.md` rather than relied on silently: deepghs's MIT tag is their own declaration
+over weights trained with `ultralytics` tooling, and Ultralytics asserts AGPL over such weights — a
+claim about *weights*, which this repository distributes none of and links no code from, which is the
+same reading this decision already rests on.
+
 ### D17 — The release criterion is that the correlation was computed, never that it was good.
 
 Written into `tasks.md` before the labelling happens. If the numbers do not track the operator's eye, that is

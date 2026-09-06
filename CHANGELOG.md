@@ -25,6 +25,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Every model the evaluator will load is pinned, before a line of scorer code exists.**
+  `scripts/eval_models.json` — twelve entries, each with an immutable-revision URL, a SHA-256 and a
+  byte count — is a **sibling** of `scripts/models.json` and never a section of it: that file is what
+  the pod provisions **the graph** from, and these run locally on the operator's machine. It is
+  *derived*, not transcribed, by `scripts/derive_eval_manifest.py`, under the same rule its sibling is
+  under: re-running it must leave the file byte-identical.
+- **Three destinations are copied out of the graph's manifest byte for byte** —
+  `insightface/models/antelopev2/glintr100.onnx` and the two DWPose artifacts. For `glintr100` that is
+  load-bearing rather than tidy: the scorer's ArcFace has to be the artifact the generator injects
+  identity *with*, or the whole claim about self-grading would be a claim about two different models.
+  `shared_entries_that_differ` compares whole entries, not just digests, so the two files cannot drift
+  apart unnoticed — a matching digest beside diverged sources would mean the same bytes arriving from
+  different places, which is exactly the drift the copy exists to prevent.
+- **`isekai/eval_models.py`**, the gate every scorer axis will reach its weights through. It refuses
+  three ways: an artifact the manifest does not declare, an entry whose sources are not pinned
+  revisions, and bytes on disk that do not hash to the pin — the last naming the file, the expected
+  digest and the computed one, because a human reading a mismatch is deciding whether a pin is stale
+  or a file has been swapped, and two of the three do not answer that. The pin check runs even though
+  nothing is fetched: an entry pointing at `resolve/main/` says nothing about which bytes those were.
+  Nothing here knows about an axis, and it stays off `convert.py`'s import graph.
+
+### Notes
+
+- **Every licence was read on 2026-09-06 and recorded in `scripts/eval_licences.md`**, each with the
+  URL it was read at and quoted verbatim from the source. **None forbids this use.**
+- **DWPose was the one entry left open, and it closes clean: Apache-2.0.** So the pose axis is
+  unthreatened on licence grounds, and the contingency where it would have reported its own absence
+  rather than a zero is not needed.
+- **The conflict this version was cut believing in does not exist.** StyleID's CC BY-SA 4.0 is on
+  **the website** — footer boilerplate from the academic project-page template it is built on. The
+  repository and the model card agree with each other: *"StyleID is released for non-commercial
+  research use."* The adjacent clause, *"Do not use FFHQ-derived data for biometric human
+  recognition"*, governs the **dataset** and not the encoder; it is recorded because it is adjacent,
+  not because it binds.
+- **Four artifacts are non-commercial research and are carried as recorded deviations** — StyleID,
+  `segformer_b2_clothes` (NVIDIA Source Code License, inherited from SegFormer), and `glintr100`, whose
+  restriction this project has been shipping since v0.9 because InsightFace's library is MIT and its
+  weights are not. **Stated rather than discovered later: if this project ever became commercial, all
+  four would bite at once, and retroactively against a baseline already in git.** There is no
+  mitigation beyond knowing it. The rule that survives is the load-bearing half — **a model whose
+  licence is restrictive may not be the sole carrier of an axis**; StyleID ships beside ArcFace or not
+  at all.
+- **The AGPL detector was replaced, because the artifact the design named does not exist.** The plan
+  was to load `Fuyucchi/yolov8_animeface` (AGPL-3.0) through `onnxruntime` and never import
+  `ultralytics`, so that no AGPL *code* is combined with this Apache-2.0 public repository. Checked on
+  2026-09-06: that repository publishes **no ONNX at all** — its Hugging Face tree and its sole GitHub
+  release both carry only `yolov8x6_animeface.pt` — so the mechanism had nothing to point at.
+  Exporting the `.pt` ourselves was rejected: it needs `ultralytics` installed and yields an artifact
+  with no upstream revision to pin. Pinned instead: **`deepghs/anime_face_detection`,
+  `face_detect_v1.4_s`, MIT** — a published ONNX, which **dissolves** the copyleft problem instead of
+  routing around it, and which keeps the guard measurable both ways rather than collapsing it to one
+  method. Recorded residual, not relied on silently: deepghs's MIT tag is their own declaration over
+  weights trained with `ultralytics` tooling, and Ultralytics asserts AGPL over such weights — an
+  assertion about *weights*, which this repository distributes none of and links no code from.
+- **No scorer code, no axis and no render change.** This phase pins artifacts and records licences;
+  `workflows/pipeline.json`, `scripts/models.json` and the `Dockerfile` are untouched, no image is
+  rebuilt and no volume is re-provisioned.
+
 ## [0.11.0] - 2026-09-06
 
 ### Fixed

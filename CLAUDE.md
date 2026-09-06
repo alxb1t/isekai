@@ -146,7 +146,13 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   model artifact the graph needs and the source of truth for what the stack *is*;
   `download_models.sh`, the thin driver that provisions it, run *on the pod*; and
   `derive_manifest.py`, which re-derives every revision and digest — the manifest is its output, so
-  a re-run must leave the file byte-identical. **`Dockerfile`** — the image that *is* the pod.
+  a re-run must leave the file byte-identical. Beside them and never merged into them:
+  `eval_models.json`, the same thing for the artifacts the **evaluator** loads locally, derived the
+  same way by `derive_eval_manifest.py` and under the same byte-identical rule; and
+  `eval_licences.md`, where each of those artifacts' licences is recorded with the URL and the date
+  it was read. Three destinations appear in **both** manifests, byte for byte — `glintr100` and the
+  two DWPose artifacts — and a test fails if the two files ever disagree about them.
+  **`Dockerfile`** — the image that *is* the pod.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one
