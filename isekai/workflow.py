@@ -21,6 +21,22 @@ PIPELINE_PATH = Path(__file__).parent.parent / "workflows" / "pipeline.json"
 WORKING_SCALE = 1024
 DIMENSION_STEP = 64
 
+# Three stated ceilings (design.md D8). A short-side rule places no bound on the
+# other axis, and a header field is an unverified number until something bounds
+# it. Each refuses rather than clamping: a clamped target no longer preserves the
+# aspect ratio, and would squash the photo the way the orientation rule exists to
+# prevent.
+#
+#   4096 is 4:1 at a 1024 short side -- past any real photo, and 1024x4096 is
+#   already a heavy SDXL allocation.
+#   65535 is what JPEG's two-byte frame field already enforces, so both codecs
+#   refuse the same input.
+#   4 MiB is generous for a camera's EXIF, thumbnail, ICC and XMP together --
+#   a few hundred KiB -- without being unbounded.
+MAX_TARGET_LONG_SIDE = 4096
+MAX_HEADER_DIMENSION = 65535
+MAX_HEADER_BYTES = 4 * 1024 * 1024
+
 # The SOFn markers that carry a JPEG frame's dimensions. The gaps are deliberate:
 # 0xC4, 0xC8 and 0xCC are DHT, JPG and DAC, which are not frame headers and whose
 # payloads would decode to nonsense sizes if read as one.
@@ -42,6 +58,10 @@ _EXIF_ORIENTATION_TAG = 0x0112
 _EXIF_TRANSPOSING_ORIENTATIONS = frozenset({5, 6, 7, 8})
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+
+
+class _HeaderTooDeep(Exception):
+    """The marker walk passed `MAX_HEADER_BYTES` without reaching a frame header."""
 
 
 def find_nodes(workflow: Workflow, *, class_type: str) -> list[str]:
@@ -134,6 +154,10 @@ def _jpeg_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
 
     orientation = 1
     while True:
+        # Bounded by a stated number rather than by the file, which is not a
+        # bound: a 100 MB file walked to its end takes seconds to refuse.
+        if handle.tell() > MAX_HEADER_BYTES:
+            raise _HeaderTooDeep
         byte = handle.read(1)
         if byte != b"\xff":
             return None
@@ -187,6 +211,11 @@ def image_dimensions(path: str) -> tuple[int, int]:
     An unreadable or truncated header stops the run naming the file. There is no
     default size, because a silently wrong resolution is a wrong render rather
     than an error (design.md D2).
+
+    A header that declares a dimension past `MAX_HEADER_DIMENSION`, and a marker
+    walk that passes `MAX_HEADER_BYTES` without reaching a frame header, are each
+    refused the same way and for the same reason: the header states a number, and
+    a number nothing bounds is not a measurement.
     """
     try:
         with open(path, "rb") as handle:
@@ -196,9 +225,20 @@ def image_dimensions(path: str) -> tuple[int, int]:
             size = _png_dimensions(handle.read(24)) or _jpeg_dimensions(handle)
     except OSError as e:
         sys.exit(f"{path}: cannot be read ({e.strerror})")
+    except _HeaderTooDeep:
+        sys.exit(
+            f"{path}: no frame header in the first {MAX_HEADER_BYTES} bytes; "
+            f"refusing to walk further"
+        )
 
     if size is None or 0 in size:
         sys.exit(f"{path}: cannot read the image dimensions from its header")
+
+    if max(size) > MAX_HEADER_DIMENSION:
+        sys.exit(
+            f"{path}: header declares {size[0]}x{size[1]}, past the "
+            f"{MAX_HEADER_DIMENSION} limit either dimension may state"
+        )
 
     return size
 
@@ -238,5 +278,11 @@ def inject(workflow: Workflow, image_name: str, image_path: str) -> None:
 
     scale_id = find_node(workflow, class_type="ImageScale")
     width, height = working_resolution(*image_dimensions(image_path))
+    if max(width, height) > MAX_TARGET_LONG_SIDE:
+        sys.exit(
+            f"{image_path}: a {width}x{height} target is past the "
+            f"{MAX_TARGET_LONG_SIDE} limit on the long side; the short-side rule "
+            f"bounds one axis and this photo's aspect ratio is extreme"
+        )
     workflow[scale_id]["inputs"]["width"] = width
     workflow[scale_id]["inputs"]["height"] = height

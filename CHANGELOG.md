@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Three stated ceilings on measuring a photo, each a refusal rather than a clamp.** The short-side
+  rule bounds one axis and says nothing about the other, and a header field was an unverified number
+  until something bounded it. The computed target's **long side** is capped at 4096 — 4:1 at a 1024
+  short side, past any real photo, and 1024×4096 is already a heavy SDXL allocation. A
+  **header-declared dimension** is capped at 65535, which JPEG's own two-byte frame field already
+  enforces, so both codecs now refuse the same input. The **marker walk** stops after 4 MiB, so a
+  file whose frame header sits arbitrarily deep is refused rather than read to its end. Each names
+  the file and the limit. None clamps: a clamped target no longer preserves the aspect ratio, and
+  would squash the photo the way the orientation rule exists to prevent.
 - **A pod is refused before it is created if it was not told which network volume to use.**
   `infra/up.sh` now checks `RUNPOD_VOLUME_ID` before the create call and passes it into the
   container, so the entrypoint is told which volume to expect rather than inferring it. The failure

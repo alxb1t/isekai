@@ -8,6 +8,9 @@ from isekai import cli
 from isekai.comfy_types import Workflow
 from isekai.workflow import (
     DIMENSION_STEP,
+    MAX_HEADER_BYTES,
+    MAX_HEADER_DIMENSION,
+    MAX_TARGET_LONG_SIDE,
     WORKING_SCALE,
     find_node,
     find_nodes,
@@ -443,3 +446,83 @@ def test_the_samplers_positive_input_reaches_the_encoder_through_the_stack(
     # later version deletes one, this number moves and the walk above still holds.
     assert hops == len(find_nodes(workflow, class_type="ControlNetApplyAdvanced"))
     assert hops == 3
+
+
+# Three stated ceilings. A short-side rule places no bound on the other axis, and
+# a header field is an unverified number until something bounds it (design.md D8).
+# Each refuses rather than clamping: a clamped target no longer preserves the
+# aspect ratio, and would squash the photo the way the orientation rule exists to
+# prevent.
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-extreme-aspect-ratio-is-refused"
+)
+def test_a_photo_whose_target_long_side_exceeds_the_ceiling_is_refused(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    # 1:8 at a 1024 short side computes to 8192 on the long axis — already a
+    # heavy SDXL allocation at 4096, and past any real photo.
+    path = _write(tmp_path, "panorama.png", png_bytes(1024, 8192))
+
+    with pytest.raises(SystemExit) as excinfo:
+        inject(workflow, image_name="face.png", image_path=path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_TARGET_LONG_SIDE) in message
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-extreme-aspect-ratio-is-refused"
+)
+def test_an_aspect_ratio_at_the_ceiling_is_still_rendered(
+    workflow: Workflow, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "wide.png", png_bytes(4096, 1024))
+    inject(workflow, image_name="face.png", image_path=path)
+
+    scale_id = find_node(workflow, class_type="ImageScale")
+    assert workflow[scale_id]["inputs"]["width"] == MAX_TARGET_LONG_SIDE
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused"
+)
+def test_a_header_dimension_past_the_ceiling_is_refused(tmp_path: Path) -> None:
+    # JPEG's own two-byte frame field enforces this already, so a PNG is the only
+    # codec that can declare it — and both refuse the same input.
+    path = _write(tmp_path, "absurd.png", png_bytes(70_000, 1_000))
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_HEADER_DIMENSION) in message
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused"
+)
+def test_a_header_dimension_at_the_ceiling_is_read(tmp_path: Path) -> None:
+    path = _write(tmp_path, "at-the-limit.png", png_bytes(MAX_HEADER_DIMENSION, 1_000))
+    assert image_dimensions(path) == (MAX_HEADER_DIMENSION, 1_000)
+
+
+@pytest.mark.spec(
+    "workflow-injection:working-resolution:an-unbounded-header-walk-is-refused"
+)
+def test_a_header_walk_past_the_byte_ceiling_is_refused(tmp_path: Path) -> None:
+    # The walk is bounded by the file, which is not a bound: a camera's EXIF,
+    # thumbnail, ICC and XMP together are a few hundred KiB, so a frame header
+    # this deep is a file being used to make the parser read the whole of it.
+    data = jpeg_with_header(4032, 3024, header_padding=MAX_HEADER_BYTES + 1024)
+    path = _write(tmp_path, "unbounded.jpg", data)
+
+    with pytest.raises(SystemExit) as excinfo:
+        image_dimensions(path)
+
+    message = str(excinfo.value)
+    assert path in message
+    assert str(MAX_HEADER_BYTES) in message
