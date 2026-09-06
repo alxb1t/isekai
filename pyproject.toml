@@ -85,11 +85,13 @@ ignore = ["D203", "D213"]
 # installation. Declaring it a source root here lets the type checker and the
 # suite see `derive_manifest` the way a human running it does. It widens where
 # real code is looked for; it suppresses no check.
-# `eval_backends.py` bridges to five packages the gate's environment deliberately
-# does NOT install, so `unresolved-import` there is the configuration working, not
-# a defect. Scoped to that one file, and to that one rule -- every other check
-# still applies to it, which is how the `invalid-return-type` on `OnnxSession.run`
-# was caught and fixed rather than suppressed.
+# Two files bridge to packages the gate's environment deliberately does NOT
+# install, so `unresolved-import` in them is the configuration working, not a
+# defect: `eval_backends.py`, the scorer's model boundary, and
+# `build_contact_sheets.py`, a labelling aid that needs Pillow to paste three
+# images side by side. Scoped to those files and to that one rule -- every other
+# check still applies, which is how the `invalid-return-type` on
+# `OnnxSession.run` was caught and fixed rather than suppressed.
 #
 # Scoped as an override rather than as per-line `ty: ignore` comments, because
 # those cannot be right in both environments: absent the extra they are load-
@@ -98,7 +100,7 @@ ignore = ["D203", "D213"]
 # installed, which is the property that matters -- `make gate` must not depend on
 # what the operator happens to have synced.
 [[tool.ty.overrides]]
-include = ["isekai/eval_backends.py"]
+include = ["isekai/eval_backends.py", "baseline/build_contact_sheets.py"]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

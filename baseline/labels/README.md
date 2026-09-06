@@ -19,6 +19,27 @@ revision away from carrying one.
 - **`s5` and `s6` are absent.** They are the refusal-path subjects; a subject whose axes are expected
   to refuse cannot calibrate anything.
 
+## The contact sheets
+
+`build_contact_sheets.py` writes one image per row — the reference photograph beside render **A** and
+render **B**, captioned with nothing but the pair id and the two letters:
+
+```
+uv run --extra eval python baseline/build_contact_sheets.py \
+    --sheet baseline/labels/sheet.csv --out outputs/labels
+```
+
+Forty judgements made by opening eighty files by hand is forty chances to compare the wrong pair, so
+this exists to remove that. **It reads only `sheet.csv`, which has no metric value in it, and never
+opens a scorer record — so it cannot leak one even by accident.** It also preserves the sheet's own
+randomised side order rather than sorting it: captioning the lower-numbered render as `A` every time
+would let a preference for `A` masquerade as a judgement.
+
+The reference is captioned by role rather than by filename, because naming the source file under the
+photograph and the render's file under the render is a difference the eye can use.
+
+The sheets land in `outputs/`, which is gitignored — a contact sheet is pixels twice over.
+
 ## How to fill it in
 
 Put `a`, `b`, or `tie` in the `choice` column of every row — **forty rows, none blank**. The question
