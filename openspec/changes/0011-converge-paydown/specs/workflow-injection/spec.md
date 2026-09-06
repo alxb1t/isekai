@@ -65,11 +65,15 @@ and a limit the operator cannot read is not a limit they can work around.
 #### Scenario: a rotated photo is measured as it will be loaded
 - **Key:** `workflow-injection:working-resolution:orientation-is-honoured`
 - **Layers:** unit
-- **WHEN** the photo records a rotation that transposes it
+- **WHEN** the photo records a rotation that transposes it, **in either supported codec**
 - **THEN** the dimensions derived are the transposed ones the loader will present
 - **AND** a photo recording no rotation, or one that only flips it, is measured as its header states,
   because the scale node scales to the exact target given rather than fitting to it — so a target
   computed against the untransposed size would squash the photo non-uniformly with nothing reporting it
+- **AND** the rule holds wherever the codec puts the tag, because the loader reads it from both and
+  the mismatch this prevents is a property of the loader rather than of the container: a rule applied
+  to one codec and not the other leaves the defect open in whichever codec the project actually feeds
+  it, while looking closed
 
 #### Scenario: a photo whose frame header sits behind large metadata is still read
 - **Key:** `workflow-injection:working-resolution:a-deep-header-is-still-read`

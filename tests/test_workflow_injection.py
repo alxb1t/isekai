@@ -18,7 +18,7 @@ from isekai.workflow import (
     inject,
     working_resolution,
 )
-from tests.images import jpeg_bytes, jpeg_with_header, png_bytes
+from tests.images import jpeg_bytes, jpeg_with_header, png_bytes, png_with_exif
 
 
 @pytest.mark.spec("workflow-injection:node-location:locates-by-class-type")
@@ -526,3 +526,52 @@ def test_a_header_walk_past_the_byte_ceiling_is_refused(tmp_path: Path) -> None:
     message = str(excinfo.value)
     assert path in message
     assert str(MAX_HEADER_BYTES) in message
+
+
+# The PNG half of the orientation rule. v0.10 closed the JPEG branch and left this
+# one open; the phase-6 loader probe measured the pod and found `LoadImage`
+# transposes a PNG carrying an `eXIf` chunk exactly as it transposes a tagged
+# JPEG -- and every input this project has ever rendered is a PNG.
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.parametrize("orientation", [5, 6, 7, 8])
+def test_a_rotated_png_reports_the_dimensions_the_loader_will_present(
+    orientation: int, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "rotated.png", png_with_exif(4032, 3024, orientation))
+    assert image_dimensions(path) == (3024, 4032)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.parametrize("orientation", [1, 2, 3, 4])
+def test_an_upright_png_orientation_leaves_the_header_dimensions_alone(
+    orientation: int, tmp_path: Path
+) -> None:
+    path = _write(tmp_path, "upright.png", png_with_exif(4032, 3024, orientation))
+    assert image_dimensions(path) == (4032, 3024)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+def test_a_png_with_no_exif_chunk_is_measured_as_its_header_states(
+    tmp_path: Path,
+) -> None:
+    path = _write(tmp_path, "plain.png", png_bytes(4032, 3024))
+    assert image_dimensions(path) == (4032, 3024)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+def test_the_exif_chunk_is_found_wherever_the_writer_put_it(tmp_path: Path) -> None:
+    # A writer may put `eXIf` anywhere before the pixel data, so a parser that
+    # looks only straight after IHDR would report the untransposed pair.
+    path = _write(tmp_path, "late.png", png_with_exif(4032, 3024, 6, chunks_before=5))
+    assert image_dimensions(path) == (3024, 4032)
+
+
+@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+def test_both_codecs_agree_on_the_same_rotation(tmp_path: Path) -> None:
+    # The mismatch this rule prevents is a property of the loader, not of the
+    # container: the phase-6 probe measured both and both transposed.
+    as_jpeg = _write(tmp_path, "r.jpg", jpeg_with_header(4032, 3024, orientation=6))
+    as_png = _write(tmp_path, "r.png", png_with_exif(4032, 3024, 6))
+    assert image_dimensions(as_jpeg) == image_dimensions(as_png) == (3024, 4032)

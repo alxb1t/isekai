@@ -59,6 +59,12 @@ _EXIF_TRANSPOSING_ORIENTATIONS = frozenset({5, 6, 7, 8})
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
+# PNG carries the same EXIF payload JPEG does, in an `eXIf` chunk holding the TIFF
+# stream raw -- the `Exif\x00\x00` marker is JPEG's container, not this one. The
+# walk stops at the pixel data, past which a writer may not put it.
+_PNG_EXIF_CHUNK = b"eXIf"
+_PNG_PIXEL_CHUNKS = frozenset({b"IDAT", b"IEND"})
+
 
 class _HeaderTooDeep(Exception):
     """The marker walk passed `MAX_HEADER_BYTES` without reaching a frame header."""
@@ -88,25 +94,67 @@ def find_node(workflow: Workflow, *, class_type: str) -> str:
     return matches[0]
 
 
-def _png_dimensions(data: bytes) -> tuple[int, int] | None:
-    """Return the width and height in a PNG's IHDR, or None if it is not readable."""
-    if len(data) < 24 or not data.startswith(_PNG_SIGNATURE) or data[12:16] != b"IHDR":
+def _png_dimensions(handle: BinaryIO) -> tuple[int, int] | None:
+    """Return the dimensions a PNG will be loaded at, or None if it is not one.
+
+    IHDR states the stored size; an `eXIf` chunk may then say the loader will
+    transpose it. Both are read, because the phase-6 loader probe measured the
+    pinned build and found `LoadImage` applies the orientation to a PNG exactly as
+    it applies it to a tagged JPEG -- and every input this project has ever
+    rendered is a PNG.
+
+    The chunk walk reads each chunk's header and seeks over its payload, so this
+    stays a header parse: a writer may put `eXIf` anywhere before the pixel data,
+    and looking only straight after IHDR would report the untransposed pair.
+    """
+    handle.seek(0)
+    header = handle.read(24)
+    if (
+        len(header) < 24
+        or not header.startswith(_PNG_SIGNATURE)
+        or header[12:16] != b"IHDR"
+    ):
         return None
-    width, height = struct.unpack(">II", data[16:24])
+    width, height = struct.unpack(">II", header[16:24])
+
+    handle.seek(len(_PNG_SIGNATURE))
+    while True:
+        if handle.tell() > MAX_HEADER_BYTES:
+            raise _HeaderTooDeep
+        chunk = handle.read(8)
+        if len(chunk) < 8:
+            break
+        (length,) = struct.unpack(">I", chunk[:4])
+        kind = chunk[4:8]
+        if kind in _PNG_PIXEL_CHUNKS:
+            break
+        if kind == _PNG_EXIF_CHUNK:
+            orientation = _tiff_orientation(handle.read(length))
+            if orientation in _EXIF_TRANSPOSING_ORIENTATIONS:
+                width, height = height, width
+            break
+        # payload, then the chunk's own four-byte CRC
+        handle.seek(length + 4, 1)
+
     return width, height
 
 
 def _exif_orientation(segment: bytes) -> int:
-    """Return the Orientation tag in an APP1 segment, or 1 if it declares none.
-
-    1 is the identity, and is what an absent tag, an unreadable IFD or a segment
-    that is not EXIF all mean: orientation is a correction, so the safe reading of
-    "not stated" is "no correction".
-    """
+    """Return the Orientation tag in a JPEG APP1 segment, or 1 if it declares none."""
     if not segment.startswith(b"Exif\x00\x00"):
         return 1
+    return _tiff_orientation(segment[6:])
 
-    tiff = segment[6:]
+
+def _tiff_orientation(tiff: bytes) -> int:
+    """Return the Orientation tag in a TIFF block, or 1 if it declares none.
+
+    1 is the identity, and is what an absent tag or an unreadable IFD both mean:
+    orientation is a correction, so the safe reading of "not stated" is "no
+    correction". The block is the payload of JPEG's APP1 and of PNG's `eXIf`
+    alike, which is why the two codecs share this walk rather than each having
+    one.
+    """
     if len(tiff) < 8:
         return 1
     if tiff[:2] == b"II":
@@ -219,10 +267,11 @@ def image_dimensions(path: str) -> tuple[int, int]:
     """
     try:
         with open(path, "rb") as handle:
-            # PNG states its size in a fixed-offset IHDR; JPEG's frame header sits
-            # after however much metadata the camera wrote, so that walk reads the
-            # open file rather than a prefix guessed to be long enough.
-            size = _png_dimensions(handle.read(24)) or _jpeg_dimensions(handle)
+            # Both are chunk or segment walks against the open file rather than
+            # over a prefix guessed to be long enough: PNG's orientation chunk and
+            # JPEG's frame header alike sit after however much metadata the writer
+            # put in front of them.
+            size = _png_dimensions(handle) or _jpeg_dimensions(handle)
     except OSError as e:
         sys.exit(f"{path}: cannot be read ({e.strerror})")
     except _HeaderTooDeep:

@@ -8,6 +8,7 @@ dimensions a test asserts against.
 """
 
 import struct
+import zlib
 
 
 def png_bytes(width: int, height: int) -> bytes:
@@ -102,3 +103,40 @@ def jpeg_with_header(
         prefix += _exif_app1(orientation)
     prefix += _filler_app2(header_padding)
     return body[:2] + prefix + body[2:]
+
+
+def png_with_exif(
+    width: int, height: int, orientation: int, *, chunks_before: int = 0
+) -> bytes:
+    r"""Return a PNG declaring this size and carrying an `eXIf` Orientation chunk.
+
+    PNG's `eXIf` chunk holds the TIFF stream raw -- the `Exif\x00\x00` marker is
+    JPEG's container, not this one. `chunks_before` pads the walk with ancillary
+    chunks ahead of it, because a writer is free to put `eXIf` anywhere before the
+    pixel data and a parser that only looks straight after IHDR would miss it.
+    """
+    base = png_bytes(width, height)
+    # Signature, then IHDR's own length word, type, payload and CRC. Computed
+    # rather than counted back from the end, because splicing a chunk inside
+    # IHDR's CRC produces a file that parses as garbage rather than as a PNG
+    # carrying orientation.
+    ihdr_end = 8 + 4 + 4 + struct.unpack(">I", base[8:12])[0] + 4
+    padding = b"".join(
+        _png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
+    )
+    return (
+        base[:ihdr_end]
+        + padding
+        + _png_chunk(b"eXIf", exif_tiff(orientation))
+        + base[ihdr_end:]
+    )
+
+
+def _png_chunk(kind: bytes, payload: bytes) -> bytes:
+    """Return one length-prefixed, CRC-suffixed PNG chunk."""
+    return (
+        struct.pack(">I", len(payload))
+        + kind
+        + payload
+        + struct.pack(">I", zlib.crc32(kind + payload))
+    )

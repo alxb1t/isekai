@@ -25,6 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A rotated PNG is measured as it will be loaded, in the codec every input this project has ever
+  used.** v0.10 closed this for JPEG and left PNG open, because `_png_dimensions` read IHDR and
+  stopped. PNG can carry an `eXIf` chunk holding the same TIFF stream JPEG's APP1 does, and the
+  phase-6 loader probe measured the pinned build rather than reasoning about it: a portrait PNG
+  tagged Orientation 6 came back from `LoadImage` as **1216×832**, transposed, against an untagged
+  control that did not move. Injection was therefore measuring such a file as its header states while
+  the loader handed the graph the transposed pixels — and `ImageScale` runs with `crop: "disabled"`,
+  so the photo would be squashed non-uniformly into the wrong frame and the distorted face fed to
+  InstantID, the VAE encoder and all three preprocessors at once. Exactly the defect v0.10 called
+  blocking, in the branch that was not fixed. The parser now walks the PNG's chunks to the pixel data
+  looking for `eXIf`, and both codecs share one TIFF orientation reader rather than each having its
+  own. The scenario the fix is bound to now names both codecs, because the mismatch is a property of
+  the loader and not of the container.
+
 ### Added
 
 - **CI enforces the `latest` protection its own header comment claims.** `build-image.yml` asserted
