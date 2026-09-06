@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import random
 from pathlib import Path
@@ -7,6 +8,7 @@ import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.pipeline import run
+from isekai.workflow import working_resolution
 from tests.fakes import FakeComfyClient
 
 
@@ -343,3 +345,171 @@ def test_jitter_is_still_what_a_run_does_when_it_is_not_asked_otherwise(
     submitted = client.submissions[0]
     assert submitted["10"]["inputs"]["denoise"] != workflow["10"]["inputs"]["denoise"]
     assert submitted["8"]["inputs"]["ip_weight"] != workflow["8"]["inputs"]["ip_weight"]
+
+
+# --- v0.12: the manifest becomes a provenance record --------------------------
+
+
+def _manifest_of(
+    workflow: Workflow, run_dir: Path, photo: str, **kwargs: object
+) -> tuple[dict, FakeComfyClient]:
+    """Run once and return the manifest it wrote, beside the client that saw it."""
+    client = FakeComfyClient()
+    run(client, workflow, photo, run_dir, **kwargs)  # ty: ignore[invalid-argument-type]
+    return json.loads((run_dir / "run.json").read_text()), client
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-identifies-the-photo")
+def test_the_manifest_records_a_digest_of_the_input_photograph(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, _ = _manifest_of(workflow, tmp_path / "run", photo, variations=1, seed=7)
+    expected = hashlib.sha256(Path(photo).read_bytes()).hexdigest()
+
+    assert manifest["photo_sha256"] == expected
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-identifies-the-photo")
+def test_the_manifest_records_the_digest_and_never_the_photograph(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # A digest of a face is not a face. The rule that derived faces are not
+    # committed is untouched, and this is what makes an uncommitted input
+    # checkable rather than merely trusted.
+    run_dir = tmp_path / "run"
+    manifest, _ = _manifest_of(workflow, run_dir, photo, variations=1, seed=7)
+    written = (run_dir / "run.json").read_bytes()
+
+    assert Path(photo).read_bytes() not in written
+    assert len(manifest["photo_sha256"]) == 64
+
+
+@pytest.mark.spec(
+    "workflow-mutation:output-layout:manifest-identifies-the-graph-and-base"
+)
+def test_the_manifest_records_the_base_checkpoint_named_in_the_graph(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, _ = _manifest_of(workflow, tmp_path / "run", photo, variations=1, seed=7)
+
+    assert manifest["base"] == workflow["1"]["inputs"]["ckpt_name"]
+
+
+@pytest.mark.spec(
+    "workflow-mutation:output-layout:manifest-identifies-the-graph-and-base"
+)
+def test_the_manifest_records_a_digest_of_each_graph_as_submitted(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # Per variation, because each variation submits a different graph. One digest
+    # for the run would name a document nothing was rendered from.
+    manifest, client = _manifest_of(
+        workflow, tmp_path / "run", photo, variations=3, seed=7
+    )
+    recorded = [render["graph_sha256"] for render in manifest["renders"]]
+
+    assert len(set(recorded)) == 3
+    for submitted, digest in zip(client.submissions, recorded):
+        assert (
+            hashlib.sha256(
+                json.dumps(submitted, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            == digest
+        )
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-resolved-dials")
+def test_the_manifest_records_the_dials_each_variation_was_submitted_with(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, client = _manifest_of(
+        workflow, tmp_path / "run", photo, variations=3, seed=7
+    )
+
+    for submitted, render in zip(client.submissions, manifest["renders"]):
+        dials = render["dials"]
+        assert dials["denoise"] == submitted["10"]["inputs"]["denoise"]
+        assert dials["cfg"] == submitted["10"]["inputs"]["cfg"]
+        assert dials["ip_weight"] == submitted["8"]["inputs"]["ip_weight"]
+        assert dials["cn_strength"] == submitted["8"]["inputs"]["cn_strength"]
+        assert dials["controlnet_strength"] == {
+            nid: submitted[nid]["inputs"]["strength"] for nid in ("14", "18", "21")
+        }
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-resolved-dials")
+def test_the_recorded_dials_differ_per_variation_under_jitter(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # The point of recording them per variation rather than once: under jitter
+    # every variation carries its own, and a single record would be a lie about
+    # four of five renders.
+    manifest, _ = _manifest_of(workflow, tmp_path / "run", photo, variations=3, seed=7)
+    denoises = [render["dials"]["denoise"] for render in manifest["renders"]]
+
+    assert len(set(denoises)) == 3
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-resolution")
+def test_the_manifest_records_the_render_target_derived_from_the_photograph(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, client = _manifest_of(
+        workflow, tmp_path / "run", photo, variations=1, seed=7
+    )
+    scaled = client.submissions[0]["22"]["inputs"]
+
+    assert manifest["resolution"] == [scaled["width"], scaled["height"]]
+    # `photo` is 1600x1200 landscape: short side to 1024, long side on the step.
+    assert manifest["resolution"] == list(working_resolution(1600, 1200))
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-run")
+def test_the_manifest_names_the_image_each_render_was_written_to(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    run_dir = tmp_path / "run"
+    manifest, _ = _manifest_of(workflow, run_dir, photo, variations=3, seed=7)
+
+    for i, render in enumerate(manifest["renders"]):
+        assert render["image"] == f"{i}.png"
+        assert (run_dir / render["image"]).exists()
+
+
+@pytest.mark.spec("cli:fixed-dials:mode-is-recorded")
+def test_the_manifest_records_that_a_jittered_run_jittered(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, _ = _manifest_of(workflow, tmp_path / "run", photo, variations=1, seed=7)
+    assert manifest["dials_mode"] == "jittered"
+
+
+@pytest.mark.spec("cli:fixed-dials:mode-is-recorded")
+def test_the_manifest_records_that_a_held_run_held(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, _ = _manifest_of(
+        workflow, tmp_path / "run", photo, variations=1, seed=7, fixed_dials=True
+    )
+    assert manifest["dials_mode"] == "held"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-run")
+def test_the_manifest_keeps_every_key_an_older_reader_expects(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # Keys are added and none removed, so an old manifest stays readable and a
+    # reader written against the old shape keeps working.
+    manifest, _ = _manifest_of(
+        workflow,
+        tmp_path / "run",
+        photo,
+        variations=2,
+        seed=7,
+        overrides={"denoise": 0.72},
+    )
+
+    assert manifest["seed"] == 7
+    assert manifest["variations"] == 2
+    assert len(manifest["seeds"]) == 2
+    assert manifest["overrides"] == {"denoise": 0.72}

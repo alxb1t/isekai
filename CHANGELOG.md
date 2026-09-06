@@ -27,6 +27,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`run.json` becomes a provenance record, not only a reproduction one.** It recorded `seed`,
+  `variations`, `seeds` and `overrides`, and so could not name the photograph, the graph, the base or
+  the resolution — the two batches in `outputs/final/` are identifiable only from this file's prose,
+  and a baseline nothing can identify is not a baseline. It now also records the input photograph's
+  SHA-256, the base checkpoint the graph loads, the resolved working resolution, and a `renders` list
+  carrying, per variation, the image it was written to, its sampler seed, a digest of **the graph as
+  submitted**, and the dial values that graph actually carried.
+- **The dials are recorded per variation, not once**, because under jitter every variation carries its
+  own and a single record would be a lie about all but one of them. They are read off the submitted
+  graph rather than reconstructed from the seed and the overrides — reconstructing them would mean
+  re-deriving the mutator in order to read it. The three ControlNet strengths are keyed by node id,
+  since they are tuned differently and "tile, pose, lineart" is an ordering nothing in the graph
+  states.
+- **The photograph is recorded as a digest and never as pixels.** A digest of a face is not a face, so
+  the rule that derived faces are not committed is untouched — and the digest is exactly what makes an
+  uncommitted input checkable rather than merely trusted, as `probe/README.md` already does.
+- **Keys are added and none removed**, so a manifest written by an earlier version stays readable and
+  a reader written against the old shape keeps working; a test holds that. The digest helper is
+  spelled in `pipeline.py` rather than imported from `isekai.provision`, which has one: that module is
+  deliberately off `convert.py`'s import graph, and importing it for four lines would put it on.
 - **A render with the graph's own dials is possible for the first time.** `pipeline.run` called
   `mutate` unconditionally on every variation, and `mutate` moves six dials at once — `denoise`,
   `cfg`, `ip_weight` and all three ControlNet strengths — so **nothing this repository has ever
