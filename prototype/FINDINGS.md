@@ -634,4 +634,73 @@ asking the operator.
 
 ---
 
-<!-- next: F17 -->
+## F17 · The thesis is answered — and it is a **reachability** result, not a trade-off · T10d ✅
+
+**Pod `0ur2whpfighgo8`, 14 renders, ~16 min, ≈$0.19.** Seven sampling settings × two subjects, one
+instruction held fixed.
+
+| s1 | linework | posterisation | bg detail | hair ΔE |
+|---|---:|---:|---:|---:|
+| the photograph | 0.0299 | 0.266 | 1.000 | — |
+| **FOTOR** | **0.0404** | **0.460** | **1.008** | 20.95 |
+| ours — notile d0.65 | 0.0038 | 0.230 | **0.064** | 6.34 |
+| ours — notile d0.45 | 0.0136 | 0.272 | **0.525** | 3.41 |
+| ours — notile d0.35 | 0.0150 | 0.314 | **0.598** | 2.91 |
+| qwen f_full_20_cfg4 | 0.0295 | 0.404 | 1.370 | 21.84 |
+| qwen d_full_8_cfg25 | 0.0320 | 0.396 | 1.492 | 25.73 |
+| qwen e_full_12_cfg25 | 0.0351 | 0.399 | 1.675 | 24.03 |
+| qwen g_full_20_cfg25 | 0.0376 | 0.393 | 1.812 | 23.28 |
+| qwen c_light_8_cfg2 | 0.0645 | 0.438 | 2.275 | 22.48 |
+| qwen a_light_4_cfg1 | 0.0716 | 0.419 | 2.765 | 22.90 |
+| qwen b_light_8_cfg1 | 0.0776 | 0.432 | 2.955 | 22.27 |
+
+### The two architectures occupy disjoint regions
+
+```
+   ours:   linework 0.004 – 0.015    bg detail 0.06 – 0.60     ← a small box, low-left
+   FOTOR:  linework 0.040           bg detail 1.008
+   qwen:   linework 0.030 – 0.078    bg detail 1.37 – 2.96     ← somewhere else entirely
+```
+
+**There is no overlap.** Our most faithful setting retains **0.598** of the photograph's background
+detail; Qwen's *least* faithful setting retains **1.370**, at twice the stylization. This is not a
+trade-off curve with two positions on it — **our stack cannot reach where Fotor and Qwen live at any
+dial setting we have found.**
+
+That is the architecture thesis, answered, on our own axes, from our own renders. And it is a stronger
+result than a trade-off would have been: a trade-off could be tuned around, a reachability gap cannot.
+
+**Both architectures' curves slope the same way** — more stylization comes *with* more retention, not
+instead of it. Our own "trade-off" along `denoise` was never style-against-identity; it was
+distance-from-photograph against everything, which is what F9 found from the other side.
+
+### A correction F15 flagged in advance
+
+F15 said *"the instruction is a weak lever"* and marked it **shown at Lightning, assumed at full**.
+It is now shown false at full: the same sampling setting (20 steps, cfg 2.5) gives linework **0.0198**
+with `4_tv_anime` and **0.0376** with `5_recovered_keepall` — nearly 2×.
+
+**Both levers work.** The sampling path spans 0.030–0.078; the instruction spans ~0.020–0.038 at a fixed
+path. They are roughly independent, which is more control than either finding alone suggested.
+
+### What `bg detail > 1` means, said plainly
+
+Qwen scores **1.37–2.96** where the photograph is 1.000. It is not merely preserving the background —
+it is **redrawing it with anime linework**, adding edges the photograph never had. Reading that as
+"better preservation" would be wrong. The axis measures *detail survived*, and detail can be added.
+Fotor's 1.008 is the number that means "kept, not embellished".
+
+### By eye, on the contact sheet
+
+Every Qwen setting keeps the **gold hoops**, the **lace placket and hem**, the **meadow with its
+flowers**, the **treeline**, the **hills** and the **blue eyes**. `notile d0.45` keeps none of the
+accessories and washes the background out. The Lightning settings (a, b, c) read as **flat cel**; the
+full settings (d–g) read as **painterly illustration**.
+
+**Hair ΔE is unusable here** — every Qwen setting scores 21.8–25.7 and Fotor 20.95, indistinguishable,
+because F16's disease dominates: all of them brighten blonde hair and our least-stylized render does
+not.
+
+---
+
+<!-- next: F18 -->
