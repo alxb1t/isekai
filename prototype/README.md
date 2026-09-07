@@ -82,7 +82,9 @@ agrees with what we already picked.
       an answer for it.
 - [ ] *(deferred, notile closed)* **T9 · s5, the exception** — the only subject where shipped beats the candidate on hair, and the
       subject whose refusal path has never fired.
-- [ ] **T10 · the instruction sweep** — recover the Qwen path (`prototype/styles/qwen-image-edit.recovered.json`,
+- [x] **T10a/T10b · provisioned + the instruction sweep** — F15: instruction is weak, the sampling path is strong, and 4-step / 20-step bracket the target
+- [ ] **T10d · sweep the SAMPLING PATH** — steps x cfg x Lightning, the lever F15 identified. The target sits between two settings already run
+- [ ] ~~T10 (original)~~ the instruction sweep — recover the Qwen path (`prototype/styles/qwen-image-edit.recovered.json`,
       from `e324699^`), grow the volume, and sweep the **instruction** rather than the architecture:
       F13 shows it overshot the register at 2x Fotor's linework because it was told "clean line art".
       Same six subjects, same axes.

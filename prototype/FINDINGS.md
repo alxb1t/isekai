@@ -450,6 +450,12 @@ a *base* problem rather than an unsolved one.
 
 ### So the next move is a string, not a rebuild
 
+> **Corrected by F15, 2026-09-07.** This section's hypothesis — that the register overshoot was caused
+> by the instruction — **was tested and is not supported.** Six instructions moved linework barely at
+> all; the *sampling path* moved it 3.6x. The prediction was worth making and the sweep was the right
+> test; it returned a negative. The paragraph is left standing rather than edited, because a
+> prediction rewritten after its result is not a prediction.
+
 The register is a prompt, and the prompt is the cheapest thing in this project to change — it is exactly
 the lever that produced the Illustrious win in F9. **Qwen is the right architecture with the wrong
 instruction**, and testing that costs one instruction sweep.
@@ -509,4 +515,74 @@ score it.
 
 ---
 
-<!-- next: F15 -->
+## F15 · The instruction is a weak lever. The **sampling path** is the strong one — and it brackets the target. · T10a/T10b ✅
+
+**Pod `c6xbkziy7hl8yg`, ~35 min, ≈$0.42** — the 28.89 GiB Qwen stack provisioned onto the grown 80 GB
+volume (all four files verified against digests derived from Hugging Face before the pod existed), then
+6 instructions × 2 subjects at 4-step Lightning, then 1 instruction × 2 subjects at the full 20-step
+path.
+
+**All 13 node types the recovered graph needs exist on the shipped image**, and `CLIPLoader` accepts
+`qwen_image`. Nothing had to be built to run a two-year-old deleted graph.
+
+### The instruction sweep returned a negative
+
+Six instructions on s1, linework: **0.0574 – 0.0776**. Fotor is **0.0404**, the photograph **0.0299**.
+Every instruction overshot, including *"no heavy black linework"* (0.0748) and the bare *"Make this an
+anime screencap"* (0.0574). **Dropping the phrase F13 blamed changed almost nothing.**
+
+### Because the register is set by the sampling path
+
+| s1 | posterisation | linework | hair ΔE | bg detail | bg colour |
+|---|---:|---:|---:|---:|---:|
+| the photograph | 0.266 | 0.0299 | — | 1.000 | — |
+| FOTOR | 0.460 | **0.0404** | 20.95 | 1.008 | 8.60 |
+| notile d0.45 | 0.272 | 0.0136 | **3.41** | 0.525 | **1.98** |
+| qwen **Lightning 4-step** | 0.448 | **0.0721** | 22.94 | 2.507 | 14.24 |
+| qwen **full 20-step** | 0.397 | **0.0198** | 17.12 | **1.110** | 6.74 |
+
+| s4 | posterisation | linework | hair ΔE | garment ΔE |
+|---|---:|---:|---:|---:|
+| the photograph | 0.637 | 0.0049 | — | — |
+| FOTOR | 0.838 | **0.0255** | 6.36 | 5.82 |
+| notile d0.45 | 0.545 | 0.0021 | 4.24 | 5.70 |
+| qwen **Lightning** | 0.881 | 0.0348 | 5.85 | 5.62 |
+| qwen **full** | 0.699 | **0.0054** | **2.80** | 7.59 |
+
+**Same instruction, same subject: linework 0.0721 → 0.0198, a 3.6× move.** No instruction came close to
+that. The register is controlled by steps / cfg / the Lightning LoRA, not by the words.
+
+### And the two settings bracket the target rather than reaching it
+
+- **4-step Lightning over-transforms** — inked manga, linework 1.8× Fotor's.
+- **20-step full under-transforms** — by eye, s4 is *the photograph, lightly retouched*: the necklace,
+  its pendant, both earrings, the hair, the tee, the maroon trousers and the grey studio are all
+  perfectly kept, and it is barely anime at all. The numbers agree: linework **0.0054** against the
+  photograph's 0.0049.
+
+```
+   linework:  qwen full 0.020 ── photo 0.030 ── FOTOR 0.040 ── qwen lightning 0.072
+                       under              the target ▲                 over
+```
+
+**The target sits between two settings we have already run.** That is a much better position than
+either "it does not work" or "it needs a different model".
+
+### What Qwen is unambiguously better at
+
+At full quality, on the axes that survive a cross-base comparison: **hair ΔE 2.80 on s4** — better than
+our 4.24 and Fotor's 6.36 — and **background detail 1.110 on s1**, matching Fotor's 1.008 where our own
+best is 0.525. It keeps things. That was never the question.
+
+### Three limits on all of the above
+
+- **The 20-step comparison moves three variables at once** — steps 4→20, cfg 1.0→2.5, and the Lightning
+  LoRA off. Attribution between them is not available from this data.
+- **Only one instruction was run at 20 steps.** *"The instruction is a weak lever"* is established at
+  Lightning and assumed, not shown, at full.
+- **Two subjects.** s1's hair ΔE stays poor at 17.12 even at full quality, so "Qwen keeps things" is not
+  uniform across subjects.
+
+---
+
+<!-- next: F16 -->
