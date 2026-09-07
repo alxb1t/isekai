@@ -19,6 +19,7 @@ models/
 # Generated outputs
 outputs/
 .inputs/
+inputs/
 
 # Python
 __pycache__/
@@ -36,3 +37,7 @@ venv/
 
 .ruff_cache
 .pytest_cache
+
+# Prototype scratch — v0.13 external-render probe. Resampled third-party
+# renders; pixels are never committed (design.md D14).
+prototype/out/
