@@ -81,6 +81,12 @@ agrees with what we already picked.
       an answer for it.
 - [ ] **T9 · s5, the exception** — the only subject where shipped beats the candidate on hair, and the
       subject whose refusal path has never fired.
+- [ ] **T10 · the instruction sweep** — recover the Qwen path (`prototype/styles/qwen-image-edit.recovered.json`,
+      from `e324699^`), grow the volume, and sweep the **instruction** rather than the architecture:
+      F13 shows it overshot the register at 2x Fotor's linework because it was told "clean line art".
+      Same six subjects, same axes.
+- [ ] **T11 · the tattoo question** — Qwen kept the subject's chest ink. `xor` is a claim about global
+      ControlNet and stands; this asks whether the project's largest parked feature is a *base* problem.
 - [ ] **T7 · style presets** — the operator wants several named setups rather than one. `notile`,
       `flat-cel`, and the shipped register are three candidates that already exist as run manifests.
       Note this is [backlog] `style menu`, previously held out of the arc and now evidence-backed.

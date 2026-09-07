@@ -411,4 +411,52 @@ instruction-edit architecture, arrived at from our own renders rather than from 
 
 ---
 
-<!-- next: F13 -->
+## F13 · The Qwen output was not a preservation failure. It was a **register overshoot**.
+
+The operator's recollection was *"I did not like the Qwen output"*. Measured, that verdict is about
+**style**, and it points the opposite way from how it reads.
+
+| | posterisation | linework |
+|---|---:|---:|
+| the photograph | 0.267 | 0.038 |
+| `notile d0.45` (ours) | 0.272 | 0.014 |
+| **FOTOR** | 0.460 | **0.040** |
+| **QWEN, as recovered** | 0.675 | **0.075** |
+
+```
+   linework:  notile 0.014 ──▶ photo 0.038 ──▶ FOTOR 0.040 ──▶ QWEN 0.075
+                  under              the target ▲              overshoot ▲
+```
+
+**Qwen did not fail to reach the register. It went past it** — nearly 2× Fotor's linework — landing in
+heavy inked manga line-art rather than cel-shaded anime. And the instruction it was given says so in as
+many words: *"Anime style, **clean line art**, cel shading, vibrant colors."* It was asked for line art
+and it delivered line art.
+
+**What it preserved is the finding.** In one render it kept the entire kitchen behind the subject — the
+extractor hood, the microwave, red cabinets, a fridge covered in magnets and photographs, a ceiling fan,
+a light switch — plus the necklace, an earring, the lace trim, her eye colour and her smile. **More than
+Fotor preserves.** That is instruction-edit behaviour: whatever the instruction does not mention, stays.
+
+### And it kept the tattoos
+
+The subject's chest ink came through — placement, motif and colour. [decisions] §2 `xor` records *"good
+anime XOR faithful tattoo — global CN cannot pin a local detail"*, and the tattoo is the project's
+largest parked feature on the strength of it.
+
+**That claim is about a global ControlNet, and it stands.** What this shows is that the constraint is
+**architectural, not physical** — a different architecture is not bound by it. The tattoo problem may be
+a *base* problem rather than an unsolved one.
+
+### So the next move is a string, not a rebuild
+
+The register is a prompt, and the prompt is the cheapest thing in this project to change — it is exactly
+the lever that produced the Illustrious win in F9. **Qwen is the right architecture with the wrong
+instruction**, and testing that costs one instruction sweep.
+
+**The blocker is storage, not capability**: the Qwen stack is 28.89 GiB against 20.74 GiB free on a
+37.25 GiB volume. The operator has approved growing it.
+
+---
+
+<!-- next: F14 -->
