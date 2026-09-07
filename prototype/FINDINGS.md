@@ -703,4 +703,65 @@ not.
 
 ---
 
-<!-- next: F18 -->
+## F18 · `qwen-flatcel` across ten portraits — the two architectures fail in **different shapes** · T10e/T10f ✅
+
+**Pod `2oiozb2bppxama`, 11 renders, ≈$0.12.** The operator's pick (`c_light_8_cfg2`) on every synthetic
+portrait. Sheet: `prototype/out/gallery_qwen_c_light_8_cfg2.png`.
+
+| subject | linework | posterisation | bg detail | bg colour ΔE | garment ΔE |
+|---|---:|---:|---:|---:|---:|
+| 00003 | 0.0657 | 0.436 | 2.274 | 20.7 | 4.8 |
+| 00004 | 0.0619 | 0.651 | 3.528 | 15.6 | 9.1 |
+| 00014 | 0.0415 | 0.890 | — | 5.0 | 8.8 |
+| 00022 | 0.0420 | 0.478 | — | **28.0** | **38.4** |
+| 00033 | 0.0433 | 0.771 | — | 11.7 | 6.4 |
+| 00035 | **0.1134** | 0.753 | — | 5.4 | 4.1 |
+| 00050 | 0.0714 | 0.414 | **7.367** | 20.1 | 8.6 |
+| 00059 | 0.0277 | 0.585 | 0.840 | 2.0 | 2.1 |
+| 00060 | 0.0506 | 0.535 | 2.152 | 7.0 | 1.8 |
+| 00072 | 0.0824 | 0.628 | — | 14.6 | 10.8 |
+
+**The register generalises** — flat cel on all ten by eye. But linework spans **0.028 – 0.113**, a 4×
+range where `notile`'s spanned about 2×. **This preset is less consistent than the other one**, which is
+the cost of running at 8 Lightning steps.
+
+### What it keeps, and it is a lot
+
+By eye across the ten: a **necklace and gold hoops** (00033), a **choker with its heart pendant plus two
+layered necklaces** (00072), **white sneakers and ripped jeans** (00035), a **belt** (00022), a
+**sherpa collar over a white top** (00004), a **concrete wall** (00050), an **ornate doorway** (00059),
+a **hedge and pavement** (00035), **coastal buildings** (00004). `notile` kept **none** of the
+accessories on any subject.
+
+### And three failures that are a different *kind* from ours
+
+- **00014: the background was replaced outright** — a neutral studio became a tropical beach with palm
+  trees and ocean. Not simplified: **invented**.
+- **00060: hair went blonde → red**, and large teal earrings appeared that are not in the photograph.
+- **00004 and 00072: eye colour drifted.**
+
+```
+   ours  (notile):  failures are SYSTEMATIC and MILD
+                    -- accessories always lost, backgrounds always washed out
+   qwen (flatcel):  failures are OCCASIONAL and DRAMATIC
+                    -- usually keeps everything, then replaces a whole background
+```
+
+**That is the honest characterisation of the architecture choice, and neither shape is strictly better.**
+A systematic failure is predictable and can be designed around; a dramatic one is rare and unshippable
+when it lands. Which matters more is a product decision, not a measurement.
+
+### What the numbers cannot say here
+
+`background_detail` scored on only **5 of 10** — the rest are studio backdrops below the denominator
+floor (F14). `bg colour` and `garment colour` are reported but must not be used to rank this preset
+against `notile`: F16 establishes they penalise correct stylization, and this preset is far more
+stylized. **00022's garment ΔE of 38.4 is the loudest number in the table and it is uninterpretable** —
+it may be a real failure or it may be F16.
+
+**Accessory retention — the thing this preset is visibly best at — remains unmeasured** (F14). The
+record says so in words because the proxy did not validate.
+
+---
+
+<!-- next: F19 -->
