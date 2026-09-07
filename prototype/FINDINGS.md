@@ -110,4 +110,70 @@ colour"*), not *"which is better"*.
 
 ---
 
-<!-- next: F7 from T1 (style axis calibration), F8 from T3 (pod session 1) -->
+## F7 · A style axis is buildable — and it takes **two** numbers, not one · T1 ✅
+
+Calibrated on the three points whose order is not in dispute, before any tuning.
+
+| | posterisation ↑ | linework ↑ |
+|---|---|---|
+| | *share of px in the 32 commonest colour bins* | *share of px on a strong luminance gradient* |
+| **s1** photo | 0.2662 | 0.0299 |
+| s1 isekai (5) | 0.2698 – 0.2885 | **0.0005 – 0.0051** |
+| s1 **FOTOR** | **0.4599** | **0.0404** |
+| **s2** photo | 0.2445 | 0.0161 |
+| s2 isekai (5) | 0.2185 – 0.3189 | **0.0005 – 0.0015** |
+| s2 **FOTOR** | **0.5413** | **0.0240** |
+
+**Resampling is not the confound.** Fotor reaches the canvas by a downscale from 1968×2880 where ours
+arrives natively. Sending the photograph down that same path moves every measure by **< 0.4%**
+(`resampling_control`, built into the script so the objection is answered by a command).
+
+**Two candidates tried and dropped**, recorded so they are not re-tried: `flat_fraction` orders the
+three correctly but **conflates cel flatness with blur** — both score high, for opposite reasons;
+`unique_ratio` does not order them at all.
+
+### The finding underneath the finding: **isekai is not under-stylized. It is off-axis.**
+
+```
+   linework ▲
+            │  FOTOR ●            flat cel: posterised AND drawn
+     0.04   │
+            │
+     0.03   │  photo ●            photographic: graduated, textured
+            │
+     0.02   │
+            │
+     0.01   │
+            │
+     0.00   │  isekai ●           neither: as graduated as a photograph,
+            └──────────────────▶   with the lines wiped off
+              0.25       0.50
+                 posterisation
+```
+
+- **posterisation**: isekai ≈ **the photograph** (0.270 vs 0.266). Its colour distribution is as
+  continuous as a photo's. It is not flattening at all. Fotor is **1.7–2.2×** higher.
+- **linework**: isekai is **below the photograph** — 0.0005 vs 0.0299, a **60×** deficit, and it holds
+  at every gradient threshold from 8 to 64. Fotor is *above* the photograph (0.0404 vs 0.0299).
+
+So the render is not sitting between photograph and anime. **It is softer than the photograph and no
+flatter.** "Semi-realistic" was generous: it is a *blurred* photograph-like image, and blur is a
+failure mode neither endpoint has.
+
+### What this predicts for the pod session
+
+Two independent deficits, so probably two different levers:
+
+| deficit | lever to test |
+|---|---|
+| **no linework** | lineart CN 0.2 → 0.6 — the only leg that draws edges. Currently near-off |
+| **no posterisation** | the register: `realistic, photorealistic` restored to the negative, and the flat-anime register generally. Possibly `denoise` |
+
+**And a free acceptance test for the tuning:** a candidate dial set has to move isekai *up and right*
+on that plot. Both numbers are computable on a laptop the moment a render lands, with no labels and
+no judge — so the pod session has an objective readout for the first time, on the axis the project
+never had.
+
+---
+
+<!-- next: F8 from T3 (pod session 1) -->

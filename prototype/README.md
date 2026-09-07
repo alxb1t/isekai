@@ -43,7 +43,7 @@ Order matters. **T1 before T3** — building the style metric *after* tuning mea
 agrees with what we already picked.
 
 - [x] **T0 · external-render seam** — score a render this pipeline did not produce. `b0dac41`
-- [ ] **T1 · style axis calibration** *($0)* — a candidate metric must order **photo < isekai < Fotor**
+- [x] **T1 · style axis calibration** *($0)* — a candidate metric must order **photo < isekai < Fotor**
       on stylization, using files already on disk. Candidates: edge density, colour-count /
       posterisation, gradient smoothness, CLIP text-image against *"flat anime screencap"*.
       **If nothing separates those three, say so — that is a finding.**
