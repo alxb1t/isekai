@@ -50,7 +50,7 @@ agrees with what we already picked.
 - [x] **T2 · make the hair readout usable** *($0)* — the mode is invalid on a photograph (see
       `FINDINGS.md` F3). Needs to be trustworthy enough to use as a diagnostic while tuning, not
       necessarily production-correct.
-- [ ] **T3 · pod session 1 — the dial ladder** *(~20 min, ~$0.25)* — one subject (`s4_multitone_bob`,
+- [x] **T3 · pod session 1 — the dial ladder** *(~20 min, ~$0.25)* — one subject (`s4_multitone_bob`,
       it lost the most), one seed, **one variable at a time**:
 
       | # | render | tests |
@@ -61,7 +61,8 @@ agrees with what we already picked.
       | 4 | tile 0.2 → 0.9 | do accessories/colour come back? |
       | 5 | denoise 0.65 → 0.45 | identity↔style, **after** the register is right |
 
-- [ ] **T4 · read session 1** — by eye and with T1/T2. Decide session 2's variables.
+- [x] **T4 · read session 1** — done in-session; four rounds rather than one
+- [ ] **T4b · confirm the candidate** — the frontier is four points on ONE photograph. Re-run denoise 0.35/0.45/0.55 across all six subjects at 2–3 seeds before this is a setup rather than a candidate — by eye and with T1/T2. Decide session 2's variables.
 - [ ] **T5 · pod session 2** — combinations of whatever won, plus `cn_strength` (never searched).
 - [ ] **T6 · re-probe against Fotor** — repaired axes, all six subjects. Does the instrument now
       agree with the eye?

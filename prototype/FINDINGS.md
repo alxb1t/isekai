@@ -215,4 +215,87 @@ multi-tone subjects were put in the baseline to force.
 
 ---
 
-<!-- next: F9 from T3 (pod session 1) -->
+## F9 · The style is reachable with dials — and the register was doing denoise's job · T3 ✅
+
+**Pod `4i9yfjciuhse7a`, ~30 min, ~$0.36, 13 renders across four rounds, one seed throughout.**
+Subject `s4_multitone_bob` for rounds 1–3, then three more subjects to test generalisation.
+
+### Round 1 said none of the obvious levers works
+
+| variant | posterise | linework | hair ΔE |
+|---|---:|---:|---:|
+| photo | 0.6371 | 0.0049 | 0.00 |
+| 1_control (shipped dials) | 0.4956 | 0.0023 | 7.01 |
+| 2_negative *(+realistic, photorealistic)* | 0.4648 | **0.0061** | 11.62 |
+| 3_lineart *(0.2→0.6)* | 0.5191 | 0.0014 | 7.54 |
+| 4_tile *(0.2→0.9)* | 0.5858 | **0.0002** | 9.35 |
+| 5_denoise *(0.65→0.45)* | 0.5946 | 0.0011 | 3.63 |
+| FOTOR | **0.8379** | **0.0255** | 6.36 |
+
+Two surprises. **Lineart at 0.6 made linework *worse*** (0.0014 vs 0.0023) — raising MistoLine does not
+add lines. **Tile at 0.9 crushed it to 0.0002** — tile is a *de-stylizing* force, pulling toward the
+photograph's own smooth structure. The card's recommendation is wrong for this product.
+
+### Round 2: the lever I had not tested was the **positive** prompt
+
+The ladder varied the negative, the legs and denoise. It never touched the positive — which carried
+`soft lighting` (literally asking for soft) and the quality ladder, which on Illustrious pulls toward
+heavy painterly rendering. Replacing it with Danbooru's own vocabulary for the target —
+`flat color, cel shading, thick outlines` — plus tile **off**, lineart 0.6, negative restored, denoise
+0.8, gave `9_combo`: **linework 0.0105**, 4.5× the control and the flattest thing this project has
+made. **It is unmistakably cel.** And hair ΔE went to **23.73** — the identity was gone.
+
+### Round 3: sweeping denoise under the flat register found the frontier — and it is not where it was
+
+| flat register, tile 0, lineart 0.6 | posterise | linework | hair ΔE |
+|---|---:|---:|---:|
+| denoise 0.45 | **0.6322** | **0.0051** | **2.34** |
+| denoise 0.55 | 0.5938 | 0.0044 | 7.76 |
+| denoise 0.65 | 0.5087 | 0.0044 | 14.94 |
+| denoise 0.80 *(9_combo)* | 0.4582 | 0.0105 | 23.73 |
+
+**denoise 0.45 with the flat register is the best render this project has produced**, on every axis at
+once: posterisation matching the photograph's, linework above it, and hair ΔE **2.34 — below the 2.3
+just-noticeable difference**. By eye the necklace **and its pendant**, the earrings, the brown bob, the
+oatmeal tee and the grey studio background are all back, and it is flat cel.
+
+### **The finding: the register and denoise were doing each other's jobs**
+
+The shipped graph had **no register pushing toward flat anime**, so the only thing making a render look
+non-photographic was **denoise** — and denoise buys style by *destroying content*, which is why
+accessories, garment colour and backgrounds vanished. Give the prompt the styling job and denoise is
+freed to do identity preservation, which is what it is actually good at.
+
+That is why the fix is **denoise DOWN, not up** — the opposite of the intuition, and the opposite of
+what round 1 was built to test.
+
+### Generalisation: real on identity, partial on style
+
+Same config, denoise 0.45, three more subjects:
+
+| subject | linework old → new | hair ΔE old → new | Fotor linework |
+|---|---|---|---:|
+| s1 blonde | 0.0005 → **0.0147** *(30×)* | 3.63 → 5.45 | 0.0404 |
+| s2 brunette | 0.0015 → 0.0021 | 10.00 → **4.35** | 0.0240 |
+| s3 balayage | 0.0059 → **0.0030** *(worse)* | 4.39 → **2.54** | 0.0252 |
+
+**Hair colour improved on 2 of 3 and dramatically on s4. Linework improved on 1 of 3.** s1 by eye
+recovers the hoop earrings, the lace cami *with its button placket and hem*, and the meadow with its
+flowers and hillside — all lost at the shipped dials. **We are still 2–10× behind Fotor on linework
+everywhere**, so the style gap is narrowed and not closed.
+
+### Honest notes
+
+- **The session exceeded the cost half of its ceiling.** ~30 min at $0.72/hr ≈ **$0.36** against
+  *"45 min / ~$0.30"*. The two halves are inconsistent — 45 min at this rate is $0.54 — so they cannot
+  both bind. Flagged rather than quietly reported against the favourable half.
+- **One subject, one seed, for rounds 1–3.** The frontier table is four points on one photograph. It
+  is a candidate, not a measurement.
+- **`s4` is a poor subject for posterisation**: its flat grey studio background puts the photograph
+  itself at 0.6371, so that column reads differently for it than for the others.
+- Fotor's own hair ΔE on s1 is **20.95** — it saturates blonde hair considerably. On that axis we beat
+  it, which is worth remembering when the eye says Fotor wins everything.
+
+---
+
+<!-- next: F10 -->

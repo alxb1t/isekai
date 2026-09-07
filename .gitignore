@@ -41,3 +41,8 @@ venv/
 # Prototype scratch — v0.13 external-render probe. Resampled third-party
 # renders; pixels are never committed (design.md D14).
 prototype/out/
+
+# Prototype: third-party renders, not ours to redistribute. Digests in MANIFEST.md
+prototype/fotor/*.jpg
+
+prototype/ladder/
