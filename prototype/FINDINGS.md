@@ -802,4 +802,58 @@ portfolio that publishes scores and recipes rather than weights.
 
 ---
 
-<!-- next: F20 -->
+## F20 · Fotor is **stochastic**. The translation-network hypothesis is dead, and our Fotor numbers have unmeasured variance.
+
+The operator ran the same photograph through Fotor twice. By eye: *"almost the same, they differ in
+very very small details."* Measured, they differ by far more than that.
+
+| | |
+|---|---:|
+| mean absolute pixel difference | **17.36** / 255 |
+| median | 6 |
+| pixels differing by > 8 levels | **50.6 %** |
+| pixels differing by > 64 levels | **8.8 %** |
+| **JPEG re-encode floor** (same image, q95) | **0.415** |
+
+**The two draws differ by 42× the encoding noise floor**, and the difference is spread across the whole
+frame rather than sitting in one place. A deterministic image-to-image translation network would be
+pixel-identical, or differ at the floor. **Fotor regenerates the image every time.**
+
+### What that kills, and what it opens
+
+**Dead: the AnimeGAN-class hypothesis.** Fotor is not a network that transforms pixels locally and
+preserves geometry by construction. It is generative and seeded.
+
+**And that reframes its most striking number.** F17 made much of Fotor's `background_detail` landing at
+**1.008** — reproducing the photograph's edge density almost exactly — against Qwen's 1.4–7.4 and our
+0.06–0.60. That is **not** because it copies pixels. It regenerates and *lands there*, which makes it a
+property of the model's learned style rather than of a preserving architecture.
+
+**That is encouraging rather than deflating**: a target a stochastic generator hits is a target other
+stochastic generators can be tuned toward. It is a model-choice and tuning problem, not an
+architectural wall.
+
+### The methodological correction
+
+**Every Fotor number in F14, F17 and F18 is a single draw from a stochastic process, and we have been
+treating them as fixed reference points.** Two draws on one subject give the first estimate of that
+spread:
+
+| axis | draw 1 | draw 2 | spread |
+|---|---:|---:|---:|
+| linework | 0.0651 | 0.0615 | 5.5 % |
+| posterisation | 0.539 | 0.565 | 4.7 % |
+| bg colour ΔE | 3.68 | 3.57 | 3.0 % |
+| **garment colour ΔE** | **4.47** | **3.60** | **19.4 %** |
+
+The style axes are stable to ~5 %, which is small against the gaps F17 reports — **the disjoint-regions
+conclusion survives comfortably.** The colour axes are not: 19 % on garment means differences under
+about a fifth are noise, and F18's alarming garment ΔE of 38.4 on `00022` still cannot be read, now for
+a second reason.
+
+**One draw per subject was the wrong design** and it was chosen before anyone knew Fotor was seeded.
+Any future comparison against it needs 3+ draws, exactly as F11 forced for our own renders.
+
+---
+
+<!-- next: F21 -->
