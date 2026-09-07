@@ -137,6 +137,21 @@ denoise is what ships as the guard.
 cannot locate the face in our own outputs" is what v0.12 ships as its result. Moving `denoise` to make the
 meter work is explicitly disqualified — the product is not tuned to flatter the instrument.
 
+**Amended at converge, 2026-09-07, on the name rather than on the decision.** This decision says
+"landmark-centroid alignment", and that is what was decided; what was **built** is a **face-box centroid
+offset** — the centroid of the anime-face detector's bounding box on each side, normalised by the
+photograph's face diagonal. The name did not survive D19's own amendment: `deepghs/anime_face_detection`
+is a *box* detector, and no detector in this tree produces landmarks at all, so the second method had
+nothing else to be computed from. D19's amendment recorded that the two-way comparison survived the
+substitution, which it did; what it did not record is that one of the two methods was no longer the one
+this decision named. The decision's *shape* is untouched — two methods, computed on the same renders
+at the same denoise, whichever holds ships, and neither holding is the finding — and the fallback did
+not fire either way. The wording above stands as written because it records what was
+decided before the detector was known; this note records what the decision became, so a reader is not
+left to infer that a landmark method was measured. The same applies to D19's "guard on landmarks alone"
+alternative below: that reserve was never available, and the box-centroid method is what stood in its
+place. The implementation and every report now say "face-box centroid offset".
+
 ### D10 — The labels are pairwise, within-subject, holistic, and blind; git is what proves blind.
 
 40 judgements across 4 subjects, 10 pairs each. Pairwise because "is A or B more like them?" is stable where

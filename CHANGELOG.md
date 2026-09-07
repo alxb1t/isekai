@@ -93,10 +93,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The guard's authoritative method is settled by measurement: box IoU.** Both methods were computed
   on all thirty baseline renders at the working denoise of 0.65 and **both hold** — IoU median 0.950
-  against a 0.30 floor, landmark-centroid median 0.012 against a 0.25 ceiling, 30/30 either way. So
-  D9's pre-committed fallback, where neither holds and the region axes refuse, did not fire. IoU ships
-  because it constrains **size** as well as position: a correctly-centred face at three times the scale
-  passes the centroid test and fails IoU, and a test asserts exactly that. It is pinned as
+  against a 0.30 floor, face-box centroid offset median 0.012 against a 0.25 ceiling, 30/30 either
+  way. So D9's pre-committed fallback, where neither holds and the region axes refuse, did not fire.
+  IoU ships because it constrains **size** as well as position: a correctly-centred face at three
+  times the scale passes the centroid test and fails IoU, and a test asserts exactly that. It is pinned as
   `AUTHORITATIVE_GUARD_METHOD` and the method not chosen is still computed and printed on every run, so
   the day the two disagree is visible rather than silent.
 - **StyleID carries real signal but does not separate cleanly, and n=6 cannot license it.** Across 30
@@ -262,7 +262,7 @@ Drafted in `tasks.md` before any number existed, and reproduced here unchanged n
   unknown. A region under a **measured area floor** refuses naming itself and its area, rather than
   reporting a number derived from too few pixels; the per-class accuracy filter is not here, because it
   would have discarded classes on someone else's test-set numbers.
-- **The guard computes both methods on every run** — box IoU and landmark-centroid alignment — and
+- **The guard computes both methods on every run** — box IoU and face-box centroid offset — and
   names which one was authoritative. Which one ships is decided by measurement in phase 8, not by
   argument. A failed guard refuses every region axis naming the guard as the cause, while the pose axis,
   which needs no region, still reports: a guard failure does not deprive the operator of the
