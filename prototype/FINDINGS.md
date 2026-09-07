@@ -373,4 +373,42 @@ polished-illustration look the operator chose is unchanged.
 
 ---
 
-<!-- next: F12 -->
+## F12 · The register generalises. The failures that remain are not the ones we were measuring. · T6c ✅
+
+**Pod `jp77ucxtifd89i`, 20 renders — 10 synthetic portraits × 2 seeds, ~9 min, ≈$0.15.** Not the
+adversarial baseline six; just the portraits on hand, deliberately diverse. Sheet:
+`prototype/out/gallery_notile_d045.png`.
+
+**What holds, across all ten:**
+
+- **The register is consistent.** Every render is the same polished anime-illustration look. It is not
+  subject-dependent, which is the thing a one-subject finding could not tell us.
+- **Garment and composition retention is strong** — the lace cami *with its buttons and hem*, a sherpa
+  collar, white sneakers, a tube top, a full-length lace robe, and a **choker with its pendant** all
+  survive. This is the failure that started the whole investigation, and at this setup it is largely
+  fixed.
+- **Seed variation is modest.** The two draws per subject look alike. The setup is stable, which is what
+  makes a committed baseline meaningful.
+
+**What still fails — and none of it is on any axis we measure:**
+
+| failure | measured by |
+|---|---|
+| **eye colour drifts** — brown → green or blue, repeatedly | nothing |
+| **body proportions are idealised** — chest enlargement is systematic and visible on at least four subjects | nothing |
+| **faces converge** toward one anime face across different people | `face_styleid`, badly (F4: it rewards *not* stylizing, so it cannot separate "stylized well" from "stylized into someone else") |
+| **backgrounds simplify** — flowers thin out, textures flatten | nothing |
+
+**This is F6 arriving from the other direction.** We built four axes; the surviving defects sit almost
+entirely outside them. The idealisation one is the sharpest: the vault has recorded *"the quality ladder
+pushes toward idealisation and idealised faces are more generic"* as an unmeasured worry since v0.10.
+It is no longer a worry, it is visible in four of ten renders, and there is still no axis for it.
+
+**Reading for the decision.** The setup is good and the identity failures that remain are *attribute*
+failures a ControlNet+adapter stack is not positioned to fix — they come from the base model's prior
+asserting itself over whatever the conditioning does not pin. That is the structural argument for the
+instruction-edit architecture, arrived at from our own renders rather than from Fotor's.
+
+---
+
+<!-- next: F13 -->

@@ -74,6 +74,7 @@ agrees with what we already picked.
 - [x] **T6b · the frontier, confirmed** — partly: six subjects, but 1 seed except s4 *(~20 min)* — F9's four points are ONE photograph at ONE seed.
       Re-run denoise 0.35 / 0.45 / 0.55 under the chosen register, all six subjects, 2–3 seeds, before
       it is a setup rather than a candidate.
+- [x] **T6c · the register across ten diverse portraits** — F12. Generalises; the remaining failures are unmeasured ones
 - [ ] **T8 · re-run the known-answer probe WITHIN one base** *($0)* — `notile d0.45` vs the shipped
       dials, all six, full evaluator. **Same base and same tool, so the face axes do not refuse** — this
       is a far better instrument test than the cross-base Fotor one, and the operator's eye already has
