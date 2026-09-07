@@ -326,4 +326,51 @@ background. That is *identity*, not style, and F9's low-denoise direction is wha
 
 ---
 
-<!-- next: F11 -->
+## F11 · The chosen register works — but **not at the denoise it was chosen at** · T6/T6b ✅
+
+**Pod `kdok6n056xz0f0`, 16 renders, ~8 min of GPU, ≈$0.13.** Six subjects at `notile` d0.65 and d0.45,
+two at d0.35, three seeds at d0.45.
+
+**hair ΔE — lower is closer**
+
+| subject | shipped (v0.12) | notile d0.65 *(the pick)* | notile d0.45 | notile d0.35 | FOTOR |
+|---|---:|---:|---:|---:|---:|
+| s1 blonde | 3.63 | 6.34 | **3.41** | **2.91** | 20.95 |
+| s2 brunette | 10.00 | 10.35 | **4.38** | — | 7.35 |
+| s3 balayage | 4.39 | 6.62 | **3.61** | — | 6.47 |
+| s4 bob | 6.05 | 9.84 | **4.24** | **2.57** | 6.36 |
+| s5 small face | **1.94** | 13.21 | 5.89 | — | 9.17 |
+| s6 landscape | 5.68 | 6.65 | **4.21** | — | 7.71 |
+
+### The uncomfortable part, stated first
+
+**`notile` at d0.65 — the render the operator picked as best of the session — has the worst measured
+identity of the three configs.** It is worse than the shipped dials on **five of six** subjects, by up
+to 3.4× (s5: 13.21 against 1.94). The *look* was chosen; the identity was never measured. That is
+exactly the gap the evaluator exists to close, and here it closed it against the operator's own pick.
+
+### And the resolution
+
+**`notile` at d0.45 keeps the register and fixes the identity.** It beats the shipped dials on **five of
+six** subjects and beats d0.65 on **six of six**. By eye on s4 the hair is brown rather than olive-green,
+the tee is oatmeal rather than teal, the trousers are maroon, and the earrings are present — while the
+polished-illustration look the operator chose is unchanged.
+
+**The candidate setup:** `tile 0.0` · `denoise 0.45` · everything else as shipped.
+
+### Notes
+
+- **s5 is the exception**: the shipped dials win on hair (1.94 vs 5.89). It is the tiny-face subject
+  (~1.3% of canvas), and it is also the subject whose refusal path has never fired. Worth its own look.
+- **Seed stability at d0.45 (s4, three seeds)**: hair ΔE 2.66 / 4.03 / 4.24, linework 0.0021–0.0027,
+  posterisation 0.545–0.587. Real spread on hair — a single render is worth about ±1.5 ΔE — so
+  per-subject claims need more than one seed.
+- **Linework did not consistently improve** (better on s1 and s6, worse on s3, s4, s5). Per F10 that is
+  a coordinate, not a target: the chosen register is the illustration one, and it is being hit.
+- **d0.35 is better than d0.45 on both subjects tested** (2.91 vs 3.41, 2.57 vs 4.24). The frontier may
+  not have bottomed out. It is also where "anime" starts becoming "a filtered photograph", which is a
+  judgement rather than a measurement.
+
+---
+
+<!-- next: F12 -->
