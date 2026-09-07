@@ -1,5 +1,10 @@
 # Prototype session — tuning the look, and the instrument that judges it
 
+> **CLOSED 2026-09-07.** 23 findings, 8 pod sessions, ≈$1.80. **Read
+> [`SUMMARY.md`](SUMMARY.md) first** — it carries the three-flow comparison, the eleven findings worth
+> keeping, what was tried and failed, and what is parked. `FINDINGS.md` is the full evidence behind it.
+> This file is the plan the session ran to, kept as the record of what was asked.
+
 **Not a version. This branch (`v0.13_prototype`) does not merge.** It exists to answer empirical
 questions cheaply, in practice rather than on paper. When the answers are in, they are written up
 and a proper change is cut from them — the branch is the workshop, `FINDINGS.md` is the product.
