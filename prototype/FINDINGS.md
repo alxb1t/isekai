@@ -856,4 +856,81 @@ Any future comparison against it needs 3+ draws, exactly as F11 forced for our o
 
 ---
 
-<!-- next: F21 -->
+## F21 · The 8-step-native LoRA does not fix the inconsistency. It is Qwen's, not ours. · T14 ✅
+
+**Pod `yu6fk20hd3hfsh`, 10 renders, ≈$0.14.** The same ten portraits, the same instruction and sampling
+path, with `Lightning-8steps-V1.0` in place of the 4-step LoRA we had been running at 8 steps.
+
+**The prediction was recorded in the script before the render.** It resolves on the second branch.
+
+| | 4-step LoRA @ 8 steps | **8-step native @ 8 steps** |
+|---|---:|---:|
+| linework min / med / max | 0.0277 / 0.0619 / 0.1134 | 0.0222 / 0.0560 / 0.1064 |
+| **linework spread** | **4.09×** | **4.80×** |
+| posterisation spread | 2.15× | 2.62× |
+| bg detail max | 7.367 | 4.098 |
+
+**The spread did not narrow toward 2×. It widened slightly, to 4.80×.** So the inconsistency is **not**
+a mismatch we introduced by running a 4-step LoRA at 8 steps — it is a property of Qwen-Image-Edit at
+this task, and it stands as a real mark against `qwen-flatcel` for a product that ships five variations
+per photograph.
+
+**The third prediction held**, which is the reassuring part: the median barely moved (0.0619 → 0.0560)
+and stayed far from Fotor's 0.040. Step distillation changes fidelity and consistency, not style — as
+stated in advance. Had the median jumped to Fotor's coordinate, the measurement would have been suspect.
+
+**One thing did improve**: the worst-case background embellishment fell from 7.367 to 4.098. Less extreme
+edge-adding at the tail, with the same median. Worth having, not worth switching for on its own.
+
+**Cost of the negative: ≈$0.14.** It closes the cheapest remaining hypothesis about the preset's weakest
+property, and it means any future fix for consistency has to come from somewhere other than the step
+schedule.
+
+---
+
+## F22 · Fotor's catalogue says the moat is a **style library**, not an architecture
+
+The operator's screenshot of Fotor's *AI Art Effects* shows dozens of tightly branded looks — *Animal
+Crossing Style*, *Kawaii Anime*, *Cartoon PlotSnap*, *Caricature Art*, *Music Box*, *Vector
+Illustration* — across tabs for Cartoon, Sketch and more. The effect used for our comparison is the one
+simply called **Anime**.
+
+**Only one architecture ships that catalogue economically:**
+
+| shape | verdict |
+|---|---|
+| per-style **prompt** on one model | could not hit *"Animal Crossing Style"* reliably or consistently |
+| per-style **fine-tuned model** | dozens of full models to host. Nobody does this |
+| **one base + per-style LoRA** | ~200 MB per style, hot-swapped, distinct and reliable. **This** |
+
+**It fits every measurement we have.** F20 says stochastic, so a diffusion base rather than a translation
+network. F17 says `background_detail` **1.008** — reproducing the photograph's edge density — where our
+Qwen *adds* edges at 1.4–7.4, and a trained style adapter is exactly what controls that. The register is
+consistent per style, which is a LoRA and not a prompt. A free tier and fast turnaround fit a small
+adapter swapping on a shared base.
+
+### The consequence, and it redirects the project
+
+**They are not doing something structurally cleverer than us.** They have an edit base — possibly one we
+can run — and they **trained the adapters that do not exist publicly**.
+
+The Civitai search established the gap directly: for Qwen-Image-Edit the community trains **anime→real**
+almost exclusively, and the one photo→anime candidate is licence-blocked for a portfolio. **Fotor's
+answer to that same gap was to train their own.**
+
+```
+   what we lack  ≠  a better model
+   what we lack  =  a trained style LoRA for the direction we want
+```
+
+That moves *"train our own"* from fallback to **the answer** — and it is the strongest portfolio story
+available: *the open ecosystem only went one direction, so I trained the other, and I had an evaluator to
+prove it worked.*
+
+**Still unknown: which base.** One unused clue — Fotor's output is always capped at **2880 on the long
+side** (1968×2880 portrait, 2880×1915 landscape), a fixed production policy that suggests
+generate-then-upscale rather than a research pipeline.
+
+---
+
+<!-- next: F23 -->

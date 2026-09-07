@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "dest": "loras/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors",
+      "bytes": 849608296,
+      "sha256": "a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8",
+      "sources": [
+        "https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/d74eba145674fd7e31b949324e148e21e7118abd/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors"
+      ]
+    }
+  ]
+}

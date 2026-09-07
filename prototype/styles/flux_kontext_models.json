@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "dest": "diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors",
+      "bytes": 11904640136,
+      "sha256": "630ba795ec64283b4230ea23cf79406c2c68b7c578229ed139f30043eadb30a2",
+      "sources": [
+        "https://huggingface.co/Comfy-Org/flux1-kontext-dev_ComfyUI/resolve/6799032a16e9c37154e5474d4a308e378e3359a8/split_files/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors"
+      ]
+    }
+  ]
+}
