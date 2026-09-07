@@ -26,6 +26,7 @@ def run(
     overrides: Overrides | None = None,
     fixed_dials: bool = False,
     pod_image: str | None = None,
+    comfy_commit: str | None = None,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client.
 
@@ -44,6 +45,12 @@ def run(
     passed in or it is not known. It is recorded verbatim and never guessed --
     `None` is written through as `null`, which is a run saying it does not know
     rather than a run claiming an image it was not produced on (design.md D14).
+
+    `comfy_commit` is D14's other half, under exactly the same contract: the image
+    pins the dependency closure, the commit pins ComfyUI itself, and the drift D14
+    wants measurable later needs both. `/system_stats` reports a version string,
+    not a commit, so this too is stated rather than asked for -- and both are read
+    in the CLI, so `run` still draws nothing from the environment.
 
     `fixed_dials` holds the graph's committed dials still, and defaults to off so
     every existing invocation behaves exactly as it did. It is what a baseline
@@ -123,6 +130,10 @@ def run(
             # `pod_image` because `renders[].image` already means a PNG
             # filename in this same file. `null` when the run was not told.
             "pod_image": pod_image,
+            # The other half of D14's record: the image is the dependency
+            # closure, the commit is ComfyUI itself, and a rebuild moves one
+            # without the other. `null` when the run was not told.
+            "comfy_commit": comfy_commit,
             "base": base,
             "resolution": resolution,
             "renders": renders,

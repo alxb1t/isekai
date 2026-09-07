@@ -357,7 +357,7 @@ def run_guard(
         centroid_offset=offset,
         detail=(
             f"box IoU {iou:.3f} (floor {MIN_GUARD_IOU}), "
-            f"landmark-centroid offset {offset:.3f} of the face diagonal "
+            f"face-box centroid offset {offset:.3f} of the face diagonal "
             f"(ceiling {MAX_GUARD_CENTROID_OFFSET}); authoritative method: {method}"
         ),
     )

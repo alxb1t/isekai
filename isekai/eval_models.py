@@ -30,6 +30,7 @@ from isekai.provision import (
     WHITESPACE,
     Entry,
     Manifest,
+    resolve_dest,
     verify,
 )
 
@@ -58,6 +59,10 @@ class UnknownArtifact(Exception):
 
 class UnpinnedArtifact(Exception):
     """A manifest entry names a source that does not address an immutable revision."""
+
+
+class EscapingDestination(Exception):
+    """A manifest entry's destination does not land under the models root."""
 
 
 def load_eval_manifest(path: Path = EVAL_MANIFEST_PATH) -> Manifest:
@@ -92,6 +97,13 @@ def resolve(dest: str, models_dir: Path, manifest: Manifest | None = None) -> Pa
     The pin check runs even though this function fetches nothing. The manifest is
     the only reason to believe the bytes on disk are the right ones, and an entry
     pointing at `resolve/main/` says nothing about which bytes those were.
+
+    A fourth refusal sits under the third: the join onto `models_dir` goes through
+    `isekai.provision.resolve_dest`, which is the repository's **single** site for
+    the containment rule (design.md D7). Every caller here passes a literal today,
+    so this is not an exploit path being closed -- it is the invariant keeping one
+    enforcement site rather than two, so a destination that climbs out of the
+    models root is refused here exactly as it is on the pod.
     """
     manifest = load_eval_manifest() if manifest is None else manifest
     entry = entry_for(manifest, dest)
@@ -101,7 +113,12 @@ def resolve(dest: str, models_dir: Path, manifest: Manifest | None = None) -> Pa
                 f"{dest}: {source!r} is not a pinned revision, so the digest "
                 "beside it verifies nothing in particular"
             )
-    path = models_dir / dest
+    path = resolve_dest(entry, models_dir)
+    if path is None:
+        raise EscapingDestination(
+            f"{dest!r} does not resolve to a path under {models_dir}, so it is "
+            "refused rather than loaded from"
+        )
     verify(path, entry["sha256"])
     return path
 

@@ -9,6 +9,7 @@ import pytest
 from isekai.eval_models import (
     RECOGNIZER,
     SHARED_WITH_THE_GRAPH,
+    EscapingDestination,
     UnknownArtifact,
     UnpinnedArtifact,
     entry_for,
@@ -132,6 +133,29 @@ def test_an_artifact_the_manifest_does_not_declare_is_refused(
 ) -> None:
     with pytest.raises(UnknownArtifact):
         resolve("styleid/a_model_nobody_pinned.safetensors", tmp_path, eval_manifest)
+
+
+# The two shapes `isekai.provision.resolve_dest` refuses, mirroring
+# `tests/test_provision.py`'s: a relative destination that climbs out, and one
+# that is absolute and would win the join outright.
+ESCAPES = "../../etc/cron.d/payload"
+ABSOLUTE = "/etc/cron.d/payload"
+
+
+@pytest.mark.spec("evaluation:pinned-artifacts:escaping-destination-is-refused")
+@pytest.mark.parametrize("dest", [ESCAPES, ABSOLUTE])
+def test_a_destination_outside_the_models_root_is_refused_rather_than_loaded(
+    eval_manifest: Manifest, tmp_path: Path, dest: str
+) -> None:
+    # The scorer's join goes through the provisioner's containment check, so the
+    # rule has one enforcement site rather than two. Nothing is landed on disk:
+    # the refusal must come before any byte is read, not from a missing file.
+    entry = cast(dict[str, Any], entry_for(eval_manifest, RECOGNIZER))
+    entry["dest"] = dest
+
+    with pytest.raises(EscapingDestination) as refused:
+        resolve(dest, tmp_path, eval_manifest)
+    assert dest in str(refused.value)
 
 
 @pytest.mark.spec("evaluation:pinned-artifacts:recognizer-matches-the-generators-pin")

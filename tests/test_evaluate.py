@@ -817,7 +817,7 @@ def test_the_method_not_chosen_is_still_measured_and_reported(
     guard_note = next(n for n in report.notes if n.startswith("guard: "))
 
     assert "IoU" in guard_note
-    assert "landmark-centroid offset" in guard_note
+    assert "face-box centroid offset" in guard_note
 
 
 @pytest.mark.spec("evaluation:guard:method-is-reported")

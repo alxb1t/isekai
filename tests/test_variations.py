@@ -507,6 +507,39 @@ def test_a_run_that_was_not_told_its_image_records_that_it_does_not_know(
     assert manifest["pod_image"] is None
 
 
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-comfy-commit")
+def test_the_manifest_records_the_comfy_commit_the_run_was_told_it_drives(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    manifest, _ = _manifest_of(
+        workflow,
+        tmp_path / "run",
+        photo,
+        variations=1,
+        seed=7,
+        pod_image="ghcr.io/owner/isekai:v0.11-rc",
+        comfy_commit="250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a",
+    )
+
+    # Beside the image, not instead of it: the image pins the dependency
+    # closure and the commit pins ComfyUI, and a rebuild moves one without the
+    # other (design.md D14).
+    assert manifest["comfy_commit"] == "250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a"
+    assert manifest["pod_image"] == "ghcr.io/owner/isekai:v0.11-rc"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-comfy-commit")
+def test_a_run_that_was_not_told_its_comfy_commit_records_that_it_does_not_know(
+    workflow: Workflow, tmp_path: Path, photo: str
+) -> None:
+    # `/system_stats` reports a ComfyUI version, not a commit, so a run that was
+    # not told records null rather than deriving one from a version string.
+    manifest, _ = _manifest_of(workflow, tmp_path / "run", photo, variations=1, seed=7)
+
+    assert "comfy_commit" in manifest
+    assert manifest["comfy_commit"] is None
+
+
 @pytest.mark.spec("cli:fixed-dials:mode-is-recorded")
 def test_the_manifest_records_that_a_jittered_run_jittered(
     workflow: Workflow, tmp_path: Path, photo: str

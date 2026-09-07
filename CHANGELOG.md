@@ -52,6 +52,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   manifest the pipeline actually wrote rather than against a literal. A run that was not told records
   `null` and the table says `unrecorded`: nothing guesses at a tag, and the required command line is
   still `convert.py photo.jpg`.
+- **`run.json` now carries D14's other half: the ComfyUI commit.** D14 promised the manifest would
+  record the image *and* the commit; only the image landed, and the commit existed solely as prose in
+  `baseline/README.md`, which no run writes and nothing can read. `convert.py` takes `--comfy-commit`
+  — what `git -C /opt/ComfyUI rev-parse HEAD` reports on the pod — and `run.json` records it beside
+  `pod_image`. **No environment default**: nothing in `infra/` or `.env.example` exports a commit, and
+  inventing a variable for it would be a second place to keep in step. A run that was not told records
+  `null`; `/system_stats` reports a version string, not a commit, so nothing derives one. The tracked
+  `baseline/runs/*.run.json` are **not** backfilled — they stand as the metered session's code wrote
+  them.
+- **Both provenance values are bounded and filtered where they enter.** `--pod-image` and
+  `--comfy-commit` are recorded verbatim and printed verbatim, so a newline emitted a line into
+  `eval.txt` indistinguishable from a real header and an escape sequence reached the terminal unread.
+  Both now go through one argparse type at `parse_args` — printable ASCII, at most 256 characters —
+  which `argparse` applies to the `$RUNPOD_IMAGE` default on the same line as the typed flag, so the
+  source likeliest to arrive unreviewed is checked on the same rule.
+- **The scorer's manifest destination goes through the provisioner's containment check.**
+  `eval_models.resolve` joined `dest` onto the models root directly, a second enforcement site beside
+  `provision.resolve_dest`, which exists precisely so the containment rule (design.md D7) has one. It
+  now routes through `resolve_dest` and raises `EscapingDestination` rather than falling through. Not
+  an exploit path closed — every caller passes a literal and `entry_for` matches by equality — but the
+  invariant now has one site rather than two, with the traversal case bound in
+  `tests/test_eval_manifest.py` as it is in `tests/test_provision.py`.
+- **Three pieces of committed prose that described something other than what the code does.** The
+  guard's persisted detail string said "landmark-centroid offset" for what is a face **bounding-box**
+  centroid — no detector in this tree produces landmarks — so it now says "face-box centroid offset",
+  and `baseline/README.md`'s row is relabelled with it; **no number moves and nothing is regenerated**.
+  `eval_backends.py`'s module docstring documented per-line `ty: ignore[unresolved-import]` markers
+  that a `[[tool.ty.overrides]]` block in `pyproject.toml` replaced, so a contributor following it
+  would have turned the gate red; it now points at the override and says why the markers cannot be
+  right in both environments. And the pose-saturation passages called metric ties "most" of the
+  within-subject pairs when `agreement.json` records 18 of 40, a **minority** — both now say what
+  `baseline/correlation/README.md` already said.
+- **The v0.12 pod identifier is redacted from `baseline/README.md` to `<pod id>`.** Account-scoped
+  rather than secret, and the pod is destroyed, but it carries no reader value. The timestamps, wall
+  clock, rate and cost, and the RunPod MCP `list-pods` / `get-pod` 404 that **confirms teardown** all
+  stay: those are what the metered-session protocol requires.
 
 ### Added
 
@@ -72,9 +108,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **DWPose reads all thirty renders — and the pose axis is saturated.** PCK median **1.000**, min
   **0.976** (recomputed at converge, see *Fixed*). The OpenPose ControlNet at strength 0.6 holds pose so
   tightly that at fixed dials this axis has **almost no variance** — twenty-one of thirty renders sit at
-  exactly 1.000, so most within-subject pairs are metric ties and only 22 of 40 could be scored at all.
-  The axis is **not** removed: probe 3 asked whether
-  DWPose could read these renders and it can, so nothing was killed by the probe it was given, and
+  exactly 1.000, so 18 of the 40 within-subject pairs are exact metric ties and only 22 could be
+  scored at all. The axis is **not** removed: probe 3 asked whether DWPose could read these renders
+  and it can, so nothing was killed by the probe it was given, and
   deleting the column would hide that it was measured. It should become informative the moment the pose
   strength is searched, which is v0.13's business.
 - **No axis was removed and no dial was moved to make a meter work.** `denoise` stays at 0.65 and the

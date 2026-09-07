@@ -229,7 +229,9 @@ collected after the scores were seen cannot check them.
 ### Requirement: Every model the scorer loads is pinned and verified
 
 The system SHALL resolve each model it loads from a pinned manifest carrying a revision and a digest,
-SHALL verify that digest before use, and SHALL refuse rather than score when it does not match. The
+SHALL verify that digest before use, and SHALL refuse rather than score when it does not match. It
+SHALL join the manifest's destination onto the models root through the same containment check the
+provisioner uses, and SHALL refuse a destination that does not land under that root. The
 recognizer the scorer reports as a sanity channel SHALL be the same pinned artifact the generator
 injects identity with.
 
@@ -256,3 +258,12 @@ about two different models.
 - **Layers:** unit
 - **WHEN** a manifest entry names a source that is not a pinned revision
 - **THEN** it is refused rather than fetched
+
+#### Scenario: a destination that escapes the models root is refused
+- **Key:** `evaluation:pinned-artifacts:escaping-destination-is-refused`
+- **Layers:** unit
+- **WHEN** the scorer resolves an entry whose destination climbs out of, or is absolute against, the
+  models root
+- **THEN** it is refused naming the destination, before any bytes are read
+- **AND** the check is the provisioner's own, so the containment rule has one enforcement site rather
+  than two

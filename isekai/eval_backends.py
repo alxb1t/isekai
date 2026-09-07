@@ -16,14 +16,19 @@ Every artifact is resolved through `isekai.eval_models.resolve`, which verifies
 its digest against `scripts/eval_models.json` and refuses on a mismatch. A score
 produced by an unverified model is a number from an unknown thing.
 
-**On the `ty: ignore[unresolved-import]` markers below.** The gate runs with the
-extra deliberately absent, so the type checker cannot resolve these five modules
--- not because they are missing but because they are *supposed* to be. Each
-import is marked on its own line, at the boundary, and nowhere else; every other
-diagnostic in this file is still enforced, which is why the `_srgb_to_lab` call
-below unpacks its triple explicitly rather than passing a `tuple[float, ...]`.
-Whoever installs the extra can run `uv run --extra eval ty check` and get the
-resolution these markers stand in for.
+**On the unresolved imports below.** The gate runs with the extra deliberately
+absent, so the type checker cannot resolve these five modules -- not because they
+are missing but because they are *supposed* to be. That is waived in
+`pyproject.toml`, by a `[[tool.ty.overrides]]` block naming this file and the one
+rule `unresolved-import`; do **not** add per-line `ty: ignore[unresolved-import]`
+markers here, because they cannot be right in both environments -- absent the
+extra they are load-bearing, present it they are unused-directive warnings and ty
+exits non-zero on those, so re-adding them turns the gate red under
+`uv run --extra eval ty check`. Every other diagnostic in this file is still
+enforced, which is why the `_srgb_to_lab` call below unpacks its triple
+explicitly rather than passing a `tuple[float, ...]`. Whoever installs the extra
+can run `uv run --extra eval ty check` and get the resolution the override stands
+in for.
 """
 
 from collections.abc import Sequence

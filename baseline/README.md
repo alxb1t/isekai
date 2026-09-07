@@ -112,12 +112,12 @@ One pod session, on `ghcr.io/alxb1t/isekai:v0.11-rc`, RTX PRO 4500 Blackwell in 
 
 | | |
 |---|---|
-| Pod | `91nijtpzpfgfq2` |
+| Pod | `<pod id>` (redacted; the identifier is account-scoped and the pod is destroyed) |
 | Created | 2026-09-06T17:15:53Z |
 | Torn down | 2026-09-06T17:35:51Z |
 | Wall clock | **19 min 58 s** (planned against 25 min, ceiling 45 min) |
 | Rate / cost | $0.72/hr → **~$0.24** (ceiling ~$0.30) |
-| Teardown confirmed | RunPod MCP `list-pods` → `{"items": [], "pagination": {"total": 0, ...}}`; `get-pod 91nijtpzpfgfq2` → `404 {"detail":"pod not found","status":404,"title":"Not Found"}` |
+| Teardown confirmed | RunPod MCP `list-pods` → `{"items": [], "pagination": {"total": 0, ...}}`; `get-pod <pod id>` → `404 {"detail":"pod not found","status":404,"title":"Not Found"}` |
 
 Boot to a reachable ComfyUI took 5 min 10 s; the thirty renders took 13 min 16 s, about 26 s each.
 The estimate in `tasks.md` was ~19 min ≈ $0.23, derived from v0.11's measured session — it was right
@@ -187,7 +187,7 @@ Computed on all thirty renders at the working denoise of 0.65.
 | method | median | worst | threshold | passes |
 |---|---|---|---|---|
 | box IoU | 0.950 | 0.857 (min) | ≥ 0.30 | **30 / 30** |
-| landmark centroid | 0.012 | 0.024 (max) | ≤ 0.25 | **30 / 30** |
+| face-box centroid offset | 0.012 | 0.024 (max) | ≤ 0.25 | **30 / 30** |
 
 So `design.md` D9's pre-committed fallback — *if neither holds, the region axes refuse and that
 refusal is what v0.12 ships* — **did not fire**. Both methods locate the face in every render, with
@@ -250,8 +250,8 @@ PCK   median 1.000   min 0.976   max 1.000   across all 30 renders
 
 Every render's pose agrees with its photograph almost perfectly. The OpenPose ControlNet sits at
 strength 0.6 and holds the pose so tightly that, **at fixed dials, this axis has almost no
-variance** — twenty-one of the thirty renders sit at exactly 1.000, so most within-subject pairs are
-metric ties and the correlation is computed over the few that are not.
+variance** — twenty-one of the thirty renders sit at exactly 1.000, so 18 of the 40 within-subject
+pairs are exact metric ties and the correlation is computed over the 22 that could be scored.
 
 **These numbers were recomputed at converge**, after the pose reader's preprocessing was brought onto
 the pinned artifacts' reference pipeline (a 1.25-padded aspect-preserving warp, ImageNet

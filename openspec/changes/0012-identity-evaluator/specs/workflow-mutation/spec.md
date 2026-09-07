@@ -107,6 +107,21 @@ looking at, and a baseline nothing can identify is not a baseline.
 - **AND** a run that was not told records that it does not know, rather than naming an image it was
   not produced on
 
+#### Scenario: the manifest records the ComfyUI the run was produced on
+- **Key:** `workflow-mutation:output-layout:manifest-records-the-comfy-commit`
+- **Layers:** unit
+- **WHEN** a run completes and was told which ComfyUI commit it is driving
+- **THEN** the manifest records that commit verbatim, beside the image
+- **AND** a run that was not told records that it does not know, rather than naming a commit it was
+  not produced on
+
+#### Scenario: a provenance value that could rewrite a report is refused
+- **Key:** `workflow-mutation:output-layout:provenance-values-are-bounded`
+- **Layers:** unit
+- **WHEN** the image or the commit arrives carrying a control character, or longer than the bound
+- **THEN** it is refused where it enters, before anything records or prints it
+- **AND** the value taken from the environment is refused on the same rule as the one typed
+
 #### Scenario: the manifest records the resolved dials per variation
 - **Key:** `workflow-mutation:output-layout:manifest-records-resolved-dials`
 - **Layers:** unit
