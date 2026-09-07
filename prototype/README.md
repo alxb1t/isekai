@@ -62,7 +62,7 @@ agrees with what we already picked.
       | 5 | denoise 0.65 → 0.45 | identity↔style, **after** the register is right |
 
 - [x] **T4 · read session 1** — done in-session; four rounds rather than one
-- [ ] **T4b · confirm the candidate** — the frontier is four points on ONE photograph. Re-run denoise 0.35/0.45/0.55 across all six subjects at 2–3 seeds before this is a setup rather than a candidate — by eye and with T1/T2. Decide session 2's variables.
+- [x] ~~T4b~~ superseded by T6/T6b/T6c — the frontier is four points on ONE photograph. Re-run denoise 0.35/0.45/0.55 across all six subjects at 2–3 seeds before this is a setup rather than a candidate — by eye and with T1/T2. Decide session 2's variables.
 - [x] **T5 · CHOOSE THE TARGET REGISTER** — **`notile`**, the rendered-illustration register. Chosen 2026-09-07.
 - [x] ~~T5 (original)~~ *($0, operator)* — F10: the operator prefers `8_notile`
       (rendered anime illustration) over Fotor's flat cel. Until this is chosen, "better" is undefined
@@ -75,11 +75,12 @@ agrees with what we already picked.
       Re-run denoise 0.35 / 0.45 / 0.55 under the chosen register, all six subjects, 2–3 seeds, before
       it is a setup rather than a candidate.
 - [x] **T6c · the register across ten diverse portraits** — F12. Generalises; the remaining failures are unmeasured ones
+- [x] **T12 · the missing axes** — F14. `background_detail`, `background_colour`, `garment_colour` validate; `accessory_detail` did not
 - [ ] **T8 · re-run the known-answer probe WITHIN one base** *($0)* — `notile d0.45` vs the shipped
       dials, all six, full evaluator. **Same base and same tool, so the face axes do not refuse** — this
       is a far better instrument test than the cross-base Fotor one, and the operator's eye already has
       an answer for it.
-- [ ] **T9 · s5, the exception** — the only subject where shipped beats the candidate on hair, and the
+- [ ] *(deferred, notile closed)* **T9 · s5, the exception** — the only subject where shipped beats the candidate on hair, and the
       subject whose refusal path has never fired.
 - [ ] **T10 · the instruction sweep** — recover the Qwen path (`prototype/styles/qwen-image-edit.recovered.json`,
       from `e324699^`), grow the volume, and sweep the **instruction** rather than the architecture:
@@ -87,7 +88,7 @@ agrees with what we already picked.
       Same six subjects, same axes.
 - [ ] **T11 · the tattoo question** — Qwen kept the subject's chest ink. `xor` is a claim about global
       ControlNet and stands; this asks whether the project's largest parked feature is a *base* problem.
-- [ ] **T7 · style presets** — the operator wants several named setups rather than one. `notile`,
+- [x] **T7 · style presets** — `notile-d045` recorded in `prototype/styles/`; the rule is *a workflow exists only if it has a committed scored baseline and a stated style target* — the operator wants several named setups rather than one. `notile`,
       `flat-cel`, and the shipped register are three candidates that already exist as run manifests.
       Note this is [backlog] `style menu`, previously held out of the arc and now evidence-backed.
 - [ ] **T6 · re-probe against Fotor** — repaired axes, all six subjects. Does the instrument now

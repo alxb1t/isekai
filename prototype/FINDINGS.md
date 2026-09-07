@@ -459,4 +459,54 @@ instruction**, and testing that costs one instruction sweep.
 
 ---
 
-<!-- next: F14 -->
+## F14 · Three of four missing axes now exist. The fourth did not validate. · T12 ✅
+
+Built **before** the architecture they will judge, on pairs whose answers are already known — the same
+discipline as T1. All four are **absolute and cross-base valid**, which is not a nicety: the face
+embeddings refuse across bases (F1), so a three-way Illustrious / Fotor / Qwen comparison lives
+*entirely* on axes of this kind.
+
+**s1 (a meadow behind the subject — a background with real detail)**
+
+| | background detail *(ratio, ~1 good)* | background colour *(ΔE)* | garment colour *(ΔE)* |
+|---|---:|---:|---:|
+| shipped dials | **0.009** | 8.27 | 9.44 |
+| notile d0.45 | 0.525 | **1.98** | 6.50 |
+| FOTOR | **1.008** | 8.60 | **2.99** |
+
+**`background_detail` is the axis this whole investigation needed.** The shipped dials score **0.009** —
+the meadow was dissolved to a wash, which is precisely what the eye saw and no axis could say. Fotor
+scores **1.008**: it kept the background pixel-for-pixel in detail terms. `notile` sits between at 0.525.
+
+The other two behave sensibly and disagree usefully: `notile` keeps the background *colour* best (1.98)
+while Fotor keeps the *garment* colour best (2.99) and saturates the greens (8.60). Two tools, two
+different failures — which is the trade-off an unaveraged report exists to show.
+
+### The guard the validation forced
+
+Background edge density across the six photographs runs **0.0001** (a flat wall, s6) to **0.0227** (a
+meadow, s5). On `s4`'s flat studio backdrop it is **0.0021**, so the first version of this axis divided
+noise by noise and returned 1.138 for a render that had turned the backdrop teal.
+
+**This is F3's flat-histogram failure in different clothes**, and it gets F3's answer: a floor. Below
+`MIN_EDGE_DENSITY = 0.005` the axis **refuses**. That silences `background_detail` on two of six
+subjects, and a refusal on two subjects is worth more than a number on six.
+
+### `accessory_detail` did not validate, and is demoted
+
+The band where a necklace and earrings live, derived from the photo's own face mask. On s1 it tracked
+the eye exactly (shipped **0.006** — the hoops are gone; Fotor **1.185** — kept). On s4 it scored
+**0.902** for a render whose necklace is plainly missing, because a bob falls into both ear zones and
+the hair supplies the edges the necklace no longer does.
+
+**A proxy that works when the region is clean and lies when it is not is not an axis.** It is renamed
+`accessory_detail?`, still computed, never reported as a result — the same shelf as T1's `flat_fraction`
+and `unique_ratio`.
+
+**So accessory retention remains unmeasured**, and it is one of the things Qwen visibly does best
+(F13: a necklace, an earring, lace trim). The three-way comparison will have to say so rather than
+score it.
+
+---
+
+<!-- next: F15 -->
