@@ -298,4 +298,32 @@ everywhere**, so the style gap is narrowed and not closed.
 
 ---
 
-<!-- next: F10 -->
+## F10 · **"Anime" is not one target** — and the operator prefers the register we were calling a defect
+
+Reviewing the ladder by eye, the operator picked **`8_notile`** as the best output of the whole session,
+**including above Fotor**. Also liked: `7_denoise08`, `6_positive`, `2_negative`.
+
+That changes what the style axis is for. F7 and F9 implicitly treated **more linework = better**,
+because Fotor was the reference. If the target is a *rendered anime illustration* rather than a *flat
+TV screencap*, then linework is **a coordinate to hit, not a quantity to maximise**.
+
+```
+   photograph ──▶ ANIME ILLUSTRATION ──▶ FLAT CEL SCREENCAP
+                  8_notile                Fotor
+                  polished, shaded,       flat fills, hard
+                  clean edges             outlines
+                  ▲
+                  └─ the operator's preference
+```
+
+**Two registers, both legitimate products.** The project has been treating "not flat cel" as a defect
+since v0.10. It is a defect only relative to a target nobody had chosen. **Choose the target before
+tuning further** — otherwise "better" is undefined and every dial search optimises toward whichever
+reference happened to be on screen.
+
+**What is a defect either way, and is unchanged:** the lost necklace, earrings, garment colour and
+background. That is *identity*, not style, and F9's low-denoise direction is what fixes it.
+
+---
+
+<!-- next: F11 -->

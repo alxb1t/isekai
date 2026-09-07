@@ -63,7 +63,19 @@ agrees with what we already picked.
 
 - [x] **T4 · read session 1** — done in-session; four rounds rather than one
 - [ ] **T4b · confirm the candidate** — the frontier is four points on ONE photograph. Re-run denoise 0.35/0.45/0.55 across all six subjects at 2–3 seeds before this is a setup rather than a candidate — by eye and with T1/T2. Decide session 2's variables.
-- [ ] **T5 · pod session 2** — combinations of whatever won, plus `cn_strength` (never searched).
+- [ ] **T5 · CHOOSE THE TARGET REGISTER** *($0, operator)* — F10: the operator prefers `8_notile`
+      (rendered anime illustration) over Fotor's flat cel. Until this is chosen, "better" is undefined
+      and every dial search optimises toward whichever reference is on screen. **This gates T6 and T7.**
+- [ ] **T6 · pod session 2 — `notile` across all six subjects** *(~15 min)* — the operator's pick, run
+      on every subject to see whether the register holds beyond `s4`. Its config is `tile 0.0` with
+      everything else shipped (old register, denoise 0.65, lineart 0.2, pose 0.6); the run manifests
+      are in `prototype/ladder/8_notile/`.
+- [ ] **T6b · the frontier, confirmed** *(~20 min)* — F9's four points are ONE photograph at ONE seed.
+      Re-run denoise 0.35 / 0.45 / 0.55 under the chosen register, all six subjects, 2–3 seeds, before
+      it is a setup rather than a candidate.
+- [ ] **T7 · style presets** — the operator wants several named setups rather than one. `notile`,
+      `flat-cel`, and the shipped register are three candidates that already exist as run manifests.
+      Note this is [backlog] `style menu`, previously held out of the arc and now evidence-backed.
 - [ ] **T6 · re-probe against Fotor** — repaired axes, all six subjects. Does the instrument now
       agree with the eye?
 - [ ] **T7 · answer Q5** — dials or architecture, with the evidence for it.
