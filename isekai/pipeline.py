@@ -1,17 +1,19 @@
 """Drive a conversion end to end: upload, inject, override, mutate, render, save."""
 
 import copy
+import hashlib
 import json
 import random
 import sys
 import time
 from pathlib import Path
+from typing import Any
 from urllib import error
 
 from isekai.comfy_types import ComfyTransport, Overrides, Workflow
-from isekai.mutate import mutate
+from isekai.mutate import draw_seed, mutate
 from isekai.overrides import apply_overrides
-from isekai.workflow import inject
+from isekai.workflow import find_node, find_nodes, inject
 
 
 def run(
@@ -22,6 +24,9 @@ def run(
     variations: int,
     seed: int | None = None,
     overrides: Overrides | None = None,
+    fixed_dials: bool = False,
+    pod_image: str | None = None,
+    comfy_commit: str | None = None,
 ) -> None:
     """Orchestrate one or more conversions against an injected ComfyUI client.
 
@@ -34,6 +39,25 @@ def run(
     `output_dir` is this run's own directory, already resolved by the caller, and
     `variations` is required: the count is a spend decision, and its default and
     its ceiling belong together in the CLI that carries the flag.
+
+    `pod_image` is the container image the ComfyUI on the other end of `client` is
+    running, as the operator states it: nothing on the wire reports it, so it is
+    passed in or it is not known. It is recorded verbatim and never guessed --
+    `None` is written through as `null`, which is a run saying it does not know
+    rather than a run claiming an image it was not produced on (design.md D14).
+
+    `comfy_commit` is D14's other half, under exactly the same contract: the image
+    pins the dependency closure, the commit pins ComfyUI itself, and the drift D14
+    wants measurable later needs both. `/system_stats` reports a version string,
+    not a commit, so this too is stated rather than asked for -- and both are read
+    in the CLI, so `run` still draws nothing from the environment.
+
+    `fixed_dials` holds the graph's committed dials still, and defaults to off so
+    every existing invocation behaves exactly as it did. It is what a baseline
+    means: the mutator moves six dials at once, so until this existed no two
+    renders this repository had produced differed in one thing (design.md D3). A
+    held run still draws its own sampler seed per variation -- otherwise it would
+    be one render billed N times -- so its variations differ in exactly that.
     """
     image_name = client.upload_image(input_path)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -43,6 +67,14 @@ def run(
     # None it draws from OS entropy, which is the unseeded behaviour.
     seeds = random.Random(seed)
     used: list[int] = []
+    renders: list[dict[str, Any]] = []
+    # Read off the graph rather than passed in: the base is what the run actually
+    # loaded, and the resolution is what injection actually derived and wrote.
+    # Both are constant across a run's variations -- same photo, same checkpoint --
+    # so they are recorded once at the top rather than repeated per render.
+    base_id = find_node(workflow, class_type="CheckpointLoaderSimple")
+    base = workflow[base_id]["inputs"]["ckpt_name"]
+    resolution: list[int] = []
 
     for i in range(variations):
         wf = copy.deepcopy(workflow)
@@ -56,34 +88,125 @@ def run(
         # doubling as the first render's sampler seed (design.md D5).
         s = seeds.getrandbits(64)
         used.append(s)
-        mutate(wf, random.Random(s))
+        # The same first draw either way, so a held run and a jittered run from
+        # one run seed share their sampler seeds and differ in the jitter alone.
+        if fixed_dials:
+            draw_seed(wf, random.Random(s))
+        else:
+            mutate(wf, random.Random(s))
         print(f"variation {i}: seed {s}")
 
-        _render(client, wf, output_dir / f"{i}.png")
+        if not resolution:
+            scale_id = find_node(wf, class_type="ImageScale")
+            resolution = [
+                wf[scale_id]["inputs"]["width"],
+                wf[scale_id]["inputs"]["height"],
+            ]
 
-    _write_manifest(output_dir, seed, used, overrides)
+        image = f"{i}.png"
+        renders.append(_provenance_of(wf, image))
+        _render(client, wf, output_dir / image)
+
+    # Recorded so a later comparison can identify what produced these images: a
+    # baseline nothing can identify is not a baseline. Keys are added and none
+    # removed, so a manifest written by an earlier version stays readable.
+    #
+    # **The photograph is a digest, never pixels.** A digest of a face is not a
+    # face, so the rule that derived faces are not committed is untouched -- and
+    # the digest is what makes an uncommitted input checkable rather than merely
+    # trusted.
+    _write_manifest(
+        output_dir,
+        {
+            "seed": seed,
+            # From the seeds actually drawn rather than the count asked for: a
+            # manifest claiming five renders beside four seeds would lie.
+            "variations": len(used),
+            "seeds": used,
+            "overrides": dict(overrides) if overrides else {},
+            "dials_mode": "held" if fixed_dials else "jittered",
+            "photo_sha256": _digest_of_file(input_path),
+            # The container image the render was produced on, spelled
+            # `pod_image` because `renders[].image` already means a PNG
+            # filename in this same file. `null` when the run was not told.
+            "pod_image": pod_image,
+            # The other half of D14's record: the image is the dependency
+            # closure, the commit is ComfyUI itself, and a rebuild moves one
+            # without the other. `null` when the run was not told.
+            "comfy_commit": comfy_commit,
+            "base": base,
+            "resolution": resolution,
+            "renders": renders,
+        },
+    )
 
 
-def _write_manifest(
-    output_dir: Path,
-    seed: int | None,
-    used: list[int],
-    overrides: Overrides | None,
-) -> None:
-    """Record what produced this run, beside the images it produced.
+def _digest_of_file(path: str) -> str:
+    """Return a file's SHA-256, read in chunks so a large photo does not go in RAM.
 
-    With the per-variation seeds printed and nowhere else, reproducing render 3
-    next week means still having the terminal. The manifest moves that from a
-    property of the operator's scrollback to a property of the artifact.
+    Spelled here rather than imported from `isekai.provision`, which has one --
+    that module is deliberately off `convert.py`'s import graph, and importing it
+    for four lines would put it on. The runtime stays stdlib-only either way; what
+    would change is the graph, and its narrowness is the property being kept.
     """
-    manifest = {
-        "seed": seed,
-        # Derived from the seeds actually drawn rather than from the count asked
-        # for: a manifest claiming five renders beside four seeds would lie.
-        "variations": len(used),
-        "seeds": used,
-        "overrides": dict(overrides) if overrides else {},
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _digest_of_graph(workflow: Workflow) -> str:
+    """Return the SHA-256 of a graph as submitted.
+
+    Key-sorted and separator-tight, so the digest is a property of the graph and
+    not of how this file happened to serialise it. Two runs that submitted the
+    same graph must agree, or the digest cannot be used to tell them apart.
+    """
+    return hashlib.sha256(
+        json.dumps(workflow, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def _provenance_of(workflow: Workflow, image: str) -> dict[str, Any]:
+    """Record what one variation is about to be submitted with.
+
+    Read off the graph rather than off the arguments that produced it: the dials
+    that were *submitted* are the ones a later comparison needs, and reconstructing
+    them from a seed and an override would re-derive the mutator to read it.
+
+    Per variation rather than once for the run, because under jitter every
+    variation carries its own -- a single record would be a lie about all but one.
+    """
+    sampler_id = find_node(workflow, class_type="KSampler")
+    apply_id = find_node(workflow, class_type="ApplyInstantIDAdvanced")
+    cn_ids = sorted(find_nodes(workflow, class_type="ControlNetApplyAdvanced"), key=int)
+    return {
+        "image": image,
+        "sampler_seed": workflow[sampler_id]["inputs"]["seed"],
+        "graph_sha256": _digest_of_graph(workflow),
+        "dials": {
+            "denoise": workflow[sampler_id]["inputs"]["denoise"],
+            "cfg": workflow[sampler_id]["inputs"]["cfg"],
+            "ip_weight": workflow[apply_id]["inputs"]["ip_weight"],
+            "cn_strength": workflow[apply_id]["inputs"]["cn_strength"],
+            # Keyed by node id, because the three are tuned differently and
+            # "tile, pose, lineart" is an ordering nothing in the graph states.
+            "controlnet_strength": {
+                nid: workflow[nid]["inputs"]["strength"] for nid in cn_ids
+            },
+        },
     }
+
+
+def _write_manifest(output_dir: Path, manifest: dict[str, Any]) -> None:
+    """Write this run's manifest beside the images it produced.
+
+    Takes the assembled record rather than nine positional arguments to
+    reassemble it from: `run` already holds every field, and threading them
+    through a signature only to rebuild the same dict on the other side made the
+    call site a list of nine bare positionals whose order nothing checked.
+    """
     (output_dir / "run.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 

@@ -1,0 +1,70 @@
+{
+  "judgements": 40,
+  "labelled_subjects": [
+    "s1_control_blonde",
+    "s2_control_brunette",
+    "s3_multitone_balayage",
+    "s4_multitone_bob"
+  ],
+  "axes": [
+    {
+      "axis": "face_styleid",
+      "higher_is_closer": true,
+      "agreement": 0.45,
+      "judgements_used": 40,
+      "judgements_skipped": 0,
+      "agreed": 18,
+      "ci95": [
+        0.2950483946517494,
+        0.6049516053482507
+      ],
+      "binomial_p": 0.6358280026288412
+    },
+    {
+      "axis": "face_arcface",
+      "higher_is_closer": true,
+      "agreement": 0.625,
+      "judgements_used": 40,
+      "judgements_skipped": 0,
+      "agreed": 25,
+      "ci95": [
+        0.4700483946517494,
+        0.7799516053482506
+      ],
+      "binomial_p": 0.1538599441628321
+    },
+    {
+      "axis": "pose_pck",
+      "higher_is_closer": true,
+      "agreement": 0.6363636363636364,
+      "judgements_used": 22,
+      "judgements_skipped": 18,
+      "agreed": 14,
+      "ci95": [
+        0.4274269343351381,
+        0.8453003383921346
+      ],
+      "binomial_p": 0.28627872467041016
+    },
+    {
+      "axis": "hair_colour_delta_e",
+      "higher_is_closer": false,
+      "agreement": 0.425,
+      "judgements_used": 40,
+      "judgements_skipped": 0,
+      "agreed": 17,
+      "ci95": [
+        0.2700483946517494,
+        0.5799516053482505
+      ],
+      "binomial_p": 0.42959050784338615
+    },
+    {
+      "axis": "hair_mask_area",
+      "higher_is_closer": true,
+      "agreement": null,
+      "judgements_used": 0,
+      "judgements_skipped": 40
+    }
+  ]
+}

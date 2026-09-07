@@ -25,6 +25,388 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-07
+
+### Fixed
+
+- **The pose reader's input now matches what the pinned artifacts are published to be fed.** Three
+  deviations from `comfyui_controlnet_aux`'s reference pipeline — the one that publishes
+  `dw-ll_ucoco_384_bs5.torchscript.pt` and `yolox_l.onnx`, and the same preprocessor the graph's own
+  OpenPose branch runs on the pod: the person crop was **stretched** to 288x384 where the reference
+  applies an aspect-preserving affine over a **1.25-padded** box; the crop was normalised
+  `(x - 127.5) / 127.5` where the reference uses **ImageNet mean and standard deviation**, the same
+  convention `SegformerParser` in that file already used; and `yolox_l` was fed **RGB** where its
+  reference feeds **BGR**. All three are corrected, and the keypoints are mapped back through the
+  inverse of the window they were read in.
+- **The pose axis was recomputed over the thirty committed renders, locally and for nothing.** Only
+  the pose axis moved: every other axis in all thirty `*.eval.json` records came back byte-identical,
+  which is what makes this a recomputation rather than a new measurement. **The saturation finding
+  stands** — PCK median **1.000**, twenty-one of thirty at exactly 1.000, min now 0.976 — and it is now
+  attributable to the pipeline rather than to the reader. The correlation's pose row moves from
+  **0.286 (4/14)** to **0.636 (14/22)**, *p* = 0.286, interval 0.427 – 0.845: still a coin flip, and
+  every 95% interval in the table still contains 0.5. `baseline/correlation/agreement.json` and both
+  `baseline` READMEs carry the recomputed figures.
+- **A run records the container image it was rendered on, and the report reads it.** The table's
+  fourth line read `manifest.get("image", ...)`, a key nothing ever wrote — `renders[].image` is a PNG
+  filename — so every real table printed `image: unrecorded` while the unit test, handed a literal,
+  printed a tag. `run.json` now carries `pod_image`, `convert.py` takes `--pod-image` (defaulting to
+  `$RUNPOD_IMAGE`, the same variable `infra/up.sh` boots from), and the table is now proven against a
+  manifest the pipeline actually wrote rather than against a literal. A run that was not told records
+  `null` and the table says `unrecorded`: nothing guesses at a tag, and the required command line is
+  still `convert.py photo.jpg`.
+- **`run.json` now carries D14's other half: the ComfyUI commit.** D14 promised the manifest would
+  record the image *and* the commit; only the image landed, and the commit existed solely as prose in
+  `baseline/README.md`, which no run writes and nothing can read. `convert.py` takes `--comfy-commit`
+  — what `git -C /opt/ComfyUI rev-parse HEAD` reports on the pod — and `run.json` records it beside
+  `pod_image`. **No environment default**: nothing in `infra/` or `.env.example` exports a commit, and
+  inventing a variable for it would be a second place to keep in step. A run that was not told records
+  `null`; `/system_stats` reports a version string, not a commit, so nothing derives one. The tracked
+  `baseline/runs/*.run.json` are **not** backfilled — they stand as the metered session's code wrote
+  them.
+- **Both provenance values are bounded and filtered where they enter.** `--pod-image` and
+  `--comfy-commit` are recorded verbatim and printed verbatim, so a newline emitted a line into
+  `eval.txt` indistinguishable from a real header and an escape sequence reached the terminal unread.
+  Both now go through one argparse type at `parse_args` — printable ASCII, at most 256 characters —
+  which `argparse` applies to the `$RUNPOD_IMAGE` default on the same line as the typed flag, so the
+  source likeliest to arrive unreviewed is checked on the same rule.
+- **The scorer's manifest destination goes through the provisioner's containment check.**
+  `eval_models.resolve` joined `dest` onto the models root directly, a second enforcement site beside
+  `provision.resolve_dest`, which exists precisely so the containment rule (design.md D7) has one. It
+  now routes through `resolve_dest` and raises `EscapingDestination` rather than falling through. Not
+  an exploit path closed — every caller passes a literal and `entry_for` matches by equality — but the
+  invariant now has one site rather than two, with the traversal case bound in
+  `tests/test_eval_manifest.py` as it is in `tests/test_provision.py`.
+- **Three pieces of committed prose that described something other than what the code does.** The
+  guard's persisted detail string said "landmark-centroid offset" for what is a face **bounding-box**
+  centroid — no detector in this tree produces landmarks — so it now says "face-box centroid offset",
+  and `baseline/README.md`'s row is relabelled with it; **no number moves and nothing is regenerated**.
+  `eval_backends.py`'s module docstring documented per-line `ty: ignore[unresolved-import]` markers
+  that a `[[tool.ty.overrides]]` block in `pyproject.toml` replaced, so a contributor following it
+  would have turned the gate red; it now points at the override and says why the markers cannot be
+  right in both environments. And the pose-saturation passages called metric ties "most" of the
+  within-subject pairs when `agreement.json` records 18 of 40, a **minority** — both now say what
+  `baseline/correlation/README.md` already said.
+- **The v0.12 pod identifier is redacted from `baseline/README.md` to `<pod id>`.** Account-scoped
+  rather than secret, and the pod is destroyed, but it carries no reader value. The timestamps, wall
+  clock, rate and cost, and the RunPod MCP `list-pods` / `get-pod` 404 that **confirms teardown** all
+  stay: those are what the metered-session protocol requires.
+
+### Added
+
+- **The guard's authoritative method is settled by measurement: box IoU.** Both methods were computed
+  on all thirty baseline renders at the working denoise of 0.65 and **both hold** — IoU median 0.950
+  against a 0.30 floor, face-box centroid offset median 0.012 against a 0.25 ceiling, 30/30 either
+  way. So D9's pre-committed fallback, where neither holds and the region axes refuse, did not fire.
+  IoU ships because it constrains **size** as well as position: a correctly-centred face at three
+  times the scale passes the centroid test and fails IoU, and a test asserts exactly that. It is pinned as
+  `AUTHORITATIVE_GUARD_METHOD` and the method not chosen is still computed and printed on every run, so
+  the day the two disagree is visible rather than silent.
+- **StyleID carries real signal but does not separate cleanly, and n=6 cannot license it.** Across 30
+  same-subject and 150 different-subject pairs: AUC **0.847**, medians 0.467 against 0.207 — a long way
+  from a coin flip. But 98 of 150 different-subject pairs score at or above the worst same-subject
+  pair, and **two of six subjects are nearer somebody else's renders than their own**. The probe could
+  have killed StyleID and did not; it cannot license it either, and no threshold is set. StyleID
+  outscores ArcFace on both AUC and separation, consistent with the roles D8 assigns them.
+- **DWPose reads all thirty renders — and the pose axis is saturated.** PCK median **1.000**, min
+  **0.976** (recomputed at converge, see *Fixed*). The OpenPose ControlNet at strength 0.6 holds pose so
+  tightly that at fixed dials this axis has **almost no variance** — twenty-one of thirty renders sit at
+  exactly 1.000, so 18 of the 40 within-subject pairs are exact metric ties and only 22 could be
+  scored at all. The axis is **not** removed: probe 3 asked whether DWPose could read these renders
+  and it can, so nothing was killed by the probe it was given, and
+  deleting the column would hide that it was measured. It should become informative the moment the pose
+  strength is searched, which is v0.13's business.
+- **No axis was removed and no dial was moved to make a meter work.** `denoise` stays at 0.65 and the
+  guard was measured at the denoise the product actually uses.
+- **`s5`'s refusal path was not exercised.** It was chosen as a refusal-path subject and the detector
+  found its face in all five of its renders — the batch's lowest IoU at 0.857–0.898, but far above the
+  floor. The absent-face and guard-failure paths remain covered by unit tests and by nothing in the
+  baseline. Stated as a gap rather than papered over.
+- **Thirty fixed-dial renders, from one metered pod session: 19 min 58 s, ~$0.24.** Six subjects × five
+  seeds on the already-built `:v0.11-rc`, so rebuild drift is held constant rather than measured. These
+  are **the first renders this project has ever produced with the graph's committed dials** — within a
+  subject they differ in exactly one thing, which is what makes them a baseline rather than thirty
+  samples of a distribution. Planned against 25 min against a 45 min ceiling; the estimate derived from
+  v0.11's session was right to within a minute. Teardown confirmed through the RunPod MCP with the
+  response transcribed in `baseline/README.md` — `list-pods` empty and `get-pod` a 404.
+- **The landscape gap is closed on a GPU, not just on paper.** `s6` rendered at **1536×1024**, an aspect
+  ratio this pipeline had never produced, and every one of the thirty renders' dimensions equals the
+  target the injector computes from that subject's own photograph. Every `run.json`'s `photo_sha256`
+  matches the digest the builder recorded, so each batch is provably the subject it claims to be.
+- **`RUNPOD_IMAGE` was set to the release candidate for the session and cleared immediately after**, so
+  no later pod silently boots an unreleased image. The renders arrive over the tunnel and are written
+  locally by `convert.py`, so nothing ever lived only on the pod's ephemeral disk — and they were
+  verified complete *before* teardown rather than after.
+- **The run manifests are committed and the pixels are not**, following v0.10's and v0.11's precedent:
+  this repository claims reproducibility over the submitted workflow JSON, never over pixels.
+- **`baseline/build_subjects.py` and the six subjects it produces**, given `probe/build_inputs.py`'s
+  treatment because one version does not silently reverse a convention the previous one wrote down: a
+  tracked recipe, digests recorded in `baseline/README.md`, **pixels not committed**. Two consecutive
+  runs produce byte-identical digests, which is the only thing that makes a recorded digest worth
+  recording.
+- **Each subject earns its slot adversarially, not representatively.** Two controls that differ in hair
+  colour so they are not one case counted twice; two multi-tone subjects that stress the
+  dominant-colour metric in *different* ways — one by extreme dark-root-to-blonde bimodality, one by a
+  small hair region rather than a large one; one full-length figure whose face is ~1.3% of the canvas;
+  and one landscape. Four are labelled in phase 9 (4 × 10 within-subject pairs = 40) and the two
+  refusal-path subjects are not, because a subject whose axes are expected to refuse cannot calibrate
+  anything.
+- **The landscape gap v0.11 named is closed.** The source set is entirely portrait, so `s6` is derived
+  by cropping, reusing v0.11's own 832×554 landscape geometry — the crop origin keeps the face in the
+  band, since a centred crop of a standing figure is a crop of its chest. It resolves to a
+  **1536×1024** target, an aspect ratio this pipeline has never rendered.
+- **All six were read by the real scorer on CPU before any pod was created.** Hair areas span 0.0198 to
+  0.3104 — a factor of fifteen, every one above the 0.005 floor — so no subject refuses its region axes
+  for lack of pixels before the renders exist. **`s5`'s refusal is therefore not yet demonstrated**:
+  what was measured is the anime detector against a *photograph*, and whether it locates a face in
+  `s5`'s stylized renders is a phase-8 question, left unprejudged.
+- **The sources deliberately unused are recorded with their reasons**, so the selection is reviewable
+  rather than asserted — one candidate was the same person and shoot as `s5`, and two others repeated
+  the easy uniform-blonde case a control already covers.
+- **Residual risk stated rather than discovered later:** if the source photographs are lost this
+  baseline becomes unreproducible and the labels are the only surviving artifact, with the digests
+  proving that some file once existed and nothing about what it contained. That is the accepted cost of
+  not committing derived faces, and there is no mitigation beyond keeping the sources.
+
+### Notes
+
+- **The correlation, which is what v0.12 actually ships. No axis is shown to track the operator's
+  eye.** Forty blind pairwise judgements against each axis separately, never rolled up, with the count
+  beside every figure: `face_styleid` **0.450** (18/40), `face_arcface` **0.625** (25/40), `pose_pck`
+  **0.636** (14/22), `hair_colour_delta_e` **0.425** (17/40), `hair_mask_area` **undefined**. **Every
+  95% interval contains 0.5 and every binomial *p* is ≥ 0.15.** At n=40 the interval is ±0.155 — ±0.209
+  on the pose row, which only 22 pairs could be scored on — so this could only ever have detected a very
+  strong effect, and there was not one.
+- **The primary face axis lands below a coin flip.** StyleID separates *different people* well enough —
+  AUC 0.847 in phase 8 — and still cannot say which of two renders **of the same person** looks more
+  like them. Those are different questions, and this version is what established that the second is the
+  hard one. The highest agreement over all forty pairs belongs to `face_arcface`, the channel permitted
+  to claim the least;
+  at *p* = 0.154 that licenses nothing, and it is recorded so a later version can go looking.
+- **`hair_mask_area` cannot participate by construction — a design defect this table exposed.** It
+  reports the photograph's own mask area, so it is identical for every render of a subject and every
+  within-subject pair is a tie. It is left in the report rather than quietly dropped, because the
+  report is what revealed the mistake.
+- **This is a successful version by its own pre-committed criterion (D17): the correlation was
+  computed, never that it was good.** Had v0.13 opened by searching `cn_strength` against
+  `face_styleid`, it would have been optimising against a coin flip, at real money, and the result
+  would have looked plausible. **This version cost ~$0.24 and prevented that.**
+
+### What v0.12 does NOT establish
+
+Drafted in `tasks.md` before any number existed, and reproduced here unchanged now that they do:
+
+- **No metric here is shown to measure identity.** Four axes were built and none of them agrees with
+  the operator's eye better than chance.
+- **No score is comparable across bases or across batches.** An embedding cosine has no zero point
+  across the photograph-to-drawing gap; it ranks within one batch on one base and nothing more.
+- **No dial is shown to be better than another.** Nothing here compares dial settings at all.
+- **`cn_strength` 0.5 is unsearched.** It is merely now *searchable* — settable, pinned, and recorded
+  in every manifest.
+- **Rebuild drift is recorded and unmeasured.** The baseline is pinned to `:v0.11-rc` so drift is held
+  constant rather than quantified; `run.json` records the image so a later version can measure it.
+- **There is no percentage, no verdict and no threshold**, and this version deliberately produces none.
+- **Additionally, discovered rather than predicted:** the guard is shown not to produce false refusals,
+  but is **not** shown to catch a recomposed render, because no render recomposed. And `s5`'s refusal
+  path never fired.
+
+### Fixed
+
+- **Three real plumbing failures, found on the renders already on disk, before any pod was created.**
+  Running the scorer against `outputs/final/`'s ten 1024-canvas PNGs cost nothing and paid for itself
+  three times. This is what ordering the metered session *last* is for.
+  - **StyleID returned a `ModelOutput`, not a tensor.** `get_image_features` gives a bare tensor in
+    transformers 4.x and a `BaseModelOutputWithPooling` in 5.x, whose `pooler_output` is the same
+    already-projected vector. Both are now accepted, and a shape that is neither refuses loudly —
+    because the extra declares `transformers>=4.49` and a silent change here would surface as a cosine
+    over the wrong axis rather than as an error.
+  - **DWPose is top-down, fixed at batch five, and emits SimCC rather than heatmaps.** It was being
+    handed a whole image at batch one, which raises — so the axis correctly reported its own absence,
+    for entirely the wrong reason. It now uses the person detector that was already pinned but never
+    called, repeats the crop to fill the traced batch of five, and decodes `(5, 133, 576)` x-logits
+    against `(5, 133, 768)` y-logits over 133 whole-body keypoints.
+  - **`yolox_l.onnx` emits undecoded predictions.** Its `(1, 8400, 85)` output carries per-anchor
+    offsets, not coordinates; reading columns 0–3 as pixels produced a confident-looking box in
+    entirely the wrong place, and the pose read inside it came back as 133 keypoints every one of which
+    fell under confidence. Found by looking at the value ranges rather than the shapes — the columns
+    were negative. The standard YOLOX grid/stride decode is now done here, over a letterboxed input
+    rather than a stretched one, because the model was trained that way.
+  - **After the three: the scorer runs to completion on both directories, all five axes reporting.**
+    No claim is made about the numbers — the dials moved six ways per render and these are the wrong
+    subjects. What was proven is the plumbing.
+- **`ty check` is green whether or not the extra is installed.** `eval_backends.py`'s unresolvable
+  imports are scoped with a `[[tool.ty.overrides]]` block rather than per-line `ty: ignore` comments,
+  which cannot be right in both environments: absent the extra they are load-bearing, present it they
+  are "unused directive" warnings, and ty exits non-zero on warnings. `make gate` must not depend on
+  what the operator happens to have synced. Every other check still applies to that file, which is how
+  a genuine `invalid-return-type` on `OnnxSession.run` was caught and fixed — `onnxruntime` returns a
+  `Sequence`, not a `list` — rather than suppressed.
+
+### Added
+
+- **`evaluate.py`, a second entry point beside `convert.py` and never on its import graph.** Four axes
+  over a canvas the photograph and the render provably share: face (StyleID, plus ArcFace tagged
+  falsify-only), pose (PCK), hair colour (CIEDE2000), and a face-location guard. It is deliberately not
+  a subcommand — a subcommand would put the `[eval]` extra one misplaced import away from breaking
+  `convert.py`'s `dependencies = []`.
+- **Every rule the scorer applies is stdlib-only and therefore tested in CI with the stack absent.**
+  `isekai/evaluate.py` holds the canvas, the guard, the refusals and the report and imports nothing
+  third-party; the models arrive through Protocols that `isekai/eval_backends.py` implements. That is
+  the same seam `ComfyTransport` is under, for the same reason — 47 tests over the scorer's behaviour
+  run offline against fakes.
+- **The canvas comes from the injector, and a mismatched render is refused naming both sizes.**
+  `canvas_for` calls `working_resolution` and `image_dimensions` rather than restating the rule, and
+  the photograph's pixels are transposed for a rotating EXIF tag **before any region is parsed** — the
+  header parser returns dimensions, and `LoadImage` transposes both codecs, so a photograph parsed
+  upright against transposed pixels would place every region wrong with all four numbers still looking
+  plausible. The canvas is settled before any model is asked anything, which a test asserts.
+- **Regions come from the photograph only.** The render is sampled inside the photograph's own mask and
+  never handed to a parser — a human parser is trained on photographs and its behaviour on a drawing is
+  unknown. A region under a **measured area floor** refuses naming itself and its area, rather than
+  reporting a number derived from too few pixels; the per-class accuracy filter is not here, because it
+  would have discarded classes on someone else's test-set numbers.
+- **The guard computes both methods on every run** — box IoU and face-box centroid offset — and
+  names which one was authoritative. Which one ships is decided by measurement in phase 8, not by
+  argument. A failed guard refuses every region axis naming the guard as the cause, while the pose axis,
+  which needs no region, still reports: a guard failure does not deprive the operator of the
+  measurements it does not invalidate.
+- **Absence is its own field and never a low score.** `face_detected` and `render_face_detected` are
+  separate from every value, a pose reader that read nothing reports its own absence rather than a
+  zero, and low-confidence keypoints are dropped and counted rather than scored at a guessed
+  coordinate.
+- **A cross-base comparison refuses per axis, not globally.** The embedding axes refuse with the reason
+  in the record while colour, area and keypoints still report. **A run recording no base is treated as
+  unknown rather than as matching** — the case this exists for is an old manifest that predates the
+  provenance keys, where assuming a match would compare across bases silently.
+- **The report emits no combined score, no verdict and no percentage.** One JSON record per render and
+  one table per run; every column states its direction and whether it is absolute or relative; the run,
+  the base and the image are named so a table read months later can be attributed. Every claim the
+  numbers do **not** support is printed beside them, including that no axis isolates one dial.
+- **CIEDE2000 is implemented in-tree and checked against Sharma, Wu & Dalal (2005)'s own 34-pair
+  reference table**, to four decimals, plus symmetry and the neutral-chroma cases. That table was
+  constructed to catch exactly the discontinuities an implementation gets wrong, which makes it a
+  stronger check than trusting a transitive dependency — and it keeps scipy, networkx and imageio out
+  of the lock for one closed-form function of six numbers.
+- **The `[eval]` extra is five packages and CI never installs it.** `torch` and `transformers` are
+  unavoidable rather than convenient: StyleID publishes only a `CLIPModel` safetensors and the DWPose
+  artifact `models.json` pins is a TorchScript `.pt`. `onnxruntime` (MIT) carries the region parser and
+  the anime-face detector. The gate array stays five commands and `convert.py` keeps
+  `dependencies = []`.
+- **`ultralytics` is absent from `pyproject.toml`, from `uv.lock` and from the scorer's import graph**,
+  asserted by three tests rather than left to a licence review nobody runs. Verified with the whole
+  extra installed: it is not importable.
+- **The stdlib guard uses `-S`, and the AST fallback was not needed.** `design.md` D12 left the
+  mechanism open because `-S` inside a uv venv was unverified. It was verified here, both ways: `-S`
+  leaves no site-packages on `sys.path`, `import convert` succeeds under it, and `import pytest` fails
+  under it — so the guard is falsifiable rather than passing for the wrong reason.
+- **`run.json` becomes a provenance record, not only a reproduction one.** It recorded `seed`,
+  `variations`, `seeds` and `overrides`, and so could not name the photograph, the graph, the base or
+  the resolution — the two batches in `outputs/final/` are identifiable only from this file's prose,
+  and a baseline nothing can identify is not a baseline. It now also records the input photograph's
+  SHA-256, the base checkpoint the graph loads, the resolved working resolution, and a `renders` list
+  carrying, per variation, the image it was written to, its sampler seed, a digest of **the graph as
+  submitted**, and the dial values that graph actually carried.
+- **The dials are recorded per variation, not once**, because under jitter every variation carries its
+  own and a single record would be a lie about all but one of them. They are read off the submitted
+  graph rather than reconstructed from the seed and the overrides — reconstructing them would mean
+  re-deriving the mutator in order to read it. The three ControlNet strengths are keyed by node id,
+  since they are tuned differently and "tile, pose, lineart" is an ordering nothing in the graph
+  states.
+- **The photograph is recorded as a digest and never as pixels.** A digest of a face is not a face, so
+  the rule that derived faces are not committed is untouched — and the digest is exactly what makes an
+  uncommitted input checkable rather than merely trusted, as `probe/README.md` already does.
+- **Keys are added and none removed**, so a manifest written by an earlier version stays readable and
+  a reader written against the old shape keeps working; a test holds that. The digest helper is
+  spelled in `pipeline.py` rather than imported from `isekai.provision`, which has one: that module is
+  deliberately off `convert.py`'s import graph, and importing it for four lines would put it on.
+- **A render with the graph's own dials is possible for the first time.** `pipeline.run` called
+  `mutate` unconditionally on every variation, and `mutate` moves six dials at once — `denoise`,
+  `cfg`, `ip_weight` and all three ControlNet strengths — so **nothing this repository has ever
+  rendered differs from its neighbour in one thing**, and "same subject, one thing moved" was not a
+  claim it could make. `run` gains `fixed_dials` and the CLI gains `--fixed-dials`, **off by default**,
+  so every existing invocation behaves exactly as it did.
+- **A held run still draws its own sampler seed per variation**, because otherwise it would be one
+  render billed N times. The seed draw is split out of `mutate` as `draw_seed` and stays the *first*
+  draw `mutate` makes, so a held run and a jittered run from the same run seed carry the **same**
+  sampler seeds and differ in the jitter alone — which makes the two directly comparable rather than
+  merely both reproducible. An override still applies under `--fixed-dials`: holding the dials means
+  not jittering *around* the base, never ignoring the base the user set.
+- **`cn_strength` becomes settable.** The identity node's second dial — the keypoint route, beside
+  `ip_weight`'s embedding route — sat at 0.5 in the graph and was referenced nowhere else in the tree:
+  not in `apply_overrides`, not in `mutate`, not in any test. It joins `apply_overrides` and the CLI as
+  `--cn-strength`, range-checked at parse time in zero-to-one like its neighbours. It is set on
+  `ApplyInstantIDAdvanced` and **never** on a `ControlNetApplyAdvanced`, which is a different dial that
+  happens to share a word — setting it there would move pose and structure while claiming to move
+  identity, and a test asserts every ControlNet strength is untouched.
+- **`cn_strength` is pinned** beside `PROBE_DENOISE` and `PROBE_IP_WEIGHT`, so a silent re-tune becomes
+  a deliberate test edit. Unlike those two it was never *chosen* by anybody — it is the value the graph
+  arrived with — so the pin records where the baseline was rendered rather than a preference. **0.5 is
+  unsearched: this version makes it searchable and deliberately does not search it**, because searching
+  a dial with the same renders that validate the instrument would leave neither result clean.
+- **Every model the evaluator will load is pinned, before a line of scorer code exists.**
+  `scripts/eval_models.json` — twelve entries, each with an immutable-revision URL, a SHA-256 and a
+  byte count — is a **sibling** of `scripts/models.json` and never a section of it: that file is what
+  the pod provisions **the graph** from, and these run locally on the operator's machine. It is
+  *derived*, not transcribed, by `scripts/derive_eval_manifest.py`, under the same rule its sibling is
+  under: re-running it must leave the file byte-identical.
+- **Three destinations are copied out of the graph's manifest byte for byte** —
+  `insightface/models/antelopev2/glintr100.onnx` and the two DWPose artifacts. For `glintr100` that is
+  load-bearing rather than tidy: the scorer's ArcFace has to be the artifact the generator injects
+  identity *with*, or the whole claim about self-grading would be a claim about two different models.
+  `shared_entries_that_differ` compares whole entries, not just digests, so the two files cannot drift
+  apart unnoticed — a matching digest beside diverged sources would mean the same bytes arriving from
+  different places, which is exactly the drift the copy exists to prevent.
+- **`isekai/eval_models.py`**, the gate every scorer axis will reach its weights through. It refuses
+  three ways: an artifact the manifest does not declare, an entry whose sources are not pinned
+  revisions, and bytes on disk that do not hash to the pin — the last naming the file, the expected
+  digest and the computed one, because a human reading a mismatch is deciding whether a pin is stale
+  or a file has been swapped, and two of the three do not answer that. The pin check runs even though
+  nothing is fetched: an entry pointing at `resolve/main/` says nothing about which bytes those were.
+  Nothing here knows about an axis, and it stays off `convert.py`'s import graph.
+
+### Notes
+
+- **Every licence was read on 2026-09-06 and recorded in `scripts/eval_licences.md`**, each with the
+  URL it was read at and quoted verbatim from the source. **None forbids this use.**
+- **DWPose was the one entry left open, and it closes clean: Apache-2.0.** So the pose axis is
+  unthreatened on licence grounds, and the contingency where it would have reported its own absence
+  rather than a zero is not needed.
+- **The conflict this version was cut believing in does not exist.** StyleID's CC BY-SA 4.0 is on
+  **the website** — footer boilerplate from the academic project-page template it is built on. The
+  repository and the model card agree with each other: *"StyleID is released for non-commercial
+  research use."* The adjacent clause, *"Do not use FFHQ-derived data for biometric human
+  recognition"*, governs the **dataset** and not the encoder; it is recorded because it is adjacent,
+  not because it binds.
+- **Four artifacts are non-commercial research and are carried as recorded deviations** — StyleID,
+  `segformer_b2_clothes` (NVIDIA Source Code License, inherited from SegFormer), and `glintr100`, whose
+  restriction this project has been shipping since v0.9 because InsightFace's library is MIT and its
+  weights are not. **Stated rather than discovered later: if this project ever became commercial, all
+  four would bite at once, and retroactively against a baseline already in git.** There is no
+  mitigation beyond knowing it. The rule that survives is the load-bearing half — **a model whose
+  licence is restrictive may not be the sole carrier of an axis**; StyleID ships beside ArcFace or not
+  at all.
+- **The AGPL detector was replaced, because the artifact the design named does not exist.** The plan
+  was to load `Fuyucchi/yolov8_animeface` (AGPL-3.0) through `onnxruntime` and never import
+  `ultralytics`, so that no AGPL *code* is combined with this Apache-2.0 public repository. Checked on
+  2026-09-06: that repository publishes **no ONNX at all** — its Hugging Face tree and its sole GitHub
+  release both carry only `yolov8x6_animeface.pt` — so the mechanism had nothing to point at.
+  Exporting the `.pt` ourselves was rejected: it needs `ultralytics` installed and yields an artifact
+  with no upstream revision to pin. Pinned instead: **`deepghs/anime_face_detection`,
+  `face_detect_v1.4_s`, MIT** — a published ONNX, which **dissolves** the copyleft problem instead of
+  routing around it, and which keeps the guard measurable both ways rather than collapsing it to one
+  method. Recorded residual, not relied on silently: deepghs's MIT tag is their own declaration over
+  weights trained with `ultralytics` tooling, and Ultralytics asserts AGPL over such weights — an
+  assertion about *weights*, which this repository distributes none of and links no code from.
+- **A pre-v0.12 `run.json` is refused by name, not guessed at.** Both directories in `outputs/final/`
+  were rendered before the provenance record existed, and the scorer says exactly what it lacks — no
+  `photo_sha256`, so the photograph supplied cannot be confirmed; no `base`; no `renders` — and exits
+  1. Guessing would be worse than refusing: a comparison against the wrong photograph produces four
+  plausible numbers and no way to notice one of them is about somebody else.
+- **All twelve pinned eval artifacts were fetched and verified against `scripts/eval_models.json`**
+  before anything was scored. Every digest matched.
+- **No scorer code, no axis and no render change.** This phase pins artifacts and records licences;
+  `workflows/pipeline.json`, `scripts/models.json` and the `Dockerfile` are untouched, no image is
+  rebuilt and no volume is re-provisioned.
+
 ## [0.11.0] - 2026-09-06
 
 ### Fixed

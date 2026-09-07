@@ -422,3 +422,250 @@ def test_parse_args_accepts_the_ceiling_itself(
 ) -> None:
     monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--variations", "25"])
     assert cli.parse_args().variations == 25
+
+
+# --- v0.12: cn_strength joins the dials, and the flag that holds them all still ---
+
+
+def _capture_run(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> dict[str, Any]:
+    """Drive `main()` with `argv` and return every argument it handed `run`."""
+    monkeypatch.setattr("sys.argv", argv)
+    _stub_environment(monkeypatch)
+    captured: dict[str, Any] = {}
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+    cli.main()
+    return captured
+
+
+@pytest.mark.spec("cli:dial-defaults:cn-strength-defaults-to-unset")
+def test_parse_args_defaults_cn_strength_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().cn_strength is None
+
+
+@pytest.mark.spec("cli:dial-validation:accepts-cn-strength-in-range")
+def test_parse_args_accepts_cn_strength_in_range(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--cn-strength", "0.35"],
+    )
+    assert cli.parse_args().cn_strength == pytest.approx(0.35)
+
+
+@pytest.mark.spec("cli:dial-validation:accepts-cn-strength-in-range")
+def test_parse_args_accepts_cn_strength_at_both_inclusive_bounds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for edge in ("0.0", "1.0"):
+        monkeypatch.setattr(
+            "sys.argv",
+            ["convert.py", "photo.jpg", "--cn-strength", edge],
+        )
+        assert cli.parse_args().cn_strength == float(edge)
+
+
+@pytest.mark.spec("cli:dial-validation:rejects-cn-strength-above-one")
+def test_parse_args_rejects_cn_strength_above_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--cn-strength", "1.5"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("cli:dial-validation:rejects-cn-strength-below-zero")
+def test_parse_args_rejects_cn_strength_below_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--cn-strength", "-0.1"],
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("cli:fixed-dials:jitter-is-the-default")
+def test_parse_args_defaults_fixed_dials_to_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().fixed_dials is False
+
+
+@pytest.mark.spec("cli:fixed-dials:jitter-is-the-default")
+def test_main_leaves_the_run_jittering_when_the_flag_is_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_run(monkeypatch, ["convert.py", "photo.jpg"])
+    assert captured["fixed_dials"] is False
+
+
+@pytest.mark.spec("cli:fixed-dials:flag-reaches-the-run")
+def test_parse_args_accepts_the_fixed_dials_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", "--fixed-dials"])
+    assert cli.parse_args().fixed_dials is True
+
+
+@pytest.mark.spec("cli:fixed-dials:flag-reaches-the-run")
+def test_main_hands_the_fixed_dials_flag_to_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_run(monkeypatch, ["convert.py", "photo.jpg", "--fixed-dials"])
+    assert captured["fixed_dials"] is True
+
+
+@pytest.mark.spec("cli:dial-validation:accepts-cn-strength-in-range")
+def test_main_carries_cn_strength_through_to_the_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_run(
+        monkeypatch, ["convert.py", "photo.jpg", "--cn-strength", "0.35"]
+    )
+    assert captured["overrides"] == {"cn_strength": 0.35}
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_parse_args_takes_the_pod_image_from_the_environment_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # `$RUNPOD_IMAGE` is the same variable `infra/up.sh` boots the pod from, so
+    # the manifest records what was booted rather than a second spelling of it.
+    monkeypatch.setenv("RUNPOD_IMAGE", "ghcr.io/owner/isekai:v0.11-rc")
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().pod_image == "ghcr.io/owner/isekai:v0.11-rc"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_parse_args_leaves_the_pod_image_unknown_when_nothing_states_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("RUNPOD_IMAGE", raising=False)
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().pod_image is None
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-pod-image")
+def test_main_passes_the_pod_image_through_to_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+    _stub_environment(monkeypatch)
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+    monkeypatch.setattr(
+        "sys.argv",
+        ["convert.py", "photo.jpg", "--pod-image", "ghcr.io/owner/isekai:v0.11-rc"],
+    )
+    cli.main()
+
+    assert captured["pod_image"] == "ghcr.io/owner/isekai:v0.11-rc"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-comfy-commit")
+def test_parse_args_leaves_the_comfy_commit_unknown_when_nothing_states_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # No environment default on purpose: nothing in infra/ or .env.example
+    # exports a ComfyUI commit, and inventing a variable would be a second
+    # place to keep in step with the pod.
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    assert cli.parse_args().comfy_commit is None
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:manifest-records-the-comfy-commit")
+def test_main_passes_the_comfy_commit_through_to_the_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+    _stub_environment(monkeypatch)
+    monkeypatch.setattr(cli, "run", _capturing_run(captured))
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "convert.py",
+            "photo.jpg",
+            "--comfy-commit",
+            "250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a",
+        ],
+    )
+    cli.main()
+
+    assert captured["comfy_commit"] == "250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a"
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:provenance-values-are-bounded")
+@pytest.mark.parametrize("flag", ["--pod-image", "--comfy-commit"])
+@pytest.mark.parametrize(
+    "value",
+    [
+        "ghcr.io/owner/isekai:v0.11-rc\nimage: something-else",
+        "ghcr.io/owner/isekai:v0.11-rc\x1b[2Kimage: something-else",
+        "ghcr.io/owner/isekai:v0.11-rc\tv2",
+    ],
+)
+def test_a_provenance_value_carrying_a_control_character_is_refused(
+    monkeypatch: pytest.MonkeyPatch, flag: str, value: str
+) -> None:
+    # Both values are recorded verbatim and printed verbatim, so a newline emits
+    # a line into eval.txt indistinguishable from a real header and an escape
+    # sequence reaches the terminal unread. Refused where they enter.
+    monkeypatch.delenv("RUNPOD_IMAGE", raising=False)
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg", flag, value])
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:provenance-values-are-bounded")
+@pytest.mark.parametrize("flag", ["--pod-image", "--comfy-commit"])
+def test_a_provenance_value_longer_than_the_bound_is_refused(
+    monkeypatch: pytest.MonkeyPatch, flag: str
+) -> None:
+    monkeypatch.delenv("RUNPOD_IMAGE", raising=False)
+    monkeypatch.setattr(
+        "sys.argv", ["convert.py", "photo.jpg", flag, "a" * (cli._MAX_PROVENANCE + 1)]
+    )
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:provenance-values-are-bounded")
+def test_a_bad_pod_image_in_the_environment_is_refused_on_the_same_rule(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The environment default goes through the same argparse type as the typed
+    # flag, so the rule has one site rather than two -- and $RUNPOD_IMAGE is the
+    # source a run is likelier to reach unreviewed.
+    monkeypatch.setenv("RUNPOD_IMAGE", "ghcr.io/owner/isekai:v0.11-rc\nimage: other")
+    monkeypatch.setattr("sys.argv", ["convert.py", "photo.jpg"])
+    with pytest.raises(SystemExit):
+        cli.parse_args()
+
+
+@pytest.mark.spec("workflow-mutation:output-layout:provenance-values-are-bounded")
+def test_a_legal_registry_reference_and_commit_pass_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "convert.py",
+            "photo.jpg",
+            "--pod-image",
+            "ghcr.io/owner/isekai:v0.11-rc",
+            "--comfy-commit",
+            "250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a",
+        ],
+    )
+    args = cli.parse_args()
+
+    assert args.pod_image == "ghcr.io/owner/isekai:v0.11-rc"
+    assert args.comfy_commit == "250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a"

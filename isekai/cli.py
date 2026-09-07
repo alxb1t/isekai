@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,43 @@ _IMAGE_SUFFIXES = frozenset(
 
 _VARIATIONS = 5
 _MAX_VARIATIONS = 25
+
+# The ceiling on the two provenance strings recorded verbatim into `run.json`.
+# A registry reference and a git commit are both short; 256 is generous for
+# either, and short enough that nothing can bury a report under one.
+_MAX_PROVENANCE = 256
+
+
+def _provenance(flag: str) -> Callable[[str], str]:
+    """Build an argparse type for a value recorded verbatim and printed verbatim.
+
+    `--pod-image` and `--comfy-commit` are the only two values that travel from
+    the operator's shell (or from `$RUNPOD_IMAGE`) into `run.json` and back out
+    onto the terminal and into `eval.txt` untouched. `json.dumps` escapes the
+    manifest correctly, so the exposure is the *report*: a newline injects a line
+    indistinguishable from a real header, and a control sequence reaches stdout
+    unescaped. Both are refused here, at the one place either value can arrive,
+    rather than escaped at each of the several places they are read back.
+
+    Printable ASCII, and bounded. Neither a registry reference nor a commit has
+    any business outside that alphabet, so a value that leaves it is a mistake
+    far more often than it is a tag. `argparse` applies this to a **string**
+    default too, so `$RUNPOD_IMAGE` is bounded on the same line the flag is.
+    """
+
+    def provenance(value: str) -> str:
+        if len(value) > _MAX_PROVENANCE:
+            raise argparse.ArgumentTypeError(
+                f"{flag} must be at most {_MAX_PROVENANCE} characters, got {len(value)}"
+            )
+        if any(not (" " <= character <= "~") for character in value):
+            raise argparse.ArgumentTypeError(
+                f"{flag} must be printable ASCII: it is recorded verbatim and "
+                "printed verbatim, and a control character there rewrites a report"
+            )
+        return value
+
+    return provenance
 
 
 def _bounded[T: (int, float)](
@@ -97,6 +135,38 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="InstantID ip_weight base value [0, 1]",
     )
+    p.add_argument(
+        "--cn-strength",
+        type=_bounded(float, 0.0, 1.0),
+        default=None,
+        help="InstantID cn_strength base value [0, 1] (the keypoint route)",
+    )
+    p.add_argument(
+        "--pod-image",
+        type=_provenance("--pod-image"),
+        default=os.environ.get("RUNPOD_IMAGE"),
+        help="the container image the ComfyUI being driven is running, recorded "
+        "verbatim into the run's manifest; defaults to $RUNPOD_IMAGE, the same "
+        "variable infra/up.sh boots the pod from. Unset means the run records "
+        "that it does not know, which is not the same as knowing it was :latest",
+    )
+    p.add_argument(
+        "--comfy-commit",
+        type=_provenance("--comfy-commit"),
+        default=None,
+        help="the ComfyUI commit the server being driven is running -- what "
+        "`git -C /opt/ComfyUI rev-parse HEAD` reports on the pod -- recorded "
+        "verbatim into the run's manifest. No environment default: nothing in "
+        "infra/ or .env.example exports it, and inventing a variable for it "
+        "would be a second place to keep in step. Unset records that the run "
+        "does not know",
+    )
+    p.add_argument(
+        "--fixed-dials",
+        action="store_true",
+        help="render the graph's committed dials, jittering nothing; each "
+        "variation still draws its own sampler seed",
+    )
 
     return p.parse_args()
 
@@ -126,6 +196,8 @@ def main() -> None:
         overrides["cfg"] = args.cfg
     if args.ip_weight is not None:
         overrides["ip_weight"] = args.ip_weight
+    if args.cn_strength is not None:
+        overrides["cn_strength"] = args.cn_strength
 
     run(
         client,
@@ -135,4 +207,7 @@ def main() -> None:
         seed=args.seed,
         variations=args.variations,
         overrides=overrides or None,
+        fixed_dials=args.fixed_dials,
+        pod_image=args.pod_image,
+        comfy_commit=args.comfy_commit,
     )
