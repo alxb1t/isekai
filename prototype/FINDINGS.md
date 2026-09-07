@@ -764,4 +764,42 @@ record says so in words because the proxy did not validate.
 
 ---
 
-<!-- next: F19 -->
+## F19 · The style LoRA applies, and it fights Lightning · T13 ✅
+
+`raena_qwen_image_lora_v0.1` (Civitai 1914845, `baseModel: Qwen` — i.e. Qwen-*Image*, not Edit),
+0.27 GiB, verified against its published digest. s1:
+
+| setting | linework | posterisation | bg detail | bg colour ΔE |
+|---|---:|---:|---:|---:|
+| FOTOR | 0.0404 | 0.460 | **1.008** | 8.60 |
+| a — LoRA **off**, Lightning 8 | 0.0657 | 0.436 | 2.274 | **20.7** |
+| b — 0.5, Lightning 8 | 0.0734 | 0.420 | 2.574 | 14.0 |
+| c — 0.8, Lightning 8 | 0.0779 | 0.410 | 2.856 | 13.7 |
+| d — 1.0, Lightning 8 | 0.0674 | 0.389 | 2.563 | **13.3** |
+| f — LoRA **off**, full 12 | 0.0351 | 0.399 | 1.675 | 15.8 |
+| g — 1.0, full 12 | **0.0167** | 0.334 | 0.957 | 6.8 |
+| h — 1.0 + trained words, full 12 | **0.0109** | 0.315 | 0.596 | **5.5** |
+
+**Both questions the sweep existed to answer come back yes.**
+
+1. **It applies.** A Qwen-*Image* LoRA does affect Qwen-Image-*Edit* — on the full path it moves linework
+   **0.0351 → 0.0167 → 0.0109**, a 3× swing, and bg colour ΔE from 15.8 to 5.5. The backbone is shared
+   enough.
+2. **It fights Lightning.** Under Lightning the same LoRA at the same strength barely moves the register
+   at all (0.0657 → 0.0674). Lightning dominates whatever else is in the chain.
+
+**Its direction is away from flat cel, toward painterly** — every full-path setting *reduces* linework.
+That is the opposite of the register the operator chose, so as a route to a Fotor-like look it is the
+wrong instrument.
+
+**But it is not useless.** Stacked with Lightning it leaves the flat-cel register intact and improves
+colour fidelity markedly — bg colour ΔE **20.7 → 13.3** at strength 1.0, the best of the Lightning
+group. The operator's preference for the LoRA renders is consistent with that: same register, truer
+colour.
+
+**Licence note.** `allowCommercialUse: Image, RentCivit, Rent`; `derivatives: True`. Usable for a
+portfolio that publishes scores and recipes rather than weights.
+
+---
+
+<!-- next: F20 -->

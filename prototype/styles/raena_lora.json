@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "dest": "loras/raena_qwen_image_lora_v0.1.safetensors",
+      "bytes": 295146200,
+      "sha256": "c343198215e099415d535541a18033571f1f5f80d76bdc6bf539ce659980026f",
+      "sources": [
+        "https://civitai.com/api/download/models/2167278?fileId=2060522"
+      ]
+    }
+  ]
+}
