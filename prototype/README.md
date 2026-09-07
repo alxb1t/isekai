@@ -1,5 +1,8 @@
 # Prototype session — tuning the look, and the instrument that judges it
 
+> **REOPENED 2026-09-08** for one more question — see **[Next session](#next-session--from-noise)** at
+> the foot of this file. The three-flow work below is closed.
+>
 > **CLOSED 2026-09-07.** 23 findings, 8 pod sessions, ≈$1.80. **Read
 > [`SUMMARY.md`](SUMMARY.md) first** — it carries the three-flow comparison, the eleven findings worth
 > keeping, what was tried and failed, and what is parked. `FINDINGS.md` is the full evidence behind it.
@@ -150,3 +153,85 @@ PYTHONPATH=. uv run --extra eval python prototype/external_eval.py \
 
 **Read `FINDINGS.md` before doing anything.** It carries why the plan is shaped this way, and
 several of the tasks above only make sense against it.
+
+
+---
+
+# Next session — from noise
+
+**Set up 2026-09-07 evening, to run 2026-09-08 morning.** Read `SUMMARY.md` first; this section
+assumes it.
+
+## Why
+
+`notile-d045` is **soft on everything** — median linework **0.0030** across the ten-portrait gallery,
+about 10x below its own inputs, on synthetic and real photographs alike. The domain theory (works on
+synthetics, fails on real) is **not supported**: the medians are identical. Clean, well-lit inputs were
+hiding the defect, not fixing it.
+
+**And the softness is mechanical, not a tuning miss.** `decisions` §2 `i2i` seeds the latent from the
+photograph at `denoise < 1`, so the sampler must reconcile a photographic latent with an anime prior.
+What comes out is an interpolation between them — which is precisely what F7 measured and named
+*off-axis*: as graduated as a photograph, with **fewer edges than either endpoint**.
+
+## The question
+
+**Does the softness disappear when the photograph leaves the latent?**
+
+```
+   now:       photo -> VAE -> latent -> +45% noise -> denoise -> render
+                                  ^ the photo's structure is still in here
+
+   proposed:  pure noise -> denoise -> render
+                              ^ InstantID face embedding
+                              ^ OpenPose skeleton
+                              ^ booru tags
+              the photograph never enters the latent
+```
+
+Architecturally this is **v0.2's deleted `animagine` from-noise path plus a tagger** — the third path
+v0.8 deleted as "superseded" that we have found reason to revisit, all three asserted by eye with no
+evaluator in existence.
+
+## Tasks
+
+- [ ] **N1 · recover the from-noise graph** — `git show e324699^:workflows/animagine.json` (and its
+      `-i2i` sibling for comparison), the same recovery that worked for `qwen-image-edit`. Confirm the
+      node types exist on the shipped image before booting.
+- [ ] **N2 · build the variant** — `denoise 1.0` / empty latent · **InstantID kept** · **OpenPose kept**
+      · **tile and lineart dropped** (both condition on the photograph's *appearance*, which is the
+      thing being removed) · subject description **hand-written**, not tagged.
+- [ ] **N3 · one session** — the same four real photographs from `outputs/original/darya` plus two
+      synthetics, so it is comparable to `90_tattoo/` and `30_gallery/`. ~$0.20.
+- [ ] **N4 · measure** — linework and posterisation against the same photographs. **The bar: median
+      linework at or above the photograph's**, against `notile-d045`'s 0.0030. Plus pose PCK, which is
+      the one identity axis that survives the change.
+- [ ] **N5 · decide** — if the blur goes, this is the flow and the evaluator gets re-cut around it. If
+      it does not, the softness is Illustrious's rather than the method's, which is also worth knowing.
+
+**Hand-written tags on purpose.** There is no point integrating WD14 if the flow does not render
+cleanly, and a typed description removes the tagger as a variable. The tagger is step 2, and it is
+already researched.
+
+## What this changes downstream, decided knowingly
+
+**The identity criteria become pose · haircut · eyes · face · clothes** — background and accessories
+drop out, because from-noise cannot preserve a background and measuring it would measure nothing. Eyes
+earn their own axis: drift appeared in F12 and F18 repeatedly.
+
+**And it breaks the shared-mask trick.** Every region axis assumes the render is the photograph's pixel
+grid. A from-noise render will not align, so the evaluator must **parse both images independently** —
+running segformer on the *anime* image, the exact thing the original design was built to avoid. That is
+the fallback the method of record already names for guard failure. Real work, real accuracy cost, and it
+should be entered into with eyes open.
+
+## Housekeeping, in this order
+
+- [ ] **free the Qwen space** — 28.89 GiB, reversible: `prototype/styles/qwen_models.json` records every
+      digest and source.
+- [ ] **do NOT destroy the volume yet.** `decisions` §4 `probe`: *keep the old thing declared until the
+      new one is proven; the irreversible act is a version's last, never its first.* Resize only after
+      the new flow works — and note RunPod volumes cannot shrink, so that means destroy-and-recreate,
+      once, at the end.
+- [ ] Neither preset is being promoted. Both are recorded with baselines; neither met the bar. That is a
+      legitimate outcome for a spike.
