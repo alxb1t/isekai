@@ -933,4 +933,49 @@ generate-then-upscale rather than a research pipeline.
 
 ---
 
-<!-- next: F23 -->
+## F23 · Fotor does not solve the tattoo. It solves **tattoo presence**. `xor` survives contact with a commercial product.
+
+A heavily tattooed subject — full irezumi coverage, neck to hips, both sleeves — through Fotor's *Anime*
+effect. Photo 800×1200, canvas 1024×1536, linework **0.0126 → 0.0264**, posterisation 0.314 → 0.371,
+background colour ΔE **4.47**.
+
+**What it kept:** the coverage and its **placement** — neck piece, chest, both full sleeves, stomach,
+hips — the approximate **palette** (orange, teal, blue, red), the black bikini and its straps, the desert
+with its mountains and scrub, black hair, the general proportions. The read *"heavily tattooed woman in a
+desert"* survives completely.
+
+**What it lost:** **the motifs, as motifs.** The photograph has readable subjects — a large mask/face
+centrepiece across the chest, a dragon, eyes, geometric panels, script. The render has *tattoo-textured
+noise*: plausible swirls, florals and vague creatures that read as irezumi at a glance and contain **none
+of her actual tattoos**.
+
+### This is `xor`, confirmed from the outside
+
+[decisions] §2 `xor` records *"good anime XOR faithful tattoo — global CN cannot pin a local detail"*, and
+the catalogue's own finding was sharper: *"the gap is not 'can a model put a tattoo on an arm
+convincingly' — it can, well. **The gap is specificity: can it put *this* tattoo there.**"*
+
+**A commercial product, with what F22 argues is a purpose-trained style LoRA, hits exactly that wall.**
+So `xor` is **not an artefact of our ControlNet stack**. It is a property of the task at anime
+stylization levels: fine ink detail sits below the representational budget of the style.
+
+That partially rehabilitates our own architecture. We are not uniquely bad at tattoos. **Nobody is good
+at them.**
+
+### And the caveat on "Qwen solved it"
+
+F13 recorded Qwen keeping a subject's chest ink recognisably, and it did. But that render came from the
+**under-transforming** end of F15's bracket — the setting whose s4 output was *"the photograph, lightly
+retouched"*, at linework 0.0198 against the photograph's 0.030.
+
+**Qwen preserved the tattoo by barely stylizing.** Which is `xor` a third time, now measured on a third
+system. The amount of ink fidelity available is coupled to how little the render is transformed, and the
+coupling is the finding rather than any one system's failure.
+
+**What this does not close:** whether a *subject-trained* LoRA carrying the ink vocabulary (the parked
+route in [ideas]) escapes the trade-off. Nothing here tests that — it tests only that no
+general-purpose stylizer, ours or commercial, carries specific ink through a strong style transfer.
+
+---
+
+<!-- next: F24 -->
