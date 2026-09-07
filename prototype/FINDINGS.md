@@ -176,4 +176,43 @@ never had.
 
 ---
 
-<!-- next: F8 from T3 (pod session 1) -->
+## F8 · The hair statistic: the mode is indicted, the mean is the diagnostic · T2 ✅
+
+Known-answer test on s1's hair — shift the photograph's own pixels by an amount we chose, ask each
+candidate what it sees. No labels needed.
+
+| case | mode | mean | median | cluster2 | want |
+|---|---:|---:|---:|---:|---|
+| identical | 0.00 | 0.00 | 0.00 | 0.00 | 0 |
+| L +15 | 16.37 | 14.64 | 14.76 | 12.53 | ~15 |
+| L −15 | **8.39** | 11.63 | 12.24 | 15.16 | ~15 |
+| b +15 | **20.40** | 6.61 | 6.91 | 7.13 | small |
+| **posterised (cel-shaded)** | **26.80** | 0.51 | 9.15 | 3.34 | true shift **0.51** |
+| *reported hair L\** | **4.3** | 40.8 | 41.0 | 55.5 | blonde |
+
+**The posterisation row is the whole Fotor penalty, reproduced on our own photograph.** Cel-shading it
+moves the actual colour by **0.51** and moves the mode by **26.80**. That is a 50× overstatement, and
+it is what F2's `hair_colour_delta_e` = 74.9 was mostly made of.
+
+**An honesty note that changed the conclusion.** The first version of this test added the mean
+difference back after quantising, so the case was "colour kept" *by construction* — which made `mean`
+score zero by definition. Circular. It was rerun without the correction and the true shift is now
+printed beside the candidates. **So this test indicts the mode; it does not select its replacement.**
+
+**The selection rests on the other rows**: the mode under-reports L−15 by half (8.39 for a shift of
+15), over-reports b+15 by 3× (20.40 against ~6.6 for everything else), and describes blonde hair as
+**L\* 4.3**. The mean tracks every known shift within ~1–3 and reports a plausible L\* 40.8.
+
+**Use the mean as the prototype diagnostic.** With its limitation stated: a mean of a dark base and a
+bright underlayer is a colour that appears nowhere in the image, so it is a good *comparison* and a
+poor *description*. It is not blind to the case that objection is about — dropping the underlayer
+entirely registers ΔE 6.2–15.5 across the three subjects tested, all far above the 2.3 JND.
+
+**`cluster2` is the right long-term shape and is not ready.** Returning only the larger of two
+centres is unstable — it caught the underlayer drop at 22.3 and 12.7 on the multi-tone subjects and
+missed it at 3.2 on s1. A real version reports **both centres and their shares**, which is what the
+multi-tone subjects were put in the baseline to force.
+
+---
+
+<!-- next: F9 from T3 (pod session 1) -->

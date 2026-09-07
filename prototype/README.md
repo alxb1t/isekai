@@ -47,7 +47,7 @@ agrees with what we already picked.
       on stylization, using files already on disk. Candidates: edge density, colour-count /
       posterisation, gradient smoothness, CLIP text-image against *"flat anime screencap"*.
       **If nothing separates those three, say so — that is a finding.**
-- [ ] **T2 · make the hair readout usable** *($0)* — the mode is invalid on a photograph (see
+- [x] **T2 · make the hair readout usable** *($0)* — the mode is invalid on a photograph (see
       `FINDINGS.md` F3). Needs to be trustworthy enough to use as a diagnostic while tuning, not
       necessarily production-correct.
 - [ ] **T3 · pod session 1 — the dial ladder** *(~20 min, ~$0.25)* — one subject (`s4_multitone_bob`,
@@ -56,9 +56,9 @@ agrees with what we already picked.
       | # | render | tests |
       |---|---|---|
       | 1 | current dials | the control |
-      | 2 | negative + `realistic, photorealistic` | is the blur the register? |
-      | 3 | tile 0.2 → 0.9 | do accessories/colour come back? |
-      | 4 | lineart 0.2 → 0.6 | does flat linework need the edge leg? |
+      | 2 | negative + `realistic, photorealistic` | is the posterisation deficit the register? |
+      | 3 | **lineart 0.2 → 0.6** | the 60× linework deficit is the larger, cleaner gap (F7) |
+      | 4 | tile 0.2 → 0.9 | do accessories/colour come back? |
       | 5 | denoise 0.65 → 0.45 | identity↔style, **after** the register is right |
 
 - [ ] **T4 · read session 1** — by eye and with T1/T2. Decide session 2's variables.
