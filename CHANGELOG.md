@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-07
+
 ### Fixed
 
 - **The pose reader's input now matches what the pinned artifacts are published to be fed.** Three
