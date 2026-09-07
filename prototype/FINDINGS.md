@@ -585,4 +585,53 @@ best is 0.525. It keeps things. That was never the question.
 
 ---
 
-<!-- next: F16 -->
+## F16 · Colour distance to a photograph penalises correct stylization — F4's disease, on the colour axes
+
+The operator picked `40_qwen_sweep/5_recovered_keepall/s1` as good anime. Its measured scores say
+otherwise: **linework 0.0706** (against Fotor's 0.0404) and **hair ΔE 22.91**. By eye the hair is blonde
+and right, the gold hoops are there, the lace placket and hem are there, the meadow and treeline are
+there.
+
+**s1's hair, mean L\*:**
+
+| | L\* | hair ΔE |
+|---|---:|---:|
+| the photograph | 41.4 | — |
+| `notile d0.45` — barely stylized | 43.3 | **3.41** |
+| FOTOR — brightened | 62.1 | 20.95 |
+| QWEN — brightened | — | 22.91 |
+
+**Anime hair *is* brighter and flatter.** So a colour distance measured against a photograph will always
+prefer the least-anime render. That is **F4 exactly** — *the metric rewards not stylizing* — appearing on
+the colour axes rather than the face one, and it was not anticipated when they were built (T2, T12).
+
+### The rule this forces
+
+> **Colour ΔE is valid *within* one style register and systematically unfair *across* registers.**
+
+A three-way Illustrious / Fotor / Qwen table on colour ΔE would flatter the least-stylized entrant by
+construction. `notile d0.45` is the least stylized of the three. **The table would have looked
+decisive and been wrong**, which is the failure mode this project keeps catching one step before it
+ships.
+
+**What survives cross-register:** `background_detail` (a ratio of like quantities, and stylization does
+not systematically add or remove background edges the way it brightens hair) and the two style measures
+themselves, which are *descriptions* rather than scores. **What does not:** `hair_colour`,
+`garment_colour`, `background_colour`.
+
+**Not fixed here.** The candidate fix is to normalise colour distance by the render's own stylization —
+compare against what a correctly-stylized version of that colour would be, rather than against the
+photograph's. That needs a model of "what stylization does to a colour", which is a version's work and
+not a prototype's. **Until then the cross-register comparison is reported per axis with this caveat
+attached, or not reported.**
+
+### And a caution on the style axis itself
+
+It was calibrated on three points assuming **Fotor is the target** (F7). The operator now rates a
+Qwen render at linework 0.0706 as good — above Fotor's 0.0404. So the target is a **band, not a point**,
+and its upper edge is unmeasured. Do not treat "further from Fotor's coordinate" as "worse" without
+asking the operator.
+
+---
+
+<!-- next: F17 -->
