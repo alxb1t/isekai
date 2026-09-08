@@ -36,7 +36,7 @@ def subjects() -> list[Path]:
 def render(server: str) -> None:
     from isekai.comfy_client import ComfyClient
     from isekai.pipeline import run
-    from prototype.ladder import TILE
+    from prototype.archive.ladder import TILE
 
     graph = json.loads(Path("workflows/pipeline.json").read_text())
     graph[TILE]["inputs"]["strength"] = 0.0  # the chosen register

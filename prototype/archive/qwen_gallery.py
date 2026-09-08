@@ -17,8 +17,8 @@ import copy
 import json
 from pathlib import Path
 
-from prototype.qwen_path import configure
-from prototype.qwen_sweep import render
+from prototype.archive.qwen_path import configure
+from prototype.archive.qwen_sweep import render
 
 SRC = Path("inputs/synthetic")
 OUT = Path("prototype/ladder/60_qwen_gallery")

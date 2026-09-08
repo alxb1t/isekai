@@ -26,8 +26,8 @@ import copy
 import json
 from pathlib import Path
 
-from prototype.qwen_path import configure, LORA, MODEL_IN, UNET
-from prototype.qwen_sweep import POSITIVE, SUBJECTS, render, INSTRUCTIONS
+from prototype.archive.qwen_path import configure, LORA, MODEL_IN, UNET
+from prototype.archive.qwen_sweep import POSITIVE, SUBJECTS, render, INSTRUCTIONS
 
 KSAMPLER = "102:3"
 STYLE_LORA = "900"  # a node id the recovered graph does not use

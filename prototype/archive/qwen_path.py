@@ -31,7 +31,7 @@ import copy
 import json
 from pathlib import Path
 
-from prototype.qwen_sweep import INSTRUCTIONS, POSITIVE, SUBJECTS, render
+from prototype.archive.qwen_sweep import INSTRUCTIONS, POSITIVE, SUBJECTS, render
 
 KSAMPLER = "102:3"
 MODEL_IN = "102:66"  # ModelSamplingAuraFlow -- what the LoRA is wired in front of

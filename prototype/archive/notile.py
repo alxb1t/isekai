@@ -28,7 +28,7 @@ from pathlib import Path
 
 from isekai.comfy_client import ComfyClient
 from isekai.pipeline import run
-from prototype.ladder import TILE
+from prototype.archive.ladder import TILE
 
 SUBJECTS = [
     "s1_control_blonde",

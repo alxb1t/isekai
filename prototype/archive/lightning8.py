@@ -28,8 +28,8 @@ import copy
 import json
 from pathlib import Path
 
-from prototype.qwen_path import configure, LORA
-from prototype.qwen_sweep import INSTRUCTIONS, POSITIVE, render
+from prototype.archive.qwen_path import configure, LORA
+from prototype.archive.qwen_sweep import INSTRUCTIONS, POSITIVE, render
 
 LORA_8 = "Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors"
 SRC = Path("inputs/synthetic")

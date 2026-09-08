@@ -55,9 +55,9 @@ def main() -> None:
 
     from isekai.comfy_client import ComfyClient
     from isekai.pipeline import run
-    from prototype.ladder import TILE
-    from prototype.qwen_path import configure
-    from prototype.qwen_sweep import INSTRUCTIONS, POSITIVE, render
+    from prototype.archive.ladder import TILE
+    from prototype.archive.qwen_path import configure
+    from prototype.archive.qwen_sweep import INSTRUCTIONS, POSITIVE, render
 
     client = ComfyClient(a.server)
     qbase = json.loads(Path("prototype/styles/qwen-lightning.json").read_text())

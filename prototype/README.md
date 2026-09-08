@@ -169,15 +169,21 @@ pod outlived its job that way on 2026-09-07. Tear down as its own step, then ver
 | Fotor comparison images | `prototype/fotor/` (gitignored; digests in `FINDINGS.md` F0) |
 | the two presets | `prototype/styles/*.md` and `*.json` |
 
-**Measurement scripts**, all run as `PYTHONPATH=. uv run --extra eval python <script>`:
+**Live measurement scripts** — the four round 2 needs, all run as
+`PYTHONPATH=. uv run --extra eval python <script>`:
 
 | script | what it does |
 |---|---|
-| `style_axis.py` | posterisation + linework, with the resampling control built in |
-| `hair_colour.py` | the known-answer test that indicted the mode |
+| `style_axis.py` | posterisation + linework — **round 2's bar is stated in these units** |
+| `hair_colour.py` | the colour machinery, and the known-answer test that indicted the mode |
 | `retention.py` | background detail / background colour / garment colour |
-| `thesis.py` | plots retention against stylization for both architectures |
-| `external_eval.py` | scores a render this pipeline did not produce |
+| `thesis.py` | plots retention against stylization, for comparing flows |
+
+**[`archive/`](archive/)** holds round 1's eleven pod-session runners. Records rather than tools — each
+one's result is in `FINDINGS.md`. Two are worth reading before writing round 2's runner:
+`archive/qwen_graph.py`, for recovering and flattening a deleted ComfyUI subgraph export into something
+submittable (round 2 must do the same for `workflows/animagine.json`), and `archive/external_eval.py`,
+for scoring a foreign render without fabricating provenance.
 
 **Read [`SUMMARY.md`](SUMMARY.md) before doing anything.** It carries what was tried and failed, so it is
 not retried.
