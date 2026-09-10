@@ -147,7 +147,7 @@ by the operator reading a contact sheet; one sheet was itself showing a stale th
 ## 5 · What is still open
 
 **Every open item now lives in [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, as
-N25–N31.** This section states the one that matters and does not restate the rest, because two copies of
+N25–N29 and N31.** This section states the one that matters and does not restate the rest, because two copies of
 a task list is how one of them goes stale.
 
 **N14 — nothing has ever measured "is this the same person" in a way that survives stylization.** This is
@@ -166,6 +166,10 @@ N27's first step is therefore free and uses that instrument directly: judge `A` 
 
 **Set aside deliberately, and not carried into round 3:**
 
+- **The style LoRA** — round 1's `N20`, dropped 2026-09-10. **No style LoRA is trained in this
+  prototype.** It was carried as the last lever for a posterisation deficit measured against a
+  third-party reference this round retired; against the bar that replaced it there is no deficit. F19
+  and F22 stay as findings. README's § *What was dropped* has the full reasoning.
 - **Tattoos** — F23: no general-purpose stylizer carries specific ink through a strong style change.
   Presence survives; design does not. This is a *finding*, not an open task.
 
@@ -224,7 +228,7 @@ have learnt. Worth softening the message.
 
 ## 6c · Where to start
 
-**The task list is [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, N25–N31.** It is the
+**The task list is [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, N25–N29 and N31.** It is the
 one copy; this section says only where to put your hands first.
 
 **N27, and its first step is free.** Judge `A` and `D` on identity *by eye*, on

@@ -233,8 +233,9 @@ no evaluator in existence at the time.
       photographs. First pass exposed three *transcription* defects (`pale skin` → bleached again,
       `messy hair` overshooting, a background too thin to stop the base inventing one); **all three were
       fixed for free and all three landed.** Sheets and renders are gitignored (D14).
-- [→] **N20 · the style LoRA** — **carried into round 3 as N30.** Round 1's parked lever, still parked;
-      prompt, dials and the hires pass are all spent.
+- [x] **N20 · the style LoRA — dropped 2026-09-10, and not carried into round 3.** Round 1's parked
+      lever, parked for two rounds and now closed: **no style LoRA will be trained in this prototype.**
+      The reasoning is in round 3's § *What was dropped, and why that is not a loss*.
 - [x] ~~**N19 · the hires pass**~~ — **superseded by the N19 above, which shipped (F35).** The original statement, kept:
       the last structural lever, and WAI's own recommendation: R-ESRGAN 4x+
       Anime6B, 20 steps, denoise 0.35–0.5. Needs the upscaler on the pod plus two graph nodes, so it is a
@@ -264,21 +265,43 @@ no evaluator in existence at the time.
 
 ### Round 3 — the session of 2026-09-10
 
-**Seven questions, worked one at a time.** Both flows now clear their bars and the operator has said the
+**Six questions, worked one at a time.** Both flows now clear their bars and the operator has said the
 renders are what he wants; what is left is not rescue but **knowing why they work** — which of the levers
 is load-bearing, and how we would tell if one stopped being.
 
-**Round 2 closed with three items still carrying work, and all three are here** — nothing was dropped in
-the renumbering, and nothing was closed by being moved:
+**Round 2 closed with three items still carrying work. Two are here; one was dropped on purpose** — and
+neither the carrying nor the dropping is silent:
 
 | round 2 | round 3 | why it moved |
 |---|---|---|
 | **N14** the axis nobody has built | **N27** | restated with the two flows separated. Still unsolved |
 | **N9c** judge `A`/`D` on identity | **N27**, as its first step | $0, no pod, renders already on disk |
-| **N20** the style LoRA | **N30** | still parked — but for a *different reason* now; see N30 |
+| **N20** the style LoRA | **dropped** | not renumbered, not forgotten — the deficit it existed to close was measured against a retired reference |
 
 **N31 joins them from HANDOFF §6c** — the reader's `body shape` blind spot, $0, and it comes
 before N26 so that a briefing bug in the incumbent reader is not scored as a reason to replace it.
+
+### What was dropped, and why that is not a loss
+
+**No style LoRA will be trained in this prototype** — round 1's `N20`, parked for two rounds, closed
+2026-09-10 by the operator's decision. It is worth writing down *why*, because it was carried for two
+rounds as "the last remaining lever" and a future reader will otherwise assume it was forgotten.
+
+**It existed to close a deficit that no longer exists.** Every statement of it traced back to flow `A`
+being "19% short on posterisation" — a number measured against a third-party stylizer that this round
+retired. Against the bar that replaced it, `A`'s own last measurement, there is no shortfall to close;
+the operator's verdict on those renders is that they are what he wants. **A LoRA is therefore not a fix,
+it is a different look** — a product decision, and not one this prototype is for.
+
+**And the cost was never small.** F19 measured a style LoRA fighting the sampler and pushing the wrong
+way; F22's redirect assumed a corpus that would have to be gathered, licence-checked and scored on the
+style axis before a single GPU hour. That is a project, not a lever.
+
+What survives is the *finding*, not the task: `archive/styles/raena_lora.json` and `archive/qwen_lora.py`
+keep F19 reproducible, and `archive/SUMMARY.md` keeps round 1's reasoning for parking it. **Nothing here
+needs re-deriving if the question ever reopens outside this prototype.**
+
+---
 
 **N27 comes first in practice.** An evaluator decides which arms are worth $0.0044 each, and every
 previous round that built the scoreboard second measured the wrong thing — F16 in round 1, F29 in round 2.
@@ -289,9 +312,6 @@ previous round that built the scoreboard second measured the wrong thing — F16
         ├──▶ N25 pose tags   ─┐
         │                     ├──▶ ONE pod session, one boot
         └──▶ N28 hires for A ─┘
-        │
-        └──▶ N30 style LoRA — blocked ON N27: without an identity number
-                              there is no way to tell what a LoRA costs
    N31 reader fix    — $0, and comes BEFORE N26 (fix the incumbent, then survey)
         └──▶ N26 VLM research — $0, independent, runs alongside everything
    N29 new portraits — needs N25/N28 settled, so its renders test a decided flow
@@ -409,23 +429,6 @@ previous round that built the scoreboard second measured the wrong thing — F16
       `02_00_raw_photo_upper_body_portrait.png`, while every sheet, render directory and evaluator key in
       this prototype is built from a 5-digit id. Renaming them costs nothing *now* and would be guessing
       at how many deserve sheets; the id scheme is settled when N29 starts, not before.
-
-- [ ] **N30 · the style LoRA — round 2's N20, still parked.** The last lever nobody has pulled. Prompt,
-      dials and the hires pass are all spent, and F22 argued in round 1 that a **trained style adapter**
-      is the thing that would close a register gap the open ecosystem does not otherwise provide for
-      photo→anime.
-
-      **It is parked rather than open, and the reason changed on 2026-09-10.** It was carried as "the
-      only remaining lever for `A`'s 19% posterisation gap" — and that gap was measured against a
-      third-party reference this project has now retired. **There is no gap.** `A` is what the operator
-      wants. So a LoRA is no longer a fix for a deficit; it is a *different look*, which is a product
-      decision and not a measurement one.
-
-      What round 1 established, so it is not re-derived: it needs only **unpaired** style images, and
-      **it must not be trained on our own renders** — F7 measured that style as soft and under-drawn, so
-      the corpus would teach the deficiency. Any candidate corpus is scored on the style axis *before*
-      any GPU time is spent. **Do not start this before N27**, or there is no way to tell whether a LoRA
-      cost identity.
 
 - [ ] **N31 · re-brief the reader on `body shape`** ($0, no pod). It scores **0.00 on real photographs** —
       the reader declines to guess a breast-size tag from a corseted torso, which is a *briefing* failure

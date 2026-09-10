@@ -68,7 +68,7 @@ holds exactly the three files the live flows read -- `fromnoise-v1.json`, `wd14_
 | `qwen-image-edit.recovered.json` | the subgraph export recovered from `e324699^` |
 | `qwen_models.json` | **28.89 GiB of pinned digests** — this is what makes freeing the Qwen space on the volume reversible, so it is archived and never deleted |
 | `lightning8_models.json` · `flux_kontext_models.json` | the 8-step Lightning test (F21); Flux.1 Kontext, parked on its gated VAE |
-| `raena_lora.json` | round 1's style-LoRA sweep (F19). **N20 is still open**, but it would be a fresh LoRA against Illustrious, not this one against Qwen |
+| `raena_lora.json` | round 1's style-LoRA sweep (F19). **N20 was dropped on 2026-09-10** — no style LoRA is trained in this prototype — so this is a record only |
 
 The runners here were repointed at `prototype/archive/styles/` in the same move, so each still runs.
 
