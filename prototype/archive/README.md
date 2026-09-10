@@ -2,7 +2,7 @@
 
 **Records, not tools.** Round 1's runners, the graphs they drove, and two notes whose questions are
 closed. Every script here drove a pod session that is finished; its result is written up
-in `../FINDINGS.md` and `../SUMMARY.md`. They are kept because a finding without the code that produced
+in `../notes/FINDINGS.md` and `../SUMMARY.md`. They are kept because a finding without the code that produced
 it is an assertion, and because two of them recover deleted graphs from git history that would otherwise
 have to be rediscovered.
 
@@ -89,7 +89,7 @@ the working `derived/` tree.
 ## `fotor/` — round 1's lighthouse, retired 2026-09-10
 
 Six renders from a commercial stylizer, their nine canvas resamples under `canvas/`, and the two
-external-eval score files from F1/F2. Gitignored; digests are in `FINDINGS.md` F0.
+external-eval score files from F1/F2. Gitignored; digests are in `../notes/FINDINGS.md` F0.
 
 **It earned its place and then stopped being useful.** It calibrated the style axis when nothing in this
 project knew what "flat enough" meant (**F7**), it was the third point in a three-way ordering whose

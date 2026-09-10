@@ -26,11 +26,13 @@ import re
 from pathlib import Path
 
 from prototype.face_ladder import SUBJECTS as LADDER_SUBJECTS
-from prototype.fromnoise import PHOTOS
 from prototype.fromnoise import SUGGESTED as ALL_SUBJECTS
 from prototype.paths import derived_dir, resolve_render
+from prototype.portfolio import SUBJECTS as PORTFOLIO_SUBJECTS
+from prototype.pose_ablation import SUBJECTS as POSE_SUBJECTS
 from prototype.real_photo import PHOTOS as REAL_PHOTOS
 from prototype.real_photo import SUBJECTS as REAL_SUBJECTS
+from prototype.sheet import photo_for
 
 # `2026-09-08` -- a UTC date bucket under `renders/`, stripped from thumbnail names.
 DATE_BUCKET = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -77,6 +79,52 @@ SHEETS: dict[str, tuple[str, dict[str, tuple[str, str]]]] = {
             "prototype/renders/n6_face/7_age/{sid}/0.png": (
                 "age tag ×1.4",
                 "emphasis on the sheet's age field",
+            ),
+        },
+    ),
+    "n29_portfolio": (
+        "the decided flow on inputs no dial was tuned against",
+        {
+            "prototype/renders/n29_portfolio/1_a/{sid}/0.png": (
+                "A · the product",
+                "InstantID + OpenPose + full sheet · cn 0.8 · cfg 5 · hires 0.35",
+            ),
+            "prototype/renders/n29_portfolio/2_d/{sid}/0.png": (
+                "D · description only",
+                "the photograph is never read at render time",
+            ),
+        },
+    ),
+    "n28_hires_pose": (
+        "does the hires pass cost anything on a hard pose?",
+        {
+            "prototype/renders/n25_pose/1_a_control/{sid}/0.png": (
+                "A · no hires",
+                "flow A at its settled dials — N25's control, reused as the pair",
+            ),
+            "prototype/renders/n25_pose/4_a_hires_035/{sid}/0.png": (
+                "A · hires 0.35",
+                "the same render plus a second sampler pass at 1536x2208. Same "
+                "seed, same prompt, same dials — the pair differs by this alone",
+            ),
+        },
+    ),
+    "n25_pose": (
+        "does OpenPose carry the body without the tags?",
+        {
+            "prototype/renders/n25_pose/1_a_control/{sid}/0.png": (
+                "A · control",
+                "pose tags AND the skeleton — the reference",
+            ),
+            "prototype/renders/n25_pose/2_a_no_pose/{sid}/0.png": (
+                "A · no pose tags",
+                "the skeleton alone — the question. Differs from the control by "
+                "field 13 and nothing else",
+            ),
+            "prototype/renders/n25_pose/3_d/{sid}/0.png": (
+                "D · tags only",
+                "no skeleton exists in `D`, so the tags are all that places the "
+                "body — the reference for what one mechanism is worth",
             ),
         },
     ),
@@ -181,7 +229,7 @@ SHEETS: dict[str, tuple[str, dict[str, tuple[str, str]]]] = {
         },
     ),
     "n16_prompt": (
-        "the four ILLUSTRIOUS.md prompt changes, one at a time",
+        "the four notes/ILLUSTRIOUS.md prompt changes, one at a time",
         {
             "prototype/renders/n12_canonical/1_full/{sid}/0.png": (
                 "N12 — before",
@@ -402,6 +450,9 @@ def main() -> None:
         "n6_face": LADDER_SUBJECTS,
         "n21_real_photo": tuple(REAL_SUBJECTS),
         "n24_real_photo_final": tuple(REAL_SUBJECTS),
+        "n25_pose": POSE_SUBJECTS,
+        "n28_hires_pose": POSE_SUBJECTS,
+        "n29_portfolio": PORTFOLIO_SUBJECTS,
     }
     subjects = [
         sid
@@ -425,10 +476,13 @@ def main() -> None:
 
     rows = []
     for sid in subjects:
+        # `photo_for` searches every input root, so a new subject set needs no
+        # branch here. The real photographs stay a special case only because
+        # their filenames are camera-assigned and cannot be derived from an id.
         photo = (
             REAL_PHOTOS / REAL_SUBJECTS[sid]
             if sid in REAL_SUBJECTS
-            else PHOTOS / f"synthetic_portrait_{sid}_.png"
+            else Path(photo_for(sid))
         )
         # Relative to the page, so the file opens from disk with no server.
         # Derived from where the page actually lands rather than fixed at `../..`:

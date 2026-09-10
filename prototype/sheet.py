@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PROTOTYPE — the criteria sheet as an editable, checkable artifact.
 
-The sheets have been the ground truth since `CRITERIA.md` §1, but nothing has
+The sheets have been the ground truth since `notes/CRITERIA.md` §1, but nothing has
 owned them: every runner parsed the assembled prompt, and the prompt itself was
 rebuilt by whichever throwaway script last touched the table. **Edit a sheet's
 table by hand and the prompt does not change**, which makes the sheet look
@@ -19,8 +19,8 @@ So the loop is: **edit the table -> `sheet.py build` -> render.** Add a tag, dro
 one, change one, and see what it does.
 
 `adopt` is the front of the same loop. A reader writes a draft to
-`prototype/derived/vlm_drafts/<id>.json` (see `vlm_reader.py`), `adopt` turns it into
-a sheet, and the operator edits from there rather than from a blank page:
+`prototype/derived/vlm_drafts/<pool>/<id>.json` (see `vlm_reader.py`), `adopt`
+turns it into a sheet, and the operator edits from there rather than from a blank page:
 
     photo -> reader -> draft -> adopt -> **review and edit** -> build -> render
 
@@ -35,7 +35,7 @@ F28 found, without a single exception across two rounds, that **canonical Danboo
 tags work and invented ones do not**. It was a reading of results; here it is a
 gate. The authority is `models/wd14/selected_tags.csv`, which ships with the
 tagger and lists **8,106 general tags with their Danbooru post counts** -- so it
-answers both halves of the question `ILLUSTRIOUS.md` §1 raised:
+answers both halves of the question `notes/ILLUSTRIOUS.md` §1 raised:
 
     is this a real tag?              -> is it in the file
     is it common enough to be learnt -> is its post count above a floor
@@ -62,7 +62,7 @@ import re
 import sys
 from pathlib import Path
 
-from prototype.paths import sheet_path
+from prototype.paths import DRAFTS, draft_path, new_sheet_path, sheet_path
 
 VOCABULARY = Path("models/wd14/selected_tags.csv")
 
@@ -70,18 +70,30 @@ VOCABULARY = Path("models/wd14/selected_tags.csv")
 # leads the prompt rather than trailing it. Not Danbooru vocabulary, so it is
 # exempt from the check below.
 QUALITY = ("masterpiece", "best quality", "amazing quality", "newest")
-# Danbooru always front-loads a count tag; `CRITERIA.md` records why `1girl` is
-# back in the prototype and why that is not a proposal for `main`.
-COUNT = ("1girl", "solo")
+# Danbooru always front-loads a count tag; `notes/CRITERIA.md` records why `1girl`
+# is back in the prototype and why that is not a proposal for `main`.
+#
+# **It is a SHEET FIELD, not a constant, since 2026-09-10.** It was hardcoded for
+# as long as every subject was a woman -- which is a property of the round 2 set,
+# not of the product. The pose set contains men, and `1girl` on a male subject
+# fights the face embedding that flow `A` gets its gender from, putting an
+# unmeasured confound in the middle of a pose experiment. Flow `D` has no
+# embedding at all, so for `D` the tag is the *only* thing asserting gender.
+#
+# `COUNT_DEFAULT` is what a sheet gets when its draft does not say; the sheet's
+# own value always wins. Same pattern as the negative prompt, which `00059`
+# overrides per sheet so the change is visible rather than global.
+COUNT_DEFAULT = "1girl, solo"
 # Style tags inherited from the shipped graph's committed prompt. `anime
 # screencap` is canonical; the other two are not, and are exempt rather than
 # fixed because changing them is a deliberate test edit, not a cleanup.
 TRAILER = ("anime screencap", "detailed eyes", "soft lighting")
-EXEMPT = {*QUALITY, *COUNT, *TRAILER}
+EXEMPT = {*QUALITY, "1girl", "1boy", "solo", *TRAILER}
 
 # The order fields are emitted in: subject, then appearance, then action, then
 # frame. One definition, here, rather than a copy in every runner.
 ORDER = (
+    "count",
     "age band",
     "skin / ancestry",
     "hair colour",
@@ -105,6 +117,10 @@ _ROW = re.compile(
 )
 _PROMPT = re.compile(
     r"(### The positive prompt, assembled\s*\n\s*```\n)(.+?)(\n```)", re.DOTALL
+)
+_PROMPT_NO_POSE = re.compile(
+    r"(### The positive prompt — pose tags dropped\n.*?```\n)(.+?)(\n```)",
+    re.DOTALL,
 )
 
 
@@ -138,10 +154,26 @@ def fields_of(sid: str) -> dict[str, str]:
     return found
 
 
-def assemble(fields: dict[str, str]) -> str:
-    """Return the positive prompt: quality string, count, the fields, the trailer."""
-    body = [fields[name] for name in ORDER if fields[name]]
-    return ", ".join([*QUALITY, *COUNT, *body, *TRAILER])
+# Fields flow `A` can omit because a mechanism in the graph already carries them.
+# **`pose` is a hypothesis, not a settled fact** -- N25 is the experiment that
+# decides whether OpenPose's skeleton makes the tags redundant, and until it has
+# rendered, the ablation prompt is a candidate rather than the default.
+POSE_FIELDS = ("pose",)
+
+
+def assemble(fields: dict[str, str], drop: tuple[str, ...] = ()) -> str:
+    """Return the positive prompt: quality string, the fields, the trailer.
+
+    The count tag is no longer spliced in here -- it is `ORDER`'s first field, so
+    a sheet declaring `1boy, solo` emits that and nothing overrides it.
+
+    `drop` omits fields from the PROMPT and never from the sheet. The sheet is the
+    evaluator's ground truth: delete `pose` from the table and the scoreboard no
+    longer knows what the pose was, so *did the skeleton carry it* becomes
+    unanswerable at the moment it is asked.
+    """
+    body = [fields[name] for name in ORDER if fields[name] and name not in drop]
+    return ", ".join([*QUALITY, *body, *TRAILER])
 
 
 def find(words: list[str], known: dict[str, int]) -> None:
@@ -212,10 +244,21 @@ criterion. Edit the table, then run `sheet.py build {sid}` to regenerate the pro
 {prompt}
 ```
 
+### The positive prompt — pose tags dropped
+
+**Flow `A`'s ablation arm (N25).** The same table with field 13 omitted, on the
+hypothesis that OpenPose's skeleton already carries the geometry. Flow `D` never
+uses this block: it has no skeleton, so for `D` the tags are the only thing
+placing the body.
+
+```
+{prompt_no_pose}
+```
+
 ### The negative prompt
 
 ```
-bad quality, worst quality, sketch, censor, nsfw
+bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust
 ```
 
 ### Verdict — filled in after the render, by eye
@@ -253,34 +296,87 @@ def render_table(fields: dict[str, str]) -> str:
     return "\n".join(rows)
 
 
-def adopt(sid: str, drafts: Path, known: dict[str, int]) -> None:
+# Where a subject's photograph lives. Round 2's portraits are the exception, not
+# the rule: they carry a `synthetic_portrait_<id>_.png` filename from the
+# generator that made them, while every later set is named for what it depicts.
+PHOTO_ROOTS = (
+    Path("prototype/inputs/synthetic/pose"),
+    Path("prototype/inputs/synthetic/portfolio"),
+    Path("prototype/inputs/synthetic"),
+    Path("prototype/inputs/real"),
+    Path("inputs/synthetic"),
+)
+
+
+def photo_for(sid: str) -> str:
+    """Return the photograph a subject id names, searched across the input roots."""
+    for root in PHOTO_ROOTS:
+        for name in (f"{sid}.png", f"synthetic_portrait_{sid}_.png"):
+            if (root / name).exists():
+                return str(root / name)
+    return f"inputs/synthetic/synthetic_portrait_{sid}_.png"
+
+
+REVIEWED = re.compile(r"\*\*Reviewed by the operator", re.I)
+
+
+def adopt(
+    sid: str, drafts: Path, known: dict[str, int], force: bool = False
+) -> None:
     """Write a draft's field values into the sheet's table, creating it if absent.
 
     Only the table is written. Everything else in an existing sheet -- its source
     note, its prose, its verdict block -- belongs to the operator and survives.
+
+    **It REFUSES a sheet marked reviewed, unless forced.** A draft is what a
+    reader guessed; a reviewed table is what a human corrected, and the whole
+    architecture exists for that correction. Adopting over it silently replaces
+    the corrections with the guesses that were already rejected -- which is not
+    hypothetical: it happened to `00003` on 2026-09-10 and took `green eyes` back
+    to the reader's `blue eyes`, undoing a fix F26 had measured. The sheet was
+    tracked, so `git checkout` recovered it; an untracked one would be gone.
+
+    This is the sibling of the `build` trap already recorded: `build` regenerates
+    the prompt from the table, `adopt` regenerates the table from the draft. In
+    both cases the operator's edit is the thing at risk.
     """
     import datetime
 
-    draft_path = drafts / f"{sid}.json"
-    if not draft_path.exists():
-        raise SystemExit(f"{draft_path} does not exist")
-    draft = json.loads(draft_path.read_text())
+    # `drafts` is honoured when the caller names a directory explicitly; the
+    # default resolves through the pool tree, which mirrors the sheet tree.
+    src = (drafts / f"{sid}.json") if drafts != DRAFTS else draft_path(sid)
+    if not src.exists():
+        raise SystemExit(f"{src} does not exist")
+    draft = json.loads(src.read_text())
+    # `count` defaults rather than being required: every draft written before
+    # 2026-09-10 predates the field, and failing them all would make the reader's
+    # ten existing drafts unusable to prove a point about a tag they all agree on.
+    draft.setdefault("count", COUNT_DEFAULT)
     missing = [f for f in ORDER if f not in draft]
     if missing:
-        raise SystemExit(f"{draft_path}: missing fields {missing}")
+        raise SystemExit(f"{src}: missing fields {missing}")
     fields = {name: draft[name].strip() for name in ORDER}
 
+    photo = photo_for(sid)
     path = sheet_path(sid)
+    if not path.exists():
+        path = new_sheet_path(sid, photo)
+        path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
         text = path.read_text()
+        if REVIEWED.search(text) and not force:
+            raise SystemExit(
+                f"{path} is marked reviewed by the operator; adopting would "
+                f"replace those corrections with the reader's draft.\n"
+                f"  Pass --force if that is genuinely what you want."
+            )
         rows = list(_ROW.finditer(text))
         if not rows:
             raise SystemExit(f"{sid}: existing sheet has no field table to replace")
         text = text[: rows[0].start()] + render_table(fields) + text[rows[-1].end() :]
         path.write_text(text)
-        print(f"\n=== {sid} ===\n  table replaced from {draft_path}")
+        print(f"\n=== {sid} ===\n  table replaced from {src}")
     else:
-        photo = f"inputs/synthetic/synthetic_portrait_{sid}_.png"
         path.write_text(
             TEMPLATE.format(
                 sid=sid,
@@ -288,26 +384,49 @@ def adopt(sid: str, drafts: Path, known: dict[str, int]) -> None:
                 date=datetime.date.today().isoformat(),
                 table=render_table(fields),
                 prompt=assemble(fields),
+                prompt_no_pose=assemble(fields, drop=POSE_FIELDS),
             )
         )
-        print(f"\n=== {sid} ===\n  sheet created from {draft_path}")
+        print(f"\n=== {sid} ===\n  sheet created from {src}")
     build(sid, known)
 
 
 def build(sid: str, known: dict[str, int]) -> None:
-    """Rewrite a sheet's prompt block from its table, after checking it."""
+    """Rewrite a sheet's prompt blocks from its table, after checking it.
+
+    **Both blocks come from one table**, which is the point. Two sheets per
+    subject would mean fifteen fields transcribed twice, and a correction applied
+    to one of them -- the sheet is the single source of truth precisely so that a
+    fix lands everywhere it is used.
+
+    A sheet with no ablation block is left with one, so nothing written before
+    2026-09-10 has to be regenerated to stay readable.
+    """
     check(sid, known)
     path = sheet_path(sid)
     text = path.read_text()
-    prompt = assemble(fields_of(sid))
-    match = _PROMPT.search(text)
-    if match is None:
-        raise SystemExit(f"{sid}: no assembled-prompt block to rewrite")
-    if match.group(2) == prompt:
-        print("  prompt already matches the table")
+    fields = fields_of(sid)
+
+    wrote = []
+    for pattern, prompt, label in (
+        (_PROMPT, assemble(fields), "full"),
+        (_PROMPT_NO_POSE, assemble(fields, drop=POSE_FIELDS), "no-pose"),
+    ):
+        match = pattern.search(text)
+        if match is None:
+            if pattern is _PROMPT:
+                raise SystemExit(f"{sid}: no assembled-prompt block to rewrite")
+            continue
+        if match.group(2) == prompt:
+            continue
+        text = text[: match.start(2)] + prompt + text[match.end(2) :]
+        wrote.append(f"{label} ({len(prompt.split(','))} tags)")
+
+    if not wrote:
+        print("  prompts already match the table")
         return
-    path.write_text(text[: match.start(2)] + prompt + text[match.end(2) :])
-    print(f"  prompt rewritten — {len(prompt.split(','))} tags")
+    path.write_text(text)
+    print(f"  rewritten: {', '.join(wrote)}")
 
 
 def main() -> None:
@@ -320,8 +439,13 @@ def main() -> None:
     parser.add_argument(
         "--drafts",
         type=Path,
-        default=Path("prototype/derived/vlm_drafts"),
+        default=DRAFTS,
         help="where `adopt` reads a reader's draft JSON from",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="let `adopt` overwrite a table the operator has marked reviewed",
     )
     args = parser.parse_args()
 
@@ -336,7 +460,7 @@ def main() -> None:
         elif args.action == "build":
             build(sid, known)
         else:
-            adopt(sid, args.drafts, known)
+            adopt(sid, args.drafts, known, args.force)
     if args.action == "check" and unknown:
         # A non-zero exit so this can gate a run, but the report is always
         # printed first -- an unknown tag is a warning to a human, not a crash.

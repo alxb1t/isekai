@@ -19,9 +19,9 @@ a pool: a subject id already says which one it is in.
 ## The ten synthetic portraits
 
 One sheet per subject, transcribed by eye on **2026-09-08** against the thirteen-field schema in
-[`../CRITERIA.md`](../CRITERIA.md) §2, and **reviewed by the operator the same day**.
+[`../notes/CRITERIA.md`](../notes/CRITERIA.md) §2, and **reviewed by the operator the same day**.
 
-These are the **ground truth** for round 2. `CRITERIA.md` §1 relocated it here from the photograph, which
+These are the **ground truth** for round 2. `../notes/CRITERIA.md` §1 relocated it here from the photograph, which
 means every number the evaluator produces inherits whatever this transcription got wrong.
 
 **Each sheet carries its own negative prompt.** Nine declare the shipped one, which keeps them comparable

@@ -61,7 +61,7 @@ requires.
 On 2026-09-08 and 09 RunPod repeatedly returned pods that reach `status: RUNNING` with **`runtime: null`,
 `ssh.direct: null`, no `publicIp` and no `portMappings`** — only their SSH proxy, which is a restricted
 shell that cannot carry a port forward. isekai lost roughly $0.26 to this before it was understood; the
-full account is in isekai's `prototype/FINDINGS.md` F31.
+full account is in isekai's `prototype/notes/FINDINGS.md` F31.
 
 `synthetic_portraits/infra/up.sh` polls 60 × 5 s for a public IP and then **prints a warning and exits,
 leaving the pod running and billing.** That is how a `synthetic-portraits` pod was found still billing on

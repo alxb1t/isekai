@@ -2,7 +2,7 @@
 """PROTOTYPE — T6/T6b: the chosen register across every subject, and its frontier.
 
 **T5 is answered: the target register is `notile`** — a rendered anime
-illustration, not a flat cel screencap (FINDINGS.md F10). That is the shipped
+illustration, not a flat cel screencap (../notes/FINDINGS.md F10). That is the shipped
 graph with **one leg switched off**: TTPlanet's tile ControlNet, which conditions
 on the photograph's local colour and continuous tone and therefore keeps dragging
 the render back toward looking photographic.

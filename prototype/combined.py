@@ -6,7 +6,7 @@ N6 ran seven arms one change at a time and the operator chose two of them:
 N6 arm is one change from its control, so the combination is a render and not an
 inference. At the same time the sheets moved from prose to Danbooru vocabulary and
 gained a `gaze` field, because N6 showed the base fills in an untagged criterion
-rather than leaving it alone (`CRITERIA.md` §2).
+rather than leaving it alone (`notes/CRITERIA.md` §2).
 
 **This run deliberately changes two things at once**, which every ladder in this
 repository has refused to do. It is the operator's call and the reason is sound:

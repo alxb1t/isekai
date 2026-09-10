@@ -4,16 +4,22 @@
 before a change is cut. Tuning by eye is allowed here and nowhere else: the rule that dials are settled
 by numbers binds *versions*, and a branch that never merges settles nothing.
 
+> **All five notes live in [`notes/`](notes/)** — method, reference and record, indexed in
+> [`notes/README.md`](notes/README.md). This file stays at the root as the task list and its history.
+>
 > ### Reading order
-> 1. **[`HANDOFF.md`](HANDOFF.md)** — **start here in a fresh thread.** What exists now, the settled
+> 1. **[`notes/HANDOFF.md`](notes/HANDOFF.md)** — **start here in a fresh thread.** What exists now, the settled
 >    configuration, the laws, and what is still open. This file is the ledger behind it.
 > 2. **this file** — the task list and its history: every question asked, and what closed it
-> 3. **[`CRITERIA.md`](CRITERIA.md)** — round 2's design: the sheet, the seven scored criteria, both bars
-> 4. **[`ILLUSTRIOUS.md`](ILLUSTRIOUS.md)** — what the base was trained on, and what to prompt it with
-> 5. **[`FINDINGS.md`](FINDINGS.md)** — F1–F36, the full evidence, newest at the bottom
-> 6. **[`archive/SUMMARY.md`](archive/SUMMARY.md)** — round 1's close: the flows compared, and what
+> 3. **[`notes/IDENTITY.md`](notes/IDENTITY.md)** — **how we know the anime image is the same person.** The
+>    methodology, its proof, and the two traps that produced a wrong answer first. Written to be
+>    exported
+> 4. **[`notes/CRITERIA.md`](notes/CRITERIA.md)** — round 2's design: the sheet, the seven scored criteria, both bars
+> 5. **[`notes/ILLUSTRIOUS.md`](notes/ILLUSTRIOUS.md)** — what the base was trained on, and what to prompt it with
+> 6. **[`notes/FINDINGS.md`](notes/FINDINGS.md)** — F1–F40, the full evidence, newest at the bottom
+> 7. **[`archive/SUMMARY.md`](archive/SUMMARY.md)** — round 1's close: the flows compared, and what
 >    not to retry
-> 7. **[`archive/GPU.md`](archive/GPU.md)** — settled: keep the card, and a render is not where the
+> 8. **[`archive/GPU.md`](archive/GPU.md)** — settled: keep the card, and a render is not where the
 >    money goes
 
 ---
@@ -84,7 +90,7 @@ LoRA · Flux.1 Kontext dev (its VAE is gated) · the within-base known-answer pr
 **Rendered 2026-09-08. The style bar is cleared 3x over; the identity bar is the open question.**
 
 One pod session, 15:05–15:15, ten minutes, ~$0.05. Six subjects, one seed. Full evidence in
-[`FINDINGS.md`](FINDINGS.md) **F24**.
+[`notes/FINDINGS.md`](notes/FINDINGS.md) **F24**.
 
 | flow | linework ↑ | posterisation | spread |
 |---|---:|---:|---:|
@@ -134,10 +140,10 @@ no evaluator in existence at the time.
 ### Tasks
 
 - [x] **N0 · settle the identity criteria** — the sheet, the scored six, and both bars, decided
-      2026-09-08 and written up in **[`CRITERIA.md`](CRITERIA.md)** before any render.
+      2026-09-08 and written up in **[`notes/CRITERIA.md`](notes/CRITERIA.md)** before any render.
 - [x] **N1 · ~~recover the graph~~ — not needed.** `animagine.json` does not have to be recovered: the
       shipped `workflows/pipeline.json` becomes from-noise with **four edits**, and every node type is
-      already on the image. See `CRITERIA.md` §7.
+      already on the image. See `notes/CRITERIA.md` §7.
 - [x] **N2 · build the variant** — `prototype/styles/fromnoise-v1.json`: empty latent, `denoise 1.0`,
       `cfg 5 → 7` (from noise the prompt carries the criteria, so text adherence is worth more than it
       was), **InstantID kept**, **OpenPose kept**, **tile and lineart dropped**. 17 nodes, every link
@@ -190,7 +196,7 @@ no evaluator in existence at the time.
       the finding is that the scoreboard **cannot see identity at all**, so it does not overturn the
       operator's verdict.
 - [x] **N15 · research what Illustrious was actually trained on** — done 2026-09-08, $0 ·
-      **[`ILLUSTRIOUS.md`](ILLUSTRIOUS.md)**, primary source the Illustrious paper. Confirms the
+      **[`notes/ILLUSTRIOUS.md`](notes/ILLUSTRIOUS.md)**, primary source the Illustrious paper. Confirms the
       operator's memory (10–20 M images against Animagine's 8.4 M), gives the **trained caption schema**
       and the **trained quality ladder**, and closes the skin question: `pale skin` means *bleached*,
       not fair. Two fixes applied free — skin tags corrected across all ten sheets, and **`worst detail`
@@ -265,7 +271,7 @@ no evaluator in existence at the time.
 
 ### Round 3 — the session of 2026-09-10
 
-**Six questions, worked one at a time.** Both flows now clear their bars and the operator has said the
+**Six questions. Five closed on 2026-09-10; one remains, plus one item inside N27.** Both flows now clear their bars and the operator has said the
 renders are what he wants; what is left is not rescue but **knowing why they work** — which of the levers
 is load-bearing, and how we would tell if one stopped being.
 
@@ -307,35 +313,48 @@ needs re-deriving if the question ever reopens outside this prototype.**
 previous round that built the scoreboard second measured the wrong thing — F16 in round 1, F29 in round 2.
 
 ```
-   N27 evaluation  ──▶ decides what N25 and N28 have to measure
-        │                (its first step is free: judge by eye, on disk)
-        ├──▶ N25 pose tags   ─┐
-        │                     ├──▶ ONE pod session, one boot
-        └──▶ N28 hires for A ─┘
-   N31 reader fix    — $0, and comes BEFORE N26 (fix the incumbent, then survey)
-        └──▶ N26 VLM research — $0, independent, runs alongside everything
-   N29 new portraits — needs N25/N28 settled, so its renders test a decided flow
+   ✅ N27  face likeness      instrument built, F37
+   ✅ N27  pose geometry      instrument built, F38
+   ✅ N31  reader re-briefed  folded into the same edit
+   ✅ N25  pose tags          ANSWERED: flow A keeps both, F38
+   ─────────────────────────────────────────────────────────────────
+   ✅ N28  hires for A        ANSWERED: yes, at 0.35 — F39
+   ✅ N29  held-out portraits ANSWERED: it generalises, 8/10 — F40
+   ─────────────────────────────────────────────────────────────────
+      N26  VLM survey         $0, independent
+      N27  remaining          an INDEPENDENT recognizer, to turn A's upper
+                              bound into an estimate. Needs a model fetched.
 ```
 
-- [ ] **N25 · does flow `A` need pose tags at all?** The open item HANDOFF §5 named and never ran.
-      Flow `A` carries a DWPose skeleton *and* a `pose` field in the prompt; nobody has removed one and
-      looked. Two facts make it worth the render: **pose is the VLM reader's weakest field on both real
-      and synthetic photographs (0.57/0.58)** — the only field indifferent to input type, which points at
-      a vocabulary limit rather than a reading limit — and **F27 measured that the legs compete with the
-      tags**, so a tag the skeleton already carries is not free, it is paid for in style.
+**Flow `A` is decided as of 2026-09-10:** InstantID + OpenPose + the full criteria sheet including its
+pose tags, `cn_strength 0.8`, `cfg 5`, and the hires pass at denoise **0.35**. Every dial in it has now
+been chosen by measurement on at least two axes.
 
-      **The two flows get two prompts, and that is the point.** `D` has no skeleton and *must* keep the
-      pose tags; `A` may not need them. One prompt for both was never a decision, only an inheritance.
+- [x] **N25 · does flow `A` need pose tags at all? — ANSWERED 2026-09-10: it needs both.** One pod
+      session, 30 renders, ~$0.17, teardown confirmed by the MCP · **F38**. Ten deliberately varied
+      poses, three arms, one variable: the `pose` field, dropped from the **prompt** and never from the
+      sheet.
 
-      **Design, settled before the render: strip the tags in the runner, never in the sheet.** The sheet
-      is the evaluator's ground truth (`CRITERIA.md` §1). Emptying `2 · pose` in the sheet would remove
-      the tags from the prompt *and* remove the scoreboard's knowledge of what the pose was — the
-      question would become unaskable at the moment we started asking it. So `assemble()` takes a set of
-      fields to drop, the sheet is untouched, and both renders are scored against the same `pose` row.
+      | arm | PCK ↑ | joint-angle error ↓ |
+      |---|---:|---:|
+      | `1_a_control` — tags + skeleton | **0.821** | **9.4°** |
+      | `2_a_no_pose` — skeleton alone | 0.801 | 12.6° |
+      | `3_d` — tags alone, no skeleton | 0.218 | 15.9° |
 
-      Open sub-question: **`framing`** (`cowboy shot`, `upper body`) sits beside `pose` in `ORDER` and is
-      a *crop* tag, not a body tag. DWPose keypoints land at the photograph's own coordinates, so the
-      crop is arguably carried too — untested, and worth its own arm rather than being bundled.
+      **They complement rather than compete.** The skeleton places the body; the tags disambiguate the
+      limbs it gets wrong. Without them `arms_up` drops an arm the photograph holds behind the head —
+      a shoulder off by **124°**, which is a different pose rather than a displaced one.
+
+      **The operator judged the contact sheet before the instrument existed**, named six subjects where
+      the control wins, and that expectation was written into the scorer *before* it ran. It agreed on
+      five; on `arms_on_hips_legs_wide` it disagreed, the per-joint detail showed the control's left
+      elbow off by 65.9° while everything else landed, and **the operator reviewed it and agreed with the
+      instrument** — the first time a measurement has corrected the eye here, and it only counts because
+      the expectation was recorded first.
+
+      **Left open deliberately:** `framing` was held constant in every arm, so whether DWPose carries the
+      *crop* is untested and is a separate question. `legs_crossed` is the worst subject for every arm,
+      and part of that is DWPose's own uncertainty on a self-occluding floor pose rather than the render.
 
 - [ ] **N26 · is there an open model that reads a photograph as well as the agent session does?** ($0,
       research only.) The reader in `vlm_reader.py` is **an agent session, not a dependency** — it scored
@@ -381,56 +400,103 @@ previous round that built the scoreboard second measured the wrong thing — F16
       an instrument that can read the criteria off *the photograph* as reliably as off the render — which
       is precisely what N26 is researching, and why the two are the same problem seen from two ends.
 
-      **First step, and it costs nothing — this is round 2's N9c.** Judge `A` and `D` on identity *by
+      **The instrument exists as of 2026-09-10 — [`notes/IDENTITY.md`](notes/IDENTITY.md) is the methodology and
+      `face_likeness.py` is the code.** It reframes the question as *given this render, which of the six
+      photographs did it come from*, which is stylization-invariant because every candidate in the
+      comparison is equally stylized. First run, chance 16.7%: flow `A` scores **4–5 of 6** (p 0.0087 to
+      0.0007, positive margin in every arm) and flow `D` scores **2 of 6 with a negative margin** — it is
+      guessing, which is what `D` is for. **`A`'s number is an upper bound**, because the recognizer is
+      the one InstantID optimises against; `D`'s is clean. Full run at
+      `prototype/evaluations/2026-09-10/t1_face_likeness/`.
+
+      **The eye-check is closed.** The operator read the renders on 2026-09-10 and his judgement agrees
+      with the instrument — which is the ordering this whole design depends on, since an instrument is
+      built to agree with a judgement. Round 2's **N9c is closed by that**.
+
+      **What is left in N27, in the order it is worth doing:**
+
+      1. ~~**Pose geometry — the second layer.**~~ **BUILT 2026-09-10** — `prototype/pose_geometry.py`,
+         written up as `notes/IDENTITY.md` §10 and first used in **F38**. Two measures, because each is
+         a trap alone: **PCK** describes *placement*, **joint-angle error** describes *configuration*,
+         and flow `D` scored the best angle error of any arm on `sitting_on_knees` at a PCK of **0.000**
+         — a plausible body in entirely the wrong place. No circularity touches it: keypoints are
+         geometric, not appearance-based. `A` and `D` separate exactly as predicted, 0.821 against 0.218.
+      2. **An independent recognizer — and it is harder than it first looked.** The obvious candidate
+         was the other face encoder already pinned here; it is **disqualified**, because its training
+         pairs were stylized with InstantID and IP-Adapter — this exact generator family. It is *more*
+         entangled, not less. **Neither local encoder is independent**, so this needs a model fetched,
+         licence-checked and digest-pinned. No GPU, but real provisioning work.
+      3. **Held-out subjects** — the six scored are the set every dial was tuned on. Rides **N29**.
+      4. **Real photographs** — untested, and that set is down to two.
+
+      **The eye-check, and it costs nothing — this is round 2's N9c.** Judge `A` and `D` on identity *by
       eye*, on renders already on disk:
       `prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`. No pod, no evaluator, no code. It
       comes first because **an instrument is built to agree with a judgement, and the judgement has to
       exist first** — F1 is the record of building an evaluator before the thing it judged and getting a
       coin flip back. What the eye finds here is what N27's mechanism has to reproduce.
 
-- [ ] **N28 · does flow `A` need the hires pass?** `D` gains on both axes; `A`'s case is weaker, and
-      the operator's eye says it looks fine without:
+- [x] **N28 · does flow `A` need the hires pass? — ANSWERED 2026-09-10: yes, at denoise 0.35.** One pod
+      session, 10 renders, ~$0.10, teardown confirmed · **F39**.
 
-      | | posterisation | linework |
-      |---|---:|---:|
-      | `A` no hires | 0.363 | 0.0145 |
-      | `A` + hires 0.50 | 0.373 (+0.010) | 0.0181 (**+25%**) |
-      | *determinism floor* | *±0.0020* | *±0.0003* |
+      | axis | control | + hires 0.35 | floor |
+      |---|---:|---:|---|
+      | linework ↑ | 0.0112 | **0.0133** (+18%) | ±0.0003 |
+      | posterisation ↑ | 0.8261 | 0.8214 (−0.0047) | ±0.0020 |
+      | pose · angle error ↓ | 9.4° | **8.7°** | — |
+      | pose · PCK ↑ | 0.821 | **0.830** | — |
 
-      **The gain is almost entirely linework; posterisation moves 0.010 — five times its floor, so it is
-      real, but small.** Both deltas clear noise, which makes this a cost question rather than a
-      measurement one. Whether
-      that is worth a second sampler pass is a cost question the numbers alone do not settle, so it is
-      being decided *after* N27 gives an identity number to weigh against the style one. Rides on N25's
-      pod session at no extra boot cost.
+      **Two thirds of it were already answered and had never been put in one table** — F35 had style,
+      F37 identity, and F38's scorer ran on F35's own renders for nothing. That is what made the pod
+      session ten renders rather than thirty, and it is the habit worth keeping: *score what exists
+      before rendering more.*
 
-- [ ] **N29 · the new synthetic portfolio portraits.** Generated 2026-09-10 — the `synthetic_portraits`
-      blocker is closed and its note is in [`archive/`](archive/SYNTHETIC_PORTRAITS_FIX.md). Ten images,
-      at **`prototype/inputs/synthetic/`**.
+      **The pod session tested a hypothesis the free measurement raised**, not one it had answered: F35's
+      `00050`, the hardest pose in that set, went 38.7° → 57.0° with hires, so *does hires degrade
+      already-hard poses?* **Falsified.** On ten hard poses it marginally improves them, and
+      `sitting_on_knees` — the closest analogue — went 16.2° → **10.2°**.
 
-      **They are the first inputs this flow has not been tuned on** — the closest thing to a held-out set
-      the prototype has, and the only chance to find out whether two rounds of dials generalise or were
-      fitted to ten faces. **Run them after N25 and N28 settle**, so what they test is a decided flow
-      rather than a moving one.
+      **⚠️ This changed a settled value.** `A`'s hires denoise is now **0.35, not 0.50**. The old number
+      came from F35, which measured style alone because neither identity instrument existed yet. Across
+      all four axes 0.35 wins three and loses posterisation by 0.014. `notes/HANDOFF.md`'s configuration
+      table is updated. **A settled value is settled against the axes that existed when it was set.**
 
-      **That is why round 2's ten stay at `inputs/synthetic/` and do not move into the new tree**
-      (decided 2026-09-10). The two sets are *tuned-on* and *held-out*, and a directory that mixes them
-      makes the distinction invisible at exactly the moment it matters. `fromnoise.PHOTOS` still points
-      at the old path and every closed finding still reads.
+- [x] **N29 · the held-out portraits — ANSWERED 2026-09-10: the flow generalises.** One pod session,
+      20 renders, ~$0.18, teardown confirmed · **F40**. The decided flow, run as decided, on ten inputs
+      no dial was ever chosen against.
 
-      **Sourcing criteria are on disk** — [`inputs/README.md`](inputs/README.md) carries what makes a
-      good test photograph here (six hard axes, and what the current set covers), why real photographs
-      come from **model-released stock** rather than a search engine, and why a **celebrity is a
-      methodological trap**: Illustrious has famous faces memorised, so one renders recognisably with or
-      without InstantID — which makes `A` and `D` indistinguishable, the exact comparison N25 and N27
-      exist to run.
+      | | tuned-on six (F37) | **held-out ten** |
+      |---|---|---|
+      | chance | 1/6 | 1/10 |
+      | flow `A` top-1 | 5/6 | **8/10** |
+      | mean margin | +0.0485 | **+0.1170** |
 
-      **Their ids are undecided, deliberately.** They arrive as
-      `02_00_raw_photo_upper_body_portrait.png`, while every sheet, render directory and evaluator key in
-      this prototype is built from a 5-digit id. Renaming them costs nothing *now* and would be guessing
-      at how many deserve sheets; the id scheme is settled when N29 starts, not before.
+      **The margin more than doubled against a harder chance floor.** Two rounds of tuning did not fit
+      ten faces.
 
-- [ ] **N31 · re-brief the reader on `body shape`** ($0, no pod). It scores **0.00 on real photographs** —
+      **The sharpest result is `14_00`.** `D` rendered the older woman as a young silver-haired anime
+      character; `A` kept her age. The tags were identical — `grey hair` is a *fantasy hair colour* on
+      Danbooru meaning silver-haired character, not older person. **The vocabulary cannot say "this
+      older woman"; the face embedding could.** That is why flow `A` exists rather than `D`.
+
+      **Pose was mostly inconclusive and the reason was predicted before the render:** eight of ten are
+      headshots, so DWPose has no limbs and dropped 10 of 17 keypoints each. PCK still separates on the
+      visible head-and-shoulder points — `A` 0.647–0.875 on every subject, **`D` 0.000 on six of ten**.
+
+      **A confound this set introduced into the test itself:** `D` scored 4/10 (p = 0.0128) with a
+      *negative* margin, and the four are the demographically most distinctive sheets. A diverse set
+      lets a description-only flow be matched back by attributes rather than by face. Property of the
+      test set, not the flow — and the negative margin is what exposed it.
+
+      **Still open:** `A`'s number is an upper bound until N27's independent recognizer exists. The
+      small-face limit reproduced — full-body framing costs identity, in both rounds and both sets.
+
+- [x] **N31 · re-brief the reader on `body shape` — DONE 2026-09-10.** `vlm_reader.py`'s briefing now
+      instructs the reader to give the field a value and says why, in the same edit that added the
+      `count` field. Verified by the ten pose drafts, every one of which filled it. The original
+      statement, kept:
+
+      It scores **0.00 on real photographs** —
       the reader declines to guess a breast-size tag from a corseted torso, which is a *briefing* failure
       rather than a model failure and is fixable by editing `vlm_reader.py --schema` alone.
 
@@ -454,7 +520,7 @@ inputs running 0.005–0.078. Anything that merely beats 0.0030 without reaching
 same failure at a smaller scale.
 
 **Identity.** **5 of the 6 scored criteria survive, and pose and hair silhouette are mandatory.**
-Stated in full, with why 6-of-6 was rejected, in [`CRITERIA.md`](CRITERIA.md) §4.
+Stated in full, with why 6-of-6 was rejected, in [`notes/CRITERIA.md`](notes/CRITERIA.md) §4.
 
 **Hand-written tags on purpose.** There is no point integrating WD14 if the flow does not render
 cleanly, and a typed description removes the tagger as a second variable. The tagger is step 2 and is
@@ -495,7 +561,7 @@ along (N14) and is now true of style as well.
 
 ### What round 2 changes downstream — decide knowingly
 
-**Settled 2026-09-08 in [`CRITERIA.md`](CRITERIA.md).** The scored criteria are **pose · hair
+**Settled 2026-09-08 in [`notes/CRITERIA.md`](notes/CRITERIA.md).** The scored criteria are **pose · hair
 silhouette · hair colour · eyes · clothes · marks**. Background drops out entirely; accessories, body
 shape, expression and skin tone stay in the prompt but are judged by eye, each for a stated reason.
 
@@ -503,7 +569,7 @@ shape, expression and skin tone stay in the prompt but are judged by eye, each f
 against **the criteria sheet**, not against the photograph. That kills F16's inverted metric at the root
 — no colour distance to a photograph appears in the scored set, so correct stylization is never
 punished — and it makes the broken shared-mask assumption stop mattering, since an attribute check needs
-no pixel alignment. The cost, stated in `CRITERIA.md` §1: the scoreboard now measures **prompt
+no pixel alignment. The cost, stated in `notes/CRITERIA.md` §1: the scoreboard now measures **prompt
 adherence**, and inherits whatever the human transcription got wrong.
 
 ### Carried out of this branch
@@ -592,7 +658,7 @@ pod outlived its job that way on 2026-09-07. Tear down as its own step, then ver
 | v0.12's 30 renders + scores | `outputs/baseline/<subject>/{0..4}.{png,eval.json}` |
 | pinned eval models (2.3 GB) | `models/` |
 | every prototype render | `prototype/renders/<UTC-date>/<run>/` (gitignored) |
-| round 1's comparison images | `prototype/archive/fotor/` (gitignored; digests in `FINDINGS.md` F0) — **history; nothing live reads them** |
+| round 1's comparison images | `prototype/archive/fotor/` (gitignored; digests in `notes/FINDINGS.md` F0) — **history; nothing live reads them** |
 | the two presets | `prototype/archive/styles/*.md` and `*.json` — round 1, archived |
 | round 2's criteria sheets | `prototype/sheets/*.md` — ten, reviewed 2026-09-08 |
 | round 2's graph | `prototype/styles/fromnoise-v1.json` |
@@ -621,7 +687,7 @@ Read their findings, not their numbers.
 **[`archive/`](archive/)** holds everything whose question is closed — round 1's pod-session runners
 and its graphs, round 1's photograph-referenced measurement, the runners of round 2's finished arms
 (`n4_measure.py`, `prompt_arms.py`), and two settled notes (`GPU.md`, `SYNTHETIC_PORTRAITS_FIX.md`).
-**Records rather than tools; each one's result is in `FINDINGS.md`, and every one of them still runs.**
+**Records rather than tools; each one's result is in `notes/FINDINGS.md`, and every one of them still runs.**
 [`archive/README.md`](archive/README.md) is the index. Two are worth reading before writing a new
 runner: `archive/qwen_graph.py`, for recovering and flattening a deleted ComfyUI subgraph export into
 something submittable, and `archive/external_eval.py`, for scoring a foreign render without fabricating

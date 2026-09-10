@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PROTOTYPE — N13: score a render against its criteria sheet, criterion by criterion.
 
-`CRITERIA.md` §1 moved the ground truth from the photograph to the **sheet**, and
+`notes/CRITERIA.md` §1 moved the ground truth from the photograph to the **sheet**, and
 §5 then left six of the seven criteria unmeasured, waiting for a reader. This is
 the reader.
 
@@ -22,7 +22,7 @@ Recall rather than F1, because a render carrying *extra* true tags -- the tagger
 seeing `smile` where the sheet said nothing -- is not a fidelity failure, and
 punishing it would make a sparse sheet score better than a complete one.
 
-**The gate, from `CRITERIA.md` §5, and it runs first.** The reader is pointed at
+**The gate, from `notes/CRITERIA.md` §5, and it runs first.** The reader is pointed at
 the ten *photographs* and asked to recover their own sheets. A reader that cannot
 read a photograph has no business being asked about a drawing, and round 1's first
 finding was an evaluator built before the thing it judged coming back a coin flip.

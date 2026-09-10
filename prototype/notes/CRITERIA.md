@@ -1,10 +1,10 @@
 # Identity criteria — what we extract, what we score, and what neither
 
 **Round 2's design note. Written 2026-09-08, before any render.** It settles the question
-[`README.md`](README.md) left open under *"What round 2 changes downstream"*: if the photograph never
+[`README.md`](../README.md) left open under *"What round 2 changes downstream"*: if the photograph never
 enters the latent, what does "the same person" even mean, and what reads it back out.
 
-Read [`archive/SUMMARY.md`](archive/SUMMARY.md) first. This note assumes its eleven findings, and in particular #2 and
+Read [`archive/SUMMARY.md`](../archive/SUMMARY.md) first. This note assumes its eleven findings, and in particular #2 and
 #3 — the metrics were inverted, and only one side of the trade-off was instrumented.
 
 ---
@@ -284,7 +284,7 @@ installing.** Nothing here authorises that; this note only records what the read
 
 ## 7. What the graph edit actually is
 
-Recorded here because [`README.md`](README.md)'s **N1** overstates it. `workflows/animagine.json` does
+Recorded here because [`README.md`](../README.md)'s **N1** overstates it. `workflows/animagine.json` does
 not need recovering: the shipped graph becomes from-noise with **four edits**, and every node type
 involved is already on the image.
 

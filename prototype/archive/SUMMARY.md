@@ -1,7 +1,7 @@
 # Prototype summary — three flows, measured
 
 **Branch `v0.13_prototype`. Closed 2026-09-07. 23 findings, 8 pod sessions, ≈$1.80.**
-Full evidence in `FINDINGS.md`; this is the part worth carrying out.
+Full evidence in `../notes/FINDINGS.md`; this is the part worth carrying out.
 
 ---
 

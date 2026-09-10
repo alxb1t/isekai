@@ -11,14 +11,14 @@ What still conditions the render: **InstantID** for the face, **OpenPose** for t
 skeleton, and a **hand-written prompt** assembled from the subject's criteria
 sheet. Tile and lineart are dropped -- both condition on the photograph's
 *appearance*, which is the thing being removed. The graph is
-`prototype/styles/fromnoise-v1.json`; `CRITERIA.md` §7 records the four edits.
+`prototype/styles/fromnoise-v1.json`; `notes/CRITERIA.md` §7 records the four edits.
 
 The photograph is still loaded and still scaled, because InstantID and DWPose
 both read it, and because `ImageScale` is what fixes the canvas pose PCK is
 measured on. The one thing `inject` does not know about this graph is the empty
 latent's size, so it is set here, from the same derivation, and asserted equal.
 
-Two bars, both stated in `CRITERIA.md` §4 before this was ever run: median
+Two bars, both stated in `notes/CRITERIA.md` §4 before this was ever run: median
 linework at or above the photograph's own, and 5 of 6 scored criteria surviving
 with pose and hair silhouette mandatory.
 
@@ -56,10 +56,24 @@ _POSITIVE_RE = re.compile(
     _BLOCK.format("### The positive prompt, assembled"), re.DOTALL
 )
 _NEGATIVE_RE = re.compile(_BLOCK.format("### The negative prompt"), re.DOTALL)
+# The ablation block: the same table with the pose field omitted. Its heading
+# carries prose before the fence, so it needs its own pattern rather than
+# `_BLOCK`.
+_NO_POSE_RE = re.compile(
+    r"### The positive prompt — pose tags dropped\n.*?```\n(.+?)\n```", re.DOTALL
+)
+POSITIVE_VARIANTS = ("full", "no_pose")
 
 
-def prompts_of(sheet: Path) -> tuple[str, str]:
+def prompts_of(sheet: Path, variant: str = "full") -> tuple[str, str]:
     """Return the positive and negative prompts a criteria sheet declares.
+
+    `variant` picks which positive block: `full` is every field, `no_pose` is the
+    same table with the pose field omitted -- **generated from one table** by
+    `sheet.py build`, so a correction to the table reaches both and neither can
+    drift from the other. A sheet written before the ablation block existed has
+    only `full`, and asking it for `no_pose` names the sheet in the error rather
+    than silently falling back to a prompt that answers a different question.
 
     Read out of the sheet rather than rebuilt from its table, because the sheet
     is the artifact the operator reviews and corrects -- a second assembly path
@@ -72,12 +86,16 @@ def prompts_of(sheet: Path) -> tuple[str, str]:
     so beside the text. A single negative in this file would have made that
     change global and silent.
     """
+    if variant not in POSITIVE_VARIANTS:
+        raise SystemExit(f"unknown prompt variant {variant!r}")
     text = sheet.read_text()
-    positive = _POSITIVE_RE.search(text)
+    pattern = _POSITIVE_RE if variant == "full" else _NO_POSE_RE
+    positive = pattern.search(text)
     negative = _NEGATIVE_RE.search(text)
-    if positive is None or negative is None:
-        missing = "positive" if positive is None else "negative"
-        raise SystemExit(f"{sheet}: no {missing} prompt block")
+    if positive is None:
+        raise SystemExit(f"{sheet}: no `{variant}` positive prompt block")
+    if negative is None:
+        raise SystemExit(f"{sheet}: no negative prompt block")
     return positive.group(1).strip(), negative.group(1).strip()
 
 

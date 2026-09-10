@@ -1,7 +1,7 @@
 # Illustrious and the Danbooru vocabulary — a prompting reference
 
 **Researched 2026-09-08 for round 2 of the prototype.** The operator's own
-[`danbooru_tags.md`](../README.md) note covers the Danbooru tag system in general; **this note is about
+[`danbooru_tags.md`](../../README.md) note covers the Danbooru tag system in general; **this note is about
 what the Illustrious family in particular was trained on**, because F28 found that canonical tags work and
 invented ones do not, and the next question is *which* canonical vocabulary and in *what shape*.
 

@@ -3,7 +3,7 @@
 
 `hair_colour_delta_e` takes the **mode** of a coarse RGB histogram. On a
 photograph the histogram is flat -- the winning bin held 1.21% of pixels and
-landed on a shadow, reading blonde hair as L* 4.5 (FINDINGS.md F3). On flat cel
+landed on a shadow, reading blonde hair as L* 4.5 (../notes/FINDINGS.md F3). On flat cel
 art the mode is real. So the axis compares a noise bin against a genuine one and
 penalises the more stylized image.
 

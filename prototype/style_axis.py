@@ -3,9 +3,9 @@
 
 The missing half of the trade-off. Four axes measure similarity-to-photograph and
 nothing measures *style*, so a less-stylized render wins by construction
-(FINDINGS.md F5).
+(notes/FINDINGS.md F5).
 
-**Answer: yes, and it takes two numbers, not one** (FINDINGS.md F7).
+**Answer: yes, and it takes two numbers, not one** (notes/FINDINGS.md F7).
 
     posterisation   share of pixels in the 32 commonest colour bins. F3's finding
                     generalised: cel art fills flat, photographs graduate.

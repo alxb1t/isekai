@@ -35,7 +35,7 @@ only, no OpenPose) was tested and rejected against `A`.
 | `cfg` | **5** | **F26** — 7 measured worse; inside WAI's published 5–7 |
 | sampler / steps | `euler_ancestral` / 28 | already WAI's own recommendation — **not** an untested lever |
 | hires | R-ESRGAN 4x+ Anime6B → 1.5x → 20 steps | **F35** |
-| hires denoise | **0.50** for `A`, 0.35 tested for `D` | WAI publishes a *range* `0.35~0.5`; both are its recommendation |
+| hires denoise | **0.35** for `A` and for `D` | **F39** — `A` changed from 0.50 on 2026-09-10. 0.50 was set by F35 on *style alone*; across all four axes 0.35 wins linework, identity and pose, and loses only posterisation by 0.014 |
 | negative | `bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust` | WAI's own speck fix, in canonical form — **applied, never render-tested** |
 
 Graph: `prototype/styles/fromnoise-v1.json`. Runners: `fromnoise.py`, `ladder_position.py`, `hires.py`,
@@ -146,7 +146,7 @@ by the operator reading a contact sheet; one sheet was itself showing a stale th
 
 ## 5 · What is still open
 
-**Every open item now lives in [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, as
+**Every open item now lives in [`README.md`](../README.md) § *Round 3 — the session of 2026-09-10*, as
 N25–N29 and N31.** This section states the one that matters and does not restate the rest, because two copies of
 a task list is how one of them goes stale.
 
@@ -228,16 +228,33 @@ have learnt. Worth softening the message.
 
 ## 6c · Where to start
 
-**The task list is [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, N25–N29 and N31.** It is the
+**The task list is [`README.md`](../README.md) § *Round 3 — the session of 2026-09-10*, N25–N29 and N31.** It is the
 one copy; this section says only where to put your hands first.
 
-**N27, and its first step is free.** Judge `A` and `D` on identity *by eye*, on
-`prototype/derived/2026-09-08/n9_ablation_contact_sheet.html` — already on disk, no pod, no code. It goes
-first because **an instrument is built to agree with a judgement and the judgement has to exist first**;
-F1 is the record of building an evaluator before the thing it judged and getting a coin flip back.
+**Nothing metered is left.** Round 3's five renderable questions all closed on 2026-09-10: **N25** (flow
+`A` keeps its pose tags, F38), **N28** (hires yes, at 0.35 — F39), **N29** (**the flow generalises**, 8/10
+on held-out faces — F40), **N31**, and both of **N27**'s instruments (F37, F38).
 
-Then **N31** ($0, a briefing edit), then **N25 + N28 on one pod session** (~$0.10, one boot — `archive/GPU.md`
-records that a boot costs eight renders, so they share).
+**Flow `A` is validated end to end.** Every dial chosen by measurement, then the whole configuration
+confirmed on ten inputs none of it was chosen against, across a demographic range round 2 never covered.
+
+**Next session starts with N26** — the open-VLM survey. $0, no pod, no dependency on anything above.
+The question: is there an open model that reads a photograph into a criteria sheet as well as an agent
+session does? The incumbent scores 0.78 on synthetic and 0.80 on real photographs, and it is **not
+reproducible by anyone without this transcript**, which is a problem for a repository whose thesis is
+open models end to end. The baseline any candidate must beat is in the N26 entry; WD14 is not it —
+F29 measured it at 0.47 on photographs with `pose` at 0.08.
+
+After that, one item inside N27.
+
+**N27 is not finished, and it is the one thing that would strengthen every number above.** Its remaining
+item is an *independent* recognizer — both locally pinned face encoders are entangled with this
+generator, so `A`'s identity numbers are an upper bound rather than an estimate. That needs a model
+fetched, licence-checked and digest-pinned; no GPU.
+
+**The known limit, reproduced twice:** full-body framing costs identity. `00059` in round 2, `15_01` and
+`16_01` in N29 — the face is a small fraction of frame and the identification misses. It is a property,
+not noise.
 
 **The three cheapest candidates listed here on 2026-09-09 have all been dispositioned:** the negative-prompt
 confirmation is **closed** — `n24_real_photo_final` *is* the run that carried `lens flare, light particles,
@@ -279,12 +296,14 @@ scripts read rather than artifacts of a day: `vlm_drafts/`, `reference_sheets/`,
 | what | where |
 |---|---|
 | the design | `CRITERIA.md` — the sheet, the seven scored criteria, both bars |
-| the evidence | `FINDINGS.md` F24–F36, newest at the bottom |
+| **how identity is measured** | **`IDENTITY.md`** — face likeness (§1–7) and pose geometry (§10), their limits, and how to run them. Written to be exported |
+| identity runs | `prototype/evaluations/<UTC-date>/<run>/` — self-contained, gitignored |
+| the evidence | `FINDINGS.md` F24–F40, newest at the bottom |
 | the base's own docs | `ILLUSTRIOUS.md` — caption schema, quality ladder, skin tags, WAI §6b |
 | the GPU question | `archive/GPU.md` — settled: keep the card |
 | sheets | `prototype/sheets/{synthetic,real}/` — `real/` gitignored as a directory (D14) |
 | round 2's inputs, tuned on | `inputs/synthetic/` (ten) · `inputs/baseline/` (six) |
-| round 3's inputs, held out | `prototype/inputs/` — **[its README](inputs/README.md) is the sourcing criteria**; ten new portraits, two real photographs |
+| round 3's inputs, held out | `prototype/inputs/` — **[its README](../inputs/README.md) is the sourcing criteria**; ten new portraits, two real photographs |
 | the sheet tool | `sheet.py check \| build \| adopt \| find` — `find` searches the vocabulary |
 | the reader harness | `vlm_reader.py --schema`; drafts in `prototype/derived/vlm_drafts/` |
 | the evaluator | `criteria_eval.py` (WD14 on renders) |
@@ -301,4 +320,4 @@ mean pixel |Δ| **≈2/255** across pods. Anything smaller is GPU nondeterminism
 **Style was restated on 2026-09-10** — the third-party reference is retired and the bar is now **our own
 last number**: `A` + hires at posterisation **0.373** / linework **0.0181**, `D` + hires at **0.528** /
 **0.0376**, and a drop beyond the determinism floor is a regression. Full reasoning, and the cost of
-giving up the external anchor, in [`README.md`](README.md) § *The style bar, restated*.
+giving up the external anchor, in [`README.md`](../README.md) § *The style bar, restated*.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PROTOTYPE — N4: does the from-noise flow clear the style bar.
 
-The bar was stated in `CRITERIA.md` §4 before the render, in the units
+The bar was stated in `../notes/CRITERIA.md` §4 before the render, in the units
 `style_axis.py` produces: **median linework at or above the photograph's own**,
 against `notile-d045`'s 0.0030. Anything that merely beats 0.0030 without
 reaching the photograph is the same failure at a smaller scale.

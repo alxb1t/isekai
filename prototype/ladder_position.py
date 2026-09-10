@@ -5,7 +5,7 @@ Two questions in one session, and they do not interfere because they are on
 different axes -- the prompt transform is identical across flows, and the flow is
 identical across transforms.
 
-**Question 1: does the quality ladder belong at the front?** `ILLUSTRIOUS.md` §6b
+**Question 1: does the quality ladder belong at the front?** `notes/ILLUSTRIOUS.md` §6b
 found the two sources disagree. The Illustrious community guide puts quality tags
 last, which is what we do; **WAI's own page says "always start your positive prompt
 with"** them. For this checkpoint the publisher outranks the guide, and F32's

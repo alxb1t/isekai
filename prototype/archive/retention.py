@@ -13,7 +13,7 @@ to flatter a result we have already seen.
 **Every axis here is ABSOLUTE and cross-base valid**, which is the other reason
 they matter: `refuse_embedding_axes_across_bases` will silence both face axes
 across a three-way Illustrious / Fotor / Qwen comparison, so the comparison lives
-entirely on axes of this kind (FINDINGS.md F1).
+entirely on axes of this kind (../notes/FINDINGS.md F1).
 
     background_detail    edge density inside the photo's background mask,
                          render / photo. ~1 kept it, ~0 dissolved it to a wash.

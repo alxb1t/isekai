@@ -12,7 +12,8 @@ upper denoise, which is the value that measured best for `A`.
 **Three photographs, three sheets, one person.** The hair colour differs between
 them, which no synthetic subject posed: `real_photo_3` is blonde and the other two are
 brown, months apart. Each sheet describes **its own photograph** rather than the
-person -- which is what `CRITERIA.md` §1 means by the sheet being the ground truth,
+person -- which is what `notes/CRITERIA.md` §1 means by the sheet being the
+ground truth,
 and the reason a per-photo sheet is the right unit.
 
 **Tattoos are declared and expected to fail as design.** F23 found no

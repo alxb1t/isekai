@@ -45,6 +45,7 @@ DERIVED = Path("prototype/derived")
 # Sheets are split by what they depict, not by who wrote them. `real/` is
 # gitignored as a DIRECTORY -- see `.gitignore`, which carries the reason.
 SHEETS = Path("prototype/sheets")
+DRAFTS = DERIVED / "vlm_drafts"
 POOLS = ("synthetic", "real")
 
 
@@ -75,10 +76,71 @@ def sheet_path(sid: str) -> Path:
     own error message is what the operator sees.
     """
     for pool in POOLS:
-        candidate = SHEETS / pool / f"{sid}.md"
-        if candidate.exists():
-            return candidate
+        # Recursive, so the sheet tree can mirror the input tree -- the pose set
+        # lives at `inputs/synthetic/pose/` and its sheets at
+        # `sheets/synthetic/pose/`. Restricted to one pool per pass rather than a
+        # single rglob over `sheets/`, because `real/` is a privacy boundary and a
+        # lookup must never cross into it by accident.
+        hits = sorted((SHEETS / pool).rglob(f"{sid}.md"))
+        if hits:
+            return hits[0]
     return SHEETS / "real" / f"{sid}.md"
+
+
+def pool_of(photo: str | Path) -> tuple[str, ...]:
+    """Return the pool path a subject belongs to, derived from its photograph.
+
+    **The photograph is the only thing that actually knows.** A subject id does
+    not say whether it depicts a real person, and a sheet or draft filed in the
+    wrong pool is a privacy failure in one direction and mere untidiness in the
+    other -- so this refuses rather than defaulting.
+
+    Returns a path fragment: `("real",)`, `("synthetic",)`, or `("synthetic",
+    "pose")` -- one level of grouping is mirrored, so a themed input set keeps its
+    grouping in every derived tree rather than being flattened into the pool it
+    happens to belong to.
+    """
+    photo = Path(photo)
+    if not photo.exists():
+        raise SystemExit(
+            f"no photograph at {photo}, so the pool cannot be determined. "
+            "Put the image under prototype/inputs/ first."
+        )
+    parts = photo.parts
+    if "real" in parts:
+        return ("real",)
+    if "synthetic" in parts:
+        after = parts[parts.index("synthetic") + 1 :]
+        if len(after) > 1:  # a subdirectory, not the photograph itself
+            return ("synthetic", after[0])
+    return ("synthetic",)
+
+
+def draft_path(sid: str) -> Path:
+    """Return a subject's VLM draft, from whichever pool holds it.
+
+    The read-side twin of `sheet_path`, and recursive for the same reason: the
+    draft tree mirrors the sheet tree, which mirrors the input tree.
+    """
+    hits = sorted(DRAFTS.rglob(f"{sid}.json"))
+    return hits[0] if hits else DRAFTS / f"{sid}.json"
+
+
+def new_draft_path(sid: str, photo: str | Path) -> Path:
+    """Return where a draft that does not exist yet should be written."""
+    return DRAFTS.joinpath(*pool_of(photo), f"{sid}.json")
+
+
+def new_sheet_path(sid: str, photo: str | Path) -> Path:
+    """Return where a sheet that does not exist yet should be created.
+
+    **`sheet_path` must not be used for this.** Its miss-fallback is `real/`,
+    which is deliberate for reads -- a lookup that fails should name the pool with
+    the stricter handling -- and exactly wrong for writes, because it would file a
+    new synthetic subject inside the gitignored privacy boundary and nothing would
+    say so.
+    """
+    return SHEETS.joinpath(*pool_of(photo), f"{sid}.md")
 
 
 def resolve_render(path: str | Path) -> Path:

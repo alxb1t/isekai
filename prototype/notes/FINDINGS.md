@@ -1928,4 +1928,292 @@ demonstrated on a real subject rather than a synthetic one.
 
 ---
 
-<!-- next: F37 -->
+## F37 — identity is measurable after all, once you stop asking how similar and start asking which one
+
+**2026-09-10 · $0, no pod · 6 subjects × 5 arms = 30 renders, all already on disk ·
+`prototype/face_likeness.py` · run at `prototype/evaluations/2026-09-10/t1_face_likeness/` ·
+method written up in `IDENTITY.md`.**
+
+**N14 has been open since round 1 and this closes the measurement half of it.** Two scoreboards existed.
+F4/F16: a cosine to the photograph falls as stylization rises, so its optimum is the input image. F29:
+adherence-to-description is stylization-invariant but blind to identity, which is why the flow that never
+reads the photograph scored *above* the flow that does, 0.77 to 0.73. Both complete on their own terms,
+both missing the same axis.
+
+**The fix is not a better metric, it is a different question.** Not *how similar is this render to its
+photograph* — an absolute score stylization poisons — but **given this render, which of the six
+photographs did it come from**. Every candidate in that comparison is equally stylized, so a metric that
+merely punishes stylization pushes all six numbers down and leaves the *ranking* untouched. Chance is
+1/6 = 16.7%, stated before the run.
+
+| arm | flow | top-1 | mean margin | exact p |
+|---|---|---:|---:|---:|
+| no hires | **A** | 4/6 | +0.0180 | 0.0087 |
+| hires 0.35 | **A** | **5/6** | **+0.0485** | **0.0007** |
+| hires 0.50 | **A** | 4/6 | +0.0273 | 0.0087 |
+| no hires | **D** | 2/6 | **−0.0625** | 0.2632 |
+| hires 0.35 | **D** | 2/6 | **−0.0472** | 0.2632 |
+
+**Flow `A` carries identity.** Positive margin in every arm, p as low as 0.0007.
+
+**Flow `D` is guessing, and the margin says it more clearly than the hit count.** 2/6 reads as "twice
+chance" and is what guessing produces 26% of the time. But `D`'s mean margin is **negative** — averaged
+over subjects the wrong photograph out-scores the right one — and **three of its six correct-cosines are
+negative outright**. That is not a weak match, it is a wrong one. `D` renders a person who fits the
+description; it does not render *this* person. Which is what `D` is for, now stated as a number.
+
+**The absolute cosines are low and must never be read as grades.** Same-person photographs score 0.4–0.7
+on this recognizer; photo→its-own-render runs **0.10–0.30**, and photo→someone-else's runs 0.07–0.21. Read
+absolutely, 0.25 is a poor match and the honest conclusion is "identity lost" — which is exactly the
+conclusion F4 reached. **Only the ordering survives the domain gap**, and `00014` won its rank by 0.0097.
+
+**The circularity is real and it is asymmetric — this is the part to carry.** `glintr100` is the encoder
+InstantID injects with, so `A` is being marked by its own examiner. `D` never touches it. Therefore
+**`D`'s failure is clean evidence and `A`'s success is an upper bound**: `A − D` is the most InstantID
+could be worth, not an estimate of what it is worth. Removing that needs a second recognizer the pipeline
+was never trained against, and that has not been done.
+
+**Free secondary result, and it feeds N28:** the hires pass does not cost identity. `A` + hires 0.35 is
+the best arm in the table. One subject of difference at N=6, so the size means nothing — but the
+direction contradicts the worry that a second sampler pass washes the face out.
+
+**And a defect this run caught in itself.** The first execution reported "cosine" margins of **±21**,
+impossible for a quantity bounded by ±1. `ArcFaceEncoder`'s docstring claims a unit-normalised embedding
+and the ONNX head does not emit one — raw features measure L2 ≈ 16–18 — so the dot product was ranking by
+vector *magnitude* as much as by direction. Fixed by calling `isekai.evaluate.cosine`, which normalises
+both sides itself; the shipped code is correct and only that docstring overclaims. **The tell was a
+number outside its own possible range, not a wrong-looking answer** — had the magnitudes happened to sit
+near 1, this would have shipped silently.
+
+**Limits, stated with the result.** Six subjects, all of them the set every dial was tuned on. It
+measures the *face* — hair silhouette, proportion, marks and pose are part of "the same person" and none
+is in this number. Untested on held-out subjects (N29) and on photographs of real people.
+
+---
+
+## F38 — the skeleton and the tags complement each other, and it takes two measures to see it
+
+**2026-09-10 · one pod session, 30 renders, ~$0.17 · `prototype/pose_ablation.py` ·
+`prototype/renders/2026-09-10/n25_pose/` · scored $0 on CPU by
+`prototype/pose_geometry.py`. Teardown confirmed by the RunPod MCP: zero pods.**
+
+**N25 asked whether flow `A` needs pose tags at all.** It places the body twice --
+a DWPose skeleton conditions the render, and the sheet's `pose` field says the
+same thing in Danbooru tags -- and F27 had established that the legs compete with
+the tags, so a tag the skeleton already carries is paid for in style. Ten
+deliberately varied poses, three arms, one variable: the `pose` field, dropped
+from the **prompt** and never from the sheet.
+
+**The answer is keep both.** They are not redundant and they are not fighting:
+
+| arm | PCK ↑ | joint-angle error ↓ |
+|---|---:|---:|
+| `1_a_control` — tags + skeleton | **0.821** | **9.4°** |
+| `2_a_no_pose` — skeleton alone | 0.801 | 12.6° |
+| `3_d` — tags alone, no skeleton | 0.218 | 15.9° |
+
+**The skeleton places the body; the tags disambiguate the limbs it gets wrong.**
+`arms_up` is the worked example and it is not marginal -- without the tags the
+model drops an arm the photograph holds behind the head:
+
+    2_a_no_pose   r_shoulder off by 124.2°     1_a_control   r_shoulder off by 13.0°
+                  r_elbow    off by 107.1°                   r_elbow    off by  6.5°
+
+That is a *different pose*, not a displaced one, which is precisely the
+distinction the second measure exists to make.
+
+### It takes two measures, and `D` is the proof
+
+**PCK alone would have repeated F4's mistake in a new place.** An anime figure has
+different proportions from a photograph -- longer legs, smaller head -- so a
+perfect pose match still displaces every keypoint, and a position score penalises
+correct stylization. Joint angles are proportion-invariant: longer legs held the
+same way have the same knee angle.
+
+**But angles alone are just as wrong, and `3_d` shows both failures at once.** Its
+PCK is **0.218** -- catastrophic, because with no skeleton the body lands anywhere
+in frame -- while its angle error is 15.9°, not far off the arms that have one.
+`D` renders a *plausible body in the wrong place*. On `sitting_on_knees` the same
+thing inverts: `D` scores the **best angle error of any arm (9.3°) at a PCK of
+0.000**. Nothing landed where it should, and reading angles alone there would have
+produced a confident wrong answer.
+
+**Angles describe the configuration, PCK describes the placement, and neither
+alone can say what the other says.**
+
+### The ordering is the methodological point
+
+**The operator judged the contact sheet before this instrument existed**, and named
+six subjects where the control wins. That expectation was written into
+`pose_geometry.py`'s docstring *before* it was run, with the rule stated: if the
+instrument ranks the ablation above the control, the instrument is wrong.
+
+It agreed on five of six. The sixth, `arms_on_hips_legs_wide`, disagreed --
+instrument 9.6° for the ablation against 17.3° for the control -- and the
+per-joint detail explained it rather than excusing it: the control's **left elbow
+is off by 65.9°** while everything else lands well. The eye was reading silhouette
+and stance; the instrument weights eight joints equally. **The operator reviewed
+that and agreed with the instrument**, which is the first time in this project a
+measurement has corrected the eye rather than the other way round -- and it only
+counts because the expectation was recorded first.
+
+### Carried
+
+- **Flow `A` keeps its pose tags.** The `pose` field stays in the prompt. The
+  ablation block stays in every sheet, because it is what makes this reproducible.
+- **`framing` was held constant in every arm** and is still untested. `full body`
+  is on all ten sheets, so it explained nothing here; whether DWPose carries the
+  crop is a real question and a separate one.
+- **`legs_crossed` is the worst subject for every arm** (0.562 PCK, 19.6–23.2°).
+  A floor-sitting, self-occluding pose is where DWPose itself is least certain, so
+  part of that number is the instrument rather than the render.
+- **The pose set doubles as a labelled dataset.** Ten filenames are ten pose
+  labels, which is what made this cost nothing beyond the renders.
+
+---
+
+## F39 — flow `A` takes the hires pass, and at 0.35 rather than the 0.50 that was settled
+
+**2026-09-10 · one pod session, 10 renders, ~$0.10 · `prototype/pose_ablation.py --only
+4_a_hires_035` · teardown confirmed by the RunPod MCP: zero pods. Scored $0 on CPU.**
+
+**Two thirds of N28 were already answered and nobody had noticed**, because the axes were measured in
+different sessions and never put in one table. F35 had the style numbers, F37 the identification
+numbers, and F38's scorer could be run on F35's own renders for nothing. Doing that first is what made
+the pod session ten renders instead of thirty.
+
+### The pair, on ten hard poses
+
+`1_a_control` from N25 is the control -- identical seed, prompt and dials, already on disk -- so this
+session rendered only the hires half and the pair differs by the second sampler pass alone.
+
+| axis | control | + hires 0.35 | Δ | floor |
+|---|---:|---:|---:|---|
+| linework ↑ | 0.0112 | **0.0133** | **+18%** | ±0.0003 |
+| posterisation ↑ | 0.8261 | 0.8214 | −0.0047 | ±0.0020 |
+| pose · angle error ↓ | 9.4° | **8.7°** | −0.7° | — |
+| pose · PCK ↑ | 0.821 | **0.830** | +0.009 | — |
+
+**The hypothesis this session existed to test is falsified, and that is the result.** Scoring F35's six
+subjects on the pose instrument had shown hires costing nothing on five and a great deal on one --
+`00050`, the hardest pose in that set, 38.7° to 57.0°. The question was whether hires degrades poses
+that are already hard. **On ten hard poses it does not; it marginally improves them**, and the one
+subject that moved meaningfully moved the *right* way: `sitting_on_knees`, 16.2° → 10.2°. `00050` was an
+outlier, not a pattern.
+
+### The denoise, and a settled value that was settled on one axis
+
+**`A`'s hires denoise changes from 0.50 to 0.35.** The old value came from F35, which measured style and
+nothing else, because neither identity instrument existed yet. With all four axes:
+
+| | linework | posterisation | face id | pose |
+|---|---|---|---|---|
+| **0.35** | **+43%** | −0.004 | **5/6** | **ties no-hires** |
+| 0.50 | +25% | **+0.010** | 4/6 | −1.0° |
+
+**0.50 wins one axis by 0.014 and loses three.** That it survived as the settled value for a day is the
+ordinary way a number outlives its evidence: it was correct when chosen, the evidence base widened
+underneath it, and nothing re-read it. **A settled value is settled against the axes that existed when
+it was set.**
+
+### Carried
+
+- **Posterisation reads ~0.82 here against F35's ~0.36**, and the two are not comparable. These subjects
+  stand on plain grey studio backdrops, so a large share of every frame sits in a handful of colour
+  bins. **The delta is comparable; the absolute value is not.** Any future run that mixes backdrops
+  needs this said again.
+- **`legs_crossed` is the worst subject for both arms and unchanged by hires** (19.6°). A self-occluding
+  floor pose is where DWPose is least certain of its own keypoints, so part of that number is the
+  instrument.
+- **The free-measurement-first habit paid twice today.** Both N28's scope and its denoise decision came
+  out of scoring renders that already existed. Neither needed a pod, and the pod that was booted asked a
+  question the existing data had raised rather than one it had already answered.
+
+---
+
+## F40 — the flow generalises: better on held-out faces than on the ones it was tuned on
+
+**2026-09-10 · one pod session, 20 renders, ~$0.18 · `prototype/portfolio.py` ·
+`prototype/renders/2026-09-10/n29_portfolio/` · teardown confirmed by the RunPod MCP: zero pods.
+Scored $0 on CPU.**
+
+**Every number in this project before today came from subjects every dial was chosen on.** Ten synthetic
+portraits and six baselines, tuned across two rounds. Whether that generalised or was fitted to those
+faces was unanswerable, and it is the question a prototype most owes its reader. These ten portraits are
+the first inputs the flow had never seen, and the flow ran **as decided** -- no sweep, no variable moved.
+
+### It generalises, and the identity number went UP
+
+| | tuned-on six (F37) | **held-out ten** |
+|---|---|---|
+| chance | 1/6 = 16.7% | 1/10 = 10.0% |
+| flow `A` top-1 | 5/6 | **8/10** |
+| flow `A` mean margin | +0.0485 | **+0.1170** |
+| p | 0.0007 | **0.0000** |
+
+**The margin more than doubled against a harder chance floor.** Two rounds of tuning did not fit ten
+faces.
+
+**The two misses are the failure mode already on record.** `15_01` and `16_01` are the only full-body
+shots, so the face is a small fraction of frame -- and both were confused with the same wrong subject.
+That is `00059`'s small-face problem from round 2, reappearing unchanged on new data. **A limit that
+reproduces is a property; one that appears once is noise.**
+
+### The sharpest single result: `14_00`, where the vocabulary could not say it and the embedding could
+
+The set carries four attributes the tuned-on ten never had -- **age** (grey hair, visible lines),
+**dark skin**, **eyewear**, and a **male** subject. Three predictions were recorded before the render:
+
+| prediction | outcome |
+|---|---|
+| `14_00` loses the age -- `grey hair` is a *fantasy hair colour* on Danbooru (529,760 posts) meaning silver-haired character, not older person | **half right, and the half is the finding** |
+| `10_01`'s cornrows simplify -- `cornrows` is not in the vocabulary at all | **right**, both flows rendered a single side braid |
+| the tight headshots render wider than the photograph | **wrong**, framing held |
+
+**Flow `D` rendered `14_00` as a young silver-haired anime woman. Flow `A` kept the age.** The tags were
+identical -- `mature female`, `wrinkled skin`, `grey hair` -- so the difference is entirely the face
+embedding. **The Danbooru vocabulary cannot express "this older woman"; InstantID carried what the tags
+could not.** That is the clearest demonstration in either round of why flow `A` exists rather than `D`.
+
+### Pose: mostly inconclusive here, and the reason was predicted
+
+| | `A` | `D` |
+|---|---:|---:|
+| PCK | **0.771** | 0.142 |
+| joint-angle error | 19.8° **(n=2)** | 15.0° (n=2) |
+
+**Eight of the ten produced no joint angles at all.** They are headshots; DWPose has no elbow, hip or
+knee to read and dropped 10 of 17 keypoints on each. `15_01` and `16_01` are the only full-body
+subjects, so the angle column is n=2 and nothing should be drawn from it.
+
+**PCK still separates, and cleanly**, because it scored the seven head-and-shoulder keypoints that were
+visible: `A` runs 0.647–0.875 on every subject while **`D` scores 0.000 on six of ten**. The head lands
+where the photograph put it under `A` and nowhere near it under `D`.
+
+This was written into the runner's docstring before the render rather than explained afterwards. **An
+instrument that cannot see enough to answer is a result; silence is not.**
+
+### A confound this set introduces into the identification test itself
+
+**`D` scored 4/10 with p = 0.0128 -- significant on hit count -- while its mean margin is negative.** The
+four it got are `02_00` (red hair and freckles), `06_01` (black bob), `08_00` (black pixie) and `19_01`
+(the man): the subjects whose *sheet* is most demographically distinctive within this set. On round 2's
+six similar young women `D` scored 2/6 with a negative margin, which is noise.
+
+**A demographically diverse set lets a description-only flow be matched back by attributes rather than by
+face**, and that inflates `D` without any identity being preserved. It is a property of the test set, not
+of the flow. **Any future run on a diverse set has to expect it**, and the negative margin is what
+exposes it -- another case where reporting one number would have produced a confident wrong answer.
+
+### Carried
+
+- **Flow `A` is validated end to end**: every dial chosen by measurement, the whole configuration then
+  confirmed on inputs none of it was chosen against, across a demographic range round 2 never covered.
+- **`A`'s number remains an upper bound** until an independent recognizer exists -- `glintr100` is the
+  encoder InstantID optimises against. `D`'s is clean, which is the only remaining reason to render it.
+- **The small-face limit is real and reproducible.** Full-body framing costs identity, in both rounds and
+  on both subject sets.
+
+---
+
+<!-- next: F41 -->

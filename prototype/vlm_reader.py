@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """PROTOTYPE — N22: compare a model-written criteria sheet against the hand-written one.
 
-`CRITERIA.md` §1 made the sheet the ground truth and left a human writing it.
+`notes/CRITERIA.md` §1 made the sheet the ground truth and left a human writing it.
 F36 measured what that costs: three transcription defects on the first real
 photographs, each producing a visible render failure, and every one of them a
 rule that had already been written down and not applied. **So: does a model read
@@ -16,7 +16,7 @@ scored **0.47 on the photographs** against 0.73 on the renders, with `pose` at
 **Drafts are JSON files on disk. Nothing here calls an API.** One JSON object per
 subject, keyed by the fifteen field names, values comma-separated tag strings:
 
-    prototype/derived/vlm_drafts/00003.json
+    prototype/derived/vlm_drafts/synthetic/00003.json
     {"age band": "", "skin / ancestry": "tan", "hair colour": "blonde hair", ...}
 
 Anything can fill that directory — an agent session reading the images, a
@@ -26,7 +26,7 @@ which is the point: swapping the reader must not mean rewriting the measurement.
 
 ### The gate, stated before any number is seen
 
-`CRITERIA.md` §5's rule for any new reader: **agreement floor 0.60 mean, and no
+`notes/CRITERIA.md` §5's rule for any new reader: **agreement floor 0.60 mean, and no
 scored field below 0.40.**
 
 ### The contamination this cannot escape on its own
@@ -57,6 +57,7 @@ import json
 import statistics
 from pathlib import Path
 
+from prototype.paths import DRAFTS, draft_path
 from prototype.sheet import ORDER, fields_of, vocabulary
 
 PHOTOS = Path("inputs/synthetic")
@@ -86,7 +87,9 @@ FLOOR_FIELD = 0.40
 
 INSTRUCTIONS = """Transcribe each photograph into a criteria sheet.
 
-Write ONE JSON file per photograph, named <id>.json, into the drafts directory.
+Write ONE JSON file per photograph, named <id>.json, into the drafts directory
+given below. It mirrors the input tree: a subject from `inputs/synthetic/pose/`
+has its draft at `vlm_drafts/synthetic/pose/`.
 Each is a JSON object mapping every field name below to a comma-separated string
 of Danbooru tags. Use an empty string for a field the photograph does not show.
 
@@ -101,7 +104,17 @@ Rules:
 - `pale skin` means bleached, not fair. Most light-skinned subjects need NO skin
   tag at all: Danbooru's default is the usual Eurasian tone, and every skin tag
   is a deviation from it.
-- Do not include quality tags, `1girl`, `solo`, or style tags. Only the fields.
+- `count` is the Danbooru count tag and it is a FIELD, not a constant. Write
+  `1girl, solo` for a woman and `1boy, solo` for a man. Read it off the
+  photograph; it was hardcoded to `1girl, solo` until 2026-09-10 because every
+  subject happened to be a woman, and on a male subject the wrong value fights
+  the face embedding the render gets its gender from.
+- `body shape` is the sheet's highest-leverage field -- `medium breasts` is what
+  fixed a persistent age drift no wording of the age tag could. **Give it a
+  value.** Declining to estimate a build from a clothed torso reads as 0.00 and
+  costs more than an imperfect guess; `medium breasts` is near-default at 770k
+  posts and renders ordinary. Omit it only for a male subject.
+- Do not include quality tags or style tags. Only the fields.
 
 Photographs: {photos}
 
@@ -131,9 +144,7 @@ def main() -> None:
     """Compare every draft on disk against its hand-written sheet."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--subjects", nargs="*", default=list(SUBJECTS))
-    parser.add_argument(
-        "--drafts", type=Path, default=Path("prototype/derived/vlm_drafts")
-    )
+    parser.add_argument("--drafts", type=Path, default=DRAFTS)
     parser.add_argument(
         "--schema", action="store_true", help="print the reader's instructions and exit"
     )
@@ -159,13 +170,21 @@ def main() -> None:
     seen = 0
 
     for sid in args.subjects:
-        path = args.drafts / f"{sid}.json"
+        # Resolved through the pool tree unless the caller named a directory.
+        path = (
+            draft_path(sid)
+            if args.drafts == DRAFTS
+            else args.drafts / f"{sid}.json"
+        )
         if not path.exists():
             print(f"  {sid}: no draft at {path} — skipped")
             continue
         seen += 1
         draft = json.loads(path.read_text())
         reference = fields_of(sid)
+        # Drafts written before 2026-09-10 predate the `count` field; defaulting
+        # matches `sheet.py adopt` rather than failing ten usable drafts.
+        draft.setdefault("count", "1girl, solo")
         missing = [f for f in ORDER if f not in draft]
         if missing:
             raise SystemExit(f"{path}: missing fields {missing}")

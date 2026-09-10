@@ -64,6 +64,12 @@ prototype/derived/
 # Prototype: third-party renders, not ours to redistribute. Digests in MANIFEST.md
 prototype/archive/fotor/
 
+# Evaluation runs: each is a self-contained directory holding COPIES of its
+# inputs (photographs, renders) beside its results, so a finding can be re-read
+# without resolving paths into trees that may have moved. Copies mean bulk --
+# hundreds of MB per run -- and none of it is anything git should carry.
+prototype/evaluations/
+
 # Round 1's contact images -- 7.3 MB of derived PNGs whose findings are in
 # FINDINGS.md (F12, F17, F18). They lived under the ignored `out/` tree until
 # 2026-09-10; archiving them must not quietly turn them into commits.

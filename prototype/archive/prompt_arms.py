@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PROTOTYPE — N16: the four prompt questions ILLUSTRIOUS.md raised, one at a time.
+"""PROTOTYPE — N16: four prompt questions from ILLUSTRIOUS.md, one at a time.
 
 The research note turned up four changes the base's own training argues for, and
 none of them had been tried. Bundling them was the operator's first proposal and
@@ -51,14 +51,14 @@ from prototype.fromnoise import (
 )
 from prototype.paths import render_dir, sheet_path
 
-# ILLUSTRIOUS.md §5. Built from the trained ladder's bottom two rungs
+# ../notes/ILLUSTRIOUS.md §5. Built from the trained ladder's bottom two rungs
 # (`worst quality`, `bad quality`) and two trained year modifiers (`old`,
 # `oldest`), rather than from adjectives the model never learned.
 LONG_NEGATIVE = (
     "lowres, worst quality, bad quality, bad anatomy, sketch, jpeg artifacts, "
     "signature, watermark, artist name, old, oldest, censor, nsfw"
 )
-# ILLUSTRIOUS.md §2. `general` is the rating every one of these sheets is;
+# ../notes/ILLUSTRIOUS.md §2. `general` is the rating every one of these sheets is;
 # `newest` is the paper's most recent trained tier (~2023), chosen because modern
 # anime illustration is flatter than older cel work and posterisation is the axis
 # still short of the bar.
