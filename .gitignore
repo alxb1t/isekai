@@ -19,7 +19,17 @@ models/
 # Generated outputs
 outputs/
 .inputs/
-inputs/
+# ANCHORED with a leading slash. Bare `inputs/` matches at any depth and excludes
+# the DIRECTORY `prototype/inputs` -- and git never descends into an excluded
+# directory, so the `!` negation below would silently do nothing.
+/inputs/
+
+# `prototype/inputs/` holds round 3's held-out portraits and the real photographs
+# (D14). Its CONTENTS are ignored rather than the directory itself: git does not
+# descend into an excluded directory, so `!.../README.md` below would do nothing
+# if the parent were excluded. The README is the sourcing criteria and is tracked.
+prototype/inputs/*
+!prototype/inputs/README.md
 
 # Python
 __pycache__/
@@ -38,11 +48,28 @@ venv/
 .ruff_cache
 .pytest_cache
 
-# Prototype scratch — v0.13 external-render probe. Resampled third-party
-# renders; pixels are never committed (design.md D14).
-prototype/out/
+# The prototype's two output trees, split by what it costs to make one again.
+# Neither is committed: renders depict people (design.md D14) and derived/ is a
+# few minutes of CPU away from being rebuilt.
+#
+#   renders/  PAID   — a pod session per run, and GPU nondeterminism (±2/255)
+#                      means a re-render is not the same file. Irreplaceable.
+#   derived/  FREE   — thumbnails, contact sheets, scores. Rebuilt from renders/.
+prototype/renders/
+prototype/derived/
+# `prototype/inputs/` is NOT excluded here -- it is handled above as
+# `prototype/inputs/*` plus a negation, which only works if the directory itself
+# stays visible to git. A second bare rule here would silently defeat it.
 
 # Prototype: third-party renders, not ours to redistribute. Digests in MANIFEST.md
-prototype/fotor/*.jpg
+prototype/archive/fotor/
 
-prototype/ladder/
+# Round 1's contact images -- 7.3 MB of derived PNGs whose findings are in
+# FINDINGS.md (F12, F17, F18). They lived under the ignored `out/` tree until
+# 2026-09-10; archiving them must not quietly turn them into commits.
+prototype/archive/galleries/
+# The real subject's criteria sheets. A DIRECTORY, not a name glob: the sheets
+# sat at the root under the subject's own name until 2026-09-10, and a glob that no longer
+# matches fails silently and open -- a real person's transcription becomes
+# committable and nothing says so.
+prototype/sheets/real/

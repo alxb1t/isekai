@@ -37,7 +37,7 @@ KSAMPLER = "102:3"
 MODEL_IN = "102:66"  # ModelSamplingAuraFlow -- what the LoRA is wired in front of
 LORA = "102:89"
 UNET = "102:37"
-OUT = Path("prototype/ladder/50_qwen_path")
+OUT = Path("prototype/renders/50_qwen_path")
 INSTRUCTION = INSTRUCTIONS["5_recovered_keepall"]
 
 # (name, steps, cfg, lightning). The two ends are the bracket already measured;
@@ -77,7 +77,7 @@ def main() -> None:
     args = p.parse_args()
 
     # Start from the Lightning graph so the LoRA node exists to wire or drop.
-    base = json.loads(Path("prototype/styles/qwen-lightning.json").read_text())
+    base = json.loads(Path("prototype/archive/styles/qwen-lightning.json").read_text())
 
     if args.dry_run:
         print(f"{len(SETTINGS) * len(SUBJECTS)} renders")

@@ -37,7 +37,8 @@ import numpy as np
 from isekai.ciede2000 import delta_e_2000
 from isekai.evaluate import canvas_for
 from isekai.eval_backends import SegformerParser, load_canvas_pixels
-import prototype.hair_colour as hc
+from prototype.paths import resolve_render
+import prototype.archive.hair_colour as hc
 
 BACKGROUND, HAIR, UPPER, FACE = 0, 2, 4, 11
 STRONG_GRADIENT = 32.0
@@ -130,8 +131,11 @@ def main() -> None:
         photo = f"inputs/baseline/{subj}.png"
         rows = [
             ("SHIPPED (dissolves bg)", f"outputs/baseline/{subj}/0.png"),
-            ("notile d0.45", f"prototype/ladder/21_notile_d045/{subj}/0.png"),
-            ("FOTOR", f"prototype/out/{fot[subj]}.canvas.png"),
+            (
+                "notile d0.45",
+                str(resolve_render(f"prototype/renders/21_notile_d045/{subj}/0.png")),
+            ),
+            ("FOTOR", f"prototype/archive/fotor/canvas/{fot[subj]}.canvas.png"),
         ]
         print(f"\n=== {subj} ===")
         print(f"{'':24s}" + "".join(f"{n.replace('_', ' '):>19s}" for n in NAMES))

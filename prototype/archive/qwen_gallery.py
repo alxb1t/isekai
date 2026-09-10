@@ -21,7 +21,7 @@ from prototype.archive.qwen_path import configure
 from prototype.archive.qwen_sweep import render
 
 SRC = Path("inputs/synthetic")
-OUT = Path("prototype/ladder/60_qwen_gallery")
+OUT = Path("prototype/renders/60_qwen_gallery")
 KSAMPLER = "102:3"
 SEEDS = [403402840318143, 20260907]
 STEPS, CFG, LIGHTNING = 8, 2.0, True
@@ -56,7 +56,7 @@ def sheet(height=300):
         x = 0
         for t in r:
             img.paste(t, (x, i * height)); x += t.width
-    dest = Path("prototype/out/gallery_qwen_c_light_8_cfg2.png")
+    dest = Path("prototype/archive/galleries/gallery_qwen_c_light_8_cfg2.png")
     dest.parent.mkdir(parents=True, exist_ok=True)
     img.save(dest)
     print(f"{len(thumbs)} subjects -> {dest} ({img.width}x{img.height})")
@@ -76,7 +76,7 @@ def main():
         return
     if not a.sheet_only:
         from isekai.comfy_client import ComfyClient
-        base = json.loads(Path("prototype/styles/qwen-lightning.json").read_text())
+        base = json.loads(Path("prototype/archive/styles/qwen-lightning.json").read_text())
         g0 = configure(base, STEPS, CFG, LIGHTNING)
         client = ComfyClient(a.server)
         for photo, stem, seed, tag in plan:

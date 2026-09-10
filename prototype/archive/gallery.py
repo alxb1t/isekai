@@ -13,7 +13,7 @@ result.
     python prototype/gallery.py --server http://127.0.0.1:8188   # render
     python prototype/gallery.py --sheet-only                     # build the sheet
 
-The sheet lands under `prototype/out/`, which is gitignored: this repository
+The sheet lands under `prototype/derived/`, which is gitignored: this repository
 claims reproducibility over the recipe and never over pixels, and a contact sheet
 is pixels twice over.
 """
@@ -26,7 +26,7 @@ from pathlib import Path
 SEEDS = [20260907, 20260909]
 DENOISE = 0.45
 SRC = Path("inputs/synthetic")
-OUT = Path("prototype/ladder/30_gallery")
+OUT = Path("prototype/renders/30_gallery")
 
 
 def subjects() -> list[Path]:
@@ -88,7 +88,7 @@ def sheet(height: int = 300) -> Path:
             sheet_img.paste(t, (x, r * height))
             x += t.width
 
-    dest = Path("prototype/out/gallery_notile_d045.png")
+    dest = Path("prototype/archive/galleries/gallery_notile_d045.png")
     dest.parent.mkdir(parents=True, exist_ok=True)
     sheet_img.save(dest)
     print(f"{len(thumbs)} subjects -> {dest} ({sheet_img.width}x{sheet_img.height})")

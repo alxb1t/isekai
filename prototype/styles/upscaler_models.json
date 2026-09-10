@@ -1,0 +1,20 @@
+{
+  "pinned": "2026-09-09",
+  "why": "The hires pass WAI recommends and this pipeline has never run: \"Upscale with R-ESRGAN 4x+ Anime6B, 20 steps, and a Denoising strength of 0.35~0.5\". It is the last structural lever after F32 and F34 spent every documented prompt lever.",
+  "not_in_models_json": "A prototype artifact, recorded the way round 1 recorded Qwen and the raena LoRA and round 2 recorded the WD14 tagger: beside the prototype, never in the tracked manifest, whose byte-identical derivation this branch must not disturb.",
+  "licence": "BSD-3-Clause (xinntao/Real-ESRGAN)",
+  "pod_dest": "upscale_models/RealESRGAN_x4plus_anime_6B.pth",
+  "publishers": [
+    "xinntao"
+  ],
+  "entries": [
+    {
+      "dest": "upscale/RealESRGAN_x4plus_anime_6B.pth",
+      "sha256": "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da",
+      "bytes": 17938799,
+      "sources": [
+        "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
+      ]
+    }
+  ]
+}

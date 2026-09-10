@@ -5,21 +5,19 @@ The missing half of the trade-off. Four axes measure similarity-to-photograph an
 nothing measures *style*, so a less-stylized render wins by construction
 (FINDINGS.md F5).
 
-**The calibration set is free and owes nothing to any tuning we are about to do.**
-Three points whose order is not in dispute:
-
-    the photograph   <   isekai now   <   Fotor
-    photographic         semi-realistic    flat cel
-
-Run this BEFORE tuning: a style metric built afterwards is a metric built to agree
-with whatever we picked.
-
 **Answer: yes, and it takes two numbers, not one** (FINDINGS.md F7).
 
     posterisation   share of pixels in the 32 commonest colour bins. F3's finding
                     generalised: cel art fills flat, photographs graduate.
     linework        share of pixels on a strong luminance gradient. Cel art draws
                     lines; a blurred render draws none.
+
+**Both are ABSOLUTE.** They describe the render and nothing else -- no photograph,
+no reference image, no competitor. That is what lets them be read against *our own
+previous number*, which is the only comparison this prototype makes as of
+2026-09-10. It was calibrated in round 1 against a third-party stylizer, which is
+recorded in F7 and is now history: the artifacts are in `archive/fotor/` and
+nothing live reads them.
 
 Two candidates were tried and dropped, recorded so they are not re-tried:
 `flat_fraction` (share of near-zero-gradient neighbourhoods) orders the three
@@ -30,10 +28,9 @@ them at all.
     uv run --extra eval python prototype/style_axis.py
 """
 
-from pathlib import Path
 
-from isekai.evaluate import canvas_for
 from isekai.eval_backends import load_canvas_pixels
+from isekai.evaluate import canvas_for
 
 STRONG_GRADIENT = 32.0
 QUANT = 8  # 32 levels per channel, as `_dominant_lab` uses
@@ -58,14 +55,16 @@ def style(pixels) -> dict[str, float]:
 
 
 def resampling_control(photo: str, canvas) -> dict[str, float]:
-    """Send the photograph down Fotor's own resampling path and re-measure.
+    """Send the photograph up to 1968x2880 and back down, then re-measure.
 
-    Fotor returns 1968x2880 from our 832x1216, so its render reaches the canvas by
-    a *downscale* where ours arrives natively and the photograph arrives by an
-    upscale. If that path alone moved these numbers, the comparison would be
-    measuring the resampler. It does not -- every measure lands within 0.4% -- and
-    this stays in the file so the objection is answered by a command rather than
-    by a claim.
+    **The axes are resolution-sensitive** (F35, where reading hires natively
+    flipped linework's sign), so the standing objection is that a number could be
+    measuring the resampler rather than the render. It is not -- a round trip
+    through a much larger canvas lands every measure within 0.4% -- and this stays
+    in the file so the objection is answered by a command rather than by a claim.
+
+    The specific size is inherited from round 1's third-party comparison and is
+    kept only because that is the size the 0.4% was established at.
     """
     import numpy as np
     from PIL import Image
@@ -75,26 +74,20 @@ def resampling_control(photo: str, canvas) -> dict[str, float]:
         return style(np.asarray(up.resize((canvas.width, canvas.height), Image.LANCZOS)))
 
 
-SUBJECTS = {
-    "s1_control_blonde": "s1_control_blonde-fotor-ai-art-effects-20260907125511",
-    "s2_control_brunette": "s2_control_brunette-fotor-ai-art-effects-20260907130103",
-}
+SUBJECTS = ("s1_control_blonde", "s2_control_brunette")
 
 
 def main() -> None:
+    """Print both axes for each calibration subject: the photograph, then v0.12."""
     names = ["posterisation", "linework"]
-    for subject, fotor_stem in SUBJECTS.items():
+    for subject in SUBJECTS:
         photo = f"inputs/baseline/{subject}.png"
         canvas = canvas_for(photo)
         rows = [("photo", style(load_canvas_pixels(photo, canvas)))]
-        rows.append(("  ↳ via Fotor's path", resampling_control(photo, canvas)))
+        rows.append(("  ↳ resampling control", resampling_control(photo, canvas)))
         for i in range(5):
-            rows.append(
-                (f"isekai {i}", style(load_canvas_pixels(f"outputs/baseline/{subject}/{i}.png", canvas)))
-            )
-        fotor = Path("prototype/out") / f"{fotor_stem}.canvas.png"
-        if fotor.exists():
-            rows.append(("FOTOR", style(load_canvas_pixels(str(fotor), canvas))))
+            render = f"outputs/baseline/{subject}/{i}.png"
+            rows.append((f"isekai {i}", style(load_canvas_pixels(render, canvas))))
 
         print(f"\n=== {subject} ===")
         print(f"{'':22s}" + "".join(f"{n:>16s}" for n in names))

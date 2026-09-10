@@ -1,0 +1,26 @@
+{
+  "pinned": "2026-09-08",
+  "why": "The criteria evaluator's reader. `SmilingWolf/wd-swinv2-tagger-v3` emits Danbooru tags, which is the vocabulary the criteria sheets are written in -- so scoring a render against its sheet is a set comparison inside one vocabulary rather than a translation between two. Apache-2.0. ONNX, so it loads through the OnnxSession seam that already exists.",
+  "not_in_eval_models_json": "A prototype artifact, recorded the way round 1 recorded Qwen and the raena LoRA: beside the prototype, never in the tracked eval manifest, whose byte-identical derivation this branch must not disturb.",
+  "publishers": [
+    "SmilingWolf"
+  ],
+  "entries": [
+    {
+      "dest": "wd14/model.onnx",
+      "sha256": "e6774bff34d43bd49f75a47db4ef217dce701c9847b546523eb85ff6dbba1db1",
+      "bytes": 467460978,
+      "sources": [
+        "https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/main/model.onnx"
+      ]
+    },
+    {
+      "dest": "wd14/selected_tags.csv",
+      "sha256": "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217",
+      "bytes": 308468,
+      "sources": [
+        "https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/main/selected_tags.csv"
+      ]
+    }
+  ]
+}

@@ -25,7 +25,7 @@ partially-noised latent -- there is no img2img trade-off to tune.
 import json
 from pathlib import Path
 
-SRC = Path("prototype/styles/qwen-image-edit.recovered.json")
+SRC = Path("prototype/archive/styles/qwen-image-edit.recovered.json")
 SWITCH = "ComfySwitchNode"
 PRIMITIVES = {"PrimitiveBoolean", "PrimitiveFloat", "PrimitiveInt"}
 
@@ -61,7 +61,7 @@ def main() -> None:
     src = json.loads(SRC.read_text())
     for name, lightning in (("qwen-full", False), ("qwen-lightning", True)):
         g = flatten(src, lightning)
-        dest = Path(f"prototype/styles/{name}.json")
+        dest = Path(f"prototype/archive/styles/{name}.json")
         dest.write_text(json.dumps(g, indent=2) + "\n")
         ks = g[KSAMPLER]["inputs"]
         has_lora = any(v["class_type"] == "LoraLoaderModelOnly" for v in g.values())

@@ -52,7 +52,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--subject", required=True)
     p.add_argument("--tool", required=True, help="what produced the render, for the record")
     p.add_argument("--models", type=Path, default=Path("models"))
-    p.add_argument("--out", type=Path, default=Path("prototype/out"))
+    p.add_argument("--out", type=Path, default=Path("prototype/derived"))
     p.add_argument("--guard", choices=("iou", "centroid"), default=AUTHORITATIVE_GUARD_METHOD)
     p.add_argument(
         "--force-embeddings",
@@ -62,12 +62,12 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def resampled(render: Path, canvas, out_dir: Path) -> Path:
+def resampled(render: Path, canvas, derived_dir: Path) -> Path:
     """Write the render at the canvas's exact size and return the path."""
     from PIL import Image
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    dest = out_dir / f"{render.stem}.canvas.png"
+    derived_dir.mkdir(parents=True, exist_ok=True)
+    dest = derived_dir / f"{render.stem}.canvas.png"
     with Image.open(render) as im:
         im.convert("RGB").resize((canvas.width, canvas.height), Image.LANCZOS).save(dest)
     return dest

@@ -64,7 +64,7 @@ def variants(graph: dict) -> dict[str, tuple[dict, dict]]:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--server", default="http://127.0.0.1:8188")
-    p.add_argument("--out", type=Path, default=Path("prototype/ladder"))
+    p.add_argument("--out", type=Path, default=Path("prototype/renders"))
     p.add_argument("--only", default=None, help="run one variant by name")
     args = p.parse_args()
 

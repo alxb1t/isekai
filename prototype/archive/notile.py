@@ -72,7 +72,7 @@ def jobs() -> list[tuple[str, str, float, int]]:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--server", default="http://127.0.0.1:8188")
-    p.add_argument("--out", type=Path, default=Path("prototype/ladder"))
+    p.add_argument("--out", type=Path, default=Path("prototype/renders"))
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
 

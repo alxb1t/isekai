@@ -33,7 +33,7 @@ POSITIVE = "102:76"
 LOADIMAGE = "78"
 SAVE = "60"
 SUBJECTS = ["s1_control_blonde", "s4_multitone_bob"]
-OUT = Path("prototype/ladder/40_qwen_sweep")
+OUT = Path("prototype/renders/40_qwen_sweep")
 
 KEEP = "Keep the person's face, hairstyle, clothing, accessories, and background exactly as they are."
 
@@ -86,7 +86,7 @@ def render(client, graph: dict, photo: str, dest: Path) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--server", default="http://127.0.0.1:8188")
-    p.add_argument("--graph", default="prototype/styles/qwen-lightning.json")
+    p.add_argument("--graph", default="prototype/archive/styles/qwen-lightning.json")
     p.add_argument("--dry-run", action="store_true")
     args = p.parse_args()
 

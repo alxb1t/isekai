@@ -377,7 +377,7 @@ polished-illustration look the operator chose is unchanged.
 
 **Pod `jp77ucxtifd89i`, 20 renders — 10 synthetic portraits × 2 seeds, ~9 min, ≈$0.15.** Not the
 adversarial baseline six; just the portraits on hand, deliberately diverse. Sheet:
-`prototype/out/gallery_notile_d045.png`.
+`prototype/derived/gallery_notile_d045.png`.
 
 **What holds, across all ten:**
 
@@ -706,7 +706,7 @@ not.
 ## F18 · `qwen-flatcel` across ten portraits — the two architectures fail in **different shapes** · T10e/T10f ✅
 
 **Pod `2oiozb2bppxama`, 11 renders, ≈$0.12.** The operator's pick (`c_light_8_cfg2`) on every synthetic
-portrait. Sheet: `prototype/out/gallery_qwen_c_light_8_cfg2.png`.
+portrait. Sheet: `prototype/derived/gallery_qwen_c_light_8_cfg2.png`.
 
 | subject | linework | posterisation | bg detail | bg colour ΔE | garment ΔE |
 |---|---:|---:|---:|---:|---:|
@@ -978,4 +978,954 @@ general-purpose stylizer, ours or commercial, carries specific ink through a str
 
 ---
 
-<!-- next: F24 -->
+## F24 — the blur was the architecture. From noise, the style bar is cleared 3x over
+
+**2026-09-08 · one pod session, 15:05–15:15, 10 minutes, ~$0.05 · six synthetic subjects, one seed ·
+`prototype/renders/n3_fromnoise/` · re-measurable with `prototype/n4_measure.py`.**
+
+Round 1's `notile-d045` was rejected for softness, and `SUMMARY.md` blamed the architecture rather than
+the tuning: `i2i` seeds the latent from the photograph, so the sampler must reconcile a photographic
+latent with an anime prior and returns an interpolation between them. **That prediction is now tested.**
+Take the photograph out of the latent, keep InstantID and OpenPose as conditioning, and hand-write the
+subject from a criteria sheet.
+
+The bar was stated in `CRITERIA.md` §4 before the pod was booted: **median linework at or above the
+photograph's own.**
+
+| flow | linework ↑ | posterisation | linework spread |
+|---|---:|---:|---:|
+| the photograph | 0.0077 | 0.411 | 6.10x |
+| **`notile-d045`** · round 1's Illustrious img2img | 0.0043 | 0.466 | 9.07x |
+| **`fromnoise-v1`** · this round | **0.0240** | 0.296 | **1.28x** |
+| **`qwen-flatcel`** · round 1's Qwen edit path | 0.0545 | 0.606 | 2.97x |
+
+Medians over the same six subjects, each render read at its own photograph's canvas.
+
+**The bar is cleared, and not narrowly.** `fromnoise-v1` runs **3.1x the photograph's own linework** and
+**5.6x `notile-d045`'s**, and it beats the photograph on five of the six subjects individually. The
+softness was the architecture. F7's off-axis diagnosis was right about the cause and right about the fix.
+
+### The consistency result was not predicted, and it inverts SUMMARY #11
+
+**1.28x spread across six subjects** — 0.0205 to 0.0263. Against `notile-d045`'s 9.07x, `qwen-flatcel`'s
+2.97x, and the input photographs' own 6.10x.
+
+`SUMMARY.md` #11 recorded *"consistency is Qwen's, not ours"*, from F21's finding that the 8-step-native
+Lightning LoRA widened Qwen's spread rather than narrowing it. **That conclusion was about the wrong
+axis.** The flow that varies least is the one whose latent does not start from a photograph — and it
+varies less than the photographs themselves, which is the tell. An img2img flow inherits its inputs'
+variance by construction; a from-noise flow does not.
+
+### It is still off-axis, in the opposite direction
+
+**Posterisation 0.296, against the photograph's 0.411.** These renders are *less* flat than their own
+inputs, and far less flat than `qwen-flatcel`'s 0.606. By eye that is exactly what they are: glossy,
+gradient-rich rendered illustration with strong lines — not flat cel.
+
+Round 1's failure was *photographic flatness with no lines*. This one is *strong lines with less
+flatness than a photograph*. **Both are off-axis; they are off it in different directions**, and only
+this one has the deficit on the axis nobody has yet found a lever for. Whether the operator wants flat
+cel at all is a question the register was never asked; `notile` was chosen in T5 as "rendered
+illustration", and this is a more strongly drawn version of that choice.
+
+### What the sheet bought, and what it did not
+
+**Criteria adherence is high.** Across the six: pose, hair silhouette, hair colour and eye colour survive
+on all six by eye. `00072`'s choker, chain and heart pendant all render — **the accessories
+`notile-d045` lost every single time**. `00003`'s freckles render. Clothes drift twice: `00033`'s white
+tank comes back light blue, and `00059`'s sheer lace robe comes back opaque satin.
+
+**And the operator's verdict on the identity bar is a pass.** Side by side with the photographs:
+*"holistically I do have a feeling the anime images are based on the photo"*, *"they do preserve the
+identity criteria from the photo original"*, and the register is *"really good style anime"*. Recorded
+in each sheet's verdict block; **the bar passes holistically**, with the per-criterion rows left blank
+because a whole-image judgement is what was given.
+
+That overturns a claim in this finding's first draft. Reading the six renders alone, the assistant judged
+the faces generic and called `CRITERIA.md` §6's open question answered against InstantID. **The operator,
+comparing against the photographs, does not see that** — and on identity the operator is the instrument
+this project has. What survives of the observation is narrower and still worth acting on: nothing in the
+graph has been swept, and `ip_weight` still sits at the 0.9 an img2img graph wanted, where the latent was
+already carrying the face. **Whether InstantID has more to give at `denoise 1.0` is untested, not
+answered.**
+
+Two systematic drifts, both on unscored fields, both worth recording:
+
+- **Skin tone drifts darker.** `00014` declared `fair skin` and renders markedly tanned; the tag is
+  being outvoted. (`00003` was named here in this finding's first draft and should not have been: its
+  own tag reads `light skin, sun-tanned`, so a tanned render is the tag being *obeyed*. F25's skin arm
+  inherited the error and is inconclusive because of it.)
+- **Age drifts younger, on every subject.** `00003` reads early teens against a declared `young woman`,
+  and `00033`'s declared `mature female` reads a decade younger than her photograph. This is the failure
+  `CRITERIA.md` §3 named when it added the age band, and adding the tag did not prevent it.
+
+### What this changes
+
+**Round 1 ended on a split and round 2 does not.** Round 1: the style he liked lost identity, the identity
+he wanted had a style he disliked, and F17 showed the two architectures occupied disjoint regions — a
+reachability result that could not be tuned around. Here **both bars are met by one flow**: the style bar
+by measurement, the identity bar by the operator's eye. That is the first time in either round that has
+happened, and it is what makes this the flow rather than a third rejected candidate.
+
+What is left is improvement rather than rescue, and it is unusually cheap, because **nothing in this
+graph has been swept.** `ip_weight` is at 0.9, `cn_strength` at 0.5 and the OpenPose leg at 0.6 — every
+one of them set for an img2img graph whose latent already carried the face, and none revisited since the
+photograph left it. `cfg` was moved to 7 by argument, not by measurement.
+
+---
+
+## F25 — ip_weight is at its ceiling, and the free lever is the other half of InstantID
+
+**2026-09-08 · one pod session, 15:34–15:43, 9 minutes, ~$0.05 · 7 arms x 3 subjects = 21 renders ·
+`prototype/renders/n6_face/` · `prototype/face_ladder.py`, one change per arm.**
+
+F24 left every dial in `fromnoise-v1` unswept: `ip_weight` 0.9, `cn_strength` 0.5 and the OpenPose leg
+0.6 were all chosen for an img2img graph whose latent already carried the face, and `cfg` was moved to 7
+by argument rather than measurement. From noise, InstantID is the only carrier of the face, so its two
+dials are the most under-argued numbers in the file. This is round 1's `ladder.py` discipline applied to
+them: **one change each, never two**, every arm against a control that reproduces F24 exactly.
+
+### First, the control found a determinism floor
+
+`1_control` re-renders F24's graph, seed and prompt on a **second pod**. It came back bit-identical on
+one subject of three, and on the other two differed at **mean |Δ| ≈ 2/255, with linework moving 0.0003 —
+about 1%.** Perceptually the same image; numerically not the same bits. Same class of test as F20's on
+Fotor, and a far quieter answer: Fotor was stochastic at **42x** the JPEG floor, ours is GPU float
+nondeterminism.
+
+**That number is what makes the rest of this finding readable.** Every arm below moved the render by
+mean |Δ| of 10 to 41 — **5x to 20x the floor.** No arm is noise.
+
+### The ladder
+
+| arm | change | median linework | median posterisation | mean \|Δ\| vs control |
+|---|---|---:|---:|---:|
+| `1_control` | — | **0.0233** | 0.264 | 0.0 |
+| `2_ip_1.2` | `ip_weight` 0.9 → 1.2 | 0.0182 | 0.268 | 22.8 |
+| `3_ip_1.5` | `ip_weight` 0.9 → 1.5 | **0.0097** | 0.241 | 37.9 |
+| `4_cn_0.8` | `cn_strength` 0.5 → 0.8 | 0.0223 | **0.288** | 22.1 |
+| `5_cfg_5` | `cfg` 7 → 5 | 0.0167 | 0.303 | 20.0 |
+| `6_skin` | skin tag at emphasis 1.4 | 0.0270 | 0.270 | 17.7 |
+| `7_age` | age tag at emphasis 1.4 | **0.0287** | 0.285 | 15.6 |
+
+### ip_weight up is the wrong direction, and it fails visibly
+
+**0.9 is at or past the ceiling.** At 1.2 the render acquires vertical streaking and a hard seam along
+the jaw and neck — the face is arguably closer in proportion, and the image is damaged. At 1.5 it
+collapses: colour cast, washed-out contrast, smearing, and on `00003` **linework 0.0018 — below round
+1's rejected `notile-d045` at 0.0043.** Pushing the adapter harder does not buy identity; it buys
+artifacts, and it spends the style bar to do it.
+
+That closes the question F24 left open in the assistant's reading and the operator's alike: **InstantID
+does not have more to give on this dial.** Whatever raises face fidelity from here, it is not
+`ip_weight`.
+
+**And the operator rejected both arms on sight** — *"those values seem to make the anime not clean"*.
+The eye and the two axes agree, which is the first time in this repository that a dial has been closed
+by both at once. Both arms were dropped from the contact sheet the same day; the renders stay on disk
+and the evidence stays here, because a comparison table is for choosing between live candidates.
+
+### `cn_strength` is the free lever
+
+**0.5 → 0.8 holds the style bar and improves the face.** Median linework 0.0223 against the control's
+0.0233 — inside a whisker of it — and the **highest posterisation of any dial arm at 0.288**, which is
+movement toward the flat-cel register that F24 named as this flow's remaining deficit. On `00003` it
+*raised* linework to 0.0283, the second-best single reading in the whole ladder, with visibly cleaner
+facial structure and **no artifacts of the kind arms 2 and 3 produced.**
+
+The asymmetry is the finding, and it is a mechanism story rather than a tuning one. `ip_weight` weights
+the **face embedding**; `cn_strength` weights the **keypoint ControlNet**. They are two mechanisms, not
+one dial under two names — and from noise, pushing *geometry* is free where pushing *appearance* is
+ruinous. That is consistent with everything `xor` has said in this repository: structure transfers
+through a style change, appearance does not.
+
+### cfg 7 was right, and it was right by argument
+
+`5_cfg_5` drops median linework to 0.0167, a 28% loss against the control. F24's `cfg 5 → 7` was made on
+reasoning — from noise the prompt carries the criteria, so text adherence is worth more — and never
+measured. **It is now measured, and the reasoning held.**
+
+### The emphasis arms: one clean negative, one that cannot be read
+
+Both raised linework (0.0270 and 0.0287, the two highest medians in the ladder), so **prompt emphasis
+sharpens this flow** — an unlooked-for result and a lever for the register, not the face.
+
+- **`7_age` is a clean negative.** `(young woman:1.4)` did not make the subject read older. The age drift
+  F24 recorded survives a 40% emphasis on the exact tag that was supposed to prevent it, which means the
+  base's prior is not being outvoted by weighting alone.
+- **`6_skin` cannot be read, and the fault is in the arm.** `00003`'s skin field is literally
+  `light skin, sun-tanned`, so weighting it weights the tan; `00050` declares `tan skin`. Neither is the
+  drift case. **The subject where skin renders against its tag is `00014` (`fair skin`), and `00014` is
+  not in this ladder.** The arm tested the wrong subjects and its result means nothing. Recorded rather
+  than quietly dropped, because the same mistake corrected F24's own claim above.
+
+### What is now the best-known configuration
+
+`ip_weight` **0.9** (unchanged, and now known to be a ceiling rather than a default), `cn_strength`
+**0.8**, `cfg` **7**. Untested together — every arm here is one change from the control, so a combined
+run is a new render and not an inference.
+
+---
+
+## F26 — the bar was on the wrong axis, and the operator's eye found it
+
+**2026-09-08 · two pod sessions, 16:32–16:40 (wasted) and 16:41–16:44 · six subjects ·
+`prototype/renders/n8_combined/` · `prototype/combined.py`.**
+
+Shown N6's contact sheet, the operator picked `5_cfg_5` as the best-looking anime and `4_cn_0.8` second,
+and rejected the rest. **Ranked by posterisation those are 1st and 2nd of seven, and the arm he called
+worst is 7th. Ranked by linework his favourite is 6th of seven.**
+
+| arm | posterisation | linework | the operator |
+|---|---:|---:|---|
+| `5_cfg_5` | **0.303** | 0.0167 | **liked most** |
+| `4_cn_0.8` | **0.288** | 0.0223 | **liked** |
+| `7_age` | 0.285 | 0.0287 | rejected |
+| `6_skin` | 0.270 | 0.0270 | rejected — "bluring" |
+| `2_ip_1.2` | 0.268 | 0.0182 | rejected |
+| `1_control` | 0.264 | 0.0233 | — |
+| `3_ip_1.5` | **0.241** | 0.0097 | **rejected, worst** |
+
+**Posterisation orders his preference; linework does not.** The two arms he called blurry have the
+*highest* linework in the ladder — which is the axis behaving exactly as `style_axis.py`'s own docstring
+warns a *different* candidate did, conflating a quality with its opposite.
+
+### Why the wrong axis was being quoted
+
+Round 2 inherited round 1's bar without re-deriving it. **Round 1's failure was blur, so linework was
+its axis** — F7 measured our renders at 60x below the photograph and everything followed from that. **Round
+2's failure is insufficient flatness**, and F24 said so in the same paragraph that quoted linework as the
+bar. The bar is now *median posterisation at or above Fotor's 0.460*, and linework is a floor rather than
+a target (`CRITERIA.md` §4).
+
+This is the third time in this repository an axis has been caught rewarding the wrong thing — F4 on the
+face axis, F16 on colour distance, and now the round-2 bar. **In all three the operator's eye was the
+instrument that caught it**, which is an argument for the contact sheet as a standing part of the loop
+rather than a one-off.
+
+### N8: the two picks together, on sheets rewritten in booru tags
+
+Two changes at once, which every ladder here has refused — the operator's call, and the cost was written
+into `combined.py` before the render: this run cannot say which half did what.
+
+| | posterisation | linework |
+|---|---:|---:|
+| the photograph | 0.413 | 0.0108 |
+| **N3** — cn 0.5, cfg 7, prose sheets | 0.296 | 0.0240 |
+| **N8** — cn 0.8, cfg 5, booru sheets | **0.332** | 0.0151 |
+| Fotor — the bar | 0.460 | 0.0404 |
+
+**Posterisation up 12%, on 5 of 6 subjects.** Still 28% short of Fotor. Linework fell to 0.0151 and is
+still 1.4x the photograph's, so the floor holds.
+
+### Booru pose tags work, and the evidence is the subject that prompted them
+
+`00050`'s pose was prose: *"sitting on a step, legs bent to one side, one arm resting on knee, other arm
+behind, leaning back"*, and N3 rendered her upright with her legs down the steps. Rewritten as `sitting,
+on stairs, knee up, hand on own knee, arm support, leaning back` — six tags the base was trained on —
+**N8 reproduces the photograph's pose, arm support and all.** The single clearest prompt win in either
+round.
+
+### The gaze tag worked
+
+`00003` was the subject whose eyes looked the wrong way, and its sheet now carries `looking at viewer`.
+**The operator, comparing against the photograph: the render looks straight back at him, as the
+photograph does.** The natural experiment that motivated the field survives its first deliberate test.
+
+**This finding's first draft recorded the opposite**, from the assistant reading the render alone and
+judging the irises still off-axis. It was wrong, and on gaze — as on identity in F24 — the operator
+comparing against the photograph is the instrument this project has. Two axis corrections in this
+finding, and both went the same way.
+
+What the combined run still cannot settle is the *strength* of the lever: N8 moved cfg 7 → 5 in the same
+render, and lower cfg weakens every tag. The tag worked **at a weakened setting**, which is a stronger
+result than it looks, but the separated arm — same sheets, cfg 7 against cfg 5 — is the one that would
+say by how much.
+
+### Also unfixed, and now on their third recording
+
+Skin still renders darker than the tag on the subjects that declare fair, and **age still renders young**
+— `00003` reads early teens against `young woman` at cfg 5 as it did at cfg 7 and as it did under a 1.4
+emphasis in N6. Three settings, one result: **weighting and re-wording do not move the base's age prior.**
+Whatever fixes it is not in the prompt.
+
+### One session was wasted, and it is recorded rather than netted out
+
+The first pod of this pair came up `RUNNING` with `runtime: null` and no public IP — RunPod's SSH proxy
+only, which is a restricted shell and will not carry a port forward. `infra/up.sh` polls for
+`publicIp` and a mapped `:22`, so it waited seven minutes for something that was never coming, and the
+pod billed for all of it. Terminated, confirmed empty, and recreated; the second pod had direct SSH and
+the whole run took **three minutes**.
+
+**`up.sh` has no timeout on that poll.** It is the one piece of infrastructure in this repository that
+can bill indefinitely while looking like it is working.
+
+---
+
+## F27 — InstantID was suppressing the style, and dropping it clears the bar
+
+**2026-09-08 · one pod session, 18:58–19:13, 14 minutes, ~$0.10 · 4 arms x 6 subjects = 24 renders ·
+`prototype/renders/n9_ablation/` · `prototype/ablation.py`.**
+
+**The operator's hypothesis**, after N8 showed booru tags carrying pose and gaze on their own: *are
+InstantID and OpenPose now fighting the prompt rather than helping it?* The prediction was written into
+the runner before the pod was booted — if the legs fight, dropping them improves adherence; if they
+carry, dropping them loses the pose and the face and the tags do not recover it.
+
+**They fight. Overwhelmingly, and it is InstantID.**
+
+| arm | posterisation ↑ | linework | linework spread |
+|---|---:|---:|---:|
+| the photograph | 0.413 | 0.0108 | 6.10x |
+| N8 — both legs, sheets before enrichment | 0.332 | 0.0151 | 2.74x |
+| **A** — both legs, enriched sheets | 0.358 | 0.0139 | 2.45x |
+| **B** — **no InstantID**, OpenPose kept | **0.518** | 0.0316 | 2.34x |
+| **C** — no OpenPose, InstantID kept | 0.371 | 0.0147 | 2.94x |
+| **D** — **prompt only**, neither leg | **0.577** | 0.0320 | **2.09x** |
+| **Fotor — the style bar** | **0.460** | 0.0404 | — |
+
+**Removing InstantID moves posterisation 0.358 → 0.518, and clears Fotor's 0.460 for the first time in
+either round.** Removing OpenPose instead moves it 0.358 → 0.371 — barely outside the determinism floor.
+The two legs are not comparable forces: **one of them was most of the style deficit and the other is
+nearly free.**
+
+Linework more than doubles at the same time (0.0139 → 0.0316), which puts it within reach of Fotor's
+0.0404 rather than 3x past the photograph's. Both axes move the same way, which is the first time in this
+round they have agreed.
+
+### Why this was invisible for two rounds
+
+`ip_weight` and `cn_strength` were swept in N6 and the sweep found a ceiling and a free lever. **Neither
+arm asked what the node costs when it is absent** — a ladder over a dial cannot find the dial's own floor.
+It took the operator's architectural question to ask it, and the answer was larger than every dial result
+in either round put together.
+
+This also explains N6 in retrospect. `3_ip_1.5` had the **worst** posterisation of the seven arms at
+0.241; `1_control` at 0.9 was second worst at 0.264. The whole `ip_weight` axis was ordered by *how much
+InstantID was suppressing the register* — which is the same finding, seen from inside a range too narrow
+to reach zero.
+
+### The enrichment paid too, and it is separable
+
+N8 → A is the operator's six prompt improvements with nothing else changed: background, midriff, precise
+accessories, hair parting, the smile fix, and `medium breasts` for the age drift. **Posterisation
+0.332 → 0.358, +8%**, and by eye every added tag lands — flower field, mountains and blue sky on `00003`,
+the navel, the lace, the light smile.
+
+**And `medium breasts` moved the age.** The drift that survived cfg 7, cfg 5 and a 1.4 emphasis on the age
+tag itself is gone at `00003`, which now reads adult. Three attempts on the tag that names the thing all
+failed; one attempt on a *body* tag worked. The operator proposed it.
+
+### What is not settled, and it is the whole question
+
+**These arms were not judged on identity.** B and D produce cleaner anime by both axes and by eye — and
+booru has no vocabulary for *a particular face*. Two subjects with the same tags get the same face, and
+that is precisely what dropping InstantID buys the style with.
+
+`D` also changes what the product is: **nothing reads the photograph at render time.** `LoadImage` and
+`ImageScale` are orphaned in that graph — 10 nodes, 8 reachable — and the render is reproducible from the
+sheet alone. `photo -> anime` becomes `photo -> sheet -> anime`, where the photograph's only job is to be
+read once, by a human.
+
+**B is the interesting middle** and was not on the operator's list: the photograph still supplies the
+skeleton, the face is left to the tags, and it clears the style bar anyway at 0.518. Whether its identity
+is acceptable is a question only the eye answers.
+
+### A seam held under pressure, and is worth recording
+
+`pipeline.run` could not drive three of these four arms: its provenance record calls
+`find_node(class_type="ApplyInstantIDAdvanced")`, whose exactly-one contract is violated by a graph that
+has deliberately removed the node. **The contract was not weakened for a prototype** —
+`ablation.py` submits directly and writes its own `arm.json` — because that seam is load-bearing in the
+shipped path. The failure was loud, immediate, and cost one render.
+
+---
+
+## F28 — every tag that worked is a real Danbooru tag; every tag that failed is not
+
+**2026-09-08 · $0, no pod · an audit of the six rendered sheets against the canonical Danbooru
+vocabulary, prompted by the operator's own reference note.**
+
+His note states the rule outright: *"A model only knows a tag if it appeared enough in training.
+Rare/niche tags silently do nothing — prefer the canonical Danbooru wiki name over a synonym."* The
+sheets were written before that note was consulted, and **74 distinct non-canonical tags** appear across
+the six — roughly half of every prompt.
+
+**Then the pattern.** Sorting the tag results of F26 and F27 by whether the tag exists on Danbooru:
+
+| worked, and dramatically | canonical? | | failed, repeatedly | canonical? |
+|---|:-:|---|---|:-:|
+| `hand on own knee` | ✅ | | `centre part` — parting never landed | ❌ |
+| `arm support` | ✅ | | `voluminous`, `tousled` — `00033`'s hair volume | ❌ |
+| `knee up`, `leaning back` | ✅ | | `fair skin`, `light skin`, `tan skin` | ❌ |
+| `looking at viewer` — fixed the gaze | ✅ | | `young woman` — age, three attempts | ❌ |
+| `midriff`, `navel` | ✅ | | `blue-green eyes`, `hazel eyes` | ❌ |
+| `medium breasts` — **fixed the age** | ✅ | | `natural eyebrows`, `defined eyebrows` | ❌ |
+| `flower field`, `mountain`, `blue sky` | ✅ | | `chin-length wavy bob` | ❌ |
+| `freckles` | ✅ | | `black sheer lace long robe` | ❌ |
+
+**Not one exception in either column.** The three drifts this round could not fix — hair volume, skin
+tone, and age — were each addressed with a tag the model has never seen; and the age drift fell the
+moment it was attacked with `medium breasts`, which is canonical, after three failures against
+`young woman`, which is not. The canonical alternatives exist and were simply not used: `pale skin`,
+`dark skin`, `mature female`, `bob cut`, `parted bangs`.
+
+This is not proof — nothing here is a controlled arm, and a non-canonical tag is not *inert*, it is
+tokenised and contributes something. But it orders every tag result in two rounds without a
+counter-example, and the fix costs one rewrite and no GPU.
+
+### It is also the precondition for the evaluator
+
+`CRITERIA.md` §1 made the sheet the ground truth, and §5 left six of the seven criteria unmeasured
+pending a reader. **The natural reader is a WD14-class tagger** — an ONNX model that reads an image and
+emits *Danbooru tags*, which is the same vocabulary the sheet is written in. Scoring becomes a set
+comparison in one vocabulary rather than a translation between two.
+
+**A tagger cannot score `blue-green eyes` or `black sheer lace long robe`, because it cannot emit
+them.** So the tag question and the evaluation question are the same question, and canonicalising the
+sheets is the first step of both.
+
+---
+
+## F29 — the criteria evaluator exists, and it says D wins. It also cannot see identity
+
+**2026-09-08 · one pod session, 20:05–20:10, 5 minutes, ~$0.04, plus $0 of local scoring ·
+`prototype/criteria_eval.py`, `prototype/renders/n12_canonical/`.**
+
+The operator approved a WD14-class tagger and asked for the two kept flows scored across the seven
+criteria. Sheets were canonicalised first (F28), then `A` and `D` re-rendered on them, then scored.
+
+**The instrument.** `SmilingWolf/wd-swinv2-tagger-v3`, ONNX, Apache-2.0, pinned by digest in
+`prototype/styles/wd14_models.json`. It reads an image and emits **Danbooru tags** — the vocabulary the
+sheets are written in — so a score is a set comparison inside one vocabulary rather than a translation
+between two. Per criterion: **recall against the sheet**, the share of declared tags the reader found.
+Recall and not F1, because a render carrying extra true tags is not a fidelity failure.
+
+`isekai.eval_models.resolve` refused the artifact, correctly, because it is not in the tracked
+`eval_models.json`. **That refusal was not weakened**: the prototype verifies the same bytes against its
+own manifest instead.
+
+### The known-answer gate passed, and the mean hid most of the story
+
+Floor stated before the run at **0.40**, deliberately low because the reader was trained on drawings and
+a photograph is out of its distribution.
+
+| | pose | gaze | hair sil. | hair col. | eye col. | clothes | marks | mean |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **the photographs** | **0.08** | 1.00 | **0.18** | 0.58 | 0.50 | 0.56 | **0.00** | **0.47** |
+
+**Pass on the mean, and three columns are unreadable.** `pose`, `hair silhouette` and `marks` are near
+zero *on the photographs the sheets were written from*. That is the reader being out of distribution
+rather than the sheets being wrong — every one of those flows scores far higher on the renders below,
+which are drawings. But it means **the pose column is the least trustworthy number in this finding**, and
+pose is one of the two mandatory criteria.
+
+### The scores
+
+| | pose | gaze | hair sil. | hair col. | eye col. | clothes | marks | **mean** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **A · both legs** | 0.48 | 1.00 | 0.47 | 0.67 | **1.00** | 0.73 | 1.00 | 0.73 |
+| **D · prompt only** | **0.54** | 1.00 | **0.62** | **0.75** | 0.83 | **0.87** | 1.00 | **0.77** |
+
+**D wins on five of seven and on the mean.** `A` wins only on eye colour. Both are perfect on gaze and
+marks — `looking at viewer` and `freckles` land every time.
+
+**And D follows the pose tags better than the flow with OpenPose in it.** 0.54 against 0.48, on the
+column that is least trustworthy, but pointing the same way F27 did: the legs compete with the tags
+rather than reinforcing them.
+
+### What this scoreboard cannot see, and it is the thing the project is named for
+
+**These numbers measure adherence to a description. They cannot measure whether the render is the same
+person.** A flow that draws a well-executed generic woman matching every tag scores 1.00. `CRITERIA.md`
+§1 accepted that trade knowingly — it is what killed F16's inverted metric — and here is the bill.
+
+So **F29 does not overturn the operator's verdict that `A` is the better flow.** He judged `A` on face
+identity, comparing against the photographs; this instrument is blind to exactly that, and the one
+column where `A` wins outright — eye colour, 1.00 against 0.83 — is the most face-adjacent criterion on
+the sheet. The two readings are not in conflict; they are measuring different things, and only one of
+them is measuring the product.
+
+**This is F5's disease inverted.** Round 1 instrumented only similarity-to-photograph and nothing
+measured style, so the least-stylized render won by construction. Round 2 now instruments only
+adherence-to-description, and **the flow that ignores the photograph entirely wins by construction.**
+Both scoreboards were complete on their own terms and both were missing the same axis: nothing here has
+ever measured *is this the same person* in a way that survives stylization.
+
+That axis is still open, and it is the honest next problem.
+
+---
+
+## F30 — a contact sheet showed the same image in two columns for two sessions
+
+**2026-09-08 · $0 · caught by the operator, not by the tool.**
+
+`contact_sheet.py` named each thumbnail `<subject>_<render.parent.parent.name>` — the arm directory. That
+is unique **within** one run and not **across** runs, so `n9_ablation/1_full` and `n12_canonical/1_full`
+both wrote `00003_1_full.jpg`. The second overwrote the first, and the before-and-after sheet showed
+**the same picture in both columns** while its click-through links pointed at the two genuinely different
+renders.
+
+The renders were never wrong (`26418fb9…` against `45b38f95…`); only the picture of them was. And the
+failure mode is the worst shape a comparison tool has: **it silently answers "no difference" to the exact
+question it was built to ask.** A sheet built to show whether the canonical rewrite changed anything
+reported that it changed nothing.
+
+Fixed by naming from the whole path below `renders/`, and every sheet now carries a check: 102 images
+across four sheets, 102 distinct files, zero byte-identical pairs.
+
+**Worth recording beyond the bug.** F26, F27 and F29 all turned on the operator reading a contact sheet,
+and this one was reading back a stale file for two of its columns. The instrument that has caught three
+broken axes needed catching itself, and the thing that caught it was a person noticing two columns that
+should have differed did not.
+
+---
+
+## F31 — a datacenter stopped issuing public IPs, and the pinned GPU exists in two places
+
+**2026-09-08 evening · no renders · roughly $0.26 of pods that could not be used.**
+
+Five pod sessions worked during the day. From about 21:20 every pod in **EU-RO-1** came up `RUNNING` with
+`runtime: null` and `ssh.direct: null` — **no public IP, only RunPod's SSH proxy**, which is a restricted
+shell that cannot carry the `-L 8188` forward this pipeline is built on.
+
+```
+  15:05 ✅   15:34 ✅   16:32 ❌   16:41 ✅   18:58 ✅   20:05 ✅
+  ────────────────────────────────────────────────────────────────
+  21:20 ❌   21:25 ❌   21:28 ❌   21:32 ❌   21:47 ❌
+```
+
+**Nothing on our side changed.** Same `.env`, same `:latest` image, same GPU, and no client change between the interleaved successes and failures. The one
+mid-day failure at 16:32 had the identical signature and succeeded on immediate retry; by 21:20 it was
+every attempt. Consistent with a **public-IP pool exhausting** rather than GPU scarcity — the two are
+separate pools, and the GPU still reported `MEDIUM` stock throughout, which is why pods created
+successfully and then arrived unreachable.
+
+`create-pod` has **no parameter to request a public IP.** It is a property of whichever host you land on,
+so there is nothing to ask for and nothing to retry differently.
+
+### It is not just us, and there is no incident to wait on
+
+RunPod's status page records **no incident for EU-RO-1** that day; the nearest entry is an SSH Proxy and
+Serverless degradation on **5–6 September**, a different component three days earlier.
+
+But a published case study of **2026-08-20** reports the same shape independently: **eight bounded GPU
+launches, six of which never produced a verified public SSH/runtime endpoint** within their admission
+window, across RTX 5090, Secure A40 and Secure A100 pools. Its author records that *"RunPod did not
+provide us with provider-side telemetry establishing a root cause"* and classifies them as
+**endpoint-admission failures**, unable to separate the daemon, the networking layer and the admission
+path.
+
+So: a known, reproducible, undiagnosed platform behaviour that RunPod does not track as an incident.
+**Nothing is being fixed on a timeline we can watch**, which is why retrying is the correct response —
+the failure is per-allocation, not per-datacenter, so each attempt is a fresh draw.
+
+That case study proposes a **five-gate fail-closed readiness sequence**. Three of its gates — verify
+*ready* separately from *running*, require a real TCP mapping to `:22`, and delete on a readiness
+deadline — are what the `up.sh` fix below turned out to be, arrived at independently. The other two,
+**pinning the SSH host key** and **health-checking the GPU before downloading models**, we do not have
+anywhere. All five are carried in `.minions/v0.13_backlog.md` as **B1**, deferred to a version rather
+than to this prototype. The gates are that author's proposal, **not official RunPod guidance**, and the
+backlog entry says so.
+
+### The fix that mattered: `up.sh` could bill forever
+
+The IP poll was an **unbounded `while true`**. A pod that never gets an IP is never detected, so the
+script waits and the meter runs — it looked like it was working. It is now bounded at 180s and **tears
+the pod down itself** on timeout, because a bounded wait that leaves the meter running has not solved the
+problem it was added for. That guard caught four of the five evening failures at ~3 minutes each instead
+of at whatever the operator eventually noticed.
+
+### And the constraint nobody had written down
+
+`get-gpu-type` on the pinned card:
+
+| datacenter | availability | STANDARD volumes? |
+|---|---|---|
+| **EU-RO-1** | MEDIUM | yes — our 80 GB volume is here |
+| **EUR-IS-1** | LOW | yes |
+| *everywhere else* | **none** | — |
+
+**`NVIDIA RTX PRO 4500 Blackwell` exists in exactly two datacenters.** That is a single point of failure
+nothing in this repository recorded, and it turns "just move datacenter" into a much smaller decision
+than it sounds: there is one alternative, and it is `LOW`.
+
+Two consequences, both now fixed in the tooling:
+
+- **`RUNPOD_GPU_TYPE` accepts a comma-separated preference list**, and `up.sh` sends it as
+  `gpuTypeIds`. RunPod places on whichever is available. Every entry must work with the image's cu128
+  PyTorch — cu128 covers sm_80 through sm_120, so Ada and Ampere cards qualify; CLAUDE.md's constraint is
+  that **cu124 fails on Blackwell**, not that the image is Blackwell-only.
+- **Network volumes are datacenter-bound**, so the volume is what pins the location. Moving means a new
+  volume and a full 16.5 GiB re-provision.
+
+### A sequencing mistake, recorded because the order is the lesson
+
+A 30 GB volume was created in **EU-NL-1** before checking whether the GPU existed there. It does not —
+`create pod: could not find any pods with required specifications`, then `no instances currently
+available` once the GPU list was widened. The volume was empty, was deleted within ten minutes, and cost
+pennies.
+
+**Check the destination has the compute before creating the storage that pins you to it.** The `probe`
+rule already says *keep the old thing declared until the new one is proven*; what this adds is that
+proving it starts with the cheapest read-only query, not with the first irreversible create.
+
+---
+
+## F32 — every prompt change the research argued for made the render worse
+
+**2026-09-09 · one pod session, 08:39–08:55, ~$0.19 including the morning's failed allocations ·
+5 arms x 6 subjects = 30 renders · `prototype/renders/n16_prompt/` · `prototype/prompt_arms.py`.**
+
+`ILLUSTRIOUS.md` read the Illustrious paper and the community guides and ranked six prompt changes. Four
+were testable as arms. **All four lost, and stacking them lost most.**
+
+| arm | posterisation ↑ | linework | Δ vs baseline |
+|---|---:|---:|---:|
+| **`1_baseline`** — skin tags corrected, `worst detail` removed | **0.350** | 0.0165 | — |
+| `2_negative` — the community Illustrious negative | 0.333 | 0.0171 | **−0.017** |
+| `3_schema` — the paper's `rating` and `year modifier` slots | 0.339 | 0.0166 | **−0.012** |
+| `4_underscore` — every tag in Danbooru's stored spelling | 0.338 | 0.0186 | **−0.013** |
+| `5_all` — everything stacked | **0.329** | 0.0142 | **−0.021** |
+| *N12, before the two definitional fixes* | 0.337 | — | −0.013 |
+
+**These are 6x to 10x the determinism floor.** That floor had only ever been measured for linework
+(±0.0003); it is established here for posterisation from the same cross-pod pair — **max |Δ| 0.0020,
+median 0.0012** — so none of these effects is noise.
+
+### The two definitional fixes were the only thing that helped
+
+Baseline is N12 plus exactly two changes: `pale skin` → the correct tag per the Danbooru wiki, and
+`worst detail` removed from the negative as a tag on no ladder and in no vocabulary. **That pair is worth
++0.013**, and it is the whole of this session's gain. Both were corrections of things that were *wrong*,
+not attempts to be cleverer.
+
+### Underscores: the operator's instinct, tested and falsified
+
+He suspected Danbooru's stored spelling would work better, and `ILLUSTRIOUS.md` §4 could not settle it —
+the paper's only relevant sentence is about the separator *between* tags, and the two community guides
+contradict each other. **Measured: `long_hair` is 0.013 worse than `long hair`**, 6x the floor.
+
+Not a large effect, and it is one base at one setting. But it is the answer that was asked for, and it
+went the other way. **The guide recommending underscores is wrong for this model** — or at least for this
+finetune, at these dials, on these prompts.
+
+### The long negative is the biggest single loss, and that is the surprise
+
+The community negative is *better sourced* than ours: it is built from `worst quality` and `bad quality`,
+which are real rungs of the paper's trained ladder, plus `old` and `oldest`, which are real year
+modifiers. Ours is WAI's short form. **The better-sourced negative renders worse by 0.017.**
+
+The likely reason is token budget rather than vocabulary. Our prompts already sit at 59–93 estimated CLIP
+tokens against a 77-token window; the long negative adds thirteen tags to the *negative* encoder, which
+has the same window. **A negative that is more correct per-token can still be worse if it pushes the
+whole conditioning past what the encoder holds.**
+
+### `rating` and `year modifier` did not pay either — but this arm was malformed
+
+These are the paper's own caption slots, unfilled by us until now, and `newest` was chosen specifically
+because modern anime illustration is flatter and posterisation is the axis we are short on. **It moved
+the wrong way, −0.012.**
+
+> **Corrected by F34.** This arm bundled `general` with `newest` *and* placed `newest` at the very end,
+> after the quality ladder. WAI's published string puts `newest` **inside** the ladder, at the front.
+> Tested that way it is worth **+0.006**. The −0.012 here is real for what it tested; what it tested was
+> not what the publisher recommends, and the arm design was the assistant's error. Whatever `newest` selects for in this finetune, it is not flatness.
+
+### What this says about the method, which is the part worth keeping
+
+`ILLUSTRIOUS.md` is good research and its central claim survived — **F28's canonical-vocabulary finding
+is what the baseline's gain rests on.** But its §7 ranked six changes as "worth doing", and the four that
+could be tested all lost.
+
+**The difference between the two halves is that one fixed errors and the other pursued improvements.**
+Correcting `pale skin` and deleting `worst detail` removed things that were demonstrably wrong. Adding a
+longer negative, filling schema slots and re-spelling tags were all *plausible from documentation* and
+none survived contact with the axis.
+
+That is the third time this round a documented, reasonable-sounding prompt change has failed a
+measurement — after the age tag at three settings (F26) and the `6_skin` emphasis arm (F25). **Prompt
+folklore is cheap to generate and expensive to trust**, and the only reliable filter has been rendering
+it.
+
+**`1_baseline` is now the best-known configuration**, and it is the one with the fewest ideas in it.
+
+---
+
+## F33 — the pod blocker has a workaround: expose ComfyUI over HTTP, no public IP needed
+
+**2026-09-09 · $0 beyond the session it was added in.**
+
+F31 left us blocked: pods reach `RUNNING` with no public IP, and the SSH proxy cannot carry the
+`-L 8188` forward the pipeline was built on. RunPod's support triage pointed at the answer — **an
+HTTP-exposed port is served by their proxy and needs no public IP at all**:
+
+```
+  ports: ["22/tcp", "8188/http"]   ->   https://<pod id>-8188.proxy.runpod.net
+```
+
+`infra/up.sh` now requests both ports and polls for **either** a public IP **or** a working proxy,
+taking whichever arrives first. The deadline moved 180s → 420s, because the IP check answers in seconds
+while the proxy cannot answer until the image has pulled *and* ComfyUI has started.
+
+Two details that are easy to get wrong and were:
+
+- **`curl` needs `--fail`.** Without it curl exits 0 on the proxy's own 502 while ComfyUI is still
+  starting, and the script announces a pod that cannot serve a render.
+- **The jq body is single-quoted shell.** A comment containing an apostrophe (`RunPod's`) terminated the
+  quote and broke pod creation before the API call — caught for free, at $0, because the failure was
+  local.
+
+### Amended 2026-09-09: the proxy does not work for our client
+
+**This finding's first draft said the workaround works. It was verified with `curl` and never with a
+render, and that gap is the whole error.**
+
+```
+curl  https://<pod>-8188.proxy.runpod.net/system_stats   ->  HTTP 200
+a stdlib urllib client against the same URL             ->  Cloudflare error 1010
+```
+
+**1010 is a user-agent block.** The proxy sits behind Cloudflare, and both this repository's
+`ComfyTransport` and `synthetic_portraits`'s transport are **stdlib `urllib` by design** — the
+stdlib-only runtime rule is why — so both send `Python-urllib/3.x` and both are refused. `curl` passes.
+Found when the portfolio run failed against a real pod on 2026-09-09.
+
+So the fallback in `up.sh` **announces a pod it cannot actually drive**. The port exposure and the poll
+are still right; what is missing is that the client cannot use the endpoint.
+
+**The fix is one line and untested**: send a browser-like `User-Agent` on the transport's requests. It
+adds no dependency. **It must be proven by an actual render, not by a status probe** — which is exactly
+the mistake being corrected here.
+
+Until then: **the proxy is a diagnostic channel, not a way in.** The SSH tunnel remains the only working
+path, and the no-public-IP blocker of F31 is therefore **still open**.
+
+### A second probe in this session proved nothing either
+
+`GET /object_info/<NodeName>` returns **HTTP 200 for nodes that do not exist.** Three custom nodes were
+checked that way on a pod that had none of them, and all three "passed". The real check fetches the full
+`/object_info` and looks for the key. `check_graph` in the prototype runners is unaffected — it validates
+the graph locally — but every pod-side node probe in these sessions was worthless.
+
+**Both mistakes have the same shape: a cheap check that returns success for the wrong reason.**
+
+### The cost of the workaround is a public endpoint
+
+RunPod's docs are explicit: *"your service becomes publicly accessible"*, and *"the Pod ID provides only
+obscurity, not security."* **ComfyUI has no authentication**, so for the pod's lifetime anyone holding
+the id can drive it — submit graphs, read outputs, consume the GPU. An SSH tunnel was private to one
+machine; this is not.
+
+Acceptable here only because sessions are minutes long and torn down immediately, and because `up.sh`
+prefers the tunnel whenever a public IP exists. **It is not a posture to leave running**, and a version
+that adopts it should put authentication in front of ComfyUI first.
+
+### It was not needed on first use, which is itself the finding
+
+The session that added it drew a host **with** a public IP, at 08:39 UTC on 2026-09-09 — after eight
+consecutive failures across two datacenters and two GPU pools. So EU-RO-1 either recovered or the
+allocation got lucky, and **the underlying issue is unresolved and unexplained.** The proxy path stays as
+a fallback that costs nothing when SSH works.
+
+---
+
+## F34 — the publisher was right about the ladder, and the earlier `newest` test was mine to get wrong
+
+**2026-09-09 · one pod session, 12:25–12:34, ~$0.11 · 5 arms x 6 subjects = 30 renders ·
+`prototype/renders/n18_position/` · `prototype/ladder_position.py`.**
+
+`ILLUSTRIOUS.md` §6b found the sources disagree on where quality tags belong: the Illustrious community
+guide says last, which is what we do; **WAI's own page says "always start your positive prompt with"**
+them. This tests the publisher against the guide, on the publisher's checkpoint — and separates the two
+changes F32 had bundled.
+
+| arm | flow | posterisation ↑ | linework |
+|---|---|---:|---:|
+| `1_baseline` — quality tags last | A | 0.350 | 0.0165 |
+| `2_front` — the same three tags moved to the front | A | **0.357** | 0.0150 |
+| `3_wai` — + `newest`, the publisher's exact string | A | **0.363** | 0.0145 |
+| `4_d_baseline` — quality tags last | **D** | **0.507** | 0.0280 |
+| `5_d_wai` — publisher's string at the front | **D** | 0.503 | 0.0255 |
+| *Fotor — the style bar* | | *0.460* | *0.0404* |
+
+Against a determinism floor of **0.0020**:
+
+- **Position alone: +0.007**, 3.5x the floor. **WAI's page beats the community guide on WAI's model.**
+- **`newest` alone, correctly placed: +0.006**, 3x the floor.
+- **Together: +0.013** — the first prompt *addition* to help since F28's definitional fixes.
+
+### The `newest` result is a correction to F32, and the fault was in the arm
+
+F32 concluded that all four documented prompt changes lost. Three of those stand. **The fourth does
+not.** N16's `3_schema` arm put `newest` at the very end, after the ladder, bundled with a `general`
+rating tag — and lost 0.012. Placed the way the publisher writes it, inside the ladder at the front, the
+same tag **gains 0.006**.
+
+**That was an arm-design error, not a property of the tag.** The lesson F32 drew — that
+publisher-sourced corrections win where plausible additions lose — survives and is in fact strengthened:
+this is a publisher-sourced correction, and it won. What needs amending is the claim that the change
+itself was tested. It was not.
+
+### Flow D does not want it, and does not need it
+
+`5_d_wai` vs `4_d_baseline` is **−0.004**, about twice the floor and in the wrong direction — call it
+neutral to mildly negative. **Flow D is already at 0.507, above Fotor's 0.460**, so there is no deficit
+for the ladder to close there. The transform helps the flow that is short of the bar and does nothing for
+the flow that has cleared it.
+
+### The two flows, finally measured side by side on identical prompts
+
+**D beats A by +0.156 on posterisation** — 0.507 against 0.350, on the same sheets, same seed, same
+dials. That is the F27 result reproduced on canonical prompts and it is not close.
+
+The standing summary is unchanged and worth restating because the numbers keep pointing one way while
+the operator's eye points the other: **D is the flatter, more anime-looking render and A is the one that
+preserves identity.** Neither axis in this repository can see identity, so the numbers will keep
+preferring D. That is N14, still open.
+
+### Where flow A now stands
+
+`3_wai` at **0.363** is the best flow-A configuration measured, and still **21% short of Fotor's 0.460**.
+Every documented prompt lever is now spent: F32 closed three, this closes the fourth, and
+`ILLUSTRIOUS.md` §7 has nothing left that is a prompt change. **The remaining gap is structural** — the
+hires pass WAI assumes and we have never run, or a style LoRA.
+
+---
+
+## F35 — the hires pass is the first thing to move both axes at once
+
+**2026-09-09 · one pod session, 12:56–13:12, ~$0.20 · 3 arms x 6 subjects = 18 renders ·
+`prototype/renders/n19_hires/` · `prototype/hires.py`.**
+
+The last structural lever, and the publisher's own: *"Upscale with R-ESRGAN 4x+ Anime6B, 20 steps, and
+a Denoising strength of 0.35~0.5"*. A second sampler pass over the upscaled first-pass render, at
+**1024x1472 → 1.5x → 1536x2208**. The two no-hires references already existed at the identical prompt in
+`n18_position` and were reused rather than re-rendered.
+
+| | posterisation ↑ | linework ↑ |
+|---|---:|---:|
+| **A** no hires | 0.363 | 0.0145 |
+| **A** hires 0.35 | 0.359 | **0.0208** |
+| **A** hires 0.50 | **0.373** | 0.0181 |
+| **D** no hires | 0.503 | 0.0255 |
+| **D** hires 0.35 | **0.528** | **0.0376** |
+| *Fotor — the bar* | *0.460* | *0.0404* |
+
+- **Flow A:** posterisation −0.004 at denoise 0.35 and **+0.010** at 0.50; linework **+43%** and **+25%**.
+- **Flow D:** **+0.025** posterisation and **+47%** linework, both far past the 0.0020 floor.
+
+**`D` + hires is the closest anything in this project has come to Fotor on both axes at once** —
+posterisation 0.528 *above* Fotor's 0.460, and linework 0.0376 at **93%** of its 0.0404.
+
+### The measurement was nearly reported wrong, and the reason is worth keeping
+
+The hires renders are **1536x2208**; every reference is **1024x1472**. Both style axes are
+resolution-sensitive, and the first pass at these numbers read each image at its **native** size.
+
+Re-read at the photograph's own canvas — which is what `style_axis.py` was built to do and what every
+earlier number in this project used — **posterisation barely moved, and linework moved a great deal**:
+
+| | native read | canvas read |
+|---|---:|---:|
+| A hires 0.35, linework | 0.0138 | **0.0208** |
+| D hires 0.35, linework | 0.0284 | **0.0376** |
+
+Read natively, hires looked like a **linework loss**. Read correctly, it is a **43–47% gain**. The sign
+flipped. Posterisation was robust; linework was not, which makes sense — it counts pixels on a strong
+luminance gradient, and that is a per-pixel quantity that changes when the pixel grid does.
+
+**Nothing in the tooling caught this**, because `load_canvas_pixels` is a thing a caller has to choose to
+use, and the quick measurement scripts written this session did not. Every comparison in this repository
+that spans two resolutions is exposed to the same error.
+
+### What this changes
+
+`ILLUSTRIOUS.md` §7 listed the hires pass as the one remaining structural lever. **It paid**, and it is
+the only change in two rounds to improve both axes together rather than trading one for the other.
+
+Flow `A` at 0.373 is still **19% short of Fotor** on posterisation, and hires does not close that — its
+gift to `A` is linework. Flow `D` no longer has a style deficit at all on these axes.
+
+**The prompt is spent, the dials are spent, and the hires pass is now spent.** What is left is a style
+LoRA — round 1's parked lever — or accepting that `A`'s register is what this architecture gives.
+
+---
+
+## F36 — the first real photographs, and `pale skin` bit twice
+
+**2026-09-09 · one pod session, 14:16–14:21, ~$0.06 · 3 photographs x 2 arms = 6 renders ·
+`prototype/renders/n21_real_photo/` · `prototype/real_photo.py`. Renders, sheets and photographs are all
+gitignored (design.md D14).**
+
+Every render in round 2 has been of a **synthetic** subject — SDXL-generated, evenly lit, frontal, one
+face, no lens. The product's input is a phone photograph. This is the first time the settled flow met one:
+flow `A` exactly as F34 and F35 left it, with and without the hires pass at denoise 0.50.
+
+**Three photographs of one person, three sheets** — and a case no synthetic posed: **the hair colour
+differs between them.** `real_photo_3` is blonde, the other two brown, months apart. Each sheet describes *its
+own photograph* rather than the person, which is what `CRITERIA.md` §1 means by the sheet being the
+ground truth, and is why the per-photograph sheet is the right unit rather than a per-person one.
+
+### What carried
+
+Pose, framing, garment, accessories and background all land. The lace-up corset, the pearl necklace, the
+crossed arms, the beach at sunset, the raised arm — all present. `nose piercing`, a one-tag identity
+signature of exactly the kind F28 predicts works, renders clearly on `real_photo_2`. Tattoo **presence**
+appears on the arm, with the design wrong, exactly as F23 said it would be.
+
+### What did not, and one cause repeats
+
+**`pale skin` produced chalk-white, waxy skin on all three.** This is the *same mistake* `ILLUSTRIOUS.md`
+§6 corrected for the synthetics: the Danbooru wiki defines `pale skin` as *"significantly lighter than the
+usual Eurasian skintone, or skin which appears 'bleached'"*. The subject is fair, not bleached. **The
+right tag is no skin tag at all** — Danbooru's default *is* the usual Eurasian tone, and every skin tag is
+a deviation from it.
+
+That correction was made, written down, and then not applied when the next sheets were written. **A
+finding recorded in a note is not a finding applied to the next artifact.**
+
+**`messy hair` overshot the same way.** It produced wild, windswept, near-vertical hair against a
+photograph with calm hair. `messy hair` is canonical, but it is stronger than the thing being described;
+`wavy hair` alone was the honest tag.
+
+**`indoors` alone under-specified the background** on `real_photo_2` and the model invented a flat green door.
+An unfilled slot is filled by the base — the argument that earned `gaze` its own field, appearing again in
+a field that *was* filled, just not enough.
+
+**And the face does not read as her.** That is the one thing no tag can fix and no axis here can measure —
+N14, unchanged. The renders are of a person matching the description, which is what this architecture
+builds.
+
+### The honest read
+
+**A real photograph is harder than a synthetic one**, and the gap is not in the flow — it is in the
+sheet. Every failure above is a transcription defect: a tag too strong, a tag that should have been
+absent, a field left thin. The synthetics were easy partly because *the assistant wrote both the subject
+and its description*, from images generated to be frontal and evenly lit.
+
+### The fixes were applied and all three landed — second session, 14:29–14:38, ~$0.10
+
+Three edits, no dial touched: **`pale skin` removed from all three sheets**, **`messy hair` → dropped in
+favour of `wavy hair` alone**, and **`real_photo_2`'s background filled out** to `indoors, kitchen, wooden
+wall`. Then both kept flows rendered, with and without hires — 12 renders. The pre-fix set is kept at
+`ladder/n21_real_photo_v1/` so the contact sheet can show before against after.
+
+**Every one worked by eye.** The chalk skin is gone and the render reads as fair rather than bleached;
+the hair is a calm wavy bob instead of a windswept explosion; the invented green door is replaced by the
+kitchen the photograph actually has, with the wooden wall and the units in it. The corset's lacing, the
+pearl necklace, the nose piercing and the arm tattoo's presence all survive.
+
+**The flow was never the problem.** Three transcription defects produced three visible failures, and
+correcting the transcription corrected all three — on the first attempt, at the cost of one pod session
+and no change to any dial. That is the strongest evidence yet for `CRITERIA.md` §1's central bet: with
+the sheet as the ground truth, **most of what looks like a model failure is a description failure**, and
+description failures are free to fix.
+
+**What did not change is the face.** It is a well-executed anime face carrying the declared attributes,
+and it is not recognisably hers. No tag fixes that and no axis here measures it — N14, unchanged, and now
+demonstrated on a real subject rather than a synthetic one.
+
+---
+
+<!-- next: F37 -->

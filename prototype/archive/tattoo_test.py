@@ -20,7 +20,7 @@ motifs, `xor` has a counter-example worth a great deal.
 Two of the four photographs show the ink and two have it hidden -- the hidden pair
 is the control for "did the model invent tattoos".
 
-**These are photographs of a real person.** Renders go to `prototype/ladder/`,
+**These are photographs of a real person.** Renders go to `prototype/renders/`,
 which is gitignored, and nothing here is committed (design.md D14).
 
     python prototype/tattoo_test.py --server http://127.0.0.1:8188 [--dry-run]
@@ -31,8 +31,8 @@ import copy
 import json
 from pathlib import Path
 
-SRC = Path("outputs/original/darya")
-OUT = Path("prototype/ladder/90_tattoo")
+SRC = Path("outputs/original/real_photo")
+OUT = Path("prototype/renders/90_tattoo")
 SEED = 20260907
 
 
@@ -60,7 +60,7 @@ def main() -> None:
     from prototype.archive.qwen_sweep import INSTRUCTIONS, POSITIVE, render
 
     client = ComfyClient(a.server)
-    qbase = json.loads(Path("prototype/styles/qwen-lightning.json").read_text())
+    qbase = json.loads(Path("prototype/archive/styles/qwen-lightning.json").read_text())
     instruction = INSTRUCTIONS["5_recovered_keepall"]
 
     qwen = {

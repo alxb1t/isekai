@@ -29,9 +29,10 @@ from pathlib import Path
 from isekai.ciede2000 import delta_e_2000
 from isekai.evaluate import canvas_for
 from isekai.eval_backends import SegformerParser, load_canvas_pixels
-from prototype.retention import retention
+from prototype.archive.retention import retention
+from prototype.paths import resolve_render
 from prototype.style_axis import style
-import prototype.hair_colour as hc
+import prototype.archive.hair_colour as hc
 
 SUBJ = "s1_control_blonde"
 PHOTO = f"inputs/baseline/{SUBJ}.png"
@@ -39,10 +40,11 @@ PHOTO = f"inputs/baseline/{SUBJ}.png"
 
 def points() -> list[tuple[str, str, str]]:
     """(series, label, path) for everything with a render on disk."""
-    out = [("photo", "the photograph", PHOTO), ("fotor", "FOTOR", f"prototype/out/{SUBJ}-fotor.canvas.png")]
+    out = [("photo", "the photograph", PHOTO), ("fotor", "FOTOR", f"prototype/archive/fotor/canvas/{SUBJ}-fotor.canvas.png")]
     for d, lab in (("22_notile_d035", "d0.35"), ("21_notile_d045", "d0.45"), ("20_notile_d065", "d0.65")):
-        out.append(("ours", f"notile {lab}", f"prototype/ladder/{d}/{SUBJ}/0.png"))
-    sweep = Path("prototype/ladder/50_qwen_path")
+        path = resolve_render(f"prototype/renders/{d}/{SUBJ}/0.png")
+        out.append(("ours", f"notile {lab}", str(path)))
+    sweep = resolve_render("prototype/renders/50_qwen_path")
     if sweep.exists():
         for d in sorted(sweep.iterdir()):
             out.append(("qwen", f"qwen {d.name}", str(d / SUBJ / "0.png")))

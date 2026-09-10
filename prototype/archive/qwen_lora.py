@@ -32,7 +32,7 @@ from prototype.archive.qwen_sweep import POSITIVE, SUBJECTS, render, INSTRUCTION
 KSAMPLER = "102:3"
 STYLE_LORA = "900"  # a node id the recovered graph does not use
 LORA_FILE = "raena_qwen_image_lora_v0.1.safetensors"
-OUT = Path("prototype/ladder/70_qwen_lora")
+OUT = Path("prototype/renders/70_qwen_lora")
 BASE_INSTRUCTION = INSTRUCTIONS["5_recovered_keepall"]
 
 # (name, steps, cfg, lightning, lora_strength, instruction_suffix)
@@ -70,7 +70,7 @@ def main() -> None:
     ap.add_argument("--server", default="http://127.0.0.1:8188")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
-    base = json.loads(Path("prototype/styles/qwen-lightning.json").read_text())
+    base = json.loads(Path("prototype/archive/styles/qwen-lightning.json").read_text())
 
     if a.dry_run:
         print(f"{len(SETTINGS) * len(SUBJECTS)} renders")

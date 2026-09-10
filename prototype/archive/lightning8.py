@@ -33,7 +33,7 @@ from prototype.archive.qwen_sweep import INSTRUCTIONS, POSITIVE, render
 
 LORA_8 = "Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors"
 SRC = Path("inputs/synthetic")
-OUT = Path("prototype/ladder/80_lightning8")
+OUT = Path("prototype/renders/80_lightning8")
 SEED = 403402840318143
 
 
@@ -43,7 +43,7 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
-    base = json.loads(Path("prototype/styles/qwen-lightning.json").read_text())
+    base = json.loads(Path("prototype/archive/styles/qwen-lightning.json").read_text())
     g = configure(base, 8, 2.0, True)               # the chosen preset's path
     g[LORA]["inputs"]["lora_name"] = LORA_8         # ...with the native 8-step LoRA
     g[POSITIVE]["inputs"]["prompt"] = INSTRUCTIONS["5_recovered_keepall"]
