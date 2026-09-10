@@ -135,7 +135,7 @@ no evaluator in existence at the time.
 
 - [x] **N0 · settle the identity criteria** — the sheet, the scored six, and both bars, decided
       2026-09-08 and written up in **[`CRITERIA.md`](CRITERIA.md)** before any render.
-- [ ] **N1 · ~~recover the graph~~ — not needed.** `animagine.json` does not have to be recovered: the
+- [x] **N1 · ~~recover the graph~~ — not needed.** `animagine.json` does not have to be recovered: the
       shipped `workflows/pipeline.json` becomes from-noise with **four edits**, and every node type is
       already on the image. See `CRITERIA.md` §7.
 - [x] **N2 · build the variant** — `prototype/styles/fromnoise-v1.json`: empty latent, `denoise 1.0`,
@@ -195,12 +195,16 @@ no evaluator in existence at the time.
       and the **trained quality ladder**, and closes the skin question: `pale skin` means *bleached*,
       not fair. Two fixes applied free — skin tags corrected across all ten sheets, and **`worst detail`
       removed from the negative** as an invented tag by F28's own test.
-- [ ] **N14 · the axis nobody has built** — F29: round 1 measured only similarity-to-photograph and the
-      least-stylized render won by construction; round 2 measures only adherence-to-description and the
-      flow that never reads the photograph wins by construction. **Nothing has ever measured *is this
-      the same person* in a way that survives stylization.** The open problem.
-- [ ] **N9c · judge B and D on identity.** The numbers cannot: booru has no vocabulary for a particular
-      face, which is exactly what dropping InstantID trades away. `prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`.
+- [→] **N14 · the axis nobody has built** — **carried into round 3 as N27**, which restates it with the
+      two flows separated and asks the evaluator question per flow. **Still the open problem, and still
+      unsolved** — moving it renumbers it, it does not close it. F29: round 1 measured only
+      similarity-to-photograph and the least-stylized render won by construction; round 2 measures only
+      adherence-to-description and the flow that never reads the photograph wins by construction.
+      **Nothing has ever measured *is this the same person* in a way that survives stylization.**
+- [→] **N9c · judge B and D on identity.** **Carried into round 3 as N27's first step** — it is $0, needs
+      no pod, and the renders are already on disk. The numbers cannot do it: booru has no vocabulary for
+      a particular face, which is exactly what dropping InstantID trades away.
+      `prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`.
 - [x] **N10 · the age drift** — **fixed by `medium breasts`**, not by any wording of the age tag. Skin's
       real drift case is **`00014` (`fair skin`)**, still never isolated; it is now enriched, so a
       re-read of the N9 renders may close it without a pod.
@@ -229,9 +233,10 @@ no evaluator in existence at the time.
       photographs. First pass exposed three *transcription* defects (`pale skin` → bleached again,
       `messy hair` overshooting, a background too thin to stop the base inventing one); **all three were
       fixed for free and all three landed.** Sheets and renders are gitignored (D14).
-- [ ] **N20 · the style LoRA** — round 1's parked lever and the only one left. Prompt, dials and the
-      hires pass are all now spent.
-- [ ] ~~**N19 · the hires pass**~~ — the last structural lever, and WAI's own recommendation: R-ESRGAN 4x+
+- [→] **N20 · the style LoRA** — **carried into round 3 as N30.** Round 1's parked lever, still parked;
+      prompt, dials and the hires pass are all spent.
+- [x] ~~**N19 · the hires pass**~~ — **superseded by the N19 above, which shipped (F35).** The original statement, kept:
+      the last structural lever, and WAI's own recommendation: R-ESRGAN 4x+
       Anime6B, 20 steps, denoise 0.35–0.5. Needs the upscaler on the pod plus two graph nodes, so it is a
       provisioning change as well as a graph one. **Every documented prompt lever is now spent.**
 - [x] **N17 · is our GPU the right one** — researched 2026-09-08, $0 · **[`archive/GPU.md`](archive/GPU.md)**.
@@ -247,7 +252,8 @@ no evaluator in existence at the time.
       **Underscores are 0.013 worse than spaces** — the operator's instinct, tested and falsified.
       Posterisation's determinism floor established at **0.0020**, so every effect is 6–10x noise.
       `1_baseline` is the best-known configuration and has the fewest ideas in it.
-- [ ] ~~**N16 · BLOCKED on infrastructure**~~ `archive/prompt_arms.py` is built
+- [x] ~~**N16 · BLOCKED on infrastructure**~~ — **the block cleared and N16 ran (F32).** The original statement, kept:
+      `archive/prompt_arms.py` is built
       and dry-runs clean; all ten sheets are canonical with skin corrected and `worst detail` removed.
       **EU-RO-1 stopped issuing public IPs at ~21:20 on 2026-09-08** and the only alternative datacenter
       for this GPU is `EUR-IS-1` at `LOW` stock, which would need a new volume and a full re-provision.
@@ -258,21 +264,36 @@ no evaluator in existence at the time.
 
 ### Round 3 — the session of 2026-09-10
 
-**Five questions, opened together and worked one at a time.** Both flows now clear their bars and the
-operator has said the renders are what he wants; what is left is not rescue but **knowing why they
-work** — which of the levers is load-bearing, and how we would tell if one stopped being.
+**Seven questions, worked one at a time.** Both flows now clear their bars and the operator has said the
+renders are what he wants; what is left is not rescue but **knowing why they work** — which of the levers
+is load-bearing, and how we would tell if one stopped being.
 
-They are numbered in the order they were raised, but **N27 comes first in practice**: an evaluator
-decides which arms are worth $0.0044 each, and every previous round that built the scoreboard second
-measured the wrong thing (F16 in round 1, F29 in round 2 — see N14).
+**Round 2 closed with three items still carrying work, and all three are here** — nothing was dropped in
+the renumbering, and nothing was closed by being moved:
+
+| round 2 | round 3 | why it moved |
+|---|---|---|
+| **N14** the axis nobody has built | **N27** | restated with the two flows separated. Still unsolved |
+| **N9c** judge `A`/`D` on identity | **N27**, as its first step | $0, no pod, renders already on disk |
+| **N20** the style LoRA | **N30** | still parked — but for a *different reason* now; see N30 |
+
+**N31 joins them from HANDOFF §6c** — the reader's `body shape` blind spot, $0, and it comes
+before N26 so that a briefing bug in the incumbent reader is not scored as a reason to replace it.
+
+**N27 comes first in practice.** An evaluator decides which arms are worth $0.0044 each, and every
+previous round that built the scoreboard second measured the wrong thing — F16 in round 1, F29 in round 2.
 
 ```
    N27 evaluation  ──▶ decides what N25 and N28 have to measure
-        │
+        │                (its first step is free: judge by eye, on disk)
         ├──▶ N25 pose tags   ─┐
         │                     ├──▶ ONE pod session, one boot
         └──▶ N28 hires for A ─┘
-   N26 VLM research  — $0, independent, runs alongside
+        │
+        └──▶ N30 style LoRA — blocked ON N27: without an identity number
+                              there is no way to tell what a LoRA costs
+   N31 reader fix    — $0, and comes BEFORE N26 (fix the incumbent, then survey)
+        └──▶ N26 VLM research — $0, independent, runs alongside everything
    N29 new portraits — needs N25/N28 settled, so its renders test a decided flow
 ```
 
@@ -313,7 +334,8 @@ measured the wrong thing (F16 in round 1, F29 in round 2 — see N14).
       the WD14 *model* reads a render. Neither is the photograph reader. Three different jobs.
 
 - [ ] **N27 · what does "the identity transferred" actually mean, and how is it scored — per flow?**
-      This is **N14 restated with the flows separated**, and it is the honest hole in the project.
+      **Carries round 2's N14 and N9c**, which are closed there and live here. It is the honest hole in
+      the project, and renumbering it has not made it smaller.
 
       > Round 1 instrumented similarity-to-photograph, so the least-stylized render won by construction.
       > Round 2 instruments adherence-to-description, so the flow that never reads the photograph wins by
@@ -338,6 +360,13 @@ measured the wrong thing (F16 in round 1, F29 in round 2 — see N14).
       The bar already stated: **6 of 7 criteria, pose and hair silhouette mandatory.** What is missing is
       an instrument that can read the criteria off *the photograph* as reliably as off the render — which
       is precisely what N26 is researching, and why the two are the same problem seen from two ends.
+
+      **First step, and it costs nothing — this is round 2's N9c.** Judge `A` and `D` on identity *by
+      eye*, on renders already on disk:
+      `prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`. No pod, no evaluator, no code. It
+      comes first because **an instrument is built to agree with a judgement, and the judgement has to
+      exist first** — F1 is the record of building an evaluator before the thing it judged and getting a
+      coin flip back. What the eye finds here is what N27's mechanism has to reproduce.
 
 - [ ] **N28 · does flow `A` need the hires pass?** `D` gains on both axes; `A`'s case is weaker, and
       the operator's eye says it looks fine without:
@@ -380,6 +409,37 @@ measured the wrong thing (F16 in round 1, F29 in round 2 — see N14).
       `02_00_raw_photo_upper_body_portrait.png`, while every sheet, render directory and evaluator key in
       this prototype is built from a 5-digit id. Renaming them costs nothing *now* and would be guessing
       at how many deserve sheets; the id scheme is settled when N29 starts, not before.
+
+- [ ] **N30 · the style LoRA — round 2's N20, still parked.** The last lever nobody has pulled. Prompt,
+      dials and the hires pass are all spent, and F22 argued in round 1 that a **trained style adapter**
+      is the thing that would close a register gap the open ecosystem does not otherwise provide for
+      photo→anime.
+
+      **It is parked rather than open, and the reason changed on 2026-09-10.** It was carried as "the
+      only remaining lever for `A`'s 19% posterisation gap" — and that gap was measured against a
+      third-party reference this project has now retired. **There is no gap.** `A` is what the operator
+      wants. So a LoRA is no longer a fix for a deficit; it is a *different look*, which is a product
+      decision and not a measurement one.
+
+      What round 1 established, so it is not re-derived: it needs only **unpaired** style images, and
+      **it must not be trained on our own renders** — F7 measured that style as soft and under-drawn, so
+      the corpus would teach the deficiency. Any candidate corpus is scored on the style axis *before*
+      any GPU time is spent. **Do not start this before N27**, or there is no way to tell whether a LoRA
+      cost identity.
+
+- [ ] **N31 · re-brief the reader on `body shape`** ($0, no pod). It scores **0.00 on real photographs** —
+      the reader declines to guess a breast-size tag from a corseted torso, which is a *briefing* failure
+      rather than a model failure and is fixable by editing `vlm_reader.py --schema` alone.
+
+      **It costs more than a blank field.** `medium breasts` is the tag **F26** measured as fixing the
+      age drift that three separate attempts at the age tag could not — so the field the reader declines
+      to fill is the sheet's highest-leverage one. And **F36's law applies**: most apparent model
+      failures are description failures, and every one of them was fixed in the sheet rather than in a
+      dial.
+
+      Distinct from **N26**, which surveys *replacement* readers. This fixes the reader we have, and it
+      should be done first: a briefing bug in the incumbent would otherwise be scored as a reason to
+      replace it.
 
 ### The bar, stated before the render
 

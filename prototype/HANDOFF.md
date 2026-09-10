@@ -146,8 +146,13 @@ by the operator reading a contact sheet; one sheet was itself showing a stale th
 
 ## 5 · What is still open
 
-**N14 — nothing has ever measured "is this the same person" in a way that survives stylization.** This
-is the honest hole in the whole project.
+**Every open item now lives in [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, as
+N25–N31.** This section states the one that matters and does not restate the rest, because two copies of
+a task list is how one of them goes stale.
+
+**N14 — nothing has ever measured "is this the same person" in a way that survives stylization.** This is
+the honest hole in the whole project. **Carried forward as N27**, which restates it with the two flows
+separated; the renumbering did not shrink it.
 
 > Round 1 instrumented only similarity-to-photograph, so the least-stylized render won by construction.
 > Round 2 instruments only adherence-to-description, so **the flow that never reads the photograph wins
@@ -156,19 +161,14 @@ is the honest hole in the whole project.
 
 Both scoreboards were complete on their own terms and both missed the same axis. **The operator's eye is
 still the only instrument for identity**, and it has overruled the assistant's reading twice (F24, F26).
+N27's first step is therefore free and uses that instrument directly: judge `A` and `D` by eye on
+`prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`, which is already on disk.
 
-Other open items:
+**Set aside deliberately, and not carried into round 3:**
 
-- **The pose question.** Pose is the VLM's weakest field on *both* real and synthetic photos (0.57/0.58)
-  — the only field indifferent to input type, which suggests a vocabulary limit rather than a reading
-  limit. **Flow `A` has never been run with OpenPose but no pose tags.** One variable, ~$0.06.
-- **`body shape` reads 0.00 on real photos** — the reader declines to guess a breast-size tag from a
-  corseted torso. Since `medium breasts` is what fixed the age drift (F26), that caution costs us the
-  sheet's highest-leverage tag. A briefing fix, not a model failure.
-- **Style LoRA** — round 1's parked lever, still parked, and the only remaining one for `A`'s 19%
-  posterisation gap. Prompt, dials and hires are all spent.
 - **Tattoos** — F23: no general-purpose stylizer carries specific ink through a strong style change.
-  Presence survives; design does not. Set aside deliberately.
+  Presence survives; design does not. This is a *finding*, not an open task.
+
 
 ---
 
@@ -222,25 +222,25 @@ have learnt. Worth softening the message.
 
 ---
 
-## 6c · Where to start tomorrow
+## 6c · Where to start
 
-**Opened 2026-09-10 as N25–N29 in [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*,**
-with the reasoning behind each written there rather than here. In short: does `A` need pose tags (N25),
-is there an open photograph reader (N26), what does "identity transferred" mean per flow (N27), does `A`
-need hires (N28), and the new held-out portraits (N29). **N27 comes first** — it decides what the others
-have to measure, and both previous rounds built the scoreboard second and measured the wrong thing.
+**The task list is [`README.md`](README.md) § *Round 3 — the session of 2026-09-10*, N25–N31.** It is the
+one copy; this section says only where to put your hands first.
 
-Nothing is mid-flight; the account is empty and every artifact is on disk. Three candidates, cheapest
-first — **none is blocked on anything**.
+**N27, and its first step is free.** Judge `A` and `D` on identity *by eye*, on
+`prototype/derived/2026-09-08/n9_ablation_contact_sheet.html` — already on disk, no pod, no code. It goes
+first because **an instrument is built to agree with a judgement and the judgement has to exist first**;
+F1 is the record of building an evaluator before the thing it judged and getting a coin flip back.
 
-1. ~~**Confirm the negative-prompt change**~~ — **done, and it holds.** `n24_real_photo_final` *is* the run
-   that carried `lens flare, light particles, dust`, and the operator read the output on 2026-09-10:
-   the negative works. The assumption F32 raised is closed by that column, not by a new session.
-2. **The pose ablation** (~$0.06, one variable). Flow `A` with OpenPose but **no pose tags**. Pose is the
-   VLM's weakest field on both real and synthetic input (0.57/0.58), so if OpenPose already carries the
-   geometry, dropping the tags removes the worst-read field rather than a good one. §5.
-3. **Re-brief the reader on `body shape`** ($0). It scored **0.00** on real photos because it declines to
-   guess a breast-size tag — and `medium breasts` is the tag F26 measured as fixing the age drift.
+Then **N31** ($0, a briefing edit), then **N25 + N28 on one pod session** (~$0.10, one boot — `archive/GPU.md`
+records that a boot costs eight renders, so they share).
+
+**The three cheapest candidates listed here on 2026-09-09 have all been dispositioned:** the negative-prompt
+confirmation is **closed** — `n24_real_photo_final` *is* the run that carried `lens flare, light particles,
+dust`, and the operator read the output on 2026-09-10; the pose ablation is **N25**; the `body shape`
+re-brief is **N31**.
+
+Nothing is mid-flight; the account is empty and every artifact is on disk.
 
 The last full run is `prototype/renders/2026-09-09/n24_real_photo_final/` with
 `prototype/derived/2026-09-09/n24_real_photo_final_contact_sheet.html`. Its predecessors `n21_real_photo_v1` (pre-sheet-fix) and
