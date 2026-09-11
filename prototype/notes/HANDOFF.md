@@ -1,9 +1,14 @@
-# Round 2 — the state of the work, for a new thread
+# The state of the work, for a new thread
 
-**Written 2026-09-09 at the end of the session that produced F24–F36.** This is the file to read first
-in a fresh thread. It is a summary with pointers, not a replacement: `FINDINGS.md` holds the evidence,
-`CRITERIA.md` the design, `ILLUSTRIOUS.md` the base's own documentation, `archive/GPU.md` the
-infrastructure.
+**Rounds 1–3 are complete. Round 4 is the JoyCaption trial and has not started.**
+
+**Updated 2026-09-11 at the close of round 3 (F37–F41).** This is the file to read first in a fresh
+thread. It is a summary with pointers, not a replacement: `FINDINGS.md` holds the evidence,
+`IDENTITY.md` the identity method, `CRITERIA.md` the sheet's design, `ILLUSTRIOUS.md` the base's own
+documentation, `READER.md` and `JOYCAPTION.md` the next round, `archive/GPU.md` the infrastructure.
+
+> **If you are starting round 4, read §6c first** — it is at the bottom and it is the only section that
+> tells you what to do next. Everything above it is what is already true.
 
 ---
 
@@ -36,14 +41,15 @@ only, no OpenPose) was tested and rejected against `A`.
 | sampler / steps | `euler_ancestral` / 28 | already WAI's own recommendation — **not** an untested lever |
 | hires | R-ESRGAN 4x+ Anime6B → 1.5x → 20 steps | **F35** |
 | hires denoise | **0.35** for `A` and for `D` | **F39** — `A` changed from 0.50 on 2026-09-10. 0.50 was set by F35 on *style alone*; across all four axes 0.35 wins linework, identity and pose, and loses only posterisation by 0.014 |
-| negative | `bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust` | WAI's own speck fix, in canonical form — **applied, never render-tested** |
+| negative | `bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust` | WAI's own speck fix. **Render-tested and confirmed** — `n24_real_photo_final` is the run that carried it, read 2026-09-10 |
+| pose tags | **kept in the prompt** alongside OpenPose | **F38** — they complement rather than compete. Without them `arms_up` drops an arm, a shoulder off by 124° |
 
 Graph: `prototype/styles/fromnoise-v1.json`. Runners: `fromnoise.py`, `ladder_position.py`, `hires.py`,
 `real_photo.py`. Every runner is one-change-per-arm by construction.
 
 ---
 
-## 2 · Corrections to the summary as stated
+## 2 · Corrections worth getting exactly right
 
 Four things worth getting exactly right, because a new thread will inherit them.
 
@@ -113,7 +119,7 @@ three real ones, against a floor of 0.60 stated before the run. **Four invented 
 
 ---
 
-## 4 · The laws this round established
+## 4 · The laws, rounds 1–3
 
 Ranked by how much they should change a new thread's behaviour.
 
@@ -139,40 +145,60 @@ first attempt, with no dial touched.
 looked like a linework *loss*; read at the photograph's canvas it is a 43–47% *gain*. **The sign
 flipped.** Use `load_canvas_pixels(path, canvas_for(photo))`, never `Image.open` at native size.
 
+**F38 — ask "which one", not "how similar".** Both earlier scoreboards failed the same way. N-way
+identification is stylization-invariant because every candidate is equally stylized. And report **two**
+pose measures: PCK is *placement*, joint angles are *configuration*, and flow `D` once scored the best
+angle error of any arm **at a PCK of 0.000** — a plausible body in entirely the wrong place.
+
+**F39 — a settled value is settled against the axes that existed when it was set.** `A`'s hires denoise
+sat at 0.50 for a day after two new instruments contradicted it, because nobody re-read it. It is 0.35.
+
+**F41 — score what already exists before rendering more.** Two thirds of N28 was answered across three
+earlier sessions and had never been put in one table; doing so shrank its pod session from 30 renders to
+10. The same habit is why N26 cost nothing.
+
 **F30 — the contact sheet is the instrument, and it can lie.** Three broken axes this round were caught
 by the operator reading a contact sheet; one sheet was itself showing a stale thumbnail in two columns.
 
 ---
 
-## 5 · What is still open
+## 5 · What was the hole, and how it was closed
 
-**Every open item now lives in [`README.md`](../README.md) § *Round 3 — the session of 2026-09-10*, as
-N25–N29 and N31.** This section states the one that matters and does not restate the rest, because two copies of
-a task list is how one of them goes stale.
+**N14 was open from round 1 to round 3 and it is now answered.** Kept here rather than deleted, because
+*how* it was wrong twice is the most transferable thing this project produced.
 
-**N14 — nothing has ever measured "is this the same person" in a way that survives stylization.** This is
-the honest hole in the whole project. **Carried forward as N27**, which restates it with the two flows
-separated; the renumbering did not shrink it.
+> Round 1 instrumented only similarity-to-photograph, so the **least-stylized render won by
+> construction**. Round 2 instrumented only adherence-to-description, so the flow that **never reads the
+> photograph won by construction** — F29 scored `D` above `A`, 0.77 to 0.73, precisely because it was
+> blind to the thing that separates them.
+>
+> **Both scoreboards were complete on their own terms and both missed the same axis.**
 
-> Round 1 instrumented only similarity-to-photograph, so the least-stylized render won by construction.
-> Round 2 instruments only adherence-to-description, so **the flow that never reads the photograph wins
-> by construction** — F29 scores `D` above `A` (0.77 vs 0.73) precisely because it is blind to the thing
-> that separates them.
+**The fix was not a better metric but a different question.** Not *how similar is this render to its
+photograph* — an absolute score whose optimum is a render that did not stylize — but **which of the N
+photographs did this render come from**. Every candidate in that comparison is equally stylized, so a
+metric that merely punishes stylization pushes all N numbers down and leaves the ranking untouched.
+**[`IDENTITY.md`](IDENTITY.md)** is the method, written to be exported.
 
-Both scoreboards were complete on their own terms and both missed the same axis. **The operator's eye is
-still the only instrument for identity**, and it has overruled the assistant's reading twice (F24, F26).
-N27's first step is therefore free and uses that instrument directly: judge `A` and `D` by eye on
-`prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`, which is already on disk.
+| | subjects | chance | flow `A` | margin | |
+|---|---:|---:|---:|---:|---|
+| tuned-on six | 6 | 16.7% | 5/6 | +0.0485 | **F37** |
+| held-out ten | 10 | 10.0% | 8/10 | +0.1170 | **F40** |
+| **real seventeen** | **17** | **5.9%** | **14/17** | **+0.1172** | **F41** |
 
-**Set aside deliberately, and not carried into round 3:**
+**The operator's eye agreed on all three**, and on F38 the instrument *corrected* the eye on one subject
+— which counted only because the expectation had been recorded before the run.
 
-- **The style LoRA** — round 1's `N20`, dropped 2026-09-10. **No style LoRA is trained in this
-  prototype.** It was carried as the last lever for a posterisation deficit measured against a
-  third-party reference this round retired; against the bar that replaced it there is no deficit. F19
-  and F22 stay as findings. README's § *What was dropped* has the full reasoning.
+**What is genuinely still open** is one item, and it is in §6c: an **independent recognizer**. Everything
+else in rounds 1–3 is closed or deliberately dropped, and `../README.md` has the per-task record.
+
+**Set aside deliberately, and not carried forward:**
+
+- **The style LoRA** — round 1's `N20`, dropped 2026-09-10. It existed to close a posterisation deficit
+  measured against a third-party reference this project retired; against the bar that replaced it there
+  is no deficit. F19 and F22 stay as findings.
 - **Tattoos** — F23: no general-purpose stylizer carries specific ink through a strong style change.
-  Presence survives; design does not. This is a *finding*, not an open task.
-
+  Presence survives; design does not. A *finding*, not an open task.
 
 ---
 
@@ -235,66 +261,83 @@ have learnt. Worth softening the message.
 
 ---
 
-## 6c · Where to start
+## 6c · Where to start — round 4, the JoyCaption trial
 
-**The task list is [`README.md`](../README.md) § *Round 3 — the session of 2026-09-10*, N25–N29 and N31.** It is the
-one copy; this section says only where to put your hands first.
+**Nothing is mid-flight. The RunPod account is empty, the working tree is clean, and every artifact is
+on disk.** Rounds 1–3 are closed; `../README.md` carries every question and what answered it.
 
-**Nothing metered is left.** Round 3's five renderable questions all closed on 2026-09-10: **N25** (flow
-`A` keeps its pose tags, F38), **N28** (hires yes, at 0.35 — F39), **N29** (**the flow generalises**, 8/10
-on held-out faces — F40), **N31**, and both of **N27**'s instruments (F37, F38).
+### The one job
 
-**Flow `A` is validated end to end.** Every dial chosen by measurement, then the whole configuration
-confirmed on ten inputs none of it was chosen against, across a demographic range round 2 never covered.
+**Trial JoyCaption as the photograph reader, and it is planned already.**
+**[`JOYCAPTION.md`](JOYCAPTION.md)** is the plan — artifacts and their digests, hosting, the two phases,
+the traps, and **the bar written before the run**. **[`READER.md`](READER.md)** is the survey behind the
+choice. Read both before touching anything; between them there is nothing left to decide except what the
+numbers say.
 
-**N26 is surveyed** (2026-09-11, `READER.md`): **JoyCaption Beta One** leads — Apache-2.0, 8B, a
-**Danbooru tag mode**, and trained on photographs as well as illustrations, which is the property WD14
-lacks. **Qwen3-VL-8B** is the like-for-like control. Two things the survey settled: there is **no
-Danbooru tagger trained on photographs**, so the hole can only be filled by a VLM; and **no new
-evaluation harness is needed**, because `vlm_reader.py` already scores any candidate's drafts against the
-reviewed sheets and against the incumbent's 0.78.
+**Why it matters, in one line:** the reader that turns a photograph into a criteria sheet is currently
+*an agent session*. It scores 0.78 and it is **not reproducible by anyone without the transcript** — a
+closed component at step one of a repository whose thesis is open models end to end.
 
-**What is left is two separate pieces of work, neither opened as a task yet:**
+**The plan in brief**, and the detail is in `JOYCAPTION.md`:
 
-- **trial a reader** — JoyCaption and Qwen3-VL through the existing harness. Confirm JoyCaption's licence
-  from the weights first (`scripts/eval_licences.md`), and **state the bar before the run**.
-- **N27's independent recognizer** — the one thing that would strengthen every identity number here.
+```
+  ① pin      Q4_K 4.92 GB + mmproj 0.88 GB, digests recorded FIRST
+             concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf
+             ⚠ the two most-cited quantisations ship NO mmproj and are blind
+  ② host     LM Studio, already installed — no new Python dependency
+  ③ client   prototype/joycaption.py, stdlib urllib against localhost
+  ④ run      BOTH phases over the same 13 photographs in one sitting:
+               phase 0  JoyCaption's own Danbooru tag mode
+               phase 1  our 16-field schema, verbatim from vlm_reader.py --schema
+  ⑤ score    vlm_reader.py, unchanged
+  ⑥ decide   ≥0.78 replaces · 0.60–0.78 becomes a first draft · <0.60 fails
+```
 
-**N27 is not finished, and it is the one thing that would strengthen every number above.** Its remaining
-item is an *independent* recognizer — both locally pinned face encoders are entangled with this
-generator, so `A`'s identity numbers are an upper bound rather than an estimate. That needs a model
-fetched, licence-checked and digest-pinned; no GPU.
+**One real data point exists.** The operator ran `standing_turn.png` through the public demo on
+2026-09-11: **0.688** against that subject's reviewed sheet, with **all six clothes tags** correct and
+every miss in a field JoyCaption had no reason to look at. n=1, and its *shape* is why phase 1 exists —
+the question is whether it is a tagger we route or a reader we brief.
 
-**The known limit, reproduced twice:** full-body framing costs identity. `00059` in round 2, `15_01` and
-`16_01` in N29 — the face is a small fraction of frame and the identification misses. It is a property,
-not noise.
+### The other job, smaller and unscheduled
 
-**The three cheapest candidates listed here on 2026-09-09 have all been dispositioned:** the negative-prompt
-confirmation is **closed** — `n24_real_photo_final` *is* the run that carried `lens flare, light particles,
-dust`, and the operator read the output on 2026-09-10; the pose ablation is **N25**; the `body shape`
-re-brief is **N31**.
+**N27's independent recognizer.** `A`'s identity numbers are an **upper bound** because `glintr100` is
+the encoder InstantID optimises against. `D`'s are clean, which is the only reason the gap reads. Both
+locally pinned face encoders are entangled with this generator — the other one *more* so. Needs a model
+from a different architecture and training set fetched, licence-checked and digest-pinned. **No GPU.**
 
-Nothing is mid-flight; the account is empty and every artifact is on disk.
+### What is known and should not be re-derived
 
-The last full run is `prototype/renders/2026-09-09/n24_real_photo_final/` with
-`prototype/derived/2026-09-09/n24_real_photo_final_contact_sheet.html`. Its predecessors `n21_real_photo_v1` (pre-sheet-fix) and
-`n21_real_photo_v2` (reviewed tables, pre-speck-fix) are kept deliberately, so the two edit rounds are
-visible as columns.
+- **Flow `A` is validated end to end** — see §1's configuration table. Every dial measured, then
+  confirmed on held-out faces (F40) and on **17 photographs of real people, 14/17 at chance 5.9%** (F41).
+- **Full-body framing costs identity**, reproduced in **three** independent sets: `00059` in round 2,
+  `15_01`/`16_01` in N29, `full_height_4`/`male_full_height` in N30. A property, not noise.
+- **Nothing tests a phone snapshot.** Every photograph used so far is generated or professionally shot.
+  The operator intends to gather a phone-camera set; it does not exist yet.
+- **The session ceiling is 60 minutes / ~$0.75** on this branch (`CLAUDE.md`), raised 2026-09-11.
+- **Large inputs dominate a session.** N30's photographs are 21–28 MB each and the uploads, not the GPU,
+  made 34 renders take 27 minutes. **Downscale before a run, or budget for it.**
 
-**Spend on 2026-09-09 was roughly $1.00, of which about $0.50 was waste** — IP-less pods, a failed
-sibling-repo session, and three orphans. The useful renders cost less than the mistakes. Worth carrying
-as a number, not an impression.
+### The last runs on disk
+
+| run | what | contact sheet |
+|---|---|---|
+| `renders/2026-09-11/n30_real/` | 17 real subjects, both flows — **the strongest identity result** | `derived/2026-09-11/n30_real_contact_sheet.html` |
+| `renders/2026-09-10/n29_portfolio/` | the held-out ten | `derived/2026-09-10/n29_portfolio_contact_sheet.html` |
+| `renders/2026-09-10/n25_pose/` | the pose ablation, four arms | `derived/2026-09-10/n25_pose_contact_sheet.html` |
+
+Identity runs are self-contained under `prototype/evaluations/<date>/`, each with its own `report.md`,
+`manifest.json` of digests, and copies of every image scored.
 
 ---
 
 ## 7 · Where things live
 
-**Both render trees are bucketed by UTC date** (2026-09-10), because forty sibling directories with
+**Both render trees are bucketed by UTC date**, because forty sibling directories with
 nothing in the name to say which session made them is not a record:
 
 ```
   prototype/renders/2026-09-08/n9_ablation/<sid>/0.png
-  prototype/derived/2026-09-09/n24_real_photo_final_contact_sheet.html
+  prototype/derived/2026-09-11/n30_real_contact_sheet.html
 ```
 
 `prototype/paths.py` is the seam. **`render_dir(name)` and `derived_dir()` are for writing** and always mean
@@ -302,9 +345,9 @@ today; **`resolve_render(path)` is for reading** and finds an undated `prototype
 whichever bucket holds it, newest bucket winning. That is why `contact_sheet.py`'s forty column templates
 still name no date — and why bucketing again later would need no edit there.
 
-**Three things under `derived/` are deliberately *not* dated**, because they are named references other
-scripts read rather than artifacts of a day: `vlm_drafts/`, `reference_sheets/`, and the Fotor
-`*.canvas.png` bars that `style_axis.py` and archived `thesis.py` / `retention.py` open by name.
+**Two things under `derived/` are deliberately *not* dated**, because they are named references other
+scripts read rather than artifacts of a day: **`vlm_drafts/`** (which mirrors the sheet and input trees —
+`synthetic/`, `synthetic/pose/`, `synthetic/portfolio/`, `real/`) and `reference_sheets/`.
 
 | what | where |
 |---|---|
@@ -317,7 +360,11 @@ scripts read rather than artifacts of a day: `vlm_drafts/`, `reference_sheets/`,
 | the GPU question | `archive/GPU.md` — settled: keep the card |
 | sheets | `prototype/sheets/{synthetic,real}/` — `real/` gitignored as a directory (D14) |
 | round 2's inputs, tuned on | `inputs/synthetic/` (ten) · `inputs/baseline/` (six) |
-| round 3's inputs, held out | `prototype/inputs/` — **[its README](../inputs/README.md) is the sourcing criteria**; ten new portraits, two real photographs |
+| round 3's inputs | `prototype/inputs/` — **[its README](../inputs/README.md) is the sourcing criteria** |
+| · held-out ten | `prototype/inputs/synthetic/portfolio/` — never tuned on (N29) |
+| · ten pose studies | `prototype/inputs/synthetic/pose/` — **filenames are the pose labels** (N25) |
+| · **17 real photographs** | `prototype/inputs/real/` — gitignored, D14. Sheets and renders too |
+| **the next round** | **`JOYCAPTION.md`** — the trial plan, bar stated before the run |
 | the sheet tool | `sheet.py check \| build \| adopt \| find` — `find` searches the vocabulary |
 | the reader harness | `vlm_reader.py --schema`; drafts in `prototype/derived/vlm_drafts/` |
 | the evaluator | `criteria_eval.py` (WD14 on renders) |
