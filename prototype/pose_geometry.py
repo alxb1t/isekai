@@ -90,7 +90,28 @@ N29_ARMS = {
     "2_d": "prototype/renders/n29_portfolio/2_d/{sid}/0.png",
 }
 
+# N30's real photographs. Framing is mixed on purpose -- 5 cowboy shot, 5 face,
+# 4 full height, 3 male -- so the small-face limit can be read as a gradient
+# rather than a binary. The face-only subjects will drop most keypoints, as N29's
+# headshots did; that is the input, not the flow.
+N30_SUBJECTS = (
+    "cowboy_shot_1", "cowboy_shot_2", "cowboy_shot_3", "cowboy_shot_4",
+    "cowboy_shot_5", "face_1", "face_2", "face_3", "face_4", "face_5",
+    "ful_height_1", "full_height_2", "full_height_3", "full_height_4",
+    "male_cowboy_shot_1", "male_cowboy_shot_2", "male_full_height",
+)
+N30_ARMS = {
+    "1_a": "prototype/renders/n30_real/1_a/{sid}/0.png",
+    "2_d": "prototype/renders/n30_real/2_d/{sid}/0.png",
+}
+
 RUNS = {
+    "n30_real": (
+        N30_SUBJECTS,
+        Path("prototype/inputs/real"),
+        "{sid}",  # extension varies; resolved below
+        N30_ARMS,
+    ),
     "n29_portfolio": (
         N29_SUBJECTS,
         Path("prototype/inputs/synthetic/portfolio"),
@@ -197,6 +218,10 @@ def main() -> None:
 
     for sid in subjects:
         photo = photo_root / photo_name.format(sid=sid)
+        if not photo.exists():  # real photographs vary in extension
+            from prototype.sheet import photo_for
+
+            photo = Path(photo_for(sid))
         canvas = canvas_for(str(photo))
         reader = DwPoseReader(args.models, canvas)
         photo_pts = reader.keypoints(str(photo))

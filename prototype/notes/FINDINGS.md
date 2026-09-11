@@ -2216,4 +2216,89 @@ exposes it -- another case where reporting one number would have produced a conf
 
 ---
 
-<!-- next: F41 -->
+## F41 — it works on real faces, and better than on the generated ones it was tuned on
+
+**2026-09-11 · one pod session, 34 renders, ~$0.32 · `prototype/real_photo.py` ·
+`prototype/renders/2026-09-11/n30_real/` · teardown confirmed by the RunPod MCP: zero pods.
+Scored $0 on CPU. Closes N27, which is round 2's N14, open since round 1.**
+
+**Every identity number in this project until today was measured on generated faces** — evenly lit,
+frontal, one face, no lens. The product's input is a photograph of a real person, and whether the flow
+or the instruments held up on one had never been tested. It was **blocked on data rather than on work**:
+the previous real subject was withdrawn and the set fell to two, where the identification floor is 50%.
+
+**Seventeen photographs, ~16 distinct people, from a wallpaper site. Chance 1/17 = 5.9%** — the hardest
+floor this project has run against.
+
+### The result, and it is the strongest yet
+
+| | subjects | chance | flow `A` top-1 | mean margin |
+|---|---:|---:|---:|---:|
+| tuned-on six (**F37**) | 6 | 16.7% | 5/6 | +0.0485 |
+| held-out ten (**F40**) | 10 | 10.0% | 8/10 | +0.1170 |
+| **real seventeen** | **17** | **5.9%** | **14/17** | **+0.1172** |
+
+`p = 0.0000`. **The margin held at its held-out level against a floor nearly twice as hard**, and the
+operator's eye agrees: *"watching side by side the original photo and `A`, I can truly identify the anime
+image is made out of the photo."* Third consecutive run where the eye and the instrument agree.
+
+### A prediction recorded before the run, and it landed
+
+Written into `real_photo.py`'s docstring before anything rendered: nine of the seventeen sheets say
+`brown hair` and fourteen say `standing`, so **these descriptions are less distinctive than N29's
+portfolio set** — where F40 found `D` scoring 4/10 by being matched on *demographics* rather than faces.
+**`D` should therefore score worse here.**
+
+It scored **2/17, margin −0.1098, p = 0.2641** — its worst yet, and eight of its seventeen correct
+cosines are negative. **The confound F40 identified is absent exactly where the theory says it should be.**
+That is the first time this project has predicted an instrument's behaviour in advance and been right.
+
+### The three misses, two of them called in advance
+
+| miss | rank | cause |
+|---|:-:|---|
+| `ful_height_1` | 3 | **sunglasses** — flagged pre-run; the eyes are the strongest signal an ArcFace recognizer has |
+| `male_full_height` | 6 | the subject suspected of being **AI-generated**, sourced from an image search rather than the wallpaper site; also full body |
+| `full_height_4` | 3 | **full body, small face** |
+
+**The small-face limit has now reproduced in three independent sets** — `00059` in round 2, `15_01` and
+`16_01` in N29, `full_height_4` and `male_full_height` here. **It is a property of the flow, not noise**,
+and it is the one thing a product built on this would need to handle.
+
+### No contamination signal
+
+These are real people and some may be recognisable to the base. **A memorised face would render from the
+sheet alone**, so flow `D` is the detector. `D` scored 2/17 with no subject standing out and no
+unusually strong correct-cosine anywhere. **Nothing in this set appears to be memorised** — which is a
+measurement rather than the guess about who is famous that it replaces.
+
+### Pose and style
+
+| | `A` | `D` |
+|---|---:|---:|
+| pose · PCK | **0.753** | 0.311 |
+| pose · angle error | **19.3°** | 24.6° |
+| posterisation | 0.346 | 0.617 |
+| linework | 0.0162 | 0.0340 |
+
+Three face-only subjects produced no joint angles — no limbs in frame, the same input property N29 hit.
+`cowboy_shot_2` is the worst pose error at **57.1°** and is worth a look before it is treated as noise.
+
+### Limits, stated with the result
+
+- **Every photograph is professionally shot** — studio or well-lit outdoor, posed, retouched. This tests
+  *real faces*; it still does not test the product's actual input, a phone snapshot. A phone-camera set
+  is wanted and does not exist.
+- **`male_full_height` may itself be generated.** Kept deliberately and flagged rather than quietly
+  counted as evidence about real photographs.
+- **`A`'s number remains an upper bound.** `glintr100` is the encoder InstantID optimises against, and an
+  independent recognizer has still not been fetched. **`D`'s number is clean**, which is what makes the
+  gap readable at all.
+- **One session cost ~$0.32 against a $0.30 ceiling** and was halted mid-run to ask. The cause was not
+  the GPU: these photographs are 21–28 MB each and **the uploads dominated** — 27 minutes against the ~17
+  that render time alone predicts. The ceiling was raised to 60 min / $0.75 afterward, and the two
+  numbers now agree with each other.
+
+---
+
+<!-- next: F42 -->

@@ -82,6 +82,19 @@ SHEETS: dict[str, tuple[str, dict[str, tuple[str, str]]]] = {
             ),
         },
     ),
+    "n30_real": (
+        "the decided flow on photographs of real people",
+        {
+            "prototype/renders/n30_real/1_a/{sid}/0.png": (
+                "A · the product",
+                "InstantID + OpenPose + full sheet · cn 0.8 · cfg 5 · hires 0.35",
+            ),
+            "prototype/renders/n30_real/2_d/{sid}/0.png": (
+                "D · description only",
+                "the photograph is never read at render time",
+            ),
+        },
+    ),
     "n29_portfolio": (
         "the decided flow on inputs no dial was tuned against",
         {
@@ -453,6 +466,7 @@ def main() -> None:
         "n25_pose": POSE_SUBJECTS,
         "n28_hires_pose": POSE_SUBJECTS,
         "n29_portfolio": PORTFOLIO_SUBJECTS,
+        "n30_real": tuple(REAL_SUBJECTS),
     }
     subjects = [
         sid

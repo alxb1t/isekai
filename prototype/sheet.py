@@ -308,12 +308,19 @@ PHOTO_ROOTS = (
 )
 
 
+# Real photographs arrive as JPEG and generated ones as PNG, so the extension is
+# searched rather than assumed -- a reader that only looked for `.png` silently
+# reported "no photograph" for an entire real subject set on 2026-09-11.
+PHOTO_SUFFIXES = (".png", ".jpeg", ".jpg", ".webp")
+
+
 def photo_for(sid: str) -> str:
     """Return the photograph a subject id names, searched across the input roots."""
     for root in PHOTO_ROOTS:
-        for name in (f"{sid}.png", f"synthetic_portrait_{sid}_.png"):
-            if (root / name).exists():
-                return str(root / name)
+        for suffix in PHOTO_SUFFIXES:
+            for name in (f"{sid}{suffix}", f"synthetic_portrait_{sid}_{suffix}"):
+                if (root / name).exists():
+                    return str(root / name)
     return f"inputs/synthetic/synthetic_portrait_{sid}_.png"
 
 

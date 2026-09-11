@@ -4,7 +4,7 @@
 before a change is cut. Tuning by eye is allowed here and nowhere else: the rule that dials are settled
 by numbers binds *versions*, and a branch that never merges settles nothing.
 
-> **All five notes live in [`notes/`](notes/)** — method, reference and record, indexed in
+> **All seven notes live in [`notes/`](notes/)** — method, reference, plan and record, indexed in
 > [`notes/README.md`](notes/README.md). This file stays at the root as the task list and its history.
 >
 > ### Reading order
@@ -16,15 +16,46 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 >    exported
 > 4. **[`notes/CRITERIA.md`](notes/CRITERIA.md)** — round 2's design: the sheet, the seven scored criteria, both bars
 > 5. **[`notes/ILLUSTRIOUS.md`](notes/ILLUSTRIOUS.md)** — what the base was trained on, and what to prompt it with
-> 6. **[`notes/FINDINGS.md`](notes/FINDINGS.md)** — F1–F40, the full evidence, newest at the bottom
-> 7. **[`archive/SUMMARY.md`](archive/SUMMARY.md)** — round 1's close: the flows compared, and what
+> 6. **[`notes/FINDINGS.md`](notes/FINDINGS.md)** — F1–F41, the full evidence, newest at the bottom
+> 7. **[`notes/READER.md`](notes/READER.md)** · **[`notes/JOYCAPTION.md`](notes/JOYCAPTION.md)** — who can
+>    read a photograph into a sheet, and the plan for trialling the leading candidate. **Next round**
+> 8. **[`archive/SUMMARY.md`](archive/SUMMARY.md)** — round 1's close: the flows compared, and what
 >    not to retry
-> 8. **[`archive/GPU.md`](archive/GPU.md)** — settled: keep the card, and a render is not where the
+> 9. **[`archive/GPU.md`](archive/GPU.md)** — settled: keep the card, and a render is not where the
 >    money goes
 
 ---
 
-## Status: round 1 complete. Both candidate flows rejected.
+## Status: round 3 complete. Flow `A` is validated end to end.
+
+**2026-09-11 · 41 findings · 16 pod sessions · ≈$2.80 · every task in every round closed.**
+
+```
+  photo ─▶ VLM reads it into a 16-field criteria sheet ─▶ operator reviews
+                                                              │
+        InstantID (face) ─┐                                    │
+        OpenPose (skeleton)├──▶ WAI-illustrious-SDXL ──▶ hires ─▶ anime image
+        the sheet ─────────┘    cn 0.8 · cfg 5           0.35
+```
+
+**Every dial was chosen by measurement, then the whole configuration was confirmed twice over:** on ten
+portraits no dial was tuned against (**F40**, 8/10 at chance 10%), and on **seventeen photographs of
+real people** (**F41**, **14/17 at chance 5.9%** — the strongest result here, against its hardest floor).
+The operator's eye agreed with the instrument on every one of the three runs.
+
+**What made that sayable is the instrument round 3 built.** Identity had been the honest hole since round
+1: one scoreboard rewarded not stylizing, the next was blind to identity entirely. The fix was not a
+better metric but a different question — *given this render, which of the N photographs did it come
+from* — which is stylization-invariant because every candidate is equally stylized.
+**[`notes/IDENTITY.md`](notes/IDENTITY.md)** is that method, written to be exported.
+
+**Two caveats stand, and neither is hidden.** `A`'s identity number is an **upper bound**, because the
+recognizer is the one InstantID optimises against; `D`'s is clean, which is what makes the gap readable.
+And **full-body framing costs identity** — a small face in frame, reproduced in three independent sets.
+
+---
+
+### Round 1's status, kept as history
 
 **2026-09-07 · 23 findings · 8 pod sessions · ≈$1.80 · every task below closed.**
 
@@ -269,18 +300,85 @@ no evaluator in existence at the time.
       was never coming, billing throughout, and looked like it was working. The one thing in this
       repository that can bill indefinitely without erroring.
 
-### Round 3 — the session of 2026-09-10
+### The bar, stated before the render
 
-**Six questions. Five closed on 2026-09-10; one remains, plus one item inside N27.** Both flows now clear their bars and the operator has said the
-renders are what he wants; what is left is not rescue but **knowing why they work** — which of the levers
-is load-bearing, and how we would tell if one stopped being.
+There are **two** bars, and a flow must clear both. Round 1's conclusion was that the operator's
+preference split the flows against their own numbers; a single-bar round 2 walks back into that.
+
+**Style.** Median linework at or above the photograph's own, against `notile-d045`'s **0.0030** and
+inputs running 0.005–0.078. Anything that merely beats 0.0030 without reaching the photograph is the
+same failure at a smaller scale.
+
+**Identity.** **5 of the 6 scored criteria survive, and pose and hair silhouette are mandatory.**
+Stated in full, with why 6-of-6 was rejected, in [`notes/CRITERIA.md`](notes/CRITERIA.md) §4.
+
+**Hand-written tags on purpose.** There is no point integrating WD14 if the flow does not render
+cleanly, and a typed description removes the tagger as a second variable. The tagger is step 2 and is
+already researched.
+
+### The style bar, restated — 2026-09-10
+
+**The bar above is round 2's, pre-registered, and it is kept verbatim.** A bar stated before a render is
+not editable after it; what follows supersedes it going forward and does not rewrite it.
+
+**The third-party stylizer is no longer the reference, and nothing replaces it.** It was round 1's
+lighthouse and it did its job — it calibrated the style axis when we had no idea what "flat enough"
+meant, and F20/F22 got real answers out of it. Round 2 then reached the register the operator wants.
+**A reference you have passed is not a target; it is a rearview mirror**, and `A`'s "19% short of 0.460"
+was being read as a deficit when the operator's own verdict on those renders was that they are what he
+wants. The artifacts are in [`archive/fotor/`](archive/) — kept, not deleted — and **nothing live reads
+them.**
+
+**What the bar is now: our own last number.** Both axes are *absolute* — they describe the render and
+nothing else, no photograph and no reference image — so they can be read against the configuration we
+chose. From **F35**, at the photograph's canvas:
+
+| | posterisation | linework |
+|---|---:|---:|
+| `A` + hires 0.50 | **0.373** | **0.0181** |
+| `D` + hires 0.35 | **0.528** | **0.0376** |
+
+> **A change that drops either axis by more than its determinism floor is a regression, and is
+> reverted.** The floors are **posterisation ±0.0020** and **linework ±0.0003** — so the numbers above are
+> a real gate, not a formality. A change that moves neither axis beyond its floor is **style-free**, and
+> is then judged on identity alone (N27) rather than argued about on style.
+
+**The cost, stated plainly.** This removes the only *external* calibration the style axis ever had. The
+axes do not need one to be read — that is what absolute means — but the sanity anchor is gone, and a slow
+drift of both flows in the same direction would no longer have anything outside the project to catch it.
+The accepted mitigation is that **the operator's eye is the anchor**, which has been true of identity all
+along (N14) and is now true of style as well.
+
+### What round 2 changes downstream — decide knowingly
+
+**Settled 2026-09-08 in [`notes/CRITERIA.md`](notes/CRITERIA.md).** The scored criteria are **pose · hair
+silhouette · hair colour · eyes · clothes · marks**. Background drops out entirely; accessories, body
+shape, expression and skin tone stay in the prompt but are judged by eye, each for a stated reason.
+
+**And the ground truth moved.** Because the tags are hand-written, the evaluator scores the render
+against **the criteria sheet**, not against the photograph. That kills F16's inverted metric at the root
+— no colour distance to a photograph appears in the scored set, so correct stylization is never
+punished — and it makes the broken shared-mask assumption stop mattering, since an attribute check needs
+no pixel alignment. The cost, stated in `notes/CRITERIA.md` §1: the scoreboard now measures **prompt
+adherence**, and inherits whatever the human transcription got wrong.
+
+---
+
+## Round 3 — the identity question, answered
+
+**Both flows already cleared their bars when this round opened**, so it was never about rescue. It asked
+**why they work** — which lever is load-bearing, and how we would know if one stopped being. Five
+questions closed on the 10th, N26 and N27 on the 11th.
+
+**Two items are carried forward rather than left open**, and both are about making the *instruments*
+honest rather than the product better: an **independent recognizer**, and the **JoyCaption trial**.
 
 **Round 2 closed with three items still carrying work. Two are here; one was dropped on purpose** — and
 neither the carrying nor the dropping is silent:
 
 | round 2 | round 3 | why it moved |
 |---|---|---|
-| **N14** the axis nobody has built | **N27** | restated with the two flows separated. Still unsolved |
+| **N14** the axis nobody has built | **N27** | restated with the two flows separated — and **answered**, F37/F40/F41 |
 | **N9c** judge `A`/`D` on identity | **N27**, as its first step | $0, no pod, renders already on disk |
 | **N20** the style LoRA | **dropped** | not renumbered, not forgotten — the deficit it existed to close was measured against a retired reference |
 
@@ -313,17 +411,24 @@ needs re-deriving if the question ever reopens outside this prototype.**
 previous round that built the scoreboard second measured the wrong thing — F16 in round 1, F29 in round 2.
 
 ```
-   ✅ N27  face likeness      instrument built, F37
-   ✅ N27  pose geometry      instrument built, F38
-   ✅ N31  reader re-briefed  folded into the same edit
-   ✅ N25  pose tags          ANSWERED: flow A keeps both, F38
-   ─────────────────────────────────────────────────────────────────
-   ✅ N28  hires for A        ANSWERED: yes, at 0.35 — F39
-   ✅ N29  held-out portraits ANSWERED: it generalises, 8/10 — F40
-   ─────────────────────────────────────────────────────────────────
-      N26  VLM survey         $0, independent
-      N27  remaining          an INDEPENDENT recognizer, to turn A's upper
-                              bound into an estimate. Needs a model fetched.
+   ✅ N25  pose tags          flow A keeps both                      F38
+   ✅ N26  reader survey      JoyCaption leads — notes/READER.md
+   ✅ N27  identity, scored   14/17 on REAL faces at chance 5.9%     F41
+   ✅ N28  hires for A        yes, at 0.35 — and it changed a
+                              settled value                          F39
+   ✅ N29  held-out ten       it generalises, 8/10                    F40
+   ✅ N31  reader re-briefed
+
+   ROUND 3 IS CLOSED. Flow A is validated end to end:
+     InstantID + OpenPose + full criteria sheet (pose tags IN)
+     cn_strength 0.8 · cfg 5 · hires 0.35
+   Every dial chosen by measurement, then confirmed on inputs none of
+   it was chosen against — and finally on photographs of real people.
+
+   CARRIED FORWARD, both "make it honest" jobs:
+     · an INDEPENDENT recognizer — A's identity number is an upper
+       bound until one exists. D's is clean. No GPU, real provisioning.
+     · the JoyCaption TRIAL — notes/JOYCAPTION.md plans it, bar stated
 ```
 
 **Flow `A` is decided as of 2026-09-10:** InstantID + OpenPose + the full criteria sheet including its
@@ -356,85 +461,76 @@ been chosen by measurement on at least two axes.
       *crop* is untested and is a separate question. `legs_crossed` is the worst subject for every arm,
       and part of that is DWPose's own uncertainty on a self-occluding floor pose rather than the render.
 
-- [ ] **N26 · is there an open model that reads a photograph as well as the agent session does?** ($0,
-      research only.) The reader in `vlm_reader.py` is **an agent session, not a dependency** — it scored
-      0.78 on ten synthetic photographs and 0.80 on three real ones, with ~1% invented tags. That is
-      good, and it is also **not reproducible by anyone who does not have this transcript**, which is a
-      problem for a repository whose thesis is *open models, end to end*.
+- [x] **N26 · is there an open model that reads a photograph as well as the agent session does? —
+      SURVEYED 2026-09-11, $0** · **[`notes/READER.md`](notes/READER.md)**. Desk research; nothing run.
 
-      What to establish, and nothing more — this is a survey, not a bake-off:
-      **local candidates** (Qwen2.5-VL, InternVL, Molmo, JoyCaption — the last is trained on booru-style
-      description specifically); **hosted candidates** on OpenRouter, with their licence and cost;
-      **the honest baseline**, which is that WD14 already exists here and **F29 measured it at 0.47 on
-      photographs against 0.73 on renders, with `pose` at 0.08 and `marks` at 0.00** — it is a tagger for
-      drawings and it cannot read a photograph. Any candidate has to beat that, not merely exist.
+      **JoyCaption Beta One is the lead candidate and the only one built for this vocabulary.**
+      Apache-2.0, Llama 3.1 + LLaVA, 8B, **~17 GB at bf16 or 4.92 GB at Q4_K** — and it ships a
+      **Danbooru tag mode**, one of four booru modes among eleven. Crucially it is trained on
+      photographs *as well as* illustrations, which is exactly the property WD14 lacks.
 
-      **The distinction that keeps getting lost:** `selected_tags.csv` validates a sheet's vocabulary and
-      the WD14 *model* reads a render. Neither is the photograph reader. Three different jobs.
+      **Qwen3-VL-8B is the like-for-like control** (Apache-2.0, no booru training, driven by our briefing
+      alone). Running both isolates *what the Danbooru vocabulary knowledge is actually worth*: if they
+      score the same, it is decorative.
 
-- [ ] **N27 · what does "the identity transferred" actually mean, and how is it scored — per flow?**
-      **Carries round 2's N14 and N9c**, which are closed there and live here. It is the honest hole in
-      the project, and renumbering it has not made it smaller.
+      **Two things the survey settled that were open:**
+
+      - **There is no Danbooru tagger trained on photographs.** Searched for directly; DeepDanbooru,
+        Danbooru's own autotagger and every WD14 variant are anime-trained. **The WD14-shaped hole
+        cannot be filled by a better tagger, only by a VLM** — so the obvious "WD14 for tags, VLM for the
+        rest" hybrid is not available. WD14 scores `pose` 0.08 and `marks` 0.00 on photographs.
+      - **No new evaluation harness is needed.** `vlm_reader.py` already scores a draft against the
+        operator's reviewed sheets, with floors stated before the incumbent ran. **Any candidate that
+        writes `<id>.json` into the drafts directory gets a number directly comparable to the agent's
+        0.78**, against WD14's 0.47 and the 0.60 floor.
+
+      **Left open deliberately — the trial, which is a separate task.** This was scoped as *a survey, not
+      a bake-off*, and it stayed one. Before anything is trialled: confirm JoyCaption's licence from the
+      weights themselves (the repository says Apache-2.0, the model card does not say) into
+      `scripts/eval_licences.md`, and **state the bar before the run**, as the incumbent's 0.60 was.
+
+- [x] **N27 · what does "the identity transferred" actually mean, and how is it scored — CLOSED
+      2026-09-11.** Carried round 2's **N14** and **N9c**, and N14 had been open since round 1. **It was
+      the honest hole in the project and it is now instrumented, validated three times, and agreed with
+      by eye every time.**
 
       > Round 1 instrumented similarity-to-photograph, so the least-stylized render won by construction.
-      > Round 2 instruments adherence-to-description, so the flow that never reads the photograph wins by
-      > construction — F29 scores `D` above `A` (0.77 vs 0.73) precisely because it is blind to the thing
-      > that separates them. **Both scoreboards were complete on their own terms and both missed the
-      > same axis.**
+      > Round 2 instrumented adherence-to-description, so the flow that never reads the photograph won by
+      > construction. **Both scoreboards were complete on their own terms and both missed the same axis.**
 
-      Two questions, and they have different answers:
+      **The fix was not a better metric but a different question** — *given this render, which of the N
+      photographs did it come from* — which is stylization-invariant because every candidate in the
+      comparison is equally stylized. Method in **[`notes/IDENTITY.md`](notes/IDENTITY.md)**, written to
+      be exported.
 
-      **Does comparing `A` against the photograph make sense?** Partly. `A` reads the photograph, so a
-      photograph-referenced measure is at least *askable* of it — but any pixel or colour distance
-      punishes correct stylization, which is exactly F16's disease. What survives stylization is
-      **geometry** (where the keypoints are) and **attributes** (what is true of the person), not pixels.
+      | | subjects | chance | flow `A` | margin | |
+      |---|---:|---:|---:|---:|---|
+      | tuned-on six | 6 | 16.7% | 5/6 | +0.0485 | **F37** |
+      | held-out ten | 10 | 10.0% | 8/10 | +0.1170 | **F40** |
+      | **real seventeen** | **17** | **5.9%** | **14/17** | **+0.1172** | **F41** |
 
-      **What is the mechanism for `D`?** `D` never reads the photograph, so photograph-referenced scoring
-      is meaningless for it — but the criteria sheet *was* read from the photograph by a human, which
-      makes the sheet a **transcription of the photograph** rather than an independent prompt. So the
-      right question for both flows is the same one: **how many of the identity criteria visible in the
-      photograph survive into the anime image** — with `A` free to be additionally scored on geometry,
-      because it alone has a skeleton to be faithful to.
+      **All four sub-items are closed:**
 
-      The bar already stated: **6 of 7 criteria, pose and hair silhouette mandatory.** What is missing is
-      an instrument that can read the criteria off *the photograph* as reliably as off the render — which
-      is precisely what N26 is researching, and why the two are the same problem seen from two ends.
+      1. ✅ **Pose geometry** — `pose_geometry.py`, `IDENTITY.md` §10, first used in **F38**. PCK for
+         *placement*, joint-angle error for *configuration*; each is a trap alone.
+      2. ✅ **Held-out subjects** — **F40**, 8/10 at chance 10%.
+      3. ✅ **Real photographs** — **F41**, 14/17 at chance 5.9%, the strongest result in the project.
+      4. ⚠️ **An independent recognizer — NOT done, and it is the standing caveat.** `glintr100` is the
+         encoder InstantID optimises against, so **`A`'s numbers are an upper bound rather than an
+         estimate**. `D`'s are clean — it never touches that encoder — which is the only reason the gap
+         is readable. Both locally pinned face encoders are entangled with this generator; the other is
+         *more* so, its training pairs having been stylized with InstantID itself. **This needs a model
+         from a different architecture and training set fetched, licence-checked and digest-pinned. No
+         GPU. Carried to the next round.**
 
-      **The instrument exists as of 2026-09-10 — [`notes/IDENTITY.md`](notes/IDENTITY.md) is the methodology and
-      `face_likeness.py` is the code.** It reframes the question as *given this render, which of the six
-      photographs did it come from*, which is stylization-invariant because every candidate in the
-      comparison is equally stylized. First run, chance 16.7%: flow `A` scores **4–5 of 6** (p 0.0087 to
-      0.0007, positive margin in every arm) and flow `D` scores **2 of 6 with a negative margin** — it is
-      guessing, which is what `D` is for. **`A`'s number is an upper bound**, because the recognizer is
-      the one InstantID optimises against; `D`'s is clean. Full run at
-      `prototype/evaluations/2026-09-10/t1_face_likeness/`.
+      **Two things this round proved about the method, not the product:**
 
-      **The eye-check is closed.** The operator read the renders on 2026-09-10 and his judgement agrees
-      with the instrument — which is the ordering this whole design depends on, since an instrument is
-      built to agree with a judgement. Round 2's **N9c is closed by that**.
-
-      **What is left in N27, in the order it is worth doing:**
-
-      1. ~~**Pose geometry — the second layer.**~~ **BUILT 2026-09-10** — `prototype/pose_geometry.py`,
-         written up as `notes/IDENTITY.md` §10 and first used in **F38**. Two measures, because each is
-         a trap alone: **PCK** describes *placement*, **joint-angle error** describes *configuration*,
-         and flow `D` scored the best angle error of any arm on `sitting_on_knees` at a PCK of **0.000**
-         — a plausible body in entirely the wrong place. No circularity touches it: keypoints are
-         geometric, not appearance-based. `A` and `D` separate exactly as predicted, 0.821 against 0.218.
-      2. **An independent recognizer — and it is harder than it first looked.** The obvious candidate
-         was the other face encoder already pinned here; it is **disqualified**, because its training
-         pairs were stylized with InstantID and IP-Adapter — this exact generator family. It is *more*
-         entangled, not less. **Neither local encoder is independent**, so this needs a model fetched,
-         licence-checked and digest-pinned. No GPU, but real provisioning work.
-      3. **Held-out subjects** — the six scored are the set every dial was tuned on. Rides **N29**.
-      4. **Real photographs** — untested, and that set is down to two.
-
-      **The eye-check, and it costs nothing — this is round 2's N9c.** Judge `A` and `D` on identity *by
-      eye*, on renders already on disk:
-      `prototype/derived/2026-09-08/n9_ablation_contact_sheet.html`. No pod, no evaluator, no code. It
-      comes first because **an instrument is built to agree with a judgement, and the judgement has to
-      exist first** — F1 is the record of building an evaluator before the thing it judged and getting a
-      coin flip back. What the eye finds here is what N27's mechanism has to reproduce.
+      - **The eye came first every time and the instrument had to reproduce it** — F1 is the record of
+         doing it the other way and getting a coin flip. On F38 the instrument then *corrected* the eye
+         on one subject, and that only counted because the expectation was written down first.
+      - **F41 predicted an instrument's behaviour in advance and was right.** `D` was predicted to score
+         worse on the real set than on the portfolio, because these descriptions are less distinctive and
+         F40 had shown `D`'s hits came from demographics rather than faces. It fell from 4/10 to 2/17.
 
 - [x] **N28 · does flow `A` need the hires pass? — ANSWERED 2026-09-10: yes, at denoise 0.35.** One pod
       session, 10 renders, ~$0.10, teardown confirmed · **F39**.
@@ -510,69 +606,56 @@ been chosen by measurement on at least two axes.
       should be done first: a briefing bug in the incumbent would otherwise be scored as a reason to
       replace it.
 
-### The bar, stated before the render
+### Round 3 closed — what it established
 
-There are **two** bars, and a flow must clear both. Round 1's conclusion was that the operator's
-preference split the flows against their own numbers; a single-bar round 2 walks back into that.
+**Six questions, six answers, ~$0.77 across five pod sessions.** The findings are F37–F41; this is what
+they amount to.
 
-**Style.** Median linework at or above the photograph's own, against `notile-d045`'s **0.0030** and
-inputs running 0.005–0.078. Anything that merely beats 0.0030 without reaching the photograph is the
-same failure at a smaller scale.
+**About the product:**
 
-**Identity.** **5 of the 6 scored criteria survive, and pose and hair silhouette are mandatory.**
-Stated in full, with why 6-of-6 was rejected, in [`notes/CRITERIA.md`](notes/CRITERIA.md) §4.
+| | |
+|---|---|
+| **flow `A` keeps its pose tags** | the skeleton places the body, the tags disambiguate the limbs it gets wrong. Without them `arms_up` drops an arm — a shoulder off by **124°**, a different pose rather than a displaced one · **F38** |
+| **flow `A` takes the hires pass at 0.35** | not the 0.50 that was settled. Three axes to one, and the old number came from F35 measuring style alone · **F39** |
+| **it generalises** | 8/10 on faces no dial was tuned against · **F40** |
+| **it works on real people** | **14/17 at chance 5.9%**, the hardest floor here · **F41** |
+| **the vocabulary has a ceiling the embedding does not** | `D` rendered an older woman as a young silver-haired anime character; `A` kept her age, on identical tags. `grey hair` on Danbooru *means* silver-haired character · **F40** |
 
-**Hand-written tags on purpose.** There is no point integrating WD14 if the flow does not render
-cleanly, and a typed description removes the tagger as a second variable. The tagger is step 2 and is
-already researched.
+**About the method, which is the part that transfers:**
 
-### The style bar, restated — 2026-09-10
+- **Ask "which one", not "how similar".** Both earlier scoreboards failed the same way — one rewarded
+  not stylizing, the other was blind to identity. N-way identification is stylization-invariant because
+  every candidate is equally stylized. **[`notes/IDENTITY.md`](notes/IDENTITY.md)**.
+- **Two measures, because each is a trap alone.** PCK describes *placement*, joint angles describe
+  *configuration*. Flow `D` scored the best angle error of any arm on `sitting_on_knees` **at a PCK of
+  0.000** — a plausible body in entirely the wrong place · **F38**.
+- **State the bar before the run.** Every result here is readable only because its floor was written
+  first. F1 is the record of doing it the other way and getting a coin flip.
+- **The eye first, then the instrument.** On F38 the instrument *corrected* the eye on one subject —
+  and that only counted because the expectation had been recorded beforehand.
+- **Score what exists before rendering more.** Two thirds of N28 was already answered across three
+  sessions and had never been put in one table. Doing that shrank its pod session from 30 renders to 10.
+- **A diverse test set inflates a description-only flow.** N-way identification assumes the candidates
+  are interchangeable; the more diverse the set, the less they are · **F40**, confirmed by **F41**
+  predicting the effect's *absence* in advance.
 
-**The bar above is round 2's, pre-registered, and it is kept verbatim.** A bar stated before a render is
-not editable after it; what follows supersedes it going forward and does not rewrite it.
+**Known limits, all reproduced rather than suspected:**
 
-**The third-party stylizer is no longer the reference, and nothing replaces it.** It was round 1's
-lighthouse and it did its job — it calibrated the style axis when we had no idea what "flat enough"
-meant, and F20/F22 got real answers out of it. Round 2 then reached the register the operator wants.
-**A reference you have passed is not a target; it is a rearview mirror**, and `A`'s "19% short of 0.460"
-was being read as a deficit when the operator's own verdict on those renders was that they are what he
-wants. The artifacts are in [`archive/fotor/`](archive/) — kept, not deleted — and **nothing live reads
-them.**
+- **Full-body framing costs identity** — a small face in frame. Three independent sets: `00059`,
+  then `15_01`/`16_01`, then `full_height_4`/`male_full_height`.
+- **`A`'s identity number is an upper bound** — `glintr100` is the encoder InstantID optimises against.
+  `D`'s is clean, which is the only reason the gap is readable.
+- **Nothing here tests a phone snapshot.** Every photograph in every set is generated or professionally
+  shot. That is the product's actual input and it remains untested.
 
-**What the bar is now: our own last number.** Both axes are *absolute* — they describe the render and
-nothing else, no photograph and no reference image — so they can be read against the configuration we
-chose. From **F35**, at the photograph's canvas:
+**Carried forward, both about honesty rather than capability:** an **independent recognizer**
+(no GPU, real provisioning) and the **JoyCaption trial** — planned with its bar already stated in
+**[`notes/JOYCAPTION.md`](notes/JOYCAPTION.md)**, candidates surveyed in
+**[`notes/READER.md`](notes/READER.md)**.
 
-| | posterisation | linework |
-|---|---:|---:|
-| `A` + hires 0.50 | **0.373** | **0.0181** |
-| `D` + hires 0.35 | **0.528** | **0.0376** |
+---
 
-> **A change that drops either axis by more than its determinism floor is a regression, and is
-> reverted.** The floors are **posterisation ±0.0020** and **linework ±0.0003** — so the numbers above are
-> a real gate, not a formality. A change that moves neither axis beyond its floor is **style-free**, and
-> is then judged on identity alone (N27) rather than argued about on style.
-
-**The cost, stated plainly.** This removes the only *external* calibration the style axis ever had. The
-axes do not need one to be read — that is what absolute means — but the sanity anchor is gone, and a slow
-drift of both flows in the same direction would no longer have anything outside the project to catch it.
-The accepted mitigation is that **the operator's eye is the anchor**, which has been true of identity all
-along (N14) and is now true of style as well.
-
-### What round 2 changes downstream — decide knowingly
-
-**Settled 2026-09-08 in [`notes/CRITERIA.md`](notes/CRITERIA.md).** The scored criteria are **pose · hair
-silhouette · hair colour · eyes · clothes · marks**. Background drops out entirely; accessories, body
-shape, expression and skin tone stay in the prompt but are judged by eye, each for a stated reason.
-
-**And the ground truth moved.** Because the tags are hand-written, the evaluator scores the render
-against **the criteria sheet**, not against the photograph. That kills F16's inverted metric at the root
-— no colour distance to a photograph appears in the scored set, so correct stylization is never
-punished — and it makes the broken shared-mask assumption stop mattering, since an attribute check needs
-no pixel alignment. The cost, stated in `notes/CRITERIA.md` §1: the scoreboard now measures **prompt
-adherence**, and inherits whatever the human transcription got wrong.
-
-### Carried out of this branch
+## Carried out of this branch
 
 - **`.minions/v0.13_backlog.md` · B1 — pod readiness gates.** Deferred to a version, not to this
   prototype, on the operator's decision of 2026-09-08. The five-gate sequence a third-party case study
@@ -582,7 +665,7 @@ adherence**, and inherits whatever the human transcription got wrong.
 - **`.minions/` is gitignored and this branch never merges**, so that file carries nothing on its own.
   It reaches a release only by being exported to the operator's own backlog or restated inside a change.
 
-### Housekeeping, in this order
+## Housekeeping, in this order
 
 - [x] **the prototype tree, tidied — 2026-09-10.** What is *current* is now legible from `ls` rather than
       from memory. `styles/` holds exactly the three files the live flows read; round 1's eleven graphs
@@ -652,15 +735,17 @@ pod outlived its job that way on 2026-09-07. Tear down as its own step, then ver
 
 | what | where |
 |---|---|
-| six baseline subjects | `inputs/baseline/*.png` — digests in `baseline/README.md` |
-| ten synthetic portraits | `inputs/synthetic/*.png` |
-| four real photographs | `outputs/original/real_photo/` — a real person; renders stay gitignored (D14) |
+| six baseline subjects | `inputs/baseline/*.png` — round 1's, digests in `baseline/README.md` |
+| round 2's ten portraits | `inputs/synthetic/*.png` — **tuned on**, every dial chosen against these |
+| round 3's held-out ten | `prototype/inputs/synthetic/portfolio/` — never tuned on (N29) |
+| the ten pose studies | `prototype/inputs/synthetic/pose/` — filenames are the pose labels (N25) |
+| **17 real photographs** | `prototype/inputs/real/` — **gitignored, D14**; sheets and renders too |
 | v0.12's 30 renders + scores | `outputs/baseline/<subject>/{0..4}.{png,eval.json}` |
 | pinned eval models (2.3 GB) | `models/` |
 | every prototype render | `prototype/renders/<UTC-date>/<run>/` (gitignored) |
 | round 1's comparison images | `prototype/archive/fotor/` (gitignored; digests in `notes/FINDINGS.md` F0) — **history; nothing live reads them** |
 | the two presets | `prototype/archive/styles/*.md` and `*.json` — round 1, archived |
-| round 2's criteria sheets | `prototype/sheets/*.md` — ten, reviewed 2026-09-08 |
+| criteria sheets | `prototype/sheets/{synthetic,real}/` — mirrors the input tree; `real/` gitignored |
 | round 2's graph | `prototype/styles/fromnoise-v1.json` |
 | round 2's runner | `prototype/fromnoise.py` |
 | round 2's renders | `prototype/renders/2026-09-08/n3_fromnoise/<sid>/0.png` (gitignored) |

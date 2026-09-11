@@ -216,10 +216,16 @@ published WAI v17 sample generates at clip skip 2 and none of its prose says so.
      so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
      unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.
 
-  **The ceiling is 45 minutes and ~$0.30 for a single pod session** — numbers, not "promptly", so a human
+  **The ceiling is 60 minutes and ~$0.75 for a single pod session** — numbers, not "promptly", so a human
   can hold you to it. Exceeding it is a halt, not a judgement call. And whichever route applies, the
   authority to spend comes from the **phase**, never from the agent: **a pod goes up only for a phase
   `tasks.md` marks metered.**
+
+  **Raised from 45 minutes / $0.30 on 2026-09-11, on this branch only.** The old pair was incoherent:
+  at $0.72/hr the money ran out at 25 minutes, so the stated 45 was never the limit and a session was
+  halted mid-run at 14 of 34 renders by a number nobody was reading. **The two are now consistent — a
+  full hour costs $0.72, so time binds and the money does not halt it first.** `main` keeps 45 / $0.30
+  until a change proposes otherwise.
 - **GPU renders live on the pod's ephemeral disk**; only the models volume persists. Download before
   teardown or the output is gone.
 - **The Blackwell (sm_120) pod needs cu128 PyTorch** — cu124 gives "no kernel image". It is pinned in the

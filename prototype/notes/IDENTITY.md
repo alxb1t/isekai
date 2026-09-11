@@ -251,6 +251,15 @@ subject and is not significant on its own. Only the flow-level `A` vs `D` separa
 are part of "the same person" and none of them is in this number. **Pose is now covered** — see §10,
 added 2026-09-10 — and the attribute scoreboard covers some of the rest.
 
+**~~Generated faces only.~~ Answered 2026-09-11 (F41).** The method was run on **seventeen photographs
+of real people** at chance 1/17 = 5.9%: **14/17, margin +0.1172**. The margin held at its held-out level
+against a floor nearly twice as hard, and the three misses were all explicable — one subject in
+sunglasses, two at full-body framing where the face is a small fraction of frame. **The small-face limit
+has now reproduced in three independent sets and should be treated as a property of the flow.**
+
+What is still untested is the product's *actual* input: every photograph in that set was professionally
+shot. A phone snapshot is a different thing.
+
 **~~Tuned-on subjects.~~ Answered 2026-09-10 (F40).** The method was re-run on ten portraits no dial was
 chosen against, at chance 1/10 rather than 1/6: **8/10 with a mean margin of +0.1170**, against 5/6 and
 +0.0485 on the tuned-on set. The result strengthened on harder data. Photographs of *real* people remain

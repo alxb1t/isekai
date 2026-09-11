@@ -195,6 +195,15 @@ pools. No incident posted; a published case study reports the same shape. Detail
 Cost discipline: a render is **$0.0044** of GPU time; a session's boot is **$0.036** — eight times as
 much. **Fewer, larger sessions is worth more than any cheaper card available to us** (`archive/GPU.md`).
 
+**The session ceiling is 60 minutes / ~$0.75 on this branch**, raised from 45 / $0.30 on 2026-09-11.
+The old pair was incoherent — at $0.72/hr the money ran out at 25 minutes, so 45 was never the real
+limit, and N30 was halted mid-run at 14 of 34 renders by a number nobody had noticed was binding. **Now
+time binds**: a full hour costs $0.72. `CLAUDE.md` carries the rule; `main` keeps the old pair.
+
+**And a cost the per-render figure hides: large source photographs.** N30's real photographs run 21–28 MB
+each, and uploading them over the SSH tunnel dominated the session — 34 renders took 27 minutes against
+the ~17 the GPU time alone predicts. **Downscale inputs before a run, or budget for the upload.**
+
 ---
 
 ## 6b · Five traps that cost real money or real renders this session
@@ -238,14 +247,18 @@ on held-out faces — F40), **N31**, and both of **N27**'s instruments (F37, F38
 **Flow `A` is validated end to end.** Every dial chosen by measurement, then the whole configuration
 confirmed on ten inputs none of it was chosen against, across a demographic range round 2 never covered.
 
-**Next session starts with N26** — the open-VLM survey. $0, no pod, no dependency on anything above.
-The question: is there an open model that reads a photograph into a criteria sheet as well as an agent
-session does? The incumbent scores 0.78 on synthetic and 0.80 on real photographs, and it is **not
-reproducible by anyone without this transcript**, which is a problem for a repository whose thesis is
-open models end to end. The baseline any candidate must beat is in the N26 entry; WD14 is not it —
-F29 measured it at 0.47 on photographs with `pose` at 0.08.
+**N26 is surveyed** (2026-09-11, `READER.md`): **JoyCaption Beta One** leads — Apache-2.0, 8B, a
+**Danbooru tag mode**, and trained on photographs as well as illustrations, which is the property WD14
+lacks. **Qwen3-VL-8B** is the like-for-like control. Two things the survey settled: there is **no
+Danbooru tagger trained on photographs**, so the hole can only be filled by a VLM; and **no new
+evaluation harness is needed**, because `vlm_reader.py` already scores any candidate's drafts against the
+reviewed sheets and against the incumbent's 0.78.
 
-After that, one item inside N27.
+**What is left is two separate pieces of work, neither opened as a task yet:**
+
+- **trial a reader** — JoyCaption and Qwen3-VL through the existing harness. Confirm JoyCaption's licence
+  from the weights first (`scripts/eval_licences.md`), and **state the bar before the run**.
+- **N27's independent recognizer** — the one thing that would strengthen every identity number here.
 
 **N27 is not finished, and it is the one thing that would strengthen every number above.** Its remaining
 item is an *independent* recognizer — both locally pinned face encoders are entangled with this
@@ -298,7 +311,8 @@ scripts read rather than artifacts of a day: `vlm_drafts/`, `reference_sheets/`,
 | the design | `CRITERIA.md` — the sheet, the seven scored criteria, both bars |
 | **how identity is measured** | **`IDENTITY.md`** — face likeness (§1–7) and pose geometry (§10), their limits, and how to run them. Written to be exported |
 | identity runs | `prototype/evaluations/<UTC-date>/<run>/` — self-contained, gitignored |
-| the evidence | `FINDINGS.md` F24–F40, newest at the bottom |
+| the evidence | `FINDINGS.md` F24–F41, newest at the bottom |
+| who reads the photograph | `READER.md` — the open candidates, their licences, and the numbers to beat |
 | the base's own docs | `ILLUSTRIOUS.md` — caption schema, quality ladder, skin tags, WAI §6b |
 | the GPU question | `archive/GPU.md` — settled: keep the card |
 | sheets | `prototype/sheets/{synthetic,real}/` — `real/` gitignored as a directory (D14) |

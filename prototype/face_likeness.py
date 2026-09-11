@@ -98,8 +98,35 @@ N29_ARMS = {
     "d": "prototype/renders/n29_portfolio/2_d/{sid}/0.png",
 }
 
+# N30's real photographs. **Chance is 1/17 = 5.9%**, the strongest floor this
+# project has had -- and the first time the instrument is pointed at faces that
+# were photographed rather than generated.
+#
+# `face_4` and `ful_height_1` are the SAME PERSON. The scorer has no way to know
+# that, so a render of one ranking the other first reads as a miss when it is
+# arguably a hit. Both are kept -- they are the only same-person-across-
+# photographs case here -- and the pair is reported separately in the run's own
+# report rather than silently inflating or deflating the headline.
+N30_SUBJECTS = (
+    "cowboy_shot_1", "cowboy_shot_2", "cowboy_shot_3", "cowboy_shot_4",
+    "cowboy_shot_5", "face_1", "face_2", "face_3", "face_4", "face_5",
+    "ful_height_1", "full_height_2", "full_height_3", "full_height_4",
+    "male_cowboy_shot_1", "male_cowboy_shot_2", "male_full_height",
+)
+N30_ARMS = {
+    "a": "prototype/renders/n30_real/1_a/{sid}/0.png",
+    "d": "prototype/renders/n30_real/2_d/{sid}/0.png",
+}
+
 RUNS = {
     "t1": (SUBJECTS, PHOTOS, PHOTO_NAME, ARMS, "t1_face_likeness"),
+    "n30": (
+        N30_SUBJECTS,
+        Path("prototype/inputs/real"),
+        "{sid}",  # extension varies; resolved by `photo_for`
+        N30_ARMS,
+        "t3_real_likeness",
+    ),
     "n29": (
         N29_SUBJECTS,
         Path("prototype/inputs/synthetic/portfolio"),
@@ -154,9 +181,13 @@ def stage(
     (dest / "photos").mkdir(parents=True, exist_ok=True)
     for sid in subjects:
         src = photos / photo_name.format(sid=sid)
+        if not src.exists():  # extension varies on real photographs
+            from prototype.sheet import photo_for
+
+            src = Path(photo_for(sid))
         if not src.exists():
             raise SystemExit(f"photograph missing: {src}")
-        shutil.copy2(src, dest / "photos" / f"{sid}.png")
+        shutil.copy2(src, dest / "photos" / f"{sid}{src.suffix}")
         manifest["photos"][sid] = {"source": str(src), "sha256": digest(src)}
 
     for arm, template in arms.items():
@@ -195,7 +226,8 @@ def embeddings(
     vectors: dict[str, tuple[float, ...]] = {}
 
     def read(key: str, image: Path, sid: str) -> None:
-        canvas = canvas_for(str(dest / "photos" / f"{sid}.png"))
+        hits = sorted((dest / "photos").glob(f"{sid}.*"))
+        canvas = canvas_for(str(hits[0]))
         detector = AnimeFaceDetector(models, canvas)
         encoder = ArcFaceEncoder(models, canvas)
         reading = detector.read_face(str(image))
@@ -210,7 +242,7 @@ def embeddings(
         vectors[key] = vector
 
     for sid in subjects:
-        read(f"photo/{sid}", dest / "photos" / f"{sid}.png", sid)
+        read(f"photo/{sid}", sorted((dest / "photos").glob(f"{sid}.*"))[0], sid)
     for arm in arms:
         for sid in subjects:
             read(f"{arm}/{sid}", dest / "renders" / arm / f"{sid}.png", sid)
