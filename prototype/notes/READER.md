@@ -67,7 +67,7 @@ replacement**, and the gap between those two numbers is the whole search space.
 
 | | |
 |---|---|
-| licence | **Apache-2.0** (per the project repository; the model card states "free and open" without an SPDX identifier — **worth confirming before anything ships**) |
+| licence | **Not cleanly Apache-2.0 — confirmed 2026-09-12, and this row said otherwise.** Apache-2.0 covers the project's *code*; the weights carry **no `license` field**, and the base LLM is `meta-llama/Llama-3.1-8B-Instruct` under the **Llama 3.1 Community License**, which a fine-tune derives from. All four layers recorded in `prototype/styles/joycaption_models.json` and in [`JOYCAPTION.md`](JOYCAPTION.md) §9 |
 | base | Llama 3.1 + LLaVA architecture, SigLIP2 vision encoder, **8B** |
 | current | **Beta One**, described as nearing 1.0 |
 | size | **~17 GB** at bf16; GGUF quantisations at **Q4_K 4.92 GB**, Q8_0 8.54 GB, **plus an 0.88 GB vision projector** — see the warning below |
@@ -179,9 +179,12 @@ be trialled on the thirteen photographs already transcribed and reviewed.
 
 ### Two things to decide before trialling, not after
 
-- **Confirm JoyCaption's licence from the weights themselves.** The repository says Apache-2.0 and the
-  model card does not say. `scripts/eval_licences.md` is where the answer belongs, with the URL and the
-  date it was read, as every other pinned artifact here has.
+- ~~**Confirm JoyCaption's licence from the weights themselves.**~~ **Done 2026-09-12, and the answer
+  was not the expected one.** The weights declare nothing and the base LLM is Llama 3.1, so the honest
+  statement is *Apache-2.0 code over Llama-3.1-licensed weights* — see §3's licence row. It is recorded in
+  **`prototype/styles/joycaption_models.json`**, not `scripts/eval_licences.md`: that file is tracked and
+  belongs to `eval_models.json`, and `wd14_models.json` already set the precedent of a prototype artifact
+  carrying its own licence record.
 - **State the bar first.** The incumbent's 0.60 floor was stated before it ran, which is why its 0.78
   means something. A candidate trialled without a stated bar will be judged against whatever it scores.
 

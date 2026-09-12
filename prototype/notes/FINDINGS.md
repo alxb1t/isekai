@@ -2301,4 +2301,246 @@ Three face-only subjects produced no joint angles — no limbs in frame, the sam
 
 ---
 
-<!-- next: F42 -->
+## F42 — a briefing fixes omissions and cannot fix perception
+
+**2026-09-12 · $0, local · seven prompts over ten photographs · `prototype/joycaption.py` ·
+scored by `vlm_reader.py` against the reviewed sheets. Closes N35/N36/N37.**
+
+JoyCaption Beta One was trialled as a replacement for the agent session that reads a photograph into a
+criteria sheet. **Against `notes/JOYCAPTION.md` §3's bar, stated the day before and not moved, it fails.**
+
+| prompt | mean over the 3 independent references |
+|---|---:|
+| its own Danbooru tag mode | 0.501 |
+| our sixteen fields, briefed neutrally | **0.518** |
+| its prose, hand-routed to a sheet | 0.489 |
+| the seven identity criteria, briefed pointedly | 0.307 |
+| the agent's briefing passed verbatim | 0.093 |
+| *the agent session, same measure* | *0.795* |
+| *the stated floor* | *0.60* |
+
+**Every field it scored badly on *for not being asked* improved when asked.** `marks` went 0.00 → non-zero
+once the briefing named freckles, moles and piercings; `gaze` and `framing` likewise. **Eye colour did
+not move.** `00003`'s eyes are green in its reviewed sheet and in the photograph, checked by eye:
+JoyCaption returned **brown, blue, brown, light brown, blue, brown, brown** across seven prompts, never
+once said green, and on one subject two prompts of the same model at temperature 0 disagreed with *each
+other*.
+
+> **Rank a reader's failures into omission and perception before trying to prompt around them.** Only the
+> first kind is reachable. Three prompts and a day were spent on the second.
+
+**And it is kept anyway** — as the describer rather than the reader, because the *seeing* becomes
+reproducible from a digest, which was round 4's whole motivation. See
+[`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+---
+
+## F43 — pressure on an identity field produces confabulated identity, and a canonical invented tag does something wrong
+
+**2026-09-12 · $0 · the three phase-1 arms, ten photographs each.**
+
+The arm briefed with the seven scored criteria and told *"do not leave one blank if the photograph shows
+it at all"* **invented nineteen identity marks across seven of ten subjects** and scored **0.307**
+against the neutrally-briefed arm's 0.518 — while reading as more specific.
+
+```
+  cowboy_shot_1        mole, mole under eye
+  cowboy_shot_3        freckles, mole, mole under mouth
+  face_1               eye scar, mole, mole under eye, piercing
+  ful_height_1         freckles, mole, mole under eye
+  full_height_2        freckles, mole, mole under eye, mole under mouth
+  male_cowboy_shot_1   mole, mole under eye
+```
+
+Only `00003` actually has freckles. It also produced `two-tone hair` on almost everyone, `white hair` on
+a brunette and `white eyes` on `face_1`.
+
+**This sharpens F28.** The law was *canonical tags work, invented ones do nothing*. `mole under eye` is
+**canonical and invented at once** — so an invented canonical tag does not do nothing:
+
+> **It does something wrong, and it passes `sheet.py check` on the way to the prompt.** `mole under eye`
+> has real weight in Illustrious and will draw a mole. A blank field gets caught by the operator's
+> review; a plausible false tag does not.
+
+**The fix is the opposite pressure.** Licensing the reader to say *"no marks are visible"* produced
+**zero** invented marks across ten captions — and created F44.
+
+---
+
+## F44 — an absence clause is a presence instruction
+
+**2026-09-12 · one pod session, 20 renders, ~$0.26 ·
+`evaluations/2026-09-12/descriptive_and_booru/` · teardown MCP-confirmed, zero pods.**
+
+F43's fix worked on the reader. Every caption duly wrote some form of *"No distinguishing marks,
+freckles, moles, scars, tattoos, or piercings are visible."* **Then that sentence went into the positive
+prompt, and CLIP has no negation.**
+
+`1_descriptive/cowboy_shot_1` came back with **tattoos on both arms, freckles, ear piercings, scars and a
+necklace.** None are in the photograph. The words `tattoos`, `freckles`, `piercings` and `scars` were in
+the embedding as tokens; `No` was a token too, not an operator.
+
+**Isolated by a control on the same photograph, same seed, same graph** — the only difference being
+whether the absence was *stated* or *omitted*:
+
+| arm | the marks input | the render |
+|---|---|---|
+| `1_descriptive` | *"No … tattoos, or piercings are visible"* | **tattoos, freckles, piercings, scars** |
+| `3_booru` | `marks: ""` — the negation dropped in routing | **clean** |
+
+> **Two stages, opposite requirements.** A *reader* must be licensed to state absence or it confabulates
+> (F43). A *prompt* must never carry it or the generator draws it. **The router between them is the
+> component that converts one into the other** — which is a second, independent argument for the
+> two-stage architecture, unrelated to cost.
+
+`prototype/router.py` counts `absence_leaks` for exactly this, and `prototype/tagmap.py` maps every
+absence phrase to nothing.
+
+---
+
+## F45 — the prompt's job is style; the legs' job is identity
+
+**2026-09-12 · 26 renders across two sessions, five subjects, five prompt registers.**
+
+Flow `A`'s identity did not come from the prompt in any of them. **The operator's reading of all twenty
+renders of the first session: InstantID and OpenPose held on every case**, across a register that was out
+of distribution (English prose at 2.3–2.8 CLIP windows), and in two cases actively poisoned with F44's
+hallucinated tattoos.
+
+**A bad sheet degrades *attributes*, not *likeness*** — which is why a 0.568 sheet still renders the
+right person, and why the two prose arms are recognisably the same subject while being unusable.
+
+**Corollary, and it is the useful half:** effort spent on the prompt buys style and register; effort spent
+on identity belongs in the legs and in the photograph. This is a cleaner division of labour than the
+project assumed for three rounds.
+
+**Not instrumented, and stated as the gap it is.** `face_likeness.py` was named in the evaluation's plan
+and **was not run** on these renders; five subjects gives a 20% identification floor. The claim rests on
+the operator's eye across twenty-six images, not on a cosine.
+
+### And an instrument lesson from the same run
+
+**The two style axes ranked the four arms almost backwards from `criteria_eval`.** The arm with the
+**best linework of the four had the worst attribute recall**: `2_straightforward` scored 0.0212 linework
+and 0.510 recall, against the baseline's 0.0170 and 0.917.
+
+> **Posterisation and linework describe the register and say nothing about whether it is the right
+> person.** `IDENTITY.md` §1 already says this about round 1's scoreboard; this is the same trap met from
+> a new direction, and the run where it was caught by having both instruments present.
+
+---
+
+## F46 — identity survives an encoder we did not train against, and the old number was inflated ~16x on margin
+
+**2026-09-12 · $0, no pod · `prototype/sface.py --compare --despite-gate` ·
+`prototype/styles/sface_models.json` · F41's seventeen real subjects, re-scored. Answers N27b and the
+carry-forward open since round 3.**
+
+**The problem this closes.** `glintr100` is both the embedding InstantID *injects* and the ruler measuring
+whether identity survived, so flow `A`'s 14/17 was an **upper bound** and `IDENTITY.md` §circularity said
+removing the caveat "needs a second, independent recognizer". It now has one.
+
+**SFace** from OpenCV Zoo: different architecture, different corpus, a different loss
+(sigmoid-constrained hypersphere, IEEE 9318547), a **128-d** embedding against glintr100's 512-d, and
+**Apache-2.0** — which is *more* permissive than the incumbent, recorded in `scripts/eval_licences.md` as
+a non-commercial-research deviation.
+
+### Both encoders, the same crops, the same seventeen subjects
+
+| encoder | top-1 | chance | mean margin | p |
+|---|---:|---:|---:|---:|
+| `glintr100` — **entangled** | **14/17** | 5.9% | **+0.1172** | 0.0000 |
+| SFace — **independent** | **9/17** | 5.9% | **+0.0072** | 0.0000 |
+
+**`glintr100`'s row reproduces F41 exactly**, which is the harness validating itself before the other row
+is believed. Both read the boxes the *same* anime detector found, so the encoder is the only thing that
+differs.
+
+> **Identity survives independent examination.** 9 of 17 against a 5.9% floor is p ≈ 0.0000 — an encoder
+> InstantID was never optimised against still identifies which photograph a render came from. **Flow `A`
+> is no longer a self-graded result.**
+
+**And the entanglement was real, now measured rather than suspected:**
+
+```
+   hits      14/17  →  9/17      1.6x
+   margin  +0.1172  → +0.0072   16.3x     ← the overstatement lives here
+```
+
+**The inflation is almost entirely in the margin, not in whether identity survives.** That is the precise
+content of "upper bound": the adapter does preserve identity, and *how emphatically* its own recognizer
+says so cannot be taken at face value.
+
+### What is now confirmed by what — the distinction is worth keeping straight
+
+| | subjects | instrument | result |
+|---|---|---|---|
+| F37 | 6 tuned-on | `glintr100` | 5/6 |
+| F40 | 10 held-out | `glintr100` | 8/10 |
+| F41 | 17 real | `glintr100` | 14/17 |
+| **F46** | **17 real** | **SFace, independent** | **9/17** |
+
+Three subject sets were independent **data**; they were never an independent **examiner**. F46 is the
+first different instrument, on one set — plus the operator's eye, which agreed on all three earlier runs,
+and pose, confirmed separately by PCK and joint angles (F38). **Two encoders, one eye, three sets, two
+axes** is the honest tally.
+
+### Three things ruled out before alignment was blamed, and one gate that earned its keep
+
+**The encoder was not trusted until it passed a known-answer test on recorded data.** `face_4` and
+`ful_height_1` are the same person — `real_photo.py`'s `SAME_PERSON` — so that pair must outrank the
+other 135 photograph pairs.
+
+**It ranked 2 of 136, and diagnosing why produced the useful part.** Five preprocessing variants and a
+crop-margin sweep, all against the fixed known answer:
+
+| variant | same-person cosine | rank of 136 |
+|---|---:|---:|
+| **raw 0-255 RGB** | +0.5600 | **2** |
+| raw 0-255 BGR | +0.5375 | 5 |
+| `(x−127.5)/127.5` RGB | +0.9313 | 20 |
+| `(x−127.5)/127.5` BGR | +0.9476 | 30 |
+| `x/255` BGR | +0.9088 | 37 |
+| *`glintr100`, same crops* | *+0.2360* | ***1*** |
+
+- **Preprocessing is raw 0-255 RGB**, settled by measurement. The first implementation used BGR, reasoned
+  from OpenCV's own demo, and was wrong by three ranks. **The normalised variants collapse every pair into
+  0.83–0.98** — the signature of a compressed embedding space, and a reading that looks perfectly
+  plausible in isolation.
+- **The crop is exonerated**, and this was the decisive control: `glintr100` reads the *identical* boxes
+  and ranks the pair **1 of 136**.
+- **Margin is not the cause.** A sweep from −0.30 to +0.80 found **0.0 already optimal**; every other
+  value ranked worse.
+
+**So it is alignment, by elimination.** OpenCV's SFace pipeline feeds a **5-point landmark-aligned** crop
+via a similarity transform; ours feeds a bounding box. `glintr100` tolerates that and SFace does not.
+
+> **All five preprocessing variants produced plausible cosines. Only the known answer told them apart.**
+> `IDENTITY.md` §4 warns that the wrong input format "silently produces numbers that look fine and mean
+> nothing"; this is that warning paying for itself, on a gate written before the run.
+
+### The caveat that replaces the one it removed, and it is smaller
+
+**SFace runs unaligned, so 9/17 is a *lower* bound** exactly as 14/17 is an upper one:
+
+```
+   independent identity is somewhere in  9/17 ... 14/17
+```
+
+**Alignment would tighten the floor; it would not change the verdict.** It needs either `opencv-python`
+(absent, and the `[eval]` extra is five packages whose own comment says each is load-bearing) or a second
+pinned model for **anime** facial landmarks — YuNet gives landmarks and is photograph-trained, so it
+cannot supply them on a render. Both are dependency decisions rather than measurements.
+
+### And a scoping correction, recorded so it is not repeated
+
+**The first sketch of N27b said "swap the detector too".** Wrong: `face_likeness.py` crops with deepghs'
+`anime_face_detection` (MIT), **not** InsightFace's SCRFD, so the detector was never the entangled
+component. Replacing it with YuNet would have put a photograph-trained detector on anime faces — the exact
+failure the anime-specific pin exists to avoid — and would have made the two encoders' numbers
+incomparable by changing the pixels underneath them. YuNet's digest is recorded under `not_fetched` so the
+decision is reversible without re-deriving anything.
+
+---
+
+<!-- next: F47 -->

@@ -1,14 +1,32 @@
 # The state of the work, for a new thread
 
-**Rounds 1–3 are complete. Round 4 is the JoyCaption trial and has not started.**
+**Rounds 1–4 are complete.**
 
-**Updated 2026-09-11 at the close of round 3 (F37–F41).** This is the file to read first in a fresh
-thread. It is a summary with pointers, not a replacement: `FINDINGS.md` holds the evidence,
-`IDENTITY.md` the identity method, `CRITERIA.md` the sheet's design, `ILLUSTRIOUS.md` the base's own
-documentation, `READER.md` and `JOYCAPTION.md` the next round, `archive/GPU.md` the infrastructure.
+**Updated 2026-09-12 at the close of round 4 (F42–F46).** This is the file to read first in a fresh
+thread. It is a summary with pointers, not a replacement: **[`ARCHITECTURE.md`](ARCHITECTURE.md) is the
+shape of the whole pipeline** and is the other thing to read first; `FINDINGS.md` holds the evidence,
+`ROUTER.md` how prose becomes a sheet, `IDENTITY.md` the identity method, `CRITERIA.md` the sheet's
+design, `ILLUSTRIOUS.md` the base's own documentation, `READER.md` and `JOYCAPTION.md` round 4's survey
+and plan, `archive/GPU.md` the infrastructure.
 
-> **If you are starting round 4, read §6c first** — it is at the bottom and it is the only section that
-> tells you what to do next. Everything above it is what is already true.
+> **§6c is stale** — it briefs round 4, which is now closed. **What to do next is
+> `../README.md` § *Start here tomorrow*** — the ranked open list, the plan, and today's three traps.
+> The architectural version of the same ranking is [`ARCHITECTURE.md`](ARCHITECTURE.md) §6.
+
+### What round 4 settled, in five lines
+
+- **JoyCaption is in the stack as the *describer*, not the reader** — 0.518 against the agent session's
+  0.795 and a 0.60 floor, kept because the *seeing* becomes reproducible from a digest · **F42**
+- **An LLM + deterministic mapper is stage two.** Qwen3-8B (Apache-2.0, 5.2 GB) + `tagmap.py` reaches
+  **0.482**, and *rendered* it ties the hand-routed sheet — 0.580 to 0.568 · **`ROUTER.md`**
+- **Prose is dead as a render prompt.** Illustrious reads it and renders it in the wrong register ·
+  **F45**
+- **An absence clause is a presence instruction.** The router is where negation dies · **F44**
+- **The operator's review step is worth 0.35** — 0.568 unreviewed against 0.917 reviewed. It is the one
+  unbuilt stage · **F44/`ARCHITECTURE.md` §4**
+- **Identity survives an encoder we did not train against.** SFace, independent: **9/17 at chance 5.9%,
+  p ≈ 0.0000**, against `glintr100`'s 14/17 on the same crops. `A` is no longer self-graded, and the
+  entanglement inflated the **margin 16.3x** while inflating hits only 1.6x · **F46**
 
 ---
 
@@ -261,7 +279,11 @@ have learnt. Worth softening the message.
 
 ---
 
-## 6c · Where to start — round 4, the JoyCaption trial
+## 6c · Round 4's brief — STALE, kept as the record of what was planned
+
+> **Round 4 is closed.** This section briefed it and is left unedited because the plan it states is what
+> the result should be read against. **For what to do next, see `../README.md` § *Carried out of round 4*
+> or [`ARCHITECTURE.md`](ARCHITECTURE.md) §6.**
 
 **Nothing is mid-flight. The RunPod account is empty, the working tree is clean, and every artifact is
 on disk.** Rounds 1–3 are closed; `../README.md` carries every question and what answered it.

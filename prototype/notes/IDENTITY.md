@@ -236,13 +236,30 @@ adapter being marked by its own examiner.
 - **`D`'s result is clean.** `D` never touches the encoder, so `D`'s failure is real evidence.
 - **`A`'s result is an upper bound.** `A − D` is the *most* the identity adapter could be worth, not an
   estimate of what it is worth.
-- **Removing this needs a second, independent recognizer** that the pipeline was not trained against.
-  **And the obvious candidate is disqualified.** The other face encoder already pinned here is a CLIP
-  image encoder with a style LoRA merged, and its own documentation records that *"its training pairs
-  were stylized with InstantID and IP-Adapter — this exact generator family."* It is **more** entangled
-  than the recognizer used above, not less. **Neither locally available face encoder is independent of
-  this generator**, so an honest second opinion has to be fetched and pinned: a different architecture
-  and a different training set, not another variant of the same family.
+- **~~Removing this needs a second, independent recognizer~~ — done 2026-09-12, F46.** It needed one and
+  it now has one. **SFace** (OpenCV Zoo, Apache-2.0, pinned in `../styles/sface_models.json`): a
+  different architecture, corpus and loss, and a 128-d embedding against `glintr100`'s 512-d. On F41's
+  seventeen real subjects, **both encoders reading the same crops**:
+
+  | encoder | top-1 | chance | mean margin | p |
+  |---|---:|---:|---:|---:|
+  | `glintr100` — entangled | 14/17 | 5.9% | +0.1172 | 0.0000 |
+  | **SFace — independent** | **9/17** | 5.9% | **+0.0072** | 0.0000 |
+
+  **Identity survives independent examination**, p ≈ 0.0000 — so `A` is no longer self-graded. **And the
+  inflation was real and is almost entirely in the margin**: 1.6x on hits, **16.3x on margin**. That is
+  what "upper bound" meant, now quantified rather than suspected.
+
+  **The replacement caveat, smaller and one-directional.** SFace runs **unaligned** — it expects a
+  5-point landmark-aligned crop and gets a bounding box — so **9/17 is a lower bound** as surely as 14/17
+  is an upper one. Preprocessing and crop margin were both ruled out first; `glintr100` on the identical
+  crops ranks the known-answer pair 1 of 136 where SFace ranks it 2, which is what exonerates the crop
+  and indicts alignment. **Read independent identity as bracketed, `9/17 … 14/17`, not pinned.**
+
+- **The obvious candidate was disqualified, and still is.** The other face encoder already pinned here is
+  a CLIP image encoder with a style LoRA merged, and its own documentation records that *"its training
+  pairs were stylized with InstantID and IP-Adapter — this exact generator family."* It is **more**
+  entangled than `glintr100`, not less.
 
 **Small N.** Six subjects. Every p-value is exact rather than approximated, but 5/6 versus 4/6 is one
 subject and is not significant on its own. Only the flow-level `A` vs `D` separation is.

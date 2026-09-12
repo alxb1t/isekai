@@ -1,0 +1,39 @@
+{
+  "pinned": "2026-09-12",
+  "why": "N27b. An INDEPENDENT face recognizer, so flow `A`'s identity number stops being graded by the encoder InstantID optimises against. `glintr100` is both the embedding InstantID injects and the ruler measuring whether identity survived, which makes `A`'s 14/17 an upper bound rather than an estimate -- `notes/IDENTITY.md` §circularity states it and `isekai/eval_backends.py` says the axis may only falsify. SFace is a different architecture, a different training corpus, a different loss (sigmoid-constrained hypersphere, IEEE 9318547) and a 128-d embedding against glintr100's 512-d.",
+  "not_in_eval_models_json": "A prototype artifact, on `wd14_models.json`'s and `joycaption_models.json`'s precedent: recorded beside the prototype, never in the tracked eval manifest, whose byte-identical derivation this branch must not disturb.",
+  "only_the_recognizer_is_swapped": "`prototype/face_likeness.py` crops with deepghs' `anime_face_detection` (MIT), NOT with InsightFace's SCRFD, so the detector is already independent of InstantID. An earlier sketch of N27b proposed swapping the detector too, for YuNet; that was wrong and is dropped. YuNet is photograph-trained and the repository pins an anime-specific detector precisely because photograph detectors fail on anime faces -- it would have put a worse crop under a better recognizer.",
+  "licence": {
+    "declared": "Apache-2.0",
+    "where": "https://github.com/opencv/opencv_zoo/blob/main/models/face_recognition_sface/LICENSE",
+    "read": "2026-09-12",
+    "note": "Declared by that model directory's OWN LICENSE file and restated in its README -- not inherited from the repository root, which is also Apache-2.0 but would be a weaker claim. **This is more permissive than the incumbent**: `scripts/eval_licences.md` records glintr100/antelopev2 as non-commercial research and a shipping deviation. So an independent recognizer is also the more shippable one."
+  },
+  "publishers": [
+    "opencv",
+    "ShiqiYu"
+  ],
+  "verification": "The digest below is also the `oid` declared in the repository's own git-LFS pointer, so a download verifies against the repository's record and not merely against itself. Worth knowing because the plain `raw.githubusercontent.com` URL serves the 133-byte POINTER rather than the model, and it is a valid file that is not a model: the first fetch here produced two `.onnx` files whose leading bytes were `version http`. **Fetch LFS content through `media.githubusercontent.com/media/`, and check the magic byte.**",
+  "preprocessing": "**Raw 0-255, NOT ArcFace's (x-127.5)/127.5.** `ArcFaceEncoder` normalises; SFace does not, and OpenCV's own demo feeds `blobFromImage` at scalefactor 1.0 with no mean subtraction. Feeding the wrong range produces what `IDENTITY.md` §4 calls numbers that look fine and mean nothing, which is why `prototype/sface.py` refuses to report anything until its known-answer test passes.",
+  "entries": [
+    {
+      "dest": "opencv_face/sface.onnx",
+      "sha256": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
+      "bytes": 38696353,
+      "input": "[1, 3, 112, 112] float32, NCHW, BGR, 0-255",
+      "output": "[1, 128]",
+      "sources": [
+        "https://media.githubusercontent.com/media/opencv/opencv_zoo/main/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
+      ]
+    }
+  ],
+  "not_fetched": [
+    {
+      "dest": "opencv_face/yunet.onnx",
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
+      "bytes": 232589,
+      "licence": "MIT, per that directory's own LICENSE",
+      "why": "Downloaded, then dropped on the scoping correction above -- the detector was never the entangled component. Its digest is recorded so the decision is reversible without re-deriving anything, and so nobody repeats the investigation."
+    }
+  ]
+}

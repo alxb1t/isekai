@@ -8,6 +8,12 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 > [`notes/README.md`](notes/README.md). This file stays at the root as the task list and its history.
 >
 > ### Reading order
+> **Resuming cold on 2026-09-13? Jump to § *[Start here tomorrow](#start-here-tomorrow--2026-09-13)*** —
+> it names the three documents to read, the plan, and what is actually open.
+>
+> 0. **[`notes/ARCHITECTURE.md`](notes/ARCHITECTURE.md)** — **the shape of the whole thing**, photograph to
+>    anime image, in four stages: the abstract version, the open stack, the closed one, and where each
+>    stage's ceiling is. Settled 2026-09-12
 > 1. **[`notes/HANDOFF.md`](notes/HANDOFF.md)** — **start here in a fresh thread.** What exists now, the settled
 >    configuration, the laws, and what is still open. This file is the ledger behind it.
 > 2. **this file** — the task list and its history: every question asked, and what closed it
@@ -18,7 +24,9 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 > 5. **[`notes/ILLUSTRIOUS.md`](notes/ILLUSTRIOUS.md)** — what the base was trained on, and what to prompt it with
 > 6. **[`notes/FINDINGS.md`](notes/FINDINGS.md)** — F1–F41, the full evidence, newest at the bottom
 > 7. **[`notes/READER.md`](notes/READER.md)** · **[`notes/JOYCAPTION.md`](notes/JOYCAPTION.md)** — who can
->    read a photograph into a sheet, and the plan for trialling the leading candidate. **Next round**
+>    read a photograph into a sheet, and the plan for trialling the leading candidate. **Round 4, closed**
+> 7b. **[`notes/ROUTER.md`](notes/ROUTER.md)** — **how prose becomes a sheet with an open model**: 0.033 →
+>    0.482 across four configurations, and why the enum grammar was a trap
 > 8. **[`archive/SUMMARY.md`](archive/SUMMARY.md)** — round 1's close: the flows compared, and what
 >    not to retry
 > 9. **[`archive/GPU.md`](archive/GPU.md)** — settled: keep the card, and a render is not where the
@@ -26,9 +34,12 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 
 ---
 
-## Status: round 3 complete. Flow `A` is validated end to end.
+## Status: round 4 complete. JoyCaption is in the stack — as the describer, not the reader.
 
-**2026-09-11 · 41 findings · 16 pod sessions · ≈$2.80 · every task in every round closed.**
+**2026-09-12 · 46 findings · 19 pod sessions · ≈$3.17 · every round-4 task closed but the UI.**
+**The stack is open end to end, and identity now survives an encoder we did not train against.**
+**It fails the 0.60 reader bar at 0.518 and is kept for the one thing it does reproducibly: see.**
+Verdict and reasoning in § *[Round 4 closed](#round-4-closed--joycaption-fails-the-bar-it-was-given-and-earns-a-different-job)*.
 
 ```
   photo ─▶ VLM reads it into a 16-field criteria sheet ─▶ operator reviews
@@ -89,6 +100,98 @@ The style he liked belonged to the flow that loses identity. The identity he wan
 whose style he disliked. **Neither available architecture delivers both halves** — and F22 argues the
 thing that would is a **trained style adapter**, which is what Fotor has and what the open ecosystem
 does not provide for this direction.
+
+---
+
+## Start here tomorrow — 2026-09-13
+
+**Written 2026-09-12 at the end of the session, for a thread that has none of its context.**
+Nothing is mid-flight: the RunPod account is empty (MCP-confirmed twice), every render is on local disk,
+and the working tree is clean apart from the uncommitted work listed at the end of this section.
+
+### Read these three, in this order
+
+1. **[`notes/ARCHITECTURE.md`](notes/ARCHITECTURE.md)** — the whole pipeline in four stages, with three
+   diagrams: abstract, the open stack, the closed one. **§5 is where each stage's ceiling is**, and §6 is
+   the open work already ranked.
+2. **[`notes/HANDOFF.md`](notes/HANDOFF.md)** — the settled dials, the laws, and round 4's six settled
+   points at the top. Its **§6c is marked stale** and kept only as the record of what round 4 planned.
+3. **this file's § *Round 4 closed*** — the verdict and its reasoning.
+
+Then, only as needed: **[`notes/ROUTER.md`](notes/ROUTER.md)** if you are touching stage ②,
+**[`notes/IDENTITY.md`](notes/IDENTITY.md)** if you are touching the identity number,
+**[`notes/FINDINGS.md`](notes/FINDINGS.md)** F42–F46 for today's evidence.
+
+### What the plan is
+
+**The operator's stated intent for 2026-09-13, in his order:**
+
+1. **Finish the open tasks** — listed and ranked below.
+2. **Then close the prototype**, and hold a **grilling session on integrating it into the actual
+   product.** That is a `mattpocock-skills:grilling` session against the productisation plan, not a
+   coding task, and `ARCHITECTURE.md` is the document it will be run against.
+
+> **The prototype's job was to answer empirical questions cheaply before a change is cut.** Four rounds,
+> 46 findings, 19 pod sessions, ~$3.17. **Productisation means cutting a change under
+> `openspec/changes/<id>/` with four artifacts** — and `../CLAUDE.md` § *How a change is cut here* is the
+> contract that governs it. **Nothing in this branch merges.** It reaches a release only by being
+> restated inside a change.
+
+### What is actually open, ranked
+
+| | task | cost | why this rank |
+|---|---|---|---|
+| 1 | **N41 · the review UI** | a feature | **Measured at 0.35** — the gap between the open route unreviewed (0.568) and reviewed (0.917). The only unbuilt stage. Requirements are in § *Carried out of round 4* |
+| 2 | **A phone-camera set** | data | **The only true unknown.** Every input across four rounds is generated or professionally shot; the product's actual input has never been tested. Blocked on the operator gathering photographs |
+| 3 | **N40 · `pose` in the router**, 0.37 vs Claude's 0.80 | hours, $0 | curation of `tagmap.PHRASES`, not capability. Per-field enums are the other half |
+| 4 | **A better VLM** — `Qwen3-VL`, Apache-2.0 | a download | **Stage ①'s ceiling bounds everything after it.** Would separate how much of JoyCaption's 0.518 is its Danbooru training from how much is its eyes |
+| 5 | `face_likeness` on N38's twenty renders | $0 | turns F45 from an eye into a number |
+| 6 | SFace alignment | a pinned landmark model | tightens `9/17 … 14/17`. **Deliberately last** — it refines a number and changes no verdict |
+
+**Explicitly dropped, do not retry:** prose as a render prompt (F45 — the base reads it and renders it in
+the wrong register; the register is the problem, not the wording), and the enum grammar as a router
+(F46/`ROUTER.md` §2 — it converts a visible failure into an invisible one).
+
+### What exists now that did not this morning
+
+| file | what it is |
+|---|---|
+| `joycaption.py` | the VLM seam: pinned bytes, two sight gates, both caption modes, five HTML instruments |
+| `router.py` | stage ②'s harness. `--model` swaps a candidate; scores `invented` (F28) and `absence_leaks` (F44) |
+| `tagmap.py` | the deterministic mapper — exact → suffix → curated → containment |
+| `prose_render.py` | the six-arm render runner, reading prompts from a reviewed `prompts.json` |
+| `sface.py` | the independent recognizer, behind a known-answer gate |
+| `styles/joycaption_models.json` · `styles/sface_models.json` | pinned digests and licences |
+| `notes/ARCHITECTURE.md` · `notes/ROUTER.md` | the two new notes |
+| `evaluations/2026-09-12/descriptive_and_booru/` | 26 renders, plan, prompts, captions, four HTML pages, `report.md` |
+
+**Weights on disk, all pinned and digest-verified:** JoyCaption 5.40 GiB + Qwen3-8B 5.2 GB (via Ollama) +
+SFace 37 MB. `models/` and `prototype/evaluations/` are gitignored.
+
+### Uncommitted, and it is a record rather than a release
+
+```
+  M  README.md  notes/{ARCHITECTURE,FINDINGS,HANDOFF,IDENTITY,JOYCAPTION,READER,README}.md
+  ?? joycaption.py  router.py  tagmap.py  prose_render.py  sface.py
+  ?? notes/ARCHITECTURE.md  notes/ROUTER.md
+  ?? styles/joycaption_models.json  styles/sface_models.json
+```
+
+**The gate, honestly:** `isekai/` + `tests/` + `convert.py` are format/lint/type clean and 434 tests pass;
+every file added today is clean. **`prototype/archive/*` and `prototype/style_axis.py` carry 109
+pre-existing lint errors and 18 unformatted files** — none of them touched today, and `prototype/` has
+never been gate-clean on this branch. Flagged rather than fixed: cleaning archived round-1 runners risks
+the findings they reproduce.
+
+### Three traps that cost real time today
+
+- **A `raw.githubusercontent.com` URL serves a git-LFS *pointer*, not the model** — a valid 133-byte file
+  whose first bytes are `version http`. **Check the magic byte after any model download.** Fetch LFS
+  content through `media.githubusercontent.com/media/`.
+- **`ollama create` wants roughly twice the file in free disk**, and fails at the validation step after
+  copying. A 13 GB import needed more than 20 GiB free.
+- **Python buffers stdout when redirected**, so a long background run's log looks empty. Use `python -u`
+  or watch the filesystem instead of the log.
 
 ---
 
@@ -655,6 +758,484 @@ they amount to.
 
 ---
 
+## Round 4 — the open reader
+
+**Opened 2026-09-12. One question, and it is about reproducibility rather than quality.**
+
+The reader that turns a photograph into a criteria sheet is an **agent session**. It scores 0.78, which is
+good, and it is **not reproducible by anyone without the transcript that produced it** — a closed,
+unversioned, un-pinnable component at step one of a repository whose thesis is open models end to end.
+
+```
+  photo ─▶ READER ─▶ draft.json ─▶ adopt ─▶ ★ operator reviews ★ ─▶ build ─▶ render
+             │
+             ├─ now    an agent session       0.78 · not reproducible
+             └─ trial  JoyCaption Beta One    Apache-2.0 · 5.8 GB · local · pinned
+```
+
+**The plan is already written and its bar is already stated:** [`notes/JOYCAPTION.md`](notes/JOYCAPTION.md)
+— the artifacts, the hosting, the two phases, five traps, and what would make it fail.
+[`notes/READER.md`](notes/READER.md) is the survey that chose the candidate over Qwen3-VL, InternVL3 and
+Molmo. **Read both before touching anything.** What follows is the task list, and before it the four
+places the plan is wrong — every one found on disk on 2026-09-12, before anything was downloaded.
+
+### Four corrections the plan needs before it is followed
+
+**Checked on disk, 2026-09-12, $0.** The plan was written on the 11th and three of these are things that
+changed under it; the fourth it never had.
+
+| # | what the plan says | what is true |
+|---|---|---|
+| **1** | §2: *"LM Studio, already installed — no new dependency"* | **LM Studio is not installed.** `~/.lmstudio/` and the `lms` CLI are there, and `/Applications/LM Studio.app` is not — `lms ls` dies with `ENOENT` trying to spawn it. **Ollama 0.33.1 is installed and answering on `127.0.0.1:11434`**, with no models pulled. **The host is Ollama**, by the operator's decision of 2026-09-12 — and see N33 for the risk that came with it |
+| **2** | §4: *"the ten synthetic and three real subjects"* = 13 | **The three real photographs are deleted.** `real_photo_1..3` were withdrawn 2026-09-11 and their images removed from `inputs/real/` — the sheets are kept only so F36 and F40 stay reproducible (`sheets/real/_withdrawn_2026-09-11/README.md`). The runnable set is **10**, unless real subjects are drawn from N30's seventeen |
+| **3** | §3: the bar is *0.78, measured the same way* | **Only the ten synthetic portraits can give a like-for-like.** The 17 real, 10 portfolio and 10 pose sheets were written by `sheet.py adopt` **from the incumbent's own drafts**, one minute apart — the reference *is* the incumbent's output plus the operator's edits. Scoring JoyCaption on those 34 measures *agreement with the incumbent, as corrected*, which is worth having and is **not** the same number as 0.78 |
+| **4** ✅ | §1: two sha256 digests | **Both are truncated to four bytes** and verify nothing. The manifest needs the full digests, and hashing a 4.92 GB file must be **streamed** — `criteria_eval.verified()` does `path.read_bytes()`, which is fine at 467 MB and not on a 16 GiB machine at 4.9 GB. **Closed by N32** — full digests pinned, hash streamed |
+
+**The machine, measured rather than assumed:** MacBookPro18,1, **16 GiB RAM**, **43 GiB free**. Q4_K plus
+the projector is 5.80 GB and fits; Q8_0 is 9.42 GB, fits on disk, and is tight in RAM — it stays the
+quantisation check of §7 and not the first thing tried.
+
+### Tasks
+
+```
+   ✅ N32  pin + licence         pinned, licence NOT Apache-2.0, bytes verified
+   ✅ N33  host + prove sight    Ollama, two-FROM Modelfile. It SEES: 17/17 incl. 3/3 men
+   ◐  N34  the client            built, and the normalisation pass is NOT — see below
+   ✅ N35  phase 0              0.501 · 85% canonical · every §6 trap confirmed
+   ✅ N36  phase 1              0.518 best of three arms — and one arm did harm
+   ✅ N37  the decision         FAILS the 0.60 bar as a reader · KEPT as the describer
+   ✅ N38  render-test          20 renders, ~$0.26 · prose is dead · the review step is 0.35
+```
+
+- [x] **N32 — pinned, licence-checked and byte-verified — 2026-09-12.** `$0`. **Closed below.**
+      `prototype/styles/joycaption_models.json`, on `wd14_models.json`'s pattern exactly: `pinned`, `why`,
+      `not_in_eval_models_json`, `publishers`, and per entry `dest` / `sha256` / `bytes` / `sources`.
+      From **`concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf`** and nowhere else — `READER.md`'s
+      warning is that the two most-cited quantisations ship **no `mmproj`** and are silently blind.
+      Full digests come from the repository's own metadata, not from `JOYCAPTION.md`'s truncated table.
+      The licence goes in the manifest's `why`, with the URL and the date read, which is where `wd14`'s
+      Apache-2.0 is recorded — **not** `scripts/eval_licences.md`, which is tracked and belongs to
+      `eval_models.json`. `concedo`'s requantisation declares no licence of its own; that gap is the thing
+      to write down.
+- [x] **N33 — DONE 2026-09-12. It sees.** `$0`. Ollama's undocumented two-`FROM` Modelfile pairs the
+      projector; `ollama show` lists `vision` and a 434 M-parameter CLIP projector, and its blob store
+      is content-addressed so **its two layers carry our pinned digests**. The falsifiable gate:
+      **17/17 on sex over the seventeen real photographs, including 3/3 on the men** — a blind model
+      scores 0/3 there, so sight is proven. **Gate 1 failed its stated bar**, 6/10 on eye colour
+      against 8/10, above the 4/10 blind floor; every miss was green or grey and it never once said
+      either word. Kept as a FAILED bar rather than rewritten. Original text below.
+- [x] ~~N33 — stand up the host, and prove the model can see.~~ `$0`. **Ollama, by the operator's
+      decision of 2026-09-12**, at 0.33.1 and already answering on `127.0.0.1:11434`. The requirement is
+      **one local HTTP endpoint that accepts an image**, so the client stays stdlib `urllib` and no Python
+      dependency is added.
+
+      **And the risk that came with the choice, found 2026-09-12 before starting:** Ollama's current
+      `docs/import.mdx` and `docs/modelfile.mdx` **do not mention `mmproj`, a projector, or vision
+      anywhere.** The documented GGUF import path covers a text model and a safetensors adapter. The
+      two-`FROM` Modelfile that paired a LLaVA quant with its projector is undocumented now, and may or
+      may not still work on 0.33's engine. **Cheapest order: try the two-`FROM` Modelfile against the
+      local pinned files (two minutes), then `ollama pull hf.co/concedo/…` to see whether Ollama detects
+      the projector in the repository itself** — the second is worse for us because nothing we can verify
+      against the manifest ever lands on disk. If neither pairs it, the blocker is **hosting, not the
+      model** (`JOYCAPTION.md` §7 says exactly this), and the options are LM Studio after all or
+      `llama-server` from llama.cpp — the latter a binary tool rather than a Python dependency, and still
+      an ask, not an assumption.
+
+      Then the gate,
+      and it has to be falsifiable because the failure is silent: **a LLaVA GGUF without its projector
+      answers fluently and describes nothing.** Two different photographs must produce two different
+      answers, and a question about a detail present in only one of them must fail on the other. A model
+      that passes a single "describe this" prompt has proven nothing.
+- [◐] **N34 — the client is built; the normalisation pass is NOT.** `$0`. `prototype/joycaption.py`
+      carries the transport, both sight gates, the booru probe, both caption modes, the evaluation
+      runner and five HTML instruments. **The §6 cleanup was counted and never applied** — underscores,
+      `meta:`/`photo (medium)`, and the `own` family were all measured (49 dead-or-meta tags of 333)
+      and the fix was done by hand during routing instead. **It belongs in the router, which does not
+      exist yet**, and N38 added a second job to it: strip absence clauses. Carried, not dropped.
+- [x] ~~N34 — the client, and the normalisation pass that belongs in it.~~ `$0`.
+      `prototype/joycaption.py`: stdlib `urllib` against localhost, writing `<id>.json` into
+      `derived/vlm_drafts/` under a per-phase directory so no run overwrites the incumbent's drafts.
+      `JOYCAPTION.md` §6's first three traps are a deterministic cleanup — underscores (F32: −0.013,
+      six times the determinism floor), meta tags (`photo (medium)` **instructs an anime model to render a
+      photograph**), non-canonical variants (`hands on hips` is not in the vocabulary; `hands on own hips`
+      is, at 25,548). It goes **here and not in `sheet.py`**, which serves every reader.
+- [x] **N35 — DONE 2026-09-12. 0.501 on the independent three.** `$0`. 333 tags over ten photographs,
+      **85% canonical**. **All four of `JOYCAPTION.md` §6's predicted traps confirmed**: underscores on
+      all 333, `copyright:original` + `meta:photoshop_(medium)` on all ten, `photo_(medium)` on eight,
+      and six of the `own` family (`hands on hips` for `hands on own hips`). One new one, measured:
+      **it hedges rather than decides** — `blonde hair` *and* `brown hair` on the same subject,
+      `long hair` *and* `medium hair`, three background colours at once. Original text below.
+- [x] ~~N35 — phase 0: the raw Danbooru tag dump.~~ `$0`. JoyCaption's own booru mode, over the ten
+      synthetic portraits and — knowing correction 3 — N30's seventeen real ones as a second, separately
+      reported arm. Scored by `vlm_reader.py` **unchanged**; it already does recall per field against the
+      reviewed sheets, with the 0.60 mean and 0.40 per-field floors stated before the incumbent ran.
+- [x] **N36 — DONE 2026-09-12. Three arms, and the sharpest arm did harm.** `$0`. Briefing it
+      *neutrally* with the sixteen fields is the best of five prompts at **0.518** — and it ignored the
+      field structure and returned a flat bag anyway. Briefing it **pointedly** with the seven identity
+      criteria and *"do not leave one blank"* **fell to 0.307 and invented nineteen identity marks on
+      seven of ten subjects**. The agent briefing passed verbatim collapsed to 0.093. Original text below.
+- [x] ~~N36 — phase 1: our sixteen-field schema, verbatim.~~ `$0`. The briefing `vlm_reader.py --schema`
+      prints, word for word — `JOYCAPTION.md` §8 is right that changing it makes the comparison unfair, so
+      **any rewrite is a second arm, never a correction.** Same photographs, same scorer, same sitting as
+      N35, because the comparison *between* the two phases is the finding: **is JoyCaption a tagger we
+      route, or a reader we brief?** Its model card warns instruction-following is its weak point, so this
+      is a real question.
+- [x] **N37 — DECIDED 2026-09-12. It fails as a reader and is kept as the describer.** `$0`. See
+      § *Round 4 closed* below for the decision and its reasoning. Original text below.
+- [x] ~~N37 — the decision.~~ `$0`. Against §3's bar: **≥0.78 replaces** the agent session · **0.60–0.78**
+      becomes the first-draft generator the operator reviews · **<0.60 fails**, as WD14 did at 0.47. And
+      against §5's fork, which chooses the integration: a briefed reader is a drop-in, a tag dump needs a
+      `tag → field` router that is real and maintained work. The middle band is **not** a consolation
+      prize — `CRITERIA.md`'s architecture already has the review step.
+- [x] **N38 — DONE 2026-09-12. 20 renders, one session, ~$0.26.** It grew past a render-test into the
+      round's most informative run: **[`evaluations/2026-09-12/descriptive_and_booru/`](evaluations/2026-09-12/descriptive_and_booru/)**,
+      plan and prediction written first, verdict in its `report.md`. Prose is dead as a prompt; an
+      absence clause is a presence instruction; the review step is worth 0.35. Original text below.
+- [x] ~~N38 — render-test the winning sheet. ⚠️ GPU, conditional on N37.~~ Only if N37 adopts or
+      first-drafts. **The agreement score is a proxy and the product is the image**: a 0.69 sheet may
+      render well and a 0.90 sheet may miss the one tag that mattered. One session, flow `A` at the settled
+      configuration, the reviewed sheet against the JoyCaption-seeded sheet on the same subjects and seed.
+      Budget ~10 renders, ~$0.10 inside the 60-minute / ~$0.75 ceiling. **Downscale the inputs first** —
+      N30's real photographs are 21–28 MB each and the uploads, not the GPU, made 34 renders take 27
+      minutes.
+
+### N32 closed — the bytes are pinned, and the licence is not what both notes said
+
+**2026-09-12 · `$0`, no pod, no GPU.** `prototype/styles/joycaption_models.json` ·
+`prototype/joycaption.py --verify` · 5.40 GiB on disk at `models/joycaption/`.
+
+```
+  PINNED   revision acfe6bf78ae4e411cd5c7c8f4a71ba01f26a5b97 in every source URL
+  OK       Llama-Joycaption-Beta-One-Hf-Llava-Q4_K.gguf            4.58 GiB
+  OK       llama-joycaption-beta-one-llava-mmproj-model-f16.gguf    0.82 GiB
+  --       Q8_0 (7.95 GiB) and F16 (14.97 GiB) — digests recorded, NOT fetched
+```
+
+**All four digests in the repository were checked against the Hub's own LFS metadata before anything was
+downloaded, and both fetched files then verified against them.** `JOYCAPTION.md` §1's two were truncated to
+four bytes and verified nothing; the full ones confirm its prefixes were right. The manifest **pins the
+revision** in every source URL where `wd14_models.json` resolves through `main` — a digest catches a
+repository that moved, a pinned revision stops it moving.
+
+**The licence is the finding, and it corrects two notes.** Read four layers deep:
+
+| layer | declared |
+|---|---|
+| `fpgaminer/joycaption` — the **code** | **Apache-2.0**, SPDX, via the GitHub licence API |
+| `fancyfeast/…-hf-llava` — the **weights** | **no `license` field.** The README's *"open weights, no restrictions"* is prose |
+| `meta-llama/Llama-3.1-8B-Instruct` — the **base LLM** | **`llama3.1`**, and `gated: manual` |
+| `google/siglip2-so400m-patch14-384` — the **vision tower** | `apache-2.0` |
+| `concedo/…-mmproj-gguf` — **this requantisation** | **none**, and its README states no terms |
+
+**`READER.md` and `JOYCAPTION.md` both call it "Apache-2.0". That is true of the code and not established
+for the weights** — the Llama 3.1 Community License carries naming, acceptable-use and 700M-MAU terms, and
+a fine-tune of a Llama 3.1 checkpoint derives from it. The upstream author's "no restrictions" cannot grant
+more than he received. **Fine for a prototype that renders locally and distributes nothing; not a settled
+position for anything that ships.** Both notes are corrected and the full record is in the manifest and
+`JOYCAPTION.md` §9 — deliberately **not** in `scripts/eval_licences.md`, which is tracked and belongs to
+`eval_models.json`, on `wd14_models.json`'s precedent.
+
+**And a second projector trap, in the same repository chain.** The source repository's own README says:
+
+> *"Download the main model (`…-Q4_K.gguf`) and the mmproj (`Llama-Joycaption-Beta-One-Hf-Llava-F16.gguf`)"*
+
+**`…-Hf-Llava-F16.gguf` is the 16 GB full-precision *text* model, not the projector.** Following that
+instruction downloads 21 GB and still has no vision. It is recorded under `not_fetched` for exactly one
+reason: so it is never confused with the projector again. Twice now the projector is where this model goes
+wrong — §1's warning was two quantisations shipping none at all.
+
+**`prototype/joycaption.py` streams the hash.** `criteria_eval.verified()` does `path.read_bytes()`, which
+is right at 467 MB and a risk of swapping at 4.92 GB on 16 GiB. Size is checked before the digest, because
+a truncated download is the failure that actually happens and saying so is free.
+
+**What is *not* proven, and the file says so when it runs:** that the model can see. A digest proves the
+bytes are the bytes we pinned; a projector-less LLaVA answers fluently and describes nothing. **N33's gate
+has to be falsifiable**, and it is next.
+
+### The bar, and why it is quoted rather than restated
+
+**It is in [`notes/JOYCAPTION.md`](notes/JOYCAPTION.md) §3, written on 2026-09-11 before a byte was
+downloaded**, and it is not repeated in full here so there is exactly one copy of it to adjust. The whole
+point of F1 — this project's record of stating a bar *after* the run and getting a coin flip — is that the
+number has to be older than the result.
+
+**What the trial cannot decide, and should not be read as deciding:** whether JoyCaption is a *good
+captioner*. It is being measured on one job — structured extraction into a closed vocabulary against
+sixteen named fields — and a model can be excellent at prose description and fail this.
+
+### What round 4 changes downstream — decide knowingly
+
+- **If JoyCaption replaces the agent session**, `vlm_reader.py`'s `INSTRUCTIONS` stops being *the*
+      reader's briefing and becomes *one* reader's briefing. That is `JOYCAPTION.md` §8's third open item
+      and it is a real edit, not a rename.
+- **If it becomes the first draft instead**, nothing downstream changes at all — `adopt`, `check`,
+      the operator's review and `build` are untouched, and the win is that step one is now pinnable.
+- **Either way the reproducibility claim changes shape.** A pinned GGUF with a recorded digest is
+      reproducible *by anyone with the file*; it is not reproducible *bit-for-bit across hosts*, because
+      llama.cpp sampling and quantisation are not the same thing as a deterministic tagger. Worth stating
+      before it is claimed.
+
+### Not scheduled this round, and each with its reason
+
+- **N39 — Qwen3-VL-8B as the control.** `READER.md` §4's second item: no booru training, driven purely by
+  our briefing. **If it ties JoyCaption, the Danbooru vocabulary training is decorative** and the field is
+  wide open. Worth knowing, and it is a second trial rather than part of this one.
+- **N27b — an independent recognizer.** Still open and still the honest gap: `A`'s identity numbers are an
+  **upper bound** because `glintr100` is the encoder InstantID optimises against. Needs a face encoder from
+  a different architecture and training set, fetched, licence-checked and digest-pinned. `$0`, no GPU.
+- **A phone-camera set.** Every photograph in every round so far is generated or professionally shot.
+  **That is the product's actual input and it remains untested.** Blocked on data, not on work.
+
+---
+
+### Round 4 closed — JoyCaption fails the bar it was given and earns a different job
+
+**2026-09-12 · one pod session, 20 renders, ~$0.26 · seven prompts tried · every task closed but one.**
+
+**Against `JOYCAPTION.md` §3's bar, stated 2026-09-11 and not moved: it fails.** Seven prompts, and the
+best agreement on the three references that are independent of the incumbent is **0.518**, against the
+agent session's reproduced **0.795** and a floor of **0.60**. It clears WD14's 0.47 and nothing else.
+
+| what was asked | best score | bar |
+|---|---:|---:|
+| its own Danbooru tag mode | 0.501 | — |
+| our sixteen fields, neutrally | **0.518** | 0.60 |
+| its prose, hand-routed to a sheet | 0.489 | 0.60 |
+| the seven identity criteria, pointedly | **0.307** ↓ | 0.60 |
+| the agent's briefing verbatim | 0.093 | 0.60 |
+| *the agent session, same measure* | *0.795* | |
+
+**The gap is perception, not briefing, and that is why no prompt closed it.** `00003`'s eyes are green in
+its reviewed sheet and in the photograph, which was checked by eye. JoyCaption returned **brown, blue,
+brown, light brown, blue, brown and brown** across seven prompts — it has never once said green, and on
+one subject two prompts of the same model at temperature 0 disagreed with *each other*. A briefing can
+fix a field nobody asked for; it cannot fix a colour the vision tower does not resolve.
+
+### And it is kept — as the describer, not the reader
+
+**The operator's decision, 2026-09-12: JoyCaption has a place in the stack.** Not the place the trial was
+designed to test.
+
+```
+  photo ─▶ JoyCaption ────▶ prose ─▶ ROUTER ─▶ 16-field sheet ─▶ ★ REVIEW ★ ─▶ render
+           open · pinned            open, or                      the 0.35
+           Apache-2.0 code          Claude / OpenRouter
+           Llama-3.1 weights        as the alternative
+```
+
+- **Stage 1 is open and pinned.** 5.40 GiB, digests in `styles/joycaption_models.json`, hosted on Ollama.
+  The *seeing* is now reproducible by anyone with the file, which was round 4's entire motivation.
+- **Stage 2 is a router, and it has two jobs.** Sort prose into sixteen fields, **and strip absence
+  clauses** — the second job was discovered by N38 and is not optional. Claude or an OpenRouter model
+  stays the alternative by the operator's decision; an open model is preferred and untested.
+- **Stage 3 is the review step, and it is worth 0.35.** Measured: the open route unreviewed delivers
+  **0.568** of the reviewed sheet's attributes through to the render; the reviewed sheet delivers
+  **0.917**.
+
+**What this buys and what it costs, stated plainly.** It buys an open, pinnable, digest-verified
+perception stage. It costs a component that did not exist before, and it does not beat the agent session
+on quality — it beats it on reproducibility, which was always the argument.
+
+### Four laws, and two of them are new
+
+- **F42 · a briefing fixes omissions and cannot fix perception.** Every field JoyCaption scored badly on
+  *for not being asked* improved when asked — `marks`, `gaze`, `framing`. Eye colour did not move across
+  seven prompts. **Rank a reader's failures into omission and perception before trying to prompt around
+  them**; only the first kind is reachable.
+- **F43 · pressure on an identity field produces confabulated identity.** *"Do not leave one blank"* gave
+  nineteen invented marks on seven of ten subjects and dropped the score from 0.518 to 0.307. **And it
+  sharpens F28**: the law was *canonical tags work, invented ones do nothing*. `mole under eye` is
+  canonical **and** invented — so an invented canonical tag does not do nothing, **it does something
+  wrong**, and it passes `sheet.py check` on its way to the prompt. A blank gets reviewed; a plausible
+  false tag does not.
+- **F44 · an absence clause is a presence instruction.** Licensing the reader to say *"no tattoos are
+  visible"* stopped it confabulating and then put `tattoos` in the positive prompt, because CLIP has no
+  negation. The render came back with tattoos, freckles, piercings and scars on a subject who has none.
+  Isolated by a control on the same photograph and seed. **A reader must be allowed to state absence; a
+  prompt must never carry it. The router is the seam where that is stripped.**
+- **F45 · the prompt's job is style; the legs' job is identity.** The operator's reading of all twenty
+  renders is that InstantID and OpenPose held on every case, across four prompt registers including one
+  out of distribution and two poisoned with hallucinated tattoos. **A bad sheet degrades attributes
+  rather than likeness** — which is why a 0.568 sheet is still a usable picture of the right person.
+  *Not instrumented:* `face_likeness` was not run on these twenty, and five subjects gives a 20% floor.
+
+**And one instrument lesson.** The two style axes ranked the four arms almost backwards from
+`criteria_eval`: the arm with the **best linework of the four had the worst attribute recall**. A render
+can be more cel-shaded than the baseline and a worse picture of the person. **Posterisation and linework
+describe the register and say nothing about whether it is the right person** — which is what
+`IDENTITY.md` §1 already says about round 1's scoreboard, met again from a new direction.
+
+---
+
+## Carried out of round 4
+
+- [x] **N39 — the harness is built. 2026-09-12.** `prototype/router.py`. Scores a prose→sheet mapper by
+      `vlm_reader`'s measure against the reviewed sheets, and counts two failure modes: `invented`
+      (F28) and **`absence_leaks`** (F44). **The incumbent now has a number: Claude by hand, 0.575, zero
+      invented, zero leaks** — on the five evaluation captions, which is what any candidate must beat.
+      One bug caught building it: **54 canonical tags contain negation words** — `no bra` (93,761),
+      `eyes visible through hair` (62,070), `invisible chair` (11,163) — so the leak detector flags only
+      absence language the vocabulary does *not* know. A real tag is never a leak, however it reads.
+- [x] ~~N39 — the router, and an eval for it.~~ The component the decision above depends on and the one
+      thing round 4 did not build. **There is no eval for a prose→sheet mapper**: `vlm_reader.py` scores a
+      *reader*, and the only router number that exists is one hand-routing on five subjects — by a hand
+      that is not a reproducible component either, which is the objection round 4 opened with. **Build the
+      harness first, then candidates are a one-line swap and a table.** Two jobs: sixteen fields, and strip
+      negation (F44). `$0`, no GPU.
+- [◐] **N40 — yes, and the constraint matters more than the model. 2026-09-12.**
+      **`Mistral-Small-3.2-24B` was abandoned on hardware, not licence.** `ollama create` copied 13 GB and
+      then ran out of disk writing its validation temp, from 34 GiB free — Ollama's import wants roughly
+      twice the file. And Q4_K_M is 13 GB on a **16 GiB** machine, so even once hosted it would page
+      through every token: the test would have measured swap. Recorded so it is not retried on this
+      machine without more RAM.
+
+      **`qwen3:8b` — Apache-2.0 confirmed from the weights, 5.2 GB, runs comfortably.** Measured on the
+      five evaluation captions:
+
+      | router | mean | tags | invented | leaks |
+      |---|---:|---:|---:|---:|
+      | Claude, by hand — the incumbent | **0.575** | 105 | 0 | 0 |
+      | **qwen3:8b + enum grammar** | **0.316** | 111 | **0** | 0 |
+      | qwen3:8b, unconstrained | 0.033 | 88 | **68** | 0 |
+
+      **Constraining the output is worth +0.283, a 9.6x improvement, and it removed all 68 invalid tags
+      by construction rather than by validation.** `blonde` became unemittable. That is the reframe
+      confirmed: **the vocabulary is closed, so this is a picking problem and not a knowledge problem** —
+      and an 8B model with a grammar beats the same 8B model without one by an order of magnitude.
+
+      **Unconstrained, its failures were surface and not semantic.** It correctly saw blonde hair, blue
+      jeans, a hand on the chin, and then wrote `blonde` for `blonde hair`, `brown` for `brown eyes`,
+      `body slightly angled to the right` for a pose. **It had simply never seen `selected_tags.csv`.**
+
+      **Two fields already match the hand-routing** — `hair colour` 0.80 and `eye colour` 0.40, both
+      exactly Claude's. The gap is three: `clothes` 0.24 vs 0.77, `pose` 0.27 vs 0.80, and **`gaze` 0.00
+      vs 0.60**.
+
+      **Next, and it is cheap: per-field enums.** The shared 8,106-tag enum constrains the vocabulary and
+      not the *field*, so a third of the errors are real tags in the wrong slot — `framing` received
+      `sunset, blowing, sunlight` and `gaze` received `front ponytail`. Derived per field from the
+      vocabulary the sets are tiny: **`count` 5 · `framing` 13 · `gaze` 20 · `body shape` 51 ·
+      `eye colour` 55 · `expression` 80 · `hair colour` 103**. At 20 values all beginning `looking`,
+      `gaze` cannot receive a ponytail. `clothes`, `accessories` and `background` stay open-ended and keep
+      the full enum. **A crude keyword derivation is not enough** — `marks` picked up `scarf` because it
+      contains `scar`; the lists need curating, which is `JOYCAPTION.md` §5's *"real work, and it has to be
+      maintained"*, now with numbers.
+
+      **Two defects found and fixed, both worth knowing before anyone repeats this.**
+      1. **Thinking tokens are drawn from the answer's budget.** Qwen3 is a hybrid reasoner; its thinking
+         truncated the JSON mid-string on the third subject. `think: false` — routing is slot-filling.
+      2. **A grammar stops invalid tokens and does not stop looping.** `full_height_2` emitted
+         `"white robe"` forty times until it exhausted 2048 tokens, `done_reason: length`. A context-free
+         grammar cannot express *no repeats*, so the bound goes on length: `maxItems: 10` — no field on
+         any reviewed sheet here carries more than nine tags — plus `repeat_penalty`. At temperature 0
+         there is no sampling noise to break a loop, so the penalty is the only thing acting inside one
+         array.
+
+      **Cost: the grammar is ~70s per subject against ~15s unconstrained.** Worth it at 9.6x, and worth
+      measuring again if the per-field enums shrink the compile.
+- [x] ~~N40 — can an open model be the router?~~ **`Mistral-Small-3.2-24B-Instruct` is already on the
+      operator's disk at 14 GB and is Apache-2.0**, which makes it the first candidate for reasons of
+      licence and availability rather than ranking. Alternatives: Qwen3-8B/14B (Apache-2.0), Phi-4 (MIT).
+      **Gemma 3 is not a candidate** — the Gemma Terms of Use carry use restrictions and fail the stated
+      open-licence bar; Llama 3.x carries the same 700M-MAU clause as JoyCaption's own base.
+      **And the reframe that matters: this is not a knowledge problem.** The vocabulary is closed at 8,106
+      tags, so a GBNF grammar over `selected_tags.csv` makes an invalid tag *structurally impossible*
+      rather than caught afterwards — which is a stronger guarantee than any model gives, and lets a
+      smaller one do the job. A deterministic `phrase → field+tag` map for the few hundred phrases that
+      carry the seven scored fields may cover most of it with no model and no licence at all.
+- [ ] **N41 — the review UI.** **A separate feature and explicitly out of the prototype's scope** — the
+      operator's decision of 2026-09-12; nothing here is an unknown that needs a spike. Recorded so the
+      idea is not lost, with the four requirements that came out of today's measurements:
+      upload a photograph, see what JoyCaption saw and the tags an LLM built from it, **grouped by the
+      sixteen fields with the seven scored ones marked**, and per-group add/delete with autocomplete.
+      1. **Autocomplete must show the post count**, not just the tag — `narrow waist` (9,411) renders an
+         exaggerated waist and `medium breasts` (770,389) renders ordinary. A picker that offers them as
+         equals walks the operator into that trap every time.
+      2. **Show the live token count against the 77-token window.** Sheets already run 80–122 estimated
+         tokens and nothing says so; every one is silently chunked and averaged.
+      3. **The table is the only editable surface** — which removes the `sheet.py build` footgun, where
+         editing the prompt block gets silently overwritten.
+      4. **The sheet on disk stays the source of truth.** Write on save; never let the sheet exist only in
+         a browser.
+      **And its value is now measured rather than assumed: it is the 0.35** between the open route
+      unreviewed (0.568) and the reviewed sheet (0.917).
+- [x] **N27b — DONE 2026-09-12. Identity survives an independent encoder · F46.** `$0`, no pod.
+      **SFace: 9/17 at chance 5.9%, p ≈ 0.0000**, against `glintr100`'s 14/17 on the same crops — so `A` is
+      no longer self-graded, and the entanglement inflated the **margin 16.3x** while inflating the hit
+      count only 1.6x. `prototype/sface.py`, `prototype/styles/sface_models.json`.
+      **One caveat replaces the other and it is one-directional:** SFace runs unaligned, so 9/17 is a
+      *lower* bound — preprocessing (raw 0-255 RGB, settled over five variants) and crop margin (0.0
+      already optimal) were ruled out first, and `glintr100` ranking the known-answer pair 1/136 where
+      SFace ranks it 2/136 is what exonerates the crop and indicts alignment. Read it as bracketed:
+      **9/17 … 14/17**. Original scope below.
+- [x] ~~N27b — an independent recognizer, so `A`'s identity number stops being self-graded.~~ `$0`, no GPU.
+
+      **The problem, precisely.** `face_likeness.py` measures identity with `glintr100`, and InstantID
+      *injects* identity using that same encoder. The examiner is the thing being optimised against, so
+      **flow `A`'s 14/17 is an upper bound rather than an estimate** — `IDENTITY.md` §"circularity" states
+      it and `isekai/eval_backends.py`'s `ArcFaceEncoder` docstring says the axis "may only falsify".
+      Flow `D` never touches InstantID, which is the only reason the `A − D` gap reads at all.
+
+      ```
+        photograph ──▶ glintr100 ──▶ embedding ──▶ InstantID conditions on it
+                            │                              │
+                            └──────▶ SCORES the render ◀────┘
+                                 the same encoder, both ends
+      ```
+
+      **Only the recognizer is entangled, and that is a scoping correction.** The first sketch of this
+      task said "swap the detector too". **Wrong:** `face_likeness.py` crops with deepghs'
+      `anime_face_detection` (MIT), not with InsightFace's SCRFD, so the detector is already independent
+      of InstantID. Replacing it with a photograph-trained detector like YuNet would put a *worse* crop
+      on anime faces and buy nothing — the repo pins an anime-specific detector precisely because photo
+      detectors fail there. **YuNet is dropped from this task.**
+
+      **The candidate: `SFace` from OpenCV Zoo.** Checked 2026-09-12.
+
+      | | |
+      |---|---|
+      | licence | **Apache-2.0**, per that directory's own `LICENSE` — *better* than the incumbent, which `scripts/eval_licences.md` records as a non-commercial-research deviation |
+      | form | ONNX, 38,696,353 bytes, loads through the `OnnxSession` seam that already exists |
+      | independence | different architecture, different training corpus, different loss (sigmoid-constrained hypersphere, IEEE 9318547), and a **128-d** embedding against `glintr100`'s **512-d** — the dimensionality alone is evidence they are not variants of one model |
+      | digest | `0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79`, and **git's own LFS pointer declares the same oid**, so the download verifies against the repository's record rather than only against itself |
+
+      **Runners-up, and why not.** `FaceNet` (Inception-ResNet on VGGFace2, MIT) is genuinely independent
+      and is a PyTorch checkpoint — a heavier integration than ONNX for the same answer. `AdaFace` shares
+      IR-101 backbones and MS1MV training with ArcFace, so it is not independent enough. Anything else
+      from `insightface` is the same family and disqualified by construction. And the other locally
+      pinned encoder is **already disqualified**: `IDENTITY.md` records it as a CLIP encoder with a style
+      LoRA whose training pairs were stylized *with InstantID and IP-Adapter* — more entangled, not less.
+
+      **The trap this task must not fall into, and it has a known-answer test.** SFace's preprocessing is
+      **not** ArcFace's: the incumbent feeds `(x − 127.5) / 127.5`, SFace expects raw 0–255. Feeding it
+      the wrong range produces, in `IDENTITY.md` §4's own words, *"numbers that look fine and mean
+      nothing"*. So the encoder is not trusted until it passes a known-answer test on real data:
+      **`face_4` and `ful_height_1` are the same person** (recorded in `real_photo.py`'s `SAME_PERSON`),
+      so SFace must score that pair far above the other 15 photograph pairs. **If it cannot, the
+      preprocessing is wrong and no downstream number may be read.**
+
+      **What the comparison actually asks, and it is not "a cleaner cosine".** Both encoders are
+      photograph-trained and are being asked to embed an *anime* face. `glintr100` does that badly but
+      **consistently**, which is why N-way identification works at all.
+
+      > **The question is whether an independent encoder reproduces the same RANKING**, over F41's
+      > seventeen real subjects at chance 5.9%. If SFace also puts the correct photograph first on ~14 of
+      > 17, `A`'s result stops being self-graded. **If SFace produces noise on anime faces, the honest
+      > outcome is "no independent signal is available" — and that is also a result**, because it would
+      > say this project cannot currently de-bias its own identity number, which is worth knowing rather
+      > than assuming.
+
+      **Reads renders already on disk** — `evaluations/` and `renders/2026-09-11/n30_real/` — so it costs
+      nothing and spends no pod. Deliverable: the two encoders' top-1, margin and p side by side on the
+      same seventeen subjects, and a verdict on whether the entanglement caveat can be dropped.
+- [ ] **`face_likeness` on N38's twenty renders.** Would turn F45 from an eye into a number. `$0`.
+- [ ] **A phone-camera set.** Still the product's actual input and still untested. Blocked on data.
+
+**Dropped deliberately:** **prose as a render prompt.** Dead on the instrument (0.675 and 0.510 against
+0.917) and on the eye. The base *does* read prose — `"the image has a gray border"` produced a painted
+grey frame — and renders it in a register the product does not want. **Do not retry it with a better
+prose prompt; the register is the problem, not the wording.**
+
 ## Carried out of this branch
 
 - **`.minions/v0.13_backlog.md` · B1 — pod readiness gates.** Deferred to a version, not to this
@@ -742,6 +1323,7 @@ pod outlived its job that way on 2026-09-07. Tear down as its own step, then ver
 | **17 real photographs** | `prototype/inputs/real/` — **gitignored, D14**; sheets and renders too |
 | v0.12's 30 renders + scores | `outputs/baseline/<subject>/{0..4}.{png,eval.json}` |
 | pinned eval models (2.3 GB) | `models/` |
+| **the pinned reader (5.40 GiB)** | `models/joycaption/` — manifest, licence and revision in `prototype/styles/joycaption_models.json`; verify with `PYTHONPATH=. uv run python prototype/joycaption.py --verify` |
 | every prototype render | `prototype/renders/<UTC-date>/<run>/` (gitignored) |
 | round 1's comparison images | `prototype/archive/fotor/` (gitignored; digests in `notes/FINDINGS.md` F0) — **history; nothing live reads them** |
 | the two presets | `prototype/archive/styles/*.md` and `*.json` — round 1, archived |

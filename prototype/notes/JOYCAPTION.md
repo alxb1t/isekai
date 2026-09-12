@@ -214,3 +214,74 @@ shared path.
   local model — which is *fine*, it never leaves the machine, and is worth stating rather than assuming.
 - **What happens to `vlm_reader.py`'s own briefing** if JoyCaption wins. It is currently the reader's
   instructions; it would become one reader's instructions among two.
+
+---
+
+## 9 · Amendments from N32 — 2026-09-12
+
+**Everything above was written on 2026-09-11, before anything was downloaded. This section is what N32
+found when it went to execute it.** §3's bar is deliberately untouched: it was stated first, and that is
+the only reason it will mean anything.
+
+### The licence is not cleanly Apache-2.0, and §1 says it is
+
+Both this note and `READER.md` call JoyCaption "Apache-2.0". **That is true of the project's code and is
+not established for the weights.** Read 2026-09-12, four layers deep:
+
+| layer | declared | where |
+|---|---|---|
+| `fpgaminer/joycaption` — the **code** | **Apache-2.0** (SPDX, via the GitHub licence API) | github.com/fpgaminer/joycaption/blob/main/LICENSE |
+| `fancyfeast/…-hf-llava` — the **weights** | **no `license` field at all.** The README says *"Free and Open … open weights, no restrictions"* — prose, not an identifier | the model card |
+| `meta-llama/Llama-3.1-8B-Instruct` — the **base LLM** | **`llama3.1`**, and the repository is `gated: manual` | the base model card |
+| `google/siglip2-so400m-patch14-384` — the **vision tower** | `apache-2.0` | the base model card |
+| `concedo/…-mmproj-gguf` — **this requantisation** | **none**, and the README states no terms of its own | the source repository |
+
+**The Llama 3.1 Community License is the deviation** — naming, acceptable-use and 700M-MAU terms, none of
+them Apache-2.0's. A fine-tune of a Llama 3.1 checkpoint is a derivative of it, and the upstream author's
+"no restrictions" cannot grant more than he received.
+
+**Fine for this prototype**, which renders locally, distributes no weights and links no code. **Not a
+settled position for anything that ships:** a reader adopted into a version needs the Llama 3.1 terms read
+properly first, and that read is a task rather than a footnote. Written down so this trial is never later
+quoted as having cleared it.
+
+**And it is recorded in `prototype/styles/joycaption_models.json`, not in `scripts/eval_licences.md`** —
+§1 said the latter and §1 is wrong. That file is tracked and belongs to `eval_models.json`, whose
+byte-identical derivation this branch must not disturb; `wd14_models.json` set the precedent of a
+prototype artifact carrying its own licence record, and this follows it.
+
+### The source repository's own README pairs the wrong file
+
+> *"Download the main model (`…-Q4_K.gguf`) and the mmproj (`Llama-Joycaption-Beta-One-Hf-Llava-F16.gguf`)"*
+
+**`…-Hf-Llava-F16.gguf` is the 16 GB full-precision *text* model, not the projector.** The projector is
+`llama-joycaption-beta-one-llava-mmproj-model-f16.gguf`, 0.88 GB. Following that instruction downloads
+21 GB and still has no vision. The manifest pins both real files and records the 16 GB one under
+`not_fetched` **only so it is never confused with the projector again.**
+
+This is the second instance of the same class of trap in one repository chain — §1's warning was that two
+quantisations ship no projector at all. **The projector is where this model goes wrong, every time.**
+
+### Three smaller ones
+
+- **The digests in §1 are truncated to four bytes** and verify nothing. The manifest carries the full
+  sha256 of all four files in the repository, each checked against the Hub's own LFS metadata.
+- **The manifest pins the revision** — `acfe6bf78ae4e411cd5c7c8f4a71ba01f26a5b97` — in every source URL,
+  where `wd14_models.json` resolves through `main`. A digest catches a repository that moved; a pinned
+  revision stops it moving.
+- **Hashing must be streamed.** `criteria_eval.verified()` does `path.read_bytes()`, which is fine at
+  467 MB and not at 4.92 GB on a 16 GiB machine.
+
+### And two things above are simply no longer runnable
+
+Both are stated in full, with evidence, in `../README.md` § *Round 4 — the open reader*, and are named
+here so this note is not read on its own and believed:
+
+- **§2's host does not exist.** LM Studio is *not* installed — `~/.lmstudio/` and the `lms` CLI are, the
+  application is not. **The host is Ollama** (§2's own fallback), by the operator's decision of 2026-09-12.
+- **§4's thirteen photographs are ten.** The three real subjects are `real_photo_1..3`, withdrawn
+  2026-09-11 with their images deleted. Worse for the comparison: the 17 real, 10 portfolio and 10 pose
+  sheets were all seeded by `sheet.py adopt` from the incumbent's own drafts, so **only the ten synthetic
+  portraits carry an incumbent draft written independently of the reference.** That is why 0.78 is the one
+  comparable number this repository owns, and everything else is *agreement with the incumbent, as
+  corrected*.
