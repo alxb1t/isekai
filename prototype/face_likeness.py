@@ -118,8 +118,27 @@ N30_ARMS = {
     "d": "prototype/renders/n30_real/2_d/{sid}/0.png",
 }
 
+# N42's ten phone photographs of four people -- the product's actual input, and
+# the first set here with MORE THAN ONE photograph per person. `groups.json`
+# beside the photographs carries the operator-confirmed grouping.
+N42_SUBJECTS = (
+    "lying_1", "mirror_1", "mirror_2", "selfie_1", "selfie_2",
+    "selfie_3", "selfie_4", "selfie_5", "sitting_1", "sitting_2",
+)
+N42_ARMS = {
+    "a": "prototype/renders/n42_phone/1_a/{sid}/0.png",
+    "d": "prototype/renders/n42_phone/2_d/{sid}/0.png",
+}
+
 RUNS = {
     "t1": (SUBJECTS, PHOTOS, PHOTO_NAME, ARMS, "t1_face_likeness"),
+    "n42": (
+        N42_SUBJECTS,
+        Path("prototype/inputs/real/phone"),
+        "{sid}",  # extension varies; resolved by `photo_for`
+        N42_ARMS,
+        "t4_phone_likeness",
+    ),
     "n30": (
         N30_SUBJECTS,
         Path("prototype/inputs/real"),

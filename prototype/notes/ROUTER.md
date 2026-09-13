@@ -36,8 +36,15 @@ configuration to the last, on the same model, the same prose and the same five s
 **`gaze`, `eye colour` and `hair colour` match the hand-routing exactly.** `pose` is the remaining gap.
 `marks` is 0.00 for *every* configuration including Claude, and that is not a router failure — see §5.
 
-**And rendered, the difference disappears.** WD14 reading the renders scored the reviewed Qwen sheet at
-**0.580** against the hand-routed sheet's **0.568** — a tie on n=5.
+**And rendered, the difference disappears.** WD14 reading the renders scored the two sheets at **0.580**
+and **0.568** — a tie on n=5.
+
+> **CORRECTED 2026-09-13.** This line previously named 0.568 *"the hand-routed sheet"*. **It is not.**
+> `evaluations/2026-09-12/descriptive_and_booru/report.md` defines 0.568 as **`3_booru` — the whole open
+> pipeline end to end with no human in it**, which is the same 0.568 that §5 and `ARCHITECTURE.md` §4
+> call the unreviewed open route. **The number was right and its label was wrong**; the correction is
+> recorded rather than silently applied, because a mislabelled measurement is how a later reader builds
+> on a claim nobody made.
 
 ---
 

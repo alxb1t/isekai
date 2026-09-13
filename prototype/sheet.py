@@ -303,6 +303,7 @@ PHOTO_ROOTS = (
     Path("prototype/inputs/synthetic/pose"),
     Path("prototype/inputs/synthetic/portfolio"),
     Path("prototype/inputs/synthetic"),
+    Path("prototype/inputs/real/phone"),
     Path("prototype/inputs/real"),
     Path("inputs/synthetic"),
 )

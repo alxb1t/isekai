@@ -2543,4 +2543,126 @@ decision is reversible without re-deriving anything.
 
 ---
 
-<!-- next: F47 -->
+## F47
+
+**N42 · 2026-09-13 · ten phone photographs of four people · one pod session, 20 renders, ≈$0.13.**
+
+### The product's actual input works, and the identity number measures a person rather than a photograph
+
+Two questions were open for four rounds and this run closes both. **Neither was answerable before**: the
+first needed phone-camera photographs, and the second needed **more than one photograph per person** —
+of which this project had exactly one pair (`real_photo.py`'s `SAME_PERSON`, n=1).
+
+**The set.** Ten photographs of **four** people, gathered from Instagram by the operator on 2026-09-13 —
+selfies, mirror shots, a lying shot, two seated. Group sizes 3·2·2·3. **The grouping is the operator's,
+confirmed by him**, and is recorded in `prototype/inputs/real/phone/groups.json` inside the gitignored
+privacy boundary (D14). Sheets were written by an agent session from the photographs, **checked against
+the vocabulary and rendered without an operator review** — his decision, so this measures the
+*unreviewed* path.
+
+### 1 · Phone input holds, at the same rate as studio input
+
+```
+   gate: a face was found in  30 / 30  images     10 photographs + 20 renders
+```
+
+**That was the floor most likely to fail** and it did not: `DETECTION_FLOOR` is 1.0, and a phone snapshot
+in bad light is exactly the case where an anime-face detector or a photograph encoder could return
+nothing.
+
+| run | input | top-1 | chance |
+|---|---|---:|---:|
+| **F40** | held-out synthetic ten | 8/10 | 10.0% |
+| **F41** | 17 real, professionally shot | 14/17 | 5.9% |
+| **F47** | **10 phone photographs** | **8/10** | **10.0%** |
+
+**Phone input scores exactly what the held-out synthetic ten scored**, at p ≈ 0.0000, margin +0.0957.
+**The fear that the product's real input would break the pipeline is answered, and the answer is no.**
+
+### 2 · The number tracks the PERSON — and the two "misses" were not misses
+
+**Stated before the analysis was run:** if the identity number measures a *person*, the other
+photographs of the same person should rank just below the correct one; if it measures a *photograph*,
+they should rank no better than strangers.
+
+| arm | own photo top-1 | **person-level top-1** | sibling mean rank | permutation p |
+|---|---:|---:|---:|---:|
+| **A** | 8/10 | **10/10** | **2.75** | **0.0000** |
+| **D** | 1/10 | 2/10 | 4.94 | 0.2224 |
+
+**Every one of the ten flow-`A` renders ranked a photograph of the correct person first.** The two that
+missed their own source did so by ranking a *sibling* above it:
+
+```
+   sitting_1   own photo #2   — #1 was selfie_1,  its own group-mate
+   sitting_2   own photo #3   — #1 and #2 were mirror_2 and selfie_4, both group-mates
+```
+
+**Chance expectation for person-level top-1 on this set is 2.6 of 10.** Flow `A` scored **10**.
+
+**The 8/10 figure therefore understates the result**, and the reason is structural rather than a quirk:
+the N-way test was built for sets with one photograph per person, so it scores a render that found the
+right *person* through the wrong *photograph* as a miss. **`SAME_PERSON` was the right instinct in round
+3; it simply had n=1 to work with.**
+
+### 3 · Flow `D` is the control, and it is what makes the above readable
+
+`D` never reads the photograph — it renders from the criteria sheet alone — so **no mechanism in it
+could carry identity**. It scored **2 of 10 person-level against a chance expectation of 2.6**, with a
+sibling mean rank of 4.94 at p = 0.2224.
+
+> **A green `D` would have invalidated `A`.** If the tags alone carried identity, there would be no way
+> to tell whether `A`'s result came from InstantID or from the prompt. `D` sitting precisely on chance
+> is the cleanest possible confirmation that the mechanism under test is the one doing the work — and it
+> is F45 met from a new direction: **the prompt's job is style, the legs' job is identity.**
+
+### 4 · The operator's eye agreed, and it was recorded as agreeing
+
+*"I indeed see with my own eyes the identity is preserved well for the flow `A`. And indeed comparing
+side by side the flow `A` for the same person I can see they are the same person."* — 2026-09-13, reading
+`derived/2026-09-13/n42_phone_report.html`. **Three runs now, three agreements** (F38, F40/F41, F47).
+
+### What this does NOT establish
+
+- **The encoder is still `glintr100`**, which InstantID optimises against, so `A`'s figures remain an
+  **upper bound** (F46). **SFace was not run on this set.** The bracket `9/17 … 14/17` from F46 is the
+  honest shape and this run does not tighten it.
+- **The sibling result partly inherits the encoder's own clustering.** InstantID pulls a render toward
+  its *source photograph's* embedding, so siblings ranking high partly reflects how tightly `glintr100`
+  clusters one person's photographs. **The control that would separate these is photograph→photograph
+  sibling rank with no render involved** — cheap, no GPU, and **not run**.
+- **This measures the unreviewed path.** Stage ③ was skipped, so attribute recall is not comparable to a
+  reviewed sheet's 0.917 and was not scored here.
+- **Ten photographs, four people.** Group sizes of two and three, not P6's proposed five.
+
+### One incidental finding about the reader, worth its own line
+
+**A Claude agent session, having written sixteen fields for each of the ten photographs, still got the
+person grouping wrong.** Reading the ten across three disjoint subsets it proposed P1 and P3 correctly
+and **swapped `lying_1` with `mirror_1`** between the other two — 3 of 4 groupings right. The
+mole-below-the-left-eye evidence correctly bound `selfie_2` to `selfie_5`; the error was attaching the
+wrong third photograph to that pair.
+
+**The fan-out is part of the cause** — no single agent saw all ten — but the lesson stands with F42:
+**a briefing fixes omissions and cannot fix perception**, and cross-photograph identity is perception.
+**The ground truth was held by the human and by nobody else**, which is one more argument for the review
+stage being worth what it is worth.
+
+### Reproducing it
+
+```bash
+PYTHONPATH=. uv run --extra eval python prototype/face_likeness.py --run n42
+PYTHONPATH=. uv run python prototype/same_person.py \
+    --results prototype/evaluations/2026-09-13/t4_phone_likeness/results.json
+PYTHONPATH=. uv run --extra eval python prototype/phone_report.py
+```
+
+`prototype/same_person.py` and `prototype/phone_report.py` are new in this finding; `face_likeness.py`
+gained one `RUNS` entry and `sheet.py` one `PHOTO_ROOTS` entry. The permutation null is seeded
+(`--seed 20260913`) and shuffles each render's ranking independently, which preserves group sizes and
+sibling counts exactly — so the only association it destroys is the one between a photograph's rank and
+whose face it is.
+
+---
+
+<!-- next: F48 -->

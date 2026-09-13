@@ -1,7 +1,13 @@
 # The architecture — photograph in, anime image out
 
+> **This is the MEASURED shape, and it is one round out of date on terminology.** Round 5 made the
+> pipeline **five layers** and renamed ④ from *diffusion* to **generation**, because the registry it
+> became includes flows that perform no redraw at all. **This note was deliberately not edited** —
+> every box in it is cited to a finding, and editing evidence to match a later design is what this
+> repository forbids. **[`PRODUCT.md`](PRODUCT.md) is the current shape**; this is why it is that shape.
+
 **Settled 2026-09-12, after four rounds.** Every box below is measured; the numbers are cited to the
-finding that produced them. This note is the shape of the thing. `HANDOFF.md` holds the dial values,
+finding that produced them. This note is the shape of the thing. `CONFIGURATION.md` holds the dial values,
 `ROUTER.md` the stage-2 detail, `IDENTITY.md` how the output is judged.
 
 ---
@@ -127,8 +133,14 @@ quality, and it is not a large one:
 |---|---:|---:|---|
 | stage ① as a reader | **0.518** | **0.795** | F42 · seven prompts tried |
 | stage ② as a router | **0.482** | **0.575** | ROUTER.md §1 |
-| rendered, WD14 on the output | **0.580** | **0.568** | a tie on n=5 |
+| rendered, WD14 on the output | **0.580** | **0.568** ⚠ | a tie on n=5 — **but see below** |
 | reproducible from a digest | **yes** | no | the reason round 4 existed |
+
+⚠ **CORRECTED 2026-09-13: 0.568 is in the wrong column.** It is `3_booru` — **the open pipeline
+unreviewed** — per `evaluations/2026-09-12/descriptive_and_booru/report.md`, and it is the same 0.568
+this note's own §5 and `ROUTER.md` §5 use as the floor of the 0.35. **The closed stack's rendered score
+was never measured**, so that cell should be empty. Left in place with this mark rather than deleted,
+because the row is what a later reader would otherwise re-derive wrongly.
 
 **The rendered numbers tie.** The reader gap is real and the router gap is real, and by the time both
 have passed through stage ③ and the generator they are inside the noise on five subjects.

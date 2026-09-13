@@ -14,7 +14,7 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 > 0. **[`notes/ARCHITECTURE.md`](notes/ARCHITECTURE.md)** — **the shape of the whole thing**, photograph to
 >    anime image, in four stages: the abstract version, the open stack, the closed one, and where each
 >    stage's ceiling is. Settled 2026-09-12
-> 1. **[`notes/HANDOFF.md`](notes/HANDOFF.md)** — **start here in a fresh thread.** What exists now, the settled
+> 1. **[`notes/CONFIGURATION.md`](notes/CONFIGURATION.md)** — **start here in a fresh thread.** What exists now, the settled
 >    configuration, the laws, and what is still open. This file is the ledger behind it.
 > 2. **this file** — the task list and its history: every question asked, and what closed it
 > 3. **[`notes/IDENTITY.md`](notes/IDENTITY.md)** — **how we know the anime image is the same person.** The
@@ -22,7 +22,7 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 >    exported
 > 4. **[`notes/CRITERIA.md`](notes/CRITERIA.md)** — round 2's design: the sheet, the seven scored criteria, both bars
 > 5. **[`notes/ILLUSTRIOUS.md`](notes/ILLUSTRIOUS.md)** — what the base was trained on, and what to prompt it with
-> 6. **[`notes/FINDINGS.md`](notes/FINDINGS.md)** — F1–F41, the full evidence, newest at the bottom
+> 6. **[`notes/FINDINGS.md`](notes/FINDINGS.md)** — **F0–F47**, the full evidence, newest at the bottom
 > 7. **[`notes/READER.md`](notes/READER.md)** · **[`notes/JOYCAPTION.md`](notes/JOYCAPTION.md)** — who can
 >    read a photograph into a sheet, and the plan for trialling the leading candidate. **Round 4, closed**
 > 7b. **[`notes/ROUTER.md`](notes/ROUTER.md)** — **how prose becomes a sheet with an open model**: 0.033 →
@@ -34,7 +34,15 @@ by numbers binds *versions*, and a branch that never merges settles nothing.
 
 ---
 
-## Status: round 4 complete. JoyCaption is in the stack — as the describer, not the reader.
+## Status: round 5 open — the wrap-up. Rounds 1–4 are closed and the stack is open end to end.
+
+> **Opened 2026-09-13: [§ *Round 5 — the wrap-up*](#round-5--the-wrap-up-the-prototype-becomes-a-product).**
+> The prototype answers no more empirical questions. Round 5 renders nothing, spends no pod, and writes
+> four notes: the open-questions register, the product architecture, the fit with `main`, and the
+> roadmap. **Read that section before acting on anything below it** — the ranked open list in
+> § *Start here tomorrow* is now N48's input, not a work queue.
+
+### Round 4's close, kept as the state of the evidence
 
 **2026-09-12 · 46 findings · 19 pod sessions · ≈$3.17 · every round-4 task closed but the UI.**
 **The stack is open end to end, and identity now survives an encoder we did not train against.**
@@ -114,7 +122,7 @@ and the working tree is clean apart from the uncommitted work listed at the end 
 1. **[`notes/ARCHITECTURE.md`](notes/ARCHITECTURE.md)** — the whole pipeline in four stages, with three
    diagrams: abstract, the open stack, the closed one. **§5 is where each stage's ceiling is**, and §6 is
    the open work already ranked.
-2. **[`notes/HANDOFF.md`](notes/HANDOFF.md)** — the settled dials, the laws, and round 4's six settled
+2. **[`notes/CONFIGURATION.md`](notes/CONFIGURATION.md)** — the settled dials, the laws, and round 4's six settled
    points at the top. Its **§6c is marked stale** and kept only as the record of what round 4 planned.
 3. **this file's § *Round 4 closed*** — the verdict and its reasoning.
 
@@ -124,9 +132,14 @@ Then, only as needed: **[`notes/ROUTER.md`](notes/ROUTER.md)** if you are touchi
 
 ### What the plan is
 
+> **SUPERSEDED 2026-09-13, and kept because the ranked list below is still the input to N48.**
+> The operator's decision on the day was to **skip step 1 and close the prototype now**: the open items
+> are candidates for the roadmap rather than blockers for the architecture, and **N48 dispositions every
+> one of them.** See [§ *Round 5*](#round-5--the-wrap-up-the-prototype-becomes-a-product).
+
 **The operator's stated intent for 2026-09-13, in his order:**
 
-1. **Finish the open tasks** — listed and ranked below.
+1. ~~**Finish the open tasks** — listed and ranked below.~~
 2. **Then close the prototype**, and hold a **grilling session on integrating it into the actual
    product.** That is a `mattpocock-skills:grilling` session against the productisation plan, not a
    coding task, and `ARCHITECTURE.md` is the document it will be run against.
@@ -657,7 +670,7 @@ been chosen by measurement on at least two axes.
 
       **⚠️ This changed a settled value.** `A`'s hires denoise is now **0.35, not 0.50**. The old number
       came from F35, which measured style alone because neither identity instrument existed yet. Across
-      all four axes 0.35 wins three and loses posterisation by 0.014. `notes/HANDOFF.md`'s configuration
+      all four axes 0.35 wins three and loses posterisation by 0.014. `notes/CONFIGURATION.md`'s configuration
       table is updated. **A settled value is settled against the axes that existed when it was set.**
 
 - [x] **N29 · the held-out portraits — ANSWERED 2026-09-10: the flow generalises.** One pod session,
@@ -1236,6 +1249,205 @@ describe the register and say nothing about whether it is the right person** —
 grey frame — and renders it in a register the product does not want. **Do not retry it with a better
 prose prompt; the register is the problem, not the wording.**
 
+## Round 5 — the wrap-up: the prototype becomes a product
+
+**Opened 2026-09-13. It renders nothing and spends no pod.** The prototype's job was to answer empirical
+questions cheaply before a change is cut, and it is done: four rounds, 46 findings, 19 pod sessions,
+≈$3.17, and a stack that is open from photograph to anime image. **Round 5's only output is written** —
+a settled architecture, a settled fit with `main`, and a roadmap of versions a change can be cut from.
+
+> **The order changed, and this records it.** § *Start here tomorrow* planned *finish the open tasks,
+> then close the prototype*. The operator's decision of 2026-09-13 is to **close it now**: the ranked
+> open items are not blockers for the architecture, they are candidates for the roadmap, and N48
+> dispositions every one of them. Nothing in that list is deleted by this — it is re-homed.
+
+**Nothing here is built on this branch.** Building happens on `main`, one version at a time, under
+`openspec/changes/<id>/`, and [`../CLAUDE.md`](../CLAUDE.md) § *How a change is cut here* is the
+contract. Round 5 produces the documents the grilling session is run against, and the grilling session
+is what licenses the first change.
+
+---
+
+### The operator's architecture, as stated 2026-09-13
+
+```
+   ┌─────────────────────── ORCHESTRATOR ───────────────────────┐
+   │  the only thing that moves data; owns the run directory,   │
+   │  the stage order, and resume across the human pause        │
+   └─┬─────────┬─────────┬──────────┬──────────┬────────────────┘
+     │         │         │          │          │
+   ① VLM     ② LLM    ③ REVIEW  ④ DIFFUSION  ⑤ EVAL
+    see       sort     correct      draw        judge
+     │         │         │          │           │
+     ▼         ▼         ▼          ▼           ▼
+   ──────────────── runs/<photo-id>/ ─────────────────────
+    caption    draft     sheet      A.png       eval
+     .json     .json     .json      D.png       .json
+       ▲ the only coupling between layers: a path and a schema
+```
+
+**Four properties are asked for, and every later decision is bound by them:**
+
+1. **Each layer is a facade.** JoyCaption swaps for any VLM, Qwen for any LLM, the editor for a web page
+   / TUI / desktop app, WAI for any base, the evaluator for any method. The caller sees an API and never
+   an internal.
+2. **No layer knows another exists.** No imports, no calls, no shared types beyond the artifact on disk.
+3. **Convention over configuration.** One directory per photograph accumulates every stage's output, and
+   its path is a convention every layer already knows rather than a value anyone passes.
+4. **The orchestrator pushes.** Layers are driven; they never pull, and they never chain.
+
+**The product's output for one photograph is two anime images** — flow `A` (maximum identity: InstantID +
+OpenPose + the reviewed sheet) and flow `D` (maximum style: the reviewed sheet alone, the photograph
+never read at render time) — **and an evaluation for each.**
+
+---
+
+### Tasks
+
+Worked in order. **N42 is first by the operator's instruction** — *"before the actual architecture we
+need to settle up all the unknown blockers"* — and each task closes by writing a named note, not by
+being agreed in a thread.
+
+| task | closes into |
+|---|---|
+| N42 open questions | `notes/OPEN.md` — new, living, ticked as each is settled |
+| N43 · N44 · N45 · N46 architecture | `notes/PRODUCT.md` — new |
+| N47 the fit with `main` | `notes/MIGRATION.md` — new |
+| N48 the roadmap | `notes/ROADMAP.md` — new |
+
+**`ARCHITECTURE.md` is not superseded and is not edited by this round.** It states the *measured* shape —
+four stages, every box cited to a finding. `PRODUCT.md` states the *engineered* shape: the same pipeline
+as software, with seams, facades and a disk contract. One is evidence, the other is design, and merging
+them would put an unmeasured decision next to a cited number as if they had the same standing.
+
+- [x] **N42 · the open-questions register.** Enumerate every unknown that would change the architecture
+      if answered late, settle what can be settled from what is already on disk, and mark the rest as a
+      decision the operator makes. **This is the gate on N43–N48.**
+
+      **Seeds, not the answer — nine found while reading in, ranked by how much each moves the design:**
+
+      1. **The stdlib-only rule meets a five-layer pipeline.** `../CLAUDE.md` binds `convert.py`'s import
+         graph to the stdlib. The VLM, LLM and evaluation layers all need wheels. The precedent exists —
+         `provision.py` is off that graph, and `evaluate.py` keeps the rule by putting every model behind
+         a Protocol with an `[eval]` extra — but **the orchestrator is on somebody's import graph**, and
+         which one is a decision, not a detail.
+      2. **"There is one path. A version may replace it; it may not add a second."** The product now
+         emits **two** images from two flows. Either that is one path with two terminal renders, or the
+         rule is amended in a change. **It cannot be left to a reader's judgement**; the rule is quoted
+         in `CLAUDE.md` and will be quoted back.
+      3. **The pipeline spans two machines.** ①②⑤ run locally on 16 GiB; ④ runs on a rented pod. An
+         orchestrator that "pushes to each stage" is pushing across a machine boundary at exactly one
+         seam. Does the run split into a local half and a pod half, or does the pod become a layer
+         implementation detail behind the diffusion facade?
+      4. **The human pause makes the orchestrator stateful.** Stage ③ blocks on a person. A pipeline with
+         a human in the middle is not one CLI invocation — it is at minimum two, with resume, and the
+         run directory is the state. **This is what makes the disk convention load-bearing rather than
+         tidy.**
+      5. **`main`'s evaluator asks a different question from the prototype's.** `isekai/evaluate.py` is
+         *one render against the photograph that produced it* — pairwise, no verdict. `IDENTITY.md`'s
+         method is **N-way identification**, and it needs a *cohort*: at N=1 there is no answer. So
+         *"evaluate each output image"* is not the prototype's method as it stands, and the gap has to be
+         closed deliberately. **This is the sharpest of the nine.**
+      6. **Six capabilities are specified on `main` and the prototype rewrites most of two.**
+         `workflow-injection` (23 scenarios) assumes img2img and a ControlNet stack; `workflow-mutation`
+         (44) jitters dials the from-noise flow does not have. Archived, rewritten, or kept — and each
+         answer costs something different.
+      7. **JoyCaption's licence does not clear anything that ships.** Apache-2.0 covers the code; the
+         weights are Llama-3.1-derived. Fine for local rendering that distributes nothing. **If the
+         product's definition includes shipping, stage ① needs a different model** — which changes the
+         roadmap, not the architecture.
+      8. **Where the weights live and what pins them.** 10.4 GB of new local weights against
+         `scripts/models.json` (pod) and `scripts/eval_models.json` (local eval), already under a
+         byte-identical re-derivation rule and a cross-manifest agreement test. A third manifest, an
+         extension of the second, or a per-layer manifest behind each facade.
+      9. **The product's actual input has never been tested.** Every photograph across four rounds is
+         generated or professionally shot. A phone snapshot is what a user has.
+
+- [x] **N43 · the layer contract.** For each of the five layers: **what it takes, what it returns, what
+      it may assume, and what swapping it must not break.** The facade is only real if it is stated in
+      those four terms — a module boundary that has never had a second implementation behind it is a
+      boundary by assertion. `../CLAUDE.md`'s own seam rule applies and is the sharpest test available:
+      *a parameter is a seam only if something else is actually passed through it.*
+
+      **Name the second implementation for each facade, or say plainly that there is none yet.** The
+      prototype already has two for stage ② (Claude by hand, Qwen3-8B + `tagmap`) and two for stage ⑤
+      (`glintr100`, SFace) — those are earned. Stages ①, ③ and ④ have one each.
+
+- [x] **N44 · the run directory — the convention, in full.** The path, the per-stage filenames, each
+      artifact's schema, and **what happens to a run when a schema changes**. This is the only coupling
+      the design permits, so it is the thing most worth getting exactly right.
+
+      Three things it must answer: **what a photo-id is** (and whether it survives the same photograph
+      being submitted twice); **who owns the directory** — the orchestrator writes the frame and layers
+      write their own file, or layers are handed a path; and **whether a stage's output is a fact or a
+      draft** — F44's absence clause and the review step mean stage ②'s output is explicitly not final,
+      and the schema should say which.
+
+- [x] **N45 · the orchestrator.** What it knows, what it must not know, and how a run survives the human
+      pause. **The hard part is not the happy path** — it is resume, partial failure and re-entry: a
+      reviewed sheet that gets re-rendered, a stage that is re-run with a different implementation, a
+      run whose diffusion half happened on a pod that no longer exists. State how each is detected from
+      the run directory alone, because from `../CLAUDE.md`'s guardrail *state lives on disk* it follows
+      that the orchestrator must be able to reconstruct itself from one.
+
+- [x] **N46 · the evaluation layer, as a facade.** In: the original photograph and the output images.
+      Out: evaluation data. The machinery behind it is replaceable **and the current machinery is kept**
+      — the operator's decision. Three things this must settle, and the first is N42's fifth seed:
+
+      1. **N-way identification needs a cohort and the product has one photograph.** Either the facade
+         carries a reference population, or per-run evaluation answers a *weaker* question than
+         `IDENTITY.md` does and says so in its output. **A number that silently changes question is the
+         exact failure round 3 spent itself correcting.**
+      2. **What gets reported per image** — `A` and `D` are not comparable on identity by construction,
+         and F27 says they are not comparable on style either. Two flows, one report, or two.
+      3. **What `main` already has stays in the count.** v0.12 shipped an evaluation capability with 28
+         scenarios, `Refusal`, the IoU guard, PCK and the Protocol seam. The prototype's method is newer
+         on the identity axis and **not** newer on the plumbing.
+
+- [x] **N47 · the fit with `main`.** The operator's position: *the flow currently in `main` is removed
+      and replaced by the prototype's two.* Produce the honest inventory — **what dies, what survives,
+      what moves** — file by file, capability by capability, scenario by scenario, with the cost of each
+      named. Enough detail that a grilling session can attack it and a change can be cut from it.
+
+      **Both directions are load-bearing.** What dies has to be deleted deliberately, with the spec
+      delta that removes its requirements; what survives has to be pointed at, because reusing
+      `ComfyTransport`, `provision.py`, the manifest discipline and the offline-fake suite is most of
+      what makes the next version cheap. **`prototype/` is not merged and nothing in it is promoted as
+      code** — every line reaches a release by being restated inside a change.
+
+- [x] **N48 · the roadmap — versions, in order, each releasable.** Cut the work into versions that each
+      end on a green gate and a tag. State for each: **what it delivers, what it makes possible, what it
+      leaves broken, and why it is not later.** One branch per version; `CLAUDE.md`'s
+      `(major × 100) + minor` id rule gives the change ids.
+
+      **And disposition every carried item explicitly** — N41 (the review UI, worth 0.35), the
+      phone-camera set, N40's `pose` router at 0.37, a better VLM, `face_likeness` on N38's twenty,
+      SFace alignment, and `.minions/v0.13_backlog.md`'s B1. Each becomes **a version, a task inside
+      one, or dropped with its reason**. An item that is neither is an item that gets lost.
+
+---
+
+### What round 5 is not
+
+- **Not a build.** No code is written on this branch. If a question can only be answered by building,
+  that is a finding for N42 and the answer is a version, not a spike.
+- **~~Not a render. No pod comes up.~~ AMENDED 2026-09-13, on the operator's explicit "go".** Q9 could
+  not be settled from evidence on disk — it needed data, and the operator gathered ten phone
+  photographs of four people that day. **One metered session was authorised**, estimated at ≈$0.13 and
+  ~25 minutes against the 60 min / $0.75 ceiling. Recorded as a change to the round's scope rather than
+  taken quietly, because a round that says it spends nothing and then spends is a record that lies.
+- **Not a rewrite of the record.** `ARCHITECTURE.md`, `FINDINGS.md` and `IDENTITY.md` are evidence and
+  are not edited to fit a design. A design that needs a finding changed is a design that is wrong.
+- **Not the grilling session, and not the change.** Those are the operator's next two acts, in that
+  order, and this round exists to give them something to be run against.
+
+### What closes it
+
+**Four notes on disk, and the ranked open list emptied into N48's roadmap.** Then the grilling session
+against them; then a change per version, cut on `main` under the contract in `../CLAUDE.md`. **The
+prototype branch is finished at that point** — it never merges, and it has no further job.
+
+---
 ## Carried out of this branch
 
 - **`.minions/v0.13_backlog.md` · B1 — pod readiness gates.** Deferred to a version, not to this
