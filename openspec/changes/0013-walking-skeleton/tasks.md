@@ -10,7 +10,7 @@
 - [x] 6 — ③ `review` and `approve`
 - [x] 7 — ④ `generate`, the flow, and `show`
 - [x] 8 — Resume: run everything twice and assert nothing moved
-- [ ] 9 — ⚠️ **GPU · HALT** — one session, five photographs, end to end
+- [x] 9 — ⚠️ **GPU · HALT** — one session, five photographs, end to end
 - [ ] 10 — The banner, the changelog, and the version line
 
 ## The per-phase ritual
@@ -207,9 +207,9 @@ boot to teardown. Exceeding the ceiling is a halt, not a judgement call.
 - [x] 9.1 Locally and for free, before anything is rented: `caption` → `sheet` → `review` → edit →
   `approve` for five photographs, then `generate` assembling every prompt; verify five assembled prompt
   artifacts exist and no endpoint was contacted
-- [ ] 9.2 ⚠️ **GPU** — one session on the release-candidate image: bring the pod up, open the tunnel,
+- [x] 9.2 ⚠️ **GPU** — one session on the release-candidate image: bring the pod up, open the tunnel,
   render the five approved artifacts, download the outputs before teardown, tear down, confirm empty
-- [ ] 9.3 Verify by eye that flow `summon-v1` rendered a recognisable anime image of each subject from a
+- [x] 9.3 Verify by eye that flow `summon-v1` rendered a recognisable anime image of each subject from a
   photograph nobody hand-captioned — the seam this whole version exists to cross — and record the
   session's duration and cost in `CHANGELOG.md`
 

@@ -25,6 +25,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The acceptance run: five photographs, end to end, on a rented GPU.** Photograph → prose →
+  machine-filled sheet → approved artifact → assembled prompt → anime render, with nothing
+  hand-captioned anywhere in the chain. **The seam this version exists to cross is crossed.**
+
+  One pod session, `pi7jqpvla6daz6`, RTX PRO 4500 Blackwell (32 GB) in EU-RO-1 on
+  `ghcr.io/alxb1t/isekai:latest`, with `scripts/models.json` copied up so the upscaler this version
+  added was provisioned: **16/16 artifacts present and digest-verified**. Created 21:24:49,
+  terminated 21:36:35 — **11 min 46 s**, and `infra/down.sh` reported billing stopped. Teardown
+  confirmed through the RunPod MCP, which returned `{"pods": []}`.
+
+  **Cost ≈ $0.141** at the type's $0.72/hr secure rate, against a planned $0.058 and a $0.30
+  ceiling. The gap is the GPU type, not the duration: the preference list's first entry is a
+  Blackwell at roughly twice the rate the estimate assumed, and it had capacity. Rendering itself
+  was 6 min 39 s for five images — the first took 2 min 30 s cold, the rest about 45 s each once
+  the checkpoint was resident.
+
+  **What the renders show.** Every scored criterion survived on all five, including the two hard
+  framings: `back` rendered `from behind` + `looking back` + `arm up` with `gradient hair`,
+  `overall shorts` and `nail polish`, and `lying_side` rendered `lying` + `on side` +
+  `arm over head` + `barefoot` at 3264x1536. `cowboy-shoot-2`'s `mole on cheek` is on the cheek.
+  The 106-token prompt's tail survived the encoder window rather than being lost to it.
+
+  **What they also show, and this is the finding worth keeping.** Every junk tag drew itself,
+  exactly and without mercy. `collar` — meant as a blouse's stand collar — became a studded choker.
+  `faucet`, `counter` and `chandelier` turned a bathroom into a ballroom. And a colour the reader
+  *did* see was lost between stages: "black crop top" reached the sheet as `crop top` with no
+  colour, and rendered teal. All five were approved **unedited**, recorded as `edited: false`, so
+  this is the control arm the correction gets measured against — and it is the clearest possible
+  argument for stage ③ existing at all.
+
 ### Fixed
 
 - **`infra/up.sh` sent a comma-separated GPU preference list as one enum value**, so pod creation was
