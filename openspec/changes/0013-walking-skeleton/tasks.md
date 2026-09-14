@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — Foundations: `Refusal` moves, the derivation module is extracted, the vocabulary is pinned
-- [ ] 2 — The run directory, the new entry point, and the second stdlib guard
+- [x] 2 — The run directory, the new entry point, and the second stdlib guard
 - [ ] 3 — The vocabulary object, the mapping cascade, and the schema
 - [ ] 4 — ① `caption` — a photograph in, prose out
 - [ ] 5 — ② `sheet` — prose in, canonical fields out
@@ -68,28 +68,28 @@ re-export a class that moved out of it.
 
 ## 2. The run directory
 
-- [ ] 2.1 Add `isekai/__main__.py` with an argument parser carrying the six subcommands as no-ops;
+- [x] 2.1 Add `isekai/__main__.py` with an argument parser carrying the six subcommands as no-ops;
   verify `python -m isekai --help` lists all six and an unknown verb exits non-zero
   (`cli:pipeline-surface:verbs-are-subcommands`, `cli:pipeline-surface:unknown-verb-is-refused`)
-- [ ] 2.2 Add a second stdlib guard beside the existing one, importing `isekai.__main__` under `-S`;
+- [x] 2.2 Add a second stdlib guard beside the existing one, importing `isekai.__main__` under `-S`;
   verify both guards and the shared falsifiability twin pass
   (`cli:pipeline-surface:entry-point-is-stdlib-only`)
-- [ ] 2.3 Implement the data root at `.data/runs/<photo-id>/`, the photo-id — a SHA-256 prefix plus a
+- [x] 2.3 Implement the data root at `.data/runs/<photo-id>/`, the photo-id — a SHA-256 prefix plus a
   sanitised stem — and the frame writer; verify the three identity scenarios and the three frame
   scenarios
   (`run-directory:identity:*`, `run-directory:frame:*`)
-- [ ] 2.4 Implement the atomic writer — temporary file on the same filesystem, then replace; verify an
+- [x] 2.4 Implement the atomic writer — temporary file on the same filesystem, then replace; verify an
   interrupted write leaves nothing at the final path (`run-directory:atomicity:*`)
-- [ ] 2.5 Implement per-directory numbering and the artifact envelope — `schema`, `producer`,
+- [x] 2.5 Implement per-directory numbering and the artifact envelope — `schema`, `producer`,
   `producer.from`; verify the provenance and numbering scenarios
   (`run-directory:provenance:*`, `run-directory:numbering:each-directory-counts-its-own`)
-- [ ] 2.6 Implement error records as siblings, with the attempt ordinal and kind in the filename, and
+- [x] 2.6 Implement error records as siblings, with the attempt ordinal and kind in the filename, and
   the retry budgets (① 3 · ② 3 · ④a 1 · ④b 1); verify the failure and budget scenarios, including that
   a failed attempt does not consume the artifact's number (`run-directory:failure:*`,
   `run-directory:budget:*`)
-- [ ] 2.7 Implement schema refusal on an unknown version, naming the remedy; verify the two schema
+- [x] 2.7 Implement schema refusal on an unknown version, naming the remedy; verify the two schema
   scenarios (`run-directory:schema:*`)
-- [ ] 2.8 Implement the completion tests as directory listings, with approval read from the filename;
+- [x] 2.8 Implement the completion tests as directory listings, with approval read from the filename;
   verify no completion decision opens a file (`run-directory:readdir:*`)
 
 ## 3. The vocabulary and the schema

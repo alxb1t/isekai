@@ -27,6 +27,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`python -m isekai` — a second entry point, with the pipeline's six verbs.**
+  `caption` · `sheet` · `review` · `approve` · `generate` · `show`, under one parser in
+  `isekai/__main__.py`. It is additive: `convert.py` and `isekai/cli.py` are untouched, and a test
+  asserts that importing the pipeline's entry point does not pull the render surface in. A second
+  stdlib-only subprocess guard joins the existing one — the falsifiability twin that proves `-S`
+  really refuses a third-party import is unchanged and now covers both.
+- **`isekai/run.py` — the run directory, the only thing the four stages share.** A run is
+  `.data/runs/<photo-id>/`, identified by a prefix of the photograph's SHA-256 plus a sanitised
+  filename stem, with the photograph *copied in* rather than pointed at and its digest, size and
+  media type recorded in the frame. Resumption keys on the bytes, not the id, so a renamed
+  photograph resumes its own run and a digest-prefix collision is refused rather than silently
+  mixing two people's photographs. The extension is derived from the header, so a PNG named `.jpg`
+  is stored as what it is.
+  Artifacts are numbered per directory, written temp-then-replace, and never overwritten; every
+  "is this done?" test is a directory listing, with approval read from the filename. A failure is
+  recorded as a *sibling* of the artifact it failed to produce — `001.error.1.transient.json` —
+  so it never consumes the version number, and its kind and attempt ordinal are in the name so the
+  retry decision stays a listing. Retry budgets are three for reading and sorting, one for
+  assembling and one for rendering; a permanent failure is never retried, and one photograph's
+  failure does not cost the rest of a batch their turn.
+
+### Added
+
 - **The tag vocabulary is a provisioned artifact with its own manifest.**
   `scripts/vocabulary.json` pins `wd14/selected_tags.csv` — 10,861 Danbooru tags with their post
   counts, 8,106 of them general — at an immutable revision, digested by fetching and hashing
