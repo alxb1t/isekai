@@ -9,7 +9,7 @@
 - [x] 5 — ② `sheet` — prose in, canonical fields out
 - [x] 6 — ③ `review` and `approve`
 - [x] 7 — ④ `generate`, the flow, and `show`
-- [ ] 8 — Resume: run everything twice and assert nothing moved
+- [x] 8 — Resume: run everything twice and assert nothing moved
 - [ ] 9 — ⚠️ **GPU · HALT** — one session, five photographs, end to end
 - [ ] 10 — The banner, the changelog, and the version line
 
@@ -186,14 +186,14 @@ re-export a class that moved out of it.
 
 ## 8. Resume
 
-- [ ] 8.1 Write the resume test: run all six commands against a temporary run with every fake in place,
+- [x] 8.1 Write the resume test: run all six commands against a temporary run with every fake in place,
   snapshot the directory, run all six again, and assert **not one byte changed and not one call was
   made**; verify it is offline, needs no GPU and passes (`cli:resume:second-pass-is-inert`)
-- [ ] 8.2 Verify the explicit-version flag against it — the flag writes the next number, the repeat
+- [x] 8.2 Verify the explicit-version flag against it — the flag writes the next number, the repeat
   invocation without it does nothing (`cli:explicit-versions:*`,
   `run-directory:idempotence:rerun-is-a-no-op`,
   `run-directory:idempotence:new-version-must-be-asked-for`)
-- [ ] 8.3 Audit every refusal added in phases 2–7 for a remedy that this build can actually perform, and
+- [x] 8.3 Audit every refusal added in phases 2–7 for a remedy that this build can actually perform, and
   a non-zero exit; verify both refusal scenarios (`cli:refusals:*`)
 
 ## 9. ⚠️ **GPU · HALT** — the acceptance run

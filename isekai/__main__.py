@@ -24,8 +24,26 @@ holds `convert.py`.
 """
 
 import argparse
+import dataclasses
+import random
 import sys
 from collections.abc import Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TextIO
+
+from isekai.caption import ClaudeReader, Reader, caption
+from isekai.comfy_client import ComfyClient
+from isekai.comfy_types import ComfyTransport
+from isekai.flow import FLOWS_DIR, load_flow, tracked_flows
+from isekai.generate import prepare, render
+from isekai.refusal import Refusal
+from isekai.review import approve, review
+from isekai.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.sheet import ClaudeSorter, Schema, Sorter, load_schema, sheet
+from isekai.show import report
+from isekai.vocabulary import Vocabulary
+from isekai.vocabulary import load as load_vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
 # so the two cannot disagree about what a stage does.
@@ -120,10 +138,174 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+@dataclass
+class Wiring:
+    """Everything the verbs reach the outside world through, in one place.
+
+    A parameter is a seam only if something else is actually passed through it,
+    and something is passed through every one of these: the reader and the sorter
+    take their offline doubles, the transport takes the fake the existing suite
+    already drives `pipeline.run` with, and the roots take a temporary directory.
+    That is what makes the resume assertion -- run everything twice, and nothing
+    moved and nothing was called -- provable without a GPU or a network.
+    """
+
+    reader: Reader
+    sorter: Sorter
+    client: ComfyTransport | None
+    schema: Schema
+    vocabulary: Vocabulary
+    runs_root: Path = RUNS_ROOT
+    flows_dir: Path = FLOWS_DIR
+    present: Sequence[str] | None = None
+    rng: random.Random = dataclasses.field(default_factory=random.Random)
+    out: TextIO = sys.stdout
+    err: TextIO = sys.stderr
+
+
+def wiring(args: argparse.Namespace) -> Wiring:
+    """Build the real wiring: the hosted reader and sorter, and the HTTP transport.
+
+    The vocabulary and the schema are read here rather than inside a stage,
+    because reading a file is I/O and the stages are the part that must stay
+    testable without any.
+    """
+    server = getattr(args, "server", None)
+    return Wiring(
+        reader=ClaudeReader(),
+        sorter=ClaudeSorter(),
+        client=ComfyClient(server) if server else None,
+        schema=load_schema(),
+        vocabulary=load_vocabulary(),
+    )
+
+
+def _run_for(identifier: str, wired: Wiring) -> Run:
+    """Return the run an argument names: a photograph to open, or a run to resume.
+
+    A photograph is offered by path and an existing run by its id, and which one
+    was meant is decided by what is on disk rather than by a flag.
+    """
+    directory = wired.runs_root / identifier
+    if (directory / FRAME_NAME).is_file():
+        return Run(identifier, directory)
+    photo = Path(identifier)
+    if not photo.is_file():
+        raise Refusal(
+            f"{identifier!r} is neither a photograph on disk nor a run under "
+            f"{wired.runs_root.name}/; give the path to a JPEG or PNG, or the id "
+            "`python -m isekai show` prints"
+        )
+    return open_run(photo, wired.runs_root)
+
+
+def _flows_for(args: argparse.Namespace, wired: Wiring) -> list[str]:
+    """Return the flows a verb acts on: the one named, or every tracked one."""
+    named = getattr(args, "flow", None)
+    return [named] if named else tracked_flows(wired.flows_dir)
+
+
+def _matching_flows(wired: Wiring) -> list[str]:
+    """Return the flows whose schema and vocabulary this fill would serve.
+
+    The sorting stage is filled once per distinct pair and written to every flow
+    declaring it, which is why the stage is never told which flow asked.
+    """
+    return [
+        name
+        for name in tracked_flows(wired.flows_dir)
+        if (flow := load_flow(name, wired.flows_dir)).schema
+        == f"{wired.schema.name}.v{wired.schema.version}"
+        and flow.vocabulary["sha256"] == wired.vocabulary.digest
+    ]
+
+
+def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
+    """Run one verb over every identifier given, reporting every refusal together.
+
+    One photograph's failure does not cost the others their turn: refusals are
+    collected and printed at the end, and the exit status says whether any fired.
+    """
+    verb = str(args.verb)
+    new_version = bool(getattr(args, "new_version", False))
+
+    def work(identifier: str) -> None:
+        run = _run_for(identifier, wired)
+        if verb == "caption":
+            written = caption(run, wired.reader, new_version=new_version)
+            _say(wired, run, "caption", written)
+        elif verb == "sheet":
+            written = sheet(
+                run,
+                wired.sorter,
+                wired.schema,
+                wired.vocabulary,
+                _matching_flows(wired),
+                new_version=new_version,
+            )
+            for path in written or [None]:
+                _say(wired, run, "sheet", path)
+        elif verb == "review":
+            for flow in _flows_for(args, wired):
+                _say(wired, run, "review", review(run, flow, new_version=new_version))
+        elif verb == "approve":
+            for flow in _flows_for(args, wired):
+                written, warnings = approve(run, flow, wired.schema, wired.vocabulary)
+                for warning in warnings:
+                    print(f"warning: {warning}", file=wired.err)
+                _say(wired, run, "approve", written)
+        elif verb == "generate":
+            _generate(args, wired, run)
+        else:
+            for line in report(run):
+                print(line, file=wired.out)
+
+    refused = across(list(args.photos), work)
+    for message in refused:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if refused else 0
+
+
+def _generate(args: argparse.Namespace, wired: Wiring, run: Run) -> None:
+    """Assemble every approved flow's prompt, then render what was asked for."""
+    flows = {name: load_flow(name, wired.flows_dir) for name in _flows_for(args, wired)}
+    prepared = prepare(run, flows, wired.schema)
+    for flow, path in prepared.items():
+        print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
+    if wired.client is None:
+        return
+    for flow in prepared:
+        produced = render(
+            run,
+            flows[flow],
+            wired.client,
+            count=args.count,
+            seeds=args.seeds,
+            rng=wired.rng,
+            present=wired.present,
+        )
+        for made in produced:
+            print(f"{run.id}: rendered {flow}/{made.image.name}", file=wired.out)
+        if not produced:
+            print(f"{run.id}: {flow} is already rendered", file=wired.out)
+
+
+def _say(wired: Wiring, run: Run, verb: str, written: Path | None) -> None:
+    """Report what a stage did, including that it was already complete."""
+    if written is None:
+        print(f"{run.id}: {verb} is already complete", file=wired.out)
+    else:
+        print(f"{run.id}: {verb} wrote {written.name}", file=wired.out)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse the pipeline's arguments and dispatch to the named stage."""
-    build_parser().parse_args(argv)
-    return 0
+    args = build_parser().parse_args(argv)
+    try:
+        return dispatch(args, wiring(args))
+    except Refusal as refused:
+        print(f"refused: {refused}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

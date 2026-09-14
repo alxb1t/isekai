@@ -435,7 +435,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     client = FakeComfyClient()
     render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
 
-    second = review(run, FLOW)
+    second = review(run, FLOW, new_version=True)
     assert second is not None
     body = json.loads(second.read_text())
     body["fields"]["clothes"] = ["collared shirt"]

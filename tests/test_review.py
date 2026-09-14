@@ -133,9 +133,10 @@ def test_reviewing_again_appends_from_the_approved_copy(
     assert first is not None
     _edit(first, hair_silhouette=["long hair"])
     approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
     frozen = approved.read_bytes()
 
-    second = review(run, FLOW)
+    second = review(run, FLOW, new_version=True)
 
     assert second is not None
     assert second.name == "002.draft.json"
@@ -191,6 +192,7 @@ def test_approval_carries_the_operators_content_across_unchanged(
     before = json.loads(draft.read_text())["fields"]
 
     approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
 
     assert approved.name == "001.approved.json"
     assert read_artifact(approved)["fields"] == before
@@ -216,12 +218,14 @@ def test_an_approved_artifact_is_never_overwritten(
 ) -> None:
     review(run, FLOW)
     approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
     frozen = approved.read_bytes()
 
-    second = review(run, FLOW)
+    second = review(run, FLOW, new_version=True)
     assert second is not None
     _edit(second, hair_silhouette=["long hair"])
     corrected, _ = approve(run, FLOW, schema, vocabulary)
+    assert corrected is not None
 
     assert corrected.name == "002.approved.json"
     assert approved.read_bytes() == frozen
@@ -298,6 +302,7 @@ def test_an_empty_field_is_not_treated_as_missing(
     review(run, FLOW)
 
     approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
 
     assert read_artifact(approved)["fields"]["pose"] == []
 
@@ -316,7 +321,7 @@ def test_an_over_long_prompt_warns_and_still_approves(
 
     approved, warnings = approve(run, FLOW, schema, vocabulary)
 
-    assert approved.exists()
+    assert approved is not None and approved.exists()
     assert len(warnings) == 1
     assert str(ENCODER_WINDOW) in warnings[0]
     assert "warning and not a refusal" in warnings[0]
@@ -355,6 +360,7 @@ def test_an_untouched_copy_is_recorded_as_unedited(
     review(run, FLOW)
 
     approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
 
     body = read_artifact(approved)
     assert body["producer"]["edited"] is False
@@ -370,6 +376,7 @@ def test_a_changed_copy_is_recorded_as_edited_without_being_told(
     _edit(draft, clothes=["collared shirt"])
 
     approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
 
     body = read_artifact(approved)
     assert body["producer"]["edited"] is True
@@ -402,3 +409,42 @@ def test_a_refusal_writes_no_error_record_and_leaves_the_run_unchanged(
 
     assert _snapshot(run.path) == before
     assert [p.name for p in run.path.rglob("*.error.*")] == []
+
+
+@pytest.mark.spec("run-directory:idempotence:rerun-is-a-no-op")
+def test_reviewing_an_approved_flow_again_does_nothing_without_the_flag(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    before = _snapshot(run.path)
+
+    assert review(run, FLOW) is None
+    assert _snapshot(run.path) == before
+
+
+@pytest.mark.spec("run-directory:idempotence:rerun-is-a-no-op")
+def test_approving_an_approved_flow_again_does_nothing_and_does_not_refuse(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    before = _snapshot(run.path)
+
+    assert approve(run, FLOW, schema, vocabulary) == (None, [])
+    assert _snapshot(run.path) == before
+
+
+@pytest.mark.spec("run-directory:idempotence:new-version-must-be-asked-for")
+def test_the_explicit_flag_opens_the_next_draft_and_leaves_the_last_alone(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    frozen = approved.read_bytes()
+
+    second = review(run, FLOW, new_version=True)
+
+    assert second is not None and second.name == "002.draft.json"
+    assert approved.read_bytes() == frozen

@@ -27,6 +27,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The six verbs now dispatch.** `isekai/__main__.py` gains a `Wiring` carrying the reader, the
+  sorter, the transport, the schema, the vocabulary and the run root — every one of them a seam
+  something is actually passed through, which is what makes the resume assertion provable with no
+  GPU and no network. An argument is a photograph to open or a run id to resume, decided by what is
+  on disk rather than by a flag. One bad identifier does not stop the rest of a batch; every refusal
+  is collected, printed to the error stream, and the exit status says whether any fired.
+- **The resume test: every command, twice.** Not one byte of the run directory differs and not one
+  external call is made — a number, not a hope, because the doubles count their calls. A companion
+  test asserts the first pass actually produced a caption, a sheet, an approved artifact, a prompt
+  and a render, so the resume claim cannot pass vacuously.
+- **A refusal audit across every stage.** Each refusal added in phases 2–7 is provoked and checked
+  for a remedy this build can actually perform, and for the absence of ones it cannot — no
+  `isekai migrate`, which is exactly the verb it would be most natural to promise and is deliberately
+  absent, because only schema version 1 exists and its dispatch table would have no entries.
+
+### Changed
+
+- **`review` and `approve` are inert on a second pass.** Re-running `review` on an already-approved
+  flow used to open a new draft, which made resume *write*. Both now do nothing without
+  `--new-version`, and `approve` with nothing to approve reports completion rather than refusing —
+  resume must not exit non-zero. Appending a corrected draft is still one flag away, and the approved
+  artifact it starts from is untouched.
+
+### Added
+
 - **Stage ④ — `isekai/flow.py`, `isekai/generate.py` and `flows/summon-v1/`.** A flow is a directory
   whose manifest *declares* and never computes, which is what lets a broken flow be caught by the
   suite rather than after a pod boot and several minutes. It names its inputs, its schema, its

@@ -94,15 +94,17 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     the operator agreed with, not from the machine's first attempt -- and the
     approved copy is left exactly as it was.
 
-    Returns the draft's path, or None when a draft is already waiting: an
-    unapproved draft is the operator's, and re-running must not overwrite their
-    half-finished edit.
+    Returns the draft's path, or None when there is nothing to do -- which is
+    either because a draft is already waiting, or because this flow is already
+    approved. Both are the same rule: **a new version is an explicit act.** An
+    unapproved draft is the operator's and re-running must not overwrite their
+    half-finished edit; an approved flow is finished, and quietly opening a new
+    draft every time somebody re-ran the pipeline would make resume write.
     """
     sheets = run.directory(SHEETS, flow)
     review_directory = run.directory(DIRECTORY, flow)
 
-    drafts = draft_versions(review_directory)
-    if drafts and not new_version:
+    if versions(review_directory) and not new_version:
         return None
 
     source_sheet = latest(sheets)
@@ -159,7 +161,7 @@ def approve(
     flow: str,
     schema: Schema,
     vocabulary: Vocabulary,
-) -> tuple[Path, list[str]]:
+) -> tuple[Path | None, list[str]]:
     """Validate `flow`'s highest draft and approve it, returning it and any warnings.
 
     Validation is the last place an invented tag can be caught: one that merely
@@ -171,6 +173,11 @@ def approve(
     directory = run.directory(DIRECTORY, flow)
     drafts = draft_versions(directory)
     if not drafts:
+        if approved_versions(directory):
+            # Already approved, and approving again would have nothing to act on.
+            # A no-op rather than a refusal, because re-running every command is
+            # the whole of resume and resume must not exit non-zero.
+            return None, []
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to approve; run "
             f"`python -m isekai review --flow {flow}` to take a copy, edit it, "

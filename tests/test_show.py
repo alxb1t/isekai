@@ -45,7 +45,7 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     sheet(made, FakeSorter(implementation="fake-sorter"), schema, vocabulary, [FLOW])
     review(made, FLOW)
     approve(made, FLOW, schema, vocabulary)
-    review(made, FLOW)
+    review(made, FLOW, new_version=True)
     return made
 
 
