@@ -27,6 +27,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`isekai/vocabulary.py` — the tag list as an object, and the four-pass cascade over it.**
+  `load` reads the provisioned `selected_tags.csv` with the stdlib `csv` module, keeps the general
+  tags only, normalises underscores to spaces, and verifies the bytes against the manifest before
+  parsing them. The cascade maps a phrase by exact match, then the *field's* suffix — passed in
+  from the schema rather than looked up by field name, which is what makes the mapper genuinely
+  independent of the field list — then a curated pass that consumes the span it matched and
+  carries on, then containment requiring every word of a candidate tag. An empty result is a real
+  answer: no nearest neighbour is ever substituted. Absence clauses are dropped whole, because a
+  positive prompt has no negation and "no tattoos" passed through becomes tattoos drawn. No pass,
+  the curated table included, can emit a tag the vocabulary does not carry.
+- **`schemas/identity.v1.json` — the field list as a versioned data file.** Sixteen fields in
+  prompt order, the seven that are scored, the per-field suffix convention, and the vocabulary the
+  schema is written against. Field names are identifier-safe slugs because the structured-output
+  flag becomes a tool input schema at the API, which enforces `^[a-zA-Z0-9_.-]{1,64}$` on property
+  keys; a name that would fail it is refused at load.
+- **`isekai/sheet.py` — the schema reader and the sheet's validation.** A sheet is fields and
+  nothing else: an assembled prompt in it is refused, a missing field is refused and told to add an
+  empty one, and an empty field is legal. A tag outside the vocabulary's prediction set is refused
+  with that as the reason, because the base model was never trained to draw it.
+
+### Added
+
 - **`python -m isekai` — a second entry point, with the pipeline's six verbs.**
   `caption` · `sheet` · `review` · `approve` · `generate` · `show`, under one parser in
   `isekai/__main__.py`. It is additive: `convert.py` and `isekai/cli.py` are untouched, and a test

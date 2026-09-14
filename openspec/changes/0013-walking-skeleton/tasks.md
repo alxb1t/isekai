@@ -4,7 +4,7 @@
 
 - [x] 1 — Foundations: `Refusal` moves, the derivation module is extracted, the vocabulary is pinned
 - [x] 2 — The run directory, the new entry point, and the second stdlib guard
-- [ ] 3 — The vocabulary object, the mapping cascade, and the schema
+- [x] 3 — The vocabulary object, the mapping cascade, and the schema
 - [ ] 4 — ① `caption` — a photograph in, prose out
 - [ ] 5 — ② `sheet` — prose in, canonical fields out
 - [ ] 6 — ③ `review` and `approve`
@@ -94,18 +94,18 @@ re-export a class that moved out of it.
 
 ## 3. The vocabulary and the schema
 
-- [ ] 3.1 Add `isekai/vocabulary.py` with `Vocabulary` (name, revision, digest, tag→post-count mapping)
+- [x] 3.1 Add `isekai/vocabulary.py` with `Vocabulary` (name, revision, digest, tag→post-count mapping)
   and `load` reading the provisioned CSV with the stdlib `csv` module, keeping general tags only and
   normalising underscores; verify it loads 8,106 tags and that `count` and `search` return the expected
   ordering
-- [ ] 3.2 Port the four-pass cascade — exact, per-field suffix, curated span-consuming, containment —
+- [x] 3.2 Port the four-pass cascade — exact, per-field suffix, curated span-consuming, containment —
   taking the suffixes as an argument rather than looking them up by field name; verify the five mapping
   scenarios (`sheet:mapping:*`)
-- [ ] 3.3 Add `schemas/identity.v1.json` — sixteen identifier-safe fields in prompt order, the seven
+- [x] 3.3 Add `schemas/identity.v1.json` — sixteen identifier-safe fields in prompt order, the seven
   scored flags, the per-field suffixes, and the vocabulary it is written against; verify the three
   schema scenarios including that every field name is a legal JSON-schema property key
   (`sheet:schema:*`)
-- [ ] 3.4 Implement sheet validation against the schema and the vocabulary — every field present, empty
+- [x] 3.4 Implement sheet validation against the schema and the vocabulary — every field present, empty
   legal, no tag outside the vocabulary; verify the purity and output scenarios
   (`sheet:purity:*`, `sheet:output:empty-field-is-legal`)
 
