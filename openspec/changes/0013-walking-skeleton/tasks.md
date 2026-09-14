@@ -6,7 +6,7 @@
 - [x] 2 — The run directory, the new entry point, and the second stdlib guard
 - [x] 3 — The vocabulary object, the mapping cascade, and the schema
 - [x] 4 — ① `caption` — a photograph in, prose out
-- [ ] 5 — ② `sheet` — prose in, canonical fields out
+- [x] 5 — ② `sheet` — prose in, canonical fields out
 - [ ] 6 — ③ `review` and `approve`
 - [ ] 7 — ④ `generate`, the flow, and `show`
 - [ ] 8 — Resume: run everything twice and assert nothing moved
@@ -127,18 +127,18 @@ re-export a class that moved out of it.
 
 ## 5. Stage ② — sheet
 
-- [ ] 5.1 Define the sorting model interface and its fake; verify a sheet is written with no network
+- [x] 5.1 Define the sorting model interface and its fake; verify a sheet is written with no network
   (`sheet:seam:offline-double-satisfies-the-interface`)
-- [ ] 5.2 Write `schemas/identity.v1.briefing.md` — the routing rules and the two worked examples, using
+- [x] 5.2 Write `schemas/identity.v1.briefing.md` — the routing rules and the two worked examples, using
   the **same identifier-safe field names** the schema declares; verify a test asserts every field name
   the briefing mentions exists in the schema
-- [ ] 5.3 Implement the `claude -p` adapter for this stage — `--tools ""`, the schema's field structure
+- [x] 5.3 Implement the `claude -p` adapter for this stage — `--tools ""`, the schema's field structure
   passed as the required output shape, wording unconstrained; verify the structure-constrained scenario
   and that a structurally wrong response is a permanent failure
   (`sheet:seam:structure-constrained-content-free`, `sheet:failure:structural-mismatch-is-permanent`)
-- [ ] 5.4 Implement `isekai sheet` — fill, map through the cascade, write fields only with the
+- [x] 5.4 Implement `isekai sheet` — fill, map through the cascade, write fields only with the
   vocabulary's identity recorded; verify the output scenarios (`sheet:output:*`)
-- [ ] 5.5 Implement the once-per-(schema, vocabulary) rule, writing the result to every flow declaring
+- [x] 5.5 Implement the once-per-(schema, vocabulary) rule, writing the result to every flow declaring
   that pair; verify with two flows sharing a pair that one fill serves both
   (`sheet:sharing:one-fill-serves-every-matching-flow`)
 

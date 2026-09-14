@@ -27,6 +27,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Stage ② — `isekai/sheet.py` gains the sorter, the fill and the write.** Prose, a schema and a
+  vocabulary in; canonical fields out. The stage is never told which flow asked, which is what lets
+  one fill serve every flow declaring the same schema and vocabulary — a second flow added later
+  costs one call, not two, and the first flow's sheet is left exactly as it was. The sheet records
+  the vocabulary's name, revision and digest, and its producer names the caption version it sorted.
+- **`schemas/identity.v1.briefing.md`** — the routing rules and two worked examples, written in the
+  schema's own identifier-safe field names. Both examples show absence clauses producing empty
+  fields, and details with no field being dropped rather than forced somewhere.
+- **The sorter's invocation constrains structure, not wording.** `--tools ""` and a `--json-schema`
+  carrying exactly the schema's fields, required, with no additional properties and no `enum`.
+  Constraining generation *to the vocabulary* was measured and rejected: token-prefix masking lands
+  on the nearest tag sharing a prefix rather than the one the model meant, which turns a visible
+  failure into an invisible one. A response that does not carry the schema's fields is a permanent
+  failure — the structure was stated in the request, so another attempt would spend for nothing.
+- **`isekai/claude_cli.py` — the pipeline's one network boundary.** The locked-down invocation, the
+  envelope, the failure classification and the absent-binary refusal now live in one module that
+  both stages reach through, rather than in the first stage that happened to need them.
+
+### Fixed
+
+- **The reader is now told where the photograph is.** Stage ①'s adapter passed the path as a
+  trailing positional after `-p`, which the CLI's argument parser silently drops — the reader would
+  have been told to describe a photograph and never told which one. The path travels in the prompt;
+  `--add-dir` is what grants the read. Verified against the real binary, which also confirmed the
+  envelope's shape: `api_error_status` and `permission_denials` now feed the classifier, and a
+  single envelope really does report two models, as the design said it would.
+
+### Added
+
 - **Stage ① — `isekai/caption.py`, a photograph in and prose out.** The reader is handed exactly two
   things, the photograph and its standing instructions, and is told nothing about schemas, fields,
   vocabularies or flows: pressing a reader into a schema is measured to make it invent — told never

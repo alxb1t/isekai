@@ -13,17 +13,14 @@ from pathlib import Path
 import pytest
 
 from isekai.caption import (
-    BASE_FLAGS,
     BRIEFING_PATH,
     ClaudeReader,
     FakeReader,
-    ReaderFailure,
     Reading,
     briefing_record,
     caption,
-    classify,
-    models_that_ran,
 )
+from isekai.claude_cli import BASE_FLAGS, CliFailure, classify, models_that_ran
 from isekai.refusal import Refusal
 from isekai.run import BUDGETS, Run, attempts, open_run, read_artifact, versions
 from isekai.sheet import load_schema
@@ -209,8 +206,13 @@ def test_the_argument_vector_carries_every_load_bearing_flag(tmp_path: Path) -> 
     assert argv[argv.index("--add-dir") + 1] == str(tmp_path)
     assert argv[argv.index("--permission-prompts") + 1] == "none"
     assert argv[argv.index("--output-format") + 1] == "json"
-    assert argv[:3] == ["claude", "-p", "the briefing"]
+    assert argv[:2] == ["claude", "-p"]
     assert set(BASE_FLAGS) <= set(argv)
+    # The photograph's path travels in the prompt. A trailing positional is
+    # silently dropped by the CLI's parser, which would leave the reader told to
+    # describe a photograph and never told where it is.
+    assert "the briefing" in argv[2]
+    assert str(tmp_path / "photo.jpg") in argv[2]
 
 
 @pytest.mark.spec("caption:seam:offline-double-satisfies-the-interface")
@@ -223,7 +225,7 @@ def test_the_adapter_reads_prose_out_of_the_envelope(
         seen.append(list(argv))
         return 0, _envelope(result="  She is wearing a grey coat.  "), ""
 
-    monkeypatch.setattr("isekai.caption.shutil.which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/usr/bin/claude")
     reading = ClaudeReader(runner=fake_runner).read(
         tmp_path / "p.jpg", "brief", tmp_path
     )
@@ -260,7 +262,7 @@ def test_a_rate_limit_a_server_error_or_a_timeout_is_transient(subtype: str) -> 
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
 def test_a_transient_failure_counts_against_the_budget(run: Run) -> None:
-    reader = FakeReader(failure=ReaderFailure("transient", "rate limited"))
+    reader = FakeReader(failure=CliFailure("transient", "rate limited"))
 
     with pytest.raises(Refusal):
         caption(run, reader)
@@ -272,7 +274,7 @@ def test_a_transient_failure_counts_against_the_budget(run: Run) -> None:
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
 def test_the_stage_refuses_once_the_budget_is_spent(run: Run) -> None:
-    reader = FakeReader(failure=ReaderFailure("transient", "rate limited"))
+    reader = FakeReader(failure=CliFailure("transient", "rate limited"))
     for _ in range(BUDGETS["caption"]):
         with pytest.raises(Refusal):
             caption(run, reader)
@@ -296,7 +298,7 @@ def test_a_declined_request_is_permanent() -> None:
 def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
     run: Run,
 ) -> None:
-    reader = FakeReader(failure=ReaderFailure("permanent", "the reader declined"))
+    reader = FakeReader(failure=CliFailure("permanent", "the reader declined"))
 
     with pytest.raises(Refusal) as refused:
         caption(run, reader)
@@ -317,12 +319,12 @@ def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
 def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.caption.shutil.which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/usr/bin/claude")
 
     def empty(argv: Sequence[str]) -> tuple[int, str, str]:
         return 0, _envelope(result="   "), ""
 
-    with pytest.raises(ReaderFailure) as failed:
+    with pytest.raises(CliFailure) as failed:
         ClaudeReader(runner=empty).read(tmp_path / "p.jpg", "brief", tmp_path)
 
     assert failed.value.kind == "permanent"
@@ -330,7 +332,7 @@ def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
 def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> None:
-    reader = FakeReader(failure=ReaderFailure("permanent", "not prose"))
+    reader = FakeReader(failure=CliFailure("permanent", "not prose"))
 
     with pytest.raises(Refusal):
         caption(run, reader)
@@ -342,12 +344,12 @@ def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> No
 def test_output_that_is_not_an_envelope_at_all_is_a_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.caption.shutil.which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/usr/bin/claude")
 
     def garbage(argv: Sequence[str]) -> tuple[int, str, str]:
         return 1, "not json", "command not understood"
 
-    with pytest.raises(ReaderFailure) as failed:
+    with pytest.raises(CliFailure) as failed:
         ClaudeReader(runner=garbage).read(tmp_path / "p.jpg", "brief", tmp_path)
 
     assert failed.value.kind == "permanent"
@@ -360,7 +362,7 @@ def test_output_that_is_not_an_envelope_at_all_is_a_failure(
 def test_an_absent_reader_refuses_naming_what_to_install(
     run: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.caption.shutil.which", lambda _: None)
+    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: None)
 
     with pytest.raises(Refusal) as refused:
         ClaudeReader().read(run.photo, "brief", run.path)
@@ -374,7 +376,7 @@ def test_an_absent_reader_refuses_naming_what_to_install(
 def test_an_absent_reader_leaves_the_run_directory_untouched(
     run: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.caption.shutil.which", lambda _: None)
+    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: None)
     before = sorted(p.name for p in run.path.rglob("*"))
 
     with pytest.raises(Refusal):
