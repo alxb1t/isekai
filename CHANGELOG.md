@@ -27,6 +27,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Stage ③ — `isekai/review.py`: the correction, on a copy, approved by a rename.** `review` copies
+  the highest sheet into `review/<flow>/` as a draft and records which sheet version it came from;
+  `sheets/<flow>/` is never written to again by anything. That separation is what makes "the
+  machine's sheet is never edited" a property of the layout rather than a rule a tool is trusted to
+  follow — and the machine's raw sheet is the baseline the correction is measured against, since the
+  unreviewed route carries 0.568 of a sheet's attributes into the render and the reviewed one 0.917.
+  Reviewing again starts from the last thing the operator approved, not from the machine's first
+  attempt, and leaves the approved artifact exactly as it was.
+- **Saving is not approving.** A draft is parkable half-edited for as long as the operator wants, a
+  repeat `review` does not overwrite it, and a draft is reported as *not* complete — approval is its
+  own act and is what a directory listing reads.
+- **Approval validates, then renames.** Every tag is checked against the vocabulary, because a tag
+  that merely looks canonical passes every later check on its way into the prompt and this is the
+  last place to catch it. The refusal says the tag is not in the vocabulary's *prediction set*,
+  which is what is true — that set is a subset of the wider tag corpus, so calling an absent tag
+  unreal would overclaim. An approved artifact is never overwritten; a correction is the next number.
+- **The token window warns rather than refuses.** The assembled prompt is estimated against SDXL's
+  77-token encoder window; over it, a warning states the estimate and the window and approval still
+  succeeds. Sheets already ran past it with nothing saying so, so every one was being silently
+  chunked and averaged — but the sheet is the record of what the render was *asked* to contain, and
+  deleting fields to fit would make "did this criterion survive" unanswerable at the moment it is asked.
+- **The approved artifact records whether a human changed anything**, computed against the source
+  sheet rather than declared by the operator. Whether a sheet was actually corrected is the
+  difference between the two routes above, and a flag somebody sets is an assumption in a fact's
+  clothes. Approving unedited is a legitimate, recorded act — it is how the machine's raw draft gets
+  rendered as a control.
+- **This stage writes no error record and consumes no retry budget.** There is no batch and no
+  unattended retry here: the operator is present by definition, and a refusal is a message to them
+  rather than state for a later resume to reason about.
+
+### Added
+
 - **Stage ② — `isekai/sheet.py` gains the sorter, the fill and the write.** Prose, a schema and a
   vocabulary in; canonical fields out. The stage is never told which flow asked, which is what lets
   one fill serve every flow declaring the same schema and vocabulary — a second flow added later

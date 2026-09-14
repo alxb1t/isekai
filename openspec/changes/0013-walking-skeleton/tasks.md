@@ -7,7 +7,7 @@
 - [x] 3 — The vocabulary object, the mapping cascade, and the schema
 - [x] 4 — ① `caption` — a photograph in, prose out
 - [x] 5 — ② `sheet` — prose in, canonical fields out
-- [ ] 6 — ③ `review` and `approve`
+- [x] 6 — ③ `review` and `approve`
 - [ ] 7 — ④ `generate`, the flow, and `show`
 - [ ] 8 — Resume: run everything twice and assert nothing moved
 - [ ] 9 — ⚠️ **GPU · HALT** — one session, five photographs, end to end
@@ -144,18 +144,18 @@ re-export a class that moved out of it.
 
 ## 6. Stage ③ — review and approve
 
-- [ ] 6.1 Implement `isekai review` — copy the highest sheet into `review/<flow>/` as a draft, recording
+- [x] 6.1 Implement `isekai review` — copy the highest sheet into `review/<flow>/` as a draft, recording
   the source version; verify the three copy scenarios (`review:copy:*`)
-- [ ] 6.2 Implement `isekai approve` — validate, then rename; verify the three approval scenarios
+- [x] 6.2 Implement `isekai approve` — validate, then rename; verify the three approval scenarios
   including that the bytes are unchanged (`review:approval:*`)
-- [ ] 6.3 Implement tag validation at approval with the honest message — not in the vocabulary's
+- [x] 6.3 Implement tag validation at approval with the honest message — not in the vocabulary's
   prediction set — and the missing-field refusal; verify the three validation scenarios
   (`review:validation:*`)
-- [ ] 6.4 Implement the token-window warning against the encoder's 77-token window; verify an over-long
+- [x] 6.4 Implement the token-window warning against the encoder's 77-token window; verify an over-long
   prompt warns and still approves (`review:budget:over-window-warns-not-refuses`)
-- [ ] 6.5 Record `edited` on the approved artifact by comparing it to its source sheet; verify both
+- [x] 6.5 Record `edited` on the approved artifact by comparing it to its source sheet; verify both
   provenance scenarios (`review:provenance:*`)
-- [ ] 6.6 Ensure this stage writes no error record and consumes no budget; verify a refusal leaves the
+- [x] 6.6 Ensure this stage writes no error record and consumes no budget; verify a refusal leaves the
   run directory unchanged (`review:refusal:no-error-record-is-written`)
 
 ## 7. Stage ④ — generate, the flow, and show
