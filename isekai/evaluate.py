@@ -26,6 +26,11 @@ from dataclasses import dataclass, field, replace
 from typing import Literal, Protocol
 
 from isekai.ciede2000 import Lab, delta_e_2000
+
+# Re-exported, not defined here. The redundant alias is the explicit-re-export
+# form: `Refusal` moved to its own module so the pipeline can raise it without
+# importing the scorer, and every existing importer still reads it from here.
+from isekai.refusal import Refusal as Refusal
 from isekai.workflow import image_dimensions, working_resolution
 
 # A region covering less than this fraction of the canvas is refused rather than
@@ -81,10 +86,6 @@ AUTHORITATIVE_GUARD_METHOD = "iou"
 
 Box = tuple[float, float, float, float]
 Point = tuple[float, float]
-
-
-class Refusal(Exception):
-    """The comparison cannot be made, and saying so is the correct output."""
 
 
 @dataclass(frozen=True)

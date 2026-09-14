@@ -1,12 +1,18 @@
-# The evaluator's model licences — read, quoted, and what each one costs
+# The model licences — read, quoted, and what each one costs
 
 The tracked note that sits beside `scripts/eval_models.json`, the way that manifest sits beside
 `scripts/models.json`. Every artifact the scorer loads is listed here with the licence it ships
 under, the URL that licence was read at, and the date it was read.
 
-**Every licence below was read on 2026-09-06, and none of them forbids this use.** That was checked
+**It is one record, not one per manifest.** A licence is a property of an artifact rather than of
+the file that pins it, so the vocabulary `scripts/vocabulary.json` declares is recorded here too,
+under its own heading and with its own read date — three notes would be three places to forget.
+The filename is the evaluator's for historical reasons only; the record is the repository's.
+
+**Every scorer licence below was read on 2026-09-06, and none of them forbids this use.** That was checked
 before a line of scorer code was written, because a licence that forbids the use should kill a model
-before an axis is built on it (`openspec/changes/0012-identity-evaluator/design.md`, D16, D18).
+before an axis is built on it (`openspec/changes/0012-identity-evaluator/design.md`, D16, D18). The
+vocabulary was added later and carries its own read date, stated in its own section.
 
 This repository is **Apache-2.0** (`LICENSE`), it is public, and it distributes **no model weights** —
 `README.md` already says model weights are licensed separately by their publishers. That last fact is
@@ -172,6 +178,32 @@ silently.
 
 ---
 
+## The vocabulary — a tag list, not a model
+
+### `wd14/selected_tags.csv` — the canonical tag vocabulary
+
+- **Licence:** **Apache-2.0.** Permissive; nothing to record beyond the fact.
+- **Read at:** <https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3>, 2026-09-14; the model
+  card's frontmatter declares `license: apache-2.0`.
+
+The file the sorting stage fills a sheet from: 10,861 rows, of which 8,106 are general Danbooru
+tags with their post counts. It is pinned in `scripts/vocabulary.json` at revision
+`627aef95638667ddcaa3ac8ae625e88ea5b02f51`, and its digest is obtained by fetching and hashing
+rather than read from a published record — at roughly 300 KB it is not stored as a large file, so
+Hugging Face publishes no SHA-256 for it.
+
+**The tagger it is published beside is not pinned and is not loaded**, so its own terms are not
+this repository's problem and are deliberately not recorded as though they were. What is recorded
+is that the tag list carries the repository's licence, which the card states over the whole
+repository and therefore over this file.
+
+**A residual, stated rather than assumed away:** the tags themselves are Danbooru's vocabulary and
+the post counts are Danbooru's statistics. Apache-2.0 is SmilingWolf's grant over the artifact
+published here, which is what this repository consumes; it is not a claim about the upstream
+booru's data. This project distributes neither.
+
+---
+
 ## Summary
 
 | artifact | licence | reading | pinned in |
@@ -181,3 +213,4 @@ silently.
 | `glintr100` / antelopev2 | non-commercial research; weights not MIT | recorded deviation, **shipping since v0.9** | both manifests, byte-identical |
 | DWPose (`yolox_l`, `dw-ll_ucoco_384_bs5`) | **Apache-2.0** | permissive; the open entry, now closed | both manifests, byte-identical |
 | `deepghs/anime_face_detection` | **MIT** | permissive; replaces D19's AGPL artifact | `eval_models.json` |
+| `wd14/selected_tags.csv` (`SmilingWolf/wd-swinv2-tagger-v3`) | **Apache-2.0** | permissive; the tag list, not the tagger | `vocabulary.json` |

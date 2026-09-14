@@ -25,6 +25,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The tag vocabulary is a provisioned artifact with its own manifest.**
+  `scripts/vocabulary.json` pins `wd14/selected_tags.csv` — 10,861 Danbooru tags with their post
+  counts, 8,106 of them general — at an immutable revision, digested by fetching and hashing
+  because at ~300 KB it is not stored as a large file and Hugging Face publishes no SHA-256 to
+  read. It used to arrive as a side effect of downloading a tagger this repository does not load,
+  on a mutable reference, so a fresh clone could not fill a sheet at all. Derived by
+  `scripts/derive_vocabulary.py`, and held to the same pinning, digest and mirror checks as the
+  other two manifests.
+- **`scripts/manifest.py` — one derivation module behind all three manifests.** It carries the
+  entry types, both digest strategies and the writer; each deriver is now a table of what to pin
+  plus a `derive()`. The entry spec had been declared twice, under one name, with two different
+  shapes, and a third deriver is how that becomes a defect rather than an oddity. Verifiable for
+  nothing: `scripts/models.json` and `scripts/eval_models.json` are byte-identical after a re-run.
+- **`isekai/refusal.py`.** `Refusal` moves out of the evaluator's module so the pipeline can raise
+  it without loading several hundred lines of scoring rules; `isekai.evaluate` re-exports it, so
+  both existing importers resolve unchanged.
+- **The vocabulary's licence is recorded** in `scripts/eval_licences.md` — Apache-2.0, the URL it
+  was read at, and the date. That record is now stated to be one note for every artifact this
+  repository pins, rather than one per manifest.
+
 ## [0.12.0] - 2026-09-07
 
 ### Fixed

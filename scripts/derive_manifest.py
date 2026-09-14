@@ -20,13 +20,28 @@ is the check, and it is why `PINNED` is a constant here rather than today's date
 Revisions are data in this file, not resolved from a branch at run time. Resolving
 `main` would make the tool's output depend on the day it ran, which is the exact
 property the pins exist to remove.
+
+What is left here is this manifest's *spec*: what to pin, and the one publisher
+record the mirrors are held against. The entry types, both digest strategies and
+the writer live in `scripts/manifest.py`, shared with the two sibling derivers
+(design.md D10).
 """
 
 import json
 import re
 import urllib.request
 from pathlib import Path
-from typing import Any, NamedTuple, TypedDict
+from typing import Any
+
+from manifest import (
+    USER_AGENT,
+    Manifest,
+    ManifestEntry,
+    Source,
+    Spec,
+    entry_for,
+    write,
+)
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
 
@@ -47,49 +62,6 @@ PUBLISHERS = (
     "TheMistoAI",
     "lllyasviel",
 )
-
-
-class ManifestEntry(TypedDict):
-    """One emitted manifest entry -- the shape `isekai.provision` reads back."""
-
-    dest: str
-    sha256: str
-    bytes: int
-    sources: list[str]
-
-
-class Manifest(TypedDict):
-    """The emitted manifest."""
-
-    pinned: str
-    publishers: list[str]
-    entries: list[ManifestEntry]
-
-
-class Source(NamedTuple):
-    """One Hugging Face file, addressed by an immutable revision."""
-
-    repo: str
-    revision: str
-    path: str
-
-    def url(self) -> str:
-        """Return the `resolve/<sha>/` URL that serves exactly these bytes."""
-        return f"https://huggingface.co/{self.repo}/resolve/{self.revision}/{self.path}"
-
-
-class Spec(NamedTuple):
-    """A destination under the models tree, and the ordered sources that fill it.
-
-    `expect_sha256` is for an artifact whose publisher is not the host: the
-    publisher states a digest, every source is a mirror, and the derived digest
-    is checked against the stated one. That check is what makes the mirrors
-    interchangeable CDNs rather than trust roots (design.md D1).
-    """
-
-    dest: str
-    sources: tuple[Source, ...]
-    expect_sha256: str | None = None
 
 
 # --- the authored spec: destinations, and where each one's bytes come from ---
@@ -297,37 +269,11 @@ def civitai_version(version_id: int) -> dict[str, Any]:
     """Fetch one Civitai model version's public record."""
     request = urllib.request.Request(
         f"https://civitai.com/api/v1/model-versions/{version_id}",
-        headers={"User-Agent": "isekai-derive"},
+        headers={"User-Agent": USER_AGENT},
     )
     with urllib.request.urlopen(request, timeout=120) as response:
         parsed: Any = json.load(response)
     return parsed
-
-
-def published_digest(source: Source) -> tuple[str, int]:
-    """Return the SHA-256 and size Hugging Face publishes for `source`.
-
-    The digest is the LFS object id, which HF documents as the file's SHA-256. A
-    path that is not stored in LFS has no such id, and this raises rather than
-    falling back to the git blob sha1 -- a sha1 in a sha256 field would validate
-    and verify nothing.
-    """
-    body = json.dumps({"paths": [source.path]}).encode()
-    request = urllib.request.Request(
-        f"https://huggingface.co/api/models/{source.repo}/paths-info/{source.revision}",
-        data=body,
-        headers={"Content-Type": "application/json", "User-Agent": "isekai-derive"},
-    )
-    with urllib.request.urlopen(request, timeout=120) as response:
-        payload = json.load(response)
-    for item in payload:
-        if item.get("path") != source.path:
-            continue
-        lfs = item.get("lfs")
-        if not lfs or not lfs.get("oid"):
-            raise SystemExit(f"{source.url()}: not an LFS object, no published SHA-256")
-        return str(lfs["oid"]), int(item["size"])
-    raise SystemExit(f"{source.url()}: not found at that revision")
 
 
 def derive() -> Manifest:
@@ -340,28 +286,7 @@ def derive() -> Manifest:
     for spec in SPECS:
         if spec.dest == WAI_DEST:
             spec = spec._replace(expect_sha256=wai_sha256)
-        primary, *alternates = spec.sources
-        sha256, size = published_digest(primary)
-        if spec.expect_sha256 is not None and sha256 != spec.expect_sha256:
-            raise SystemExit(
-                f"{spec.dest}: {primary.url()} publishes {sha256}, "
-                f"but the publisher states {spec.expect_sha256}"
-            )
-        for alternate in alternates:
-            alt_sha, _ = published_digest(alternate)
-            if alt_sha != sha256:
-                raise SystemExit(
-                    f"{spec.dest}: alternate {alternate.url()} publishes {alt_sha}, "
-                    f"primary {primary.url()} publishes {sha256}"
-                )
-        entries.append(
-            {
-                "dest": spec.dest,
-                "sha256": sha256,
-                "bytes": size,
-                "sources": [source.url() for source in spec.sources],
-            }
-        )
+        entries.append(entry_for(spec))
     return {
         "pinned": PINNED,
         "publishers": list(PUBLISHERS),
@@ -371,13 +296,7 @@ def derive() -> Manifest:
 
 def main() -> None:
     """Derive the manifest and write it to `scripts/models.json`."""
-    manifest = derive()
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
-    entries = manifest["entries"]
-    total = sum(entry["bytes"] for entry in entries)
-    print(
-        f"wrote {MANIFEST_PATH.name}: {len(entries)} entries, {total / 2**30:.1f} GiB"
-    )
+    write(derive(), MANIFEST_PATH)
 
 
 if __name__ == "__main__":

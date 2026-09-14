@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — Foundations: `Refusal` moves, the derivation module is extracted, the vocabulary is pinned
+- [x] 1 — Foundations: `Refusal` moves, the derivation module is extracted, the vocabulary is pinned
 - [ ] 2 — The run directory, the new entry point, and the second stdlib guard
 - [ ] 3 — The vocabulary object, the mapping cascade, and the schema
 - [ ] 4 — ① `caption` — a photograph in, prose out
@@ -41,28 +41,28 @@ re-export a class that moved out of it.
 
 ## 1. Foundations
 
-- [ ] 1.1 Move `Refusal` from `isekai/evaluate.py` into `isekai/refusal.py` and re-export it from
+- [x] 1.1 Move `Refusal` from `isekai/evaluate.py` into `isekai/refusal.py` and re-export it from
   `isekai/evaluate.py`; verify `uv run pytest` is green with no test changed, and that both
   `evaluate.py` and `isekai/eval_backends.py` still import it by their existing paths
-- [ ] 1.2 Extract `scripts/manifest.py` carrying `Manifest`, `ManifestEntry`, `Source`,
+- [x] 1.2 Extract `scripts/manifest.py` carrying `Manifest`, `ManifestEntry`, `Source`,
   `published_digest`, `blob_digest` and the manifest writer; verify by importing it from a scratch
   interpreter and printing each name
-- [ ] 1.3 Repoint `scripts/derive_manifest.py` and `scripts/derive_eval_manifest.py` at the shared
+- [x] 1.3 Repoint `scripts/derive_manifest.py` and `scripts/derive_eval_manifest.py` at the shared
   module, deleting the duplicated writer and the second `Spec` shape; verify by re-running both and
   asserting `git diff --exit-code scripts/models.json scripts/eval_models.json` is clean
   (`model-provisioning:derivation:entry-type-has-one-definition`,
   `model-provisioning:derivation:both-digest-strategies-are-shared`,
   `model-provisioning:derivation:rerun-is-byte-identical`)
-- [ ] 1.4 Add `scripts/derive_vocabulary.py` writing `scripts/vocabulary.json`, one entry for
+- [x] 1.4 Add `scripts/derive_vocabulary.py` writing `scripts/vocabulary.json`, one entry for
   `wd14/selected_tags.csv`, its source **resolved to an immutable revision** and its digest obtained by
   fetching and hashing (it is 308 KB and publishes no large-file record); verify by running it twice
   and asserting the second run leaves the file byte-identical
   (`model-provisioning:vocabulary:manifest-is-its-own-file`,
   `model-provisioning:vocabulary:tagger-model-is-not-included`)
-- [ ] 1.5 Add a test asserting `scripts/vocabulary.json` declares a digest, a byte count and at least
+- [x] 1.5 Add a test asserting `scripts/vocabulary.json` declares a digest, a byte count and at least
   one source, and that no source resolves a mutable reference — the same rule the graph manifest is
   held to (`model-provisioning:vocabulary:entry-is-pinned-and-digested`)
-- [ ] 1.6 Add the vocabulary artifact's row to `eval_licences.md` — the terms, the URL they were read
+- [x] 1.6 Add the vocabulary artifact's row to `eval_licences.md` — the terms, the URL they were read
   from, and the date; verify the file parses in the form the existing rows use
   (`model-provisioning:licences:vocabulary-terms-are-recorded`)
 

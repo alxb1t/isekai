@@ -25,6 +25,15 @@ from typing import IO, Any, Literal, Protocol, TypedDict
 
 MANIFEST_PATH = Path(__file__).resolve().parent.parent / "scripts" / "models.json"
 
+# The third manifest: the tag list the sorting stage fills a sheet from. A sibling
+# of the other two rather than a section of either -- one file per question, and
+# this one answers what the pipeline's vocabulary is (design.md D9). The path is
+# declared here, beside the graph's, because the checks that keep a manifest
+# honest are this module's and all three are held to them.
+VOCABULARY_MANIFEST_PATH = (
+    Path(__file__).resolve().parent.parent / "scripts" / "vocabulary.json"
+)
+
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.
 DIGEST = re.compile(r"^[0-9a-f]{64}$")
 
@@ -69,6 +78,12 @@ ENTRY_KEYS = frozenset(Entry.__required_keys__)
 
 def load_manifest(path: Path = MANIFEST_PATH) -> Manifest:
     """Read and parse the tracked manifest."""
+    parsed: Any = json.loads(path.read_text())
+    return parsed
+
+
+def load_vocabulary_manifest(path: Path = VOCABULARY_MANIFEST_PATH) -> Manifest:
+    """Read and parse the tracked vocabulary manifest."""
     parsed: Any = json.loads(path.read_text())
     return parsed
 
