@@ -16,9 +16,8 @@
 # Downloaded model weights (tens of GB; live on the RunPod network volume)
 models/
 
-# Generated outputs
-outputs/
-.inputs/
+# Images data for inputs and generated outputs
+.data
 
 # Python
 __pycache__/
