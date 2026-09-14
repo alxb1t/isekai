@@ -11,7 +11,7 @@
 - [x] 7 — ④ `generate`, the flow, and `show`
 - [x] 8 — Resume: run everything twice and assert nothing moved
 - [x] 9 — ⚠️ **GPU · HALT** — one session, five photographs, end to end
-- [ ] 10 — The banner, the changelog, and the version line
+- [x] 10 — The banner, the changelog, and the version line
 
 ## The per-phase ritual
 
@@ -215,15 +215,15 @@ boot to teardown. Exceeding the ceiling is a halt, not a judgement call.
 
 ## 10. Release preparation
 
-- [ ] 10.1 Add the layout rule to `CLAUDE.md` — everything a run produces or consumes lives under
+- [x] 10.1 Add the layout rule to `CLAUDE.md` — everything a run produces or consumes lives under
   `.data/`, which is gitignored, and `models/` stays separate because it is provisioned from a pinned
   manifest and is re-derivable byte-for-byte; verify `.gitignore` covers `.data` and that no tracked
   file writes outside it
-- [ ] 10.2 Add the work-in-progress banner to `README.md`, once, stating that stages ① and ② need the
+- [x] 10.2 Add the work-in-progress banner to `README.md`, once, stating that stages ① and ② need the
   `claude` binary and a subscription and that the open-model replacements are the next version; verify
   it renders and that no other README section was changed
-- [ ] 10.3 Cut `CHANGELOG.md`'s `## [Unreleased]` entries into `## [0.13.0]`; verify the heading form
+- [x] 10.3 Cut `CHANGELOG.md`'s `## [Unreleased]` entries into `## [0.13.0]`; verify the heading form
   matches the existing ones
-- [ ] 10.4 Set the version line in all four places — `proposal.md`'s frontmatter, `CHANGELOG.md`'s
+- [x] 10.4 Set the version line in all four places — `proposal.md`'s frontmatter, `CHANGELOG.md`'s
   heading, `pyproject.toml`'s `version`, and the annotated tag; verify all four read `0.13.0` and that
   `openspec validate 0013-walking-skeleton --strict` passes

@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-14
+
 ### Added
 
 - **The acceptance run: five photographs, end to end, on a rented GPU.** Photograph → prose →
