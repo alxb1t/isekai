@@ -27,6 +27,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`infra/up.sh` sent a comma-separated GPU preference list as one enum value**, so pod creation was
+  rejected outright with the whole enum echoed back. `RUNPOD_GPU_TYPE` is an ordered preference — the
+  API takes a list and picks the first with capacity, which is what stops a metered session dying
+  because one model is sold out in one datacenter — and it is now split into an array, trimmed, with
+  empty entries dropped. Found at the top of v0.13's metered phase; no pod was created and nothing
+  was billed.
+
+### Fixed
+
 - **`generate` rendered before the batch was assembled, and a dead endpoint was a traceback.** Both
   found by v0.13's acceptance run. The CLI dispatched per photograph, so it assembled one prompt and
   immediately reached for the endpoint — which is exactly the failure the "assemble the whole batch
