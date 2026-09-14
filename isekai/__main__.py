@@ -99,6 +99,17 @@ def build_parser() -> argparse.ArgumentParser:
             nargs="*",
             help="photographs, or run identifiers for a run that already exists",
         )
+        # The root every run lives under. It defaults to `.data/runs`, and it is a
+        # flag because a version's acceptance run wants its own directory rather
+        # than one pile every version adds to. Anywhere it points is still inside
+        # `.data/`, which is gitignored -- a run holds a copy of the photograph,
+        # so `runs/` holds personal photographs by construction (design.md D14).
+        made[name].add_argument(
+            "--runs",
+            type=Path,
+            default=RUNS_ROOT,
+            help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
+        )
     for name in ("review", "approve", "generate"):
         made[name].add_argument(
             "--flow",
@@ -177,6 +188,7 @@ def wiring(args: argparse.Namespace) -> Wiring:
         client=ComfyClient(server) if server else None,
         schema=load_schema(),
         vocabulary=load_vocabulary(),
+        runs_root=args.runs,
     )
 
 

@@ -377,3 +377,15 @@ def test_one_bad_identifier_does_not_stop_the_rest_of_a_batch(
     assert status == 1
     assert _calls(wired)[0] == 1
     assert len(list(wired.runs_root.iterdir())) == 1
+
+
+@pytest.mark.spec_exempt("structural: the runs root is a flag, not a fixed path")
+def test_the_runs_root_is_a_flag_defaulting_to_the_gitignored_data_root(
+    tmp_path: Path,
+) -> None:
+    from isekai.run import RUNS_ROOT
+
+    assert build_parser().parse_args(["show"]).runs == RUNS_ROOT
+    assert build_parser().parse_args(["show", "--runs", str(tmp_path)]).runs == tmp_path
+    # Wherever it points by default, it is inside the one ignored root.
+    assert RUNS_ROOT.parent.name == ".data"

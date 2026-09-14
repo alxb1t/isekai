@@ -62,6 +62,15 @@ _ABSENCE = re.compile(
 # one is a recorded correction rather than a synonym dictionary's worth of
 # guesses, and each is looked up in the vocabulary before it is emitted, so an
 # entry that goes stale is inert rather than poisonous.
+#
+# **The `camera` entries are the load-bearing ones**, and they are here because
+# the acceptance run caught them. A reader writes "looking at the camera" because
+# that is English; `camera` is itself a canonical tag, meaning *a camera is in the
+# picture*, so the exact-match pass would take it and the render would contain a
+# camera. Naming the photographer's equipment instead of the subject's attribute
+# is worse than an empty field, because what is named is what gets drawn. The
+# briefing teaches the right register and this catches the cases where it does not
+# take -- two defences, because one of them is a document nobody can test.
 CURATED: Mapping[str, str] = {
     "chin length": "short hair",
     "shoulder length": "medium hair",
@@ -78,8 +87,18 @@ CURATED: Mapping[str, str] = {
     "stubble": "facial hair",
     "head and shoulders": "upper body",
     "eye contact": "looking at viewer",
+    "looking at the camera": "looking at viewer",
+    "looking at the lens": "looking at viewer",
+    "looking into the lens": "looking at viewer",
+    "straight at the camera": "looking at viewer",
     "three quarter view": "looking to the side",
     "profile view": "looking to the side",
+    "one person": "solo",
+    "one woman": "1girl",
+    "one man": "1boy",
+    "a woman": "1girl",
+    "a man": "1boy",
+    "two women": "2girls",
     "waist up": "cowboy shot",
     "neutral expression": "expressionless",
     "slight smile": "light smile",

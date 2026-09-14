@@ -5,11 +5,16 @@ could see the picture and who knew nothing about this sheet. Your job is to sort
 what it says into the fields below. You are not describing the photograph
 yourself, and you have not seen it.
 
-Return one entry per field. Each entry is a list of short phrases in your own
-words — two or three words each, lowercase, no punctuation. Do not try to guess
-what vocabulary comes next; somebody else maps your phrases onto canonical terms
-afterwards, and a phrase that maps to nothing is a better outcome than a term
-you invented to look official.
+Return one entry per field. Each entry is a list of short phrases — two or three
+words each, lowercase, no punctuation. Somebody else maps your phrases onto
+canonical terms afterwards, and a phrase that maps to nothing is a better
+outcome than a term you invented to look official.
+
+**Write the noun, not the sentence.** The phrases are labels for a picture, not
+descriptions of it: `standing`, not `she is standing`; `brown hair`, not `her
+hair is brown`; `looking at viewer`, not `looking at the camera`. A phrase that
+names the photographer's equipment instead of the subject's attribute is worse
+than an empty field, because what you name is what gets drawn.
 
 ## The rules that decide where something goes
 
@@ -41,7 +46,8 @@ you invented to look official.
 
 ## The fields
 
-- `count` — how many people are in the picture.
+- `count` — how many people, and of what kind: `1girl`, `1boy`, `2girls`,
+  `multiple girls`. Always paired with `solo` when there is exactly one person.
 - `age_band` — roughly how old the person looks.
 - `skin_ancestry` — skin tone as the prose describes it.
 - `hair_colour` — the colour only.
@@ -52,13 +58,20 @@ you invented to look official.
 - `clothes` — garments worn on the body.
 - `accessories` — worn but not a garment: glasses, jewellery, a hat, a watch.
 - `expression` — what the face is doing.
-- `gaze` — where the eyes are directed.
+- `gaze` — where the eyes are directed: `looking at viewer` when they meet the
+  lens, `looking to the side`, `looking at another`, `looking down`. Never the
+  word *camera*: that names an object in the picture, not a direction of gaze.
 - `pose` — what the body is doing.
-- `framing` — how much of the person the picture shows.
+- `framing` — how much of the person is shown: `portrait` (head), `upper body`,
+  `cowboy shot` (to mid-thigh), `full body`, `close-up`, `from behind`,
+  `from above`, `feet out of frame`.
 - `body_shape` — build, only if the prose says.
 - `background` — what is behind the person.
 
 ## Two worked examples
+
+These show the *register* as much as the routing. Read what the sheets say, not
+only where each idea landed.
 
 **The prose:**
 
@@ -71,8 +84,8 @@ you invented to look official.
 **The sheet:**
 
 ```
-count            ["one person"]
-age_band         ["early thirties"]
+count            ["1girl", "solo"]
+age_band         ["mature female"]
 skin_ancestry    []
 hair_colour      ["dark brown"]
 hair_silhouette  ["shoulder length", "wavy"]
@@ -81,12 +94,12 @@ eyebrows         []
 marks            []
 clothes          ["collared shirt", "white shirt"]
 accessories      []
-expression       ["closed mouth smile"]
-gaze             ["looking at the camera"]
+expression       ["closed mouth", "smile"]
+gaze             ["looking at viewer"]
 pose             []
-framing          ["chest up"]
+framing          ["upper body"]
 body_shape       []
-background       ["plain wall", "pale wall"]
+background       ["simple background", "white background"]
 ```
 
 Note what happened to the last sentence. "No jewellery visible" and "nothing in
@@ -94,7 +107,8 @@ her hair" are both true and both useful to the person who wrote them, and both
 produce an empty field here — `accessories` is `[]` and nothing is added to
 `hair_silhouette`. Note also that `skin_ancestry`, `eyebrows`, `marks`, `pose`
 and `body_shape` are empty because the prose did not mention them, not because
-nothing was there.
+nothing was there. And note `gaze`: the prose says "looking straight into the
+lens" and the sheet says `looking at viewer` — the lens is not in the picture.
 
 **The prose:**
 
@@ -107,22 +121,22 @@ nothing was there.
 **The sheet:**
 
 ```
-count            ["one person"]
-age_band         ["sixty"]
-skin_ancestry    ["dark"]
+count            ["1boy", "solo"]
+age_band         ["old man"]
+skin_ancestry    ["dark skin"]
 hair_colour      ["grey"]
-hair_silhouette  ["close cropped"]
+hair_silhouette  ["very short hair"]
 eye_colour       []
 eyebrows         []
 marks            []
-clothes          ["knitted jumper"]
+clothes          ["sweater"]
 accessories      []
 expression       []
 gaze             ["looking to the side"]
-pose             ["seated"]
+pose             ["sitting"]
 framing          []
 body_shape       []
-background       ["window", "blurry"]
+background       ["window", "blurry background"]
 ```
 
 The beard is facial hair rather than something *on* the skin, so it is not

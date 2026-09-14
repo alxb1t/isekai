@@ -359,13 +359,53 @@ def test_a_run_with_no_caption_is_refused_and_told_which_command_to_run(
 def test_every_field_name_the_briefing_mentions_exists_in_the_schema(
     schema: Schema,
 ) -> None:
+    # The two places a briefing names a *field*: the field list's bullets, and
+    # the left column of each worked example's sheet. Tag names in prose are not
+    # field names and are deliberately not matched here.
     text = BRIEFING_PATH.read_text()
-    mentioned = set(re.findall(r"`([a-z_]+)`", text)) | set(
+    mentioned = set(re.findall(r"^- `([a-z_]+)` —", text, re.MULTILINE)) | set(
         re.findall(r"^(\w+)\s{2,}\[", text, re.MULTILINE)
     )
 
     assert mentioned - set(schema.names) == set()
     assert set(schema.names) - mentioned == set()
+
+
+@pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")
+def test_every_phrase_the_briefings_examples_emit_maps_to_a_real_tag(
+    schema: Schema,
+) -> None:
+    # A worked example is the strongest instruction in the briefing, so one that
+    # demonstrates a phrasing the cascade drops teaches the sorter to waste a
+    # field. The acceptance run found exactly that: `count` came back empty on
+    # five of five photographs, and `gaze` came back as `camera`.
+    from isekai.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, map_phrase
+    from isekai.vocabulary import load as load_vocabulary
+
+    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
+        pytest.skip("the vocabulary is not provisioned in this environment")
+    provisioned = load_vocabulary()
+    suffixes = {field.name: field.suffix for field in schema.fields}
+
+    text = BRIEFING_PATH.read_text()
+    unmapped = [
+        (field, phrase)
+        for field, items in re.findall(r"^(\w+)\s+\[(.*)\]$", text, re.MULTILINE)
+        for phrase in re.findall(r'"([^"]+)"', items)
+        if not map_phrase(phrase, provisioned, suffixes.get(field))
+    ]
+    assert unmapped == []
+
+
+@pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")
+def test_the_briefing_never_teaches_the_word_camera_as_a_gaze() -> None:
+    # `camera` is a canonical tag meaning a camera is *in the picture*, so a
+    # briefing that says "looking at the camera" teaches the sorter to have one
+    # drawn. What is named is what gets rendered.
+    text = BRIEFING_PATH.read_text()
+
+    assert "Never the\n  word *camera*" in text
+    assert '"looking at the camera"' not in text
 
 
 @pytest.mark.spec("sheet:purity:absence-clause-is-dropped")

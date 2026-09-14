@@ -25,6 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The sorting briefing taught two phrasings the mapping cascade drops.** Found by v0.13's own
+  acceptance run, on five photographs out of five: `count` came back empty every time and `gaze`
+  came back as `camera`. The cause was the briefing's own worked examples, which showed
+  `count: ["one person"]` and `gaze: ["looking at the camera"]` — a worked example is the strongest
+  instruction in a briefing, and both of those map to nothing usable. `camera` is worse than
+  nothing: it is a canonical tag meaning *a camera is in the picture*, so every one of those renders
+  would have had a camera drawn in it. An empty `count` also loses `solo`, the Danbooru mode
+  selector.
+  The examples are rewritten in the vocabulary's own spellings, taken from the prototype's
+  hand-written sheets — `1girl, solo`, `looking at viewer`, `upper body` — and a test now walks every
+  phrase the examples emit through the cascade and fails on any that maps to nothing. The field list
+  gives the canonical vocabulary for the three fields where English and Danbooru diverge most, and
+  the register rule is stated outright: write the label, not the sentence, and never name the
+  photographer's equipment in place of the subject's attribute, because what is named is what gets
+  drawn.
+  Curated bridges catch the same cases where the briefing does not take — two defences, because one
+  of them is a document nothing can test.
+
 ### Added
 
 - **The six verbs now dispatch.** `isekai/__main__.py` gains a `Wiring` carrying the reader, the
