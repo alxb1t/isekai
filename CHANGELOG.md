@@ -27,6 +27,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Stage ① — `isekai/caption.py`, a photograph in and prose out.** The reader is handed exactly two
+  things, the photograph and its standing instructions, and is told nothing about schemas, fields,
+  vocabularies or flows: pressing a reader into a schema is measured to make it invent — told never
+  to leave a field blank, one manufactured nineteen identity marks across seven of ten subjects and
+  its score fell from 0.518 to 0.307. The reader is licensed to state absence and this stage does
+  not strip it; turning a licensed absence into an empty field belongs to stage ②, and naming where
+  that happens is the point of allowing it here.
+- **`briefings/caption.md`** — prose only, with absence explicitly licensed, and no schema field
+  name anywhere in it, asserted by a test rather than by intent.
+- **The `claude -p` adapter, locked down.** `--safe-mode` (so the CLI does not inject sixteen
+  kilobytes about *this repository* into the context that should describe a photograph),
+  `--tools Read` (a stage that can run shell commands is not a stage),
+  `--permission-prompts none` (so a misconfigured stage cannot wait for a human forever),
+  `--strict-mcp-config`, `--no-session-persistence`, and the JSON envelope always — the envelope is
+  what carries the error status, the stop reason and which models actually ran.
+- **Failure classification read off the envelope.** A rate limit, a server error or a timeout is
+  transient and spends the budget; a decline, a denied permission or a response that is not prose is
+  permanent and is never retried. No fallback reader: substituting one would write an artifact whose
+  provenance record is untrue. The producer records the models that *ran* rather than the flag that
+  was passed, the digest of the briefing text, and `pinned: false`, because a hosted CLI exposes no
+  revision and a revision field that would be untrue is worse than an honest absence.
+- **An absent `claude` binary is a refusal naming the install command**, and it leaves the run
+  directory exactly as it found it.
+
+### Added
+
 - **`isekai/vocabulary.py` — the tag list as an object, and the four-pass cascade over it.**
   `load` reads the provisioned `selected_tags.csv` with the stdlib `csv` module, keeps the general
   tags only, normalises underscores to spaces, and verifies the bytes against the manifest before

@@ -5,7 +5,7 @@
 - [x] 1 — Foundations: `Refusal` moves, the derivation module is extracted, the vocabulary is pinned
 - [x] 2 — The run directory, the new entry point, and the second stdlib guard
 - [x] 3 — The vocabulary object, the mapping cascade, and the schema
-- [ ] 4 — ① `caption` — a photograph in, prose out
+- [x] 4 — ① `caption` — a photograph in, prose out
 - [ ] 5 — ② `sheet` — prose in, canonical fields out
 - [ ] 6 — ③ `review` and `approve`
 - [ ] 7 — ④ `generate`, the flow, and `show`
@@ -111,18 +111,18 @@ re-export a class that moved out of it.
 
 ## 4. Stage ① — caption
 
-- [ ] 4.1 Define the `Reader` interface and a `FakeReader` that counts calls; verify the stage writes a
+- [x] 4.1 Define the `Reader` interface and a `FakeReader` that counts calls; verify the stage writes a
   caption with no network reached (`caption:seam:offline-double-satisfies-the-interface`)
-- [ ] 4.2 Implement the `claude -p` adapter — `--safe-mode --strict-mcp-config --no-session-persistence
+- [x] 4.2 Implement the `claude -p` adapter — `--safe-mode --strict-mcp-config --no-session-persistence
   --tools Read --add-dir <run> --permission-prompts none --output-format json`; verify against a fake
   subprocess that the argument vector carries every one of those flags
-- [ ] 4.3 Write `briefings/caption.md` — prose only, licensed to state absence, no schema and no field
+- [x] 4.3 Write `briefings/caption.md` — prose only, licensed to state absence, no schema and no field
   list; verify a test asserts the briefing names no schema field
   (`caption:inputs:only-the-photograph-is-passed`)
-- [ ] 4.4 Implement `isekai caption`, writing prose, the producer with the briefing digest and the
+- [x] 4.4 Implement `isekai caption`, writing prose, the producer with the briefing digest and the
   models that actually ran; verify the output, absence, reuse and producer scenarios
   (`caption:output:*`, `caption:absence:*`, `caption:seam:producer-names-the-implementation`)
-- [ ] 4.5 Implement envelope-based failure classification and the absent-binary refusal; verify the
+- [x] 4.5 Implement envelope-based failure classification and the absent-binary refusal; verify the
   four failure and refusal scenarios (`caption:failure:*`, `caption:refusal:absent-reader-names-the-fix`)
 
 ## 5. Stage ② — sheet

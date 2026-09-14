@@ -208,10 +208,13 @@ class Run:
         return self.path / str(self.frame["photo"]["name"])
 
     def directory(self, *parts: str) -> Path:
-        """Return a directory inside this run, created if it is not there yet."""
-        target = self.path.joinpath(*parts)
-        target.mkdir(parents=True, exist_ok=True)
-        return target
+        """Return a stage's directory inside this run, whether or not it exists.
+
+        Deliberately does not create it: a command that refuses must leave the run
+        exactly as it found it, and an empty directory nobody asked for is a
+        change. Every writer here creates its parent on the way past.
+        """
+        return self.path.joinpath(*parts)
 
 
 def _run_for(digest: str, runs_root: Path) -> Run | None:

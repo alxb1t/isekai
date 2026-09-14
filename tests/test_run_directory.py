@@ -104,7 +104,7 @@ def test_two_photographs_sharing_a_filename_get_different_runs(
     second = open_run(_photo(tmp_path / "b", "p.jpg", jpeg_bytes(640, 480)), runs)
 
     assert first.id != second.id
-    first.directory("captions").joinpath("001.json").write_text("{}")
+    write_json(first.directory("captions") / "001.json", {})
     assert versions(second.path / "captions") == []
 
 
@@ -112,8 +112,7 @@ def test_two_photographs_sharing_a_filename_get_different_runs(
 def test_the_same_photograph_twice_is_one_run(tmp_path: Path, runs: Path) -> None:
     body = jpeg_bytes(800, 600)
     first = open_run(_photo(tmp_path / "a", "p.jpg", body), runs)
-    (first.path / "captions").mkdir()
-    (first.path / "captions" / "001.json").write_text("{}")
+    write_json(first.path / "captions" / "001.json", {})
 
     second = open_run(_photo(tmp_path / "b", "renamed.jpg", body), runs)
 
