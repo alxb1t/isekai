@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`generate` rendered before the batch was assembled, and a dead endpoint was a traceback.** Both
+  found by v0.13's acceptance run. The CLI dispatched per photograph, so it assembled one prompt and
+  immediately reached for the endpoint — which is exactly the failure the "assemble the whole batch
+  first" rule exists to prevent, since a malformed third sheet would have been discovered after a
+  machine was already rented. The unit test covered `prepare` per run and never the CLI's ordering;
+  it does now, by asserting every "assembled" line precedes every "rendered" one.
+  `--server` also no longer has a default. Assembly is free and rendering is not, so the invocation
+  that costs money is the one that names where to spend it: `generate` without `--server` assembles
+  every prompt and stops. And a transport-level network error is now a refusal naming the tunnel and
+  `infra/up.sh`, rather than a `urllib` traceback naming a socket.
+
+### Fixed
+
 - **The sorting briefing taught two phrasings the mapping cascade drops.** Found by v0.13's own
   acceptance run, on five photographs out of five: `count` came back empty every time and `gaze`
   came back as `camera`. The cause was the briefing's own worked examples, which showed

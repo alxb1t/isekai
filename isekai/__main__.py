@@ -27,14 +27,16 @@ import argparse
 import dataclasses
 import random
 import sys
-from collections.abc import Sequence
+import urllib.error
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from isekai.caption import ClaudeReader, Reader, caption
 from isekai.comfy_client import ComfyClient
-from isekai.comfy_types import ComfyTransport
+from isekai.comfy_types import ComfyTransport, Image, Workflow
 from isekai.flow import FLOWS_DIR, load_flow, tracked_flows
 from isekai.generate import prepare, render
 from isekai.refusal import Refusal
@@ -141,10 +143,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="render exactly this seed; repeatable, and not combinable with --count",
     )
+    # No default, deliberately. Assembly is free and rendering is not, so the
+    # invocation that costs money is the one that names where to spend it --
+    # `generate` without `--server` assembles every prompt and stops, which is
+    # also how a malformed sheet is found before anything is rented.
     made["generate"].add_argument(
         "--server",
-        default="http://127.0.0.1:8188",
-        help="the ComfyUI endpoint, reached through the tunnel",
+        default=None,
+        help=(
+            "the ComfyUI endpoint, reached through the tunnel; omit it to "
+            "assemble every prompt and stop without rendering"
+        ),
     )
     return parser
 
@@ -267,30 +276,50 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
         elif verb == "generate":
-            _generate(args, wired, run)
+            raise AssertionError("generate is batched below, not run per item")
         else:
             for line in report(run):
                 print(line, file=wired.out)
 
-    refused = across(list(args.photos), work)
+    targets = list(args.photos)
+    refused = (
+        _generate(args, wired, targets) if verb == "generate" else across(targets, work)
+    )
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
 
 
-def _generate(args: argparse.Namespace, wired: Wiring, run: Run) -> None:
-    """Assemble every approved flow's prompt, then render what was asked for."""
+def _generate(
+    args: argparse.Namespace, wired: Wiring, targets: Sequence[str]
+) -> list[str]:
+    """Assemble every prompt in the batch, and only then reach for the endpoint.
+
+    **The whole batch, before anything is acquired.** Assembly is free and
+    rendering is not, so a malformed sheet should cost nothing rather than a boot
+    and several minutes of waiting -- and doing the batch first is what turns that
+    from a per-item saving into a guarantee. Interleaving them would rent a
+    machine and then discover the third sheet was broken.
+    """
     flows = {name: load_flow(name, wired.flows_dir) for name in _flows_for(args, wired)}
-    prepared = prepare(run, flows, wired.schema)
-    for flow, path in prepared.items():
-        print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
+    ready: list[tuple[Run, str]] = []
+
+    def assemble_one(identifier: str) -> None:
+        run = _run_for(identifier, wired)
+        for flow, path in prepare(run, flows, wired.schema).items():
+            print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
+            ready.append((run, flow))
+
+    refused = across(list(targets), assemble_one)
     if wired.client is None:
-        return
-    for flow in prepared:
+        return refused
+
+    def render_one(pair: tuple[Run, str]) -> None:
+        run, flow = pair
         produced = render(
             run,
             flows[flow],
-            wired.client,
+            _connected(wired),
             count=args.count,
             seeds=args.seeds,
             rng=wired.rng,
@@ -300,6 +329,61 @@ def _generate(args: argparse.Namespace, wired: Wiring, run: Run) -> None:
             print(f"{run.id}: rendered {flow}/{made.image.name}", file=wired.out)
         if not produced:
             print(f"{run.id}: {flow} is already rendered", file=wired.out)
+
+    return refused + across(ready, render_one)
+
+
+def _connected(wired: Wiring) -> ComfyTransport:
+    """Return the transport, turning a dead endpoint into a refusal with a remedy.
+
+    A connection error otherwise surfaces as a `urllib` traceback naming a socket,
+    which tells an operator nothing about what to do. This stage talks to an
+    endpoint somebody else brought up, so the remedy is about the tunnel and the
+    pod rather than about anything this command can fix by itself.
+    """
+    assert wired.client is not None
+    return _Reporting(wired.client)
+
+
+@dataclass(frozen=True)
+class _Reporting:
+    """The transport, with every network error turned into a named refusal."""
+
+    inner: ComfyTransport
+
+    def upload_image(self, path: str) -> str:
+        """Upload a photograph, refusing legibly if the endpoint is unreachable."""
+        with _reported():
+            return self.inner.upload_image(path)
+
+    def submit(self, workflow: Workflow) -> str:
+        """Queue a graph, refusing legibly if the endpoint is unreachable."""
+        with _reported():
+            return self.inner.submit(workflow)
+
+    def history(self, prompt_id: str) -> dict[str, Any]:
+        """Poll a queued graph, refusing legibly if the endpoint is unreachable."""
+        with _reported():
+            return self.inner.history(prompt_id)
+
+    def view(self, image: Image) -> bytes:
+        """Download one render, refusing legibly if the endpoint is unreachable."""
+        with _reported():
+            return self.inner.view(image)
+
+
+@contextmanager
+def _reported() -> Iterator[None]:
+    """Turn a transport-level network error into a `Refusal` naming the remedy."""
+    try:
+        yield
+    except (urllib.error.URLError, OSError) as unreachable:
+        raise Refusal(
+            f"the rendering endpoint could not be reached ({unreachable}); "
+            "bring a pod up with `bash infra/up.sh`, open the tunnel, and pass "
+            "its address with `--server` -- or drop `--server` to assemble the "
+            "prompts and stop"
+        ) from unreachable
 
 
 def _say(wired: Wiring, run: Run, verb: str, written: Path | None) -> None:

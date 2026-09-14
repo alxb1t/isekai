@@ -204,7 +204,7 @@ ceiling on this branch is **45 minutes and ~$0.30** per pod session; this run is
 **five photographs, one render each — $0.036 boot plus 5 × $0.0044 ≈ $0.058** — and about 15–25 minutes
 boot to teardown. Exceeding the ceiling is a halt, not a judgement call.
 
-- [ ] 9.1 Locally and for free, before anything is rented: `caption` → `sheet` → `review` → edit →
+- [x] 9.1 Locally and for free, before anything is rented: `caption` → `sheet` → `review` → edit →
   `approve` for five photographs, then `generate` assembling every prompt; verify five assembled prompt
   artifacts exist and no endpoint was contacted
 - [ ] 9.2 ⚠️ **GPU** — one session on the release-candidate image: bring the pod up, open the tunnel,

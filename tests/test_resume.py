@@ -389,3 +389,111 @@ def test_the_runs_root_is_a_flag_defaulting_to_the_gitignored_data_root(
     assert build_parser().parse_args(["show", "--runs", str(tmp_path)]).runs == tmp_path
     # Wherever it points by default, it is inside the one ignored root.
     assert RUNS_ROOT.parent.name == ".data"
+
+
+# --- assembly happens for the whole batch before any endpoint is acquired ------
+
+
+def _approved_run(wired: Wiring, tmp_path: Path, name: str) -> str:
+    """Carry one photograph all the way to an approved sheet, and return its id."""
+    photo = tmp_path / f"{name}.jpg"
+    # Distinct bytes per name -- identical bytes are the same run, by design.
+    photo.write_bytes(jpeg_bytes(1200, 904 + 8 * (sum(map(ord, name)) % 40)))
+    for verb in ("caption", "sheet", "review", "approve"):
+        assert dispatch(_args(verb, str(photo)), wired) == 0
+    from isekai.run import open_run
+
+    return open_run(photo, wired.runs_root).id
+
+
+@pytest.mark.spec("image-generation:assembly:bad-sheet-fails-before-the-session")
+def test_every_prompt_is_assembled_before_the_first_render_is_submitted(
+    wired: Wiring, tmp_path: Path
+) -> None:
+    # The acceptance run caught this: dispatching per-item assembled one prompt
+    # and then immediately reached for the endpoint, so a malformed third sheet
+    # would have been found after a machine was already rented.
+    ids = [_approved_run(wired, tmp_path, name) for name in ("one", "two", "three")]
+    assert isinstance(wired.client, FakeComfyClient)
+
+    seen: list[str] = []
+    real_upload = wired.client.upload_image
+
+    def watched(path: str) -> str:
+        seen.append("upload")
+        return real_upload(path)
+
+    wired.client.upload_image = watched  # ty: ignore[invalid-assignment]
+    assert isinstance(wired.out, io.StringIO)
+    wired.out.truncate(0), wired.out.seek(0)
+
+    assert dispatch(_args("generate", *ids), wired) == 0
+
+    lines = wired.out.getvalue().splitlines()
+    assembled = [i for i, line in enumerate(lines) if "assembled" in line]
+    rendered = [i for i, line in enumerate(lines) if "rendered" in line]
+    assert len(assembled) == 3
+    assert max(assembled) < min(rendered)
+    assert len(seen) == 3
+
+
+@pytest.mark.spec("image-generation:assembly:assembly-is-local-and-free")
+def test_generate_without_a_server_assembles_everything_and_contacts_nothing(
+    wired: Wiring, tmp_path: Path
+) -> None:
+    ids = [_approved_run(wired, tmp_path, name) for name in ("one", "two")]
+    wired.client = None
+    assert isinstance(wired.out, io.StringIO)
+    wired.out.truncate(0), wired.out.seek(0)
+
+    assert dispatch(_args("generate", *ids), wired) == 0
+
+    assert wired.out.getvalue().count("assembled") == 2
+    assert "rendered" not in wired.out.getvalue()
+    for run_id in ids:
+        assert (wired.runs_root / run_id / "prompts" / FLOW / "001.json").exists()
+
+
+@pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
+def test_the_server_flag_has_no_default_so_rendering_is_always_asked_for() -> None:
+    assert build_parser().parse_args(["generate"]).server is None
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
+    wired: Wiring, tmp_path: Path
+) -> None:
+    import urllib.error
+
+    from isekai.__main__ import _connected
+
+    run_id = _approved_run(wired, tmp_path, "one")
+
+    class Dead:
+        def upload_image(self, path: str) -> str:
+            raise urllib.error.URLError(
+                ConnectionRefusedError(61, "Connection refused")
+            )
+
+        def submit(self, workflow: object) -> str:
+            raise AssertionError("nothing should be submitted")
+
+        def history(self, prompt_id: str) -> dict[str, object]:
+            raise AssertionError("nothing should be polled")
+
+        def view(self, image: object) -> bytes:
+            raise AssertionError("nothing should be downloaded")
+
+    wired.client = Dead()
+    assert isinstance(wired.err, io.StringIO)
+
+    assert dispatch(_args("generate", run_id), wired) == 1
+
+    message = wired.err.getvalue()
+    assert "could not be reached" in message
+    assert "infra/up.sh" in message
+    assert "--server" in message
+    assert "Traceback" not in message
+    # `_connected` is what wraps it, and the assembly still happened.
+    assert _connected(wired) is not None
+    assert (wired.runs_root / run_id / "prompts" / FLOW / "001.json").exists()
