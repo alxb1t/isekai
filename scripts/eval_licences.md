@@ -178,6 +178,28 @@ silently.
 
 ---
 
+## The hires pass's upscaler
+
+### `RealESRGAN_x4plus_anime_6B.pth` — the second sampler pass's upscaler
+
+- **Licence:** **BSD-3-Clause.** Permissive; nothing to record beyond the fact.
+- **Read at:** <https://github.com/xinntao/Real-ESRGAN/blob/v0.2.2.4/LICENSE>, 2026-09-14; the file
+  is the BSD 3-Clause License verbatim from its first line, `Copyright (c) 2021, Xintao Wang`.
+
+What the flow `summon-v1` upscales its first pass with before sampling again — the pass WAI's own
+model page asks for: *"Upscale with R-ESRGAN 4x+ Anime6B, 20 steps, and a Denoising strength of
+0.35~0.5"*.
+
+**It is pinned like the base checkpoint, and for the same reason.** Its publisher hosts no Hugging
+Face repository, so every source in `scripts/models.json` is a mirror. It is worse off than the base
+checkpoint, which at least has a published digest on Civitai: this release predates GitHub's
+asset-digest field, so there is no published record to read at all. `scripts/derive_manifest.py`
+therefore fetches the publisher's own **bytes** and hashes them, and holds all four mirrors against
+that — derived, never transcribed, in the one entry where a transcribed constant would be least
+checkable.
+
+---
+
 ## The vocabulary — a tag list, not a model
 
 ### `wd14/selected_tags.csv` — the canonical tag vocabulary
@@ -214,3 +236,4 @@ booru's data. This project distributes neither.
 | DWPose (`yolox_l`, `dw-ll_ucoco_384_bs5`) | **Apache-2.0** | permissive; the open entry, now closed | both manifests, byte-identical |
 | `deepghs/anime_face_detection` | **MIT** | permissive; replaces D19's AGPL artifact | `eval_models.json` |
 | `wd14/selected_tags.csv` (`SmilingWolf/wd-swinv2-tagger-v3`) | **Apache-2.0** | permissive; the tag list, not the tagger | `vocabulary.json` |
+| `RealESRGAN_x4plus_anime_6B.pth` (`xinntao/Real-ESRGAN`) | **BSD-3-Clause** | permissive; mirror-primary, held against the publisher's own bytes | `models.json` |

@@ -123,6 +123,22 @@ def published_digest(source: Source) -> tuple[str, int]:
     raise SystemExit(f"{source.url()}: not found at that revision")
 
 
+def digest_of_url(url: str, cap: int) -> tuple[str, int]:
+    """Return the SHA-256 and size of whatever `url` serves, refusing past `cap`.
+
+    The cap is the caller's, and is required, because "how big may this be" is a
+    statement about the artifact and not about the strategy. A file that overruns
+    it is a mistake in a spec, and failing loudly is what stops a checkpoint
+    arriving down a path meant for a config file.
+    """
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(request, timeout=300) as response:
+        body: bytes = response.read(cap + 1)
+    if len(body) > cap:
+        raise SystemExit(f"{url}: larger than {cap} bytes, which its spec declares")
+    return hashlib.sha256(body).hexdigest(), len(body)
+
+
 def blob_digest(source: Source) -> tuple[str, int]:
     """Return the SHA-256 and size of a non-LFS file, by fetching and hashing it.
 
@@ -130,15 +146,7 @@ def blob_digest(source: Source) -> tuple[str, int]:
     revision in the URL is what makes the result a pin rather than a snapshot of
     whatever `main` served today.
     """
-    request = urllib.request.Request(source.url(), headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=120) as response:
-        body: bytes = response.read(BLOB_CAP_BYTES + 1)
-    if len(body) > BLOB_CAP_BYTES:
-        raise SystemExit(
-            f"{source.url()}: larger than {BLOB_CAP_BYTES} bytes; "
-            "a file this size should be pinned through its LFS object id"
-        )
-    return hashlib.sha256(body).hexdigest(), len(body)
+    return digest_of_url(source.url(), BLOB_CAP_BYTES)
 
 
 def digest_of(spec: Spec) -> tuple[str, int]:

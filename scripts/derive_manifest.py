@@ -39,6 +39,7 @@ from manifest import (
     ManifestEntry,
     Source,
     Spec,
+    digest_of_url,
     entry_for,
     write,
 )
@@ -98,6 +99,34 @@ YOLOX_ALT = "a124b32c3b7c5cebda1c7cd96178f0f9d2050125"
 DWPOSE_TS = "359d662a9b33b73f6d0f21732baf8845f17bb4be"
 DWPOSE_TS_ALT = "31098820c4d5d126b92e28517380ea1b088f8d53"
 ANNOTATORS = "982e7edaec38759d914a963c48c4726685de7d96"
+
+# R-ESRGAN 4x+ Anime6B, the hires pass's upscaler, and the second artifact here
+# whose publisher hosts no Hugging Face repo. It is worse off than the base
+# checkpoint: Civitai publishes a digest per model version, and this release
+# predates GitHub's asset-digest field entirely, so there is no published record
+# to read at all.
+#
+# So the trust root is the publisher's own *bytes*, fetched and hashed. That is
+# 17 MiB on a tool a human runs by hand, and it keeps the rule this file opens
+# with -- derived, never transcribed -- rather than admitting one typed constant
+# for the one artifact where a typed constant would be least checkable.
+#
+# Every source below is therefore a mirror, and all four are cross-checked
+# against that digest by `entry_for`.
+UPSCALER_FILE = "RealESRGAN_x4plus_anime_6B.pth"
+UPSCALER_DEST = f"upscale_models/{UPSCALER_FILE}"
+UPSCALER_RELEASE = (
+    f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/{UPSCALER_FILE}"
+)
+
+# Generous against the artifact's 17.1 MiB, and small enough that a spec pointing
+# this strategy at a checkpoint fails instead of downloading one.
+UPSCALER_CAP_BYTES = 32 << 20
+
+ESRGAN_XIMSO = "cc64fe8cc1e0c3a232d86f7cfbda6f67e5b865ec"
+ESRGAN_GEMASAI = "3bc7e46fe5752d8703fc1ec410cada4fd1c7230e"
+ESRGAN_COM_ADM = "b3490c4cf451dc50eff73aebaf31825456318f7c"
+ESRGAN_RYOUKO = "58f7a1b546bfe84cd2119c8716d79d7317fef921"
 
 ANTELOPE_FILES = (
     "1k3d68.onnx",
@@ -235,6 +264,21 @@ SPECS: tuple[Spec, ...] = (
         "annotator_ckpts/lllyasviel/Annotators/sk_model2.pth",
         (Source("lllyasviel/Annotators", ANNOTATORS, "sk_model2.pth"),),
     ),
+    # The hires pass's upscaler. Mirror-primary, like the base checkpoint, and
+    # held against the publisher's bytes rather than a published record because
+    # there is no published record; see `UPSCALER_RELEASE` above.
+    Spec(
+        UPSCALER_DEST,
+        (
+            Source("ximso/RealESRGAN_x4plus_anime_6B", ESRGAN_XIMSO, UPSCALER_FILE),
+            Source("gemasai/RealESRGAN_x4plus_anime_6B", ESRGAN_GEMASAI, UPSCALER_FILE),
+            Source("com-adm/RealESRGAN_x4plus_anime_6B", ESRGAN_COM_ADM, UPSCALER_FILE),
+            Source(
+                "Ryouko65777/RealESRGAN_x4plus_anime_6B", ESRGAN_RYOUKO, UPSCALER_FILE
+            ),
+        ),
+        None,  # filled from the publisher's own bytes below; see `derive`
+    ),
 )
 
 
@@ -281,11 +325,15 @@ def derive() -> Manifest:
     # The one artifact no publisher hosts, so its publisher's own record is what
     # the mirrors are held against.
     wai_sha256 = civitai_file(civitai_version(WAI_VERSION_ID), WAI_FILE)
+    # The other publisher-less artifact, whose publisher states no digest at all,
+    # so its own bytes are what its mirrors are held against.
+    upscaler_sha256, _ = digest_of_url(UPSCALER_RELEASE, UPSCALER_CAP_BYTES)
+    stated = {WAI_DEST: wai_sha256, UPSCALER_DEST: upscaler_sha256}
 
     entries: list[ManifestEntry] = []
     for spec in SPECS:
-        if spec.dest == WAI_DEST:
-            spec = spec._replace(expect_sha256=wai_sha256)
+        if spec.dest in stated:
+            spec = spec._replace(expect_sha256=stated[spec.dest])
         entries.append(entry_for(spec))
     return {
         "pinned": PINNED,

@@ -140,6 +140,17 @@
       "sources": [
         "https://huggingface.co/lllyasviel/Annotators/resolve/982e7edaec38759d914a963c48c4726685de7d96/sk_model2.pth"
       ]
+    },
+    {
+      "dest": "upscale_models/RealESRGAN_x4plus_anime_6B.pth",
+      "sha256": "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da",
+      "bytes": 17938799,
+      "sources": [
+        "https://huggingface.co/ximso/RealESRGAN_x4plus_anime_6B/resolve/cc64fe8cc1e0c3a232d86f7cfbda6f67e5b865ec/RealESRGAN_x4plus_anime_6B.pth",
+        "https://huggingface.co/gemasai/RealESRGAN_x4plus_anime_6B/resolve/3bc7e46fe5752d8703fc1ec410cada4fd1c7230e/RealESRGAN_x4plus_anime_6B.pth",
+        "https://huggingface.co/com-adm/RealESRGAN_x4plus_anime_6B/resolve/b3490c4cf451dc50eff73aebaf31825456318f7c/RealESRGAN_x4plus_anime_6B.pth",
+        "https://huggingface.co/Ryouko65777/RealESRGAN_x4plus_anime_6B/resolve/58f7a1b546bfe84cd2119c8716d79d7317fef921/RealESRGAN_x4plus_anime_6B.pth"
+      ]
     }
   ]
 }

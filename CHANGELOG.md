@@ -27,6 +27,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Stage ④ — `isekai/flow.py`, `isekai/generate.py` and `flows/summon-v1/`.** A flow is a directory
+  whose manifest *declares* and never computes, which is what lets a broken flow be caught by the
+  suite rather than after a pod boot and several minutes. It names its inputs, its schema, its
+  vocabulary, its graph, its prompt fragments, its dials and every model artifact it needs.
+- **The flow's dials are the measured ones, not its graph file's.** `summon-v1`'s graph carries the
+  prototype's committed cfg 7 and identity strength 0.5; every measured run overrode them to 5 and
+  0.8, and a test asserts the two disagree — a manifest transcribed from the graph would ship a
+  configuration nothing measured.
+- **A flow is immutable, pinned by equality.** The suite holds each tracked flow's whole directory
+  against a committed digest. Changing a dial, a prompt fragment or the graph fails the gate naming
+  the flow and saying that a changed dial means a new flow identifier — because an output's path
+  identifies a configuration only if an identifier never silently means something else.
+- **Assembly is pure, local and happens before any endpoint is acquired.** The prompt is the flow's
+  prefix, the sheet's fields in the schema's order, and the flow's trailer; nothing is taken from the
+  graph's own committed strings. A malformed sheet costs nothing instead of a boot, and one bad sheet
+  does not stop the rest of a batch.
+- **Only an approved sheet renders**, and every flow with an approved artifact renders without a
+  flag. Seeds are drawn from an injected source or named explicitly, never both — one verb explores
+  and the other reproduces — and the parser refuses the combination before any work begins. An output
+  is named by its seed under its sheet version, which reproduces an *image* rather than an ordering.
+- **Rendering is idempotent per image and preflights the volume.** An existing seed is skipped from a
+  directory listing, a raised count renders only the shortfall, and a declared artifact the endpoint
+  does not carry refuses before anything is submitted, naming `download_models.sh` rather than a
+  file. Provenance carries the flow, the seed, the sheet version, the submitted graph's digest and
+  whether the sheet was edited.
+- **`isekai show`** — the run's artifacts, the active version per stage, approval where it applies,
+  and what produced each one. It reads files where control flow reads listings, which is why no
+  progress file ships: nothing but a human is watching before a review UI exists.
+- **`RealESRGAN_x4plus_anime_6B.pth` joins `scripts/models.json`.** The hires pass needs it and
+  nothing provisioned it. Its publisher hosts no Hugging Face repo *and* publishes no digest — the
+  release predates GitHub's asset-digest field — so the derivation fetches the publisher's own bytes,
+  hashes them, and holds all four mirrors against that: derived, never transcribed, in the entry
+  where a transcribed constant would be least checkable. Its BSD-3-Clause terms join the licence
+  record. `scripts/eval_models.json` is unchanged.
+
+### Added
+
 - **Stage ③ — `isekai/review.py`: the correction, on a copy, approved by a rename.** `review` copies
   the highest sheet into `review/<flow>/` as a draft and records which sheet version it came from;
   `sheets/<flow>/` is never written to again by anything. That separation is what makes "the

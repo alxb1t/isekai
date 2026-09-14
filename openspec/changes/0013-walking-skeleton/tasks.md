@@ -8,7 +8,7 @@
 - [x] 4 — ① `caption` — a photograph in, prose out
 - [x] 5 — ② `sheet` — prose in, canonical fields out
 - [x] 6 — ③ `review` and `approve`
-- [ ] 7 — ④ `generate`, the flow, and `show`
+- [x] 7 — ④ `generate`, the flow, and `show`
 - [ ] 8 — Resume: run everything twice and assert nothing moved
 - [ ] 9 — ⚠️ **GPU · HALT** — one session, five photographs, end to end
 - [ ] 10 — The banner, the changelog, and the version line
@@ -160,28 +160,28 @@ re-export a class that moved out of it.
 
 ## 7. Stage ④ — generate, the flow, and show
 
-- [ ] 7.1 Add `flows/summon-v1/` with its manifest declaring inputs, schema, vocabulary and the
+- [x] 7.1 Add `flows/summon-v1/` with its manifest declaring inputs, schema, vocabulary and the
   **measured** dials from design.md D12 — not the graph file's; verify the manifest parses and its
   schema and vocabulary resolve (`image-generation:manifest:*`)
-- [ ] 7.2 Add the flow-immutability test holding every tracked manifest against a committed digest;
+- [x] 7.2 Add the flow-immutability test holding every tracked manifest against a committed digest;
   verify by editing a dial in a scratch copy and asserting the test fails naming the flow
   (`image-generation:immutability:flow-manifest-is-pinned-by-equality`)
-- [ ] 7.3 Implement `assemble` — pure, local, from the approved artifact and the flow's dials, in the
+- [x] 7.3 Implement `assemble` — pure, local, from the approved artifact and the flow's dials, in the
   schema's field order; verify the three assembly scenarios with no endpoint contacted
   (`image-generation:assembly:*`)
-- [ ] 7.4 Implement seed handling — a count drawing from an injected source, explicit seeds rendering
+- [x] 7.4 Implement seed handling — a count drawing from an injected source, explicit seeds rendering
   exactly those, the two mutually exclusive; verify the four seed scenarios and the two parse-time CLI
   scenarios (`image-generation:seeds:*`, `cli:generate-signature:*`)
-- [ ] 7.5 Implement `render` over the existing `ComfyTransport`, writing outputs named by seed under the
+- [x] 7.5 Implement `render` over the existing `ComfyTransport`, writing outputs named by seed under the
   approved artifact's number, with provenance carrying flow, seed, version and graph digest; verify
   through the existing fake with no GPU and no network
   (`image-generation:transport:offline-double-drives-the-stage`,
   `image-generation:immutability:output-records-the-graph-digest`)
-- [ ] 7.6 Implement the approved-only rule and the absent-models preflight refusal; verify the inputs
+- [x] 7.6 Implement the approved-only rule and the absent-models preflight refusal; verify the inputs
   and preflight scenarios (`image-generation:inputs:*`, `image-generation:preflight:absent-models-refuse-early`)
-- [ ] 7.7 Implement per-image idempotence — an existing seed is skipped, a raised count renders only the
+- [x] 7.7 Implement per-image idempotence — an existing seed is skipped, a raised count renders only the
   shortfall; verify both scenarios (`image-generation:idempotence:*`)
-- [ ] 7.8 Implement `isekai show`; verify it marks the active version per stage and reports each
+- [x] 7.8 Implement `isekai show`; verify it marks the active version per stage and reports each
   artifact's producer (`cli:show:*`)
 
 ## 8. Resume

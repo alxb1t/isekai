@@ -39,6 +39,30 @@ VERBS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _seed(value: str) -> int:
+    """Parse a seed: an unsigned 64-bit integer, refused at parse time if it is not."""
+    try:
+        seed = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
+    if not 0 <= seed < 2**64:
+        raise argparse.ArgumentTypeError(
+            f"{seed} is outside the sampler's unsigned 64-bit range"
+        )
+    return seed
+
+
+def _count(value: str) -> int:
+    """Parse a render count: a positive integer. Every one of them costs money."""
+    try:
+        count = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
+    if count < 1:
+        raise argparse.ArgumentTypeError("a render count below 1 renders nothing")
+    return count
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the pipeline's parser, with one subparser per verb."""
     parser = argparse.ArgumentParser(
@@ -46,8 +70,53 @@ def build_parser() -> argparse.ArgumentParser:
         description="The staged pipeline: photograph -> prose -> sheet -> render.",
     )
     verbs = parser.add_subparsers(dest="verb", metavar="verb", required=True)
-    for name, summary in VERBS:
-        verbs.add_parser(name, help=summary, description=summary)
+    made = {
+        name: verbs.add_parser(name, help=summary, description=summary)
+        for name, summary in VERBS
+    }
+
+    for name in ("caption", "sheet", "review", "approve", "generate", "show"):
+        made[name].add_argument(
+            "photos",
+            nargs="*",
+            help="photographs, or run identifiers for a run that already exists",
+        )
+    for name in ("review", "approve", "generate"):
+        made[name].add_argument(
+            "--flow",
+            default=None,
+            help="the flow to act on; every approved one by default",
+        )
+    for name in ("caption", "sheet", "review"):
+        made[name].add_argument(
+            "--new-version",
+            action="store_true",
+            help="write the next numbered artifact instead of doing nothing",
+        )
+
+    # Mutually exclusive at parse time, so asking for both is refused before any
+    # work begins rather than discovered on a rented machine. One verb explores
+    # and the other reproduces, and combining them has no meaning (design.md D13).
+    render = made["generate"].add_mutually_exclusive_group()
+    render.add_argument(
+        "--count",
+        type=_count,
+        default=None,
+        help="how many renders per photograph per flow (default 1, seeds drawn)",
+    )
+    render.add_argument(
+        "--seed",
+        type=_seed,
+        action="append",
+        dest="seeds",
+        default=None,
+        help="render exactly this seed; repeatable, and not combinable with --count",
+    )
+    made["generate"].add_argument(
+        "--server",
+        default="http://127.0.0.1:8188",
+        help="the ComfyUI endpoint, reached through the tunnel",
+    )
     return parser
 
 
