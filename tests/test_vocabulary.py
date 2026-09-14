@@ -20,31 +20,7 @@ from isekai.vocabulary import (
     normalise,
     read_tags,
 )
-
-# A small stand-in with the same shape as the real list: general tags in
-# category 0, character and meta tags in the categories the loader drops.
-CSV = """tag_id,name,category,count
-9999999,general,9,1000000
-1,long_hair,0,3645082
-2,short_hair,0,1904624
-3,medium_hair,0,273659
-4,very_long_hair,0,783428
-5,wavy_hair,0,83362
-6,brown_hair,0,1267072
-7,blue_eyes,0,1490640
-8,brown_eyes,0,747352
-9,thick_eyebrows,0,77258
-10,dark_skin,0,233165
-11,simple_background,0,1420030
-12,glasses,0,309385
-13,smile,0,2365730
-14,looking_at_viewer,0,2696730
-15,jeans,0,200000
-16,shirt,0,1382452
-17,collared_shirt,0,321941
-18,hair,0,50000
-19,hatsune_miku,4,500000
-"""
+from tests.conftest import CSV
 
 
 @pytest.fixture

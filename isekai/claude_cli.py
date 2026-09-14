@@ -140,8 +140,42 @@ class Envelope:
     models: tuple[str, ...]
 
 
-def invoke(argv: Sequence[str], runner: Runner = spawn) -> Envelope:
-    """Run one locked-down invocation and return its envelope, or raise."""
+def briefing_text(path: Path) -> str:
+    """Return a stage's standing instructions."""
+    return path.read_text()
+
+
+def refusal_for(
+    stage: str,
+    run_id: str,
+    failed: CliFailure,
+    record: Path,
+    where: str,
+    verb: str,
+) -> Refusal:
+    """Build the refusal a stage raises after recording a failed attempt.
+
+    One shape for both stages: what failed, how it failed, where the record is,
+    and the command to run once what it names is fixed. Stated here beside
+    `CliFailure` rather than twice, because the two stages differ only in nouns.
+    """
+    return Refusal(
+        f"{run_id}: the {stage} failed ({failed.kind}) -- {failed.detail}; "
+        f"see {record.name} in {where}, and run `python -m isekai {verb}` again "
+        "once what it names is fixed"
+    )
+
+
+def invoke(
+    argv: Sequence[str], runner: Runner = spawn, binary: str = BINARY
+) -> Envelope:
+    """Run one locked-down invocation and return its envelope, or raise.
+
+    The binary check is here rather than at each call site: every caller in the
+    repository ran it immediately before invoking, which makes it part of
+    invoking rather than a thing to remember.
+    """
+    require_binary(binary)
     status, out, err = runner(argv)
     try:
         parsed: Any = json.loads(out)

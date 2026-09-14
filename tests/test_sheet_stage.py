@@ -20,27 +20,14 @@ from isekai.sheet import (
     ClaudeSorter,
     FakeSorter,
     Schema,
-    load_schema,
     output_shape,
     sheet,
 )
 from isekai.vocabulary import Vocabulary, read_tags
+from tests.conftest import CSV
 from tests.images import jpeg_bytes
-from tests.test_vocabulary import CSV
 
 PROSE = "Dark brown hair past the shoulders, brown eyes, a white collared shirt."
-
-
-@pytest.fixture
-def schema() -> Schema:
-    """Return the tracked identity schema."""
-    return load_schema()
-
-
-@pytest.fixture
-def vocabulary() -> Vocabulary:
-    """Return the small offline vocabulary the mapping tests use."""
-    return Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
 
 
 @pytest.fixture

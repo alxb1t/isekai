@@ -34,10 +34,8 @@ refusal is a message to them rather than state for a later resume to reason abou
 Stdlib only.
 """
 
-import json
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
 
 from isekai.refusal import Refusal
 from isekai.run import (
@@ -240,7 +238,7 @@ def _differs(fields: Mapping[str, Sequence[str]], source: Path) -> bool:
     """
     if not source.exists():
         return False
-    original: Any = json.loads(source.read_text()).get("fields", {})
+    original = read_artifact(source)["fields"]
     return {name: list(tags) for name, tags in original.items()} != {
         name: list(tags) for name, tags in fields.items()
     }

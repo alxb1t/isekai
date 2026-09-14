@@ -15,7 +15,7 @@ import derive_manifest
 import derive_vocabulary
 import manifest as shared
 import pytest
-from manifest import Manifest, Source, Spec
+from manifest import Manifest, Source
 
 DERIVERS = (derive_manifest, derive_eval_manifest, derive_vocabulary)
 
@@ -72,8 +72,8 @@ def test_an_artifact_not_stored_as_a_large_file_is_hashed_by_fetching_it(
     monkeypatch.setattr(shared, "published_digest", published)
     monkeypatch.setattr(shared, "blob_digest", blob)
     source = Source("org/repo", "0" * 40, "small.csv")
-    assert shared.digest_of(Spec("dest", (source,), lfs=False)) == ("b" * 64, 2)
-    assert shared.digest_of(Spec("dest", (source,))) == ("a" * 64, 1)
+    assert shared.digest_of(source, lfs=False) == ("b" * 64, 2)
+    assert shared.digest_of(source, lfs=True) == ("a" * 64, 1)
     assert taken == ["blob", "lfs"]
 
 

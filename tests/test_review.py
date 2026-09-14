@@ -20,24 +20,12 @@ from isekai.review import (
     review,
 )
 from isekai.run import Run, approved_versions, open_run, read_artifact, versions
-from isekai.sheet import FakeSorter, Schema, load_schema, sheet
-from isekai.vocabulary import Vocabulary, read_tags
+from isekai.sheet import FakeSorter, Schema, sheet
+from isekai.vocabulary import Vocabulary
+from tests.conftest import snapshot
 from tests.images import jpeg_bytes
-from tests.test_vocabulary import CSV
 
 FLOW = "summon-v1"
-
-
-@pytest.fixture
-def schema() -> Schema:
-    """Return the tracked identity schema."""
-    return load_schema()
-
-
-@pytest.fixture
-def vocabulary() -> Vocabulary:
-    """Return the small offline vocabulary the mapping tests use."""
-    return Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
 
 
 @pytest.fixture
@@ -57,15 +45,6 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     return made
 
 
-def _snapshot(directory: Path) -> dict[str, bytes]:
-    """Return every file under `directory`, by relative name, with its bytes."""
-    return {
-        str(path.relative_to(directory)): path.read_bytes()
-        for path in sorted(directory.rglob("*"))
-        if path.is_file()
-    }
-
-
 def _edit(path: Path, **fields: list[str]) -> None:
     """Edit a draft the way an operator would: open it, change it, save it."""
     body = json.loads(path.read_text())
@@ -78,25 +57,25 @@ def _edit(path: Path, **fields: list[str]) -> None:
 
 @pytest.mark.spec("review:copy:review-writes-to-its-own-directory")
 def test_review_writes_a_copy_and_touches_no_sheet(run: Run) -> None:
-    before = _snapshot(run.path / "sheets")
+    before = snapshot(run.path / "sheets")
 
     draft = review(run, FLOW)
 
     assert draft is not None
     assert draft.parent == run.path / "review" / FLOW
     assert draft.name == "001.draft.json"
-    assert _snapshot(run.path / "sheets") == before
+    assert snapshot(run.path / "sheets") == before
 
 
 @pytest.mark.spec("review:copy:review-writes-to-its-own-directory")
 def test_editing_the_draft_leaves_the_sheet_untouched(run: Run) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    before = _snapshot(run.path / "sheets")
+    before = snapshot(run.path / "sheets")
 
     _edit(draft, hair_colour=["black hair"])
 
-    assert _snapshot(run.path / "sheets") == before
+    assert snapshot(run.path / "sheets") == before
     assert read_artifact(run.path / "sheets" / FLOW / "001.json")["fields"][
         "hair_colour"
     ] == ["brown hair"]
@@ -400,14 +379,14 @@ def test_a_refusal_writes_no_error_record_and_leaves_the_run_unchanged(
     draft = review(run, FLOW)
     assert draft is not None
     _edit(draft, eye_colour=["hazel eyes"])
-    before = _snapshot(run.path)
+    before = snapshot(run.path)
 
     with pytest.raises(Refusal):
         approve(run, FLOW, schema, vocabulary)
     with pytest.raises(Refusal):
         review(run, "summon-v9")
 
-    assert _snapshot(run.path) == before
+    assert snapshot(run.path) == before
     assert [p.name for p in run.path.rglob("*.error.*")] == []
 
 
@@ -417,10 +396,10 @@ def test_reviewing_an_approved_flow_again_does_nothing_without_the_flag(
 ) -> None:
     review(run, FLOW)
     approve(run, FLOW, schema, vocabulary)
-    before = _snapshot(run.path)
+    before = snapshot(run.path)
 
     assert review(run, FLOW) is None
-    assert _snapshot(run.path) == before
+    assert snapshot(run.path) == before
 
 
 @pytest.mark.spec("run-directory:idempotence:rerun-is-a-no-op")
@@ -429,10 +408,10 @@ def test_approving_an_approved_flow_again_does_nothing_and_does_not_refuse(
 ) -> None:
     review(run, FLOW)
     approve(run, FLOW, schema, vocabulary)
-    before = _snapshot(run.path)
+    before = snapshot(run.path)
 
     assert approve(run, FLOW, schema, vocabulary) == (None, [])
-    assert _snapshot(run.path) == before
+    assert snapshot(run.path) == before
 
 
 @pytest.mark.spec("run-directory:idempotence:new-version-must-be-asked-for")

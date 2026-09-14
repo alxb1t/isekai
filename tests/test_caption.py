@@ -17,10 +17,15 @@ from isekai.caption import (
     ClaudeReader,
     FakeReader,
     Reading,
-    briefing_record,
     caption,
 )
-from isekai.claude_cli import BASE_FLAGS, CliFailure, classify, models_that_ran
+from isekai.claude_cli import (
+    BASE_FLAGS,
+    CliFailure,
+    classify,
+    instructions_record,
+    models_that_ran,
+)
 from isekai.refusal import Refusal
 from isekai.run import BUDGETS, Run, attempts, open_run, read_artifact, versions
 from isekai.sheet import load_schema
@@ -184,7 +189,7 @@ def test_the_producer_records_the_briefings_path_and_digest(
     two = read_artifact(second)["producer"]["briefing"]
     assert one["path"] == "briefings/caption.md"
     assert one["sha256"] != two["sha256"]
-    assert briefing_record()["sha256"] == one["sha256"]
+    assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
 
 
 # --- the adapter --------------------------------------------------------------

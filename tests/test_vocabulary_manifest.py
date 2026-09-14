@@ -16,11 +16,11 @@ import pytest
 from isekai.eval_models import load_eval_manifest
 from isekai.provision import (
     DIGEST,
+    VOCABULARY_MANIFEST_PATH,
     Manifest,
     entries_with_missing_keys,
     entries_without_a_digest,
     load_manifest,
-    load_vocabulary_manifest,
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
@@ -40,7 +40,7 @@ WEIGHT_SUFFIXES = (".onnx", ".safetensors", ".pt", ".pth", ".bin")
 @pytest.fixture
 def vocabulary_manifest() -> Manifest:
     """Return a private copy of the vocabulary manifest, free to be malformed."""
-    return copy.deepcopy(load_vocabulary_manifest())
+    return copy.deepcopy(load_manifest(VOCABULARY_MANIFEST_PATH))
 
 
 @pytest.mark.spec_exempt("structural: the manifest is data the other checks read")
@@ -104,7 +104,7 @@ def test_the_vocabularys_primary_publishes_the_artifact_it_serves(
 
 @pytest.mark.spec("model-provisioning:vocabulary:manifest-is-its-own-file")
 def test_the_vocabulary_appears_only_in_its_own_manifest() -> None:
-    vocabulary = {e["dest"] for e in load_vocabulary_manifest()["entries"]}
+    vocabulary = {e["dest"] for e in load_manifest(VOCABULARY_MANIFEST_PATH)["entries"]}
     graph = {e["dest"] for e in load_manifest()["entries"]}
     scorer = {e["dest"] for e in load_eval_manifest()["entries"]}
     assert VOCABULARY in vocabulary

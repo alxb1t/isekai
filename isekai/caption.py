@@ -32,12 +32,12 @@ from isekai.claude_cli import (
     BINARY,
     CliFailure,
     Runner,
+    briefing_text,
     instructions_record,
     invoke,
-    require_binary,
+    refusal_for,
     spawn,
 )
-from isekai.refusal import Refusal
 from isekai.run import (
     Run,
     artifact_name,
@@ -130,23 +130,12 @@ class ClaudeReader:
 
     def read(self, photo: Path, briefing: str, workspace: Path) -> Reading:
         """Invoke the CLI and read prose out of its envelope, or raise."""
-        require_binary(self.binary)
-        result = invoke(self.argv(photo, workspace, briefing), self.runner)
+        result = invoke(self.argv(photo, workspace, briefing), self.runner, self.binary)
         if not result.result:
             raise CliFailure(
                 "permanent", "the envelope carries no prose the stage can read"
             )
         return Reading(result.result, self.implementation, result.models)
-
-
-def briefing_text(path: Path = BRIEFING_PATH) -> str:
-    """Return the reader's standing instructions."""
-    return path.read_text()
-
-
-def briefing_record(path: Path = BRIEFING_PATH) -> dict[str, str]:
-    """Return the path and digest of the instruction text, for the producer."""
-    return instructions_record(path)
 
 
 def caption(
@@ -179,10 +168,8 @@ def caption(
             failed.kind,
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
-        raise Refusal(
-            f"{run.id}: the reader failed ({failed.kind}) -- {failed.detail}; "
-            f"see {record.name} in {DIRECTORY}/, and run `python -m isekai "
-            f"caption` again once what it names is fixed"
+        raise refusal_for(
+            "reader", run.id, failed, record, f"{DIRECTORY}/", STAGE
         ) from failed
 
     path = directory / artifact_name(version)
@@ -194,7 +181,7 @@ def caption(
                 "implementation": reading.implementation,
                 "models": list(reading.models),
                 "pinned": reading.pinned,
-                "briefing": briefing_record(briefing_path),
+                "briefing": instructions_record(briefing_path),
             },
             {"prose": reading.prose},
         ),
@@ -208,7 +195,5 @@ __all__: Sequence[str] = (
     "FakeReader",
     "Reader",
     "Reading",
-    "briefing_record",
-    "briefing_text",
     "caption",
 )

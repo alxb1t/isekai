@@ -256,10 +256,8 @@ def build_graph(
     graph[flow.node("positive")]["inputs"]["text"] = prompt["positive"]
     graph[flow.node("negative")]["inputs"]["text"] = prompt["negative"]
 
-    scale = graph[flow.node("scale")]["inputs"]
-    scale["width"], scale["height"] = width, height
-    latent = graph[flow.node("latent")]["inputs"]
-    latent["width"], latent["height"] = width, height
+    for role in ("scale", "latent"):
+        graph[flow.node(role)]["inputs"].update(width=width, height=height)
 
     identity = graph[flow.node("identity")]["inputs"]
     identity["ip_weight"] = dials["ip_weight"]
@@ -274,24 +272,22 @@ def build_graph(
 
     hires = graph[flow.node("hires_resize")]["inputs"]
     scaled = (round(width * dials["hires_scale"]), round(height * dials["hires_scale"]))
-    for side in scaled:
-        # SDXL's VAE needs a multiple of 8. 1.5x of a /64 canvas always is, and
-        # this asserts it rather than trusting it.
-        if side % 8:
-            raise Refusal(
-                f"flow {flow.id}: a hires target of {scaled} is not a multiple of "
-                "8, which the VAE requires; change `hires_scale` under a new flow "
-                "identifier"
-            )
+    # SDXL's VAE needs a multiple of 8. 1.5x of a /64 canvas always is, and this
+    # asserts it rather than trusting it.
+    if any(side % 8 for side in scaled):
+        raise Refusal(
+            f"flow {flow.id}: a hires target of {scaled} is not a multiple of 8, "
+            "which the VAE requires; change `hires_scale` under a new flow "
+            "identifier"
+        )
     hires["width"], hires["height"] = scaled
 
     second = graph[flow.node("hires_sampler")]["inputs"]
     second["seed"] = seed
     second["steps"] = dials["hires_steps"]
     second["denoise"] = dials["hires_denoise"]
-    second["cfg"] = dials["cfg"]
-    second["sampler_name"] = dials["sampler_name"]
-    second["scheduler"] = dials["scheduler"]
+    for dial in ("cfg", "sampler_name", "scheduler"):
+        second[dial] = dials[dial]
     return graph
 
 
@@ -334,6 +330,8 @@ def render(
     check_budget(STAGE_RENDER, directory, version, run.id)
 
     image_name = client.upload_image(str(run.photo))
+    # Constant across seeds: the flow's graph on disk does not change mid-render.
+    flow_graph = flow.graph_digest()
     produced: list[Render] = []
     for seed in wanted:
         graph = build_graph(flow, run.photo, image_name, prompt, seed)
@@ -361,7 +359,7 @@ def render(
                     "seed": seed,
                     "sheet_version": version,
                     "graph_sha256": graph_digest(graph),
-                    "flow_graph_sha256": flow.graph_digest(),
+                    "flow_graph_sha256": flow_graph,
                     "edited": prompt["edited"],
                 },
             ),

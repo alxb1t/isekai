@@ -19,8 +19,7 @@ from isekai.sheet import (
     schema_path,
     validate,
 )
-from isekai.vocabulary import Vocabulary, read_tags
-from tests.test_vocabulary import CSV
+from isekai.vocabulary import Vocabulary
 
 # D8's sixteen, in the one order a prompt is assembled in, and the seven a
 # measurement is taken over. Restated here so that reordering the schema document
@@ -52,18 +51,6 @@ SCORED = (
     "gaze",
     "pose",
 )
-
-
-@pytest.fixture
-def schema() -> Schema:
-    """Return the tracked identity schema."""
-    return load_schema()
-
-
-@pytest.fixture
-def vocabulary() -> Vocabulary:
-    """Return the small offline vocabulary the mapping tests use."""
-    return Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
 
 
 @pytest.mark.spec("sheet:schema:field-order-is-declared-once")

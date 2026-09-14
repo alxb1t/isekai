@@ -35,9 +35,10 @@ from isekai.claude_cli import (
     BINARY,
     CliFailure,
     Runner,
+    briefing_text,
     instructions_record,
     invoke,
-    require_binary,
+    refusal_for,
     spawn,
 )
 from isekai.refusal import Refusal
@@ -322,8 +323,7 @@ class ClaudeSorter:
 
     def sort(self, prose: str, schema: Schema, briefing: str) -> Sorting:
         """Invoke the CLI and read one list per field out of its envelope."""
-        require_binary(self.binary)
-        result = invoke(self.argv(prose, schema, briefing), self.runner)
+        result = invoke(self.argv(prose, schema, briefing), self.runner, self.binary)
         return Sorting(
             answers_from(result.structured, result.result, schema),
             self.implementation,
@@ -368,11 +368,6 @@ def answers_from(structured: object, text: str, schema: Schema) -> dict[str, lis
             if isinstance(phrase, str) and phrase.strip()
         ]
     return answers
-
-
-def briefing_text(path: Path = BRIEFING_PATH) -> str:
-    """Return the sorter's standing instructions."""
-    return path.read_text()
 
 
 def sheet(
@@ -425,15 +420,15 @@ def sheet(
             failed.kind,
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
-        raise Refusal(
-            f"{run.id}: the sorter failed ({failed.kind}) -- {failed.detail}; "
-            f"see {record.name} in {DIRECTORY}/{wanted[0]}/, and run "
-            "`python -m isekai sheet` again once what it names is fixed"
+        raise refusal_for(
+            "sorter", run.id, failed, record, f"{DIRECTORY}/{wanted[0]}/", STAGE
         ) from failed
 
     fields = fill(sorted_answers.answers, schema, vocabulary)
     validate(fields, schema, vocabulary)
 
+    # Constant across destinations: one read and one hash, not one per flow.
+    briefing_record = instructions_record(briefing_path)
     written: list[Path] = []
     for flow in wanted:
         directory = run.directory(DIRECTORY, flow)
@@ -446,7 +441,7 @@ def sheet(
                     "implementation": sorted_answers.implementation,
                     "models": list(sorted_answers.models),
                     "pinned": sorted_answers.pinned,
-                    "briefing": instructions_record(briefing_path),
+                    "briefing": briefing_record,
                     "from": source,
                 },
                 {

@@ -26,9 +26,9 @@ from isekai.refusal import Refusal
 from isekai.run import BUDGETS
 from isekai.sheet import FakeSorter, load_schema
 from isekai.vocabulary import Vocabulary, read_tags
+from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.test_vocabulary import CSV
 
 FLOW = "summon-v1"
 
@@ -62,7 +62,7 @@ def wired(tmp_path: Path) -> Wiring:
         ),
         client=FakeComfyClient(),
         schema=load_schema(),
-        vocabulary=Vocabulary(
+        vocabulary=lambda: Vocabulary(
             "wd14/selected_tags.csv",
             "627aef95638667ddcaa3ac8ae625e88ea5b02f51",
             "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217",
@@ -90,15 +90,6 @@ def _flags(extra: dict[str, object]) -> list[str]:
     return rendered
 
 
-def _snapshot(directory: Path) -> dict[str, bytes]:
-    """Return every file under `directory`, by relative name, with its bytes."""
-    return {
-        str(path.relative_to(directory)): path.read_bytes()
-        for path in sorted(directory.rglob("*"))
-        if path.is_file()
-    }
-
-
 def _calls(wired: Wiring) -> tuple[int, int, int]:
     """Return how many times each external double has been reached."""
     reader, sorter, client = wired.reader, wired.sorter, wired.client
@@ -124,12 +115,12 @@ def test_a_second_full_pass_changes_nothing_and_calls_nothing(
     photo: Path, wired: Wiring
 ) -> None:
     assert _pass(wired, str(photo)) == 0
-    after_first = _snapshot(wired.runs_root)
+    after_first = snapshot(wired.runs_root)
     calls = _calls(wired)
 
     assert _pass(wired, str(photo)) == 0
 
-    assert _snapshot(wired.runs_root) == after_first
+    assert snapshot(wired.runs_root) == after_first
     assert _calls(wired) == calls
 
 
@@ -139,7 +130,7 @@ def test_the_first_pass_actually_produced_something_to_be_inert_about(
 ) -> None:
     # A resume assertion over an empty directory passes vacuously.
     _pass(wired, str(photo))
-    files = _snapshot(wired.runs_root)
+    files = snapshot(wired.runs_root)
 
     names = sorted(files)
     assert any(name.endswith("captions/001.json") for name in names)
@@ -155,11 +146,11 @@ def test_resume_works_from_the_run_id_as_well_as_the_photograph(
     photo: Path, wired: Wiring
 ) -> None:
     _pass(wired, str(photo))
-    after_first = _snapshot(wired.runs_root)
+    after_first = snapshot(wired.runs_root)
     run_id = next(path.name for path in wired.runs_root.iterdir())
 
     assert _pass(wired, run_id) == 0
-    assert _snapshot(wired.runs_root) == after_first
+    assert snapshot(wired.runs_root) == after_first
 
 
 # --- the explicit-version flag ------------------------------------------------
@@ -170,13 +161,13 @@ def test_a_repeat_invocation_writes_nothing_and_reports_completion(
     photo: Path, wired: Wiring
 ) -> None:
     dispatch(_args("caption", str(photo)), wired)
-    before = _snapshot(wired.runs_root)
+    before = snapshot(wired.runs_root)
     assert isinstance(wired.out, io.StringIO)
     wired.out.truncate(0), wired.out.seek(0)
 
     assert dispatch(_args("caption", str(photo)), wired) == 0
 
-    assert _snapshot(wired.runs_root) == before
+    assert snapshot(wired.runs_root) == before
     assert "already complete" in wired.out.getvalue()
     assert _calls(wired)[0] == 1
 
@@ -254,9 +245,9 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: open_run(tmp_path / "missing.jpg", wired.runs_root))
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
     collect(lambda: read_artifact(_future_artifact(tmp_path)))
-    collect(lambda: sheet(bare, wired.sorter, wired.schema, wired.vocabulary, [FLOW]))
+    collect(lambda: sheet(bare, wired.sorter, wired.schema, wired.vocabulary(), [FLOW]))
     collect(lambda: review(bare, FLOW))
-    collect(lambda: approve(bare, FLOW, wired.schema, wired.vocabulary))
+    collect(lambda: approve(bare, FLOW, wired.schema, wired.vocabulary()))
     collect(lambda: prompt_artifact(bare, flow, wired.schema))
     collect(lambda: preflight(flow, []))
     collect(lambda: load_flow("summon-v9"))
@@ -465,8 +456,6 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
 ) -> None:
     import urllib.error
 
-    from isekai.__main__ import _connected
-
     run_id = _approved_run(wired, tmp_path, "one")
 
     class Dead:
@@ -494,6 +483,5 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
     assert "infra/up.sh" in message
     assert "--server" in message
     assert "Traceback" not in message
-    # `_connected` is what wraps it, and the assembly still happened.
-    assert _connected(wired) is not None
+    # The assembly still happened before the endpoint was reached at all.
     assert (wired.runs_root / run_id / "prompts" / FLOW / "001.json").exists()

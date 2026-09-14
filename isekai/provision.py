@@ -82,12 +82,6 @@ def load_manifest(path: Path = MANIFEST_PATH) -> Manifest:
     return parsed
 
 
-def load_vocabulary_manifest(path: Path = VOCABULARY_MANIFEST_PATH) -> Manifest:
-    """Read and parse the tracked vocabulary manifest."""
-    parsed: Any = json.loads(path.read_text())
-    return parsed
-
-
 def entries_with_missing_keys(manifest: Manifest) -> list[str]:
     """Return the destinations of entries that do not declare every required key."""
     return [

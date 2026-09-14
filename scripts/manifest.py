@@ -149,10 +149,14 @@ def blob_digest(source: Source) -> tuple[str, int]:
     return digest_of_url(source.url(), BLOB_CAP_BYTES)
 
 
-def digest_of(spec: Spec) -> tuple[str, int]:
-    """Return the SHA-256 and size of `spec`'s primary source, by its declared route."""
-    primary = spec.sources[0]
-    return published_digest(primary) if spec.lfs else blob_digest(primary)
+def digest_of(source: Source, lfs: bool) -> tuple[str, int]:
+    """Return one source's SHA-256 and size, by the route its spec declares.
+
+    The one place the two strategies are chosen between, which is what the module
+    docstring claims: an artifact gets one route or the other, and stating the
+    choice twice is how the two drift.
+    """
+    return published_digest(source) if lfs else blob_digest(source)
 
 
 def entry_for(spec: Spec) -> ManifestEntry:
@@ -162,7 +166,7 @@ def entry_for(spec: Spec) -> ManifestEntry:
     whole point of an ordered source list is that any of them serves the artifact
     the digest names.
     """
-    sha256, size = digest_of(spec)
+    sha256, size = digest_of(spec.sources[0], spec.lfs)
     if spec.expect_sha256 is not None and sha256 != spec.expect_sha256:
         raise SystemExit(
             f"{spec.dest}: {spec.sources[0].url()} publishes {sha256}, "

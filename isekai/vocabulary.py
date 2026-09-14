@@ -105,9 +105,31 @@ CURATED: Mapping[str, str] = {
 }
 
 
+def _spans(curated: Mapping[str, str]) -> tuple[tuple[tuple[str, ...], str], ...]:
+    """Return the curated table as needle words and target tag, longest span first.
+
+    Precomputed rather than rebuilt per phrase: the table is a constant, and
+    normalising and sorting thirty entries for every field of every photograph is
+    setup pretended to be work.
+    """
+    return tuple(
+        sorted(
+            (
+                (tuple(normalise(span).split()), normalise(curated[span]))
+                for span in curated
+            ),
+            key=lambda entry: -len(entry[0]),
+        )
+    )
+
+
 def normalise(phrase: str) -> str:
     """Return the one spelling the rest of this module reads: lowercase, spaced."""
     return _UNDERSCORES.sub(" ", phrase.strip().lower()).strip()
+
+
+# The curated table, precomputed once into the shape the cascade walks.
+CURATED_SPANS = _spans(CURATED)
 
 
 def asserts_absence(phrase: str) -> bool:
@@ -158,6 +180,21 @@ class Vocabulary:
         """Return each tag's words, for the containment pass to test against."""
         return {tag: frozenset(tag.split()) for tag in self.counts}
 
+    @cached_property
+    def by_word(self) -> Mapping[str, tuple[str, ...]]:
+        """Return, for each word, every tag containing it.
+
+        The containment pass already requires a candidate to share at least one
+        word with the phrase, so this index is not an approximation of that test
+        -- it is the same test, done by lookup instead of by scanning all 8,106
+        tags per phrase. Built once per vocabulary, beside `words`.
+        """
+        index: dict[str, list[str]] = {}
+        for tag, needed in self.words.items():
+            for word in needed:
+                index.setdefault(word, []).append(tag)
+        return {word: tuple(tags) for word, tags in index.items()}
+
     def contained_in(
         self, words: Iterable[str], suffix: Iterable[str] = ()
     ) -> list[str]:
@@ -176,12 +213,9 @@ class Vocabulary:
         """
         phrase = frozenset(words)
         available = phrase | frozenset(suffix)
+        candidates = {tag for word in phrase for tag in self.by_word.get(word, ())}
         return sorted(
-            (
-                tag
-                for tag, needed in self.words.items()
-                if needed <= available and needed & phrase
-            ),
+            (tag for tag in candidates if self.words[tag] <= available),
             key=lambda tag: (-len(self.words[tag]), -self.counts[tag], tag),
         )
 
@@ -206,9 +240,9 @@ def load(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
     rules, not one per consumer.
     """
     from isekai.eval_models import resolve
-    from isekai.provision import load_vocabulary_manifest
+    from isekai.provision import VOCABULARY_MANIFEST_PATH, load_manifest
 
-    manifest = load_vocabulary_manifest()
+    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     path = resolve(VOCABULARY_DEST, models_dir, manifest)
     entry = next(e for e in manifest["entries"] if e["dest"] == VOCABULARY_DEST)
     match = _REVISION.search(entry["sources"][0])
@@ -266,11 +300,14 @@ def map_phrase(
 
     found, words = _curated_pass(text.split(), vocabulary, curated)
 
-    remaining = vocabulary.contained_in(
-        words, normalise(suffix).split() if suffix else ()
-    )
-    if remaining:
-        found.append(remaining[0])
+    # A phrase the curated pass consumed entirely has nothing left to contain, and
+    # the containment test would be false for every candidate anyway.
+    if words:
+        remaining = vocabulary.contained_in(
+            words, normalise(suffix).split() if suffix else ()
+        )
+        if remaining:
+            found.append(remaining[0])
 
     return _in_order(found)
 
@@ -286,11 +323,9 @@ def _curated_pass(
     keeps going over what is left. Longest span first, so a specific curated
     phrase is never pre-empted by a shorter one nested inside it.
     """
-    spans = sorted(curated, key=lambda span: -len(normalise(span).split()))
+    spans = CURATED_SPANS if curated is CURATED else _spans(curated)
     found: list[str] = []
-    for span in spans:
-        needle = normalise(span).split()
-        tag = normalise(curated[span])
+    for needle, tag in spans:
         if tag not in vocabulary:
             continue
         while (at := _index_of(words, needle)) is not None:

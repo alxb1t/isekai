@@ -28,7 +28,7 @@ import dataclasses
 import random
 import sys
 import urllib.error
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -95,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
         for name, summary in VERBS
     }
 
-    for name in ("caption", "sheet", "review", "approve", "generate", "show"):
+    for name in made:
         made[name].add_argument(
             "photos",
             nargs="*",
@@ -174,7 +174,11 @@ class Wiring:
     sorter: Sorter
     client: ComfyTransport | None
     schema: Schema
-    vocabulary: Vocabulary
+    # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
+    # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
+    # eager read made `python -m isekai show` impossible on a clone that had not
+    # provisioned it. The doubles still inject one; they inject a lambda.
+    vocabulary: Callable[[], Vocabulary]
     runs_root: Path = RUNS_ROOT
     flows_dir: Path = FLOWS_DIR
     present: Sequence[str] | None = None
@@ -196,7 +200,7 @@ def wiring(args: argparse.Namespace) -> Wiring:
         sorter=ClaudeSorter(),
         client=ComfyClient(server) if server else None,
         schema=load_schema(),
-        vocabulary=load_vocabulary(),
+        vocabulary=load_vocabulary,
         runs_root=args.runs,
     )
 
@@ -232,62 +236,84 @@ def _matching_flows(wired: Wiring) -> list[str]:
     The sorting stage is filled once per distinct pair and written to every flow
     declaring it, which is why the stage is never told which flow asked.
     """
+    vocabulary = wired.vocabulary()
     return [
         name
         for name in tracked_flows(wired.flows_dir)
         if (flow := load_flow(name, wired.flows_dir)).schema
         == f"{wired.schema.name}.v{wired.schema.version}"
-        and flow.vocabulary["sha256"] == wired.vocabulary.digest
+        and flow.vocabulary["sha256"] == vocabulary.digest
     ]
 
 
 def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     """Run one verb over every identifier given, reporting every refusal together.
 
-    One photograph's failure does not cost the others their turn: refusals are
+    **Batch is the general form here and per-item is the special case.** Assembly
+    has to finish for the whole batch before any endpoint is acquired, so
+    `generate` takes the targets itself; every other verb is per-item, and one
+    photograph's failure does not cost the others their turn. Refusals are
     collected and printed at the end, and the exit status says whether any fired.
     """
     verb = str(args.verb)
+    targets = list(args.photos)
+    if verb == "generate":
+        refused = _generate(args, wired, targets)
+    else:
+        refused = across(targets, _per_item(verb, args, wired))
+    for message in refused:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if refused else 0
+
+
+def _per_item(
+    verb: str, args: argparse.Namespace, wired: Wiring
+) -> Callable[[str], None]:
+    """Return the work one identifier gets, with everything run-independent done.
+
+    The flows a verb acts on are a property of the wiring, not of the photograph,
+    so they are resolved once here rather than re-read from disk per identifier.
+    """
     new_version = bool(getattr(args, "new_version", False))
+    flows = _flows_for(args, wired) if verb in ("review", "approve") else []
+    matching = _matching_flows(wired) if verb == "sheet" else []
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
-            written = caption(run, wired.reader, new_version=new_version)
-            _say(wired, run, "caption", written)
+            _say(
+                wired,
+                run,
+                "caption",
+                caption(run, wired.reader, new_version=new_version),
+            )
         elif verb == "sheet":
             written = sheet(
                 run,
                 wired.sorter,
                 wired.schema,
-                wired.vocabulary,
-                _matching_flows(wired),
+                wired.vocabulary(),
+                matching,
                 new_version=new_version,
             )
             for path in written or [None]:
                 _say(wired, run, "sheet", path)
         elif verb == "review":
-            for flow in _flows_for(args, wired):
+            for flow in flows:
                 _say(wired, run, "review", review(run, flow, new_version=new_version))
         elif verb == "approve":
-            for flow in _flows_for(args, wired):
-                written, warnings = approve(run, flow, wired.schema, wired.vocabulary)
+            for flow in flows:
+                written, warnings = approve(run, flow, wired.schema, wired.vocabulary())
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
-        elif verb == "generate":
-            raise AssertionError("generate is batched below, not run per item")
-        else:
+        elif verb == "show":
             for line in report(run):
                 print(line, file=wired.out)
+        else:
+            raise Refusal(f"{verb!r} is not a stage this build runs")
 
-    targets = list(args.photos)
-    refused = (
-        _generate(args, wired, targets) if verb == "generate" else across(targets, work)
-    )
-    for message in refused:
-        print(f"refused: {message}", file=wired.err)
-    return 1 if refused else 0
+    return work
 
 
 def _generate(
@@ -314,12 +340,14 @@ def _generate(
     if wired.client is None:
         return refused
 
+    client = _Reporting(wired.client)
+
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair
         produced = render(
             run,
             flows[flow],
-            _connected(wired),
+            client,
             count=args.count,
             seeds=args.seeds,
             rng=wired.rng,
@@ -331,18 +359,6 @@ def _generate(
             print(f"{run.id}: {flow} is already rendered", file=wired.out)
 
     return refused + across(ready, render_one)
-
-
-def _connected(wired: Wiring) -> ComfyTransport:
-    """Return the transport, turning a dead endpoint into a refusal with a remedy.
-
-    A connection error otherwise surfaces as a `urllib` traceback naming a socket,
-    which tells an operator nothing about what to do. This stage talks to an
-    endpoint somebody else brought up, so the remedy is about the tunnel and the
-    pod rather than about anything this command can fix by itself.
-    """
-    assert wired.client is not None
-    return _Reporting(wired.client)
 
 
 @dataclass(frozen=True)

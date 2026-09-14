@@ -86,7 +86,7 @@ _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
 FRAME_NAME = "run.json"
 
 # `001`, and `001.approved` / `001.draft` where a stage has that concept.
-_ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>[a-z]+))?\.json$")
+ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>[a-z]+))?\.json$")
 
 # `001.error.1.transient` -- the version it stands in for, the attempt ordinal,
 # and the kind, all decidable without opening anything.
@@ -305,7 +305,7 @@ def versions(directory: Path) -> list[int]:
     found = {
         int(match.group("version"))
         for name in os.listdir(directory)
-        if (match := _ARTIFACT.match(name))
+        if (match := ARTIFACT.match(name))
     }
     return sorted(found)
 
@@ -328,7 +328,7 @@ def artifact_name(version: int, label: str | None = None) -> str:
 
 def is_approved(name: str) -> bool:
     """Say whether a filename is an approved artifact, without opening anything."""
-    match = _ARTIFACT.match(name)
+    match = ARTIFACT.match(name)
     return match is not None and match.group("label") == "approved"
 
 
@@ -339,7 +339,7 @@ def approved_versions(directory: Path) -> list[int]:
     return sorted(
         int(match.group("version"))
         for name in os.listdir(directory)
-        if (match := _ARTIFACT.match(name)) and match.group("label") == "approved"
+        if is_approved(name) and (match := ARTIFACT.match(name))
     )
 
 
@@ -384,9 +384,12 @@ def read_artifact(path: Path) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class Attempt:
-    """One recorded failure: which artifact it stands in for, and how it failed."""
+    """One recorded failure against a known artifact: how it failed, and where.
 
-    version: int
+    It carries no version: `attempts` is always asked about one, so storing it
+    here would be the caller's own argument handed back.
+    """
+
     attempt: int
     kind: Kind
     path: Path
@@ -403,7 +406,6 @@ def attempts(directory: Path, version: int) -> list[Attempt]:
         return []
     found = [
         Attempt(
-            int(match.group("version")),
             int(match.group("attempt")),
             _kind(match.group("kind")),
             directory / name,

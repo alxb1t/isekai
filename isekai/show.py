@@ -14,16 +14,17 @@ Stdlib only.
 """
 
 import json
+import os
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from isekai.caption import DIRECTORY as CAPTIONS
-from isekai.generate import OUTPUTS, PROMPTS
+from isekai.generate import OUTPUTS, PROMPTS, rendered_seeds
 from isekai.review import APPROVED
 from isekai.review import DIRECTORY as REVIEW
-from isekai.run import Run, approved_versions, versions
+from isekai.run import ARTIFACT, Run
 from isekai.sheet import DIRECTORY as SHEETS
 
 # The stages in the order a run passes through them, and whether each one is
@@ -73,24 +74,33 @@ def _producer_of(path: Path) -> str:
 
 
 def _listing(stage: str, flow: str | None, directory: Path) -> Listing:
-    """Build one stage's listing from a directory of artifacts."""
-    present = versions(directory)
-    approved = approved_versions(directory)
+    """Build one stage's listing from a single reading of its directory.
+
+    One `os.listdir`, not three: the versions, the approved ones and each
+    version's actual filename all come out of the same pass, so the listing does
+    not stat three candidate names per version to find the one that is there.
+    """
+    names: dict[int, str] = {}
+    approved: list[int] = []
+    if directory.is_dir():
+        for name in sorted(os.listdir(directory)):
+            match = ARTIFACT.match(name)
+            if match is None:
+                continue
+            version = int(match.group("version"))
+            names[version] = name
+            if match.group("label") == APPROVED:
+                approved.append(version)
+    present = sorted(names)
     # The active version is the highest *approved* one where approval applies,
     # and the highest present one otherwise -- because downstream stages read
     # approval, and a draft is not something to proceed from.
-    active = (approved or present or [None])[-1] if (approved or present) else None
-    producers: dict[int, str] = {}
-    for version in present:
-        for candidate in (
-            directory / f"{version:03d}.{APPROVED}.json",
-            directory / f"{version:03d}.draft.json",
-            directory / f"{version:03d}.json",
-        ):
-            if candidate.exists():
-                producers[version] = _producer_of(candidate)
-                break
-    return Listing(stage, flow, present, active, approved, producers)
+    ranked = sorted(approved) or present
+    active = ranked[-1] if ranked else None
+    producers = {
+        version: _producer_of(directory / names[version]) for version in present
+    }
+    return Listing(stage, flow, present, active, sorted(approved), producers)
 
 
 def listings(run: Run) -> list[Listing]:
@@ -98,10 +108,7 @@ def listings(run: Run) -> list[Listing]:
     found: list[Listing] = []
     for stage, per_flow in STAGES:
         directory = run.directory(stage)
-        if not per_flow:
-            found.append(_listing(stage, None, directory))
-            continue
-        if not directory.is_dir():
+        if not per_flow or not directory.is_dir():
             found.append(_listing(stage, None, directory))
             continue
         for flow in sorted(path.name for path in directory.iterdir() if path.is_dir()):
@@ -114,18 +121,12 @@ def rendered(run: Run) -> list[tuple[str, int, list[int]]]:
     outputs = run.directory(OUTPUTS)
     if not outputs.is_dir():
         return []
-    found: list[tuple[str, int, list[int]]] = []
-    for flow in sorted(path.name for path in outputs.iterdir() if path.is_dir()):
-        for group in sorted((outputs / flow).iterdir()):
-            if not group.is_dir() or not group.name.isdigit():
-                continue
-            seeds = sorted(
-                int(image.stem)
-                for image in group.iterdir()
-                if image.suffix == ".png" and image.stem.isdigit()
-            )
-            found.append((flow, int(group.name), seeds))
-    return found
+    return [
+        (flow, int(group.name), rendered_seeds(group))
+        for flow in sorted(path.name for path in outputs.iterdir() if path.is_dir())
+        for group in sorted((outputs / flow).iterdir())
+        if group.is_dir() and group.name.isdigit()
+    ]
 
 
 def report(run: Run) -> Iterator[str]:

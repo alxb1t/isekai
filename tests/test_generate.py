@@ -32,25 +32,12 @@ from isekai.generate import (
 from isekai.refusal import Refusal
 from isekai.review import approve, review
 from isekai.run import Run, artifact_name, open_run, read_artifact
-from isekai.sheet import FakeSorter, Schema, load_schema, sheet
-from isekai.vocabulary import Vocabulary, read_tags
+from isekai.sheet import FakeSorter, Schema, sheet
+from isekai.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.test_vocabulary import CSV
 
 FLOW = "summon-v1"
-
-
-@pytest.fixture
-def schema() -> Schema:
-    """Return the tracked identity schema."""
-    return load_schema()
-
-
-@pytest.fixture
-def vocabulary() -> Vocabulary:
-    """Return the small offline vocabulary the mapping tests use."""
-    return Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
 
 
 @pytest.fixture
