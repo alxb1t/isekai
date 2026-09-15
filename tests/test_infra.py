@@ -67,7 +67,7 @@ def test_every_annotator_checkpoint_the_graph_needs_lands_under_that_path(
     path = aux_annotator_ckpts_path(dockerfile)
     assert path is not None
     needed = annotator_files(workflow)
-    assert len(needed) == 4
+    assert len(needed) == 2
     for filename in needed:
         dest = manifest_dest(filename, manifest)
         assert dest is not None
@@ -75,16 +75,14 @@ def test_every_annotator_checkpoint_the_graph_needs_lands_under_that_path(
 
 
 @pytest.mark.spec_exempt(
-    "structural: names the 386 MB the redirect exists to move onto the volume"
+    "structural: names the 352 MB the redirect exists to move onto the volume"
 )
-def test_the_annotator_checkpoints_are_the_four_the_preprocessors_fetch(
+def test_the_annotator_checkpoints_are_the_two_the_preprocessors_fetch(
     workflow: Workflow,
 ) -> None:
     assert set(annotator_files(workflow)) == {
         "yolox_l.onnx",
         "dw-ll_ucoco_384_bs5.torchscript.pt",
-        "sk_model.pth",
-        "sk_model2.pth",
     }
 
 
@@ -313,6 +311,30 @@ def test_the_client_refuses_to_create_a_pod_without_a_named_volume(
 )
 def test_the_pod_is_told_which_volume_to_expect(up_sh: str) -> None:
     assert "RUNPOD_VOLUME_ID: $vol" in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: where the teardown call resolves from, not a scenario about readiness"
+)
+def test_the_timeout_teardown_resolves_from_the_root_the_script_moved_to(
+    up_sh: str,
+) -> None:
+    lines = up_sh.splitlines()
+    moved = next(i for i, line in enumerate(lines) if line.startswith("cd "))
+    teardown = next(
+        i
+        for i, line in enumerate(lines)
+        if "down.sh" in line and not line.lstrip().startswith("#")
+    )
+
+    # The script has already moved to the repository root, so the teardown is
+    # spelled from there. Re-deriving `dirname "$0"` after the move interprets a
+    # path relative to the *old* working directory against the new one, which
+    # resolves only when the invocation path's last component happens to repeat
+    # -- and a teardown that fails to resolve leaves the pod billing.
+    assert moved < teardown
+    assert 'dirname "$0"' not in lines[teardown]
+    assert "./infra/down.sh" in lines[teardown]
 
 
 @pytest.mark.spec(

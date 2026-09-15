@@ -68,13 +68,51 @@ fi
 echo "$pod_id" > .runpod_pod_id
 echo "Pod $pod_id created. Waiting for SSH ..."
 
-# Poll until the pod has a public IP and a mapped :22.
+# Poll until the pod has a public IP and a mapped :22 -- and give up if one never
+# arrives. Some SECURE-cloud machines come up `RUNNING` with `runtime: null` and
+# only RunPod's own SSH proxy, which is a restricted shell and will not carry the
+# port forward this pipeline needs. The pod is then useless and bills anyway.
+#
+# This poll was unbounded, which made it the one thing in this repository that
+# could bill indefinitely while looking like it was working. It cost two sessions
+# on 2026-09-08. On timeout the pod is **torn down here**: a bounded wait that
+# leaves the meter running has not solved the problem it was added for, and
+# teardown is the act that stops the billing.
+#
+# 420s, not 180s. The IP check itself answers in seconds, but the pod is not
+# usable until the image has pulled and ComfyUI has started -- observed at 2-4
+# minutes together. The cost of the longer wait is a few cents on a pod that
+# never comes up; the cost of a shorter one is tearing down healthy pods
+# mid-boot.
+#
+# The prototype's companion change -- exposing ComfyUI's port through RunPod's
+# HTTP proxy, and probing it as a fallback -- is deliberately NOT taken. That
+# proxy is a public, unauthenticated endpoint and ComfyUI has no auth, so a
+# version adopting it must put authentication in front of ComfyUI first
+# (design.md D10). The bounded wait adds no exposure; it only removes one, and
+# that asymmetry is why one half crosses and the other does not. The grep this
+# phase is verified by is literal, so the two names stay out of this file
+# entirely -- including out of the comment that says why.
+deadline=$((SECONDS + 420))
 while true; do
   pod=$(curl -s "https://rest.runpod.io/v1/pods?id=$pod_id" \
         -H "Authorization: Bearer $RUNPOD_API_KEY")
   ip=$(echo   "$pod" | jq -r '(if type=="array" then .[0] else . end).publicIp // empty')
   port=$(echo "$pod" | jq -r '(if type=="array" then .[0] else . end).portMappings."22" // empty')
   [ -n "$ip" ] && [ -n "$port" ] && break
+  if [ "$SECONDS" -ge "$deadline" ]; then
+    echo >&2
+    echo "ERROR: pod $pod_id got no public IP and no mapped :22 within 420s." >&2
+    echo "Tearing it down rather than billing for a pod we cannot use. Re-run" >&2
+    echo "infra/up.sh -- allocation is per-host, so each attempt is a fresh draw." >&2
+    # Spelled from the repository root, which line 7 already moved to. Re-deriving
+    # `dirname "$0"` here would read a path relative to the *original* working
+    # directory against the new one -- `bash isekai/infra/up.sh` from the parent
+    # would look for `<parent>/isekai/isekai/infra/down.sh` and find nothing, and
+    # a teardown that cannot resolve leaves the pod billing.
+    bash ./infra/down.sh >&2
+    exit 1
+  fi
   sleep 5
 done
 

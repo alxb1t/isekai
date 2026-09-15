@@ -53,31 +53,34 @@ def test_the_files_a_preprocessor_fetches_for_itself_have_manifest_entries(
 @pytest.mark.spec(
     "model-provisioning:manifest-completeness:preprocessor-models-are-declared"
 )
-def test_the_lineart_files_are_declared_although_the_graph_names_neither(
+def test_the_pose_preprocessor_names_its_own_files_rather_than_fetching_them(
     workflow: Workflow, manifest: Manifest
 ) -> None:
+    # The other half of the binding. `DWPreprocessor` is the shipped graph's only
+    # preprocessor and it names both checkpoints in its own inputs, so the graph
+    # half already covers them and the self-fetching half must claim neither --
+    # a node counted twice would hide a missing entry behind a present one.
     named = graph_model_files(workflow)
-    assert "sk_model.pth" not in named
-    assert "sk_model2.pth" not in named
+    assert "yolox_l.onnx" in named
+    assert "dw-ll_ucoco_384_bs5.torchscript.pt" in named
     fetched = self_fetched_model_files(workflow)
-    assert "sk_model.pth" in fetched
-    assert "sk_model2.pth" in fetched
-    assert undeclared_files(["sk_model.pth", "sk_model2.pth"], manifest) == []
+    assert "yolox_l.onnx" not in fetched
+    assert "dw-ll_ucoco_384_bs5.torchscript.pt" not in fetched
 
 
 @pytest.mark.spec(
     "model-provisioning:manifest-completeness:preprocessor-models-are-declared"
 )
-def test_dropping_a_mapped_file_from_the_manifest_fails_the_check(
+def test_dropping_a_preprocessors_file_from_the_manifest_fails_the_check(
     workflow: Workflow, manifest: Manifest
 ) -> None:
     manifest["entries"] = [
         entry
         for entry in manifest["entries"]
-        if not entry["dest"].endswith("/sk_model2.pth")
+        if not entry["dest"].endswith("/dw-ll_ucoco_384_bs5.torchscript.pt")
     ]
-    assert undeclared_files(self_fetched_model_files(workflow), manifest) == [
-        "sk_model2.pth"
+    assert undeclared_files(graph_model_files(workflow), manifest) == [
+        "dw-ll_ucoco_384_bs5.torchscript.pt"
     ]
 
 
@@ -90,7 +93,7 @@ def test_the_mapping_covers_every_preprocessor_the_shipped_graph_uses(
         for node in workflow.values()
         if node["class_type"].endswith("Preprocessor")
     }
-    assert used == {"TilePreprocessor", "DWPreprocessor", "LineArtPreprocessor"}
+    assert used == {"DWPreprocessor"}
 
 
 ANTELOPEV2 = (

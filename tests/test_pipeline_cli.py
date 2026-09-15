@@ -1,8 +1,8 @@
 """The pipeline's own entry point: its verbs, its refusals, and its stdlib guard.
 
-`convert.py`'s surface is not touched by anything here, and a test asserts that
-rather than trusting it: the two entry points are separate modules and only one
-of them is new.
+This is the only entry point: v0.14 deleted the single-command surface `convert.py`
+carried, so the stdlib-only runtime rule now has exactly one subject and the guard
+that holds it lives here, beside the falsification that keeps it honest.
 """
 
 import os
@@ -29,6 +29,25 @@ def _module(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _stdlib_import(statement: str) -> subprocess.CompletedProcess[str]:
+    """Run one import under `-S`, with the repository on the path and nothing else.
+
+    The mechanism is `-S`, chosen over an AST walk against `sys.stdlib_module_names`
+    because it was verified to work here: inside this uv venv, `-S` leaves no
+    site-packages on `sys.path` at all, so a third-party import anywhere in the
+    graph raises rather than resolving. Spelled once, because the guards below and
+    the falsification that keeps them honest must run under identical conditions --
+    a falsification that differs from what it falsifies proves nothing.
+    """
+    return subprocess.run(
+        [sys.executable, "-S", "-c", statement],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(ROOT)},
+        cwd=ROOT,
+    )
+
+
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 def test_the_six_verbs_are_the_ones_the_change_declares() -> None:
     assert tuple(name for name, _ in VERBS) == EXPECTED_VERBS
@@ -47,26 +66,6 @@ def test_the_help_lists_every_verb() -> None:
     assert result.returncode == 0, result.stderr
     for verb in EXPECTED_VERBS:
         assert verb in result.stdout
-
-
-@pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
-def test_the_pipeline_surface_does_not_load_the_render_surface() -> None:
-    # The render path is left unchanged by being left alone: importing the
-    # pipeline's entry point must not pull in the parser `convert.py` drives.
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            "import isekai.__main__, sys; print('isekai.cli' in sys.modules)",
-        ],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(ROOT)},
-        cwd=ROOT,
-    )
-
-    assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "False"
 
 
 @pytest.mark.spec("cli:pipeline-surface:unknown-verb-is-refused")
@@ -92,31 +91,31 @@ def test_no_verb_at_all_is_refused_too() -> None:
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
 def test_the_pipeline_entry_point_imports_with_site_packages_off_the_path() -> None:
-    # The second guard, beside the one that holds `convert.py`. Same mechanism:
-    # `-S` leaves no site-packages on `sys.path` inside this venv, so a
-    # third-party import anywhere in this entry point's graph raises.
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import isekai.__main__"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(ROOT)},
-        cwd=ROOT,
-    )
+    result = _stdlib_import("import isekai.__main__")
 
     assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
 def test_the_run_directory_module_imports_with_site_packages_off_the_path() -> None:
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import isekai.run"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(ROOT)},
-        cwd=ROOT,
-    )
+    result = _stdlib_import("import isekai.run")
 
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.spec_exempt(
+    "structural: the two guards above prove nothing unless -S really refuses"
+)
+def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
+    # A check that cannot fail is not a check. If `-S` ever stopped removing
+    # site-packages, the two guards above would pass for the wrong reason and an
+    # accidental wheel in `python -m isekai`'s import graph would ship silently.
+    # It moved here with the guard it falsifies: it used to sit beside the one
+    # that held `convert.py`, and that guard died with its target.
+    result = _stdlib_import("import pytest")
+
+    assert result.returncode != 0
+    assert "No module named 'pytest'" in result.stderr
 
 
 @pytest.mark.spec_exempt("structural: the parser dispatches nothing yet")

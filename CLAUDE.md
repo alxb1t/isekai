@@ -12,10 +12,17 @@ repository in particular**.
 Hard constraints that shape the code here:
 
 - **Identity preservation is the product.** A beautiful anime image of someone else is a failed run.
-- **The runtime is stdlib-only** — the ComfyUI transport is `urllib`, and nothing in `convert.py`'s import
-  graph may need a wheel. Face detection runs *in the image*, never as a runtime dep.
-- **There is one path. A version may replace it; it may not add a second.** Four selectable models were
-  how the product was *found*; carrying three dead ones was the cost of not deciding.
+- **The runtime is stdlib-only** — the ComfyUI transport is `urllib`, and nothing in
+  `python -m isekai`'s import graph may need a wheel. Face detection runs *in the image*, never as a
+  runtime dep.
+- **A selectable implementation is a measured one.** Nothing enters the registry on the strength of
+  being written; it enters on a measurement against the bar its capability states, and it is removed
+  only by the version that retires it. This replaces the older rule *"there is one path"* rather than
+  restoring it: a **count** would forbid the flow registry v0.16 adds, and — the reason the rule
+  existed — a count also permits an *unmeasured* single path, which is exactly what the graph v0.14
+  deleted was. Four selectable models were how the product was *found*; carrying three dead ones was
+  the cost of not deciding, and carrying one unmeasured one was the cost of counting instead of
+  measuring.
 
 > **This file is shared, role-independent context — what is *true* about this repo. It is not a script.**
 > What you should *do* comes from the **prompt/task you were given**. If your prompt conflicts with this
@@ -45,7 +52,7 @@ That is a convention for those phases, not an entry in the array; adding it to o
 
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
 Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
-and mutation takes an injected `random.Random`. No test hits a GPU or the network — which is why every scenario declares `Layers: unit`
+and seed drawing takes an injected `random.Random`. No test hits a GPU or the network — which is why every scenario declares `Layers: unit`
 and none declares `e2e`. Diffusion quality and identity fidelity are verified **live on a pod, by eye**,
 never mocked and never asserted.
 
@@ -58,18 +65,19 @@ decision record: the reasoning that settled a decision, and the measurement behi
 and nowhere else. In brief, the load-bearing seams are:
 
 - **A parameter is a seam only if something else is actually passed through it.** That is why `client` is a
-  parameter of `pipeline.run` — `FakeComfyClient` is what makes the whole suite offline — and `workflow` is
-  one, keeping file I/O in the CLI, while `inject` and `mutate` are **imported**: neither ever had a second
-  implementation or a test double. A one-entry registry is a dispatch mechanism with nothing to dispatch.
-- **Injection** (`isekai/workflow.py`) — a plain function that wires the photo into the graph, and nothing
-  else. The positive prompt is committed to the graph, so there is nothing to place. The non-obvious fact a
-  future tagger will need: `KSampler.positive` may point at `ApplyInstantIDAdvanced` directly **or** through
-  a stack of `ControlNetApplyAdvanced` nodes, so the encoder must be found by following the link, never by
-  class lookup.
-- **`mutate(workflow, rng)`** (`isekai/mutate.py`) — variation, kept *separate from* injection: injection
-  wires, mutation jitters dials. The `rng` is injected, which is the whole reason it is testable.
-- **`apply_overrides`** (`isekai/overrides.py`) — the user's **base** dial values. The order is
-  **load → override → mutate**: `mutate` jitters *around* the base the user set, never over it.
+  parameter of `generate.render` — `FakeComfyClient` is what makes the whole suite offline — and why `rng`
+  is one, while the reader and the sorter are seams because each has a real double. A one-entry registry
+  is a dispatch mechanism with nothing to dispatch.
+- **The flow manifest declares; nothing computes.** `flows/<id>/flow.json` names every node the render
+  path edits, by role — `flow.node("sampler")`, `flow.node("photo")` — so no node is ever located by
+  class at runtime. That is what lets a broken flow be caught by the suite rather than by a boot, and
+  it is not optional: `summon-v1` has two `KSampler` nodes and two `ImageScale` nodes, so a class
+  lookup is ambiguous against the graph that actually ships.
+- **`isekai/photo.py`** — what a photograph *is*: the JPEG/PNG header walk, the EXIF transpose the
+  loader will apply, and `working_resolution`, the render target the photograph's own dimensions
+  imply. It touches no ComfyUI graph; the caller writes the target into the node the manifest names.
+- **`isekai/generate.py`** — assembly, seed drawing and the render. Assembly happens before any
+  endpoint is acquired, for the whole batch, so a malformed sheet costs nothing rather than a boot.
 - **`ComfyTransport`** (`isekai/comfy_client.py`) — the network boundary, and the only one.
 
 **Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
@@ -106,10 +114,11 @@ A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `d
 unchecked box**. A phase is advanced by a commit **and** a ticked box, in that phase's own commit — either
 alone is not an advance.
 
-**The living spec** is `openspec/specs/<capability>/spec.md` — four capabilities:
-`workflow-injection`, `workflow-mutation`, `comfy-transport`, `cli`. A fifth,
-`model-provisioning`, is written and test-backed on the v0.9 branch and joins the living spec when
-that change is archived, which is `mf-release`'s act. Every `#### Scenario:` carries a
+**The living spec** is `openspec/specs/<capability>/spec.md` — nine capabilities, each a contract
+with one owner: `cli`, `run-directory`, `caption`, `sheet`, `review`, `image-generation`,
+`comfy-transport`, `evaluation`, `model-provisioning`. (`workflow-injection` and `workflow-mutation`
+were the old path's, and v0.14 removes them; they leave the living spec when that change is
+archived, which is `mf-release`'s act.) Every `#### Scenario:` carries a
 `- **Key:**` and a `- **Layers:**` bullet, and the key is
 `<capability>:<requirement-slug>:<scenario-slug>` — so a key locates its own file. On release the delta is
 folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
@@ -133,15 +142,17 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## Layout — where things live here
 
-- **`convert.py`** — the CLI entry point. **`isekai/`** — the package: injection, mutation,
-  overrides, transport, pipeline, and `provision.py` — the manifest's reader, the byte
-  verification, the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is
-  **not** in `convert.py`'s import graph, so the stdlib-only runtime rule is untouched either way.
+- **`isekai/__main__.py`** — the entry point, `python -m isekai <verb>`, and the only one.
+  **`isekai/`** — the package: the six stages (`caption`, `sheet`, `review`, `generate`, `show`),
+  `run.py`'s run directory, `flow.py`'s manifest loader, `photo.py`'s header reader, the transport,
+  and `provision.py` — the manifest's reader, the byte verification, the skip/abort/fetch policy and
+  the graph↔manifest binding. `provision.py` is **not** in the entry point's import graph, so the
+  stdlib-only runtime rule is untouched either way.
   **`tests/`** — the suite and its fakes.
-  **`workflows/`** — `pipeline.json`, the API graph the run loads and the **source of truth**, and
-  `pipeline_ui.json`, a **stale** ComfyUI editor snapshot kept for reference only — it lags the API
-  graph (no Lineart branch, older strengths), so never regenerate `pipeline.json` from it without
-  re-exporting it from the current graph first. **`infra/`** — `up.sh` / `down.sh`,
+  **`flows/<id>/`** — one flow: `flow.json`, the manifest that declares its inputs, dials, prompt
+  fragments and the graph id of every node the render path edits; and `graph.json`, the API graph
+  itself. A flow is immutable — editing one is not a variant of a flow, it is an untested flow — and
+  `flows/summon-v1/` is the only one. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — `models.json`, the pinned and checksummed manifest of every
   model artifact the graph needs and the source of truth for what the stack *is*;
   `download_models.sh`, the thin driver that provisions it, run *on the pod*; and
@@ -175,30 +186,36 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## The path
 
-One graph, `workflows/pipeline.json`, on a **WAI-illustrious-SDXL v17.0** (Illustrious/SDXL anime) base.
-Nothing about it is typed at the command line: the whole required surface is `convert.py photo.jpg`.
-Identity is four axes, and each is carried by a mechanism rather than by a sentence someone types:
+One flow, `summon-v1`, on a **WAI-illustrious-SDXL v17.0** (Illustrious/SDXL anime) base, driven in
+four staged verbs — `caption` → `sheet` → `review`/`approve` → `generate`. The stages before the last
+are free and local; only `generate` needs an endpoint, and assembly happens for the whole batch
+before one is acquired, so a malformed sheet costs nothing rather than a boot.
 
-- **Face** — InstantID + InsightFace: face embedding and keypoints. `ip_weight` is its dial.
-- **Composition** — **img2img**: latent init from the photo (`VAEEncode`, `denoise < 1`). `denoise` is the
-  identity↔style dial.
-- **Pose and structure** — a **ControlNet stack** (tile → OpenPose → Lineart), each with its own tuned
-  strength. All three were kept in v0.10 on a strength-to-zero comparison at a fixed seed: each measurably
-  changes the render, so none is deletable with evidence. That is *changes*, not *improves*. Tile carries
-  its publisher's "no comic, animation application are promised" disclaimer as a known deviation.
-- **Register** — both prompts, **committed to the graph** and pinned by equality in the suite, so changing
-  either is a deliberate test edit. They are the base publisher's own: the content tags with WAI's ladder
-  appended last, and WAI's short negative, which its model page asks for in the same breath as warning that
-  long negatives reduce quality. `solo` is the Danbooru mode selector; **`1girl` is gone**, and the gender
-  it used to assert now comes from the identity node's face embedding — a mechanism already in the graph.
-  v0.8's defect is closed, and the check that closed it is falsifiable: a male photo yields a
-  male-presenting output.
+Identity is carried by mechanisms rather than by a sentence someone types:
 
-Before any of those read the photo, an `ImageScale` node puts it on one working resolution, computed by
-injection from the photo's own JPEG or PNG header: aspect preserved, short side at 1024, both dimensions a
-multiple of 64, in both directions. No node available here can derive that, and a header it cannot read
-stops the run rather than defaulting. A `CLIPSetLastLayer` at -2 feeds both text encoders, because every
-published WAI v17 sample generates at clip skip 2 and none of its prose says so.
+- **Face** — InstantID + InsightFace: face embedding and keypoints. `ip_weight` 0.9 and
+  `identity_cn_strength` 0.8 are its dials.
+- **Composition** — **from noise**: `EmptyLatentImage` at `denoise` 1.0. Taking the photograph out of
+  the latent is what removed the blur (F24), and img2img is a closed avenue here.
+- **Pose** — one ControlNet, OpenPose off `DWPreprocessor`, at `openpose_strength` 0.6.
+- **Detail** — a hires pass: `RealESRGAN_x4plus_anime_6B` upscale, then a second sampler at
+  `hires_scale` 1.5 and `hires_denoise` 0.35.
+- **Register** — the prompts are **assembled per run** from an approved sheet, not committed to the
+  graph: the flow's manifest carries a prefix, a trailer and the negative, and the subject's own
+  canonical tags come from the sheet a human corrected. The correction is the single largest measured
+  gain in this pipeline, which is why **only an approved artifact is ever rendered**.
+
+Before any node reads the photo, an `ImageScale` node puts it on one working resolution, computed by
+`isekai/photo.py` from the photo's own JPEG or PNG header: aspect preserved, short side at 1024, both
+dimensions a multiple of 64, in both directions, and refused past 4:1 rather than clamped. No node
+available here can derive that, and a header it cannot read refuses that photograph rather than
+defaulting or ending the batch. `clip_skip` is -2, declared in the flow's manifest rather than
+committed to the graph file, because every published WAI v17 sample generates at clip skip 2 and none
+of its prose says so.
+
+**Nothing locates a node by class.** The manifest names every node the render path edits, by role, and
+`summon-v1` has two `KSampler` nodes and two `ImageScale` nodes — so a class lookup is ambiguous
+against the graph that actually ships.
 
 ---
 

@@ -58,10 +58,7 @@ DIGEST_PATTERN = re.compile(r"[0-9a-fA-F]{64}")
 # this set is a mirror, and a mirror must declare an alternate (design.md D10).
 PUBLISHERS = (
     "InstantX",
-    "TTPlanet",
     "xinsir",
-    "TheMistoAI",
-    "lllyasviel",
 )
 
 
@@ -91,14 +88,11 @@ WAI_DEST = f"checkpoints/{WAI_FILE}"
 INSTANTID = "57b32dfee076092ad2930c71fd6d439c2c3b1820"
 ANTELOPE = "ba0c3e10f4548361eb9a63265d87ce1140ab5a05"
 ANTELOPE_ALT = "397cafa6d8310e96e302e96528c20a4c92a884f2"
-TILE = "37f1c4575b543fb2036e39f5763d082fdd135318"
 OPENPOSE = "23f966cd5cfdd3f7729c903e243d87152162d2b7"
-MISTOLINE = "1d9d0b3d48b295cf70d80a0f839a3055672f8393"
 DWPOSE = "1a7144101628d69ee7a3768d1ee3a094070dc388"
 YOLOX_ALT = "a124b32c3b7c5cebda1c7cd96178f0f9d2050125"
 DWPOSE_TS = "359d662a9b33b73f6d0f21732baf8845f17bb4be"
 DWPOSE_TS_ALT = "31098820c4d5d126b92e28517380ea1b088f8d53"
-ANNOTATORS = "982e7edaec38759d914a963c48c4726685de7d96"
 
 # R-ESRGAN 4x+ Anime6B, the hires pass's upscaler, and the second artifact here
 # whose publisher hosts no Hugging Face repo. It is worse off than the base
@@ -208,16 +202,6 @@ SPECS: tuple[Spec, ...] = (
         for name in ANTELOPE_FILES
     ),
     Spec(
-        "controlnet/TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors",
-        (
-            Source(
-                "TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic",
-                TILE,
-                "TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors",
-            ),
-        ),
-    ),
-    Spec(
         "controlnet/openpose/diffusion_pytorch_model.safetensors",
         (
             Source(
@@ -227,13 +211,9 @@ SPECS: tuple[Spec, ...] = (
             ),
         ),
     ),
-    Spec(
-        "controlnet/mistoLine_rank256.safetensors",
-        (Source("TheMistoAI/MistoLine", MISTOLINE, "mistoLine_rank256.safetensors"),),
-    ),
-    # The four annotator checkpoints the preprocessors would otherwise fetch for
-    # themselves, onto container disk, mid-render. The layout under the redirect
-    # is the pack's own: <AUX_ANNOTATOR_CKPTS_PATH>/<repo>/<path> (design.md D7).
+    # The two annotator checkpoints `DWPreprocessor` would otherwise fetch for
+    # itself, onto container disk, mid-render. The layout under the redirect is
+    # the pack's own: <AUX_ANNOTATOR_CKPTS_PATH>/<repo>/<path> (design.md D7).
     Spec(
         "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx",
         (
@@ -255,14 +235,6 @@ SPECS: tuple[Spec, ...] = (
                 "dw-ll_ucoco_384_bs5.torchscript.pt",
             ),
         ),
-    ),
-    Spec(
-        "annotator_ckpts/lllyasviel/Annotators/sk_model.pth",
-        (Source("lllyasviel/Annotators", ANNOTATORS, "sk_model.pth"),),
-    ),
-    Spec(
-        "annotator_ckpts/lllyasviel/Annotators/sk_model2.pth",
-        (Source("lllyasviel/Annotators", ANNOTATORS, "sk_model2.pth"),),
     ),
     # The hires pass's upscaler. Mirror-primary, like the base checkpoint, and
     # held against the publisher's bytes rather than a published record because

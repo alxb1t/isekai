@@ -25,6 +25,157 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-15
+
+### Added
+
+- **The 4:1 target ceiling is restored to the surviving render path.**
+  `MAX_TARGET_LONG_SIDE` was enforced only inside `inject`, via `sys.exit`, and `generate.py`'s
+  `photo_resolution` never applied it — **a live gap on `main`, not a regression this version
+  introduces**, which deleting `inject` would have made permanent. It moves as a `Refusal` rather
+  than a `SystemExit`, so a batch survives one extreme photograph the same way it survives one
+  unreadable header. It bounds the **working** target, not the hires one: hires scales both axes by
+  the same factor and so does not change the aspect ratio, and bounding the hires value would
+  silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect (design.md D4).
+
+- **`--runs` can no longer write inside the repository working tree.** It has been a free
+  `type=Path` since it was introduced, while the comment beside it claimed a containment check that
+  existed nowhere — and `run.py` copies the photograph into the run directory by construction, so
+  such a directory holds personal photographs one `git add` from being published. The rule **bounds
+  the working tree, not the filesystem**: a run root resolving inside this repository and outside
+  `.data/` is refused before any run is created, naming the path given and what would be accepted,
+  while any path outside the repository is still accepted, because version control cannot reach it
+  and that is what keeps a run on another disk expressible (design.md D7). The repository root is
+  taken from the module's own location rather than the process's working directory, so the same run
+  root is not legal or illegal depending on where the operator was standing. **The requirement is
+  the part that closes it** — the claim sat in a source comment for a whole version and was false
+  that whole time because no scenario held it.
+
+- **`infra/up.sh`'s readiness wait is bounded, and tears the pod down itself on timeout.** The poll
+  was `while true … sleep 5` with **no deadline at all** — the one thing in this repository that
+  could bill indefinitely while looking like it was working, which cost two sessions on 2026-09-08.
+  It now has a 420 s deadline and calls `infra/down.sh` when it expires, because a bounded wait that
+  leaves the meter running has not solved the problem it was added for: teardown is the act that
+  stops the billing. 420 s rather than 180 s, because the pod is not usable until the image has
+  pulled and ComfyUI has started — a shorter deadline tears down healthy pods mid-boot.
+  **The prototype's companion HTTP-proxy fallback is deliberately not taken**: that proxy is a
+  public, unauthenticated endpoint and ComfyUI has no auth, so a version adopting it must put
+  authentication in front of ComfyUI first (design.md D10). The bounded wait only removes exposure,
+  which is why one half crosses and the other does not. v0.14 is the only version in the arc with no
+  GPU phase, so it is the one place this work does not compete with a version's own metered risk —
+  and every version after it needs a pod to accept.
+
+### Changed
+
+- **`.data/` is now the only root anything is generated into, and `outputs/` is gone.** It had two
+  producers: the render path this version deletes, and `baseline/build_contact_sheets.py`, which
+  pastes the reference photograph beside the renders and is therefore pixels twice over. The
+  labelling aid is repointed — `--renders` defaults to `.data/baseline` and its sheets are written
+  under `.data/labels` — so D14's *"nothing generated is outside the one ignored root"* is literally
+  true rather than true of the pipeline and not of the tool beside it. **`.inputs/` stays**: it holds
+  source photographs an operator puts there by hand, which is an input rather than something
+  generated, and v0.13's comment was wrong to schedule it for deletion.
+- **`CLAUDE.md`'s one-path bullet is replaced by the entry gate, not restored**, discharging the
+  second deviation v0.13 declared and never performed. *"A selectable implementation is a measured
+  one"* — because a **count** would forbid the flow registry v0.16 adds, and, which is the reason the
+  rule existed at all, a count also permits an *unmeasured* single path, exactly what the deleted
+  graph was. Twelve further stale sites are corrected, including the living spec's description, which
+  still read *"four capabilities… a fifth, `model-provisioning`, on the v0.9 branch"* and is nine,
+  named.
+- **The README's work-in-progress banner names no version**, because `openspec/` is already cited as
+  authoritative for what is being built next and a forward reference here is one reordering away
+  from being wrong — which it already was. Every runnable command in the file is now one of the six
+  verbs, and each was **verified against the actual parser** rather than written from memory.
+- **The standalone evaluator records, in its own docstring, that it cannot read a run this pipeline
+  produces.** Its reader wants a `run.json` of v0.12's shape and the current run frame writes none of
+  those fields, so it already could not read a v0.13 run; what this version removes is the last
+  producer of the shape it *can* read. A pre-existing gap made total, owned by the version whose
+  whole content is the evaluation tool (design.md D13). Nothing under `tests/` imports it, so it
+  fails no gate command — which is exactly why it is written where a reader will hit it.
+- **`isekai/workflow.py` is `isekai/photo.py`, minus injection.** `PIPELINE_PATH`, `find_node`,
+  `find_nodes` and `inject` are gone; the JPEG/PNG header walk, the EXIF transpose,
+  `image_dimensions` and `working_resolution` survive as what they always were — *what is this
+  photograph, and what render target does it imply*. Nothing that remains touches a ComfyUI graph,
+  so `workflow` was a name that would lie. `working_resolution`'s docstring no longer justifies the
+  short-side rule by *"the line-art ControlNet's floor"*: `summon-v1` has no LineArt node, and the
+  rule holds on SDXL's own trained scale — the reason written beside it belonged to the deleted path.
+- **`scale-precedes-every-consumer` asserts by role, not by class.** `summon-v1` has two `ImageScale`
+  nodes — one on the photograph, one on the hires pass — so a class lookup is ambiguous against it,
+  and the flow manifest is what names the photograph's. The test now reads the shipped graph and
+  asserts the scaling node sits between the loader and **both** the identity node and the pose
+  preprocessor, with nothing else reaching the loader.
+- **The archive's one `.py` file is exempted from three type-checker rules, by literal path and
+  permanently, in a block of its own.** `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py`
+  imports `isekai.pipeline._render` plus six names from `isekai.workflow`; this version deletes four of
+  them and moves the other two, which turns `ty check` red on a file the repository forbids editing. An
+  archived change records what was true at a past commit, and these rules ask whether it is true today —
+  which the archive makes no claim about — so the exemption is permanent rather than a TODO. **design.md
+  D5 predicted one rule and the tree needed three**: its measurement was made against a missing *member*,
+  where `unresolved-import` is the whole story, while deleting the whole module makes `find_nodes` resolve
+  to `Unknown` and raises `invalid-argument-type` and `invalid-assignment` downstream. The decision is
+  unchanged — by literal path, permanently, as narrowly as the rules allow — so the three rules sit in a
+  **probe-only block**, leaving the shared block to mean exactly *"files that bridge to wheels the gate
+  deliberately does not install"*, which has no claim to cover against type errors.
+- **`comfy-transport`'s two orphaned scenarios are rebound rather than deleted.** Polling and
+  retrieval lost their only tests with `tests/test_polling.py`, but the behaviour is live in
+  `isekai/generate.py`. The two tests move into `tests/test_generate.py` with `pipeline.run` swapped
+  for `render`, carrying their keys. Deleting them would have deleted a requirement that is still
+  true — the worst outcome available, and the one that looks cheapest.
+- **The `-S` stdlib guard's falsifiability twin moves to the entry point it now falsifies.** The
+  guard on `import convert` died with its target; its twin — *a check that cannot fail is not a
+  check* — would then have sat in a file whose guard had gone, so it moves beside
+  `tests/test_pipeline_cli.py`'s guards on `isekai.__main__` and `isekai.run`.
+- **The suite's shipped-graph fixture reads `flows/summon-v1/graph.json`**, reached through the flow
+  that declares it rather than through a path constant, so the fixture and the render path agree on
+  which file the shipped graph is by construction. Five assertions the new graph invalidates are
+  corrected with it: `summon-v1` uses `DWPreprocessor` alone, so it has no unclassified node classes,
+  names neither the Tile nor the mistoLine ControlNet, and yields two annotator checkpoints, not four.
+### Removed
+
+- **Four model artifacts the old graph orphaned are dropped from the manifest, ≈2 GB.** The Tile and
+  mistoLine ControlNets and the two `sk_model` LineArt annotators go from `scripts/models.json` and
+  from `scripts/derive_manifest.py`'s `PINNED`, with `TTPlanet`, `TheMistoAI` and `lllyasviel`
+  dropped from `PUBLISHERS` — no surviving entry names them. `summon-v1` uses `DWPreprocessor`
+  alone. Nothing would have failed the gate had they stayed (`test_flow.py` uses a subset check); it
+  would just have downloaded 2 GB nothing reads.
+- **BREAKING — the old render path is deleted.** `convert.py`, `isekai/cli.py`,
+  `isekai/pipeline.py`, `isekai/mutate.py`, `isekai/overrides.py`, `workflows/pipeline.json`,
+  `workflows/pipeline_ui.json` and `comfy_types.Overrides` are gone, with the five test files that
+  drove them. There is one render path — `python -m isekai … generate`, flow `summon-v1` — which
+  discharges the suspension v0.13 took on *"there is one path."* It is deleted under **L3**, not
+  because the new path beat it: a selectable implementation is a measured one, and
+  `workflows/pipeline.json` was measured on style and rejected (F24) and never measured on identity
+  at all. **No identity comparison between the two paths exists, on either instrument** — the record
+  says so rather than implying a head-to-head that was never run.
+- **The evaluator's two `pipeline.run`-driven report tests are deleted** with their driver. The
+  surviving render path writes no `pod_image` key, so nothing else moves: `pod_image_of` and
+  `table()` keep their signatures and `evaluation:report:names-its-run` keeps three passing tests
+  that build their inputs directly. That the standalone evaluator can no longer read any run this
+  pipeline produces is a pre-existing gap this version makes total, recorded for v0.18 rather than
+  repaired here (design.md D13).
+
+### Fixed
+
+- **`up.sh`'s timeout teardown is spelled from the repository root**, not re-derived from `$0` after
+  the script has already moved there. The second `dirname "$0"` read a path relative to the
+  *original* working directory against the new one, so `bash isekai/infra/up.sh` from a parent
+  directory resolved the teardown to `<parent>/isekai/isekai/infra/down.sh` — which does not exist,
+  and under `set -e` kills `up.sh` before its `exit 1`, leaving the pod billing. That is precisely
+  the failure the bounded wait was added to prevent: teardown is the act that stops the meter, so a
+  teardown call that cannot resolve is the whole feature missing. A structural test now pins the
+  call to a path that does not depend on how the script was invoked.
+- **Three spec defects the deletion left behind are closed in the change's delta.** The header tests
+  for `image_dimensions` were rekeyed onto `dimensions-are-written-by-injection`, a scenario the
+  delta itself says does not migrate — six parametrised cases that looked bound and were bound to
+  nothing, in a repository with no binding checker. The surviving half of that scenario — that the
+  dimensions are *read* from the photograph's own frame header, because nothing else can supply
+  them — is stated as `image-generation:working-resolution:dimensions-come-from-the-header` and the
+  tests carry it. `cli`'s pipeline-surface requirement, which mandated a *second* entry point
+  standing beside the single-command render surface and leaving it unchanged, is modified and
+  renamed to the only entry point. `model-provisioning`'s completeness rule, stated over the deleted
+  `workflows/pipeline.json`, is restated over a tracked flow's graph — which is what its bound test
+  already reads.
+
 ## [0.13.0] - 2026-09-15
 
 ### Fixed

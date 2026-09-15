@@ -7,7 +7,7 @@ carrying the reference photograph beside the two renders, captioned **only** wit
 the pair id and the letters `A` and `B`.
 
     uv run --extra eval python baseline/build_contact_sheets.py \
-        --sheet baseline/labels/sheet.csv --out outputs/labels
+        --sheet baseline/labels/sheet.csv --out .data/labels
 
 **It carries no score, and it cannot.** It reads `sheet.csv`, which has no metric
 value in it, and it never opens a scorer record -- so it cannot leak one even by
@@ -18,9 +18,12 @@ randomised which side of each pair is shown as `a`, and this preserves that orde
 rather than sorting it: captioning the lower-numbered render as `A` every time
 would let a preference for `A` masquerade as a judgement.
 
-The sheets are written under `outputs/`, which is gitignored -- this repository
-claims reproducibility over the recipe and never over pixels, and a contact sheet
-is pixels twice over.
+The sheets are written under `.data/`, the one ignored root, because a contact
+sheet pastes the reference photograph beside the renders and so holds a person's
+likeness by construction. v0.14 deleted `outputs/` along with the render path that
+named it; this was its other producer, and it moves rather than keeping a second
+ignored root alive on its own. This repository claims reproducibility over the
+recipe and never over pixels, and a contact sheet is pixels twice over.
 """
 
 import argparse
@@ -103,7 +106,7 @@ def main() -> int:
     """Build a contact sheet for every row of the comparison sheet."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sheet", required=True, type=Path)
-    parser.add_argument("--renders", default=Path("outputs/baseline"), type=Path)
+    parser.add_argument("--renders", default=Path(".data/baseline"), type=Path)
     parser.add_argument("--sources", default=Path(".inputs/baseline"), type=Path)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()

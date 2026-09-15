@@ -19,15 +19,16 @@ models/
 # Everything the staged pipeline captures or generates (design.md D14)
 .data
 
-# The render path's own two roots, which v0.13 deliberately left in place.
-# `isekai/cli.py` still defaults `--output` to `./outputs`, and
-# `baseline/build_contact_sheets.py` reads renders from `outputs/baseline` and
-# *source photographs* from `.inputs/baseline` — so both hold personal
-# photographs by construction, exactly as `.data/` does. D14's "nothing is
-# generated outside the one ignored root" becomes true when v0.14 deletes the
-# path that writes them; until then these two lines are what makes the standing
-# rule hold, and they go in the same commit that deletes their producers.
-outputs/
+# `outputs/` is gone. It had two producers: the render path v0.14 deletes, and
+# `baseline/build_contact_sheets.py`, which v0.14 repoints under `.data/` — so
+# D14's "nothing generated is outside the one ignored root" is now literally
+# true, rather than true of the pipeline and not of the labelling aid beside it.
+#
+# `.inputs/` stays, and v0.13's comment here was wrong to schedule it for
+# deletion. It holds *source photographs* an operator puts there by hand, which
+# is an input rather than something generated, so it is outside D14's claim
+# entirely — and it holds a person's likeness exactly as `.data/` does, which is
+# why the line is load-bearing.
 .inputs/
 
 # Python

@@ -26,12 +26,12 @@ from dataclasses import dataclass, field, replace
 from typing import Literal, Protocol
 
 from isekai.ciede2000 import Lab, delta_e_2000
+from isekai.photo import image_dimensions, working_resolution
 
 # Re-exported, not defined here. The redundant alias is the explicit-re-export
 # form: `Refusal` moved to its own module so the pipeline can raise it without
 # importing the scorer, and every existing importer still reads it from here.
 from isekai.refusal import Refusal as Refusal
-from isekai.workflow import image_dimensions, working_resolution
 
 # A region covering less than this fraction of the canvas is refused rather than
 # scored. Measured on the photograph in front of it rather than inherited from a
@@ -225,7 +225,7 @@ class PoseReader(Protocol):
 def canvas_for(photo_path: str) -> Canvas:
     """Return the canvas a photograph is compared on: the injector's own target.
 
-    Asks `isekai.workflow` rather than restating the rule. A second implementation
+    Asks `isekai.photo` rather than restating the rule. A second implementation
     of the resolution rule would be a second thing to keep in step, and the graph
     is the thing that actually scaled the pixels.
     """

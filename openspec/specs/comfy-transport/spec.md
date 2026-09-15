@@ -45,8 +45,11 @@ matches the body it produced and encoding fields and files in the wire format th
 
 ### Requirement: Render completion polling
 
-The system SHALL wait for a queued prompt to finish by polling the server's history, rather than assuming a
-render is ready when it was submitted.
+The system SHALL wait for a queued prompt to finish by polling the server's history, rather than
+assuming a render is ready when it was submitted.
+
+The transport supplies the call and the render stage supplies the loop. That division is unchanged by
+this version; what changes is which module holds the loop, and therefore which suite exercises it.
 
 #### Scenario: history is polled until the prompt completes
 - **Key:** `comfy-transport:polling:polls-history-until-complete`
@@ -57,7 +60,8 @@ render is ready when it was submitted.
 
 ### Requirement: Result retrieval
 
-The system SHALL download the images the completed history record names, rather than guessing an output path.
+The system SHALL download the images the completed history record names, rather than guessing an output
+path.
 
 #### Scenario: the image named in the history is downloaded
 - **Key:** `comfy-transport:retrieval:downloads-image-named-in-history`

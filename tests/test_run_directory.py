@@ -14,10 +14,13 @@ from typing import Any
 import pytest
 
 import isekai.run as run_module
+from isekai.__main__ import Wiring, build_parser, wiring
 from isekai.refusal import Refusal
 from isekai.run import (
     BUDGETS,
+    DATA_ROOT,
     FRAME_NAME,
+    RUNS_ROOT,
     SCHEMA_VERSION,
     across,
     approved_versions,
@@ -587,16 +590,19 @@ def test_a_digest_prefix_collision_is_refused_rather_than_mixed(
 
 REPO = Path(__file__).resolve().parent.parent
 
-# One path per directory a tracked producer writes a photograph or a render
-# into. `.data/` is the staged pipeline's single root (design.md D14); the render
-# path this version deliberately left in place still writes `outputs/` from
-# `isekai/cli.py`'s `--output` default, and `baseline/build_contact_sheets.py`
-# reads renders from `outputs/baseline` and *source photographs* from
-# `.inputs/baseline`. All four hold a person's likeness by construction.
+# One path per directory a tracked producer names a photograph or a render under.
+# `.data/` is the single ignored root (design.md D14), and v0.14 made it the only
+# one that is generated into: the run directory holds a copy of the photograph,
+# and `baseline/build_contact_sheets.py` -- which pastes the reference photograph
+# beside the renders -- now defaults `--renders` to `.data/baseline` and is
+# documented to write its sheets under `.data/labels`, where it used to use
+# `outputs/`. `.inputs/baseline` is the one exception and is not generated at
+# all: an operator puts source photographs there by hand. All four hold a
+# person's likeness by construction.
 GENERATED = (
     ".data/runs/000000000000-ada/photo.jpg",
-    "outputs/20260101T000000Z/0.png",
-    "outputs/baseline/ada/0.png",
+    ".data/baseline/ada/0.png",
+    ".data/labels/pair-01.png",
     ".inputs/baseline/ada.png",
 )
 
@@ -619,3 +625,65 @@ def test_every_directory_a_producer_writes_a_photograph_into_is_ignored(
     )
 
     assert decided.returncode == 0, f"{generated} is not ignored: {decided.stderr}"
+
+
+# --- where a run root may point -----------------------------------------------
+
+# The defect the flag had was never "outside `.data/`" -- it was "inside the git
+# working tree, where nothing ignores it". `--runs /Volumes/BigDisk/runs` is safe
+# because version control cannot reach it; `--runs ./acceptance-runs` is the hole,
+# and `run.py` copies the photograph into the run directory by construction, so
+# such a directory holds personal photographs one `git add` from being published
+# (design.md D7).
+
+
+def _wiring(*flags: str) -> Wiring:
+    """Build the real wiring the way the command line does, parser included.
+
+    Through `build_parser` rather than a hand-built `Namespace`: the rule under
+    test is about what `--runs` may be given, and fabricating the parser's output
+    would leave the flag itself -- its name, its `type`, its default -- asserted
+    by nothing.
+    """
+    return wiring(build_parser().parse_args(["show", *flags]))
+
+
+@pytest.mark.spec("run-directory:containment:in-tree-run-root-is-refused")
+def test_a_run_root_inside_the_working_tree_is_refused_before_anything_is_created() -> (
+    None
+):
+    inside = REPO / "acceptance-runs"
+
+    with pytest.raises(Refusal) as refused:
+        _wiring("--runs", str(inside))
+
+    message = str(refused.value)
+    assert str(inside) in message
+    assert ".data" in message
+    # Refused before any run is created -- the check is on the root, not on the
+    # first photograph offered to it.
+    assert not inside.exists()
+
+
+@pytest.mark.spec("run-directory:containment:external-run-root-is-accepted")
+def test_a_run_root_outside_the_repository_is_accepted_and_runs_are_created_under_it(
+    tmp_path: Path,
+) -> None:
+    # No containment check applies out here, because version control cannot reach
+    # it -- which is what keeps the flag useful for a run on another disk.
+    outside = tmp_path / "acceptance-runs"
+    wired = _wiring("--runs", str(outside))
+
+    made = open_run(_photo(tmp_path, "ada.jpg", jpeg_bytes(800, 600)), wired.runs_root)
+
+    assert made.path.parent == outside
+    assert (made.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec("run-directory:containment:default-is-the-ignored-root")
+def test_the_default_run_root_is_under_the_ignored_data_root() -> None:
+    # No `--runs` at all: the default is the parser's, not this test's.
+    wired = _wiring()
+
+    assert wired.runs_root == RUNS_ROOT
+    assert DATA_ROOT in wired.runs_root.parents

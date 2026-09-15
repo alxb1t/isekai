@@ -1,23 +1,20 @@
-"""Locate nodes in a ComfyUI graph, and wire the photo into one."""
+"""What a photograph is, and what render target it implies.
+
+Reads a JPEG or PNG header -- dimensions and the orientation tag the loader will
+apply -- and turns the answer into the target the render is normalised to. It
+touches no ComfyUI graph: the flow's manifest names the node that takes the
+target, and the caller writes it there.
+"""
 
 import struct
 import sys
-from pathlib import Path
 from typing import BinaryIO, NamedTuple
 
-from isekai.comfy_types import Workflow
-
-# The one graph, anchored to the repository rather than to the working
-# directory: `convert.py` is run in place, and a CWD-relative path would make
-# the product's only workflow unloadable from anywhere but the repo root. The
-# suite loads the same constant, so the filename is spelled once.
-PIPELINE_PATH = Path(__file__).parent.parent / "workflows" / "pipeline.json"
-
 # The short side every render is normalised to, and the step both dimensions are
-# rounded to. 1024 is the SDXL family's trained scale and the floor MistoLine's
-# card names; 64 is the latent stride, so an off-step dimension is padded by the
-# encoder rather than honoured. The rule -- short side, aspect preserved, both
-# dimensions on the step -- is the spec's; this is the number it left open.
+# rounded to. 1024 is the SDXL family's trained scale; 64 is the latent stride, so
+# an off-step dimension is padded by the encoder rather than honoured. The rule --
+# short side, aspect preserved, both dimensions on the step -- is the spec's; this
+# is the number it left open.
 WORKING_SCALE = 1024
 DIMENSION_STEP = 64
 
@@ -26,6 +23,11 @@ DIMENSION_STEP = 64
 # it. Each refuses rather than clamping: a clamped target no longer preserves the
 # aspect ratio, and would squash the photo the way the orientation rule exists to
 # prevent.
+#
+# Two of the three are enforced here, where the header is read. The third bounds
+# a *computed target* rather than a header field, so it is enforced where a target
+# is computed for a render -- `generate.photo_resolution`, which is also the only
+# caller that can turn it into a per-photograph refusal instead of a dead batch.
 #
 #   4096 is 4:1 at a 1024 short side -- past any real photo, and 1024x4096 is
 #   already a heavy SDXL allocation.
@@ -91,30 +93,6 @@ class _Header(NamedTuple):
     width: int
     height: int
     orientation: int
-
-
-def find_nodes(workflow: Workflow, *, class_type: str) -> list[str]:
-    """Return every node ID with this class_type, in the graph's own order."""
-    return [
-        nid for nid, node in workflow.items() if node.get("class_type") == class_type
-    ]
-
-
-def find_node(workflow: Workflow, *, class_type: str) -> str:
-    """Return the single node ID with this class_type.
-
-    Fail if the match is not exactly one node: an injection that edits the wrong
-    node produces a silently wrong render rather than an error.
-    """
-    matches = find_nodes(workflow, class_type=class_type)
-
-    if len(matches) != 1:
-        sys.exit(
-            f"find_node(class_type={class_type!r}): "
-            f"expected exactly 1 match, found {len(matches)}"
-        )
-
-    return matches[0]
 
 
 def _png_dimensions(handle: BinaryIO) -> _Header | None:
@@ -277,7 +255,7 @@ def image_dimensions(path: str) -> tuple[int, int]:
     """Return the pixel dimensions a JPEG or PNG will be loaded at.
 
     Stdlib only, by parsing the header directly: the runtime carries no imaging
-    wheel and this is on `convert.py`'s import graph.
+    wheel and this is on `python -m isekai`'s import graph.
 
     An unreadable or truncated header stops the run naming the file. There is no
     default size, because a silently wrong resolution is a wrong render rather
@@ -328,36 +306,9 @@ def working_resolution(width: int, height: int) -> tuple[int, int]:
 
     Expressed as a short side rather than a pixel budget on purpose. At a fixed
     megapixel count the short side moves with the aspect ratio, so a wide photo
-    lands below the line-art ControlNet's floor while a squarer one clears it --
-    a failure that varies by input and reports nothing (design.md D2).
+    lands below the base family's own trained scale while a squarer one clears it
+    -- a failure that varies by input and reports nothing (design.md D2).
     """
     scale = WORKING_SCALE / min(width, height)
     long_side = round(max(width, height) * scale / DIMENSION_STEP) * DIMENSION_STEP
     return (long_side, WORKING_SCALE) if width >= height else (WORKING_SCALE, long_side)
-
-
-def inject(workflow: Workflow, image_name: str, image_path: str) -> None:
-    """Wire the uploaded photo into the pipeline graph.
-
-    Mutates `workflow` in place. The positive prompt is committed to the graph,
-    so the photo -- its uploaded name, and the render target derived from its own
-    dimensions -- is the only thing injection wires.
-
-    `image_path` is the photo on local disk, which the graph cannot read: no node
-    available to this pipeline derives a target from the image it is given, so
-    the dimensions are computed here and written in. It stays an argument, passed
-    from the `input_path` `pipeline.run` already holds, rather than becoming state.
-    """
-    load_id = find_node(workflow, class_type="LoadImage")
-    workflow[load_id]["inputs"]["image"] = image_name
-
-    scale_id = find_node(workflow, class_type="ImageScale")
-    width, height = working_resolution(*image_dimensions(image_path))
-    if max(width, height) > MAX_TARGET_LONG_SIDE:
-        sys.exit(
-            f"{image_path}: a {width}x{height} target is past the "
-            f"{MAX_TARGET_LONG_SIDE} limit on the long side; the short-side rule "
-            f"bounds one axis and this photo's aspect ratio is extreme"
-        )
-    workflow[scale_id]["inputs"]["width"] = width
-    workflow[scale_id]["inputs"]["height"] = height
