@@ -40,7 +40,7 @@ from isekai.flow import FLOWS_DIR, load_flow, tracked_flows
 from isekai.generate import prepare, render
 from isekai.refusal import Refusal
 from isekai.review import approve, review
-from isekai.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.run import DATA_ROOT, FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.sheet import ClaudeSorter, Schema, Sorter, load_schema, sheet
 from isekai.show import report
 from isekai.vocabulary import Vocabulary
@@ -102,9 +102,13 @@ def build_parser() -> argparse.ArgumentParser:
         )
         # The root every run lives under. It defaults to `.data/runs`, and it is a
         # flag because a version's acceptance run wants its own directory rather
-        # than one pile every version adds to. Anywhere it points is still inside
-        # `.data/`, which is gitignored -- a run holds a copy of the photograph,
-        # so `runs/` holds personal photographs by construction (design.md D14).
+        # than one pile every version adds to. A run holds a copy of the
+        # photograph, so a run root is a directory of personal photographs by
+        # construction -- which is why `wiring` refuses one that resolves INSIDE
+        # this repository and outside `.data/`, where nothing ignores it and a
+        # `git add` would publish it. A path outside the repository needs no
+        # check at all: version control cannot reach it, whatever it is, and that
+        # is what keeps a run on another disk expressible (design.md D7).
         made[name].add_argument(
             "--runs",
             type=Path,
@@ -185,6 +189,35 @@ class Wiring:
     err: TextIO = sys.stderr
 
 
+# The repository, taken from this module's own location rather than from the
+# process's working directory: `python -m isekai` may be run from anywhere, and a
+# CWD-relative answer would make the same run root legal or illegal depending on
+# where the operator happened to be standing.
+REPOSITORY = Path(__file__).resolve().parent.parent
+
+
+def _check_run_root(runs: Path) -> None:
+    """Refuse a run root inside the working tree that is not under `DATA_ROOT`.
+
+    The rule bounds the working tree, not the filesystem. A run directory holds a
+    copy of the photograph by construction, so inside the tree and outside the
+    ignored root those photographs are trackable and one `git add` from being
+    published; outside the repository they are not, whatever path they sit at
+    (design.md D7).
+    """
+    resolved = runs.resolve()
+    inside_repository = resolved == REPOSITORY or REPOSITORY in resolved.parents
+    under_data_root = resolved == DATA_ROOT or DATA_ROOT in resolved.parents
+    if inside_repository and not under_data_root:
+        raise Refusal(
+            f"--runs {resolved} is inside this repository and outside "
+            f"{DATA_ROOT}, the one directory git ignores; a run holds a copy of "
+            "the photograph, so that directory would be trackable and one `git "
+            "add` from being published -- point it under .data/ or at a path "
+            "outside the repository entirely"
+        )
+
+
 def wiring(args: argparse.Namespace) -> Wiring:
     """Build the real wiring: the hosted reader and sorter, and the HTTP transport.
 
@@ -193,6 +226,7 @@ def wiring(args: argparse.Namespace) -> Wiring:
     testable without any.
     """
     server = getattr(args, "server", None)
+    _check_run_root(args.runs)
     return Wiring(
         reader=ClaudeReader(),
         sorter=ClaudeSorter(),

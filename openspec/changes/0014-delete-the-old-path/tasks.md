@@ -5,7 +5,7 @@
 - [x] 1 — The gate's exemption, landed first while it is still a no-op
 - [x] 2 — The old path deleted: modules, graphs, tests
 - [x] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
-- [ ] 4 — The run root's containment, and the requirement that holds it
+- [x] 4 — The run root's containment, and the requirement that holds it
 - [ ] 5 — The manifest's orphans, and `infra/up.sh`'s bounded wait
 - [ ] 6 — The record: `CLAUDE.md`, the README, `.gitignore`, the version line
 
@@ -185,21 +185,21 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
 
 ## 4. The run root's containment, and the requirement that holds it
 
-- [ ] 4.1 **Red first.** Three tests bound to `run-directory:containment:*`, in
+- [x] 4.1 **Red first.** Three tests bound to `run-directory:containment:*`, in
   `tests/test_run_directory.py`: a run root resolving **inside the repository working tree and not under
   `DATA_ROOT`** is refused before any run is created, with a message naming the path given and what would
   be accepted; a run root resolving **outside the repository** is accepted and a run is created under it;
   the default is under `DATA_ROOT`. Verify the first fails and the other two pass.
-- [ ] 4.2 Implement the refusal in `wiring()` (`isekai/__main__.py:189-204`), taking the repository root
+- [x] 4.2 Implement the refusal in `wiring()` (`isekai/__main__.py:189-204`), taking the repository root
   from the module's own location rather than from the process's working directory. **The rule bounds the
   working tree, not the filesystem** — design.md **D7**: any path outside the repository is accepted,
   because version control cannot reach it, which is what keeps `--runs` useful for a run on another disk.
   Verify 4.1 passes.
-- [ ] 4.3 Replace the comment at `isekai/__main__.py:106-109`, which has claimed containment under
+- [x] 4.3 Replace the comment at `isekai/__main__.py:106-109`, which has claimed containment under
   `.data/` since v0.13 while no check existed. The new text states what is actually enforced, and why a
   path outside the repository needs no check. Verify: `grep -n "Anywhere it points" isekai/__main__.py`
   returns nothing.
-- [ ] 4.4 Full gate green, and `uv run pytest --collect-only -q | tail -1` reads **590**. `CHANGELOG.md`
+- [x] 4.4 Full gate green, and `uv run pytest --collect-only -q | tail -1` reads **590**. `CHANGELOG.md`
   entry. Tick box 4. Commit.
 
 ## 5. The manifest's orphans, and `infra/up.sh`'s bounded wait

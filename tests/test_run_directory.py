@@ -5,6 +5,7 @@ nothing opens an artifact to decide whether a stage is done -- which is the
 property under test as much as it is the way the tests are written.
 """
 
+import argparse
 import json
 import os
 import subprocess
@@ -14,10 +15,13 @@ from typing import Any
 import pytest
 
 import isekai.run as run_module
+from isekai.__main__ import Wiring, wiring
 from isekai.refusal import Refusal
 from isekai.run import (
     BUDGETS,
+    DATA_ROOT,
     FRAME_NAME,
+    RUNS_ROOT,
     SCHEMA_VERSION,
     across,
     approved_versions,
@@ -619,3 +623,58 @@ def test_every_directory_a_producer_writes_a_photograph_into_is_ignored(
     )
 
     assert decided.returncode == 0, f"{generated} is not ignored: {decided.stderr}"
+
+
+# --- where a run root may point -----------------------------------------------
+
+# The defect the flag had was never "outside `.data/`" -- it was "inside the git
+# working tree, where nothing ignores it". `--runs /Volumes/BigDisk/runs` is safe
+# because version control cannot reach it; `--runs ./acceptance-runs` is the hole,
+# and `run.py` copies the photograph into the run directory by construction, so
+# such a directory holds personal photographs one `git add` from being published
+# (design.md D7).
+
+
+def _wiring(runs: Path) -> Wiring:
+    """Build the real wiring for a run root, the way the entry point does."""
+    return wiring(argparse.Namespace(runs=runs, server=None))
+
+
+@pytest.mark.spec("run-directory:containment:in-tree-run-root-is-refused")
+def test_a_run_root_inside_the_working_tree_is_refused_before_anything_is_created(
+    tmp_path: Path,
+) -> None:
+    inside = REPO / "acceptance-runs"
+
+    with pytest.raises(Refusal) as refused:
+        _wiring(inside)
+
+    message = str(refused.value)
+    assert str(inside) in message
+    assert ".data" in message
+    # Refused before any run is created -- the check is on the root, not on the
+    # first photograph offered to it.
+    assert not inside.exists()
+
+
+@pytest.mark.spec("run-directory:containment:external-run-root-is-accepted")
+def test_a_run_root_outside_the_repository_is_accepted_and_runs_are_created_under_it(
+    tmp_path: Path,
+) -> None:
+    # No containment check applies out here, because version control cannot reach
+    # it -- which is what keeps the flag useful for a run on another disk.
+    outside = tmp_path / "acceptance-runs"
+    wired = _wiring(outside)
+
+    made = open_run(_photo(tmp_path, "ada.jpg", jpeg_bytes(800, 600)), wired.runs_root)
+
+    assert made.path.parent == outside
+    assert (made.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec("run-directory:containment:default-is-the-ignored-root")
+def test_the_default_run_root_is_under_the_ignored_data_root() -> None:
+    wired = _wiring(RUNS_ROOT)
+
+    assert wired.runs_root == RUNS_ROOT
+    assert DATA_ROOT in wired.runs_root.parents

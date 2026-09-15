@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`--runs` can no longer write inside the repository working tree.** It has been a free
+  `type=Path` since it was introduced, while the comment beside it claimed a containment check that
+  existed nowhere — and `run.py` copies the photograph into the run directory by construction, so
+  such a directory holds personal photographs one `git add` from being published. The rule **bounds
+  the working tree, not the filesystem**: a run root resolving inside this repository and outside
+  `.data/` is refused before any run is created, naming the path given and what would be accepted,
+  while any path outside the repository is still accepted, because version control cannot reach it
+  and that is what keeps a run on another disk expressible (design.md D7). The repository root is
+  taken from the module's own location rather than the process's working directory, so the same run
+  root is not legal or illegal depending on where the operator was standing. **The requirement is
+  the part that closes it** — the claim sat in a source comment for a whole version and was false
+  that whole time because no scenario held it.
+
 - **The 4:1 target ceiling is restored to the surviving render path.**
   `MAX_TARGET_LONG_SIDE` was enforced only inside `inject`, via `sys.exit`, and `generate.py`'s
   `photo_resolution` never applied it — **a live gap on `main`, not a regression this version
