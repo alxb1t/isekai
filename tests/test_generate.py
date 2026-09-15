@@ -1,9 +1,9 @@
 """Stage (4): assembly before the session, seeds, render, atomicity, idempotence.
 
-Everything here runs against `FakeComfyClient`, the double the existing suite
-already drives `pipeline.run` with. No GPU, no network, and the assembly tests
-assert that positively: the client records every call it is given, so "no
-endpoint was contacted" is a count rather than a hope.
+Everything here runs against `FakeComfyClient`, the double that stands in for the
+endpoint. No GPU, no network, and the assembly tests assert that positively: the
+client records every call it is given, so "no endpoint was contacted" is a count
+rather than a hope.
 """
 
 import io
@@ -269,6 +269,42 @@ def test_the_stage_renders_through_the_double_with_no_gpu(
     assert produced[0].image.parent == run.path / OUTPUTS / FLOW / "001"
     assert produced[0].image.read_bytes() == client.view_bytes
     assert len(client.submissions) == 1
+
+
+# The transport's own two scenarios, held here because `render` is now the only
+# caller of the seam. They moved out of `tests/test_polling.py` with the render
+# path that file drove; the behaviour they describe is unchanged, and deleting
+# them would have deleted a requirement that is still true (design.md D8).
+
+
+@pytest.mark.spec("comfy-transport:polling:polls-history-until-complete")
+def test_the_stage_polls_history_until_the_prompt_completes(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    prepare(run, {FLOW: flow}, schema)
+    client = FakeComfyClient(pending_polls=2)
+
+    produced = render(run, flow, client, seeds=[42], poll=0)
+
+    # Two empty answers, then the real one: the loop waits rather than reading
+    # the first reply as the render.
+    assert client.history_calls == 3
+    assert produced[0].image.read_bytes() == client.view_bytes
+
+
+@pytest.mark.spec("comfy-transport:retrieval:downloads-image-named-in-history")
+def test_the_stage_downloads_the_image_named_in_the_history(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    prepare(run, {FLOW: flow}, schema)
+    image = {"filename": "anime_00001.png", "subfolder": "sub", "type": "output"}
+    client = FakeComfyClient(image=image)
+
+    render(run, flow, client, seeds=[42], poll=0)
+
+    # The whole dict, not just the filename: `subfolder` and `type` are what the
+    # endpoint needs to find the file again, and dropping either fetches nothing.
+    assert client.viewed == image
 
 
 @pytest.mark.spec("image-generation:immutability:output-records-the-graph-digest")

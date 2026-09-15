@@ -1,9 +1,8 @@
 """The pipeline's entry point: `python -m isekai <verb>`.
 
-**A second surface, not an extension of the first.** `convert.py` is a shim over
-`isekai.cli`, and that parser drives the render path this version promised not to
-touch -- so the staged pipeline gets its own parser in its own module and the
-existing single-command surface is unchanged (design.md D1). Four separate scripts
+**The only surface.** v0.13 built this parser beside the old single-command one
+and v0.14 deleted that one, discharging the suspension of the repository's own
+rule: there is one render path, and this is its entry point. Four separate scripts
 were rejected for the same reason one parser was chosen: it would multiply the
 stdlib-only guard by four and give argument parsing four places to drift.
 

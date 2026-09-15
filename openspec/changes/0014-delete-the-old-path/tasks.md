@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The gate's exemption, landed first while it is still a no-op
-- [ ] 2 — The old path deleted: modules, graphs, tests
+- [x] 2 — The old path deleted: modules, graphs, tests
 - [ ] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
 - [ ] 4 — The run root's containment, and the requirement that holds it
 - [ ] 5 — The manifest's orphans, and `infra/up.sh`'s bounded wait
@@ -87,48 +87,48 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
 > **`isekai/workflow.py` keeps its name and every name in it for this whole phase.** The rename and the
 > pruning are phase 3. Doing them here breaks five importers at once and the boundary cannot be green.
 
-- [ ] 2.1 Delete `convert.py`, `isekai/cli.py`, `isekai/pipeline.py`, `isekai/mutate.py`,
+- [x] 2.1 Delete `convert.py`, `isekai/cli.py`, `isekai/pipeline.py`, `isekai/mutate.py`,
   `isekai/overrides.py`, `workflows/pipeline.json`, `workflows/pipeline_ui.json`, and the now-dead
   `Overrides` TypedDict from `isekai/comfy_types.py`. Verify:
   `grep -rn "isekai\.cli\|isekai\.pipeline\|isekai\.mutate\|isekai\.overrides\|Overrides" --include='*.py' . | grep -v '\.venv'`
   returns **only** `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py`.
-- [ ] 2.2 Delete `tests/test_cli.py` (55), `tests/test_variations.py` (30), `tests/test_mutation.py`
+- [x] 2.2 Delete `tests/test_cli.py` (55), `tests/test_variations.py` (30), `tests/test_mutation.py`
   (21), `tests/test_overrides.py` (13), `tests/test_polling.py` (2), and
   `tests/test_pipeline_cli.py`'s `test_the_pipeline_surface_does_not_load_the_render_surface` (`:53-69`),
   which still passes after the deletion but asserts `'isekai.cli' not in sys.modules` about a module that
   no longer exists. Verify: `uv run pytest --collect-only -q | tail -1`.
-- [ ] 2.3 Repoint `tests/conftest.py:11,50`'s `_shipped_workflow` fixture at
+- [x] 2.3 Repoint `tests/conftest.py:11,50`'s `_shipped_workflow` fixture at
   `flows/summon-v1/graph.json` and drop its `PIPELINE_PATH` import. Verify:
   `uv run pytest tests/test_manifest_binding.py tests/test_infra.py -q` — failures are expected here and
   2.4 fixes them; **this sub-task's check is that they are assertion failures, not import or fixture
   errors.**
-- [ ] 2.4 Fix the five assertions the new graph invalidates: `tests/test_manifest_binding.py:56`, `:71`,
+- [x] 2.4 Fix the five assertions the new graph invalidates: `tests/test_manifest_binding.py:56`, `:71`,
   `:85` — the LineArt/Tile trio; `summon-v1` uses `DWPreprocessor` alone, so `unclassified_node_classes`
   is `[]` and `graph_model_files` no longer names the Tile or mistoLine ControlNets — and
   `tests/test_infra.py:65`, `:81`, where `annotator_files` yields **2**, not 4: drop `sk_model.pth` and
   `sk_model2.pth` from the set literal and change `len(needed) == 4` to `2`. Verify:
   `uv run pytest tests/test_manifest_binding.py tests/test_infra.py -q` exits 0 at 12 and 24.
-- [ ] 2.5 Split `tests/test_workflow_injection.py` **in place** — the file is renamed in phase 3, with
+- [x] 2.5 Split `tests/test_workflow_injection.py` **in place** — the file is renamed in phase 3, with
   the module. Delete the 21 tests that depend on the old path: the 17 taking the `workflow` fixture, the
   three `find_node`/`find_nodes` tests over synthetic dicts (`:25`, `:35`, `:43`), and the one calling
   `cli.parse_args` (`:163`). **The two ceiling tests at `:480` and `:498` are among the 17** — they drive
   `inject`, and `summon-v1` has two `ImageScale` nodes, so `find_node` is ambiguous against it. Their
   scenario is reborn in phase 3 against the new implementation. Verify:
   `uv run pytest tests/test_workflow_injection.py --collect-only -q | tail -1` reads **41**.
-- [ ] 2.6 Rebind `comfy-transport`'s two scenarios into `tests/test_generate.py`, carrying their existing
+- [x] 2.6 Rebind `comfy-transport`'s two scenarios into `tests/test_generate.py`, carrying their existing
   keys: a polling test constructing `FakeComfyClient(pending_polls=2)` and asserting
   `client.history_calls == 3`, and a retrieval test asserting `client.viewed` equals the image dict the
   fake's history named. They are `tests/test_polling.py`'s two, with `pipeline.run` swapped for `render`.
   Verify: `uv run pytest tests/test_generate.py -q` exits 0 and
   `grep -rn "comfy-transport:polling\|comfy-transport:retrieval" tests/` finds both keys.
-- [ ] 2.7 Resolve the `-S` stdlib guard pair. `tests/test_evaluate.py:750` guards `import convert` and
+- [x] 2.7 Resolve the `-S` stdlib guard pair. `tests/test_evaluate.py:750` guards `import convert` and
   **dies with its target**; its falsifiability twin at `:769` — *"the guard above proves nothing unless
   `-S` really refuses"* — then guards nothing where it sits. **Delete the first; move the twin into
   `tests/test_pipeline_cli.py`**, beside `:92`'s guard on `isekai.__main__`, which v0.13 already built.
   Keep its `spec_exempt` marker and update its comment to name the guard it now falsifies. Verify:
   `uv run pytest tests/test_pipeline_cli.py -q` exits 0 and
   `grep -rn '"-S"' tests/ | grep -v test_pipeline_cli` returns nothing.
-- [ ] 2.8 **Delete** `tests/test_evaluate.py`'s two `pipeline.run`-driven tests — `:601`
+- [x] 2.8 **Delete** `tests/test_evaluate.py`'s two `pipeline.run`-driven tests — `:601`
   `test_the_table_names_the_image_the_pipeline_itself_recorded` and `:626`
   `test_the_table_says_unrecorded_when_the_run_never_learned_its_image`. Their driver is deleted and the
   surviving render path writes no `pod_image` key. **Change nothing else**: `pod_image_of` and `table()`
@@ -136,7 +136,7 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
   **D13**. Verify: `uv run pytest tests/test_evaluate.py -q` exits 0 at **50**, and
   `grep -c 'spec("evaluation:report:names-its-run")' tests/test_evaluate.py` returns **3**, so the
   scenario keeps its binding.
-- [ ] 2.9 Full gate green, and `uv run pytest --collect-only -q | tail -1` reads **583**. `CHANGELOG.md`
+- [x] 2.9 Full gate green, and `uv run pytest --collect-only -q | tail -1` reads **583**. `CHANGELOG.md`
   entry. Tick box 2. Commit.
 
 ## 3. `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path

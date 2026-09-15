@@ -1,12 +1,8 @@
 import json
-import os
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
-from isekai.comfy_types import Workflow
 from isekai.evaluate import (
     AUTHORITATIVE_GUARD_METHOD,
     CLAIMS,
@@ -22,14 +18,12 @@ from isekai.evaluate import (
     canvas_for,
     check_render_matches,
     pck,
-    pod_image_of,
     refuse_embedding_axes_across_bases,
     run_guard,
     score_render,
     table,
     usable_regions,
 )
-from isekai.pipeline import run
 from isekai.workflow import working_resolution
 from tests.eval_fakes import (
     FakeDetector,
@@ -38,7 +32,6 @@ from tests.eval_fakes import (
     FakePoseReader,
     FakeSampler,
 )
-from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, jpeg_with_header, png_bytes
 
 # A face filling a plausible slice of the canvas, and the same face nudged by a
@@ -599,45 +592,6 @@ def test_the_table_names_the_run_the_base_and_the_image_it_was_produced_on(
 
 
 @pytest.mark.spec("evaluation:report:names-its-run")
-def test_the_table_names_the_image_the_pipeline_itself_recorded(
-    workflow: Workflow, tmp_path: Path, photo: str
-) -> None:
-    # Driven off a manifest the pipeline actually wrote, never a literal handed
-    # to the formatter: the placeholder this closes was invisible for exactly
-    # that reason -- the formatter was proven while the key it reads was not.
-    run_dir = tmp_path / "run"
-    run(
-        FakeComfyClient(),
-        workflow,
-        photo,
-        run_dir,
-        variations=1,
-        seed=7,
-        pod_image="ghcr.io/owner/isekai:v0.11-rc",
-    )
-    manifest = json.loads((run_dir / "run.json").read_text())
-    report, _ = _score(tmp_path)
-
-    rendered = table([report], run_dir.name, manifest["base"], pod_image_of(manifest))
-
-    assert "image: ghcr.io/owner/isekai:v0.11-rc" in rendered
-
-
-@pytest.mark.spec("evaluation:report:names-its-run")
-def test_the_table_says_unrecorded_when_the_run_never_learned_its_image(
-    workflow: Workflow, tmp_path: Path, photo: str
-) -> None:
-    run_dir = tmp_path / "run"
-    run(FakeComfyClient(), workflow, photo, run_dir, variations=1, seed=7)
-    manifest = json.loads((run_dir / "run.json").read_text())
-    report, _ = _score(tmp_path)
-
-    rendered = table([report], run_dir.name, manifest["base"], pod_image_of(manifest))
-
-    assert "image: unrecorded" in rendered
-
-
-@pytest.mark.spec("evaluation:report:names-its-run")
 def test_a_table_from_a_run_that_recorded_no_base_says_so_rather_than_omitting_it(
     tmp_path: Path,
 ) -> None:
@@ -741,48 +695,6 @@ def test_the_claims_a_report_prints_are_the_ones_the_design_requires() -> None:
     assert "no verdict" in joined
     assert "no threshold" in joined
     assert "not a percentage" in joined
-
-
-@pytest.mark.spec_exempt(
-    "structural: holds `convert.py`'s stdlib-only runtime, which is a repo "
-    "invariant rather than a scenario about evaluation"
-)
-def test_convert_imports_with_site_packages_off_the_path() -> None:
-    # The mechanism is `-S`, chosen over an AST walk against
-    # `sys.stdlib_module_names` because it was verified to work here: inside this
-    # uv venv, `-S` leaves no site-packages on `sys.path` at all, so a
-    # third-party import in the runtime's graph raises rather than resolving.
-    # The AST fallback design.md D12 names was not needed.
-    root = Path(__file__).resolve().parent.parent
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import convert"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(root)},
-        cwd=root,
-    )
-
-    assert result.returncode == 0, result.stderr
-
-
-@pytest.mark.spec_exempt(
-    "structural: the guard above proves nothing unless -S really refuses"
-)
-def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
-    # A check that cannot fail is not a check. If `-S` ever stopped removing
-    # site-packages, the test above would pass for the wrong reason and an
-    # accidental wheel in `convert.py`'s graph would ship silently.
-    root = Path(__file__).resolve().parent.parent
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import pytest"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(root)},
-        cwd=root,
-    )
-
-    assert result.returncode != 0
-    assert "No module named 'pytest'" in result.stderr
 
 
 # --- phase 8: the guard's method, settled by measurement and pinned here -------

@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 
 from isekai.comfy_types import Workflow
+from isekai.flow import load_flow
 from isekai.provision import Manifest, load_manifest
 from isekai.sheet import Schema, load_schema
 from isekai.vocabulary import Vocabulary, read_tags
-from isekai.workflow import PIPELINE_PATH
 from tests.images import jpeg_bytes
 
 # A small stand-in for the provisioned tag list, with the same shape and the same
@@ -45,9 +45,11 @@ def _shipped_workflow() -> Workflow:
 
     The suite reads the shipped graph itself: a byte-identical fixture copy with
     no drift check is a second thing to rename and a silent divergence waiting to
-    happen (design.md D9).
+    happen (design.md D9). It is reached through the flow that declares it rather
+    than through a path constant, so the fixture and the render path agree on
+    which file the shipped graph is by construction.
     """
-    return json.loads(PIPELINE_PATH.read_text())
+    return json.loads(load_flow("summon-v1").graph_path.read_text())
 
 
 @pytest.fixture

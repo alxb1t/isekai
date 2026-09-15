@@ -1,25 +1,16 @@
-"""The shared vocabulary: graph aliases, the dial overrides, and the transport seam."""
+"""The shared vocabulary: graph aliases and the transport seam."""
 
-from typing import Any, Protocol, TypedDict
+from typing import Any, Protocol
 
 Workflow = dict[str, Any]
 Image = dict[str, str]
 
 
-class Overrides(TypedDict, total=False):
-    """The dial values a user may set explicitly; absent means "leave the graph's"."""
-
-    denoise: float
-    cfg: float
-    ip_weight: float
-    cn_strength: float
-
-
 class ComfyTransport(Protocol):
     """The transport seam as a type.
 
-    Anything with these four methods can drive `run` -- which is how the suite
-    substitutes an in-memory fake for the network.
+    Anything with these four methods can drive `generate.render` -- which is how
+    the suite substitutes an in-memory fake for the network.
     """
 
     def upload_image(self, path: str) -> str:

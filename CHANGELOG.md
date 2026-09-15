@@ -25,8 +25,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING — the old render path is deleted.** `convert.py`, `isekai/cli.py`,
+  `isekai/pipeline.py`, `isekai/mutate.py`, `isekai/overrides.py`, `workflows/pipeline.json`,
+  `workflows/pipeline_ui.json` and `comfy_types.Overrides` are gone, with the five test files that
+  drove them. There is one render path — `python -m isekai … generate`, flow `summon-v1` — which
+  discharges the suspension v0.13 took on *"there is one path."* It is deleted under **L3**, not
+  because the new path beat it: a selectable implementation is a measured one, and
+  `workflows/pipeline.json` was measured on style and rejected (F24) and never measured on identity
+  at all. **No identity comparison between the two paths exists, on either instrument** — the record
+  says so rather than implying a head-to-head that was never run.
+- **The evaluator's two `pipeline.run`-driven report tests are deleted** with their driver. The
+  surviving render path writes no `pod_image` key, so nothing else moves: `pod_image_of` and
+  `table()` keep their signatures and `evaluation:report:names-its-run` keeps three passing tests
+  that build their inputs directly. That the standalone evaluator can no longer read any run this
+  pipeline produces is a pre-existing gap this version makes total, recorded for v0.18 rather than
+  repaired here (design.md D13).
+
 ### Changed
 
+- **`comfy-transport`'s two orphaned scenarios are rebound rather than deleted.** Polling and
+  retrieval lost their only tests with `tests/test_polling.py`, but the behaviour is live in
+  `isekai/generate.py`. The two tests move into `tests/test_generate.py` with `pipeline.run` swapped
+  for `render`, carrying their keys. Deleting them would have deleted a requirement that is still
+  true — the worst outcome available, and the one that looks cheapest.
+- **The `-S` stdlib guard's falsifiability twin moves to the entry point it now falsifies.** The
+  guard on `import convert` died with its target; its twin — *a check that cannot fail is not a
+  check* — would then have sat in a file whose guard had gone, so it moves beside
+  `tests/test_pipeline_cli.py`'s guards on `isekai.__main__` and `isekai.run`.
+- **The suite's shipped-graph fixture reads `flows/summon-v1/graph.json`**, reached through the flow
+  that declares it rather than through a path constant, so the fixture and the render path agree on
+  which file the shipped graph is by construction. Five assertions the new graph invalidates are
+  corrected with it: `summon-v1` uses `DWPreprocessor` alone, so it has no unclassified node classes,
+  names neither the Tile nor the mistoLine ControlNet, and yields two annotator checkpoints, not four.
 - **The archived ControlNet probe is exempted from `unresolved-import`, by literal path and
   permanently.** `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py` is the only
   `.py` file in the archive, and it imports `isekai.pipeline._render` plus six names from
