@@ -7,7 +7,7 @@
 - [x] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
 - [x] 4 — The run root's containment, and the requirement that holds it
 - [x] 5 — The manifest's orphans, and `infra/up.sh`'s bounded wait
-- [ ] 6 — The record: `CLAUDE.md`, the README, `.gitignore`, the version line
+- [x] 6 — The record: `CLAUDE.md`, the README, `.gitignore`, the version line
 
 ## The per-phase ritual
 
@@ -223,34 +223,34 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
 
 ## 6. The record: `CLAUDE.md`, the README, `.gitignore`, the version line
 
-- [ ] 6.1 `CLAUDE.md:17` — replace the one-path bullet with **L3's entry gate**, keeping the history
+- [x] 6.1 `CLAUDE.md:17` — replace the one-path bullet with **L3's entry gate**, keeping the history
   clause. The replacement text is settled in design.md **D11**; it is **replaced, not restored**, because
   a count would forbid the flow registry v0.16 adds. Verify: `grep -n "There is one path" CLAUDE.md`
   returns nothing.
-- [ ] 6.2 `CLAUDE.md` — correct the twelve remaining stale sites: `:15` (`convert.py`'s import graph),
+- [x] 6.2 `CLAUDE.md` — correct the twelve remaining stale sites: `:15` (`convert.py`'s import graph),
   `:48`, `:62`, `:69-72` (injection, mutation and overrides as seams), `:109-110` — **it still says "four
   capabilities… a fifth, `model-provisioning`, on the v0.9 branch"**, and it is **nine**, named —
   `:136-143` (layout: the entry point, `workflows/`), `:178-179` (*"the whole required surface is
   `convert.py photo.jpg`"*), and `:198`. Verify:
   `grep -n "convert\.py\|workflow-injection\|workflow-mutation\|pipeline\.json\|isekai/cli\.py" CLAUDE.md`
   returns nothing but deliberately-historical prose.
-- [ ] 6.3 `README.md` — rewrite the work-in-progress banner so it **names no version at all**: the banner
+- [x] 6.3 `README.md` — rewrite the work-in-progress banner so it **names no version at all**: the banner
   already cites `openspec/` as authoritative for what is being built next, and a forward version
   reference is one reordering away from being wrong, which it already was. Then replace every runnable
   command — `:42`, `:51`, `:60`, `:98`, `:111-113`, `:157`, `:225`. **Verify the new Quickstart against
   the actual parser**: run `python -m isekai --help` and each verb's `--help`, and paste the output;
   never write it from memory. `generate` needs `--server` and an open tunnel. Verify:
   `grep -n "convert\.py\|--denoise\|--variations" README.md` returns nothing.
-- [ ] 6.4 `.gitignore` — remove `outputs/`, whose producer this version deletes. **Keep `.inputs/`**:
+- [x] 6.4 `.gitignore` — remove `outputs/`, whose producer this version deletes. **Keep `.inputs/`**:
   `baseline/build_contact_sheets.py:107` still defaults `--sources` to `.inputs/baseline` and survives
   this change. Update the comment, which schedules both lines for this version and is wrong about one.
   Verify: `grep -n "^outputs/" .gitignore` returns nothing and `grep -n "^\.inputs/" .gitignore` returns
   the surviving line.
-- [ ] 6.5 The version line in the three places this change controls — `proposal.md`'s `version: v0.14`
+- [x] 6.5 The version line in the three places this change controls — `proposal.md`'s `version: v0.14`
   (already set), `CHANGELOG.md`'s released heading, and `pyproject.toml`'s `version`. The annotated tag
   is `mf-release`'s act, not this change's. Verify: `grep -n '^version' pyproject.toml` and
   `grep -n '^## \[' CHANGELOG.md | head -2` agree on `0.14.0`.
-- [ ] 6.6 Full gate green. `CHANGELOG.md` entry. Tick box 6. Commit.
+- [x] 6.6 Full gate green. `CHANGELOG.md` entry. Tick box 6. Commit.
 
 ---
 

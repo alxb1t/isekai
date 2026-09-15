@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 """Score a run's renders against the photograph that produced them.
 
-The second entry point, beside `convert.py`, and deliberately **not** a
-subcommand of it: a subcommand would put the `[eval]` extra one misplaced import
-away from breaking `convert.py`'s `dependencies = []`. The one-path rule is about
-there being one way to *render*, and an evaluator is not a second way to render
-(design.md D12).
+A separate entry point, and deliberately **not** a subcommand of the pipeline: a
+subcommand would put the `[eval]` extra one misplaced import away from breaking
+`dependencies = []`. The entry-gate rule is about what may be selected to
+*render*, and an evaluator is not a way to render at all.
 
-    uv run --extra eval python evaluate.py outputs/final/<run>/ --photo <photo>
+    uv run --extra eval python evaluate.py <run-directory>/ --photo <photo>
+
+**It cannot read a run this pipeline produces today, and the path above no longer
+exists.** The reader below requires a `run.json` carrying `photo_sha256`, `base`
+and `renders` -- v0.12's shape -- and the current run frame writes none of those.
+v0.14 removed the last producer of the shape it *can* read. That is a
+pre-existing gap this version makes total rather than one it introduces, and it
+belongs to the version whose whole content is the evaluation tool, which must
+repoint this reader at the run directory (change 0014's design.md D13). Nothing
+under `tests/` imports this module, so it fails no gate command -- which is
+exactly why it has to be written down here.
 
 It reads the run's own `run.json` for provenance. The photograph is passed in
 rather than read from the manifest, because the manifest records a **digest** and

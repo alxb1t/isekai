@@ -26,7 +26,7 @@ render **B**, captioned with nothing but the pair id and the two letters:
 
 ```
 uv run --extra eval python baseline/build_contact_sheets.py \
-    --sheet baseline/labels/sheet.csv --out outputs/labels
+    --sheet baseline/labels/sheet.csv --out .data/labels
 ```
 
 Forty judgements made by opening eighty files by hand is forty chances to compare the wrong pair, so
@@ -38,7 +38,7 @@ would let a preference for `A` masquerade as a judgement.
 The reference is captioned by role rather than by filename, because naming the source file under the
 photograph and the render's file under the render is a difference the eye can use.
 
-The sheets land in `outputs/`, which is gitignored — a contact sheet is pixels twice over.
+The sheets land in `.data/`, the one ignored root — a contact sheet is pixels twice over.
 
 ## How to fill it in
 

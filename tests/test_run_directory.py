@@ -591,16 +591,19 @@ def test_a_digest_prefix_collision_is_refused_rather_than_mixed(
 
 REPO = Path(__file__).resolve().parent.parent
 
-# One path per directory a tracked producer writes a photograph or a render
-# into. `.data/` is the staged pipeline's single root (design.md D14); the render
-# path this version deliberately left in place still writes `outputs/` from
-# `isekai/cli.py`'s `--output` default, and `baseline/build_contact_sheets.py`
-# reads renders from `outputs/baseline` and *source photographs* from
-# `.inputs/baseline`. All four hold a person's likeness by construction.
+# One path per directory a tracked producer names a photograph or a render under.
+# `.data/` is the single ignored root (design.md D14), and v0.14 made it the only
+# one that is generated into: the run directory holds a copy of the photograph,
+# and `baseline/build_contact_sheets.py` -- which pastes the reference photograph
+# beside the renders -- now defaults `--renders` to `.data/baseline` and is
+# documented to write its sheets under `.data/labels`, where it used to use
+# `outputs/`. `.inputs/baseline` is the one exception and is not generated at
+# all: an operator puts source photographs there by hand. All four hold a
+# person's likeness by construction.
 GENERATED = (
     ".data/runs/000000000000-ada/photo.jpg",
-    "outputs/20260101T000000Z/0.png",
-    "outputs/baseline/ada/0.png",
+    ".data/baseline/ada/0.png",
+    ".data/labels/pair-01.png",
     ".inputs/baseline/ada.png",
 )
 

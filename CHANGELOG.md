@@ -25,6 +25,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-09-15
+
+### Changed
+
+- **`.data/` is now the only root anything is generated into, and `outputs/` is gone.** It had two
+  producers: the render path this version deletes, and `baseline/build_contact_sheets.py`, which
+  pastes the reference photograph beside the renders and is therefore pixels twice over. The
+  labelling aid is repointed — `--renders` defaults to `.data/baseline` and its sheets are written
+  under `.data/labels` — so D14's *"nothing generated is outside the one ignored root"* is literally
+  true rather than true of the pipeline and not of the tool beside it. **`.inputs/` stays**: it holds
+  source photographs an operator puts there by hand, which is an input rather than something
+  generated, and v0.13's comment was wrong to schedule it for deletion.
+- **`CLAUDE.md`'s one-path bullet is replaced by the entry gate, not restored**, discharging the
+  second deviation v0.13 declared and never performed. *"A selectable implementation is a measured
+  one"* — because a **count** would forbid the flow registry v0.16 adds, and, which is the reason the
+  rule existed at all, a count also permits an *unmeasured* single path, exactly what the deleted
+  graph was. Twelve further stale sites are corrected, including the living spec's description, which
+  still read *"four capabilities… a fifth, `model-provisioning`, on the v0.9 branch"* and is nine,
+  named.
+- **The README's work-in-progress banner names no version**, because `openspec/` is already cited as
+  authoritative for what is being built next and a forward reference here is one reordering away
+  from being wrong — which it already was. Every runnable command in the file is now one of the six
+  verbs, and each was **verified against the actual parser** rather than written from memory.
+- **The standalone evaluator records, in its own docstring, that it cannot read a run this pipeline
+  produces.** Its reader wants a `run.json` of v0.12's shape and the current run frame writes none of
+  those fields, so it already could not read a v0.13 run; what this version removes is the last
+  producer of the shape it *can* read. A pre-existing gap made total, owned by the version whose
+  whole content is the evaluation tool (design.md D13). Nothing under `tests/` imports it, so it
+  fails no gate command — which is exactly why it is written where a reader will hit it.
+
 ### Added
 
 - **`infra/up.sh`'s readiness wait is bounded, and tears the pod down itself on timeout.** The poll

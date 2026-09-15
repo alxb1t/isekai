@@ -1,13 +1,13 @@
 [project]
 name = "isekai"
-version = "0.13.0"
+version = "0.14.0"
 requires-python = ">=3.12"
 dependencies = []
 
-# The evaluator's stack, and NOT the runtime's. `convert.py` keeps
+# The evaluator's stack, and NOT the runtime's. `python -m isekai` keeps
 # `dependencies = []` above, held by a test that imports it with site-packages
-# off the path -- an evaluator is not a second way to render, and the one-path
-# rule is about rendering (design.md D12).
+# off the path -- an evaluator is not a way to render at all, and the entry gate
+# is about what may be selected to render.
 #
 # CI never installs this. The eval tests skip there and run on the operator's
 # machine, which is the same posture this repository already takes toward
