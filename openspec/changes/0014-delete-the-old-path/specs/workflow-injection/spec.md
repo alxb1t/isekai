@@ -27,7 +27,10 @@ flow initialises from `EmptyLatentImage` at denoise 1.0. img2img is a closed ave
 photograph's own header"* and is the live caller of the rule.
 **Migration**: `image-generation:working-resolution:*`, same scenario names, new keys. The tenth —
 `dimensions-are-written-by-injection` — does not move: it asserts that *injection* writes the
-dimensions, and injection is deleted.
+dimensions, and injection is deleted. Its surviving half — that the dimensions are *read* from the
+photograph's own frame header, because nothing else can supply them — is stated afresh as
+`image-generation:working-resolution:dimensions-come-from-the-header`, which is the claim the header
+tests actually make.
 
 ### Requirement: The base's CLIP layer is committed to the graph
 **Reason**: The CLIP layer is now a flow's declared dial (`clip_skip: -2` in `summon-v1`'s manifest),

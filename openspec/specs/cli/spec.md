@@ -3,7 +3,7 @@
 The command-line surface: parsing flags, validating their ranges before any GPU work starts, and dispatching the
 chosen model into a run.
 
-**Source:** `isekai/cli.py` · **Tests:** `tests/test_cli.py`
+**Source:** `isekai/__main__.py` · **Tests:** `tests/test_pipeline_cli.py`
 
 The CLI is where a bad value is cheapest to catch. Every dial is range-checked **at parse time**, so an
 out-of-range flag fails before a pod is touched rather than after a paid render.

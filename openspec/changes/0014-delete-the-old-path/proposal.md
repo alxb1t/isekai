@@ -73,12 +73,21 @@ exist, and a deviation nobody wrote down again.
 ### Modified Capabilities
 
 - `cli`: **30 scenarios REMOVED** — every requirement belonging to `convert.py`'s
-  surface. Nothing is modified: the honest count of survivors is zero, and the three
-  the vault records as surviving do not.
+  surface — and **one MODIFIED and RENAMED**: the pipeline surface was specified as a
+  *second* entry point standing beside the render surface and leaving it unchanged,
+  which is a clause about a surface this version deletes. It becomes the only entry
+  point. Of `convert.py`'s own requirements the honest count of survivors is still
+  zero, and the three the vault records as surviving do not.
+- `model-provisioning`: **MODIFIED** — the completeness rule is stated over
+  `workflows/pipeline.json` by name, and that file is deleted here. It is restated
+  over a tracked flow's graph, which is what the bound test already reads.
 - `image-generation`: **ADDED** — the nine surviving working-resolution scenarios,
   rekeyed here as the capability that owns *"the render target is derived from the
-  photograph's own header"*; the 4:1 refusal; and the seed's 64-bit width, whose only
-  binding today dies with `workflow-mutation`.
+  photograph's own header"*; the 4:1 refusal; the seed's 64-bit width, whose only
+  binding today dies with `workflow-mutation`; and one scenario that is new rather
+  than migrated — that the dimensions are *read* from the photograph's own frame
+  header, which is the half of `dimensions-are-written-by-injection` that survives
+  its writer.
 - `run-directory`: **ADDED** — a run root is under the ignored root or outside the
   repository entirely. Design decision D14 was never a requirement, which is why the
   comment could contradict it for a whole version.
@@ -116,7 +125,8 @@ reader in `baseline/build_contact_sheets.py:107`) · `README.md` · `CLAUDE.md`
 (13 sites) · `CHANGELOG.md`.
 
 **Tests:** 726 today → **146 die, 583 land** after the three rebound and moved tests,
-rising to **590** as phases 3 and 4 add their own.
+rising to **590** as phases 3 and 4 add their own, and to **591** with the regression
+test converge round 1 adds for `up.sh`'s teardown path.
 
 **Not touched:** every stage module · `isekai/run.py` · `isekai/flow.py` ·
 `isekai/provision.py` · `isekai/comfy_client.py` · `isekai/eval_backends.py` ·

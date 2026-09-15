@@ -88,9 +88,7 @@ def test_a_photo_below_the_working_scale_is_scaled_up() -> None:
     assert min(out_width, out_height) == WORKING_SCALE
 
 
-@pytest.mark.spec(
-    "image-generation:working-resolution:dimensions-are-written-by-injection"
-)
+@pytest.mark.spec("image-generation:working-resolution:dimensions-come-from-the-header")
 @pytest.mark.parametrize("builder", [png_bytes, jpeg_bytes])
 @pytest.mark.parametrize(("width", "height"), [(1600, 1200), (1200, 1600), (900, 900)])
 def test_dimensions_are_read_from_landscape_portrait_and_square_headers(

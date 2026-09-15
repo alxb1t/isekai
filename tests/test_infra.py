@@ -313,6 +313,30 @@ def test_the_pod_is_told_which_volume_to_expect(up_sh: str) -> None:
     assert "RUNPOD_VOLUME_ID: $vol" in up_sh
 
 
+@pytest.mark.spec_exempt(
+    "structural: where the teardown call resolves from, not a scenario about readiness"
+)
+def test_the_timeout_teardown_resolves_from_the_root_the_script_moved_to(
+    up_sh: str,
+) -> None:
+    lines = up_sh.splitlines()
+    moved = next(i for i, line in enumerate(lines) if line.startswith("cd "))
+    teardown = next(
+        i
+        for i, line in enumerate(lines)
+        if "down.sh" in line and not line.lstrip().startswith("#")
+    )
+
+    # The script has already moved to the repository root, so the teardown is
+    # spelled from there. Re-deriving `dirname "$0"` after the move interprets a
+    # path relative to the *old* working directory against the new one, which
+    # resolves only when the invocation path's last component happens to repeat
+    # -- and a teardown that fails to resolve leaves the pod billing.
+    assert moved < teardown
+    assert 'dirname "$0"' not in lines[teardown]
+    assert "./infra/down.sh" in lines[teardown]
+
+
 @pytest.mark.spec(
     "model-provisioning:reachability:provisioning-requires-the-network-volume"
 )

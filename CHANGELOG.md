@@ -154,6 +154,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pipeline produces is a pre-existing gap this version makes total, recorded for v0.18 rather than
   repaired here (design.md D13).
 
+### Fixed
+
+- **`up.sh`'s timeout teardown is spelled from the repository root**, not re-derived from `$0` after
+  the script has already moved there. The second `dirname "$0"` read a path relative to the
+  *original* working directory against the new one, so `bash isekai/infra/up.sh` from a parent
+  directory resolved the teardown to `<parent>/isekai/isekai/infra/down.sh` — which does not exist,
+  and under `set -e` kills `up.sh` before its `exit 1`, leaving the pod billing. That is precisely
+  the failure the bounded wait was added to prevent: teardown is the act that stops the meter, so a
+  teardown call that cannot resolve is the whole feature missing. A structural test now pins the
+  call to a path that does not depend on how the script was invoked.
+- **Three spec defects the deletion left behind are closed in the change's delta.** The header tests
+  for `image_dimensions` were rekeyed onto `dimensions-are-written-by-injection`, a scenario the
+  delta itself says does not migrate — six parametrised cases that looked bound and were bound to
+  nothing, in a repository with no binding checker. The surviving half of that scenario — that the
+  dimensions are *read* from the photograph's own frame header, because nothing else can supply
+  them — is stated as `image-generation:working-resolution:dimensions-come-from-the-header` and the
+  tests carry it. `cli`'s pipeline-surface requirement, which mandated a *second* entry point
+  standing beside the single-command render surface and leaving it unchanged, is modified and
+  renamed to the only entry point. `model-provisioning`'s completeness rule, stated over the deleted
+  `workflows/pipeline.json`, is restated over a tracked flow's graph — which is what its bound test
+  already reads.
+
 ## [0.13.0] - 2026-09-15
 
 ### Fixed

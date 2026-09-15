@@ -105,7 +105,12 @@ while true; do
     echo "ERROR: pod $pod_id got no public IP and no mapped :22 within 420s." >&2
     echo "Tearing it down rather than billing for a pod we cannot use. Re-run" >&2
     echo "infra/up.sh -- allocation is per-host, so each attempt is a fresh draw." >&2
-    bash "$(dirname "$0")/down.sh" >&2
+    # Spelled from the repository root, which line 7 already moved to. Re-deriving
+    # `dirname "$0"` here would read a path relative to the *original* working
+    # directory against the new one -- `bash isekai/infra/up.sh` from the parent
+    # would look for `<parent>/isekai/isekai/infra/down.sh` and find nothing, and
+    # a teardown that cannot resolve leaves the pod billing.
+    bash ./infra/down.sh >&2
     exit 1
   fi
   sleep 5

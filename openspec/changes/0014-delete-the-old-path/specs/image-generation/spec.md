@@ -44,6 +44,16 @@ session.
   side is the working scale, and both dimensions are multiples of the latent stride
 - **AND** this holds for landscape, portrait and square inputs alike
 
+#### Scenario: the dimensions come from the photograph's own frame header
+- **Key:** `image-generation:working-resolution:dimensions-come-from-the-header`
+- **Layers:** unit
+- **WHEN** a photograph in either supported codec is measured
+- **THEN** the dimensions derived are the ones its own frame header states, for a landscape, a portrait
+  and a square photograph alike
+- **AND** they are read from the photograph rather than declared alongside it, because no node
+  available to this pipeline can derive a target from the image it is handed — so a dimension the
+  system does not read is a dimension nothing supplies
+
 #### Scenario: a photograph below the working scale is scaled up
 - **Key:** `image-generation:working-resolution:small-photos-are-scaled-up`
 - **Layers:** unit
