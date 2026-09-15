@@ -1,4 +1,4 @@
-"""Stage (4): assembly before the session, seeds, preflight, render, idempotence.
+"""Stage (4): assembly before the session, seeds, render, atomicity, idempotence.
 
 Everything here runs against `FakeComfyClient`, the double the existing suite
 already drives `pipeline.run` with. No GPU, no network, and the assembly tests
@@ -6,12 +6,14 @@ assert that positively: the client records every call it is given, so "no
 endpoint was contacted" is a count rather than a hope.
 """
 
+import io
 import json
 import random
 from pathlib import Path
 
 import pytest
 
+import isekai.run as run_module
 from isekai.caption import FakeReader, caption
 from isekai.flow import Flow, load_flow
 from isekai.generate import (
@@ -21,8 +23,6 @@ from isekai.generate import (
     build_graph,
     draw_seeds,
     graph_digest,
-    missing_models,
-    preflight,
     prepare,
     prompt_artifact,
     render,
@@ -31,7 +31,7 @@ from isekai.generate import (
 )
 from isekai.refusal import Refusal
 from isekai.review import approve, review
-from isekai.run import Run, artifact_name, open_run, read_artifact
+from isekai.run import Run, across, artifact_name, open_run, read_artifact
 from isekai.sheet import FakeSorter, Schema, sheet
 from isekai.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
@@ -71,11 +71,6 @@ def _run(
 def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     """Return a run with an approved sheet for `FLOW`."""
     return _run(tmp_path, schema, vocabulary)
-
-
-def _present(flow: Flow) -> list[str]:
-    """Return the volume contents a preflight would find for a healthy pod."""
-    return list(flow.models)
 
 
 # --- assembly -----------------------------------------------------------------
@@ -257,32 +252,6 @@ def test_the_parser_takes_several_photographs_in_one_invocation() -> None:
     assert parsed.photos == ["a.jpg", "b.jpg", "c.jpg"]
 
 
-# --- preflight ----------------------------------------------------------------
-
-
-@pytest.mark.spec("image-generation:preflight:absent-models-refuse-early")
-def test_an_absent_artifact_refuses_before_any_work_is_submitted(
-    run: Run, flow: Flow, schema: Schema
-) -> None:
-    prepare(run, {FLOW: flow}, schema)
-    client = FakeComfyClient()
-    short = [dest for dest in flow.models if "RealESRGAN" not in dest]
-
-    with pytest.raises(Refusal) as refused:
-        render(run, flow, client, present=short, rng=random.Random(7))
-
-    message = str(refused.value)
-    assert "RealESRGAN_x4plus_anime_6B.pth" in message
-    assert "download_models.sh" in message
-    assert client.submissions == []
-
-
-@pytest.mark.spec("image-generation:preflight:absent-models-refuse-early")
-def test_a_complete_volume_passes_the_preflight(flow: Flow) -> None:
-    assert missing_models(flow, _present(flow)) == []
-    preflight(flow, _present(flow))
-
-
 # --- rendering ----------------------------------------------------------------
 
 
@@ -293,7 +262,7 @@ def test_the_stage_renders_through_the_double_with_no_gpu(
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
 
-    produced = render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    produced = render(run, flow, client, seeds=[42], poll=0)
 
     assert len(produced) == 1
     assert produced[0].image.name == "42.png"
@@ -309,7 +278,7 @@ def test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph(
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
 
-    produced = render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    produced = render(run, flow, client, seeds=[42], poll=0)
 
     body = read_artifact(produced[0].provenance)
     assert body["flow"] == FLOW
@@ -347,7 +316,7 @@ def test_the_submitted_graph_carries_the_manifests_dials_not_the_files(
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
 
-    render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     graph = client.submissions[0]
     assert graph[flow.node("sampler")]["inputs"]["cfg"] == 5
@@ -365,7 +334,7 @@ def test_the_submitted_graph_is_sized_from_the_photographs_own_header(
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
 
-    render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     graph = client.submissions[0]
     latent = graph[flow.node("latent")]["inputs"]
@@ -383,10 +352,10 @@ def test_a_named_seed_already_rendered_is_skipped(
 ) -> None:
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
-    render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
     before = len(client.submissions)
 
-    assert render(run, flow, client, seeds=[42], present=_present(flow), poll=0) == []
+    assert render(run, flow, client, seeds=[42], poll=0) == []
     assert len(client.submissions) == before
 
 
@@ -396,16 +365,12 @@ def test_raising_the_count_renders_only_the_difference(
 ) -> None:
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
-    render(
-        run, flow, client, count=2, rng=random.Random(7), present=_present(flow), poll=0
-    )
+    render(run, flow, client, count=2, rng=random.Random(7), poll=0)
     directory = run.path / OUTPUTS / FLOW / "001"
     first = rendered_seeds(directory)
     stamps = {p.name: p.read_bytes() for p in directory.iterdir()}
 
-    produced = render(
-        run, flow, client, count=3, rng=random.Random(9), present=_present(flow), poll=0
-    )
+    produced = render(run, flow, client, count=3, rng=random.Random(9), poll=0)
 
     assert len(first) == 2
     assert len(produced) == 1
@@ -420,7 +385,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
 ) -> None:
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
-    render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     second = review(run, FLOW, new_version=True)
     assert second is not None
@@ -429,7 +394,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     second.write_text(json.dumps(body))
     approve(run, FLOW, schema, vocabulary)
     prepare(run, {FLOW: flow}, schema)
-    render(run, flow, client, seeds=[42], present=_present(flow), poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     assert (run.path / OUTPUTS / FLOW / "001" / "42.png").exists()
     assert (run.path / OUTPUTS / FLOW / "002" / "42.png").exists()
@@ -442,10 +407,114 @@ def test_each_render_is_named_by_the_seed_that_produced_it(
     prepare(run, {FLOW: flow}, schema)
     client = FakeComfyClient()
 
-    produced = render(
-        run, flow, client, count=3, rng=random.Random(7), present=_present(flow), poll=0
-    )
+    produced = render(run, flow, client, count=3, rng=random.Random(7), poll=0)
 
     for made in produced:
         assert made.image.stem == str(made.seed)
         assert read_artifact(made.provenance)["seed"] == made.seed
+
+
+# --- the unapproved run, the unreadable header, the interrupted write ----------
+
+
+@pytest.mark.spec("image-generation:inputs:unapproved-flow-is-refused")
+def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    # The CLI's own path, not `approved_artifact` called directly: `prepare`
+    # filters to the flows a run is approved for, so a refusal only `prepare`
+    # cannot reach leaves `generate` printing nothing and exiting 0 -- the worst
+    # outcome for an operator who has just rented a pod.
+    from isekai.__main__ import Wiring, build_parser, dispatch
+
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    runs = tmp_path / "runs"
+    open_run(photo, runs)
+    err = io.StringIO()
+    wired = Wiring(
+        reader=FakeReader(prose="unused"),
+        sorter=FakeSorter(answers={}),
+        client=FakeComfyClient(),
+        schema=schema,
+        vocabulary=lambda: vocabulary,
+        runs_root=runs,
+        out=io.StringIO(),
+        err=err,
+    )
+
+    status = dispatch(build_parser().parse_args(["generate", str(photo)]), wired)
+
+    message = err.getvalue()
+    assert status == 1
+    assert FLOW in message
+    assert "python -m isekai review" in message
+    assert "python -m isekai approve" in message
+
+
+@pytest.mark.spec("image-generation:inputs:every-approved-flow-renders")
+def test_an_approved_flow_still_needs_no_flag_to_be_selected(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    # The refusal above fires only when *nothing* asked for is approved, so the
+    # "a run renders everything it has been approved for" rule is untouched.
+    assert list(prepare(run, {FLOW: flow}, schema)) == [FLOW]
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
+    tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    # Different name lengths, because `_run` derives the photograph's bytes from
+    # the name's length and identical bytes are the same run by design.
+    bad = _run(tmp_path, schema, vocabulary, "bella")
+    good = _run(tmp_path, schema, vocabulary, "ada")
+    # A run admits a photograph on its 8-byte magic alone, so a truncated PNG
+    # opens a run cleanly and only the header read ever finds it.
+    bad.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    def assemble_one(one: Run) -> None:
+        prepare(one, {FLOW: flow}, schema)
+
+    refused = across([bad, good], assemble_one)
+
+    assert len(refused) == 1
+    assert "re-export the photograph" in refused[0]
+    assert (good.directory(PROMPTS, FLOW) / artifact_name(1)).is_file()
+    assert list(bad.directory(PROMPTS, FLOW).glob("001.error.1.permanent.json"))
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    prepare(run, {FLOW: flow}, schema)
+    run.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
+    client = FakeComfyClient()
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, client, seeds=[42], poll=0)
+
+    directory = run.path / OUTPUTS / FLOW / "001"
+    assert "re-export the photograph" in str(refused.value)
+    assert client.submissions == []
+    assert list(directory.glob("001.error.1.permanent.json"))
+
+
+@pytest.mark.spec("run-directory:atomicity:interrupted-write-leaves-nothing")
+def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
+    run: Run, flow: Flow, schema: Schema, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare(run, {FLOW: flow}, schema)
+
+    def interrupted(descriptor: int) -> None:
+        raise OSError("the disk went away mid-write")
+
+    monkeypatch.setattr(run_module.os, "fsync", interrupted)
+
+    with pytest.raises(OSError):
+        render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+
+    directory = run.path / OUTPUTS / FLOW / "001"
+    assert not (directory / "42.png").exists()
+    assert rendered_seeds(directory) == []

@@ -179,21 +179,6 @@ stage's: a listing, never a parse.
 - **THEN** only the difference is rendered
 - **AND** the existing renders are untouched
 
-### Requirement: Absent models are refused before rendering, naming the remedy
-
-The system SHALL verify that the flow's declared model artifacts are present on the endpoint's volume
-before submitting any work, and SHALL refuse naming what would provision them.
-
-A missing artifact otherwise surfaces as a node error inside the graph, after a boot and several
-minutes of waiting, in a message that names a file rather than an action.
-
-#### Scenario: a missing model artifact refuses before any render
-- **Key:** `image-generation:preflight:absent-models-refuse-early`
-- **Layers:** unit
-- **WHEN** a flow's declared artifact is absent from the endpoint's volume
-- **THEN** rendering is refused before any work is submitted
-- **AND** the message names the missing artifact and how to provision it
-
 ### Requirement: The endpoint is reached through the existing transport seam
 
 The system SHALL reach the rendering endpoint through the repository's existing transport interface, so

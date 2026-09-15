@@ -7,6 +7,7 @@ property under test as much as it is the way the tests are written.
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -580,3 +581,41 @@ def test_a_digest_prefix_collision_is_refused_rather_than_mixed(
 
     assert run.id in str(refused.value)
     assert "rename that run directory" in str(refused.value)
+
+
+# --- the ignored roots --------------------------------------------------------
+
+REPO = Path(__file__).resolve().parent.parent
+
+# One path per directory a tracked producer writes a photograph or a render
+# into. `.data/` is the staged pipeline's single root (design.md D14); the render
+# path this version deliberately left in place still writes `outputs/` from
+# `isekai/cli.py`'s `--output` default, and `baseline/build_contact_sheets.py`
+# reads renders from `outputs/baseline` and *source photographs* from
+# `.inputs/baseline`. All four hold a person's likeness by construction.
+GENERATED = (
+    ".data/runs/000000000000-ada/photo.jpg",
+    "outputs/20260101T000000Z/0.png",
+    "outputs/baseline/ada/0.png",
+    ".inputs/baseline/ada.png",
+)
+
+
+@pytest.mark.spec_exempt(
+    "structural: the repository's own ignore rules, which no stage can assert"
+)
+@pytest.mark.parametrize("generated", GENERATED)
+def test_every_directory_a_producer_writes_a_photograph_into_is_ignored(
+    generated: str,
+) -> None:
+    # `git check-ignore` rather than a grep over `.gitignore`: the property is
+    # that git ignores the path, and a rule that reads right while matching
+    # nothing is exactly the failure this guards against.
+    decided = subprocess.run(
+        ["git", "check-ignore", "--no-index", "-q", generated],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    )
+
+    assert decided.returncode == 0, f"{generated} is not ignored: {decided.stderr}"

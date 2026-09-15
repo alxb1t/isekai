@@ -141,7 +141,8 @@ def test_every_model_a_flow_declares_has_a_manifest_entry() -> None:
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
 def test_every_model_a_flows_graph_needs_is_declared_by_that_flow() -> None:
     # Everything the graph names *and* everything its nodes fetch while naming
-    # nothing -- the preflight is only worth running if the list is complete.
+    # nothing. The gate is where an unpinned artifact is caught, so the list
+    # being complete is what the check is worth (design.md D15).
     from isekai.provision import (
         annotator_files,
         graph_model_files,

@@ -27,6 +27,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.13.0] - 2026-09-14
 
+### Fixed
+
+- **`outputs/` and `.inputs/` are gitignored again, and a test says so.** D14's single ignored root
+  replaced both lines, but the render path this version deliberately does *not* touch still writes
+  them: `isekai/cli.py` defaults `--output` to `./outputs`, and `baseline/build_contact_sheets.py`
+  reads renders from `outputs/baseline` and **source photographs** from `.inputs/baseline`. Both hold
+  a person's likeness by construction, so for the length of one `git add .` the repository's hardest
+  invariant depended on nobody typing it. The `.gitignore` route rather than repointing the producers,
+  because this version promised not to touch them; the lines go in the commit that deletes them.
+  `git check-ignore` is now run over one path per producing directory, so a rule that reads right
+  while matching nothing fails the gate.
+- **The rendered PNG was the one artifact written non-atomically.** `rendered_seeds` treats the
+  presence of `<seed>.png` as proof the seed is done, so an interrupted write left a truncated image
+  that resume skipped forever — on the single stage that costs money on every pass, and in direct
+  contradiction of this version's own "written atomically or not at all" requirement. It goes through
+  `write_atomically` like every other artifact now.
+- **`generate` on a run approved for nothing printed nothing and exited 0.** `prepare` iterated only
+  the flows a run was already approved for, so the refusal naming `review` → edit → `approve` was
+  unreachable from the command line: the scenario was proved by a test calling one function directly
+  while the shipped surface did the opposite. It refuses when none of the flows asked for has an
+  approved sheet, and the binding is at the CLI now. Selecting among several approved flows still
+  needs no flag — the refusal fires only when there is nothing at all to render.
+- **One unreadable photograph header no longer kills the batch mid-render.** `image_dimensions`
+  belongs to the untouched render path and stops the process with `sys.exit`; `across` collects
+  `Refusal` and a `SystemExit` walks straight past it, so a truncated header ended the whole batch
+  after the pod was rented and wrote no error record. The header is now read during *assembly*, which
+  is the free pre-rental step, and the read inside the render loop is a refusal the stage records.
+- **The vocabulary was manifested and verified but nothing fetched it**, which left the proposal's own
+  motivating defect — "a fresh clone cannot fill a sheet at all" — open. `scripts/download_models.sh`
+  takes the manifest as its one optional argument, so
+  `bash scripts/download_models.sh scripts/vocabulary.json` provisions the tag list through the same
+  plan → verify → land path as everything else; `provision.py` keeps the default so the shell has no
+  second copy of it. An absent tag list is a refusal naming that command rather than a
+  `FileNotFoundError` naming a path.
+
+### Removed
+
+- **The absent-models preflight, requirement and all** (design.md D15). It was real code bound to a
+  real scenario that no production invocation could reach: `Wiring.present` was populated by nothing
+  but tests, and nothing could populate it — a flow declares destinations like
+  `insightface/models/antelopev2/glintr100.onnx`, and ComfyUI exposes no endpoint that lists a volume.
+  `/object_info` reports each loader's enum per category folder, which cannot see the InsightFace
+  models or the annotator checkpoints at all, and a preflight over the half it *can* see would report
+  "present" for a flow about to fail on the half it cannot — a false guarantee on the stage that costs
+  money. The check that catches the mistake a human actually makes stays and needs no endpoint: the
+  gate binds every tracked flow's declared artifacts to `scripts/models.json` and to its own graph, in
+  both directions.
+
 ### Added
 
 - **The acceptance run: five photographs, end to end, on a rented GPU.** Photograph → prose →
@@ -148,11 +196,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flag. Seeds are drawn from an injected source or named explicitly, never both — one verb explores
   and the other reproduces — and the parser refuses the combination before any work begins. An output
   is named by its seed under its sheet version, which reproduces an *image* rather than an ordering.
-- **Rendering is idempotent per image and preflights the volume.** An existing seed is skipped from a
-  directory listing, a raised count renders only the shortfall, and a declared artifact the endpoint
-  does not carry refuses before anything is submitted, naming `download_models.sh` rather than a
-  file. Provenance carries the flow, the seed, the sheet version, the submitted graph's digest and
-  whether the sheet was edited.
+- **Rendering is idempotent per image.** An existing seed is skipped from a directory listing, and a
+  raised count renders only the shortfall. Provenance carries the flow, the seed, the sheet version,
+  the submitted graph's digest and whether the sheet was edited. (A volume preflight shipped in this
+  phase and was **withdrawn at converge** — see *Fixed*, below.)
 - **`isekai show`** — the run's artifacts, the active version per stage, approval where it applies,
   and what produced each one. It reads files where control flow reads listings, which is why no
   progress file ships: nothing but a human is watching before a review UI exists.

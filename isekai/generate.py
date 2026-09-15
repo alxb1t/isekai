@@ -49,6 +49,7 @@ from isekai.run import (
     envelope,
     read_artifact,
     record_failure,
+    write_atomically,
     write_json,
 )
 from isekai.sheet import Schema
@@ -164,6 +165,10 @@ def prompt_artifact(
     try:
         body = read_artifact(source)
         positive, negative = assemble(body["fields"], schema.names, flow)
+        # Read here and thrown away, for the reason the whole stage is here: the
+        # render target comes from the photograph's own header, and a header
+        # nothing can read must cost an assembly rather than a boot.
+        photo_resolution(run.photo)
     except (Refusal, KeyError, TypeError) as broken:
         record = record_failure(
             directory,
@@ -197,34 +202,23 @@ def prepare(
     flows: Mapping[str, Flow],
     schema: Schema,
 ) -> dict[str, Path]:
-    """Assemble every approved flow's prompt for one run, before anything is rented."""
-    return {
-        flow: prompt_artifact(run, flows[flow], schema)
-        for flow in approved_flows(run)
-        if flow in flows
-    }
+    """Assemble every approved flow's prompt for one run, before anything is rented.
 
-
-def missing_models(flow: Flow, present: Sequence[str]) -> list[str]:
-    """Return the flow's declared artifacts that the endpoint's volume does not have."""
-    available = set(present)
-    return [dest for dest in flow.models if dest not in available]
-
-
-def preflight(flow: Flow, present: Sequence[str]) -> None:
-    """Refuse before submitting anything when a declared artifact is absent.
-
-    A missing artifact otherwise surfaces as a node error inside the graph, after
-    a boot and several minutes of waiting, in a message that names a file rather
-    than an action.
+    A run that has been approved for *nothing* asked for is refused rather than
+    returning empty. Selecting among several approved flows still needs no flag --
+    the refusal fires only when none of the flows asked for has an approved sheet,
+    so "a run renders everything it has been approved for" is unchanged and
+    "rendering did nothing and said nothing" is no longer reachable.
     """
-    absent = missing_models(flow, present)
-    if absent:
+    ready = [flow for flow in approved_flows(run) if flow in flows]
+    if flows and not ready:
+        asked = ", ".join(sorted(flows))
         raise Refusal(
-            f"flow {flow.id} needs {', '.join(absent)}, which the endpoint's "
-            "volume does not carry; run `bash scripts/download_models.sh` on the "
-            "pod to provision them from the pinned manifest, then render again"
+            f"{run.id}: no approved sheet for {asked}, and only an approved sheet "
+            "is rendered; run `python -m isekai review`, edit the draft, then "
+            "`python -m isekai approve`"
         )
+    return {flow: prompt_artifact(run, flows[flow], schema) for flow in ready}
 
 
 def rendered_seeds(directory: Path) -> list[int]:
@@ -236,6 +230,25 @@ def rendered_seeds(directory: Path) -> list[int]:
         for path in directory.iterdir()
         if path.suffix == ".png" and path.stem.isdigit()
     )
+
+
+def photo_resolution(photo: Path) -> tuple[int, int]:
+    """Return the working resolution for `photo`, as a refusal rather than an exit.
+
+    `image_dimensions` belongs to the render path this version does not touch, and
+    it stops the process with `sys.exit` -- correct for a single-photograph
+    command, wrong here. A batch must survive one unreadable header: `across`
+    collects refusals and a `SystemExit` walks straight past it, taking the
+    remaining photographs with it after the endpoint is already rented.
+    """
+    try:
+        return working_resolution(*image_dimensions(str(photo)))
+    except SystemExit as unreadable:
+        raise Refusal(
+            f"{unreadable}; the render target is derived from the photograph's "
+            "own header and there is nothing to fall back to -- re-export the "
+            "photograph as a JPEG or PNG and open the run again"
+        ) from unreadable
 
 
 def build_graph(
@@ -250,7 +263,7 @@ def build_graph(
     """
     graph = flow.graph()
     dials = flow.dials
-    width, height = working_resolution(*image_dimensions(str(photo)))
+    width, height = photo_resolution(photo)
 
     graph[flow.node("photo")]["inputs"]["image"] = image_name
     graph[flow.node("positive")]["inputs"]["text"] = prompt["positive"]
@@ -306,7 +319,6 @@ def render(
     count: int | None = None,
     seeds: Sequence[int] | None = None,
     rng: random.Random | None = None,
-    present: Sequence[str] | None = None,
     poll: float = 1.0,
 ) -> list[Render]:
     """Render `flow`'s approved sheet for this run, one image per seed.
@@ -325,8 +337,6 @@ def render(
     if not wanted:
         return []
 
-    if present is not None:
-        preflight(flow, present)
     check_budget(STAGE_RENDER, directory, version, run.id)
 
     image_name = client.upload_image(str(run.photo))
@@ -334,9 +344,12 @@ def render(
     flow_graph = flow.graph_digest()
     produced: list[Render] = []
     for seed in wanted:
-        graph = build_graph(flow, run.photo, image_name, prompt, seed)
         image = directory / f"{seed}.png"
+        # `build_graph` is inside the guard and not before it: it refuses on an
+        # unreadable photograph header, and a refusal this stage does not record
+        # leaves resume nothing on disk to reason about.
         try:
+            graph = build_graph(flow, run.photo, image_name, prompt, seed)
             body = _submit(client, graph, poll)
         except Refusal as failed:
             record_failure(
@@ -346,8 +359,11 @@ def render(
                 {"stage": STAGE_RENDER, "seed": seed, "detail": str(failed)},
             )
             raise
-        directory.mkdir(parents=True, exist_ok=True)
-        image.write_bytes(body)
+        # Atomically, like every other artifact in a run, and for a sharper
+        # reason: `rendered_seeds` treats the presence of `<seed>.png` as proof
+        # the seed is done, so a truncated file is a seed resume skips forever --
+        # on the one stage that costs money on every pass.
+        write_atomically(image, body)
         provenance = directory / f"{seed}.json"
         write_json(
             provenance,

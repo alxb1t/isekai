@@ -181,7 +181,6 @@ class Wiring:
     vocabulary: Callable[[], Vocabulary]
     runs_root: Path = RUNS_ROOT
     flows_dir: Path = FLOWS_DIR
-    present: Sequence[str] | None = None
     rng: random.Random = dataclasses.field(default_factory=random.Random)
     out: TextIO = sys.stdout
     err: TextIO = sys.stderr
@@ -351,7 +350,6 @@ def _generate(
             count=args.count,
             seeds=args.seeds,
             rng=wired.rng,
-            present=wired.present,
         )
         for made in produced:
             print(f"{run.id}: rendered {flow}/{made.image.name}", file=wired.out)

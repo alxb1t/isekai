@@ -177,8 +177,10 @@ re-export a class that moved out of it.
   through the existing fake with no GPU and no network
   (`image-generation:transport:offline-double-drives-the-stage`,
   `image-generation:immutability:output-records-the-graph-digest`)
-- [x] 7.6 Implement the approved-only rule and the absent-models preflight refusal; verify the inputs
-  and preflight scenarios (`image-generation:inputs:*`, `image-generation:preflight:absent-models-refuse-early`)
+- [x] 7.6 Implement the approved-only rule; verify the inputs scenarios
+  (`image-generation:inputs:*`). The absent-models preflight was built in this phase and
+  **withdrawn at converge**, requirement and all — nothing outside a test could populate the list it
+  checks against, and ComfyUI exposes no way to produce one (design.md D15).
 - [x] 7.7 Implement per-image idempotence — an existing seed is skipped, a raised count renders only the
   shortfall; verify both scenarios (`image-generation:idempotence:*`)
 - [x] 7.8 Implement `isekai show`; verify it marks the active version per stage and reports each

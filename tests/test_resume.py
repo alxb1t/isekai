@@ -49,8 +49,6 @@ def photo(tmp_path: Path) -> Path:
 @pytest.fixture
 def wired(tmp_path: Path) -> Wiring:
     """Return a wiring with every external thing replaced by a counting double."""
-    from isekai.flow import load_flow
-
     return Wiring(
         reader=FakeReader(prose="Brown hair, brown eyes, a collared shirt."),
         sorter=FakeSorter(
@@ -69,7 +67,6 @@ def wired(tmp_path: Path) -> Wiring:
             read_tags(CSV),
         ),
         runs_root=tmp_path / "runs",
-        present=list(load_flow(FLOW).models),
         rng=random.Random(7),
         out=io.StringIO(),
         err=io.StringIO(),
@@ -223,7 +220,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     """Provoke one refusal from each stage that has one, and return the messages."""
     from isekai.caption import ClaudeReader, caption
     from isekai.flow import load_flow
-    from isekai.generate import preflight, prompt_artifact
+    from isekai.generate import photo_resolution, prompt_artifact
     from isekai.review import approve, review
     from isekai.run import open_run, read_artifact, record_failure
     from isekai.sheet import load_schema, sheet
@@ -249,7 +246,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: review(bare, FLOW))
     collect(lambda: approve(bare, FLOW, wired.schema, wired.vocabulary()))
     collect(lambda: prompt_artifact(bare, flow, wired.schema))
-    collect(lambda: preflight(flow, []))
+    collect(lambda: photo_resolution(_unreadable(tmp_path)))
     collect(lambda: load_flow("summon-v9"))
     collect(lambda: load_schema(_future_schema(tmp_path)))
     collect(lambda: ClaudeReader(binary="not-a-real-binary").read(photo, "b", tmp_path))
@@ -296,6 +293,7 @@ AVAILABLE: Sequence[str] = (
     "npm install -g @anthropic-ai/claude-code",
     "upgrade isekai",
     "convert the photograph",
+    "re-export the photograph",
     "check the path",
     "delete",
     "rename",

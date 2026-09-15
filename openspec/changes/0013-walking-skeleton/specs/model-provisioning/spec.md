@@ -30,6 +30,20 @@ vocabulary a matter of pointing one manifest somewhere else, rather than a code 
 - **THEN** it declares the tag list and not the model published alongside it
 - **AND** the two are treated as different artifacts with different consumers
 
+#### Scenario: the shipped driver fetches the vocabulary from its own manifest
+- **Key:** `model-provisioning:vocabulary:driver-provisions-the-manifest`
+- **Layers:** unit
+- **WHEN** the provisioning driver is pointed at the vocabulary manifest
+- **THEN** it plans and lands that manifest's entries
+- **AND** it does so through the same command every other artifact is provisioned by
+
+#### Scenario: an unprovisioned vocabulary refuses naming that command
+- **Key:** `model-provisioning:vocabulary:absent-vocabulary-names-the-command`
+- **Layers:** unit
+- **WHEN** a stage reads the vocabulary and the artifact has not been provisioned
+- **THEN** the read is refused rather than raising a file error
+- **AND** the message names the command that would provision it
+
 ### Requirement: Manifest derivation is shared and each manifest stays byte-identical
 
 The system SHALL derive every manifest through one shared module carrying the entry types and both

@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
+from isekai.refusal import Refusal
+
 # The destination the vocabulary manifest declares, and the models root the
 # scorer already defaults to. One tree, two consumers, one provisioning rule.
 VOCABULARY_DEST = "wd14/selected_tags.csv"
@@ -243,7 +245,17 @@ def load(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
     from isekai.provision import VOCABULARY_MANIFEST_PATH, load_manifest
 
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
-    path = resolve(VOCABULARY_DEST, models_dir, manifest)
+    try:
+        path = resolve(VOCABULARY_DEST, models_dir, manifest)
+    except FileNotFoundError as absent:
+        # A `FileNotFoundError` is the one failure here that has a remedy this
+        # build can perform, and a traceback names a path instead of naming it.
+        raise Refusal(
+            f"{VOCABULARY_DEST} is not provisioned under {models_dir}/, and no "
+            "sheet can be filled or approved without it; run `bash "
+            "scripts/download_models.sh scripts/vocabulary.json` from the "
+            "repository root to fetch and verify it against its pinned manifest"
+        ) from absent
     entry = next(e for e in manifest["entries"] if e["dest"] == VOCABULARY_DEST)
     match = _REVISION.search(entry["sources"][0])
     return Vocabulary(

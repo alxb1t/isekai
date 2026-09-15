@@ -164,8 +164,9 @@ isekai/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
 ├── scripts/
-│   ├── download_models.sh     # thin driver: plan → wget → verify & land (runs on the pod)
+│   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
+│   ├── vocabulary.json        # the tag list's manifest: `download_models.sh scripts/vocabulary.json`
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)

@@ -46,6 +46,9 @@ See `proposal.md` — *Why*. What matters for the approach:
 - **No progress file.** Nothing but a human is watching before the review UI exists, and the inspection
   command is what a human reads.
 - **No evaluation.** It needs optional heavy dependencies, and its unit is a cohort rather than a run.
+- **No volume preflight.** Added at converge, on evidence — see D15. Whether the endpoint's volume
+  carries the flow's artifacts cannot be answered through ComfyUI's API, so this version submits and
+  lets the node error say so.
 
 ## Decisions
 
@@ -208,6 +211,16 @@ is ours, it is tested, and shipping it as data would put a dependency into the g
 The deciding question is which outlives which: swap the sorting model and the mapper is still needed;
 swap the vocabulary and it is useless.
 
+**Provisioned means fetched, not merely verified** — settled at converge, where the first build shipped
+only the verify half and a fresh clone still could not fill a sheet, which is the defect this decision
+opens by naming. `scripts/download_models.sh` takes the manifest as its one optional argument and
+`provision.py` owns the default, so `bash scripts/download_models.sh scripts/vocabulary.json` fetches
+the tag list through the same plan/verify/land path every other artifact goes through. *Which manifest,
+not which policy*: a verb per consumer would be a second driver to keep in step, and the pins, the
+digests and the containment rule are already one set of rules for all three files. The absent file is a
+`Refusal` naming that command rather than a `FileNotFoundError` naming a path, because a remedy this
+build can perform is the only thing that makes the refusal worth reading.
+
 ### D10 · One shared derivation module, three derivers
 
 `scripts/manifest.py` carries the entry types, both digest strategies and the writer. Each deriver
@@ -288,6 +301,33 @@ construction. Moving it would also edit the provisioning policy, the scorer's co
 the pod's namespace conventions — real risk in a version whose only intended risk is the architecture.
 The rule is stated in `CLAUDE.md` with that boundary named, so it does not drift into meaning
 "everything untracked".
+
+### D15 · The volume preflight is deferred, and the requirement goes with it
+
+**Added at converge.** The first build carried `preflight(flow, present)` and a `Wiring.present` field
+that nothing outside a test ever populated: the refusal was real code, bound to a real scenario, and
+unreachable from every production invocation. Both are removed, and so is the requirement.
+
+**The reason is not scope, it is that the information does not exist at this seam.** A flow declares
+its artifacts as destinations under the models root — `insightface/models/antelopev2/glintr100.onnx`,
+`annotator_ckpts/yzd-v/DWPose/yolox_l.onnx`, `checkpoints/…`. ComfyUI exposes no endpoint that lists a
+volume; `/object_info` reports the *enum* each loader node offers, per category folder, which covers
+the checkpoint, the ControlNets, the InstantID adapter and the upscaler and cannot see the InsightFace
+models or the annotator checkpoints at all. A preflight over the half it can see is worse than none: it
+would report "present" for a flow that is about to fail on the half it cannot, which is a false
+guarantee on the one stage that costs money.
+
+*Alternatives.* Keep the code and the scenario and wire nothing — rejected, that is precisely the seam
+by assertion `CLAUDE.md`'s rule exists to prevent, and a living spec that claims behaviour the product
+does not have is worse than a spec that is silent. Narrow the requirement to the enumerable subset —
+rejected for the false-guarantee argument above. Add a listing endpoint to the image — a real option,
+and it belongs with the version that owns the session lifecycle, because that is the version that knows
+what a volume is.
+
+**What is kept instead.** `tests/test_flow.py` still binds every tracked flow's declared artifacts to
+`scripts/models.json` and to its own graph, in both directions, at gate time. That is the check that
+actually catches the mistake a human makes — adding a node whose model nothing pins — and it needs no
+endpoint.
 
 ## Risks / Trade-offs
 

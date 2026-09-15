@@ -115,7 +115,7 @@ def test_renders_are_listed_under_the_sheet_version_they_came_from(
 ) -> None:
     flow = load_flow(FLOW)
     prepare(run, {FLOW: flow}, schema)
-    render(run, flow, FakeComfyClient(), seeds=[42], present=list(flow.models), poll=0)
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert rendered(run) == [(FLOW, 1, [42])]
     assert any("42.png" in line for line in report(run))

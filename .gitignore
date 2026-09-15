@@ -16,8 +16,19 @@
 # Downloaded model weights (tens of GB; live on the RunPod network volume)
 models/
 
-# Images data for inputs and generated outputs
+# Everything the staged pipeline captures or generates (design.md D14)
 .data
+
+# The render path's own two roots, which v0.13 deliberately left in place.
+# `isekai/cli.py` still defaults `--output` to `./outputs`, and
+# `baseline/build_contact_sheets.py` reads renders from `outputs/baseline` and
+# *source photographs* from `.inputs/baseline` — so both hold personal
+# photographs by construction, exactly as `.data/` does. D14's "nothing is
+# generated outside the one ignored root" becomes true when v0.14 deletes the
+# path that writes them; until then these two lines are what makes the standing
+# rule hold, and they go in the same commit that deletes their producers.
+outputs/
+.inputs/
 
 # Python
 __pycache__/
