@@ -27,6 +27,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`infra/up.sh`'s readiness wait is bounded, and tears the pod down itself on timeout.** The poll
+  was `while true … sleep 5` with **no deadline at all** — the one thing in this repository that
+  could bill indefinitely while looking like it was working, which cost two sessions on 2026-09-08.
+  It now has a 420 s deadline and calls `infra/down.sh` when it expires, because a bounded wait that
+  leaves the meter running has not solved the problem it was added for: teardown is the act that
+  stops the billing. 420 s rather than 180 s, because the pod is not usable until the image has
+  pulled and ComfyUI has started — a shorter deadline tears down healthy pods mid-boot.
+  **The prototype's companion HTTP-proxy fallback is deliberately not taken**: that proxy is a
+  public, unauthenticated endpoint and ComfyUI has no auth, so a version adopting it must put
+  authentication in front of ComfyUI first (design.md D10). The bounded wait only removes exposure,
+  which is why one half crosses and the other does not. v0.14 is the only version in the arc with no
+  GPU phase, so it is the one place this work does not compete with a version's own metered risk —
+  and every version after it needs a pod to accept.
+
+### Removed
+
+- **Four model artifacts the old graph orphaned are dropped from the manifest, ≈2 GB.** The Tile and
+  mistoLine ControlNets and the two `sk_model` LineArt annotators go from `scripts/models.json` and
+  from `scripts/derive_manifest.py`'s `PINNED`, with `TTPlanet`, `TheMistoAI` and `lllyasviel`
+  dropped from `PUBLISHERS` — no surviving entry names them. `summon-v1` uses `DWPreprocessor`
+  alone. Nothing would have failed the gate had they stayed (`test_flow.py` uses a subset check); it
+  would just have downloaded 2 GB nothing reads.
+
 - **`--runs` can no longer write inside the repository working tree.** It has been a free
   `type=Path` since it was introduced, while the comment beside it claimed a containment check that
   existed nowhere — and `run.py` copies the photograph into the run directory by construction, so

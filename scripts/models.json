@@ -2,10 +2,7 @@
   "pinned": "2026-09-05",
   "publishers": [
     "InstantX",
-    "TTPlanet",
-    "xinsir",
-    "TheMistoAI",
-    "lllyasviel"
+    "xinsir"
   ],
   "entries": [
     {
@@ -84,27 +81,11 @@
       ]
     },
     {
-      "dest": "controlnet/TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors",
-      "sha256": "3d7db14f6b82c981f506be138774f6d9324dd2087a193e79682b4856ec90a622",
-      "bytes": 2502139104,
-      "sources": [
-        "https://huggingface.co/TTPlanet/TTPLanet_SDXL_Controlnet_Tile_Realistic/resolve/37f1c4575b543fb2036e39f5763d082fdd135318/TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors"
-      ]
-    },
-    {
       "dest": "controlnet/openpose/diffusion_pytorch_model.safetensors",
       "sha256": "b8524e557a7df60d081f5d4a0eb109967d107df217943bf88c2d99b9ebcc06c5",
       "bytes": 2502139104,
       "sources": [
         "https://huggingface.co/xinsir/controlnet-openpose-sdxl-1.0/resolve/23f966cd5cfdd3f7729c903e243d87152162d2b7/diffusion_pytorch_model.safetensors"
-      ]
-    },
-    {
-      "dest": "controlnet/mistoLine_rank256.safetensors",
-      "sha256": "6c46c871a49bf9e74114f0e1f87d818426203fd62847e78043e4ce2d40834d53",
-      "bytes": 774423024,
-      "sources": [
-        "https://huggingface.co/TheMistoAI/MistoLine/resolve/1d9d0b3d48b295cf70d80a0f839a3055672f8393/mistoLine_rank256.safetensors"
       ]
     },
     {
@@ -123,22 +104,6 @@
       "sources": [
         "https://huggingface.co/hr16/DWPose-TorchScript-BatchSize5/resolve/359d662a9b33b73f6d0f21732baf8845f17bb4be/dw-ll_ucoco_384_bs5.torchscript.pt",
         "https://huggingface.co/Pictorial/DWPose-TorchScript-BatchSize5/resolve/31098820c4d5d126b92e28517380ea1b088f8d53/dw-ll_ucoco_384_bs5.torchscript.pt"
-      ]
-    },
-    {
-      "dest": "annotator_ckpts/lllyasviel/Annotators/sk_model.pth",
-      "sha256": "c686ced2a666b4850b4bb6ccf0748031c3eda9f822de73a34b8979970d90f0c6",
-      "bytes": 17173511,
-      "sources": [
-        "https://huggingface.co/lllyasviel/Annotators/resolve/982e7edaec38759d914a963c48c4726685de7d96/sk_model.pth"
-      ]
-    },
-    {
-      "dest": "annotator_ckpts/lllyasviel/Annotators/sk_model2.pth",
-      "sha256": "30a534781061f34e83bb9406b4335da4ff2616c95d22a585c1245aa8363e74e0",
-      "bytes": 17173511,
-      "sources": [
-        "https://huggingface.co/lllyasviel/Annotators/resolve/982e7edaec38759d914a963c48c4726685de7d96/sk_model2.pth"
       ]
     },
     {

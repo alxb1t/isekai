@@ -6,7 +6,7 @@
 - [x] 2 — The old path deleted: modules, graphs, tests
 - [x] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
 - [x] 4 — The run root's containment, and the requirement that holds it
-- [ ] 5 — The manifest's orphans, and `infra/up.sh`'s bounded wait
+- [x] 5 — The manifest's orphans, and `infra/up.sh`'s bounded wait
 - [ ] 6 — The record: `CLAUDE.md`, the README, `.gitignore`, the version line
 
 ## The per-phase ritual
@@ -204,7 +204,7 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
 
 ## 5. The manifest's orphans, and `infra/up.sh`'s bounded wait
 
-- [ ] 5.1 Remove the four artifacts the old graph orphaned, from `scripts/models.json` **and** from
+- [x] 5.1 Remove the four artifacts the old graph orphaned, from `scripts/models.json` **and** from
   `scripts/derive_manifest.py`'s `PINNED` —
   `controlnet/TTPLANET_Controlnet_Tile_realistic_v2_fp16.safetensors`,
   `controlnet/mistoLine_rank256.safetensors`,
@@ -212,14 +212,14 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
   `TTPlanet`, `TheMistoAI` and `lllyasviel` from `PUBLISHERS` **only if** no surviving entry names them.
   Verify: `uv run pytest tests/test_manifest.py tests/test_derivation.py tests/test_flow.py -q` exits 0
   — that is where the byte-identical re-derivation invariant (**L21**) is held.
-- [ ] 5.2 Port **only** `infra/up.sh`'s bounded readiness wait from the `v0.13_prototype` branch — the
+- [x] 5.2 Port **only** `infra/up.sh`'s bounded readiness wait from the `v0.13_prototype` branch — the
   **420 s deadline that tears the pod down itself on timeout**, replacing `main`'s `while true … sleep 5`,
   which has no deadline at all. **Do not port the `8188/http` port or the proxy probe** — design.md
   **D10**: the RunPod proxy is a public, unauthenticated ComfyUI endpoint, and it is gated on
   authentication landing first. Keep `main`'s own GPU-preference-list fix, which the prototype predates.
   Verify: `bash -n infra/up.sh` exits 0, `uv run pytest tests/test_infra.py -q` exits 0, and
   `grep -n "8188/http\|proxy\.runpod\.net" infra/up.sh` returns nothing.
-- [ ] 5.3 Full gate green. `CHANGELOG.md` entry. Tick box 5. Commit.
+- [x] 5.3 Full gate green. `CHANGELOG.md` entry. Tick box 5. Commit.
 
 ## 6. The record: `CLAUDE.md`, the README, `.gitignore`, the version line
 
