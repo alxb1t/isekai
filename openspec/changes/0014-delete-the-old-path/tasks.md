@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The gate's exemption, landed first while it is still a no-op
+- [x] 1 — The gate's exemption, landed first while it is still a no-op
 - [ ] 2 — The old path deleted: modules, graphs, tests
 - [ ] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
 - [ ] 4 — The run root's containment, and the requirement that holds it
@@ -71,16 +71,16 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
 
 ## 1. The gate's exemption, landed first while it is still a no-op
 
-- [ ] 1.1 Add `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py` to the existing
+- [x] 1.1 Add `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py` to the existing
   `[[tool.ty.overrides]]` `include` list in `pyproject.toml` — **by literal path**, the form already
   proven in that file. A `**` glob is unverified; design.md **D5** says to use the literal form. Verify:
   `uv run ty check` exits 0, and `git diff --stat pyproject.toml` shows one file changed.
-- [ ] 1.2 Add a comment in that block's established style: an archived change is a record of code that
+- [x] 1.2 Add a comment in that block's established style: an archived change is a record of code that
   was true at a past commit, and `unresolved-import` asks whether it is true *today*, which the archive
   makes no claim about. State that the exemption is **permanent** — the probe is never repaired, because
   *"archived changes are never deleted."* Verify: `uv run ruff format --check .` exits 0 and
   `git diff pyproject.toml` shows the comment above the entry.
-- [ ] 1.3 Full gate green. `CHANGELOG.md` entry. Tick box 1. Commit.
+- [x] 1.3 Full gate green. `CHANGELOG.md` entry. Tick box 1. Commit.
 
 ## 2. The old path deleted: modules, graphs, tests
 

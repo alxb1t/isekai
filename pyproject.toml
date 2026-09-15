@@ -100,7 +100,20 @@ ignore = ["D203", "D213"]
 # installed, which is the property that matters -- `make gate` must not depend on
 # what the operator happens to have synced.
 [[tool.ty.overrides]]
-include = ["isekai/eval_backends.py", "baseline/build_contact_sheets.py"]
+include = [
+    "isekai/eval_backends.py",
+    "baseline/build_contact_sheets.py",
+    # A third file, for a different reason, under the same one rule. An archived
+    # change is a record of code that was true at a past commit; `unresolved-import`
+    # asks whether it is true TODAY, which the archive makes no claim about. This
+    # probe imports `isekai.pipeline._render` and six names from `isekai.workflow`,
+    # and v0.14 deletes four of them and moves the other two. The exemption is
+    # therefore PERMANENT: the probe is never repaired, because "archived changes
+    # are never deleted" -- editing it to match today's tree would falsify the
+    # record it exists to be. Listed by literal path, not by a `**` glob over the
+    # archive, so no file nobody has written yet is granted cover in advance.
+    "openspec/changes/archive/0010-illustrious-base/controlnet_probe.py",
+]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

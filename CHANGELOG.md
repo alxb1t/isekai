@@ -25,6 +25,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The archived ControlNet probe is exempted from `unresolved-import`, by literal path and
+  permanently.** `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py` is the only
+  `.py` file in the archive, and it imports `isekai.pipeline._render` plus six names from
+  `isekai.workflow` — four of which v0.14 deletes and two of which it moves. An archived change
+  records what was true at a past commit; `unresolved-import` asks whether it is true today, which
+  the archive makes no claim about, and repairing the probe would violate *"archived changes are
+  never deleted."* The entry lands **first, while it is still a no-op**, so the deletion's own commit
+  carries no suppression and no phase boundary is ever red. Scoped by literal path rather than by a
+  glob over the archive, so no file nobody has written yet is granted cover in advance.
+
 ## [0.13.0] - 2026-09-15
 
 ### Fixed
