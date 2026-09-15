@@ -29,6 +29,25 @@ def _module(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _stdlib_import(statement: str) -> subprocess.CompletedProcess[str]:
+    """Run one import under `-S`, with the repository on the path and nothing else.
+
+    The mechanism is `-S`, chosen over an AST walk against `sys.stdlib_module_names`
+    because it was verified to work here: inside this uv venv, `-S` leaves no
+    site-packages on `sys.path` at all, so a third-party import anywhere in the
+    graph raises rather than resolving. Spelled once, because the guards below and
+    the falsification that keeps them honest must run under identical conditions --
+    a falsification that differs from what it falsifies proves nothing.
+    """
+    return subprocess.run(
+        [sys.executable, "-S", "-c", statement],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": str(ROOT)},
+        cwd=ROOT,
+    )
+
+
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 def test_the_six_verbs_are_the_ones_the_change_declares() -> None:
     assert tuple(name for name, _ in VERBS) == EXPECTED_VERBS
@@ -72,31 +91,14 @@ def test_no_verb_at_all_is_refused_too() -> None:
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
 def test_the_pipeline_entry_point_imports_with_site_packages_off_the_path() -> None:
-    # The mechanism is `-S`, chosen over an AST walk against
-    # `sys.stdlib_module_names` because it was verified to work here: inside this
-    # uv venv, `-S` leaves no site-packages on `sys.path` at all, so a
-    # third-party import anywhere in this entry point's graph raises rather than
-    # resolving.
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import isekai.__main__"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(ROOT)},
-        cwd=ROOT,
-    )
+    result = _stdlib_import("import isekai.__main__")
 
     assert result.returncode == 0, result.stderr
 
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
 def test_the_run_directory_module_imports_with_site_packages_off_the_path() -> None:
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import isekai.run"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(ROOT)},
-        cwd=ROOT,
-    )
+    result = _stdlib_import("import isekai.run")
 
     assert result.returncode == 0, result.stderr
 
@@ -110,13 +112,7 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
     # accidental wheel in `python -m isekai`'s import graph would ship silently.
     # It moved here with the guard it falsifies: it used to sit beside the one
     # that held `convert.py`, and that guard died with its target.
-    result = subprocess.run(
-        [sys.executable, "-S", "-c", "import pytest"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "PYTHONPATH": str(ROOT)},
-        cwd=ROOT,
-    )
+    result = _stdlib_import("import pytest")
 
     assert result.returncode != 0
     assert "No module named 'pytest'" in result.stderr

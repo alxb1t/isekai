@@ -27,6 +27,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.14.0] - 2026-09-15
 
+### Added
+
+- **The 4:1 target ceiling is restored to the surviving render path.**
+  `MAX_TARGET_LONG_SIDE` was enforced only inside `inject`, via `sys.exit`, and `generate.py`'s
+  `photo_resolution` never applied it — **a live gap on `main`, not a regression this version
+  introduces**, which deleting `inject` would have made permanent. It moves as a `Refusal` rather
+  than a `SystemExit`, so a batch survives one extreme photograph the same way it survives one
+  unreadable header. It bounds the **working** target, not the hires one: hires scales both axes by
+  the same factor and so does not change the aspect ratio, and bounding the hires value would
+  silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect (design.md D4).
+
+- **`--runs` can no longer write inside the repository working tree.** It has been a free
+  `type=Path` since it was introduced, while the comment beside it claimed a containment check that
+  existed nowhere — and `run.py` copies the photograph into the run directory by construction, so
+  such a directory holds personal photographs one `git add` from being published. The rule **bounds
+  the working tree, not the filesystem**: a run root resolving inside this repository and outside
+  `.data/` is refused before any run is created, naming the path given and what would be accepted,
+  while any path outside the repository is still accepted, because version control cannot reach it
+  and that is what keeps a run on another disk expressible (design.md D7). The repository root is
+  taken from the module's own location rather than the process's working directory, so the same run
+  root is not legal or illegal depending on where the operator was standing. **The requirement is
+  the part that closes it** — the claim sat in a source comment for a whole version and was false
+  that whole time because no scenario held it.
+
+- **`infra/up.sh`'s readiness wait is bounded, and tears the pod down itself on timeout.** The poll
+  was `while true … sleep 5` with **no deadline at all** — the one thing in this repository that
+  could bill indefinitely while looking like it was working, which cost two sessions on 2026-09-08.
+  It now has a 420 s deadline and calls `infra/down.sh` when it expires, because a bounded wait that
+  leaves the meter running has not solved the problem it was added for: teardown is the act that
+  stops the billing. 420 s rather than 180 s, because the pod is not usable until the image has
+  pulled and ComfyUI has started — a shorter deadline tears down healthy pods mid-boot.
+  **The prototype's companion HTTP-proxy fallback is deliberately not taken**: that proxy is a
+  public, unauthenticated endpoint and ComfyUI has no auth, so a version adopting it must put
+  authentication in front of ComfyUI first (design.md D10). The bounded wait only removes exposure,
+  which is why one half crosses and the other does not. v0.14 is the only version in the arc with no
+  GPU phase, so it is the one place this work does not compete with a version's own metered risk —
+  and every version after it needs a pod to accept.
+
 ### Changed
 
 - **`.data/` is now the only root anything is generated into, and `outputs/` is gone.** It had two
@@ -54,56 +92,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   producer of the shape it *can* read. A pre-existing gap made total, owned by the version whose
   whole content is the evaluation tool (design.md D13). Nothing under `tests/` imports it, so it
   fails no gate command — which is exactly why it is written where a reader will hit it.
-
-### Added
-
-- **`infra/up.sh`'s readiness wait is bounded, and tears the pod down itself on timeout.** The poll
-  was `while true … sleep 5` with **no deadline at all** — the one thing in this repository that
-  could bill indefinitely while looking like it was working, which cost two sessions on 2026-09-08.
-  It now has a 420 s deadline and calls `infra/down.sh` when it expires, because a bounded wait that
-  leaves the meter running has not solved the problem it was added for: teardown is the act that
-  stops the billing. 420 s rather than 180 s, because the pod is not usable until the image has
-  pulled and ComfyUI has started — a shorter deadline tears down healthy pods mid-boot.
-  **The prototype's companion HTTP-proxy fallback is deliberately not taken**: that proxy is a
-  public, unauthenticated endpoint and ComfyUI has no auth, so a version adopting it must put
-  authentication in front of ComfyUI first (design.md D10). The bounded wait only removes exposure,
-  which is why one half crosses and the other does not. v0.14 is the only version in the arc with no
-  GPU phase, so it is the one place this work does not compete with a version's own metered risk —
-  and every version after it needs a pod to accept.
-
-### Removed
-
-- **Four model artifacts the old graph orphaned are dropped from the manifest, ≈2 GB.** The Tile and
-  mistoLine ControlNets and the two `sk_model` LineArt annotators go from `scripts/models.json` and
-  from `scripts/derive_manifest.py`'s `PINNED`, with `TTPlanet`, `TheMistoAI` and `lllyasviel`
-  dropped from `PUBLISHERS` — no surviving entry names them. `summon-v1` uses `DWPreprocessor`
-  alone. Nothing would have failed the gate had they stayed (`test_flow.py` uses a subset check); it
-  would just have downloaded 2 GB nothing reads.
-
-- **`--runs` can no longer write inside the repository working tree.** It has been a free
-  `type=Path` since it was introduced, while the comment beside it claimed a containment check that
-  existed nowhere — and `run.py` copies the photograph into the run directory by construction, so
-  such a directory holds personal photographs one `git add` from being published. The rule **bounds
-  the working tree, not the filesystem**: a run root resolving inside this repository and outside
-  `.data/` is refused before any run is created, naming the path given and what would be accepted,
-  while any path outside the repository is still accepted, because version control cannot reach it
-  and that is what keeps a run on another disk expressible (design.md D7). The repository root is
-  taken from the module's own location rather than the process's working directory, so the same run
-  root is not legal or illegal depending on where the operator was standing. **The requirement is
-  the part that closes it** — the claim sat in a source comment for a whole version and was false
-  that whole time because no scenario held it.
-
-- **The 4:1 target ceiling is restored to the surviving render path.**
-  `MAX_TARGET_LONG_SIDE` was enforced only inside `inject`, via `sys.exit`, and `generate.py`'s
-  `photo_resolution` never applied it — **a live gap on `main`, not a regression this version
-  introduces**, which deleting `inject` would have made permanent. It moves as a `Refusal` rather
-  than a `SystemExit`, so a batch survives one extreme photograph the same way it survives one
-  unreadable header. It bounds the **working** target, not the hires one: hires scales both axes by
-  the same factor and so does not change the aspect ratio, and bounding the hires value would
-  silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect (design.md D4).
-
-### Changed
-
 - **`isekai/workflow.py` is `isekai/photo.py`, minus injection.** `PIPELINE_PATH`, `find_node`,
   `find_nodes` and `inject` are gone; the JPEG/PNG header walk, the EXIF transpose,
   `image_dimensions` and `working_resolution` survive as what they always were — *what is this
@@ -116,17 +104,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the flow manifest is what names the photograph's. The test now reads the shipped graph and
   asserts the scaling node sits between the loader and **both** the identity node and the pose
   preprocessor, with nothing else reaching the loader.
-- **The archived probe needs two more rules exempted than design.md D5 predicted, and gets them in a
-  block of its own.** D5's measurement was made against a missing *member*, where `unresolved-import`
-  is the whole story; deleting the whole module makes `find_nodes` resolve to `Unknown`, which widens
-  `apply_id` through `sorted(..., key=int)` and raises `invalid-argument-type` and
-  `invalid-assignment`. The decision is unchanged — exempt the probe by literal path, permanently,
-  as narrowly as the rules allow — so the two rules land in a **second override scoped to the probe
-  alone** rather than widening the block that covers `eval_backends.py` and
-  `build_contact_sheets.py`, which bridge to absent wheels and need no cover against type errors.
-
+- **The archive's one `.py` file is exempted from three type-checker rules, by literal path and
+  permanently, in a block of its own.** `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py`
+  imports `isekai.pipeline._render` plus six names from `isekai.workflow`; this version deletes four of
+  them and moves the other two, which turns `ty check` red on a file the repository forbids editing. An
+  archived change records what was true at a past commit, and these rules ask whether it is true today —
+  which the archive makes no claim about — so the exemption is permanent rather than a TODO. **design.md
+  D5 predicted one rule and the tree needed three**: its measurement was made against a missing *member*,
+  where `unresolved-import` is the whole story, while deleting the whole module makes `find_nodes` resolve
+  to `Unknown` and raises `invalid-argument-type` and `invalid-assignment` downstream. The decision is
+  unchanged — by literal path, permanently, as narrowly as the rules allow — so the three rules sit in a
+  **probe-only block**, leaving the shared block to mean exactly *"files that bridge to wheels the gate
+  deliberately does not install"*, which has no claim to cover against type errors.
+- **`comfy-transport`'s two orphaned scenarios are rebound rather than deleted.** Polling and
+  retrieval lost their only tests with `tests/test_polling.py`, but the behaviour is live in
+  `isekai/generate.py`. The two tests move into `tests/test_generate.py` with `pipeline.run` swapped
+  for `render`, carrying their keys. Deleting them would have deleted a requirement that is still
+  true — the worst outcome available, and the one that looks cheapest.
+- **The `-S` stdlib guard's falsifiability twin moves to the entry point it now falsifies.** The
+  guard on `import convert` died with its target; its twin — *a check that cannot fail is not a
+  check* — would then have sat in a file whose guard had gone, so it moves beside
+  `tests/test_pipeline_cli.py`'s guards on `isekai.__main__` and `isekai.run`.
+- **The suite's shipped-graph fixture reads `flows/summon-v1/graph.json`**, reached through the flow
+  that declares it rather than through a path constant, so the fixture and the render path agree on
+  which file the shipped graph is by construction. Five assertions the new graph invalidates are
+  corrected with it: `summon-v1` uses `DWPreprocessor` alone, so it has no unclassified node classes,
+  names neither the Tile nor the mistoLine ControlNet, and yields two annotator checkpoints, not four.
 ### Removed
 
+- **Four model artifacts the old graph orphaned are dropped from the manifest, ≈2 GB.** The Tile and
+  mistoLine ControlNets and the two `sk_model` LineArt annotators go from `scripts/models.json` and
+  from `scripts/derive_manifest.py`'s `PINNED`, with `TTPlanet`, `TheMistoAI` and `lllyasviel`
+  dropped from `PUBLISHERS` — no surviving entry names them. `summon-v1` uses `DWPreprocessor`
+  alone. Nothing would have failed the gate had they stayed (`test_flow.py` uses a subset check); it
+  would just have downloaded 2 GB nothing reads.
 - **BREAKING — the old render path is deleted.** `convert.py`, `isekai/cli.py`,
   `isekai/pipeline.py`, `isekai/mutate.py`, `isekai/overrides.py`, `workflows/pipeline.json`,
   `workflows/pipeline_ui.json` and `comfy_types.Overrides` are gone, with the five test files that
@@ -142,32 +153,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that build their inputs directly. That the standalone evaluator can no longer read any run this
   pipeline produces is a pre-existing gap this version makes total, recorded for v0.18 rather than
   repaired here (design.md D13).
-
-### Changed
-
-- **`comfy-transport`'s two orphaned scenarios are rebound rather than deleted.** Polling and
-  retrieval lost their only tests with `tests/test_polling.py`, but the behaviour is live in
-  `isekai/generate.py`. The two tests move into `tests/test_generate.py` with `pipeline.run` swapped
-  for `render`, carrying their keys. Deleting them would have deleted a requirement that is still
-  true — the worst outcome available, and the one that looks cheapest.
-- **The `-S` stdlib guard's falsifiability twin moves to the entry point it now falsifies.** The
-  guard on `import convert` died with its target; its twin — *a check that cannot fail is not a
-  check* — would then have sat in a file whose guard had gone, so it moves beside
-  `tests/test_pipeline_cli.py`'s guards on `isekai.__main__` and `isekai.run`.
-- **The suite's shipped-graph fixture reads `flows/summon-v1/graph.json`**, reached through the flow
-  that declares it rather than through a path constant, so the fixture and the render path agree on
-  which file the shipped graph is by construction. Five assertions the new graph invalidates are
-  corrected with it: `summon-v1` uses `DWPreprocessor` alone, so it has no unclassified node classes,
-  names neither the Tile nor the mistoLine ControlNet, and yields two annotator checkpoints, not four.
-- **The archived ControlNet probe is exempted from `unresolved-import`, by literal path and
-  permanently.** `openspec/changes/archive/0010-illustrious-base/controlnet_probe.py` is the only
-  `.py` file in the archive, and it imports `isekai.pipeline._render` plus six names from
-  `isekai.workflow` — four of which v0.14 deletes and two of which it moves. An archived change
-  records what was true at a past commit; `unresolved-import` asks whether it is true today, which
-  the archive makes no claim about, and repairing the probe would violate *"archived changes are
-  never deleted."* The entry lands **first, while it is still a no-op**, so the deletion's own commit
-  carries no suppression and no phase boundary is ever red. Scoped by literal path rather than by a
-  glob over the archive, so no file nobody has written yet is granted cover in advance.
 
 ## [0.13.0] - 2026-09-15
 

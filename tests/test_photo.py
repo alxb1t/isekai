@@ -54,18 +54,6 @@ def _write(directory: Path, name: str, data: bytes) -> str:
     return str(path)
 
 
-# Every node that reads the photo, by the input that carries it. Named rather
-# than discovered: the scenario is that *these* consumers read one pixel grid,
-# and a check that derives its own list from the graph would pass an empty one.
-PHOTO_CONSUMERS = (
-    ("8", "image"),  # ApplyInstantIDAdvanced
-    ("9", "pixels"),  # VAEEncode
-    ("13", "image"),  # TilePreprocessor
-    ("16", "image"),  # DWPreprocessor
-    ("19", "image"),  # LineArtPreprocessor
-)
-
-
 @pytest.mark.spec("image-generation:working-resolution:short-side-at-the-working-scale")
 @pytest.mark.parametrize(
     ("width", "height"),
@@ -182,11 +170,9 @@ def test_a_photo_whose_dimensions_cannot_be_read_stops_the_run(
     assert path in str(excinfo.value)
 
 
-# Three stated ceilings. A short-side rule places no bound on the other axis, and
-# a header field is an unverified number until something bounds it (design.md D8).
-# Each refuses rather than clamping: a clamped target no longer preserves the
-# aspect ratio, and would squash the photo the way the orientation rule exists to
-# prevent.
+# The two header ceilings. A header field is an unverified number until something
+# bounds it (design.md D8). The third stated ceiling is the target's long side,
+# enforced where the target is computed for a render -- see `tests/test_generate.py`.
 
 
 @pytest.mark.spec(

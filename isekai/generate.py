@@ -245,16 +245,13 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
     straight past it, taking the remaining photographs with it after the endpoint
     is already rented.
 
-    The long-side bound is enforced here for the same reason and in the same
-    currency. The short-side rule bounds one axis and says nothing about the
-    other, so an extreme aspect ratio drives the long side arbitrarily high.
-    `MAX_TARGET_LONG_SIDE` is 4:1 at a 1024 short side -- an aspect bound wearing
-    a pixel bound's clothes -- and it bounds the *working* target, not the hires
-    one: hires scales both axes by the same factor and so does not change the
-    aspect ratio, and bounding the hires value would silently tighten 4:1 to
-    2.67:1 for a reason unrelated to aspect (design.md D4). It refuses rather than
-    clamping, because a clamped target no longer preserves the aspect ratio and
-    would squash the photograph the way the orientation rule exists to prevent.
+    `MAX_TARGET_LONG_SIDE` is enforced here for the same reason and in the same
+    currency -- see its own comment in `isekai.photo` for what it bounds and why.
+    The one fact that belongs here rather than beside the constant: it bounds the
+    *working* target and not the hires one, because hires scales both axes by the
+    same factor and so does not change the aspect ratio, and bounding the hires
+    value would silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect
+    (design.md D4).
     """
     try:
         width, height = working_resolution(*image_dimensions(str(photo)))

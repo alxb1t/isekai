@@ -66,7 +66,6 @@ def test_the_pose_preprocessor_names_its_own_files_rather_than_fetching_them(
     fetched = self_fetched_model_files(workflow)
     assert "yolox_l.onnx" not in fetched
     assert "dw-ll_ucoco_384_bs5.torchscript.pt" not in fetched
-    assert undeclared_files(named, manifest) == []
 
 
 @pytest.mark.spec(

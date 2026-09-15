@@ -189,11 +189,12 @@ class Wiring:
     err: TextIO = sys.stderr
 
 
-# The repository, taken from this module's own location rather than from the
-# process's working directory: `python -m isekai` may be run from anywhere, and a
-# CWD-relative answer would make the same run root legal or illegal depending on
-# where the operator happened to be standing.
-REPOSITORY = Path(__file__).resolve().parent.parent
+# Derived from `DATA_ROOT` rather than recomputed, so the two halves of the check
+# below cannot drift apart: both the repository and the ignored root are then
+# anchored to one `__file__`. That anchor is deliberate -- `python -m isekai` may
+# be run from anywhere, and a CWD-relative answer would make the same run root
+# legal or illegal depending on where the operator happened to be standing.
+REPOSITORY = DATA_ROOT.parent
 
 
 def _check_run_root(runs: Path) -> None:
@@ -206,9 +207,7 @@ def _check_run_root(runs: Path) -> None:
     (design.md D7).
     """
     resolved = runs.resolve()
-    inside_repository = resolved == REPOSITORY or REPOSITORY in resolved.parents
-    under_data_root = resolved == DATA_ROOT or DATA_ROOT in resolved.parents
-    if inside_repository and not under_data_root:
+    if resolved.is_relative_to(REPOSITORY) and not resolved.is_relative_to(DATA_ROOT):
         raise Refusal(
             f"--runs {resolved} is inside this repository and outside "
             f"{DATA_ROOT}, the one directory git ignores; a run holds a copy of "

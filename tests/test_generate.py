@@ -561,12 +561,10 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
 
 # --- the aspect-ratio ceiling -------------------------------------------------
 
-# The short-side rule bounds one axis and says nothing about the other, so an
-# extreme aspect ratio drives the long side arbitrarily high. `MAX_TARGET_LONG_SIDE`
-# is 4:1 at a 1024 short side wearing a pixel bound's clothes, and it bounds the
-# WORKING target rather than the hires one: hires scales both axes by the same
-# factor and so does not change the aspect ratio, and bounding the hires value
-# would tighten 4:1 to 2.67:1 for a reason unrelated to aspect (design.md D4).
+# The third of the three ceilings `isekai.photo` states, enforced where a target
+# is computed rather than where a header is read. What it bounds and why is beside
+# the constant; what is asserted here is that it refuses, that it refuses per
+# photograph, and that it does not refuse what merely reaches it.
 
 
 def _photo(tmp_path: Path, name: str, width: int, height: int) -> Path:

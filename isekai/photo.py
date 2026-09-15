@@ -24,6 +24,11 @@ DIMENSION_STEP = 64
 # aspect ratio, and would squash the photo the way the orientation rule exists to
 # prevent.
 #
+# Two of the three are enforced here, where the header is read. The third bounds
+# a *computed target* rather than a header field, so it is enforced where a target
+# is computed for a render -- `generate.photo_resolution`, which is also the only
+# caller that can turn it into a per-photograph refusal instead of a dead batch.
+#
 #   4096 is 4:1 at a 1024 short side -- past any real photo, and 1024x4096 is
 #   already a heavy SDXL allocation.
 #   65535 is what JPEG's two-byte frame field already enforces, so both codecs
