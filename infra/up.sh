@@ -30,6 +30,12 @@ fi
 
 echo "Creating pod in $RUNPOD_DATACENTER on '$RUNPOD_GPU_TYPE' ..."
 echo "  image: $RUNPOD_IMAGE"
+# `RUNPOD_GPU_TYPE` is a comma-separated preference order, not one name: the API
+# takes a list and picks the first with capacity, which is what stops a session
+# dying at creation because one model is sold out in one datacenter. It is split
+# here rather than in `.env` because the API wants an array of exact enum values,
+# and a single string carrying a comma is not one of them -- it is rejected at
+# creation with the whole enum echoed back, which is how this was found.
 body=$(jq -n \
   --arg image  "$RUNPOD_IMAGE" \
   --arg gpu    "$RUNPOD_GPU_TYPE" \
@@ -38,7 +44,7 @@ body=$(jq -n \
   --arg pubkey "$PUBKEY" \
   '{ name: "isekai",
      imageName: $image,
-     gpuTypeIds: [$gpu],
+     gpuTypeIds: ($gpu | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))),
      gpuCount: 1,
      networkVolumeId: $vol,
      volumeMountPath: "/runpod-volume",

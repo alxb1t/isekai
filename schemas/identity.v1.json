@@ -1,0 +1,91 @@
+{
+  "schema": "identity",
+  "version": 1,
+  "vocabulary": {
+    "name": "wd14/selected_tags.csv",
+    "revision": "627aef95638667ddcaa3ac8ae625e88ea5b02f51",
+    "sha256": "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217"
+  },
+  "fields": [
+    {
+      "name": "count",
+      "scored": false,
+      "suffix": null
+    },
+    {
+      "name": "age_band",
+      "scored": false,
+      "suffix": null
+    },
+    {
+      "name": "skin_ancestry",
+      "scored": false,
+      "suffix": "skin"
+    },
+    {
+      "name": "hair_colour",
+      "scored": true,
+      "suffix": "hair"
+    },
+    {
+      "name": "hair_silhouette",
+      "scored": true,
+      "suffix": "hair"
+    },
+    {
+      "name": "eye_colour",
+      "scored": true,
+      "suffix": "eyes"
+    },
+    {
+      "name": "eyebrows",
+      "scored": false,
+      "suffix": "eyebrows"
+    },
+    {
+      "name": "marks",
+      "scored": true,
+      "suffix": null
+    },
+    {
+      "name": "clothes",
+      "scored": true,
+      "suffix": null
+    },
+    {
+      "name": "accessories",
+      "scored": false,
+      "suffix": null
+    },
+    {
+      "name": "expression",
+      "scored": false,
+      "suffix": null
+    },
+    {
+      "name": "gaze",
+      "scored": true,
+      "suffix": null
+    },
+    {
+      "name": "pose",
+      "scored": true,
+      "suffix": null
+    },
+    {
+      "name": "framing",
+      "scored": false,
+      "suffix": null
+    },
+    {
+      "name": "body_shape",
+      "scored": false,
+      "suffix": null
+    },
+    {
+      "name": "background",
+      "scored": false,
+      "suffix": "background"
+    }
+  ]
+}

@@ -158,6 +158,17 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 - **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one
   tracked file in it. `git check-ignore` reports the *directory* as not ignored precisely because of that
   one file — always check a file path.
+- **`.data/`** — **everything a run produces or consumes**, and **gitignored**: the staged pipeline's
+  runs under `.data/runs/<photo-id>/` (or wherever `--runs` points), beside its inputs and outputs.
+  The reason is not tidiness. A run directory holds a *copy of the photograph* — that is what makes a
+  run reconstructable from disk — so `runs/` contains personal photographs **by construction**. Under
+  a top-level `runs/` the standing rule that no personal photograph is committed would depend on one
+  `.gitignore` line staying correct forever; under one ignored root it is structurally true instead,
+  because there is nothing generated outside it to get wrong.
+- **`models/` deliberately stays outside `.data/`**, and the boundary is named so the rule does not
+  drift into meaning "everything untracked". The two fail differently: `.data/` is captured or
+  generated and its loss is the loss of work, while `models/` is fetched from a pinned manifest and
+  verified, so its loss costs a re-download that is byte-identical by construction.
 - **Everything a run reads or writes is inside the repository.** No path outside the repo is resolved by
   anything tracked here. Research notes and the running log live in the operator's own notebook; nothing
   in this repo reaches into it, and its location is not recorded here.

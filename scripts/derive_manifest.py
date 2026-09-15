@@ -20,13 +20,29 @@ is the check, and it is why `PINNED` is a constant here rather than today's date
 Revisions are data in this file, not resolved from a branch at run time. Resolving
 `main` would make the tool's output depend on the day it ran, which is the exact
 property the pins exist to remove.
+
+What is left here is this manifest's *spec*: what to pin, and the one publisher
+record the mirrors are held against. The entry types, both digest strategies and
+the writer live in `scripts/manifest.py`, shared with the two sibling derivers
+(design.md D10).
 """
 
 import json
 import re
 import urllib.request
 from pathlib import Path
-from typing import Any, NamedTuple, TypedDict
+from typing import Any
+
+from manifest import (
+    USER_AGENT,
+    Manifest,
+    ManifestEntry,
+    Source,
+    Spec,
+    digest_of_url,
+    entry_for,
+    write,
+)
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
 
@@ -47,49 +63,6 @@ PUBLISHERS = (
     "TheMistoAI",
     "lllyasviel",
 )
-
-
-class ManifestEntry(TypedDict):
-    """One emitted manifest entry -- the shape `isekai.provision` reads back."""
-
-    dest: str
-    sha256: str
-    bytes: int
-    sources: list[str]
-
-
-class Manifest(TypedDict):
-    """The emitted manifest."""
-
-    pinned: str
-    publishers: list[str]
-    entries: list[ManifestEntry]
-
-
-class Source(NamedTuple):
-    """One Hugging Face file, addressed by an immutable revision."""
-
-    repo: str
-    revision: str
-    path: str
-
-    def url(self) -> str:
-        """Return the `resolve/<sha>/` URL that serves exactly these bytes."""
-        return f"https://huggingface.co/{self.repo}/resolve/{self.revision}/{self.path}"
-
-
-class Spec(NamedTuple):
-    """A destination under the models tree, and the ordered sources that fill it.
-
-    `expect_sha256` is for an artifact whose publisher is not the host: the
-    publisher states a digest, every source is a mirror, and the derived digest
-    is checked against the stated one. That check is what makes the mirrors
-    interchangeable CDNs rather than trust roots (design.md D1).
-    """
-
-    dest: str
-    sources: tuple[Source, ...]
-    expect_sha256: str | None = None
 
 
 # --- the authored spec: destinations, and where each one's bytes come from ---
@@ -126,6 +99,34 @@ YOLOX_ALT = "a124b32c3b7c5cebda1c7cd96178f0f9d2050125"
 DWPOSE_TS = "359d662a9b33b73f6d0f21732baf8845f17bb4be"
 DWPOSE_TS_ALT = "31098820c4d5d126b92e28517380ea1b088f8d53"
 ANNOTATORS = "982e7edaec38759d914a963c48c4726685de7d96"
+
+# R-ESRGAN 4x+ Anime6B, the hires pass's upscaler, and the second artifact here
+# whose publisher hosts no Hugging Face repo. It is worse off than the base
+# checkpoint: Civitai publishes a digest per model version, and this release
+# predates GitHub's asset-digest field entirely, so there is no published record
+# to read at all.
+#
+# So the trust root is the publisher's own *bytes*, fetched and hashed. That is
+# 17 MiB on a tool a human runs by hand, and it keeps the rule this file opens
+# with -- derived, never transcribed -- rather than admitting one typed constant
+# for the one artifact where a typed constant would be least checkable.
+#
+# Every source below is therefore a mirror, and all four are cross-checked
+# against that digest by `entry_for`.
+UPSCALER_FILE = "RealESRGAN_x4plus_anime_6B.pth"
+UPSCALER_DEST = f"upscale_models/{UPSCALER_FILE}"
+UPSCALER_RELEASE = (
+    f"https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/{UPSCALER_FILE}"
+)
+
+# Generous against the artifact's 17.1 MiB, and small enough that a spec pointing
+# this strategy at a checkpoint fails instead of downloading one.
+UPSCALER_CAP_BYTES = 32 << 20
+
+ESRGAN_XIMSO = "cc64fe8cc1e0c3a232d86f7cfbda6f67e5b865ec"
+ESRGAN_GEMASAI = "3bc7e46fe5752d8703fc1ec410cada4fd1c7230e"
+ESRGAN_COM_ADM = "b3490c4cf451dc50eff73aebaf31825456318f7c"
+ESRGAN_RYOUKO = "58f7a1b546bfe84cd2119c8716d79d7317fef921"
 
 ANTELOPE_FILES = (
     "1k3d68.onnx",
@@ -263,6 +264,21 @@ SPECS: tuple[Spec, ...] = (
         "annotator_ckpts/lllyasviel/Annotators/sk_model2.pth",
         (Source("lllyasviel/Annotators", ANNOTATORS, "sk_model2.pth"),),
     ),
+    # The hires pass's upscaler. Mirror-primary, like the base checkpoint, and
+    # held against the publisher's bytes rather than a published record because
+    # there is no published record; see `UPSCALER_RELEASE` above.
+    Spec(
+        UPSCALER_DEST,
+        (
+            Source("ximso/RealESRGAN_x4plus_anime_6B", ESRGAN_XIMSO, UPSCALER_FILE),
+            Source("gemasai/RealESRGAN_x4plus_anime_6B", ESRGAN_GEMASAI, UPSCALER_FILE),
+            Source("com-adm/RealESRGAN_x4plus_anime_6B", ESRGAN_COM_ADM, UPSCALER_FILE),
+            Source(
+                "Ryouko65777/RealESRGAN_x4plus_anime_6B", ESRGAN_RYOUKO, UPSCALER_FILE
+            ),
+        ),
+        None,  # filled from the publisher's own bytes below; see `derive`
+    ),
 )
 
 
@@ -297,37 +313,11 @@ def civitai_version(version_id: int) -> dict[str, Any]:
     """Fetch one Civitai model version's public record."""
     request = urllib.request.Request(
         f"https://civitai.com/api/v1/model-versions/{version_id}",
-        headers={"User-Agent": "isekai-derive"},
+        headers={"User-Agent": USER_AGENT},
     )
     with urllib.request.urlopen(request, timeout=120) as response:
         parsed: Any = json.load(response)
     return parsed
-
-
-def published_digest(source: Source) -> tuple[str, int]:
-    """Return the SHA-256 and size Hugging Face publishes for `source`.
-
-    The digest is the LFS object id, which HF documents as the file's SHA-256. A
-    path that is not stored in LFS has no such id, and this raises rather than
-    falling back to the git blob sha1 -- a sha1 in a sha256 field would validate
-    and verify nothing.
-    """
-    body = json.dumps({"paths": [source.path]}).encode()
-    request = urllib.request.Request(
-        f"https://huggingface.co/api/models/{source.repo}/paths-info/{source.revision}",
-        data=body,
-        headers={"Content-Type": "application/json", "User-Agent": "isekai-derive"},
-    )
-    with urllib.request.urlopen(request, timeout=120) as response:
-        payload = json.load(response)
-    for item in payload:
-        if item.get("path") != source.path:
-            continue
-        lfs = item.get("lfs")
-        if not lfs or not lfs.get("oid"):
-            raise SystemExit(f"{source.url()}: not an LFS object, no published SHA-256")
-        return str(lfs["oid"]), int(item["size"])
-    raise SystemExit(f"{source.url()}: not found at that revision")
 
 
 def derive() -> Manifest:
@@ -335,33 +325,16 @@ def derive() -> Manifest:
     # The one artifact no publisher hosts, so its publisher's own record is what
     # the mirrors are held against.
     wai_sha256 = civitai_file(civitai_version(WAI_VERSION_ID), WAI_FILE)
+    # The other publisher-less artifact, whose publisher states no digest at all,
+    # so its own bytes are what its mirrors are held against.
+    upscaler_sha256, _ = digest_of_url(UPSCALER_RELEASE, UPSCALER_CAP_BYTES)
+    stated = {WAI_DEST: wai_sha256, UPSCALER_DEST: upscaler_sha256}
 
     entries: list[ManifestEntry] = []
     for spec in SPECS:
-        if spec.dest == WAI_DEST:
-            spec = spec._replace(expect_sha256=wai_sha256)
-        primary, *alternates = spec.sources
-        sha256, size = published_digest(primary)
-        if spec.expect_sha256 is not None and sha256 != spec.expect_sha256:
-            raise SystemExit(
-                f"{spec.dest}: {primary.url()} publishes {sha256}, "
-                f"but the publisher states {spec.expect_sha256}"
-            )
-        for alternate in alternates:
-            alt_sha, _ = published_digest(alternate)
-            if alt_sha != sha256:
-                raise SystemExit(
-                    f"{spec.dest}: alternate {alternate.url()} publishes {alt_sha}, "
-                    f"primary {primary.url()} publishes {sha256}"
-                )
-        entries.append(
-            {
-                "dest": spec.dest,
-                "sha256": sha256,
-                "bytes": size,
-                "sources": [source.url() for source in spec.sources],
-            }
-        )
+        if spec.dest in stated:
+            spec = spec._replace(expect_sha256=stated[spec.dest])
+        entries.append(entry_for(spec))
     return {
         "pinned": PINNED,
         "publishers": list(PUBLISHERS),
@@ -371,13 +344,7 @@ def derive() -> Manifest:
 
 def main() -> None:
     """Derive the manifest and write it to `scripts/models.json`."""
-    manifest = derive()
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
-    entries = manifest["entries"]
-    total = sum(entry["bytes"] for entry in entries)
-    print(
-        f"wrote {MANIFEST_PATH.name}: {len(entries)} entries, {total / 2**30:.1f} GiB"
-    )
+    write(derive(), MANIFEST_PATH)
 
 
 if __name__ == "__main__":

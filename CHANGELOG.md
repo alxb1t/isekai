@@ -25,6 +25,345 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-15
+
+### Fixed
+
+- **`outputs/` and `.inputs/` are gitignored again, and a test says so.** D14's single ignored root
+  replaced both lines, but the render path this version deliberately does *not* touch still writes
+  them: `isekai/cli.py` defaults `--output` to `./outputs`, and `baseline/build_contact_sheets.py`
+  reads renders from `outputs/baseline` and **source photographs** from `.inputs/baseline`. Both hold
+  a person's likeness by construction, so for the length of one `git add .` the repository's hardest
+  invariant depended on nobody typing it. The `.gitignore` route rather than repointing the producers,
+  because this version promised not to touch them; the lines go in the commit that deletes them.
+  `git check-ignore` is now run over one path per producing directory, so a rule that reads right
+  while matching nothing fails the gate.
+- **The rendered PNG was the one artifact written non-atomically.** `rendered_seeds` treats the
+  presence of `<seed>.png` as proof the seed is done, so an interrupted write left a truncated image
+  that resume skipped forever — on the single stage that costs money on every pass, and in direct
+  contradiction of this version's own "written atomically or not at all" requirement. It goes through
+  `write_atomically` like every other artifact now.
+- **`generate` on a run approved for nothing printed nothing and exited 0.** `prepare` iterated only
+  the flows a run was already approved for, so the refusal naming `review` → edit → `approve` was
+  unreachable from the command line: the scenario was proved by a test calling one function directly
+  while the shipped surface did the opposite. It refuses when none of the flows asked for has an
+  approved sheet, and the binding is at the CLI now. Selecting among several approved flows still
+  needs no flag — the refusal fires only when there is nothing at all to render.
+- **One unreadable photograph header no longer kills the batch mid-render.** `image_dimensions`
+  belongs to the untouched render path and stops the process with `sys.exit`; `across` collects
+  `Refusal` and a `SystemExit` walks straight past it, so a truncated header ended the whole batch
+  after the pod was rented and wrote no error record. The header is now read during *assembly*, which
+  is the free pre-rental step, and the read inside the render loop is a refusal the stage records.
+- **The vocabulary was manifested and verified but nothing fetched it**, which left the proposal's own
+  motivating defect — "a fresh clone cannot fill a sheet at all" — open. `scripts/download_models.sh`
+  takes the manifest as its one optional argument, so
+  `bash scripts/download_models.sh scripts/vocabulary.json` provisions the tag list through the same
+  plan → verify → land path as everything else; `provision.py` keeps the default so the shell has no
+  second copy of it. An absent tag list is a refusal naming that command rather than a
+  `FileNotFoundError` naming a path.
+
+### Removed
+
+- **The absent-models preflight, requirement and all** (design.md D15). It was real code bound to a
+  real scenario that no production invocation could reach: `Wiring.present` was populated by nothing
+  but tests, and nothing could populate it — a flow declares destinations like
+  `insightface/models/antelopev2/glintr100.onnx`, and ComfyUI exposes no endpoint that lists a volume.
+  `/object_info` reports each loader's enum per category folder, which cannot see the InsightFace
+  models or the annotator checkpoints at all, and a preflight over the half it *can* see would report
+  "present" for a flow about to fail on the half it cannot — a false guarantee on the stage that costs
+  money. The check that catches the mistake a human actually makes stays and needs no endpoint: the
+  gate binds every tracked flow's declared artifacts to `scripts/models.json` and to its own graph, in
+  both directions.
+
+### Added
+
+- **The acceptance run: five photographs, end to end, on a rented GPU.** Photograph → prose →
+  machine-filled sheet → approved artifact → assembled prompt → anime render, with nothing
+  hand-captioned anywhere in the chain. **The seam this version exists to cross is crossed.**
+
+  One pod session, `pi7jqpvla6daz6`, RTX PRO 4500 Blackwell (32 GB) in EU-RO-1 on
+  `ghcr.io/alxb1t/isekai:latest`, with `scripts/models.json` copied up so the upscaler this version
+  added was provisioned: **16/16 artifacts present and digest-verified**. Created 21:24:49,
+  terminated 21:36:35 — **11 min 46 s**, and `infra/down.sh` reported billing stopped. Teardown
+  confirmed through the RunPod MCP, which returned `{"pods": []}`.
+
+  **Cost ≈ $0.141** at the type's $0.72/hr secure rate, against a planned $0.058 and a $0.30
+  ceiling. The gap is the GPU type, not the duration: the preference list's first entry is a
+  Blackwell at roughly twice the rate the estimate assumed, and it had capacity. Rendering itself
+  was 6 min 39 s for five images — the first took 2 min 30 s cold, the rest about 45 s each once
+  the checkpoint was resident.
+
+  **What the renders show.** Every scored criterion survived on all five, including the two hard
+  framings: `back` rendered `from behind` + `looking back` + `arm up` with `gradient hair`,
+  `overall shorts` and `nail polish`, and `lying_side` rendered `lying` + `on side` +
+  `arm over head` + `barefoot` at 3264x1536. `cowboy-shoot-2`'s `mole on cheek` is on the cheek.
+  The 106-token prompt's tail survived the encoder window rather than being lost to it.
+
+  **What they also show, and this is the finding worth keeping.** Every junk tag drew itself,
+  exactly and without mercy. `collar` — meant as a blouse's stand collar — became a studded choker.
+  `faucet`, `counter` and `chandelier` turned a bathroom into a ballroom. And a colour the reader
+  *did* see was lost between stages: "black crop top" reached the sheet as `crop top` with no
+  colour, and rendered teal. All five were approved **unedited**, recorded as `edited: false`, so
+  this is the control arm the correction gets measured against — and it is the clearest possible
+  argument for stage ③ existing at all.
+
+### Fixed
+
+- **`infra/up.sh` sent a comma-separated GPU preference list as one enum value**, so pod creation was
+  rejected outright with the whole enum echoed back. `RUNPOD_GPU_TYPE` is an ordered preference — the
+  API takes a list and picks the first with capacity, which is what stops a metered session dying
+  because one model is sold out in one datacenter — and it is now split into an array, trimmed, with
+  empty entries dropped. Found at the top of v0.13's metered phase; no pod was created and nothing
+  was billed.
+
+### Fixed
+
+- **`generate` rendered before the batch was assembled, and a dead endpoint was a traceback.** Both
+  found by v0.13's acceptance run. The CLI dispatched per photograph, so it assembled one prompt and
+  immediately reached for the endpoint — which is exactly the failure the "assemble the whole batch
+  first" rule exists to prevent, since a malformed third sheet would have been discovered after a
+  machine was already rented. The unit test covered `prepare` per run and never the CLI's ordering;
+  it does now, by asserting every "assembled" line precedes every "rendered" one.
+  `--server` also no longer has a default. Assembly is free and rendering is not, so the invocation
+  that costs money is the one that names where to spend it: `generate` without `--server` assembles
+  every prompt and stops. And a transport-level network error is now a refusal naming the tunnel and
+  `infra/up.sh`, rather than a `urllib` traceback naming a socket.
+
+### Fixed
+
+- **The sorting briefing taught two phrasings the mapping cascade drops.** Found by v0.13's own
+  acceptance run, on five photographs out of five: `count` came back empty every time and `gaze`
+  came back as `camera`. The cause was the briefing's own worked examples, which showed
+  `count: ["one person"]` and `gaze: ["looking at the camera"]` — a worked example is the strongest
+  instruction in a briefing, and both of those map to nothing usable. `camera` is worse than
+  nothing: it is a canonical tag meaning *a camera is in the picture*, so every one of those renders
+  would have had a camera drawn in it. An empty `count` also loses `solo`, the Danbooru mode
+  selector.
+  The examples are rewritten in the vocabulary's own spellings, taken from the prototype's
+  hand-written sheets — `1girl, solo`, `looking at viewer`, `upper body` — and a test now walks every
+  phrase the examples emit through the cascade and fails on any that maps to nothing. The field list
+  gives the canonical vocabulary for the three fields where English and Danbooru diverge most, and
+  the register rule is stated outright: write the label, not the sentence, and never name the
+  photographer's equipment in place of the subject's attribute, because what is named is what gets
+  drawn.
+  Curated bridges catch the same cases where the briefing does not take — two defences, because one
+  of them is a document nothing can test.
+
+### Added
+
+- **The six verbs now dispatch.** `isekai/__main__.py` gains a `Wiring` carrying the reader, the
+  sorter, the transport, the schema, the vocabulary and the run root — every one of them a seam
+  something is actually passed through, which is what makes the resume assertion provable with no
+  GPU and no network. An argument is a photograph to open or a run id to resume, decided by what is
+  on disk rather than by a flag. One bad identifier does not stop the rest of a batch; every refusal
+  is collected, printed to the error stream, and the exit status says whether any fired.
+- **The resume test: every command, twice.** Not one byte of the run directory differs and not one
+  external call is made — a number, not a hope, because the doubles count their calls. A companion
+  test asserts the first pass actually produced a caption, a sheet, an approved artifact, a prompt
+  and a render, so the resume claim cannot pass vacuously.
+- **A refusal audit across every stage.** Each refusal added in phases 2–7 is provoked and checked
+  for a remedy this build can actually perform, and for the absence of ones it cannot — no
+  `isekai migrate`, which is exactly the verb it would be most natural to promise and is deliberately
+  absent, because only schema version 1 exists and its dispatch table would have no entries.
+
+### Changed
+
+- **`review` and `approve` are inert on a second pass.** Re-running `review` on an already-approved
+  flow used to open a new draft, which made resume *write*. Both now do nothing without
+  `--new-version`, and `approve` with nothing to approve reports completion rather than refusing —
+  resume must not exit non-zero. Appending a corrected draft is still one flag away, and the approved
+  artifact it starts from is untouched.
+
+### Added
+
+- **Stage ④ — `isekai/flow.py`, `isekai/generate.py` and `flows/summon-v1/`.** A flow is a directory
+  whose manifest *declares* and never computes, which is what lets a broken flow be caught by the
+  suite rather than after a pod boot and several minutes. It names its inputs, its schema, its
+  vocabulary, its graph, its prompt fragments, its dials and every model artifact it needs.
+- **The flow's dials are the measured ones, not its graph file's.** `summon-v1`'s graph carries the
+  prototype's committed cfg 7 and identity strength 0.5; every measured run overrode them to 5 and
+  0.8, and a test asserts the two disagree — a manifest transcribed from the graph would ship a
+  configuration nothing measured.
+- **A flow is immutable, pinned by equality.** The suite holds each tracked flow's whole directory
+  against a committed digest. Changing a dial, a prompt fragment or the graph fails the gate naming
+  the flow and saying that a changed dial means a new flow identifier — because an output's path
+  identifies a configuration only if an identifier never silently means something else.
+- **Assembly is pure, local and happens before any endpoint is acquired.** The prompt is the flow's
+  prefix, the sheet's fields in the schema's order, and the flow's trailer; nothing is taken from the
+  graph's own committed strings. A malformed sheet costs nothing instead of a boot, and one bad sheet
+  does not stop the rest of a batch.
+- **Only an approved sheet renders**, and every flow with an approved artifact renders without a
+  flag. Seeds are drawn from an injected source or named explicitly, never both — one verb explores
+  and the other reproduces — and the parser refuses the combination before any work begins. An output
+  is named by its seed under its sheet version, which reproduces an *image* rather than an ordering.
+- **Rendering is idempotent per image.** An existing seed is skipped from a directory listing, and a
+  raised count renders only the shortfall. Provenance carries the flow, the seed, the sheet version,
+  the submitted graph's digest and whether the sheet was edited. (A volume preflight shipped in this
+  phase and was **withdrawn at converge** — see *Fixed*, below.)
+- **`isekai show`** — the run's artifacts, the active version per stage, approval where it applies,
+  and what produced each one. It reads files where control flow reads listings, which is why no
+  progress file ships: nothing but a human is watching before a review UI exists.
+- **`RealESRGAN_x4plus_anime_6B.pth` joins `scripts/models.json`.** The hires pass needs it and
+  nothing provisioned it. Its publisher hosts no Hugging Face repo *and* publishes no digest — the
+  release predates GitHub's asset-digest field — so the derivation fetches the publisher's own bytes,
+  hashes them, and holds all four mirrors against that: derived, never transcribed, in the entry
+  where a transcribed constant would be least checkable. Its BSD-3-Clause terms join the licence
+  record. `scripts/eval_models.json` is unchanged.
+
+### Added
+
+- **Stage ③ — `isekai/review.py`: the correction, on a copy, approved by a rename.** `review` copies
+  the highest sheet into `review/<flow>/` as a draft and records which sheet version it came from;
+  `sheets/<flow>/` is never written to again by anything. That separation is what makes "the
+  machine's sheet is never edited" a property of the layout rather than a rule a tool is trusted to
+  follow — and the machine's raw sheet is the baseline the correction is measured against, since the
+  unreviewed route carries 0.568 of a sheet's attributes into the render and the reviewed one 0.917.
+  Reviewing again starts from the last thing the operator approved, not from the machine's first
+  attempt, and leaves the approved artifact exactly as it was.
+- **Saving is not approving.** A draft is parkable half-edited for as long as the operator wants, a
+  repeat `review` does not overwrite it, and a draft is reported as *not* complete — approval is its
+  own act and is what a directory listing reads.
+- **Approval validates, then renames.** Every tag is checked against the vocabulary, because a tag
+  that merely looks canonical passes every later check on its way into the prompt and this is the
+  last place to catch it. The refusal says the tag is not in the vocabulary's *prediction set*,
+  which is what is true — that set is a subset of the wider tag corpus, so calling an absent tag
+  unreal would overclaim. An approved artifact is never overwritten; a correction is the next number.
+- **The token window warns rather than refuses.** The assembled prompt is estimated against SDXL's
+  77-token encoder window; over it, a warning states the estimate and the window and approval still
+  succeeds. Sheets already ran past it with nothing saying so, so every one was being silently
+  chunked and averaged — but the sheet is the record of what the render was *asked* to contain, and
+  deleting fields to fit would make "did this criterion survive" unanswerable at the moment it is asked.
+- **The approved artifact records whether a human changed anything**, computed against the source
+  sheet rather than declared by the operator. Whether a sheet was actually corrected is the
+  difference between the two routes above, and a flag somebody sets is an assumption in a fact's
+  clothes. Approving unedited is a legitimate, recorded act — it is how the machine's raw draft gets
+  rendered as a control.
+- **This stage writes no error record and consumes no retry budget.** There is no batch and no
+  unattended retry here: the operator is present by definition, and a refusal is a message to them
+  rather than state for a later resume to reason about.
+
+### Added
+
+- **Stage ② — `isekai/sheet.py` gains the sorter, the fill and the write.** Prose, a schema and a
+  vocabulary in; canonical fields out. The stage is never told which flow asked, which is what lets
+  one fill serve every flow declaring the same schema and vocabulary — a second flow added later
+  costs one call, not two, and the first flow's sheet is left exactly as it was. The sheet records
+  the vocabulary's name, revision and digest, and its producer names the caption version it sorted.
+- **`schemas/identity.v1.briefing.md`** — the routing rules and two worked examples, written in the
+  schema's own identifier-safe field names. Both examples show absence clauses producing empty
+  fields, and details with no field being dropped rather than forced somewhere.
+- **The sorter's invocation constrains structure, not wording.** `--tools ""` and a `--json-schema`
+  carrying exactly the schema's fields, required, with no additional properties and no `enum`.
+  Constraining generation *to the vocabulary* was measured and rejected: token-prefix masking lands
+  on the nearest tag sharing a prefix rather than the one the model meant, which turns a visible
+  failure into an invisible one. A response that does not carry the schema's fields is a permanent
+  failure — the structure was stated in the request, so another attempt would spend for nothing.
+- **`isekai/claude_cli.py` — the pipeline's one network boundary.** The locked-down invocation, the
+  envelope, the failure classification and the absent-binary refusal now live in one module that
+  both stages reach through, rather than in the first stage that happened to need them.
+
+### Fixed
+
+- **The reader is now told where the photograph is.** Stage ①'s adapter passed the path as a
+  trailing positional after `-p`, which the CLI's argument parser silently drops — the reader would
+  have been told to describe a photograph and never told which one. The path travels in the prompt;
+  `--add-dir` is what grants the read. Verified against the real binary, which also confirmed the
+  envelope's shape: `api_error_status` and `permission_denials` now feed the classifier, and a
+  single envelope really does report two models, as the design said it would.
+
+### Added
+
+- **Stage ① — `isekai/caption.py`, a photograph in and prose out.** The reader is handed exactly two
+  things, the photograph and its standing instructions, and is told nothing about schemas, fields,
+  vocabularies or flows: pressing a reader into a schema is measured to make it invent — told never
+  to leave a field blank, one manufactured nineteen identity marks across seven of ten subjects and
+  its score fell from 0.518 to 0.307. The reader is licensed to state absence and this stage does
+  not strip it; turning a licensed absence into an empty field belongs to stage ②, and naming where
+  that happens is the point of allowing it here.
+- **`briefings/caption.md`** — prose only, with absence explicitly licensed, and no schema field
+  name anywhere in it, asserted by a test rather than by intent.
+- **The `claude -p` adapter, locked down.** `--safe-mode` (so the CLI does not inject sixteen
+  kilobytes about *this repository* into the context that should describe a photograph),
+  `--tools Read` (a stage that can run shell commands is not a stage),
+  `--permission-prompts none` (so a misconfigured stage cannot wait for a human forever),
+  `--strict-mcp-config`, `--no-session-persistence`, and the JSON envelope always — the envelope is
+  what carries the error status, the stop reason and which models actually ran.
+- **Failure classification read off the envelope.** A rate limit, a server error or a timeout is
+  transient and spends the budget; a decline, a denied permission or a response that is not prose is
+  permanent and is never retried. No fallback reader: substituting one would write an artifact whose
+  provenance record is untrue. The producer records the models that *ran* rather than the flag that
+  was passed, the digest of the briefing text, and `pinned: false`, because a hosted CLI exposes no
+  revision and a revision field that would be untrue is worse than an honest absence.
+- **An absent `claude` binary is a refusal naming the install command**, and it leaves the run
+  directory exactly as it found it.
+
+### Added
+
+- **`isekai/vocabulary.py` — the tag list as an object, and the four-pass cascade over it.**
+  `load` reads the provisioned `selected_tags.csv` with the stdlib `csv` module, keeps the general
+  tags only, normalises underscores to spaces, and verifies the bytes against the manifest before
+  parsing them. The cascade maps a phrase by exact match, then the *field's* suffix — passed in
+  from the schema rather than looked up by field name, which is what makes the mapper genuinely
+  independent of the field list — then a curated pass that consumes the span it matched and
+  carries on, then containment requiring every word of a candidate tag. An empty result is a real
+  answer: no nearest neighbour is ever substituted. Absence clauses are dropped whole, because a
+  positive prompt has no negation and "no tattoos" passed through becomes tattoos drawn. No pass,
+  the curated table included, can emit a tag the vocabulary does not carry.
+- **`schemas/identity.v1.json` — the field list as a versioned data file.** Sixteen fields in
+  prompt order, the seven that are scored, the per-field suffix convention, and the vocabulary the
+  schema is written against. Field names are identifier-safe slugs because the structured-output
+  flag becomes a tool input schema at the API, which enforces `^[a-zA-Z0-9_.-]{1,64}$` on property
+  keys; a name that would fail it is refused at load.
+- **`isekai/sheet.py` — the schema reader and the sheet's validation.** A sheet is fields and
+  nothing else: an assembled prompt in it is refused, a missing field is refused and told to add an
+  empty one, and an empty field is legal. A tag outside the vocabulary's prediction set is refused
+  with that as the reason, because the base model was never trained to draw it.
+
+### Added
+
+- **`python -m isekai` — a second entry point, with the pipeline's six verbs.**
+  `caption` · `sheet` · `review` · `approve` · `generate` · `show`, under one parser in
+  `isekai/__main__.py`. It is additive: `convert.py` and `isekai/cli.py` are untouched, and a test
+  asserts that importing the pipeline's entry point does not pull the render surface in. A second
+  stdlib-only subprocess guard joins the existing one — the falsifiability twin that proves `-S`
+  really refuses a third-party import is unchanged and now covers both.
+- **`isekai/run.py` — the run directory, the only thing the four stages share.** A run is
+  `.data/runs/<photo-id>/`, identified by a prefix of the photograph's SHA-256 plus a sanitised
+  filename stem, with the photograph *copied in* rather than pointed at and its digest, size and
+  media type recorded in the frame. Resumption keys on the bytes, not the id, so a renamed
+  photograph resumes its own run and a digest-prefix collision is refused rather than silently
+  mixing two people's photographs. The extension is derived from the header, so a PNG named `.jpg`
+  is stored as what it is.
+  Artifacts are numbered per directory, written temp-then-replace, and never overwritten; every
+  "is this done?" test is a directory listing, with approval read from the filename. A failure is
+  recorded as a *sibling* of the artifact it failed to produce — `001.error.1.transient.json` —
+  so it never consumes the version number, and its kind and attempt ordinal are in the name so the
+  retry decision stays a listing. Retry budgets are three for reading and sorting, one for
+  assembling and one for rendering; a permanent failure is never retried, and one photograph's
+  failure does not cost the rest of a batch their turn.
+
+### Added
+
+- **The tag vocabulary is a provisioned artifact with its own manifest.**
+  `scripts/vocabulary.json` pins `wd14/selected_tags.csv` — 10,861 Danbooru tags with their post
+  counts, 8,106 of them general — at an immutable revision, digested by fetching and hashing
+  because at ~300 KB it is not stored as a large file and Hugging Face publishes no SHA-256 to
+  read. It used to arrive as a side effect of downloading a tagger this repository does not load,
+  on a mutable reference, so a fresh clone could not fill a sheet at all. Derived by
+  `scripts/derive_vocabulary.py`, and held to the same pinning, digest and mirror checks as the
+  other two manifests.
+- **`scripts/manifest.py` — one derivation module behind all three manifests.** It carries the
+  entry types, both digest strategies and the writer; each deriver is now a table of what to pin
+  plus a `derive()`. The entry spec had been declared twice, under one name, with two different
+  shapes, and a third deriver is how that becomes a defect rather than an oddity. Verifiable for
+  nothing: `scripts/models.json` and `scripts/eval_models.json` are byte-identical after a re-run.
+- **`isekai/refusal.py`.** `Refusal` moves out of the evaluator's module so the pipeline can raise
+  it without loading several hundred lines of scoring rules; `isekai.evaluate` re-exports it, so
+  both existing importers resolve unchanged.
+- **The vocabulary's licence is recorded** in `scripts/eval_licences.md` — Apache-2.0, the URL it
+  was read at, and the date. That record is now stated to be one note for every artifact this
+  repository pins, rather than one per manifest.
+
 ## [0.12.0] - 2026-09-07
 
 ### Fixed

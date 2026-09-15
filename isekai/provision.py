@@ -25,6 +25,15 @@ from typing import IO, Any, Literal, Protocol, TypedDict
 
 MANIFEST_PATH = Path(__file__).resolve().parent.parent / "scripts" / "models.json"
 
+# The third manifest: the tag list the sorting stage fills a sheet from. A sibling
+# of the other two rather than a section of either -- one file per question, and
+# this one answers what the pipeline's vocabulary is (design.md D9). The path is
+# declared here, beside the graph's, because the checks that keep a manifest
+# honest are this module's and all three are held to them.
+VOCABULARY_MANIFEST_PATH = (
+    Path(__file__).resolve().parent.parent / "scripts" / "vocabulary.json"
+)
+
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.
 DIGEST = re.compile(r"^[0-9a-f]{64}$")
 
@@ -377,7 +386,9 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     return 0
 
 
-def _entry_for(manifest: Manifest, models_dir: Path, target: str) -> tuple[Entry, Path]:
+def _entry_for(
+    manifest: Manifest, models_dir: Path, target: str, source: Path
+) -> tuple[Entry, Path]:
     """Return the entry whose resolved destination is `target`, and that path.
 
     The driver is handed resolved targets and hands them straight back, so the
@@ -389,16 +400,33 @@ def _entry_for(manifest: Manifest, models_dir: Path, target: str) -> tuple[Entry
         resolved = resolve_dest(entry, models_dir)
         if resolved is not None and str(resolved) == target:
             return entry, resolved
-    raise SystemExit(f"ERROR: {target} is not declared in {MANIFEST_PATH}")
+    raise SystemExit(f"ERROR: {target} is not declared in {source}")
+
+
+def manifest_argument(given: str | None) -> Path:
+    """Return the manifest a driver invocation names, defaulting to the graph's.
+
+    **Which manifest, not which policy.** Every manifest this repository keeps is
+    held to the same pins, the same digests and the same containment rule, so the
+    provisioner takes the file as an argument rather than growing a verb per
+    consumer. It is what makes the vocabulary a *provisioned* artifact rather than
+    one that is merely verified: `bash scripts/download_models.sh
+    scripts/vocabulary.json` fetches it through this exact path (design.md D9).
+    """
+    return MANIFEST_PATH if given is None else Path(given)
 
 
 def main(argv: list[str]) -> int:
     """Run the two commands the shell driver uses: `plan` and `land`."""
     match argv:
-        case ["plan", models_dir]:
-            return plan(load_manifest(), Path(models_dir), HuggingFaceFetcher())
-        case ["land", models_dir, target, partial]:
-            entry, dest = _entry_for(load_manifest(), Path(models_dir), target)
+        case ["plan", models_dir, *rest] if len(rest) <= 1:
+            source = manifest_argument(rest[0] if rest else None)
+            return plan(load_manifest(source), Path(models_dir), HuggingFaceFetcher())
+        case ["land", models_dir, target, partial, *rest] if len(rest) <= 1:
+            source = manifest_argument(rest[0] if rest else None)
+            entry, dest = _entry_for(
+                load_manifest(source), Path(models_dir), target, source
+            )
             try:
                 land(entry, dest, Path(partial))
             except DigestMismatch as mismatch:
@@ -408,8 +436,8 @@ def main(argv: list[str]) -> int:
             return 0
         case _:
             raise SystemExit(
-                "usage: provision.py plan <models-dir>\n"
-                "       provision.py land <models-dir> <target> <partial>"
+                "usage: provision.py plan <models-dir> [manifest]\n"
+                "       provision.py land <models-dir> <target> <partial> [manifest]"
             )
 
 
@@ -451,12 +479,15 @@ SELF_FETCHING_MODELS: dict[str, tuple[str, ...]] = {
     "ControlNetApplyAdvanced": (),
     "ControlNetLoader": (),
     "DWPreprocessor": (),
+    "EmptyLatentImage": (),
     "ImageScale": (),
+    "ImageUpscaleWithModel": (),
     "InstantIDModelLoader": (),
     "KSampler": (),
     "LoadImage": (),
     "SaveImage": (),
     "TilePreprocessor": (),
+    "UpscaleModelLoader": (),
     "VAEDecode": (),
     "VAEEncode": (),
 }

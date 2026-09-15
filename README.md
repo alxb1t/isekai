@@ -4,11 +4,22 @@ Turn a photo of a person into an anime image — while keeping the person **reco
 using **open models** on a **rented GPU, on demand**. A reproducible, provider-agnostic
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
-> **Status: v0.12.0, released.** The pipeline works end to end: one path, five seeded
-> variations per run, and a CLI whose whole required surface is the photo, on a stack
-> provisioned from a pinned, checksummed manifest. Development follows
-> OpenSpec SDD — `openspec/` is authoritative for what the code does and what is being built
-> next.
+> **Status: v0.13.0, released.** The render path of v0.12 still works, unchanged:
+> `convert.py photo.jpg`, one path, five seeded variations, on a stack provisioned from a
+> pinned, checksummed manifest. Alongside it this version adds a **staged pipeline** —
+> `python -m isekai caption | sheet | review | approve | generate | show` — which reads a
+> photograph into prose, sorts the prose into a sheet of canonical tags, lets a human correct
+> the sheet, and renders from it. Development follows OpenSpec SDD — `openspec/` is
+> authoritative for what the code does and what is being built next.
+>
+> **⚠️ Work in progress: the staged pipeline's first two stages are not yet open.** Reading a
+> photograph and sorting the result both run through the **`claude` CLI**, so they need that
+> binary on `PATH` and an Anthropic subscription — a fresh clone without one can do neither.
+> Nothing else here does: the render path, the provisioning and the whole test suite are
+> unaffected. **Replacing both with open, digest-pinned models is the next version's work**,
+> and the seam they sit behind exists so that is a swap rather than a rewrite. Carrying two
+> render paths at once is also deliberate and scoped to this version: the replacement is
+> proved before the proven thing is deleted.
 
 ## Why this exists
 
@@ -153,8 +164,9 @@ isekai/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
 ├── scripts/
-│   ├── download_models.sh     # thin driver: plan → wget → verify & land (runs on the pod)
+│   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
+│   ├── vocabulary.json        # the tag list's manifest: `download_models.sh scripts/vocabulary.json`
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)

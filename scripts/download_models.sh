@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-# Provision the model stack onto the volume, from the pinned manifest beside this file.
+# Provision a pinned manifest's artifacts, verifying every byte before it lands.
+#
+#     bash scripts/download_models.sh                          # the graph's stack, on the pod
+#     bash scripts/download_models.sh scripts/vocabulary.json  # the tag list, on a fresh clone
+#
+# One driver, one manifest per invocation. The graph's stack is the default because the
+# pod is where this runs most; the vocabulary is a sibling manifest held to the same pins,
+# the same digests and the same containment rule, so it is provisioned by the same command
+# rather than by a second one that would have to be kept in step (design.md D9).
 #
 # Idempotent: an entry already present and verified is skipped, so a re-boot on a warm
 # volume is a no-op. NOT skipped by name — `provision.py` hashes every file it finds, so
@@ -17,13 +25,17 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROVISION="${HERE}/../isekai/provision.py"
 
+# Which manifest to provision. `provision.py` owns the default, so the shell has no
+# second copy of the path to drift from it.
+MANIFEST="${1:-}"
+
 # ComfyUI's models root
 MODELS_DIR="${MODELS_DIR:-./models}"
 
 mkdir -p "$MODELS_DIR"
 
 # Decide everything first: an abort anywhere stops the run before a single byte moves.
-plan="$(python3 "$PROVISION" plan "$MODELS_DIR")"
+plan="$(python3 "$PROVISION" plan "$MODELS_DIR" ${MANIFEST:+"$MANIFEST"})"
 
 # Every line is read into an array on tabs. A FETCH line carries the already-
 # resolved target and then every source that survived the pre-flight, in the
@@ -55,7 +67,7 @@ while IFS=$'\t' read -r -a fields; do
                     echo "WARNING: transfer failed from $url" >&2
                     continue
                 fi
-                if ! python3 "$PROVISION" land "$MODELS_DIR" "$target" "${target}.partial"; then
+                if ! python3 "$PROVISION" land "$MODELS_DIR" "$target" "${target}.partial" ${MANIFEST:+"$MANIFEST"}; then
                     echo "WARNING: bytes served by $url did not verify" >&2
                     continue
                 fi

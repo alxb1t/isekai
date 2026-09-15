@@ -30,17 +30,16 @@ shaped differently from the graph's:
   architecture and its input normalisation from unpinned bytes is pinning the
   weights and not the model. The URL already addresses an immutable revision, so
   the bytes are fixed; this records what they are. The size cap is what stops
-  that path from ever quietly downloading a checkpoint.
+  that path from ever quietly downloading a checkpoint. That strategy is no
+  longer this file's: it lives in `scripts/manifest.py` alongside the LFS one,
+  where every deriver reaches for whichever an artifact needs (design.md D10).
 """
 
-import hashlib
 import json
 import sys
-import urllib.request
 from pathlib import Path
-from typing import NamedTuple
 
-from derive_manifest import Manifest, ManifestEntry, Source, published_digest
+from manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 
 # Run as a script from the repository root, `scripts/` is on the path and the
 # root is not -- the same hop `probe/build_inputs.py` makes, for the same reason.
@@ -62,11 +61,6 @@ PUBLISHERS = (
     "mattmdjaga",
     "deepghs",
 )
-
-# Above this, a file is not a config and something is wrong with the spec. Every
-# non-LFS file pinned here is a few kilobytes; the cap exists so a mistake in the
-# spec fails loudly instead of pulling a checkpoint through the hashing path.
-BLOB_CAP_BYTES = 1 << 20
 
 # StyleID, the primary face axis: a CLIP image encoder with LoRA adapters merged.
 # `kwanyun/StyleID`, SIGGRAPH 2026. Non-commercial research use -- a recorded
@@ -101,96 +95,74 @@ ANIMEFACE = "784dc4c0bb692351ddcdbe6131a050b17d3025d5"
 # enforces it at load time is the one that should own it.
 
 
-class Spec(NamedTuple):
-    """A destination under the scorer's models tree, and the source that fills it.
-
-    `lfs` says which of the two digest routes applies: an LFS object publishes its
-    SHA-256 as its object id, and a plain git blob has to be fetched and hashed.
-    It is stated in the spec rather than sniffed, so a file silently moving out of
-    LFS is a loud failure rather than a silent switch to the slower path.
-    """
-
-    dest: str
-    source: Source
-    lfs: bool = True
-
-
 SPECS: tuple[Spec, ...] = (
     Spec(
         "styleid/model.safetensors",
-        Source("kwanY/styleid", STYLEID, "model.safetensors"),
+        (Source("kwanY/styleid", STYLEID, "model.safetensors"),),
     ),
     Spec(
         "styleid/config.json",
-        Source("kwanY/styleid", STYLEID, "config.json"),
+        (Source("kwanY/styleid", STYLEID, "config.json"),),
         lfs=False,
     ),
     Spec(
         "styleid/preprocessor_config.json",
-        Source("kwanY/styleid", STYLEID, "preprocessor_config.json"),
+        (Source("kwanY/styleid", STYLEID, "preprocessor_config.json"),),
         lfs=False,
     ),
     Spec(
         "segformer_b2_clothes/model.onnx",
-        Source("mattmdjaga/segformer_b2_clothes", SEGFORMER, "onnx/model.onnx"),
+        (Source("mattmdjaga/segformer_b2_clothes", SEGFORMER, "onnx/model.onnx"),),
     ),
     Spec(
         "segformer_b2_clothes/config.json",
-        Source("mattmdjaga/segformer_b2_clothes", SEGFORMER, "onnx/config.json"),
+        (Source("mattmdjaga/segformer_b2_clothes", SEGFORMER, "onnx/config.json"),),
         lfs=False,
     ),
     Spec(
         "segformer_b2_clothes/preprocessor_config.json",
-        Source(
-            "mattmdjaga/segformer_b2_clothes",
-            SEGFORMER,
-            "onnx/preprocessor_config.json",
+        (
+            Source(
+                "mattmdjaga/segformer_b2_clothes",
+                SEGFORMER,
+                "onnx/preprocessor_config.json",
+            ),
         ),
         lfs=False,
     ),
     Spec(
         "anime_face_detection/model.onnx",
-        Source(
-            "deepghs/anime_face_detection", ANIMEFACE, "face_detect_v1.4_s/model.onnx"
+        (
+            Source(
+                "deepghs/anime_face_detection",
+                ANIMEFACE,
+                "face_detect_v1.4_s/model.onnx",
+            ),
         ),
     ),
     Spec(
         "anime_face_detection/labels.json",
-        Source(
-            "deepghs/anime_face_detection", ANIMEFACE, "face_detect_v1.4_s/labels.json"
+        (
+            Source(
+                "deepghs/anime_face_detection",
+                ANIMEFACE,
+                "face_detect_v1.4_s/labels.json",
+            ),
         ),
         lfs=False,
     ),
     Spec(
         "anime_face_detection/threshold.json",
-        Source(
-            "deepghs/anime_face_detection",
-            ANIMEFACE,
-            "face_detect_v1.4_s/threshold.json",
+        (
+            Source(
+                "deepghs/anime_face_detection",
+                ANIMEFACE,
+                "face_detect_v1.4_s/threshold.json",
+            ),
         ),
         lfs=False,
     ),
 )
-
-
-def blob_digest(source: Source) -> tuple[str, int]:
-    """Return the SHA-256 and size of a non-LFS file, by fetching and hashing it.
-
-    Capped, so this path can never be the one a checkpoint arrives through. The
-    revision in the URL is what makes the result a pin rather than a snapshot of
-    whatever `main` served today.
-    """
-    request = urllib.request.Request(
-        source.url(), headers={"User-Agent": "isekai-derive"}
-    )
-    with urllib.request.urlopen(request, timeout=120) as response:
-        body: bytes = response.read(BLOB_CAP_BYTES + 1)
-    if len(body) > BLOB_CAP_BYTES:
-        raise SystemExit(
-            f"{source.url()}: larger than {BLOB_CAP_BYTES} bytes; "
-            "a file this size should be pinned through its LFS object id"
-        )
-    return hashlib.sha256(body).hexdigest(), len(body)
 
 
 def copied_entries() -> list[ManifestEntry]:
@@ -213,18 +185,7 @@ def copied_entries() -> list[ManifestEntry]:
 def derive() -> Manifest:
     """Build the whole eval manifest: the shared entries, then the scorer's own."""
     entries: list[ManifestEntry] = list(copied_entries())
-    for spec in SPECS:
-        sha256, size = (
-            published_digest(spec.source) if spec.lfs else blob_digest(spec.source)
-        )
-        entries.append(
-            {
-                "dest": spec.dest,
-                "sha256": sha256,
-                "bytes": size,
-                "sources": [spec.source.url()],
-            }
-        )
+    entries.extend(entry_for(spec) for spec in SPECS)
     return {
         "pinned": PINNED,
         "publishers": list(PUBLISHERS),
@@ -234,13 +195,7 @@ def derive() -> Manifest:
 
 def main() -> None:
     """Derive the eval manifest and write it to `scripts/eval_models.json`."""
-    manifest = derive()
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n")
-    entries = manifest["entries"]
-    total = sum(entry["bytes"] for entry in entries)
-    print(
-        f"wrote {MANIFEST_PATH.name}: {len(entries)} entries, {total / 2**30:.1f} GiB"
-    )
+    write(derive(), MANIFEST_PATH)
 
 
 if __name__ == "__main__":

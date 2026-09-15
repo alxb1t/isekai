@@ -1,0 +1,62 @@
+{
+  "flow": "summon-v1",
+  "schema_version": 1,
+  "inputs": [
+    "photo",
+    "sheet"
+  ],
+  "schema": "identity.v1",
+  "vocabulary": {
+    "name": "wd14/selected_tags.csv",
+    "revision": "627aef95638667ddcaa3ac8ae625e88ea5b02f51",
+    "sha256": "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217"
+  },
+  "graph": "graph.json",
+  "prompt": {
+    "prefix": "masterpiece, best quality, amazing quality, newest",
+    "trailer": "anime screencap, detailed eyes, soft lighting",
+    "negative": "bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust",
+    "separator": ", "
+  },
+  "dials": {
+    "cfg": 5,
+    "steps": 28,
+    "sampler_name": "euler_ancestral",
+    "scheduler": "normal",
+    "denoise": 1.0,
+    "clip_skip": -2,
+    "ip_weight": 0.9,
+    "identity_cn_strength": 0.8,
+    "openpose_strength": 0.6,
+    "hires_scale": 1.5,
+    "hires_steps": 20,
+    "hires_denoise": 0.35
+  },
+  "nodes": {
+    "photo": "2",
+    "positive": "3",
+    "negative": "4",
+    "identity": "8",
+    "latent": "9",
+    "sampler": "10",
+    "openpose": "18",
+    "scale": "22",
+    "clip_skip": "23",
+    "hires_resize": "32",
+    "hires_sampler": "34"
+  },
+  "models": [
+    "annotator_ckpts/hr16/DWPose-TorchScript-BatchSize5/dw-ll_ucoco_384_bs5.torchscript.pt",
+    "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx",
+    "checkpoints/waiIllustriousSDXL_v170.safetensors",
+    "controlnet/instantid/diffusion_pytorch_model.safetensors",
+    "controlnet/openpose/diffusion_pytorch_model.safetensors",
+    "insightface/models/antelopev2/1k3d68.onnx",
+    "insightface/models/antelopev2/2d106det.onnx",
+    "insightface/models/antelopev2/genderage.onnx",
+    "insightface/models/antelopev2/glintr100.onnx",
+    "insightface/models/antelopev2/scrfd_10g_bnkps.onnx",
+    "instantid/ip-adapter.bin",
+    "upscale_models/RealESRGAN_x4plus_anime_6B.pth"
+  ]
+}
