@@ -3,7 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from isekai.workflow import (
+from isekai.comfy_types import Workflow
+from isekai.flow import load_flow
+from isekai.photo import (
     DIMENSION_STEP,
     MAX_HEADER_BYTES,
     MAX_HEADER_DIMENSION,
@@ -14,8 +16,39 @@ from isekai.workflow import (
 from tests.images import jpeg_bytes, jpeg_with_header, png_bytes, png_with_exif
 
 
+@pytest.mark.spec("image-generation:working-resolution:scale-precedes-every-consumer")
+def test_a_scale_node_sits_between_the_loader_and_every_consumer(
+    workflow: Workflow,
+) -> None:
+    # By role, not by class: `summon-v1` has two `ImageScale` nodes -- one on the
+    # photograph and one on the hires pass -- so a class lookup is ambiguous
+    # against it, and the flow's manifest is what names the photograph's.
+    flow = load_flow("summon-v1")
+    load_id = flow.node("photo")
+    scale_id = flow.node("scale")
+    assert workflow[scale_id]["inputs"]["image"] == [load_id, 0]
+
+    # The two nodes that read the photograph: the identity node's embedding and
+    # keypoints, and the pose preprocessor's control hint.
+    assert workflow[flow.node("identity")]["inputs"]["image"] == [scale_id, 0]
+    pose_id = next(
+        nid for nid, node in workflow.items() if node["class_type"] == "DWPreprocessor"
+    )
+    assert workflow[pose_id]["inputs"]["image"] == [scale_id, 0]
+
+    # And nothing else reaches the loader, so there is exactly one pixel grid in
+    # the graph and no control hint is registered against a different one.
+    readers = {
+        node_id
+        for node_id, node in workflow.items()
+        for value in node["inputs"].values()
+        if isinstance(value, list) and value[0] == load_id
+    }
+    assert readers == {scale_id}
+
+
 def _write(directory: Path, name: str, data: bytes) -> str:
-    """Write `data` to `directory/name` and return the path as injection takes it."""
+    """Write `data` to `directory/name` and return the path as the reader takes it."""
     path = directory / name
     path.write_bytes(data)
     return str(path)
@@ -33,9 +66,7 @@ PHOTO_CONSUMERS = (
 )
 
 
-@pytest.mark.spec(
-    "workflow-injection:working-resolution:short-side-at-the-working-scale"
-)
+@pytest.mark.spec("image-generation:working-resolution:short-side-at-the-working-scale")
 @pytest.mark.parametrize(
     ("width", "height"),
     [(4032, 3024), (3024, 4032), (2000, 2000), (1920, 1080), (1080, 1920)],
@@ -59,7 +90,7 @@ def test_the_target_preserves_aspect_with_the_short_side_at_the_working_scale(
     assert (out_width >= out_height) == (width >= height)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:small-photos-are-scaled-up")
+@pytest.mark.spec("image-generation:working-resolution:small-photos-are-scaled-up")
 def test_a_photo_below_the_working_scale_is_scaled_up() -> None:
     width, height = 640, 480
     out_width, out_height = working_resolution(width, height)
@@ -70,7 +101,7 @@ def test_a_photo_below_the_working_scale_is_scaled_up() -> None:
 
 
 @pytest.mark.spec(
-    "workflow-injection:working-resolution:dimensions-are-written-by-injection"
+    "image-generation:working-resolution:dimensions-are-written-by-injection"
 )
 @pytest.mark.parametrize("builder", [png_bytes, jpeg_bytes])
 @pytest.mark.parametrize(("width", "height"), [(1600, 1200), (1200, 1600), (900, 900)])
@@ -81,7 +112,7 @@ def test_dimensions_are_read_from_landscape_portrait_and_square_headers(
     assert image_dimensions(path) == (width, height)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 @pytest.mark.parametrize("orientation", [5, 6, 7, 8])
 def test_a_rotated_photo_reports_the_dimensions_the_loader_will_present(
     orientation: int, tmp_path: Path
@@ -96,7 +127,7 @@ def test_a_rotated_photo_reports_the_dimensions_the_loader_will_present(
     assert image_dimensions(path) == (3024, 4032)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 @pytest.mark.parametrize("orientation", [1, 2, 3, 4])
 def test_an_upright_orientation_leaves_the_header_dimensions_alone(
     orientation: int, tmp_path: Path
@@ -109,7 +140,7 @@ def test_an_upright_orientation_leaves_the_header_dimensions_alone(
     assert image_dimensions(path) == (4032, 3024)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:a-deep-header-is-still-read")
+@pytest.mark.spec("image-generation:working-resolution:a-deep-header-is-still-read")
 def test_dimensions_are_read_past_a_metadata_block_larger_than_a_prefix(
     tmp_path: Path,
 ) -> None:
@@ -123,7 +154,7 @@ def test_dimensions_are_read_past_a_metadata_block_larger_than_a_prefix(
 
 
 @pytest.mark.spec(
-    "workflow-injection:working-resolution:unreadable-dimensions-are-refused"
+    "image-generation:working-resolution:unreadable-dimensions-are-refused"
 )
 @pytest.mark.parametrize(
     ("name", "data"),
@@ -159,7 +190,7 @@ def test_a_photo_whose_dimensions_cannot_be_read_stops_the_run(
 
 
 @pytest.mark.spec(
-    "workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused"
+    "image-generation:working-resolution:an-out-of-range-header-dimension-is-refused"
 )
 def test_a_header_dimension_past_the_ceiling_is_refused(tmp_path: Path) -> None:
     # JPEG's own two-byte frame field enforces this already, so a PNG is the only
@@ -175,7 +206,7 @@ def test_a_header_dimension_past_the_ceiling_is_refused(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec(
-    "workflow-injection:working-resolution:an-out-of-range-header-dimension-is-refused"
+    "image-generation:working-resolution:an-out-of-range-header-dimension-is-refused"
 )
 def test_a_header_dimension_at_the_ceiling_is_read(tmp_path: Path) -> None:
     path = _write(tmp_path, "at-the-limit.png", png_bytes(MAX_HEADER_DIMENSION, 1_000))
@@ -183,7 +214,7 @@ def test_a_header_dimension_at_the_ceiling_is_read(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec(
-    "workflow-injection:working-resolution:an-unbounded-header-walk-is-refused"
+    "image-generation:working-resolution:an-unbounded-header-walk-is-refused"
 )
 def test_a_header_walk_past_the_byte_ceiling_is_refused(tmp_path: Path) -> None:
     # The walk is bounded by the file, which is not a bound: a camera's EXIF,
@@ -206,7 +237,7 @@ def test_a_header_walk_past_the_byte_ceiling_is_refused(tmp_path: Path) -> None:
 # JPEG -- and every input this project has ever rendered is a PNG.
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 @pytest.mark.parametrize("orientation", [5, 6, 7, 8])
 def test_a_rotated_png_reports_the_dimensions_the_loader_will_present(
     orientation: int, tmp_path: Path
@@ -215,7 +246,7 @@ def test_a_rotated_png_reports_the_dimensions_the_loader_will_present(
     assert image_dimensions(path) == (3024, 4032)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 @pytest.mark.parametrize("orientation", [1, 2, 3, 4])
 def test_an_upright_png_orientation_leaves_the_header_dimensions_alone(
     orientation: int, tmp_path: Path
@@ -224,7 +255,7 @@ def test_an_upright_png_orientation_leaves_the_header_dimensions_alone(
     assert image_dimensions(path) == (4032, 3024)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 def test_a_png_with_no_exif_chunk_is_measured_as_its_header_states(
     tmp_path: Path,
 ) -> None:
@@ -232,7 +263,7 @@ def test_a_png_with_no_exif_chunk_is_measured_as_its_header_states(
     assert image_dimensions(path) == (4032, 3024)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 def test_the_exif_chunk_is_found_wherever_the_writer_put_it(tmp_path: Path) -> None:
     # A writer may put `eXIf` anywhere before the pixel data, so a parser that
     # looks only straight after IHDR would report the untransposed pair.
@@ -240,7 +271,7 @@ def test_the_exif_chunk_is_found_wherever_the_writer_put_it(tmp_path: Path) -> N
     assert image_dimensions(path) == (3024, 4032)
 
 
-@pytest.mark.spec("workflow-injection:working-resolution:orientation-is-honoured")
+@pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 def test_both_codecs_agree_on_the_same_rotation(tmp_path: Path) -> None:
     # The mismatch this rule prevents is a property of the loader, not of the
     # container: the phase-6 probe measured both and both transposed.
@@ -250,7 +281,7 @@ def test_both_codecs_agree_on_the_same_rotation(tmp_path: Path) -> None:
 
 
 @pytest.mark.spec(
-    "workflow-injection:working-resolution:an-unbounded-header-walk-is-refused"
+    "image-generation:working-resolution:an-unbounded-header-walk-is-refused"
 )
 def test_a_png_declaring_an_unbounded_exif_chunk_is_refused(tmp_path: Path) -> None:
     # The `eXIf` payload is the one thing the walk reads rather than seeks over,

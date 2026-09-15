@@ -135,6 +135,22 @@ Measured, not assumed:
   confirmed against a throwaway file, since removed. That is exactly the rule `pyproject.toml:102-106`
   already scopes off for `isekai/eval_backends.py` and `baseline/build_contact_sheets.py`.
 
+> **Corrected during phase 3, against the tree rather than a throwaway.** The measurement above was
+> made against a missing **member**, where `unresolved-import` is the whole story. What this change
+> actually lands is a missing **module**: `isekai/workflow.py` becomes `isekai/photo.py`, so
+> `find_nodes` resolves to `Unknown`, `sorted(..., key=int)` widens `apply_id` to `int`'s own
+> parameter union, and indexing a `dict[str, Any]` with it raises **`invalid-argument-type` (×4)** and
+> **`invalid-assignment` (×1)** at `controlnet_probe.py:79` and `:81`. Phase 1's entry is necessary
+> and not sufficient.
+>
+> **The decision is unchanged** — exempt the probe by literal path, permanently, as narrowly as the
+> rules allow. Only the rule list is corrected, and it is corrected in a **second
+> `[[tool.ty.overrides]]` block scoped to the probe alone** rather than by widening the shared one:
+> `eval_backends.py` and `build_contact_sheets.py` bridge to absent wheels, which is an import problem
+> and nothing else, and granting them cover against type errors is what that block's own *"scoped to
+> those files and to that one rule"* argues against. Verified: `uv run ty check` exits 0 with the
+> second block and reports five diagnostics without it.
+
 So the fix is **one entry in the existing `[[tool.ty.overrides]]` include list**, by literal path — the
 form already proven in that file, where a `**` glob is not. It lands in **phase 1**, while it is still
 a no-op, so no phase boundary is ever red and the commit that adds it carries its own rationale rather

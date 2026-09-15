@@ -38,6 +38,11 @@ from typing import Any
 
 from isekai.comfy_types import ComfyTransport, Workflow
 from isekai.flow import Flow, assemble
+from isekai.photo import (
+    MAX_TARGET_LONG_SIDE,
+    image_dimensions,
+    working_resolution,
+)
 from isekai.refusal import Refusal
 from isekai.review import APPROVED
 from isekai.review import DIRECTORY as REVIEW
@@ -53,7 +58,6 @@ from isekai.run import (
     write_json,
 )
 from isekai.sheet import Schema
-from isekai.workflow import image_dimensions, working_resolution
 
 STAGE_ASSEMBLE = "assemble"
 STAGE_RENDER = "render"
@@ -235,20 +239,39 @@ def rendered_seeds(directory: Path) -> list[int]:
 def photo_resolution(photo: Path) -> tuple[int, int]:
     """Return the working resolution for `photo`, as a refusal rather than an exit.
 
-    `image_dimensions` belongs to the render path this version does not touch, and
-    it stops the process with `sys.exit` -- correct for a single-photograph
-    command, wrong here. A batch must survive one unreadable header: `across`
-    collects refusals and a `SystemExit` walks straight past it, taking the
-    remaining photographs with it after the endpoint is already rented.
+    `image_dimensions` stops the process with `sys.exit` -- correct for the
+    single-photograph command it was written for, wrong here. A batch must survive
+    one unreadable header: `across` collects refusals and a `SystemExit` walks
+    straight past it, taking the remaining photographs with it after the endpoint
+    is already rented.
+
+    The long-side bound is enforced here for the same reason and in the same
+    currency. The short-side rule bounds one axis and says nothing about the
+    other, so an extreme aspect ratio drives the long side arbitrarily high.
+    `MAX_TARGET_LONG_SIDE` is 4:1 at a 1024 short side -- an aspect bound wearing
+    a pixel bound's clothes -- and it bounds the *working* target, not the hires
+    one: hires scales both axes by the same factor and so does not change the
+    aspect ratio, and bounding the hires value would silently tighten 4:1 to
+    2.67:1 for a reason unrelated to aspect (design.md D4). It refuses rather than
+    clamping, because a clamped target no longer preserves the aspect ratio and
+    would squash the photograph the way the orientation rule exists to prevent.
     """
     try:
-        return working_resolution(*image_dimensions(str(photo)))
+        width, height = working_resolution(*image_dimensions(str(photo)))
     except SystemExit as unreadable:
         raise Refusal(
             f"{unreadable}; the render target is derived from the photograph's "
             "own header and there is nothing to fall back to -- re-export the "
             "photograph as a JPEG or PNG and open the run again"
         ) from unreadable
+    if max(width, height) > MAX_TARGET_LONG_SIDE:
+        raise Refusal(
+            f"{photo.name}: a {width}x{height} target is past the "
+            f"{MAX_TARGET_LONG_SIDE} limit on the long side; the short-side rule "
+            "bounds one axis and this photograph's aspect ratio is extreme -- "
+            "crop it closer to the subject and open the run again"
+        )
+    return width, height
 
 
 def build_graph(

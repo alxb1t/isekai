@@ -118,6 +118,28 @@ include = [
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"
 
+# The archived probe again, alone, for the two rules the block above must NOT be
+# widened by -- `eval_backends.py` and `build_contact_sheets.py` bridge to absent
+# wheels, which is an import problem and nothing else, and granting them cover
+# against type errors is exactly what that block's own "scoped to those files and
+# to that one rule" argues against.
+#
+# The measurement design.md D5 recorded was made against a missing MEMBER, where
+# `unresolved-import` is the whole story. What v0.14 actually landed is a missing
+# MODULE: `isekai/workflow.py` became `isekai/photo.py`, so `find_nodes` resolves
+# to Unknown, `sorted(..., key=int)` widens `apply_id` to `int`'s own parameter
+# union, and indexing a `dict[str, Any]` with it raises `invalid-argument-type`
+# and `invalid-assignment` at lines 79 and 81. The decision is unchanged -- exempt
+# the probe by literal path, permanently, as narrowly as the rules allow -- and
+# only the rule list is corrected, because the premise behind it was scoped to a
+# case that did not happen.
+[[tool.ty.overrides]]
+include = ["openspec/changes/archive/0010-illustrious-base/controlnet_probe.py"]
+
+[tool.ty.overrides.rules]
+invalid-argument-type = "ignore"
+invalid-assignment = "ignore"
+
 [tool.ty.environment]
 extra-paths = ["scripts"]
 

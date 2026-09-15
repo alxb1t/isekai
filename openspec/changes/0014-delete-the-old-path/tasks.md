@@ -4,7 +4,7 @@
 
 - [x] 1 — The gate's exemption, landed first while it is still a no-op
 - [x] 2 — The old path deleted: modules, graphs, tests
-- [ ] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
+- [x] 3 — `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
 - [ ] 4 — The run root's containment, and the requirement that holds it
 - [ ] 5 — The manifest's orphans, and `infra/up.sh`'s bounded wait
 - [ ] 6 — The record: `CLAUDE.md`, the README, `.gitignore`, the version line
@@ -141,46 +141,46 @@ A test whose scenario is `REMOVED` is deleted with it, never left unbound.
 
 ## 3. `isekai/photo.py`, and the 4:1 ceiling restored to the surviving path
 
-- [ ] 3.1 `git mv isekai/workflow.py isekai/photo.py` and
+- [x] 3.1 `git mv isekai/workflow.py isekai/photo.py` and
   `git mv tests/test_workflow_injection.py tests/test_photo.py`. Update the two importers —
   `isekai/generate.py:56` and `isekai/evaluate.py:34`, one line each — plus the moved test file's
   imports, and `isekai/evaluate.py:228`'s comment, which names the module and becomes true again. Verify:
   `uv run pytest -q` exits 0 and
   `grep -rn "isekai\.workflow" --include='*.py' . | grep -v '\.venv'` returns only the archived probe.
-- [ ] 3.2 Delete `PIPELINE_PATH`, `find_node`, `find_nodes` and `inject` from `isekai/photo.py`. Keep the
+- [x] 3.2 Delete `PIPELINE_PATH`, `find_node`, `find_nodes` and `inject` from `isekai/photo.py`. Keep the
   JPEG/PNG header walk, the EXIF transpose, `image_dimensions`, `working_resolution`, `WORKING_SCALE`,
   `DIMENSION_STEP`, `MAX_HEADER_DIMENSION`, `MAX_HEADER_BYTES` and `MAX_TARGET_LONG_SIDE` — the last is
   used by 3.6, not dead. Verify: `uv run pytest -q` exits 0 and
   `grep -n "def inject\|def find_node\|def find_nodes\|PIPELINE_PATH" isekai/photo.py` returns nothing.
-- [ ] 3.3 Rekey the moved file's markers from `workflow-injection:working-resolution:*` to
+- [x] 3.3 Rekey the moved file's markers from `workflow-injection:working-resolution:*` to
   `image-generation:working-resolution:*`. Its `scale-precedes-every-consumer` test now reads
   `flows/summon-v1/graph.json` and asserts the scaling node sits between `LoadImage` and **both**
   `ApplyInstantIDAdvanced` and `DWPreprocessor`. Verify: `grep -rn "workflow-injection" tests/` returns
   nothing, and `uv run pytest tests/test_photo.py -q` exits 0 at 41.
-- [ ] 3.4 **Red first.** In `tests/test_generate.py`, two tests bound to
+- [x] 3.4 **Red first.** In `tests/test_generate.py`, two tests bound to
   `image-generation:working-resolution:an-extreme-aspect-ratio-is-refused`: a photograph whose short side
   at the working scale drives its long side past `MAX_TARGET_LONG_SIDE` raises **`Refusal`** — not
   `SystemExit` — naming the file, both computed dimensions and the bound; and a photograph at exactly the
   bound still renders. Verify both fail, and that they fail because no such refusal is raised.
-- [ ] 3.5 **Red first.** One test bound to
+- [x] 3.5 **Red first.** One test bound to
   `image-generation:working-resolution:a-refusal-is-per-photograph`: a batch of three photographs, the
   middle one refused for the reason above, still renders the other two and reports the refusal against
   its own photograph. Verify it fails.
-- [ ] 3.6 Implement in `isekai/generate.py`'s `photo_resolution` (`:235-251`): after computing the
+- [x] 3.6 Implement in `isekai/generate.py`'s `photo_resolution` (`:235-251`): after computing the
   working target, raise `Refusal` when `max(width, height) > MAX_TARGET_LONG_SIDE`. **Bound the working
   target, not the hires target** — design.md **D4**: hires scales both axes by `hires_scale` and so does
   not change the aspect ratio, and bounding the hires value would tighten 4:1 to 2.67:1 for a reason
   unrelated to aspect. Verify 3.4 and 3.5 now pass.
-- [ ] 3.7 **Red first, then green:** a test bound to
+- [x] 3.7 **Red first, then green:** a test bound to
   `image-generation:seeds:seeds-are-drawn-at-full-64-bit-width`, asserting `draw_seeds` draws across the
   full 64-bit space and that the width comes from the single `SEED_BITS` constant rather than a repeated
   literal. It carries `workflow-mutation:jitter:seed-is-64-bit` forward. Verify:
   `uv run pytest tests/test_generate.py -q` exits 0.
-- [ ] 3.8 Fix `working_resolution`'s docstring, which justifies the short-side rule with *"a wide photo
+- [x] 3.8 Fix `working_resolution`'s docstring, which justifies the short-side rule with *"a wide photo
   lands below the **line-art ControlNet's** floor"* — `summon-v1` has no LineArt node. The rule holds on
   SDXL's own trained scale; the reason written beside it belongs to the deleted path. Verify:
   `grep -in "line.art" isekai/photo.py` returns nothing.
-- [ ] 3.9 Full gate green, and `uv run pytest --collect-only -q | tail -1` reads **587**. `CHANGELOG.md`
+- [x] 3.9 Full gate green, and `uv run pytest --collect-only -q | tail -1` reads **587**. `CHANGELOG.md`
   entry. Tick box 3. Commit.
 
 ## 4. The run root's containment, and the requirement that holds it

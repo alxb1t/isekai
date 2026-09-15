@@ -19,16 +19,19 @@ from isekai.flow import Flow, load_flow
 from isekai.generate import (
     OUTPUTS,
     PROMPTS,
+    SEED_BITS,
     approved_flows,
     build_graph,
     draw_seeds,
     graph_digest,
+    photo_resolution,
     prepare,
     prompt_artifact,
     render,
     rendered_seeds,
     seeds_for,
 )
+from isekai.photo import MAX_TARGET_LONG_SIDE
 from isekai.refusal import Refusal
 from isekai.review import approve, review
 from isekai.run import Run, across, artifact_name, open_run, read_artifact
@@ -554,3 +557,96 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
     directory = run.path / OUTPUTS / FLOW / "001"
     assert not (directory / "42.png").exists()
     assert rendered_seeds(directory) == []
+
+
+# --- the aspect-ratio ceiling -------------------------------------------------
+
+# The short-side rule bounds one axis and says nothing about the other, so an
+# extreme aspect ratio drives the long side arbitrarily high. `MAX_TARGET_LONG_SIDE`
+# is 4:1 at a 1024 short side wearing a pixel bound's clothes, and it bounds the
+# WORKING target rather than the hires one: hires scales both axes by the same
+# factor and so does not change the aspect ratio, and bounding the hires value
+# would tighten 4:1 to 2.67:1 for a reason unrelated to aspect (design.md D4).
+
+
+def _photo(tmp_path: Path, name: str, width: int, height: int) -> Path:
+    """Write a photograph of exactly this size and return its path."""
+    path = tmp_path / name
+    path.write_bytes(jpeg_bytes(width, height))
+    return path
+
+
+@pytest.mark.spec(
+    "image-generation:working-resolution:an-extreme-aspect-ratio-is-refused"
+)
+def test_a_photograph_whose_target_passes_the_long_side_bound_is_refused(
+    tmp_path: Path,
+) -> None:
+    photo = _photo(tmp_path, "panorama.jpg", 5000, 1000)
+
+    with pytest.raises(Refusal) as refused:
+        photo_resolution(photo)
+
+    # A `Refusal`, not a `SystemExit`: the batch must survive one extreme
+    # photograph the same way it survives one unreadable header.
+    message = str(refused.value)
+    assert photo.name in message
+    assert "5120" in message and "1024" in message
+    assert str(MAX_TARGET_LONG_SIDE) in message
+
+
+@pytest.mark.spec(
+    "image-generation:working-resolution:an-extreme-aspect-ratio-is-refused"
+)
+def test_a_photograph_at_exactly_the_bound_is_still_rendered(tmp_path: Path) -> None:
+    # 4:1 exactly. The bound refuses what is past it, not what reaches it.
+    photo = _photo(tmp_path, "wide.jpg", 4096, 1024)
+
+    assert photo_resolution(photo) == (MAX_TARGET_LONG_SIDE, 1024)
+
+
+@pytest.mark.spec("image-generation:working-resolution:a-refusal-is-per-photograph")
+def test_one_photograph_past_the_bound_does_not_cost_the_batch_its_session(
+    tmp_path: Path,
+) -> None:
+    photos = [
+        _photo(tmp_path, "first.jpg", 1600, 1200),
+        _photo(tmp_path, "middle.jpg", 5000, 1000),
+        _photo(tmp_path, "last.jpg", 1200, 1600),
+    ]
+    resolved: list[tuple[int, int]] = []
+
+    refusals = across(photos, lambda photo: resolved.append(photo_resolution(photo)))
+
+    # The other two are still rendered, and the refusal names the photograph it
+    # belongs to rather than the batch.
+    assert resolved == [(1344, 1024), (1024, 1344)]
+    assert len(refusals) == 1
+    assert "middle.jpg" in refusals[0]
+    assert "first.jpg" not in refusals[0] and "last.jpg" not in refusals[0]
+
+
+@pytest.mark.spec("image-generation:seeds:seeds-are-drawn-at-full-64-bit-width")
+def test_a_drawn_seed_spans_the_full_sampler_width() -> None:
+    # Carried forward from `workflow-mutation:jitter:seed-is-64-bit`, which was
+    # the only binding on the width in the living spec. An output is named by its
+    # seed, so the seed space is the reproducibility contract at its finest grain
+    # and narrowing it raises the collision rate the drawing rule already guards.
+    assert SEED_BITS == 64
+
+    class _Widest(random.Random):
+        """A source answering with the widest value the width it is asked for allows."""
+
+        asked: list[int] = []
+
+        def getrandbits(self, k: int) -> int:
+            self.asked.append(k)
+            return (1 << k) - 1
+
+    source = _Widest()
+    drawn = draw_seeds(1, source)
+
+    # The width comes from the one constant rather than a literal at the draw:
+    # a repeated literal is a second place to change and a silent way to disagree.
+    assert source.asked == [SEED_BITS]
+    assert drawn == [2**64 - 1]

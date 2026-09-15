@@ -25,6 +25,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The 4:1 target ceiling is restored to the surviving render path.**
+  `MAX_TARGET_LONG_SIDE` was enforced only inside `inject`, via `sys.exit`, and `generate.py`'s
+  `photo_resolution` never applied it — **a live gap on `main`, not a regression this version
+  introduces**, which deleting `inject` would have made permanent. It moves as a `Refusal` rather
+  than a `SystemExit`, so a batch survives one extreme photograph the same way it survives one
+  unreadable header. It bounds the **working** target, not the hires one: hires scales both axes by
+  the same factor and so does not change the aspect ratio, and bounding the hires value would
+  silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect (design.md D4).
+
+### Changed
+
+- **`isekai/workflow.py` is `isekai/photo.py`, minus injection.** `PIPELINE_PATH`, `find_node`,
+  `find_nodes` and `inject` are gone; the JPEG/PNG header walk, the EXIF transpose,
+  `image_dimensions` and `working_resolution` survive as what they always were — *what is this
+  photograph, and what render target does it imply*. Nothing that remains touches a ComfyUI graph,
+  so `workflow` was a name that would lie. `working_resolution`'s docstring no longer justifies the
+  short-side rule by *"the line-art ControlNet's floor"*: `summon-v1` has no LineArt node, and the
+  rule holds on SDXL's own trained scale — the reason written beside it belonged to the deleted path.
+- **`scale-precedes-every-consumer` asserts by role, not by class.** `summon-v1` has two `ImageScale`
+  nodes — one on the photograph, one on the hires pass — so a class lookup is ambiguous against it,
+  and the flow manifest is what names the photograph's. The test now reads the shipped graph and
+  asserts the scaling node sits between the loader and **both** the identity node and the pose
+  preprocessor, with nothing else reaching the loader.
+- **The archived probe needs two more rules exempted than design.md D5 predicted, and gets them in a
+  block of its own.** D5's measurement was made against a missing *member*, where `unresolved-import`
+  is the whole story; deleting the whole module makes `find_nodes` resolve to `Unknown`, which widens
+  `apply_id` through `sorted(..., key=int)` and raises `invalid-argument-type` and
+  `invalid-assignment`. The decision is unchanged — exempt the probe by literal path, permanently,
+  as narrowly as the rules allow — so the two rules land in a **second override scoped to the probe
+  alone** rather than widening the block that covers `eval_backends.py` and
+  `build_contact_sheets.py`, which bridge to absent wheels and need no cover against type errors.
+
 ### Removed
 
 - **BREAKING — the old render path is deleted.** `convert.py`, `isekai/cli.py`,
