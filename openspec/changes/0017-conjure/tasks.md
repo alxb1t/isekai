@@ -4,7 +4,7 @@
 
 - [x] 1 — The one repair: the registry's contents stop being hard-coded
 - [x] 2 — `flows/conjure-v1/` — five files and the pin
-- [ ] 3 — The verdict, measured rather than asserted
+- [x] 3 — The verdict, measured rather than asserted
 - [ ] 4 — ⚠️ **GPU · HALT** — the acceptance run
 
 ## The per-phase ritual
@@ -219,18 +219,18 @@ legible in `git log`.
 disagrees with the verdict `design.md` states, that is the change's finding — write it down exactly as
 it is and HALT for the operator rather than adjusting either.**
 
-- [ ] 3.1 Run and record **verbatim**, under a new `## Verdict, measured` heading in `design.md`:
+- [x] 3.1 Run and record **verbatim**, under a new `## Verdict, measured` heading in `design.md`:
       ```
       git diff --stat v0.16.0..HEAD -- isekai/ scripts/ Dockerfile start.sh infra/ \
         Makefile pyproject.toml .github/ openspec/specs/
       ```
       **Expected: empty output.** Non-empty is the finding, not a failure to hide.
-- [ ] 3.2 Run and record **verbatim** beneath it: `git diff --stat v0.16.0..HEAD -- tests/`.
+- [x] 3.2 Run and record **verbatim** beneath it: `git diff --stat v0.16.0..HEAD -- tests/`.
       **Expected: `tests/test_flow.py` only, two lines changed.**
-- [ ] 3.3 Write the three-bucket classification against what actually landed — the flow · the designed
+- [x] 3.3 Write the three-bucket classification against what actually landed — the flow · the designed
       pin · the undesigned assumption. **If a fourth bucket appeared, name it and state what it means
       for v0.16's completeness.** Verify: the section names all three buckets and cites 3.1 and 3.2.
-- [ ] 3.4 Verify: `openspec validate 0017-conjure --strict` exits 0.
+- [x] 3.4 Verify: `openspec validate 0017-conjure --strict` exits 0.
 
 ## 4. ⚠️ **GPU · HALT** — the acceptance run
 

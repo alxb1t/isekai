@@ -204,6 +204,83 @@ recommendation:
 **`ip_weight`, `identity_cn_strength` and `openpose_strength` are absent**, because the nodes they
 patched are. A dial whose node was deleted is a declaration nothing reads.
 
+## Verdict, measured
+
+Written after the build, from the commands rather than from the plan. Phase 3 changes no code; it
+records what the diff says, and the diff is this change's subject.
+
+### The production surface — empty, as the verdict predicted (task 3.1)
+
+```
+$ git diff --stat v0.16.0..HEAD -- isekai/ scripts/ Dockerfile start.sh infra/ \
+    Makefile pyproject.toml .github/ openspec/specs/
+$
+```
+
+No output. **`conjure-v1` renders through v0.16's code unchanged** — `load_flow`'s eight checks,
+`build_graph`'s four required roles and seven guarded ones, the `inputs`-gated upload, and the
+unconditional `photo_resolution` all accepted a second, sheet-only flow with nothing added to them.
+The two claims never exercised by a second flow — `REQUIRED_NODES` and `TRANSFERRED_INPUTS` — were
+both exercised here and both held: seven declared roles satisfied the four required, and `photo`
+absent from both sides passed as the sheet-only case.
+
+### The test surface (task 3.2)
+
+```
+$ git diff --stat v0.16.0..HEAD -- tests/
+ tests/test_flow.py | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+$
+```
+
+**One module, as predicted — and six lines, where the verdict above says two.** Recorded rather than
+reconciled. The gap is entirely accounted for, and it is not a discovery about v0.16:
+
+| the diff's lines | what they are | bucket |
+|---|---|---|
+| `+"conjure-v1": "3869…"` | the pin | the designed pin |
+| `+` three comment lines above it | the comment `tasks.md` 2.8 required the pin to carry | the designed pin |
+| `-assert tracked_flows() == ["summon-v1"]` / `+assert tracked_flows()` | the widened vacuity guard | the undesigned assumption |
+
+**Two *edits*, six *lines*.** The verdict counted edits and the acceptance row counted lines, and the
+four extra lines are a comment the same `tasks.md` mandated in task 2.8. **The verdict `feasible`
+stands and the edit set is what D1 says it is**; the prediction that was wrong is *"two lines"*, and
+what makes it wrong is an instruction in this change's own plan rather than anything about v0.16's
+completeness. Stated here so a later reader is not left reconciling `6` against `2` alone.
+
+### The three buckets, against what landed
+
+1. **The flow — `flows/conjure-v1/`, five files, 646 lines.** This is the change's product and it is
+   entirely inside its own directory. Nothing was added to a shared module to make it load, render or
+   score, including `CURATED` (`isekai/shared/vocabulary.py`), which D4 named as the standing risk:
+   all five new schema fields proved reachable by the suffix or containment pass, checked in task 2.6.
+2. **The designed pin — `PINNED["conjure-v1"]` and its comment, four lines.** *The freeze working.*
+   The pin list is what makes adding or removing a flow deliberate; a version that reported this as an
+   incompleteness would be arguing to delete the mechanism (D1).
+3. **The undesigned assumption — `test_every_tracked_flow_parses`'s opening assertion, two lines.**
+   *The one defect this change repaired*, landed first and on its own commit so that it reads as a
+   defect rather than as part of the flow. It was a vacuity guard written as a registry census; every
+   other test in the module already iterated `tracked_flows()`.
+
+**No fourth bucket appeared.** Nothing outside `flows/`, `tests/test_flow.py`, `CHANGELOG.md` and this
+change's own directory was touched — task 3.1's empty output is that claim, and task 3.2's single
+module is its bound.
+
+**So v0.16 was complete on the claim this version tested.** Adding a flow cost a directory plus one
+deliberate pin. The second line in `tests/test_flow.py` was an incidental single-flow assumption that
+only a second flow could reveal, which is the thing this version existed to find.
+
+### Two findings that the measurement does not cover
+
+Both are recorded in `## Risks / Trade-offs` with triggers, and neither is visible in a diff:
+
+- **Two flows in one invocation are not seed-matched** — `seeds_for` draws per directory from one
+  shared `Random`. The acceptance run passes `--seed` explicitly for exactly this reason.
+- **`generate` renders in on-disk order**, so `conjure-v1` goes before `summon-v1` regardless of
+  `--flow` order.
+
+Both block the evaluation version and travel with it, which is the version that needs them.
+
 ## Risks / Trade-offs
 
 - **The claim is about a diff, and nothing in the gate reads a diff.** → Two acceptance rows are

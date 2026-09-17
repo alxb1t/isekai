@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **The version's verdict is recorded as a measurement, in the change's `design.md` under
+  `## Verdict, measured`.** `git diff --stat v0.16.0..HEAD` over `isekai/`, `scripts/`, `Dockerfile`,
+  `start.sh`, `infra/`, `Makefile`, `pyproject.toml`, `.github/` and `openspec/specs/` is **empty**:
+  `conjure-v1` loads, assembles and renders through v0.16's code unchanged, and the two checks no
+  second flow had ever exercised — `REQUIRED_NODES` and `TRANSFERRED_INPUTS` — both held. The test
+  surface is one module, `tests/test_flow.py`, in **two edits across six lines**: the designed pin and
+  its mandated comment, and the widened vacuity guard. **The verdict's own "two lines" prediction was
+  a line count of an edit count**, and the four extra lines are the comment this change's own plan
+  required — written down rather than reconciled. No fourth bucket appeared, so **v0.16 was complete
+  on the claim this version tested**: adding a flow cost a directory plus one deliberate pin.
+
 ### Added
 
 - **`flows/conjure-v1/` — a second flow, and the first test of the claim that adding one is a
