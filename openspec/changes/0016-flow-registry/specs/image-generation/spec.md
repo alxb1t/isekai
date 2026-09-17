@@ -106,7 +106,9 @@ The system SHALL require exactly four node roles of every flow — a positive co
 negative conditioning node, a latent node and a sampler node — and SHALL refuse a flow declaring fewer
 when the flow is loaded, before anything is executed. Every other node role SHALL be optional, and a
 render SHALL patch only the roles the flow declares. The system SHALL NOT transfer an input a flow does
-not declare.
+not declare. Where a role names both a transfer and a patch, the manifest's `inputs` and its `nodes`
+SHALL agree about it, and a manifest declaring it under one and not the other SHALL be refused when the
+flow is loaded, naming the flow and the key that is missing.
 
 A flow declaring fewer roles used to pass the whole suite and fail on a rented GPU, after the
 photograph had already been uploaded — which is the half of "a broken flow costs a test run, not a
@@ -114,6 +116,13 @@ boot" that was not true. Four roles are required because every image flow has th
 not required include a photograph, an identity adapter and a pose preprocessor, which a sheet-only flow
 does not have, and a hires resize and a hires sampler, which an ordinary cheaper flow does not have
 either. Refusing at load rather than at render is what moves the failure from money to a test run.
+
+The two gates over the photograph sit in different places — the transfer is gated on `inputs` and the
+patch on `nodes` — so nothing holds them in agreement unless the manifest is checked. A flow naming the
+photograph under `nodes` alone would upload nothing and leave the graph file's own committed filename in
+the load node: a paid render of the wrong person, with the whole suite green. The mirror case transfers a
+photograph no node reads. Identity preservation is the product, so a disagreement that can render
+somebody else is refused before anything runs rather than inspected afterwards.
 
 #### Scenario: a flow missing a required role is refused at load
 - **Key:** `image-generation:roles:a-missing-required-role-is-refused-offline`
@@ -128,6 +137,14 @@ either. Refusing at load rather than at render is what moves the failure from mo
 - **WHEN** a flow declares the four required roles and none of the optional ones
 - **THEN** its graph is built without error
 - **AND** only the roles it declares are patched
+
+#### Scenario: a manifest whose inputs and nodes disagree is refused at load
+- **Key:** `image-generation:roles:transferred-input-and-node-must-agree`
+- **Layers:** unit
+- **WHEN** a flow manifest declares the photograph under `nodes` but not under `inputs`, or under
+  `inputs` but not under `nodes`
+- **THEN** loading it is refused naming the flow and the key the declaration is missing from
+- **AND** no endpoint is contacted, no photograph is transferred, and no render is submitted
 
 #### Scenario: an input a flow does not declare is not transferred
 - **Key:** `image-generation:roles:undeclared-input-is-not-uploaded`

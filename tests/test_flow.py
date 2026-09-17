@@ -18,6 +18,7 @@ from isekai.foundation.flow import (
     REQUIRED,
     REQUIRED_NODES,
     SIBLINGS,
+    TRANSFERRED_INPUTS,
     Flow,
     assemble,
     load_flow,
@@ -299,6 +300,37 @@ def test_a_flow_declaring_fewer_than_the_required_nodes_is_refused(
         load_flow("summon-v1", root)
 
     assert role in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:roles:transferred-input-and-node-must-agree")
+@pytest.mark.parametrize("key", ["inputs", "nodes"])
+def test_a_flow_declaring_a_photograph_on_one_side_only_is_refused(
+    tmp_path: Path, key: str
+) -> None:
+    # Declared under `nodes` alone, the photograph is never uploaded and the
+    # `LoadImage` node keeps the filename committed inside `graph.json` -- a
+    # render of whoever that file names. Declared under `inputs` alone, it is
+    # uploaded and read nowhere. Both are refused here, off any endpoint.
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    if key == "inputs":
+        document["inputs"] = [name for name in document["inputs"] if name != "photo"]
+    else:
+        del document["nodes"]["photo"]
+    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-v1", root)
+
+    assert "summon-v1" in str(refused.value)
+    assert f"`{key}` declares no 'photo'" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:roles:transferred-input-and-node-must-agree")
+def test_the_tracked_flow_declares_its_photograph_on_both_sides(flow: Flow) -> None:
+    assert TRANSFERRED_INPUTS == ("photo",)
+    for name in TRANSFERRED_INPUTS:
+        assert (name in flow.inputs) == (name in flow.nodes)
 
 
 @pytest.mark.spec("image-generation:roles:a-missing-required-role-is-refused-offline")

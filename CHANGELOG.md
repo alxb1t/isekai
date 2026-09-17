@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A manifest that declares the photograph on one side only is refused at load.** The transfer is
+  gated on `inputs` and the `LoadImage` patch on `nodes`, and nothing held the two in agreement once
+  both became conditional: a flow naming `nodes.photo` but omitting `photo` from `inputs` uploaded
+  nothing and rendered the filename committed inside `graph.json` — a paid render of the wrong
+  person, with the whole gate green — while the mirror case uploaded a photograph no node reads.
+  `load_flow` now refuses the disagreement beside the required-roles check, naming the flow and the
+  half of the manifest the declaration is missing from, so it costs a test run rather than a boot.
+  Identity preservation is the product; a check that can only be made after the render is not one.
 - **Resume no longer assumes a render is a PNG.** `rendered_seeds` filtered `iterdir()` on
   `path.suffix == ".png"`, so a flow whose output is not a still image would have had its finished work
   reported as missing and rendered again — on the one stage that costs money on every pass. The

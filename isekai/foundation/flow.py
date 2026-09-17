@@ -80,6 +80,16 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # a rented GPU -- after the photograph had already been uploaded (design.md D9).
 REQUIRED_NODES = ("positive", "negative", "latent", "sampler")
 
+# Every role that names a transfer as well as a patch, and so has to be declared
+# on both sides of the manifest. The photograph is uploaded because `inputs`
+# names it and read because `nodes` names it, and those two gates live in
+# different modules -- nothing holds them in agreement but this check. Declared
+# under `nodes` alone, the flow uploads nothing and the load node keeps the
+# filename committed inside `graph.json`: a paid render of whoever that file
+# names, with the whole gate green. Declared under `inputs` alone, the
+# photograph is transferred and read nowhere.
+TRANSFERRED_INPUTS = ("photo",)
+
 # The form every flow this build carries produces. It is answered by the flow
 # rather than written into the resume predicate, so "which of my outputs are
 # already produced" is a question asked of the flow and not of an extension
@@ -314,6 +324,21 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             "every flow patches those four, so one that names fewer would fail on "
             "a rented machine rather than here"
         )
+    for role in TRANSFERRED_INPUTS:
+        sides = [
+            side
+            for side in ("inputs", "nodes")
+            if role not in document[side]  # `inputs` is a list, `nodes` a mapping
+        ]
+        if len(sides) == 1:
+            raise Refusal(
+                f"{flow}/{MANIFEST_NAME}: `{sides[0]}` declares no {role!r} and the "
+                f"other half of the manifest does; a {role} is transferred because "
+                "`inputs` names it and read because `nodes` names it, so declaring "
+                "one side alone renders what the graph file itself names, or "
+                f"transfers a {role} no node reads -- add {role!r} to "
+                f"`{sides[0]}`, under a new flow identifier"
+            )
     absent_files = [name for name in SIBLINGS if not (directory / name).is_file()]
     if absent_files:
         raise Refusal(

@@ -398,7 +398,10 @@ def render(
 
     # `flow.inputs` gates the transfer: a flow that does not declare a photograph
     # has nothing to upload, and uploading one anyway spends the endpoint's time
-    # on an input no node reads.
+    # on an input no node reads. The patch below it is gated on `flow.nodes`
+    # instead, and `load_flow` is what holds the two halves in agreement -- a
+    # manifest declaring the photograph on one side alone never loads, so this
+    # gate and that one cannot disagree about the same run.
     image_name = client.upload_image(str(run.photo)) if "photo" in flow.inputs else None
     # Constant across seeds: the flow's graph on disk does not change mid-render.
     flow_graph = flow.graph_digest()
