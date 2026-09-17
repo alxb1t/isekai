@@ -5,7 +5,7 @@
 - [x] 1 — The one repair: the registry's contents stop being hard-coded
 - [x] 2 — `flows/conjure-v1/` — five files and the pin
 - [x] 3 — The verdict, measured rather than asserted
-- [ ] 4 — ⚠️ **GPU · HALT** — the acceptance run
+- [x] 4 — ⚠️ **GPU · HALT** — the acceptance run
 
 ## The per-phase ritual
 
@@ -240,12 +240,12 @@ session, and confirm the account is empty through the RunPod MCP, recording what
 — $0.036 boot plus 6 × ~$0.01 ≈ $0.10**, about 15–25 minutes boot to teardown. **Exceeding the ceiling
 is a halt, not a judgement call.**
 
-- [ ] 4.1 Locally and for free, before anything is rented: `caption` → `sheet` → `review` → edit →
+- [x] 4.1 Locally and for free, before anything is rented: `caption` → `sheet` → `review` → edit →
       `approve` for three photographs with `--flow summon-v1 --flow conjure-v1`, then `generate`
       **without** `--server`. Verify: six approved sheets and six assembled prompt artifacts exist, no
       endpoint was contacted, and `conjure-v1`'s sheets carry non-empty values in at least two of the
       five new fields across the three subjects.
-- [ ] 4.2 ⚠️ **GPU** — one session: bring the pod up, open the tunnel, then
+- [x] 4.2 ⚠️ **GPU** — one session: bring the pod up, open the tunnel, then
       ```
       python -m isekai generate <run…> --flow summon-v1 --flow conjure-v1 \
         --seed <N> --server <addr>
@@ -255,9 +255,9 @@ is a halt, not a judgement call.**
       produce. Download the outputs before teardown, tear down, confirm the account is empty.
       Verify: six renders from **one** boot, and `<N>.png` present under **both**
       `runs/<id>/summon-v1/outputs/<v>/` and `runs/<id>/conjure-v1/outputs/<v>/`.
-- [ ] 4.3 Verify `show` survives two flows — **never run before this change**:
+- [x] 4.3 Verify `show` survives two flows — **never run before this change**:
       `python -m isekai show <run>` prints two flow subtrees, refuses nothing, and exits 0.
-- [ ] 4.4 **By eye**, and this is the version's product judgement: `conjure-v1` rendered a recognisable
+- [x] 4.4 **By eye**, and this is the version's product judgement: `conjure-v1` rendered a recognisable
       anime character from the sheet alone, at a flatness the operator accepts. **If it reads as
       insufficiently flat, that is parked entry P9's trigger — `hires_denoise` 0.50 as `conjure-v2`, not
       an edit to this flow.** Record the session's duration and actual cost in `CHANGELOG.md`.

@@ -25,6 +25,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Verified
+
+- **The acceptance run: two flows, one invocation, one boot, seven renders — and it needed no code
+  change.** The first end-to-end execution of the multi-flow path, which no test had ever run:
+  `tests/test_pipeline_cli.py`'s `_two_flows` stops at `_flows_for`, so the multi-flow loops,
+  `prepare`'s multi-entry return and `report` over two flows were untested end to end until this
+  session.
+  - **Locally and for free:** `caption` → `sheet` → `review` → edit → `approve` for three
+    photographs across both flows, then `generate` with no `--server`. Seven approved sheets, seven
+    assembled prompts, **zero outputs** — no endpoint contacted.
+  - **Metered:** one pod, `19m42s` boot to confirmed teardown, **~$0.236** at the RTX PRO 4500
+    Blackwell's live $0.72/hr — inside the ~$0.30 and 45-minute ceilings. The volume was empty, so
+    this session also paid for provisioning: 14 G of the manifest fetched in ~6m25s, ComfyUI up at
+    11m36s, seven renders in ~7m25s (~67s each). Teardown confirmed through the RunPod MCP:
+    `list-pods` returned `[]` and `get-pod` returned `404 pod not found`.
+  - **`--seed` was passed explicitly**, as `design.md`'s risk register requires: two flows in one
+    invocation draw different seeds from one shared `Random`, so the pair is only comparable when the
+    seed is named. Every render is `20260917.png` under both flows.
+  - **`show` survives two flows** — never run before this change. Two flow subtrees, nothing refused,
+    exit 0, and it distinguishes `001 unedited` from `002 edited`.
+  - **`conjure-v1` renders a recognisable anime character from the sheet alone**, at a flatness the
+    operator accepts. Every sheet tag landed. Against `summon-v1` on the same subject and seed it is
+    the **flatter** of the two — flat cel shading and visible linework where `summon` is painterly,
+    which is InstantID pulling toward likeness. **Parked entry P9 (`hires_denoise` 0.50 as
+    `conjure-v2`) is therefore not triggered**; it stays parked with its trigger unfired.
+  - **Four of the five new schema fields were exercised** across the subjects — `eyelashes`, `lips`,
+    `nose` and `bangs`. `facial_hair` stayed `[]` throughout, correctly: no subject had any, and
+    writing a negation into a sheet is what rule 3 forbids.
+
 ### Documentation
 
 - **The version's verdict is recorded as a measurement, in the change's `design.md` under
