@@ -102,10 +102,19 @@ schema is pure data: `map_phrase(phrase, vocabulary, suffix)` takes the suffix f
 structure.** `conjure` has neither, so the face reaches the render only as tags.
 
 *Refused:* **`jaw`** — the 8,106-tag vocabulary has **zero** jaw tags, and a field that cannot be filled
-produces a sheet that looks more complete than it is. *Deferred:* **`eye_shape`** — its four tags
-(`tsurime`, `tareme`, `jitome`, `sanpaku`) are reachable only through a curated span, and `CURATED`
-(`vocabulary.py:77`) is a module constant shared by every flow that no manifest can declare. Four tags is
-the wrong price for the first edit to shared routing.
+produces a sheet that looks more complete than it is. *Deferred:* **`eye_shape`** — and the reason is
+**what a reader would actually write**, not the tags' existence. Measured rather than assumed, during
+the `/simplify` pass: of eight English eye-shape phrases, **only `upturned` maps** — `upturned` +
+`eyes` → `upturned eyes` (count 2,096) through the ordinary suffix pass, while `droopy`,
+`downturned`, `narrow`, `almond`, `hooded`, `sharp` and `round` all return `[]`. The four canonical
+tags (`tsurime` 31,622, `tareme` 32,196, `jitome` 26,634, `sanpaku` 7,731) are reachable by the
+**exact-match** pass — `map_phrase("tsurime", v, "eyes")` → `["tsurime"]` — so they need no curated
+span at all; what they need is a sorter that already writes Japanese, which the briefing does not ask
+for and should not. So the field would ship with one reachable English phrasing out of eight, and the
+route to the rest is `CURATED` (`vocabulary.py:77`), a module constant shared by every flow that no
+manifest can declare. **Seven dead phrasings is the wrong price for the first edit to shared
+routing** — and the counts say the loss is larger than "four tags" implies, which is the honest way
+to leave it parked.
 
 All five are `scored: false`: the evaluator has no measurement for any of them, and `scored` is what
 keeps a published table's coverage checkable rather than asserted.
