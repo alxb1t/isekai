@@ -11,29 +11,62 @@ an output identifies the configuration that produced it.
 
 ## Requirements
 
-### Requirement: A flow is a directory whose manifest declares and never computes
+### Requirement: A flow is a directory of five files whose manifest declares and never computes
 
-The system SHALL define a flow as a directory containing a manifest that declares its required inputs,
-the schema and vocabulary its sheet is filled from, and its dials. The manifest SHALL contain no
-computed or conditional value.
+The system SHALL define a flow as a directory containing exactly five files — a manifest, a graph, a
+schema, a caption briefing and a sheet briefing — all of them directly in that directory. The manifest
+SHALL declare its required inputs, the vocabulary and the models its render is pinned to, its node
+roles, its prompt fragments and its dials. The manifest SHALL NOT name any of its sibling files, SHALL
+declare the version of its own format, and SHALL contain no computed or conditional value.
 
 A manifest that computes nothing is fully checkable without executing anything, which is what lets a
-broken flow be caught by the test suite rather than after a pod boot and several minutes. That property
-is also the standing argument against anyone later adding a computed field.
+broken flow be caught by the test suite rather than after a pod boot and several minutes. Holding the
+schema and both briefings inside the directory is what makes a flow the complete specification of how an
+input becomes an image: a briefing decides what enters the caption, the caption decides the sheet, and
+the sheet decides the render, so a changed briefing is a changed image and must be a new flow. The files
+sit directly in the directory rather than in sub-directories because the digest that freezes a flow
+covers regular files only; a nested layout would leave the schema and the briefings outside the freeze
+while the gate stayed green. A key that can only ever hold one value is not a declaration, which is why
+the manifest names no filenames.
 
-#### Scenario: a flow declares its schema, vocabulary and dials
+#### Scenario: a flow is five files and the manifest names none of them
+- **Key:** `image-generation:manifest:flow-is-five-flat-files`
+- **Layers:** unit
+- **WHEN** a tracked flow directory is read
+- **THEN** it holds a manifest, a graph, a schema, a caption briefing and a sheet briefing, each directly
+  in the directory
+- **AND** the manifest declares no filename for any of them
+- **AND** the directory contains no sub-directory
+
+#### Scenario: a flow declares its inputs, vocabulary, models and dials
 - **Key:** `image-generation:manifest:flow-declares-its-inputs`
 - **Layers:** unit
 - **WHEN** a flow manifest is loaded
-- **THEN** it names its required inputs, its schema, its vocabulary and every dial the render uses
+- **THEN** it names its required inputs, its vocabulary, its models, its node roles and every dial the
+  render uses
 - **AND** no value in it is derived at load time
+
+#### Scenario: the manifest declares the version of its own format
+- **Key:** `image-generation:manifest:manifest-declares-its-format-version`
+- **Layers:** unit
+- **WHEN** a manifest declares a format version this build does not read
+- **THEN** loading it is refused naming both versions
+- **AND** the refusal states that the build is what needs upgrading
+
+#### Scenario: a flow pins every model it uses by digest
+- **Key:** `image-generation:manifest:flow-pins-its-models-by-digest`
+- **Layers:** unit
+- **WHEN** the suite runs
+- **THEN** every model a tracked flow declares carries a digest as well as a destination
+- **AND** that digest equals the one the provisioning manifest declares for the same destination
+- **AND** a flow whose digest disagrees with the provisioning manifest fails the suite naming the flow
 
 #### Scenario: every tracked flow parses and resolves
 - **Key:** `image-generation:manifest:tracked-flows-are-gate-checked`
 - **Layers:** unit
 - **WHEN** the suite runs
 - **THEN** every tracked flow manifest parses
-- **AND** the schema and vocabulary each one names resolve
+- **AND** the schema, both briefings and the graph each one needs are present in its own directory
 
 #### Scenario: an invalid manifest is refused naming the field
 - **Key:** `image-generation:manifest:invalid-manifest-names-the-field`
@@ -42,23 +75,31 @@ is also the standing argument against anyone later adding a computed field.
 - **THEN** loading it is refused naming that field
 - **AND** the refusal does not require the flow to be executed
 
-### Requirement: A flow is immutable; changing a dial creates a new flow
+### Requirement: A flow is immutable; changing any file in it creates a new flow
 
-The system SHALL hold each tracked flow manifest against a committed digest, so that altering a dial,
-a prompt fragment or any other declared value fails the suite rather than changing an existing flow's
-behaviour.
+The system SHALL hold each tracked flow against a committed digest computed over every file in its
+directory, so that altering a dial, a prompt fragment, the graph, the schema or either briefing fails
+the suite rather than changing an existing flow's behaviour.
 
 An output's path identifies a configuration only if a flow identifier never silently means something
-else. Every render already carries a graph digest to prove that held; pinning the manifest by equality
-is what makes the claim checkable rather than assumed. The repository already pins its committed
-prompts this way, so changing one is a deliberate test edit.
+else. Every render already carries a graph digest to prove that held; pinning the whole directory by
+equality is what makes the claim checkable rather than assumed. Extending it from the manifest to every
+file is what lets two flows be rendered over one cohort and compared: if a briefing could be edited in
+place, the comparison would not exist to run.
 
-#### Scenario: editing a tracked flow fails the suite
+#### Scenario: editing any file in a tracked flow fails the suite
 - **Key:** `image-generation:immutability:flow-manifest-is-pinned-by-equality`
 - **Layers:** unit
-- **WHEN** a tracked flow manifest's content differs from its committed digest
+- **WHEN** any file in a tracked flow directory differs from its committed digest
 - **THEN** the suite fails naming the flow
-- **AND** the failure states that a changed dial means a new flow identifier
+- **AND** the failure states that a changed value means a new flow identifier
+
+#### Scenario: adding a file to a flow moves its digest
+- **Key:** `image-generation:immutability:a-new-file-moves-the-digest`
+- **Layers:** unit
+- **WHEN** a file is added to a tracked flow's directory
+- **THEN** that flow's digest differs from the committed one
+- **AND** the suite fails naming the flow
 
 #### Scenario: an output's provenance carries the graph digest
 - **Key:** `image-generation:immutability:output-records-the-graph-digest`
@@ -341,3 +382,56 @@ which is the condition the drawing rule already guards against.
 - **WHEN** a seed is drawn from the injected source
 - **THEN** it is drawn across the full 64-bit space
 - **AND** the width is stated in one place rather than repeated as a literal at each draw
+
+### Requirement: A render asks a flow which node roles it declares
+
+The system SHALL require exactly four node roles of every flow — a positive conditioning node, a
+negative conditioning node, a latent node and a sampler node — and SHALL refuse a flow declaring fewer
+when the flow is loaded, before anything is executed. Every other node role SHALL be optional, and a
+render SHALL patch only the roles the flow declares. The system SHALL NOT transfer an input a flow does
+not declare. Where a role names both a transfer and a patch, the manifest's `inputs` and its `nodes`
+SHALL agree about it, and a manifest declaring it under one and not the other SHALL be refused when the
+flow is loaded, naming the flow and the key that is missing.
+
+A flow declaring fewer roles used to pass the whole suite and fail on a rented GPU, after the
+photograph had already been uploaded — which is the half of "a broken flow costs a test run, not a
+boot" that was not true. Four roles are required because every image flow has them; the seven that are
+not required include a photograph, an identity adapter and a pose preprocessor, which a sheet-only flow
+does not have, and a hires resize and a hires sampler, which an ordinary cheaper flow does not have
+either. Refusing at load rather than at render is what moves the failure from money to a test run.
+
+The two gates over the photograph sit in different places — the transfer is gated on `inputs` and the
+patch on `nodes` — so nothing holds them in agreement unless the manifest is checked. A flow naming the
+photograph under `nodes` alone would upload nothing and leave the graph file's own committed filename in
+the load node: a paid render of the wrong person, with the whole suite green. The mirror case transfers a
+photograph no node reads. Identity preservation is the product, so a disagreement that can render
+somebody else is refused before anything runs rather than inspected afterwards.
+
+#### Scenario: a flow missing a required role is refused at load
+- **Key:** `image-generation:roles:a-missing-required-role-is-refused-offline`
+- **Layers:** unit
+- **WHEN** a flow manifest declares fewer than the four required node roles
+- **THEN** loading it is refused naming the missing role
+- **AND** no endpoint is contacted and no input is transferred
+
+#### Scenario: a flow declaring fewer optional roles renders
+- **Key:** `image-generation:roles:optional-roles-are-not-assumed`
+- **Layers:** unit
+- **WHEN** a flow declares the four required roles and none of the optional ones
+- **THEN** its graph is built without error
+- **AND** only the roles it declares are patched
+
+#### Scenario: a manifest whose inputs and nodes disagree is refused at load
+- **Key:** `image-generation:roles:transferred-input-and-node-must-agree`
+- **Layers:** unit
+- **WHEN** a flow manifest declares the photograph under `nodes` but not under `inputs`, or under
+  `inputs` but not under `nodes`
+- **THEN** loading it is refused naming the flow and the key the declaration is missing from
+- **AND** no endpoint is contacted, no photograph is transferred, and no render is submitted
+
+#### Scenario: an input a flow does not declare is not transferred
+- **Key:** `image-generation:roles:undeclared-input-is-not-uploaded`
+- **Layers:** unit
+- **WHEN** a flow that does not declare a photograph input is rendered
+- **THEN** no photograph is transferred to the endpoint
+- **AND** the render proceeds from the flow's own declared inputs

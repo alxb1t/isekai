@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-17
+
 ### Documentation
 
 - **The living spec's `Source:` lines, `README.md`, `CLAUDE.md` and the group READMEs follow the
