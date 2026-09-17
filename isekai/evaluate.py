@@ -26,7 +26,7 @@ from dataclasses import dataclass, field, replace
 from typing import Literal, Protocol
 
 from isekai.ciede2000 import Lab, delta_e_2000
-from isekai.photo import image_dimensions, working_resolution
+from isekai.image import image_dimensions, working_resolution
 
 # Re-exported, not defined here. The redundant alias is the explicit-re-export
 # form: `Refusal` moved to its own module so the pipeline can raise it without
@@ -225,7 +225,7 @@ class PoseReader(Protocol):
 def canvas_for(photo_path: str) -> Canvas:
     """Return the canvas a photograph is compared on: the injector's own target.
 
-    Asks `isekai.photo` rather than restating the rule. A second implementation
+    Asks `isekai.image` rather than restating the rule. A second implementation
     of the resolution rule would be a second thing to keep in step, and the graph
     is the thing that actually scaled the pixels.
     """

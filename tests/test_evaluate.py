@@ -24,7 +24,7 @@ from isekai.evaluate import (
     table,
     usable_regions,
 )
-from isekai.photo import working_resolution
+from isekai.image import working_resolution
 from tests.eval_fakes import (
     FakeDetector,
     FakeEncoder,

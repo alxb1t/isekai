@@ -31,7 +31,7 @@ from isekai.generate import (
     rendered_seeds,
     seeds_for,
 )
-from isekai.photo import MAX_TARGET_LONG_SIDE
+from isekai.image import MAX_TARGET_LONG_SIDE
 from isekai.refusal import Refusal
 from isekai.review import approve, review
 from isekai.run import Run, across, artifact_name, open_run, read_artifact
@@ -562,7 +562,7 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
 
 # --- the aspect-ratio ceiling -------------------------------------------------
 
-# The third of the three ceilings `isekai.photo` states, enforced where a target
+# The third of the three ceilings `isekai.image` states, enforced where a target
 # is computed rather than where a header is read. What it bounds and why is beside
 # the constant; what is asserted here is that it refuses, that it refuses per
 # photograph, and that it does not refuse what merely reaches it.

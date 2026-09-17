@@ -43,8 +43,8 @@ from isekai.generate import prepare, render
 from isekai.refusal import Refusal
 from isekai.review import approve, review
 from isekai.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.run_view import report
 from isekai.sheet import sheet
-from isekai.show import report
 from isekai.wiring import Wiring, wiring
 
 # One line of prose per verb, used for both the subcommand list and its own help,

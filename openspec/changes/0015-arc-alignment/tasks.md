@@ -6,7 +6,7 @@
 - [x] 2 — `atomic_write` out of `run`
 - [x] 3 — `wiring` out of `__main__`
 - [x] 4 — `cli` out of `__main__`, behind a three-line shim
-- [ ] 5 — `show` → `run_view`, `photo` → `image`
+- [x] 5 — `show` → `run_view`, `photo` → `image`
 - [ ] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
 - [ ] 7 — The restructure: 22 files into six directories, seven READMEs
 - [ ] 8 — The record: nine capability files, `CLAUDE.md`, `README.md`
@@ -79,10 +79,10 @@ Every phase, without exception:
 > `show` is the verb **and** the file; `photo`'s callers hand it renders. **The verb `show` does not
 > change** — pinned at `tests/test_pipeline_cli.py:20` and `tests/test_resume.py:38`.
 
-- [ ] 5.1 `git mv isekai/show.py isekai/run_view.py`; `git mv tests/test_show.py tests/test_run_view.py`; update the importer in `cli.py` and `tests/test_run_view.py:17`. Verify: `uv run python -m isekai show --help` exits 0
-- [ ] 5.2 `git mv isekai/photo.py isekai/image.py`; `git mv tests/test_photo.py tests/test_image.py`; update `isekai/generate.py`, `isekai/evaluate.py`, root `evaluate.py`, `tests/test_generate.py:34`, `tests/test_evaluate.py:27`, and the stale comment at `tests/test_generate.py:564`. Verify: `grep -rn 'isekai\.\(show\|photo\)\b' isekai tests scripts probe evaluate.py baseline` is empty
-- [ ] 5.3 Verify history survived both renames: `git log --follow --oneline -- isekai/run_view.py | tail -3` reaches commits older than this change
-- [ ] 5.4 Verify the gate: `make gate`
+- [x] 5.1 `git mv isekai/show.py isekai/run_view.py`; `git mv tests/test_show.py tests/test_run_view.py`; update the importer in `cli.py` and `tests/test_run_view.py:17`. Verify: `uv run python -m isekai show --help` exits 0
+- [x] 5.2 `git mv isekai/photo.py isekai/image.py`; `git mv tests/test_photo.py tests/test_image.py`; update `isekai/generate.py`, `isekai/evaluate.py`, root `evaluate.py`, `tests/test_generate.py:34`, `tests/test_evaluate.py:27`, and the stale comment at `tests/test_generate.py:564`. Verify: `grep -rn 'isekai\.\(show\|photo\)\b' isekai tests scripts probe evaluate.py baseline` is empty
+- [x] 5.3 Verify history survived both renames: `git log --follow --oneline -- isekai/run_view.py | tail -3` reaches commits older than this change
+- [x] 5.4 Verify the gate: `make gate`
 
 ## 6. The two seam moves
 

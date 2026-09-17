@@ -43,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`show.py` → `run_view.py`, `photo.py` → `image.py`.** `show` was the verb *and* the file, and
+  half of `photo`'s callers hand it a render rather than a photograph. Both are `git mv`, so
+  `--follow` reaches back past the rename, and their test files move with them. **The CLI verb `show`
+  does not change** — it is pinned by the entry-point tests, so the rename cannot reach the user
+  surface. Root `evaluate.py` is listed in the change's impact but imports neither module; nothing
+  there needed editing.
+
 - **The parser, the verb table and the dispatch functions move to `isekai/cli.py`; `__main__.py`
   becomes a shim.** `runpy` pins where the entry point's *path* is, not where the parser lives, and a
   package's largest interface surface has no business being the one module outside the filing scheme

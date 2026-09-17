@@ -5,7 +5,7 @@ import pytest
 
 from isekai.comfy_types import Workflow
 from isekai.flow import load_flow
-from isekai.photo import (
+from isekai.image import (
     DIMENSION_STEP,
     MAX_HEADER_BYTES,
     MAX_HEADER_DIMENSION,
