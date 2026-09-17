@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-17
+
 ### Added
 
 - **The eight repo-root anchors are pinned to the repository root, before anything moves.**
@@ -37,9 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refuse only paths inside the package (design.md D7). `tests/test_package_paths.py` asserts the
   **absolute** property instead: strip each anchor's own suffix and what remains must be the
   directory holding `pyproject.toml`, never another constant that would move alongside it. It
-  carries a falsification twin per anchor, because a check that cannot fail is not a check. Written
-  while every anchor is still correct, so it passes today and goes red the moment a file moves
-  without gaining its `.parent` — the detector, not the fix.
+  carries **one** falsification twin, because a check that cannot fail is not a check — each anchor's
+  suffix cancels against its own hops, so all eight reduce to the same path and parametrizing would
+  advertise per-anchor coverage that does not exist. Written while every anchor is still correct, so
+  it passes today and goes red the moment a file moves without gaining its `.parent` — the detector,
+  not the fix.
 
 ### Fixed
 
