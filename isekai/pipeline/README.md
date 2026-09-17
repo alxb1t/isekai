@@ -18,8 +18,8 @@ numbered artifact. Exactly one stage imports another — `review.py` calls
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `caption.py` | `interface/cli.py`, `interface/wiring.py` | six test modules |
-| `sheet.py` | `interface/cli.py`, `interface/wiring.py`, `review.py` | nine test modules |
+| `caption.py` | `interface/cli.py`, `interface/wiring.py` | seven test modules |
+| `sheet.py` | `interface/cli.py`, `interface/wiring.py`, `review.py` | ten test modules |
 | `review.py` | `interface/cli.py` | four test modules |
 | `generate.py` | `interface/cli.py`, `interface/run_view.py` | three test modules |
 

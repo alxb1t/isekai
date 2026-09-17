@@ -22,7 +22,7 @@ absent.
 | `evaluate.py` | `eval_backends.py` | `../../evaluate.py`, `tests/eval_fakes.py`, `tests/test_evaluate.py` |
 | `eval_backends.py` | — | `../../evaluate.py` only |
 | `ciede2000.py` | `eval_backends.py`, `evaluate.py` | `tests/eval_fakes.py`, `tests/test_ciede2000.py` |
-| `eval_models.py` | `eval_backends.py`, `shared/vocabulary.py` | `scripts/derive_eval_manifest.py`, two test modules |
+| `eval_models.py` | `eval_backends.py`, `shared/vocabulary.py` | `scripts/derive_eval_manifest.py`, three test modules |
 | `labels.py` | — | `tests/test_labels.py` |
 
 > `eval_backends.py` has **no test importer** and `pyproject.toml`'s

@@ -1,20 +1,22 @@
-"""The eight repo-root anchors, pinned to the repository root while they are right.
+"""The eight repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
-Seven files compute a repo-root path as `Path(__file__).resolve().parent.parent`.
-v0.15's restructure moves every one of them a directory deeper, and that expression
-then yields `isekai/` instead of the repository. Six of the eight constants below
-fail loudly when that happens -- a missing `flows/`, `schemas/`, `briefings/` or
-manifest breaks dozens of tests at collection. `DATA_ROOT` does not: it becomes
-`isekai/.data`, `RUNS_ROOT` moves with it, and every test that asserts the
-*relationship* between the two still passes, while the guard that keeps a run
-directory -- which holds a copy of a photograph by construction -- out of one
-`git add` quietly narrows to refuse only paths inside the package (design.md D7).
+Eight constants across seven files anchor a repository path on their own
+`__file__`. Each is asserted **absolutely**: strip the anchor's own suffix, and
+what remains must be the directory holding `pyproject.toml`. None of them is
+compared against another constant, because two constants that move together prove
+nothing about where either one landed.
 
-So these assertions are **absolute**: each one strips the anchor's own suffix and
-demands that what is left is the directory holding `pyproject.toml`. None of them
-compares two constants that would move together. They are written here, now, while
-every anchor is still correct, so they pass today and go red the moment a file moves
-without gaining its `.parent`. They are the detector, not the fix.
+The absolute form is the point. Six of the eight break loudly when a file moves a
+directory deeper without its expression following -- a missing `flows/`,
+`schemas/`, `briefings/` or manifest takes dozens of tests down at collection.
+`DATA_ROOT` is the one that would relocate to `isekai/.data` with `RUNS_ROOT`
+still beside it, leaving every assertion about the *relationship* between the two
+green while the guard that keeps a run directory -- which holds a copy of a
+photograph by construction -- one `git add` from publication quietly narrowed to
+the package (design.md D7).
+
+Written while every anchor was still correct, and green across the restructure
+that moved all seven files.
 """
 
 from pathlib import Path
@@ -28,42 +30,40 @@ from isekai.pipeline import caption, sheet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Each anchor, beside the path it appends to the repository root. The suffix is how
-# many `.parent` hops separate the constant from the root, spelled as the segments
-# themselves so a wrong entry is wrong on its face rather than off by a count.
-ANCHORS: tuple[tuple[str, Path, tuple[str, ...]], ...] = (
-    ("run.DATA_ROOT", run.DATA_ROOT, (".data",)),
-    ("flow.FLOWS_DIR", flow.FLOWS_DIR, ("flows",)),
-    ("sheet.SCHEMAS_DIR", sheet.SCHEMAS_DIR, ("schemas",)),
-    ("caption.BRIEFINGS_DIR", caption.BRIEFINGS_DIR, ("briefings",)),
-    (
-        "provision.MANIFEST_PATH",
+# Each anchor, beside the path it appends to the repository root. The suffix is
+# how many `.parent` hops separate the constant from the root, spelled as the
+# segments themselves so a wrong entry is wrong on its face rather than off by a
+# count.
+ANCHORS = (
+    pytest.param(run.DATA_ROOT, (".data",), id="run.DATA_ROOT"),
+    pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
+    pytest.param(sheet.SCHEMAS_DIR, ("schemas",), id="sheet.SCHEMAS_DIR"),
+    pytest.param(caption.BRIEFINGS_DIR, ("briefings",), id="caption.BRIEFINGS_DIR"),
+    pytest.param(
         provision.MANIFEST_PATH,
         ("scripts", "models.json"),
+        id="provision.MANIFEST_PATH",
     ),
-    (
-        "provision.VOCABULARY_MANIFEST_PATH",
+    pytest.param(
         provision.VOCABULARY_MANIFEST_PATH,
         ("scripts", "vocabulary.json"),
+        id="provision.VOCABULARY_MANIFEST_PATH",
     ),
-    (
-        "eval_models.EVAL_MANIFEST_PATH",
+    pytest.param(
         eval_models.EVAL_MANIFEST_PATH,
         ("scripts", "eval_models.json"),
+        id="eval_models.EVAL_MANIFEST_PATH",
     ),
-    ("claude_cli.ROOT", claude_cli.ROOT, ()),
+    pytest.param(claude_cli.ROOT, (), id="claude_cli.ROOT"),
 )
-
-ANCHOR_IDS = tuple(name for name, _, _ in ANCHORS)
-CASES = tuple((anchor, suffix) for _, anchor, suffix in ANCHORS)
 
 
 def _assert_anchors_the_repository_root(anchor: Path, suffix: tuple[str, ...]) -> None:
     """Strip the anchor's own suffix; what remains must be the repository root.
 
     The root is identified by `pyproject.toml` rather than by another constant,
-    because a constant that moves with the anchor proves nothing about where either
-    one landed.
+    because a constant that moves with the anchor proves nothing about where
+    either one landed.
     """
     root = anchor
     for _ in suffix:
@@ -72,14 +72,13 @@ def _assert_anchors_the_repository_root(anchor: Path, suffix: tuple[str, ...]) -
     assert (root / "pyproject.toml").is_file(), (
         f"{root} holds no pyproject.toml, so it is not the repository root"
     )
-    assert root == REPO_ROOT
 
 
 @pytest.mark.spec_exempt(
-    "structural: pins each repo-root anchor to the repository, so the restructure "
-    "cannot move a file a directory deeper and silently relocate it"
+    "structural: pins each repo-root anchor to the repository, so moving a file a "
+    "directory deeper cannot silently relocate what it points at"
 )
-@pytest.mark.parametrize(("anchor", "suffix"), CASES, ids=ANCHOR_IDS)
+@pytest.mark.parametrize(("anchor", "suffix"), ANCHORS)
 def test_each_anchor_resolves_to_the_repository_root(
     anchor: Path, suffix: tuple[str, ...]
 ) -> None:
@@ -87,17 +86,13 @@ def test_each_anchor_resolves_to_the_repository_root(
 
 
 @pytest.mark.spec_exempt(
-    "structural: the detector above proves nothing unless it can go red"
+    "structural: the assertion above proves nothing unless it can go red"
 )
-@pytest.mark.parametrize(("anchor", "suffix"), CASES, ids=ANCHOR_IDS)
-def test_the_detector_fails_when_an_anchor_stops_one_level_short(
-    anchor: Path, suffix: tuple[str, ...]
-) -> None:
-    # What every one of these constants becomes if its module moves into a group
-    # directory and its expression does not gain a `.parent`: the same suffix, hung
-    # off the package instead of off the repository. A check that cannot fail is not
-    # a check, and this one has to survive a rename storm intact.
-    one_level_short = REPO_ROOT.joinpath("isekai", *suffix)
-
+def test_the_assertion_fails_when_it_lands_on_the_package_instead() -> None:
+    # Where every one of these constants strips back to if its module moves into a
+    # group directory and its expression does not gain a `.parent`: the package,
+    # not the repository. One case, not eight -- each anchor's suffix cancels
+    # against its own hops, so all eight reduce to exactly this path, and
+    # parametrizing would advertise per-anchor coverage that does not exist.
     with pytest.raises(AssertionError):
-        _assert_anchors_the_repository_root(one_level_short, suffix)
+        _assert_anchors_the_repository_root(REPO_ROOT / "isekai", ())

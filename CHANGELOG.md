@@ -41,6 +41,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   while every anchor is still correct, so it passes today and goes red the moment a file moves
   without gaining its `.parent` — the detector, not the fix.
 
+### Fixed
+
+- **The image and the provisioning driver follow `provision.py` into `boundary/`.** The restructure
+  moved `isekai/provision.py` and `Dockerfile`'s `COPY` and `scripts/download_models.sh`'s `PROVISION`
+  still named the old path — the first breaks `docker build` outright, the second is a dead path on a
+  clone. **No gate command reads either file**: `bash -n` and `docker build --check` are the
+  image-phase convention and v0.15 is not an image phase, and `tests/test_infra.py` asserts on
+  `start.sh`'s shape but not on these paths. The destination matters as much as the source —
+  `provision.py` resolves its manifest as `parent.parent.parent / "scripts"`, so it must land at
+  `/opt/isekai/isekai/boundary/provision.py` for `/opt/isekai/scripts/models.json` to resolve; the
+  `Dockerfile` comment that makes the layout load-bearing now says so.
+
 ### Changed
 
 - **`known-first-party = ["isekai"]` is declared to `ruff`'s isort.** It decided first-party per
@@ -96,8 +108,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   surface. Root `evaluate.py` is listed in the change's impact but imports neither module; nothing
   there needed editing.
 
-- **The parser, the verb table and the dispatch functions move to `isekai/cli.py`; `__main__.py`
-  becomes a shim.** `runpy` pins where the entry point's *path* is, not where the parser lives, and a
+- **The parser, the verb table and the dispatch functions move out of `__main__.py`, which becomes a
+  shim** — to `isekai/interface/cli.py`, after the restructure below. `runpy` pins where the entry point's *path* is, not where the parser lives, and a
   package's largest interface surface has no business being the one module outside the filing scheme
   (design.md D3). **The shim keeps its `if __name__ == "__main__":` guard**, a one-line departure from
   the snippet in D3: without it, importing `isekai.__main__` runs the parser, which exits 2 on an
@@ -105,14 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exactly that import. D3 names that risk; this is the line that discharges it. Callers move rather
   than being re-exported: `VERBS`, `build_parser` and `dispatch` are imported from `isekai.cli`.
 
-- **`Wiring`, `wiring()` and `_check_run_root` are their own module, `isekai/wiring.py`.** The
+- **`Wiring`, `wiring()` and `_check_run_root` are their own module** — `isekai/interface/wiring.py`, after the restructure below. The
   composition root had a second consumer that never sees an argv: the suite builds a `Wiring`
   directly, with no parser at all, in fourteen tests. A parser is one way to fill that dataclass and
   not the only one, so the module that owns the parser is not its home. `_check_run_root` travels
   with `wiring()`, its only caller, and `REPOSITORY` with it. **No compatibility re-export is left in
   `__main__`** — the three test import sites moved, and the name did not stay behind.
 
-- **`write_atomically` is its own module, `isekai/atomic_write.py`.** It takes a path and bytes and
+- **`write_atomically` is its own module** — `isekai/shared/atomic_write.py`, after the restructure below. It takes a path and bytes and
   knows nothing about runs, and it already had a consumer outside `run.py`: `generate.py` writes the
   rendered PNG with it — a file that is neither JSON nor numbered by the run's artifact convention.
   **`write_json` stays in `run`**, because `indent=2` and a trailing newline are a run's artifact

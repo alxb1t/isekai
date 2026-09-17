@@ -17,11 +17,11 @@ outside this directory opens a socket or spawns a binary.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `claude_cli.py` | `pipeline/caption.py`, `pipeline/sheet.py` | `tests/test_caption.py`, `tests/test_sheet_stage.py` |
+| `claude_cli.py` | `pipeline/caption.py`, `pipeline/sheet.py` | `tests/test_caption.py`, `tests/test_sheet_stage.py`, `tests/test_package_paths.py` |
 | `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | five test modules |
 | `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
 | `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
-| `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, eight test modules |
+| `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, nine test modules |
 
 > `provision.py` is not on `python -m isekai`'s import graph, so the stdlib-only
 > runtime rule is untouched either way.

@@ -26,7 +26,7 @@ convention:**
   to advance to. The kind and the attempt ordinal are in the name, so the retry
   decision stays a listing.
 
-Stdlib only, and not on `convert.py`'s import graph either way.
+Stdlib only, and on `python -m isekai`'s import graph.
 """
 
 import hashlib
@@ -162,12 +162,7 @@ def media_type(body: bytes) -> tuple[str, str]:
     )
 
 
-# --- atomic writes ------------------------------------------------------------
-
-# `write_atomically` lives in `isekai.shared.atomic_write`: it takes a path and bytes
-# and knows nothing about runs, and `generate.py` already writes the rendered PNG with
-# it. What stays here is the one below -- the JSON form every artifact in a run is
-# written in, which is a run format rather than a write primitive.
+# --- the run's JSON form ------------------------------------------------------
 
 
 def write_json(path: Path, payload: Mapping[str, Any]) -> None:

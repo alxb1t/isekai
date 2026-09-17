@@ -2,7 +2,7 @@
 
 The composition root, split out of `__main__.py` because it has a second consumer
 that never sees an argv: the suite builds a `Wiring` directly, with no parser at
-all, in fourteen tests (`tests/test_resume.py`). A parser is one way to fill this
+all, in three test modules. A parser is one way to fill this
 dataclass; it is not the only one, and the module that owns the parser is not the
 right home for something composed without it.
 

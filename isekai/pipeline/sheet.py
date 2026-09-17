@@ -191,7 +191,8 @@ def validate(
 
 BRIEFING_PATH = SCHEMAS_DIR / "identity.v1.briefing.md"
 
-# The stage's own directory inside a run, and the name its budget is keyed by.
+# The name this stage's budget is keyed by. Its directory inside a run is the
+# run's to name, not the stage's -- `run.SHEETS`.
 STAGE = "sheet"
 
 

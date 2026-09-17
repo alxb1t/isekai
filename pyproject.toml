@@ -85,7 +85,7 @@ known-first-party = ["isekai"]
 
 # `eval_backends.py` is the ONLY module that touches numpy, torch, onnxruntime
 # and Pillow, and it exists to be that boundary -- everything the scorer decides
-# lives in `isekai/evaluate.py`, which is stdlib-only and fully annotated. An
+# lives in `isekai/evaluation/evaluate.py`, which is stdlib-only and fully annotated. An
 # ndarray has no honest annotation available here: the extra is NOT installed in
 # the environment the gate runs in, by design, so `numpy.typing.NDArray` cannot
 # be resolved even behind `TYPE_CHECKING` -- the type checker would fail on the

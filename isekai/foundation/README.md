@@ -16,8 +16,8 @@ endpoint or a score; everything here is imported by something that does.
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `refusal.py` | `boundary/claude_cli.py`, `evaluation/evaluate.py`, `flow.py`, `run.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `shared/vocabulary.py` | nine test modules |
-| `run.py` | `boundary/claude_cli.py`, `interface/cli.py`, `interface/run_view.py`, `interface/wiring.py`, and all four of `pipeline/` | seven test modules |
-| `flow.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py` | eight test modules |
+| `run.py` | `boundary/claude_cli.py`, `interface/cli.py`, `interface/run_view.py`, `interface/wiring.py`, and all four of `pipeline/` | eight test modules |
+| `flow.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py` | nine test modules |
 
 > Files and importers only. What a seam *is*, and what could replace it, is the
 > design record's; neither restates the other.

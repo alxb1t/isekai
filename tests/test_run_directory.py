@@ -13,7 +13,6 @@ from typing import Any
 
 import pytest
 
-import isekai.foundation.run as run_module
 import isekai.shared.atomic_write as atomic_write_module
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -194,6 +193,12 @@ def test_a_photograph_this_build_cannot_read_stops_the_run_naming_the_fix(
 
 # --- atomicity ----------------------------------------------------------------
 
+# `write_atomically` lives in `isekai.shared.atomic_write`; these patch that module
+# by name rather than `run`, which merely imports it. Patching through `run` would
+# have passed either way -- `run.os` IS the global `os` module object -- so naming
+# the real subject is what makes these break on a move rather than sleep through
+# it (design.md D4).
+
 
 @pytest.mark.spec("run-directory:atomicity:interrupted-write-leaves-nothing")
 def test_a_failed_write_leaves_no_artifact_behind(
@@ -204,7 +209,7 @@ def test_a_failed_write_leaves_no_artifact_behind(
     def interrupted(descriptor: int) -> None:
         raise OSError("the disk went away mid-write")
 
-    monkeypatch.setattr(run_module.os, "fsync", interrupted)
+    monkeypatch.setattr(atomic_write_module.os, "fsync", interrupted)
 
     with pytest.raises(OSError):
         write_atomically(target, b"half a file")
@@ -222,7 +227,7 @@ def test_a_failed_rename_leaves_neither_the_artifact_nor_its_temporary(
     def refused(source: object, destination: object) -> None:
         raise OSError("the rename did not happen")
 
-    monkeypatch.setattr(run_module.os, "replace", refused)
+    monkeypatch.setattr(atomic_write_module.os, "replace", refused)
 
     with pytest.raises(OSError):
         write_atomically(target, b"a whole file that never lands")
@@ -247,11 +252,6 @@ def test_the_temporary_file_shares_the_artifacts_filesystem(
 ) -> None:
     target = tmp_path / "captions" / "001.json"
     where: list[Path] = []
-    # `tempfile` is imported by `isekai.shared.atomic_write`, which is where the
-    # function under test now lives; `run` no longer imports it at all. The two patches
-    # above reach `run_module.os`, which IS the global `os` module object and would have
-    # passed either way -- this one names the module that actually holds the import, so
-    # it breaks on the move rather than sleeping through it (design.md D4).
     real = atomic_write_module.tempfile.mkstemp
 
     def watched(dir: Path, prefix: str, suffix: str) -> tuple[int, str]:

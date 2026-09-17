@@ -17,16 +17,24 @@ what it is, not by what calls it.
 code, so a module is imported by its own path and a group never becomes a place
 two modules can reach each other through.
 
-**The direction of travel** — no cycles, and one stage-to-stage edge:
+**A group is a filing decision, not a layering rule.** The *module* graph has no
+cycles and never has; the *group* graph does, and drawing it as a stack would be a
+lie. `foundation` holds `refusal`, which everything raises, so `boundary` imports
+back into it; `shared/vocabulary.py` reaches `boundary/provision.py` for its
+manifest and — lazily, at call time — `evaluation/eval_models.py`. Every
+cross-group edge that exists today, by source:
 
 ```
-  interface ──▶ pipeline ──▶ boundary
-      │            │  │
-      │            │  └────▶ shared
-      └────────────┴───────▶ foundation
-
-  evaluation ──▶ shared · boundary        (the [eval] extra's island)
+  interface   ──▶ pipeline · foundation · shared · boundary
+  pipeline    ──▶ foundation · shared · boundary
+  evaluation  ──▶ foundation · shared · boundary
+  foundation  ──▶ shared · boundary
+  shared      ──▶ foundation · boundary · evaluation (lazy)
+  boundary    ──▶ foundation
 ```
+
+Read it as *what each group is allowed to know about*, and check the module graph
+— not this table — when the question is whether something is acyclic.
 
 **Two rules the layout is holding, not describing.** The runtime is stdlib-only:
 nothing in `python -m isekai`'s import graph may need a wheel, and a subprocess
