@@ -15,7 +15,7 @@ import pytest
 
 import isekai.atomic_write as atomic_write_module
 import isekai.run as run_module
-from isekai.__main__ import build_parser
+from isekai.cli import build_parser
 from isekai.refusal import Refusal
 from isekai.run import (
     BUDGETS,

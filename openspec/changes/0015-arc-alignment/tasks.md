@@ -5,7 +5,7 @@
 - [x] 1 — The anchor detectors, written while the anchors are still correct
 - [x] 2 — `atomic_write` out of `run`
 - [x] 3 — `wiring` out of `__main__`
-- [ ] 4 — `cli` out of `__main__`, behind a three-line shim
+- [x] 4 — `cli` out of `__main__`, behind a three-line shim
 - [ ] 5 — `show` → `run_view`, `photo` → `image`
 - [ ] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
 - [ ] 7 — The restructure: 22 files into six directories, seven READMEs
@@ -70,9 +70,9 @@ Every phase, without exception:
 > Design D3. `runpy` pins `__main__.py`'s path; it does not pin where the parser lives. `pip`, `black`
 > and `flask` all ship this shape.
 
-- [ ] 4.1 Move the parser, the verb table and the dispatch functions into `isekai/cli.py`. Reduce `isekai/__main__.py` to `from isekai.cli import main` / `raise SystemExit(main())`. Verify: `wc -l isekai/__main__.py` is under 10, and `uv run python -m isekai --help` prints the six verbs
-- [ ] 4.2 Verify the stdlib guard survives the extra hop, **and that it can still fail**: `uv run pytest -q -k "stdlib or dash_s or minus_s"`
-- [ ] 4.3 Verify the gate: `make gate`
+- [x] 4.1 Move the parser, the verb table and the dispatch functions into `isekai/cli.py`. Reduce `isekai/__main__.py` to `from isekai.cli import main` / `raise SystemExit(main())`. Verify: `wc -l isekai/__main__.py` is under 10, and `uv run python -m isekai --help` prints the six verbs
+- [x] 4.2 Verify the stdlib guard survives the extra hop, **and that it can still fail**: `uv run pytest -q -k "stdlib or dash_s or minus_s"`
+- [x] 4.3 Verify the gate: `make gate`
 
 ## 5. The two renames
 

@@ -230,7 +230,7 @@ def test_asking_for_both_a_count_and_seeds_is_refused() -> None:
 
 @pytest.mark.spec("cli:generate-signature:count-and-seed-are-exclusive")
 def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
-    from isekai.__main__ import build_parser
+    from isekai.cli import build_parser
 
     with pytest.raises(SystemExit):
         build_parser().parse_args(["generate", "--count", "2", "--seed", "7"])
@@ -238,7 +238,7 @@ def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
 
 @pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
 def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
-    from isekai.__main__ import build_parser
+    from isekai.cli import build_parser
 
     parsed = build_parser().parse_args(["generate"])
 
@@ -248,7 +248,7 @@ def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
 
 @pytest.mark.spec("cli:generate-signature:accepts-many-identifiers")
 def test_the_parser_takes_several_photographs_in_one_invocation() -> None:
-    from isekai.__main__ import build_parser
+    from isekai.cli import build_parser
 
     parsed = build_parser().parse_args(["generate", "a.jpg", "b.jpg", "c.jpg"])
 
@@ -464,7 +464,7 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     # filters to the flows a run is approved for, so a refusal only `prepare`
     # cannot reach leaves `generate` printing nothing and exiting 0 -- the worst
     # outcome for an operator who has just rented a pod.
-    from isekai.__main__ import build_parser, dispatch
+    from isekai.cli import build_parser, dispatch
     from isekai.wiring import Wiring
 
     photo = tmp_path / "ada.jpg"

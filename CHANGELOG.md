@@ -43,6 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The parser, the verb table and the dispatch functions move to `isekai/cli.py`; `__main__.py`
+  becomes a shim.** `runpy` pins where the entry point's *path* is, not where the parser lives, and a
+  package's largest interface surface has no business being the one module outside the filing scheme
+  (design.md D3). **The shim keeps its `if __name__ == "__main__":` guard**, a one-line departure from
+  the snippet in D3: without it, importing `isekai.__main__` runs the parser, which exits 2 on an
+  empty argv — and the `-S` guard that proves the entry point needs no third-party import does
+  exactly that import. D3 names that risk; this is the line that discharges it. Callers move rather
+  than being re-exported: `VERBS`, `build_parser` and `dispatch` are imported from `isekai.cli`.
+
 - **`Wiring`, `wiring()` and `_check_run_root` are their own module, `isekai/wiring.py`.** The
   composition root had a second consumer that never sees an argv: the suite builds a `Wiring`
   directly, with no parser at all, in fourteen tests. A parser is one way to fill that dataclass and

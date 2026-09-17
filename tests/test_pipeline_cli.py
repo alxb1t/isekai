@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.__main__ import VERBS, build_parser, main
+from isekai.cli import VERBS, build_parser, main
 
 ROOT = Path(__file__).resolve().parent.parent
 

@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pytest
 
-from isekai.__main__ import build_parser, dispatch
 from isekai.caption import FakeReader
+from isekai.cli import build_parser, dispatch
 from isekai.refusal import Refusal
 from isekai.run import BUDGETS
 from isekai.sheet import FakeSorter, load_schema
