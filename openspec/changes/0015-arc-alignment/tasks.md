@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The anchor detectors, written while the anchors are still correct
+- [x] 1 — The anchor detectors, written while the anchors are still correct
 - [ ] 2 — `atomic_write` out of `run`
 - [ ] 3 — `wiring` out of `__main__`
 - [ ] 4 — `cli` out of `__main__`, behind a three-line shim
@@ -41,10 +41,10 @@ Every phase, without exception:
 > `.parent` to each. A shared constant would need a home every one of those seven could import, which
 > is a module this change did not propose and new edges phase 6 exists to remove.
 
-- [ ] 1.1 Add `tests/test_package_paths.py` asserting each of the seven repo-root anchors resolves to the directory that contains `pyproject.toml` — `run.DATA_ROOT`, `flow.FLOWS_DIR`, `sheet.SCHEMAS_DIR`, `caption.BRIEFINGS_DIR`, `provision.MANIFEST_PATH` and `VOCABULARY_MANIFEST_PATH`, `eval_models`' manifest path, `claude_cli.ROOT`. Assert the **absolute** property — that the anchor's repo root *is* the repo root — never a relationship between two constants that move together. Verify: `uv run pytest tests/test_package_paths.py -q`
-- [ ] 1.2 Add the falsification twin: a test proving the assertion in 1.1 **fails** when an anchor is one level short, so the detector cannot be a check that cannot fail. Verify: `uv run pytest tests/test_package_paths.py -q`
-- [ ] 1.3 Verify the guard these protect is intact before anything moves: `uv run pytest tests/test_run_directory.py -q -k "run_root or containment"`
-- [ ] 1.4 Verify the gate: `make gate`
+- [x] 1.1 Add `tests/test_package_paths.py` asserting each of the seven repo-root anchors resolves to the directory that contains `pyproject.toml` — `run.DATA_ROOT`, `flow.FLOWS_DIR`, `sheet.SCHEMAS_DIR`, `caption.BRIEFINGS_DIR`, `provision.MANIFEST_PATH` and `VOCABULARY_MANIFEST_PATH`, `eval_models`' manifest path, `claude_cli.ROOT`. Assert the **absolute** property — that the anchor's repo root *is* the repo root — never a relationship between two constants that move together. Verify: `uv run pytest tests/test_package_paths.py -q`
+- [x] 1.2 Add the falsification twin: a test proving the assertion in 1.1 **fails** when an anchor is one level short, so the detector cannot be a check that cannot fail. Verify: `uv run pytest tests/test_package_paths.py -q`
+- [x] 1.3 Verify the guard these protect is intact before anything moves: `uv run pytest tests/test_run_directory.py -q -k "run_root or containment"`
+- [x] 1.4 Verify the gate: `make gate`
 
 ## 2. `atomic_write` out of `run`
 

@@ -25,6 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The eight repo-root anchors are pinned to the repository root, before anything moves.**
+  Seven files compute a repo-root path as `Path(__file__).resolve().parent.parent`, and v0.15's
+  restructure moves every one of them a directory deeper — where that expression yields `isekai/`
+  instead of the repository. Six of the eight constants would fail loudly; **`DATA_ROOT` would
+  not.** It would become `isekai/.data`, `RUNS_ROOT` would move with it, and every test asserting
+  the *relationship* between the two would still pass, while the guard that keeps a run directory
+  — which holds a copy of a photograph by construction — out of one `git add` quietly narrowed to
+  refuse only paths inside the package (design.md D7). `tests/test_package_paths.py` asserts the
+  **absolute** property instead: strip each anchor's own suffix and what remains must be the
+  directory holding `pyproject.toml`, never another constant that would move alongside it. It
+  carries a falsification twin per anchor, because a check that cannot fail is not a check. Written
+  while every anchor is still correct, so it passes today and goes red the moment a file moves
+  without gaining its `.parent` — the detector, not the fix.
+
 ## [0.14.0] - 2026-09-15
 
 ### Added
