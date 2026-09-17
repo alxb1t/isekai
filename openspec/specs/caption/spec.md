@@ -1,9 +1,11 @@
 # Capability: `caption`
 
-Stage ① of the pipeline: reading a photograph into descriptive English prose, knowing nothing about
-schemas, vocabularies, flows or what happens next, and licensed to say that something is absent.
+Stage ① of the pipeline: reading a photograph into descriptive English prose under the standing
+instructions of the flow that asked, knowing nothing about schemas, vocabularies or what happens next,
+and licensed to say that something is absent.
 
-**Source:** `isekai/pipeline/caption.py`, `isekai/boundary/claude_cli.py` ·
+**Source:** `isekai/pipeline/caption.py`, `isekai/boundary/claude_cli.py`,
+`flows/summon-v1/caption.briefing.md` ·
 **Tests:** `tests/test_caption.py`
 
 ## Requirements

@@ -1,12 +1,12 @@
 # Capability: `sheet`
 
 Stage ② of the pipeline: turning descriptive prose into a sheet of fields filled with canonical
-vocabulary tags, using a declared schema and a provisioned tag list, and knowing nothing about which
-flow asked or how many will read the result.
+vocabulary tags, using the schema and the standing instructions inside the flow that asked, and knowing
+nothing about flows beyond the one directory it reads and writes.
 
-**Source:** `isekai/pipeline/sheet.py`, `isekai/shared/vocabulary.py`,
-`isekai/boundary/claude_cli.py`, `isekai/foundation/flow.py`, `schemas/identity.v1.json`,
-`schemas/identity.v1.briefing.md` ·
+**Source:** `isekai/pipeline/sheet.py`, `isekai/shared/fields.py`, `isekai/shared/vocabulary.py`,
+`isekai/boundary/claude_cli.py`, `isekai/foundation/flow.py`, `flows/summon-v1/schema.json`,
+`flows/summon-v1/sheet.briefing.md` ·
 **Tests:** `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`,
 `tests/test_vocabulary.py`
 

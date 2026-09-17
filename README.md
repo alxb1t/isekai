@@ -56,7 +56,7 @@ Local (your machine)                          RunPod
 ```
 
 **Lifecycle:** `up.sh` (create pod from the image + attach volume) →
-`python -m isekai generate --server …` → `down.sh` (remove pod, billing stops). Only the pod is
+`python -m isekai generate --flow … --server …` → `down.sh` (remove pod, billing stops). Only the pod is
 ephemeral and metered.
 
 ## The path
@@ -92,20 +92,23 @@ Run `cp .env.example .env` and fill in your RunPod values.
 The first three stages need **no GPU and no pod** — they are free and local. Only `generate` needs
 an endpoint.
 
-1. Read the photograph into prose, then sort the prose into a sheet of canonical tags:
+1. Read the photograph into prose, then sort the prose into a sheet of canonical tags. Every stage
+   verb takes `--flow`, and it is required — a stage cannot act without knowing which flow asked,
+   because the flow supplies the briefing it reads and the schema it fills against:
    ```sh
-   python -m isekai caption me.jpg
-   python -m isekai sheet me.jpg
+   python -m isekai caption --flow summon-v1 me.jpg
+   python -m isekai sheet --flow summon-v1 me.jpg
    ```
    Each run gets a directory under `.data/runs/`, named for the photograph's digest and its
-   filename. Offer the photograph again, or the run's id — which one you meant is decided by
-   what is on disk.
+   filename, and every artifact sits under the flow that produced it:
+   `<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`. Offer the photograph again, or
+   the run's id — which one you meant is decided by what is on disk.
 2. Correct the sheet. `review` copies it somewhere you may edit it; `approve` validates the edit
    and marks it approved. **Only an approved sheet is ever rendered** — the correction is the
    single largest measured gain in this pipeline.
    ```sh
-   python -m isekai review me.jpg      # then edit the file it prints
-   python -m isekai approve me.jpg
+   python -m isekai review --flow summon-v1 me.jpg   # then edit the file it prints
+   python -m isekai approve --flow summon-v1 me.jpg
    ```
 3. Create the pod. It prints the SSH and tunnel commands when ready, and tears itself down if it
    never becomes usable.
@@ -118,7 +121,7 @@ an endpoint.
    ```
 5. Back in the first terminal, render:
    ```sh
-   python -m isekai generate me.jpg --server http://127.0.0.1:8188
+   python -m isekai generate --flow summon-v1 me.jpg --server http://127.0.0.1:8188
    ```
    Each image lands under the run directory, named for the seed that produced it, beside a
    provenance artifact recording the flow, the seed, the sheet version and the digest of the graph
@@ -195,13 +198,17 @@ isekai/
 │   ├── __main__.py            # the path `python -m isekai` resolves — a shim over interface/cli.py
 │   ├── foundation/            # run directory & layout names, flow manifest & Schema, refusal
 │   ├── pipeline/              # the four staged verbs: caption · sheet · review · generate
-│   ├── shared/                # image header reader, vocabulary, atomic write
+│   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted model, provisioning
 │   ├── evaluation/            # the scorer, and the only importer of the [eval] extra
 │   └── interface/             # the parser & dispatch, the composition, the run's account
 ├── tests/                     # the suite and its fakes
-├── flows/summon-v1/           # flow.json = inputs, dials, prompt fragments, node roles;
-│                              # graph.json = the API graph. A flow is immutable.
+├── flows/summon-v1/           # one flow: five flat files, and it is immutable
+│   ├── flow.json              # the manifest: inputs, vocabulary, models, dials, prompt, node roles
+│   ├── graph.json             # the API graph
+│   ├── schema.json            # the sheet's field list, in prompt order
+│   ├── caption.briefing.md    # the standing instructions the photograph is read under
+│   └── sheet.briefing.md      # the standing instructions the caption is sorted under
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
@@ -264,7 +271,7 @@ PROVISION TIME (every session — this is up.sh / down.sh)
 
 USE IT
   ssh -L 8188:localhost:8188 ...    opens a private tunnel to the pod
-  python -m isekai generate photo.jpg --server http://127.0.0.1:8188
+  python -m isekai generate --flow summon-v1 photo.jpg --server http://127.0.0.1:8188
                        ──▶ localhost:8188 ──tunnel──▶ ComfyUI ──▶ GPU ──▶ anime.png
 
 TEAR DOWN

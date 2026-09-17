@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **The living spec's `Source:` lines, `README.md`, `CLAUDE.md` and the group READMEs follow the
+  version.** `sheet`'s named `schemas/identity.v1.json` and `schemas/identity.v1.briefing.md`, which
+  no longer exist; a flow is described as five flat files rather than two; the repository tree, the
+  run layout and every worked `python -m isekai` invocation carry `--flow`; `pipeline/README.md` no
+  longer claims one stage imports another; `shared/README.md` gains `fields.py`. The blast-radius
+  sweep is a `git grep` over every tracked file except `CHANGELOG.md` and the change directory —
+  v0.15 shipped a broken `Dockerfile` COPY by hunting only the files being renamed.
+- **`tests/test_package_paths.py`'s anchor table drops to six constants across five files**, and its
+  prose says so. Two anchors left with the fold: a schema and a briefing are a flow's now, and a flow
+  is reached through `FLOWS_DIR`.
+
 ### Fixed
 
 - **Resume no longer assumes a render is a PNG.** `rendered_seeds` filtered `iterdir()` on

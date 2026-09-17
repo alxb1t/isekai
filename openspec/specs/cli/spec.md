@@ -4,7 +4,7 @@ The command-line surface: one entry point, six verbs, and every refusal a batch 
 together rather than one at a time.
 
 **Source:** `isekai/__main__.py`, `isekai/interface/cli.py`, `isekai/interface/wiring.py`,
-`isekai/interface/run_view.py` ·
+`isekai/interface/run_view.py`, `flows/` ·
 **Tests:** `tests/test_pipeline_cli.py`, `tests/test_generate.py`, `tests/test_resume.py`,
 `tests/test_run_view.py`
 

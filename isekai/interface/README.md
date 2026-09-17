@@ -8,8 +8,8 @@ is a shim over `cli.py` and holds nothing else.
 
 | file | does |
 |---|---|
-| `cli.py` | parses a verb, names the flows, dispatches, and reports every refusal together |
-| `wiring.py` | composes the modules — resolves what a verb needs and hands out the pieces, with or without a parser |
+| `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
+| `wiring.py` | composes the modules — resolves a flow to its own schema, and hands out the pieces, with or without a parser |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions and producers. Reads everything, decides nothing |
 
 ## Imported by
@@ -17,7 +17,7 @@ is a shim over `cli.py` and holds nothing else.
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `isekai/__main__.py` | four test modules |
-| `wiring.py` | `cli.py` | three test modules |
+| `wiring.py` | `cli.py` | four test modules |
 | `run_view.py` | `cli.py` | `tests/test_run_view.py` |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point

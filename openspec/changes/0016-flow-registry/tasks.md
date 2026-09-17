@@ -9,7 +9,7 @@
 - [x] 5 — `--flow` is required and repeatable on every stage verb
 - [x] 6 — The run layout: input above, flow below
 - [x] 7 — Resume stops assuming a PNG
-- [ ] 8 — The living spec, the docs, and the blast-radius sweep
+- [x] 8 — The living spec, the docs, and the blast-radius sweep
 
 ## The per-phase ritual
 
@@ -191,23 +191,23 @@ the repository is touched.
 > here**, because the sweep hunted the modules being renamed and never asked what referenced the ones
 > that merely moved.
 
-- [ ] 8.1 Update `openspec/specs/sheet/spec.md:8`'s `Source:` line, which names
+- [x] 8.1 Update `openspec/specs/sheet/spec.md:8`'s `Source:` line, which names
       `schemas/identity.v1.json` and `schemas/identity.v1.briefing.md`, and every other capability's
       `Source:` line this change invalidates. Verify:
       `git grep -nE 'schemas/|briefings/' -- openspec/specs/` — no output.
-- [ ] 8.2 Update `README.md:187-217`'s repository tree, `README.md:198-199`'s flow description and
+- [x] 8.2 Update `README.md:187-217`'s repository tree, `README.md:198-199`'s flow description and
       `CLAUDE.md:166-169`'s flow-directory paragraph — all three describe a flow as two files. Verify:
       `grep -n 'caption.briefing.md' README.md CLAUDE.md` — both hit.
-- [ ] 8.3 Update `isekai/pipeline/README.md:13`, `isekai/foundation/README.md:12`,
+- [x] 8.3 Update `isekai/pipeline/README.md:13`, `isekai/foundation/README.md:12`,
       `isekai/interface/README.md:11` and `isekai/shared/README.md` — the last gains `fields.py`. Verify:
       `grep -rn 'fields.py' isekai/shared/README.md` — one hit.
-- [ ] 8.4 **The sweep.** `CHANGELOG.md` is history and `openspec/changes/` describes the move itself,
+- [x] 8.4 **The sweep.** `CHANGELOG.md` is history and `openspec/changes/` describes the move itself,
       so both are excluded — everything else is in scope, including files no gate command reads. Verify:
       `git grep -nE 'schemas/|briefings/|identity\.v1' -- . ':!CHANGELOG.md' ':!openspec/changes'`
       — **no output.**
-- [ ] 8.5 Confirm the files no gate command reads are clean. Verify:
+- [x] 8.5 Confirm the files no gate command reads are clean. Verify:
       `grep -nE 'schemas|briefings' Dockerfile scripts/download_models.sh start.sh Makefile docker-compose.yml .github/workflows/*.yml infra/*.sh` — no output.
-- [ ] 8.6 Confirm the import graph claim this change makes true. Verify:
+- [x] 8.6 Confirm the import graph claim this change makes true. Verify:
       `grep -rn 'from isekai.pipeline' isekai/pipeline/` — no output.
-- [ ] 8.7 Verify: `openspec validate 0016-flow-registry --strict` — green.
-- [ ] 8.8 Verify the gate: `make gate`
+- [x] 8.7 Verify: `openspec validate 0016-flow-registry --strict` — green.
+- [x] 8.8 Verify the gate: `make gate`

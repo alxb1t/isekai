@@ -8,7 +8,7 @@ what it is, not by what calls it.
 |---|---|---|
 | [`foundation/`](foundation/README.md) | what a run, a flow and a refusal are | 3 |
 | [`pipeline/`](pipeline/README.md) | the four staged verbs | 4 |
-| [`shared/`](shared/README.md) | primitives with no domain of their own | 3 |
+| [`shared/`](shared/README.md) | primitives with no domain of their own | 4 |
 | [`boundary/`](boundary/README.md) | everything that leaves this process | 5 |
 | [`evaluation/`](evaluation/README.md) | scoring a render against its photograph | 5 |
 | [`interface/`](interface/README.md) | what an operator touches | 3 |
@@ -38,7 +38,7 @@ Read it as *what each group is allowed to know about*, and check the module grap
 
 **Two rules the layout is holding, not describing.** The runtime is stdlib-only:
 nothing in `python -m isekai`'s import graph may need a wheel, and a subprocess
-guard under `-S` proves it. And seven files anchor a repository path on their own
+guard under `-S` proves it. And five files anchor a repository path on their own
 `__file__`; `tests/test_package_paths.py` pins every one of them to the directory
 holding `pyproject.toml`, with a falsification twin each.
 
