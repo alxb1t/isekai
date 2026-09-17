@@ -38,16 +38,18 @@ from typing import Any
 
 from isekai.atomic_write import write_atomically
 from isekai.comfy_types import ComfyTransport, Workflow
-from isekai.flow import Flow, assemble
+from isekai.flow import Flow, Schema, assemble
 from isekai.image import (
     MAX_TARGET_LONG_SIDE,
     image_dimensions,
     working_resolution,
 )
 from isekai.refusal import Refusal
-from isekai.review import APPROVED
-from isekai.review import DIRECTORY as REVIEW
 from isekai.run import (
+    APPROVED,
+    OUTPUTS,
+    PROMPTS,
+    REVIEW,
     Run,
     approved_versions,
     artifact_name,
@@ -57,12 +59,9 @@ from isekai.run import (
     record_failure,
     write_json,
 )
-from isekai.sheet import Schema
 
 STAGE_ASSEMBLE = "assemble"
 STAGE_RENDER = "render"
-PROMPTS = "prompts"
-OUTPUTS = "outputs"
 
 # A seed is what the sampler takes: an unsigned 64-bit integer.
 SEED_BITS = 64

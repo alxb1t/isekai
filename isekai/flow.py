@@ -56,6 +56,56 @@ REQUIRED = (
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 
 
+# --- what a sheet declares ----------------------------------------------------
+
+# The schema lives here, beside the flow, because a flow is what decides which
+# schema a run is sorted against: `flow.json` names the schema document, and both
+# ends of prompt assembly -- the field order and the prompt fragments -- are read
+# off this module. Held in `sheet.py` it made the sorter a dependency of the
+# renderer, which is the edge this move removes (design.md D6). Only the type's
+# home moves; what a schema *is* is unchanged.
+
+
+@dataclass(frozen=True)
+class Field:
+    """One field of a sheet: its name, whether it is scored, and its suffix."""
+
+    name: str
+    scored: bool
+    suffix: str | None
+
+
+@dataclass(frozen=True)
+class Schema:
+    """A versioned field list, in prompt order, and the vocabulary it assumes."""
+
+    name: str
+    version: int
+    vocabulary: Mapping[str, str]
+    fields: tuple[Field, ...]
+
+    @property
+    def names(self) -> tuple[str, ...]:
+        """Return the field names, in the one order a prompt is assembled in."""
+        return tuple(field.name for field in self.fields)
+
+    @property
+    def scored(self) -> tuple[str, ...]:
+        """Return the names of the fields a measurement is taken over."""
+        return tuple(field.name for field in self.fields if field.scored)
+
+    def field(self, name: str) -> Field:
+        """Return the named field, or refuse naming what the schema does declare."""
+        for field in self.fields:
+            if field.name == name:
+                return field
+        raise Refusal(
+            f"{name!r} is not a field of schema {self.name} v{self.version}; "
+            f"this schema declares {', '.join(self.names)} -- correct the field "
+            "name, or write a new schema version that declares it"
+        )
+
+
 @dataclass(frozen=True)
 class Flow:
     """One flow, loaded: what it needs, what it renders, and the dials it runs at."""

@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 
 from isekai.caption import FakeReader, caption
-from isekai.flow import load_flow
+from isekai.flow import Schema, load_flow
 from isekai.generate import prepare, render
 from isekai.review import approve, review
 from isekai.run import Run, open_run
 from isekai.run_view import listings, rendered, report
-from isekai.sheet import FakeSorter, Schema, sheet
+from isekai.sheet import FakeSorter, sheet
 from isekai.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes

@@ -85,6 +85,18 @@ _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
 # The frame: what the run is, written once when the run is created.
 FRAME_NAME = "run.json"
 
+# The stage directories, and the label an approved artifact carries. The run owns
+# the layout, so a stage that needs another stage's directory asks the run rather
+# than importing the stage -- which is what closes five of the six stage-to-stage
+# edges (design.md D6). `approved` is here for the same reason: `review` writes it
+# and both `generate` and the inspection command read it.
+CAPTIONS = "captions"
+SHEETS = "sheets"
+REVIEW = "review"
+PROMPTS = "prompts"
+OUTPUTS = "outputs"
+APPROVED = "approved"
+
 # `001`, and `001.approved` / `001.draft` where a stage has that concept.
 ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>[a-z]+))?\.json$")
 

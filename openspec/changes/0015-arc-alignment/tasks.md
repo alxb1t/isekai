@@ -7,7 +7,7 @@
 - [x] 3 — `wiring` out of `__main__`
 - [x] 4 — `cli` out of `__main__`, behind a three-line shim
 - [x] 5 — `show` → `run_view`, `photo` → `image`
-- [ ] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
+- [x] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
 - [ ] 7 — The restructure: 22 files into six directories, seven READMEs
 - [ ] 8 — The record: nine capability files, `CLAUDE.md`, `README.md`
 
@@ -90,10 +90,10 @@ Every phase, without exception:
 > `validate` survives. **Only the `Schema` type's home moves** — striking `version`, de-duplicating the
 > vocabulary pin and redefining what a schema *is* are v0.16's, because those are observable.
 
-- [ ] 6.1 Move the `Schema` type from `sheet.py:81` to `flow.py`; `sheet`, `review` and `cli` import it from `flow`. Verify `generate`'s import of `sheet` disappears entirely: `grep -n "from isekai.sheet" isekai/generate.py` is empty
-- [ ] 6.2 Give `run` the stage directory names — `CAPTIONS`, `SHEETS`, `REVIEW`, `PROMPTS`, `OUTPUTS`, `APPROVED` — and point `sheet`, `review`, `generate` and `run_view` at `run` for them. Verify: `grep -n "from isekai.\(caption\|sheet\|review\|generate\)" isekai/run_view.py` names only `generate`, for `rendered_seeds`
-- [ ] 6.3 Verify **exactly one** stage→stage import remains, and that it is the validator call: `grep -n "from isekai.\(caption\|sheet\|review\|generate\)" isekai/caption.py isekai/sheet.py isekai/review.py isekai/generate.py` returns one line — `review.py` importing `validate` from `sheet`
-- [ ] 6.4 Verify the gate: `make gate`
+- [x] 6.1 Move the `Schema` type from `sheet.py:81` to `flow.py`; `sheet`, `review` and `cli` import it from `flow`. Verify `generate`'s import of `sheet` disappears entirely: `grep -n "from isekai.sheet" isekai/generate.py` is empty
+- [x] 6.2 Give `run` the stage directory names — `CAPTIONS`, `SHEETS`, `REVIEW`, `PROMPTS`, `OUTPUTS`, `APPROVED` — and point `sheet`, `review`, `generate` and `run_view` at `run` for them. Verify: `grep -n "from isekai.\(caption\|sheet\|review\|generate\)" isekai/run_view.py` names only `generate`, for `rendered_seeds`
+- [x] 6.3 Verify **exactly one** stage→stage import remains, and that it is the validator call: `grep -n "from isekai.\(caption\|sheet\|review\|generate\)" isekai/caption.py isekai/sheet.py isekai/review.py isekai/generate.py` returns one line — `review.py` importing `validate` from `sheet`
+- [x] 6.4 Verify the gate: `make gate`
 
 ## 7. The restructure
 

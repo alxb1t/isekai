@@ -15,10 +15,8 @@ import pytest
 
 import isekai.run as run_module
 from isekai.caption import FakeReader, caption
-from isekai.flow import Flow, load_flow
+from isekai.flow import Flow, Schema, load_flow
 from isekai.generate import (
-    OUTPUTS,
-    PROMPTS,
     SEED_BITS,
     approved_flows,
     build_graph,
@@ -34,8 +32,16 @@ from isekai.generate import (
 from isekai.image import MAX_TARGET_LONG_SIDE
 from isekai.refusal import Refusal
 from isekai.review import approve, review
-from isekai.run import Run, across, artifact_name, open_run, read_artifact
-from isekai.sheet import FakeSorter, Schema, sheet
+from isekai.run import (
+    OUTPUTS,
+    PROMPTS,
+    Run,
+    across,
+    artifact_name,
+    open_run,
+    read_artifact,
+)
+from isekai.sheet import FakeSorter, sheet
 from isekai.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes

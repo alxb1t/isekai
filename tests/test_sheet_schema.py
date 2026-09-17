@@ -9,11 +9,11 @@ from pathlib import Path
 
 import pytest
 
+from isekai.flow import Schema
 from isekai.refusal import Refusal
 from isekai.sheet import (
     IDENTIFIER_SAFE,
     SCHEMA_VERSION,
-    Schema,
     fill,
     load_schema,
     schema_path,

@@ -43,6 +43,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Five of the six stage→stage imports stop existing.** The `Schema` type moves from `sheet.py` to
+  `flow.py` — a flow is what decides which schema a run is sorted against, and holding the type in
+  the sorter made the sorter a dependency of the renderer. The six stage directory names —
+  `CAPTIONS`, `SHEETS`, `REVIEW`, `PROMPTS`, `OUTPUTS`, `APPROVED` — move to `run.py`, which owns the
+  layout, so a stage that needs another stage's directory asks the run instead of importing the
+  stage. **Exactly one stage→stage edge survives**, and it is the behavioural one: `review` importing
+  and calling `sheet.validate` (design.md D6). **Only the type's home moves** — striking its
+  `version`, de-duplicating the vocabulary pin and redefining what a schema *is* are v0.16's, because
+  those are observable. Consequence banked for v0.16: it changes the directory values in one file
+  instead of five.
+
 - **`show.py` → `run_view.py`, `photo.py` → `image.py`.** `show` was the verb *and* the file, and
   half of `photo`'s callers hand it a render rather than a photograph. Both are `git mv`, so
   `--follow` reaches back past the rename, and their test files move with them. **The CLI verb `show`

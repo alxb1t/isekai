@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from isekai.caption import FakeReader, caption
+from isekai.flow import Schema
 from isekai.refusal import Refusal
 from isekai.review import (
     ENCODER_WINDOW,
@@ -20,7 +21,7 @@ from isekai.review import (
     review,
 )
 from isekai.run import Run, approved_versions, open_run, read_artifact, versions
-from isekai.sheet import FakeSorter, Schema, sheet
+from isekai.sheet import FakeSorter, sheet
 from isekai.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes

@@ -25,10 +25,10 @@ from typing import TextIO
 from isekai.caption import ClaudeReader, Reader
 from isekai.comfy_client import ComfyClient
 from isekai.comfy_types import ComfyTransport
-from isekai.flow import FLOWS_DIR
+from isekai.flow import FLOWS_DIR, Schema
 from isekai.refusal import Refusal
 from isekai.run import DATA_ROOT, RUNS_ROOT
-from isekai.sheet import ClaudeSorter, Schema, Sorter, load_schema
+from isekai.sheet import ClaudeSorter, Sorter, load_schema
 from isekai.vocabulary import Vocabulary
 from isekai.vocabulary import load as load_vocabulary
 
