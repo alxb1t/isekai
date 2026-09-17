@@ -11,11 +11,18 @@ from pathlib import Path
 
 import pytest
 
-from isekai.caption import FakeReader, caption
-from isekai.claude_cli import BASE_FLAGS, CliFailure
-from isekai.refusal import Refusal
-from isekai.run import BUDGETS, Run, attempts, open_run, read_artifact, versions
-from isekai.sheet import (
+from isekai.boundary.claude_cli import BASE_FLAGS, CliFailure
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    BUDGETS,
+    Run,
+    attempts,
+    open_run,
+    read_artifact,
+    versions,
+)
+from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.sheet import (
     BRIEFING_PATH,
     ClaudeSorter,
     FakeSorter,
@@ -23,7 +30,7 @@ from isekai.sheet import (
     output_shape,
     sheet,
 )
-from isekai.vocabulary import Vocabulary, read_tags
+from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
 
@@ -105,7 +112,9 @@ def test_the_argument_vector_disables_every_tool_and_states_the_shape(
 def test_the_adapter_reads_the_structured_answer_out_of_the_envelope(
     schema: Schema, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/bin/claude")
+    monkeypatch.setattr(
+        "isekai.boundary.claude_cli.shutil.which", lambda _: "/bin/claude"
+    )
     answer = {name: [] for name in schema.names}
     answer["hair_colour"] = ["dark brown"]
 
@@ -122,7 +131,9 @@ def test_the_adapter_reads_the_structured_answer_out_of_the_envelope(
 def test_a_response_that_does_not_carry_the_schemas_fields_is_permanent(
     schema: Schema, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/bin/claude")
+    monkeypatch.setattr(
+        "isekai.boundary.claude_cli.shutil.which", lambda _: "/bin/claude"
+    )
 
     def runner(argv: Sequence[str]) -> tuple[int, str, str]:
         return 0, _envelope(result=json.dumps({"hair_colour": ["brown"]})), ""
@@ -366,8 +377,8 @@ def test_every_phrase_the_briefings_examples_emit_maps_to_a_real_tag(
     # demonstrates a phrasing the cascade drops teaches the sorter to waste a
     # field. The acceptance run found exactly that: `count` came back empty on
     # five of five photographs, and `gaze` came back as `camera`.
-    from isekai.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, map_phrase
-    from isekai.vocabulary import load as load_vocabulary
+    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, map_phrase
+    from isekai.shared.vocabulary import load as load_vocabulary
 
     if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
         pytest.skip("the vocabulary is not provisioned in this environment")

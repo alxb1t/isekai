@@ -38,8 +38,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
-from isekai.atomic_write import write_atomically
-from isekai.refusal import Refusal
+from isekai.foundation.refusal import Refusal
+from isekai.shared.atomic_write import write_atomically
 
 # Everything a run produces or consumes lives under one gitignored root. The run
 # directory holds a *copy of the photograph*, which is what makes a run
@@ -49,7 +49,7 @@ from isekai.refusal import Refusal
 # (design.md D14). `models/` deliberately stays where it is: it is fetched from a
 # pinned manifest and is re-derivable byte for byte, so its loss costs a
 # re-download rather than the loss of work.
-DATA_ROOT = Path(__file__).resolve().parent.parent / ".data"
+DATA_ROOT = Path(__file__).resolve().parent.parent.parent / ".data"
 RUNS_ROOT = DATA_ROOT / "runs"
 
 # The only schema version this build reads. There is no migration ladder because
@@ -164,8 +164,8 @@ def media_type(body: bytes) -> tuple[str, str]:
 
 # --- atomic writes ------------------------------------------------------------
 
-# `write_atomically` lives in `isekai.atomic_write`: it takes a path and bytes and
-# knows nothing about runs, and `generate.py` already writes the rendered PNG with
+# `write_atomically` lives in `isekai.shared.atomic_write`: it takes a path and bytes
+# and knows nothing about runs, and `generate.py` already writes the rendered PNG with
 # it. What stays here is the one below -- the JSON form every artifact in a run is
 # written in, which is a run format rather than a write primitive.
 

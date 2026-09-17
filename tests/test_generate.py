@@ -13,10 +13,20 @@ from pathlib import Path
 
 import pytest
 
-import isekai.run as run_module
-from isekai.caption import FakeReader, caption
-from isekai.flow import Flow, Schema, load_flow
-from isekai.generate import (
+import isekai.foundation.run as run_module
+from isekai.foundation.flow import Flow, Schema, load_flow
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    OUTPUTS,
+    PROMPTS,
+    Run,
+    across,
+    artifact_name,
+    open_run,
+    read_artifact,
+)
+from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.generate import (
     SEED_BITS,
     approved_flows,
     build_graph,
@@ -29,20 +39,10 @@ from isekai.generate import (
     rendered_seeds,
     seeds_for,
 )
-from isekai.image import MAX_TARGET_LONG_SIDE
-from isekai.refusal import Refusal
-from isekai.review import approve, review
-from isekai.run import (
-    OUTPUTS,
-    PROMPTS,
-    Run,
-    across,
-    artifact_name,
-    open_run,
-    read_artifact,
-)
-from isekai.sheet import FakeSorter, sheet
-from isekai.vocabulary import Vocabulary
+from isekai.pipeline.review import approve, review
+from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.shared.image import MAX_TARGET_LONG_SIDE
+from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
 
@@ -132,7 +132,7 @@ def test_a_malformed_approved_sheet_is_caught_before_anything_is_rented(
 def test_one_bad_sheet_does_not_stop_the_other_photographs(
     tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    from isekai.run import across
+    from isekai.foundation.run import across
 
     good = _run(tmp_path, schema, vocabulary, "good")
     bad = _run(tmp_path, schema, vocabulary, "bad")
@@ -236,7 +236,7 @@ def test_asking_for_both_a_count_and_seeds_is_refused() -> None:
 
 @pytest.mark.spec("cli:generate-signature:count-and-seed-are-exclusive")
 def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
-    from isekai.cli import build_parser
+    from isekai.interface.cli import build_parser
 
     with pytest.raises(SystemExit):
         build_parser().parse_args(["generate", "--count", "2", "--seed", "7"])
@@ -244,7 +244,7 @@ def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
 
 @pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
 def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
-    from isekai.cli import build_parser
+    from isekai.interface.cli import build_parser
 
     parsed = build_parser().parse_args(["generate"])
 
@@ -254,7 +254,7 @@ def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
 
 @pytest.mark.spec("cli:generate-signature:accepts-many-identifiers")
 def test_the_parser_takes_several_photographs_in_one_invocation() -> None:
-    from isekai.cli import build_parser
+    from isekai.interface.cli import build_parser
 
     parsed = build_parser().parse_args(["generate", "a.jpg", "b.jpg", "c.jpg"])
 
@@ -470,8 +470,8 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     # filters to the flows a run is approved for, so a refusal only `prepare`
     # cannot reach leaves `generate` printing nothing and exiting 0 -- the worst
     # outcome for an operator who has just rented a pod.
-    from isekai.cli import build_parser, dispatch
-    from isekai.wiring import Wiring
+    from isekai.interface.cli import build_parser, dispatch
+    from isekai.interface.wiring import Wiring
 
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
@@ -568,7 +568,7 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
 
 # --- the aspect-ratio ceiling -------------------------------------------------
 
-# The third of the three ceilings `isekai.image` states, enforced where a target
+# The third of the three ceilings `isekai.shared.image` states, enforced where a target
 # is computed rather than where a header is read. What it bounds and why is beside
 # the constant; what is asserted here is that it refuses, that it refuses per
 # photograph, and that it does not refuse what merely reaches it.

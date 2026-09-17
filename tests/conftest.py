@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from isekai.comfy_types import Workflow
-from isekai.flow import Schema, load_flow
-from isekai.provision import Manifest, load_manifest
-from isekai.sheet import load_schema
-from isekai.vocabulary import Vocabulary, read_tags
+from isekai.boundary.comfy_types import Workflow
+from isekai.boundary.provision import Manifest, load_manifest
+from isekai.foundation.flow import Schema, load_flow
+from isekai.pipeline.sheet import load_schema
+from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.images import jpeg_bytes
 
 # A small stand-in for the provisioned tag list, with the same shape and the same

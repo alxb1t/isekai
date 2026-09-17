@@ -8,7 +8,7 @@
 - [x] 4 — `cli` out of `__main__`, behind a three-line shim
 - [x] 5 — `show` → `run_view`, `photo` → `image`
 - [x] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
-- [ ] 7 — The restructure: 22 files into six directories, seven READMEs
+- [x] 7 — The restructure: 22 files into six directories, seven READMEs
 - [ ] 8 — The record: nine capability files, `CLAUDE.md`, `README.md`
 
 ## The per-phase ritual
@@ -99,12 +99,12 @@ Every phase, without exception:
 
 > Design D2. Contents unchanged; only paths, the import lines naming them, and one `.parent` per anchor.
 
-- [ ] 7.1 `git mv` all files into `foundation/` · `pipeline/` · `shared/` · `boundary/` · `evaluation/` · `interface/`, leaving `isekai/__main__.py` at the package root. Add an **empty** `__init__.py` to each group. Verify: `uv run python -c "import isekai.foundation.run, isekai.pipeline.generate, isekai.shared.atomic_write, isekai.boundary.provision, isekai.evaluation.labels, isekai.interface.wiring; print('ok')"`
-- [ ] 7.2 Add one `.parent` to each of the seven repo-root anchors. Verify with phase 1's detector: `uv run pytest tests/test_package_paths.py -q`
-- [ ] 7.3 Rewrite every import path across `isekai/`, `tests/`, root `evaluate.py`, `probe/loader_probe.py` and `scripts/derive_eval_manifest.py`. Update `pyproject.toml`'s two `[[tool.ty.overrides]]` paths naming `isekai/eval_backends.py`. Verify: `make gate`
-- [ ] 7.4 **Verify `isekai/evaluation/eval_backends.py`'s three first-party imports by hand.** `pyproject.toml`'s `unresolved-import` override blinds `ty` here and no test imports the file, so **this is the one edit in the change that no gate command sees** (design D9). Verify: `grep -n '^from isekai\.' isekai/evaluation/eval_backends.py` returns three lines, and `uv run python -c "import ast,pathlib,importlib.util as u; [print(n.module, u.find_spec(n.module) is not None) for n in ast.walk(ast.parse(pathlib.Path('isekai/evaluation/eval_backends.py').read_text())) if isinstance(n, ast.ImportFrom) and n.module and n.module.startswith('isekai.')]"` reports `True` for every one
-- [ ] 7.5 Write the seven `README.md` files — one per group plus `isekai/README.md`. Each carries a table of its files and a table of who imports them; **one screen, files and importers only** — seams and contracts stay in the design record (design D11). Verify: `for d in foundation pipeline shared boundary evaluation interface; do diff <(ls isekai/$d/*.py | xargs -n1 basename | grep -v __init__ | sort) <(grep -o '\`[a-z_0-9]*\.py\`' isekai/$d/README.md | tr -d '\`' | sort -u) > /dev/null || echo "MISMATCH $d"; done` prints nothing
-- [ ] 7.6 Verify the gate: `make gate`
+- [x] 7.1 `git mv` all files into `foundation/` · `pipeline/` · `shared/` · `boundary/` · `evaluation/` · `interface/`, leaving `isekai/__main__.py` at the package root. Add an **empty** `__init__.py` to each group. Verify: `uv run python -c "import isekai.foundation.run, isekai.pipeline.generate, isekai.shared.atomic_write, isekai.boundary.provision, isekai.evaluation.labels, isekai.interface.wiring; print('ok')"`
+- [x] 7.2 Add one `.parent` to each of the seven repo-root anchors. Verify with phase 1's detector: `uv run pytest tests/test_package_paths.py -q`
+- [x] 7.3 Rewrite every import path across `isekai/`, `tests/`, root `evaluate.py`, `probe/loader_probe.py` and `scripts/derive_eval_manifest.py`. Update `pyproject.toml`'s two `[[tool.ty.overrides]]` paths naming `isekai/eval_backends.py`. Verify: `make gate`
+- [x] 7.4 **Verify `isekai/evaluation/eval_backends.py`'s three first-party imports by hand.** `pyproject.toml`'s `unresolved-import` override blinds `ty` here and no test imports the file, so **this is the one edit in the change that no gate command sees** (design D9). Verify: `grep -n '^from isekai\.' isekai/evaluation/eval_backends.py` returns three lines, and `uv run python -c "import ast,pathlib,importlib.util as u; [print(n.module, u.find_spec(n.module) is not None) for n in ast.walk(ast.parse(pathlib.Path('isekai/evaluation/eval_backends.py').read_text())) if isinstance(n, ast.ImportFrom) and n.module and n.module.startswith('isekai.')]"` reports `True` for every one
+- [x] 7.5 Write the seven `README.md` files — one per group plus `isekai/README.md`. Each carries a table of its files and a table of who imports them; **one screen, files and importers only** — seams and contracts stay in the design record (design D11). Verify: `for d in foundation pipeline shared boundary evaluation interface; do diff <(ls isekai/$d/*.py | xargs -n1 basename | grep -v __init__ | sort) <(grep -o '\`[a-z_0-9]*\.py\`' isekai/$d/README.md | tr -d '\`' | sort -u) > /dev/null || echo "MISMATCH $d"; done` prints nothing
+- [x] 7.6 Verify the gate: `make gate`
 
 ## 8. The record
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.provision import (
+from isekai.boundary.provision import (
     DigestMismatch,
     Entry,
     Manifest,

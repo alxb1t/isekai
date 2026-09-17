@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.flow import (
+from isekai.foundation.flow import (
     FLOW_SCHEMA_VERSION,
     MANIFEST_NAME,
     REQUIRED,
@@ -21,8 +21,8 @@ from isekai.flow import (
     manifest_digest,
     tracked_flows,
 )
-from isekai.refusal import Refusal
-from isekai.sheet import load_schema
+from isekai.foundation.refusal import Refusal
+from isekai.pipeline.sheet import load_schema
 
 # The digest of every tracked flow's whole directory, committed here.
 #
@@ -131,7 +131,7 @@ def test_the_schema_and_vocabulary_each_flow_names_resolve() -> None:
 
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
 def test_every_model_a_flow_declares_has_a_manifest_entry() -> None:
-    from isekai.provision import load_manifest
+    from isekai.boundary.provision import load_manifest
 
     declared = {entry["dest"] for entry in load_manifest()["entries"]}
     for name in tracked_flows():
@@ -143,7 +143,7 @@ def test_every_model_a_flows_graph_needs_is_declared_by_that_flow() -> None:
     # Everything the graph names *and* everything its nodes fetch while naming
     # nothing. The gate is where an unpinned artifact is caught, so the list
     # being complete is what the check is worth (design.md D15).
-    from isekai.provision import (
+    from isekai.boundary.provision import (
         annotator_files,
         graph_model_files,
         load_manifest,

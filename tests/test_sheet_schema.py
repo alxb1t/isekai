@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from isekai.flow import Schema
-from isekai.refusal import Refusal
-from isekai.sheet import (
+from isekai.foundation.flow import Schema
+from isekai.foundation.refusal import Refusal
+from isekai.pipeline.sheet import (
     IDENTIFIER_SAFE,
     SCHEMA_VERSION,
     fill,
@@ -19,7 +19,7 @@ from isekai.sheet import (
     schema_path,
     validate,
 )
-from isekai.vocabulary import Vocabulary
+from isekai.shared.vocabulary import Vocabulary
 
 # D8's sixteen, in the one order a prompt is assembled in, and the seven a
 # measurement is taken over. Restated here so that reordering the schema document

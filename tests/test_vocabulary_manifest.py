@@ -13,8 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.eval_models import load_eval_manifest
-from isekai.provision import (
+from isekai.boundary.provision import (
     DIGEST,
     MANIFEST_PATH,
     VOCABULARY_MANIFEST_PATH,
@@ -25,8 +24,9 @@ from isekai.provision import (
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
-from isekai.refusal import Refusal
-from isekai.vocabulary import load as load_vocabulary
+from isekai.evaluation.eval_models import load_eval_manifest
+from isekai.foundation.refusal import Refusal
+from isekai.shared.vocabulary import load as load_vocabulary
 from tests.fakes import FakeFetcher
 
 VOCABULARY = "wd14/selected_tags.csv"
@@ -197,7 +197,7 @@ def _targets(captured: str) -> list[str]:
 def test_the_provisioner_plans_the_vocabulary_when_pointed_at_its_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import isekai.provision as provision
+    import isekai.boundary.provision as provision
 
     # The pre-flight is the only network call in the module; the fake is what the
     # rest of this suite already drives it with.
@@ -212,7 +212,7 @@ def test_the_provisioner_plans_the_vocabulary_when_pointed_at_its_manifest(
 def test_the_provisioner_still_plans_the_graphs_stack_when_told_no_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import isekai.provision as provision
+    import isekai.boundary.provision as provision
 
     monkeypatch.setattr(provision, "HuggingFaceFetcher", FakeFetcher)
 

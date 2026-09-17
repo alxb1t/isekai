@@ -12,23 +12,30 @@ from pathlib import Path
 
 import pytest
 
-from isekai.caption import (
-    BRIEFING_PATH,
-    ClaudeReader,
-    FakeReader,
-    Reading,
-    caption,
-)
-from isekai.claude_cli import (
+from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     CliFailure,
     classify,
     instructions_record,
     models_that_ran,
 )
-from isekai.refusal import Refusal
-from isekai.run import BUDGETS, Run, attempts, open_run, read_artifact, versions
-from isekai.sheet import load_schema
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    BUDGETS,
+    Run,
+    attempts,
+    open_run,
+    read_artifact,
+    versions,
+)
+from isekai.pipeline.caption import (
+    BRIEFING_PATH,
+    ClaudeReader,
+    FakeReader,
+    Reading,
+    caption,
+)
+from isekai.pipeline.sheet import load_schema
 from tests.images import jpeg_bytes
 
 
@@ -230,7 +237,9 @@ def test_the_adapter_reads_prose_out_of_the_envelope(
         seen.append(list(argv))
         return 0, _envelope(result="  She is wearing a grey coat.  "), ""
 
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(
+        "isekai.boundary.claude_cli.shutil.which", lambda _: "/usr/bin/claude"
+    )
     reading = ClaudeReader(runner=fake_runner).read(
         tmp_path / "p.jpg", "brief", tmp_path
     )
@@ -324,7 +333,9 @@ def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
 def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(
+        "isekai.boundary.claude_cli.shutil.which", lambda _: "/usr/bin/claude"
+    )
 
     def empty(argv: Sequence[str]) -> tuple[int, str, str]:
         return 0, _envelope(result="   "), ""
@@ -349,7 +360,9 @@ def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> No
 def test_output_that_is_not_an_envelope_at_all_is_a_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: "/usr/bin/claude")
+    monkeypatch.setattr(
+        "isekai.boundary.claude_cli.shutil.which", lambda _: "/usr/bin/claude"
+    )
 
     def garbage(argv: Sequence[str]) -> tuple[int, str, str]:
         return 1, "not json", "command not understood"
@@ -367,7 +380,7 @@ def test_output_that_is_not_an_envelope_at_all_is_a_failure(
 def test_an_absent_reader_refuses_naming_what_to_install(
     run: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: None)
+    monkeypatch.setattr("isekai.boundary.claude_cli.shutil.which", lambda _: None)
 
     with pytest.raises(Refusal) as refused:
         ClaudeReader().read(run.photo, "brief", run.path)
@@ -381,7 +394,7 @@ def test_an_absent_reader_refuses_naming_what_to_install(
 def test_an_absent_reader_leaves_the_run_directory_untouched(
     run: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr("isekai.claude_cli.shutil.which", lambda _: None)
+    monkeypatch.setattr("isekai.boundary.claude_cli.shutil.which", lambda _: None)
     before = sorted(p.name for p in run.path.rglob("*"))
 
     with pytest.raises(Refusal):

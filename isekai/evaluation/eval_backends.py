@@ -1,10 +1,10 @@
-"""The real models behind `isekai.evaluate`'s seams.
+"""The real models behind `isekai.evaluation.evaluate`'s seams.
 
 **This is the only module in the tree that imports the `[eval]` extra**, and it
 is imported lazily, from `evaluate.py`'s `main` and nowhere else. Everything the
-scorer actually *decides* lives in `isekai.evaluate`, which is stdlib-only and is
-therefore tested in CI with this stack absent -- the same division `ComfyTransport`
-and `FakeComfyClient` are under.
+scorer actually *decides* lives in `isekai.evaluation.evaluate`, which is
+stdlib-only and is therefore tested in CI with this stack absent -- the same
+division `ComfyTransport` and `FakeComfyClient` are under.
 
 `ultralytics` is not imported here and is not in the extra. The anime-face
 detector's weights are loaded through `onnxruntime`, which is MIT: loading weights
@@ -12,8 +12,9 @@ is not linking code, and that is what keeps an AGPL-3.0 detector out of an
 Apache-2.0 public repository (design.md D19, `scripts/eval_licences.md`). A test
 asserts the absence, because a licence review nobody runs is not a control.
 
-Every artifact is resolved through `isekai.eval_models.resolve`, which verifies
-its digest against `scripts/eval_models.json` and refuses on a mismatch. A score
+Every artifact is resolved through `isekai.evaluation.eval_models.resolve`,
+which verifies its digest against `scripts/eval_models.json` and refuses on a
+mismatch. A score
 produced by an unverified model is a number from an unknown thing.
 
 **On the unresolved imports below.** The gate runs with the extra deliberately
@@ -37,9 +38,16 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-from isekai.ciede2000 import Lab
-from isekai.eval_models import RECOGNIZER, resolve
-from isekai.evaluate import Box, Canvas, FaceReading, Keypoint, Refusal, Region
+from isekai.evaluation.ciede2000 import Lab
+from isekai.evaluation.eval_models import RECOGNIZER, resolve
+from isekai.evaluation.evaluate import (
+    Box,
+    Canvas,
+    FaceReading,
+    Keypoint,
+    Refusal,
+    Region,
+)
 
 # The SegFormer clothes parser's label ids. Only the ones this version measures
 # are named; the rest are parsed and ignored rather than deleted, because the

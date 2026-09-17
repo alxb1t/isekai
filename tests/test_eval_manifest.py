@@ -6,7 +6,15 @@ from typing import Any, cast
 
 import pytest
 
-from isekai.eval_models import (
+from isekai.boundary.provision import (
+    DigestMismatch,
+    Manifest,
+    entries_with_missing_keys,
+    entries_without_a_digest,
+    mirror_entries_without_an_alternate,
+    sources_on_a_mutable_ref,
+)
+from isekai.evaluation.eval_models import (
     RECOGNIZER,
     SHARED_WITH_THE_GRAPH,
     EscapingDestination,
@@ -16,14 +24,6 @@ from isekai.eval_models import (
     load_eval_manifest,
     resolve,
     shared_entries_that_differ,
-)
-from isekai.provision import (
-    DigestMismatch,
-    Manifest,
-    entries_with_missing_keys,
-    entries_without_a_digest,
-    mirror_entries_without_an_alternate,
-    sources_on_a_mutable_ref,
 )
 
 
@@ -135,7 +135,7 @@ def test_an_artifact_the_manifest_does_not_declare_is_refused(
         resolve("styleid/a_model_nobody_pinned.safetensors", tmp_path, eval_manifest)
 
 
-# The two shapes `isekai.provision.resolve_dest` refuses, mirroring
+# The two shapes `isekai.boundary.provision.resolve_dest` refuses, mirroring
 # `tests/test_provision.py`'s: a relative destination that climbs out, and one
 # that is absolute and would win the join outright.
 ESCAPES = "../../etc/cron.d/payload"

@@ -17,14 +17,14 @@ This module owns two things, and deliberately nothing about any axis:
 
 Not imported by `convert.py`, and not by `isekai/evaluate.py`'s axes either --
 this is the gate they pass through. The runtime stays stdlib-only regardless:
-this module is `json`, `pathlib` and its sibling `isekai.provision`.
+this module is `json`, `pathlib` and its sibling `isekai.boundary.provision`.
 """
 
 import json
 from pathlib import Path
 from typing import Any
 
-from isekai.provision import (
+from isekai.boundary.provision import (
     MANIFEST_PATH,
     PINNED_SOURCE,
     WHITESPACE,
@@ -35,7 +35,7 @@ from isekai.provision import (
 )
 
 EVAL_MANIFEST_PATH = (
-    Path(__file__).resolve().parent.parent / "scripts" / "eval_models.json"
+    Path(__file__).resolve().parent.parent.parent / "scripts" / "eval_models.json"
 )
 
 # The destinations `scripts/models.json` and `scripts/eval_models.json` both
@@ -90,7 +90,7 @@ def resolve(dest: str, models_dir: Path, manifest: Manifest | None = None) -> Pa
     Three refusals, in the order a bad manifest would trip them: an artifact the
     manifest does not declare, an entry whose sources are not pinned revisions,
     and bytes on disk that do not hash to the pin. The last one raises
-    `DigestMismatch` from `isekai.provision`, whose message names the file, the
+    `DigestMismatch` from `isekai.boundary.provision`, whose message names the file, the
     expected digest and the computed one -- all three, because a mismatch is read
     by a human deciding whether a pin is stale or a file has been swapped.
 
@@ -98,12 +98,13 @@ def resolve(dest: str, models_dir: Path, manifest: Manifest | None = None) -> Pa
     the only reason to believe the bytes on disk are the right ones, and an entry
     pointing at `resolve/main/` says nothing about which bytes those were.
 
-    A fourth refusal sits under the third: the join onto `models_dir` goes through
-    `isekai.provision.resolve_dest`, which is the repository's **single** site for
-    the containment rule (design.md D7). Every caller here passes a literal today,
-    so this is not an exploit path being closed -- it is the invariant keeping one
-    enforcement site rather than two, so a destination that climbs out of the
-    models root is refused here exactly as it is on the pod.
+    A fourth refusal sits under the third: the join onto `models_dir` goes
+    through `isekai.boundary.provision.resolve_dest`, which is the repository's
+    **single** site for the containment rule (design.md D7). Every caller here
+    passes a literal today, so this is not an exploit path being closed -- it is
+    the invariant keeping one enforcement site rather than two, so a destination
+    that climbs out of the models root is refused here exactly as it is on the
+    pod.
     """
     manifest = load_eval_manifest() if manifest is None else manifest
     entry = entry_for(manifest, dest)

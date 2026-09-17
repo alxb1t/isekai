@@ -20,8 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.generate import rendered_seeds
-from isekai.run import (
+from isekai.foundation.run import (
     APPROVED,
     ARTIFACT,
     CAPTIONS,
@@ -31,6 +30,7 @@ from isekai.run import (
     SHEETS,
     Run,
 )
+from isekai.pipeline.generate import rendered_seeds
 
 # The stages in the order a run passes through them, and whether each one is
 # scoped to a flow. Declared once here so the listing cannot drift from the

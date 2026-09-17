@@ -13,11 +13,10 @@ from typing import Any
 
 import pytest
 
-import isekai.atomic_write as atomic_write_module
-import isekai.run as run_module
-from isekai.cli import build_parser
-from isekai.refusal import Refusal
-from isekai.run import (
+import isekai.foundation.run as run_module
+import isekai.shared.atomic_write as atomic_write_module
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
     BUDGETS,
     DATA_ROOT,
     FRAME_NAME,
@@ -41,7 +40,8 @@ from isekai.run import (
     write_atomically,
     write_json,
 )
-from isekai.wiring import Wiring, wiring
+from isekai.interface.cli import build_parser
+from isekai.interface.wiring import Wiring, wiring
 from tests.images import jpeg_bytes, png_bytes
 
 
@@ -247,11 +247,11 @@ def test_the_temporary_file_shares_the_artifacts_filesystem(
 ) -> None:
     target = tmp_path / "captions" / "001.json"
     where: list[Path] = []
-    # `tempfile` is imported by `isekai.atomic_write`, which is where the function
-    # under test now lives; `run` no longer imports it at all. The two patches above
-    # reach `run_module.os`, which IS the global `os` module object and would have
-    # passed either way -- this one names the module that actually holds the import,
-    # so it breaks on the move rather than sleeping through it (design.md D4).
+    # `tempfile` is imported by `isekai.shared.atomic_write`, which is where the
+    # function under test now lives; `run` no longer imports it at all. The two patches
+    # above reach `run_module.os`, which IS the global `os` module object and would have
+    # passed either way -- this one names the module that actually holds the import, so
+    # it breaks on the move rather than sleeping through it (design.md D4).
     real = atomic_write_module.tempfile.mkstemp
 
     def watched(dir: Path, prefix: str, suffix: str) -> tuple[int, str]:

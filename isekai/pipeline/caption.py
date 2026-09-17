@@ -18,7 +18,7 @@ routed around: substituting a different implementation would write an artifact
 whose provenance record is untrue, and the whole discipline of this pipeline is
 that a producer names what actually made the artifact (design.md D6).
 
-Stdlib only. The network is behind `Reader`; `isekai.claude_cli` is the one
+Stdlib only. The network is behind `Reader`; `isekai.boundary.claude_cli` is the one
 implementation of it, and `FakeReader` is what keeps the suite offline.
 """
 
@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from isekai.claude_cli import (
+from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
     CliFailure,
@@ -38,7 +38,7 @@ from isekai.claude_cli import (
     refusal_for,
     spawn,
 )
-from isekai.run import (
+from isekai.foundation.run import (
     CAPTIONS,
     Run,
     artifact_name,
@@ -50,7 +50,7 @@ from isekai.run import (
     write_json,
 )
 
-BRIEFINGS_DIR = Path(__file__).resolve().parent.parent / "briefings"
+BRIEFINGS_DIR = Path(__file__).resolve().parent.parent.parent / "briefings"
 BRIEFING_PATH = BRIEFINGS_DIR / "caption.md"
 
 # The name this stage's budget is keyed by. Its directory inside a run is the

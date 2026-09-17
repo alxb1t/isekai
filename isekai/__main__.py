@@ -1,8 +1,12 @@
-"""The entry point `python -m isekai` resolves to; the command line is `isekai.cli`."""
+"""The entry point `python -m isekai` resolves to.
+
+The command line itself is `isekai.interface.cli`. This file is the path `runpy`
+pins, and nothing more.
+"""
 
 import sys
 
-from isekai.cli import main
+from isekai.interface.cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

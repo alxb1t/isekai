@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.labels import (
+from isekai.evaluation.labels import (
     CHOICES,
     SHEET_FIELDS,
     GitOrdering,

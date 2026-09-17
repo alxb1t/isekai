@@ -45,7 +45,7 @@ from manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 # root is not -- the same hop `probe/build_inputs.py` makes, for the same reason.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from isekai.eval_models import SHARED_WITH_THE_GRAPH  # noqa: E402
+from isekai.evaluation.eval_models import SHARED_WITH_THE_GRAPH  # noqa: E402
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
 GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"

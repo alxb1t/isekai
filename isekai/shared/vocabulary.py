@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 
-from isekai.refusal import Refusal
+from isekai.foundation.refusal import Refusal
 
 # The destination the vocabulary manifest declares, and the models root the
 # scorer already defaults to. One tree, two consumers, one provisioning rule.
@@ -241,8 +241,8 @@ def load(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
     it -- the repository keeps one enforcement site for the containment and digest
     rules, not one per consumer.
     """
-    from isekai.eval_models import resolve
-    from isekai.provision import VOCABULARY_MANIFEST_PATH, load_manifest
+    from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH, load_manifest
+    from isekai.evaluation.eval_models import resolve
 
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     try:

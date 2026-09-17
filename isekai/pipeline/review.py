@@ -37,9 +37,9 @@ Stdlib only.
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from isekai.flow import Schema
-from isekai.refusal import Refusal
-from isekai.run import (
+from isekai.foundation.flow import Schema
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
     APPROVED,
     REVIEW,
     SHEETS,
@@ -53,8 +53,8 @@ from isekai.run import (
     versions,
     write_json,
 )
-from isekai.sheet import validate
-from isekai.vocabulary import Vocabulary
+from isekai.pipeline.sheet import validate
+from isekai.shared.vocabulary import Vocabulary
 
 STAGE = "review"
 

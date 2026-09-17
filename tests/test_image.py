@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from isekai.comfy_types import Workflow
-from isekai.flow import load_flow
-from isekai.image import (
+from isekai.boundary.comfy_types import Workflow
+from isekai.foundation.flow import load_flow
+from isekai.shared.image import (
     DIMENSION_STEP,
     MAX_HEADER_BYTES,
     MAX_HEADER_DIMENSION,

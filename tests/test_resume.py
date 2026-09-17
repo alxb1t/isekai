@@ -20,13 +20,13 @@ from pathlib import Path
 
 import pytest
 
-from isekai.caption import FakeReader
-from isekai.cli import build_parser, dispatch
-from isekai.refusal import Refusal
-from isekai.run import BUDGETS
-from isekai.sheet import FakeSorter, load_schema
-from isekai.vocabulary import Vocabulary, read_tags
-from isekai.wiring import Wiring
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import BUDGETS
+from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.wiring import Wiring
+from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.sheet import FakeSorter, load_schema
+from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
@@ -219,12 +219,12 @@ def test_no_external_call_is_made_on_a_pass_that_changes_nothing(
 
 def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     """Provoke one refusal from each stage that has one, and return the messages."""
-    from isekai.caption import ClaudeReader, caption
-    from isekai.flow import load_flow
-    from isekai.generate import photo_resolution, prompt_artifact
-    from isekai.review import approve, review
-    from isekai.run import open_run, read_artifact, record_failure
-    from isekai.sheet import load_schema, sheet
+    from isekai.foundation.flow import load_flow
+    from isekai.foundation.run import open_run, read_artifact, record_failure
+    from isekai.pipeline.caption import ClaudeReader, caption
+    from isekai.pipeline.generate import photo_resolution, prompt_artifact
+    from isekai.pipeline.review import approve, review
+    from isekai.pipeline.sheet import load_schema, sheet
 
     photo = tmp_path / "bare.jpg"
     photo.write_bytes(jpeg_bytes(640, 480))
@@ -373,7 +373,7 @@ def test_one_bad_identifier_does_not_stop_the_rest_of_a_batch(
 def test_the_runs_root_is_a_flag_defaulting_to_the_gitignored_data_root(
     tmp_path: Path,
 ) -> None:
-    from isekai.run import RUNS_ROOT
+    from isekai.foundation.run import RUNS_ROOT
 
     assert build_parser().parse_args(["show"]).runs == RUNS_ROOT
     assert build_parser().parse_args(["show", "--runs", str(tmp_path)]).runs == tmp_path
@@ -391,7 +391,7 @@ def _approved_run(wired: Wiring, tmp_path: Path, name: str) -> str:
     photo.write_bytes(jpeg_bytes(1200, 904 + 8 * (sum(map(ord, name)) % 40)))
     for verb in ("caption", "sheet", "review", "approve"):
         assert dispatch(_args(verb, str(photo)), wired) == 0
-    from isekai.run import open_run
+    from isekai.foundation.run import open_run
 
     return open_run(photo, wired.runs_root).id
 

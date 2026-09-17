@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.cli import VERBS, build_parser, main
+from isekai.interface.cli import VERBS, build_parser, main
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -98,7 +98,7 @@ def test_the_pipeline_entry_point_imports_with_site_packages_off_the_path() -> N
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
 def test_the_run_directory_module_imports_with_site_packages_off_the_path() -> None:
-    result = _stdlib_import("import isekai.run")
+    result = _stdlib_import("import isekai.foundation.run")
 
     assert result.returncode == 0, result.stderr
 

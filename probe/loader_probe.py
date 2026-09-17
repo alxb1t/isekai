@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from build_inputs import png_dimensions  # noqa: E402
 
-from isekai.comfy_client import ComfyClient  # noqa: E402
+from isekai.boundary.comfy_client import ComfyClient  # noqa: E402
 
 PROBE_GRAPH_PATH = Path(__file__).resolve().parent / "loader_probe_graph.json"
 

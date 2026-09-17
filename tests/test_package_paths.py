@@ -21,7 +21,10 @@ from pathlib import Path
 
 import pytest
 
-from isekai import caption, claude_cli, eval_models, flow, provision, run, sheet
+from isekai.boundary import claude_cli, provision
+from isekai.evaluation import eval_models
+from isekai.foundation import flow, run
+from isekai.pipeline import caption, sheet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 

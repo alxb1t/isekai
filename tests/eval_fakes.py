@@ -11,8 +11,8 @@ Every fake records what it was asked, because several of the rules are about
 from a return value.
 """
 
-from isekai.ciede2000 import Lab
-from isekai.evaluate import Box, Canvas, FaceReading, Keypoint, Region
+from isekai.evaluation.ciede2000 import Lab
+from isekai.evaluation.evaluate import Box, Canvas, FaceReading, Keypoint, Region
 
 
 class FakeDetector:

@@ -45,10 +45,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from isekai.refusal import Refusal
-from isekai.run import Kind
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import Kind
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 # The binary every stage resolves on PATH. New for this repository: tooling has
 # always resolved binaries, the runtime never has. It is bounded -- the open,

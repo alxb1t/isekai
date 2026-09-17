@@ -1,6 +1,6 @@
 import pytest
 
-from isekai.ciede2000 import delta_e_2000
+from isekai.evaluation.ciede2000 import delta_e_2000
 
 # Sharma, Wu & Dalal (2005), "The CIEDE2000 Color-Difference Formula:
 # Implementation Notes, Supplementary Test Data, and Mathematical Observations",

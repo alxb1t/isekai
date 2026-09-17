@@ -29,10 +29,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.comfy_types import Workflow
-from isekai.refusal import Refusal
+from isekai.boundary.comfy_types import Workflow
+from isekai.foundation.refusal import Refusal
 
-FLOWS_DIR = Path(__file__).resolve().parent.parent / "flows"
+FLOWS_DIR = Path(__file__).resolve().parent.parent.parent / "flows"
 
 # The only flow-manifest version this build reads.
 FLOW_SCHEMA_VERSION = 1

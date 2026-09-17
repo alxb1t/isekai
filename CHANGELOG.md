@@ -43,6 +43,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The package becomes six directories.** `foundation/` · `pipeline/` · `shared/` · `boundary/` ·
+  `evaluation/` · `interface/`, with `isekai/__main__.py` left at the package root because `runpy`
+  pins that path. Contents are unchanged: only paths, the import lines naming them, and one `.parent`
+  per repo-root anchor. Each group carries a `README.md` of its files and who imports them, plus
+  `isekai/README.md` over the six — **files and importers only**, because what a seam *is* belongs to
+  the design record and neither should restate the other (design.md D11). Each group's `__init__.py`
+  holds a docstring and **no code**: re-exporting through one is how a nested package acquires the
+  import cycles this one has none of (design.md D2). D2 asks for an *empty* file; `ruff`'s D104 makes
+  a byte-empty package init a lint error, so each carries the same one-line form `isekai/__init__.py`
+  already used — which is not a re-export, and is the constraint D2 actually states.
+  `pyproject.toml`'s two `[[tool.ty.overrides]]` paths follow `eval_backends.py` to its new home.
+
 - **Five of the six stage→stage imports stop existing.** The `Schema` type moves from `sheet.py` to
   `flow.py` — a flow is what decides which schema a run is sorted against, and holding the type in
   the sorter made the sorter a dependency of the renderer. The six stage directory names —

@@ -36,16 +36,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.caption import caption
-from isekai.comfy_types import ComfyTransport, Image, Workflow
-from isekai.flow import load_flow, tracked_flows
-from isekai.generate import prepare, render
-from isekai.refusal import Refusal
-from isekai.review import approve, review
-from isekai.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
-from isekai.run_view import report
-from isekai.sheet import sheet
-from isekai.wiring import Wiring, wiring
+from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
+from isekai.foundation.flow import load_flow, tracked_flows
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.interface.run_view import report
+from isekai.interface.wiring import Wiring, wiring
+from isekai.pipeline.caption import caption
+from isekai.pipeline.generate import prepare, render
+from isekai.pipeline.review import approve, review
+from isekai.pipeline.sheet import sheet
 
 # One line of prose per verb, used for both the subcommand list and its own help,
 # so the two cannot disagree about what a stage does.

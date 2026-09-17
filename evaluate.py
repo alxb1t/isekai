@@ -33,14 +33,14 @@ import json
 import sys
 from pathlib import Path
 
-from isekai.evaluate import (
+from isekai.boundary.provision import digest_of
+from isekai.evaluation.evaluate import (
     AUTHORITATIVE_GUARD_METHOD,
     Refusal,
     pod_image_of,
     score_render,
     table,
 )
-from isekai.provision import digest_of
 
 # Where the scorer's own artifacts live, verified against
 # `scripts/eval_models.json` before any of them is loaded. Local to the
@@ -132,9 +132,9 @@ def main() -> None:
     base = manifest.get("base")
 
     # Imported here, not at module scope: this is the only import of the `[eval]`
-    # extra in the tree, and `isekai.evaluate`'s rules are stdlib-only so they
-    # stay testable in CI with the stack absent.
-    from isekai.eval_backends import (
+    # extra in the tree, and `isekai.evaluation.evaluate`'s rules are stdlib-only
+    # so they stay testable in CI with the stack absent.
+    from isekai.evaluation.eval_backends import (
         AnimeFaceDetector,
         ArcFaceEncoder,
         DwPoseReader,
@@ -142,7 +142,7 @@ def main() -> None:
         SegformerParser,
         StyleIdEncoder,
     )
-    from isekai.evaluate import canvas_for
+    from isekai.evaluation.evaluate import canvas_for
 
     canvas = canvas_for(photo)
     parser = SegformerParser(args.models)

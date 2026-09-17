@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from isekai.claude_cli import (
+from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
     CliFailure,
@@ -40,9 +40,9 @@ from isekai.claude_cli import (
     refusal_for,
     spawn,
 )
-from isekai.flow import Field, Schema
-from isekai.refusal import Refusal
-from isekai.run import (
+from isekai.foundation.flow import Field, Schema
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
     CAPTIONS,
     SHEETS,
     Run,
@@ -55,10 +55,10 @@ from isekai.run import (
     record_failure,
     write_json,
 )
-from isekai.vocabulary import Vocabulary, map_phrase, normalise
-from isekai.vocabulary import identity as vocabulary_identity
+from isekai.shared.vocabulary import Vocabulary, map_phrase, normalise
+from isekai.shared.vocabulary import identity as vocabulary_identity
 
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent / "schemas"
+SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / "schemas"
 
 # The only schema document version this build reads. There is one schema version
 # in existence, so there is no migration ladder and no second reader.
