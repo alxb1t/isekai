@@ -497,3 +497,36 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
     assert "Traceback" not in message
     # The assembly still happened before the endpoint was reached at all.
     assert (wired.runs_root / run_id / FLOW / "prompts" / "001.json").exists()
+
+
+# --- resume asks the flow what it produces ------------------------------------
+
+
+@pytest.mark.spec("run-directory:listings:resume-does-not-assume-an-image-format")
+def test_the_completed_output_check_is_not_tied_to_one_format(tmp_path: Path) -> None:
+    from isekai.foundation.flow import load_flow
+    from isekai.pipeline.generate import rendered_seeds
+
+    flow = load_flow(FLOW)
+    directory = tmp_path / "outputs"
+    directory.mkdir()
+    (directory / f"42{flow.output_suffix}").write_bytes(b"a render")
+    (directory / "42.json").write_text("{}")
+    # A form no flow here produces: the predicate takes the flow's word for what
+    # counts, so this is not one of its outputs.
+    (directory / "43.webm").write_bytes(b"not this flow's output")
+
+    assert rendered_seeds(directory, flow.output_suffix) == [42]
+    assert rendered_seeds(directory, ".webm") == [43]
+
+
+@pytest.mark.spec("run-directory:listings:resume-does-not-assume-an-image-format")
+def test_no_image_format_is_named_in_the_resume_predicate() -> None:
+    import inspect
+
+    from isekai.pipeline.generate import rendered_seeds
+
+    source = inspect.getsource(rendered_seeds)
+
+    for form in (".png", ".jpg", ".jpeg", ".webp"):
+        assert form not in source, form

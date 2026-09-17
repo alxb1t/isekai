@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isekai.foundation.flow import load_flow
 from isekai.foundation.run import (
     APPROVED,
     ARTIFACT,
@@ -123,7 +124,7 @@ def listings(run: Run) -> list[Listing]:
 def rendered(run: Run) -> list[tuple[str, int, list[int]]]:
     """Return each flow's rendered seeds, by sheet version, from filenames alone."""
     return [
-        (flow, int(group.name), rendered_seeds(group))
+        (flow, int(group.name), rendered_seeds(group, load_flow(flow).output_suffix))
         for flow in flows_in(run)
         for group in sorted(_groups(run.directory(flow, OUTPUTS)))
         if group.name.isdigit()

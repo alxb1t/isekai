@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Resume no longer assumes a render is a PNG.** `rendered_seeds` filtered `iterdir()` on
+  `path.suffix == ".png"`, so a flow whose output is not a still image would have had its finished work
+  reported as missing and rendered again — on the one stage that costs money on every pass. The
+  predicate now takes what the flow says it produces, and `Flow.output_suffix` is the one line a video
+  flow changes when it arrives; the render path writes through the same answer, so the writer and the
+  resume check cannot disagree (design.md D11). This change owes exactly that and no more.
+
 ### Changed
 
 - **BREAKING — the run layout is input above, flow below.** A run is now

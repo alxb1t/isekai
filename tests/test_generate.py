@@ -506,14 +506,14 @@ def test_raising_the_count_renders_only_the_difference(
     client = FakeComfyClient()
     render(run, flow, client, count=2, rng=random.Random(7), poll=0)
     directory = run.path / FLOW / OUTPUTS / "001"
-    first = rendered_seeds(directory)
+    first = rendered_seeds(directory, flow.output_suffix)
     stamps = {p.name: p.read_bytes() for p in directory.iterdir()}
 
     produced = render(run, flow, client, count=3, rng=random.Random(9), poll=0)
 
     assert len(first) == 2
     assert len(produced) == 1
-    assert len(rendered_seeds(directory)) == 3
+    assert len(rendered_seeds(directory, flow.output_suffix)) == 3
     for name, body in stamps.items():
         assert (directory / name).read_bytes() == body
 
@@ -658,8 +658,8 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
         render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     directory = run.path / FLOW / OUTPUTS / "001"
-    assert not (directory / "42.png").exists()
-    assert rendered_seeds(directory) == []
+    assert not (directory / f"42{flow.output_suffix}").exists()
+    assert rendered_seeds(directory, flow.output_suffix) == []
 
 
 # --- the aspect-ratio ceiling -------------------------------------------------

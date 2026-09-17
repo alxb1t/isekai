@@ -8,7 +8,7 @@
 - [x] 4 — The code stops assuming eleven node roles
 - [x] 5 — `--flow` is required and repeatable on every stage verb
 - [x] 6 — The run layout: input above, flow below
-- [ ] 7 — Resume stops assuming a PNG
+- [x] 7 — Resume stops assuming a PNG
 - [ ] 8 — The living spec, the docs, and the blast-radius sweep
 
 ## The per-phase ritual
@@ -180,10 +180,10 @@ the repository is touched.
 > `rendered_seeds` (`generate.py:227`) filters on `path.suffix == ".png"`. The output path already
 > generalises; the predicate does not. **This change owes exactly that and no more.** Design D11.
 
-- [ ] 7.1 Derive the extension from what the flow declares it produces, and delete the literal. Verify:
+- [x] 7.1 Derive the extension from what the flow declares it produces, and delete the literal. Verify:
       `grep -n '"\.png"' isekai/pipeline/generate.py` — no output.
-- [ ] 7.2 Verify: `uv run pytest tests/test_resume.py -q` — green.
-- [ ] 7.3 Verify the gate: `make gate`
+- [x] 7.2 Verify: `uv run pytest tests/test_resume.py -q` — green.
+- [x] 7.3 Verify the gate: `make gate`
 
 ## 8. The living spec, the docs, and the blast-radius sweep
 

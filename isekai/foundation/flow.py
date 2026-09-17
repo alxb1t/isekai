@@ -78,6 +78,13 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # a rented GPU -- after the photograph had already been uploaded (design.md D9).
 REQUIRED_NODES = ("positive", "negative", "latent", "sampler")
 
+# The form every flow this build carries produces. It is answered by the flow
+# rather than written into the resume predicate, so "which of my outputs are
+# already produced" is a question asked of the flow and not of an extension
+# somebody typed. A flow whose output is not a still image is unscheduled, and
+# this is the one line it changes when it arrives (design.md D11).
+OUTPUT_SUFFIX = ".png"
+
 
 # --- what a sheet declares ----------------------------------------------------
 
@@ -163,6 +170,11 @@ class Flow:
     def graph_path(self) -> Path:
         """Return this flow's graph file. Fixed name; the manifest declares none."""
         return self.path / GRAPH_NAME
+
+    @property
+    def output_suffix(self) -> str:
+        """Return the form this flow's renders take, as a filename suffix."""
+        return OUTPUT_SUFFIX
 
     @property
     def schema_path(self) -> Path:

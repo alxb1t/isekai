@@ -230,14 +230,21 @@ def prepare(
     }
 
 
-def rendered_seeds(directory: Path) -> list[int]:
-    """Return the seeds already rendered into `directory`, from filenames alone."""
+def rendered_seeds(directory: Path, suffix: str) -> list[int]:
+    """Return the seeds already produced into `directory`, from filenames alone.
+
+    `suffix` is what the flow says it produces, so the predicate names no format
+    of its own. Every "is this done?" check here is a directory listing, and this
+    was the one with an extension written into it -- a flow whose output is not a
+    still image would have had its finished work reported as missing and rendered
+    again, on the one stage that costs money on every pass (design.md D11).
+    """
     if not directory.is_dir():
         return []
     return sorted(
         int(path.stem)
         for path in directory.iterdir()
-        if path.suffix == ".png" and path.stem.isdigit()
+        if path.suffix == suffix and path.stem.isdigit()
     )
 
 
@@ -375,7 +382,7 @@ def render(
     version, _ = approved_artifact(run, flow.id)
     prompt = read_artifact(run.directory(flow.id, PROMPTS) / artifact_name(version))
     directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
-    already = rendered_seeds(directory)
+    already = rendered_seeds(directory, flow.output_suffix)
     wanted = seeds_for(count, seeds, rng or random.Random(), already)
     if not wanted:
         return []
@@ -390,7 +397,7 @@ def render(
     flow_graph = flow.graph_digest()
     produced: list[Render] = []
     for seed in wanted:
-        image = directory / f"{seed}.png"
+        image = directory / f"{seed}{flow.output_suffix}"
         # `build_graph` is inside the guard and not before it: it refuses on an
         # unreadable photograph header, and a refusal this stage does not record
         # leaves resume nothing on disk to reason about.
@@ -406,9 +413,9 @@ def render(
             )
             raise
         # Atomically, like every other artifact in a run, and for a sharper
-        # reason: `rendered_seeds` treats the presence of `<seed>.png` as proof
-        # the seed is done, so a truncated file is a seed resume skips forever --
-        # on the one stage that costs money on every pass.
+        # reason: `rendered_seeds` treats the presence of the render as proof the
+        # seed is done, so a truncated file is a seed resume skips forever -- on
+        # the one stage that costs money on every pass.
         write_atomically(image, body)
         provenance = directory / f"{seed}.json"
         write_json(
