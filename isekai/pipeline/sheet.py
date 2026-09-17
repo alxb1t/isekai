@@ -257,42 +257,37 @@ def answers_from(structured: object, text: str, schema: Schema) -> dict[str, lis
 
 def sheet(
     run: Run,
+    flow: str,
     sorter: Sorter,
     schema: Schema,
     vocabulary: Vocabulary,
-    flows: Sequence[str],
     *,
     briefing_path: Path,
     new_version: bool = False,
-) -> list[Path]:
-    """Sort `run`'s caption into a sheet, and write it to every flow given.
+) -> Path | None:
+    """Sort this flow's caption into a sheet, under that flow.
 
-    **One fill, many destinations.** The stage is never told which flow asked --
-    it is handed the schema, the vocabulary and the caption, and nothing else --
-    so flows declaring the same pair start from identical sheets and diverge only
-    when a human edits them. Filling once and copying is what makes adding a flow
-    cheap, and it follows from the stage's ignorance rather than from a check.
+    **The fill itself is told nothing about flows.** The sorter is handed the
+    prose, the schema and the briefing, and nothing else, so the same code serves
+    every flow without learning that flows exist; `flow` decides only which
+    directory is read and written. A flow shares nothing, so the caption read here
+    is the one produced under this flow's own instructions (design.md D5).
 
-    Returns the paths written, empty when every flow already had a sheet.
+    Returns the artifact's path, or None when this flow already had a sheet.
     """
-    wanted = [
-        flow
-        for flow in flows
-        if latest(run.directory(SHEETS, flow)) is None or new_version
-    ]
-    if not wanted:
-        return []
+    directory = run.directory(flow, SHEETS)
+    if latest(directory) is not None and not new_version:
+        return None
 
-    captions = run.directory(CAPTIONS)
+    captions = run.directory(flow, CAPTIONS)
     source = latest(captions)
     if source is None:
         raise Refusal(
-            f"{run.id}: there is no caption to sort; run "
-            "`python -m isekai caption` for this photograph first"
+            f"{run.id}: there is no caption to sort for {flow}; run "
+            f"`python -m isekai caption --flow {flow}` for this photograph first"
         )
 
-    first = run.directory(SHEETS, wanted[0])
-    check_budget(STAGE, first, next_version(first), run.id)
+    check_budget(STAGE, directory, next_version(directory), run.id)
 
     prose = str(read_artifact(captions / artifact_name(source))["prose"])
     briefing = briefing_text(briefing_path)
@@ -300,41 +295,35 @@ def sheet(
         sorted_answers = sorter.sort(prose, schema, briefing)
     except CliFailure as failed:
         record = record_failure(
-            first,
-            next_version(first),
+            directory,
+            next_version(directory),
             failed.kind,
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "sorter", run.id, failed, record, f"{SHEETS}/{wanted[0]}/", STAGE
+            "sorter", run.id, failed, record, f"{flow}/{SHEETS}/", STAGE
         ) from failed
 
     fields = fill(sorted_answers.answers, schema, vocabulary)
     validate(fields, schema, vocabulary)
 
-    # Constant across destinations: one read and one hash, not one per flow.
-    briefing_record = instructions_record(briefing_path)
-    written: list[Path] = []
-    for flow in wanted:
-        directory = run.directory(SHEETS, flow)
-        path = directory / artifact_name(next_version(directory))
-        write_json(
-            path,
-            envelope(
-                STAGE,
-                {
-                    "implementation": sorted_answers.implementation,
-                    "models": list(sorted_answers.models),
-                    "pinned": sorted_answers.pinned,
-                    "briefing": briefing_record,
-                    "from": source,
-                },
-                {
-                    "schema_document": {"name": schema.name},
-                    "vocabulary": vocabulary_identity(vocabulary),
-                    "fields": fields,
-                },
-            ),
-        )
-        written.append(path)
-    return written
+    path = directory / artifact_name(next_version(directory))
+    write_json(
+        path,
+        envelope(
+            STAGE,
+            {
+                "implementation": sorted_answers.implementation,
+                "models": list(sorted_answers.models),
+                "pinned": sorted_answers.pinned,
+                "briefing": instructions_record(briefing_path),
+                "from": source,
+            },
+            {
+                "schema_document": {"name": schema.name},
+                "vocabulary": vocabulary_identity(vocabulary),
+                "fields": fields,
+            },
+        ),
+    )
+    return path

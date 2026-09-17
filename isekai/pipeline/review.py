@@ -100,8 +100,8 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     half-finished edit; an approved flow is finished, and quietly opening a new
     draft every time somebody re-ran the pipeline would make resume write.
     """
-    sheets = run.directory(SHEETS, flow)
-    review_directory = run.directory(REVIEW, flow)
+    sheets = run.directory(flow, SHEETS)
+    review_directory = run.directory(flow, REVIEW)
 
     if versions(review_directory) and not new_version:
         return None
@@ -169,7 +169,7 @@ def approve(
     what is true -- that set is a subset of the wider tag corpus, so calling an
     absent tag unreal would overclaim.
     """
-    directory = run.directory(REVIEW, flow)
+    directory = run.directory(flow, REVIEW)
     drafts = draft_versions(directory)
     if not drafts:
         if approved_versions(directory):
@@ -202,7 +202,7 @@ def approve(
         )
 
     sheet_version = int(body["sheet"])
-    source = run.directory(SHEETS, flow) / artifact_name(sheet_version)
+    source = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body = envelope(
         STAGE,
         {

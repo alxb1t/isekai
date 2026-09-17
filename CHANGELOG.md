@@ -25,6 +25,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING — the run layout is input above, flow below.** A run is now
+  `runs/<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`. Above the flow split sits only
+  what every flow shares, and after this change that is the input itself and its frame. Nesting
+  stage-first meant adding a flow scattered four entries across four stage directories; flow-first,
+  adding a flow adds one subtree and retiring one flow's work is removing one directory. Captions move
+  below the split too, which is what makes a flow's briefing binding: a caption written under one
+  flow's instructions can never be picked up by a flow whose instructions differ, because the two never
+  name the same directory (design.md D5, D6).
+- **BREAKING — the run id's separator is an underscore**: `<12 hex>_<slug>`. `slug()` maps every unsafe
+  character to a hyphen, so `0bfdc0612d98-cowboy-shoot-1` gave a reader no way to see where the digest
+  ended; a slug can never contain an underscore, which makes the boundary unambiguous. Twelve hex
+  characters stay — six is a birthday collision at roughly 4,800 inputs, and the remedy for a collision
+  is a human renaming a directory by hand. Nothing parses the id, so this is readability alone
+  (design.md D10).
+- **BREAKING — the sheet stage writes one sheet for one flow.** `sheet()` took a list of destinations
+  and fanned one fill out across them, which is the sharing v0.16 deletes; it now takes the flow whose
+  directory it reads the caption from and writes the sheet to, and returns one path or none. The
+  caption stage takes its flow for the same reason. Neither the reader nor the sorter learns anything
+  about flows: the flow decides which directory is touched, not what is asked.
+- **The inspection command lists per flow then per stage.** `run_view`'s per-flow-ness table is gone —
+  every stage is a flow's own now, so there is nothing left for that column to say — and its bespoke
+  outputs walk is one listing of the run's flow subdirectories. `approved_flows` reads the same
+  listing.
+
 ### Added
 
 - **`--flow` is required and repeatable on every stage verb.** It reached three of six verbs, was a

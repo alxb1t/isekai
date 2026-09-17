@@ -10,7 +10,6 @@ Shared here rather than imported from one test module by another, which would
 make that module undeletable -- the same rule `tests/images.py` is under.
 """
 
-from collections.abc import Sequence
 from pathlib import Path
 
 from isekai.foundation.flow import Schema, load_flow
@@ -28,12 +27,13 @@ def caption(
     run: Run,
     reader: caption_stage.Reader,
     *,
+    flow: str = FLOW.id,
     briefing_path: Path = CAPTION_BRIEFING,
     new_version: bool = False,
 ) -> Path | None:
     """Call the caption stage under `summon-v1`'s standing instructions."""
     return caption_stage.caption(
-        run, reader, briefing_path=briefing_path, new_version=new_version
+        run, flow, reader, briefing_path=briefing_path, new_version=new_version
     )
 
 
@@ -42,18 +42,18 @@ def sheet(
     sorter: sheet_stage.Sorter,
     schema: Schema,
     vocabulary: Vocabulary,
-    flows: Sequence[str],
     *,
+    flow: str = FLOW.id,
     briefing_path: Path = SHEET_BRIEFING,
     new_version: bool = False,
-) -> list[Path]:
+) -> Path | None:
     """Call the sheet stage under `summon-v1`'s standing instructions."""
     return sheet_stage.sheet(
         run,
+        flow,
         sorter,
         schema,
         vocabulary,
-        flows,
         briefing_path=briefing_path,
         new_version=new_version,
     )

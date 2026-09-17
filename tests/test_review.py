@@ -1,7 +1,7 @@
 """Stage (3): the copy, the draft, the validation, and the rename that is approval.
 
 The load-bearing assertion in this file is negative: after every path through
-this stage, `sheets/<flow>/` is byte-identical to what stage (2) wrote.
+this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 """
 
 import json
@@ -48,7 +48,6 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
         FakeSorter(answers={"hair_colour": ["dark brown"], "eye_colour": ["brown"]}),
         schema,
         vocabulary,
-        [FLOW],
     )
     return made
 
@@ -65,26 +64,26 @@ def _edit(path: Path, **fields: list[str]) -> None:
 
 @pytest.mark.spec("review:copy:review-writes-to-its-own-directory")
 def test_review_writes_a_copy_and_touches_no_sheet(run: Run) -> None:
-    before = snapshot(run.path / "sheets")
+    before = snapshot(run.path / FLOW / "sheets")
 
     draft = review(run, FLOW)
 
     assert draft is not None
-    assert draft.parent == run.path / "review" / FLOW
+    assert draft.parent == run.path / FLOW / "review"
     assert draft.name == "001.draft.json"
-    assert snapshot(run.path / "sheets") == before
+    assert snapshot(run.path / FLOW / "sheets") == before
 
 
 @pytest.mark.spec("review:copy:review-writes-to-its-own-directory")
 def test_editing_the_draft_leaves_the_sheet_untouched(run: Run) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    before = snapshot(run.path / "sheets")
+    before = snapshot(run.path / FLOW / "sheets")
 
     _edit(draft, hair_colour=["black hair"])
 
-    assert snapshot(run.path / "sheets") == before
-    assert read_artifact(run.path / "sheets" / FLOW / "001.json")["fields"][
+    assert snapshot(run.path / FLOW / "sheets") == before
+    assert read_artifact(run.path / FLOW / "sheets" / "001.json")["fields"][
         "hair_colour"
     ] == ["brown hair"]
 
@@ -98,10 +97,9 @@ def test_the_highest_sheet_is_copied_and_its_version_recorded(
         FakeSorter(answers={"hair_colour": ["black"]}),
         schema,
         vocabulary,
-        [FLOW],
         new_version=True,
     )
-    assert versions(run.path / "sheets" / FLOW) == [1, 2]
+    assert versions(run.path / FLOW / "sheets") == [1, 2]
 
     draft = review(run, FLOW)
 
@@ -162,7 +160,7 @@ def test_a_flow_with_no_sheet_is_refused_and_told_which_command_to_run(
 @pytest.mark.spec("review:approval:draft-is-not-done")
 def test_a_draft_is_not_treated_as_complete(run: Run) -> None:
     review(run, FLOW)
-    directory = run.path / "review" / FLOW
+    directory = run.path / FLOW / "review"
 
     assert draft_versions(directory) == [1]
     assert approved_versions(directory) == []
@@ -192,7 +190,7 @@ def test_approval_is_decidable_from_the_filename_alone(
 ) -> None:
     review(run, FLOW)
     approve(run, FLOW, schema, vocabulary)
-    directory = run.path / "review" / FLOW
+    directory = run.path / FLOW / "review"
 
     assert [p.name for p in directory.iterdir()] == ["001.approved.json"]
     assert approved_versions(directory) == [1]
@@ -246,7 +244,7 @@ def test_a_tag_absent_from_the_vocabulary_refuses_approval(
     assert "hazel eyes" in str(refused.value)
     assert "eye_colour" in str(refused.value)
     assert draft.read_bytes() == frozen
-    assert approved_versions(run.path / "review" / FLOW) == []
+    assert approved_versions(run.path / FLOW / "review") == []
 
 
 @pytest.mark.spec("review:validation:message-states-the-prediction-set")
@@ -369,12 +367,10 @@ def test_a_changed_copy_is_recorded_as_edited_without_being_told(
     assert body["producer"]["edited"] is True
     assert body["sheet"] == 1
     # Nothing the operator wrote says so; it is computed against the sheet.
-    assert (
-        "edited"
-        not in json.loads(
-            draft.parent.parent.parent.joinpath("sheets", FLOW, "001.json").read_text()
-        )["producer"]
-    )
+    # The sheet is the draft's sibling stage under the same flow -- named rather
+    # than counted in `.parent` hops, which is what a layout change breaks.
+    sheet_artifact = run.directory(FLOW, "sheets") / "001.json"
+    assert "edited" not in json.loads(sheet_artifact.read_text())["producer"]
 
 
 # --- refusals leave no state --------------------------------------------------

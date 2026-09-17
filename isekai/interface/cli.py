@@ -261,13 +261,14 @@ def _per_item(
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
-            for flow in flows.values():
+            for name, flow in flows.items():
                 _say(
                     wired,
                     run,
                     "caption",
                     caption(
                         run,
+                        name,
                         wired.reader,
                         briefing_path=flow.caption_briefing_path,
                         new_version=new_version,
@@ -275,17 +276,20 @@ def _per_item(
                 )
         elif verb == "sheet":
             for name, flow in flows.items():
-                written = sheet(
+                _say(
+                    wired,
                     run,
-                    wired.sorter,
-                    wired.schema(flow),
-                    wired.vocabulary(),
-                    [name],
-                    briefing_path=flow.sheet_briefing_path,
-                    new_version=new_version,
+                    "sheet",
+                    sheet(
+                        run,
+                        name,
+                        wired.sorter,
+                        wired.schema(flow),
+                        wired.vocabulary(),
+                        briefing_path=flow.sheet_briefing_path,
+                        new_version=new_version,
+                    ),
                 )
-                for path in written or [None]:
-                    _say(wired, run, "sheet", path)
         elif verb == "review":
             for name in flows:
                 _say(wired, run, "review", review(run, name, new_version=new_version))

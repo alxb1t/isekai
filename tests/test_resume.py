@@ -137,10 +137,10 @@ def test_the_first_pass_actually_produced_something_to_be_inert_about(
     files = snapshot(wired.runs_root)
 
     names = sorted(files)
-    assert any(name.endswith("captions/001.json") for name in names)
-    assert any(name.endswith(f"sheets/{FLOW}/001.json") for name in names)
-    assert any(name.endswith(f"review/{FLOW}/001.approved.json") for name in names)
-    assert any(name.endswith(f"prompts/{FLOW}/001.json") for name in names)
+    assert any(name.endswith(f"{FLOW}/captions/001.json") for name in names)
+    assert any(name.endswith(f"{FLOW}/sheets/001.json") for name in names)
+    assert any(name.endswith(f"{FLOW}/review/001.approved.json") for name in names)
+    assert any(name.endswith(f"{FLOW}/prompts/001.json") for name in names)
     assert any(".png" in name for name in names)
     assert _calls(wired) == (1, 1, 1)
 
@@ -182,12 +182,12 @@ def test_the_explicit_flag_writes_the_next_version_and_leaves_the_last_alone(
 ) -> None:
     dispatch(_args("caption", str(photo)), wired)
     run_id = next(path.name for path in wired.runs_root.iterdir())
-    first = wired.runs_root / run_id / "captions" / "001.json"
+    first = wired.runs_root / run_id / FLOW / "captions" / "001.json"
     frozen = first.read_bytes()
 
     assert dispatch(_args("caption", str(photo), new_version=True), wired) == 0
 
-    assert (wired.runs_root / run_id / "captions" / "002.json").exists()
+    assert (wired.runs_root / run_id / FLOW / "captions" / "002.json").exists()
     assert first.read_bytes() == frozen
     assert _calls(wired)[0] == 2
 
@@ -202,7 +202,7 @@ def test_without_the_flag_no_next_version_appears_for_any_stage(
 
     _pass(wired, str(photo))
 
-    for directory in ("captions", f"sheets/{FLOW}", f"review/{FLOW}"):
+    for directory in (f"{FLOW}/captions", f"{FLOW}/sheets", f"{FLOW}/review"):
         numbered = sorted(p.name for p in (run / directory).iterdir())
         assert len(numbered) == 1, (directory, numbered)
 
@@ -250,7 +250,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
     collect(lambda: read_artifact(_future_artifact(tmp_path)))
     schema = wired.schema(flow)
-    collect(lambda: sheet(bare, wired.sorter, schema, wired.vocabulary(), [FLOW]))
+    collect(lambda: sheet(bare, wired.sorter, schema, wired.vocabulary()))
     collect(lambda: review(bare, FLOW))
     collect(lambda: approve(bare, FLOW, schema, wired.vocabulary()))
     collect(lambda: prompt_artifact(bare, flow, schema))
@@ -259,7 +259,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: load_flow("summon-v1", _incomplete_flow(tmp_path)))
     collect(lambda: ClaudeReader(binary="not-a-real-binary").read(photo, "b", tmp_path))
 
-    directory = bare.directory("captions")
+    directory = bare.directory(FLOW, "captions")
     for _ in range(BUDGETS["caption"]):
         record_failure(directory, 1, "transient", {})
     collect(lambda: caption(bare, wired.reader, briefing_path=CAPTION_BRIEFING))
@@ -454,7 +454,7 @@ def test_generate_without_a_server_assembles_everything_and_contacts_nothing(
     assert wired.out.getvalue().count("assembled") == 2
     assert "rendered" not in wired.out.getvalue()
     for run_id in ids:
-        assert (wired.runs_root / run_id / "prompts" / FLOW / "001.json").exists()
+        assert (wired.runs_root / run_id / FLOW / "prompts" / "001.json").exists()
 
 
 @pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
@@ -496,4 +496,4 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
     assert "--server" in message
     assert "Traceback" not in message
     # The assembly still happened before the endpoint was reached at all.
-    assert (wired.runs_root / run_id / "prompts" / FLOW / "001.json").exists()
+    assert (wired.runs_root / run_id / FLOW / "prompts" / "001.json").exists()

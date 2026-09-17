@@ -7,7 +7,7 @@
 - [x] 3 — The fold: five flat files, eight keys, and the one-time re-pin
 - [x] 4 — The code stops assuming eleven node roles
 - [x] 5 — `--flow` is required and repeatable on every stage verb
-- [ ] 6 — The run layout: input above, flow below
+- [x] 6 — The run layout: input above, flow below
 - [ ] 7 — Resume stops assuming a PNG
 - [ ] 8 — The living spec, the docs, and the blast-radius sweep
 
@@ -159,21 +159,21 @@ the repository is touched.
 > is a variadic `joinpath` that enforces nothing. ~60 hard-coded path assertions across 8 test files
 > fail loudly. Design D6, D10.
 
-- [ ] 6.1 Change `run_id` (`run.py:143`) and `_run_for`'s prefix (`:220`) to `<12 hex>_<slug>`, and
+- [x] 6.1 Change `run_id` (`run.py:143`) and `_run_for`'s prefix (`:220`) to `<12 hex>_<slug>`, and
       update `slug()`'s docstring, which states the separator. Verify:
       `uv run pytest tests/test_run_directory.py -k run_id -q` — green.
-- [ ] 6.2 Move every stage's path construction to `runs/<input-id>/<flow-id>/<stage>/`, including
+- [x] 6.2 Move every stage's path construction to `runs/<input-id>/<flow-id>/<stage>/`, including
       `caption.py:155`, which is the one that is flat today. Verify:
       `uv run pytest tests/test_run_directory.py tests/test_resume.py -q` — green.
-- [ ] 6.3 Update `run_view.py:38-43`'s per-flow-ness table and its bespoke outputs walk at `:124-134`.
+- [x] 6.3 Update `run_view.py:38-43`'s per-flow-ness table and its bespoke outputs walk at `:124-134`.
       Verify: `uv run pytest tests/test_run_view.py -q` — green.
-- [ ] 6.4 Rewrite the hard-coded assertions across `test_resume.py`, `test_generate.py`,
+- [x] 6.4 Rewrite the hard-coded assertions across `test_resume.py`, `test_generate.py`,
       `test_review.py`, `test_caption.py`, `test_run_view.py`, `test_sheet_stage.py`,
       `test_run_directory.py` — including `test_review.py:374`, which hard-codes the **depth** as
       `parent.parent.parent`. Verify: `uv run pytest -q` — 600+ green.
-- [ ] 6.5 Confirm nothing writes above the flow split but the input and its frame. Verify:
+- [x] 6.5 Confirm nothing writes above the flow split but the input and its frame. Verify:
       `uv run pytest tests/test_run_directory.py -k layout -q` — green.
-- [ ] 6.6 Verify the gate: `make gate`
+- [x] 6.6 Verify the gate: `make gate`
 
 ## 7. Resume stops assuming a PNG
 

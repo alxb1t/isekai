@@ -63,6 +63,13 @@ SCHEMA_VERSION = 1
 # leave the slug legible in a listing. The whole digest is in the frame.
 ID_DIGEST_CHARS = 12
 
+# What separates the digest from the slug. An underscore, because `slug` maps
+# every unsafe character to a hyphen and a hyphenated slug left a reader no way to
+# see where the digest ended. A slug can never contain an underscore, so the
+# boundary is unambiguous. Nothing parses the id -- `startswith` on the prefix is
+# its only use -- so this is readability alone (design.md D10).
+ID_SEPARATOR = "_"
+
 # How much of a filename stem survives into the id. A stem is a human's label,
 # not an identifier, so it is truncated rather than refused.
 ID_SLUG_CHARS = 32
@@ -87,9 +94,15 @@ FRAME_NAME = "run.json"
 
 # The stage directories, and the label an approved artifact carries. The run owns
 # the layout, so a stage that needs another stage's directory asks the run rather
-# than importing the stage -- which is what closes five of the six stage-to-stage
+# than importing the stage -- which is what closed five of the six stage-to-stage
 # edges (design.md D6). `approved` is here for the same reason: `review` writes it
 # and both `generate` and the inspection command read it.
+#
+# **Every one of them sits under a flow**: `runs/<input-id>/<flow-id>/<stage>/`.
+# Above the flow split is what every flow shares, and the only thing every flow
+# shares is the input itself. Nesting stage-first meant adding a flow scattered
+# four entries across four stage directories; flow-first, adding a flow adds one
+# subtree and retiring one flow's work is removing one directory.
 CAPTIONS = "captions"
 SHEETS = "sheets"
 REVIEW = "review"
@@ -129,7 +142,10 @@ def slug(stem: str) -> str:
     """Return the readable half of a run id: lowercase, hyphenated, bounded.
 
     A stem that survives nothing -- all punctuation, or empty -- yields `photo`,
-    so the id is always `<digest>-<something>` and never ends in a bare hyphen.
+    so the id is always `<digest>_<something>` and never ends in a bare underscore.
+    Every unsafe character becomes a hyphen, which is why the id's own separator
+    is an underscore: a slug can never contain one, so the boundary between the
+    digest and the readable half is unambiguous (design.md D10).
     """
     cleaned = _UNSAFE.sub("-", stem.lower()).strip("-")[:ID_SLUG_CHARS].strip("-")
     return cleaned or "photo"
@@ -142,7 +158,7 @@ def digest_of(body: bytes) -> str:
 
 def run_id(digest: str, stem: str) -> str:
     """Return the run id for a photograph: a digest prefix, then a readable slug."""
-    return f"{digest[:ID_DIGEST_CHARS]}-{slug(stem)}"
+    return f"{digest[:ID_DIGEST_CHARS]}{ID_SEPARATOR}{slug(stem)}"
 
 
 def media_type(body: bytes) -> tuple[str, str]:
@@ -217,7 +233,7 @@ def _run_for(digest: str, runs_root: Path) -> Run | None:
     """
     if not runs_root.is_dir():
         return None
-    prefix = f"{digest[:ID_DIGEST_CHARS]}-"
+    prefix = f"{digest[:ID_DIGEST_CHARS]}{ID_SEPARATOR}"
     for name in sorted(os.listdir(runs_root)):
         if not name.startswith(prefix):
             continue

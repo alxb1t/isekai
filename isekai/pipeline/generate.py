@@ -117,7 +117,7 @@ def seeds_for(
 
 def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
     """Return the highest approved artifact for `flow`, or refuse naming the way out."""
-    directory = run.directory(REVIEW, flow)
+    directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
     if not approved:
         raise Refusal(
@@ -132,16 +132,16 @@ def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
 def approved_flows(run: Run) -> list[str]:
     """Return every flow this run has an approved artifact for, by identifier.
 
-    A listing, so selecting among them needs no flag: a run renders everything it
-    has been approved for.
+    A listing, and the layout is what makes it one: every flow's work is one
+    directory under the run, so the flows a run has been approved for are the
+    subdirectories whose `review/` holds an approved artifact.
     """
-    review = run.directory(REVIEW)
-    if not review.is_dir():
+    if not run.path.is_dir():
         return []
     return sorted(
         directory.name
-        for directory in review.iterdir()
-        if directory.is_dir() and approved_versions(directory)
+        for directory in run.path.iterdir()
+        if directory.is_dir() and approved_versions(directory / REVIEW)
     )
 
 
@@ -159,7 +159,7 @@ def prompt_artifact(
     photograph is the producer record.
     """
     version, source = approved_artifact(run, flow.id)
-    directory = run.directory(PROMPTS, flow.id)
+    directory = run.directory(flow.id, PROMPTS)
     path = directory / artifact_name(version)
     if path.exists() and not new_version:
         return path
@@ -373,8 +373,8 @@ def render(
     stage is held to.
     """
     version, _ = approved_artifact(run, flow.id)
-    prompt = read_artifact(run.directory(PROMPTS, flow.id) / artifact_name(version))
-    directory = run.directory(OUTPUTS, flow.id, f"{version:03d}")
+    prompt = read_artifact(run.directory(flow.id, PROMPTS) / artifact_name(version))
+    directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
     already = rendered_seeds(directory)
     wanted = seeds_for(count, seeds, rng or random.Random(), already)
     if not wanted:

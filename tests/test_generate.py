@@ -80,7 +80,6 @@ def _run(
         FakeSorter(answers={"hair_colour": ["brown"], "eye_colour": ["brown"]}),
         schema,
         vocabulary,
-        [FLOW],
     )
     review(made, FLOW)
     approve(made, FLOW, schema, vocabulary)
@@ -157,13 +156,13 @@ def _run_for_fewer(
     photo = tmp_path / "fewer.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    caption(made, FakeReader(prose="Brown hair, brown eyes."))
+    caption(made, FakeReader(prose="Brown hair, brown eyes."), flow=FEWER)
     sheet(
         made,
         FakeSorter(answers={"hair_colour": ["brown"]}),
         schema,
         vocabulary,
-        [FEWER],
+        flow=FEWER,
     )
     review(made, FEWER)
     approve(made, FEWER, schema, vocabulary)
@@ -196,7 +195,7 @@ def test_the_prompt_artifact_takes_the_approved_sheets_number(
     path = prompt_artifact(run, flow, schema)
 
     assert path.name == artifact_name(1)
-    assert path.parent == run.path / PROMPTS / FLOW
+    assert path.parent == run.path / FLOW / PROMPTS
     assert read_artifact(path)["producer"]["from"] == 1
 
 
@@ -204,7 +203,7 @@ def test_the_prompt_artifact_takes_the_approved_sheets_number(
 def test_a_malformed_approved_sheet_is_caught_before_anything_is_rented(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    approved = run.path / "review" / FLOW / "001.approved.json"
+    approved = run.path / FLOW / "review" / "001.approved.json"
     body = json.loads(approved.read_text())
     del body["fields"]
     approved.write_text(json.dumps(body))
@@ -213,8 +212,8 @@ def test_a_malformed_approved_sheet_is_caught_before_anything_is_rented(
         prompt_artifact(run, flow, schema)
 
     assert run.id in str(refused.value)
-    assert list((run.path / PROMPTS / FLOW).glob("*.error.*")) != []
-    assert not (run.path / PROMPTS / FLOW / "001.json").exists()
+    assert list((run.path / FLOW / PROMPTS).glob("*.error.*")) != []
+    assert not (run.path / FLOW / PROMPTS / "001.json").exists()
 
 
 @pytest.mark.spec("image-generation:assembly:bad-sheet-fails-before-the-session")
@@ -225,7 +224,7 @@ def test_one_bad_sheet_does_not_stop_the_other_photographs(
 
     good = _run(tmp_path, schema, vocabulary, "good")
     bad = _run(tmp_path, schema, vocabulary, "bad")
-    approved = bad.path / "review" / FLOW / "001.approved.json"
+    approved = bad.path / FLOW / "review" / "001.approved.json"
     approved.write_text(json.dumps({"schema": {"name": "review", "version": 1}}))
 
     done: list[Run] = []
@@ -251,7 +250,7 @@ def test_a_flow_with_no_approved_sheet_is_refused_naming_the_commands(
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
     caption(made, FakeReader())
-    sheet(made, FakeSorter(), schema, vocabulary, [FLOW])
+    sheet(made, FakeSorter(), schema, vocabulary)
     review(made, FLOW)
 
     with pytest.raises(Refusal) as refused:
@@ -267,7 +266,8 @@ def test_a_flow_with_no_approved_sheet_is_refused_naming_the_commands(
 def test_every_flow_with_an_approved_artifact_is_selected_without_a_flag(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    sheet(run, FakeSorter(), schema, vocabulary, ["summon-v2"])
+    caption(run, FakeReader(), flow="summon-v2")
+    sheet(run, FakeSorter(), schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
     approve(run, "summon-v2", schema, vocabulary)
 
@@ -278,7 +278,8 @@ def test_every_flow_with_an_approved_artifact_is_selected_without_a_flag(
 def test_a_flow_with_only_a_draft_is_not_selected(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    sheet(run, FakeSorter(), schema, vocabulary, ["summon-v2"])
+    caption(run, FakeReader(), flow="summon-v2")
+    sheet(run, FakeSorter(), schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
 
     assert approved_flows(run) == [FLOW]
@@ -368,7 +369,7 @@ def test_the_stage_renders_through_the_double_with_no_gpu(
 
     assert len(produced) == 1
     assert produced[0].image.name == "42.png"
-    assert produced[0].image.parent == run.path / OUTPUTS / FLOW / "001"
+    assert produced[0].image.parent == run.path / FLOW / OUTPUTS / "001"
     assert produced[0].image.read_bytes() == client.view_bytes
     assert len(client.submissions) == 1
 
@@ -431,12 +432,12 @@ def test_two_renders_from_one_flow_with_different_graphs_are_distinguishable(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
     prompt = (
-        read_artifact(run.directory(PROMPTS, FLOW) / artifact_name(1))
-        if (run.directory(PROMPTS, FLOW) / artifact_name(1)).exists()
+        read_artifact(run.directory(FLOW, PROMPTS) / artifact_name(1))
+        if (run.directory(FLOW, PROMPTS) / artifact_name(1)).exists()
         else None
     )
     prepare(run, {FLOW: flow}, lambda _: schema)
-    prompt = read_artifact(run.directory(PROMPTS, FLOW) / artifact_name(1))
+    prompt = read_artifact(run.directory(FLOW, PROMPTS) / artifact_name(1))
 
     one = build_graph(flow, run.photo, "up.png", prompt, 42)
     other = build_graph(flow, run.photo, "up.png", prompt, 43)
@@ -504,7 +505,7 @@ def test_raising_the_count_renders_only_the_difference(
     prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
     render(run, flow, client, count=2, rng=random.Random(7), poll=0)
-    directory = run.path / OUTPUTS / FLOW / "001"
+    directory = run.path / FLOW / OUTPUTS / "001"
     first = rendered_seeds(directory)
     stamps = {p.name: p.read_bytes() for p in directory.iterdir()}
 
@@ -534,8 +535,8 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     prepare(run, {FLOW: flow}, lambda _: schema)
     render(run, flow, client, seeds=[42], poll=0)
 
-    assert (run.path / OUTPUTS / FLOW / "001" / "42.png").exists()
-    assert (run.path / OUTPUTS / FLOW / "002" / "42.png").exists()
+    assert (run.path / FLOW / OUTPUTS / "001" / "42.png").exists()
+    assert (run.path / FLOW / OUTPUTS / "002" / "42.png").exists()
 
 
 @pytest.mark.spec("image-generation:seeds:count-draws-distinct-seeds")
@@ -621,8 +622,8 @@ def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
 
     assert len(refused) == 1
     assert "re-export the photograph" in refused[0]
-    assert (good.directory(PROMPTS, FLOW) / artifact_name(1)).is_file()
-    assert list(bad.directory(PROMPTS, FLOW).glob("001.error.1.permanent.json"))
+    assert (good.directory(FLOW, PROMPTS) / artifact_name(1)).is_file()
+    assert list(bad.directory(FLOW, PROMPTS).glob("001.error.1.permanent.json"))
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
@@ -636,7 +637,7 @@ def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
     with pytest.raises(Refusal) as refused:
         render(run, flow, client, seeds=[42], poll=0)
 
-    directory = run.path / OUTPUTS / FLOW / "001"
+    directory = run.path / FLOW / OUTPUTS / "001"
     assert "re-export the photograph" in str(refused.value)
     assert client.submissions == []
     assert list(directory.glob("001.error.1.permanent.json"))
@@ -656,7 +657,7 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
     with pytest.raises(OSError):
         render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
-    directory = run.path / OUTPUTS / FLOW / "001"
+    directory = run.path / FLOW / OUTPUTS / "001"
     assert not (directory / "42.png").exists()
     assert rendered_seeds(directory) == []
 
