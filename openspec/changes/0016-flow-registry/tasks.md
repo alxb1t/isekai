@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The detectors, written while the anchors are still correct
-- [ ] 2 — `validate` leaves `sheet`, and the last stage→stage import with it
+- [x] 2 — `validate` leaves `sheet`, and the last stage→stage import with it
 - [ ] 3 — The fold: five flat files, eight keys, and the one-time re-pin
 - [ ] 4 — The code stops assuming eleven node roles
 - [ ] 5 — `--flow` is required and repeatable on every stage verb
@@ -57,15 +57,15 @@ the repository is touched.
 > v0.15 did not close. Design D8. It lands before the fold because it is small, pure and reviewable on
 > its own, and because phase 3 edits the same function's body anyway.
 
-- [ ] 2.1 Create `isekai/shared/fields.py` holding `validate` verbatim, and its `__init__.py` entry if
+- [x] 2.1 Create `isekai/shared/fields.py` holding `validate` verbatim, and its `__init__.py` entry if
       the group needs one. Verify: `uv run python -c "import isekai.shared.fields"` — exits `0`.
-- [ ] 2.2 Repoint `isekai/pipeline/sheet.py:390`, `isekai/pipeline/review.py:56` and
+- [x] 2.2 Repoint `isekai/pipeline/sheet.py:390`, `isekai/pipeline/review.py:56` and
       `tests/test_sheet_schema.py:20`. Verify:
       `grep -rn 'from isekai.pipeline' isekai/pipeline/` — **no output**.
-- [ ] 2.3 Confirm no new package cycle: Verify:
+- [x] 2.3 Confirm no new package cycle: Verify:
       `grep -n 'from isekai' isekai/shared/fields.py` — names `foundation` and `shared` only, never
       `pipeline` or `interface`.
-- [ ] 2.4 Verify the gate: `make gate`
+- [x] 2.4 Verify the gate: `make gate`
 
 ## 3. The fold: five flat files, eight keys, and the one-time re-pin
 

@@ -53,7 +53,7 @@ from isekai.foundation.run import (
     versions,
     write_json,
 )
-from isekai.pipeline.sheet import validate
+from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
 STAGE = "review"

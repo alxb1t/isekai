@@ -55,7 +55,8 @@ from isekai.foundation.run import (
     record_failure,
     write_json,
 )
-from isekai.shared.vocabulary import Vocabulary, map_phrase, normalise
+from isekai.shared.fields import validate
+from isekai.shared.vocabulary import Vocabulary, map_phrase
 from isekai.shared.vocabulary import identity as vocabulary_identity
 
 SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / "schemas"
@@ -133,58 +134,6 @@ def fill(
                     tags.append(tag)
         filled[field.name] = tags
     return filled
-
-
-def validate(
-    fields: Mapping[str, Sequence[str]],
-    schema: Schema,
-    vocabulary: Vocabulary,
-) -> None:
-    """Refuse a sheet that is not exactly the schema's fields of canonical tags.
-
-    Three ways a sheet can be wrong, and each names what to do about it: a field
-    the schema declares is missing, a key the schema does not declare is present,
-    or a tag is not in the vocabulary's prediction set. An empty field is none of
-    those.
-    """
-    missing = [name for name in schema.names if name not in fields]
-    if missing:
-        raise Refusal(
-            f"the sheet is missing {', '.join(missing)}; add the field with an "
-            "empty list -- an empty field is a legal answer, a missing one is not"
-        )
-    extra = [name for name in fields if name not in schema.names]
-    if extra:
-        raise Refusal(
-            f"the sheet carries {', '.join(sorted(extra))}, which schema "
-            f"{schema.name} v{schema.version} does not declare; remove "
-            "the entry, or write a schema version that declares it"
-        )
-    outside = [
-        (name, tag)
-        for name in schema.names
-        for tag in fields[name]
-        if tag not in vocabulary
-    ]
-    if outside:
-        listed = ", ".join(f"{tag!r} in {name}" for name, tag in outside)
-        raise Refusal(
-            f"{listed}: not in {vocabulary.name}'s prediction set, so the base "
-            "model was never trained to draw it; replace it with a tag the "
-            "vocabulary carries, or delete it"
-        )
-    unspelled = [
-        (name, tag)
-        for name in schema.names
-        for tag in fields[name]
-        if tag != normalise(tag)
-    ]
-    if unspelled:
-        listed = ", ".join(f"{tag!r} in {name}" for name, tag in unspelled)
-        raise Refusal(
-            f"{listed}: not written in the vocabulary's own spelling; use "
-            "lowercase words separated by single spaces"
-        )
 
 
 # --- the stage: prose in, canonical fields out --------------------------------

@@ -25,6 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`validate` moves from `pipeline/sheet.py` to `shared/fields.py`, and the last stage→stage
+  import goes with it.** `review.py` imported and called `sheet.validate` — the sixth of six such
+  edges and the only one v0.15 did not close, so `grep -rn 'from isekai.pipeline'
+  isekai/pipeline/` now returns nothing. It lands in `shared/` rather than in `foundation/` beside
+  `Schema` because it depends on a `Vocabulary`, and `shared/vocabulary.py` already imports
+  `foundation/refusal.py`; putting a vocabulary-dependent function in `foundation` would make the
+  two groups import each other in both directions, where `shared → foundation` adds no new
+  direction (design.md D8).
+
 ### Fixed
 
 - **Two tests that pin a path the flow fold is about to change can now fail.**

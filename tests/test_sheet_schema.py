@@ -17,8 +17,8 @@ from isekai.pipeline.sheet import (
     fill,
     load_schema,
     schema_path,
-    validate,
 )
+from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
 # D8's sixteen, in the one order a prompt is assembled in, and the seven a
