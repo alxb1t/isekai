@@ -464,7 +464,8 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     # filters to the flows a run is approved for, so a refusal only `prepare`
     # cannot reach leaves `generate` printing nothing and exiting 0 -- the worst
     # outcome for an operator who has just rented a pod.
-    from isekai.__main__ import Wiring, build_parser, dispatch
+    from isekai.__main__ import build_parser, dispatch
+    from isekai.wiring import Wiring
 
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))

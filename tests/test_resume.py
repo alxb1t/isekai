@@ -20,12 +20,13 @@ from pathlib import Path
 
 import pytest
 
-from isekai.__main__ import Wiring, build_parser, dispatch
+from isekai.__main__ import build_parser, dispatch
 from isekai.caption import FakeReader
 from isekai.refusal import Refusal
 from isekai.run import BUDGETS
 from isekai.sheet import FakeSorter, load_schema
 from isekai.vocabulary import Vocabulary, read_tags
+from isekai.wiring import Wiring
 from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes

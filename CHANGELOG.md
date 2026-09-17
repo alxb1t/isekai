@@ -43,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`Wiring`, `wiring()` and `_check_run_root` are their own module, `isekai/wiring.py`.** The
+  composition root had a second consumer that never sees an argv: the suite builds a `Wiring`
+  directly, with no parser at all, in fourteen tests. A parser is one way to fill that dataclass and
+  not the only one, so the module that owns the parser is not its home. `_check_run_root` travels
+  with `wiring()`, its only caller, and `REPOSITORY` with it. **No compatibility re-export is left in
+  `__main__`** — the three test import sites moved, and the name did not stay behind.
+
 - **`write_atomically` is its own module, `isekai/atomic_write.py`.** It takes a path and bytes and
   knows nothing about runs, and it already had a consumer outside `run.py`: `generate.py` writes the
   rendered PNG with it — a file that is neither JSON nor numbered by the run's artifact convention.

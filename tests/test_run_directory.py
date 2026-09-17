@@ -15,7 +15,7 @@ import pytest
 
 import isekai.atomic_write as atomic_write_module
 import isekai.run as run_module
-from isekai.__main__ import Wiring, build_parser, wiring
+from isekai.__main__ import build_parser
 from isekai.refusal import Refusal
 from isekai.run import (
     BUDGETS,
@@ -41,6 +41,7 @@ from isekai.run import (
     write_atomically,
     write_json,
 )
+from isekai.wiring import Wiring, wiring
 from tests.images import jpeg_bytes, png_bytes
 
 

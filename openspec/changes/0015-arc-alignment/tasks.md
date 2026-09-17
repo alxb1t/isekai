@@ -4,7 +4,7 @@
 
 - [x] 1 — The anchor detectors, written while the anchors are still correct
 - [x] 2 — `atomic_write` out of `run`
-- [ ] 3 — `wiring` out of `__main__`
+- [x] 3 — `wiring` out of `__main__`
 - [ ] 4 — `cli` out of `__main__`, behind a three-line shim
 - [ ] 5 — `show` → `run_view`, `photo` → `image`
 - [ ] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
@@ -61,9 +61,9 @@ Every phase, without exception:
 > The suite is the second consumer: `tests/test_resume.py:49` composes the pipeline with **no parser**,
 > and fourteen tests use it. `_check_run_root` has one caller (`wiring()` at `:228`) and travels with it.
 
-- [ ] 3.1 Move `Wiring` (`__main__.py:164`), `wiring()` (`:220`) and `_check_run_root` (`:200`) into `isekai/wiring.py`. Verify: `uv run python -c "from isekai.wiring import Wiring, wiring; print('ok')"`
-- [ ] 3.2 Update the three test import sites — `tests/test_run_directory.py:17`, `tests/test_resume.py:23`, `tests/test_generate.py:467` — to import from `isekai.wiring`. **No compatibility re-export is left behind in `__main__`:** the callers move, the name does not stay. Verify: `grep -rn "from isekai.__main__ import" tests/ | grep -i wiring` is empty
-- [ ] 3.3 Verify the gate: `make gate`
+- [x] 3.1 Move `Wiring` (`__main__.py:164`), `wiring()` (`:220`) and `_check_run_root` (`:200`) into `isekai/wiring.py`. Verify: `uv run python -c "from isekai.wiring import Wiring, wiring; print('ok')"`
+- [x] 3.2 Update the three test import sites — `tests/test_run_directory.py:17`, `tests/test_resume.py:23`, `tests/test_generate.py:467` — to import from `isekai.wiring`. **No compatibility re-export is left behind in `__main__`:** the callers move, the name does not stay. Verify: `grep -rn "from isekai.__main__ import" tests/ | grep -i wiring` is empty
+- [x] 3.3 Verify the gate: `make gate`
 
 ## 4. `cli` out of `__main__`
 
