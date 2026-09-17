@@ -67,7 +67,7 @@ def test_no_second_ordering_is_defined_anywhere_else() -> None:
     root = Path(__file__).resolve().parent.parent
     carriers = [
         path
-        for path in (root / "isekai").glob("*.py")
+        for path in (root / "isekai").rglob("*.py")
         if "hair_silhouette" in path.read_text()
     ]
     assert carriers == []

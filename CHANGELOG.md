@@ -25,6 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two tests that pin a path the flow fold is about to change can now fail.**
+  `tests/test_run_directory.py` asserted `briefings/caption.md` against a producer record it
+  **built inline**, so it would have stayed green while the code wrote
+  `flows/summon-v1/caption.briefing.md` — a silent anchor, the one edit in v0.16 that fails
+  quietly (design.md D7). The record under assertion is now produced by
+  `claude_cli.instructions_record` off the briefing the stage actually reads, and the detector was
+  confirmed red against a moved briefing before anything moves. This is the shape v0.15 used for
+  `DATA_ROOT`: write the detector while the anchor is still correct.
+- **`test_no_second_ordering_is_defined_anywhere_else` was vacuously true.** It globbed
+  `isekai/*.py`, which since v0.15's six-group restructure reaches only `__init__.py` and
+  `__main__.py` — so the assertion that no module carries a second copy of the sixteen field names
+  held over an empty list. It now uses `rglob`, covering all 31 modules, and still passes.
+
 ## [0.15.0] - 2026-09-17
 
 ### Added

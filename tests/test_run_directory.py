@@ -14,6 +14,7 @@ from typing import Any
 import pytest
 
 import isekai.shared.atomic_write as atomic_write_module
+from isekai.boundary.claude_cli import instructions_record
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
@@ -41,6 +42,7 @@ from isekai.foundation.run import (
 )
 from isekai.interface.cli import build_parser
 from isekai.interface.wiring import Wiring, wiring
+from isekai.pipeline.caption import BRIEFING_PATH
 from tests.images import jpeg_bytes, png_bytes
 
 
@@ -309,28 +311,30 @@ def test_every_artifact_carries_a_schema_name_and_an_integer_version() -> None:
 
 
 @pytest.mark.spec("run-directory:provenance:producer-records-the-briefing")
-def test_a_producer_records_the_instruction_texts_path_and_digest(
+def test_a_producer_records_the_briefings_path_and_digest(
     tmp_path: Path,
 ) -> None:
-    def written(briefing_digest: str) -> dict[str, Any]:
-        path = tmp_path / f"{briefing_digest}.json"
+    # The record under assertion is the one the producer would write -- built by
+    # `instructions_record` off the briefing the stage actually reads, never
+    # constructed here. A record this test builds itself pins a literal the code
+    # is free to stop writing.
+    def written(briefing_path: Path) -> dict[str, Any]:
+        record = instructions_record(briefing_path)
+        path = tmp_path / f"{record['sha256']}.json"
         write_json(
             path,
             envelope(
                 "caption",
-                {
-                    "implementation": "claude-cli",
-                    "briefing": {
-                        "path": "briefings/caption.md",
-                        "sha256": briefing_digest,
-                    },
-                },
+                {"implementation": "claude-cli", "briefing": record},
                 {"prose": "the same prose either way"},
             ),
         )
         return read_artifact(path)
 
-    one, other = written("a" * 64), written("b" * 64)
+    elsewhere = tmp_path / "other.md"
+    elsewhere.write_text("Different standing instructions entirely.")
+
+    one, other = written(BRIEFING_PATH), written(elsewhere)
 
     assert one["producer"]["briefing"]["path"] == "briefings/caption.md"
     assert (

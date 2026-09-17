@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The detectors, written while the anchors are still correct
+- [x] 1 — The detectors, written while the anchors are still correct
 - [ ] 2 — `validate` leaves `sheet`, and the last stage→stage import with it
 - [ ] 3 — The fold: five flat files, eight keys, and the one-time re-pin
 - [ ] 4 — The code stops assuming eleven node roles
@@ -36,20 +36,20 @@ the repository is touched.
 > Design D7. This phase makes them able to fail, before anything moves — the shape v0.15 used for
 > `DATA_ROOT`. It is **not** the fold, and it changes no production code.
 
-- [ ] 1.1 Rewrite `tests/test_run_directory.py:311-338` so the producer record under assertion is
+- [x] 1.1 Rewrite `tests/test_run_directory.py:311-338` so the producer record under assertion is
       produced by `claude_cli.instructions_record`, not built inline. Verify:
       `uv run pytest tests/test_run_directory.py -k briefing -q` — passes.
-- [ ] 1.2 Prove the new test can fail: temporarily change `briefings/caption.md`'s path in a scratch and
+- [x] 1.2 Prove the new test can fail: temporarily change `briefings/caption.md`'s path in a scratch and
       confirm red. Verify: `uv run pytest tests/test_run_directory.py -k briefing -q` — **fails**, then
       revert. *A check that cannot fail is not a check.*
-- [ ] 1.3 Fix `test_no_second_ordering_is_defined_anywhere_else` (`tests/test_sheet_schema.py:64-73`):
+- [x] 1.3 Fix `test_no_second_ordering_is_defined_anywhere_else` (`tests/test_sheet_schema.py:64-73`):
       it globs `(root / "isekai").glob("*.py")`, which since v0.15's six-group restructure reaches only
       `__init__.py` and `__main__.py` — so `carriers == []` has been **vacuously true** for a day.
       Change it to `rglob("*.py")`. Verify:
       `uv run pytest tests/test_sheet_schema.py -k no_second_ordering -q` — passes, **and** the globbed
       list is non-empty: `uv run python -c "from pathlib import Path; print(len(list(Path('isekai').rglob('*.py'))))"`
       — greater than `20`.
-- [ ] 1.4 Verify the gate: `make gate`
+- [x] 1.4 Verify the gate: `make gate`
 
 ## 2. `validate` leaves `sheet`, and the last stage→stage import with it
 
