@@ -121,7 +121,7 @@ def test_the_dials_are_the_measured_ones_and_not_the_graph_files(flow: Flow) -> 
 
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
 def test_every_tracked_flow_parses(tmp_path: Path) -> None:
-    assert tracked_flows() == ["summon-v1"]
+    assert tracked_flows()
     for name in tracked_flows():
         assert load_flow(name).id == name
 

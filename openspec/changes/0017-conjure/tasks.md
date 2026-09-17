@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The one repair: the registry's contents stop being hard-coded
+- [x] 1 — The one repair: the registry's contents stop being hard-coded
 - [ ] 2 — `flows/conjure-v1/` — five files and the pin
 - [ ] 3 — The verdict, measured rather than asserted
 - [ ] 4 — ⚠️ **GPU · HALT** — the acceptance run
@@ -85,7 +85,7 @@ what the publisher said from what this project measured:
 independent of `conjure-v1`, and isolating it in its own commit is what makes the change's verdict
 legible in `git log`.
 
-- [ ] 1.1 In `tests/test_flow.py`, `test_every_tracked_flow_parses` opens with
+- [x] 1.1 In `tests/test_flow.py`, `test_every_tracked_flow_parses` opens with
       `assert tracked_flows() == ["summon-v1"]`. That line is a vacuity guard wearing a registry
       assertion's clothes — it exists so the loop below it cannot pass empty. **Replace it with
       `assert tracked_flows()`**, which keeps the guard and drops the assumption. Change nothing else in
@@ -93,7 +93,7 @@ legible in `git log`.
       `uv run pytest tests/test_flow.py -q` exits 0, and
       `grep -n 'tracked_flows() == \[' tests/test_flow.py; test $? -eq 1` exits 0 — no list literal
       naming a flow survives.
-- [ ] 1.2 Full gate green. Verify: `make gate` exits 0.
+- [x] 1.2 Full gate green. Verify: `make gate` exits 0.
 
 ## 2. `flows/conjure-v1/` — five files and the pin
 

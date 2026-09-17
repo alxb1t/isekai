@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`test_every_tracked_flow_parses` no longer hard-codes the registry's contents.** Its opening
+  `assert tracked_flows() == ["summon-v1"]` was a vacuity guard — it exists so the loop beneath it
+  cannot pass on an empty registry — wearing a registry assertion's clothes. It is now
+  `assert tracked_flows()`, which keeps the guard and drops the single-flow assumption. Every other
+  test in the module already iterates `tracked_flows()` rather than naming its length, so this was an
+  incidental assumption rather than a designed freeze; the designed freeze is `PINNED`, which stays.
+
 ## [0.16.0] - 2026-09-17
 
 ### Documentation
