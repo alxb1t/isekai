@@ -70,6 +70,14 @@ REQUIRED = (
 )
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 
+# The node roles every image flow has, checked at load the way the prompt's
+# fragments already are. Every other role is optional and guarded at the patch
+# site: a photograph, an identity adapter and a pose preprocessor are absent from
+# a sheet-only flow, and a hires resize and a hires sampler from any ordinary
+# cheaper one. Unchecked, a flow declaring fewer passed the whole gate and died on
+# a rented GPU -- after the photograph had already been uploaded (design.md D9).
+REQUIRED_NODES = ("positive", "negative", "latent", "sampler")
+
 
 # --- what a sheet declares ----------------------------------------------------
 
@@ -243,6 +251,13 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
         raise Refusal(
             f"{flow}/{MANIFEST_NAME} calls itself {document['flow']!r}; a flow's "
             "identifier is its directory name, and the two must agree"
+        )
+    unnamed = [role for role in REQUIRED_NODES if role not in document["nodes"]]
+    if unnamed:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME}: `nodes` declares no {', '.join(unnamed)}; "
+            "every flow patches those four, so one that names fewer would fail on "
+            "a rented machine rather than here"
         )
     absent_files = [name for name in SIBLINGS if not (directory / name).is_file()]
     if absent_files:

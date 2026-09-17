@@ -14,7 +14,17 @@ from pathlib import Path
 import pytest
 
 import isekai.foundation.run as run_module
-from isekai.foundation.flow import Flow, Schema, load_flow
+from isekai.foundation.flow import (
+    CAPTION_BRIEFING_NAME,
+    GRAPH_NAME,
+    MANIFEST_NAME,
+    MANIFEST_VERSION,
+    SCHEMA_NAME,
+    SHEET_BRIEFING_NAME,
+    Flow,
+    Schema,
+    load_flow,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     OUTPUTS,
@@ -81,6 +91,84 @@ def _run(
 def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     """Return a run with an approved sheet for `FLOW`."""
     return _run(tmp_path, schema, vocabulary)
+
+
+FEWER = "fewer-roles-v1"
+
+
+def _fewer_roles_flow(tmp_path: Path) -> Flow:
+    """Return a flow declaring the four required roles and none of the seven.
+
+    **It is a `tmp_path` scratch and never a directory in `flows/`.** Anything in
+    `flows/` becomes a product flow: pinned, bound into the provisioning union,
+    selectable, and undeletable under the append-only rule (design.md D9).
+    """
+    source = load_flow(FLOW)
+    root = tmp_path / "scratch-flows" / FEWER
+    root.mkdir(parents=True)
+    graph = {
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": "committed"}},
+        "4": {"class_type": "CLIPTextEncode", "inputs": {"text": "committed"}},
+        "9": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {"width": 512, "height": 512, "batch_size": 1},
+        },
+        "10": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": 0,
+                "steps": 1,
+                "cfg": 1,
+                "sampler_name": "euler",
+                "scheduler": "normal",
+                "denoise": 1.0,
+            },
+        },
+    }
+    manifest = {
+        "flow": FEWER,
+        "manifest_version": MANIFEST_VERSION,
+        # No photograph. The four roles below are the whole of what it patches.
+        "inputs": ["sheet"],
+        "vocabulary": dict(source.vocabulary),
+        "prompt": dict(source.prompt),
+        "dials": {
+            "cfg": 5,
+            "steps": 28,
+            "sampler_name": "euler_ancestral",
+            "scheduler": "normal",
+            "denoise": 1.0,
+        },
+        "nodes": {"positive": "3", "negative": "4", "latent": "9", "sampler": "10"},
+        "models": [],
+    }
+    (root / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
+    (root / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+    for name in (SCHEMA_NAME, CAPTION_BRIEFING_NAME, SHEET_BRIEFING_NAME):
+        (root / name).write_bytes((source.path / name).read_bytes())
+    return load_flow(FEWER, root.parent)
+
+
+def _run_for_fewer(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> tuple[Run, Flow]:
+    """Return a run approved for the four-role flow, and the flow itself."""
+    flow = _fewer_roles_flow(tmp_path)
+    photo = tmp_path / "fewer.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    made = open_run(photo, tmp_path / "runs")
+    caption(made, FakeReader(prose="Brown hair, brown eyes."))
+    sheet(
+        made,
+        FakeSorter(answers={"hair_colour": ["brown"]}),
+        schema,
+        vocabulary,
+        [FEWER],
+    )
+    review(made, FEWER)
+    approve(made, FEWER, schema, vocabulary)
+    prompt_artifact(made, flow, schema)
+    return made, flow
 
 
 # --- assembly -----------------------------------------------------------------
@@ -656,3 +744,66 @@ def test_a_drawn_seed_spans_the_full_sampler_width() -> None:
     # a repeated literal is a second place to change and a silent way to disagree.
     assert source.asked == [SEED_BITS]
     assert drawn == [2**64 - 1]
+
+
+# --- a flow that declares fewer roles ------------------------------------------
+
+
+@pytest.mark.spec("image-generation:roles:optional-roles-are-not-assumed")
+def test_a_flow_with_fewer_roles_builds_its_graph(
+    tmp_path: Path,
+) -> None:
+    flow = _fewer_roles_flow(tmp_path)
+    photo = tmp_path / "fewer.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+
+    graph = build_graph(
+        flow, photo, "", {"positive": "a, b", "negative": "bad"}, seed=7
+    )
+
+    assert graph["3"]["inputs"]["text"] == "a, b"
+    assert graph["4"]["inputs"]["text"] == "bad"
+    assert graph["9"]["inputs"]["width"] == photo_resolution(photo)[0]
+    assert graph["10"]["inputs"]["seed"] == 7
+    assert graph["10"]["inputs"]["cfg"] == 5
+
+
+@pytest.mark.spec("image-generation:roles:optional-roles-are-not-assumed")
+def test_a_flow_with_fewer_roles_patches_only_what_it_declares(tmp_path: Path) -> None:
+    flow = _fewer_roles_flow(tmp_path)
+    photo = tmp_path / "fewer.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    before = flow.graph()
+
+    graph = build_graph(flow, photo, "", {"positive": "a", "negative": "b"}, seed=1)
+
+    assert set(graph) == set(before)
+    assert set(graph) == {"3", "4", "9", "10"}
+
+
+@pytest.mark.spec("image-generation:roles:optional-roles-are-not-assumed")
+def test_a_flow_declaring_fewer_roles_renders(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    made, flow = _run_for_fewer(tmp_path, schema, vocabulary)
+    client = FakeComfyClient()
+
+    produced = render(made, flow, client, seeds=[11], rng=random.Random(0))
+
+    assert [render_.seed for render_ in produced] == [11]
+    assert produced[0].image.is_file()
+
+
+@pytest.mark.spec("image-generation:roles:undeclared-input-is-not-uploaded")
+def test_a_flow_that_declares_no_photograph_uploads_nothing(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    made, flow = _run_for_fewer(tmp_path, schema, vocabulary)
+    client = FakeComfyClient()
+
+    assert "photo" not in flow.inputs
+
+    render(made, flow, client, seeds=[11], rng=random.Random(0))
+
+    assert client.uploaded is None
+    assert client.submissions

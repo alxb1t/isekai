@@ -285,47 +285,65 @@ def build_graph(
     graph carries cfg 7 and identity strength 0.5; the measured configuration is
     5 and 0.8, and a render that used the file's values would be a configuration
     nothing measured (design.md D12).
+
+    **Four roles are assumed and seven are asked for.** `load_flow` has already
+    refused a flow missing one of the four; every other patch below happens only
+    where the flow declares the role, so a flow without a photograph, an identity
+    adapter, a pose preprocessor or a hires pass renders rather than raising on a
+    rented machine (design.md D9).
     """
     graph = flow.graph()
     dials = flow.dials
     width, height = photo_resolution(photo)
 
-    graph[flow.node("photo")]["inputs"]["image"] = image_name
+    def inputs(role: str) -> dict[str, Any] | None:
+        """Return the node's inputs where the flow declares the role, else None."""
+        node: Any = graph[flow.node(role)]["inputs"] if role in flow.nodes else None
+        return node
+
+    if (photo_inputs := inputs("photo")) is not None:
+        photo_inputs["image"] = image_name
     graph[flow.node("positive")]["inputs"]["text"] = prompt["positive"]
     graph[flow.node("negative")]["inputs"]["text"] = prompt["negative"]
 
-    for role in ("scale", "latent"):
-        graph[flow.node(role)]["inputs"].update(width=width, height=height)
+    graph[flow.node("latent")]["inputs"].update(width=width, height=height)
+    if (scale := inputs("scale")) is not None:
+        scale.update(width=width, height=height)
 
-    identity = graph[flow.node("identity")]["inputs"]
-    identity["ip_weight"] = dials["ip_weight"]
-    identity["cn_strength"] = dials["identity_cn_strength"]
-    graph[flow.node("openpose")]["inputs"]["strength"] = dials["openpose_strength"]
-    graph[flow.node("clip_skip")]["inputs"]["stop_at_clip_layer"] = dials["clip_skip"]
+    if (identity := inputs("identity")) is not None:
+        identity["ip_weight"] = dials["ip_weight"]
+        identity["cn_strength"] = dials["identity_cn_strength"]
+    if (openpose := inputs("openpose")) is not None:
+        openpose["strength"] = dials["openpose_strength"]
+    if (clip_skip := inputs("clip_skip")) is not None:
+        clip_skip["stop_at_clip_layer"] = dials["clip_skip"]
 
     sampler = graph[flow.node("sampler")]["inputs"]
     sampler["seed"] = seed
     for dial in ("steps", "cfg", "sampler_name", "scheduler", "denoise"):
         sampler[dial] = dials[dial]
 
-    hires = graph[flow.node("hires_resize")]["inputs"]
-    scaled = (round(width * dials["hires_scale"]), round(height * dials["hires_scale"]))
-    # SDXL's VAE needs a multiple of 8. 1.5x of a /64 canvas always is, and this
-    # asserts it rather than trusting it.
-    if any(side % 8 for side in scaled):
-        raise Refusal(
-            f"flow {flow.id}: a hires target of {scaled} is not a multiple of 8, "
-            "which the VAE requires; change `hires_scale` under a new flow "
-            "identifier"
+    if (hires := inputs("hires_resize")) is not None:
+        scaled = (
+            round(width * dials["hires_scale"]),
+            round(height * dials["hires_scale"]),
         )
-    hires["width"], hires["height"] = scaled
+        # SDXL's VAE needs a multiple of 8. 1.5x of a /64 canvas always is, and
+        # this asserts it rather than trusting it.
+        if any(side % 8 for side in scaled):
+            raise Refusal(
+                f"flow {flow.id}: a hires target of {scaled} is not a multiple "
+                "of 8, which the VAE requires; change `hires_scale` under a new "
+                "flow identifier"
+            )
+        hires["width"], hires["height"] = scaled
 
-    second = graph[flow.node("hires_sampler")]["inputs"]
-    second["seed"] = seed
-    second["steps"] = dials["hires_steps"]
-    second["denoise"] = dials["hires_denoise"]
-    for dial in ("cfg", "sampler_name", "scheduler"):
-        second[dial] = dials[dial]
+    if (second := inputs("hires_sampler")) is not None:
+        second["seed"] = seed
+        second["steps"] = dials["hires_steps"]
+        second["denoise"] = dials["hires_denoise"]
+        for dial in ("cfg", "sampler_name", "scheduler"):
+            second[dial] = dials[dial]
     return graph
 
 
@@ -364,7 +382,10 @@ def render(
 
     check_budget(STAGE_RENDER, directory, version, run.id)
 
-    image_name = client.upload_image(str(run.photo))
+    # `flow.inputs` gates the transfer: a flow that does not declare a photograph
+    # has nothing to upload, and uploading one anyway spends the endpoint's time
+    # on an input no node reads.
+    image_name = client.upload_image(str(run.photo)) if "photo" in flow.inputs else ""
     # Constant across seeds: the flow's graph on disk does not change mid-render.
     flow_graph = flow.graph_digest()
     produced: list[Render] = []

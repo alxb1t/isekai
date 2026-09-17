@@ -16,6 +16,7 @@ from isekai.foundation.flow import (
     MANIFEST_NAME,
     MANIFEST_VERSION,
     REQUIRED,
+    REQUIRED_NODES,
     SIBLINGS,
     Flow,
     assemble,
@@ -280,6 +281,28 @@ def test_a_manifest_missing_a_prompt_fragment_is_refused_naming_it(
         load_flow("summon-v1", root)
 
     assert "trailer" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:roles:a-missing-required-role-is-refused-offline")
+@pytest.mark.parametrize("role", REQUIRED_NODES)
+def test_a_flow_declaring_fewer_than_the_required_nodes_is_refused(
+    tmp_path: Path, role: str
+) -> None:
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    del document["nodes"][role]
+    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-v1", root)
+
+    assert role in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:roles:a-missing-required-role-is-refused-offline")
+def test_the_required_roles_are_the_four_every_image_flow_has(flow: Flow) -> None:
+    assert REQUIRED_NODES == ("positive", "negative", "latent", "sampler")
+    assert set(REQUIRED_NODES) <= set(flow.nodes)
 
 
 @pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")

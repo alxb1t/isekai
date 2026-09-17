@@ -5,7 +5,7 @@
 - [x] 1 — The detectors, written while the anchors are still correct
 - [x] 2 — `validate` leaves `sheet`, and the last stage→stage import with it
 - [x] 3 — The fold: five flat files, eight keys, and the one-time re-pin
-- [ ] 4 — The code stops assuming eleven node roles
+- [x] 4 — The code stops assuming eleven node roles
 - [ ] 5 — `--flow` is required and repeatable on every stage verb
 - [ ] 6 — The run layout: input above, flow below
 - [ ] 7 — Resume stops assuming a PNG
@@ -119,19 +119,19 @@ the repository is touched.
 > that the key `nodes` exists. A flow declaring fewer passes the entire gate and dies on a rented pod —
 > after `upload_image` has spent it. Design D9.
 
-- [ ] 4.1 Add `REQUIRED_NODES = ("positive", "negative", "latent", "sampler")` to
+- [x] 4.1 Add `REQUIRED_NODES = ("positive", "negative", "latent", "sampler")` to
       `isekai/foundation/flow.py` and check it in `load_flow`, refusing naming the missing role. Verify:
       `uv run pytest tests/test_flow.py -k required_nodes -q` — green.
-- [ ] 4.2 Guard the seven optional lookups in `generate.py:273-323` — `photo`, `scale`, `identity`,
+- [x] 4.2 Guard the seven optional lookups in `generate.py:273-323` — `photo`, `scale`, `identity`,
       `openpose`, `clip_skip`, `hires_resize`, `hires_sampler`. Verify:
       `uv run pytest tests/test_generate.py -q` — green.
-- [ ] 4.3 Gate `upload_image` (`generate.py:361`) on `"photo" in flow.inputs`, giving `Flow.inputs` its
+- [x] 4.3 Gate `upload_image` (`generate.py:361`) on `"photo" in flow.inputs`, giving `Flow.inputs` its
       first production reader. Verify: `uv run pytest tests/test_generate.py -k upload -q` — green.
-- [ ] 4.4 Add the `tmp_path` fixture flow declaring only the four required roles, and drive it through
+- [x] 4.4 Add the `tmp_path` fixture flow declaring only the four required roles, and drive it through
       `build_graph` and `render`. **It does not go in `flows/`.** Verify:
       `uv run pytest tests/test_generate.py -k fewer_roles -q` — green; and
       `ls flows/` — `summon-v1` only.
-- [ ] 4.5 Verify the gate: `make gate`
+- [x] 4.5 Verify the gate: `make gate`
 
 ## 5. `--flow` is required and repeatable on every stage verb
 

@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A flow is asked which node roles it declares, instead of being assumed to have eleven.**
+  `positive`, `negative`, `latent` and `sampler` are required and checked in `load_flow` the way the
+  prompt's fragments already are; the other seven — `photo`, `scale`, `identity`, `openpose`,
+  `clip_skip`, `hires_resize`, `hires_sampler` — are guarded at the patch site. `build_graph` performed
+  eleven lookups across ten call sites with none guarded, and `load_flow` checked only that the key
+  `nodes` existed, so a flow declaring fewer passed the entire gate and died on a rented GPU — after
+  `upload_image` had already spent it (design.md D9). The refusal now happens offline, naming the role.
+- **`flow.inputs` gets its first production reader.** The photograph is transferred only where the flow
+  declares a `photo` input; a flow that does not declare one uploads nothing. The field was declared,
+  populated and read by one test.
+
 ### Changed
 
 - **A flow is five flat files, and its manifest names none of them.**
