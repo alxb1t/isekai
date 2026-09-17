@@ -50,9 +50,6 @@ from isekai.foundation.run import (
     write_json,
 )
 
-BRIEFINGS_DIR = Path(__file__).resolve().parent.parent.parent / "briefings"
-BRIEFING_PATH = BRIEFINGS_DIR / "caption.md"
-
 # The name this stage's budget is keyed by. Its directory inside a run is the
 # run's to name, not the stage's -- `run.CAPTIONS`.
 STAGE = "caption"
@@ -141,18 +138,26 @@ class ClaudeReader:
 
 def caption(
     run: Run,
+    flow: str,
     reader: Reader,
     *,
+    briefing_path: Path,
     new_version: bool = False,
-    briefing_path: Path = BRIEFING_PATH,
 ) -> Path | None:
     """Read `run`'s photograph into prose, or do nothing because it is already read.
+
+    **The caption belongs to the flow that asked for it.** The reader still gets
+    the photograph and its standing instructions and nothing else -- `flow` never
+    reaches it -- but the answer is written under that flow, because the briefing
+    it was produced under is part of that flow's frozen directory. Two flows over
+    one photograph read it twice, and a flow can no longer inherit a reading
+    written to answer a different question (design.md D5).
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete -- which is the whole of resume at this stage: no special
     mode and no state machine, just a command that does nothing the second time.
     """
-    directory = run.directory(CAPTIONS)
+    directory = run.directory(flow, CAPTIONS)
     if latest(directory) is not None and not new_version:
         return None
 
@@ -170,7 +175,7 @@ def caption(
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "reader", run.id, failed, record, f"{CAPTIONS}/", STAGE
+            "reader", run.id, failed, record, f"{flow}/{CAPTIONS}/", STAGE
         ) from failed
 
     path = directory / artifact_name(version)
@@ -191,7 +196,6 @@ def caption(
 
 
 __all__: Sequence[str] = (
-    "BRIEFING_PATH",
     "ClaudeReader",
     "FakeReader",
     "Reader",

@@ -28,15 +28,10 @@ from isekai.foundation.run import (
     read_artifact,
     versions,
 )
-from isekai.pipeline.caption import (
-    BRIEFING_PATH,
-    ClaudeReader,
-    FakeReader,
-    Reading,
-    caption,
-)
-from isekai.pipeline.sheet import load_schema
+from isekai.pipeline.caption import ClaudeReader, FakeReader, Reading
 from tests.images import jpeg_bytes
+from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
+from tests.stages import FLOW, caption
 
 
 @pytest.fixture
@@ -123,7 +118,8 @@ def test_the_briefing_names_no_schema_field() -> None:
     text = BRIEFING_PATH.read_text().lower()
     words = set(re.findall(r"[a-z_]+", text))
 
-    named = [name for name in load_schema().names if name in words or name in text]
+    schema = FLOW.schema
+    named = [name for name in schema.names if name in words or name in text]
     assert named == []
 
 
@@ -150,18 +146,47 @@ def test_the_artifact_is_one_block_of_prose_and_carries_no_structure(
     assert set(artifact) == {"schema", "producer", "prose"}
 
 
-@pytest.mark.spec("caption:output:caption-is-flow-neutral")
-def test_a_second_flow_reuses_the_existing_caption(run: Run) -> None:
+@pytest.mark.spec("caption:output:caption-belongs-to-one-flow")
+def test_a_second_flow_produces_its_own_caption(run: Run) -> None:
     reader = FakeReader()
     first = caption(run, reader)
 
-    # A flow arriving later asks the same stage for the same run. Nothing about
-    # a flow is an input here, so there is nothing to ask differently.
-    again = caption(run, reader)
+    # A flow arriving later asks the same stage for the same photograph, and gets
+    # its own reading: its briefing is part of its own frozen directory, so it
+    # cannot inherit a reading written to answer a different question.
+    second = caption(run, reader, flow="summon-v2")
 
-    assert first is not None and again is None
-    assert versions(run.path / "captions") == [1]
-    assert len(reader.calls) == 1
+    assert first is not None and second is not None
+    assert first.parent == run.path / FLOW.id / "captions"
+    assert second.parent == run.path / "summon-v2" / "captions"
+    assert len(reader.calls) == 2
+
+
+@pytest.mark.spec("caption:output:caption-belongs-to-one-flow")
+def test_a_flows_caption_is_neither_read_nor_changed_by_another(run: Run) -> None:
+    first = caption(run, FakeReader(prose="One reading."))
+    assert first is not None
+    frozen = first.read_bytes()
+
+    caption(run, FakeReader(prose="A different reading."), flow="summon-v2")
+
+    assert first.read_bytes() == frozen
+    assert versions(run.path / FLOW.id / "captions") == [1]
+
+
+@pytest.mark.spec("caption:inputs:briefing-comes-from-the-flow")
+def test_the_standing_instructions_come_from_the_flows_own_directory(
+    run: Run,
+) -> None:
+    reader = FakeReader()
+
+    path = caption(run, reader)
+
+    assert path is not None
+    assert BRIEFING_PATH.parent == FLOW.path
+    assert reader.calls[0][1] == BRIEFING_PATH.read_text()
+    recorded = read_artifact(path)["producer"]["briefing"]
+    assert recorded == instructions_record(BRIEFING_PATH)
 
 
 @pytest.mark.spec("caption:absence:absence-is-permitted-here")
@@ -194,7 +219,7 @@ def test_the_producer_records_the_briefings_path_and_digest(
     assert first is not None and second is not None
     one = read_artifact(first)["producer"]["briefing"]
     two = read_artifact(second)["producer"]["briefing"]
-    assert one["path"] == "briefings/caption.md"
+    assert one["path"] == "flows/summon-v1/caption.briefing.md"
     assert one["sha256"] != two["sha256"]
     assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
 
@@ -281,9 +306,9 @@ def test_a_transient_failure_counts_against_the_budget(run: Run) -> None:
     with pytest.raises(Refusal):
         caption(run, reader)
 
-    recorded = attempts(run.path / "captions", 1)
+    recorded = attempts(run.path / FLOW.id / "captions", 1)
     assert [(a.attempt, a.kind) for a in recorded] == [(1, "transient")]
-    assert versions(run.path / "captions") == []
+    assert versions(run.path / FLOW.id / "captions") == []
 
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
@@ -326,7 +351,7 @@ def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
     with pytest.raises(Refusal):
         caption(run, other)
     assert other.calls == []
-    assert versions(run.path / "captions") == []
+    assert versions(run.path / FLOW.id / "captions") == []
 
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
@@ -353,7 +378,7 @@ def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> No
     with pytest.raises(Refusal):
         caption(run, reader)
 
-    assert versions(run.path / "captions") == []
+    assert versions(run.path / FLOW.id / "captions") == []
 
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
@@ -400,6 +425,6 @@ def test_an_absent_reader_leaves_the_run_directory_untouched(
     with pytest.raises(Refusal):
         caption(run, ClaudeReader())
 
-    assert versions(run.path / "captions") == []
-    assert attempts(run.path / "captions", 1) == []
+    assert versions(run.path / FLOW.id / "captions") == []
+    assert attempts(run.path / FLOW.id / "captions", 1) == []
     assert sorted(p.name for p in run.path.rglob("*")) == before

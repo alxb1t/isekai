@@ -25,6 +25,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-17
+
+### Documentation
+
+- **The living spec's `Source:` lines, `README.md`, `CLAUDE.md` and the group READMEs follow the
+  version.** `sheet`'s named `schemas/identity.v1.json` and `schemas/identity.v1.briefing.md`, which
+  no longer exist; a flow is described as five flat files rather than two; the repository tree, the
+  run layout and every worked `python -m isekai` invocation carry `--flow`; `pipeline/README.md` no
+  longer claims one stage imports another; `shared/README.md` gains `fields.py`. The blast-radius
+  sweep is a `git grep` over every tracked file except `CHANGELOG.md` and the change directory —
+  v0.15 shipped a broken `Dockerfile` COPY by hunting only the files being renamed.
+- **`tests/test_package_paths.py`'s anchor table drops to six constants across five files**, and its
+  prose says so. Two anchors left with the fold: a schema and a briefing are a flow's now, and a flow
+  is reached through `FLOWS_DIR`.
+
+### Fixed
+
+- **A manifest that declares the photograph on one side only is refused at load.** The transfer is
+  gated on `inputs` and the `LoadImage` patch on `nodes`, and nothing held the two in agreement once
+  both became conditional: a flow naming `nodes.photo` but omitting `photo` from `inputs` uploaded
+  nothing and rendered the filename committed inside `graph.json` — a paid render of the wrong
+  person, with the whole gate green — while the mirror case uploaded a photograph no node reads.
+  `load_flow` now refuses the disagreement beside the required-roles check, naming the flow and the
+  half of the manifest the declaration is missing from, so it costs a test run rather than a boot.
+  Identity preservation is the product; a check that can only be made after the render is not one.
+- **Resume no longer assumes a render is a PNG.** `rendered_seeds` filtered `iterdir()` on
+  `path.suffix == ".png"`, so a flow whose output is not a still image would have had its finished work
+  reported as missing and rendered again — on the one stage that costs money on every pass. The
+  predicate now takes what the flow says it produces, and `Flow.output_suffix` is the one line a video
+  flow changes when it arrives; the render path writes through the same answer, so the writer and the
+  resume check cannot disagree (design.md D11). This change owes exactly that and no more.
+
+### Changed
+
+- **BREAKING — the run layout is input above, flow below.** A run is now
+  `runs/<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`. Above the flow split sits only
+  what every flow shares, and after this change that is the input itself and its frame. Nesting
+  stage-first meant adding a flow scattered four entries across four stage directories; flow-first,
+  adding a flow adds one subtree and retiring one flow's work is removing one directory. Captions move
+  below the split too, which is what makes a flow's briefing binding: a caption written under one
+  flow's instructions can never be picked up by a flow whose instructions differ, because the two never
+  name the same directory (design.md D5, D6).
+- **BREAKING — the run id's separator is an underscore**: `<12 hex>_<slug>`. `slug()` maps every unsafe
+  character to a hyphen, so `0bfdc0612d98-cowboy-shoot-1` gave a reader no way to see where the digest
+  ended; a slug can never contain an underscore, which makes the boundary unambiguous. Twelve hex
+  characters stay — six is a birthday collision at roughly 4,800 inputs, and the remedy for a collision
+  is a human renaming a directory by hand. Nothing parses the id, so this is readability alone
+  (design.md D10).
+- **BREAKING — the sheet stage writes one sheet for one flow.** `sheet()` took a list of destinations
+  and fanned one fill out across them, which is the sharing v0.16 deletes; it now takes the flow whose
+  directory it reads the caption from and writes the sheet to, and returns one path or none. The
+  caption stage takes its flow for the same reason. Neither the reader nor the sorter learns anything
+  about flows: the flow decides which directory is touched, not what is asked.
+- **The inspection command lists per flow then per stage.** `run_view`'s per-flow-ness table is gone —
+  every stage is a flow's own now, so there is nothing left for that column to say — and its bespoke
+  outputs walk is one listing of the run's flow subdirectories. `approved_flows` reads the same
+  listing.
+
+### Added
+
+- **`--flow` is required and repeatable on every stage verb.** It reached three of six verbs, was a
+  single string that silently kept the last occurrence, fell back to every tracked flow, and had no
+  test coverage at all — one hit in the suite, asserting a refusal string. It is now
+  `action="append"`, `required=True` on `caption`, `sheet`, `review`, `approve` and `generate`; `show`
+  is the only verb that does not take it. A stage cannot act without knowing which flow asked, because
+  the flow is what supplies its briefing, its schema, its graph and its dials.
+- **A flow named on the line is resolved against `flows/` before any run is opened**, and an untracked
+  one is refused naming it and listing the flows that are tracked. At `generate` the flow's first use
+  used to be after a photograph had been uploaded, so resolving at selection is what keeps the refusal
+  free. `dispatch` reports that refusal rather than letting it escape.
+- **A flow is asked which node roles it declares, instead of being assumed to have eleven.**
+  `positive`, `negative`, `latent` and `sampler` are required and checked in `load_flow` the way the
+  prompt's fragments already are; the other seven — `photo`, `scale`, `identity`, `openpose`,
+  `clip_skip`, `hires_resize`, `hires_sampler` — are guarded at the patch site. `build_graph` performed
+  eleven lookups across ten call sites with none guarded, and `load_flow` checked only that the key
+  `nodes` existed, so a flow declaring fewer passed the entire gate and died on a rented GPU — after
+  `upload_image` had already spent it (design.md D9). The refusal now happens offline, naming the role.
+- **`flow.inputs` gets its first production reader.** The photograph is transferred only where the flow
+  declares a `photo` input; a flow that does not declare one uploads nothing. The field was declared,
+  populated and read by one test.
+
+### Changed
+
+- **A flow is five flat files, and its manifest names none of them.**
+  `schemas/identity.v1.json`, `schemas/identity.v1.briefing.md` and `briefings/caption.md` move into
+  `flows/summon-v1/` as `schema.json`, `sheet.briefing.md` and `caption.briefing.md`; the two
+  repository-root directories are gone. Flat rather than nested because `manifest_digest` filters
+  `iterdir()` through `path.is_file()` — a sub-directory would have left the schema and both briefings
+  outside the freeze with the gate green (design.md D1). A briefing decides what enters the caption, the
+  caption decides the sheet and the sheet decides the render, so a changed briefing is a changed image
+  and must be a new flow; the digest now proves that.
+- **BREAKING — `flow.json` is eight keys.** `"schema"` and `"graph"` are deleted — a key that can only
+  ever hold one value is not a declaration — and `schema_version` becomes `manifest_version`, bumped to
+  `2`, because it never meant the schema's version but the manifest's own format (design.md D3). The
+  five filenames are constants in `isekai/foundation/flow.py`, and `load_flow` refuses a flow missing
+  any of its four siblings, naming the file.
+- **BREAKING — a flow pins its model artifacts by digest.** `"models"` is now `[{dest, sha256}, …]`, and
+  a new gate check holds every digest equal to `scripts/models.json`'s entry for the same destination,
+  failing by name. A bare destination path does not pin bytes: re-pinning a checkpoint would otherwise
+  have made `summon-v1` render differently under the same identifier with the gate green, on the 6.9 GB
+  that decides what the image looks like (design.md D4).
+- **`Schema` loses its version and its vocabulary.** Inside a frozen flow directory a version protects
+  nothing — the flow's digest proves the field list byte for byte, and a changed field list is a new
+  flow. The vocabulary is the flow's declaration, so the schema document is `{name, fields}` and
+  `load_schema` takes the path of the flow that owns it. `sheet.SCHEMA_VERSION`, `schema_path()`,
+  `SCHEMAS_DIR`, `BRIEFINGS_DIR` and both `BRIEFING_PATH` constants are deleted; the sheet and caption
+  stages take their briefing as an argument.
+- **BREAKING — sheet sharing is removed with `_matching_flows`.** It was the only mechanism, had one
+  caller, and was the only production reader of `Flow.schema` and `Schema.version`. Every stage verb is
+  now driven per flow, each one handed that flow's own schema and briefing: `load_schema` moves beside
+  `Schema` in `isekai/foundation/flow.py`, and a loaded `Flow` answers for its own schema through a
+  cached property, so `Wiring` carries no schema at all. Sharing bought a selector and a class of
+  silent cross-flow inheritance in exchange for a rounding error — a caption is $0.0159 per photograph
+  at worst against a $0.036 boot (design.md D5).
+- **`summon-v1`'s committed digest is re-pinned once**, under the exception design.md D2 records: the
+  flow's configuration did not change, its manifest's format did, and `manifest_version: 2` is that
+  distinction in data. The failure message in `tests/test_flow.py` gains no "unless" clause — a test
+  message that explains how to evade itself is one that gets evaded.
+
+- **`validate` moves from `pipeline/sheet.py` to `shared/fields.py`, and the last stage→stage
+  import goes with it.** `review.py` imported and called `sheet.validate` — the sixth of six such
+  edges and the only one v0.15 did not close, so `grep -rn 'from isekai.pipeline'
+  isekai/pipeline/` now returns nothing. It lands in `shared/` rather than in `foundation/` beside
+  `Schema` because it depends on a `Vocabulary`, and `shared/vocabulary.py` already imports
+  `foundation/refusal.py`; putting a vocabulary-dependent function in `foundation` would make the
+  two groups import each other in both directions, where `shared → foundation` adds no new
+  direction (design.md D8).
+
+### Fixed
+
+- **Two tests that pin a path the flow fold is about to change can now fail.**
+  `tests/test_run_directory.py` asserted `briefings/caption.md` against a producer record it
+  **built inline**, so it would have stayed green while the code wrote
+  `flows/summon-v1/caption.briefing.md` — a silent anchor, the one edit in v0.16 that fails
+  quietly (design.md D7). The record under assertion is now produced by
+  `claude_cli.instructions_record` off the briefing the stage actually reads, and the detector was
+  confirmed red against a moved briefing before anything moves. This is the shape v0.15 used for
+  `DATA_ROOT`: write the detector while the anchor is still correct.
+- **`test_no_second_ordering_is_defined_anywhere_else` was vacuously true.** It globbed
+  `isekai/*.py`, which since v0.15's six-group restructure reaches only `__init__.py` and
+  `__main__.py` — so the assertion that no module carries a second copy of the sixteen field names
+  held over an empty list. It now uses `rglob`, covering all 31 modules, and still passes.
+
 ## [0.15.0] - 2026-09-17
 
 ### Added

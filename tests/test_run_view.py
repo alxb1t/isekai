@@ -11,13 +11,14 @@ import pytest
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import Run, open_run
 from isekai.interface.run_view import listings, rendered, report
-from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
+from tests.stages import caption, sheet
 
 FLOW = "summon-v1"
 
@@ -29,7 +30,7 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
     caption(made, FakeReader(implementation="fake-reader", models=("m1", "m2")))
-    sheet(made, FakeSorter(implementation="fake-sorter"), schema, vocabulary, [FLOW])
+    sheet(made, FakeSorter(implementation="fake-sorter"), schema, vocabulary)
     review(made, FLOW)
     approve(made, FLOW, schema, vocabulary)
     review(made, FLOW, new_version=True)
@@ -40,8 +41,8 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
 def test_each_stage_lists_its_versions_and_marks_the_active_one(run: Run) -> None:
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
-    assert by_name[("captions", None)].versions == [1]
-    assert by_name[("captions", None)].active == 1
+    assert by_name[("captions", FLOW)].versions == [1]
+    assert by_name[("captions", FLOW)].active == 1
     assert by_name[("review", FLOW)].versions == [1, 2]
     # 002 is a draft; the active one is the highest *approved*, because that is
     # what a downstream stage may proceed from.
@@ -69,9 +70,9 @@ def test_the_report_marks_the_active_version_for_each_stage(run: Run) -> None:
 def test_each_artifacts_producer_is_shown(run: Run) -> None:
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
-    assert "fake-reader" in by_name[("captions", None)].producers[1]
-    assert "m1+m2" in by_name[("captions", None)].producers[1]
-    assert "unpinned" in by_name[("captions", None)].producers[1]
+    assert "fake-reader" in by_name[("captions", FLOW)].producers[1]
+    assert "m1+m2" in by_name[("captions", FLOW)].producers[1]
+    assert "unpinned" in by_name[("captions", FLOW)].producers[1]
     assert "fake-sorter" in by_name[("sheets", FLOW)].producers[1]
     assert "unedited" in by_name[("review", FLOW)].producers[1]
 
@@ -99,14 +100,19 @@ def test_the_report_names_the_photograph_and_its_digest(run: Run) -> None:
 
 
 @pytest.mark.spec("cli:show:active-version-is-marked")
-def test_a_stage_with_nothing_in_it_says_so(tmp_path: Path) -> None:
+def test_a_stage_with_nothing_in_it_says_so(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
     photo = tmp_path / "bare.jpg"
     photo.write_bytes(jpeg_bytes(800, 600))
     bare = open_run(photo, tmp_path / "runs")
+    # A flow's directory exists as soon as the flow has done anything at all; the
+    # stages it has not reached yet are the ones that say "(none)".
+    caption(bare, FakeReader())
 
     lines = list(report(bare))
 
-    assert any("captions" in line and "(none)" in line for line in lines)
+    assert any("sheets" in line and "(none)" in line for line in lines)
 
 
 @pytest.mark.spec("cli:show:producers-are-reported")
@@ -114,8 +120,9 @@ def test_renders_are_listed_under_the_sheet_version_they_came_from(
     run: Run, schema: Schema
 ) -> None:
     flow = load_flow(FLOW)
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow})
     render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert rendered(run) == [(FLOW, 1, [42])]
-    assert any("42.png" in line for line in report(run))
+    assert any(line.strip() == "42" for line in report(run))
+    assert any(line.strip() == f"{FLOW}/outputs/001" for line in report(run))

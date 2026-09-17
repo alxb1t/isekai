@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isekai.foundation.flow import load_flow
 from isekai.foundation.run import (
     APPROVED,
     ARTIFACT,
@@ -32,23 +33,19 @@ from isekai.foundation.run import (
 )
 from isekai.pipeline.generate import rendered_seeds
 
-# The stages in the order a run passes through them, and whether each one is
-# scoped to a flow. Declared once here so the listing cannot drift from the
-# layout it describes.
-STAGES: tuple[tuple[str, bool], ...] = (
-    (CAPTIONS, False),
-    (SHEETS, True),
-    (REVIEW, True),
-    (PROMPTS, True),
-)
+# The stages in the order a run passes through them. Every one of them is a
+# flow's own now -- the run is input above and flow below -- so there is nothing
+# left for a per-flow-ness column to say. Declared once here so the listing cannot
+# drift from the layout it describes.
+STAGES: tuple[str, ...] = (CAPTIONS, SHEETS, REVIEW, PROMPTS)
 
 
 @dataclass(frozen=True)
 class Listing:
-    """One stage's artifacts in one run, and which of them is active."""
+    """One stage's artifacts in one flow of one run, and which of them is active."""
 
     stage: str
-    flow: str | None
+    flow: str
     versions: list[int]
     active: int | None
     approved: list[int]
@@ -78,7 +75,7 @@ def _producer_of(path: Path) -> str:
     return " · ".join(parts)
 
 
-def _listing(stage: str, flow: str | None, directory: Path) -> Listing:
+def _listing(stage: str, flow: str, directory: Path) -> Listing:
     """Build one stage's listing from a single reading of its directory.
 
     One `os.listdir`, not three: the versions, the approved ones and each
@@ -109,27 +106,26 @@ def _listing(stage: str, flow: str | None, directory: Path) -> Listing:
 
 
 def listings(run: Run) -> list[Listing]:
-    """Return one listing per stage, and per flow for the stages that have flows."""
-    found: list[Listing] = []
-    for stage, per_flow in STAGES:
-        directory = run.directory(stage)
-        if not per_flow or not directory.is_dir():
-            found.append(_listing(stage, None, directory))
-            continue
-        for flow in sorted(path.name for path in directory.iterdir() if path.is_dir()):
-            found.append(_listing(stage, flow, directory / flow))
-    return found
+    """Return one listing per stage per flow, in flow order then stage order."""
+    return [
+        _listing(stage, flow, run.directory(flow, stage))
+        for flow in run.flows
+        for stage in STAGES
+    ]
 
 
 def rendered(run: Run) -> list[tuple[str, int, list[int]]]:
-    """Return each flow's rendered seeds, by sheet version, from filenames alone."""
-    outputs = run.directory(OUTPUTS)
-    if not outputs.is_dir():
-        return []
+    """Return each flow's rendered seeds, by sheet version, from filenames alone.
+
+    The flow is loaded once, not once per sheet version, and it is loaded at all
+    because what counts as a produced output is the flow's answer rather than an
+    extension written in here.
+    """
     return [
-        (flow, int(group.name), rendered_seeds(group))
-        for flow in sorted(path.name for path in outputs.iterdir() if path.is_dir())
-        for group in sorted((outputs / flow).iterdir())
+        (flow, int(group.name), rendered_seeds(group, suffix))
+        for flow in run.flows
+        for suffix in (load_flow(flow).output_suffix,)
+        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
         if group.is_dir() and group.name.isdigit()
     ]
 
@@ -143,9 +139,7 @@ def report(run: Run) -> Iterator[str]:
     yield f"           sha256 {photo['sha256']}"
 
     for listing in listings(run):
-        name = (
-            listing.stage if listing.flow is None else f"{listing.stage}/{listing.flow}"
-        )
+        name = f"{listing.flow}/{listing.stage}"
         if not listing.versions:
             yield f"  {name:<22} (none)"
             continue
@@ -157,8 +151,8 @@ def report(run: Run) -> Iterator[str]:
             yield f"   {mark} {version:03d}{state}  {producer}"
 
     for flow, version, seeds in rendered(run):
-        yield f"  {OUTPUTS}/{flow}/{version:03d}"
+        yield f"  {flow}/{OUTPUTS}/{version:03d}"
         for seed in seeds:
-            yield f"     {seed}.png"
+            yield f"     {seed}"
 
     yield "  * marks the active version for each stage"

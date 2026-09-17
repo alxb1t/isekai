@@ -1,7 +1,9 @@
 """The schema document, and what a sheet is allowed to be.
 
 The tracked schema itself is read, not a fixture copy of it -- the same rule the
-suite reads the shipped graph and the tracked manifests under.
+suite reads the shipped graph and the tracked manifests under. It is reached
+through the flow that owns it, because after v0.16 there is no schema document
+outside a flow directory.
 """
 
 import json
@@ -9,17 +11,20 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.flow import Schema
-from isekai.foundation.refusal import Refusal
-from isekai.pipeline.sheet import (
+from isekai.foundation.flow import (
     IDENTIFIER_SAFE,
-    SCHEMA_VERSION,
-    fill,
+    SCHEMA_NAME,
+    Schema,
+    load_flow,
     load_schema,
-    schema_path,
-    validate,
+    tracked_flows,
 )
+from isekai.foundation.refusal import Refusal
+from isekai.pipeline.sheet import fill
+from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
+
+SCHEMA_PATH = load_flow("summon-v1").schema_path
 
 # D8's sixteen, in the one order a prompt is assembled in, and the seven a
 # measurement is taken over. Restated here so that reordering the schema document
@@ -67,7 +72,7 @@ def test_no_second_ordering_is_defined_anywhere_else() -> None:
     root = Path(__file__).resolve().parent.parent
     carriers = [
         path
-        for path in (root / "isekai").glob("*.py")
+        for path in (root / "isekai").rglob("*.py")
         if "hair_silhouette" in path.read_text()
     ]
     assert carriers == []
@@ -90,9 +95,9 @@ def test_every_field_name_is_a_legal_structured_output_property_key(
 def test_a_schema_carrying_a_name_the_api_would_reject_is_refused(
     tmp_path: Path,
 ) -> None:
-    document = json.loads(schema_path().read_text())
+    document = json.loads(SCHEMA_PATH.read_text())
     document["fields"][0]["name"] = "hair / silhouette"
-    path = tmp_path / "identity.v1.json"
+    path = tmp_path / SCHEMA_NAME
     path.write_text(json.dumps(document))
 
     with pytest.raises(Refusal) as refused:
@@ -110,50 +115,49 @@ def test_the_name_the_instructions_use_is_the_name_the_structure_enforces(
     assert len(set(schema.names)) == len(schema.names)
 
 
-@pytest.mark.spec("sheet:schema:unknown-version-is-refused")
-def test_a_schema_from_a_version_this_build_does_not_know_is_refused(
-    tmp_path: Path,
-) -> None:
-    path = tmp_path / "identity.v2.json"
-    path.write_text(json.dumps({"schema": "identity", "version": 2, "fields": []}))
+@pytest.mark.spec("sheet:schema:schema-is-read-from-the-flow")
+def test_every_tracked_flow_carries_its_own_schema_document() -> None:
+    for name in tracked_flows():
+        flow = load_flow(name)
 
-    with pytest.raises(Refusal) as refused:
-        load_schema(path)
-
-    message = str(refused.value)
-    assert "identity.v2.json" in message
-    assert "2" in message and str(SCHEMA_VERSION) in message
+        assert flow.schema_path == flow.path / SCHEMA_NAME
+        assert flow.schema.names
 
 
-@pytest.mark.spec("sheet:schema:unknown-version-is-refused")
-def test_no_field_of_an_unknown_schema_version_is_interpreted(
-    tmp_path: Path,
-) -> None:
-    path = tmp_path / "identity.v9.json"
-    path.write_text(
-        json.dumps({"schema": "identity", "version": 9, "fields": [{"name": "unread"}]})
-    )
+@pytest.mark.spec("sheet:schema:schema-is-read-from-the-flow")
+def test_no_schema_document_is_tracked_outside_a_flow_directory() -> None:
+    root = Path(__file__).resolve().parent.parent
+    flows = {load_flow(name).schema_path for name in tracked_flows()}
 
-    with pytest.raises(Refusal) as refused:
-        load_schema(path)
+    stray = [
+        path
+        for path in root.rglob(SCHEMA_NAME)
+        if path not in flows and ".venv" not in path.parts and ".data" not in path.parts
+    ]
 
-    assert "unread" not in str(refused.value)
+    assert stray == []
 
 
-@pytest.mark.spec_exempt("structural: the schema's own declared vocabulary")
-def test_the_schema_declares_the_vocabulary_it_is_written_against(
-    schema: Schema,
-) -> None:
+@pytest.mark.spec("sheet:schema:vocabulary-is-declared-by-the-flow")
+def test_the_schema_document_declares_no_vocabulary_and_no_version() -> None:
+    document = json.loads(SCHEMA_PATH.read_text())
+
+    assert sorted(document) == ["fields", "name"]
+
+
+@pytest.mark.spec("sheet:schema:vocabulary-is-declared-by-the-flow")
+def test_the_vocabulary_a_fill_is_held_against_is_the_flows() -> None:
     manifest = json.loads(
         (
             Path(__file__).resolve().parent.parent / "scripts" / "vocabulary.json"
         ).read_text()
     )
     entry = manifest["entries"][0]
+    flow = load_flow("summon-v1")
 
-    assert schema.vocabulary["name"] == entry["dest"]
-    assert schema.vocabulary["sha256"] == entry["sha256"]
-    assert schema.vocabulary["revision"] in entry["sources"][0]
+    assert flow.vocabulary["name"] == entry["dest"]
+    assert flow.vocabulary["sha256"] == entry["sha256"]
+    assert flow.vocabulary["revision"] in entry["sources"][0]
 
 
 @pytest.mark.spec_exempt("structural: the field lookup's refusal")

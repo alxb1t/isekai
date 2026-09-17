@@ -1,15 +1,19 @@
-"""Stage (2): the schema a sheet is shaped by, and the sheet itself.
+"""Stage (2): prose in, a sheet of canonical tags out.
 
 A sheet is fields and nothing else. It carries no assembled prompt -- storing one
 creates a footgun where a human edits the prompt block and a rebuild silently
-overwrites it -- and this stage is never told which flow asked for it, which is
-what lets one filled sheet serve every flow that shares a schema and a vocabulary.
+overwrites it. **The fill itself is told nothing about flows**: the sorter is
+handed the prose, the schema and the briefing, so the same code serves every flow
+without learning that flows exist, and the flow decides only which directory is
+read and written.
 
-**The schema is a versioned data file, not code.** It can be checked without
-executing anything, and a second schema -- a photoreal flow's, say -- is a file
-rather than a branch. It declares, in order, the sixteen fields, which seven are
-scored, the per-field suffix convention, and the vocabulary it is written against
-(design.md D8).
+**The schema is a data file, not code.** It can be checked without executing
+anything, and a second schema -- a photoreal flow's, say -- is a file rather than
+a branch. It declares, in order, the sixteen fields, which seven are scored and
+the per-field suffix convention; it carries no version and no vocabulary, because
+inside a frozen flow directory the digest proves the field list and the flow
+declares the vocabulary. Its reader lives beside `Schema` in
+`isekai/foundation/flow.py`.
 
 **Field names are slugs because they have to be.** The structured-output flag
 becomes a tool input schema at the API, which enforces `^[a-zA-Z0-9_.-]{1,64}$` on
@@ -23,7 +27,6 @@ Stdlib only.
 
 import dataclasses
 import json
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,7 +43,7 @@ from isekai.boundary.claude_cli import (
     refusal_for,
     spawn,
 )
-from isekai.foundation.flow import Field, Schema
+from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -55,61 +58,9 @@ from isekai.foundation.run import (
     record_failure,
     write_json,
 )
-from isekai.shared.vocabulary import Vocabulary, map_phrase, normalise
+from isekai.shared.fields import validate
+from isekai.shared.vocabulary import Vocabulary, map_phrase
 from isekai.shared.vocabulary import identity as vocabulary_identity
-
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / "schemas"
-
-# The only schema document version this build reads. There is one schema version
-# in existence, so there is no migration ladder and no second reader.
-SCHEMA_VERSION = 1
-
-# What the API enforces on a tool input schema's property keys. Held here rather
-# than discovered at the boundary, because a name that fails it fails every call
-# rather than one.
-IDENTIFIER_SAFE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
-
-
-def schema_path(name: str = "identity", version: int = SCHEMA_VERSION) -> Path:
-    """Return the tracked path of one schema document."""
-    return SCHEMAS_DIR / f"{name}.v{version}.json"
-
-
-def load_schema(path: Path | None = None) -> Schema:
-    """Read a schema document, refusing any version this build does not know.
-
-    Nothing is interpreted before the version is checked: a best-effort read of a
-    field list you do not know the shape of produces a sheet that looks filled and
-    means nothing.
-    """
-    path = schema_path() if path is None else path
-    document: Any = json.loads(path.read_text())
-    declared = document.get("version")
-    if declared != SCHEMA_VERSION:
-        raise Refusal(
-            f"{path.name}: declares schema version {declared!r} and this build "
-            f"reads version {SCHEMA_VERSION}; upgrade isekai to a build that "
-            f"reads version {declared!r}, or point the flow at a schema document "
-            f"declaring version {SCHEMA_VERSION}"
-        )
-    fields = tuple(
-        Field(str(entry["name"]), bool(entry["scored"]), entry["suffix"])
-        for entry in document["fields"]
-    )
-    unsafe = [field.name for field in fields if not IDENTIFIER_SAFE.match(field.name)]
-    if unsafe:
-        raise Refusal(
-            f"{path.name}: {', '.join(unsafe)} cannot be a structured-output "
-            "property key, which must match "
-            f"{IDENTIFIER_SAFE.pattern}; rename the field in the schema document "
-            "and in the briefing that names it"
-        )
-    return Schema(
-        name=str(document["schema"]),
-        version=int(declared),
-        vocabulary=dict(document["vocabulary"]),
-        fields=fields,
-    )
 
 
 def fill(
@@ -135,61 +86,7 @@ def fill(
     return filled
 
 
-def validate(
-    fields: Mapping[str, Sequence[str]],
-    schema: Schema,
-    vocabulary: Vocabulary,
-) -> None:
-    """Refuse a sheet that is not exactly the schema's fields of canonical tags.
-
-    Three ways a sheet can be wrong, and each names what to do about it: a field
-    the schema declares is missing, a key the schema does not declare is present,
-    or a tag is not in the vocabulary's prediction set. An empty field is none of
-    those.
-    """
-    missing = [name for name in schema.names if name not in fields]
-    if missing:
-        raise Refusal(
-            f"the sheet is missing {', '.join(missing)}; add the field with an "
-            "empty list -- an empty field is a legal answer, a missing one is not"
-        )
-    extra = [name for name in fields if name not in schema.names]
-    if extra:
-        raise Refusal(
-            f"the sheet carries {', '.join(sorted(extra))}, which schema "
-            f"{schema.name} v{schema.version} does not declare; remove "
-            "the entry, or write a schema version that declares it"
-        )
-    outside = [
-        (name, tag)
-        for name in schema.names
-        for tag in fields[name]
-        if tag not in vocabulary
-    ]
-    if outside:
-        listed = ", ".join(f"{tag!r} in {name}" for name, tag in outside)
-        raise Refusal(
-            f"{listed}: not in {vocabulary.name}'s prediction set, so the base "
-            "model was never trained to draw it; replace it with a tag the "
-            "vocabulary carries, or delete it"
-        )
-    unspelled = [
-        (name, tag)
-        for name in schema.names
-        for tag in fields[name]
-        if tag != normalise(tag)
-    ]
-    if unspelled:
-        listed = ", ".join(f"{tag!r} in {name}" for name, tag in unspelled)
-        raise Refusal(
-            f"{listed}: not written in the vocabulary's own spelling; use "
-            "lowercase words separated by single spaces"
-        )
-
-
 # --- the stage: prose in, canonical fields out --------------------------------
-
-BRIEFING_PATH = SCHEMAS_DIR / "identity.v1.briefing.md"
 
 # The name this stage's budget is keyed by. Its directory inside a run is the
 # run's to name, not the stage's -- `run.SHEETS`.
@@ -315,7 +212,7 @@ def answers_from(structured: object, text: str, schema: Schema) -> dict[str, lis
         raise CliFailure(
             "permanent",
             f"the response does not carry {', '.join(missing)}, which schema "
-            f"{schema.name} v{schema.version} requires",
+            f"{schema.name} requires",
         )
     # A bare string is tolerated as a one-phrase answer, because a model that
     # returns `"brown"` where `["brown"]` was asked for said something usable and
@@ -334,42 +231,37 @@ def answers_from(structured: object, text: str, schema: Schema) -> dict[str, lis
 
 def sheet(
     run: Run,
+    flow: str,
     sorter: Sorter,
     schema: Schema,
     vocabulary: Vocabulary,
-    flows: Sequence[str],
     *,
+    briefing_path: Path,
     new_version: bool = False,
-    briefing_path: Path = BRIEFING_PATH,
-) -> list[Path]:
-    """Sort `run`'s caption into a sheet, and write it to every flow given.
+) -> Path | None:
+    """Sort this flow's caption into a sheet, under that flow.
 
-    **One fill, many destinations.** The stage is never told which flow asked --
-    it is handed the schema, the vocabulary and the caption, and nothing else --
-    so flows declaring the same pair start from identical sheets and diverge only
-    when a human edits them. Filling once and copying is what makes adding a flow
-    cheap, and it follows from the stage's ignorance rather than from a check.
+    **The fill itself is told nothing about flows.** The sorter is handed the
+    prose, the schema and the briefing, and nothing else, so the same code serves
+    every flow without learning that flows exist; `flow` decides only which
+    directory is read and written. A flow shares nothing, so the caption read here
+    is the one produced under this flow's own instructions (design.md D5).
 
-    Returns the paths written, empty when every flow already had a sheet.
+    Returns the artifact's path, or None when this flow already had a sheet.
     """
-    wanted = [
-        flow
-        for flow in flows
-        if latest(run.directory(SHEETS, flow)) is None or new_version
-    ]
-    if not wanted:
-        return []
+    directory = run.directory(flow, SHEETS)
+    if latest(directory) is not None and not new_version:
+        return None
 
-    captions = run.directory(CAPTIONS)
+    captions = run.directory(flow, CAPTIONS)
     source = latest(captions)
     if source is None:
         raise Refusal(
-            f"{run.id}: there is no caption to sort; run "
-            "`python -m isekai caption` for this photograph first"
+            f"{run.id}: there is no caption to sort for {flow}; run "
+            f"`python -m isekai caption --flow {flow}` for this photograph first"
         )
 
-    first = run.directory(SHEETS, wanted[0])
-    check_budget(STAGE, first, next_version(first), run.id)
+    check_budget(STAGE, directory, next_version(directory), run.id)
 
     prose = str(read_artifact(captions / artifact_name(source))["prose"])
     briefing = briefing_text(briefing_path)
@@ -377,44 +269,35 @@ def sheet(
         sorted_answers = sorter.sort(prose, schema, briefing)
     except CliFailure as failed:
         record = record_failure(
-            first,
-            next_version(first),
+            directory,
+            next_version(directory),
             failed.kind,
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "sorter", run.id, failed, record, f"{SHEETS}/{wanted[0]}/", STAGE
+            "sorter", run.id, failed, record, f"{flow}/{SHEETS}/", STAGE
         ) from failed
 
     fields = fill(sorted_answers.answers, schema, vocabulary)
     validate(fields, schema, vocabulary)
 
-    # Constant across destinations: one read and one hash, not one per flow.
-    briefing_record = instructions_record(briefing_path)
-    written: list[Path] = []
-    for flow in wanted:
-        directory = run.directory(SHEETS, flow)
-        path = directory / artifact_name(next_version(directory))
-        write_json(
-            path,
-            envelope(
-                STAGE,
-                {
-                    "implementation": sorted_answers.implementation,
-                    "models": list(sorted_answers.models),
-                    "pinned": sorted_answers.pinned,
-                    "briefing": briefing_record,
-                    "from": source,
-                },
-                {
-                    "schema_document": {
-                        "name": schema.name,
-                        "version": schema.version,
-                    },
-                    "vocabulary": vocabulary_identity(vocabulary),
-                    "fields": fields,
-                },
-            ),
-        )
-        written.append(path)
-    return written
+    path = directory / artifact_name(next_version(directory))
+    write_json(
+        path,
+        envelope(
+            STAGE,
+            {
+                "implementation": sorted_answers.implementation,
+                "models": list(sorted_answers.models),
+                "pinned": sorted_answers.pinned,
+                "briefing": instructions_record(briefing_path),
+                "from": source,
+            },
+            {
+                "schema_document": {"name": schema.name},
+                "vocabulary": vocabulary_identity(vocabulary),
+                "fields": fields,
+            },
+        ),
+    )
+    return path

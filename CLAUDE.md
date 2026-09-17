@@ -82,8 +82,11 @@ and nowhere else. In brief, the load-bearing seams are:
 - **`ComfyTransport`** (`isekai/boundary/comfy_types.py`, implemented in `comfy_client.py`) — the
   network boundary, and the only one.
 - **The run owns the layout, not the stages.** The stage directory names live in
-  `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, so exactly one
-  stage imports another: `review` calls `sheet`'s `validate`, which is behaviour rather than layout.
+  `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, and **no stage
+  imports another** — the last such edge closed when `validate` moved to `isekai/shared/fields.py`,
+  which is behaviour rather than layout. The layout itself is **input above, flow below**:
+  `runs/<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`, so adding a flow adds one
+  subtree and no flow can read another's artifacts.
 
 **Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
 proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both are registered in
@@ -156,16 +159,21 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   **`foundation/`** — `run.py`'s run directory and the layout names, `flow.py`'s manifest loader and
   the `Schema` type, `refusal.py`. **`pipeline/`** — the four staged verbs, `caption` · `sheet` ·
   `review` · `generate`. **`shared/`** — `image.py`'s header reader, `vocabulary.py`,
-  `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
+  `fields.py`'s sheet validation, `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
   `multipart.py`), `claude_cli.py`, and `provision.py`: the manifest's reader, the byte verification,
   the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is **not** in the entry
   point's import graph, so the stdlib-only runtime rule is untouched either way.
   **`evaluation/`** — the scorer and the only importer of the `[eval]` extra. **`interface/`** —
   `cli.py`'s parser and dispatch, `wiring.py`'s composition, `run_view.py` behind the `show` verb.
   **`tests/`** — the suite and its fakes.
-  **`flows/<id>/`** — one flow: `flow.json`, the manifest that declares its inputs, dials, prompt
-  fragments and the graph id of every node the render path edits; and `graph.json`, the API graph
-  itself. A flow is immutable — editing one is not a variant of a flow, it is an untested flow — and
+  **`flows/<id>/`** — one flow, and **five flat files**: `flow.json`, the manifest that declares its
+  inputs, vocabulary, models, dials, prompt fragments and the graph id of every node the render path
+  edits; `graph.json`, the API graph; `schema.json`, the sheet's field list; and the two briefings,
+  `caption.briefing.md` and `sheet.briefing.md`. The manifest names none of its siblings — a key that
+  can only ever hold one value is not a declaration — and they sit *directly* in the directory,
+  because the digest that freezes a flow covers regular files only, so a nested layout would leave
+  three of the five outside the freeze with the gate green. A flow is immutable — editing any of the
+  five is not a variant of a flow, it is an untested flow — it shares nothing with another flow, and
   `flows/summon-v1/` is the only one. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — `models.json`, the pinned and checksummed manifest of every
   model artifact the graph needs and the source of truth for what the stack *is*;
@@ -184,7 +192,8 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   tracked file in it. `git check-ignore` reports the *directory* as not ignored precisely because of that
   one file — always check a file path.
 - **`.data/`** — **everything a run produces or consumes**, and **gitignored**: the staged pipeline's
-  runs under `.data/runs/<photo-id>/` (or wherever `--runs` points), beside its inputs and outputs.
+  runs under `.data/runs/<input-id>/<flow-id>/` (or wherever `--runs` points), beside its inputs and
+  outputs.
   The reason is not tidiness. A run directory holds a *copy of the photograph* — that is what makes a
   run reconstructable from disk — so `runs/` contains personal photographs **by construction**. Under
   a top-level `runs/` the standing rule that no personal photograph is committed would depend on one
@@ -201,9 +210,11 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 ## The path
 
 One flow, `summon-v1`, on a **WAI-illustrious-SDXL v17.0** (Illustrious/SDXL anime) base, driven in
-four staged verbs — `caption` → `sheet` → `review`/`approve` → `generate`. The stages before the last
-are free and local; only `generate` needs an endpoint, and assembly happens for the whole batch
-before one is acquired, so a malformed sheet costs nothing rather than a boot.
+four staged verbs — `caption` → `sheet` → `review`/`approve` → `generate`. **Every one of them takes
+`--flow`, required and repeatable**, because the flow is what supplies the briefing the stage reads,
+the schema it fills against and the directory it writes into. The stages before the last are free and
+local; only `generate` needs an endpoint, and assembly happens for the whole batch before one is
+acquired, so a malformed sheet costs nothing rather than a boot.
 
 Identity is carried by mechanisms rather than by a sentence someone types:
 

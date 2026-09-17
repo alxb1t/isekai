@@ -5,6 +5,8 @@ carried, so the stdlib-only runtime rule now has exactly one subject and the gua
 that holds it lives here, beside the falsification that keeps it honest.
 """
 
+import io
+import json
 import os
 import subprocess
 import sys
@@ -12,7 +14,14 @@ from pathlib import Path
 
 import pytest
 
-from isekai.interface.cli import VERBS, build_parser, main
+from isekai.foundation.refusal import Refusal
+from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
+from isekai.interface.wiring import Wiring
+from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.sheet import FakeSorter
+from isekai.shared.vocabulary import Vocabulary, read_tags
+from tests.conftest import CSV
+from tests.images import jpeg_bytes
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -27,6 +36,39 @@ def _module(*args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         cwd=ROOT,
     )
+
+
+def _wiring(tmp_path: Path, flows_dir: Path | None = None) -> Wiring:
+    """Return an offline wiring, optionally pointed at a scratch flows root."""
+    from isekai.foundation.flow import FLOWS_DIR
+
+    return Wiring(
+        reader=FakeReader(),
+        sorter=FakeSorter(answers={}),
+        client=None,
+        vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, read_tags(CSV)),
+        runs_root=tmp_path / "runs",
+        flows_dir=flows_dir or FLOWS_DIR,
+        out=io.StringIO(),
+        err=io.StringIO(),
+    )
+
+
+def _two_flows(tmp_path: Path) -> Path:
+    """Return a scratch flows root tracking `summon-v1` and a copy beside it."""
+    from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, load_flow
+
+    source = load_flow("summon-v1").path
+    root = tmp_path / "two-flows"
+    for name in ("summon-v1", "other-v1"):
+        directory = root / name
+        directory.mkdir(parents=True)
+        manifest = json.loads((source / MANIFEST_NAME).read_text())
+        manifest["flow"] = name
+        (directory / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
+        for sibling in SIBLINGS:
+            (directory / sibling).write_bytes((source / sibling).read_bytes())
+    return root
 
 
 def _stdlib_import(statement: str) -> subprocess.CompletedProcess[str]:
@@ -56,7 +98,9 @@ def test_the_six_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    assert build_parser().parse_args([verb]).verb == verb
+    flag = [] if verb == "show" else ["--flow", "summon-v1"]
+
+    assert build_parser().parse_args([verb, *flag]).verb == verb
 
 
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
@@ -121,3 +165,95 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
 @pytest.mark.spec_exempt("structural: the parser dispatches nothing yet")
 def test_parsing_a_verb_succeeds() -> None:
     assert main(["show"]) == 0
+
+
+# --- the flow selection --------------------------------------------------------
+
+STAGE_VERBS = ("caption", "sheet", "review", "approve", "generate")
+
+
+@pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")
+@pytest.mark.parametrize("verb", STAGE_VERBS)
+def test_a_stage_verb_without_a_flow_is_refused(verb: str) -> None:
+    result = _module(verb, "ada.jpg")
+
+    assert result.returncode != 0
+    assert "--flow" in result.stderr
+
+
+@pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")
+def test_the_refusal_lists_the_flows_this_build_tracks(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+
+    with pytest.raises(Refusal) as refused:
+        _flows_for(build_parser().parse_args(["review", "--flow", "nope"]), wired)
+
+    assert "summon-v1" in str(refused.value)
+
+
+@pytest.mark.spec("cli:flow-selection:the-flag-is-repeatable")
+def test_naming_two_flows_in_one_invocation_keeps_both() -> None:
+    parsed = build_parser().parse_args(
+        ["generate", "--flow", "summon-v1", "--flow", "summon-v2"]
+    )
+
+    assert parsed.flows == ["summon-v1", "summon-v2"]
+
+
+@pytest.mark.spec("cli:flow-selection:the-flag-is-repeatable")
+def test_no_named_flow_is_silently_dropped(tmp_path: Path) -> None:
+    # The old flag was a single string: a second `--flow` overwrote the first
+    # and the invocation acted on one of the two without saying so.
+    wired = _wiring(tmp_path, flows_dir=_two_flows(tmp_path))
+    parsed = build_parser().parse_args(
+        ["review", "--flow", "summon-v1", "--flow", "other-v1"]
+    )
+
+    assert list(_flows_for(parsed, wired)) == ["summon-v1", "other-v1"]
+
+
+@pytest.mark.spec("cli:flow-selection:every-stage-verb-accepts-it")
+@pytest.mark.parametrize("verb", STAGE_VERBS)
+def test_every_stage_verb_accepts_the_flag(verb: str) -> None:
+    parsed = build_parser().parse_args([verb, "--flow", "summon-v1"])
+
+    assert parsed.flows == ["summon-v1"]
+
+
+@pytest.mark.spec("cli:flow-selection:every-stage-verb-accepts-it")
+def test_the_inspection_verb_is_the_only_one_that_does_not_take_it() -> None:
+    result = _module("show", "--flow", "summon-v1")
+
+    assert result.returncode != 0
+    assert "--flow" in result.stderr
+
+
+@pytest.mark.spec("cli:flow-selection:an-untracked-flow-is-refused")
+def test_an_untracked_flow_is_refused_naming_it(tmp_path: Path) -> None:
+    wired = _wiring(tmp_path)
+    parsed = build_parser().parse_args(["generate", "--flow", "summon-v9"])
+
+    with pytest.raises(Refusal) as refused:
+        _flows_for(parsed, wired)
+
+    message = str(refused.value)
+    assert "summon-v9" in message
+    assert "summon-v1" in message
+
+
+@pytest.mark.spec("cli:flow-selection:an-untracked-flow-is-refused")
+def test_an_untracked_flow_is_refused_before_any_run_is_opened(tmp_path: Path) -> None:
+    # At `generate` the flow's first use is after a photograph has been uploaded,
+    # so resolving the name at selection is what keeps the refusal free.
+    err = io.StringIO()
+    wired = _wiring(tmp_path)
+    wired.err = err
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    parsed = build_parser().parse_args(["generate", "--flow", "summon-v9", str(photo)])
+
+    status = dispatch(parsed, wired)
+
+    assert status == 1
+    assert not (tmp_path / "runs").exists()
+    assert "summon-v9" in err.getvalue()

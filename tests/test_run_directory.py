@@ -7,6 +7,7 @@ property under test as much as it is the way the tests are written.
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,8 @@ from typing import Any
 import pytest
 
 import isekai.shared.atomic_write as atomic_write_module
+from isekai.boundary.claude_cli import instructions_record
+from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
@@ -21,6 +24,7 @@ from isekai.foundation.run import (
     FRAME_NAME,
     RUNS_ROOT,
     SCHEMA_VERSION,
+    Run,
     across,
     approved_versions,
     artifact_name,
@@ -41,7 +45,18 @@ from isekai.foundation.run import (
 )
 from isekai.interface.cli import build_parser
 from isekai.interface.wiring import Wiring, wiring
+from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.generate import prompt_artifact, render
+from isekai.pipeline.review import approve, review
+from isekai.pipeline.sheet import FakeSorter
+from isekai.shared.vocabulary import Vocabulary
+from tests.conftest import snapshot
+from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, png_bytes
+from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
+from tests.stages import caption, sheet
+
+FLOW = "summon-v1"
 
 
 @pytest.fixture
@@ -69,8 +84,12 @@ def test_the_id_begins_with_a_digest_prefix_and_continues_with_the_stem(
     run = open_run(_photo(tmp_path, "Aunt Ada's Photo.jpg", body), runs)
 
     digest = run.frame["photo"]["sha256"]
-    assert run.id == f"{digest[:12]}-aunt-ada-s-photo"
+    # An underscore, and the slug's own hyphens are what make it readable: with a
+    # hyphen there is no way to see where the digest ends, and a slug can never
+    # carry an underscore.
+    assert run.id == f"{digest[:12]}_aunt-ada-s-photo"
     assert run.path.name == run.id
+    assert run.id.count("_") == 1
 
 
 @pytest.mark.spec("run-directory:identity:id-is-hash-and-slug")
@@ -109,21 +128,21 @@ def test_two_photographs_sharing_a_filename_get_different_runs(
     second = open_run(_photo(tmp_path / "b", "p.jpg", jpeg_bytes(640, 480)), runs)
 
     assert first.id != second.id
-    write_json(first.directory("captions") / "001.json", {})
-    assert versions(second.path / "captions") == []
+    write_json(first.directory(FLOW, "captions") / "001.json", {})
+    assert versions(second.path / FLOW / "captions") == []
 
 
 @pytest.mark.spec("run-directory:identity:same-bytes-resume-the-same-run")
 def test_the_same_photograph_twice_is_one_run(tmp_path: Path, runs: Path) -> None:
     body = jpeg_bytes(800, 600)
     first = open_run(_photo(tmp_path / "a", "p.jpg", body), runs)
-    write_json(first.path / "captions" / "001.json", {})
+    write_json(first.path / FLOW / "captions" / "001.json", {})
 
     second = open_run(_photo(tmp_path / "b", "renamed.jpg", body), runs)
 
     assert second.path == first.path
     assert sorted(os.listdir(runs)) == [first.id]
-    assert versions(second.path / "captions") == [1]
+    assert versions(second.path / FLOW / "captions") == [1]
 
 
 # --- the frame ----------------------------------------------------------------
@@ -282,7 +301,7 @@ def test_each_stage_numbers_within_its_own_directory(
     tmp_path: Path, runs: Path
 ) -> None:
     run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
-    captions, sheets = run.directory("captions"), run.directory("sheets", "summon-v1")
+    captions, sheets = run.directory(FLOW, "captions"), run.directory(FLOW, "sheets")
 
     write_json(captions / artifact_name(next_version(captions)), {})
     write_json(captions / artifact_name(next_version(captions)), {})
@@ -309,30 +328,32 @@ def test_every_artifact_carries_a_schema_name_and_an_integer_version() -> None:
 
 
 @pytest.mark.spec("run-directory:provenance:producer-records-the-briefing")
-def test_a_producer_records_the_instruction_texts_path_and_digest(
+def test_a_producer_records_the_briefings_path_and_digest(
     tmp_path: Path,
 ) -> None:
-    def written(briefing_digest: str) -> dict[str, Any]:
-        path = tmp_path / f"{briefing_digest}.json"
+    # The record under assertion is the one the producer would write -- built by
+    # `instructions_record` off the briefing the stage actually reads, never
+    # constructed here. A record this test builds itself pins a literal the code
+    # is free to stop writing.
+    def written(briefing_path: Path) -> dict[str, Any]:
+        record = instructions_record(briefing_path)
+        path = tmp_path / f"{record['sha256']}.json"
         write_json(
             path,
             envelope(
                 "caption",
-                {
-                    "implementation": "claude-cli",
-                    "briefing": {
-                        "path": "briefings/caption.md",
-                        "sha256": briefing_digest,
-                    },
-                },
+                {"implementation": "claude-cli", "briefing": record},
                 {"prose": "the same prose either way"},
             ),
         )
         return read_artifact(path)
 
-    one, other = written("a" * 64), written("b" * 64)
+    elsewhere = tmp_path / "other.md"
+    elsewhere.write_text("Different standing instructions entirely.")
 
-    assert one["producer"]["briefing"]["path"] == "briefings/caption.md"
+    one, other = written(BRIEFING_PATH), written(elsewhere)
+
+    assert one["producer"]["briefing"]["path"] == "flows/summon-v1/caption.briefing.md"
     assert (
         one["producer"]["briefing"]["sha256"] != other["producer"]["briefing"]["sha256"]
     )
@@ -572,7 +593,7 @@ def test_the_frame_declares_its_own_schema(tmp_path: Path, runs: Path) -> None:
 
 @pytest.mark.spec_exempt("structural: the id helper, exercised directly")
 def test_the_run_id_is_the_digest_prefix_and_the_slug() -> None:
-    assert run_id("f" * 64, "Holiday Snap") == f"{'f' * 12}-holiday-snap"
+    assert run_id("f" * 64, "Holiday Snap") == f"{'f' * 12}_holiday-snap"
 
 
 @pytest.mark.spec("run-directory:identity:same-name-different-bytes-differ")
@@ -694,3 +715,110 @@ def test_the_default_run_root_is_under_the_ignored_data_root() -> None:
 
     assert wired.runs_root == RUNS_ROOT
     assert DATA_ROOT in wired.runs_root.parents
+
+
+# --- the layout: input above, flow below --------------------------------------
+
+
+def _carry(
+    run: Run, flow: str, schema: Schema, vocabulary: Vocabulary, seed: int = 42
+) -> None:
+    """Carry one run through every stage for one flow, with no network."""
+    loaded = load_flow(flow)
+    caption(run, FakeReader(prose="Brown hair, brown eyes."), flow=flow)
+    sheet(
+        run,
+        FakeSorter(answers={"hair_colour": ["brown"]}),
+        schema,
+        vocabulary,
+        flow=flow,
+    )
+    review(run, flow)
+    approve(run, flow, schema, vocabulary)
+    prompt_artifact(run, loaded, schema)
+    render(run, loaded, FakeComfyClient(), seeds=[seed], poll=0)
+
+
+@pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
+def test_the_layout_is_the_input_above_and_every_stage_below_the_flow(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+
+    _carry(run, FLOW, schema, vocabulary)
+
+    for stage in ("captions", "sheets", "review", "prompts", "outputs"):
+        assert (run.path / FLOW / stage).is_dir(), stage
+        assert not (run.path / stage).exists(), stage
+
+
+@pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
+def test_the_layout_puts_nothing_above_the_flow_but_the_input_and_its_frame(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+
+    _carry(run, FLOW, schema, vocabulary)
+
+    files = sorted(path.name for path in run.path.iterdir() if path.is_file())
+    directories = sorted(path.name for path in run.path.iterdir() if path.is_dir())
+    assert files == sorted((FRAME_NAME, run.photo.name))
+    assert directories == [FLOW]
+
+
+@pytest.mark.spec("run-directory:layout:a-second-flow-adds-one-subtree")
+def test_the_layout_gains_one_subtree_when_a_second_flow_is_added(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    _carry(run, FLOW, schema, vocabulary)
+    before = snapshot(run.path / FLOW)
+
+    caption(run, FakeReader(prose="Brown hair."), flow="summon-v2")
+
+    assert sorted(path.name for path in run.path.iterdir() if path.is_dir()) == [
+        FLOW,
+        "summon-v2",
+    ]
+    assert snapshot(run.path / FLOW) == before
+
+
+@pytest.mark.spec("run-directory:layout:the-input-is-copied-once")
+def test_the_layout_holds_one_copy_of_the_input_however_many_flows_run(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+
+    _carry(run, FLOW, schema, vocabulary)
+    caption(run, FakeReader(prose="Brown hair."), flow="summon-v2")
+
+    copies = [path for path in run.path.rglob("*.jpg") if path.is_file()]
+    assert copies == [run.photo]
+    assert versions(run.path) == []
+    assert (run.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec("run-directory:layout:one-flow-s-work-is-one-directory")
+def test_the_layout_survives_one_flows_directory_being_removed(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(
+        _photo(tmp_path, "ada.jpg", jpeg_bytes(1200, 900)), tmp_path / "runs"
+    )
+    _carry(run, FLOW, schema, vocabulary)
+    caption(run, FakeReader(prose="Brown hair."), flow="summon-v2")
+    kept = snapshot(run.path / FLOW)
+
+    shutil.rmtree(run.path / "summon-v2")
+
+    assert snapshot(run.path / FLOW) == kept
+    assert run.photo.is_file()
+    assert (run.path / FRAME_NAME).is_file()

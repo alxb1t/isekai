@@ -30,14 +30,14 @@ with site-packages off the path.
 import argparse
 import sys
 import urllib.error
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
-from isekai.foundation.flow import load_flow, tracked_flows
+from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.interface.run_view import report
@@ -46,6 +46,7 @@ from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
+from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
 # so the two cannot disagree about what a stage does.
@@ -116,11 +117,19 @@ def build_parser() -> argparse.ArgumentParser:
             default=RUNS_ROOT,
             help=f"the directory runs live under (default {RUNS_ROOT.name}/)",
         )
-    for name in ("review", "approve", "generate"):
+    # Required, and repeatable, on every stage verb. A stage cannot act without
+    # knowing which flow asked, because the flow is what supplies what it reads:
+    # its briefing, its schema, its graph and its dials. "Every tracked flow" is
+    # not a selection, it is the absence of one -- and at the last verb it spends
+    # money, at the first it burns a paid model call.
+    for name in ("caption", "sheet", "review", "approve", "generate"):
         made[name].add_argument(
             "--flow",
-            default=None,
-            help="the flow to act on; every approved one by default",
+            action="append",
+            dest="flows",
+            required=True,
+            metavar="FLOW",
+            help="a flow to act on; repeatable, and required",
         )
     for name in ("caption", "sheet", "review"):
         made[name].add_argument(
@@ -181,26 +190,26 @@ def _run_for(identifier: str, wired: Wiring) -> Run:
     return open_run(photo, wired.runs_root)
 
 
-def _flows_for(args: argparse.Namespace, wired: Wiring) -> list[str]:
-    """Return the flows a verb acts on: the one named, or every tracked one."""
-    named = getattr(args, "flow", None)
-    return [named] if named else tracked_flows(wired.flows_dir)
+def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
+    """Return the flows this invocation acts on, loaded, refusing an untracked one.
 
-
-def _matching_flows(wired: Wiring) -> list[str]:
-    """Return the flows whose schema and vocabulary this fill would serve.
-
-    The sorting stage is filled once per distinct pair and written to every flow
-    declaring it, which is why the stage is never told which flow asked.
+    Resolved once, at selection, so an untracked name or a broken manifest is
+    caught before any run is opened -- rather than at the flow's first use, which
+    on `generate` is after a photograph has been uploaded. The parser has already
+    refused a stage verb naming none, and `show` names none by design, so an empty
+    selection is the inspection verb rather than a missing flag.
     """
-    vocabulary = wired.vocabulary()
-    return [
-        name
-        for name in tracked_flows(wired.flows_dir)
-        if (flow := load_flow(name, wired.flows_dir)).schema
-        == f"{wired.schema.name}.v{wired.schema.version}"
-        and flow.vocabulary["sha256"] == vocabulary.digest
-    ]
+    named: list[str] = list(getattr(args, "flows", None) or [])
+    tracked = tracked_flows(wired.flows_dir)
+    unknown = [name for name in named if name not in tracked]
+    if unknown:
+        raise Refusal(
+            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
+            f"carries are {', '.join(tracked) or '(none)'}"
+        )
+    # Deduplicated, order kept: naming a flow twice is a typo, not a request for
+    # two renders of it.
+    return {name: load_flow(name, wired.flows_dir) for name in dict.fromkeys(named)}
 
 
 def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
@@ -214,53 +223,83 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     """
     verb = str(args.verb)
     targets = list(args.photos)
+    # Resolved before the first identifier is looked at, so an untracked flow or
+    # a broken manifest refuses without opening a run -- and on `generate`,
+    # without renting anything.
+    try:
+        flows = _flows_for(args, wired)
+    except Refusal as unselectable:
+        print(f"refused: {unselectable}", file=wired.err)
+        return 1
     if verb == "generate":
-        refused = _generate(args, wired, targets)
+        refused = _generate(args, wired, targets, flows)
     else:
-        refused = across(targets, _per_item(verb, args, wired))
+        refused = across(targets, _per_item(verb, args, wired, flows))
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
 
 
 def _per_item(
-    verb: str, args: argparse.Namespace, wired: Wiring
+    verb: str, args: argparse.Namespace, wired: Wiring, flows: Mapping[str, Flow]
 ) -> Callable[[str], None]:
     """Return the work one identifier gets, with everything run-independent done.
 
-    The flows a verb acts on are a property of the wiring, not of the photograph,
-    so they are resolved once here rather than re-read from disk per identifier.
+    The flows a verb acts on are a property of the invocation, not of the
+    photograph, so they are resolved once by the caller rather than re-read from
+    disk per identifier. Every stage but the inspection one is per flow, because
+    the flow is what supplies what the stage reads: its briefing, its schema and
+    its dials. The vocabulary is resolved at most once for the same reason and
+    lazily for the old one: parsing the 308 KB tag list costs ~50 ms, and only
+    two verbs need it at all.
     """
     new_version = bool(getattr(args, "new_version", False))
-    flows = _flows_for(args, wired) if verb in ("review", "approve") else []
-    matching = _matching_flows(wired) if verb == "sheet" else []
+    parsed: list[Vocabulary] = []
+
+    def vocabulary() -> Vocabulary:
+        """Return this invocation's vocabulary, reading it at most once."""
+        if not parsed:
+            parsed.append(wired.vocabulary())
+        return parsed[0]
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
-            _say(
-                wired,
-                run,
-                "caption",
-                caption(run, wired.reader, new_version=new_version),
-            )
+            for name, flow in flows.items():
+                _say(
+                    wired,
+                    run,
+                    "caption",
+                    caption(
+                        run,
+                        name,
+                        wired.reader,
+                        briefing_path=flow.caption_briefing_path,
+                        new_version=new_version,
+                    ),
+                )
         elif verb == "sheet":
-            written = sheet(
-                run,
-                wired.sorter,
-                wired.schema,
-                wired.vocabulary(),
-                matching,
-                new_version=new_version,
-            )
-            for path in written or [None]:
-                _say(wired, run, "sheet", path)
+            for name, flow in flows.items():
+                _say(
+                    wired,
+                    run,
+                    "sheet",
+                    sheet(
+                        run,
+                        name,
+                        wired.sorter,
+                        flow.schema,
+                        vocabulary(),
+                        briefing_path=flow.sheet_briefing_path,
+                        new_version=new_version,
+                    ),
+                )
         elif verb == "review":
-            for flow in flows:
-                _say(wired, run, "review", review(run, flow, new_version=new_version))
+            for name in flows:
+                _say(wired, run, "review", review(run, name, new_version=new_version))
         elif verb == "approve":
-            for flow in flows:
-                written, warnings = approve(run, flow, wired.schema, wired.vocabulary())
+            for name, flow in flows.items():
+                written, warnings = approve(run, name, flow.schema, vocabulary())
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
@@ -274,7 +313,10 @@ def _per_item(
 
 
 def _generate(
-    args: argparse.Namespace, wired: Wiring, targets: Sequence[str]
+    args: argparse.Namespace,
+    wired: Wiring,
+    targets: Sequence[str],
+    flows: Mapping[str, Flow],
 ) -> list[str]:
     """Assemble every prompt in the batch, and only then reach for the endpoint.
 
@@ -284,12 +326,11 @@ def _generate(
     from a per-item saving into a guarantee. Interleaving them would rent a
     machine and then discover the third sheet was broken.
     """
-    flows = {name: load_flow(name, wired.flows_dir) for name in _flows_for(args, wired)}
     ready: list[tuple[Run, str]] = []
 
     def assemble_one(identifier: str) -> None:
         run = _run_for(identifier, wired)
-        for flow, path in prepare(run, flows, wired.schema).items():
+        for flow, path in prepare(run, flows).items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))
 

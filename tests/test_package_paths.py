@@ -1,14 +1,16 @@
-"""The eight repo-root anchors, pinned to the directory that holds `pyproject.toml`.
+"""The repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
-Eight constants across seven files anchor a repository path on their own
-`__file__`. Each is asserted **absolutely**: strip the anchor's own suffix, and
-what remains must be the directory holding `pyproject.toml`. None of them is
-compared against another constant, because two constants that move together prove
-nothing about where either one landed.
+Six constants across five files anchor a repository path on their own `__file__`
+-- v0.16's fold took `SCHEMAS_DIR` and `BRIEFINGS_DIR` with it, because a schema
+and a briefing are a flow's now and a flow is reached through `FLOWS_DIR`. Each is
+asserted **absolutely**: strip the anchor's own suffix, and what remains must be
+the directory holding `pyproject.toml`. None of them is compared against another
+constant, because two constants that move together prove nothing about where
+either one landed.
 
-The absolute form is the point. Six of the eight break loudly when a file moves a
-directory deeper without its expression following -- a missing `flows/`,
-`schemas/`, `briefings/` or manifest takes dozens of tests down at collection.
+The absolute form is the point. Five of the six break loudly when a file moves a
+directory deeper without its expression following -- a missing `flows/`, a flow's
+own directory or the manifest takes dozens of tests down at collection.
 `DATA_ROOT` is the one that would relocate to `isekai/.data` with `RUNS_ROOT`
 still beside it, leaving every assertion about the *relationship* between the two
 green while the guard that keeps a run directory -- which holds a copy of a
@@ -16,7 +18,7 @@ photograph by construction -- one `git add` from publication quietly narrowed to
 the package (design.md D7).
 
 Written while every anchor was still correct, and green across the restructure
-that moved all seven files.
+that moved the files carrying them.
 """
 
 from pathlib import Path
@@ -26,7 +28,6 @@ import pytest
 from isekai.boundary import claude_cli, provision
 from isekai.evaluation import eval_models
 from isekai.foundation import flow, run
-from isekai.pipeline import caption, sheet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -37,8 +38,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ANCHORS = (
     pytest.param(run.DATA_ROOT, (".data",), id="run.DATA_ROOT"),
     pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
-    pytest.param(sheet.SCHEMAS_DIR, ("schemas",), id="sheet.SCHEMAS_DIR"),
-    pytest.param(caption.BRIEFINGS_DIR, ("briefings",), id="caption.BRIEFINGS_DIR"),
     pytest.param(
         provision.MANIFEST_PATH,
         ("scripts", "models.json"),
@@ -91,8 +90,8 @@ def test_each_anchor_resolves_to_the_repository_root(
 def test_the_assertion_fails_when_it_lands_on_the_package_instead() -> None:
     # Where every one of these constants strips back to if its module moves into a
     # group directory and its expression does not gain a `.parent`: the package,
-    # not the repository. One case, not eight -- each anchor's suffix cancels
-    # against its own hops, so all eight reduce to exactly this path, and
+    # not the repository. One case, not six -- each anchor's suffix cancels
+    # against its own hops, so all six reduce to exactly this path, and
     # parametrizing would advertise per-anchor coverage that does not exist.
     with pytest.raises(AssertionError):
         _assert_anchors_the_repository_root(REPO_ROOT / "isekai", ())
