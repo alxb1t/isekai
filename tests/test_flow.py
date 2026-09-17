@@ -25,7 +25,6 @@ from isekai.foundation.flow import (
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
-from isekai.pipeline.sheet import load_schema
 
 # The digest of every tracked flow's whole directory, committed here.
 #
@@ -144,7 +143,7 @@ def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -
         ):
             assert path.is_file(), path
             assert path.parent == flow.path
-        assert load_schema(flow.schema_path).names
+        assert flow.schema.names
         assert flow.vocabulary["name"] == vocabulary["dest"]
         assert flow.vocabulary["sha256"] == vocabulary["sha256"]
         assert flow.vocabulary["revision"] in vocabulary["sources"][0]
@@ -181,14 +180,19 @@ def test_every_model_a_flow_declares_has_a_manifest_entry() -> None:
         assert {model.dest for model in load_flow(name).models} <= declared
 
 
+def _manifest_digests() -> dict[str, str]:
+    """Return the provisioning manifest's destination-to-digest map."""
+    from isekai.boundary.provision import load_manifest
+
+    return {entry["dest"]: entry["sha256"] for entry in load_manifest()["entries"]}
+
+
 @pytest.mark.spec("image-generation:manifest:flow-pins-its-models-by-digest")
 def test_every_model_a_flow_declares_carries_the_manifests_digest_for_it() -> None:
     # A destination path does not pin bytes. Re-pinning a checkpoint would
     # otherwise make an existing flow identifier render differently with the gate
     # green, on the 6.9 GB that decides what the image looks like (design.md D4).
-    from isekai.boundary.provision import load_manifest
-
-    digests = {entry["dest"]: entry["sha256"] for entry in load_manifest()["entries"]}
+    digests = _manifest_digests()
     for name in tracked_flows():
         flow = load_flow(name)
         assert flow.models
@@ -203,13 +207,11 @@ def test_every_model_a_flow_declares_carries_the_manifests_digest_for_it() -> No
 def test_a_flow_whose_model_digest_disagrees_fails_naming_the_flow(
     tmp_path: Path,
 ) -> None:
-    from isekai.boundary.provision import load_manifest
-
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
     document["models"][0]["sha256"] = "0" * 64
     (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
-    digests = {entry["dest"]: entry["sha256"] for entry in load_manifest()["entries"]}
+    digests = _manifest_digests()
 
     flow = load_flow("summon-v1", root)
     wrong = [model.dest for model in flow.models if model.sha256 != digests[model.dest]]
@@ -442,7 +444,7 @@ def test_adding_a_new_file_to_a_flow_moves_its_digest(tmp_path: Path) -> None:
 def test_a_prompt_is_the_flows_fragments_and_the_sheets_fields_in_schema_order(
     flow: Flow,
 ) -> None:
-    schema = load_schema(flow.schema_path)
+    schema = flow.schema
     fields = {name: [] for name in schema.names}
     fields["count"] = ["1girl", "solo"]
     fields["hair_colour"] = ["brown hair"]
@@ -460,7 +462,7 @@ def test_a_prompt_is_the_flows_fragments_and_the_sheets_fields_in_schema_order(
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
 def test_no_text_is_taken_from_the_graphs_own_committed_strings(flow: Flow) -> None:
-    schema = load_schema(flow.schema_path)
+    schema = flow.schema
     graph = flow.graph()
     committed = graph[flow.node("positive")]["inputs"]["text"]
     committed_negative = graph[flow.node("negative")]["inputs"]["text"]
@@ -477,7 +479,7 @@ def test_no_text_is_taken_from_the_graphs_own_committed_strings(flow: Flow) -> N
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
 def test_the_fields_appear_in_the_order_the_schema_declares(flow: Flow) -> None:
-    schema = load_schema(flow.schema_path)
+    schema = flow.schema
     fields = {name: [f"tag-{i}"] for i, name in enumerate(schema.names)}
 
     positive, _ = assemble(fields, schema.names, flow)

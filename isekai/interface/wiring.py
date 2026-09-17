@@ -24,11 +24,11 @@ from typing import TextIO
 
 from isekai.boundary.comfy_client import ComfyClient
 from isekai.boundary.comfy_types import ComfyTransport
-from isekai.foundation.flow import FLOWS_DIR, Flow, Schema
+from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
 from isekai.pipeline.caption import ClaudeReader, Reader
-from isekai.pipeline.sheet import ClaudeSorter, Sorter, load_schema
+from isekai.pipeline.sheet import ClaudeSorter, Sorter
 from isekai.shared.vocabulary import Vocabulary
 from isekai.shared.vocabulary import load as load_vocabulary
 
@@ -48,10 +48,6 @@ class Wiring:
     reader: Reader
     sorter: Sorter
     client: ComfyTransport | None
-    # A resolver, not a value. A schema document sits inside the flow that uses
-    # it, so there is no one schema a run is sorted against -- there is the
-    # schema of each flow named on the line, read from that flow's own directory.
-    schema: Callable[[Flow], Schema]
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
     # eager read made `python -m isekai show` impossible on a clone that had not
@@ -95,10 +91,10 @@ def _check_run_root(runs: Path) -> None:
 def wiring(args: argparse.Namespace) -> Wiring:
     """Build the real wiring: the hosted reader and sorter, and the HTTP transport.
 
-    The vocabulary and the schemas are read here rather than inside a stage,
-    because reading a file is I/O and the stages are the part that must stay
-    testable without any. A flow resolves to its own schema document, so what is
-    composed here is the resolver rather than one parsed schema.
+    The vocabulary is read here rather than inside a stage, because reading a file
+    is I/O and the stages are the part that must stay testable without any. A
+    schema is not composed here at all: it sits inside the flow that uses it, so a
+    loaded `Flow` already answers for its own.
     """
     server = getattr(args, "server", None)
     _check_run_root(args.runs)
@@ -106,7 +102,6 @@ def wiring(args: argparse.Namespace) -> Wiring:
         reader=ClaudeReader(),
         sorter=ClaudeSorter(),
         client=ComfyClient(server) if server else None,
-        schema=lambda flow: load_schema(flow.schema_path),
         vocabulary=load_vocabulary,
         runs_root=args.runs,
     )

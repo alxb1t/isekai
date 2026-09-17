@@ -11,9 +11,16 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.flow import SCHEMA_NAME, Schema, load_flow, tracked_flows
+from isekai.foundation.flow import (
+    IDENTIFIER_SAFE,
+    SCHEMA_NAME,
+    Schema,
+    load_flow,
+    load_schema,
+    tracked_flows,
+)
 from isekai.foundation.refusal import Refusal
-from isekai.pipeline.sheet import IDENTIFIER_SAFE, fill, load_schema
+from isekai.pipeline.sheet import fill
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
@@ -114,7 +121,7 @@ def test_every_tracked_flow_carries_its_own_schema_document() -> None:
         flow = load_flow(name)
 
         assert flow.schema_path == flow.path / SCHEMA_NAME
-        assert load_schema(flow.schema_path).names
+        assert flow.schema.names
 
 
 @pytest.mark.spec("sheet:schema:schema-is-read-from-the-flow")

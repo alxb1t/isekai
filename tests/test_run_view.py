@@ -120,7 +120,7 @@ def test_renders_are_listed_under_the_sheet_version_they_came_from(
     run: Run, schema: Schema
 ) -> None:
     flow = load_flow(FLOW)
-    prepare(run, {FLOW: flow}, lambda _: schema)
+    prepare(run, {FLOW: flow})
     render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert rendered(run) == [(FLOW, 1, [42])]

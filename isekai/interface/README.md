@@ -9,7 +9,7 @@ is a shim over `cli.py` and holds nothing else.
 | file | does |
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
-| `wiring.py` | composes the modules — resolves a flow to its own schema, and hands out the pieces, with or without a parser |
+| `wiring.py` | composes the modules — builds the reader, the sorter, the transport and the vocabulary thunk, with or without a parser |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions and producers. Reads everything, decides nothing |
 
 ## Imported by

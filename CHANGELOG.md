@@ -124,10 +124,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stages take their briefing as an argument.
 - **BREAKING — sheet sharing is removed with `_matching_flows`.** It was the only mechanism, had one
   caller, and was the only production reader of `Flow.schema` and `Schema.version`. Every stage verb is
-  now driven per flow, each one handed that flow's own schema and briefing: `Wiring.schema` is a
-  resolver rather than one parsed schema, and `generate.prepare` takes the resolver too. Sharing bought
-  a selector and a class of silent cross-flow inheritance in exchange for a rounding error — a caption
-  is $0.0159 per photograph at worst against a $0.036 boot (design.md D5).
+  now driven per flow, each one handed that flow's own schema and briefing: `load_schema` moves beside
+  `Schema` in `isekai/foundation/flow.py`, and a loaded `Flow` answers for its own schema through a
+  cached property, so `Wiring` carries no schema at all. Sharing bought a selector and a class of
+  silent cross-flow inheritance in exchange for a rounding error — a caption is $0.0159 per photograph
+  at worst against a $0.036 boot (design.md D5).
 - **`summon-v1`'s committed digest is re-pinned once**, under the exception design.md D2 records: the
   flow's configuration did not change, its manifest's format did, and `manifest_version: 2` is that
   distinction in data. The failure message in `tests/test_flow.py` gains no "unless" clause — a test

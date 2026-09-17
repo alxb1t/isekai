@@ -9,7 +9,7 @@ endpoint or a score; everything here is imported by something that does.
 |---|---|
 | `refusal.py` | one error that names its own fix, raised anywhere and caught once |
 | `run.py` | the run directory: ids, the frame, the input-above-flow-below layout and its names, numbering, approval, budgets, and the JSON form every artifact is written in |
-| `flow.py` | reads and validates a frozen flow directory of five flat files, lists what is tracked, and owns the `Schema` type and prompt assembly |
+| `flow.py` | reads and validates a frozen flow directory of five flat files, lists what is tracked, and owns the `Schema` type, its reader and prompt assembly |
 
 ## Imported by
 

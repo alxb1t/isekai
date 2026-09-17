@@ -1,15 +1,19 @@
-"""Stage (2): the schema a sheet is shaped by, and the sheet itself.
+"""Stage (2): prose in, a sheet of canonical tags out.
 
 A sheet is fields and nothing else. It carries no assembled prompt -- storing one
 creates a footgun where a human edits the prompt block and a rebuild silently
-overwrites it -- and this stage is never told which flow asked for it, which is
-what lets one filled sheet serve every flow that shares a schema and a vocabulary.
+overwrites it. **The fill itself is told nothing about flows**: the sorter is
+handed the prose, the schema and the briefing, so the same code serves every flow
+without learning that flows exist, and the flow decides only which directory is
+read and written.
 
-**The schema is a versioned data file, not code.** It can be checked without
-executing anything, and a second schema -- a photoreal flow's, say -- is a file
-rather than a branch. It declares, in order, the sixteen fields, which seven are
-scored, the per-field suffix convention, and the vocabulary it is written against
-(design.md D8).
+**The schema is a data file, not code.** It can be checked without executing
+anything, and a second schema -- a photoreal flow's, say -- is a file rather than
+a branch. It declares, in order, the sixteen fields, which seven are scored and
+the per-field suffix convention; it carries no version and no vocabulary, because
+inside a frozen flow directory the digest proves the field list and the flow
+declares the vocabulary. Its reader lives beside `Schema` in
+`isekai/foundation/flow.py`.
 
 **Field names are slugs because they have to be.** The structured-output flag
 becomes a tool input schema at the API, which enforces `^[a-zA-Z0-9_.-]{1,64}$` on
@@ -23,7 +27,6 @@ Stdlib only.
 
 import dataclasses
 import json
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,7 +43,7 @@ from isekai.boundary.claude_cli import (
     refusal_for,
     spawn,
 )
-from isekai.foundation.flow import Field, Schema
+from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -58,35 +61,6 @@ from isekai.foundation.run import (
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary, map_phrase
 from isekai.shared.vocabulary import identity as vocabulary_identity
-
-# What the API enforces on a tool input schema's property keys. Held here rather
-# than discovered at the boundary, because a name that fails it fails every call
-# rather than one.
-IDENTIFIER_SAFE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
-
-
-def load_schema(path: Path) -> Schema:
-    """Read a schema document out of a flow's own directory.
-
-    There is no version to check and no migration ladder: the flow's digest proves
-    the field list byte for byte, so a changed field list is a new flow rather than
-    a new schema version. The path is the caller's because a schema belongs to one
-    flow -- there is no tracked schema outside a flow directory to default to.
-    """
-    document: Any = json.loads(path.read_text())
-    fields = tuple(
-        Field(str(entry["name"]), bool(entry["scored"]), entry["suffix"])
-        for entry in document["fields"]
-    )
-    unsafe = [field.name for field in fields if not IDENTIFIER_SAFE.match(field.name)]
-    if unsafe:
-        raise Refusal(
-            f"{path.name}: {', '.join(unsafe)} cannot be a structured-output "
-            "property key, which must match "
-            f"{IDENTIFIER_SAFE.pattern}; rename the field in the schema document "
-            "and in the briefing that names it"
-        )
-    return Schema(name=str(document["name"]), fields=fields)
 
 
 def fill(

@@ -105,36 +105,29 @@ def _listing(stage: str, flow: str, directory: Path) -> Listing:
     return Listing(stage, flow, present, active, sorted(approved), producers)
 
 
-def flows_in(run: Run) -> list[str]:
-    """Return the flows this run holds work for: its subdirectories, in order."""
-    if not run.path.is_dir():
-        return []
-    return sorted(path.name for path in run.path.iterdir() if path.is_dir())
-
-
 def listings(run: Run) -> list[Listing]:
     """Return one listing per stage per flow, in flow order then stage order."""
     return [
         _listing(stage, flow, run.directory(flow, stage))
-        for flow in flows_in(run)
+        for flow in run.flows
         for stage in STAGES
     ]
 
 
 def rendered(run: Run) -> list[tuple[str, int, list[int]]]:
-    """Return each flow's rendered seeds, by sheet version, from filenames alone."""
+    """Return each flow's rendered seeds, by sheet version, from filenames alone.
+
+    The flow is loaded once, not once per sheet version, and it is loaded at all
+    because what counts as a produced output is the flow's answer rather than an
+    extension written in here.
+    """
     return [
-        (flow, int(group.name), rendered_seeds(group, load_flow(flow).output_suffix))
-        for flow in flows_in(run)
-        for group in sorted(_groups(run.directory(flow, OUTPUTS)))
-        if group.name.isdigit()
+        (flow, int(group.name), rendered_seeds(group, suffix))
+        for flow in run.flows
+        for suffix in (load_flow(flow).output_suffix,)
+        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
+        if group.is_dir() and group.name.isdigit()
     ]
-
-
-def _groups(outputs: Path) -> Iterator[Path]:
-    """Yield the per-sheet-version directories under one flow's outputs."""
-    if outputs.is_dir():
-        yield from (path for path in outputs.iterdir() if path.is_dir())
 
 
 def report(run: Run) -> Iterator[str]:

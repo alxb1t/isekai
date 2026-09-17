@@ -31,7 +31,7 @@ import hashlib
 import json
 import random
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -134,15 +134,11 @@ def approved_flows(run: Run) -> list[str]:
 
     A listing, and the layout is what makes it one: every flow's work is one
     directory under the run, so the flows a run has been approved for are the
-    subdirectories whose `review/` holds an approved artifact.
+    flows whose `review/` holds an approved artifact.
     """
-    if not run.path.is_dir():
-        return []
-    return sorted(
-        directory.name
-        for directory in run.path.iterdir()
-        if directory.is_dir() and approved_versions(directory / REVIEW)
-    )
+    return [
+        flow for flow in run.flows if approved_versions(run.directory(flow, REVIEW))
+    ]
 
 
 def prompt_artifact(
@@ -200,11 +196,7 @@ def prompt_artifact(
     return path
 
 
-def prepare(
-    run: Run,
-    flows: Mapping[str, Flow],
-    schema_for: Callable[[Flow], Schema],
-) -> dict[str, Path]:
+def prepare(run: Run, flows: Mapping[str, Flow]) -> dict[str, Path]:
     """Assemble every approved flow's prompt for one run, before anything is rented.
 
     A run that has been approved for *nothing* asked for is refused rather than
@@ -212,9 +204,6 @@ def prepare(
     the refusal fires only when none of the flows asked for has an approved sheet,
     so "a run renders everything it has been approved for" is unchanged and
     "rendering did nothing and said nothing" is no longer reachable.
-
-    The schema arrives as a resolver rather than a value because each flow carries
-    its own, and a batch may name more than one flow.
     """
     ready = [flow for flow in approved_flows(run) if flow in flows]
     if flows and not ready:
@@ -225,8 +214,7 @@ def prepare(
             "`python -m isekai approve`"
         )
     return {
-        flow: prompt_artifact(run, flows[flow], schema_for(flows[flow]))
-        for flow in ready
+        flow: prompt_artifact(run, flows[flow], flows[flow].schema) for flow in ready
     }
 
 
@@ -283,8 +271,18 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
     return width, height
 
 
+# The dials each sampler takes from the manifest. The hires pass declares its own
+# `denoise` and `steps`, so it takes neither from this list.
+SAMPLER_DIALS = ("steps", "cfg", "sampler_name", "scheduler", "denoise")
+SECOND_PASS_DIALS = ("cfg", "sampler_name", "scheduler")
+
+
 def build_graph(
-    flow: Flow, photo: Path, image_name: str, prompt: Mapping[str, Any], seed: int
+    flow: Flow,
+    photo: Path,
+    image_name: str | None,
+    prompt: Mapping[str, Any],
+    seed: int,
 ) -> Workflow:
     """Return the graph to submit: the flow's own, with its dials and this seed.
 
@@ -293,65 +291,74 @@ def build_graph(
     5 and 0.8, and a render that used the file's values would be a configuration
     nothing measured (design.md D12).
 
-    **Four roles are assumed and seven are asked for.** `load_flow` has already
-    refused a flow missing one of the four; every other patch below happens only
-    where the flow declares the role, so a flow without a photograph, an identity
-    adapter, a pose preprocessor or a hires pass renders rather than raising on a
-    rented machine (design.md D9).
+    **Every patch below is conditional on the flow declaring the role.**
+    `load_flow` has already refused a flow missing one of the four required ones,
+    so those four always land; a flow without a photograph, an identity adapter, a
+    pose preprocessor or a hires pass renders rather than raising on a rented
+    machine (design.md D9).
     """
     graph = flow.graph()
     dials = flow.dials
     width, height = photo_resolution(photo)
 
-    def inputs(role: str) -> dict[str, Any] | None:
-        """Return the node's inputs where the flow declares the role, else None."""
-        node: Any = graph[flow.node(role)]["inputs"] if role in flow.nodes else None
-        return node
+    def patch(role: str, **values: object) -> None:
+        """Set inputs on the node a role names, where the flow declares the role.
 
-    if (photo_inputs := inputs("photo")) is not None:
-        photo_inputs["image"] = image_name
-    graph[flow.node("positive")]["inputs"]["text"] = prompt["positive"]
-    graph[flow.node("negative")]["inputs"]["text"] = prompt["negative"]
+        One writer for every role, so a role a flow leaves out is a patch that
+        does nothing rather than a branch somebody remembered to add. `load_flow`
+        has already refused a flow missing one of the four required roles.
+        """
+        if role in flow.nodes:
+            graph[flow.node(role)]["inputs"].update(values)
 
-    graph[flow.node("latent")]["inputs"].update(width=width, height=height)
-    if (scale := inputs("scale")) is not None:
-        scale.update(width=width, height=height)
+    if image_name is not None:
+        patch("photo", image=image_name)
+    patch("positive", text=prompt["positive"])
+    patch("negative", text=prompt["negative"])
+    patch("latent", width=width, height=height)
+    patch("scale", width=width, height=height)
+    patch("sampler", seed=seed, **{dial: dials[dial] for dial in SAMPLER_DIALS})
 
-    if (identity := inputs("identity")) is not None:
-        identity["ip_weight"] = dials["ip_weight"]
-        identity["cn_strength"] = dials["identity_cn_strength"]
-    if (openpose := inputs("openpose")) is not None:
-        openpose["strength"] = dials["openpose_strength"]
-    if (clip_skip := inputs("clip_skip")) is not None:
-        clip_skip["stop_at_clip_layer"] = dials["clip_skip"]
-
-    sampler = graph[flow.node("sampler")]["inputs"]
-    sampler["seed"] = seed
-    for dial in ("steps", "cfg", "sampler_name", "scheduler", "denoise"):
-        sampler[dial] = dials[dial]
-
-    if (hires := inputs("hires_resize")) is not None:
-        scaled = (
-            round(width * dials["hires_scale"]),
-            round(height * dials["hires_scale"]),
+    # The four below read dials a flow that has no identity adapter, no pose
+    # preprocessor and no hires pass does not declare, so the role check has to
+    # happen *before* the lookup rather than inside `patch` -- an argument is
+    # evaluated whether or not the call does anything with it.
+    if "identity" in flow.nodes:
+        patch(
+            "identity",
+            ip_weight=dials["ip_weight"],
+            cn_strength=dials["identity_cn_strength"],
         )
-        # SDXL's VAE needs a multiple of 8. 1.5x of a /64 canvas always is, and
-        # this asserts it rather than trusting it.
-        if any(side % 8 for side in scaled):
-            raise Refusal(
-                f"flow {flow.id}: a hires target of {scaled} is not a multiple "
-                "of 8, which the VAE requires; change `hires_scale` under a new "
-                "flow identifier"
-            )
-        hires["width"], hires["height"] = scaled
-
-    if (second := inputs("hires_sampler")) is not None:
-        second["seed"] = seed
-        second["steps"] = dials["hires_steps"]
-        second["denoise"] = dials["hires_denoise"]
-        for dial in ("cfg", "sampler_name", "scheduler"):
-            second[dial] = dials[dial]
+    if "openpose" in flow.nodes:
+        patch("openpose", strength=dials["openpose_strength"])
+    if "clip_skip" in flow.nodes:
+        patch("clip_skip", stop_at_clip_layer=dials["clip_skip"])
+    if "hires_resize" in flow.nodes:
+        patch("hires_resize", **_hires_target(flow, width, height))
+    if "hires_sampler" in flow.nodes:
+        patch(
+            "hires_sampler",
+            seed=seed,
+            steps=dials["hires_steps"],
+            denoise=dials["hires_denoise"],
+            **{dial: dials[dial] for dial in SECOND_PASS_DIALS},
+        )
     return graph
+
+
+def _hires_target(flow: Flow, width: int, height: int) -> dict[str, int]:
+    """Return the hires pass's canvas, refusing one the VAE cannot encode."""
+    scale = flow.dials["hires_scale"]
+    scaled = {"width": round(width * scale), "height": round(height * scale)}
+    # SDXL's VAE needs a multiple of 8. 1.5x of a /64 canvas always is, and this
+    # asserts it rather than trusting it.
+    if any(side % 8 for side in scaled.values()):
+        raise Refusal(
+            f"flow {flow.id}: a hires target of {tuple(scaled.values())} is not a "
+            "multiple of 8, which the VAE requires; change `hires_scale` under a "
+            "new flow identifier"
+        )
+    return scaled
 
 
 def graph_digest(graph: Workflow) -> str:
@@ -392,7 +399,7 @@ def render(
     # `flow.inputs` gates the transfer: a flow that does not declare a photograph
     # has nothing to upload, and uploading one anyway spends the endpoint's time
     # on an input no node reads.
-    image_name = client.upload_image(str(run.photo)) if "photo" in flow.inputs else ""
+    image_name = client.upload_image(str(run.photo)) if "photo" in flow.inputs else None
     # Constant across seeds: the flow's graph on disk does not change mid-render.
     flow_graph = flow.graph_digest()
     produced: list[Render] = []

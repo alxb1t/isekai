@@ -212,6 +212,18 @@ class Run:
         """Return the path of the photograph's copy inside the run."""
         return self.path / str(self.frame["photo"]["name"])
 
+    @property
+    def flows(self) -> list[str]:
+        """Return the flows this run holds work for, by identifier.
+
+        The run owns the layout, so the fact that a flow's work is one directory
+        directly under the run is stated here and asked for elsewhere rather than
+        re-derived by each caller.
+        """
+        if not self.path.is_dir():
+            return []
+        return sorted(path.name for path in self.path.iterdir() if path.is_dir())
+
     def directory(self, *parts: str) -> Path:
         """Return a stage's directory inside this run, whether or not it exists.
 

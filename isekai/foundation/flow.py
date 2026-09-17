@@ -29,8 +29,10 @@ Stdlib only.
 
 import hashlib
 import json
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +97,12 @@ OUTPUT_SUFFIX = ".png"
 # dependency of the renderer, which is the edge that move removed (design.md D6).
 
 
+# What the API enforces on a tool input schema's property keys. Held beside the
+# reader that checks it, because a name that fails it fails every call rather
+# than one.
+IDENTIFIER_SAFE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
+
+
 @dataclass(frozen=True)
 class Field:
     """One field of a sheet: its name, whether it is scored, and its suffix."""
@@ -139,6 +147,31 @@ class Schema:
         )
 
 
+def load_schema(path: Path) -> Schema:
+    """Read a schema document out of a flow's own directory.
+
+    There is no version to check and no migration ladder: the flow's digest proves
+    the field list byte for byte, so a changed field list is a new flow rather than
+    a new schema version. It lives here, beside `Schema` itself, because a schema
+    belongs to a flow -- there is no tracked schema document outside a flow
+    directory for a stage to default to.
+    """
+    document: Any = json.loads(path.read_text())
+    fields = tuple(
+        Field(str(entry["name"]), bool(entry["scored"]), entry["suffix"])
+        for entry in document["fields"]
+    )
+    unsafe = [field.name for field in fields if not IDENTIFIER_SAFE.match(field.name)]
+    if unsafe:
+        raise Refusal(
+            f"{path.name}: {', '.join(unsafe)} cannot be a structured-output "
+            "property key, which must match "
+            f"{IDENTIFIER_SAFE.pattern}; rename the field in the schema document "
+            "and in the briefing that names it"
+        )
+    return Schema(name=str(document["name"]), fields=fields)
+
+
 @dataclass(frozen=True)
 class Model:
     """One model artifact a flow's render is pinned to: where it goes, and its bytes.
@@ -170,6 +203,16 @@ class Flow:
     def graph_path(self) -> Path:
         """Return this flow's graph file. Fixed name; the manifest declares none."""
         return self.path / GRAPH_NAME
+
+    @cached_property
+    def schema(self) -> Schema:
+        """Return this flow's schema, parsed. Read once per loaded flow.
+
+        Cached for the same reason the flows themselves are loaded once per
+        invocation: the document cannot change while a command runs, and a batch
+        would otherwise re-read and re-parse it per photograph.
+        """
+        return load_schema(self.schema_path)
 
     @property
     def output_suffix(self) -> str:

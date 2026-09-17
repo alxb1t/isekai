@@ -7,7 +7,6 @@ import pytest
 from isekai.boundary.comfy_types import Workflow
 from isekai.boundary.provision import Manifest, load_manifest
 from isekai.foundation.flow import Schema, load_flow
-from isekai.pipeline.sheet import load_schema
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.images import jpeg_bytes
 
@@ -96,7 +95,7 @@ def _shipped_schema() -> Schema:
     reads the tracked file itself, and reads it once. It is reached through the
     flow that owns it -- there is no schema outside a flow directory.
     """
-    return load_schema(load_flow("summon-v1").schema_path)
+    return load_flow("summon-v1").schema
 
 
 @pytest.fixture

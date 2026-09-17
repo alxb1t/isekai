@@ -18,7 +18,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import FakeSorter, load_schema
+from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
@@ -46,7 +46,6 @@ def _wiring(tmp_path: Path, flows_dir: Path | None = None) -> Wiring:
         reader=FakeReader(),
         sorter=FakeSorter(answers={}),
         client=None,
-        schema=lambda flow: load_schema(flow.schema_path),
         vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, read_tags(CSV)),
         runs_root=tmp_path / "runs",
         flows_dir=flows_dir or FLOWS_DIR,
@@ -210,7 +209,7 @@ def test_no_named_flow_is_silently_dropped(tmp_path: Path) -> None:
         ["review", "--flow", "summon-v1", "--flow", "other-v1"]
     )
 
-    assert _flows_for(parsed, wired) == ["summon-v1", "other-v1"]
+    assert list(_flows_for(parsed, wired)) == ["summon-v1", "other-v1"]
 
 
 @pytest.mark.spec("cli:flow-selection:every-stage-verb-accepts-it")

@@ -29,7 +29,6 @@ from isekai.foundation.run import (
     versions,
 )
 from isekai.pipeline.caption import ClaudeReader, FakeReader, Reading
-from isekai.pipeline.sheet import load_schema
 from tests.images import jpeg_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
 from tests.stages import FLOW, caption
@@ -119,7 +118,7 @@ def test_the_briefing_names_no_schema_field() -> None:
     text = BRIEFING_PATH.read_text().lower()
     words = set(re.findall(r"[a-z_]+", text))
 
-    schema = load_schema(FLOW.schema_path)
+    schema = FLOW.schema
     named = [name for name in schema.names if name in words or name in text]
     assert named == []
 

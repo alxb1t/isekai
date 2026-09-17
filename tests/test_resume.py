@@ -25,7 +25,7 @@ from isekai.foundation.run import BUDGETS
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import FakeSorter, load_schema
+from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
@@ -60,7 +60,6 @@ def wired(tmp_path: Path) -> Wiring:
             }
         ),
         client=FakeComfyClient(),
-        schema=lambda flow: load_schema(flow.schema_path),
         vocabulary=lambda: Vocabulary(
             "wd14/selected_tags.csv",
             "627aef95638667ddcaa3ac8ae625e88ea5b02f51",
@@ -249,7 +248,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: open_run(tmp_path / "missing.jpg", wired.runs_root))
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
     collect(lambda: read_artifact(_future_artifact(tmp_path)))
-    schema = wired.schema(flow)
+    schema = flow.schema
     collect(lambda: sheet(bare, wired.sorter, schema, wired.vocabulary()))
     collect(lambda: review(bare, FLOW))
     collect(lambda: approve(bare, FLOW, schema, wired.vocabulary()))
