@@ -25,6 +25,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`flows/conjure-v1/` — a second flow, and the first test of the claim that adding one is a
+  directory and nothing else.** An anime character drawn from an approved sheet of canonical tags
+  alone: no identity node, no ControlNet, no photograph in the graph. **It makes no identity claim
+  and is not evaluated.** Five flat files, like `summon-v1`:
+  - `graph.json` — 14 nodes, `summon-v1`'s 23 less the photograph loader, the InstantID leg, the
+    OpenPose leg and the working-resolution scale. Six edges repoint on the two samplers, each back
+    to the source InstantID displaced — `CheckpointLoaderSimple(1)` for `model`, `CLIPTextEncode(3)`
+    and `(4)` for the conditioning — so the rewiring restores rather than invents. The hires chain is
+    untouched.
+  - `flow.json` — `inputs: ["sheet"]`, with `photo` declared on **neither** side, which is the
+    sheet-only case `TRANSFERRED_INPUTS` permits. Seven node roles, two models, and `summon`'s dials
+    less `ip_weight`, `identity_cn_strength` and `openpose_strength`: a dial whose node was deleted
+    is a declaration nothing reads.
+  - `schema.json` — 21 fields, `summon-v1`'s sixteen plus `bangs`, `eyelashes`, `nose`, `lips` and
+    `facial_hair`, all `scored: false`. In `summon` the identity and pose legs supply the face;
+    `conjure` has neither, so the face reaches the render only as tags. Every new field is reachable
+    by the vocabulary's suffix or containment pass, so no shared routing was touched.
+  - `caption.briefing.md` — richer on the face, naming all 21 attributes, and licensing inference on
+    **expression and the scene's light only**. *"Do not interpret"* is kept and narrowed to the
+    identity-bearing fields — skin, hair, eyes, marks, build — and the absence licence is verbatim.
+  - `sheet.briefing.md` — the five new fields in `## The fields` and in both worked sheets, each
+    illustrated only with phrases the pinned vocabulary actually carries.
+- **`conjure-v1` pinned in `tests/test_flow.py`'s `PINNED`.** This is the freeze working, not a
+  defect: the pin list is what makes adding or removing a flow deliberate.
+- **The dial provenance table** in the change's `design.md`: every dial against
+  WAI-Illustrious-SDXL's own published recommendation, separating what the publisher states from what
+  sits inside a range it bounds from what it does not address at all. `clip_skip` `-2`, `scheduler`
+  `normal` and the VAE and base resolution are named as inference.
+
 ### Fixed
 
 - **`test_every_tracked_flow_parses` no longer hard-codes the registry's contents.** Its opening

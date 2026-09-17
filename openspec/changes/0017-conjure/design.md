@@ -168,6 +168,42 @@ the prototype ref and imports module paths v0.15 moved, and **the renders must b
 photograph's canvas rather than natively** — read natively, F35's hires result came out with the wrong
 sign.
 
+## Dial provenance
+
+Every dial `conjure-v1` ships, against WAI-Illustrious-SDXL's own *"How to achieve optimal results"*
+(`https://illustriousxl.org/wai-illustrious-sdxl`, read 2026-09-17). Recorded here rather than in
+`flow.json`, because the manifest carries eight keys and JSON has no comments — D6.
+
+Three standings, and the distinction is the point: **the publisher's** is a value the page states,
+**inside the publisher's range** is a value the page bounds but does not pick, and **inference** is a
+value the page does not address at all.
+
+| dial | ships | what the publisher's page says | standing |
+|---|---|---|---|
+| `sampler_name` | `euler_ancestral` | *"Euler a or K_EULER_ANCESTRAL"* | **the publisher's** |
+| `steps` | `28` | *"20-30"* | inside the publisher's range |
+| `cfg` | `5` | *"between 5 and 7"* | inside the publisher's range, at the floor — and measured there on this graph (D6) |
+| `scheduler` | `normal` | nothing | **inference** |
+| `denoise` | `1.0` | nothing directly; implied by generating rather than transforming | **inference** — it is what *from noise* means, and it is what removed the blur (F24) |
+| `clip_skip` | `-2` | nothing | **inference**, and the weakest provenance in the manifest: every published v17 sample generates there and none of its prose says so |
+| `hires_scale` | `1.5` | *"native 1536x1536 high-resolution"* | consistent — 1.5× off a 1024 short side lands at 1536 |
+| `hires_steps` | `20` | *"20 steps"* | **the publisher's** |
+| `hires_denoise` | `0.35` | *"0.35~0.5"* | inside the publisher's range, at the floor — and the only value proved on this graph (D6) |
+
+Three of the flow's settings are not dials at all, and each is **inference** rather than a
+recommendation:
+
+- **The VAE** comes from the checkpoint — graph node `1`, slot 2. The publisher's page names no
+  external VAE, and nothing in this flow loads one.
+- **The base resolution** comes from the run's photograph header, through `working_resolution`
+  (`isekai/shared/image.py`), not from a dial. The publisher speaks only of the hires target.
+- **The prompt's form and its prefix** are the publisher's exactly — *"List concepts using
+  comma-separated tags"* and *"masterpiece, best quality, amazing quality, newest"* — and are carried
+  under `prompt` rather than `dials`. The trailer and the negative are this project's.
+
+**`ip_weight`, `identity_cn_strength` and `openpose_strength` are absent**, because the nodes they
+patched are. A dial whose node was deleted is a declaration nothing reads.
+
 ## Risks / Trade-offs
 
 - **The claim is about a diff, and nothing in the gate reads a diff.** → Two acceptance rows are

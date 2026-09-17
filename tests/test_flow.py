@@ -43,6 +43,10 @@ from isekai.foundation.refusal import Refusal
 # test message that explains how to evade itself is one that gets evaded.
 PINNED: dict[str, str] = {
     "summon-v1": "1d3c206b394d78d8547f808fb0f2a969f030f9a51468c950e2f235a2d2cfc3a5",
+    # Added by 0017-conjure, the second flow. Adding a line here is the designed
+    # cost of adding a flow, not a defect the change found: the pin list is what
+    # makes adding or removing one a deliberate act.
+    "conjure-v1": "38698396d047ff58adfe3a3aad58b599b56a43d4b197327a196d72e0cedcc56e",
 }
 
 

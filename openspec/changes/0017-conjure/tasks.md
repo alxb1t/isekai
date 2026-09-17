@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The one repair: the registry's contents stop being hard-coded
-- [ ] 2 — `flows/conjure-v1/` — five files and the pin
+- [x] 2 — `flows/conjure-v1/` — five files and the pin
 - [ ] 3 — The verdict, measured rather than asserted
 - [ ] 4 — ⚠️ **GPU · HALT** — the acceptance run
 
@@ -99,7 +99,7 @@ legible in `git log`.
 
 **Read `## The publisher's recommended configuration` above before writing `flow.json`.**
 
-- [ ] 2.1 Create `flows/conjure-v1/graph.json` from `flows/summon-v1/graph.json` by deleting nodes
+- [x] 2.1 Create `flows/conjure-v1/graph.json` from `flows/summon-v1/graph.json` by deleting nodes
       `2`, `5`, `6`, `7`, `8`, `16`, `17`, `18`, `22`; repointing `10` and `34`'s `model` to `["1", 0]`,
       `positive` to `["3", 0]` and `negative` to `["4", 0]`; and setting `12`'s `filename_prefix` to
       `conjure-v1`. Verify — this one command checks the count, every edge and the prefix at once:
@@ -112,7 +112,7 @@ legible in `git log`.
       print('prefix:',g['12']['inputs']['filename_prefix'])
       assert len(g)==14 and not dangling and g['12']['inputs']['filename_prefix']=='conjure-v1'"
       ```
-- [ ] 2.2 Create `flows/conjure-v1/flow.json`: the eight required keys, `flow: "conjure-v1"`,
+- [x] 2.2 Create `flows/conjure-v1/flow.json`: the eight required keys, `flow: "conjure-v1"`,
       `manifest_version: 2`, `inputs: ["sheet"]`, **no `photo` key in `nodes`**, the seven surviving
       roles, the vocabulary pin copied unchanged, **two** models (the base checkpoint and the upscaler)
       with their digests copied from `summon-v1`, and dials minus `ip_weight`, `identity_cn_strength`
@@ -127,7 +127,7 @@ legible in `git log`.
       print('models:',[m.dest for m in f.models]); print('dials:',sorted(f.dials))
       assert list(f.inputs)==['sheet'] and 'photo' not in f.nodes and len(f.models)==2"
       ```
-- [ ] 2.3 Create `flows/conjure-v1/schema.json`: `summon-v1`'s sixteen fields in order, plus `bangs`
+- [x] 2.3 Create `flows/conjure-v1/schema.json`: `summon-v1`'s sixteen fields in order, plus `bangs`
       (suffix `bangs`) after `hair_silhouette`; `eyelashes` (suffix `eyelashes`) after `eyebrows`; and
       `nose` (suffix `nose`), `lips` (suffix `lips`), `facial_hair` (suffix `null`) before `marks`. All
       five `scored: false`; `name` stays `"identity"`. Verify:
@@ -140,7 +140,7 @@ legible in `git log`.
       assert len(c.fields)==21 and c.scored==s.scored
       assert sorted(new)==['bangs','eyelashes','facial_hair','lips','nose']"
       ```
-- [ ] 2.4 Create `flows/conjure-v1/caption.briefing.md` from `summon-v1`'s: richer on the face, **naming
+- [x] 2.4 Create `flows/conjure-v1/caption.briefing.md` from `summon-v1`'s: richer on the face, **naming
       all 21 attributes** including the three `summon` omits (skin ancestry, eyebrows, marks); inference
       licensed for **expression and the scene's light only**; *"do not interpret"* kept and scoped to
       marks, hair, eyes, skin and build; the absence licence kept **verbatim**; gaze kept surface.
@@ -154,7 +154,7 @@ legible in `git log`.
       missing=[w for w in need if w not in b]
       print('missing clauses:',missing); assert not missing"
       ```
-- [ ] 2.5 Create `flows/conjure-v1/sheet.briefing.md` from `summon-v1`'s, adding the five new fields to
+- [x] 2.5 Create `flows/conjure-v1/sheet.briefing.md` from `summon-v1`'s, adding the five new fields to
       `## The fields` **and to both worked examples**. Verify:
       ```
       uv run python -c "
@@ -165,7 +165,7 @@ legible in `git log`.
       print('fields:',len(names)); print('appearing fewer than 3 times:',missing)
       assert not missing"
       ```
-- [ ] 2.6 ⚠️ **ABORT CHECK — this is the one task that can change the version's verdict.** For each new
+- [x] 2.6 ⚠️ **ABORT CHECK — this is the one task that can change the version's verdict.** For each new
       field, map an English phrase a reader would actually write and confirm it reaches a canonical tag
       through the suffix or containment pass alone. **If any returns `[]` and would need a `CURATED`
       entry, HALT** — `CURATED` (`isekai/shared/vocabulary.py`) is a module constant shared by every
@@ -185,7 +185,7 @@ legible in `git log`.
       `long`+`nose` → `long nose`, `blunt`+`bangs` → `blunt bangs`, `long`+`eyelashes` →
       `long eyelashes`, `a short beard` → `beard` by containment. **Run it anyway**: the phrases the
       briefing actually elicits may differ from these, and this is the task that can change the verdict.
-- [ ] 2.7 Write the dial provenance table into `design.md` under a new `## Dial provenance` heading:
+- [x] 2.7 Write the dial provenance table into `design.md` under a new `## Dial provenance` heading:
       each dial, what the publisher's page says, and its standing — **the publisher's**, **inside the
       publisher's range**, or **inference**. Name `clip_skip`, `scheduler` and the VAE/base resolution as
       inference. **Do not put it in `flow.json`** — the manifest carries eight keys and JSON has no
@@ -199,7 +199,7 @@ legible in `git log`.
       missing=[k for k in d if k not in body]
       print('dials:',sorted(d)); print('absent from the table:',missing); assert not missing"
       ```
-- [ ] 2.8 Compute the digest and add `conjure-v1` to `PINNED` in `tests/test_flow.py`, with a comment
+- [x] 2.8 Compute the digest and add `conjure-v1` to `PINNED` in `tests/test_flow.py`, with a comment
       naming this change. **This is designed bookkeeping, not a defect** — the pin list is what makes
       adding or removing a flow deliberate. Verify:
       ```
@@ -207,7 +207,7 @@ legible in `git log`.
       from isekai.foundation.flow import manifest_digest; print(manifest_digest('conjure-v1'))"
       uv run pytest tests/test_flow.py -q
       ```
-- [ ] 2.9 Full gate green, and the registry now holds two flows. Verify: `make gate` exits 0, and
+- [x] 2.9 Full gate green, and the registry now holds two flows. Verify: `make gate` exits 0, and
       ```
       uv run python -c "
       from isekai.foundation.flow import tracked_flows; print(tracked_flows())"
