@@ -1,7 +1,7 @@
 """The shared derivation module, and what each deriver takes from it.
 
 `scripts/` is declared a source root in `pyproject.toml` -- operator tooling, not
-a package, and not on `convert.py`'s import graph. Nothing here reaches the
+a package, and not on `python -m isekai`'s import graph. Nothing here reaches the
 network: the two digest strategies are checked for *which one a spec routes to*,
 which is the decision, and the fetch itself is the derivers' own business and is
 verified by re-running them.

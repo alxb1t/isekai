@@ -37,8 +37,12 @@ Stdlib only.
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from isekai.refusal import Refusal
-from isekai.run import (
+from isekai.foundation.flow import Schema
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    APPROVED,
+    REVIEW,
+    SHEETS,
     Run,
     approved_versions,
     artifact_name,
@@ -49,15 +53,12 @@ from isekai.run import (
     versions,
     write_json,
 )
-from isekai.sheet import DIRECTORY as SHEETS
-from isekai.sheet import Schema, validate
-from isekai.vocabulary import Vocabulary
+from isekai.pipeline.sheet import validate
+from isekai.shared.vocabulary import Vocabulary
 
 STAGE = "review"
-DIRECTORY = "review"
 
 DRAFT = "draft"
-APPROVED = "approved"
 
 # SDXL's text encoders read 77 tokens at a time; past that the prompt is chunked
 # and the chunks are averaged, which is not the same prompt. Sheets already run
@@ -100,7 +101,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     draft every time somebody re-ran the pipeline would make resume write.
     """
     sheets = run.directory(SHEETS, flow)
-    review_directory = run.directory(DIRECTORY, flow)
+    review_directory = run.directory(REVIEW, flow)
 
     if versions(review_directory) and not new_version:
         return None
@@ -115,7 +116,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     approved = approved_versions(review_directory)
     if approved:
         origin = review_directory / artifact_name(approved[-1], APPROVED)
-        came_from, source = approved[-1], DIRECTORY
+        came_from, source = approved[-1], REVIEW
     else:
         origin = sheets / artifact_name(source_sheet)
         came_from, source = source_sheet, SHEETS
@@ -168,7 +169,7 @@ def approve(
     what is true -- that set is a subset of the wider tag corpus, so calling an
     absent tag unreal would overclaim.
     """
-    directory = run.directory(DIRECTORY, flow)
+    directory = run.directory(REVIEW, flow)
     drafts = draft_versions(directory)
     if not drafts:
         if approved_versions(directory):
@@ -220,7 +221,7 @@ def approve(
     path = directory / artifact_name(version, APPROVED)
     if path.exists():
         raise Refusal(
-            f"{path.name} already exists in {DIRECTORY}/{flow}/ and an approved "
+            f"{path.name} already exists in {REVIEW}/{flow}/ and an approved "
             f"artifact is never replaced; run `python -m isekai review --flow "
             f"{flow} --new-version` to correct it under the next number"
         )

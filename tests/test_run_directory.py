@@ -13,10 +13,9 @@ from typing import Any
 
 import pytest
 
-import isekai.run as run_module
-from isekai.__main__ import Wiring, build_parser, wiring
-from isekai.refusal import Refusal
-from isekai.run import (
+import isekai.shared.atomic_write as atomic_write_module
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
     BUDGETS,
     DATA_ROOT,
     FRAME_NAME,
@@ -40,6 +39,8 @@ from isekai.run import (
     write_atomically,
     write_json,
 )
+from isekai.interface.cli import build_parser
+from isekai.interface.wiring import Wiring, wiring
 from tests.images import jpeg_bytes, png_bytes
 
 
@@ -192,6 +193,12 @@ def test_a_photograph_this_build_cannot_read_stops_the_run_naming_the_fix(
 
 # --- atomicity ----------------------------------------------------------------
 
+# `write_atomically` lives in `isekai.shared.atomic_write`; these patch that module
+# by name rather than `run`, which merely imports it. Patching through `run` would
+# have passed either way -- `run.os` IS the global `os` module object -- so naming
+# the real subject is what makes these break on a move rather than sleep through
+# it (design.md D4).
+
 
 @pytest.mark.spec("run-directory:atomicity:interrupted-write-leaves-nothing")
 def test_a_failed_write_leaves_no_artifact_behind(
@@ -202,7 +209,7 @@ def test_a_failed_write_leaves_no_artifact_behind(
     def interrupted(descriptor: int) -> None:
         raise OSError("the disk went away mid-write")
 
-    monkeypatch.setattr(run_module.os, "fsync", interrupted)
+    monkeypatch.setattr(atomic_write_module.os, "fsync", interrupted)
 
     with pytest.raises(OSError):
         write_atomically(target, b"half a file")
@@ -220,7 +227,7 @@ def test_a_failed_rename_leaves_neither_the_artifact_nor_its_temporary(
     def refused(source: object, destination: object) -> None:
         raise OSError("the rename did not happen")
 
-    monkeypatch.setattr(run_module.os, "replace", refused)
+    monkeypatch.setattr(atomic_write_module.os, "replace", refused)
 
     with pytest.raises(OSError):
         write_atomically(target, b"a whole file that never lands")
@@ -245,13 +252,13 @@ def test_the_temporary_file_shares_the_artifacts_filesystem(
 ) -> None:
     target = tmp_path / "captions" / "001.json"
     where: list[Path] = []
-    real = run_module.tempfile.mkstemp
+    real = atomic_write_module.tempfile.mkstemp
 
     def watched(dir: Path, prefix: str, suffix: str) -> tuple[int, str]:
         where.append(Path(dir))
         return real(dir=dir, prefix=prefix, suffix=suffix)
 
-    monkeypatch.setattr(run_module.tempfile, "mkstemp", watched)
+    monkeypatch.setattr(atomic_write_module.tempfile, "mkstemp", watched)
     write_atomically(target, b"whole")
 
     assert where == [target.parent]

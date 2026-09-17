@@ -9,9 +9,17 @@ from pathlib import Path
 
 import pytest
 
-from isekai.caption import FakeReader, caption
-from isekai.refusal import Refusal
-from isekai.review import (
+from isekai.foundation.flow import Schema
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    Run,
+    approved_versions,
+    open_run,
+    read_artifact,
+    versions,
+)
+from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
     draft_versions,
@@ -19,9 +27,8 @@ from isekai.review import (
     is_complete,
     review,
 )
-from isekai.run import Run, approved_versions, open_run, read_artifact, versions
-from isekai.sheet import FakeSorter, Schema, sheet
-from isekai.vocabulary import Vocabulary
+from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
 

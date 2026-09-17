@@ -25,6 +25,120 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-17
+
+### Added
+
+- **The eight repo-root anchors are pinned to the repository root, before anything moves.**
+  Seven files compute a repo-root path as `Path(__file__).resolve().parent.parent`, and v0.15's
+  restructure moves every one of them a directory deeper — where that expression yields `isekai/`
+  instead of the repository. Six of the eight constants would fail loudly; **`DATA_ROOT` would
+  not.** It would become `isekai/.data`, `RUNS_ROOT` would move with it, and every test asserting
+  the *relationship* between the two would still pass, while the guard that keeps a run directory
+  — which holds a copy of a photograph by construction — out of one `git add` quietly narrowed to
+  refuse only paths inside the package (design.md D7). `tests/test_package_paths.py` asserts the
+  **absolute** property instead: strip each anchor's own suffix and what remains must be the
+  directory holding `pyproject.toml`, never another constant that would move alongside it. It
+  carries **one** falsification twin, because a check that cannot fail is not a check — each anchor's
+  suffix cancels against its own hops, so all eight reduce to the same path and parametrizing would
+  advertise per-anchor coverage that does not exist. Written while every anchor is still correct, so
+  it passes today and goes red the moment a file moves without gaining its `.parent` — the detector,
+  not the fix.
+
+### Fixed
+
+- **The image and the provisioning driver follow `provision.py` into `boundary/`.** The restructure
+  moved `isekai/provision.py` and `Dockerfile`'s `COPY` and `scripts/download_models.sh`'s `PROVISION`
+  still named the old path — the first breaks `docker build` outright, the second is a dead path on a
+  clone. **No gate command reads either file**: `bash -n` and `docker build --check` are the
+  image-phase convention and v0.15 is not an image phase, and `tests/test_infra.py` asserts on
+  `start.sh`'s shape but not on these paths. The destination matters as much as the source —
+  `provision.py` resolves its manifest as `parent.parent.parent / "scripts"`, so it must land at
+  `/opt/isekai/isekai/boundary/provision.py` for `/opt/isekai/scripts/models.json` to resolve; the
+  `Dockerfile` comment that makes the layout load-bearing now says so.
+
+### Changed
+
+- **`known-first-party = ["isekai"]` is declared to `ruff`'s isort.** It decided first-party per
+  *submodule* by asking whether the path existed on disk, so once `isekai/pipeline/` became a package
+  directory the archived v0.10 probe's single import block split across two sections — `isekai.pipeline`
+  resolved, `isekai.comfy_client` and `isekai.workflow` (deleted at v0.14) did not — and `I001` fired
+  on a file untouched since v0.10. Naming the package states the fact directly, so classification no
+  longer depends on what happens to exist in the tree today. **Not a suppression**: an archived change
+  is never repaired, and the alternatives were editing the archive or exempting a rule. Neither was
+  needed, and no live file's import order changes.
+
+- **The record catches up with the package.** All nine `openspec/specs/*/spec.md` `Source:`/`Tests:`
+  lines now name files that exist — every path was invalidated at once by the restructure — and each
+  gains what it omitted: `image-generation` gains `image.py` and its tests, `cli` gains `cli.py`,
+  `wiring.py`, `run_view.py` and the three further test files holding `cli:*` keys, `run-directory`
+  gains `atomic_write.py`, `model-provisioning` gains `test_derivation.py` and
+  `test_vocabulary_manifest.py`, `sheet` gains `flow.py` now that it owns `Schema`. Two preambles are
+  rewritten: `comfy-transport` pointed at a module and a test file **deleted together in `8baf2b3` at
+  v0.14** — a stale pointer, redirected to `generate.py`'s polling loop and `tests/test_generate.py`,
+  and `comfy_types.py` added because the `ComfyTransport` Protocol its own sentence depends on lives
+  there; `cli` claimed a model selection and range-checked dial flags that **do not exist** — there
+  are no dial flags, dials live in `flows/summon-v1/flow.json`, and only `--seed` and `--count`
+  validate at parse time. `CLAUDE.md`'s layout section and `README.md`'s repository-layout tree, which
+  attributed four modules' work to the entry point, describe the six groups.
+
+- **The package becomes six directories.** `foundation/` · `pipeline/` · `shared/` · `boundary/` ·
+  `evaluation/` · `interface/`, with `isekai/__main__.py` left at the package root because `runpy`
+  pins that path. Contents are unchanged: only paths, the import lines naming them, and one `.parent`
+  per repo-root anchor. Each group carries a `README.md` of its files and who imports them, plus
+  `isekai/README.md` over the six — **files and importers only**, because what a seam *is* belongs to
+  the design record and neither should restate the other (design.md D11). Each group's `__init__.py`
+  holds a docstring and **no code**: re-exporting through one is how a nested package acquires the
+  import cycles this one has none of (design.md D2). D2 asks for an *empty* file; `ruff`'s D104 makes
+  a byte-empty package init a lint error, so each carries the same one-line form `isekai/__init__.py`
+  already used — which is not a re-export, and is the constraint D2 actually states.
+  `pyproject.toml`'s two `[[tool.ty.overrides]]` paths follow `eval_backends.py` to its new home.
+
+- **Five of the six stage→stage imports stop existing.** The `Schema` type moves from `sheet.py` to
+  `flow.py` — a flow is what decides which schema a run is sorted against, and holding the type in
+  the sorter made the sorter a dependency of the renderer. The six stage directory names —
+  `CAPTIONS`, `SHEETS`, `REVIEW`, `PROMPTS`, `OUTPUTS`, `APPROVED` — move to `run.py`, which owns the
+  layout, so a stage that needs another stage's directory asks the run instead of importing the
+  stage. **Exactly one stage→stage edge survives**, and it is the behavioural one: `review` importing
+  and calling `sheet.validate` (design.md D6). **Only the type's home moves** — striking its
+  `version`, de-duplicating the vocabulary pin and redefining what a schema *is* are v0.16's, because
+  those are observable. Consequence banked for v0.16: it changes the directory values in one file
+  instead of five.
+
+- **`show.py` → `run_view.py`, `photo.py` → `image.py`.** `show` was the verb *and* the file, and
+  half of `photo`'s callers hand it a render rather than a photograph. Both are `git mv`, so
+  `--follow` reaches back past the rename, and their test files move with them. **The CLI verb `show`
+  does not change** — it is pinned by the entry-point tests, so the rename cannot reach the user
+  surface. Root `evaluate.py` is listed in the change's impact but imports neither module; nothing
+  there needed editing.
+
+- **The parser, the verb table and the dispatch functions move out of `__main__.py`, which becomes a
+  shim** — to `isekai/interface/cli.py`, after the restructure below. `runpy` pins where the entry point's *path* is, not where the parser lives, and a
+  package's largest interface surface has no business being the one module outside the filing scheme
+  (design.md D3). **The shim keeps its `if __name__ == "__main__":` guard**, a one-line departure from
+  the snippet in D3: without it, importing `isekai.__main__` runs the parser, which exits 2 on an
+  empty argv — and the `-S` guard that proves the entry point needs no third-party import does
+  exactly that import. D3 names that risk; this is the line that discharges it. Callers move rather
+  than being re-exported: `VERBS`, `build_parser` and `dispatch` are imported from `isekai.cli`.
+
+- **`Wiring`, `wiring()` and `_check_run_root` are their own module** — `isekai/interface/wiring.py`, after the restructure below. The
+  composition root had a second consumer that never sees an argv: the suite builds a `Wiring`
+  directly, with no parser at all, in fourteen tests. A parser is one way to fill that dataclass and
+  not the only one, so the module that owns the parser is not its home. `_check_run_root` travels
+  with `wiring()`, its only caller, and `REPOSITORY` with it. **No compatibility re-export is left in
+  `__main__`** — the three test import sites moved, and the name did not stay behind.
+
+- **`write_atomically` is its own module** — `isekai/shared/atomic_write.py`, after the restructure below. It takes a path and bytes and
+  knows nothing about runs, and it already had a consumer outside `run.py`: `generate.py` writes the
+  rendered PNG with it — a file that is neither JSON nor numbered by the run's artifact convention.
+  **`write_json` stays in `run`**, because `indent=2` and a trailing newline are a run's artifact
+  format rather than a write primitive (design.md D4). The new module imports nothing first-party,
+  which is the whole claim it makes. The move is not mechanical: `tempfile` was used at exactly one
+  place, inside the moved function, so `run.py`'s import of it is now dead and removed — and
+  `tests/test_run_directory.py`'s `run_module.tempfile` monkeypatch is retargeted at the module that
+  actually holds the import. That test failed on the move rather than sleeping through it, which is
+  what a detector is for.
+
 ## [0.14.0] - 2026-09-15
 
 ### Added

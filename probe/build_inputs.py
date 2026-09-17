@@ -162,7 +162,7 @@ def jpeg_stored_size(jpeg: bytes) -> tuple[int, int]:
 
     The stored size on purpose: the probe's whole question is what a reader does
     with the orientation beside it, so applying it here would erase the thing
-    being measured. `isekai.photo.image_dimensions` is therefore not the helper
+    being measured. `isekai.shared.image.image_dimensions` is therefore not the helper
     to call -- it answers the opposite question.
     """
     for code, offset, _ in segments(jpeg):

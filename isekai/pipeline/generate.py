@@ -36,17 +36,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.comfy_types import ComfyTransport, Workflow
-from isekai.flow import Flow, assemble
-from isekai.photo import (
-    MAX_TARGET_LONG_SIDE,
-    image_dimensions,
-    working_resolution,
-)
-from isekai.refusal import Refusal
-from isekai.review import APPROVED
-from isekai.review import DIRECTORY as REVIEW
-from isekai.run import (
+from isekai.boundary.comfy_types import ComfyTransport, Workflow
+from isekai.foundation.flow import Flow, Schema, assemble
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    APPROVED,
+    OUTPUTS,
+    PROMPTS,
+    REVIEW,
     Run,
     approved_versions,
     artifact_name,
@@ -54,15 +51,17 @@ from isekai.run import (
     envelope,
     read_artifact,
     record_failure,
-    write_atomically,
     write_json,
 )
-from isekai.sheet import Schema
+from isekai.shared.atomic_write import write_atomically
+from isekai.shared.image import (
+    MAX_TARGET_LONG_SIDE,
+    image_dimensions,
+    working_resolution,
+)
 
 STAGE_ASSEMBLE = "assemble"
 STAGE_RENDER = "render"
-PROMPTS = "prompts"
-OUTPUTS = "outputs"
 
 # A seed is what the sampler takes: an unsigned 64-bit integer.
 SEED_BITS = 64
@@ -246,7 +245,7 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
     is already rented.
 
     `MAX_TARGET_LONG_SIDE` is enforced here for the same reason and in the same
-    currency -- see its own comment in `isekai.photo` for what it bounds and why.
+    currency -- see its own comment in `isekai.shared.image` for what it bounds and why.
     The one fact that belongs here rather than beside the constant: it bounds the
     *working* target and not the hires one, because hires scales both axes by the
     same factor and so does not change the aspect ratio, and bounding the hires

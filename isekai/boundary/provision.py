@@ -7,8 +7,9 @@ fetch it. The bytes move through `wget` on the pod (design.md D3, D14); the only
 network call here is the cheap pre-flight HEAD behind the `Fetcher` seam, which a
 fake replaces so the whole suite stays offline.
 
-Not imported by `convert.py`. The runtime stays stdlib-only either way -- this
-module is `json`, `re` and `pathlib` -- but the import graph stays narrow too.
+Not on `python -m isekai`'s import graph. The runtime stays stdlib-only either
+way -- this module is `json`, `re` and `pathlib` -- but the graph stays narrow
+too.
 """
 
 import hashlib
@@ -23,7 +24,9 @@ from http.client import HTTPMessage
 from pathlib import Path, PurePosixPath
 from typing import IO, Any, Literal, Protocol, TypedDict
 
-MANIFEST_PATH = Path(__file__).resolve().parent.parent / "scripts" / "models.json"
+MANIFEST_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "scripts" / "models.json"
+)
 
 # The third manifest: the tag list the sorting stage fills a sheet from. A sibling
 # of the other two rather than a section of either -- one file per question, and
@@ -31,7 +34,7 @@ MANIFEST_PATH = Path(__file__).resolve().parent.parent / "scripts" / "models.jso
 # declared here, beside the graph's, because the checks that keep a manifest
 # honest are this module's and all three are held to them.
 VOCABULARY_MANIFEST_PATH = (
-    Path(__file__).resolve().parent.parent / "scripts" / "vocabulary.json"
+    Path(__file__).resolve().parent.parent.parent / "scripts" / "vocabulary.json"
 )
 
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.

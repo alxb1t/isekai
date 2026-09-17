@@ -186,9 +186,14 @@ living, test-backed spec, and `openspec/changes/` is the work in flight.
 
 ```
 isekai/
-├── isekai/                    # the package: the six staged verbs, the run directory, the flow
-│   └── __main__.py            # loader, the photo header reader, the transport, and provisioning
-│                              # (manifest, verification, graph↔manifest binding)
+├── isekai/                    # the package, filed into six groups; one README.md each
+│   ├── __main__.py            # the path `python -m isekai` resolves — a shim over interface/cli.py
+│   ├── foundation/            # run directory & layout names, flow manifest & Schema, refusal
+│   ├── pipeline/              # the four staged verbs: caption · sheet · review · generate
+│   ├── shared/                # image header reader, vocabulary, atomic write
+│   ├── boundary/              # ComfyUI transport, the hosted model, provisioning
+│   ├── evaluation/            # the scorer, and the only importer of the [eval] extra
+│   └── interface/             # the parser & dispatch, the composition, the run's account
 ├── tests/                     # the suite and its fakes
 ├── flows/summon-v1/           # flow.json = inputs, dials, prompt fragments, node roles;
 │                              # graph.json = the API graph. A flow is immutable.

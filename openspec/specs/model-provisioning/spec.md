@@ -4,10 +4,10 @@ Which model artifacts the shipped graph requires, where each one comes from, how
 proven to be the intended ones before anything loads them, and the binding that keeps the manifest
 and the graph describing the same set of files.
 
-**Source:** `scripts/models.json`, `isekai/provision.py`, `scripts/download_models.sh`,
+**Source:** `scripts/models.json`, `isekai/boundary/provision.py`, `scripts/download_models.sh`,
 `scripts/derive_manifest.py`, `start.sh` ·
 **Tests:** `tests/test_provision.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`,
-`tests/test_infra.py`
+`tests/test_infra.py`, `tests/test_derivation.py`, `tests/test_vocabulary_manifest.py`
 
 The manifest is the source of truth for what the stack *is*: every source pinned to an immutable
 revision, every artifact carrying a digest, and nothing trusted by name. `provision.py` is **not**

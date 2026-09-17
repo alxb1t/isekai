@@ -26,20 +26,20 @@ convention:**
   to advance to. The kind and the attempt ordinal are in the name, so the retry
   decision stays a listing.
 
-Stdlib only, and not on `convert.py`'s import graph either way.
+Stdlib only, and on `python -m isekai`'s import graph.
 """
 
 import hashlib
 import json
 import os
 import re
-import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
-from isekai.refusal import Refusal
+from isekai.foundation.refusal import Refusal
+from isekai.shared.atomic_write import write_atomically
 
 # Everything a run produces or consumes lives under one gitignored root. The run
 # directory holds a *copy of the photograph*, which is what makes a run
@@ -49,7 +49,7 @@ from isekai.refusal import Refusal
 # (design.md D14). `models/` deliberately stays where it is: it is fetched from a
 # pinned manifest and is re-derivable byte for byte, so its loss costs a
 # re-download rather than the loss of work.
-DATA_ROOT = Path(__file__).resolve().parent.parent / ".data"
+DATA_ROOT = Path(__file__).resolve().parent.parent.parent / ".data"
 RUNS_ROOT = DATA_ROOT / "runs"
 
 # The only schema version this build reads. There is no migration ladder because
@@ -84,6 +84,18 @@ _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
 
 # The frame: what the run is, written once when the run is created.
 FRAME_NAME = "run.json"
+
+# The stage directories, and the label an approved artifact carries. The run owns
+# the layout, so a stage that needs another stage's directory asks the run rather
+# than importing the stage -- which is what closes five of the six stage-to-stage
+# edges (design.md D6). `approved` is here for the same reason: `review` writes it
+# and both `generate` and the inspection command read it.
+CAPTIONS = "captions"
+SHEETS = "sheets"
+REVIEW = "review"
+PROMPTS = "prompts"
+OUTPUTS = "outputs"
+APPROVED = "approved"
 
 # `001`, and `001.approved` / `001.draft` where a stage has that concept.
 ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>[a-z]+))?\.json$")
@@ -150,30 +162,7 @@ def media_type(body: bytes) -> tuple[str, str]:
     )
 
 
-# --- atomic writes ------------------------------------------------------------
-
-
-def write_atomically(path: Path, body: bytes) -> None:
-    """Write `body` to `path` through a temporary file on the same filesystem.
-
-    The temporary file is created in the destination's own directory, so the
-    replace is a rename within one filesystem and is atomic. It is also named
-    outside the artifact patterns, so a crash between the write and the replace
-    leaves something a listing does not mistake for an artifact.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle, temporary = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".partial"
-    )
-    try:
-        with os.fdopen(handle, "wb") as sink:
-            sink.write(body)
-            sink.flush()
-            os.fsync(sink.fileno())
-        os.replace(temporary, path)
-    except BaseException:
-        Path(temporary).unlink(missing_ok=True)
-        raise
+# --- the run's JSON form ------------------------------------------------------
 
 
 def write_json(path: Path, payload: Mapping[str, Any]) -> None:

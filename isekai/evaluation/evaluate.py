@@ -10,13 +10,13 @@ threshold -- a threshold needs labels, and this version is what produces the
 first ones.
 
 **It imports nothing third-party.** The models live behind the Protocols below,
-which `isekai.eval_backends` implements against torch, transformers and
+which `isekai.evaluation.eval_backends` implements against torch, transformers and
 onnxruntime; the whole of this module is stdlib, so every rule in it is testable
 in CI with the `[eval]` extra absent. That is the same seam discipline
 `ComfyTransport` is under, for the same reason: a fake is what keeps the suite
 offline.
 
-**It is not on `convert.py`'s import graph**, and the one-path rule is untouched
+**It is not on `python -m isekai`'s import graph**, and the one-path rule is untouched
 -- that rule is about there being one way to *render*, and an evaluator is not a
 second way to render (design.md D12).
 """
@@ -25,13 +25,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import Literal, Protocol
 
-from isekai.ciede2000 import Lab, delta_e_2000
-from isekai.photo import image_dimensions, working_resolution
+from isekai.evaluation.ciede2000 import Lab, delta_e_2000
 
 # Re-exported, not defined here. The redundant alias is the explicit-re-export
 # form: `Refusal` moved to its own module so the pipeline can raise it without
 # importing the scorer, and every existing importer still reads it from here.
-from isekai.refusal import Refusal as Refusal
+from isekai.foundation.refusal import Refusal as Refusal
+from isekai.shared.image import image_dimensions, working_resolution
 
 # A region covering less than this fraction of the canvas is refused rather than
 # scored. Measured on the photograph in front of it rather than inherited from a
@@ -225,7 +225,7 @@ class PoseReader(Protocol):
 def canvas_for(photo_path: str) -> Canvas:
     """Return the canvas a photograph is compared on: the injector's own target.
 
-    Asks `isekai.photo` rather than restating the rule. A second implementation
+    Asks `isekai.shared.image` rather than restating the rule. A second implementation
     of the resolution rule would be a second thing to keep in step, and the graph
     is the thing that actually scaled the pixels.
     """

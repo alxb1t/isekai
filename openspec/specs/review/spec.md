@@ -4,7 +4,7 @@ Stage ③ of the pipeline: the operator's correction of a filled sheet — an ed
 directory of its own, validated against the vocabulary, and approved by a rename, so that the
 machine-written sheet it came from is never altered.
 
-**Source:** `isekai/review.py` ·
+**Source:** `isekai/pipeline/review.py` ·
 **Tests:** `tests/test_review.py`
 
 ## Requirements

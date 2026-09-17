@@ -58,7 +58,9 @@ RUN uv pip install -r \
 # reads, and the module that owns every decision taken about it. Copying only the
 # script would put a downloader on the pod without the two things it depends on
 # (design.md D15). The layout is preserved because provision.py resolves the
-# manifest relative to itself.
+# manifest relative to itself -- `parent.parent.parent / "scripts"` -- so the
+# module's depth under /opt/isekai is load-bearing, and it must land at
+# isekai/boundary/ to match the tree it was moved into at v0.15.
 # `comfyui_controlnet_aux` writes annotator checkpoints to `<node dir>/ckpts` --
 # the pod's container disk, which does not survive the pod. That is 386 MB
 # re-fetched from Hugging Face, unpinned, during the first render of every pod,
@@ -75,7 +77,7 @@ ENV AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts
 COPY start.sh /start.sh
 COPY scripts/download_models.sh /opt/isekai/scripts/download_models.sh
 COPY scripts/models.json /opt/isekai/scripts/models.json
-COPY isekai/provision.py /opt/isekai/isekai/provision.py
+COPY isekai/boundary/provision.py /opt/isekai/isekai/boundary/provision.py
 RUN chmod +x /start.sh /opt/isekai/scripts/download_models.sh
 
 EXPOSE 8188 22

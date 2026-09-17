@@ -29,8 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from isekai import caption as caption_module
-from isekai.claude_cli import (
+from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
     CliFailure,
@@ -41,8 +40,11 @@ from isekai.claude_cli import (
     refusal_for,
     spawn,
 )
-from isekai.refusal import Refusal
-from isekai.run import (
+from isekai.foundation.flow import Field, Schema
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import (
+    CAPTIONS,
+    SHEETS,
     Run,
     artifact_name,
     check_budget,
@@ -53,10 +55,10 @@ from isekai.run import (
     record_failure,
     write_json,
 )
-from isekai.vocabulary import Vocabulary, map_phrase, normalise
-from isekai.vocabulary import identity as vocabulary_identity
+from isekai.shared.vocabulary import Vocabulary, map_phrase, normalise
+from isekai.shared.vocabulary import identity as vocabulary_identity
 
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent / "schemas"
+SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / "schemas"
 
 # The only schema document version this build reads. There is one schema version
 # in existence, so there is no migration ladder and no second reader.
@@ -66,46 +68,6 @@ SCHEMA_VERSION = 1
 # than discovered at the boundary, because a name that fails it fails every call
 # rather than one.
 IDENTIFIER_SAFE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
-
-
-@dataclass(frozen=True)
-class Field:
-    """One field of a sheet: its name, whether it is scored, and its suffix."""
-
-    name: str
-    scored: bool
-    suffix: str | None
-
-
-@dataclass(frozen=True)
-class Schema:
-    """A versioned field list, in prompt order, and the vocabulary it assumes."""
-
-    name: str
-    version: int
-    vocabulary: Mapping[str, str]
-    fields: tuple[Field, ...]
-
-    @property
-    def names(self) -> tuple[str, ...]:
-        """Return the field names, in the one order a prompt is assembled in."""
-        return tuple(field.name for field in self.fields)
-
-    @property
-    def scored(self) -> tuple[str, ...]:
-        """Return the names of the fields a measurement is taken over."""
-        return tuple(field.name for field in self.fields if field.scored)
-
-    def field(self, name: str) -> Field:
-        """Return the named field, or refuse naming what the schema does declare."""
-        for field in self.fields:
-            if field.name == name:
-                return field
-        raise Refusal(
-            f"{name!r} is not a field of schema {self.name} v{self.version}; "
-            f"this schema declares {', '.join(self.names)} -- correct the field "
-            "name, or write a new schema version that declares it"
-        )
 
 
 def schema_path(name: str = "identity", version: int = SCHEMA_VERSION) -> Path:
@@ -229,9 +191,9 @@ def validate(
 
 BRIEFING_PATH = SCHEMAS_DIR / "identity.v1.briefing.md"
 
-# The stage's own directory inside a run, and the name its budget is keyed by.
+# The name this stage's budget is keyed by. Its directory inside a run is the
+# run's to name, not the stage's -- `run.SHEETS`.
 STAGE = "sheet"
-DIRECTORY = "sheets"
 
 
 @dataclass(frozen=True)
@@ -393,12 +355,12 @@ def sheet(
     wanted = [
         flow
         for flow in flows
-        if latest(run.directory(DIRECTORY, flow)) is None or new_version
+        if latest(run.directory(SHEETS, flow)) is None or new_version
     ]
     if not wanted:
         return []
 
-    captions = run.directory(caption_module.DIRECTORY)
+    captions = run.directory(CAPTIONS)
     source = latest(captions)
     if source is None:
         raise Refusal(
@@ -406,7 +368,7 @@ def sheet(
             "`python -m isekai caption` for this photograph first"
         )
 
-    first = run.directory(DIRECTORY, wanted[0])
+    first = run.directory(SHEETS, wanted[0])
     check_budget(STAGE, first, next_version(first), run.id)
 
     prose = str(read_artifact(captions / artifact_name(source))["prose"])
@@ -421,7 +383,7 @@ def sheet(
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "sorter", run.id, failed, record, f"{DIRECTORY}/{wanted[0]}/", STAGE
+            "sorter", run.id, failed, record, f"{SHEETS}/{wanted[0]}/", STAGE
         ) from failed
 
     fields = fill(sorted_answers.answers, schema, vocabulary)
@@ -431,7 +393,7 @@ def sheet(
     briefing_record = instructions_record(briefing_path)
     written: list[Path] = []
     for flow in wanted:
-        directory = run.directory(DIRECTORY, flow)
+        directory = run.directory(SHEETS, flow)
         path = directory / artifact_name(next_version(directory))
         write_json(
             path,

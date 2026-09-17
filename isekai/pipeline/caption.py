@@ -18,7 +18,7 @@ routed around: substituting a different implementation would write an artifact
 whose provenance record is untrue, and the whole discipline of this pipeline is
 that a producer names what actually made the artifact (design.md D6).
 
-Stdlib only. The network is behind `Reader`; `isekai.claude_cli` is the one
+Stdlib only. The network is behind `Reader`; `isekai.boundary.claude_cli` is the one
 implementation of it, and `FakeReader` is what keeps the suite offline.
 """
 
@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from isekai.claude_cli import (
+from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
     CliFailure,
@@ -38,7 +38,8 @@ from isekai.claude_cli import (
     refusal_for,
     spawn,
 )
-from isekai.run import (
+from isekai.foundation.run import (
+    CAPTIONS,
     Run,
     artifact_name,
     check_budget,
@@ -49,12 +50,12 @@ from isekai.run import (
     write_json,
 )
 
-BRIEFINGS_DIR = Path(__file__).resolve().parent.parent / "briefings"
+BRIEFINGS_DIR = Path(__file__).resolve().parent.parent.parent / "briefings"
 BRIEFING_PATH = BRIEFINGS_DIR / "caption.md"
 
-# The stage's own directory inside a run, and the name its budget is keyed by.
+# The name this stage's budget is keyed by. Its directory inside a run is the
+# run's to name, not the stage's -- `run.CAPTIONS`.
 STAGE = "caption"
-DIRECTORY = "captions"
 
 # The photograph's path goes *in the prompt*. A trailing positional after the
 # prompt is silently ignored by the CLI's argument parser, which would leave the
@@ -151,7 +152,7 @@ def caption(
     already complete -- which is the whole of resume at this stage: no special
     mode and no state machine, just a command that does nothing the second time.
     """
-    directory = run.directory(DIRECTORY)
+    directory = run.directory(CAPTIONS)
     if latest(directory) is not None and not new_version:
         return None
 
@@ -169,7 +170,7 @@ def caption(
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "reader", run.id, failed, record, f"{DIRECTORY}/", STAGE
+            "reader", run.id, failed, record, f"{CAPTIONS}/", STAGE
         ) from failed
 
     path = directory / artifact_name(version)

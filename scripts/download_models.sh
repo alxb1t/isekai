@@ -23,7 +23,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROVISION="${HERE}/../isekai/provision.py"
+PROVISION="${HERE}/../isekai/boundary/provision.py"
 
 # Which manifest to provision. `provision.py` owns the default, so the shell has no
 # second copy of the path to drift from it.

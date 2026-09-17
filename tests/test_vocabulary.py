@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.vocabulary import (
+from isekai.shared.vocabulary import (
     CURATED,
     Vocabulary,
     asserts_absence,
@@ -225,7 +225,7 @@ def test_every_curated_span_and_tag_is_written_in_the_normal_spelling() -> None:
     "curated table against it only where it is present"
 )
 def test_every_curated_tag_is_in_the_provisioned_vocabulary() -> None:
-    from isekai.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
+    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
 
     if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
         pytest.skip("the vocabulary is not provisioned in this environment")
@@ -237,7 +237,7 @@ def test_every_curated_tag_is_in_the_provisioned_vocabulary() -> None:
 
 @pytest.mark.spec_exempt("structural: the loader against the provisioned file")
 def test_the_provisioned_vocabulary_carries_its_pin(tmp_path: Path) -> None:
-    from isekai.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
+    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
 
     if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
         pytest.skip("the vocabulary is not provisioned in this environment")

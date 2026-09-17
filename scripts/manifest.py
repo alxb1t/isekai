@@ -47,7 +47,7 @@ BLOB_CAP_BYTES = 1 << 20
 
 
 class ManifestEntry(TypedDict):
-    """One emitted manifest entry -- the shape `isekai.provision` reads back."""
+    """One emitted manifest entry: the shape `isekai.boundary.provision` reads."""
 
     dest: str
     sha256: str

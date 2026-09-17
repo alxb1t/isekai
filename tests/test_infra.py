@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from isekai.comfy_types import Workflow
-from isekai.provision import (
+from isekai.boundary.comfy_types import Workflow
+from isekai.boundary.provision import (
     MODELS_NAMESPACE,
     MODELS_ROOT,
     VOLUME_MOUNT,

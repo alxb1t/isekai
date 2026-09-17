@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.evaluate import (
+from isekai.evaluation.evaluate import (
     AUTHORITATIVE_GUARD_METHOD,
     CLAIMS,
     MIN_KEYPOINT_CONFIDENCE,
@@ -24,7 +24,7 @@ from isekai.evaluate import (
     table,
     usable_regions,
 )
-from isekai.photo import working_resolution
+from isekai.shared.image import working_resolution
 from tests.eval_fakes import (
     FakeDetector,
     FakeEncoder,
@@ -680,9 +680,9 @@ def test_ultralytics_is_absent_from_the_resolved_lockfile() -> None:
     "nobody runs is not a control"
 )
 def test_ultralytics_is_absent_from_the_scorers_import_graph() -> None:
-    import isekai.evaluate
+    import isekai.evaluation.evaluate
 
-    source = Path(isekai.evaluate.__file__).read_text()
+    source = Path(isekai.evaluation.evaluate.__file__).read_text()
 
     assert "import ultralytics" not in source
     assert "from ultralytics" not in source

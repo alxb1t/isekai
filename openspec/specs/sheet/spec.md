@@ -4,8 +4,9 @@ Stage ② of the pipeline: turning descriptive prose into a sheet of fields fill
 vocabulary tags, using a declared schema and a provisioned tag list, and knowing nothing about which
 flow asked or how many will read the result.
 
-**Source:** `isekai/sheet.py`, `isekai/vocabulary.py`, `isekai/claude_cli.py`,
-`schemas/identity.v1.json`, `schemas/identity.v1.briefing.md` ·
+**Source:** `isekai/pipeline/sheet.py`, `isekai/shared/vocabulary.py`,
+`isekai/boundary/claude_cli.py`, `isekai/foundation/flow.py`, `schemas/identity.v1.json`,
+`schemas/identity.v1.briefing.md` ·
 **Tests:** `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`,
 `tests/test_vocabulary.py`
 

@@ -1,6 +1,6 @@
 from typing import Any
 
-from isekai.comfy_types import Image, Workflow
+from isekai.boundary.comfy_types import Image, Workflow
 
 
 class FakeComfyClient:

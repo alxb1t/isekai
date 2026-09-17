@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-from isekai.caption import FakeReader, caption
-from isekai.flow import load_flow
-from isekai.generate import prepare, render
-from isekai.review import approve, review
-from isekai.run import Run, open_run
-from isekai.sheet import FakeSorter, Schema, sheet
-from isekai.show import listings, rendered, report
-from isekai.vocabulary import Vocabulary
+from isekai.foundation.flow import Schema, load_flow
+from isekai.foundation.run import Run, open_run
+from isekai.interface.run_view import listings, rendered, report
+from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.generate import prepare, render
+from isekai.pipeline.review import approve, review
+from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
 

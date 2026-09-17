@@ -1,6 +1,6 @@
 import pytest
 
-from isekai.multipart import build_multipart
+from isekai.boundary.multipart import build_multipart
 
 
 @pytest.mark.spec("comfy-transport:multipart:content-type-declares-boundary")

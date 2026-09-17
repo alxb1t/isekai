@@ -1,7 +1,7 @@
 import pytest
 
-from isekai.comfy_types import Workflow
-from isekai.provision import (
+from isekai.boundary.comfy_types import Workflow
+from isekai.boundary.provision import (
     Manifest,
     graph_model_files,
     self_fetched_model_files,

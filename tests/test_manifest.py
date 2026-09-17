@@ -4,11 +4,11 @@ from typing import Any, cast
 import pytest
 
 # `scripts/` is declared a source root in `pyproject.toml` -- operator tooling, not
-# a package. It is not on `convert.py`'s import graph, so the stdlib-only runtime
+# a package. It is not on `python -m isekai`'s import graph, so the stdlib-only runtime
 # rule is untouched either way.
 from derive_manifest import civitai_file
 
-from isekai.provision import (
+from isekai.boundary.provision import (
     SOURCE_ORG,
     Entry,
     Manifest,
