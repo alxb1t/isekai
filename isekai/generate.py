@@ -36,6 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isekai.atomic_write import write_atomically
 from isekai.comfy_types import ComfyTransport, Workflow
 from isekai.flow import Flow, assemble
 from isekai.photo import (
@@ -54,7 +55,6 @@ from isekai.run import (
     envelope,
     read_artifact,
     record_failure,
-    write_atomically,
     write_json,
 )
 from isekai.sheet import Schema

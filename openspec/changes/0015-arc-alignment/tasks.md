@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The anchor detectors, written while the anchors are still correct
-- [ ] 2 — `atomic_write` out of `run`
+- [x] 2 — `atomic_write` out of `run`
 - [ ] 3 — `wiring` out of `__main__`
 - [ ] 4 — `cli` out of `__main__`, behind a three-line shim
 - [ ] 5 — `show` → `run_view`, `photo` → `image`
@@ -51,10 +51,10 @@ Every phase, without exception:
 > Design D4. Justified by `generate.py:386`, not by the evaluator — which this change does **not**
 > rewire (root `evaluate.py` has zero test importers; that is v0.19's, with a harness).
 
-- [ ] 2.1 Move `write_atomically` (`run.py:156-176`) into `isekai/atomic_write.py`; `run.py` imports it. **`write_json` (`run.py:181`) stays in `run`** — it encodes the run's artifact JSON convention, not a write primitive. Verify: `uv run python -c "from isekai.atomic_write import write_atomically; from isekai.run import write_json; print('ok')"`
-- [ ] 2.2 Remove `run.py:36`'s now-unused `import tempfile` and retarget `tests/test_run_directory.py:253`'s `monkeypatch.setattr(run_module.tempfile, "mkstemp", ...)` at the new module. Verify: `uv run pytest tests/test_run_directory.py -q -k "temporary_file_shares"`
-- [ ] 2.3 Verify `atomic_write` took nothing from `run` with it — it must import no first-party module: `grep -c "^from isekai\.\|^import isekai" isekai/atomic_write.py` returns `0`
-- [ ] 2.4 Verify the gate: `make gate`
+- [x] 2.1 Move `write_atomically` (`run.py:156-176`) into `isekai/atomic_write.py`; `run.py` imports it. **`write_json` (`run.py:181`) stays in `run`** — it encodes the run's artifact JSON convention, not a write primitive. Verify: `uv run python -c "from isekai.atomic_write import write_atomically; from isekai.run import write_json; print('ok')"`
+- [x] 2.2 Remove `run.py:36`'s now-unused `import tempfile` and retarget `tests/test_run_directory.py:253`'s `monkeypatch.setattr(run_module.tempfile, "mkstemp", ...)` at the new module. Verify: `uv run pytest tests/test_run_directory.py -q -k "temporary_file_shares"`
+- [x] 2.3 Verify `atomic_write` took nothing from `run` with it — it must import no first-party module: `grep -c "^from isekai\.\|^import isekai" isekai/atomic_write.py` returns `0`
+- [x] 2.4 Verify the gate: `make gate`
 
 ## 3. `wiring` out of `__main__`
 

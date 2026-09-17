@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+import isekai.atomic_write as atomic_write_module
 import isekai.run as run_module
 from isekai.__main__ import Wiring, build_parser, wiring
 from isekai.refusal import Refusal
@@ -245,13 +246,18 @@ def test_the_temporary_file_shares_the_artifacts_filesystem(
 ) -> None:
     target = tmp_path / "captions" / "001.json"
     where: list[Path] = []
-    real = run_module.tempfile.mkstemp
+    # `tempfile` is imported by `isekai.atomic_write`, which is where the function
+    # under test now lives; `run` no longer imports it at all. The two patches above
+    # reach `run_module.os`, which IS the global `os` module object and would have
+    # passed either way -- this one names the module that actually holds the import,
+    # so it breaks on the move rather than sleeping through it (design.md D4).
+    real = atomic_write_module.tempfile.mkstemp
 
     def watched(dir: Path, prefix: str, suffix: str) -> tuple[int, str]:
         where.append(Path(dir))
         return real(dir=dir, prefix=prefix, suffix=suffix)
 
-    monkeypatch.setattr(run_module.tempfile, "mkstemp", watched)
+    monkeypatch.setattr(atomic_write_module.tempfile, "mkstemp", watched)
     write_atomically(target, b"whole")
 
     assert where == [target.parent]

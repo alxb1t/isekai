@@ -41,6 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   while every anchor is still correct, so it passes today and goes red the moment a file moves
   without gaining its `.parent` — the detector, not the fix.
 
+### Changed
+
+- **`write_atomically` is its own module, `isekai/atomic_write.py`.** It takes a path and bytes and
+  knows nothing about runs, and it already had a consumer outside `run.py`: `generate.py` writes the
+  rendered PNG with it — a file that is neither JSON nor numbered by the run's artifact convention.
+  **`write_json` stays in `run`**, because `indent=2` and a trailing newline are a run's artifact
+  format rather than a write primitive (design.md D4). The new module imports nothing first-party,
+  which is the whole claim it makes. The move is not mechanical: `tempfile` was used at exactly one
+  place, inside the moved function, so `run.py`'s import of it is now dead and removed — and
+  `tests/test_run_directory.py`'s `run_module.tempfile` monkeypatch is retargeted at the module that
+  actually holds the import. That test failed on the move rather than sleeping through it, which is
+  what a detector is for.
+
 ## [0.14.0] - 2026-09-15
 
 ### Added

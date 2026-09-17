@@ -33,12 +33,12 @@ import hashlib
 import json
 import os
 import re
-import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
+from isekai.atomic_write import write_atomically
 from isekai.refusal import Refusal
 
 # Everything a run produces or consumes lives under one gitignored root. The run
@@ -152,28 +152,10 @@ def media_type(body: bytes) -> tuple[str, str]:
 
 # --- atomic writes ------------------------------------------------------------
 
-
-def write_atomically(path: Path, body: bytes) -> None:
-    """Write `body` to `path` through a temporary file on the same filesystem.
-
-    The temporary file is created in the destination's own directory, so the
-    replace is a rename within one filesystem and is atomic. It is also named
-    outside the artifact patterns, so a crash between the write and the replace
-    leaves something a listing does not mistake for an artifact.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle, temporary = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".partial"
-    )
-    try:
-        with os.fdopen(handle, "wb") as sink:
-            sink.write(body)
-            sink.flush()
-            os.fsync(sink.fileno())
-        os.replace(temporary, path)
-    except BaseException:
-        Path(temporary).unlink(missing_ok=True)
-        raise
+# `write_atomically` lives in `isekai.atomic_write`: it takes a path and bytes and
+# knows nothing about runs, and `generate.py` already writes the rendered PNG with
+# it. What stays here is the one below -- the JSON form every artifact in a run is
+# written in, which is a run format rather than a write primitive.
 
 
 def write_json(path: Path, payload: Mapping[str, Any]) -> None:
