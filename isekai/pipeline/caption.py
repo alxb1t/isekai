@@ -50,9 +50,6 @@ from isekai.foundation.run import (
     write_json,
 )
 
-BRIEFINGS_DIR = Path(__file__).resolve().parent.parent.parent / "briefings"
-BRIEFING_PATH = BRIEFINGS_DIR / "caption.md"
-
 # The name this stage's budget is keyed by. Its directory inside a run is the
 # run's to name, not the stage's -- `run.CAPTIONS`.
 STAGE = "caption"
@@ -143,8 +140,8 @@ def caption(
     run: Run,
     reader: Reader,
     *,
+    briefing_path: Path,
     new_version: bool = False,
-    briefing_path: Path = BRIEFING_PATH,
 ) -> Path | None:
     """Read `run`'s photograph into prose, or do nothing because it is already read.
 
@@ -191,7 +188,6 @@ def caption(
 
 
 __all__: Sequence[str] = (
-    "BRIEFING_PATH",
     "ClaudeReader",
     "FakeReader",
     "Reader",

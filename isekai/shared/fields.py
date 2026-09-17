@@ -41,8 +41,8 @@ def validate(
     if extra:
         raise Refusal(
             f"the sheet carries {', '.join(sorted(extra))}, which schema "
-            f"{schema.name} v{schema.version} does not declare; remove "
-            "the entry, or write a schema version that declares it"
+            f"{schema.name} does not declare; remove the entry, or write a flow "
+            "whose schema declares it"
         )
     outside = [
         (name, tag)

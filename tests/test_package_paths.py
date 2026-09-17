@@ -26,7 +26,6 @@ import pytest
 from isekai.boundary import claude_cli, provision
 from isekai.evaluation import eval_models
 from isekai.foundation import flow, run
-from isekai.pipeline import caption, sheet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -37,8 +36,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ANCHORS = (
     pytest.param(run.DATA_ROOT, (".data",), id="run.DATA_ROOT"),
     pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
-    pytest.param(sheet.SCHEMAS_DIR, ("schemas",), id="sheet.SCHEMAS_DIR"),
-    pytest.param(caption.BRIEFINGS_DIR, ("briefings",), id="caption.BRIEFINGS_DIR"),
     pytest.param(
         provision.MANIFEST_PATH,
         ("scripts", "models.json"),

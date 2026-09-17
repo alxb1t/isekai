@@ -31,7 +31,7 @@ import hashlib
 import json
 import random
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -203,7 +203,7 @@ def prompt_artifact(
 def prepare(
     run: Run,
     flows: Mapping[str, Flow],
-    schema: Schema,
+    schema_for: Callable[[Flow], Schema],
 ) -> dict[str, Path]:
     """Assemble every approved flow's prompt for one run, before anything is rented.
 
@@ -212,6 +212,9 @@ def prepare(
     the refusal fires only when none of the flows asked for has an approved sheet,
     so "a run renders everything it has been approved for" is unchanged and
     "rendering did nothing and said nothing" is no longer reachable.
+
+    The schema arrives as a resolver rather than a value because each flow carries
+    its own, and a batch may name more than one flow.
     """
     ready = [flow for flow in approved_flows(run) if flow in flows]
     if flows and not ready:
@@ -221,7 +224,10 @@ def prepare(
             "is rendered; run `python -m isekai review`, edit the draft, then "
             "`python -m isekai approve`"
         )
-    return {flow: prompt_artifact(run, flows[flow], schema) for flow in ready}
+    return {
+        flow: prompt_artifact(run, flows[flow], schema_for(flows[flow]))
+        for flow in ready
+    }
 
 
 def rendered_seeds(directory: Path) -> list[int]:

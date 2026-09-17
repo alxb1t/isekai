@@ -11,13 +11,14 @@ import pytest
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import Run, open_run
 from isekai.interface.run_view import listings, rendered, report
-from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
+from tests.stages import caption, sheet
 
 FLOW = "summon-v1"
 
@@ -114,7 +115,7 @@ def test_renders_are_listed_under_the_sheet_version_they_came_from(
     run: Run, schema: Schema
 ) -> None:
     flow = load_flow(FLOW)
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert rendered(run) == [(FLOW, 1, [42])]

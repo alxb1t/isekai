@@ -25,7 +25,7 @@ from isekai.foundation.run import (
     open_run,
     read_artifact,
 )
-from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import (
     SEED_BITS,
     approved_flows,
@@ -40,11 +40,12 @@ from isekai.pipeline.generate import (
     seeds_for,
 )
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
+from tests.stages import caption, sheet
 
 FLOW = "summon-v1"
 
@@ -91,7 +92,7 @@ def test_assembly_contacts_no_endpoint_and_writes_an_artifact(
 ) -> None:
     client = FakeComfyClient()
 
-    written = prepare(run, {FLOW: flow}, schema)
+    written = prepare(run, {FLOW: flow}, lambda _: schema)
 
     assert list(written) == [FLOW]
     body = read_artifact(written[FLOW])
@@ -268,7 +269,7 @@ def test_the_parser_takes_several_photographs_in_one_invocation() -> None:
 def test_the_stage_renders_through_the_double_with_no_gpu(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
 
     produced = render(run, flow, client, seeds=[42], poll=0)
@@ -290,7 +291,7 @@ def test_the_stage_renders_through_the_double_with_no_gpu(
 def test_the_stage_polls_history_until_the_prompt_completes(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient(pending_polls=2)
 
     produced = render(run, flow, client, seeds=[42], poll=0)
@@ -305,7 +306,7 @@ def test_the_stage_polls_history_until_the_prompt_completes(
 def test_the_stage_downloads_the_image_named_in_the_history(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     image = {"filename": "anime_00001.png", "subfolder": "sub", "type": "output"}
     client = FakeComfyClient(image=image)
 
@@ -320,7 +321,7 @@ def test_the_stage_downloads_the_image_named_in_the_history(
 def test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
 
     produced = render(run, flow, client, seeds=[42], poll=0)
@@ -342,7 +343,7 @@ def test_two_renders_from_one_flow_with_different_graphs_are_distinguishable(
         if (run.directory(PROMPTS, FLOW) / artifact_name(1)).exists()
         else None
     )
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     prompt = read_artifact(run.directory(PROMPTS, FLOW) / artifact_name(1))
 
     one = build_graph(flow, run.photo, "up.png", prompt, 42)
@@ -358,7 +359,7 @@ def test_two_renders_from_one_flow_with_different_graphs_are_distinguishable(
 def test_the_submitted_graph_carries_the_manifests_dials_not_the_files(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
 
     render(run, flow, client, seeds=[42], poll=0)
@@ -376,7 +377,7 @@ def test_the_submitted_graph_carries_the_manifests_dials_not_the_files(
 def test_the_submitted_graph_is_sized_from_the_photographs_own_header(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
 
     render(run, flow, client, seeds=[42], poll=0)
@@ -395,7 +396,7 @@ def test_the_submitted_graph_is_sized_from_the_photographs_own_header(
 def test_a_named_seed_already_rendered_is_skipped(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
     render(run, flow, client, seeds=[42], poll=0)
     before = len(client.submissions)
@@ -408,7 +409,7 @@ def test_a_named_seed_already_rendered_is_skipped(
 def test_raising_the_count_renders_only_the_difference(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
     render(run, flow, client, count=2, rng=random.Random(7), poll=0)
     directory = run.path / OUTPUTS / FLOW / "001"
@@ -428,7 +429,7 @@ def test_raising_the_count_renders_only_the_difference(
 def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
     render(run, flow, client, seeds=[42], poll=0)
 
@@ -438,7 +439,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     body["fields"]["clothes"] = ["collared shirt"]
     second.write_text(json.dumps(body))
     approve(run, FLOW, schema, vocabulary)
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     render(run, flow, client, seeds=[42], poll=0)
 
     assert (run.path / OUTPUTS / FLOW / "001" / "42.png").exists()
@@ -449,7 +450,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
 def test_each_render_is_named_by_the_seed_that_produced_it(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     client = FakeComfyClient()
 
     produced = render(run, flow, client, count=3, rng=random.Random(7), poll=0)
@@ -482,7 +483,7 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
         reader=FakeReader(prose="unused"),
         sorter=FakeSorter(answers={}),
         client=FakeComfyClient(),
-        schema=schema,
+        schema=lambda _flow: schema,
         vocabulary=lambda: vocabulary,
         runs_root=runs,
         out=io.StringIO(),
@@ -504,7 +505,7 @@ def test_an_approved_flow_still_needs_no_flag_to_be_selected(
 ) -> None:
     # The refusal above fires only when *nothing* asked for is approved, so the
     # "a run renders everything it has been approved for" rule is untouched.
-    assert list(prepare(run, {FLOW: flow}, schema)) == [FLOW]
+    assert list(prepare(run, {FLOW: flow}, lambda _: schema)) == [FLOW]
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
@@ -520,7 +521,7 @@ def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
     bad.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
 
     def assemble_one(one: Run) -> None:
-        prepare(one, {FLOW: flow}, schema)
+        prepare(one, {FLOW: flow}, lambda _: schema)
 
     refused = across([bad, good], assemble_one)
 
@@ -534,7 +535,7 @@ def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
 def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
     run.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
     client = FakeComfyClient()
 
@@ -551,7 +552,7 @@ def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
 def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
     run: Run, flow: Flow, schema: Schema, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    prepare(run, {FLOW: flow}, schema)
+    prepare(run, {FLOW: flow}, lambda _: schema)
 
     def interrupted(descriptor: int) -> None:
         raise OSError("the disk went away mid-write")

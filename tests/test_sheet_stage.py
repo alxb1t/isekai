@@ -21,18 +21,13 @@ from isekai.foundation.run import (
     read_artifact,
     versions,
 )
-from isekai.pipeline.caption import FakeReader, caption
-from isekai.pipeline.sheet import (
-    BRIEFING_PATH,
-    ClaudeSorter,
-    FakeSorter,
-    Schema,
-    output_shape,
-    sheet,
-)
+from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.sheet import ClaudeSorter, FakeSorter, Schema, output_shape
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
+from tests.stages import SHEET_BRIEFING as BRIEFING_PATH
+from tests.stages import caption, sheet
 
 PROSE = "Dark brown hair past the shoulders, brown eyes, a white collared shirt."
 

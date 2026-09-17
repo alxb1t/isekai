@@ -4,7 +4,7 @@
 
 - [x] 1 — The detectors, written while the anchors are still correct
 - [x] 2 — `validate` leaves `sheet`, and the last stage→stage import with it
-- [ ] 3 — The fold: five flat files, eight keys, and the one-time re-pin
+- [x] 3 — The fold: five flat files, eight keys, and the one-time re-pin
 - [ ] 4 — The code stops assuming eleven node roles
 - [ ] 5 — `--flow` is required and repeatable on every stage verb
 - [ ] 6 — The run layout: input above, flow below
@@ -74,44 +74,44 @@ the repository is touched.
 > the gate green. The digest moves once, under the exception D2 records; the message at
 > `tests/test_flow.py:256` gains no escape clause.
 
-- [ ] 3.1 Move the three files in, renaming both briefings to say they are briefings:
+- [x] 3.1 Move the three files in, renaming both briefings to say they are briefings:
       `schemas/identity.v1.json` → `flows/summon-v1/schema.json` ·
       `schemas/identity.v1.briefing.md` → `flows/summon-v1/sheet.briefing.md` ·
       `briefings/caption.md` → `flows/summon-v1/caption.briefing.md`. Verify:
       `ls flows/summon-v1/ && test ! -e schemas && test ! -e briefings && echo gone` — five files, then
       `gone`.
-- [ ] 3.2 Strike `version` and `vocabulary` from `schema.json`, leaving `{name, fields}`. Verify:
+- [x] 3.2 Strike `version` and `vocabulary` from `schema.json`, leaving `{name, fields}`. Verify:
       `uv run python -c "import json;print(sorted(json.load(open('flows/summon-v1/schema.json'))))"` —
       `['fields', 'name']`.
-- [ ] 3.3 Rewrite `flow.json` to eight keys: delete `"schema"` and `"graph"`, rename `schema_version` to
+- [x] 3.3 Rewrite `flow.json` to eight keys: delete `"schema"` and `"graph"`, rename `schema_version` to
       `manifest_version` and set it to `2`, and make `"models"` a list of `{dest, sha256}` taking each
       digest from `scripts/models.json`. Verify:
       `uv run python -c "import json;d=json.load(open('flows/summon-v1/flow.json'));print(sorted(d), d['manifest_version'])"`
       — the eight keys and `2`.
-- [ ] 3.4 Update `isekai/foundation/flow.py`: `REQUIRED` loses `schema` and `graph`, gains
+- [x] 3.4 Update `isekai/foundation/flow.py`: `REQUIRED` loses `schema` and `graph`, gains
       `manifest_version`; `FLOW_SCHEMA_VERSION` becomes `MANIFEST_VERSION = 2`; the five filenames become
       constants; `load_flow` refuses a missing sibling naming it; `Flow.schema` is deleted. Verify:
       `uv run pytest tests/test_flow.py -q` — green.
-- [ ] 3.5 Delete `schema_path()`, `SCHEMAS_DIR`, `BRIEFINGS_DIR`, both `BRIEFING_PATH` constants,
+- [x] 3.5 Delete `schema_path()`, `SCHEMAS_DIR`, `BRIEFINGS_DIR`, both `BRIEFING_PATH` constants,
       `sheet.SCHEMA_VERSION` and `_matching_flows`; repoint `wiring.py` to resolve a flow's schema and
       briefings from its own directory, and the four test modules that import the deleted names —
       `tests/test_caption.py:32`, `tests/test_sheet_stage.py:26`, `tests/test_sheet_schema.py:19`,
       `tests/test_package_paths.py:40`, all of which fail at **collection**. Verify:
       `grep -rn 'SCHEMAS_DIR\|BRIEFINGS_DIR\|BRIEFING_PATH\|schema_path\|_matching_flows' isekai/` — no
       output; and `grep -rn 'SCHEMA_VERSION' isekai/` — `isekai/foundation/run.py` only.
-- [ ] 3.6 Update `tests/test_package_paths.py:37-58`, dropping the `schemas/` and `briefings/` anchors.
+- [x] 3.6 Update `tests/test_package_paths.py:37-58`, dropping the `schemas/` and `briefings/` anchors.
       Verify: `uv run pytest tests/test_package_paths.py -q` — green.
-- [ ] 3.7 Teach `_scratch()` (`tests/test_flow.py:45`) to copy **all five** files, or `:271`'s assertion
+- [x] 3.7 Teach `_scratch()` (`tests/test_flow.py:45`) to copy **all five** files, or `:271`'s assertion
       becomes accidentally true. Verify: `uv run pytest tests/test_flow.py -k scratch -q` — green.
-- [ ] 3.8 Add the test that a **sixth** file in a flow directory moves its digest. Verify:
+- [x] 3.8 Add the test that a **sixth** file in a flow directory moves its digest. Verify:
       `uv run pytest tests/test_flow.py -k a_new_file -q` — green.
-- [ ] 3.9 Add the digest binding: every `{dest, sha256}` a flow declares equals `scripts/models.json`'s
+- [x] 3.9 Add the digest binding: every `{dest, sha256}` a flow declares equals `scripts/models.json`'s
       entry for that destination, and a disagreement fails naming the flow. Verify:
       `uv run pytest tests/test_flow.py -k models -q` — green.
-- [ ] 3.10 Re-pin `PINNED` (`tests/test_flow.py:34`) to the new digest, with a comment naming this change
+- [x] 3.10 Re-pin `PINNED` (`tests/test_flow.py:34`) to the new digest, with a comment naming this change
       and the distinction — *the configuration did not change; the manifest's format did.* **Do not edit
       the failure message at `:256`.** Verify: `uv run pytest tests/test_flow.py -k digest -q` — green.
-- [ ] 3.11 Verify the gate: `make gate`
+- [x] 3.11 Verify the gate: `make gate`
 
 ## 4. The code stops assuming eleven node roles
 

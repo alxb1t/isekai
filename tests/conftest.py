@@ -90,12 +90,13 @@ def photo(tmp_path: Path) -> str:
 
 @pytest.fixture(scope="session")
 def _shipped_schema() -> Schema:
-    """Read and parse the tracked identity schema once for the whole session.
+    """Read and parse `summon-v1`'s own schema once for the whole session.
 
     Same argument as the shipped graph and the tracked manifest above: the suite
-    reads the tracked file itself, and reads it once.
+    reads the tracked file itself, and reads it once. It is reached through the
+    flow that owns it -- there is no schema outside a flow directory.
     """
-    return load_schema()
+    return load_schema(load_flow("summon-v1").schema_path)
 
 
 @pytest.fixture

@@ -27,6 +27,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A flow is five flat files, and its manifest names none of them.**
+  `schemas/identity.v1.json`, `schemas/identity.v1.briefing.md` and `briefings/caption.md` move into
+  `flows/summon-v1/` as `schema.json`, `sheet.briefing.md` and `caption.briefing.md`; the two
+  repository-root directories are gone. Flat rather than nested because `manifest_digest` filters
+  `iterdir()` through `path.is_file()` — a sub-directory would have left the schema and both briefings
+  outside the freeze with the gate green (design.md D1). A briefing decides what enters the caption, the
+  caption decides the sheet and the sheet decides the render, so a changed briefing is a changed image
+  and must be a new flow; the digest now proves that.
+- **BREAKING — `flow.json` is eight keys.** `"schema"` and `"graph"` are deleted — a key that can only
+  ever hold one value is not a declaration — and `schema_version` becomes `manifest_version`, bumped to
+  `2`, because it never meant the schema's version but the manifest's own format (design.md D3). The
+  five filenames are constants in `isekai/foundation/flow.py`, and `load_flow` refuses a flow missing
+  any of its four siblings, naming the file.
+- **BREAKING — a flow pins its model artifacts by digest.** `"models"` is now `[{dest, sha256}, …]`, and
+  a new gate check holds every digest equal to `scripts/models.json`'s entry for the same destination,
+  failing by name. A bare destination path does not pin bytes: re-pinning a checkpoint would otherwise
+  have made `summon-v1` render differently under the same identifier with the gate green, on the 6.9 GB
+  that decides what the image looks like (design.md D4).
+- **`Schema` loses its version and its vocabulary.** Inside a frozen flow directory a version protects
+  nothing — the flow's digest proves the field list byte for byte, and a changed field list is a new
+  flow. The vocabulary is the flow's declaration, so the schema document is `{name, fields}` and
+  `load_schema` takes the path of the flow that owns it. `sheet.SCHEMA_VERSION`, `schema_path()`,
+  `SCHEMAS_DIR`, `BRIEFINGS_DIR` and both `BRIEFING_PATH` constants are deleted; the sheet and caption
+  stages take their briefing as an argument.
+- **BREAKING — sheet sharing is removed with `_matching_flows`.** It was the only mechanism, had one
+  caller, and was the only production reader of `Flow.schema` and `Schema.version`. Every stage verb is
+  now driven per flow, each one handed that flow's own schema and briefing: `Wiring.schema` is a
+  resolver rather than one parsed schema, and `generate.prepare` takes the resolver too. Sharing bought
+  a selector and a class of silent cross-flow inheritance in exchange for a rounding error — a caption
+  is $0.0159 per photograph at worst against a $0.036 boot (design.md D5).
+- **`summon-v1`'s committed digest is re-pinned once**, under the exception design.md D2 records: the
+  flow's configuration did not change, its manifest's format did, and `manifest_version: 2` is that
+  distinction in data. The failure message in `tests/test_flow.py` gains no "unless" clause — a test
+  message that explains how to evade itself is one that gets evaded.
+
 - **`validate` moves from `pipeline/sheet.py` to `shared/fields.py`, and the last stage→stage
   import goes with it.** `review.py` imported and called `sheet.validate` — the sixth of six such
   edges and the only one v0.15 did not close, so `grep -rn 'from isekai.pipeline'

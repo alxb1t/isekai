@@ -187,22 +187,6 @@ def _flows_for(args: argparse.Namespace, wired: Wiring) -> list[str]:
     return [named] if named else tracked_flows(wired.flows_dir)
 
 
-def _matching_flows(wired: Wiring) -> list[str]:
-    """Return the flows whose schema and vocabulary this fill would serve.
-
-    The sorting stage is filled once per distinct pair and written to every flow
-    declaring it, which is why the stage is never told which flow asked.
-    """
-    vocabulary = wired.vocabulary()
-    return [
-        name
-        for name in tracked_flows(wired.flows_dir)
-        if (flow := load_flow(name, wired.flows_dir)).schema
-        == f"{wired.schema.name}.v{wired.schema.version}"
-        and flow.vocabulary["sha256"] == vocabulary.digest
-    ]
-
-
 def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     """Run one verb over every identifier given, reporting every refusal together.
 
@@ -230,37 +214,54 @@ def _per_item(
 
     The flows a verb acts on are a property of the wiring, not of the photograph,
     so they are resolved once here rather than re-read from disk per identifier.
+    Every stage but the inspection one is per flow, because the flow is what
+    supplies what the stage reads: its briefing, its schema and its dials.
     """
     new_version = bool(getattr(args, "new_version", False))
-    flows = _flows_for(args, wired) if verb in ("review", "approve") else []
-    matching = _matching_flows(wired) if verb == "sheet" else []
+    flows = (
+        {}
+        if verb == "show"
+        else {
+            name: load_flow(name, wired.flows_dir) for name in _flows_for(args, wired)
+        }
+    )
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
-            _say(
-                wired,
-                run,
-                "caption",
-                caption(run, wired.reader, new_version=new_version),
-            )
+            for flow in flows.values():
+                _say(
+                    wired,
+                    run,
+                    "caption",
+                    caption(
+                        run,
+                        wired.reader,
+                        briefing_path=flow.caption_briefing_path,
+                        new_version=new_version,
+                    ),
+                )
         elif verb == "sheet":
-            written = sheet(
-                run,
-                wired.sorter,
-                wired.schema,
-                wired.vocabulary(),
-                matching,
-                new_version=new_version,
-            )
-            for path in written or [None]:
-                _say(wired, run, "sheet", path)
+            for name, flow in flows.items():
+                written = sheet(
+                    run,
+                    wired.sorter,
+                    wired.schema(flow),
+                    wired.vocabulary(),
+                    [name],
+                    briefing_path=flow.sheet_briefing_path,
+                    new_version=new_version,
+                )
+                for path in written or [None]:
+                    _say(wired, run, "sheet", path)
         elif verb == "review":
-            for flow in flows:
-                _say(wired, run, "review", review(run, flow, new_version=new_version))
+            for name in flows:
+                _say(wired, run, "review", review(run, name, new_version=new_version))
         elif verb == "approve":
-            for flow in flows:
-                written, warnings = approve(run, flow, wired.schema, wired.vocabulary())
+            for name, flow in flows.items():
+                written, warnings = approve(
+                    run, name, wired.schema(flow), wired.vocabulary()
+                )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)

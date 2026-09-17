@@ -28,15 +28,11 @@ from isekai.foundation.run import (
     read_artifact,
     versions,
 )
-from isekai.pipeline.caption import (
-    BRIEFING_PATH,
-    ClaudeReader,
-    FakeReader,
-    Reading,
-    caption,
-)
+from isekai.pipeline.caption import ClaudeReader, FakeReader, Reading
 from isekai.pipeline.sheet import load_schema
 from tests.images import jpeg_bytes
+from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
+from tests.stages import FLOW, caption
 
 
 @pytest.fixture
@@ -123,7 +119,8 @@ def test_the_briefing_names_no_schema_field() -> None:
     text = BRIEFING_PATH.read_text().lower()
     words = set(re.findall(r"[a-z_]+", text))
 
-    named = [name for name in load_schema().names if name in words or name in text]
+    schema = load_schema(FLOW.schema_path)
+    named = [name for name in schema.names if name in words or name in text]
     assert named == []
 
 
@@ -194,7 +191,7 @@ def test_the_producer_records_the_briefings_path_and_digest(
     assert first is not None and second is not None
     one = read_artifact(first)["producer"]["briefing"]
     two = read_artifact(second)["producer"]["briefing"]
-    assert one["path"] == "briefings/caption.md"
+    assert one["path"] == "flows/summon-v1/caption.briefing.md"
     assert one["sha256"] != two["sha256"]
     assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
 

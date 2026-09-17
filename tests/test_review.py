@@ -18,7 +18,7 @@ from isekai.foundation.run import (
     read_artifact,
     versions,
 )
-from isekai.pipeline.caption import FakeReader, caption
+from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
@@ -27,10 +27,11 @@ from isekai.pipeline.review import (
     is_complete,
     review,
 )
-from isekai.pipeline.sheet import FakeSorter, sheet
+from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
+from tests.stages import caption, sheet
 
 FLOW = "summon-v1"
 

@@ -59,40 +59,21 @@ from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary, map_phrase
 from isekai.shared.vocabulary import identity as vocabulary_identity
 
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / "schemas"
-
-# The only schema document version this build reads. There is one schema version
-# in existence, so there is no migration ladder and no second reader.
-SCHEMA_VERSION = 1
-
 # What the API enforces on a tool input schema's property keys. Held here rather
 # than discovered at the boundary, because a name that fails it fails every call
 # rather than one.
 IDENTIFIER_SAFE = re.compile(r"^[a-zA-Z0-9_.-]{1,64}$")
 
 
-def schema_path(name: str = "identity", version: int = SCHEMA_VERSION) -> Path:
-    """Return the tracked path of one schema document."""
-    return SCHEMAS_DIR / f"{name}.v{version}.json"
+def load_schema(path: Path) -> Schema:
+    """Read a schema document out of a flow's own directory.
 
-
-def load_schema(path: Path | None = None) -> Schema:
-    """Read a schema document, refusing any version this build does not know.
-
-    Nothing is interpreted before the version is checked: a best-effort read of a
-    field list you do not know the shape of produces a sheet that looks filled and
-    means nothing.
+    There is no version to check and no migration ladder: the flow's digest proves
+    the field list byte for byte, so a changed field list is a new flow rather than
+    a new schema version. The path is the caller's because a schema belongs to one
+    flow -- there is no tracked schema outside a flow directory to default to.
     """
-    path = schema_path() if path is None else path
     document: Any = json.loads(path.read_text())
-    declared = document.get("version")
-    if declared != SCHEMA_VERSION:
-        raise Refusal(
-            f"{path.name}: declares schema version {declared!r} and this build "
-            f"reads version {SCHEMA_VERSION}; upgrade isekai to a build that "
-            f"reads version {declared!r}, or point the flow at a schema document "
-            f"declaring version {SCHEMA_VERSION}"
-        )
     fields = tuple(
         Field(str(entry["name"]), bool(entry["scored"]), entry["suffix"])
         for entry in document["fields"]
@@ -105,12 +86,7 @@ def load_schema(path: Path | None = None) -> Schema:
             f"{IDENTIFIER_SAFE.pattern}; rename the field in the schema document "
             "and in the briefing that names it"
         )
-    return Schema(
-        name=str(document["schema"]),
-        version=int(declared),
-        vocabulary=dict(document["vocabulary"]),
-        fields=fields,
-    )
+    return Schema(name=str(document["name"]), fields=fields)
 
 
 def fill(
@@ -137,8 +113,6 @@ def fill(
 
 
 # --- the stage: prose in, canonical fields out --------------------------------
-
-BRIEFING_PATH = SCHEMAS_DIR / "identity.v1.briefing.md"
 
 # The name this stage's budget is keyed by. Its directory inside a run is the
 # run's to name, not the stage's -- `run.SHEETS`.
@@ -264,7 +238,7 @@ def answers_from(structured: object, text: str, schema: Schema) -> dict[str, lis
         raise CliFailure(
             "permanent",
             f"the response does not carry {', '.join(missing)}, which schema "
-            f"{schema.name} v{schema.version} requires",
+            f"{schema.name} requires",
         )
     # A bare string is tolerated as a one-phrase answer, because a model that
     # returns `"brown"` where `["brown"]` was asked for said something usable and
@@ -288,8 +262,8 @@ def sheet(
     vocabulary: Vocabulary,
     flows: Sequence[str],
     *,
+    briefing_path: Path,
     new_version: bool = False,
-    briefing_path: Path = BRIEFING_PATH,
 ) -> list[Path]:
     """Sort `run`'s caption into a sheet, and write it to every flow given.
 
@@ -356,10 +330,7 @@ def sheet(
                     "from": source,
                 },
                 {
-                    "schema_document": {
-                        "name": schema.name,
-                        "version": schema.version,
-                    },
+                    "schema_document": {"name": schema.name},
                     "vocabulary": vocabulary_identity(vocabulary),
                     "fields": fields,
                 },

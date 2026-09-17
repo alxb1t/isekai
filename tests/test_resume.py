@@ -60,7 +60,7 @@ def wired(tmp_path: Path) -> Wiring:
             }
         ),
         client=FakeComfyClient(),
-        schema=load_schema(),
+        schema=lambda flow: load_schema(flow.schema_path),
         vocabulary=lambda: Vocabulary(
             "wd14/selected_tags.csv",
             "627aef95638667ddcaa3ac8ae625e88ea5b02f51",
@@ -221,10 +221,10 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     """Provoke one refusal from each stage that has one, and return the messages."""
     from isekai.foundation.flow import load_flow
     from isekai.foundation.run import open_run, read_artifact, record_failure
-    from isekai.pipeline.caption import ClaudeReader, caption
+    from isekai.pipeline.caption import ClaudeReader
     from isekai.pipeline.generate import photo_resolution, prompt_artifact
     from isekai.pipeline.review import approve, review
-    from isekai.pipeline.sheet import load_schema, sheet
+    from tests.stages import CAPTION_BRIEFING, caption, sheet
 
     photo = tmp_path / "bare.jpg"
     photo.write_bytes(jpeg_bytes(640, 480))
@@ -243,19 +243,20 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: open_run(tmp_path / "missing.jpg", wired.runs_root))
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
     collect(lambda: read_artifact(_future_artifact(tmp_path)))
-    collect(lambda: sheet(bare, wired.sorter, wired.schema, wired.vocabulary(), [FLOW]))
+    schema = wired.schema(flow)
+    collect(lambda: sheet(bare, wired.sorter, schema, wired.vocabulary(), [FLOW]))
     collect(lambda: review(bare, FLOW))
-    collect(lambda: approve(bare, FLOW, wired.schema, wired.vocabulary()))
-    collect(lambda: prompt_artifact(bare, flow, wired.schema))
+    collect(lambda: approve(bare, FLOW, schema, wired.vocabulary()))
+    collect(lambda: prompt_artifact(bare, flow, schema))
     collect(lambda: photo_resolution(_unreadable(tmp_path)))
     collect(lambda: load_flow("summon-v9"))
-    collect(lambda: load_schema(_future_schema(tmp_path)))
+    collect(lambda: load_flow("summon-v1", _incomplete_flow(tmp_path)))
     collect(lambda: ClaudeReader(binary="not-a-real-binary").read(photo, "b", tmp_path))
 
     directory = bare.directory("captions")
     for _ in range(BUDGETS["caption"]):
         record_failure(directory, 1, "transient", {})
-    collect(lambda: caption(bare, wired.reader))
+    collect(lambda: caption(bare, wired.reader, briefing_path=CAPTION_BRIEFING))
     return messages
 
 
@@ -273,11 +274,17 @@ def _future_artifact(tmp_path: Path) -> Path:
     return path
 
 
-def _future_schema(tmp_path: Path) -> Path:
-    """Return a schema document declaring a version this build does not read."""
-    path = tmp_path / "identity.v99.json"
-    path.write_text(json.dumps({"schema": "identity", "version": 99, "fields": []}))
-    return path
+def _incomplete_flow(tmp_path: Path) -> Path:
+    """Return a flows root holding a flow whose directory is missing a file."""
+    from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, load_flow
+
+    source = load_flow("summon-v1").path
+    root = tmp_path / "incomplete" / "summon-v1"
+    root.mkdir(parents=True)
+    (root / MANIFEST_NAME).write_bytes((source / MANIFEST_NAME).read_bytes())
+    for name in SIBLINGS[1:]:
+        (root / name).write_bytes((source / name).read_bytes())
+    return tmp_path / "incomplete"
 
 
 # The verbs and paths a refusal is allowed to send an operator to. A remedy this

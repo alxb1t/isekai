@@ -1,11 +1,5 @@
 {
-  "schema": "identity",
-  "version": 1,
-  "vocabulary": {
-    "name": "wd14/selected_tags.csv",
-    "revision": "627aef95638667ddcaa3ac8ae625e88ea5b02f51",
-    "sha256": "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217"
-  },
+  "name": "identity",
   "fields": [
     {
       "name": "count",
