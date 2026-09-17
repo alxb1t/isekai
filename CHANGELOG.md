@@ -43,6 +43,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`known-first-party = ["isekai"]` is declared to `ruff`'s isort.** It decided first-party per
+  *submodule* by asking whether the path existed on disk, so once `isekai/pipeline/` became a package
+  directory the archived v0.10 probe's single import block split across two sections — `isekai.pipeline`
+  resolved, `isekai.comfy_client` and `isekai.workflow` (deleted at v0.14) did not — and `I001` fired
+  on a file untouched since v0.10. Naming the package states the fact directly, so classification no
+  longer depends on what happens to exist in the tree today. **Not a suppression**: an archived change
+  is never repaired, and the alternatives were editing the archive or exempting a rule. Neither was
+  needed, and no live file's import order changes.
+
+- **The record catches up with the package.** All nine `openspec/specs/*/spec.md` `Source:`/`Tests:`
+  lines now name files that exist — every path was invalidated at once by the restructure — and each
+  gains what it omitted: `image-generation` gains `image.py` and its tests, `cli` gains `cli.py`,
+  `wiring.py`, `run_view.py` and the three further test files holding `cli:*` keys, `run-directory`
+  gains `atomic_write.py`, `model-provisioning` gains `test_derivation.py` and
+  `test_vocabulary_manifest.py`, `sheet` gains `flow.py` now that it owns `Schema`. Two preambles are
+  rewritten: `comfy-transport` pointed at a module and a test file **deleted together in `8baf2b3` at
+  v0.14** — a stale pointer, redirected to `generate.py`'s polling loop and `tests/test_generate.py`,
+  and `comfy_types.py` added because the `ComfyTransport` Protocol its own sentence depends on lives
+  there; `cli` claimed a model selection and range-checked dial flags that **do not exist** — there
+  are no dial flags, dials live in `flows/summon-v1/flow.json`, and only `--seed` and `--count`
+  validate at parse time. `CLAUDE.md`'s layout section and `README.md`'s repository-layout tree, which
+  attributed four modules' work to the entry point, describe the six groups.
+
 - **The package becomes six directories.** `foundation/` · `pipeline/` · `shared/` · `boundary/` ·
   `evaluation/` · `interface/`, with `isekai/__main__.py` left at the package root because `runpy`
   pins that path. Contents are unchanged: only paths, the import lines naming them, and one `.parent`

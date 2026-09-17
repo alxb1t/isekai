@@ -1,12 +1,21 @@
 # Capability: `cli`
 
-The command-line surface: parsing flags, validating their ranges before any GPU work starts, and dispatching the
-chosen model into a run.
+The command-line surface: one entry point, six verbs, and every refusal a batch produced reported
+together rather than one at a time.
 
-**Source:** `isekai/__main__.py` · **Tests:** `tests/test_pipeline_cli.py`
+**Source:** `isekai/__main__.py`, `isekai/interface/cli.py`, `isekai/interface/wiring.py`,
+`isekai/interface/run_view.py` ·
+**Tests:** `tests/test_pipeline_cli.py`, `tests/test_generate.py`, `tests/test_resume.py`,
+`tests/test_run_view.py`
 
-The CLI is where a bad value is cheapest to catch. Every dial is range-checked **at parse time**, so an
-out-of-range flag fails before a pod is touched rather than after a paid render.
+The CLI is where a bad value is cheapest to catch — `--seed` and `--count` are range-checked **at parse
+time**, so a bad one fails before a pod is touched rather than after a paid render. **There are no dial
+flags.** A flow's dials are declared in `flows/summon-v1/flow.json` and are not reachable from the
+command line, because a tuned dial is not a variant of a flow — it is an untested flow.
+
+`isekai/__main__.py` is the path `runpy` resolves and is a shim; the parser, the verb table and the
+dispatch functions are `isekai/interface/cli.py`, the composition is `isekai/interface/wiring.py`, and
+the `show` verb's reader is `isekai/interface/run_view.py`. The verb is `show`; the file is not.
 
 ## Requirements
 

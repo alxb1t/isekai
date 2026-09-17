@@ -9,7 +9,7 @@
 - [x] 5 — `show` → `run_view`, `photo` → `image`
 - [x] 6 — `Schema` → `flow`, the layout names → `run`: six stage edges become one
 - [x] 7 — The restructure: 22 files into six directories, seven READMEs
-- [ ] 8 — The record: nine capability files, `CLAUDE.md`, `README.md`
+- [x] 8 — The record: nine capability files, `CLAUDE.md`, `README.md`
 
 ## The per-phase ritual
 
@@ -110,9 +110,9 @@ Every phase, without exception:
 
 > Paths are final only now.
 
-- [ ] 8.1 Correct all nine `openspec/specs/*/spec.md` `Source:`/`Tests:` lines to the new paths, adding what each omits — `image-generation` gains `image.py`/`test_image.py`, `cli` gains `cli.py`, `wiring.py`, `run_view.py` and the three further test files holding `cli:*` keys, `run-directory` gains `atomic_write.py`, `model-provisioning` gains `test_derivation.py` and `test_vocabulary_manifest.py`. Verify: `grep -h 'Source:\|Tests:' openspec/specs/*/spec.md | grep -o '\`[^\`]*\`' | tr -d '\`' | sort -u | while read p; do [ -e "$p" ] || echo "MISSING $p"; done` prints nothing
-- [ ] 8.2 Rewrite `comfy-transport`'s preamble. `isekai/pipeline.py` and `tests/test_polling.py` were **deleted together in `8baf2b3` at v0.14** — redirect them to `generate.py`'s polling loop and `tests/test_generate.py`, and add `comfy_types.py`, which holds the `ComfyTransport` Protocol the preamble's own sentence depends on. Verify: `grep -n "pipeline.py\|test_polling" openspec/specs/comfy-transport/spec.md` is empty
-- [ ] 8.3 Rewrite `cli`'s preamble: delete *"dispatching the chosen model into a run"* and *"every dial is range-checked at parse time"* — **there are no dial flags**; dials live in `flows/summon-v1/flow.json`, and only `_seed` and `_count` validate at parse time. Verify: `grep -in "chosen model\|every dial" openspec/specs/cli/spec.md` is empty
-- [ ] 8.4 Update `CLAUDE.md`'s layout section — it says *"the six stages"* and lists five, names `photo.py`, and mentions none of `atomic_write`, `wiring` or `cli`. Update `README.md`'s repository-layout tree, whose `└── __main__.py` line attributes **four** modules' work to the entry point. Verify: `grep -n "photo.py\|isekai/show" CLAUDE.md README.md` is empty
-- [ ] 8.5 Verify the change is still well-formed: `openspec validate 0015-arc-alignment --strict`
-- [ ] 8.6 Verify the gate: `make gate`
+- [x] 8.1 Correct all nine `openspec/specs/*/spec.md` `Source:`/`Tests:` lines to the new paths, adding what each omits — `image-generation` gains `image.py`/`test_image.py`, `cli` gains `cli.py`, `wiring.py`, `run_view.py` and the three further test files holding `cli:*` keys, `run-directory` gains `atomic_write.py`, `model-provisioning` gains `test_derivation.py` and `test_vocabulary_manifest.py`. Verify: `grep -h 'Source:\|Tests:' openspec/specs/*/spec.md | grep -o '\`[^\`]*\`' | tr -d '\`' | sort -u | while read p; do [ -e "$p" ] || echo "MISSING $p"; done` prints nothing
+- [x] 8.2 Rewrite `comfy-transport`'s preamble. `isekai/pipeline.py` and `tests/test_polling.py` were **deleted together in `8baf2b3` at v0.14** — redirect them to `generate.py`'s polling loop and `tests/test_generate.py`, and add `comfy_types.py`, which holds the `ComfyTransport` Protocol the preamble's own sentence depends on. Verify: `grep -n "pipeline.py\|test_polling" openspec/specs/comfy-transport/spec.md` is empty
+- [x] 8.3 Rewrite `cli`'s preamble: delete *"dispatching the chosen model into a run"* and *"every dial is range-checked at parse time"* — **there are no dial flags**; dials live in `flows/summon-v1/flow.json`, and only `_seed` and `_count` validate at parse time. Verify: `grep -in "chosen model\|every dial" openspec/specs/cli/spec.md` is empty
+- [x] 8.4 Update `CLAUDE.md`'s layout section — it says *"the six stages"* and lists five, names `photo.py`, and mentions none of `atomic_write`, `wiring` or `cli`. Update `README.md`'s repository-layout tree, whose `└── __main__.py` line attributes **four** modules' work to the entry point. Verify: `grep -n "photo.py\|isekai/show" CLAUDE.md README.md` is empty
+- [x] 8.5 Verify the change is still well-formed: `openspec validate 0015-arc-alignment --strict`
+- [x] 8.6 Verify the gate: `make gate`

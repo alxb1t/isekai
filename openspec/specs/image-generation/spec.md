@@ -4,8 +4,10 @@ Stage ④ of the pipeline: a flow declaring what it needs and the dials it runs 
 an approved sheet performed locally before any GPU is rented, and rendering with enough provenance that
 an output identifies the configuration that produced it.
 
-**Source:** `isekai/flow.py`, `isekai/generate.py`, `flows/summon-v1/` ·
-**Tests:** `tests/test_flow.py`, `tests/test_generate.py`, `tests/test_resume.py`
+**Source:** `isekai/foundation/flow.py`, `isekai/pipeline/generate.py`, `isekai/shared/image.py`,
+`flows/summon-v1/` ·
+**Tests:** `tests/test_flow.py`, `tests/test_generate.py`, `tests/test_image.py`,
+`tests/test_resume.py`
 
 ## Requirements
 

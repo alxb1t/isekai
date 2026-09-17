@@ -73,12 +73,17 @@ and nowhere else. In brief, the load-bearing seams are:
   class at runtime. That is what lets a broken flow be caught by the suite rather than by a boot, and
   it is not optional: `summon-v1` has two `KSampler` nodes and two `ImageScale` nodes, so a class
   lookup is ambiguous against the graph that actually ships.
-- **`isekai/photo.py`** — what a photograph *is*: the JPEG/PNG header walk, the EXIF transpose the
-  loader will apply, and `working_resolution`, the render target the photograph's own dimensions
-  imply. It touches no ComfyUI graph; the caller writes the target into the node the manifest names.
-- **`isekai/generate.py`** — assembly, seed drawing and the render. Assembly happens before any
-  endpoint is acquired, for the whole batch, so a malformed sheet costs nothing rather than a boot.
-- **`ComfyTransport`** (`isekai/comfy_client.py`) — the network boundary, and the only one.
+- **`isekai/shared/image.py`** — what an image *is*: the JPEG/PNG header walk, the EXIF transpose the
+  loader will apply, and `working_resolution`, the render target the image's own dimensions imply. It
+  touches no ComfyUI graph; the caller writes the target into the node the manifest names. It is
+  `image` rather than `photo` because half its callers hand it a render.
+- **`isekai/pipeline/generate.py`** — assembly, seed drawing and the render. Assembly happens before
+  any endpoint is acquired, for the whole batch, so a malformed sheet costs nothing rather than a boot.
+- **`ComfyTransport`** (`isekai/boundary/comfy_types.py`, implemented in `comfy_client.py`) — the
+  network boundary, and the only one.
+- **The run owns the layout, not the stages.** The stage directory names live in
+  `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, so exactly one
+  stage imports another: `review` calls `sheet`'s `validate`, which is behaviour rather than layout.
 
 **Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
 proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both are registered in
@@ -142,12 +147,21 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## Layout — where things live here
 
-- **`isekai/__main__.py`** — the entry point, `python -m isekai <verb>`, and the only one.
-  **`isekai/`** — the package: the six stages (`caption`, `sheet`, `review`, `generate`, `show`),
-  `run.py`'s run directory, `flow.py`'s manifest loader, `photo.py`'s header reader, the transport,
-  and `provision.py` — the manifest's reader, the byte verification, the skip/abort/fetch policy and
-  the graph↔manifest binding. `provision.py` is **not** in the entry point's import graph, so the
-  stdlib-only runtime rule is untouched either way.
+- **`isekai/__main__.py`** — the path `runpy` resolves for `python -m isekai <verb>`, and a shim
+  over `interface/cli.py`. It is the only entry point.
+  **`isekai/`** — the package, filed into **six group directories**, each with its own `README.md`
+  naming its files and who imports them (and `isekai/README.md` over the six). Every `__init__.py`
+  holds a docstring and **no code**: a group never becomes a place two modules reach each other
+  through.
+  **`foundation/`** — `run.py`'s run directory and the layout names, `flow.py`'s manifest loader and
+  the `Schema` type, `refusal.py`. **`pipeline/`** — the four staged verbs, `caption` · `sheet` ·
+  `review` · `generate`. **`shared/`** — `image.py`'s header reader, `vocabulary.py`,
+  `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
+  `multipart.py`), `claude_cli.py`, and `provision.py`: the manifest's reader, the byte verification,
+  the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is **not** in the entry
+  point's import graph, so the stdlib-only runtime rule is untouched either way.
+  **`evaluation/`** — the scorer and the only importer of the `[eval]` extra. **`interface/`** —
+  `cli.py`'s parser and dispatch, `wiring.py`'s composition, `run_view.py` behind the `show` verb.
   **`tests/`** — the suite and its fakes.
   **`flows/<id>/`** — one flow: `flow.json`, the manifest that declares its inputs, dials, prompt
   fragments and the graph id of every node the render path edits; and `graph.json`, the API graph
@@ -206,7 +220,7 @@ Identity is carried by mechanisms rather than by a sentence someone types:
   gain in this pipeline, which is why **only an approved artifact is ever rendered**.
 
 Before any node reads the photo, an `ImageScale` node puts it on one working resolution, computed by
-`isekai/photo.py` from the photo's own JPEG or PNG header: aspect preserved, short side at 1024, both
+`isekai/shared/image.py` from the photo's own JPEG or PNG header: aspect preserved, short side at 1024, both
 dimensions a multiple of 64, in both directions, and refused past 4:1 rather than clamped. No node
 available here can derive that, and a header it cannot read refuses that photograph rather than
 defaulting or ending the batch. `clip_skip` is -2, declared in the flow's manifest rather than

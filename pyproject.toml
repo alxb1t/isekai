@@ -57,6 +57,21 @@ select = ["E", "F", "I", "D", "ANN"]
 # on the first line). This is the only blanket `ignore` in the file.
 ignore = ["D203", "D213"]
 
+# Declared rather than inferred. ruff's isort decides first-party per SUBMODULE by
+# asking whether the path exists on disk, so once `isekai/pipeline/` became a
+# package directory the archived probe's single import block split across two
+# sections -- `isekai.pipeline` resolved, `isekai.comfy_client` and
+# `isekai.workflow` (deleted at v0.14) did not -- and I001 fired on a file that had
+# not been touched since v0.10. Naming the package states the fact directly, so
+# classification no longer depends on what happens to exist in the tree today.
+#
+# This is NOT a suppression, and deliberately not one: an archived change records
+# code that was true at a past commit and is never repaired, so the alternative was
+# either editing the archive -- which would falsify the record it exists to be --
+# or exempting a rule. Neither was needed.
+[tool.ruff.lint.isort]
+known-first-party = ["isekai"]
+
 [tool.ruff.lint.per-file-ignores]
 # Tests are named as behavioural sentences and double as documentation -- that is
 # this repo's stated convention, and the name IS the description. A docstring
