@@ -75,8 +75,14 @@ def wired(tmp_path: Path) -> Wiring:
 
 
 def _args(verb: str, *photos: str, **extra: object) -> argparse.Namespace:
-    """Parse one invocation the way the command line does."""
-    return build_parser().parse_args([verb, *photos, *_flags(extra)])
+    """Parse one invocation the way the command line does.
+
+    Every stage verb requires `--flow`, so the helper supplies this suite's one
+    flow unless the caller names its own.
+    """
+    selected = extra.pop("flow", FLOW if verb != "show" else None)
+    flag = ["--flow", str(selected)] if selected is not None else []
+    return build_parser().parse_args([verb, *photos, *flag, *_flags(extra)])
 
 
 def _flags(extra: dict[str, object]) -> list[str]:
@@ -453,7 +459,7 @@ def test_generate_without_a_server_assembles_everything_and_contacts_nothing(
 
 @pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
 def test_the_server_flag_has_no_default_so_rendering_is_always_asked_for() -> None:
-    assert build_parser().parse_args(["generate"]).server is None
+    assert build_parser().parse_args(["generate", "--flow", FLOW]).server is None
 
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")

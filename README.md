@@ -135,7 +135,12 @@ Useful flags, as the parser states them:
 - `--runs RUNS` — the directory runs live under. It may point outside the repository entirely, but
   not inside the working tree and outside `.data/`: a run directory holds a copy of the photograph,
   so that would be one `git add` from publishing it.
-- `--flow FLOW` — the flow to act on; every approved one by default.
+- `--flow FLOW` — a flow to act on. **Required on every stage verb and repeatable**: a stage
+  cannot act without knowing which flow asked, because the flow is what supplies its briefing,
+  its schema, its graph and its dials. There is no fallback — the earlier one was every
+  *tracked* flow, which at catalogue scale is the absence of a selection rather than one. It
+  repeats because flows batch: every flow named in one `generate` renders on one endpoint, and a
+  second boot costs what eight more renders would.
 - `--count COUNT` — how many renders per photograph per flow (default 1, seeds drawn).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every

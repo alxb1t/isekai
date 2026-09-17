@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`--flow` is required and repeatable on every stage verb.** It reached three of six verbs, was a
+  single string that silently kept the last occurrence, fell back to every tracked flow, and had no
+  test coverage at all — one hit in the suite, asserting a refusal string. It is now
+  `action="append"`, `required=True` on `caption`, `sheet`, `review`, `approve` and `generate`; `show`
+  is the only verb that does not take it. A stage cannot act without knowing which flow asked, because
+  the flow is what supplies its briefing, its schema, its graph and its dials.
+- **A flow named on the line is resolved against `flows/` before any run is opened**, and an untracked
+  one is refused naming it and listing the flows that are tracked. At `generate` the flow's first use
+  used to be after a photograph had been uploaded, so resolving at selection is what keeps the refusal
+  free. `dispatch` reports that refusal rather than letting it escape.
 - **A flow is asked which node roles it declares, instead of being assumed to have eleven.**
   `positive`, `negative`, `latent` and `sampler` are required and checked in `load_flow` the way the
   prompt's fragments already are; the other seven — `photo`, `scale`, `identity`, `openpose`,

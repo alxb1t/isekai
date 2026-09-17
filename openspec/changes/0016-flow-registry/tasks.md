@@ -6,7 +6,7 @@
 - [x] 2 — `validate` leaves `sheet`, and the last stage→stage import with it
 - [x] 3 — The fold: five flat files, eight keys, and the one-time re-pin
 - [x] 4 — The code stops assuming eleven node roles
-- [ ] 5 — `--flow` is required and repeatable on every stage verb
+- [x] 5 — `--flow` is required and repeatable on every stage verb
 - [ ] 6 — The run layout: input above, flow below
 - [ ] 7 — Resume stops assuming a PNG
 - [ ] 8 — The living spec, the docs, and the blast-radius sweep
@@ -139,18 +139,18 @@ the repository is touched.
 > back to every tracked flow, and **has no test coverage at all** — one hit in the suite and it asserts
 > a refusal string.
 
-- [ ] 5.1 Declare `--flow` with `action="append"` and `required=True` on all five stage verbs, and delete
+- [x] 5.1 Declare `--flow` with `action="append"` and `required=True` on all five stage verbs, and delete
       `_flows_for`'s fallback in favour of a refusal listing the tracked flows. Verify:
       `uv run python -m isekai caption --help | grep -c -- --flow` — `1`; repeat for `sheet`, `review`,
       `approve`, `generate`.
-- [ ] 5.2 Resolve every named flow against `flows/` at selection, refusing an untracked one by name.
+- [x] 5.2 Resolve every named flow against `flows/` at selection, refusing an untracked one by name.
       Verify: `uv run pytest tests/test_pipeline_cli.py -k untracked -q` — green.
-- [ ] 5.3 Correct the flag's help text and `README.md:138`, both of which say *"every approved one by
+- [x] 5.3 Correct the flag's help text and `README.md:138`, both of which say *"every approved one by
       default"* — the fallback was every **tracked** flow. Verify:
       `grep -rn 'every approved one' isekai/ README.md` — no output.
-- [ ] 5.4 Add the coverage the flag has never had, including two flows in one invocation. Verify:
+- [x] 5.4 Add the coverage the flag has never had, including two flows in one invocation. Verify:
       `grep -rn -- '--flow' tests/ | wc -l` — greater than `5`.
-- [ ] 5.5 Verify the gate: `make gate`
+- [x] 5.5 Verify the gate: `make gate`
 
 ## 6. The run layout: input above, flow below
 

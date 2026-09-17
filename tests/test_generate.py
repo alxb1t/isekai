@@ -328,14 +328,16 @@ def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
     from isekai.interface.cli import build_parser
 
     with pytest.raises(SystemExit):
-        build_parser().parse_args(["generate", "--count", "2", "--seed", "7"])
+        build_parser().parse_args(
+            ["generate", "--flow", FLOW, "--count", "2", "--seed", "7"]
+        )
 
 
 @pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
 def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
     from isekai.interface.cli import build_parser
 
-    parsed = build_parser().parse_args(["generate"])
+    parsed = build_parser().parse_args(["generate", "--flow", FLOW])
 
     assert parsed.count is None and parsed.seeds is None
     assert len(seeds_for(parsed.count, parsed.seeds, random.Random(7))) == 1
@@ -345,7 +347,9 @@ def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
 def test_the_parser_takes_several_photographs_in_one_invocation() -> None:
     from isekai.interface.cli import build_parser
 
-    parsed = build_parser().parse_args(["generate", "a.jpg", "b.jpg", "c.jpg"])
+    parsed = build_parser().parse_args(
+        ["generate", "--flow", FLOW, "a.jpg", "b.jpg", "c.jpg"]
+    )
 
     assert parsed.photos == ["a.jpg", "b.jpg", "c.jpg"]
 
@@ -578,7 +582,9 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
         err=err,
     )
 
-    status = dispatch(build_parser().parse_args(["generate", str(photo)]), wired)
+    status = dispatch(
+        build_parser().parse_args(["generate", "--flow", FLOW, str(photo)]), wired
+    )
 
     message = err.getvalue()
     assert status == 1
