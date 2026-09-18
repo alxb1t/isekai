@@ -55,7 +55,9 @@ than an empty field, because what you name is what gets drawn.
 - `count` — how many people, and of what kind: `1girl`, `1boy`, `2girls`,
   `multiple girls`. Always paired with `solo` when there is exactly one person.
 - `age_band` — roughly how old the person looks.
-- `skin_ancestry` — skin tone as the prose describes it.
+- `skin_ancestry` — skin tone, only if the prose names one: `pale skin`, `tan`,
+  `dark skin`. No other shade has a canonical term, so anything else the prose
+  calls skin tone is dropped rather than written as a word that maps elsewhere.
 - `hair_colour` — the colour only.
 - `hair_silhouette` — length, shape, how it is worn. Not the colour.
 - `bangs` — only the hair over the forehead, and how it is cut: `blunt bangs`,
@@ -63,7 +65,8 @@ than an empty field, because what you name is what gets drawn.
   Not the length of the rest of the hair.
 - `eye_colour` — the colour only.
 - `eyebrows` — only if the prose remarks on them: `thick eyebrows`,
-  `short eyebrows`, `curly eyebrows`.
+  `short eyebrows`, `curly eyebrows`. Their colour or lightness has no canonical
+  term and is dropped, as in the first worked example below.
 - `eyelashes` — only if the prose remarks on them: `long eyelashes`,
   `thick eyelashes`.
 - `nose` — the nose's own shape or size, if the prose gives one: `long nose`,

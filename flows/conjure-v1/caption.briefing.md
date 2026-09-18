@@ -17,13 +17,12 @@ and leave out whatever the picture does not show:
 
 - **Who, and how many.** How many people there are, and roughly how old the
   person looks.
-- **Skin.** Its tone, as it appears in the picture.
+- **Skin.** Its tone, as it appears in the picture — pale, tan, or dark.
 - **Hair.** Its colour; its length, shape and how it is worn; and whether
   anything falls across the forehead, and if so how it is cut — straight across,
   parted, swept aside, or not at all.
-- **Eyes and brows.** The colour of the eyes; the eyebrows — their thickness,
-  shape and whether they are darker or lighter than the hair; and the lashes, if
-  the picture is close enough to show them.
+- **Eyes and brows.** The colour of the eyes; the eyebrows — their thickness and
+  shape; and the lashes, if the picture is close enough to show them.
 - **The rest of the face.** The nose — its length, width, or the shape of the
   bridge. The mouth — the fullness or thinness of the lips, and their colour if
   it is distinct from the skin. Any facial hair, and how it is kept.

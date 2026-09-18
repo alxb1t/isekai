@@ -131,6 +131,35 @@ failure is that a stated absence reaches the prompt and CLIP has no negation. `g
 `sheet.briefing.md` differs because it must: it carries a `## The fields` section naming each field and
 **two worked examples printing a complete sheet.**
 
+**Corrected in converge round 1, by review finding R1, and the correction is the one D4 already
+argued.** The first draft of `caption.briefing.md` asked for the skin's *tone* and for whether the
+brows are *darker or lighter than the hair*. Neither axis has a destination the vocabulary can
+reach from the words a describer writes: `map_phrase("light skin", v, "skin")` → `["light"]`
+(13,918 — a light source), `("fair skin", …)` → `[]`, and only `pale` reaches `pale skin` (44,564);
+on the brows, `("dark eyebrows", …)` → `["dark"]` (12,729 — a dark *image*) and `("lighter
+eyebrows", …)` → `["lighter"]`. `validate` cannot see it, because `light` and `dark` are themselves
+canonical. **It was demonstrated rather than predicted**: four of the seven approved acceptance
+sheets carried `skin_ancestry: ["light"]` and one carried `eyebrows: ["dark"]`, and those reached
+rendered positives whose own negative carries `lens flare, light particles`.
+
+So the caption briefing now **names the three words that land** — *pale, tan, or dark*
+(`("tan", v, "skin")` → `["tan"]` 50,265, `("dark skin", …)` → `["dark skin"]` 233,165) — in the
+same register it already uses for bangs, and **drops the brow-lightness ask entirely**. That second
+half is D4's `jaw` reasoning applied to a sub-axis rather than to a field: the vocabulary holds no
+brow-lightness tag, so the ask can only produce a sheet that looks more complete than it is.
+`sheet.briefing.md` gains the enumeration for `skin_ancestry` — it was the only elicited field in
+the file left without one — and one clause saying a brow's colour is dropped, which its own first
+worked example already models.
+
+**Why this was not caught by task 2.6, the declared abort check.** 2.6 was run against five
+pre-agreed phrases — `thick`+`lips`, `long`+`nose`, `blunt`+`bangs`, `long`+`eyelashes`, `a short
+beard` — all of which map. Its own note said *"the phrases the briefing actually elicits may differ
+from these, and this is the task that can change the verdict"*, and that is exactly the gap: the
+check tested the **schema's** five new fields, while the defect was in a **pre-existing** field the
+new briefing newly elicits. **A phrase check bound to the new fields cannot see a new ask on an old
+one.** The generalisation for any later flow: the unit to check is *every axis the briefing asks
+for*, not *every field the schema adds*.
+
 ### D6 — Dials are `summon`'s minus three, and every survivor is measured
 
 `ip_weight`, `identity_cn_strength` and `openpose_strength` go dead. `cfg` **5** was chosen on the
@@ -290,6 +319,36 @@ Both are recorded in `## Risks / Trade-offs` with triggers, and neither is visib
 
 Both block the evaluation version and travel with it, which is the version that needs them.
 
+### The re-pin in converge round 1, and what the acceptance render actually tested
+
+`manifest_digest` (`isekai/foundation/flow.py:363`) walks every regular file in `flows/<id>/`, so
+D5's briefing correction changes `conjure-v1`'s digest and `PINNED` moves with it:
+`38698396…` → `260ea7a3…`. Two consequences, recorded rather than smoothed over.
+
+**The test-surface row above no longer reproduces.** `git diff --stat v0.16.0..HEAD -- tests/` now
+reads `13 insertions(+), 1 deletion(-)`, not six lines. Every added line is either the pin's new
+value or the comment recording the exception beside it; the **two edits** D1 classifies are
+unchanged, and **task 3.1's production surface is still empty** — the headline verdict is measured
+over `isekai/`, `scripts/`, `Dockerfile`, `start.sh`, `infra/`, `Makefile`, `pyproject.toml`,
+`.github/` and `openspec/specs/`, and a briefing is in none of them.
+
+**The metered acceptance render tested `38698396…`, the prior bytes.** Everything that run was for
+survives it, because none of it is a property of the briefings' prose: the multi-flow path
+executing, `show` over two subtrees, the pod and teardown figures, and P9's unfired trigger are all
+claims about code, graph and dials, and the fix touches none of those. What the run produced — seven
+sheets and seven renders — is now **the evidence for R1** rather than a measurement of the corrected
+briefings, which is the honest reading of it: the defect is visible in those sheets. Nothing
+measured is lost, because a non-goal of this change is *any identity claim for `conjure`* and the
+flow is scored against nothing.
+
+**Why the fix landed here rather than as `conjure-v2`.** The append-only registry and the `PINNED`
+comment both say a pinned flow is corrected by a successor, not by an edit — and that rule binds
+from the moment a digest leaves the branch. `v0.17` is untagged, so `conjure-v1`'s digest has never
+been released; the flow is still inside the change that introduces it. Deferring instead would ship
+a flow known to ask for a light source where the operator means pale skin, permanently, and then
+add a second directory to say so. **Once the tag exists this route is closed**, and the exception is
+written beside the constant so the next reader cannot take it as precedent.
+
 ## Risks / Trade-offs
 
 - **The claim is about a diff, and nothing in the gate reads a diff.** → Two acceptance rows are
@@ -308,6 +367,11 @@ Both block the evaluation version and travel with it, which is the version that 
   measures this for `conjure` and nothing will; stated rather than discovered.
 - **`CURATED` is shared by every flow and no flow can declare it.** → Not triggered here, because all
   five new fields are cascade-reachable. Recorded as the first hole in *a flow shares nothing*.
+  **And the claim is narrower than it reads.** It is true of the five new fields and it was the wrong
+  unit: converge round 1 found the routing defect on `skin_ancestry`, a field `summon-v1` already
+  carried and whose caption briefing never mentioned — so the risk a new flow actually runs is *an
+  old field newly elicited*, not *a new field unreachable*. Corrected in D5; `CURATED` still was not
+  touched, which is the part of this bullet that holds.
 
 ## Migration Plan
 

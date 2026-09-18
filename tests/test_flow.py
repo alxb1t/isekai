@@ -46,7 +46,15 @@ PINNED: dict[str, str] = {
     # Added by 0017-conjure, the second flow. Adding a line here is the designed
     # cost of adding a flow, not a defect the change found: the pin list is what
     # makes adding or removing one a deliberate act.
-    "conjure-v1": "38698396d047ff58adfe3a3aad58b599b56a43d4b197327a196d72e0cedcc56e",
+    #
+    # Re-pinned once within that same change, by converge round 1, when review
+    # finding R1 showed both briefings eliciting skin tone and brow lightness in
+    # words the vocabulary routes to `light` and `dark` -- a light source and a
+    # dark image -- rather than to `pale skin` and nothing. The exception is that
+    # the flow was still inside the change that introduces it and had never been
+    # released: `v0.17` was not tagged, so no pinned digest had left the branch.
+    # Once it has, this route is closed and the correction is `conjure-v2`.
+    "conjure-v1": "260ea7a343166d60976bf0e77175eb01f3d85294d2e1db897243f9dac22e0116",
 }
 
 

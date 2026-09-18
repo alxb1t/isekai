@@ -106,6 +106,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `assert tracked_flows()`, which keeps the guard and drops the single-flow assumption. Every other
   test in the module already iterates `tracked_flows()` rather than naming its length, so this was an
   incidental assumption rather than a designed freeze; the designed freeze is `PINNED`, which stays.
+- **Both `conjure-v1` briefings stop eliciting two attributes the vocabulary cannot hold, and the
+  flow is re-pinned.** Converge round 1's finding R1: `caption.briefing.md` asked for the skin's
+  *tone* and for whether the brows are *darker or lighter than the hair*, and the exact-match pass
+  routes the answers to `light` (13,918 — a light source) and `dark` (12,729 — a dark image) rather
+  than to `pale skin` (44,564) and to nothing. Four of the seven approved acceptance sheets carried
+  `skin_ancestry: ["light"]` and one carried `eyebrows: ["dark"]`, and those reached rendered
+  positives whose own negative carries `lens flare, light particles`. The caption briefing now names
+  the three words that land — *pale, tan, or dark* — and drops the brow-lightness ask, per
+  `design.md` D4's own reasoning that an axis which cannot be filled makes a sheet look more complete
+  than it is; `sheet.briefing.md` enumerates `skin_ancestry`'s canonical terms and states that a
+  brow's colour is dropped. **The change's `### Added` claim that every *new* field is
+  cascade-reachable stands** — the trigger was `skin_ancestry`, a field `summon-v1` already had and
+  whose briefing never mentioned it — and `design.md`'s risk register now says so.
+- **`PINNED["conjure-v1"]` re-pinned to `260ea7a3…`**, because the digest covers every regular file
+  in the flow's directory and a briefing is one of them. **The metered acceptance render therefore
+  tested the prior bytes** — `38698396…` — and its claims are recorded against those: the multi-flow
+  path, `show` over two subtrees, the pod and teardown numbers, and P9's unfired trigger are all
+  about code and graph that this fix does not touch, while the seven sheets and renders it produced
+  are the *evidence for* R1 rather than a measurement of the corrected briefings. `conjure-v1` makes
+  no identity claim and is scored against nothing, so nothing measured is invalidated; the exception
+  that permits the re-pin is written beside the constant.
 
 ## [0.16.0] - 2026-09-17
 
