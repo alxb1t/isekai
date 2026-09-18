@@ -25,6 +25,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-18
+
+### Verified
+
+- **The acceptance run: two flows, one invocation, one boot, seven renders — and it needed no code
+  change.** The first end-to-end execution of the multi-flow path, which no test had ever run:
+  `tests/test_pipeline_cli.py`'s `_two_flows` stops at `_flows_for`, so the multi-flow loops,
+  `prepare`'s multi-entry return and `report` over two flows were untested end to end until this
+  session.
+  - **Locally and for free:** `caption` → `sheet` → `review` → edit → `approve` for three
+    photographs across both flows, then `generate` with no `--server`. Seven approved sheets, seven
+    assembled prompts, **zero outputs** — no endpoint contacted.
+  - **Metered:** one pod, `19m42s` boot to confirmed teardown, **~$0.236** at the RTX PRO 4500
+    Blackwell's live $0.72/hr — inside the ~$0.30 and 45-minute ceilings. The volume was empty, so
+    this session also paid for provisioning: 14 G of the manifest fetched in ~6m25s, ComfyUI up at
+    11m36s, seven renders in ~7m25s (~67s each). Teardown confirmed through the RunPod MCP:
+    `list-pods` returned `[]` and `get-pod` returned `404 pod not found`.
+  - **`--seed` was passed explicitly**, as `design.md`'s risk register requires: two flows in one
+    invocation draw different seeds from one shared `Random`, so the pair is only comparable when the
+    seed is named. Every render is `20260917.png` under both flows.
+  - **`show` survives two flows** — never run before this change. Two flow subtrees, nothing refused,
+    exit 0, and it distinguishes `001 unedited` from `002 edited`.
+  - **`conjure-v1` renders a recognisable anime character from the sheet alone**, at a flatness the
+    operator accepts. Every sheet tag landed. Against `summon-v1` on the same subject and seed it is
+    the **flatter** of the two — flat cel shading and visible linework where `summon` is painterly,
+    which is InstantID pulling toward likeness. **Parked entry P9 (`hires_denoise` 0.50 as
+    `conjure-v2`) is therefore not triggered**; it stays parked with its trigger unfired.
+  - **Four of the five new schema fields were exercised** across the subjects — `eyelashes`, `lips`,
+    `nose` and `bangs`. `facial_hair` stayed `[]` throughout, correctly: no subject had any, and
+    writing a negation into a sheet is what rule 3 forbids.
+
+### Documentation
+
+- **The version's verdict is recorded as a measurement, in the change's `design.md` under
+  `## Verdict, measured`.** `git diff --stat v0.16.0..HEAD` over `isekai/`, `scripts/`, `Dockerfile`,
+  `start.sh`, `infra/`, `Makefile`, `pyproject.toml`, `.github/` and `openspec/specs/` is **empty**:
+  `conjure-v1` loads, assembles and renders through v0.16's code unchanged, and the two checks no
+  second flow had ever exercised — `REQUIRED_NODES` and `TRANSFERRED_INPUTS` — both held. The test
+  surface is one module, `tests/test_flow.py`, in **two edits across six lines**: the designed pin and
+  its mandated comment, and the widened vacuity guard. **The verdict's own "two lines" prediction was
+  a line count of an edit count**, and the four extra lines are the comment this change's own plan
+  required — written down rather than reconciled. No fourth bucket appeared, so **v0.16 was complete
+  on the claim this version tested**: adding a flow cost a directory plus one deliberate pin.
+
+### Added
+
+- **`flows/conjure-v1/` — a second flow, and the first test of the claim that adding one is a
+  directory and nothing else.** An anime character drawn from an approved sheet of canonical tags
+  alone: no identity node, no ControlNet, no photograph in the graph. **It makes no identity claim
+  and is not evaluated.** Five flat files, like `summon-v1`:
+  - `graph.json` — 14 nodes, `summon-v1`'s 23 less the photograph loader, the InstantID leg, the
+    OpenPose leg and the working-resolution scale. Six edges repoint on the two samplers, each back
+    to the source InstantID displaced — `CheckpointLoaderSimple(1)` for `model`, `CLIPTextEncode(3)`
+    and `(4)` for the conditioning — so the rewiring restores rather than invents. The hires chain is
+    untouched.
+  - `flow.json` — `inputs: ["sheet"]`, with `photo` declared on **neither** side, which is the
+    sheet-only case `TRANSFERRED_INPUTS` permits. Seven node roles, two models, and `summon`'s dials
+    less `ip_weight`, `identity_cn_strength` and `openpose_strength`: a dial whose node was deleted
+    is a declaration nothing reads.
+  - `schema.json` — 21 fields, `summon-v1`'s sixteen plus `bangs`, `eyelashes`, `nose`, `lips` and
+    `facial_hair`, all `scored: false`. In `summon` the identity and pose legs supply the face;
+    `conjure` has neither, so the face reaches the render only as tags. Every new field is reachable
+    by the vocabulary's suffix or containment pass, so no shared routing was touched.
+  - `caption.briefing.md` — richer on the face, naming all 21 attributes, and licensing inference on
+    **expression and the scene's light only**. *"Do not interpret"* is kept and narrowed to the
+    identity-bearing fields — skin, hair, eyes, marks, build — and the absence licence is verbatim.
+  - `sheet.briefing.md` — the five new fields in `## The fields` and in both worked sheets, each
+    illustrated only with phrases the pinned vocabulary actually carries.
+- **`conjure-v1` pinned in `tests/test_flow.py`'s `PINNED`.** This is the freeze working, not a
+  defect: the pin list is what makes adding or removing a flow deliberate.
+- **The dial provenance table** in the change's `design.md`: every dial against
+  WAI-Illustrious-SDXL's own published recommendation, separating what the publisher states from what
+  sits inside a range it bounds from what it does not address at all. `clip_skip` `-2`, `scheduler`
+  `normal` and the VAE and base resolution are named as inference.
+
+### Fixed
+
+- **`test_every_tracked_flow_parses` no longer hard-codes the registry's contents.** Its opening
+  `assert tracked_flows() == ["summon-v1"]` was a vacuity guard — it exists so the loop beneath it
+  cannot pass on an empty registry — wearing a registry assertion's clothes. It is now
+  `assert tracked_flows()`, which keeps the guard and drops the single-flow assumption. Every other
+  test in the module already iterates `tracked_flows()` rather than naming its length, so this was an
+  incidental assumption rather than a designed freeze; the designed freeze is `PINNED`, which stays.
+- **Both `conjure-v1` briefings stop eliciting two attributes the vocabulary cannot hold, and the
+  flow is re-pinned.** Converge round 1's finding R1: `caption.briefing.md` asked for the skin's
+  *tone* and for whether the brows are *darker or lighter than the hair*, and the exact-match pass
+  routes the answers to `light` (13,918 — a light source) and `dark` (12,729 — a dark image) rather
+  than to `pale skin` (44,564) and to nothing. Four of the seven approved acceptance sheets carried
+  `skin_ancestry: ["light"]` and one carried `eyebrows: ["dark"]`, and those reached rendered
+  positives whose own negative carries `lens flare, light particles`. The caption briefing now names
+  the three words that land — *pale, tan, or dark* — and drops the brow-lightness ask, per
+  `design.md` D4's own reasoning that an axis which cannot be filled makes a sheet look more complete
+  than it is; `sheet.briefing.md` enumerates `skin_ancestry`'s canonical terms and states that a
+  brow's colour is dropped. **The change's `### Added` claim that every *new* field is
+  cascade-reachable stands** — the trigger was `skin_ancestry`, a field `summon-v1` already had and
+  whose briefing never mentioned it — and `design.md`'s risk register now says so.
+- **`PINNED["conjure-v1"]` re-pinned to `260ea7a3…`**, because the digest covers every regular file
+  in the flow's directory and a briefing is one of them. **The metered acceptance render therefore
+  tested the prior bytes** — `38698396…` — and its claims are recorded against those: the multi-flow
+  path, `show` over two subtrees, the pod and teardown numbers, and P9's unfired trigger are all
+  about code and graph that this fix does not touch, while the seven sheets and renders it produced
+  are the *evidence for* R1 rather than a measurement of the corrected briefings. `conjure-v1` makes
+  no identity claim and is scored against nothing, so nothing measured is invalidated; the exception
+  that permits the re-pin is written beside the constant.
+
 ## [0.16.0] - 2026-09-17
 
 ### Documentation

@@ -43,6 +43,18 @@ from isekai.foundation.refusal import Refusal
 # test message that explains how to evade itself is one that gets evaded.
 PINNED: dict[str, str] = {
     "summon-v1": "1d3c206b394d78d8547f808fb0f2a969f030f9a51468c950e2f235a2d2cfc3a5",
+    # Added by 0017-conjure, the second flow. Adding a line here is the designed
+    # cost of adding a flow, not a defect the change found: the pin list is what
+    # makes adding or removing one a deliberate act.
+    #
+    # Re-pinned once within that same change, by converge round 1, when review
+    # finding R1 showed both briefings eliciting skin tone and brow lightness in
+    # words the vocabulary routes to `light` and `dark` -- a light source and a
+    # dark image -- rather than to `pale skin` and nothing. The exception is that
+    # the flow was still inside the change that introduces it and had never been
+    # released: `v0.17` was not tagged, so no pinned digest had left the branch.
+    # Once it has, this route is closed and the correction is `conjure-v2`.
+    "conjure-v1": "260ea7a343166d60976bf0e77175eb01f3d85294d2e1db897243f9dac22e0116",
 }
 
 
@@ -121,7 +133,7 @@ def test_the_dials_are_the_measured_ones_and_not_the_graph_files(flow: Flow) -> 
 
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
 def test_every_tracked_flow_parses(tmp_path: Path) -> None:
-    assert tracked_flows() == ["summon-v1"]
+    assert tracked_flows()
     for name in tracked_flows():
         assert load_flow(name).id == name
 
