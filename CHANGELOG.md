@@ -72,6 +72,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model, which leaves the vertical keys unassigned outside the dropdown; an operator who has just
   clicked a row should not have to reach for the mouse again to reach the next one.
 
+### Documentation
+
+- **Three claims this repository makes about itself that v0.18 falsifies, corrected.** `CLAUDE.md`'s
+  *"there is nothing generated outside it to get wrong"* named one ignored root; there are now **four**,
+  and the boundary paragraph states how each fails differently — `.data/` is the loss of work, `models/`
+  a byte-identical re-download, `ui/dist/` a deterministic rebuild, `ui/node_modules/` an `npm install`.
+  Only the first is work; the other three are derivable, which is why none of them lives under `.data/`.
+  And *"`openspec` 1.11 ships no `new`/`scaffold` command"* was **false** — `openspec new change <name>`
+  exists; this repo scaffolds by hand because it keeps no `openspec/config.yaml` and because the id rule
+  is not one the CLI knows.
+- **node is recorded as this repository's second system dependency**, after the `claude` binary, needed
+  by `isekai ui` alone. `CLAUDE.md`, `README.md` and `isekai/interface/README.md` gain the `ui` verb and
+  the surface's four modules; the living `cli` spec's gloss stops saying *six verbs*. `baseline/labels/`
+  stops calling `.data/` *the one ignored root*.
+
 ### Fixed
 
 - **The manifest's `approved` column was blank.** `saved` reports the draft's own time and `approve()`

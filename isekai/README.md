@@ -11,7 +11,7 @@ what it is, not by what calls it.
 | [`shared/`](shared/README.md) | primitives with no domain of their own | 4 |
 | [`boundary/`](boundary/README.md) | everything that leaves this process | 5 |
 | [`evaluation/`](evaluation/README.md) | scoring a render against its photograph | 5 |
-| [`interface/`](interface/README.md) | what an operator touches | 3 |
+| [`interface/`](interface/README.md) | what an operator touches | 3 + `ui/` (4) |
 
 **The groups do not re-export.** Every `__init__.py` here holds a docstring and no
 code, so a module is imported by its own path and a group never becomes a place

@@ -5,9 +5,10 @@ using **open models** on a **rented GPU, on demand**. A reproducible, provider-a
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
-> `python -m isekai caption | sheet | review | approve | generate | show` — which reads a
+> `python -m isekai caption | sheet | review | approve | generate | show | ui` — which reads a
 > photograph into prose, sorts the prose into a sheet of canonical tags, lets a human correct the
-> sheet, and renders from it on a stack provisioned from a pinned, checksummed manifest.
+> sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary — and renders from
+> it on a stack provisioned from a pinned, checksummed manifest.
 > Development follows OpenSpec SDD, and **`openspec/` is authoritative** for what the code does and
 > for what is being built next — this banner deliberately names no version, because a forward
 > reference here is one reordering away from being wrong.
@@ -133,6 +134,27 @@ an endpoint.
 
 `python -m isekai show me.jpg` prints a run's artifacts, versions and what produced each one.
 
+### Correcting the sheets in a browser
+
+Steps ③ and ④ above edit a JSON file by hand. `isekai ui` does the same work on a surface that knows
+the vocabulary — canonical spelling, the post count behind every tag, and a live token count against
+the encoder's 77-token window, none of which a text editor can tell you:
+
+```sh
+python -m isekai ui <run-id> [<run-id> …] --flow summon-v1
+```
+
+It resolves the batch, refuses everything it can refuse, prints a URL and blocks; correct and approve
+each sheet in the browser, then stop it with Ctrl-C and run `generate`. **Nothing on the page reaches
+a model or a GPU** — its scope is stage ③ alone.
+
+- `--flow` is **required and takes exactly one** here, unlike on the stage verbs: the surface shows one
+  schema's fields in one fixed order, so a second flow would be a second page rather than a wider one.
+- It needs the optional extra and **node**: `uv sync --extra ui`, and `npm install` in `ui/` the first
+  time. The bundle is built on demand; a missing toolchain refuses naming what installs it.
+- `review` and `approve` keep working exactly as before. They are deprecated as *guidance*, never as
+  code — deleting the hand path would make ③ a single point of failure for the whole pipeline.
+
 Useful flags, as the parser states them:
 
 - `--runs RUNS` — the directory runs live under. It may point outside the repository entirely, but
@@ -201,7 +223,7 @@ isekai/
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted model, provisioning
 │   ├── evaluation/            # the scorer, and the only importer of the [eval] extra
-│   └── interface/             # the parser & dispatch, the composition, the run's account
+│   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
 ├── tests/                     # the suite and its fakes
 ├── flows/summon-v1/           # one flow: five flat files, and it is immutable
 │   ├── flow.json              # the manifest: inputs, vocabulary, models, dials, prompt, node roles
@@ -209,6 +231,9 @@ isekai/
 │   ├── schema.json            # the sheet's field list, in prompt order
 │   ├── caption.briefing.md    # the standing instructions the photograph is read under
 │   └── sheet.briefing.md      # the standing instructions the caption is sorted under
+├── ui/                        # the review surface: Vue 3 + Vite; dist/ and node_modules/ ignored
+│   ├── src/                   # the app; styles.css is a copy of design/, Inter vendored beside it
+│   └── design/                # the imported design handoff — read-only, never edited
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops

@@ -12,7 +12,7 @@
 - [x] 8 — Vue: editing and autosave
 - [x] 9 — Vue: approve, read-only, and the refusal line
 - [x] 10 — Vue: the overlay, the loading state, the manifest
-- [ ] 11 — The docs this version makes false
+- [x] 11 — The docs this version makes false
 - [ ] 12 — The free walkthrough: the surface end to end, on data that already exists
 - [ ] 13 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance run
 
@@ -349,25 +349,25 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > Design D12, and the roadmap's §⑤ sweep. **Three of these are claims the repository makes about itself
 > that this change falsifies.** Leaving one false adds to a list this release is supposed to shorten.
 
-- [ ] 11.1 `CLAUDE.md:199-201` — *"there is nothing generated outside it to get wrong"* is no longer
+- [x] 11.1 `CLAUDE.md:199-201` — *"there is nothing generated outside it to get wrong"* is no longer
       true. Extend the boundary paragraph to name **four** roots and how each fails differently:
       `.data/` loss of work · `models/` a byte-identical re-download · `ui/dist/` a deterministic
       rebuild · `ui/node_modules/` an `npm install`.
-- [ ] 11.2 `CLAUDE.md` — state that **node is a system dependency of `isekai ui`**, and that it is the
+- [x] 11.2 `CLAUDE.md` — state that **node is a system dependency of `isekai ui`**, and that it is the
       repo's **second**, after the `claude` binary. Add `ui` to the verb list and correct *"six verbs"*
       wherever it appears.
-- [ ] 11.3 `CLAUDE.md:109` — *"`openspec` 1.11 ships no `new`/`scaffold` command"* is **false**;
+- [x] 11.3 `CLAUDE.md:109` — *"`openspec` 1.11 ships no `new`/`scaffold` command"* is **false**;
       `openspec new change <name>` works in 1.11.0. Correct it, and note that this repo scaffolds by
       hand anyway because it keeps no `openspec/config.yaml`.
-- [ ] 11.4 `README.md` — add `ui/` to the tree and `isekai ui` to the verb list. `isekai/README.md` —
+- [x] 11.4 `README.md` — add `ui/` to the tree and `isekai ui` to the verb list. `isekai/README.md` —
       add a `ui` row to the edge table.
-- [ ] 11.5 `openspec/specs/cli/spec.md` — its gloss reads *"one entry point, six verbs"*. **This is
+- [x] 11.5 `openspec/specs/cli/spec.md` — its gloss reads *"one entry point, six verbs"*. **This is
       header prose, not a requirement, so no delta carries it**; correct it here so the release fold
       does not have to remember.
-- [ ] 11.6 Verify nothing claims six verbs or one ignored root:
+- [x] 11.6 Verify nothing claims six verbs or one ignored root:
       `grep -rn "six verbs\|one ignored root" --include="*.md" . | grep -v CHANGELOG | grep -v changes/archive`
       — **no output.**
-- [ ] 11.7 Verify the gate: `make gate`
+- [x] 11.7 Verify the gate: `make gate`
 
 ## 12. The free walkthrough: the surface end to end, on data that already exists
 

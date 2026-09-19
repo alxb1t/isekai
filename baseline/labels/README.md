@@ -38,7 +38,8 @@ would let a preference for `A` masquerade as a judgement.
 The reference is captioned by role rather than by filename, because naming the source file under the
 photograph and the render's file under the render is a difference the eye can use.
 
-The sheets land in `.data/`, the one ignored root — a contact sheet is pixels twice over.
+The sheets land in `.data/`, the ignored root that holds everything a run produces — a contact sheet
+is pixels twice over.
 
 ## How to fill it in
 
