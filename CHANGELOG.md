@@ -49,6 +49,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **`isekai/boundary/ollama.py` — the third network boundary, and the second the pipeline has.** One
+  POST to a local runtime over stdlib `urllib`, an injectable `Transport` protocol, and the
+  classification of what comes back. **It imports nothing from `claude_cli.py`**, and it imports nothing
+  outside the standard library — asserted by `python -S`, with site-packages off `sys.path`.
+
+  `/api/generate` rather than the OpenAI-compatible endpoint, because that endpoint expresses neither
+  `think` nor `repeat_penalty` and both are load-bearing *by measurement*: a hybrid reasoner's thinking
+  tokens come out of the same budget as its answer and truncated the sorter's JSON mid-string, and at
+  temperature 0 there is no sampling noise to break a loop, so one field came back with `"white robe"`
+  forty times. Using the compatible endpoint would re-measure the two known failure modes of the model
+  being adopted.
+
+  **The address is a module constant — no flag, no environment variable.** The runtime reads no
+  environment at all, a fixed local address is what `interface/ui/` and `interface/cli.py` already do,
+  and making the destination of a photograph operator-controlled is a security surface this version
+  declines to open. `--server`'s deliberate no-default exists because rendering costs money; a free
+  loopback call does not inherit that reason.
+
+- **The failure classification, one test per row, all through an injected transport.** A missing model
+  (404) and an unreachable host (`URLError`) are **refusals that spend no attempt** — both are the
+  operator's one-command fix, and a retry budget counts models tried and failed, which neither of them
+  is; spending an attempt on one leaves a run whose error records must be deleted by hand before it can
+  resume. That is the posture `require_binary()` already takes for an absent binary, applied to a port
+  rather than to a `PATH` entry. A 5xx and a timeout are transient; an unparseable body, a body that is
+  not an object, an answerless body, and any other non-200 are permanent.
+
+  **`HTTPError` is caught before `URLError`, because it is a subclass of it** — the prototype's single
+  handler mislabelled every 404 and every 502 as "did not answer". It is caught inside `post` and turned
+  into a returned status, so a fake transport states one the way a real host does. A **timeout arriving
+  wrapped in a `URLError`** is read as transient rather than as an unreachable host: otherwise a
+  retryable failure is spent as a refusal and the operator is told to start a server already running.
+
+  `done_reason == "length"` is permanent **and the detail carries `done_reason`**, because a truncated
+  answer and a malformed one are indistinguishable from outside and only one of them is fixed by raising
+  the output budget.
+
+  The kind is carried by `OllamaFailure`, which is deliberately neither `CliFailure` — this module may
+  not import it — nor a third vocabulary: it holds the same `Kind` the run directory already records, so
+  an adapter translates it in one line and the stage that catches it is untouched.
+
 - **A flow manifest may declare the hosted models its first two stages call — `hosted`, one optional
   top-level key.** It carries the implementation the reader and sorter are reached through and the model
   name each of them runs, parsed into a frozen `Hosted` on the loaded flow. Deliberately **not** `models`,

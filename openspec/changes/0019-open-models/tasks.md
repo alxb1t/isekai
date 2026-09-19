@@ -4,7 +4,7 @@
 
 - [x] 1 — ⚠️ **OPERATOR** — the three build-time discoveries, before a line of adapter is written
 - [x] 2 — `flow.py`: the `hosted` block parsed, and every unknown key refused
-- [ ] 3 — `boundary/ollama.py`: the transport, and nothing else
+- [x] 3 — `boundary/ollama.py`: the transport, and nothing else
 - [ ] 4 — `OllamaReader`: a photograph in, prose out, no schema
 - [ ] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
 - [ ] 6 — The registries, and the resolution moved inside the flow loop
@@ -136,14 +136,14 @@ and one of the operator's own photographs.
 
 `design.md` D1, D4, D9, D10, D11. **No adapter class in this file.**
 
-- [ ] 3.1 Add the module with `HOST` as a module constant, a `Transport` Protocol, and a `post` default
+- [x] 3.1 Add the module with `HOST` as a module constant, a `Transport` Protocol, and a `post` default
       that speaks stdlib `urllib` and nothing else. Verify it imports under
       `python -S -c "import isekai.boundary.ollama"` with site-packages off the path.
-- [ ] 3.2 Implement the classification of D9 — `HTTPError` **caught before** `URLError`, 404 and an
+- [x] 3.2 Implement the classification of D9 — `HTTPError` **caught before** `URLError`, 404 and an
       unreachable host as refusals naming the fixing command, 5xx and `TimeoutError` as transient,
       unparseable or answerless bodies and `done_reason == "length"` as permanent with `done_reason` in
       the detail. Verify with unit tests per row through an injected transport.
-- [ ] 3.3 Verify the module imports no name from `boundary/claude_cli.py`, by `git grep claude_cli
+- [x] 3.3 Verify the module imports no name from `boundary/claude_cli.py`, by `git grep claude_cli
       isekai/boundary/ollama.py` returning nothing.
 
 ## 4. `OllamaReader` — in `pipeline/caption.py`
