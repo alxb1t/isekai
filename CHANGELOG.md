@@ -27,6 +27,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`isekai ui <ids…> --flow F` — the review surface, and the pipeline's seventh verb.** One FastAPI
+  process on `127.0.0.1` serving a built Vue bundle and six endpoints. It resolves the flow, every named
+  input, a draft for each, each photograph's dimensions, the vocabulary and the bundle **before a port
+  is bound**, and prints an address only once all of them have succeeded — every input's failure
+  reported together, because ten photographs with two missing sheets must name both rather than be
+  discovered one restart at a time. `--flow` is required and takes **exactly one**: the surface shows
+  one schema's fields in one fixed order, so a second flow would be a second page rather than a wider
+  one, and a repeat is refused at the command line rather than kept silently as argparse would.
+  **Scope is stage ③ alone** — no upload, no captioning, no generate button — so nothing in the browser
+  spends money.
+- **`isekai/interface/ui/`, four modules, and the split is what keeps the suite offline.** `batch.py`
+  holds the batch and the whole startup refusal order and imports no web framework, so that order is
+  exercised by the main suite with the `ui` extra uninstalled; `bundle.py` builds the browser bundle or
+  refuses naming the command; `app.py` is the only module that imports the extra at all; `__init__.py`
+  composes the three. **The batch lives in memory and nothing writes it down** — nothing on disk says
+  ten photographs belong together — and the approved count is read from the directory, so it stays true
+  when something is approved by the verb beside the running surface.
+- **The invariant that replaces a structural guarantee.** Both front ends now call the stage functions
+  in process, so the surface is no longer stopped from writing its own artifact by the shape of the
+  system. `tests/test_ui.py` greps `isekai/interface/ui/` for `envelope(`, `artifact_name(` and
+  `write_json(`, and its docstring states that it is a **tripwire and not a proof**: an aliased import
+  walks past it and a hand-built f-string is invisible to it. Three write functions reach a run
+  directory and all three are stage ③'s — `review()` at startup, `save_draft()` on autosave, `approve()`
+  on the button.
+- **`[project.optional-dependencies] ui = ["fastapi", "uvicorn"]`, pinned exactly, with
+  `dependencies = []` untouched.** The runtime stays stdlib-only and the `-S` guard stays green,
+  because `cli.py`'s `ui` handler imports the package **inside the function**. Both packages are named
+  explicitly rather than taking `fastapi[standard]`, which pulls a much wider tree for one localhost
+  server. `httpx2` joins the dev group — it is starlette's test client, not a server dependency.
+  CI installs neither, so `isekai/interface/ui/app.py` and `tests/test_ui_api.py` get a
+  `[[tool.ty.overrides]]` block for `unresolved-import` alone; an override is green whether or not the
+  extra is installed, which per-line `ty: ignore` comments cannot be.
 - **`review.save_draft(run, flow, fields)` — one owner for an in-place draft update.** It replaces the
   highest draft's field values, keeps the version number and the sheet the draft records, and **does
   not create**: `review()` owns that, and a second creator would spend a version number on a stray

@@ -6,7 +6,7 @@
 - [x] 2 — `security/S1`: containment decided by identity, not by text
 - [x] 3 — `wiring_from()`, and the seams a ③-only caller does not need
 - [x] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
-- [ ] 5 — The server and the verb
+- [x] 5 — The server and the verb
 - [ ] 6 — Vue: shell, tokens, rail, and the read-only sheet
 - [ ] 7 — Vue: the autocomplete
 - [ ] 8 — Vue: editing and autosave
@@ -181,7 +181,7 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > startup refusal order is testable in the main suite without the `ui` extra. Only `app.py` imports
 > FastAPI.
 
-- [ ] 5.1 Add the extra to `pyproject.toml`: `[project.optional-dependencies] ui = ["fastapi", "uvicorn"]`
+- [x] 5.1 Add the extra to `pyproject.toml`: `[project.optional-dependencies] ui = ["fastapi", "uvicorn"]`
       — both explicit, because `fastapi[standard]` pulls a much wider tree for one server.
       **`dependencies = []` stays empty.** ⛔ **This is a dependency addition: state the justification
       and stop for approval before running anything.**
@@ -197,33 +197,33 @@ build order, the three things that are easy to get wrong and the keyboard model.
       green whether or not the extra is installed, which per-line `ty: ignore` comments cannot be,
       because ty exits non-zero on the unused-directive warning they raise when the extra *is* present.
       Verify: `uv run ty check` — **exits 0**, and again under `uv run --extra ui ty check` — **exits 0.**
-- [ ] 5.2 Write `isekai/interface/ui/batch.py` — `Batch` and `establish(...)`, performing the refusal
+- [x] 5.2 Write `isekai/interface/ui/batch.py` — `Batch` and `establish(...)`, performing the refusal
       order stated by `specs/ui/spec.md`'s first requirement: flow, inputs, `review()` per input, `image_dimensions()` per
       input, vocabulary, bundle. Report together via `across()`. **No FastAPI import in this file.**
-- [ ] 5.3 Write `tests/test_ui.py` for the startup order, bound to the four `ui:startup:*` keys and the
+- [x] 5.3 Write `tests/test_ui.py` for the startup order, bound to the four `ui:startup:*` keys and the
       two `ui:batch:*` keys. **Stdlib only, main suite.** Verify:
       `uv run pytest tests/test_ui.py -v`
-- [ ] 5.4 Add the invariant test to `tests/test_ui.py`, bound to
+- [x] 5.4 Add the invariant test to `tests/test_ui.py`, bound to
       `ui:invariant:server-never-names-an-artifact`: no file under `isekai/interface/ui/` contains
       `envelope(`, `artifact_name(` or `write_json(`. **Its docstring must state that it is a tripwire
       and not a proof** — an aliased import walks past it and a hand-built f-string is invisible to it.
       Verify: `uv run pytest tests/test_ui.py -k invariant -v`
-- [ ] 5.5 Write `isekai/interface/ui/app.py` — `create_app()` and the six endpoints of
+- [x] 5.5 Write `isekai/interface/ui/app.py` — `create_app()` and the six endpoints of
       `design.md` § *The API*. `Refusal` becomes an HTTP response; nothing else catches it.
-- [ ] 5.6 Write `isekai/interface/ui/bundle.py` — `ensure_built()`, bound to
+- [x] 5.6 Write `isekai/interface/ui/bundle.py` — `ensure_built()`, bound to
       `ui:bundle:a-missing-bundle-is-built` and `ui:bundle:missing-dependencies-refuse-by-name`. A missing `ui/node_modules/`
       **refuses, naming `npm install`**; a missing `node` refuses naming what to install, copying
       `claude_cli.require_binary()`'s shape. A missing `ui/dist/` runs `vite build`.
-- [ ] 5.7 Write `isekai/interface/ui/__init__.py` — `serve(...)`, which runs uvicorn on 127.0.0.1.
-- [ ] 5.8 Add the verb to `isekai/interface/cli.py`: `("ui", "serve the review surface for a batch of
+- [x] 5.7 Write `isekai/interface/ui/__init__.py` — `serve(...)`, which runs uvicorn on 127.0.0.1.
+- [x] 5.8 Add the verb to `isekai/interface/cli.py`: `("ui", "serve the review surface for a batch of
       inputs")` in `VERBS`, its own `--flow` (**single, required — not `action="append"`**) and
       `--port` defaulting to 8517. **The handler imports `isekai.interface.ui` inside the function**,
       with a comment naming `tests/test_pipeline_cli.py`'s `-S` guard as the reason.
-- [ ] 5.9 Verify the guard is still green and understands why: `uv run pytest tests/test_pipeline_cli.py -v`
-- [ ] 5.10 Verify the serving verb's flag shape, bound to `cli:flow-selection:a-serving-verb-takes-one-flow`:
+- [x] 5.9 Verify the guard is still green and understands why: `uv run pytest tests/test_pipeline_cli.py -v`
+- [x] 5.10 Verify the serving verb's flag shape, bound to `cli:flow-selection:a-serving-verb-takes-one-flow`:
       `uv run python -m isekai ui --flow summon-v1 --flow conjure-v1 2>&1 | tail -2` — **refused, naming
       the one-flow limit.**
-- [ ] 5.11 Verify the API against a running app with the extra installed, in `tests/test_ui_api.py`.
+- [x] 5.11 Verify the API against a running app with the extra installed, in `tests/test_ui_api.py`.
       **It must open with `pytest.importorskip("fastapi")`** — a module-level `from fastapi.testclient
       import TestClient` fails *collection* without the extra, which is gate command five going red, not
       a skip. Do **not** copy the eval tests here: they stay in the main suite by faking their boundary
@@ -234,14 +234,14 @@ build order, the three things that are easy to get wrong and the keyboard model.
       `ui:approval:approved-input-refuses-a-draft-update` and
       `ui:approval:approved-input-opens-read-only`. Verify:
       `uv run --extra ui pytest tests/test_ui_api.py -v`
-- [ ] 5.11b Verify every scenario in the change's `ui` delta now has a test naming it. Verify:
+- [x] 5.11b Verify every scenario in the change's `ui` delta now has a test naming it. Verify:
       ```
       for k in $(grep -ho '\*\*Key:\*\* `ui:[^`]*`' openspec/changes/0018-review-ui/specs/ui/spec.md \
                  | sed 's/.*`\(.*\)`/\1/'); do
         grep -rq "$k" tests/ && echo "OK   $k" || echo "MISS $k"; done
       ```
       — **no `MISS` lines.**
-- [ ] 5.12 Verify the gate: `make gate`
+- [x] 5.12 Verify the gate: `make gate`
 
 ## 6. Vue: shell, tokens, rail, and the read-only sheet
 

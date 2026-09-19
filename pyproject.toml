@@ -37,11 +37,43 @@ eval = [
     "Pillow>=11.0",
 ]
 
+# The review surface's server, and NOT the runtime's. `dependencies = []` above
+# stays empty and stays held by the test that imports the package with
+# site-packages off the path: `python -m isekai` is stdlib-only, and the `ui`
+# handler in `cli.py` imports this tree INSIDE the function so the import-graph
+# guard never sees it.
+#
+# CI never installs this either, which is why `isekai/interface/ui/app.py` gets a
+# `[[tool.ty.overrides]]` block below for `unresolved-import` alone -- the same
+# reasoning `eval_backends.py` already carries.
+#
+# Two packages, both explicit. `fastapi[standard]` would pull a much wider tree
+# -- an HTTP client, a CLI, email validation, templating -- for one server bound
+# to 127.0.0.1 that serves six endpoints and a built bundle.
+#
+# Pinned exactly rather than floored, unlike `eval` above. The difference is what
+# the two extras are for: `eval` is a measurement stack whose floors state what
+# the scorer needs, while this is a private localhost tool whose whole job is to
+# be the same surface every time the operator opens it -- an unannounced minor
+# that changes a response shape is a defect in the middle of a review session,
+# and there is no CI run that would catch it first.
+ui = [
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+]
+
+# Test and gate tooling only. `httpx2` is here rather than in the `ui` extra
+# above because it is a test client, not a server dependency: it is what
+# starlette's `TestClient` requires, and shipping it to anyone who installs the
+# extra to actually serve the surface would be wrong about what it is for.
+# Pinned exactly, like the extra, and for the same reason -- `tests/test_ui_api.py`
+# is the only thing that touches it, and it skips wherever FastAPI is absent.
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.0",
     "ty>=0.0.64",
+    "httpx2==2.13.0",
 ]
 
 [tool.ruff.lint]
@@ -137,6 +169,30 @@ include = ["openspec/changes/archive/0010-illustrious-base/controlnet_probe.py"]
 unresolved-import = "ignore"
 invalid-argument-type = "ignore"
 invalid-assignment = "ignore"
+
+# The review surface's server, and the ONLY file in the tree that imports
+# FastAPI. `batch.py` performs the whole startup refusal order and imports no web
+# framework at all, which is what keeps that order testable in the main suite; so
+# this block covers one file, and one rule, rather than the package.
+#
+# `tests/test_ui_api.py` is the second and last file, for the same reason and not
+# a weaker one: it drives the endpoints through starlette's `TestClient`, so it
+# imports the extra too. It opens with `pytest.importorskip("fastapi")`, which
+# makes it a skip at runtime wherever the extra is absent -- but an importorskip
+# is a runtime guard and says nothing to a type checker reading the file.
+#
+# The reasoning is `eval_backends.py`'s above, and it is copied here rather than
+# cross-referenced because it is the reason THIS block exists: per-line `ty:
+# ignore` comments cannot be right in both environments -- absent the `ui` extra
+# they are load-bearing, and present it they become "unused directive" warnings,
+# and ty exits non-zero on warnings. An override is green whether or not the
+# extra is installed, which is the property that matters, because CI never
+# installs it and `make gate` must not depend on what the operator has synced.
+[[tool.ty.overrides]]
+include = ["isekai/interface/ui/app.py", "tests/test_ui_api.py"]
+
+[tool.ty.overrides.rules]
+unresolved-import = "ignore"
 
 [tool.ty.environment]
 extra-paths = ["scripts"]
