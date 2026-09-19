@@ -49,6 +49,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **`OllamaSorter`, in `isekai/pipeline/sheet.py`** — beside `ClaudeSorter` and `FakeSorter`. Its
+  `format` **equals `output_shape(schema)`** rather than resembling it, which is the same object the
+  Claude arm puts behind `--json-schema`: the transport differs and the constraint does not. That
+  equality is what keeps a malformed answer classified **permanent** for either arm — the structure is
+  required server-side, where Ollama compiles it into a grammar, so a second attempt would spend for
+  nothing. An adapter carrying its own near-copy would have drifted from the Claude arm silently.
+
+  `think: false` and `repeat_penalty: 1.15` ride with it, and both are load-bearing by measurement: a
+  hybrid reasoner's thinking tokens come out of the answer's budget and truncated the JSON mid-string on
+  the third subject, and at temperature 0 there is no sampling noise to break a loop, so one field came
+  back with `"white robe"` forty times. Those two absences are the whole reason this repository speaks
+  `/api/generate` rather than the OpenAI-compatible endpoint.
+
+  The answer arrives **as the response body** rather than as a separate structured field, which is the
+  path `answers_from` already falls back to — unchanged, and now held by a test, so a later edit cannot
+  break the only path an Ollama answer takes. A truncated answer is permanent **and the record carries
+  `done_reason`**, because truncated and malformed are indistinguishable from outside and only one of
+  them is fixed by raising the output budget.
+
+  **Everything downstream of the seam is shared and provably unmoved.** Two tests drive the open sorter
+  through the same cascade the Claude arm uses: an absence clause becomes an empty field, and a tag
+  outside the vocabulary is dropped. `isekai/shared/vocabulary.py` and `isekai/shared/fields.py` are
+  byte-identical in the diff, and the open arm gets no exemption from either.
+
 - **`OllamaReader`, in `isekai/pipeline/caption.py`** — beside `ClaudeReader` and the `FakeReader` they
   share a Protocol with, rather than in `boundary/`, because two implementations of one Protocol in two
   different layers is the arrangement that avoids. It carries `implementation = "ollama"`, an injectable

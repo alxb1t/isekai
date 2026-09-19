@@ -22,7 +22,7 @@ outside this directory opens a socket or spawns a binary.
 | `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | five test modules |
 | `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
 | `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
-| `ollama.py` | `pipeline/caption.py` | `tests/test_ollama.py` |
+| `ollama.py` | `pipeline/caption.py`, `pipeline/sheet.py` | `tests/test_ollama.py` |
 | `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, nine test modules |
 
 > `provision.py` is not on `python -m isekai`'s import graph, so the stdlib-only

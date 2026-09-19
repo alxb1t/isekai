@@ -22,6 +22,16 @@ call hit a hard 400. Aliasing at the boundary was tried and is the cause of the
 one caveat on the measured score -- the model read one set of names and was held
 to another. One name everywhere removes the class of error.
 
+**Two implementations ship, and the shape is required of both.** `ClaudeSorter`
+puts `output_shape(schema)` behind `--json-schema`; `OllamaSorter` puts the same
+object in `format`, which the runtime compiles into a grammar. The transport
+differs and the constraint does not -- which is what keeps a malformed answer
+*permanent* for either: the structure was required server-side rather than asked
+for politely, so a second attempt would spend for nothing. Everything downstream
+of the seam is shared and untouched by which one filled it: `answers_from` reads
+the answer from the structured field or from the body, `fill` canonicalises
+through the same cascade, and the vocabulary refuses a tag neither of them knows.
+
 Stdlib only.
 """
 
@@ -32,6 +42,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from isekai.boundary import ollama
 from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
@@ -133,6 +144,25 @@ class FakeSorter:
         )
 
 
+# What the open sorter is sampled at, ported verbatim from the measurement.
+# `repeat_penalty` is belt to the schema's braces and it is not decoration: at
+# temperature 0 there is no sampling noise to break a loop, and one field came
+# back with `"white robe"` forty times until the output budget ran out, which
+# truncated the JSON mid-string. The budget is twice the reader's because sixteen
+# fields of tags run longer than prose (design.md D1, D10).
+SORTER_OPTIONS: Mapping[str, Any] = {
+    "temperature": 0,
+    "seed": 1,
+    "num_predict": 2048,
+    "repeat_penalty": 1.15,
+}
+
+# The one command that turns an absent sorter into a present one. A public
+# registry tag, so it is a pull rather than a create -- the asymmetry with the
+# reader's remedy is the whole reason the boundary takes one as an argument.
+SORTER_REMEDY = "ollama pull {model}"
+
+
 def output_shape(schema: Schema) -> dict[str, Any]:
     """Return the JSON Schema the model's answer is held to: the fields, exactly.
 
@@ -187,6 +217,71 @@ class ClaudeSorter:
             answers_from(result.structured, result.result, schema),
             self.implementation,
             result.models,
+        )
+
+
+@dataclass(frozen=True)
+class OllamaSorter:
+    """The Ollama adapter for this stage: the shape required, and thinking off.
+
+    **`format` carries the same `output_shape(schema)` the Claude arm puts behind
+    `--json-schema`.** Ollama compiles it into a llama.cpp grammar, so the sixteen
+    keys are guaranteed present and the body is guaranteed to parse. That is what
+    keeps a malformed answer classified as *permanent*: the structure was required
+    server-side rather than asked for politely, so a response that does not carry
+    it will not carry it on the next attempt either.
+
+    **`think: false` is load-bearing and not an economy.** A hybrid reasoner draws
+    its thinking tokens from the same `num_predict` budget as its answer, and on
+    the first run they truncated the JSON mid-string on the third subject. Sorting
+    is slot-filling against a closed vocabulary, not reasoning, so the budget
+    belongs to the answer. A model with no thinking mode ignores the flag
+    (design.md D1).
+    """
+
+    model: str
+    transport: ollama.Transport = ollama.post
+    implementation: str = "ollama"
+
+    def prompt(self, prose: str, briefing: str) -> str:
+        """Return the whole of what the sorter is told: its rules, then the prose."""
+        return f"{briefing.rstrip()}\n\n## The description to sort\n\n{prose.strip()}\n"
+
+    def body(self, prose: str, schema: Schema, briefing: str) -> dict[str, Any]:
+        """Return the exact request this sorter is invoked with.
+
+        A method rather than a local, so `format` is assertable against
+        `output_shape(schema)` itself rather than against a copy of it.
+        """
+        return {
+            "model": self.model,
+            "prompt": self.prompt(prose, briefing),
+            "format": output_shape(schema),
+            "stream": False,
+            "think": False,
+            "options": dict(SORTER_OPTIONS),
+        }
+
+    def sort(self, prose: str, schema: Schema, briefing: str) -> Sorting:
+        """Send the prose and read one list per field out of the answer.
+
+        The answer arrives **as the response body**, not as a separate structured
+        field, which is the path `answers_from` already falls back to. Nothing
+        here parses it: the same function serves both implementations, so the
+        cascade and the validation downstream cannot diverge between them.
+        """
+        try:
+            answer = ollama.ask(
+                self.body(prose, schema, briefing),
+                remedy=SORTER_REMEDY.format(model=self.model),
+                transport=self.transport,
+            )
+        except ollama.OllamaFailure as failed:
+            raise CliFailure(failed.kind, failed.detail) from failed
+        return Sorting(
+            answers_from(None, answer, schema),
+            self.implementation,
+            (self.model,),
         )
 
 

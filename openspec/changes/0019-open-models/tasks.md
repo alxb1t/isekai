@@ -6,7 +6,7 @@
 - [x] 2 — `flow.py`: the `hosted` block parsed, and every unknown key refused
 - [x] 3 — `boundary/ollama.py`: the transport, and nothing else
 - [x] 4 — `OllamaReader`: a photograph in, prose out, no schema
-- [ ] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
+- [x] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
 - [ ] 6 — The registries, and the resolution moved inside the flow loop
 - [ ] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
 - [ ] 8 — The isolation proof, in the suite, non-vacuous
@@ -169,19 +169,19 @@ and one of the operator's own photographs.
 
 `specs/sheet/spec.md`. `design.md` D1, D10.
 
-- [ ] 5.1 Add `OllamaSorter` beside `ClaudeSorter` and `FakeSorter`, sending `format =
+- [x] 5.1 Add `OllamaSorter` beside `ClaudeSorter` and `FakeSorter`, sending `format =
       output_shape(schema)`, `think: false`, and `repeat_penalty` with the rest of D10's options. Verify
       with a test asserting the body's `format` **equals** `output_shape(schema)` rather than merely
       resembling it — key `sheet:selection:structure-is-required-of-every-implementation`.
-- [ ] 5.2 Verify the answer is read from the response body, with a test whose transport returns the
+- [x] 5.2 Verify the answer is read from the response body, with a test whose transport returns the
       sixteen fields as the body's answer string and no separate structured field — key
       `sheet:selection:answer-in-the-body-is-read`. **`answers_from()` already does this; the test is
       what stops a later edit from breaking it.**
-- [ ] 5.3 Verify `done_reason == "length"` is permanent and distinguishable, with a test asserting the
+- [x] 5.3 Verify `done_reason == "length"` is permanent and distinguishable, with a test asserting the
       failure record carries `done_reason` — key `sheet:selection:truncation-is-permanent-and-named`.
-- [ ] 5.4 Verify the artifact records the implementation that ran, with a test asserting the sheet's
+- [x] 5.4 Verify the artifact records the implementation that ran, with a test asserting the sheet's
       `producer.implementation` is `"ollama"` — key `sheet:selection:the-flow-names-the-implementation`.
-- [ ] 5.5 Verify the cascade and the validation are untouched, by a test that an absence clause in the
+- [x] 5.5 Verify the cascade and the validation are untouched, by a test that an absence clause in the
       sorter's answer produces an empty field and a non-vocabulary tag is refused — reusing the existing
       keys, and showing `shared/vocabulary.py` and `shared/fields.py` unmodified in the diff.
 
