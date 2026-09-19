@@ -13,13 +13,16 @@ import pytest
 
 from isekai.foundation.flow import (
     GRAPH_NAME,
+    KNOWN,
     MANIFEST_NAME,
     MANIFEST_VERSION,
     REQUIRED,
+    REQUIRED_HOSTED,
     REQUIRED_NODES,
     SIBLINGS,
     TRANSFERRED_INPUTS,
     Flow,
+    Hosted,
     assemble,
     load_flow,
     manifest_digest,
@@ -530,3 +533,144 @@ def test_the_fields_appear_in_the_order_the_schema_declares(flow: Flow) -> None:
 
     order = [positive.index(f"tag-{i}") for i in range(len(schema.names))]
     assert order == sorted(order)
+
+
+# --- the hosted-model block, and the allowlist --------------------------------
+
+
+@pytest.mark.spec("image-generation:hosted:flow-declares-its-hosted-models")
+def test_a_flow_declaring_hosted_models_is_loaded_with_them(tmp_path: Path) -> None:
+    root = _scratch(
+        tmp_path,
+        hosted={
+            "implementation": "ollama",
+            "reader": "a-reader",
+            "sorter": "a-sorter",
+        },
+    )
+
+    hosted = load_flow("summon-v1", root).hosted
+
+    assert hosted == Hosted(
+        implementation="ollama", reader="a-reader", sorter="a-sorter"
+    )
+
+
+@pytest.mark.spec("image-generation:hosted:flow-declares-its-hosted-models")
+def test_no_value_in_a_hosted_block_is_derived_at_load_time(tmp_path: Path) -> None:
+    """The block is read verbatim: what comes back is what the document said.
+
+    The same property the manifest as a whole has, asserted of the one key this
+    change adds. A derived value here would be a second place the implementation
+    a flow runs on is decided, and the registry is the first.
+    """
+    declared = {"implementation": "x", "reader": "y", "sorter": "z"}
+    root = _scratch(tmp_path, hosted=dict(declared))
+
+    hosted = load_flow("summon-v1", root).hosted
+
+    assert hosted is not None
+    assert vars(hosted) == declared
+
+
+@pytest.mark.spec("image-generation:hosted:absent-block-means-the-default")
+def test_a_flow_declaring_no_hosted_block_reports_none(tmp_path: Path) -> None:
+    root = _scratch(tmp_path)
+
+    assert load_flow("summon-v1", root).hosted is None
+
+
+@pytest.mark.spec("image-generation:hosted:absent-block-means-the-default")
+def test_the_incumbent_flows_declare_no_hosted_block_and_load(
+    flow: Flow,
+) -> None:
+    """Omitting the key is not refused -- which is what leaves both incumbents alone.
+
+    Asserted against the flows that actually ship rather than a scratch copy,
+    because "the version that adds this key edits no existing manifest" is a
+    claim about the tracked directories.
+    """
+    assert flow.hosted is None
+    assert load_flow("conjure-v1").hosted is None
+
+
+@pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")
+def test_an_unrecognised_manifest_key_is_refused_naming_it(tmp_path: Path) -> None:
+    root = _scratch(tmp_path, quality="high")
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-v1", root)
+
+    assert "quality" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")
+def test_refusing_an_unknown_key_does_not_require_the_flow_to_be_executed(
+    tmp_path: Path,
+) -> None:
+    """The graph is gone and the refusal still fires, so nothing read it.
+
+    The same shape as the sibling-file test above: an unknown key is caught by
+    reading the manifest, not by running the flow that carries it.
+    """
+    root = _scratch(tmp_path, quality="high")
+    (root / "summon-v1" / GRAPH_NAME).unlink()
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-v1", root)
+
+    assert "quality" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:manifest:misspelled-hosted-block-is-refused")
+@pytest.mark.parametrize("typo", ["hostd", "Hosted", "host", "hosted_models"])
+def test_a_misspelled_hosted_block_is_refused_rather_than_ignored(
+    tmp_path: Path, typo: str
+) -> None:
+    """The silent path this allowlist exists to close.
+
+    Absent means the default implementation, so without the allowlist a typo is
+    indistinguishable from a deliberate omission and the flow runs the wrong
+    models with a complete, correct-looking run to show for it.
+    """
+    root = _scratch(
+        tmp_path,
+        **{typo: {"implementation": "ollama", "reader": "r", "sorter": "s"}},
+    )
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-v1", root)
+
+    assert typo in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
+@pytest.mark.parametrize("absent", REQUIRED_HOSTED)
+def test_a_hosted_block_missing_one_of_its_three_keys_is_refused(
+    tmp_path: Path, absent: str
+) -> None:
+    """A declared block declares all three, or it is named rather than crashing.
+
+    The shape `prompt`'s fragments are already checked in: an absent key here
+    would otherwise reach the registry as a `KeyError` three frames later.
+    """
+    block = {"implementation": "ollama", "reader": "r", "sorter": "s"}
+    del block[absent]
+    root = _scratch(tmp_path, hosted=block)
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-v1", root)
+
+    assert absent in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:hosted:incumbent-flows-are-unchanged")
+def test_the_manifest_format_version_is_unchanged_by_the_optional_key() -> None:
+    """Optional is what keeps this at 2, and 2 is what keeps the digests still.
+
+    A required key plus a version bump was this change's first shape: it would
+    have re-cut two frozen manifests to record a value that was already implied.
+    """
+    assert MANIFEST_VERSION == 2
+    assert "hosted" in KNOWN
+    assert "hosted" not in REQUIRED

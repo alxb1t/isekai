@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — ⚠️ **OPERATOR** — the three build-time discoveries, before a line of adapter is written
-- [ ] 2 — `flow.py`: the `hosted` block parsed, and every unknown key refused
+- [x] 2 — `flow.py`: the `hosted` block parsed, and every unknown key refused
 - [ ] 3 — `boundary/ollama.py`: the transport, and nothing else
 - [ ] 4 — `OllamaReader`: a photograph in, prose out, no schema
 - [ ] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
@@ -119,16 +119,16 @@ and one of the operator's own photographs.
 
 `specs/image-generation/spec.md`. `design.md` D2, D12.
 
-- [ ] 2.1 Add a frozen `Hosted` value carrying `implementation`, `reader` and `sorter`, and parse the
+- [x] 2.1 Add a frozen `Hosted` value carrying `implementation`, `reader` and `sorter`, and parse the
       optional `hosted` key into `Flow.hosted: Hosted | None`. Verify with a test that a manifest
       declaring the block loads it verbatim and one declaring none yields `None` without a refusal —
       keys `image-generation:hosted:flow-declares-its-hosted-models` and
       `image-generation:hosted:absent-block-means-the-default`.
-- [ ] 2.2 Refuse any top-level manifest key not in `REQUIRED + ("hosted",)`, naming it, without
+- [x] 2.2 Refuse any top-level manifest key not in `REQUIRED + ("hosted",)`, naming it, without
       executing the flow. Verify with a test injecting an unrecognised key and one injecting a near-miss
       spelling of `hosted` — keys `image-generation:manifest:unknown-key-is-refused` and
       `image-generation:manifest:misspelled-hosted-block-is-refused`.
-- [ ] 2.3 Verify `MANIFEST_VERSION` is still `2` and both incumbent `PINNED` digests are unchanged, by
+- [x] 2.3 Verify `MANIFEST_VERSION` is still `2` and both incumbent `PINNED` digests are unchanged, by
       running `tests/test_flow.py` and showing the immutability tests green — key
       `image-generation:hosted:incumbent-flows-are-unchanged`.
 

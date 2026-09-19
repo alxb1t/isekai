@@ -49,6 +49,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **A flow manifest may declare the hosted models its first two stages call — `hosted`, one optional
+  top-level key.** It carries the implementation the reader and sorter are reached through and the model
+  name each of them runs, parsed into a frozen `Hosted` on the loaded flow. Deliberately **not** `models`,
+  which is required and holds the twelve pinned render weights a rented GPU loads: one names a file on
+  disk with a digest behind it, the other a name a host resolves at call time, and nothing behind either
+  hosted name is verified — stated in `Hosted`'s own docstring rather than implied away by sitting beside
+  a digest.
+
+  The implementation is declared **once for both stages, not once per stage**, so *this flow is wholly one
+  implementation* is a property of the document rather than of two lookups that happen to agree. Declaring
+  a block that names fewer than all three is refused naming what is absent, the shape `prompt`'s fragments
+  are already checked in — otherwise it reaches the registry as a `KeyError` three frames later.
+
+  **Optional, and that is what keeps `MANIFEST_VERSION` at `2`.** A required key plus a version bump was
+  this change's first shape: it would have re-cut two frozen manifests to record a value already implied.
+  Both incumbent flows are untouched and carry the digests they had — `summon-v1` at `1d3c206b…`,
+  `conjure-v1` at `260ea7a3…`.
+
+- **A manifest key this build does not read is now refused naming it, rather than silently ignored.**
+  `load_flow` checked for *missing* keys only. Because `hosted` is optional and its absence means the
+  default implementation, a misspelling — `hostd`, `Hosted`, `host` — was **indistinguishable from a
+  deliberate omission**: a flow meant to run one implementation would have run the other and produced a
+  complete, correct-looking run on the wrong models. Every other way of getting that block wrong already
+  fails, an unknown implementation having no entry to resolve and an unreachable one refusing at first
+  call, which left the typo as the only silent path. The refusal names the offending key and lists the
+  nine this build reads, and it fires from reading the manifest alone — asserted with the graph file
+  deleted, so nothing executed the flow to catch it.
+
 - **D7 is decided and stands: the photograph is sent as its own bytes, base64, unresized.** The caveat
   behind this change's `feasible-with-caveats` verdict was that no real photograph had ever been sent
   unresized — the prototype always downscaled through PIL first. One of the operator's own photographs,
