@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { inputDetail, saveDraft } from '../api'
 import type { Budget, InputDetail } from '../types'
 
@@ -33,7 +33,6 @@ export function useSheet() {
   const fields = ref<Record<string, string[]>>({})
   const budget = ref<Budget | null>(null)
   const saved = ref<number | null>(null)
-  const dirty = ref(false)
   /* A save is in flight. The receipt is the only thing on the page that talks
      about saving, so it is also the only place an in-flight save can show. */
   const saving = ref(false)
@@ -61,7 +60,6 @@ export function useSheet() {
     fields.value = { ...body.fields }
     budget.value = body.budget
     saved.value = body.saved
-    dirty.value = false
     loading.value = false
     inFlight = 0
     saving.value = false
@@ -82,7 +80,6 @@ export function useSheet() {
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one.
         saved.value = receipt.saved
-        dirty.value = false
         refusal.value = null
       })
       .catch((reason: Error) => {
@@ -96,7 +93,6 @@ export function useSheet() {
   }
 
   function schedule(): void {
-    dirty.value = true
     if (timer !== undefined) clearTimeout(timer)
     timer = setTimeout(flush, DEBOUNCE)
   }
@@ -144,18 +140,12 @@ export function useSheet() {
     apply(edit)
   }
 
-  const edited = computed(() => done.length > 0)
-
-  watch(fields, () => {}, { deep: true })
-
   return {
     detail,
     fields,
     budget,
     saved,
-    dirty,
     saving,
-    edited,
     refusal,
     loading,
     readonly,

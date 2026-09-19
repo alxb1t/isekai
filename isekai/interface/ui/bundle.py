@@ -28,10 +28,6 @@ from isekai.interface.wiring import REPOSITORY
 
 SOURCE = REPOSITORY / "ui"
 
-DIST = SOURCE / "dist"
-
-MODULES = SOURCE / "node_modules"
-
 BINARY = "npm"
 
 

@@ -25,7 +25,6 @@ const ROWS = 10
 export function useVocabulary() {
   const matches = ref<VocabEntry[]>([])
   const total = ref(0)
-  const failure = ref<string | null>(null)
 
   let timer: ReturnType<typeof setTimeout> | undefined
   // A slow earlier answer must never overwrite a newer one: the operator is
@@ -53,16 +52,14 @@ export function useVocabulary() {
           if (asked !== generation) return
           matches.value = found.matches
           total.value = found.total
-          failure.value = null
         })
-        .catch((reason: Error) => {
+        .catch(() => {
           if (asked !== generation) return
           matches.value = []
           total.value = 0
-          failure.value = reason.message
         })
     }, DEBOUNCE)
   }
 
-  return { matches, total, failure, search, clear }
+  return { matches, total, search, clear }
 }

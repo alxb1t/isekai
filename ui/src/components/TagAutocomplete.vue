@@ -16,7 +16,6 @@ import type { VocabEntry } from '../types'
    ones. Their rows are not reproducible against the real prediction set --
    `blonde` returns two tags here, not four. */
 defineProps<{
-  fragment: string
   matches: VocabEntry[]
   total: number
   vocabulary: number

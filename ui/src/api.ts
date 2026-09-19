@@ -7,8 +7,11 @@
 
 import type { BatchInfo, Budget, InputDetail, TagMatches } from './types'
 
-async function get<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+/* One place where a `Refusal` stops being HTTP and becomes an error carrying the
+   pipeline's own string. `app.py` answers every refusal the same way, so this
+   unwraps it the same way for every verb. */
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init)
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { refusal?: string }
     throw new Error(body.refusal ?? `${url} answered ${response.status}`)
@@ -16,17 +19,16 @@ async function get<T>(url: string): Promise<T> {
   return (await response.json()) as T
 }
 
-async function send<T>(url: string, method: string, body: unknown): Promise<T> {
-  const response = await fetch(url, {
+function get<T>(url: string): Promise<T> {
+  return request<T>(url)
+}
+
+function send<T>(url: string, method: string, body: unknown): Promise<T> {
+  return request<T>(url, {
     method,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!response.ok) {
-    const failed = (await response.json().catch(() => ({}))) as { refusal?: string }
-    throw new Error(failed.refusal ?? `${url} answered ${response.status}`)
-  }
-  return (await response.json()) as T
 }
 
 export function tags(fragment: string, limit: number): Promise<TagMatches> {
@@ -54,7 +56,7 @@ export function saveDraft(
 
 export function approve(
   id: string,
-): Promise<{ approved: string | null; warnings: string[]; at: number | null; count: number }> {
+): Promise<{ approved: string | null; warnings: string[]; at: number | null }> {
   return send(`/api/inputs/${encodeURIComponent(id)}/approve`, 'POST', {})
 }
 

@@ -13,13 +13,11 @@ import { approve as post } from '../api'
  */
 export function useApproval() {
   const at = ref<number | null>(null)
-  const warnings = ref<string[]>([])
   const refusal = ref<string | null>(null)
   const working = ref(false)
 
   function forget(): void {
     at.value = null
-    warnings.value = []
     refusal.value = null
   }
 
@@ -28,7 +26,6 @@ export function useApproval() {
     try {
       const receipt = await post(id)
       at.value = receipt.at
-      warnings.value = receipt.warnings
       refusal.value = null
       return true
     } catch (reason) {
@@ -39,5 +36,5 @@ export function useApproval() {
     }
   }
 
-  return { at, warnings, refusal, working, approve, forget }
+  return { at, refusal, working, approve, forget }
 }

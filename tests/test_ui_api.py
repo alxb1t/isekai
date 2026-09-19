@@ -77,7 +77,7 @@ def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    return TestClient(create_app(wired, batch))
+    return TestClient(create_app(batch))
 
 
 # --- the batch, and the payload the page is drawn from ------------------------
@@ -226,7 +226,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    reopened = TestClient(create_app(wired, batch))
+    reopened = TestClient(create_app(batch))
 
     body = reopened.get(f"/api/inputs/{made.id}").json()
 

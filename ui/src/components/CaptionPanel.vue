@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { paragraphsOf, wordsOf } from '../caption'
 
 /* All paragraphs, expanded.
 
@@ -10,11 +11,9 @@ import { computed } from 'vue'
    inventing the mapping in the browser. */
 const props = defineProps<{ prose: string | null; loading?: boolean }>()
 
-const paragraphs = computed(() =>
-  (props.prose ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
-)
+const paragraphs = computed(() => paragraphsOf(props.prose))
 
-const words = computed(() => (props.prose ?? '').split(/\s+/).filter(Boolean).length)
+const words = computed(() => wordsOf(props.prose))
 </script>
 
 <template>

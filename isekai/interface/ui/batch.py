@@ -27,16 +27,16 @@ from pathlib import Path
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    APPROVED,
     CAPTIONS,
     FRAME_NAME,
     REVIEW,
-    SHEETS,
     Run,
     across,
-    approved_versions,
+    latest_artifact,
 )
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.review import draft_versions, review
+from isekai.pipeline.review import DRAFT, review
 from isekai.shared.image import image_dimensions
 from isekai.shared.vocabulary import Vocabulary
 
@@ -87,34 +87,20 @@ class Batch:
 
     def caption_path(self, held: Input) -> Path | None:
         """Return the highest caption for this input, or None if there is none."""
-        return _highest(held.run.directory(self.flow.id, CAPTIONS), "*.json")
-
-    def sheet_path(self, held: Input) -> Path | None:
-        """Return the highest sheet for this input, or None if there is none."""
-        return _highest(held.run.directory(self.flow.id, SHEETS), "*.json")
+        return latest_artifact(held.run.directory(self.flow.id, CAPTIONS))
 
     def draft_path(self, held: Input) -> Path | None:
         """Return the draft waiting for this input, or None once it is approved."""
-        return _highest(held.run.directory(self.flow.id, REVIEW), "*.draft.json")
+        return latest_artifact(held.run.directory(self.flow.id, REVIEW), DRAFT)
 
     def approved_path(self, held: Input) -> Path | None:
         """Return this input's approved artifact, or None while it is still a draft."""
-        return _highest(held.run.directory(self.flow.id, REVIEW), "*.approved.json")
-
-    def approved(self, held: Input) -> int | None:
-        """Return the approved version for this input, read from the directory."""
-        versions = approved_versions(held.run.directory(self.flow.id, REVIEW))
-        return versions[-1] if versions else None
-
-    def draft(self, held: Input) -> int | None:
-        """Return the draft version waiting for this input, read from the directory."""
-        versions = draft_versions(held.run.directory(self.flow.id, REVIEW))
-        return versions[-1] if versions else None
+        return latest_artifact(held.run.directory(self.flow.id, REVIEW), APPROVED)
 
     @property
     def approved_count(self) -> int:
         """Return how many of the batch's inputs are approved, from disk."""
-        return sum(1 for held in self.inputs if self.approved(held) is not None)
+        return sum(1 for held in self.inputs if self.approved_path(held) is not None)
 
 
 def establish(
@@ -170,16 +156,3 @@ def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:
     review(run, flow)
     width, height = image_dimensions(str(run.photo))
     return Input(run, width, height)
-
-
-def _highest(directory: Path, pattern: str) -> Path | None:
-    """Return the last artifact in `directory` matching `pattern`, by name.
-
-    By glob rather than by building a filename from a version number: this
-    package names no artifact, and the numbers are zero-padded, so sorting the
-    names sorts the versions (design.md D11).
-    """
-    if not directory.is_dir():
-        return None
-    found = sorted(directory.glob(pattern))
-    return found[-1] if found else None

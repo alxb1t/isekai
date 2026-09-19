@@ -159,7 +159,7 @@ def test_starting_the_surface_takes_a_draft_and_starting_again_takes_no_second(
     batch = establish(wired, FLOW, [made.id], bundle=_bundle)
 
     assert (directory / "001.draft.json").is_file()
-    assert batch.draft(batch.inputs[0]) == 1
+    assert batch.draft_path(batch.inputs[0]) == directory / "001.draft.json"
 
     establish(wired, FLOW, [made.id], bundle=_bundle)
 
@@ -205,8 +205,8 @@ def test_the_approved_count_follows_the_directory_not_the_batch_in_memory(
     approve(first, FLOW, schema, vocabulary)
 
     assert batch.approved_count == 1
-    assert batch.approved(batch.find(first.id)) == 1
-    assert batch.approved(batch.find(second.id)) is None
+    assert batch.approved_path(batch.find(first.id)) is not None
+    assert batch.approved_path(batch.find(second.id)) is None
 
 
 @pytest.mark.spec("ui:batch:no-batch-artifact-is-written")

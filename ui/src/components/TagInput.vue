@@ -48,8 +48,6 @@ function reset(): void {
   clear()
 }
 
-defineExpose({ reset, fragment })
-
 function onKey(event: KeyboardEvent): void {
   if (event.key === 'ArrowDown' && open.value) {
     event.preventDefault()
@@ -120,7 +118,6 @@ function onKey(event: KeyboardEvent): void {
   />
   <TagAutocomplete
     v-if="open"
-    :fragment="fragment"
     :matches="matches"
     :total="total"
     :vocabulary="vocabulary"

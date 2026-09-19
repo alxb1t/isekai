@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { paragraphsOf, wordsOf } from '../caption'
 
 /* A lens over the review screen, not a step in it. Nothing here can change the
    sheet, so leaving is never a decision -- esc, a click anywhere, or the ×.
@@ -27,11 +28,9 @@ const actual = ref(false)
 const available = 860
 const percent = computed(() => Math.round((available / props.height) * 100))
 
-const paragraphs = computed(() =>
-  (props.caption ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
-)
+const paragraphs = computed(() => paragraphsOf(props.caption))
 
-const words = computed(() => (props.caption ?? '').split(/\s+/).filter(Boolean).length)
+const words = computed(() => wordsOf(props.caption))
 </script>
 
 <template>

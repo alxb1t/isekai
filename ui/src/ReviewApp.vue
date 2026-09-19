@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { photoUrl } from './api'
+import { inputDetail, photoUrl } from './api'
 import AppHeader from './components/AppHeader.vue'
 import ApproveBar from './components/ApproveBar.vue'
 import BatchRail from './components/BatchRail.vue'
@@ -13,7 +13,6 @@ import TagInput from './components/TagInput.vue'
 import { useApproval } from './composables/useApproval'
 import { useBatch } from './composables/useBatch'
 import { useSheet } from './composables/useSheet'
-import { inputDetail } from './api'
 import type { ApprovedSheet } from './types'
 
 /* The root. It shows exactly one of the loading state, the review layout, or
@@ -47,7 +46,7 @@ const focused = ref<string | null>(null)
    the caption should land on the field they went to read about, not on the top
    of the sheet. Cleared when the input changes. */
 const lastField = ref<string | null>(null)
-const pane = ref<Pane>('rail')
+let pane: Pane = 'rail'
 const source = ref<HTMLElement | null>(null)
 const overlay = ref(false)
 const manifest = ref(false)
@@ -122,8 +121,8 @@ async function approve(): Promise<void> {
   // what the operator last typed rather than from what happened to be on disk.
   sheet.flush()
   if (!(await approval.approve(id))) return
-  await batch.refresh()
-  await sheet.open(id)
+  // Neither depends on the other's answer; both depend only on the POST landing.
+  await Promise.all([batch.refresh(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
   // Approving the last unapproved input opens the manifest, because at that
@@ -167,11 +166,11 @@ function paneNow(): Pane {
     if (active.closest('.source')) return 'source'
     if (active.closest('.form')) return 'sheet'
   }
-  return pane.value
+  return pane
 }
 
 function enter(next: Pane): void {
-  pane.value = next
+  pane = next
   if (next === 'rail') {
     document
       .querySelector<HTMLElement>('.rail__card--current')
@@ -180,7 +179,7 @@ function enter(next: Pane): void {
     source.value?.focus()
   } else {
     const order = batch.info.value?.schema ?? []
-    const field = focused.value ?? lastField.value ?? order[0]
+    const field = lastField.value ?? order[0]
     if (field) document.querySelector<HTMLInputElement>(`input.fragment[data-field="${field}"]`)?.focus()
   }
 }

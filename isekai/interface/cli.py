@@ -40,7 +40,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
@@ -56,6 +56,8 @@ from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
 # so the two cannot disagree about what a stage does.
+T = TypeVar("T")
+
 VERBS: tuple[tuple[str, str], ...] = (
     ("caption", "read a photograph into descriptive prose"),
     ("sheet", "sort a caption into a sheet of canonical tags"),
@@ -242,11 +244,7 @@ def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
     """
     from isekai.interface.ui import serve
 
-    try:
-        return serve(wired, str(args.flow), targets, port=int(args.port))
-    except Refusal as refused:
-        print(f"refused: {refused}", file=wired.err)
-        return 1
+    return serve(wired, str(args.flow), targets, port=int(args.port))
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
@@ -301,12 +299,13 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     """
     verb = str(args.verb)
     targets = list(args.photos)
-    if verb == "ui":
-        return _ui(args, wired, targets)
     # Resolved before the first identifier is looked at, so an untracked flow or
     # a broken manifest refuses without opening a run -- and on `generate`,
-    # without renting anything.
+    # without renting anything. The serving verb resolves its own single flow
+    # inside `establish`, so it is answered before that.
     try:
+        if verb == "ui":
+            return _ui(args, wired, targets)
         flows = _flows_for(args, wired)
     except Refusal as unselectable:
         print(f"refused: {unselectable}", file=wired.err)
@@ -318,6 +317,22 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
+
+
+def _seam(value: T | None, name: str, does: str) -> T:
+    """Return a wiring seam the verb in hand cannot run without, or refuse.
+
+    `reader` and `sorter` are optional on `Wiring` because a front end that
+    serves stage (3) alone reaches no hosted model and would otherwise fabricate
+    doubles it never calls. The verbs that *do* call one say so here, in one
+    place, rather than each inlining the same guard.
+    """
+    if value is None:
+        raise Refusal(
+            f"this wiring was composed without a {name}, and the verb {does} "
+            f"through one"
+        )
+    return value
 
 
 def _per_item(
@@ -345,12 +360,7 @@ def _per_item(
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
-            reader = wired.reader
-            if reader is None:
-                raise Refusal(
-                    "this wiring was composed without a reader, and `caption` "
-                    "reads the photograph through one"
-                )
+            reader = _seam(wired.reader, "reader", "reads the photograph")
             for name, flow in flows.items():
                 _say(
                     wired,
@@ -365,12 +375,7 @@ def _per_item(
                     ),
                 )
         elif verb == "sheet":
-            sorter = wired.sorter
-            if sorter is None:
-                raise Refusal(
-                    "this wiring was composed without a sorter, and `sheet` "
-                    "fills the sheet through one"
-                )
+            sorter = _seam(wired.sorter, "sorter", "fills the sheet")
             for name, flow in flows.items():
                 _say(
                     wired,

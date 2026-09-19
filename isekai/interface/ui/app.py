@@ -38,8 +38,7 @@ from fastapi.staticfiles import StaticFiles
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import read_artifact
 from isekai.interface.ui.batch import Batch, Input
-from isekai.interface.wiring import Wiring
-from isekai.pipeline.review import approve, save_draft, token_budget
+from isekai.pipeline.review import TokenBudget, approve, save_draft, token_budget
 
 # The dropdown's `· rare` marker. This number exists nowhere else in the
 # repository: the vocabulary ranks by post count and never calls anything rare,
@@ -60,7 +59,7 @@ DEFAULT_LIMIT = 10
 REFUSED = 409
 
 
-def create_app(wired: Wiring, batch: Batch) -> FastAPI:
+def create_app(batch: Batch) -> FastAPI:
     """Return the review surface's application, bound to one established batch."""
     app = FastAPI(title="isekai review", docs_url=None, redoc_url=None)
 
@@ -72,12 +71,14 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
     @app.get("/api/batch")
     def read_batch() -> dict[str, Any]:
         """Describe the batch: its flow, its schema, its inputs and their state."""
+        # Once per input, not twice: the count is what the summaries already say.
+        summaries = [_summary(batch, held) for held in batch.inputs]
         return {
             "flow": batch.flow.id,
             "schema": list(batch.flow.schema.names),
             "vocabulary": len(batch.vocabulary),
-            "approved": batch.approved_count,
-            "inputs": [_summary(batch, held) for held in batch.inputs],
+            "approved": sum(1 for held in summaries if held["status"] == "approved"),
+            "inputs": summaries,
         }
 
     @app.get("/api/tags")
@@ -92,12 +93,9 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
         found = batch.vocabulary.search(fragment) if fragment else []
         return {
             "matches": [
-                {
-                    "tag": tag,
-                    "posts": batch.vocabulary.count(tag),
-                    "rare": batch.vocabulary.count(tag) < RARE_BELOW,
-                }
+                {"tag": tag, "posts": posts, "rare": posts < RARE_BELOW}
                 for tag in found[: max(limit, 0)]
+                if (posts := batch.vocabulary.count(tag)) is not None
             ],
             "total": len(found),
         }
@@ -141,11 +139,7 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
             # in for: `approve()` unlinks the draft, so once an input is
             # approved `saved` has nothing left to report.
             "approved_at": _saved(approved),
-            "budget": {
-                "total": budget.total,
-                "per_field": dict(budget.per_field),
-                "overhead": budget.overhead,
-            },
+            "budget": _budget(budget),
         }
 
     @app.get("/api/inputs/{identifier}/photo")
@@ -171,11 +165,7 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
         return {
             "draft": written.name,
             "saved": _saved(written),
-            "budget": {
-                "total": budget.total,
-                "per_field": dict(budget.per_field),
-                "overhead": budget.overhead,
-            },
+            "budget": _budget(budget),
         }
 
     @app.post("/api/inputs/{identifier}/approve")
@@ -189,7 +179,6 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
             "approved": written.name if written else None,
             "warnings": warnings,
             "at": _saved(written),
-            "count": batch.approved_count,
         }
 
     # Mounted last, so every `/api/` path above wins. `html=True` is what makes a
@@ -200,12 +189,20 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
 
 def _summary(batch: Batch, held: Input) -> dict[str, Any]:
     """Describe one input for the rail: its size, and where it is in stage ③."""
-    approved = batch.approved(held)
     return {
         "id": held.id,
         "width": held.width,
         "height": held.height,
-        "status": "approved" if approved is not None else "draft",
+        "status": "approved" if batch.approved_path(held) is not None else "draft",
+    }
+
+
+def _budget(budget: TokenBudget) -> dict[str, Any]:
+    """Describe a token budget. One spelling, so two endpoints cannot disagree."""
+    return {
+        "total": budget.total,
+        "per_field": dict(budget.per_field),
+        "overhead": budget.overhead,
     }
 
 

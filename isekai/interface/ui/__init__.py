@@ -49,5 +49,5 @@ def serve(wired: Wiring, flow: str, identifiers: Sequence[str], *, port: int) ->
         f"{batch.approved_count} approved -- http://{HOST}:{port}",
         file=wired.out,
     )
-    run(create_app(wired, batch), host=HOST, port=port)
+    run(create_app(batch), host=HOST, port=port)
     return 0
