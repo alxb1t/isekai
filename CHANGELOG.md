@@ -25,6 +25,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Verified
+
+- **The acceptance run: three photographs through ①②③④, corrected in the browser, rendered from one
+  boot — and the corrections reached the images.** Six hosted-model calls (three captions, three
+  sorts), every sheet corrected and approved on the review surface, then three renders at one named
+  seed. **All three sheets record `edited: true`**, and the corrections were substantive rather than
+  cosmetic: `cowboy-shoot` lost eight wrong `background` tags — `meadow`, `white`/`yellow`/`pink`/
+  `purple`/`grey background`, `forest`, `clear sky` — for `outdoors`, `flower field`, `mountain`, and
+  gained `lace trim` for `lace` and `denim shorts` for `denim`. **The operator's judgement on 13.6:
+  the renders reflect the corrections and not the sorter's draft.**
+- **13.4, the abort check, answered yes.** Correcting on this surface was faster and better informed
+  than `$EDITOR`: the autocomplete makes it clear which tag to reach for, and the post count and the
+  live token number changed decisions that would otherwise have been made blind. The version's claim —
+  *a sheet is corrected on a surface that knows the vocabulary* — is earned rather than asserted.
+- **Metered: two pod sessions, `19m19s` + `13m50s`, ~$0.23 + ~$0.17 ≈ ~$0.40 at $0.72/hr**, both
+  confirmed torn down through the RunPod MCP (`list-pods` → `[]`, `get-pod` → `404 pod not found`).
+  **The first session produced nothing and is recorded because it is the measurement.** A fresh 20 GB
+  network volume had to be provisioned, and the mirror `download_models.sh` drew the 6.94 GB
+  checkpoint from ran at **7.6 MB/s** — against the ~37 MB/s the v0.17 acceptance measured for the
+  same manifest from the same datacenter. At that rate the fetch alone was 32 minutes, which no longer fit
+  a 45-minute ceiling after a 6m35s boot, so the session was **halted at the projection rather than at
+  the wall** and torn down at 19m19s.
+- **The second session drew at ~48 MB/s and did everything in one boot**: 3m41s to SSH, 14.47 GB
+  provisioned and ComfyUI answering at 6m21s, three renders in 3m31s, torn down at 13m50s — inside the
+  original ceiling. Same datacenter, same manifest, twenty minutes apart, so **the first session's rate
+  was a slow mirror and not the account or the link**.
+- **A provisioning fetch is not resumable, and that is what made the first failure total.**
+  `scripts/download_models.sh:65` is `wget -q -O "${target}.partial"` with no `-c`; the checkpoint is
+  the manifest's first and largest entry, so nothing had landed and verified when the session was cut
+  and all 4.61 GB was lost. Recorded rather than fixed: it is a one-flag change to a tracked script
+  with a test of its own, and it is outside this change's scope.
+
 ### Added
 
 - **The keyboard model the operator asked for, which separates the two axes.** `Alt+↑`/`Alt+↓` move

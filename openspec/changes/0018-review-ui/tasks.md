@@ -14,7 +14,7 @@
 - [x] 10 — Vue: the overlay, the loading state, the manifest
 - [x] 11 — The docs this version makes false
 - [x] 12 — The free walkthrough: the surface end to end, on data that already exists
-- [ ] 13 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance run
+- [x] 13 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance run
 
 ## The per-phase ritual
 
@@ -426,7 +426,7 @@ hosted-model half is six calls — three captions and three sorts — at the rat
 already bill; it is cents, and it is not what the ceiling is for. **Exceeding the ceiling is a halt, not
 a judgement call.**
 
-- [ ] 13.1 ⛔ **HALT. Run nothing in this phase until the operator has answered.** Stop here and ask
+- [x] 13.1 ⛔ **HALT. Run nothing in this phase until the operator has answered.** Stop here and ask
       them for three things, then wait:
       1. **Three photographs**, placed where they want the run root to be, and the `--runs` path to use.
       2. **Confirmation that spending is fine now** — this phase calls a hosted model six times and
@@ -434,35 +434,35 @@ a judgement call.**
       3. **An explicit go.** Silence is not a go, and neither is *"looks good"* on the phase before it.
       **Do not prepare the photographs yourself, do not pick substitutes from `.data/`, and do not
       proceed on the assumption that phase 12's approval covers this.**
-- [ ] 13.2 ⚠️ **METERED — hosted model.** With the operator's photographs and their `--runs` path:
+- [x] 13.2 ⚠️ **METERED — hosted model.** With the operator's photographs and their `--runs` path:
       ```
       uv run python -m isekai caption <photos…> --flow summon-v1 --runs <root>
       uv run python -m isekai sheet   <ids…>   --flow summon-v1 --runs <root>
       ```
       Verify three captions and three sheets exist, and paste the run ids — the surface needs them.
-- [ ] 13.3 **The acceptance.** Start the surface on those three inputs, **correct every sheet in the
+- [x] 13.3 **The acceptance.** Start the surface on those three inputs, **correct every sheet in the
       browser against the photograph, and approve each one.** Verify: three `001.approved.json` on disk
       and no drafts left. **If every sheet approves, the version works** — `review.approve()` is the only
       writer of an approved artifact whatever calls it, so the only thing the UI controls is the draft's
       contents.
-- [ ] 13.4 ⚠️ **ABORT CHECK — this is the one task that can change the version's verdict.** Before the
+- [x] 13.4 ⚠️ **ABORT CHECK — this is the one task that can change the version's verdict.** Before the
       pod: the operator confirms that correcting on this surface was **faster and better informed** than
       `$EDITOR` would have been — that the post count and the live token number changed a decision they
       would otherwise have made blind. **If it did not, say so and halt.** The version's whole claim is
       *a sheet is corrected on a surface that knows the vocabulary*; a surface nobody prefers has not
       earned the deprecation of the hand path.
-- [ ] 13.5 ⚠️ **GPU** — one session, announced before `infra/up.sh` and torn down with
+- [x] 13.5 ⚠️ **GPU** — one session, announced before `infra/up.sh` and torn down with
       `infra/down.sh` in the same session:
       ```
       uv run python -m isekai generate <ids…> --flow summon-v1 --seed <N> --server <addr> --runs <root>
       ```
       Download the outputs before teardown, tear down, and **confirm the account is empty through the
       RunPod MCP, recording what it returned.** Verify three renders from **one** boot.
-- [ ] 13.6 **By eye, and this is the version's product judgement:** the renders reflect the corrections
+- [x] 13.6 **By eye, and this is the version's product judgement:** the renders reflect the corrections
       made in the browser rather than the sorter's draft. A tag the operator added is visible; a tag they
       removed is gone. **This is the only evidence that the surface changed the output rather than just
       the file.**
-- [ ] 13.7 Record the session's duration and actual cost in `CHANGELOG.md`, and the answer to 13.4
+- [x] 13.7 Record the session's duration and actual cost in `CHANGELOG.md`, and the answer to 13.4
       alongside them.
-- [ ] 13.8 Verify the gate: `make gate`
-- [ ] 13.9 Verify the change is well-formed: `openspec validate 0018-review-ui --strict` — **exits 0.**
+- [x] 13.8 Verify the gate: `make gate`
+- [x] 13.9 Verify the change is well-formed: `openspec validate 0018-review-ui --strict` — **exits 0.**
