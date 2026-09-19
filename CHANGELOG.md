@@ -27,6 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The keyboard model the operator asked for, which separates the two axes.** `Alt+↑`/`Alt+↓` move
+  through the batch; `Alt+←`/`Alt+→` move focus across the three panes — rail, photograph, sheet — and
+  inside a pane the plain arrows do that pane's own thing: change the input, scroll the caption, walk
+  the rows. Returning to the sheet lands on the row it was left on. **This overturns one line of
+  `ux-flow.md`**, which gave `Alt+←/→` to the batch: the rail is a vertical list, so vertical is the
+  batch, and horizontal is the one movement the design had no binding for at all — getting to the
+  caption to read it and back to the field being typed.
+- **A spinner on the draft receipt while a save is in flight**, and the saved time to the minute. The
+  slot is a fixed width, so the line never shifts between the two. It is counted rather than flagged: a
+  second `PUT` can start before the first answers, so it clears when the last one lands. The approved
+  receipt keeps its seconds — it is written once and is the one a human would quote, while the draft's
+  is rewritten every few seconds under the eye. `prefers-reduced-motion` stops the rotation. **This is
+  the one piece of motion on the page**; the design's *no spinner, no shimmer* is written about the
+  page-level load, and an in-flight save has no drawn state at all.
 - **The photo overlay, the loading state and the run manifest.** `PhotoOverlay` is teleported to body on
   a ground of `color-mix(in srgb, var(--color-bg) 72%, black)`, with **no `.lighten` blend** — this is the
   one place the photograph must be seen as it is, because it is where colour is judged. `Fit` / `1:1
@@ -89,6 +103,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A click anywhere in a row focuses that field, `↑`/`↓` walk the rows, and `Esc` keeps the focus.**
+  The fragment input is sized to its content so the caret sits immediately after the text, which left
+  an empty field with a click target one character wide. `Esc` now also stops propagating, so nothing
+  above the input acts on an `Esc` the dropdown already answered.
 - **The manifest's `approved` column was blank.** `saved` reports the draft's own time and `approve()`
   unlinks the draft, so `GET /api/inputs/{id}` now reports `approved_at` beside it.
 - **One caret, not two.** The fragment carried a 1px accent `border-right` *and* the browser's own

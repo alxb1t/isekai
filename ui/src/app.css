@@ -76,6 +76,40 @@ body {
   color: var(--color-neutral-500);
 }
 
+/* `· saved 14:30` is thirteen characters; the slot holds that whether it is
+   showing the time, the spinner, or nothing yet. */
+.receipt__when {
+  display: inline-block;
+  min-width: 13ch;
+  /* The gap belongs to the slot, not to the text inside it, so the spinner and
+     the time it gives way to start at exactly the same place. */
+  margin-left: 0.6ch;
+}
+
+/* The accent as a line, never a flood: three-quarters of a ring, turning. */
+.spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  vertical-align: -1px;
+  border: 1px solid var(--color-accent-800);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
 .app-header__receipt--approved {
   color: var(--color-accent-300);
 }
@@ -199,6 +233,17 @@ body {
   padding: var(--space-6);
   border-right: 1px solid var(--color-neutral-900);
   overflow-y: auto;
+}
+
+/* The focus ring is not decoration here either -- it is how the operator knows
+   which pane the plain arrows will act on. Inset, so a 620px column does not
+   paint a ring outside itself. */
+.source:focus-visible {
+  outline-offset: -2px;
+}
+
+.rail__card:focus-visible {
+  outline-offset: -2px;
 }
 
 .source--portrait {

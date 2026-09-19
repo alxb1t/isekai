@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import CaptionPanel from './CaptionPanel.vue'
 import PhotoFrame from './PhotoFrame.vue'
 
@@ -18,10 +18,24 @@ const props = defineProps<{
 defineEmits<{ open: [] }>()
 
 const landscape = computed(() => props.width > props.height)
+
+/* `ref="source"` on a component hands back the component, not its element, and
+   `Alt+→` has to focus and scroll the real one. */
+const element = ref<HTMLElement | null>(null)
+
+defineExpose({
+  focus: () => element.value?.focus(),
+  scrollBy: (options: ScrollToOptions) => element.value?.scrollBy(options),
+})
 </script>
 
 <template>
-  <aside class="source" :class="landscape ? 'source--landscape' : 'source--portrait'">
+  <aside
+    class="source"
+    :class="landscape ? 'source--landscape' : 'source--portrait'"
+    tabindex="0"
+    ref="element"
+  >
     <div class="source__head">
       <span class="kicker">① photograph</span>
       <span class="source__meta mono">

@@ -169,6 +169,9 @@ def test_an_empty_fragment_returns_nothing_rather_than_everything(
 ) -> None:
     body = client.get("/api/tags", params={"q": "  "}).json()
 
+    # The dropdown appears on the first keystroke and not before. An empty
+    # fragment is contained by every tag, so answering it literally would be
+    # the 8,106-tag transfer this endpoint exists to delete.
     assert body["matches"] == []
     assert body["total"] == 0
 

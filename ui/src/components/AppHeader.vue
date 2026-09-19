@@ -16,6 +16,7 @@ defineProps<{
   saved: string | null
   approvedName: string | null
   approvedAt: string | null
+  saving: boolean
   refusal: string | null
 }>()
 
@@ -31,7 +32,15 @@ defineSlots<{ status?: () => unknown }>()
       </span>
       <slot name="status" />
       <div class="app-header__receipts mono">
-        <span v-if="draft">{{ draft }}<template v-if="saved"> · saved {{ saved }}</template></span>
+        <!-- Fixed width, so the line does not shift when the spinner gives way
+             to the time it was waiting for. -->
+        <span v-if="draft"
+          >{{ draft
+          }}<span class="receipt__when">
+            <span v-if="saving" class="spinner" aria-label="saving" />
+            <template v-else-if="saved">· saved {{ saved }}</template>
+          </span></span
+        >
         <span v-if="approvedName" class="app-header__receipt--approved">
           {{ approvedName }}<template v-if="approvedAt"> · approved {{ approvedAt }}</template>
         </span>

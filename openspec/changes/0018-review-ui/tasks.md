@@ -13,7 +13,7 @@
 - [x] 9 — Vue: approve, read-only, and the refusal line
 - [x] 10 — Vue: the overlay, the loading state, the manifest
 - [x] 11 — The docs this version makes false
-- [ ] 12 — The free walkthrough: the surface end to end, on data that already exists
+- [x] 12 — The free walkthrough: the surface end to end, on data that already exists
 - [ ] 13 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance run
 
 ## The per-phase ritual
@@ -375,24 +375,24 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > called and no pod is rented. **It is the gate in front of phase 13** — a defect found here costs
 > nothing, and the same defect found after the pod is up costs a session.
 
-- [ ] 12.1 Build the walkthrough root from existing data. Verify:
+- [x] 12.1 Build the walkthrough root from existing data. Verify:
       ```
       rm -rf .data/v0.18 && mkdir -p .data/v0.18 && cp -R .data/v0.17/runs .data/v0.18/runs
       rm -rf .data/v0.18/runs/*/summon-v1/review .data/v0.18/runs/*/conjure-v1/review
       ls .data/v0.18/runs/*/summon-v1/sheets/
       ```
       Expect four inputs, each with `001.json` and no review directory.
-- [ ] 12.2 Start the surface and paste what it prints. Verify:
+- [x] 12.2 Start the surface and paste what it prints. Verify:
       ```
       uv run --extra ui python -m isekai ui \
         e831676b7ccf_cowboy-shoot-1 147ea6d5604b_full-height-1 4965a5b47b45_cowboy-shoot-3 \
         --flow summon-v1 --runs .data/v0.18/runs
       ```
       Expect a URL and nothing else — **every refusal lands before it.**
-- [ ] 12.3 **Correct and approve all three in the browser.** Verify on disk:
+- [x] 12.3 **Correct and approve all three in the browser.** Verify on disk:
       `ls .data/v0.18/runs/*/summon-v1/review/` — **three `001.approved.json`, and no
       `001.draft.json` left.**
-- [ ] 12.4 Verify at least one sheet records that a human changed it:
+- [x] 12.4 Verify at least one sheet records that a human changed it:
       ```
       uv run python -c "
       from pathlib import Path
@@ -402,18 +402,18 @@ build order, the three things that are easy to get wrong and the keyboard model.
       "
       ```
       — **at least one `True`.**
-- [ ] 12.5 **The all-empty sheet.** `bf0b95dba4d6_cowboy-shoot-2`'s summon sheet has every field empty —
+- [x] 12.5 **The all-empty sheet.** `bf0b95dba4d6_cowboy-shoot-2`'s summon sheet has every field empty —
       2 tokens. Open it and confirm sixteen hollow rings, the word `empty` sixteen times, **no empties
       action anywhere**, and that it approves.
-- [ ] 12.6 **The 21-field schema.** Run the surface once for `4965a5b47b45_cowboy-shoot-3` with
+- [x] 12.6 **The 21-field schema.** Run the surface once for `4965a5b47b45_cowboy-shoot-3` with
       `--flow conjure-v1` — it is one of the three inputs that carries a conjure sheet — and confirm all
       21 rows fit a 1000px viewport without scrolling. The record claimed they would not; the
       measurement says they do.
-- [ ] 12.7 **Read-only is real.** Reopen the surface against the same root. Every input opens read-only,
+- [x] 12.7 **Read-only is real.** Reopen the surface against the same root. Every input opens read-only,
       named by its approved artifact, and nothing offers to edit it.
-- [ ] 12.8 **The refusal line is real.** With an input approved, `PUT` a draft to it from a second tab.
+- [x] 12.8 **The refusal line is real.** With an input approved, `PUT` a draft to it from a second tab.
       **Refused, the line appears carrying the `Refusal` verbatim, and nothing on disk changed.**
-- [ ] 12.9 Verify the gate: `make gate`
+- [x] 12.9 Verify the gate: `make gate`
 
 ## 13. ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance run
 

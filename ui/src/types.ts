@@ -15,9 +15,6 @@ export interface BatchInput {
 export interface BatchInfo {
   flow: string
   schema: string[]
-  /* Per field, the word the schema says its tags are spelled with -- `hair` for
-     `hair_colour`, `eyebrows` for `eyebrows` -- or null where it declares none. */
-  suffixes: Record<string, string | null>
   vocabulary: number
   approved: number
   inputs: BatchInput[]

@@ -17,8 +17,6 @@ const props = defineProps<{
   field: string
   vocabulary: number
   focused: boolean
-  /* The word the schema says this field's tags are spelled with, or null. */
-  hint: string | null
   chips: number
   selected: number | null
 }>()
@@ -34,6 +32,7 @@ const emit = defineEmits<{
 
 const fragment = ref('')
 const selected = ref(0)
+const box = ref<HTMLInputElement | null>(null)
 const { matches, total, search, clear } = useVocabulary()
 
 const open = computed(() => props.focused && matches.value.length > 0)
@@ -71,19 +70,26 @@ function onKey(event: KeyboardEvent): void {
     emit('commit', matches.value[selected.value].tag)
     reset()
   } else if (event.key === 'Escape') {
-    // Esc closes the dropdown and keeps the fragment; Esc again clears it.
+    /* Esc closes the dropdown and keeps the fragment; Esc again clears it.
+
+       It stops here rather than bubbling: nothing above this input should act
+       on an Esc the dropdown answered, least of all the photo overlay's
+       handler. And the focus is re-asserted rather than assumed -- the operator
+       reported losing it, and the next thing they press is `↓` to walk on to
+       the next field, which only reaches the sheet if this input still holds
+       it. A `.focus()` on the already-focused element costs nothing. */
     event.preventDefault()
+    event.stopPropagation()
     if (matches.value.length) clear()
     else fragment.value = ''
-  } else if (event.key === ' ' && fragment.value === '' && props.hint) {
-    /* Space on an empty field types the word the schema says the field is
-       spelled with, so the operator can see what fits before knowing what to
-       ask for. It is a shortcut for typing that word, not a second ranking:
-       the rows are `vocabulary.search()`'s, in `vocabulary.search()`'s order,
-       exactly as any other fragment. A field the schema gives no suffix gets
-       nothing, because there would be nothing honest to put there. */
+    box.value?.focus()
+  } else if (event.key === ' ' && fragment.value === '') {
+    /* A leading space can only ever match nothing -- every tag in the
+       vocabulary is normalised, so none starts with one -- and a fragment that
+       is only whitespace would sit in the field looking like a fragment. The
+       key is swallowed. The dropdown appears on the first real keystroke and
+       not before. */
     event.preventDefault()
-    fragment.value = props.hint
   } else if (event.key === 'Backspace' && fragment.value === '') {
     emit('back')
   } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !fragment.value) {
@@ -100,6 +106,7 @@ function onKey(event: KeyboardEvent): void {
 
 <template>
   <input
+    ref="box"
     v-model="fragment"
     class="fragment"
     type="text"

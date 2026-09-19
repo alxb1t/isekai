@@ -34,11 +34,17 @@ export function useSheet() {
   const budget = ref<Budget | null>(null)
   const saved = ref<number | null>(null)
   const dirty = ref(false)
+  /* A save is in flight. The receipt is the only thing on the page that talks
+     about saving, so it is also the only place an in-flight save can show. */
+  const saving = ref(false)
   const refusal = ref<string | null>(null)
   const loading = ref(true)
 
   const done: Edit[] = []
   const undone: Edit[] = []
+  // Counted, not a flag: a second PUT can start before the first has answered,
+  // and the spinner must go when the last one lands rather than the first.
+  let inFlight = 0
   let timer: ReturnType<typeof setTimeout> | undefined
   let current = ''
 
@@ -57,6 +63,8 @@ export function useSheet() {
     saved.value = body.saved
     dirty.value = false
     loading.value = false
+    inFlight = 0
+    saving.value = false
   }
 
   function flush(): void {
@@ -65,6 +73,8 @@ export function useSheet() {
     if (detail.value === null || detail.value.readonly) return
     const id = current
     const payload = { ...fields.value }
+    inFlight += 1
+    saving.value = true
     saveDraft(id, payload)
       .then((receipt) => {
         if (current !== id) return
@@ -78,6 +88,10 @@ export function useSheet() {
       .catch((reason: Error) => {
         if (current !== id) return
         refusal.value = reason.message
+      })
+      .finally(() => {
+        inFlight -= 1
+        if (inFlight === 0) saving.value = false
       })
   }
 
@@ -140,6 +154,7 @@ export function useSheet() {
     budget,
     saved,
     dirty,
+    saving,
     edited,
     refusal,
     loading,

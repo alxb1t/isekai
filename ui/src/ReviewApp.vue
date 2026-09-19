@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { photoUrl } from './api'
 import AppHeader from './components/AppHeader.vue'
 import ApproveBar from './components/ApproveBar.vue'
@@ -27,7 +27,28 @@ const batch = useBatch()
 const sheet = useSheet()
 const approval = useApproval()
 
+/* Three panes, left to right: the rail, the photograph and its caption, the
+   sheet. `Alt+←/→` moves between them and `Alt+↑/↓` moves through the batch;
+   inside a pane the plain arrows do that pane's own thing — scroll the caption,
+   walk the rows, change the input.
+
+   **This overturns the design's keyboard model on one binding.** `ux-flow.md`
+   gives `Alt+←/→` to the batch. The operator asked for the axes to separate:
+   the rail is a vertical list, so vertical is the batch, and horizontal is the
+   one movement the design had no binding for at all — getting to the caption to
+   read it, and back to the field being typed. */
+type Pane = 'rail' | 'source' | 'sheet'
+
+const PANES: Pane[] = ['rail', 'source', 'sheet']
+
 const focused = ref<string | null>(null)
+/* Where the sheet was left. `focused` is cleared on blur, because the row
+   highlight must not survive the operator leaving it -- but coming back from
+   the caption should land on the field they went to read about, not on the top
+   of the sheet. Cleared when the input changes. */
+const lastField = ref<string | null>(null)
+const pane = ref<Pane>('rail')
+const source = ref<HTMLElement | null>(null)
 const overlay = ref(false)
 const manifest = ref(false)
 const sheets = ref<ApprovedSheet[]>([])
@@ -35,6 +56,19 @@ const selectedChip = ref<number | null>(null)
 
 const clock = (at: number | null) =>
   at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
+
+/* The draft's time to the minute. It is rewritten every few seconds while the
+   operator types, and a seconds field that ticks under the eye is noise; the
+   approved time keeps its seconds, because it is written once and is the
+   receipt someone might quote. */
+const minute = (at: number | null) =>
+  at === null
+    ? null
+    : new Date(at * 1000).toLocaleTimeString('en-GB', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+      })
 
 const flow = computed(() => batch.info.value?.flow ?? '')
 
@@ -111,6 +145,7 @@ const chips = (field: string | null) => (field ? (sheet.fields.value[field] ?? [
 
 function focus(field: string): void {
   focused.value = field
+  lastField.value = field
   selectedChip.value = null
 }
 
@@ -120,6 +155,39 @@ function step(direction: -1 | 1): void {
   const at = selectedChip.value
   if (at === null) selectedChip.value = direction === -1 ? count - 1 : 0
   else selectedChip.value = (at + direction + count) % count
+}
+
+/* Which pane holds the focus, read from the document rather than remembered:
+   the operator can click into any of them, and a remembered answer would send
+   the next `Alt+→` from somewhere they are not. */
+function paneNow(): Pane {
+  const active = document.activeElement
+  if (active instanceof HTMLElement) {
+    if (active.closest('.rail')) return 'rail'
+    if (active.closest('.source')) return 'source'
+    if (active.closest('.form')) return 'sheet'
+  }
+  return pane.value
+}
+
+function enter(next: Pane): void {
+  pane.value = next
+  if (next === 'rail') {
+    document
+      .querySelector<HTMLElement>('.rail__card--current')
+      ?.focus()
+  } else if (next === 'source') {
+    source.value?.focus()
+  } else {
+    const order = batch.info.value?.schema ?? []
+    const field = focused.value ?? lastField.value ?? order[0]
+    if (field) document.querySelector<HTMLInputElement>(`input.fragment[data-field="${field}"]`)?.focus()
+  }
+}
+
+function movePane(direction: -1 | 1): void {
+  const at = PANES.indexOf(paneNow())
+  enter(PANES[Math.min(Math.max(at + direction, 0), PANES.length - 1)])
 }
 
 /* The manifest is the closing screen, and it is read from the directory rather
@@ -176,14 +244,27 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault()
     if (event.shiftKey) sheet.redo()
     else sheet.undo()
-  } else if (
-    event.altKey &&
-    ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)
-  ) {
-    // Either axis moves through the batch: the rail is a vertical list and the
-    // photographs read left to right, so both readings of "next" are true.
+  } else if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+    // The rail is a vertical list, so vertical is the batch.
     event.preventDefault()
-    batch.step(event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1)
+    batch.step(event.key === 'ArrowUp' ? -1 : 1)
+  } else if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    event.preventDefault()
+    movePane(event.key === 'ArrowLeft' ? -1 : 1)
+  } else if (
+    !event.altKey &&
+    !meta &&
+    (event.key === 'ArrowUp' || event.key === 'ArrowDown')
+  ) {
+    const here = paneNow()
+    if (here === 'rail') {
+      // A list answers its own arrows.
+      event.preventDefault()
+      batch.step(event.key === 'ArrowUp' ? -1 : 1)
+    } else if (here === 'source') {
+      event.preventDefault()
+      source.value?.scrollBy({ top: event.key === 'ArrowUp' ? -120 : 120 })
+    }
   } else if (meta && event.key === 'Enter') {
     event.preventDefault()
     void approve()
@@ -206,6 +287,9 @@ onMounted(async () => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('beforeunload', onLeave)
   await batch.load()
+  // The rail first: it is where the operator decides what they are looking at.
+  await nextTick()
+  enter('rail')
 })
 
 onUnmounted(() => {
@@ -220,8 +304,9 @@ watch(batch.current, (id) => {
   focused.value = null
   selectedChip.value = null
   approval.forget()
+  lastField.value = null
   lastDraft.value = null
-  void sheet.open(id)
+  void sheet.open(id).then(() => enter(paneNow()))
 })
 </script>
 
@@ -232,7 +317,8 @@ watch(batch.current, (id) => {
       :inputs="batch.inputs.value.length"
       :approved="batch.info.value?.approved ?? 0"
       :draft="receipt"
-      :saved="clock(lastDraft?.saved ?? null)"
+      :saved="minute(lastDraft?.saved ?? null)"
+      :saving="sheet.saving.value"
       :approved-name="approvedReceipt"
       :approved-at="clock(approval.at.value)"
       :refusal="approval.refusal.value ?? sheet.refusal.value ?? batch.failure.value"
@@ -274,6 +360,7 @@ watch(batch.current, (id) => {
       <template v-else>
       <SourcePanel
         v-if="showing"
+        ref="source"
         :id="showing.id"
         :width="showing.width"
         :height="showing.height"
@@ -299,7 +386,6 @@ watch(batch.current, (id) => {
             :vocabulary="batch.info.value?.vocabulary ?? 0"
             :field="field"
             :focused="focused === field"
-            :hint="batch.info.value?.suffixes[field] ?? null"
             :chips="chips(field)"
             :selected="focused === field ? selectedChip : null"
             @focus="focus(field)"

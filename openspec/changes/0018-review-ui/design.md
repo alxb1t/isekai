@@ -567,6 +567,16 @@ Deferred, each with what it blocks:
 - **The second-sheet path** — needs `review()` preferring a newer sheet, `generate` selecting a version,
   and the scoring that makes a comparison mean anything. **Blocks: correcting an approved sheet, and
   comparing two sorters on one photograph.**
+- **A per-field tag cheatsheet**, asked for during the build and deferred on **data rather than on
+  effort**: the overlay is small, and nothing in this repository is a machine-readable list of the tags
+  that suit a field. Measured while building the autocomplete — the schema's `suffix` covers 6 fields
+  of 16; the field name is noise (`age` reaches `cleavage` and `bandages`, `gaze` and `framing` reach
+  nothing); and `sheet.briefing.md` does name good tags per field but as prose written for a model to
+  read. So the change is a **new tracked artifact per flow**, and `flows/<id>/` is five flat files and
+  immutable with a digest covering every regular file in it, committed at `tests/test_flow.py:30` — a
+  sixth file is a new flow, not a variant. **Blocks: nothing.** Its own trigger is v0.19: scoring is
+  what could answer *most suited* by measurement instead of by taste, so curating the list before it
+  would be guessing.
 - **The remedy-parsing check** — **Blocks: `cli:refusals:refusal-names-the-remedy` being enforced rather
   than honour-system.** v0.18.1.
 - **Pool theme B and v0.21's `session()`**, and `review/R10` with them — **Blocks: a generate button in

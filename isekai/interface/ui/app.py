@@ -75,13 +75,6 @@ def create_app(wired: Wiring, batch: Batch) -> FastAPI:
         return {
             "flow": batch.flow.id,
             "schema": list(batch.flow.schema.names),
-            # What each field's tags are spelled with, where the schema declares
-            # it. The surface uses it as a starting fragment for a field the
-            # operator has not typed in yet; it is not a ranking, and the
-            # vocabulary's own order is still the order.
-            "suffixes": {
-                field.name: field.suffix for field in batch.flow.schema.fields
-            },
             "vocabulary": len(batch.vocabulary),
             "approved": batch.approved_count,
             "inputs": [_summary(batch, held) for held in batch.inputs],
