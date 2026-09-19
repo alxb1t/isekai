@@ -4,7 +4,7 @@
 
 - [x] 1 — The nine `## Purpose` lines, before anything is folded
 - [x] 2 — `security/S1`: containment decided by identity, not by text
-- [ ] 3 — `wiring_from()`, and the seams a ③-only caller does not need
+- [x] 3 — `wiring_from()`, and the seams a ③-only caller does not need
 - [ ] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
 - [ ] 5 — The server and the verb
 - [ ] 6 — Vue: shell, tokens, rail, and the read-only sheet
@@ -111,16 +111,16 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > builds `Wiring(...)` directly the way the suite does would skip it, and a server is exactly the thing
 > that should not.
 
-- [ ] 3.1 Add `wiring_from(*, runs: Path, server: str | None = None) -> Wiring` to
+- [x] 3.1 Add `wiring_from(*, runs: Path, server: str | None = None) -> Wiring` to
       `isekai/interface/wiring.py`, carrying the `_check_run_root` call and the construction.
       Reduce `wiring(args)` to `return wiring_from(runs=args.runs, server=getattr(args, "server", None))`.
-- [ ] 3.2 Make `reader` and `sorter` optional on `Wiring`, following `client`'s precedent. A ③-only
+- [x] 3.2 Make `reader` and `sorter` optional on `Wiring`, following `client`'s precedent. A ③-only
       server fabricating a `ClaudeReader()` it never calls is a lie in the code.
-- [ ] 3.3 Verify the guard cannot be skipped by the new door, bound to
+- [x] 3.3 Verify the guard cannot be skipped by the new door, bound to
       `run-directory:containment:in-tree-run-root-is-refused`: `wiring_from(runs=<in-tree path>)` refuses.
       Verify: `uv run pytest tests/ -k wiring_from -v`
-- [ ] 3.4 Verify no call site changed meaning: `uv run pytest tests/test_pipeline_cli.py tests/test_generate.py tests/test_resume.py tests/test_run_directory.py`
-- [ ] 3.5 Verify the gate: `make gate`
+- [x] 3.4 Verify no call site changed meaning: `uv run pytest tests/test_pipeline_cli.py tests/test_generate.py tests/test_resume.py tests/test_run_directory.py`
+- [x] 3.5 Verify the gate: `make gate`
 
 ## 4. `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
 

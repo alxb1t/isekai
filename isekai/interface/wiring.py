@@ -45,8 +45,12 @@ class Wiring:
     moved and nothing was called -- provable without a GPU or a network.
     """
 
-    reader: Reader
-    sorter: Sorter
+    # `reader` and `sorter` follow `client`'s precedent and may be absent. A front
+    # end that only serves stage ③ reaches no hosted model at all, and fabricating
+    # a `ClaudeReader()` it never calls would be a lie in the code -- so the verbs
+    # that do reach one say so at their own call site instead.
+    reader: Reader | None
+    sorter: Sorter | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
@@ -126,20 +130,35 @@ def _check_run_root(runs: Path) -> None:
         )
 
 
-def wiring(args: argparse.Namespace) -> Wiring:
-    """Build the real wiring: the hosted reader and sorter, and the HTTP transport.
+def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
+    """Build the real wiring from values, with no `Namespace` anywhere in sight.
+
+    The argv-free half, so that a front end which never parses a command line can
+    still only reach a `Wiring` through `_check_run_root`. The UI server is that
+    front end: building the dataclass directly, the way the suite does, would walk
+    straight past the one guard that bounds where a copy of the photograph may be
+    written -- and a server is exactly the thing that should not be able to
+    (design.md D1).
 
     The vocabulary is read here rather than inside a stage, because reading a file
     is I/O and the stages are the part that must stay testable without any. A
     schema is not composed here at all: it sits inside the flow that uses it, so a
     loaded `Flow` already answers for its own.
     """
-    server = getattr(args, "server", None)
-    _check_run_root(args.runs)
+    _check_run_root(runs)
     return Wiring(
         reader=ClaudeReader(),
         sorter=ClaudeSorter(),
         client=ComfyClient(server) if server else None,
         vocabulary=load_vocabulary,
-        runs_root=args.runs,
+        runs_root=runs,
     )
+
+
+def wiring(args: argparse.Namespace) -> Wiring:
+    """Build the real wiring from a parsed command line.
+
+    `getattr` rather than `args.server`: only `generate` declares the flag, so the
+    attribute is genuinely absent on every other verb's namespace.
+    """
+    return wiring_from(runs=args.runs, server=getattr(args, "server", None))

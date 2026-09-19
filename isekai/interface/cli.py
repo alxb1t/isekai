@@ -265,6 +265,12 @@ def _per_item(
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
+            reader = wired.reader
+            if reader is None:
+                raise Refusal(
+                    "this wiring was composed without a reader, and `caption` "
+                    "reads the photograph through one"
+                )
             for name, flow in flows.items():
                 _say(
                     wired,
@@ -273,12 +279,18 @@ def _per_item(
                     caption(
                         run,
                         name,
-                        wired.reader,
+                        reader,
                         briefing_path=flow.caption_briefing_path,
                         new_version=new_version,
                     ),
                 )
         elif verb == "sheet":
+            sorter = wired.sorter
+            if sorter is None:
+                raise Refusal(
+                    "this wiring was composed without a sorter, and `sheet` "
+                    "fills the sheet through one"
+                )
             for name, flow in flows.items():
                 _say(
                     wired,
@@ -287,7 +299,7 @@ def _per_item(
                     sheet(
                         run,
                         name,
-                        wired.sorter,
+                        sorter,
                         flow.schema,
                         vocabulary(),
                         briefing_path=flow.sheet_briefing_path,

@@ -44,7 +44,7 @@ from isekai.foundation.run import (
     write_json,
 )
 from isekai.interface.cli import build_parser
-from isekai.interface.wiring import Wiring, wiring
+from isekai.interface.wiring import Wiring, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact, render
 from isekai.pipeline.review import approve, review
@@ -737,6 +737,23 @@ def test_containment_is_decided_by_identity_not_by_the_text_of_the_path() -> Non
         _wiring("--runs", str(inside))
 
     assert ".data" in str(refused.value)
+    assert not inside.exists()
+
+
+@pytest.mark.spec("run-directory:containment:in-tree-run-root-is-refused")
+def test_wiring_from_cannot_be_used_to_skip_the_containment_guard() -> None:
+    """The argv-free door is the same door.
+
+    `wiring_from` exists so a front end that never parses a command line still
+    cannot compose a `Wiring` without this check -- which is the whole reason the
+    extraction was made, so it is asserted rather than assumed (design.md D1).
+    """
+    inside = REPO / "acceptance-runs"
+
+    with pytest.raises(Refusal) as refused:
+        wiring_from(runs=inside)
+
+    assert str(inside) in str(refused.value)
     assert not inside.exists()
 
 

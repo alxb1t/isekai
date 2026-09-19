@@ -25,6 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`wiring_from(*, runs, server=None)` — the argv-free half of the composition root.** `wiring(args)`
+  is now one line over it. A second front end cannot reach a `Wiring` without passing through
+  `_check_run_root`: building the dataclass directly, the way the suite does in three modules, walks
+  straight past the one guard that bounds where a copy of the photograph may be written, and a server
+  is exactly the thing that should not be able to. Asserted, not assumed — `wiring_from(runs=<in-tree
+  path>)` refuses.
+
+### Changed
+
+- **`reader` and `sorter` are optional on `Wiring`, following `client`'s precedent.** A front end that
+  serves stage ③ alone reaches no hosted model, and fabricating a `ClaudeReader()` it never calls would
+  be a lie in the code. The two verbs that do reach one — `caption` and `sheet` — say so at their own
+  call site and refuse naming the missing seam, rather than the dataclass insisting for everyone.
+
 ### Fixed
 
 - **`security/S1`: the run-root containment guard is decided by directory identity, not by the text of
