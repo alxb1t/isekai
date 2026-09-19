@@ -1,0 +1,51 @@
+# The `ollama create` recipe for the open reader — JoyCaption Beta One, the Q4_K
+# quantisation paired with its SigLIP2 vision projector. Stage ① of the
+# `summon-open-v1` flow calls the model this file builds.
+#
+# Committed because it was never in the repository and cannot be reconstructed
+# from it: the two-`FROM` projector pairing is undocumented in Ollama's own
+# import and modelfile docs, and the model is a machine-local alias rather than a
+# registry tag. Recovered from the operator's live model on 2026-09-19 with
+#   ollama show --modelfile joycaption-beta-one-q4k
+# and cross-checked against the prototype's own `models/joycaption/Modelfile`.
+#
+# ── the two artifacts, which this repository does not carry ────────────────────
+# `models/` is gitignored; fetch both from
+#   https://huggingface.co/concedo/llama-joycaption-beta-one-hf-llava-mmproj-gguf
+#   at revision acfe6bf78ae4e411cd5c7c8f4a71ba01f26a5b97
+# into `models/joycaption/`, and verify the bytes:
+#
+#   e8ae55dd07e61d541ab741d6ed63e7810192cea65d7ef8cda69b2a99fb06dc15  4920735936
+#     Llama-Joycaption-Beta-One-Hf-Llava-Q4_K.gguf
+#   94002cb5c354c7c9e538e64f37d593db9eceeca2e94573bae6cd3b2bd8bb1952   877771808
+#     llama-joycaption-beta-one-llava-mmproj-model-f16.gguf
+#
+# **That repository is the only requantisation that ships the projector.** The
+# two most-cited alternatives contain no `mmproj` at all, and the source repo's
+# own README misnames the projector as `…-Llava-F16.gguf`, which is the 16 GB
+# full-precision *text* model — pairing by that instruction gives a 21 GB
+# download and no vision. A model without its projector loads, answers fluently
+# and cannot see the photograph, and the failure is silent: after creating it,
+# check `ollama show` lists `vision` under Capabilities **and** prints a
+# Projector block.
+#
+# ── the two commands, from the repository root ────────────────────────────────
+#
+#   ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
+#   ollama pull qwen3:8b
+#
+# The first builds the reader, stage ①. The second fetches the sorter, stage ② —
+# a public registry tag, which is why it needs no recipe of its own.
+#
+# ── why the TEMPLATE line is here when the original did not carry one ─────────
+# The quantisation ships no chat template, so Ollama defaults to passing the
+# prompt through verbatim — which `ollama show --modelfile` renders as the line
+# below. The prototype relied on that default and its measured captions were
+# produced under it, so it is load-bearing. Stating it explicitly pins the
+# behaviour to this file instead of to a version of Ollama.
+#
+# Order matters: the quantisation first, the projector second.
+
+FROM ../models/joycaption/Llama-Joycaption-Beta-One-Hf-Llava-Q4_K.gguf
+FROM ../models/joycaption/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf
+TEMPLATE {{ .Prompt }}

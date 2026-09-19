@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — ⚠️ **OPERATOR** — the three build-time discoveries, before a line of adapter is written
+- [x] 1 — ⚠️ **OPERATOR** — the three build-time discoveries, before a line of adapter is written
 - [ ] 2 — `flow.py`: the `hosted` block parsed, and every unknown key refused
 - [ ] 3 — `boundary/ollama.py`: the transport, and nothing else
 - [ ] 4 — `OllamaReader`: a photograph in, prose out, no schema
@@ -96,22 +96,22 @@ and one of the operator's own photographs.
 **Nothing is committed here except the Modelfile.** Throwaway scripts go in `/tmp`, not in the tree.
 `design.md` D3, D7, and the Risks table.
 
-- [ ] 1.1 Recover the reader's recipe from the operator's live model — `ollama show --modelfile
+- [x] 1.1 Recover the reader's recipe from the operator's live model — `ollama show --modelfile
       <reader>` — and commit it as `scripts/joycaption.Modelfile`, verifying that `ollama create` from
       the committed file reproduces a model that answers. **The original was never committed and the
       two-`FROM` projector pairing is undocumented; any `TEMPLATE` or `PARAMETER` line it carries is
       load-bearing and recoverable only this way.**
-- [ ] 1.2 Confirm the reader can see, by `ollama show` listing `vision` under Capabilities **and** a
+- [x] 1.2 Confirm the reader can see, by `ollama show` listing `vision` under Capabilities **and** a
       projector block, plus one eye-colour question about one photograph whose answer the operator can
       check. **A LLaVA-family model with no projector loads, answers fluently and describes nothing** —
       verify sight before anything is built on it.
-- [ ] 1.3 **Decide D7.** Send one of the operator's own full-size photographs to `/api/generate` as
+- [x] 1.3 **Decide D7.** Send one of the operator's own full-size photographs to `/api/generate` as
       unresized base64 from a throwaway stdlib script, and record the body size, the wall-clock time and
       whether the host accepted it. **If it is rejected or unworkably slow, D7's fallback is taken** —
       PIL as a function-local import with a refusal naming the install — **and that is a dependency
       decision the operator makes and amends `design.md` D7 with, before phase 4 starts.** Verify by
       pasting the real body size, the real timing and the first line of the caption.
-- [ ] 1.4 Record in `scripts/joycaption.Modelfile`'s header comment, or beside it, the exact
+- [x] 1.4 Record in `scripts/joycaption.Modelfile`'s header comment, or beside it, the exact
       `ollama create` and `ollama pull` commands for both models, verified by running them from a state
       where neither model exists.
 

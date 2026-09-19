@@ -25,6 +25,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/joycaption.Modelfile` — the open reader's `ollama create` recipe, recovered from the
+  operator's live model because it was never committed.** The two-`FROM` projector pairing is
+  undocumented in Ollama's own import and modelfile docs, and the model is a machine-local alias rather
+  than a registry tag, so the recipe is the only thing that makes the name in a flow manifest mean
+  something. It sits beside `models.json` and `download_models.sh`, where provisioning artifacts already
+  live, rather than inside a flow directory — a flow is **five flat files** and that structural
+  requirement is not weakened to house a file nothing reads.
+
+  Recovered with `ollama show --modelfile`, and the recovery found one thing the on-disk original did not
+  state: **`TEMPLATE {{ .Prompt }}`**. The quantisation ships no chat template, so Ollama passed the
+  prompt through verbatim and every measured caption was produced under that default. The committed file
+  states it, pinning the behaviour to the recipe instead of to a version of Ollama. The two `FROM` lines
+  name the GGUFs by repository-relative path — **the `ollama show` output addresses them through the
+  operator's own content-addressed blob store, and a real absolute path from the machine a run is on is
+  not committed here.** Both forms build a byte-identical model: same two layer digests, same config
+  layer `b507b9c2f6ca…`.
+
+  Its header carries the two commands the release notes will repeat — `ollama create` for the reader,
+  `ollama pull qwen3:8b` for the sorter — with both artifacts' sha256 and byte counts, their pinned
+  source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
+  missing loads, answers fluently and cannot see the photograph.
+
+- **D7 is decided and stands: the photograph is sent as its own bytes, base64, unresized.** The caveat
+  behind this change's `feasible-with-caveats` verdict was that no real photograph had ever been sent
+  unresized — the prototype always downscaled through PIL first. One of the operator's own photographs,
+  3.08 MB on disk, made a **4.11 MB** POST that `/api/generate` **accepted, HTTP 200 in 12.3 s**, with
+  `done_reason` `stop` and a caption that describes the photograph. **No runtime dependency is added**,
+  and D7's contingency — PIL as a function-local import — is not taken.
+
 ## [0.18.0] - 2026-09-19
 
 ### Fixed
