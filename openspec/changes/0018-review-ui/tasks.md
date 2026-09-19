@@ -5,7 +5,7 @@
 - [x] 1 — The nine `## Purpose` lines, before anything is folded
 - [x] 2 — `security/S1`: containment decided by identity, not by text
 - [x] 3 — `wiring_from()`, and the seams a ③-only caller does not need
-- [ ] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
+- [x] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
 - [ ] 5 — The server and the verb
 - [ ] 6 — Vue: shell, tokens, rail, and the read-only sheet
 - [ ] 7 — Vue: the autocomplete
@@ -128,18 +128,18 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > opened once.** `approve()` and `estimate_tokens` are **not** touched — that is what keeps all 26
 > `approve` call sites standing.
 
-- [ ] 4.1 Write the tests first, in `tests/test_review.py`, bound to the six `review:draft-update:*` and
+- [x] 4.1 Write the tests first, in `tests/test_review.py`, bound to the six `review:draft-update:*` and
       `review:budget:*` keys in `specs/review/spec.md`. Verify:
       `uv run pytest tests/test_review.py -k "draft_update or budget"` — **fails, for the stated reasons.**
-- [ ] 4.2 Add `save_draft(run, flow, fields)`. It replaces the highest draft's `fields` in place, keeps
+- [x] 4.2 Add `save_draft(run, flow, fields)`. It replaces the highest draft's `fields` in place, keeps
       the version and the recorded `sheet`, and **refuses a payload whose key set differs from the
       draft's** — `set(fields) != set(existing["fields"])`. It refuses when no draft exists. It does not
       create one: `review()` owns that.
-- [ ] 4.3 Add `TokenBudget(total, per_field, overhead)` and `token_budget(fields, schema, flow)`.
+- [x] 4.3 Add `TokenBudget(total, per_field, overhead)` and `token_budget(fields, schema, flow)`.
       `total` is counted over `assemble(fields, schema.names, flow)[0]`; `per_field[name]` is that
       field's words plus one separator per tag; `overhead` is `total - sum(per_field.values())`.
       **Leave `estimate_tokens` byte-identical** — it is `approve()`'s and it stays wrong on purpose.
-- [ ] 4.4 Verify the numbers reconcile against real data. Verify:
+- [x] 4.4 Verify the numbers reconcile against real data. Verify:
       ```
       uv run python -c "
       from isekai.foundation.flow import load_flow
@@ -155,7 +155,7 @@ build order, the three things that are easy to get wrong and the keyboard model.
       ```
       Expect the two printed totals on line 1 to be **equal**, and the old estimate to be **lower by
       roughly nineteen**.
-- [ ] 4.5 Repair `review.py:112` — it names `python -m isekai sheet`, which exits 2 because `--flow` is
+- [x] 4.5 Repair `review.py:112` — it names `python -m isekai sheet`, which exits 2 because `--flow` is
       required. Make it name `python -m isekai sheet --flow {flow}`. **Verify in two steps, never by
       running the verb** — running `sheet` for real calls a paid model. Verify the string changed:
       `grep -n "isekai sheet --flow" isekai/pipeline/review.py` — **one hit.**
@@ -169,11 +169,11 @@ build order, the three things that are easy to get wrong and the keyboard model.
       "
       ```
       Expect **`the remedy parses`** and no `SystemExit`.
-- [ ] 4.6 Repair `review.py:224` — it names `{REVIEW}/{flow}/`, the stage-first layout v0.16 deleted.
+- [x] 4.6 Repair `review.py:224` — it names `{REVIEW}/{flow}/`, the stage-first layout v0.16 deleted.
       Make it `{flow}/{REVIEW}/`. Verify: `uv run pytest tests/test_review.py -k overwritten -v`
-- [ ] 4.7 Verify the whole review suite and the remedy allowlist:
+- [x] 4.7 Verify the whole review suite and the remedy allowlist:
       `uv run pytest tests/test_review.py tests/test_resume.py`
-- [ ] 4.8 Verify the gate: `make gate`
+- [x] 4.8 Verify the gate: `make gate`
 
 ## 5. The server and the verb
 

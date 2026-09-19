@@ -27,6 +27,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`review.save_draft(run, flow, fields)` — one owner for an in-place draft update.** It replaces the
+  highest draft's field values, keeps the version number and the sheet the draft records, and **does
+  not create**: `review()` owns that, and a second creator would spend a version number on a stray
+  keypress. It refuses an update whose field-name set differs from the draft's, which turns two of the
+  four ways a sheet can be invalid at approval — a missing field, and a field the schema does not have
+  — from a property the editing surface is trusted to have into a property of the write path, for one
+  comparison and without opening the validator. It refuses when no draft exists, which is also what a
+  stale tab meets after an input has been approved.
+- **`review.token_budget(fields, schema, flow)` → `TokenBudget(total, per_field, overhead)`.** The
+  total is counted over `assemble()`'s own positive prompt, so the flow's prefix, its trailer and the
+  separators that join them fall out of one rule instead of being added back by hand. Measured on a
+  real sheet: **100 against `estimate_tokens`' 81** — the tags-alone count understates what the text
+  encoder reads by nineteen tokens against a window of seventy-seven, so a sheet reported comfortably
+  inside the budget was in fact past it and silently chunked. The per-field shares and the overhead sum
+  to the total by construction, because the operator's question while correcting is never *how many
+  tokens* but *which tag goes*. `estimate_tokens` and `approve()`'s warning are **untouched**, so all
+  26 `approve` call sites stand.
 - **`wiring_from(*, runs, server=None)` — the argv-free half of the composition root.** `wiring(args)`
   is now one line over it. A second front end cannot reach a `Wiring` without passing through
   `_check_run_root`: building the dataclass directly, the way the suite does in three modules, walks
@@ -43,6 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Two refusal strings in `review.py` that named something that does not work.** `review()`'s
+  no-sheet refusal told the operator to run `python -m isekai sheet`, which exits 2 because `--flow` is
+  required — and the review surface calls `review()` once per input at startup, so *you forgot to run
+  `isekai sheet`* is this version's likeliest message. It now names `python -m isekai sheet --flow
+  <flow>`, verified through `build_parser()` rather than by running the verb, which would call a paid
+  model. And `approve()`'s already-approved refusal named `review/<flow>/`, the stage-first layout v0.16
+  deleted; it now names `<flow>/review/`.
 - **`security/S1`: the run-root containment guard is decided by directory identity, not by the text of
   a path.** `Path.resolve()` follows symlinks and drops `..` segments but does **not** fold case, so on
   the case-insensitive filesystem this project is developed on, `--runs` naming a directory inside the
