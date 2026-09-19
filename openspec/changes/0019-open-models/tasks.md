@@ -10,7 +10,7 @@
 - [x] 6 — The registries, and the resolution moved inside the flow loop
 - [x] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
 - [x] 8 — The isolation proof, in the suite, non-vacuous
-- [ ] 9 — The documents this version makes false
+- [x] 9 — The documents this version makes false
 - [ ] 10 — ⚠️ **HUMAN · FREE** — the open flow end to end, stopping before the pod
 - [ ] 11 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance render
 
@@ -245,17 +245,17 @@ and one of the operator's own photographs.
 
 ## 9. The documents this version makes false
 
-- [ ] 9.1 `README.md` and `CLAUDE.md`: Ollama named as the third system dependency beside `claude` and
+- [x] 9.1 `README.md` and `CLAUDE.md`: Ollama named as the third system dependency beside `claude` and
       `node`, with the two `ollama create` / `ollama pull` commands and the `scripts/joycaption.Modelfile`
       path. Verify by following the written instructions on a machine where neither model exists.
-- [ ] 9.2 The release notes state the two things this version does **not** check and hands to the
+- [x] 9.2 The release notes state the two things this version does **not** check and hands to the
       operator: **read the first caption against the photograph** — the only detector for a reader whose
       projector is missing — and **pass an explicit `--seed`** for any run meant to be compared, because
       each flow otherwise draws its own even at `--count 1`.
-- [ ] 9.3 Strike the roadmap's `v0.19` claims this version does not deliver — *"both readers pinned"* and
+- [x] 9.3 Strike the roadmap's `v0.19` claims this version does not deliver — *"both readers pinned"* and
       `--model`/`--effort` for the Claude arm — naming where each went. Verify by `grep` that no document
       still claims either.
-- [ ] 9.4 Correct *"both stdlib over HTTPS"* wherever it appears: it is **HTTP to localhost**, and there
+- [x] 9.4 Correct *"both stdlib over HTTPS"* wherever it appears: it is **HTTP to localhost**, and there
       is no TLS and should not be.
 
 ## 10. ⚠️ HUMAN · FREE — the open flow end to end, stopping before the pod

@@ -25,6 +25,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release notes — two things this version does not check, and hands to the operator
+
+**① Read the first caption against the photograph.** Nothing here detects a reader whose vision
+projector is missing. Such a model loads, reports no error, answers fluently and **describes nothing**
+— it writes a plausible portrait because that is what the prompt implies, and a digest cannot catch it
+because the file is the file that was pinned. After `ollama create`, `ollama show` must list `vision`
+under Capabilities **and** print a Projector block; after the first `caption`, read the prose against
+the picture. It is also the only check on the two briefings, which are **authored rather than ported**:
+the prompt that produced the measured captions is gitignored and was never on this branch, and how an
+8B fine-tune follows a long structured briefing is the untested variable of this version.
+
+**② Pass an explicit `--seed` for any run meant to be compared.** Each flow draws its own seed, **even
+at `--count 1`**, so the same photograph through `summon-v1` and `summon-open-v1` renders at two
+different seeds and the difference between the two images is not attributable to the arms. This
+version deliberately measures nothing and claims nothing about which arm is better; a comparison that
+matters needs the seed fixed by hand.
+
 ### Added
 
 - **`scripts/joycaption.Modelfile` — the open reader's `ollama create` recipe, recovered from the
@@ -263,6 +280,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3.08 MB on disk, made a **4.11 MB** POST that `/api/generate` **accepted, HTTP 200 in 12.3 s**, with
   `done_reason` `stop` and a caption that describes the photograph. **No runtime dependency is added**,
   and D7's contingency — PIL as a function-local import — is not taken.
+
+### Changed
+
+- **`README.md` and `CLAUDE.md`: Ollama is named as the third system dependency**, beside `claude` and
+  `node`, with the two commands that create both models, the `scripts/joycaption.Modelfile` path, and
+  the projector check to make after the first. README's work-in-progress banner is replaced: the first
+  two stages **are** open now, on the flow that declares them, and a clone with no Anthropic
+  subscription can run the whole pipeline. Three further CLAUDE.md claims this version falsified are
+  corrected — `ComfyTransport` is no longer *"the network boundary, and the only one"*, `boundary/`
+  lists `ollama.py`, and `flows/summon-v1/` is no longer *"the only one"* (it had not been since
+  `conjure-v1`).
+
+- **The roadmap's v0.19 claims are struck where this version does not deliver them.** *"Both readers
+  pinned"* is **withdrawn**: `hosted` names two models and verifies no bytes behind either, which is
+  recorded as a deferral rather than left looking like an omission, and deliberately asymmetric with
+  `models`, which pairs all twelve render weights with a digest. The Qwen revision and `--model` /
+  `--effort` for the Claude arm move to the **provisioning** version, which opens the file that does
+  byte verification anyway. The argument that v0.19 is the first version with two implementations to
+  choose between held — and what it bought was **selection**, through the manifest key and the
+  registry, which is a different mechanism from pinning.
+
+- **`both stdlib over HTTPS` is corrected wherever it appeared.** It is **plain HTTP to
+  `127.0.0.1:11434`**. There is no TLS on a loopback call to a process on the same machine and there
+  should not be.
 
 ## [0.18.0] - 2026-09-19
 

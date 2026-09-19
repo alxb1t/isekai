@@ -13,12 +13,13 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 > for what is being built next — this banner deliberately names no version, because a forward
 > reference here is one reordering away from being wrong.
 >
-> **⚠️ Work in progress: the first two stages are not yet open.** Reading a photograph and sorting
-> the result both run through the **`claude` CLI**, so they need that binary on `PATH` and an
-> Anthropic subscription — a fresh clone without one can do neither. Nothing else here does: the
-> render itself, the provisioning and the whole test suite are unaffected. **Replacing both with
-> open, digest-pinned models is upcoming work**, and the seam they sit behind exists so that is a
-> swap rather than a rewrite.
+> **The first two stages come in two arms, and the flow picks.** `summon-v1` and `conjure-v1` read
+> and sort through the **`claude` CLI**, so they need that binary on `PATH` and an Anthropic
+> subscription. **`summon-open-v1` runs both on open models over a local Ollama** and reaches
+> Claude by no path at all — so a clone with no subscription can run the whole pipeline. Nothing
+> else here needs either: the render, the provisioning and the whole test suite are unaffected.
+> **Neither arm's models are digest-pinned yet**; the flow names them and nothing verifies the
+> bytes behind the names. That travels with provisioning, and this version does not claim it.
 
 ## Why this exists
 
@@ -184,6 +185,34 @@ Useful flags, as the parser states them:
 3. An SSH key registered with RunPod.
 
 Then `cp .env.example .env` and fill it in; it is gitignored and holds every secret.
+
+**System dependencies — three, and each verb needs at most one of them.**
+
+| binary | needed by | absent means |
+|---|---|---|
+| `claude` | ① and ② of a flow that declares no `hosted` block | that flow's first two stages refuse, naming the install |
+| `node` | `isekai ui`, to build the bundle once | that verb refuses, naming the install |
+| `ollama` | ① and ② of a flow that declares `hosted` | that flow's first two stages refuse, naming the command |
+
+Each refuses rather than assuming, and none of the three is a Python dependency: the runtime
+declares `dependencies = []` and the gate proves it under `python -S`.
+
+**To run the open arm**, install [Ollama](https://ollama.com), then, from the repository root:
+
+```sh
+ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
+ollama pull qwen3:8b
+```
+
+The first builds the reader from a committed recipe; the second fetches the sorter, which is a
+public registry tag. **`scripts/joycaption.Modelfile`'s header names the two GGUF files it needs,
+with their sha256, their byte counts and their pinned source revision** — they are not in this
+repository and `models/` is gitignored, so fetch them into `models/joycaption/` first.
+
+**After creating the reader, check that it can see.** `ollama show joycaption-beta-one-q4k` must
+list `vision` under Capabilities **and** print a Projector block. A model whose vision projector is
+missing loads, answers fluently, and describes nothing — the failure is silent, and no code here
+detects it.
 
 ## Development
 
