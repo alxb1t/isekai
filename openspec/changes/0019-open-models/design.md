@@ -302,8 +302,10 @@ hand-written frozen dataclasses. The precedent is one line away — `ClaudeReade
 which is what makes `argv()` assertable.
 
 ```python
-class Transport(Protocol):                      # boundary/ollama.py
+class Transport(Protocol):  # boundary/ollama.py
     def __call__(self, path: str, body: bytes) -> tuple[int, bytes]: ...
+
+
 # OllamaReader(transport: Transport = post)
 ```
 
