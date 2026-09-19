@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The nine living specs gain `## Purpose`, and the tooling stops answering from an empty parse.**
+  Every one of `caption`, `cli`, `comfy-transport`, `evaluation`, `image-generation`,
+  `model-provisioning`, `review`, `run-directory` and `sheet` failed
+  `openspec validate --specs --strict` on a missing `Purpose` section and reported `requirements 0`,
+  so every `openspec` query against 174 scenario keys had been reading nothing. The heading is added
+  above prose that was already in each file — **no prose is written**; the fold that created these
+  specs kept the paragraph and dropped the heading. `0 passed, 9 failed` becomes `9 passed, 0 failed`,
+  and `review` now reports its 6 requirements. This lands first because v0.18 is the first change
+  since the rule was set to add a capability, and the fold rule that would create it is the same rule
+  that broke the nine.
+
 ## [0.17.0] - 2026-09-18
 
 ### Verified

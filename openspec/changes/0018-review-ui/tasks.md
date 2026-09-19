@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The nine `## Purpose` lines, before anything is folded
+- [x] 1 — The nine `## Purpose` lines, before anything is folded
 - [ ] 2 — `security/S1`: containment decided by identity, not by text
 - [ ] 3 — `wiring_from()`, and the seams a ③-only caller does not need
 - [ ] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
@@ -55,20 +55,20 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > parser needs above prose that is already in every file. Do it first, because this change adds a
 > capability and the fold rule that would create it is the same rule that broke the nine.
 
-- [ ] 1.1 Confirm the damage before touching anything. Verify:
+- [x] 1.1 Confirm the damage before touching anything. Verify:
       `openspec validate --specs --strict --no-interactive` — **`0 passed, 9 failed`**, and
       `openspec list --specs` — **`requirements 0`** on all nine.
-- [ ] 1.2 In each of `openspec/specs/{caption,cli,comfy-transport,evaluation,image-generation,model-provisioning,review,run-directory,sheet}/spec.md`,
+- [x] 1.2 In each of `openspec/specs/{caption,cli,comfy-transport,evaluation,image-generation,model-provisioning,review,run-directory,sheet}/spec.md`,
       insert a blank line and `## Purpose` immediately after the `# Capability: \`<name>\`` line, leaving
       the existing paragraph, the `**Source:**` / `**Tests:**` block and `## Requirements` exactly as
       they are. **Write no prose.**
-- [ ] 1.3 Verify every one is now readable: `openspec validate --specs --strict --no-interactive` —
+- [x] 1.3 Verify every one is now readable: `openspec validate --specs --strict --no-interactive` —
       **`9 passed, 0 failed`**.
-- [ ] 1.4 Verify the parser now sees the requirements it has been blind to: `openspec list --specs` —
+- [x] 1.4 Verify the parser now sees the requirements it has been blind to: `openspec list --specs` —
       every capability reports a non-zero count, and `review` reports **6**.
-- [ ] 1.5 Verify nothing else moved: `git diff --stat` — **nine files, nine insertions of two lines
+- [x] 1.5 Verify nothing else moved: `git diff --stat` — **nine files, nine insertions of two lines
       each, no other change.**
-- [ ] 1.6 Verify the gate: `make gate`
+- [x] 1.6 Verify the gate: `make gate`
 
 ## 2. `security/S1`: containment decided by identity, not by text
 

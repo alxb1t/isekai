@@ -1,5 +1,7 @@
 # Capability: `review`
 
+## Purpose
+
 Stage ③ of the pipeline: the operator's correction of a filled sheet — an editable copy taken into a
 directory of its own, validated against the vocabulary, and approved by a rename, so that the
 machine-written sheet it came from is never altered.

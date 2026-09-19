@@ -1,5 +1,7 @@
 # Capability: `run-directory`
 
+## Purpose
+
 The directory every pipeline stage couples through, and the only thing they share: how a photograph
 becomes an identified run, how the run is nested input above and flow below, how artifacts are numbered
 and never overwritten, how a filename carries everything resume decides on, and how a failure is

@@ -1,5 +1,7 @@
 # Capability: `image-generation`
 
+## Purpose
+
 Stage ④ of the pipeline: a flow declaring what it needs and the dials it runs at, prompt assembly from
 an approved sheet performed locally before any GPU is rented, and rendering with enough provenance that
 an output identifies the configuration that produced it.

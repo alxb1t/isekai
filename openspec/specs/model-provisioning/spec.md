@@ -1,5 +1,7 @@
 # Capability: `model-provisioning`
 
+## Purpose
+
 Which model artifacts the shipped graph requires, where each one comes from, how its bytes are
 proven to be the intended ones before anything loads them, and the binding that keeps the manifest
 and the graph describing the same set of files.

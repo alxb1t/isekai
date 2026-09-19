@@ -1,5 +1,7 @@
 # Capability: `caption`
 
+## Purpose
+
 Stage ① of the pipeline: reading a photograph into descriptive English prose under the standing
 instructions of the flow that asked, knowing nothing about schemas, vocabularies or what happens next,
 and licensed to say that something is absent.

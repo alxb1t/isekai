@@ -1,5 +1,7 @@
 # Capability: `cli`
 
+## Purpose
+
 The command-line surface: one entry point, six verbs, and every refusal a batch produced reported
 together rather than one at a time.
 

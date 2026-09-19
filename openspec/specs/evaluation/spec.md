@@ -1,5 +1,7 @@
 # Capability: `evaluation`
 
+## Purpose
+
 Scoring one render against the photograph that produced it: the shared canvas the two agree on pixel for
 pixel, the guard that refuses rather than scores the wrong region, four axes and the claim each is allowed
 to make, and the blind human labelling that is what any of those numbers are checked against.
