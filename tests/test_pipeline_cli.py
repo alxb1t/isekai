@@ -25,7 +25,15 @@ from tests.images import jpeg_bytes
 
 ROOT = Path(__file__).resolve().parent.parent
 
-EXPECTED_VERBS = ("caption", "sheet", "review", "approve", "generate", "show")
+EXPECTED_VERBS = (
+    "caption",
+    "sheet",
+    "review",
+    "approve",
+    "generate",
+    "show",
+    "ui",
+)
 
 
 def _module(*args: str) -> subprocess.CompletedProcess[str]:
@@ -91,14 +99,14 @@ def _stdlib_import(statement: str) -> subprocess.CompletedProcess[str]:
 
 
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
-def test_the_six_verbs_are_the_ones_the_change_declares() -> None:
+def test_the_verbs_are_the_ones_the_change_declares() -> None:
     assert tuple(name for name, _ in VERBS) == EXPECTED_VERBS
 
 
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    flag = [] if verb == "show" else ["--flow", "summon-v1"]
+    flag = [] if verb == "show" else ["--flow", "summon-v1"]  # `ui` takes one too
 
     assert build_parser().parse_args([verb, *flag]).verb == verb
 
@@ -198,6 +206,30 @@ def test_naming_two_flows_in_one_invocation_keeps_both() -> None:
     )
 
     assert parsed.flows == ["summon-v1", "summon-v2"]
+
+
+@pytest.mark.spec("cli:flow-selection:a-serving-verb-takes-one-flow")
+def test_a_serving_verb_refuses_a_second_flow_rather_than_keeping_the_last(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # The stage verbs repeat the flag because flows batch onto one endpoint. A
+    # serving verb does not batch: two flows would be two field orders and two
+    # token budgets sharing one set of controls, so the limit is stated at the
+    # command the operator typed rather than at a screen that half-works.
+    with pytest.raises(SystemExit) as exited:
+        build_parser().parse_args(["ui", "--flow", "summon-v1", "--flow", "conjure-v1"])
+
+    assert exited.value.code == 2
+    assert "one flow at a time" in capsys.readouterr().err
+
+
+@pytest.mark.spec("cli:flow-selection:a-serving-verb-takes-one-flow")
+def test_a_serving_verb_takes_the_one_flow_it_is_given() -> None:
+    parsed = build_parser().parse_args(["ui", "--flow", "summon-v1"])
+
+    assert parsed.flow == "summon-v1"
+    # Not the stage verbs' list -- there is nothing here for `_flows_for` to read.
+    assert not hasattr(parsed, "flows")
 
 
 @pytest.mark.spec("cli:flow-selection:the-flag-is-repeatable")

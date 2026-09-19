@@ -1,5 +1,7 @@
 # Capability: `comfy-transport`
 
+## Purpose
+
 Talking to a running ComfyUI over HTTP: uploading the photo, queueing the workflow, waiting for the render, and
 downloading the result.
 

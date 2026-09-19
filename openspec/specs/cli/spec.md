@@ -1,7 +1,9 @@
 # Capability: `cli`
 
-The command-line surface: one entry point, six verbs, and every refusal a batch produced reported
-together rather than one at a time.
+## Purpose
+
+The command-line surface: one entry point, seven verbs — six that run a stage and one that serves the
+review surface — and every refusal a batch produced reported together rather than one at a time.
 
 **Source:** `isekai/__main__.py`, `isekai/interface/cli.py`, `isekai/interface/wiring.py`,
 `isekai/interface/run_view.py`, `flows/` ·
@@ -175,6 +177,8 @@ The system SHALL require a flow selection on every stage verb — reading, sorti
 and rendering — SHALL accept the selection more than once in a single invocation, and SHALL refuse an
 invocation that names none, naming the flows that are tracked. It SHALL NOT fall back to every tracked
 flow. It SHALL refuse a flow that is not tracked, at the point of selection, naming the flows that are.
+A verb that serves a surface rather than running a stage SHALL require the selection and SHALL accept
+it **exactly once**.
 
 A stage cannot act without knowing which flow asked, because the flow is what supplies the thing the
 stage reads: its briefing, its schema, its graph and its dials. Falling back to every tracked flow is an
@@ -183,6 +187,12 @@ catalogue scale "everything tracked" is not a selection, it is the absence of on
 because flows batch: every flow named in one rendering invocation renders on one endpoint, and a second
 boot costs what eight more renders would, so a flow left off the line is a flow that pays for its own
 boot.
+
+A serving verb does not batch, so the reason the flag repeats does not reach it. What it opens is a
+surface showing one schema's fields in one fixed order, and two flows on that surface would be two
+layouts, two field orders and two token budgets sharing one set of controls — a second page rather than
+a wider one. Requiring exactly one keeps the limit where an operator meets it, at the command they
+typed, rather than at a screen that half-works.
 
 #### Scenario: a stage verb without a flow is refused
 - **Key:** `cli:flow-selection:a-stage-verb-requires-a-flow`
@@ -211,3 +221,10 @@ boot.
 - **WHEN** a stage verb names a flow that is not tracked
 - **THEN** the invocation is refused naming that flow
 - **AND** the message lists the flows that are tracked
+
+#### Scenario: a serving verb takes exactly one flow
+- **Key:** `cli:flow-selection:a-serving-verb-takes-one-flow`
+- **Layers:** unit
+- **WHEN** a verb that serves a surface is given more than one flow
+- **THEN** the invocation is refused
+- **AND** the message states that the surface serves one flow at a time

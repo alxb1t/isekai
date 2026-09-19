@@ -45,8 +45,12 @@ class Wiring:
     moved and nothing was called -- provable without a GPU or a network.
     """
 
-    reader: Reader
-    sorter: Sorter
+    # `reader` and `sorter` follow `client`'s precedent and may be absent. A front
+    # end that only serves stage ③ reaches no hosted model at all, and fabricating
+    # a `ClaudeReader()` it never calls would be a lie in the code -- so the verbs
+    # that do reach one say so at their own call site instead.
+    reader: Reader | None
+    sorter: Sorter | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
@@ -68,6 +72,44 @@ class Wiring:
 REPOSITORY = DATA_ROOT.parent
 
 
+def _identity(path: Path) -> tuple[int, int] | None:
+    """Return what the filesystem calls this directory, or `None` if it has none.
+
+    A directory that does not exist has no identity. That is the only reason this
+    returns an option rather than a pair.
+    """
+    try:
+        info = path.stat()
+    except OSError:
+        return None
+    return (info.st_dev, info.st_ino)
+
+
+def _is_within(resolved: Path, ancestor: Path) -> bool:
+    """Decide whether `resolved` is that directory, or sits inside it.
+
+    Decided by identity rather than by the text of the two paths. `Path.resolve()`
+    follows symlinks and drops `..` segments, but it does **not** fold case -- so
+    on a case-insensitive filesystem a differently-cased spelling of a directory
+    inside the working tree resolves to a path that *compares* as a different path
+    and *is* the same directory. A prefix test accepted it, which is the exact
+    outcome the rule exists to refuse, reached by a typing mistake rather than by
+    an adversary (design.md D10). `os.path.normcase` does not close this: it is a
+    no-op on darwin.
+
+    An ancestor that does not exist yet has no identity to compare against, so the
+    textual test stands in for it. That is not a weakening of the rule: where a
+    directory has never been created there is no second name for the filesystem to
+    open as it.
+    """
+    target = _identity(ancestor)
+    if target is None:
+        return resolved.is_relative_to(ancestor)
+    return any(
+        _identity(candidate) == target for candidate in (resolved, *resolved.parents)
+    )
+
+
 def _check_run_root(runs: Path) -> None:
     """Refuse a run root inside the working tree that is not under `DATA_ROOT`.
 
@@ -78,7 +120,7 @@ def _check_run_root(runs: Path) -> None:
     (design.md D7).
     """
     resolved = runs.resolve()
-    if resolved.is_relative_to(REPOSITORY) and not resolved.is_relative_to(DATA_ROOT):
+    if _is_within(resolved, REPOSITORY) and not _is_within(resolved, DATA_ROOT):
         raise Refusal(
             f"--runs {resolved} is inside this repository and outside "
             f"{DATA_ROOT}, the one directory git ignores; a run holds a copy of "
@@ -88,20 +130,35 @@ def _check_run_root(runs: Path) -> None:
         )
 
 
-def wiring(args: argparse.Namespace) -> Wiring:
-    """Build the real wiring: the hosted reader and sorter, and the HTTP transport.
+def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
+    """Build the real wiring from values, with no `Namespace` anywhere in sight.
+
+    The argv-free half, so that a front end which never parses a command line can
+    still only reach a `Wiring` through `_check_run_root`. The UI server is that
+    front end: building the dataclass directly, the way the suite does, would walk
+    straight past the one guard that bounds where a copy of the photograph may be
+    written -- and a server is exactly the thing that should not be able to
+    (design.md D1).
 
     The vocabulary is read here rather than inside a stage, because reading a file
     is I/O and the stages are the part that must stay testable without any. A
     schema is not composed here at all: it sits inside the flow that uses it, so a
     loaded `Flow` already answers for its own.
     """
-    server = getattr(args, "server", None)
-    _check_run_root(args.runs)
+    _check_run_root(runs)
     return Wiring(
         reader=ClaudeReader(),
         sorter=ClaudeSorter(),
         client=ComfyClient(server) if server else None,
         vocabulary=load_vocabulary,
-        runs_root=args.runs,
+        runs_root=runs,
     )
+
+
+def wiring(args: argparse.Namespace) -> Wiring:
+    """Build the real wiring from a parsed command line.
+
+    `getattr` rather than `args.server`: only `generate` declares the flag, so the
+    attribute is genuinely absent on every other verb's namespace.
+    """
+    return wiring_from(runs=args.runs, server=getattr(args, "server", None))

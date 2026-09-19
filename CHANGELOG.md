@@ -25,6 +25,304 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-09-19
+
+### Fixed
+
+- **Four `ui` scenarios were bound to a test the gate never ran.** `tests/test_ui_api.py` opens with
+  `pytest.importorskip("fastapi")`, FastAPI lived only in the optional `ui` extra, and CI runs
+  `make gate` with no extra — so `uv sync --locked` never installed it, the module skipped in CI and on
+  a clean checkout alike, and `ui:vocabulary:matches-are-ranked-by-post-count`,
+  `ui:vocabulary:an-unmatched-fragment-commits-nothing`, `ui:approval:approved-input-refuses-a-draft-update`
+  and `ui:approval:approved-input-opens-read-only` were proved by nothing while looking exactly like
+  bindings. `fastapi` and `uvicorn` are now pinned in the **`dev` dependency group** as well, which the
+  gate installs by default: `dependencies = []` is untouched and the runtime stays stdlib-only. The
+  suite goes from **671 passed, 1 skipped** to **682 passed, 0 skipped**. Two structural tests hold it:
+  one asserts the framework is present, so its absence is a failure rather than a skip, and one holds
+  the extra's pins and the group's equal. `isekai/interface/ui/app.py`'s `[[tool.ty.overrides]]` block
+  is **removed** rather than kept — the import resolves in the environment the gate runs in, so there
+  was nothing left to ignore.
+- **The autosave `PUT` raced the approve `POST`, and the loser was the operator's last correction.**
+  `flush()` returned `void` and discarded its promise, so the comment claiming the write landed first
+  stated an ordering the code did not enforce: approving inside the 400 ms debounce either built the
+  artifact from the *previous* draft and unlinked the correction with it, or left a `has no draft to
+  update` refusal on the header line immediately after a successful approve. `flush()` now returns its
+  write and `approve()` awaits it. **This was the one place in the change where work could be lost.**
+- **`⌘↩` committed a tag nobody chose, then approved the sheet containing it.** `TagInput`'s Enter
+  branch tested no modifier and did not stop propagating, so approving with the dropdown open committed
+  row 0 into the field and *then* ran the window handler's approve. The branch is now guarded with
+  `!metaKey && !ctrlKey`, and a bare `↩` that commits stops there — the same reasoning the `Esc` branch
+  three lines below already carried.
+- **A failed input read left the page on the skeleton for ever, saying nothing.** `useSheet.open()`
+  awaited `GET /api/inputs/{id}` with no `try`, and every caller is fire-and-forget, so a 409 or a 500
+  left `loading` true, `refusal` empty and the rejection unhandled. It now catches, writes the reason
+  verbatim to the header line and clears the skeleton, mirroring what `flush()` already did — which is
+  where design D6 says a `Refusal` lands.
+
+### Verified
+
+- **The acceptance run: three photographs through ①②③④, corrected in the browser, rendered from one
+  boot — and the corrections reached the images.** Six hosted-model calls (three captions, three
+  sorts), every sheet corrected and approved on the review surface, then three renders at one named
+  seed. **All three sheets record `edited: true`**, and the corrections were substantive rather than
+  cosmetic: `cowboy-shoot` lost eight wrong `background` tags — `meadow`, `white`/`yellow`/`pink`/
+  `purple`/`grey background`, `forest`, `clear sky` — for `outdoors`, `flower field`, `mountain`, and
+  gained `lace trim` for `lace` and `denim shorts` for `denim`. **The operator's judgement on 13.6:
+  the renders reflect the corrections and not the sorter's draft.**
+- **13.4, the abort check, answered yes.** Correcting on this surface was faster and better informed
+  than `$EDITOR`: the autocomplete makes it clear which tag to reach for, and the post count and the
+  live token number changed decisions that would otherwise have been made blind. The version's claim —
+  *a sheet is corrected on a surface that knows the vocabulary* — is earned rather than asserted.
+- **Metered: two pod sessions, `19m19s` + `13m50s`, ~$0.23 + ~$0.17 ≈ ~$0.40 at $0.72/hr**, both
+  confirmed torn down through the RunPod MCP (`list-pods` → `[]`, `get-pod` → `404 pod not found`).
+  **The first session produced nothing and is recorded because it is the measurement.** A fresh 20 GB
+  network volume had to be provisioned, and the mirror `download_models.sh` drew the 6.94 GB
+  checkpoint from ran at **7.6 MB/s** — against the ~37 MB/s the v0.17 acceptance measured for the
+  same manifest from the same datacenter. At that rate the fetch alone was 32 minutes, which no longer fit
+  a 45-minute ceiling after a 6m35s boot, so the session was **halted at the projection rather than at
+  the wall** and torn down at 19m19s.
+- **The second session drew at ~48 MB/s and did everything in one boot**: 3m41s to SSH, 14.47 GB
+  provisioned and ComfyUI answering at 6m21s, three renders in 3m31s, torn down at 13m50s — inside the
+  original ceiling. Same datacenter, same manifest, twenty minutes apart, so **the first session's rate
+  was a slow mirror and not the account or the link**.
+- **A provisioning fetch is not resumable, and that is what made the first failure total.**
+  `scripts/download_models.sh:65` is `wget -q -O "${target}.partial"` with no `-c`; the checkpoint is
+  the manifest's first and largest entry, so nothing had landed and verified when the session was cut
+  and all 4.61 GB was lost. Recorded rather than fixed: it is a one-flag change to a tracked script
+  with a test of its own, and it is outside this change's scope.
+
+### Added
+
+- **The keyboard model the operator asked for, which separates the two axes.** `Alt+↑`/`Alt+↓` move
+  through the batch; `Alt+←`/`Alt+→` move focus across the three panes — rail, photograph, sheet — and
+  inside a pane the plain arrows do that pane's own thing: change the input, scroll the caption, walk
+  the rows. Returning to the sheet lands on the row it was left on. **This overturns one line of
+  `ux-flow.md`**, which gave `Alt+←/→` to the batch: the rail is a vertical list, so vertical is the
+  batch, and horizontal is the one movement the design had no binding for at all — getting to the
+  caption to read it and back to the field being typed.
+- **A spinner on the draft receipt while a save is in flight**, and the saved time to the minute. The
+  slot is a fixed width, so the line never shifts between the two. It is counted rather than flagged: a
+  second `PUT` can start before the first answers, so it clears when the last one lands. The approved
+  receipt keeps its seconds — it is written once and is the one a human would quote, while the draft's
+  is rewritten every few seconds under the eye. `prefers-reduced-motion` stops the rotation. **This is
+  the one piece of motion on the page**; the design's *no spinner, no shimmer* is written about the
+  page-level load, and an in-flight save has no drawn state at all.
+- **The photo overlay, the loading state and the run manifest.** `PhotoOverlay` is teleported to body on
+  a ground of `color-mix(in srgb, var(--color-bg) 72%, black)`, with **no `.lighten` blend** — this is the
+  one place the photograph must be seen as it is, because it is where colour is judged. `Fit` / `1:1
+  pixels` with the percentage stated, because a judgement made at 64% is not the same judgement; `esc`,
+  a click anywhere or the × leave it, and **the arrow keys still move through the batch without
+  closing**, so the overlay doubles as a way to compare inputs. It sits below the 41px header rather
+  than over it, so the run line and the receipts still read — not dimmed with an opacity wrapper, which
+  is how that header first became illegible.
+- **Loading is counted, not spun, and no photograph appears until it has decoded.** 135° striped
+  placeholders at each photograph's true aspect ratio, all sixteen schema keys rendered immediately with
+  flat 9px bars and dashed gutter rings so nothing reflows on arrival, the token total as `—`, and
+  `vocabulary 8,106 tags · loaded` from a real `len()`. **No shimmer** — an animated skeleton pulls the
+  eye off the photograph. The line names the input being read rather than counting `2 of 3`: the browser
+  reads one input at a time, so a count would say `1 of 3` forever, while the stated reason for counting
+  at all is *if it does not finish, the operator wants to know which file it is stuck on*.
+- **`RunManifest`, reached by approving the last input or from the rail at any time.** One row per
+  approved sheet — its path, its token count, the time it was written — with over-budget totals in
+  `accent-300` and stated once more at the exit. It names the artifact and gives no order: the operator
+  wrote the CLI and does not need to be told to run `generate`. Real paths throughout:
+  `<run>/<flow>/review/` and `NNN.approved.json`, never the frames' invented `runs/2026-09-17/`.
+- **`Alt+↑` / `Alt+↓` move through the batch too.** The rail is a vertical list and the photographs read
+  left to right, so both readings of *next* are true and both now work.
+- **Space on an empty field types the word the schema says that field is spelled with** — `eyebrows` on
+  `eyebrows`, `hair` on `hair_colour` — so the operator can see what fits before knowing what to ask
+  for. It is a shortcut for typing that word and **not a second ranking**: the rows are
+  `vocabulary.search()`'s, in `vocabulary.search()`'s order, exactly as for any other fragment, which
+  leaves the design's *ranking is global* rule untouched. A field the schema declares no suffix for gets
+  nothing, because there would be nothing honest to put there.
+- **Approve, read-only, and the one line a `Refusal` lands on.** `ApproveBar` is accent-outlined and
+  **always live** — no scroll gate, no dwell timer, no confirmation step, no disabled twin, and no
+  empties action: the only thing that stops an approve is a refusal, never a ritual. On success the
+  header shows **both receipts**, the approved one in `accent-300`, and the button becomes the fact
+  `Approved HH:MM:SS` rather than a greyed-out copy of itself. **The input then goes read-only** (Design
+  D5): `approve()` deletes the draft and reopening writes no replacement, so there is nothing on disk
+  for an edit after approval to be written into — the footer states that and names the file, and offers
+  no exit affordance, because a surface that offered editing anyway would either appear to save and not,
+  or spend a version number on a keystroke with no confirm step to attribute it to.
+- **The refusal line.** One header-level line carrying the `Refusal` string verbatim, in the design's
+  own voice for states it specified and deliberately did not draw: blunt, no modal, and it never implies
+  the operator's work was lost. Verified with two real tabs on one input — one approves, the other's
+  autosave fires on the next keystroke, the line appears and **nothing on disk changed**.
+- **`↑`/`↓` walk the sheet when no dropdown is open**, clamped at both ends. Not in the design's keyboard
+  model, which leaves the vertical keys unassigned outside the dropdown; an operator who has just
+  clicked a row should not have to reach for the mouse again to reach the next one.
+
+### Documentation
+
+- **Three claims this repository makes about itself that v0.18 falsifies, corrected.** `CLAUDE.md`'s
+  *"there is nothing generated outside it to get wrong"* named one ignored root; there are now **four**,
+  and the boundary paragraph states how each fails differently — `.data/` is the loss of work, `models/`
+  a byte-identical re-download, `ui/dist/` a deterministic rebuild, `ui/node_modules/` an `npm install`.
+  Only the first is work; the other three are derivable, which is why none of them lives under `.data/`.
+  And *"`openspec` 1.11 ships no `new`/`scaffold` command"* was **false** — `openspec new change <name>`
+  exists; this repo scaffolds by hand because it keeps no `openspec/config.yaml` and because the id rule
+  is not one the CLI knows.
+- **node is recorded as this repository's second system dependency**, after the `claude` binary, needed
+  by `isekai ui` alone. `CLAUDE.md`, `README.md` and `isekai/interface/README.md` gain the `ui` verb and
+  the surface's four modules; the living `cli` spec's gloss stops saying *six verbs*. `baseline/labels/`
+  stops calling `.data/` *the one ignored root*.
+
+### Fixed
+
+- **A click anywhere in a row focuses that field, `↑`/`↓` walk the rows, and `Esc` keeps the focus.**
+  The fragment input is sized to its content so the caret sits immediately after the text, which left
+  an empty field with a click target one character wide. `Esc` now also stops propagating, so nothing
+  above the input acts on an `Esc` the dropdown already answered.
+- **The manifest's `approved` column was blank.** `saved` reports the draft's own time and `approve()`
+  unlinks the draft, so `GET /api/inputs/{id}` now reports `approved_at` beside it.
+- **One caret, not two.** The fragment carried a 1px accent `border-right` *and* the browser's own
+  recoloured caret — two marks for one insertion point, which is the *committed and in-flight never
+  look alike* rule read backwards. The border is gone; the caret is the caret.
+
+### Added
+
+- **Editing, autosave and undo — and the page stops reading a fixture.** `useBatch()` and `useSheet()`
+  replace it: the batch is the invocation's argument list held in memory, the draft is read from
+  `GET /api/inputs/{id}`, and every edit schedules a debounced 400 ms `PUT` of the whole draft. **There
+  is no Save control anywhere** — the two receipts are the only thing on the page that talks about
+  saving, and the last-saved timestamp comes back from the server rather than the client clock, because
+  a receipt the browser wrote for itself is a claim about a save and not a record of one. Verified on
+  disk: `001.draft.json` changes in place, keeps its version and the sheet it records, and **no `002`
+  appears**.
+- **The keyboard model, less the two bindings that went with the refusal surface.** Tab through the
+  fields in schema order, `Alt+←/→` between inputs, `←/→` to move chip selection, any character to open
+  the autocomplete, `↑↓⏎` to commit, `Backspace` to remove the last chip or the selected one, and
+  `Cmd/Ctrl+Z`/`Shift+Z` to undo and redo. **Replacing a selected chip by typing is three keystrokes**
+  — `→`, type, `⏎` — because it is the single commonest edit in the job; measured live, `long hair` →
+  `very long hair` in one step, and one undo puts it back without disturbing an earlier edit in another
+  field. Undo is a stack of **edit operations** rather than sheet snapshots, it crosses every field, and
+  it is cleared when the operator changes input.
+- **The tag autocomplete — the piece that decides whether the tool is fast.** `useVocabulary()` queries
+  `GET /api/tags?q=` debounced at 120 ms and **ranks nothing**: the server's order is the order, because
+  a second copy of the ranking rule in TypeScript is the duplication that endpoint exists to delete. A
+  stale answer can never overwrite a newer one. `TagAutocomplete.vue` is 430px on `--color-surface` at
+  `top: 30px`, **absolutely positioned so it overlays the rows below and never displaces them** — if
+  they moved, the operator would lose their place mid-word. Row 1 is preselected, so the highest post
+  count is one ⏎ away and a rare tag takes a deliberate ↓; counts are right-aligned mono `tabular-nums`,
+  because a post count is read by digit count and that only works if the digits align; ` · rare` in
+  `accent-300` below 2,000 posts. **Measured against the real prediction set, not the design's:**
+  `blonde` returns `blonde hair` (1,311,581) and `blonde pubic hair` (1,634 · rare) — two tags, not the
+  frames' four, since `platinum blonde hair` is absent. A fragment matching nothing shows no rows and
+  cannot be committed.
+- **A click anywhere in a row focuses that field.** The fragment input is sized to its content, because
+  the 1px accent caret must sit immediately after the text rather than at the row's right edge — which
+  left an empty field with a click target one character wide. The row is what the operator aims at.
+- **`ui/` — the Vue 3 app, its shell and the read-only sheet.** Vite, no router, dark theme only,
+  desktop from 1280px. `AppHeader`, `BatchRail`, `StatusMark`, `SourcePanel`, `PhotoFrame`,
+  `CaptionPanel`, `SheetForm`, `SheetHeader`, `TokenBudget`, `FieldRow` and `TagChip`, built against a
+  static fixture so the marks and the rows are right before a fetch can be blamed for them. **Six of
+  the ten frame deltas land here**: no `Show ② draft` pill (its ON state is drawn nowhere); the run
+  line reads `summon-v1 · 3 inputs · 0 approved`, because a run id is `<12 hex>_<slug>` and carries no
+  date; receipts name `<flow>/review/001.draft.json`; the caption shows paragraphs only, because
+  `sheet.py` discards the phrases a highlight would need; no empties action anywhere; and above 77 the
+  budget bar clamps at 100% with the total in the accent, since counting the assembled prompt puts
+  every real sheet over.
+- **Inter is vendored and the token sheet is copied, not imported.** `ui/design/` is read-only, so
+  `ui/src/styles.css` is a copy of it with exactly two deltas: its Google Fonts `@import` deleted, and
+  four local `@font-face` rules over woff2 files in `ui/src/assets/fonts/`. A private tool over a
+  directory of personal photographs must not reach a third party on every load, and offline it would
+  have rendered in the wrong typeface — on an interface whose type sizes are load-bearing.
+- **`isekai ui <ids…> --flow F` — the review surface, and the pipeline's seventh verb.** One FastAPI
+  process on `127.0.0.1` serving a built Vue bundle and six endpoints. It resolves the flow, every named
+  input, a draft for each, each photograph's dimensions, the vocabulary and the bundle **before a port
+  is bound**, and prints an address only once all of them have succeeded — every input's failure
+  reported together, because ten photographs with two missing sheets must name both rather than be
+  discovered one restart at a time. `--flow` is required and takes **exactly one**: the surface shows
+  one schema's fields in one fixed order, so a second flow would be a second page rather than a wider
+  one, and a repeat is refused at the command line rather than kept silently as argparse would.
+  **Scope is stage ③ alone** — no upload, no captioning, no generate button — so nothing in the browser
+  spends money.
+- **`isekai/interface/ui/`, four modules, and the split is what keeps the suite offline.** `batch.py`
+  holds the batch and the whole startup refusal order and imports no web framework, so that order is
+  exercised by the main suite with the `ui` extra uninstalled; `bundle.py` builds the browser bundle or
+  refuses naming the command; `app.py` is the only module that imports the extra at all; `__init__.py`
+  composes the three. **The batch lives in memory and nothing writes it down** — nothing on disk says
+  ten photographs belong together — and the approved count is read from the directory, so it stays true
+  when something is approved by the verb beside the running surface.
+- **The invariant that replaces a structural guarantee.** Both front ends now call the stage functions
+  in process, so the surface is no longer stopped from writing its own artifact by the shape of the
+  system. `tests/test_ui.py` greps `isekai/interface/ui/` for `envelope(`, `artifact_name(` and
+  `write_json(`, and its docstring states that it is a **tripwire and not a proof**: an aliased import
+  walks past it and a hand-built f-string is invisible to it. Three write functions reach a run
+  directory and all three are stage ③'s — `review()` at startup, `save_draft()` on autosave, `approve()`
+  on the button.
+- **`[project.optional-dependencies] ui = ["fastapi", "uvicorn"]`, pinned exactly, with
+  `dependencies = []` untouched.** The runtime stays stdlib-only and the `-S` guard stays green,
+  because `cli.py`'s `ui` handler imports the package **inside the function**. Both packages are named
+  explicitly rather than taking `fastapi[standard]`, which pulls a much wider tree for one localhost
+  server. `httpx2` joins the dev group — it is starlette's test client, not a server dependency.
+  CI installs neither, so `isekai/interface/ui/app.py` and `tests/test_ui_api.py` get a
+  `[[tool.ty.overrides]]` block for `unresolved-import` alone; an override is green whether or not the
+  extra is installed, which per-line `ty: ignore` comments cannot be.
+- **`review.save_draft(run, flow, fields)` — one owner for an in-place draft update.** It replaces the
+  highest draft's field values, keeps the version number and the sheet the draft records, and **does
+  not create**: `review()` owns that, and a second creator would spend a version number on a stray
+  keypress. It refuses an update whose field-name set differs from the draft's, which turns two of the
+  four ways a sheet can be invalid at approval — a missing field, and a field the schema does not have
+  — from a property the editing surface is trusted to have into a property of the write path, for one
+  comparison and without opening the validator. It refuses when no draft exists, which is also what a
+  stale tab meets after an input has been approved.
+- **`review.token_budget(fields, schema, flow)` → `TokenBudget(total, per_field, overhead)`.** The
+  total is counted over `assemble()`'s own positive prompt, so the flow's prefix, its trailer and the
+  separators that join them fall out of one rule instead of being added back by hand. Measured on a
+  real sheet: **100 against `estimate_tokens`' 81** — the tags-alone count understates what the text
+  encoder reads by nineteen tokens against a window of seventy-seven, so a sheet reported comfortably
+  inside the budget was in fact past it and silently chunked. The per-field shares and the overhead sum
+  to the total by construction, because the operator's question while correcting is never *how many
+  tokens* but *which tag goes*. `estimate_tokens` and `approve()`'s warning are **untouched**, so all
+  26 `approve` call sites stand.
+- **`wiring_from(*, runs, server=None)` — the argv-free half of the composition root.** `wiring(args)`
+  is now one line over it. A second front end cannot reach a `Wiring` without passing through
+  `_check_run_root`: building the dataclass directly, the way the suite does in three modules, walks
+  straight past the one guard that bounds where a copy of the photograph may be written, and a server
+  is exactly the thing that should not be able to. Asserted, not assumed — `wiring_from(runs=<in-tree
+  path>)` refuses.
+
+### Changed
+
+- **`reader` and `sorter` are optional on `Wiring`, following `client`'s precedent.** A front end that
+  serves stage ③ alone reaches no hosted model, and fabricating a `ClaudeReader()` it never calls would
+  be a lie in the code. The two verbs that do reach one — `caption` and `sheet` — say so at their own
+  call site and refuse naming the missing seam, rather than the dataclass insisting for everyone.
+
+### Fixed
+
+- **Two refusal strings in `review.py` that named something that does not work.** `review()`'s
+  no-sheet refusal told the operator to run `python -m isekai sheet`, which exits 2 because `--flow` is
+  required — and the review surface calls `review()` once per input at startup, so *you forgot to run
+  `isekai sheet`* is this version's likeliest message. It now names `python -m isekai sheet --flow
+  <flow>`, verified through `build_parser()` rather than by running the verb, which would call a paid
+  model. And `approve()`'s already-approved refusal named `review/<flow>/`, the stage-first layout v0.16
+  deleted; it now names `<flow>/review/`.
+- **`security/S1`: the run-root containment guard is decided by directory identity, not by the text of
+  a path.** `Path.resolve()` follows symlinks and drops `..` segments but does **not** fold case, so on
+  the case-insensitive filesystem this project is developed on, `--runs` naming a directory inside the
+  working tree with one letter of its own path in the wrong case compared as a different path and was
+  **accepted** — the exact outcome the rule exists to refuse, reached by a typing mistake rather than by
+  an adversary, leaving a directory of personal photographs somewhere `.gitignore` does not cover.
+  `_check_run_root` now walks the resolved root and its parents comparing `(st_dev, st_ino)` against the
+  repository and the ignored data root; an ancestor that does not exist yet has no identity, so the
+  textual test stands in for it, where there is no second name to be fooled by either. The refusal
+  message is unchanged. `os.path.normcase` would not have closed this: it is a no-op on darwin. The fix
+  lands **before** the extraction that exposes it, so no commit carries a broken guard through a new
+  door.
+
+- **The nine living specs gain `## Purpose`, and the tooling stops answering from an empty parse.**
+  Every one of `caption`, `cli`, `comfy-transport`, `evaluation`, `image-generation`,
+  `model-provisioning`, `review`, `run-directory` and `sheet` failed
+  `openspec validate --specs --strict` on a missing `Purpose` section and reported `requirements 0`,
+  so every `openspec` query against 174 scenario keys had been reading nothing. The heading is added
+  above prose that was already in each file — **no prose is written**; the fold that created these
+  specs kept the paragraph and dropped the heading. `0 passed, 9 failed` becomes `9 passed, 0 failed`,
+  and `review` now reports its 6 requirements. This lands first because v0.18 is the first change
+  since the rule was set to add a capability, and the fold rule that would create it is the same rule
+  that broke the nine.
+
 ## [0.17.0] - 2026-09-18
 
 ### Verified

@@ -1,5 +1,7 @@
 # Capability: `sheet`
 
+## Purpose
+
 Stage ② of the pipeline: turning descriptive prose into a sheet of fields filled with canonical
 vocabulary tags, using the schema and the standing instructions inside the flow that asked, and knowing
 nothing about flows beyond the one directory it reads and writes.

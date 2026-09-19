@@ -236,6 +236,11 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     bare = open_run(photo, wired.runs_root)
     flow = load_flow(FLOW)
     messages: list[str] = []
+    # `reader` and `sorter` are optional on `Wiring` now -- a ③-only front end
+    # composes one without either. This fixture supplies both doubles, so the two
+    # narrowings below are assertions about the fixture, not about the code.
+    reader, sorter = wired.reader, wired.sorter
+    assert reader is not None and sorter is not None
 
     def collect(work: object) -> None:
         try:
@@ -249,7 +254,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
     collect(lambda: read_artifact(_future_artifact(tmp_path)))
     schema = flow.schema
-    collect(lambda: sheet(bare, wired.sorter, schema, wired.vocabulary()))
+    collect(lambda: sheet(bare, sorter, schema, wired.vocabulary()))
     collect(lambda: review(bare, FLOW))
     collect(lambda: approve(bare, FLOW, schema, wired.vocabulary()))
     collect(lambda: prompt_artifact(bare, flow, schema))
@@ -261,7 +266,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     directory = bare.directory(FLOW, "captions")
     for _ in range(BUDGETS["caption"]):
         record_failure(directory, 1, "transient", {})
-    collect(lambda: caption(bare, wired.reader, briefing_path=CAPTION_BRIEFING))
+    collect(lambda: caption(bare, reader, briefing_path=CAPTION_BRIEFING))
     return messages
 
 

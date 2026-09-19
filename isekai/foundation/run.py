@@ -343,6 +343,23 @@ def artifact_name(version: int, label: str | None = None) -> str:
     return f"{version:03d}.json" if label is None else f"{version:03d}.{label}.json"
 
 
+def latest_artifact(directory: Path, label: str | None = None) -> Path | None:
+    """Return the highest artifact in `directory` carrying `label`, or None.
+
+    The run owns the layout, so *which file is the current one* is answered here
+    rather than by each reader globbing for it. A glob would also be wrong: an
+    error record is `NNN.error.<attempt>.<kind>.json`, which `*.json` matches and
+    `ARTIFACT` does not, so a failed second attempt beside a good first artifact
+    would sort last and be read as one.
+    """
+    numbered = [
+        version
+        for version in versions(directory)
+        if (directory / artifact_name(version, label)).is_file()
+    ]
+    return directory / artifact_name(numbered[-1], label) if numbered else None
+
+
 def is_approved(name: str) -> bool:
     """Say whether a filename is an approved artifact, without opening anything."""
     match = ARTIFACT.match(name)

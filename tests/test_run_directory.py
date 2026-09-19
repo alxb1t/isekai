@@ -44,7 +44,7 @@ from isekai.foundation.run import (
     write_json,
 )
 from isekai.interface.cli import build_parser
-from isekai.interface.wiring import Wiring, wiring
+from isekai.interface.wiring import Wiring, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact, render
 from isekai.pipeline.review import approve, review
@@ -690,6 +690,70 @@ def test_a_run_root_inside_the_working_tree_is_refused_before_anything_is_create
     assert ".data" in message
     # Refused before any run is created -- the check is on the root, not on the
     # first photograph offered to it.
+    assert not inside.exists()
+
+
+def _a_second_spelling_of(path: Path) -> Path | None:
+    """Probe for a name the filesystem opens as `path` itself, or `None`.
+
+    Probed rather than assumed. APFS is case-insensitive by default and the
+    scenario below is only expressible where that is true; CI is Linux, where the
+    swapped spelling is simply a path that does not exist and the probe says so.
+    """
+    text = str(path)
+    swapped = next(
+        (
+            text[:i] + ch.swapcase() + text[i + 1 :]
+            for i, ch in enumerate(text)
+            if ch.isalpha()
+        ),
+        None,
+    )
+    if swapped is None:
+        return None
+    other = Path(swapped)
+    try:
+        return other if path.samefile(other) else None
+    except OSError:
+        return None
+
+
+_ANOTHER_NAME = _a_second_spelling_of(REPO)
+
+
+@pytest.mark.spec("run-directory:containment:containment-is-decided-by-identity")
+@pytest.mark.skipif(
+    _ANOTHER_NAME is None,
+    reason="case-sensitive filesystem: no second spelling of the tree exists to give",
+)
+def test_containment_is_decided_by_identity_not_by_the_text_of_the_path() -> None:
+    # `Path.resolve()` follows symlinks and drops `..`, but it does not fold case,
+    # so this path compares as a different path and is the same directory. Text
+    # cannot decide that; the filesystem can.
+    assert _ANOTHER_NAME is not None
+    inside = _ANOTHER_NAME / "acceptance-runs"
+
+    with pytest.raises(Refusal) as refused:
+        _wiring("--runs", str(inside))
+
+    assert ".data" in str(refused.value)
+    assert not inside.exists()
+
+
+@pytest.mark.spec("run-directory:containment:in-tree-run-root-is-refused")
+def test_wiring_from_cannot_be_used_to_skip_the_containment_guard() -> None:
+    """The argv-free door is the same door.
+
+    `wiring_from` exists so a front end that never parses a command line still
+    cannot compose a `Wiring` without this check -- which is the whole reason the
+    extraction was made, so it is asserted rather than assumed (design.md D1).
+    """
+    inside = REPO / "acceptance-runs"
+
+    with pytest.raises(Refusal) as refused:
+        wiring_from(runs=inside)
+
+    assert str(inside) in str(refused.value)
     assert not inside.exists()
 
 

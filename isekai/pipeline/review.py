@@ -35,9 +35,10 @@ Stdlib only.
 """
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
-from isekai.foundation.flow import Schema
+from isekai.foundation.flow import Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -110,7 +111,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     if source_sheet is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to review; run "
-            f"`python -m isekai sheet` for this photograph first"
+            f"`python -m isekai sheet --flow {flow}` for this photograph first"
         )
 
     approved = approved_versions(review_directory)
@@ -153,6 +154,100 @@ def estimate_tokens(fields: Mapping[str, Sequence[str]], schema: Schema) -> int:
     words = sum(len(tag.split()) for tag in tags)
     separators = max(len(tags) - 1, 0)
     return words + separators + 2
+
+
+def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
+    """Replace the highest draft's field values in place, and return its path.
+
+    The one owner of a draft update. A draft was written once and then edited by
+    hand until now, so nothing owned this and the envelope was only ever built at
+    creation; a second writer arriving without a single owner is how two envelopes
+    in one directory drift apart.
+
+    **It does not create.** `review()` owns that, and teaching this to create too
+    would spend a version number on a stray keypress -- there is no Save control
+    on the surface that calls it and no confirm step to attribute one to
+    (design.md D5). The version and the sheet the draft records are its identity
+    and are carried across untouched.
+
+    **A changed field set is refused**, which is what makes this owner
+    load-bearing rather than clerical: a missing field and a field the schema does
+    not have are two of the four ways a sheet can be invalid at approval, and
+    comparing the set at the one write point turns both from a property the
+    editing surface is trusted to have into a property of the write path -- for
+    one comparison, without opening the validator (design.md D6).
+    """
+    directory = run.directory(flow, REVIEW)
+    drafts = draft_versions(directory)
+    if not drafts:
+        raise Refusal(
+            f"{run.id}: flow {flow} has no draft to update; a draft is opened by "
+            f"`python -m isekai review --flow {flow}`, and an approved flow has "
+            "none because approval is the end of it"
+        )
+
+    path = directory / artifact_name(drafts[-1], DRAFT)
+    body = read_artifact(path)
+    existing = set(body["fields"])
+    offered = set(fields)
+    if offered != existing:
+        missing = sorted(existing - offered)
+        unknown = sorted(offered - existing)
+        raise Refusal(
+            f"{path.name}: an update replaces a draft's values and never its "
+            f"field set; missing {missing}, unknown {unknown}"
+        )
+
+    write_json(
+        path, {**body, "fields": {name: list(fields[name]) for name in body["fields"]}}
+    )
+    return path
+
+
+@dataclass(frozen=True)
+class TokenBudget:
+    """What the text encoder will read from this sheet, and where it comes from.
+
+    Three numbers from one rule, so they reconcile instead of disagreeing: the
+    shares sum into the total and `overhead` is the remainder. The operator's
+    question while correcting is never *how many tokens* but *which tag goes*,
+    and a total with no breakdown cannot answer it.
+    """
+
+    total: int
+    per_field: Mapping[str, int]
+    overhead: int
+
+
+def token_budget(
+    fields: Mapping[str, Sequence[str]], schema: Schema, flow: Flow
+) -> TokenBudget:
+    """Count the assembled positive prompt, and split it into shares.
+
+    `total` is taken over `assemble()`'s own output, so the flow's prefix, its
+    trailer and the separators that join them fall out of one rule rather than
+    being added back by hand. That is the whole point: counting the tags alone
+    understates what the encoder reads by about nineteen tokens against a window
+    of seventy-seven, so a sheet reported comfortably inside the budget is past it
+    and silently chunked (design.md D4).
+
+    `estimate_tokens` is deliberately left alone. It is `approve()`'s, it is
+    passed a `Schema` and never a `Flow`, and changing its signature would move 26
+    call sites for a warning on a path this version deprecates as guidance.
+
+    A field absent from a mid-edit draft contributes nothing rather than raising,
+    because the surface recomputes this on every keystroke.
+    """
+    separator = flow.prompt["separator"]
+    positive, _ = assemble(fields, schema.names, flow)
+    total = len(positive.split()) + positive.count(separator) + 2
+
+    per_field: dict[str, int] = {}
+    for name in schema.names:
+        tags = list(fields.get(name, ()))
+        per_field[name] = sum(len(tag.split()) for tag in tags) + len(tags)
+
+    return TokenBudget(total, per_field, total - sum(per_field.values()))
 
 
 def approve(
@@ -221,7 +316,7 @@ def approve(
     path = directory / artifact_name(version, APPROVED)
     if path.exists():
         raise Refusal(
-            f"{path.name} already exists in {REVIEW}/{flow}/ and an approved "
+            f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
             f"artifact is never replaced; run `python -m isekai review --flow "
             f"{flow} --new-version` to correct it under the next number"
         )

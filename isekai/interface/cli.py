@@ -6,7 +6,7 @@ rule: there is one render path, and this is its entry point. Four separate scrip
 were rejected for the same reason one parser was chosen: it would multiply the
 stdlib-only guard by four and give argument parsing four places to drift.
 
-**Six verbs, and schema migration is not one of them.** Only schema version 1
+**Seven verbs, and schema migration is not one of them.** Only schema version 1
 exists, so an upgrade command would be a dispatch table with no entries and its
 refusal would be unreachable -- nothing can write a version 2 artifact
 (design.md D2).
@@ -17,6 +17,12 @@ refusal would be unreachable -- nothing can write a version 2 artifact
     approve   (3) validate the edited sheet and rename it
     generate  (4) assemble every prompt locally, then render
     show          print a run's artifacts and what produced each one
+    ui        (3) serve the review surface for a batch of inputs
+
+**Six of them run a stage and the seventh serves one.** `ui` is the second front
+end rather than a client of the first: it calls `wiring` and the stage functions
+directly, exactly as this module does, so neither surface is privileged and
+neither goes through the other (design.md D1).
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
@@ -34,7 +40,7 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
@@ -50,6 +56,8 @@ from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
 # so the two cannot disagree about what a stage does.
+T = TypeVar("T")
+
 VERBS: tuple[tuple[str, str], ...] = (
     ("caption", "read a photograph into descriptive prose"),
     ("sheet", "sort a caption into a sheet of canonical tags"),
@@ -57,7 +65,14 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("approve", "validate an edited sheet and mark it approved"),
     ("generate", "assemble the prompts for a run, then render them"),
     ("show", "print a run's artifacts, versions and producers"),
+    ("ui", "serve the review surface for a batch of inputs"),
 )
+
+# The review surface's loopback port. Declared here rather than in the package it
+# starts, because the parser is the one authority for what a flag defaults to --
+# and importing the surface at module scope is exactly what the `-S` guard
+# forbids this file from doing.
+DEFAULT_PORT = 8517
 
 
 def _seed(value: str) -> int:
@@ -82,6 +97,33 @@ def _count(value: str) -> int:
     if count < 1:
         raise argparse.ArgumentTypeError("a render count below 1 renders nothing")
     return count
+
+
+class _OneFlow(argparse.Action):
+    """Accept `--flow` exactly once, refusing a repeat naming why.
+
+    `action="append"` is what every stage verb uses, because flows batch: they
+    render on one endpoint and a second boot costs what eight more renders
+    would. A serving verb does not batch, so that reason does not reach it -- and
+    argparse's own default for a plain option is to keep the last spelling
+    silently, which would open a surface for a flow the operator did not mean.
+    """
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
+        """Set the flow, or refuse because one was already named."""
+        if getattr(namespace, self.dest, None) is not None:
+            parser.error(
+                "--flow may be given once here: the review surface serves one "
+                "flow at a time, because two would be two field orders and two "
+                "token budgets sharing one set of controls"
+            )
+        setattr(namespace, self.dest, values)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -138,6 +180,25 @@ def build_parser() -> argparse.ArgumentParser:
             help="write the next numbered artifact instead of doing nothing",
         )
 
+    # Exactly one, and required. The surface shows one schema's fields in one
+    # fixed order, so a second flow would be a second page rather than a wider
+    # one -- and the limit belongs at the command the operator typed rather than
+    # at a screen that half-works.
+    made["ui"].add_argument(
+        "--flow",
+        action=_OneFlow,
+        dest="flow",
+        required=True,
+        metavar="FLOW",
+        help="the flow to review; required, and given exactly once",
+    )
+    made["ui"].add_argument(
+        "--port",
+        type=int,
+        default=DEFAULT_PORT,
+        help=f"the loopback port to serve on (default {DEFAULT_PORT})",
+    )
+
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
     # and the other reproduces, and combining them has no meaning (design.md D13).
@@ -169,6 +230,21 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     return parser
+
+
+def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
+    """Serve the review surface for one flow, blocking until the operator stops it.
+
+    **The import is inside this function, and it is load-bearing.**
+    `tests/test_pipeline_cli.py` imports the entry point with `-S`, site-packages
+    off the path, and walks this module's module-level imports: the runtime is
+    stdlib-only, and `isekai.interface.ui` reaches FastAPI. A top-level import
+    here would put the `ui` extra on `python -m isekai`'s import graph and turn
+    that guard red for every verb, including the six that never serve anything.
+    """
+    from isekai.interface.ui import serve
+
+    return serve(wired, str(args.flow), targets, port=int(args.port))
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
@@ -225,8 +301,11 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     targets = list(args.photos)
     # Resolved before the first identifier is looked at, so an untracked flow or
     # a broken manifest refuses without opening a run -- and on `generate`,
-    # without renting anything.
+    # without renting anything. The serving verb resolves its own single flow
+    # inside `establish`, so it is answered before that.
     try:
+        if verb == "ui":
+            return _ui(args, wired, targets)
         flows = _flows_for(args, wired)
     except Refusal as unselectable:
         print(f"refused: {unselectable}", file=wired.err)
@@ -238,6 +317,22 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
+
+
+def _seam(value: T | None, name: str, does: str) -> T:
+    """Return a wiring seam the verb in hand cannot run without, or refuse.
+
+    `reader` and `sorter` are optional on `Wiring` because a front end that
+    serves stage (3) alone reaches no hosted model and would otherwise fabricate
+    doubles it never calls. The verbs that *do* call one say so here, in one
+    place, rather than each inlining the same guard.
+    """
+    if value is None:
+        raise Refusal(
+            f"this wiring was composed without a {name}, and the verb {does} "
+            f"through one"
+        )
+    return value
 
 
 def _per_item(
@@ -265,6 +360,7 @@ def _per_item(
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
+            reader = _seam(wired.reader, "reader", "reads the photograph")
             for name, flow in flows.items():
                 _say(
                     wired,
@@ -273,12 +369,13 @@ def _per_item(
                     caption(
                         run,
                         name,
-                        wired.reader,
+                        reader,
                         briefing_path=flow.caption_briefing_path,
                         new_version=new_version,
                     ),
                 )
         elif verb == "sheet":
+            sorter = _seam(wired.sorter, "sorter", "fills the sheet")
             for name, flow in flows.items():
                 _say(
                     wired,
@@ -287,7 +384,7 @@ def _per_item(
                     sheet(
                         run,
                         name,
-                        wired.sorter,
+                        sorter,
                         flow.schema,
                         vocabulary(),
                         briefing_path=flow.sheet_briefing_path,

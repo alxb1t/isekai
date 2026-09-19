@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.flow import Schema
+from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     Run,
@@ -26,6 +26,8 @@ from isekai.pipeline.review import (
     estimate_tokens,
     is_complete,
     review,
+    save_draft,
+    token_budget,
 )
 from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
@@ -34,6 +36,12 @@ from tests.images import jpeg_bytes
 from tests.stages import caption, sheet
 
 FLOW = "summon-v1"
+
+
+@pytest.fixture
+def flow() -> Flow:
+    """Return the tracked flow, which is what supplies the prefix and trailer."""
+    return load_flow(FLOW)
 
 
 @pytest.fixture
@@ -431,3 +439,138 @@ def test_the_explicit_flag_opens_the_next_draft_and_leaves_the_last_alone(
 
     assert second is not None and second.name == "002.draft.json"
     assert approved.read_bytes() == frozen
+
+
+# --- the draft is updated in place, by one owner -------------------------------
+
+
+@pytest.mark.spec("review:draft-update:values-are-replaced-in-place")
+def test_draft_update_replaces_the_values_and_keeps_the_version(run: Run) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    before = read_artifact(draft)
+    corrected = {name: list(tags) for name, tags in before["fields"].items()}
+    corrected["hair_colour"] = ["blonde"]
+
+    path = save_draft(run, FLOW, corrected)
+
+    assert path == draft
+    after = read_artifact(path)
+    assert after["fields"]["hair_colour"] == ["blonde"]
+    # The version and the sheet it came from are the draft's identity, and an
+    # update is not a new draft: `review()` is the only thing that opens one.
+    assert after["sheet"] == before["sheet"]
+    assert versions(run.directory(FLOW, "review")) == [1]
+    assert draft_versions(run.directory(FLOW, "review")) == [1]
+
+
+@pytest.mark.spec("review:draft-update:a-changed-field-set-is-refused")
+def test_draft_update_refuses_a_changed_field_set(run: Run) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    frozen = draft.read_bytes()
+    dropped = {
+        name: list(tags)
+        for name, tags in read_artifact(draft)["fields"].items()
+        if name != "eye_colour"
+    }
+
+    with pytest.raises(Refusal) as refused:
+        save_draft(run, FLOW, dropped)
+
+    assert "eye_colour" in str(refused.value)
+    assert draft.read_bytes() == frozen
+
+    invented = {
+        name: list(tags) for name, tags in read_artifact(draft)["fields"].items()
+    }
+    invented["favourite_biscuit"] = ["hobnob"]
+
+    with pytest.raises(Refusal) as second:
+        save_draft(run, FLOW, invented)
+
+    assert "favourite_biscuit" in str(second.value)
+    assert draft.read_bytes() == frozen
+
+
+@pytest.mark.spec("review:draft-update:no-draft-refuses-the-update")
+def test_draft_update_refuses_when_there_is_no_draft(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    directory = run.directory(FLOW, "review")
+
+    with pytest.raises(Refusal) as refused:
+        save_draft(run, FLOW, {"hair_colour": ["blonde"]})
+
+    assert FLOW in str(refused.value)
+    assert not directory.exists() or not versions(directory)
+
+    # And once the draft has been approved it is gone, so the same refusal covers
+    # a stale tab reaching a finished input (design.md D5).
+    review(run, FLOW)
+    approve(run, FLOW, schema, vocabulary)
+    before = snapshot(run.path)
+
+    with pytest.raises(Refusal):
+        save_draft(run, FLOW, {"hair_colour": ["blonde"]})
+
+    assert snapshot(run.path) == before
+
+
+# --- the token budget, counted over the prompt the renderer reads --------------
+
+
+@pytest.mark.spec("review:budget:count-covers-the-assembled-prompt")
+def test_the_budget_counts_the_assembled_prompt_not_the_tags_alone(
+    run: Run, schema: Schema, flow: Flow
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    fields = read_artifact(draft)["fields"]
+
+    budget = token_budget(fields, schema, flow)
+
+    positive, _ = assemble(fields, schema.names, flow)
+    assert flow.prompt["prefix"] in positive
+    assert flow.prompt["trailer"] in positive
+    # `estimate_tokens` counts the tags alone, and that is exactly the number the
+    # encoder does not read. The gap is at least the prefix's and the trailer's
+    # own words -- which is what makes a sheet reported inside 77 actually past it.
+    fixed = len(flow.prompt["prefix"].split()) + len(flow.prompt["trailer"].split())
+    assert budget.total >= estimate_tokens(fields, schema) + fixed
+
+
+@pytest.mark.spec("review:budget:shares-and-overhead-sum-to-the-total")
+def test_the_budget_shares_and_overhead_sum_to_the_total(
+    run: Run, schema: Schema, flow: Flow
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    fields = {name: list(tags) for name, tags in read_artifact(draft)["fields"].items()}
+
+    budget = token_budget(fields, schema, flow)
+
+    assert sum(budget.per_field.values()) + budget.overhead == budget.total
+    assert set(budget.per_field) == set(schema.names)
+    empty = [name for name in schema.names if not fields.get(name)]
+    assert empty, "the fixture's sorter answers two fields, so the rest are empty"
+    assert all(budget.per_field[name] == 0 for name in empty)
+
+
+@pytest.mark.spec("review:budget:an-absent-field-is-counted-as-empty")
+def test_the_budget_counts_an_absent_field_as_empty(
+    run: Run, schema: Schema, flow: Flow
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    fields = {name: list(tags) for name, tags in read_artifact(draft)["fields"].items()}
+    absent = {name: tags for name, tags in fields.items() if name != "eye_colour"}
+
+    # A mid-edit draft is what the surface recomputes this over per keystroke, so
+    # a field that is not there yet must contribute nothing rather than raise.
+    budget = token_budget(absent, schema, flow)
+    whole = token_budget({**absent, "eye_colour": []}, schema, flow)
+
+    assert budget.per_field["eye_colour"] == 0
+    assert budget.total == whole.total
+    assert sum(budget.per_field.values()) + budget.overhead == budget.total

@@ -1,6 +1,6 @@
 [project]
 name = "isekai"
-version = "0.17.0"
+version = "0.18.0"
 requires-python = ">=3.12"
 dependencies = []
 
@@ -37,11 +37,67 @@ eval = [
     "Pillow>=11.0",
 ]
 
+# The review surface's server, and NOT the runtime's. `dependencies = []` above
+# stays empty and stays held by the test that imports the package with
+# site-packages off the path: `python -m isekai` is stdlib-only, and the `ui`
+# handler in `cli.py` imports this tree INSIDE the function so the import-graph
+# guard never sees it.
+#
+# It is NOT how the gate gets FastAPI. The `dev` dependency group below pins the
+# same two packages, so `uv sync --locked` installs them and `tests/test_ui_api.py`
+# actually runs; the two pin lists are held equal by a test. That is also why
+# `isekai/interface/ui/app.py` needs no `[[tool.ty.overrides]]` block the way
+# `eval_backends.py` does -- the import resolves in the environment the gate runs
+# in, so there is nothing to ignore.
+#
+# Two packages, both explicit. `fastapi[standard]` would pull a much wider tree
+# -- an HTTP client, a CLI, email validation, templating -- for one server bound
+# to 127.0.0.1 that serves six endpoints and a built bundle.
+#
+# Pinned exactly rather than floored, unlike `eval` above. The difference is what
+# the two extras are for: `eval` is a measurement stack whose floors state what
+# the scorer needs, while this is a private localhost tool whose whole job is to
+# be the same surface every time the operator opens it -- an unannounced minor
+# that changes a response shape is a defect in the middle of a review session,
+# and there is no CI run that would catch it first.
+ui = [
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+]
+
+# Test and gate tooling only, and NOT runtime: `uv sync --locked` installs this
+# group by default, so everything here is present for all five gate commands and
+# for none of `python -m isekai`. `dependencies = []` above is untouched, and the
+# stdlib-only runtime rule with it.
+#
+# `httpx2` is here rather than in the `ui` extra above because it is a test
+# client, not a server dependency: it is what starlette's `TestClient` requires,
+# and shipping it to anyone who installs the extra to actually serve the surface
+# would be wrong about what it is for.
+#
+# `fastapi` and `uvicorn` are here TOO, duplicating the extra's pins, and that
+# duplication is the point rather than an oversight. Four `ui` scenarios are
+# bound only inside `tests/test_ui_api.py`, which drives the real HTTP surface
+# and so cannot fake its boundary the way the eval tests fake theirs. While the
+# extra was the only place FastAPI lived, gate command one never installed it,
+# the module's `importorskip` fired, and those four scenarios were proved by a
+# test that never ran -- a binding that looks exactly like a binding and binds
+# nothing, which is the failure the marker-registration rule exists to prevent.
+# A dev group entry makes the gate run them. The extra stays, because an
+# operator who only wants to serve the surface should not install a test client
+# and a test runner to do it; the two pins are held equal by a test.
+#
+# Every version here is pinned exactly, for the extra's own reason: the surface
+# must be the same every time the operator opens it, and an unannounced minor
+# that changes a response shape is a defect in the middle of a review session.
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.0",
     "ty>=0.0.64",
+    "httpx2==2.13.0",
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
 ]
 
 [tool.ruff.lint]
