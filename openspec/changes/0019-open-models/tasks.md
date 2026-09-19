@@ -7,7 +7,7 @@
 - [x] 3 — `boundary/ollama.py`: the transport, and nothing else
 - [x] 4 — `OllamaReader`: a photograph in, prose out, no schema
 - [x] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
-- [ ] 6 — The registries, and the resolution moved inside the flow loop
+- [x] 6 — The registries, and the resolution moved inside the flow loop
 - [ ] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
 - [ ] 8 — The isolation proof, in the suite, non-vacuous
 - [ ] 9 — The documents this version makes false
@@ -189,22 +189,22 @@ and one of the operator's own photographs.
 
 `specs/cli/spec.md`. `design.md` D6.
 
-- [ ] 6.1 Add `READERS` and `SORTERS` to `wiring.py`, keyed by the implementation string, and change
+- [x] 6.1 Add `READERS` and `SORTERS` to `wiring.py`, keyed by the implementation string, and change
       `Wiring.reader` / `Wiring.sorter` to `Callable[[Flow], …] | None`. Verify with a test that an
       unknown implementation refuses **naming the implementations this build carries** — keys
       `caption:selection:unknown-implementation-is-refused`,
       `sheet:selection:unknown-implementation-is-refused`.
-- [ ] 6.2 Move the resolution inside `cli.py`'s per-flow loop at both sites, leaving `_seam` unchanged.
+- [x] 6.2 Move the resolution inside `cli.py`'s per-flow loop at both sites, leaving `_seam` unchanged.
       Verify with a test that one stage verb given two flows on two implementations writes two artifacts
       each naming its own — key `cli:resolution:one-command-two-implementations`.
-- [ ] 6.3 Update the five call sites that construct `Wiring` directly — `test_ui.py`, `test_ui_api.py`,
+- [x] 6.3 Update the five call sites that construct `Wiring` directly — `test_ui.py`, `test_ui_api.py`,
       `test_generate.py`, `test_resume.py`, `test_pipeline_cli.py`. **The two that pass `None` stay
       `None`**, and verify the uncomposed case still refuses by name — key
       `cli:resolution:uncomposed-seam-refuses-by-name`.
-- [ ] 6.4 Add the test that holds each registry's keys **equal** to the strings the artifacts record, so
+- [x] 6.4 Add the test that holds each registry's keys **equal** to the strings the artifacts record, so
       the duplication cannot drift — key `caption:selection:the-flow-names-the-implementation`. Verify
       by changing one string locally and seeing the test go red, then reverting.
-- [ ] 6.5 Verify nothing is constructed until a flow asks, with a test that composes a wiring, performs
+- [x] 6.5 Verify nothing is constructed until a flow asks, with a test that composes a wiring, performs
       no stage, and asserts no host was contacted and no binary looked up — key
       `caption:reachability:the-check-fires-at-first-call`.
 

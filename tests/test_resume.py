@@ -30,6 +30,7 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
+from tests.stages import Always
 
 FLOW = "summon-v1"
 
@@ -51,13 +52,15 @@ def photo(tmp_path: Path) -> Path:
 def wired(tmp_path: Path) -> Wiring:
     """Return a wiring with every external thing replaced by a counting double."""
     return Wiring(
-        reader=FakeReader(prose="Brown hair, brown eyes, a collared shirt."),
-        sorter=FakeSorter(
-            answers={
-                "hair_colour": ["brown"],
-                "eye_colour": ["brown"],
-                "clothes": ["a crisp collared shirt"],
-            }
+        reader=Always(FakeReader(prose="Brown hair, brown eyes, a collared shirt.")),
+        sorter=Always(
+            FakeSorter(
+                answers={
+                    "hair_colour": ["brown"],
+                    "eye_colour": ["brown"],
+                    "clothes": ["a crisp collared shirt"],
+                }
+            )
         ),
         client=FakeComfyClient(),
         vocabulary=lambda: Vocabulary(
@@ -95,7 +98,10 @@ def _flags(extra: dict[str, object]) -> list[str]:
 
 def _calls(wired: Wiring) -> tuple[int, int, int]:
     """Return how many times each external double has been reached."""
-    reader, sorter, client = wired.reader, wired.sorter, wired.client
+    resolve_reader, resolve_sorter = wired.reader, wired.sorter
+    client = wired.client
+    assert isinstance(resolve_reader, Always) and isinstance(resolve_sorter, Always)
+    reader, sorter = resolve_reader.double, resolve_sorter.double
     assert isinstance(reader, FakeReader)
     assert isinstance(sorter, FakeSorter)
     assert isinstance(client, FakeComfyClient)
@@ -236,11 +242,13 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     bare = open_run(photo, wired.runs_root)
     flow = load_flow(FLOW)
     messages: list[str] = []
-    # `reader` and `sorter` are optional on `Wiring` now -- a ③-only front end
-    # composes one without either. This fixture supplies both doubles, so the two
-    # narrowings below are assertions about the fixture, not about the code.
-    reader, sorter = wired.reader, wired.sorter
-    assert reader is not None and sorter is not None
+    # `reader` and `sorter` are optional resolvers on `Wiring` now -- optional
+    # because a ③-only front end composes one without either, and resolvers
+    # because the flow decides which implementation runs. Both narrowings below
+    # are assertions about this fixture, not about the code.
+    resolve_reader, resolve_sorter = wired.reader, wired.sorter
+    assert resolve_reader is not None and resolve_sorter is not None
+    reader, sorter = resolve_reader(flow), resolve_sorter(flow)
 
     def collect(work: object) -> None:
         try:

@@ -49,6 +49,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **`Wiring.reader` and `Wiring.sorter` become resolvers — `Callable[[Flow], …] | None`, the shape
+  `vocabulary` already had — and the resolution moves inside `cli.py`'s per-flow loop.** It was hoisted
+  above it, so one invocation naming flows on both arms resolved a single reader and handed it to both:
+  one of the two captions would have recorded a producer that did not produce it, with the whole gate
+  green. A test drives one command over two flows on two implementations and asserts each artifact names
+  its own, through a resolver that reports what each flow declared — a double that ignored the flow would
+  make that test pass for the bug it exists to catch.
+
+  **`READERS` and `SORTERS` are tables, not two-branch conditionals, and the argument is the refusal.** A
+  conditional hands an unrecognised implementation the default one, producing a complete run on the wrong
+  models with the artifact's provenance disagreeing with the manifest that asked for it — silent, and it
+  corrupts any later comparison between the arms. The table makes that a refusal naming both
+  implementations this build carries. A further test holds each registry's **keys equal to the strings
+  the artifacts record**, so the duplication cannot drift; changing `OllamaReader.implementation` to
+  `"ollama-x"` turns it red.
+
+  **Nothing is constructed until a flow asks**, which is what lets a machine with one implementation
+  available never touch the other: composing a wiring with `shutil.which` and `urllib.request.urlopen`
+  both monkeypatched to raise still succeeds. `_seam` is unchanged, and the two front ends that compose
+  a wiring with no reader and no sorter — the ③-only UI — still pass `None` and still refuse by name.
+
+  `tests/stages.py` gains `Always`, a resolver handing every flow the same double, so the counting
+  assertions still reach the object that did the counting.
+
 - **`OllamaSorter`, in `isekai/pipeline/sheet.py`** — beside `ClaudeSorter` and `FakeSorter`. Its
   `format` **equals `output_shape(schema)`** rather than resembling it, which is the same object the
   Claude arm puts behind `--json-schema`: the transport differs and the constraint does not. That

@@ -5,23 +5,35 @@ carried, so the stdlib-only runtime rule now has exactly one subject and the gua
 that holds it lives here, beside the falsification that keeps it honest.
 """
 
+import argparse
 import io
 import json
 import os
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
+from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
-from isekai.interface.wiring import Wiring
-from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import FakeSorter
+from isekai.interface.wiring import (
+    DEFAULT_IMPLEMENTATION,
+    READERS,
+    SORTERS,
+    Wiring,
+    reader_for,
+    sorter_for,
+    wiring_from,
+)
+from isekai.pipeline.caption import ClaudeReader, FakeReader, OllamaReader
+from isekai.pipeline.sheet import ClaudeSorter, FakeSorter, OllamaSorter
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
+from tests.stages import Always
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -51,8 +63,8 @@ def _wiring(tmp_path: Path, flows_dir: Path | None = None) -> Wiring:
     from isekai.foundation.flow import FLOWS_DIR
 
     return Wiring(
-        reader=FakeReader(),
-        sorter=FakeSorter(answers={}),
+        reader=Always(FakeReader()),
+        sorter=Always(FakeSorter(answers={})),
         client=None,
         vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, read_tags(CSV)),
         runs_root=tmp_path / "runs",
@@ -64,8 +76,6 @@ def _wiring(tmp_path: Path, flows_dir: Path | None = None) -> Wiring:
 
 def _two_flows(tmp_path: Path) -> Path:
     """Return a scratch flows root tracking `summon-v1` and a copy beside it."""
-    from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, load_flow
-
     source = load_flow("summon-v1").path
     root = tmp_path / "two-flows"
     for name in ("summon-v1", "other-v1"):
@@ -77,6 +87,82 @@ def _two_flows(tmp_path: Path) -> Path:
         for sibling in SIBLINGS:
             (directory / sibling).write_bytes((source / sibling).read_bytes())
     return root
+
+
+def _flow_declaring(
+    tmp_path: Path,
+    *,
+    implementation: str = "ollama",
+    reader: str = "a-reader",
+    sorter: str = "a-sorter",
+    name: str = "open-v1",
+) -> Flow:
+    """Return a scratch flow whose manifest declares a `hosted` block."""
+    source = load_flow("summon-v1").path
+    directory = tmp_path / "declaring" / name
+    directory.mkdir(parents=True)
+    manifest = json.loads((source / MANIFEST_NAME).read_text())
+    manifest["flow"] = name
+    manifest["hosted"] = {
+        "implementation": implementation,
+        "reader": reader,
+        "sorter": sorter,
+    }
+    (directory / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
+    for sibling in SIBLINGS:
+        (directory / sibling).write_bytes((source / sibling).read_bytes())
+    return load_flow(name, tmp_path / "declaring")
+
+
+def _two_arms(tmp_path: Path) -> Path:
+    """Return a flows root with one flow on each implementation.
+
+    `open-v1` declares the open block; `summon-v1` declares none, which means the
+    default. One command naming both is what the per-flow resolution exists for.
+    """
+    source = load_flow("summon-v1").path
+    root = tmp_path / "two-arms"
+    for name, hosted in (("summon-v1", None), ("open-v1", "ollama")):
+        directory = root / name
+        directory.mkdir(parents=True)
+        manifest = json.loads((source / MANIFEST_NAME).read_text())
+        manifest["flow"] = name
+        if hosted is not None:
+            manifest["hosted"] = {
+                "implementation": hosted,
+                "reader": "a-reader",
+                "sorter": "a-sorter",
+            }
+        (directory / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
+        for sibling in SIBLINGS:
+            (directory / sibling).write_bytes((source / sibling).read_bytes())
+    return root
+
+
+def _arm_aware_reader() -> Callable[[Flow], FakeReader]:
+    """Return a resolver that reports the implementation each flow declares.
+
+    A double per arm rather than one for both: what is under test is that the
+    resolution happens per flow, so a resolver that ignored the flow would make
+    the assertion pass for the bug it exists to catch.
+    """
+
+    def resolve(flow: Flow) -> FakeReader:
+        hosted = flow.hosted
+        return FakeReader(
+            prose="A person.",
+            implementation=hosted.implementation if hosted else DEFAULT_IMPLEMENTATION,
+        )
+
+    return resolve
+
+
+def _cli_args(
+    verb: str, target: str, tmp_path: Path, *, flow: list[str]
+) -> argparse.Namespace:
+    """Return a parsed command line for one verb over one target."""
+    flags = [item for name in flow for item in ("--flow", name)]
+    return build_parser().parse_args([verb, *flags, target])
 
 
 def _stdlib_import(statement: str) -> subprocess.CompletedProcess[str]:
@@ -289,3 +375,143 @@ def test_an_untracked_flow_is_refused_before_any_run_is_opened(tmp_path: Path) -
     assert status == 1
     assert not (tmp_path / "runs").exists()
     assert "summon-v9" in err.getvalue()
+
+
+# --- resolution: the flow picks the implementation ----------------------------
+
+
+@pytest.mark.spec("caption:selection:unknown-implementation-is-refused")
+def test_an_unknown_reader_implementation_refuses_naming_what_this_build_carries(
+    tmp_path: Path,
+) -> None:
+    flow = _flow_declaring(tmp_path, implementation="vllm")
+
+    with pytest.raises(Refusal) as refused:
+        reader_for(flow)
+
+    message = str(refused.value)
+    assert "vllm" in message
+    assert "claude-cli" in message and "ollama" in message
+
+
+@pytest.mark.spec("sheet:selection:unknown-implementation-is-refused")
+def test_an_unknown_sorter_implementation_refuses_naming_what_this_build_carries(
+    tmp_path: Path,
+) -> None:
+    flow = _flow_declaring(tmp_path, implementation="vllm")
+
+    with pytest.raises(Refusal) as refused:
+        sorter_for(flow)
+
+    message = str(refused.value)
+    assert "vllm" in message
+    assert "claude-cli" in message and "ollama" in message
+
+
+@pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
+def test_each_registrys_keys_are_the_strings_the_artifacts_record() -> None:
+    """The duplication between the table and the adapter cannot drift.
+
+    The registry's keys and `Reading.implementation` / `Sorting.implementation`
+    are the same strings in two places, and a run whose provenance disagreed with
+    the manifest that asked for it would be silent. `Model`'s own docstring
+    establishes this pattern for the digest it duplicates.
+    """
+    assert set(READERS) == {"claude-cli", "ollama"}
+    assert set(SORTERS) == set(READERS)
+    assert ClaudeReader().implementation == "claude-cli"
+    assert ClaudeSorter().implementation == "claude-cli"
+    assert OllamaReader(model="r").implementation == "ollama"
+    assert OllamaSorter(model="s").implementation == "ollama"
+    assert DEFAULT_IMPLEMENTATION in READERS
+
+
+@pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
+def test_a_flow_declaring_no_block_resolves_to_the_default_implementation() -> None:
+    flow = load_flow("summon-v1")
+
+    assert flow.hosted is None
+    assert isinstance(reader_for(flow), ClaudeReader)
+    assert isinstance(sorter_for(flow), ClaudeSorter)
+
+
+@pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
+def test_a_flow_declaring_ollama_resolves_to_the_models_its_manifest_names(
+    tmp_path: Path,
+) -> None:
+    flow = _flow_declaring(tmp_path, reader="a-reader", sorter="a-sorter")
+
+    reader, sorter = reader_for(flow), sorter_for(flow)
+
+    assert isinstance(reader, OllamaReader) and reader.model == "a-reader"
+    assert isinstance(sorter, OllamaSorter) and sorter.model == "a-sorter"
+
+
+@pytest.mark.spec("caption:reachability:the-check-fires-at-first-call")
+def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Nothing is constructed until a flow asks, so neither check can fire here.
+
+    That is what lets a machine with one implementation available never touch the
+    other. `shutil.which` and the transport both raise, and composing a wiring
+    still succeeds because it resolves nothing.
+    """
+
+    def unreachable(*args: object, **kwargs: object) -> object:
+        raise AssertionError("something was reached at composition time")
+
+    monkeypatch.setattr("shutil.which", unreachable)
+    monkeypatch.setattr("urllib.request.urlopen", unreachable)
+
+    wired = wiring_from(runs=tmp_path / "runs")
+
+    assert wired.reader is not None and wired.sorter is not None
+
+
+@pytest.mark.spec("cli:resolution:uncomposed-seam-refuses-by-name")
+def test_a_wiring_composed_without_a_reader_refuses_by_name(tmp_path: Path) -> None:
+    """The ③-only front end's case: absent, not fabricated, and named when needed."""
+    err = io.StringIO()
+    wired = _wiring(tmp_path)
+    wired.reader = None
+    wired.err = err
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+
+    status = dispatch(
+        _cli_args("caption", str(photo), tmp_path, flow=["summon-v1"]), wired
+    )
+
+    assert status == 1
+    assert "composed without a reader" in err.getvalue()
+
+
+@pytest.mark.spec("cli:resolution:one-command-two-implementations")
+def test_one_command_over_two_flows_writes_two_artifacts_each_naming_its_own(
+    tmp_path: Path,
+) -> None:
+    """The reason the resolution moved inside the loop.
+
+    Hoisted above it, one invocation naming flows on both arms resolved a single
+    reader and handed it to both -- so one of the two captions recorded a producer
+    that did not produce it, with the whole gate green.
+    """
+    wired = _wiring(tmp_path, flows_dir=_two_arms(tmp_path))
+    wired.reader = _arm_aware_reader()
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+
+    status = dispatch(
+        _cli_args("caption", str(photo), tmp_path, flow=["summon-v1", "open-v1"]),
+        wired,
+    )
+
+    assert status == 0
+    named = {
+        written.parent.parent.name: json.loads(written.read_text())["producer"][
+            "implementation"
+        ]
+        for written in sorted((tmp_path / "runs").glob("*/*/captions/001.json"))
+    }
+    assert named == {"summon-v1": "claude-cli", "open-v1": "ollama"}
