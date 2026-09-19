@@ -27,6 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Editing, autosave and undo — and the page stops reading a fixture.** `useBatch()` and `useSheet()`
+  replace it: the batch is the invocation's argument list held in memory, the draft is read from
+  `GET /api/inputs/{id}`, and every edit schedules a debounced 400 ms `PUT` of the whole draft. **There
+  is no Save control anywhere** — the two receipts are the only thing on the page that talks about
+  saving, and the last-saved timestamp comes back from the server rather than the client clock, because
+  a receipt the browser wrote for itself is a claim about a save and not a record of one. Verified on
+  disk: `001.draft.json` changes in place, keeps its version and the sheet it records, and **no `002`
+  appears**.
+- **The keyboard model, less the two bindings that went with the refusal surface.** Tab through the
+  fields in schema order, `Alt+←/→` between inputs, `←/→` to move chip selection, any character to open
+  the autocomplete, `↑↓⏎` to commit, `Backspace` to remove the last chip or the selected one, and
+  `Cmd/Ctrl+Z`/`Shift+Z` to undo and redo. **Replacing a selected chip by typing is three keystrokes**
+  — `→`, type, `⏎` — because it is the single commonest edit in the job; measured live, `long hair` →
+  `very long hair` in one step, and one undo puts it back without disturbing an earlier edit in another
+  field. Undo is a stack of **edit operations** rather than sheet snapshots, it crosses every field, and
+  it is cleared when the operator changes input.
 - **The tag autocomplete — the piece that decides whether the tool is fast.** `useVocabulary()` queries
   `GET /api/tags?q=` debounced at 120 ms and **ranks nothing**: the server's order is the order, because
   a second copy of the ranking rule in TypeScript is the duplication that endpoint exists to delete. A

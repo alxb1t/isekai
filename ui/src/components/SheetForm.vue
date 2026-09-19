@@ -14,8 +14,11 @@ const props = defineProps<{
   readonly: boolean
   kicker: string
   focused: string | null
+  selected: number | null
   loading?: boolean
 }>()
+
+defineEmits<{ remove: [field: string, index: number] }>()
 
 const filled = computed(
   () => props.schema.filter((name) => (props.fields[name] ?? []).length > 0).length,
@@ -45,6 +48,8 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
         :state="state(name)"
         :readonly="readonly"
         :focused="name === focused"
+        :selected="name === focused ? selected : null"
+        @remove="(index) => $emit('remove', name, index)"
       >
         <slot name="editor" :field="name" />
       </FieldRow>

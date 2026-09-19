@@ -5,7 +5,7 @@
    has exactly one and `/api/batch` names it. Widening that later is a
    find-and-replace, not a migration. */
 
-import type { TagMatches } from './types'
+import type { BatchInfo, Budget, InputDetail, TagMatches } from './types'
 
 async function get<T>(url: string): Promise<T> {
   const response = await fetch(url)
@@ -16,9 +16,40 @@ async function get<T>(url: string): Promise<T> {
   return (await response.json()) as T
 }
 
+async function send<T>(url: string, method: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    const failed = (await response.json().catch(() => ({}))) as { refusal?: string }
+    throw new Error(failed.refusal ?? `${url} answered ${response.status}`)
+  }
+  return (await response.json()) as T
+}
+
 export function tags(fragment: string, limit: number): Promise<TagMatches> {
   const query = new URLSearchParams({ q: fragment, limit: String(limit) })
   return get<TagMatches>(`/api/tags?${query}`)
+}
+
+export function batch(): Promise<BatchInfo> {
+  return get<BatchInfo>('/api/batch')
+}
+
+export function inputDetail(id: string): Promise<InputDetail> {
+  return get<InputDetail>(`/api/inputs/${encodeURIComponent(id)}`)
+}
+
+/* The whole draft, every time. There is no Save control on the page and no
+   partial update here: a debounced PUT of everything is what makes the receipt
+   the page shows true. */
+export function saveDraft(
+  id: string,
+  fields: Record<string, string[]>,
+): Promise<{ draft: string; saved: number; budget: Budget }> {
+  return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields })
 }
 
 export function photoUrl(id: string): string {

@@ -13,7 +13,12 @@ import TagAutocomplete from './TagAutocomplete.vue'
    is no path to free text in a chip, and that is what underwrites two of the
    four refusal kinds this version defers: an out-of-vocabulary tag can only ever
    arrive from the sorter. */
-const props = defineProps<{ vocabulary: number; focused: boolean }>()
+const props = defineProps<{
+  vocabulary: number
+  focused: boolean
+  chips: number
+  selected: number | null
+}>()
 
 const emit = defineEmits<{
   commit: [tag: string]
@@ -63,8 +68,13 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.key === 'Backspace' && fragment.value === '') {
     emit('back')
   } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !fragment.value) {
+    // Chip selection moves only when there is no fragment to move a caret in.
+    if (props.chips === 0) return
     event.preventDefault()
     emit('step', event.key === 'ArrowLeft' ? -1 : 1)
+  } else if (event.key === 'Delete' && props.selected !== null) {
+    event.preventDefault()
+    emit('back')
   }
 }
 </script>

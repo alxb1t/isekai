@@ -9,7 +9,7 @@
 - [x] 5 — The server and the verb
 - [x] 6 — Vue: shell, tokens, rail, and the read-only sheet
 - [x] 7 — Vue: the autocomplete
-- [ ] 8 — Vue: editing and autosave
+- [x] 8 — Vue: editing and autosave
 - [ ] 9 — Vue: approve, read-only, and the refusal line
 - [ ] 10 — Vue: the overlay, the loading state, the manifest
 - [ ] 11 — The docs this version makes false
@@ -289,23 +289,23 @@ build order, the three things that are easy to get wrong and the keyboard model.
 
 > `ui/design/components.md` build order 4, and the keyboard model in `design.md` § *Build reference*.
 
-- [ ] 8.1 Build `TagInput.vue` — the fragment as **bare mono text with a 1px accent caret**, never a
+- [x] 8.1 Build `TagInput.vue` — the fragment as **bare mono text with a 1px accent caret**, never a
       chip. Committed and in-flight must never look alike.
-- [ ] 8.2 Implement the keyboard model, less `⌃↓` and `⌥⏎`, which went with 5a. **Replacing a selected
+- [x] 8.2 Implement the keyboard model, less `⌃↓` and `⌥⏎`, which went with 5a. **Replacing a selected
       chip by typing then `Enter` is the single commonest edit in the job** — it must be three
       keystrokes, not delete-then-add.
-- [ ] 8.3 Build `useSheet()` — a **400 ms** debounced `PUT` of the whole draft. The last-saved timestamp
+- [x] 8.3 Build `useSheet()` — a **400 ms** debounced `PUT` of the whole draft. The last-saved timestamp
       comes from the server, not the client clock: the receipt has to be true. **There is no Save
       control anywhere** — if one appears, the design has been broken.
-- [ ] 8.4 Undo is a stack of **edit operations**, not sheet snapshots, crossing all fields, cleared when
+- [x] 8.4 Undo is a stack of **edit operations**, not sheet snapshots, crossing all fields, cleared when
       the operator changes input.
-- [ ] 8.5 Verify a fragment matching nothing cannot be committed — **there is no path to free text in a
+- [x] 8.5 Verify a fragment matching nothing cannot be committed — **there is no path to free text in a
       chip.** This is what underwrites two of the four refusal kinds the version defers.
-- [ ] 8.6 Verify the draft on disk changes and keeps its number:
+- [x] 8.6 Verify the draft on disk changes and keeps its number:
       `watch -n1 'ls -la .data/v0.18/runs/*/summon-v1/review/'` while typing — **`001.draft.json`
       updates in place; no `002` appears.**
-- [ ] 8.7 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
-- [ ] 8.8 Verify the gate: `make gate`
+- [x] 8.7 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
+- [x] 8.8 Verify the gate: `make gate`
 
 ## 9. Vue: approve, read-only, and the refusal line
 
