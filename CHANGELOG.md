@@ -25,6 +25,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Four `ui` scenarios were bound to a test the gate never ran.** `tests/test_ui_api.py` opens with
+  `pytest.importorskip("fastapi")`, FastAPI lived only in the optional `ui` extra, and CI runs
+  `make gate` with no extra — so `uv sync --locked` never installed it, the module skipped in CI and on
+  a clean checkout alike, and `ui:vocabulary:matches-are-ranked-by-post-count`,
+  `ui:vocabulary:an-unmatched-fragment-commits-nothing`, `ui:approval:approved-input-refuses-a-draft-update`
+  and `ui:approval:approved-input-opens-read-only` were proved by nothing while looking exactly like
+  bindings. `fastapi` and `uvicorn` are now pinned in the **`dev` dependency group** as well, which the
+  gate installs by default: `dependencies = []` is untouched and the runtime stays stdlib-only. The
+  suite goes from **671 passed, 1 skipped** to **682 passed, 0 skipped**. Two structural tests hold it:
+  one asserts the framework is present, so its absence is a failure rather than a skip, and one holds
+  the extra's pins and the group's equal. `isekai/interface/ui/app.py`'s `[[tool.ty.overrides]]` block
+  is **removed** rather than kept — the import resolves in the environment the gate runs in, so there
+  was nothing left to ignore.
+- **The autosave `PUT` raced the approve `POST`, and the loser was the operator's last correction.**
+  `flush()` returned `void` and discarded its promise, so the comment claiming the write landed first
+  stated an ordering the code did not enforce: approving inside the 400 ms debounce either built the
+  artifact from the *previous* draft and unlinked the correction with it, or left a `has no draft to
+  update` refusal on the header line immediately after a successful approve. `flush()` now returns its
+  write and `approve()` awaits it. **This was the one place in the change where work could be lost.**
+- **`⌘↩` committed a tag nobody chose, then approved the sheet containing it.** `TagInput`'s Enter
+  branch tested no modifier and did not stop propagating, so approving with the dropdown open committed
+  row 0 into the field and *then* ran the window handler's approve. The branch is now guarded with
+  `!metaKey && !ctrlKey`, and a bare `↩` that commits stops there — the same reasoning the `Esc` branch
+  three lines below already carried.
+- **A failed input read left the page on the skeleton for ever, saying nothing.** `useSheet.open()`
+  awaited `GET /api/inputs/{id}` with no `try`, and every caller is fire-and-forget, so a 409 or a 500
+  left `loading` true, `refusal` empty and the rejection unhandled. It now catches, writes the reason
+  verbatim to the header line and clears the skeleton, mirroring what `flush()` already did — which is
+  where design D6 says a `Refusal` lands.
+
 ### Verified
 
 - **The acceptance run: three photographs through ①②③④, corrected in the browser, rendered from one

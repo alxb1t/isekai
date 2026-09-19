@@ -6,9 +6,11 @@ there rather than in `app.py`. Nothing in this file needs the `ui` extra; the
 endpoints that do are in `tests/test_ui_api.py`.
 """
 
+import importlib.util
 import io
 import random
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -323,3 +325,31 @@ def test_an_absent_toolchain_refuses_naming_what_to_install(
     # binary, and the refusal copies `require_binary()`'s shape.
     assert "nodejs.org" in message
     assert "isekai ui" in message
+
+
+@pytest.mark.spec_exempt("structural: it proves the gate runs the API tests")
+def test_the_gate_installs_the_web_framework_the_api_tests_need() -> None:
+    # `tests/test_ui_api.py` opens with an `importorskip`, and four `ui`
+    # scenarios are bound there and nowhere else. If FastAPI is absent from the
+    # environment the gate syncs, that module skips and those four are proved by
+    # a test that never runs. So the presence of the framework is itself
+    # asserted, here, where its absence is a failure rather than a skip.
+    assert importlib.util.find_spec("fastapi") is not None, (
+        "FastAPI is absent, so tests/test_ui_api.py will skip and the four `ui` "
+        "scenarios bound only there will be proved by nothing -- restore the "
+        "`fastapi` pin in pyproject.toml's `dev` dependency group"
+    )
+
+
+@pytest.mark.spec_exempt("structural: it holds two pin lists equal, not a behaviour")
+def test_the_extra_and_the_dev_group_pin_the_server_identically() -> None:
+    # The `ui` extra is what an operator installs to serve the surface; the
+    # `dev` group is what the gate installs to test it. They name the same two
+    # packages, so a bump to one that missed the other would have the suite
+    # proving a version nobody runs.
+    root = Path(__file__).resolve().parent.parent
+    config = tomllib.loads((root / "pyproject.toml").read_text())
+    extra = set(config["project"]["optional-dependencies"]["ui"])
+    dev = set(config["dependency-groups"]["dev"])
+
+    assert extra <= dev, f"the `dev` group is missing {sorted(extra - dev)}"

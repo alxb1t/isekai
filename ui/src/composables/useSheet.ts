@@ -54,18 +54,36 @@ export function useSheet() {
     loading.value = true
     done.length = 0
     undone.length = 0
-    const body = await inputDetail(id)
+    let body: InputDetail
+    try {
+      body = await inputDetail(id)
+    } catch (reason) {
+      if (current !== id) return
+      // A read that fails has to land somewhere, and the header line is where
+      // every other refusal lands. Without this the page sits on the skeleton
+      // for ever and says nothing at all, which is the one outcome the surface
+      // is not allowed to have.
+      refusal.value = (reason as Error).message
+      loading.value = false
+      return
+    }
     if (current !== id) return
     detail.value = body
     fields.value = { ...body.fields }
     budget.value = body.budget
     saved.value = body.saved
+    refusal.value = null
     loading.value = false
     inFlight = 0
     saving.value = false
   }
 
-  function flush(): void {
+  /* Returns the write it started, so `approve()` can wait for it. A `flush()`
+     nobody awaits races the approve `POST`, and the loser of that race is the
+     operator's last correction -- either the artifact is built from the previous
+     draft and the correction is unlinked with it, or the `PUT` lands after the
+     approve and is refused for having no draft. */
+  async function flush(): Promise<void> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (detail.value === null || detail.value.readonly) return
@@ -73,7 +91,7 @@ export function useSheet() {
     const payload = { ...fields.value }
     inFlight += 1
     saving.value = true
-    saveDraft(id, payload)
+    await saveDraft(id, payload)
       .then((receipt) => {
         if (current !== id) return
         budget.value = receipt.budget
@@ -94,7 +112,7 @@ export function useSheet() {
 
   function schedule(): void {
     if (timer !== undefined) clearTimeout(timer)
-    timer = setTimeout(flush, DEBOUNCE)
+    timer = setTimeout(() => void flush(), DEBOUNCE)
   }
 
   function apply(edit: Edit): void {

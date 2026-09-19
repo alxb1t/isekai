@@ -61,10 +61,18 @@ function onKey(event: KeyboardEvent): void {
     // has just clicked a row reach for the mouse again to reach the next one.
     event.preventDefault()
     emit('row', event.key === 'ArrowUp' ? -1 : 1)
-  } else if (event.key === 'Enter') {
-    // A fragment matching nothing commits nothing: there is no row to take.
+  } else if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
+    /* A fragment matching nothing commits nothing: there is no row to take.
+
+       `⌘↩` is approve and is deliberately NOT this branch. Without the modifier
+       test the operator who types a fragment and presses `⌘↩` meaning *approve*
+       commits row 0 -- a tag nobody selected -- and then approves the sheet
+       containing it, because the window handler sees the same event. Bare `↩`
+       stops here for the same reason the Escape branch below does: nothing above
+       this input should act on a key the dropdown answered. */
     if (!open.value) return
     event.preventDefault()
+    event.stopPropagation()
     emit('commit', matches.value[selected.value].tag)
     reset()
   } else if (event.key === 'Escape') {

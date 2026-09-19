@@ -1,9 +1,14 @@
 """The six endpoints, against a running application.
 
-**This module opens with an `importorskip` and that is load-bearing.** A
-module-level `from fastapi.testclient import TestClient` fails *collection*
-without the `ui` extra, which is gate command five going red rather than a skip,
-and CI never installs the extra.
+**This module runs in the gate.** FastAPI is pinned in the `dev` dependency
+group, so `uv sync --locked` installs it and the four `ui` scenarios bound here
+and nowhere else are actually proved. `tests/test_ui.py` asserts the framework is
+present, so its absence is a failure rather than a silent skip.
+
+The `importorskip` below is what remains of the older posture, and it is kept as
+a belt for an environment synced without the dev group: a module-level `from
+fastapi.testclient import TestClient` would fail *collection* there, which is
+gate command five going red over a missing test tool rather than a defect.
 
 This is deliberately not the eval tests' pattern. Those stay in the main suite by
 faking their boundary in `tests/eval_fakes.py` and never importing the extra at

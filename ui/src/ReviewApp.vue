@@ -117,9 +117,10 @@ const kicker = computed(() =>
 async function approve(): Promise<void> {
   const id = batch.current.value
   if (!id || sheet.readonly.value) return
-  // The debounced write lands before the approve, so the artifact is taken from
-  // what the operator last typed rather than from what happened to be on disk.
-  sheet.flush()
+  // Awaited, not merely started: the debounced write has to be ON DISK before
+  // the approve `POST` goes out, or the artifact is built from the previous
+  // draft and the last correction is unlinked along with it.
+  await sheet.flush()
   if (!(await approval.approve(id))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
   await Promise.all([batch.refresh(), sheet.open(id)])
@@ -280,7 +281,7 @@ function onKey(event: KeyboardEvent): void {
 
 // The draft is written before the tab goes, so a close mid-debounce loses
 // nothing. Nothing lives only in the browser.
-const onLeave = () => sheet.flush()
+const onLeave = () => void sheet.flush()
 
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
@@ -299,7 +300,9 @@ onUnmounted(() => {
 watch(batch.current, (id) => {
   if (!id) return
   // The pending write belongs to the input being left, not the one arriving.
-  sheet.flush()
+  // Not awaited: `flush()` captures the id it is writing and `open()` guards on
+  // `current`, so the two cannot cross.
+  void sheet.flush()
   focused.value = null
   selectedChip.value = null
   approval.forget()
