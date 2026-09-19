@@ -90,19 +90,14 @@ def _claude_sorter(flow: Flow) -> Sorter:
 
 
 def _named_by(flow: Flow) -> Hosted:
-    """Return the block that named this implementation, or refuse for its absence.
+    """Return the block that named this implementation, narrowing away its absence.
 
-    Unreachable while `DEFAULT_IMPLEMENTATION` names the arm that needs no block,
-    and a guard on that constant rather than dead code: the version that changes
-    it makes this path live, and a `None` reaching the builders below would be an
-    `AttributeError` where this is a refusal.
+    `_resolve` reached a hosted builder by reading `flow.hosted.implementation`,
+    so the block is present; this refuses rather than raising `AttributeError` if
+    `DEFAULT_IMPLEMENTATION` ever names an arm that needs one.
     """
     if flow.hosted is None:
-        raise Refusal(
-            f"flow {flow.id} resolves to a hosted implementation and declares no "
-            "`hosted` block, so there is no model name to run; add the block, "
-            "under a new flow identifier"
-        )
+        raise Refusal(f"flow {flow.id} declares no `hosted` block to run")
     return flow.hosted
 
 

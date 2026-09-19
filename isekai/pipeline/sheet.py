@@ -185,6 +185,18 @@ def output_shape(schema: Schema) -> dict[str, Any]:
     }
 
 
+def sorter_prompt(prose: str, briefing: str) -> str:
+    """Return the whole of what a sorter is told: its rules, then the prose.
+
+    **Shared by both adapters rather than written once each**, for the same
+    reason `output_shape` is: the two arms are only comparable if they differ in
+    transport and in nothing else. Two copies of this line would let a heading or
+    a `strip()` policy drift between them, which no test would catch and which
+    would quietly invalidate any comparison drawn between the arms.
+    """
+    return f"{briefing.rstrip()}\n\n## The description to sort\n\n{prose.strip()}\n"
+
+
 @dataclass(frozen=True)
 class ClaudeSorter:
     """The `claude -p` adapter for this stage: no tools, and a required shape."""
@@ -193,16 +205,12 @@ class ClaudeSorter:
     runner: Runner = spawn
     implementation: str = "claude-cli"
 
-    def prompt(self, prose: str, briefing: str) -> str:
-        """Return the whole of what the sorter is told: its rules, then the prose."""
-        return f"{briefing.rstrip()}\n\n## The description to sort\n\n{prose.strip()}\n"
-
     def argv(self, prose: str, schema: Schema, briefing: str) -> list[str]:
         """Return the exact argument vector this sorter is invoked with."""
         return [
             self.binary,
             "-p",
-            self.prompt(prose, briefing),
+            sorter_prompt(prose, briefing),
             *BASE_FLAGS,
             "--tools",
             "",
@@ -243,10 +251,6 @@ class OllamaSorter:
     transport: ollama.Transport = ollama.post
     implementation: str = "ollama"
 
-    def prompt(self, prose: str, briefing: str) -> str:
-        """Return the whole of what the sorter is told: its rules, then the prose."""
-        return f"{briefing.rstrip()}\n\n## The description to sort\n\n{prose.strip()}\n"
-
     def body(self, prose: str, schema: Schema, briefing: str) -> dict[str, Any]:
         """Return the exact request this sorter is invoked with.
 
@@ -255,7 +259,7 @@ class OllamaSorter:
         """
         return {
             "model": self.model,
-            "prompt": self.prompt(prose, briefing),
+            "prompt": sorter_prompt(prose, briefing),
             "format": output_shape(schema),
             "stream": False,
             "think": False,

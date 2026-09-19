@@ -19,7 +19,7 @@ from isekai.boundary.ollama import (
     ask,
 )
 from isekai.foundation.refusal import Refusal
-from tests.transports import EMPTY_OBJECT, FakeTransport
+from tests.transports import FakeTransport
 
 BODY = {"model": "a-model", "prompt": "describe", "stream": False}
 REMEDY = "ollama pull a-model"
@@ -80,25 +80,6 @@ def test_an_absent_model_refuses_naming_the_callers_own_remedy() -> None:
     message = str(refused.value)
     assert "a-model" in message
     assert REMEDY in message
-
-
-@pytest.mark.spec_exempt("the reachability scenarios are bound at the adapters")
-@pytest.mark.parametrize("error", [urllib.error.URLError("refused"), None])
-def test_neither_no_attempt_case_raises_the_retryable_failure(
-    error: BaseException | None,
-) -> None:
-    """Both are `Refusal`, which is what keeps them out of the retry budget.
-
-    A retry budget counts models tried and failed. Neither of these is that, and
-    spending an attempt on one leaves a run whose error records have to be deleted
-    by hand before it can resume.
-    """
-    transport = (
-        FakeTransport(error=error) if error is not None else FakeTransport(status=404)
-    )
-
-    with pytest.raises(Refusal):
-        ask(BODY, remedy=REMEDY, transport=transport)
 
 
 # --- transient: worth another attempt -----------------------------------------
@@ -168,9 +149,7 @@ def test_a_body_that_is_not_an_object_is_permanent() -> None:
 
 
 @pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
-@pytest.mark.parametrize(
-    "answer", [EMPTY_OBJECT, b'{"response": ""}', b'{"response": "   "}']
-)
+@pytest.mark.parametrize("answer", [b"{}", b'{"response": ""}', b'{"response": "   "}'])
 def test_an_answerless_body_is_permanent(answer: bytes) -> None:
     transport = FakeTransport(raw=answer)
 

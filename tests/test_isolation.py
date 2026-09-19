@@ -13,22 +13,21 @@ run on a real machine remains the acceptance evidence, and this is its
 CI-resident twin (design.md D11).
 """
 
-import json
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
+from isekai.boundary import ollama
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import CAPTIONS, SHEETS, Run, attempts, open_run, versions
 from isekai.interface.wiring import reader_for, sorter_for
 from isekai.pipeline.caption import OllamaReader, caption
 from isekai.pipeline.sheet import OllamaSorter, sheet
-from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV
+from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
-from tests.transports import FakeTransport
+from tests.transports import FakeTransport, sorted_answer
 
 REACHED = "Claude was reached"
 
@@ -59,22 +58,7 @@ def run(tmp_path: Path) -> Run:
     return open_run(photo, tmp_path / "runs")
 
 
-@pytest.fixture
-def vocabulary() -> Vocabulary:
-    """Return the suite's tag list."""
-    return Vocabulary("v", "r" * 40, "d" * 64, read_tags(CSV))
-
-
-def _answer(flow: Flow) -> bytes:
-    """Return a sorter response body carrying every field the schema names."""
-    fields = {name: [] for name in flow.schema.names}
-    fields["hair_colour"] = ["dark brown"]
-    return json.dumps({"response": json.dumps(fields)}).encode()
-
-
-def _offline(
-    resolved: object, answer: bytes | None = None, prose: str = PROSE
-) -> object:
+def _offline[T](resolved: T, transport: ollama.Transport) -> T:
     """Return `resolved` with its transport replaced, if it has one to replace.
 
     **The resolution is exercised and the socket is not.** `reader_for` is what
@@ -84,10 +68,8 @@ def _offline(
     frozen dataclass captures the default in `__init__`, so a patched module
     attribute is never consulted and the call goes to the real host.
     """
-    if isinstance(resolved, OllamaReader):
-        return replace(resolved, transport=FakeTransport(payload={"response": prose}))
-    if isinstance(resolved, OllamaSorter):
-        return replace(resolved, transport=FakeTransport(raw=answer))
+    if isinstance(resolved, OllamaReader | OllamaSorter):
+        return replace(resolved, transport=transport)
     return resolved
 
 
@@ -96,13 +78,13 @@ def _stage(flow: Flow, run: Run, vocabulary: Vocabulary, payload: bytes) -> None
     caption(
         run,
         flow.id,
-        _offline(reader_for(flow)),  # ty: ignore[invalid-argument-type]
+        _offline(reader_for(flow), FakeTransport(payload={"response": PROSE})),
         briefing_path=flow.caption_briefing_path,
     )
     sheet(
         run,
         flow.id,
-        _offline(sorter_for(flow), payload),  # ty: ignore[invalid-argument-type]
+        _offline(sorter_for(flow), FakeTransport(raw=payload)),
         flow.schema,
         vocabulary,
         briefing_path=flow.sheet_briefing_path,
@@ -116,7 +98,9 @@ def test_the_open_flow_captions_and_sorts_without_reaching_claude(
     """Both stages complete with the Claude transport rigged to explode."""
     flow = load_flow("summon-open-v1")
 
-    _stage(flow, run, vocabulary, _answer(flow))
+    _stage(
+        flow, run, vocabulary, sorted_answer(flow.schema, hair_colour=["dark brown"])
+    )
 
     assert versions(run.directory(flow.id, CAPTIONS)) == [1]
     assert versions(run.directory(flow.id, SHEETS)) == [1]

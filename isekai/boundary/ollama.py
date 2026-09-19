@@ -136,26 +136,32 @@ def ask(
     the posture `require_binary()` already takes for an absent binary, applied to a
     port rather than to a `PATH` entry (design.md D9).
     """
-    model = str(body.get("model", "(unnamed)"))
+    model = str(body["model"])
+    # Serialised into a local and the mapping dropped before the call: a
+    # photograph goes on this wire base64-encoded, so `body` can hold tens of
+    # megabytes and the request another copy of them -- for as long as the call
+    # runs, which this module caps at `TIMEOUT`. Nothing below reads `body`.
+    request = json.dumps(body).encode()
+    del body
     try:
-        status, payload = transport(GENERATE, json.dumps(body).encode())
-    except TimeoutError as expired:
-        raise OllamaFailure(
-            "transient", f"{model} did not answer within {TIMEOUT}s"
-        ) from expired
-    except urllib.error.URLError as unreachable:
-        # A timeout can arrive wrapped rather than raw, and `Kind` is the whole
-        # difference between waiting again and telling the operator to start a
-        # server that is already running.
-        if isinstance(unreachable.reason, TimeoutError):
+        status, payload = transport(GENERATE, request)
+    except (TimeoutError, urllib.error.URLError) as failed:
+        # **A timeout can arrive raw or wrapped in a `URLError`**, and the two
+        # branches below are opposite answers: one waits again, the other tells
+        # the operator to start a server. Read the wrapped form as its parent
+        # class and a retryable failure is spent as a refusal.
+        expired = isinstance(failed, TimeoutError) or isinstance(
+            getattr(failed, "reason", None), TimeoutError
+        )
+        if expired:
             raise OllamaFailure(
                 "transient", f"{model} did not answer within {TIMEOUT}s"
-            ) from unreachable
+            ) from failed
         raise Refusal(
             f"nothing is listening at {HOST}, and stages 1 and 2 of this flow are "
             "the two that need it; start the runtime (`ollama serve`), then run "
             "this command again"
-        ) from unreachable
+        ) from failed
 
     if status == 404:
         raise Refusal(

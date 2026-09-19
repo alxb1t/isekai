@@ -72,20 +72,18 @@ REQUIRED = (
 )
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 
-# The one key a flow may declare and need not. It names what the first two stages
-# call -- the implementation they are reached through and the model each runs --
-# and is deliberately not `models`, which is required and holds the render
-# weights a rented GPU loads, pinned by digest. One names a network call, the
-# other a file on disk (design.md D2).
+# Every top-level key this build knows, and a manifest carrying any other is
+# refused naming it -- `load_flow` is where that reason lives.
+#
+# `hosted` is the one key a flow may declare and need not. It names what the
+# first two stages call, and is deliberately not `models`, which is required and
+# holds the render weights a rented GPU loads, pinned by digest: one names a
+# network call, the other a file on disk (design.md D2).
 #
 # **Optional, so `MANIFEST_VERSION` stays 2.** Required plus a version bump was
 # this change's first shape and it was wrong: it forced an edit to two frozen
 # directories in a change whose whole point is to add one and touch nothing.
-OPTIONAL = ("hosted",)
-
-# Every top-level key this build knows. A manifest carrying any other is refused
-# naming it -- see `load_flow`, which is where the reason lives.
-KNOWN = REQUIRED + OPTIONAL
+KNOWN = REQUIRED + ("hosted",)
 
 # What a hosted block declares, when it declares one. All three or none: the
 # implementation is stated once rather than per stage, so "this flow is wholly

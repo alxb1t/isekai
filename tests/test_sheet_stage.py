@@ -35,7 +35,7 @@ from tests.conftest import CSV
 from tests.images import jpeg_bytes
 from tests.stages import SHEET_BRIEFING as BRIEFING_PATH
 from tests.stages import caption, sheet
-from tests.transports import FakeTransport
+from tests.transports import FakeTransport, sorted_answer
 
 FLOW = "summon-v1"
 
@@ -434,13 +434,6 @@ def test_the_briefing_carries_two_worked_examples() -> None:
 # --- the Ollama adapter -------------------------------------------------------
 
 
-def _answer(schema: Schema, **fields: list[str]) -> bytes:
-    """Return a response body carrying every field the schema names."""
-    return json.dumps(
-        {"response": json.dumps({name: fields.get(name, []) for name in schema.names})}
-    ).encode()
-
-
 @pytest.mark.spec("sheet:selection:structure-is-required-of-every-implementation")
 def test_the_open_sorters_format_is_the_schemas_own_shape(schema: Schema) -> None:
     """`format` equals `output_shape(schema)`, not merely resembles it.
@@ -486,7 +479,7 @@ def test_the_answer_is_read_from_the_response_body(
     `answers_from` already falls back to parsing the body; this is what stops a
     later edit from breaking the only path an Ollama answer takes.
     """
-    transport = FakeTransport(raw=_answer(schema, hair_colour=["dark brown"]))
+    transport = FakeTransport(raw=sorted_answer(schema, hair_colour=["dark brown"]))
 
     written = sheet(
         run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
@@ -524,7 +517,7 @@ def test_a_truncated_answer_is_permanent_and_the_record_carries_done_reason(
 def test_the_open_sorters_sheet_names_ollama_and_the_model_that_ran(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    transport = FakeTransport(raw=_answer(schema, hair_colour=["dark brown"]))
+    transport = FakeTransport(raw=sorted_answer(schema, hair_colour=["dark brown"]))
 
     written = sheet(
         run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
@@ -546,7 +539,9 @@ def test_an_absence_clause_from_the_open_sorter_still_empties_the_field(
     and this is the assertion that says so behaviourally rather than by diff.
     """
     transport = FakeTransport(
-        raw=_answer(schema, marks=["no visible tattoos"], hair_colour=["dark brown"])
+        raw=sorted_answer(
+            schema, marks=["no visible tattoos"], hair_colour=["dark brown"]
+        )
     )
 
     written = sheet(
@@ -564,7 +559,9 @@ def test_a_non_vocabulary_tag_from_the_open_sorter_is_refused(
 ) -> None:
     """The validation is shared too, and an open arm gets no exemption from it."""
     transport = FakeTransport(
-        raw=_answer(schema, hair_colour=["a shade nothing in the vocabulary names"])
+        raw=sorted_answer(
+            schema, hair_colour=["a shade nothing in the vocabulary names"]
+        )
     )
 
     written = sheet(
