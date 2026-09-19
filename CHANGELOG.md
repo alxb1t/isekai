@@ -49,6 +49,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **`tests/test_isolation.py` — the proof that a flow declaring one implementation reaches no name from
+  the other, built so it cannot pass vacuously.** The obvious form of this test — monkeypatch
+  `shutil.which` to `None`, as the absent-binary test already does — only fires if `require_binary` is
+  *called*, so a run touching no Claude path is green **for the wrong reason**, which is precisely the
+  thing under test. Instead `claude_cli.spawn` **and** `claude_cli.require_binary` are both replaced with
+  functions that raise, and the open flow is run through both stages against them.
+
+  **The falsification is resident rather than performed once by hand.** A second test points the same
+  sealed fixture at `summon-v1`, which declares no `hosted` block and so resolves to the CLI arm, and
+  asserts the seal fires. Without it the first test would stay green if the seal ever stopped sealing,
+  and would go on looking like a proof. A third covers the failure path, where a fallback would be added:
+  a permanent open failure records its kind, writes no artifact, and reaches no other implementation.
+
+  This is the CI-resident twin of the operator's `claude`-off-`PATH` acceptance run, and strictly
+  stronger than the PATH removal it stands in for.
+
+- **A test in that module briefly reached the live Ollama on the developer's machine, and the fix is
+  structural.** Monkeypatching `isekai.boundary.ollama.post` does nothing: `OllamaReader` is a frozen
+  dataclass, so `ollama.post` is captured as an `__init__` default at class-creation time and the patched
+  module attribute is never consulted. The failure is silent — the call simply goes to the real host. The
+  transport is now injected at the seam the adapter declares for it, via `dataclasses.replace` on what
+  `reader_for` actually returned, so the **resolution is still exercised and the socket is not**. Checked
+  by running the whole suite with `socket.socket.connect` rigged to raise: **749 passed**, nothing opened.
+
 - **`flows/summon-open-v1/` — the third tracked flow, and the first to declare a `hosted` block.** Five
   flat files, as every flow is. `graph.json` and `schema.json` are **byte-identical copies** of
   `summon-v1`'s, verified by `cmp`, and `flow.json` differs from that manifest in **exactly two places**

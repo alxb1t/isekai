@@ -9,7 +9,7 @@
 - [x] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
 - [x] 6 — The registries, and the resolution moved inside the flow loop
 - [x] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
-- [ ] 8 — The isolation proof, in the suite, non-vacuous
+- [x] 8 — The isolation proof, in the suite, non-vacuous
 - [ ] 9 — The documents this version makes false
 - [ ] 10 — ⚠️ **HUMAN · FREE** — the open flow end to end, stopping before the pod
 - [ ] 11 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance render
@@ -235,11 +235,11 @@ and one of the operator's own photographs.
 
 `specs/caption/spec.md`, `design.md` D11. **The whole point is that it cannot pass vacuously.**
 
-- [ ] 8.1 Add a test that runs the open flow's caption and sheet with `claude_cli.spawn` **and**
+- [x] 8.1 Add a test that runs the open flow's caption and sheet with `claude_cli.spawn` **and**
       `claude_cli.require_binary` monkeypatched to raise `AssertionError("Claude was reached")`. Verify
       it is non-vacuous by pointing the same test at `summon-v1` and seeing it go red, then reverting —
       key `caption:selection:no-path-reaches-another-implementation`.
-- [ ] 8.2 Verify no fallback exists on the failure path, with a test where the open reader's transport
+- [x] 8.2 Verify no fallback exists on the failure path, with a test where the open reader's transport
       fails permanently and no other implementation is entered — reusing
       `caption:failure:decline-is-permanent`'s no-substitution assertion.
 
