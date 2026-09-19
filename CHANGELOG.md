@@ -49,6 +49,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **`OllamaReader`, in `isekai/pipeline/caption.py`** — beside `ClaudeReader` and the `FakeReader` they
+  share a Protocol with, rather than in `boundary/`, because two implementations of one Protocol in two
+  different layers is the arrangement that avoids. It carries `implementation = "ollama"`, an injectable
+  transport, and a `body()` method the way `ClaudeReader` has `argv()` — so the request is assertable
+  without a call.
+
+  **The photograph goes as its own bytes, base64, unresized**, which is D7 built rather than assumed: the
+  prototype's encoder downscaled through PIL, and PIL is in the `eval` extra and unreachable from a module
+  `isekai.__main__` imports. Nothing is resampled and nothing needs to be — the vision tower encodes at
+  patch14-384 whatever it is handed. **No runtime dependency is added.**
+
+  **No `format` and no schema**, asserted as an absence. Pressing a reader into a field list is measured
+  to make it invent — told never to leave a field blank, one manufactured nineteen identity marks across
+  seven of ten subjects and its score fell from 0.518 to 0.307. Structure is stage ②'s to require, and
+  `format` is the field that would have required it here.
+
+  **No path from this machine reaches the model either.** The Claude adapter names the photograph's path
+  because its reader opens the file with a `Read` tool; this one is handed the bytes, so a path would be
+  an instruction it cannot act on and a detail about the operator's machine sent for nothing. The
+  `workspace` argument stays in the signature — one `Reader` Protocol, not two — and is inert, asserted
+  with a workspace the photograph is nowhere inside.
+
+- **An unreachable host and an absent model refuse without spending an attempt**, and the tests assert
+  the error-record directory is **empty** rather than merely that a refusal was raised. A spent attempt
+  leaves a run whose records must be deleted by hand before it resumes, and neither of these is a model
+  tried and failed. The reader's remedy names `ollama create … -f scripts/joycaption.Modelfile`, not
+  `ollama pull`: the two hosted models are not the same kind of name, and the registry command would send
+  the operator after a tag that does not exist. Two further tests hold the distinction honest — a 503
+  *does* record a transient attempt, and a `done_reason: length` records a permanent one with
+  `done_reason` in the detail and no caption written — so the "records no attempt" assertions cannot pass
+  for a stage that records nothing at all.
+
+- **`tests/transports.py`** — `FakeTransport`, hand-written and shared by the boundary's tests and both
+  adapters', rather than imported from one test module by another, which would make that module
+  undeletable. The same rule `tests/images.py` and `tests/stages.py` are under.
+
 - **`isekai/boundary/ollama.py` — the third network boundary, and the second the pipeline has.** One
   POST to a local runtime over stdlib `urllib`, an injectable `Transport` protocol, and the
   classification of what comes back. **It imports nothing from `claude_cli.py`**, and it imports nothing

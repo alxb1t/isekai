@@ -5,7 +5,7 @@
 - [x] 1 — ⚠️ **OPERATOR** — the three build-time discoveries, before a line of adapter is written
 - [x] 2 — `flow.py`: the `hosted` block parsed, and every unknown key refused
 - [x] 3 — `boundary/ollama.py`: the transport, and nothing else
-- [ ] 4 — `OllamaReader`: a photograph in, prose out, no schema
+- [x] 4 — `OllamaReader`: a photograph in, prose out, no schema
 - [ ] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
 - [ ] 6 — The registries, and the resolution moved inside the flow loop
 - [ ] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
@@ -150,18 +150,18 @@ and one of the operator's own photographs.
 
 `specs/caption/spec.md`. `design.md` D5, D7, D8, D10.
 
-- [ ] 4.1 Add `OllamaReader` beside `ClaudeReader` and `FakeReader`, with `implementation = "ollama"`,
+- [x] 4.1 Add `OllamaReader` beside `ClaudeReader` and `FakeReader`, with `implementation = "ollama"`,
       an injectable `transport`, and a `body()` method the way `ClaudeReader.argv()` is a method — so the
       request is assertable without a call. Verify with a test asserting the body carries the
       photograph's base64, `stream: false`, the options of D10, **and no `format` and no schema**.
-- [ ] 4.2 Verify the reader ignores the `workspace` argument and reads the photograph's bytes itself,
+- [x] 4.2 Verify the reader ignores the `workspace` argument and reads the photograph's bytes itself,
       with a test that passes a workspace the photograph is not inside and still gets a caption.
-- [ ] 4.3 Verify the refusals with tests through the injected transport: an unreachable host and a 404
+- [x] 4.3 Verify the refusals with tests through the injected transport: an unreachable host and a 404
       each refuse naming their command **and record no attempt** — assert the error-record directory is
       empty, not merely that a refusal was raised. Keys
       `caption:reachability:unreachable-host-refuses-without-an-attempt`,
       `caption:reachability:absent-model-names-how-to-create-it`.
-- [ ] 4.4 Verify the artifact records the implementation that ran, with a test asserting the caption's
+- [x] 4.4 Verify the artifact records the implementation that ran, with a test asserting the caption's
       `producer.implementation` is `"ollama"` — key
       `caption:selection:the-flow-names-the-implementation`.
 

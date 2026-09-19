@@ -8,8 +8,6 @@ operator's one-command fix and must not spend an attempt at all.
 
 import json
 import urllib.error
-from collections.abc import Mapping
-from dataclasses import dataclass, field
 
 import pytest
 
@@ -21,41 +19,10 @@ from isekai.boundary.ollama import (
     ask,
 )
 from isekai.foundation.refusal import Refusal
+from tests.transports import EMPTY_OBJECT, FakeTransport
 
 BODY = {"model": "a-model", "prompt": "describe", "stream": False}
 REMEDY = "ollama pull a-model"
-
-# A body with no answer in it. Spelled as bytes rather than as an empty mapping
-# because `FakeTransport.payload` defaults to `None` meaning "the ordinary
-# answer", and a second sentinel to say "an empty object, and I mean it" would be
-# one more thing to get wrong than `raw` already handles.
-EMPTY_OBJECT = b"{}"
-
-
-@dataclass(frozen=True)
-class FakeTransport:
-    """The host, offline: it answers what it was built to answer, and counts calls.
-
-    Hand-written rather than mocked, as every double in this suite is, and it is
-    what makes the request body assertable without a socket -- the property
-    `ClaudeReader.runner` gives `argv()`.
-    """
-
-    status: int = 200
-    payload: Mapping[str, object] | None = None
-    raw: bytes | None = None
-    error: BaseException | None = None
-    sent: list[tuple[str, bytes]] = field(default_factory=list)
-
-    def __call__(self, path: str, body: bytes) -> tuple[int, bytes]:
-        """Record the request, then raise or answer as constructed."""
-        self.sent.append((path, body))
-        if self.error is not None:
-            raise self.error
-        if self.raw is not None:
-            return self.status, self.raw
-        answer = {"response": "prose."} if self.payload is None else self.payload
-        return self.status, json.dumps(answer).encode()
 
 
 # --- the request --------------------------------------------------------------
@@ -103,7 +70,9 @@ def test_nothing_listening_refuses_naming_the_command_that_starts_it() -> None:
 
 @pytest.mark.spec_exempt("the reachability scenarios are bound at the adapters")
 def test_an_absent_model_refuses_naming_the_callers_own_remedy() -> None:
-    transport = FakeTransport(404, {"error": 'model "a-model" not found'})
+    transport = FakeTransport(
+        payload={"error": 'model "a-model" not found'}, status=404
+    )
 
     with pytest.raises(Refusal) as refused:
         ask(BODY, remedy=REMEDY, transport=transport)
@@ -124,7 +93,9 @@ def test_neither_no_attempt_case_raises_the_retryable_failure(
     spending an attempt on one leaves a run whose error records have to be deleted
     by hand before it can resume.
     """
-    transport = FakeTransport(error=error) if error is not None else FakeTransport(404)
+    transport = (
+        FakeTransport(error=error) if error is not None else FakeTransport(status=404)
+    )
 
     with pytest.raises(Refusal):
         ask(BODY, remedy=REMEDY, transport=transport)
@@ -136,7 +107,7 @@ def test_neither_no_attempt_case_raises_the_retryable_failure(
 @pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
 @pytest.mark.parametrize("status", [500, 502, 503])
 def test_a_server_error_is_transient(status: int) -> None:
-    transport = FakeTransport(status, {"error": "unable to load model"})
+    transport = FakeTransport(payload={"error": "unable to load model"}, status=status)
 
     with pytest.raises(OllamaFailure) as failed:
         ask(BODY, remedy=REMEDY, transport=transport)
@@ -229,7 +200,7 @@ def test_truncation_is_permanent_and_the_detail_says_so() -> None:
 
 @pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
 def test_a_status_that_is_neither_ok_nor_a_server_error_is_permanent() -> None:
-    transport = FakeTransport(400, {"error": "invalid options"})
+    transport = FakeTransport(payload={"error": "invalid options"}, status=400)
 
     with pytest.raises(OllamaFailure) as failed:
         ask(BODY, remedy=REMEDY, transport=transport)

@@ -18,15 +18,26 @@ routed around: substituting a different implementation would write an artifact
 whose provenance record is untrue, and the whole discipline of this pipeline is
 that a producer names what actually made the artifact (design.md D6).
 
-Stdlib only. The network is behind `Reader`; `isekai.boundary.claude_cli` is the one
-implementation of it, and `FakeReader` is what keeps the suite offline.
+**Two implementations ship, and a flow says which.** `ClaudeReader` reaches a
+model over the `claude` CLI, `OllamaReader` over HTTP to a runtime on this
+machine, and they are not interchangeable: one spends money with a third party
+and the other does not. The flow's manifest declares which, `interface/wiring.py`
+resolves it, and a flow that declared one never reaches the other -- including
+when the one it declared fails. Both adapters live here, beside the Protocol and
+the double they share, rather than in `boundary/`: two implementations of one
+Protocol in two different layers is the arrangement that avoids (design.md D5).
+
+Stdlib only. The transports are behind `Reader`, and `FakeReader` is what keeps
+the suite offline.
 """
 
-from collections.abc import Sequence
+import base64
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
+from isekai.boundary import ollama
 from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
@@ -59,6 +70,23 @@ STAGE = "caption"
 # reader told to describe a photograph and never told where it is; `--add-dir` is
 # what grants the read, and this line is what points at the file.
 PHOTOGRAPH_LINE = "The photograph is the file at this path: {path}"
+
+# What the open reader is sampled at. Pinned, and ported verbatim from the
+# measurement: a reader whose output moves between runs cannot replace a
+# transcript on the grounds of reproducibility, which was the whole argument for
+# adopting it. The budget is this stage's alone -- prose runs longer than one
+# word and shorter than sixteen fields (design.md D10).
+READER_OPTIONS: Mapping[str, Any] = {
+    "temperature": 0,
+    "seed": 1,
+    "num_predict": 1024,
+}
+
+# The one command that turns an absent reader into a present one. It is the
+# adapter's rather than the boundary's because the two hosted models are not the
+# same kind of name: this one is a machine-local alias built from a committed
+# recipe, and the sorter's is a registry tag (design.md D3).
+READER_REMEDY = "ollama create {model} -f scripts/joycaption.Modelfile"
 
 
 @dataclass(frozen=True)
@@ -136,6 +164,70 @@ class ClaudeReader:
         return Reading(result.result, self.implementation, result.models)
 
 
+@dataclass(frozen=True)
+class OllamaReader:
+    """The Ollama adapter: the photograph's own bytes, the briefing, and no schema.
+
+    **No schema, and that is measured rather than tidy.** Pressing a reader into a
+    field list makes it invent -- told never to leave a field blank, one
+    manufactured nineteen identity marks across seven of ten subjects and its
+    score fell from 0.518 to 0.307. The sorter is where structure is required, and
+    `format` is the field that requires it there.
+
+    **The photograph goes as its own bytes, unresized.** The prototype's encoder
+    downscaled through PIL, which is in the `eval` extra and cannot be imported
+    from a module `isekai.__main__` reaches. So nothing is resampled, and nothing
+    needs to be: the vision tower encodes at patch14-384 whatever it is handed
+    (design.md D7).
+    """
+
+    model: str
+    transport: ollama.Transport = ollama.post
+    implementation: str = "ollama"
+
+    def prompt(self, briefing: str) -> str:
+        """Return the whole of what the reader is told.
+
+        **The photograph's path is not in it.** The Claude adapter names a path
+        because its reader opens the file itself with a `Read` tool; this one is
+        handed the bytes, so a path would be an instruction it cannot act on and
+        a detail about the operator's machine sent to a model for nothing.
+        """
+        return f"{briefing.rstrip()}\n"
+
+    def body(self, photo: Path, briefing: str) -> dict[str, Any]:
+        """Return the exact request this reader is invoked with.
+
+        A method rather than a local, so the request is assertable without a call
+        -- the property `ClaudeReader.argv()` has, for the same reason.
+        """
+        return {
+            "model": self.model,
+            "prompt": self.prompt(briefing),
+            "images": [base64.b64encode(photo.read_bytes()).decode()],
+            "stream": False,
+            "options": dict(READER_OPTIONS),
+        }
+
+    def read(self, photo: Path, briefing: str, workspace: Path) -> Reading:
+        """Send the photograph and return the prose, or raise.
+
+        `workspace` is accepted and unused: it exists because the Claude adapter
+        needs a directory to grant `--add-dir` over, and this reader reads the
+        file itself. Keeping it in the signature is what keeps one `Reader`
+        Protocol rather than two.
+        """
+        try:
+            prose = ollama.ask(
+                self.body(photo, briefing),
+                remedy=READER_REMEDY.format(model=self.model),
+                transport=self.transport,
+            )
+        except ollama.OllamaFailure as failed:
+            raise CliFailure(failed.kind, failed.detail) from failed
+        return Reading(prose, self.implementation, (self.model,))
+
+
 def caption(
     run: Run,
     flow: str,
@@ -198,6 +290,7 @@ def caption(
 __all__: Sequence[str] = (
     "ClaudeReader",
     "FakeReader",
+    "OllamaReader",
     "Reader",
     "Reading",
     "caption",

@@ -5,8 +5,10 @@ Every test drives the stage through `FakeReader`, which counts its calls -- so
 made" when the stage is already complete.
 """
 
+import base64
 import json
 import re
+import urllib.error
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -22,16 +24,23 @@ from isekai.boundary.claude_cli import (
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
+    CAPTIONS,
     Run,
     attempts,
     open_run,
     read_artifact,
     versions,
 )
-from isekai.pipeline.caption import ClaudeReader, FakeReader, Reading
+from isekai.pipeline.caption import (
+    ClaudeReader,
+    FakeReader,
+    OllamaReader,
+    Reading,
+)
 from tests.images import jpeg_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
 from tests.stages import FLOW, caption
+from tests.transports import FakeTransport
 
 
 @pytest.fixture
@@ -428,3 +437,205 @@ def test_an_absent_reader_leaves_the_run_directory_untouched(
     assert versions(run.path / FLOW.id / "captions") == []
     assert attempts(run.path / FLOW.id / "captions", 1) == []
     assert sorted(p.name for p in run.path.rglob("*")) == before
+
+
+# --- the Ollama adapter -------------------------------------------------------
+
+
+@pytest.mark.spec_exempt("structural: the request body, asserted without a call")
+def test_the_open_readers_body_carries_the_photograph_and_the_pinned_sampling(
+    tmp_path: Path,
+) -> None:
+    photo = tmp_path / "aunt-ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    reader = OllamaReader(model="a-reader")
+
+    body = reader.body(photo, "Describe the person.")
+
+    assert body["model"] == "a-reader"
+    assert body["images"] == [base64.b64encode(photo.read_bytes()).decode()]
+    assert body["stream"] is False
+    assert body["options"] == {"temperature": 0, "seed": 1, "num_predict": 1024}
+
+
+@pytest.mark.spec("caption:instructions:reader-is-told-only-the-photograph")
+def test_the_open_reader_is_sent_no_schema_and_no_structure(tmp_path: Path) -> None:
+    """No `format`, no schema, no field list: structure is stage (2)'s to require.
+
+    Pressing a reader into a field list is measured to make it invent. `format` is
+    the field that would do it on this transport, and its absence is the assertion.
+    """
+    photo = tmp_path / "aunt-ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+
+    body = OllamaReader(model="a-reader").body(photo, "Describe the person.")
+
+    assert "format" not in body
+    assert "schema" not in body
+    assert not any("schema" in str(value).lower() for value in body["options"])
+
+
+@pytest.mark.spec_exempt("structural: the photograph is sent unresized")
+def test_the_photograph_is_sent_as_its_own_bytes_unresized(tmp_path: Path) -> None:
+    """The bytes on disk are the bytes on the wire, decoded back to prove it.
+
+    Nothing is resampled and nothing needs to be: the vision tower encodes at
+    patch14-384 whatever it is handed, and the decoder PIL would provide is in the
+    `eval` extra, which this module may not import.
+    """
+    photo = tmp_path / "aunt-ada.jpg"
+    original = jpeg_bytes(1600, 1200)
+    photo.write_bytes(original)
+
+    body = OllamaReader(model="a-reader").body(photo, "Describe.")
+
+    assert base64.b64decode(body["images"][0]) == original
+
+
+@pytest.mark.spec("caption:instructions:reader-is-told-only-the-photograph")
+def test_the_open_reader_ignores_the_workspace_and_reads_the_file_itself(
+    tmp_path: Path,
+) -> None:
+    """A workspace the photograph is nowhere inside, and the caption still arrives.
+
+    The argument exists because the Claude adapter needs a directory to grant
+    `--add-dir` over. This reader is handed the bytes, so the parameter is inert --
+    asserted rather than assumed, because an adapter that quietly needed it would
+    fail only on a real machine.
+    """
+    photo = tmp_path / "elsewhere" / "aunt-ada.jpg"
+    photo.parent.mkdir()
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    reader = OllamaReader(
+        model="a-reader", transport=FakeTransport(payload={"response": "A person."})
+    )
+
+    reading = reader.read(photo, "Describe.", tmp_path / "not-the-photos-home")
+
+    assert reading.prose == "A person."
+
+
+@pytest.mark.spec_exempt("structural: the path is not in the open reader's prompt")
+def test_the_open_readers_prompt_carries_no_path_from_this_machine(
+    tmp_path: Path,
+) -> None:
+    """No path from this machine goes to the model, because none would mean anything.
+
+    The Claude adapter names a path because its reader opens the file with a
+    `Read` tool. This one is handed the bytes, so a path would be an unactionable
+    instruction and a detail about the operator's machine sent for nothing.
+    """
+    photo = tmp_path / "aunt-ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+
+    body = OllamaReader(model="a-reader").body(photo, "Describe the person.")
+
+    assert str(photo) not in body["prompt"]
+    assert str(tmp_path) not in json.dumps(body["prompt"])
+
+
+@pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
+def test_the_open_readers_artifact_names_ollama_and_the_model_that_ran(
+    run: Run,
+) -> None:
+    reader = OllamaReader(
+        model="a-reader", transport=FakeTransport(payload={"response": "A person."})
+    )
+
+    path = caption(run, reader)
+
+    assert path is not None
+    producer = read_artifact(path)["producer"]
+    assert producer["implementation"] == "ollama"
+    assert producer["models"] == ["a-reader"]
+    assert producer["pinned"] is False
+
+
+@pytest.mark.spec("caption:reachability:unreachable-host-refuses-without-an-attempt")
+def test_an_unreachable_host_refuses_and_records_no_attempt(run: Run) -> None:
+    """The refusal names what to start, and the error-record directory stays empty.
+
+    Asserting the directory rather than merely that a refusal was raised is the
+    point: a spent attempt leaves a run whose records have to be deleted by hand
+    before it can resume, and a server that is not running is not a model tried
+    and failed.
+    """
+    reader = OllamaReader(
+        model="a-reader",
+        transport=FakeTransport(error=urllib.error.URLError("Connection refused")),
+    )
+
+    with pytest.raises(Refusal) as refused:
+        caption(run, reader)
+
+    assert "ollama serve" in str(refused.value)
+    directory = run.directory(FLOW.id, CAPTIONS)
+    assert attempts(directory, 1) == []
+    assert not any(path.name.endswith(".json") for path in directory.glob("*.error.*"))
+
+
+@pytest.mark.spec("caption:reachability:absent-model-names-how-to-create-it")
+def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
+    run: Run,
+) -> None:
+    """The reader's remedy is `ollama create`, not `ollama pull`.
+
+    The two hosted models are not the same kind of name: this one is a
+    machine-local alias built from the committed recipe, and naming the registry
+    command instead would send the operator after a tag that does not exist.
+    """
+    reader = OllamaReader(
+        model="a-reader",
+        transport=FakeTransport(payload={"error": "not found"}, status=404),
+    )
+
+    with pytest.raises(Refusal) as refused:
+        caption(run, reader)
+
+    message = str(refused.value)
+    assert "ollama create a-reader" in message
+    assert "scripts/joycaption.Modelfile" in message
+    directory = run.directory(FLOW.id, CAPTIONS)
+    assert attempts(directory, 1) == []
+
+
+@pytest.mark.spec("caption:failure:transient-failure-is-retryable")
+def test_an_open_reader_failure_is_recorded_with_its_kind(run: Run) -> None:
+    """A real failure does spend an attempt, which is what makes the two distinct.
+
+    Without this the "records no attempt" assertions above would pass for a stage
+    that never records anything at all.
+    """
+    reader = OllamaReader(
+        model="a-reader", transport=FakeTransport(payload={"error": "busy"}, status=503)
+    )
+
+    with pytest.raises(Refusal):
+        caption(run, reader)
+
+    recorded = attempts(run.directory(FLOW.id, CAPTIONS), 1)
+    assert [one.kind for one in recorded] == ["transient"]
+
+
+@pytest.mark.spec("caption:failure:decline-is-permanent")
+def test_a_permanent_open_reader_failure_substitutes_no_other_reader(
+    run: Run,
+) -> None:
+    """The truncation row, and the no-fallback rule on the failure path.
+
+    A permanent failure is recorded and surfaced, never routed around: substituting
+    an implementation would write an artifact whose provenance record is untrue.
+    """
+    reader = OllamaReader(
+        model="a-reader",
+        transport=FakeTransport(payload={"response": "A per", "done_reason": "length"}),
+    )
+
+    with pytest.raises(Refusal):
+        caption(run, reader)
+
+    directory = run.directory(FLOW.id, CAPTIONS)
+    recorded = attempts(directory, 1)
+    assert [one.kind for one in recorded] == ["permanent"]
+    assert "length" in json.loads(recorded[0].path.read_text())["detail"]
+    assert versions(directory) == []
