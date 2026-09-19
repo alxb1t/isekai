@@ -8,7 +8,7 @@
 - [x] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
 - [x] 5 — The server and the verb
 - [x] 6 — Vue: shell, tokens, rail, and the read-only sheet
-- [ ] 7 — Vue: the autocomplete
+- [x] 7 — Vue: the autocomplete
 - [ ] 8 — Vue: editing and autosave
 - [ ] 9 — Vue: approve, read-only, and the refusal line
 - [ ] 10 — Vue: the overlay, the loading state, the manifest
@@ -269,21 +269,21 @@ build order, the three things that are easy to get wrong and the keyboard model.
 
 > `ui/design/components.md` build order 3. **This is the piece that decides whether the tool is fast.**
 
-- [ ] 7.1 Build `useVocabulary()` against `GET /api/tags?q=`, debounced at 120 ms. The client ranks
+- [x] 7.1 Build `useVocabulary()` against `GET /api/tags?q=`, debounced at 120 ms. The client ranks
       nothing — the server's order is the order.
-- [ ] 7.2 Build `TagAutocomplete.vue` — 430px, `--color-surface`, `--radius-md`, `--shadow-md`,
+- [x] 7.2 Build `TagAutocomplete.vue` — 430px, `--color-surface`, `--radius-md`, `--shadow-md`,
       `top: 30px`, **absolutely positioned so it overlays the rows below and never displaces them.**
       Row 1 preselected with `accent-900`. Counts right-aligned, mono, `tabular-nums`. Footer
       `↑↓ move · ⏎ commit · esc close` and `<matches> of 8,106`.
-- [ ] 7.3 Render ` · rare` in `accent-300` for `posts < 2000`. **This threshold exists nowhere in the
+- [x] 7.3 Render ` · rare` in `accent-300` for `posts < 2000`. **This threshold exists nowhere in the
       repo** — the design is its only authority.
-- [ ] 7.4 Verify the real data, not the design's: `curl -s 'localhost:8517/api/tags?q=blonde' | head` —
+- [x] 7.4 Verify the real data, not the design's: `curl -s 'localhost:8517/api/tags?q=blonde' | head` —
       **two matches, `blonde hair` and `blonde pubic hair`.** `platinum blonde hair` is absent from the
       prediction set (delta 10), so 2b is a layout reference only.
-- [ ] 7.5 Verify by eye against `ui/design/screens/02-editing-autocomplete.png` and
+- [x] 7.5 Verify by eye against `ui/design/screens/02-editing-autocomplete.png` and
       `ui/design/screens/03-autocomplete-blonde-detail.png` for **layout and behaviour**, not content.
-- [ ] 7.6 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
-- [ ] 7.7 Verify the gate: `make gate`
+- [x] 7.6 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
+- [x] 7.7 Verify the gate: `make gate`
 
 ## 8. Vue: editing and autosave
 

@@ -27,6 +27,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The tag autocomplete — the piece that decides whether the tool is fast.** `useVocabulary()` queries
+  `GET /api/tags?q=` debounced at 120 ms and **ranks nothing**: the server's order is the order, because
+  a second copy of the ranking rule in TypeScript is the duplication that endpoint exists to delete. A
+  stale answer can never overwrite a newer one. `TagAutocomplete.vue` is 430px on `--color-surface` at
+  `top: 30px`, **absolutely positioned so it overlays the rows below and never displaces them** — if
+  they moved, the operator would lose their place mid-word. Row 1 is preselected, so the highest post
+  count is one ⏎ away and a rare tag takes a deliberate ↓; counts are right-aligned mono `tabular-nums`,
+  because a post count is read by digit count and that only works if the digits align; ` · rare` in
+  `accent-300` below 2,000 posts. **Measured against the real prediction set, not the design's:**
+  `blonde` returns `blonde hair` (1,311,581) and `blonde pubic hair` (1,634 · rare) — two tags, not the
+  frames' four, since `platinum blonde hair` is absent. A fragment matching nothing shows no rows and
+  cannot be committed.
+- **A click anywhere in a row focuses that field.** The fragment input is sized to its content, because
+  the 1px accent caret must sit immediately after the text rather than at the row's right edge — which
+  left an empty field with a click target one character wide. The row is what the operator aims at.
 - **`ui/` — the Vue 3 app, its shell and the read-only sheet.** Vite, no router, dark theme only,
   desktop from 1280px. `AppHeader`, `BatchRail`, `StatusMark`, `SourcePanel`, `PhotoFrame`,
   `CaptionPanel`, `SheetForm`, `SheetHeader`, `TokenBudget`, `FieldRow` and `TagChip`, built against a

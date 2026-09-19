@@ -13,6 +13,7 @@ const props = defineProps<{
   budget: Budget | null
   readonly: boolean
   kicker: string
+  focused: string | null
   loading?: boolean
 }>()
 
@@ -43,8 +44,10 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
         :tokens="budget?.per_field[name] ?? 0"
         :state="state(name)"
         :readonly="readonly"
-        :focused="false"
-      />
+        :focused="name === focused"
+      >
+        <slot name="editor" :field="name" />
+      </FieldRow>
     </div>
     <slot name="footer" />
   </section>

@@ -5,6 +5,7 @@ import AppHeader from './components/AppHeader.vue'
 import BatchRail from './components/BatchRail.vue'
 import SheetForm from './components/SheetForm.vue'
 import SourcePanel from './components/SourcePanel.vue'
+import TagInput from './components/TagInput.vue'
 import { BATCH, DETAIL } from './fixture'
 
 /* The root. It shows exactly one of the loading state, the review layout, or
@@ -18,6 +19,7 @@ const detail = ref(DETAIL)
 const current = ref(BATCH.inputs[0].id)
 const edited = ref(new Set<string>())
 const refusal = ref<string | null>(null)
+const focused = ref<string | null>(null)
 
 const clock = (at: number | null) =>
   at === null ? null : new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
@@ -63,8 +65,19 @@ const approvedReceipt = computed(() =>
         :fields="detail.fields"
         :budget="detail.budget"
         :readonly="detail.readonly"
+        :focused="focused"
         kicker="draft from the sorter"
-      />
+      >
+        <template #editor="{ field }">
+          <TagInput
+            v-if="!detail.readonly"
+            :vocabulary="batch.vocabulary"
+            :focused="focused === field"
+            @focus="focused = field"
+            @blur="focused === field && (focused = null)"
+          />
+        </template>
+      </SheetForm>
     </div>
   </div>
 </template>

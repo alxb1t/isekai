@@ -19,10 +19,22 @@ defineProps<{
 }>()
 
 defineEmits<{ remove: [index: number] }>()
+
+/* Click anywhere in the row to type in it.
+
+   The fragment input is sized to its content, because the 1px accent caret has
+   to sit immediately after the text rather than at the row's right edge -- so on
+   an empty field the input itself is one character wide and all but unhittable.
+   The row is the target the operator actually aims at, and a row is 34px of
+   mostly empty space, so the whole of it focuses the field. */
+function focusFragment(event: MouseEvent): void {
+  const row = event.currentTarget as HTMLElement
+  row.querySelector<HTMLInputElement>('input.fragment')?.focus()
+}
 </script>
 
 <template>
-  <div class="row" :class="{ 'row--focused': focused }">
+  <div class="row" :class="{ 'row--focused': focused }" @click="focusFragment">
     <StatusMark
       :kind="state === 'pending' ? 'dashed' : state === 'filled' ? 'filled' : 'hollow'"
     />
@@ -38,7 +50,7 @@ defineEmits<{ remove: [index: number] }>()
           @remove="$emit('remove', index)"
         />
       </template>
-      <span v-else-if="state === 'empty'" class="row__empty">empty</span>
+      <span v-else-if="state === 'empty' && !focused" class="row__empty">empty</span>
       <slot />
     </div>
     <span class="row__tokens mono">{{ tokens > 0 ? tokens : '' }}</span>
