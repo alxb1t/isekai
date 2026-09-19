@@ -49,6 +49,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
   missing loads, answers fluently and cannot see the photograph.
 
+- **`flows/summon-open-v1/` — the third tracked flow, and the first to declare a `hosted` block.** Five
+  flat files, as every flow is. `graph.json` and `schema.json` are **byte-identical copies** of
+  `summon-v1`'s, verified by `cmp`, and `flow.json` differs from that manifest in **exactly two places**
+  — the identifier and the block naming `joycaption-beta-one-q4k` and `qwen3:8b`. The render is the same
+  render; only the two hosted stages change.
+
+  **Both briefings are authored, not ported**, because the prompt that produced the measured captions is
+  gitignored and was never on this branch. The caption briefing carries `summon-v1`'s absence-licence
+  paragraph **byte for byte** — licensing absence is what stopped a reader confabulating nineteen
+  identity marks across seven of ten subjects, and a paraphrase would be an untested briefing wearing a
+  tested one's reasoning. The rest is written for a reader that is handed raw bytes under
+  `TEMPLATE {{ .Prompt }}` with no chat template: it opens on the shape of the one-sentence instruction
+  that was actually measured, keeps its coverage list as prose rather than bullets so an 8B model does
+  not echo the formatting back, and adds one sentence pressing on the skin, which is where the scored
+  identity marks live.
+
+  The sheet briefing ports both worked examples and all seven rules, and adds the two things Qwen3-8B was
+  measured getting wrong: **write the whole label, not the bare adjective** — `blonde hair`, not
+  `blonde`; `brown eyes`, not `brown`, which was 68 of 88 out-of-vocabulary tags — and do not repeat a
+  phrase within a field, which is the failure `repeat_penalty` also guards.
+
+  **The flow is pinned by whole-directory digest** at `e035d227…`, the designed cost of adding a flow.
+  And one assertion closes the last hole `design.md` D12 names: an absent `hosted` block has no key for
+  the allowlist to refuse and a digest cannot tell a correct manifest from a wrong one, so
+  `load_flow("summon-open-v1").hosted.implementation == "ollama"` is asserted directly — verified
+  non-vacuous by deleting the block and watching it go red.
+
+- **Five test bindings named scenarios that do not exist.** Nothing in this repository checks that a
+  `@pytest.mark.spec(...)` key resolves — pytest accepts any string — so five invented keys looked
+  exactly like bindings while binding nothing. All five now name real scenarios, and every key this
+  change adds was audited against the living spec and this change's delta.
+
 - **`Wiring.reader` and `Wiring.sorter` become resolvers — `Callable[[Flow], …] | None`, the shape
   `vocabulary` already had — and the resolution moves inside `cli.py`'s per-flow loop.** It was hoisted
   above it, so one invocation naming flows on both arms resolved a single reader and handed it to both:

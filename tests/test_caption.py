@@ -458,7 +458,7 @@ def test_the_open_readers_body_carries_the_photograph_and_the_pinned_sampling(
     assert body["options"] == {"temperature": 0, "seed": 1, "num_predict": 1024}
 
 
-@pytest.mark.spec("caption:instructions:reader-is-told-only-the-photograph")
+@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
 def test_the_open_reader_is_sent_no_schema_and_no_structure(tmp_path: Path) -> None:
     """No `format`, no schema, no field list: structure is stage (2)'s to require.
 
@@ -492,7 +492,7 @@ def test_the_photograph_is_sent_as_its_own_bytes_unresized(tmp_path: Path) -> No
     assert base64.b64decode(body["images"][0]) == original
 
 
-@pytest.mark.spec("caption:instructions:reader-is-told-only-the-photograph")
+@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
 def test_the_open_reader_ignores_the_workspace_and_reads_the_file_itself(
     tmp_path: Path,
 ) -> None:
@@ -599,7 +599,7 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
     assert attempts(directory, 1) == []
 
 
-@pytest.mark.spec("caption:failure:transient-failure-is-retryable")
+@pytest.mark.spec("caption:failure:rate-limit-is-transient")
 def test_an_open_reader_failure_is_recorded_with_its_kind(run: Run) -> None:
     """A real failure does spend an attempt, which is what makes the two distinct.
 

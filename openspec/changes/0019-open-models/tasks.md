@@ -8,7 +8,7 @@
 - [x] 4 — `OllamaReader`: a photograph in, prose out, no schema
 - [x] 5 — `OllamaSorter`: prose and a shape in, the sixteen fields out
 - [x] 6 — The registries, and the resolution moved inside the flow loop
-- [ ] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
+- [x] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
 - [ ] 8 — The isolation proof, in the suite, non-vacuous
 - [ ] 9 — The documents this version makes false
 - [ ] 10 — ⚠️ **HUMAN · FREE** — the open flow end to end, stopping before the pod
@@ -212,22 +212,22 @@ and one of the operator's own photographs.
 
 `design.md` D2, D8. **Exactly five files, as every tracked flow is.**
 
-- [ ] 7.1 Create the directory with `graph.json` and `schema.json` as **byte-identical copies** of
+- [x] 7.1 Create the directory with `graph.json` and `schema.json` as **byte-identical copies** of
       `summon-v1`'s, verified by `cmp` on both.
-- [ ] 7.2 Write `flow.json` as `summon-v1`'s with `"flow"` changed and one `hosted` block added, and
+- [x] 7.2 Write `flow.json` as `summon-v1`'s with `"flow"` changed and one `hosted` block added, and
       verify by diffing the two manifests that **those are the only two differences**.
-- [ ] 7.3 Author `caption.briefing.md`, carrying `summon-v1`'s absence-licence paragraph **verbatim** —
+- [x] 7.3 Author `caption.briefing.md`, carrying `summon-v1`'s absence-licence paragraph **verbatim** —
       verify by `grep` that the licence text matches byte for byte — and written for the open reader
       otherwise. **The prototype's measured prompt is not in git; this is authored, not ported.**
-- [ ] 7.4 Author `sheet.briefing.md` for the open sorter, porting the two worked examples and the rules
+- [x] 7.4 Author `sheet.briefing.md` for the open sorter, porting the two worked examples and the rules
       from `summon-v1`'s. Verify the file exists, the flow loads, and the briefing names every one of the
       schema's sixteen fields.
-- [ ] 7.5 Add the `PINNED` entry to `tests/test_flow.py` and verify the whole-directory digest test is
+- [x] 7.5 Add the `PINNED` entry to `tests/test_flow.py` and verify the whole-directory digest test is
       green — the designed cost of adding a flow. **Take this only after 7.1–7.4 are final**:
       `test_flow.py:430` asserts `sorted(PINNED) == tracked_flows()`, so the gate is red from the moment
       the directory exists until this lands, and the digest goes stale again if any of the five files is
       edited afterwards. **The directory and its pin belong in one commit.**
-- [ ] 7.6 Add the assertion that closes the last hole —
+- [x] 7.6 Add the assertion that closes the last hole —
       `load_flow("summon-open-v1").hosted.implementation == "ollama"` — and verify it goes red if the
       block is removed locally, then revert. **`design.md` D12 ③: an absent block has no key to refuse.**
 

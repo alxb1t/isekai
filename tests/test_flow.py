@@ -58,6 +58,16 @@ PINNED: dict[str, str] = {
     # released: `v0.17` was not tagged, so no pinned digest had left the branch.
     # Once it has, this route is closed and the correction is `conjure-v2`.
     "conjure-v1": "260ea7a343166d60976bf0e77175eb01f3d85294d2e1db897243f9dac22e0116",
+    # Added by 0019-open-models, the third flow and the first to declare a
+    # `hosted` block. Its graph and schema are byte-identical copies of
+    # `summon-v1`'s and its manifest differs from that one in exactly two places
+    # -- the identifier and the block -- so what this digest freezes that the
+    # incumbent's does not is the two briefings, which are authored rather than
+    # ported: the prompt that produced the measured captions is gitignored and
+    # was never on this branch.
+    "summon-open-v1": (
+        "e035d227dbaee2b935502a392bbd096876379cc5201ca17ed7c0e87ed4bafcc1"
+    ),
 }
 
 
@@ -674,3 +684,56 @@ def test_the_manifest_format_version_is_unchanged_by_the_optional_key() -> None:
     assert MANIFEST_VERSION == 2
     assert "hosted" in KNOWN
     assert "hosted" not in REQUIRED
+
+
+@pytest.mark.spec("image-generation:hosted:flow-declares-its-hosted-models")
+def test_the_open_flow_declares_the_implementation_it_is_meant_to_run() -> None:
+    """The last hole, and the only thing that closes it.
+
+    An absent `hosted` block means the default implementation, deliberately -- it
+    is what keeps both incumbent manifests unedited. So the allowlist cannot
+    refuse an omission, `manifest_digest` freezes bytes without knowing whether
+    they are the right ones, and **the first commit is exactly where this mistake
+    lives**. One assertion on the shipped flow is what costs (design.md D12).
+    """
+    hosted = load_flow("summon-open-v1").hosted
+
+    assert hosted is not None
+    assert hosted.implementation == "ollama"
+    assert hosted.reader == "joycaption-beta-one-q4k"
+    assert hosted.sorter == "qwen3:8b"
+
+
+@pytest.mark.spec("image-generation:hosted:incumbent-flows-are-unchanged")
+def test_the_open_flows_graph_and_schema_are_the_incumbents_byte_for_byte() -> None:
+    """A copied flow, so what differs is the manifest and the two briefings only."""
+    incumbent, open_flow = load_flow("summon-v1"), load_flow("summon-open-v1")
+
+    for name in (GRAPH_NAME, "schema.json"):
+        assert (open_flow.path / name).read_bytes() == (
+            incumbent.path / name
+        ).read_bytes()
+
+
+@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
+def test_the_open_caption_briefing_licenses_absence_verbatim() -> None:
+    """Licensing absence is the single largest measured gain in this pipeline.
+
+    It is what stopped a reader confabulating nineteen identity marks across seven
+    of ten subjects and dropping its score from 0.518 to 0.307, and it is carried
+    byte for byte rather than paraphrased because a paraphrase is an untested
+    briefing wearing a tested one's reasoning.
+    """
+    incumbent = load_flow("summon-v1").caption_briefing_path.read_text()
+    start = incumbent.index("**Say so when something is not visible")
+    licence = incumbent[start : incumbent.index("\n\n", start)]
+
+    assert licence in load_flow("summon-open-v1").caption_briefing_path.read_text()
+
+
+@pytest.mark.spec("sheet:schema:schema-is-read-from-the-flow")
+def test_the_open_sheet_briefing_names_every_one_of_the_sixteen_fields() -> None:
+    flow = load_flow("summon-open-v1")
+    text = flow.sheet_briefing_path.read_text()
+
+    assert [name for name in flow.schema.names if f"`{name}`" not in text] == []

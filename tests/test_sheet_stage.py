@@ -536,7 +536,7 @@ def test_the_open_sorters_sheet_names_ollama_and_the_model_that_ran(
     assert producer["pinned"] is False
 
 
-@pytest.mark.spec("sheet:absence:absence-clause-becomes-an-empty-field")
+@pytest.mark.spec("sheet:purity:absence-clause-is-dropped")
 def test_an_absence_clause_from_the_open_sorter_still_empties_the_field(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
@@ -558,7 +558,7 @@ def test_an_absence_clause_from_the_open_sorter_still_empties_the_field(
     assert fields["hair_colour"] == ["brown hair"]
 
 
-@pytest.mark.spec("sheet:vocabulary:non-vocabulary-tag-is-refused")
+@pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")
 def test_a_non_vocabulary_tag_from_the_open_sorter_is_refused(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
