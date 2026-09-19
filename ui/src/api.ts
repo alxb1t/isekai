@@ -52,6 +52,12 @@ export function saveDraft(
   return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields })
 }
 
+export function approve(
+  id: string,
+): Promise<{ approved: string | null; warnings: string[]; at: number | null; count: number }> {
+  return send(`/api/inputs/${encodeURIComponent(id)}/approve`, 'POST', {})
+}
+
 export function photoUrl(id: string): string {
   return `/api/inputs/${encodeURIComponent(id)}/photo`
 }

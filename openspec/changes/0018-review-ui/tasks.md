@@ -10,7 +10,7 @@
 - [x] 6 — Vue: shell, tokens, rail, and the read-only sheet
 - [x] 7 — Vue: the autocomplete
 - [x] 8 — Vue: editing and autosave
-- [ ] 9 — Vue: approve, read-only, and the refusal line
+- [x] 9 — Vue: approve, read-only, and the refusal line
 - [ ] 10 — Vue: the overlay, the loading state, the manifest
 - [ ] 11 — The docs this version makes false
 - [ ] 12 — The free walkthrough: the surface end to end, on data that already exists
@@ -312,19 +312,19 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > `ui/design/components.md` build order 5, Design D5 and D6. **The screenshot target is `ui/design/screens/08-approved.png`
 > only — `ui/design/screens/07-refused.png` is 5a and out of scope.**
 
-- [ ] 9.1 Build `ApproveBar.vue` — accent-outlined, **always live, no disabled twin, no empties action.**
-- [ ] 9.2 Build `useApproval()`. On success the header shows **both receipts**, the approved one in
+- [x] 9.1 Build `ApproveBar.vue` — accent-outlined, **always live, no disabled twin, no empties action.**
+- [x] 9.2 Build `useApproval()`. On success the header shows **both receipts**, the approved one in
       `accent-300`, and the button becomes the fact `Approved HH:MM:SS`.
-- [ ] 9.3 **The input goes read-only** (Design D5). The footer states the fact and names
+- [x] 9.3 **The input goes read-only** (Design D5). The footer states the fact and names
       `<flow>/review/NNN.approved.json`. No control, no exit affordance (deltas 6 and 7).
-- [ ] 9.4 Add the refusal line to `AppHeader.vue` — **one header-level line carrying the `Refusal`
+- [x] 9.4 Add the refusal line to `AppHeader.vue` — **one header-level line carrying the `Refusal`
       string verbatim**, in the design's established voice for undesigned states: blunt, no modal, and
       it must never imply the operator's work was lost.
-- [ ] 9.5 Verify the refusal path end to end: approve an input, then `PUT` a draft to it from a second
+- [x] 9.5 Verify the refusal path end to end: approve an input, then `PUT` a draft to it from a second
       tab. **Refused, the line appears, and nothing on disk changed.**
-- [ ] 9.6 Verify by eye against `ui/design/screens/08-approved.png`, less deltas 2, 3, 6 and 7.
-- [ ] 9.7 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
-- [ ] 9.8 Verify the gate: `make gate`
+- [x] 9.6 Verify by eye against `ui/design/screens/08-approved.png`, less deltas 2, 3, 6 and 7.
+- [x] 9.7 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
+- [x] 9.8 Verify the gate: `make gate`
 
 ## 10. Vue: the overlay, the loading state, the manifest
 

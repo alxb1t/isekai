@@ -436,6 +436,8 @@ body {
 }
 
 .approve-bar__fact {
+  flex: none;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -511,17 +513,14 @@ body {
   border-top: 1px solid var(--color-neutral-800);
 }
 
-/* The fragment: bare mono text with a 1px accent caret, never a chip.
-   Committed and in-flight must never look alike. */
-.fragment:focus {
-  border-right-color: var(--color-accent);
-}
-
+/* The fragment: bare mono text with one accent caret. The caret is the
+   browser's own, recoloured -- an accent border drawn beside it was a second
+   caret, which is exactly the "committed and in-flight never look alike" rule
+   read backwards: two marks for one insertion point. */
 .fragment {
   min-width: 60px;
   padding: 0;
   border: 0;
-  border-right: 1px solid transparent;
   background: none;
   color: var(--color-text);
   font-family: var(--font-mono);

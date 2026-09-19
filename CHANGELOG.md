@@ -27,6 +27,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Approve, read-only, and the one line a `Refusal` lands on.** `ApproveBar` is accent-outlined and
+  **always live** — no scroll gate, no dwell timer, no confirmation step, no disabled twin, and no
+  empties action: the only thing that stops an approve is a refusal, never a ritual. On success the
+  header shows **both receipts**, the approved one in `accent-300`, and the button becomes the fact
+  `Approved HH:MM:SS` rather than a greyed-out copy of itself. **The input then goes read-only** (Design
+  D5): `approve()` deletes the draft and reopening writes no replacement, so there is nothing on disk
+  for an edit after approval to be written into — the footer states that and names the file, and offers
+  no exit affordance, because a surface that offered editing anyway would either appear to save and not,
+  or spend a version number on a keystroke with no confirm step to attribute it to.
+- **The refusal line.** One header-level line carrying the `Refusal` string verbatim, in the design's
+  own voice for states it specified and deliberately did not draw: blunt, no modal, and it never implies
+  the operator's work was lost. Verified with two real tabs on one input — one approves, the other's
+  autosave fires on the next keystroke, the line appears and **nothing on disk changed**.
+- **`↑`/`↓` walk the sheet when no dropdown is open**, clamped at both ends. Not in the design's keyboard
+  model, which leaves the vertical keys unassigned outside the dropdown; an operator who has just
+  clicked a row should not have to reach for the mouse again to reach the next one.
+
+### Fixed
+
+- **One caret, not two.** The fragment carried a 1px accent `border-right` *and* the browser's own
+  recoloured caret — two marks for one insertion point, which is the *committed and in-flight never
+  look alike* rule read backwards. The border is gone; the caret is the caret.
+
+### Added
+
 - **Editing, autosave and undo — and the page stops reading a fixture.** `useBatch()` and `useSheet()`
   replace it: the batch is the invocation's argument list held in memory, the draft is read from
   `GET /api/inputs/{id}`, and every edit schedules a debounced 400 ms `PUT` of the whole draft. **There

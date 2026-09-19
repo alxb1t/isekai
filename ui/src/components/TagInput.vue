@@ -14,6 +14,7 @@ import TagAutocomplete from './TagAutocomplete.vue'
    four refusal kinds this version defers: an out-of-vocabulary tag can only ever
    arrive from the sorter. */
 const props = defineProps<{
+  field: string
   vocabulary: number
   focused: boolean
   chips: number
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   blur: []
   back: []
   step: [direction: -1 | 1]
+  row: [direction: -1 | 1]
 }>()
 
 const fragment = ref('')
@@ -54,6 +56,12 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.key === 'ArrowUp' && open.value) {
     event.preventDefault()
     selected.value = (selected.value - 1 + matches.value.length) % matches.value.length
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    // With no dropdown open, the vertical keys walk the sheet. Nothing in the
+    // design assigns them a meaning here, and Tab alone makes an operator who
+    // has just clicked a row reach for the mouse again to reach the next one.
+    event.preventDefault()
+    emit('row', event.key === 'ArrowUp' ? -1 : 1)
   } else if (event.key === 'Enter') {
     // A fragment matching nothing commits nothing: there is no row to take.
     if (!open.value) return
@@ -84,6 +92,7 @@ function onKey(event: KeyboardEvent): void {
     v-model="fragment"
     class="fragment"
     type="text"
+    :data-field="field"
     autocomplete="off"
     spellcheck="false"
     :size="Math.max(fragment.length, 1)"

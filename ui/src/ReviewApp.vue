@@ -2,10 +2,12 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { photoUrl } from './api'
 import AppHeader from './components/AppHeader.vue'
+import ApproveBar from './components/ApproveBar.vue'
 import BatchRail from './components/BatchRail.vue'
 import SheetForm from './components/SheetForm.vue'
 import SourcePanel from './components/SourcePanel.vue'
 import TagInput from './components/TagInput.vue'
+import { useApproval } from './composables/useApproval'
 import { useBatch } from './composables/useBatch'
 import { useSheet } from './composables/useSheet'
 
@@ -18,6 +20,7 @@ import { useSheet } from './composables/useSheet'
    move between them are read by `TagInput`. */
 const batch = useBatch()
 const sheet = useSheet()
+const approval = useApproval()
 
 const focused = ref<string | null>(null)
 const selectedChip = ref<number | null>(null)
@@ -27,8 +30,34 @@ const clock = (at: number | null) =>
 
 const flow = computed(() => batch.info.value?.flow ?? '')
 
+/* The draft receipt outlives the draft file, within one sitting.
+
+   `approve()` unlinks the draft, so after approving there is nothing on disk for
+   `GET /api/inputs/{id}` to report -- but the pairing is the whole of "saving is
+   not approving", stated without words: two files, two acts, two timestamps
+   seconds apart. So what was saved is remembered here and kept beside the
+   approved line. An input approved in an earlier sitting shows the approved
+   receipt alone, which is the truth about it. */
+const lastDraft = ref<{ name: string; saved: number | null } | null>(null)
+
+// The payload, not the draft's name: every input's draft is `001.draft.json`,
+// so watching the name fires on the first load and never again.
+watch(sheet.detail, (body) => {
+  if (body?.draft) lastDraft.value = { name: body.draft, saved: body.saved }
+})
+
+// Autosave moves the time without changing the payload. `null` is not a time:
+// after approval the draft is gone and `saved` goes null, but the moment it was
+// last written is exactly what the pairing exists to state.
+watch(
+  () => sheet.saved.value,
+  (at) => {
+    if (at !== null && lastDraft.value) lastDraft.value = { ...lastDraft.value, saved: at }
+  },
+)
+
 const receipt = computed(() =>
-  sheet.detail.value?.draft ? `${flow.value}/review/${sheet.detail.value.draft}` : null,
+  lastDraft.value ? `${flow.value}/review/${lastDraft.value.name}` : null,
 )
 
 const approvedReceipt = computed(() =>
@@ -36,6 +65,26 @@ const approvedReceipt = computed(() =>
     ? `${flow.value}/review/${sheet.detail.value.approved}`
     : null,
 )
+
+/* `③ sheet — approved` once it is, which is also when the fields go read-only.
+   The reading is taken from disk rather than from anything held here: approval
+   deletes the draft, so "has no draft" IS "is approved". */
+const kicker = computed(() =>
+  sheet.readonly.value ? 'approved' : 'draft from the sorter',
+)
+
+async function approve(): Promise<void> {
+  const id = batch.current.value
+  if (!id || sheet.readonly.value) return
+  // The debounced write lands before the approve, so the artifact is taken from
+  // what the operator last typed rather than from what happened to be on disk.
+  sheet.flush()
+  if (!(await approval.approve(id))) return
+  await batch.refresh()
+  await sheet.open(id)
+  focused.value = null
+  selectedChip.value = null
+}
 
 const chips = (field: string | null) => (field ? (sheet.fields.value[field] ?? []).length : 0)
 
@@ -50,6 +99,19 @@ function step(direction: -1 | 1): void {
   const at = selectedChip.value
   if (at === null) selectedChip.value = direction === -1 ? count - 1 : 0
   else selectedChip.value = (at + direction + count) % count
+}
+
+/* Walk the sheet with the vertical keys, clamped at both ends. A 16-row list
+   that jumped from `count` to `background` on one ↑ would lose the operator's
+   place rather than move it, which is the same reason the dropdown overlays. */
+function moveRow(direction: -1 | 1): void {
+  const order = batch.info.value?.schema ?? []
+  const at = focused.value ? order.indexOf(focused.value) : -1
+  if (at < 0) return
+  const next = order[Math.min(Math.max(at + direction, 0), order.length - 1)]
+  document
+    .querySelector<HTMLInputElement>(`input.fragment[data-field="${next}"]`)
+    ?.focus()
 }
 
 function commit(field: string, tag: string): void {
@@ -76,6 +138,9 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
     event.preventDefault()
     batch.step(event.key === 'ArrowLeft' ? -1 : 1)
+  } else if (meta && event.key === 'Enter') {
+    event.preventDefault()
+    void approve()
   }
 }
 
@@ -100,6 +165,8 @@ watch(batch.current, (id) => {
   sheet.flush()
   focused.value = null
   selectedChip.value = null
+  approval.forget()
+  lastDraft.value = null
   void sheet.open(id)
 })
 </script>
@@ -111,10 +178,10 @@ watch(batch.current, (id) => {
       :inputs="batch.inputs.value.length"
       :approved="batch.info.value?.approved ?? 0"
       :draft="receipt"
-      :saved="clock(sheet.saved.value)"
+      :saved="clock(lastDraft?.saved ?? null)"
       :approved-name="approvedReceipt"
-      :approved-at="null"
-      :refusal="sheet.refusal.value ?? batch.failure.value"
+      :approved-at="clock(approval.at.value)"
+      :refusal="approval.refusal.value ?? sheet.refusal.value ?? batch.failure.value"
     />
     <div class="work">
       <BatchRail
@@ -142,13 +209,14 @@ watch(batch.current, (id) => {
         :focused="focused"
         :selected="selectedChip"
         :loading="sheet.loading.value"
-        kicker="draft from the sorter"
+        :kicker="kicker"
         @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(batch.current.value))"
       >
         <template #editor="{ field }">
           <TagInput
             v-if="!sheet.readonly.value && !sheet.loading.value"
             :vocabulary="batch.info.value?.vocabulary ?? 0"
+            :field="field"
             :focused="focused === field"
             :chips="chips(field)"
             :selected="focused === field ? selectedChip : null"
@@ -157,6 +225,16 @@ watch(batch.current, (id) => {
             @commit="(tag) => commit(field, tag)"
             @back="back(field)"
             @step="step"
+            @row="moveRow"
+          />
+        </template>
+        <template #footer>
+          <ApproveBar
+            :approved="sheet.readonly.value"
+            :at="clock(approval.at.value)"
+            :file="approvedReceipt"
+            :working="approval.working.value"
+            @approve="approve"
           />
         </template>
       </SheetForm>
