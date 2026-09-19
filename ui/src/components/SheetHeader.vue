@@ -11,6 +11,7 @@ defineProps<{
   fields: number
   filled: number
   budget: Budget | null
+  loading?: boolean
 }>()
 </script>
 
@@ -19,8 +20,10 @@ defineProps<{
     <div>
       <span class="kicker">③ sheet — {{ kicker }}</span>
       <p class="sheet-header__line">
-        {{ fields }} fields, schema order. {{ filled }} filled ·
-        {{ fields - filled }} empty.
+        {{ fields }} fields, schema order.
+        <template v-if="!loading">
+          {{ filled }} filled · {{ fields - filled }} empty.
+        </template>
       </p>
     </div>
     <TokenBudget :budget="budget" />

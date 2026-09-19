@@ -11,7 +11,7 @@
 - [x] 7 — Vue: the autocomplete
 - [x] 8 — Vue: editing and autosave
 - [x] 9 — Vue: approve, read-only, and the refusal line
-- [ ] 10 — Vue: the overlay, the loading state, the manifest
+- [x] 10 — Vue: the overlay, the loading state, the manifest
 - [ ] 11 — The docs this version makes false
 - [ ] 12 — The free walkthrough: the surface end to end, on data that already exists
 - [ ] 13 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance run
@@ -330,19 +330,19 @@ build order, the three things that are easy to get wrong and the keyboard model.
 
 > `ui/design/components.md` build order 6.
 
-- [ ] 10.1 Build `PhotoOverlay.vue` — teleported to body, ground
+- [x] 10.1 Build `PhotoOverlay.vue` — teleported to body, ground
       `color-mix(in srgb, var(--color-bg) 72%, black)`, **no `.lighten` blend** (this is the one place
       the photograph must be seen as it is), `Fit` / `1:1 pixels`, and arrow keys still moving through
       the batch. The caption shows paragraphs only — no tinted phrases, no dashed runs (delta 4).
-- [ ] 10.2 Build `LoadingSkeleton.vue` — **counted, not spun.** 135° striped placeholders, flat bars,
+- [x] 10.2 Build `LoadingSkeleton.vue` — **counted, not spun.** 135° striped placeholders, flat bars,
       **no shimmer**, no photograph until it is decoded. `vocabulary 8,106 tags · loaded` is a real
       number from `len()`.
-- [ ] 10.3 Build `RunManifest.vue` — 7b, with real paths: `<run>/<flow>/review/` and
+- [x] 10.3 Build `RunManifest.vue` — 7b, with real paths: `<run>/<flow>/review/` and
       `NNN.approved.json`, never the design's `runs/2026-09-17/` or `.sheet.json` (delta 9).
-- [ ] 10.4 Verify by eye against `ui/design/screens/04-photo-overlay.png`, `ui/design/screens/09-batch-loading.png` and
+- [x] 10.4 Verify by eye against `ui/design/screens/04-photo-overlay.png`, `ui/design/screens/09-batch-loading.png` and
       `ui/design/screens/10-all-approved.png`, less the stated deltas.
-- [ ] 10.5 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
-- [ ] 10.6 Verify the gate: `make gate`
+- [x] 10.5 Verify it still builds: `cd ui && npm run build` — **exits 0.** `make gate` cannot see this phase.
+- [x] 10.6 Verify the gate: `make gate`
 
 ## 11. The docs this version makes false
 

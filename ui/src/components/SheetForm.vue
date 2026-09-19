@@ -37,6 +37,7 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
       :fields="schema.length"
       :filled="filled"
       :budget="budget"
+      :loading="loading"
     />
     <div class="rows">
       <FieldRow

@@ -15,6 +15,9 @@ export interface BatchInput {
 export interface BatchInfo {
   flow: string
   schema: string[]
+  /* Per field, the word the schema says its tags are spelled with -- `hair` for
+     `hair_colour`, `eyebrows` for `eyebrows` -- or null where it declares none. */
+  suffixes: Record<string, string | null>
   vocabulary: number
   approved: number
   inputs: BatchInput[]
@@ -36,6 +39,7 @@ export interface InputDetail {
   draft: string | null
   approved: string | null
   saved: number | null
+  approved_at: number | null
   budget: Budget
 }
 
@@ -48,6 +52,14 @@ export interface VocabEntry {
 export interface TagMatches {
   matches: VocabEntry[]
   total: number
+}
+
+/** One approved sheet, as the manifest lists it. */
+export interface ApprovedSheet {
+  id: string
+  name: string
+  tokens: number
+  at: string
 }
 
 /* SDXL's text encoders read 77 tokens at a time. The number is the pipeline's --

@@ -51,6 +51,11 @@ function focusFragment(event: MouseEvent): void {
         />
       </template>
       <span v-else-if="state === 'empty' && !focused" class="row__empty">empty</span>
+      <!-- Every schema key renders immediately, because the keys come from the
+           schema rather than from the data, so nothing reflows on arrival. Flat
+           bars where values will land -- no shimmer, which would pull the eye
+           off the photograph. -->
+      <span v-else-if="state === 'pending'" class="row__pending" />
       <slot />
     </div>
     <span class="row__tokens mono">{{ tokens > 0 ? tokens : '' }}</span>

@@ -4,12 +4,17 @@ import { photoUrl } from './api'
 import AppHeader from './components/AppHeader.vue'
 import ApproveBar from './components/ApproveBar.vue'
 import BatchRail from './components/BatchRail.vue'
+import LoadingSkeleton from './components/LoadingSkeleton.vue'
+import PhotoOverlay from './components/PhotoOverlay.vue'
+import RunManifest from './components/RunManifest.vue'
 import SheetForm from './components/SheetForm.vue'
 import SourcePanel from './components/SourcePanel.vue'
 import TagInput from './components/TagInput.vue'
 import { useApproval } from './composables/useApproval'
 import { useBatch } from './composables/useBatch'
 import { useSheet } from './composables/useSheet'
+import { inputDetail } from './api'
+import type { ApprovedSheet } from './types'
 
 /* The root. It shows exactly one of the loading state, the review layout, or
    the manifest; the photo overlay layers over any of them.
@@ -23,6 +28,9 @@ const sheet = useSheet()
 const approval = useApproval()
 
 const focused = ref<string | null>(null)
+const overlay = ref(false)
+const manifest = ref(false)
+const sheets = ref<ApprovedSheet[]>([])
 const selectedChip = ref<number | null>(null)
 
 const clock = (at: number | null) =>
@@ -70,7 +78,7 @@ const approvedReceipt = computed(() =>
    The reading is taken from disk rather than from anything held here: approval
    deletes the draft, so "has no draft" IS "is approved". */
 const kicker = computed(() =>
-  sheet.readonly.value ? 'approved' : 'draft from the sorter',
+  sheet.detail.value && sheet.readonly.value ? 'approved' : 'draft from the sorter',
 )
 
 async function approve(): Promise<void> {
@@ -84,7 +92,20 @@ async function approve(): Promise<void> {
   await sheet.open(id)
   focused.value = null
   selectedChip.value = null
+  // Approving the last unapproved input opens the manifest, because at that
+  // moment there is no sheet left to review.
+  if (batch.allApproved.value) await openManifest()
 }
+
+/* The rail already knows every input's dimensions, so the source column draws
+   its frame at the right aspect ratio while the payload is still in flight --
+   which is what keeps the photograph from reflowing the column when it lands. */
+const showing = computed(
+  () =>
+    sheet.detail.value ??
+    batch.inputs.value.find((input) => input.id === batch.current.value) ??
+    null,
+)
 
 const chips = (field: string | null) => (field ? (sheet.fields.value[field] ?? []).length : 0)
 
@@ -99,6 +120,26 @@ function step(direction: -1 | 1): void {
   const at = selectedChip.value
   if (at === null) selectedChip.value = direction === -1 ? count - 1 : 0
   else selectedChip.value = (at + direction + count) % count
+}
+
+/* The manifest is the closing screen, and it is read from the directory rather
+   than remembered: every approved input is asked for its own token count and the
+   time its artifact was written. Reached by approving the last unapproved input,
+   or from the rail's `run` entry at any point in the batch. */
+async function openManifest(): Promise<void> {
+  const approved = batch.inputs.value.filter((i) => i.status === 'approved')
+  sheets.value = await Promise.all(
+    approved.map(async (input) => {
+      const body = await inputDetail(input.id)
+      return {
+        id: input.id,
+        name: body.approved ?? '',
+        tokens: body.budget.total,
+        at: clock(body.approved_at) ?? '',
+      } satisfies ApprovedSheet
+    }),
+  )
+  manifest.value = true
 }
 
 /* Walk the sheet with the vertical keys, clamped at both ends. A 16-row list
@@ -135,12 +176,25 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault()
     if (event.shiftKey) sheet.redo()
     else sheet.undo()
-  } else if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+  } else if (
+    event.altKey &&
+    ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)
+  ) {
+    // Either axis moves through the batch: the rail is a vertical list and the
+    // photographs read left to right, so both readings of "next" are true.
     event.preventDefault()
-    batch.step(event.key === 'ArrowLeft' ? -1 : 1)
+    batch.step(event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1)
   } else if (meta && event.key === 'Enter') {
     event.preventDefault()
     void approve()
+  } else if (event.key === 'Escape' && overlay.value) {
+    event.preventDefault()
+    overlay.value = false
+  } else if (overlay.value && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    // Arrow keys still move through the batch, so the overlay doubles as a way
+    // to compare inputs without closing it.
+    event.preventDefault()
+    batch.step(event.key === 'ArrowLeft' ? -1 : 1)
   }
 }
 
@@ -182,24 +236,51 @@ watch(batch.current, (id) => {
       :approved-name="approvedReceipt"
       :approved-at="clock(approval.at.value)"
       :refusal="approval.refusal.value ?? sheet.refusal.value ?? batch.failure.value"
-    />
-    <div class="work">
+    >
+      <template #status>
+        <LoadingSkeleton
+          v-if="batch.loading.value || sheet.loading.value"
+          :reading="batch.loading.value ? null : batch.current.value"
+          :vocabulary="batch.info.value?.vocabulary ?? 0"
+        />
+        <span
+          v-else-if="batch.allApproved.value"
+          class="app-header__receipt--approved mono"
+          style="font-size: 11.5px"
+        >
+          nothing left to review
+        </span>
+      </template>
+    </AppHeader>
+    <div v-if="batch.info.value" class="work">
       <BatchRail
         :inputs="batch.inputs.value"
         :current="batch.current.value"
         :edited="batch.edited.value"
         :photo-url="photoUrl"
         :loading="batch.loading.value"
-        @select="batch.select"
+        @select="(id) => ((manifest = false), batch.select(id))"
+        @manifest="openManifest"
       />
+
+      <RunManifest
+        v-if="manifest"
+        :flow="flow"
+        :sheets="sheets"
+        :total="batch.inputs.value.length"
+        @again="manifest = false"
+      />
+
+      <template v-else>
       <SourcePanel
-        v-if="sheet.detail.value"
-        :id="sheet.detail.value.id"
-        :width="sheet.detail.value.width"
-        :height="sheet.detail.value.height"
-        :photo="photoUrl(sheet.detail.value.id)"
-        :caption="sheet.detail.value.caption"
+        v-if="showing"
+        :id="showing.id"
+        :width="showing.width"
+        :height="showing.height"
+        :photo="photoUrl(showing.id)"
+        :caption="sheet.detail.value?.caption ?? null"
         :loading="sheet.loading.value"
+        @open="overlay = true"
       />
       <SheetForm
         :schema="batch.info.value?.schema ?? []"
@@ -218,6 +299,7 @@ watch(batch.current, (id) => {
             :vocabulary="batch.info.value?.vocabulary ?? 0"
             :field="field"
             :focused="focused === field"
+            :hint="batch.info.value?.suffixes[field] ?? null"
             :chips="chips(field)"
             :selected="focused === field ? selectedChip : null"
             @focus="focus(field)"
@@ -238,6 +320,18 @@ watch(batch.current, (id) => {
           />
         </template>
       </SheetForm>
+      </template>
     </div>
+
+    <PhotoOverlay
+      v-if="overlay && sheet.detail.value"
+      :id="sheet.detail.value.id"
+      :width="sheet.detail.value.width"
+      :height="sheet.detail.value.height"
+      :photo="photoUrl(sheet.detail.value.id)"
+      :caption="sheet.detail.value.caption"
+      @close="overlay = false"
+      @step="batch.step"
+    />
   </div>
 </template>

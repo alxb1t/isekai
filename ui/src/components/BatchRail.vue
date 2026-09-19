@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { BatchInput, MarkKind } from '../types'
 import StatusMark from './StatusMark.vue'
 
@@ -21,6 +22,15 @@ function mark(input: BatchInput): MarkKind {
 }
 
 const approved = () => props.inputs.filter((i) => i.status === 'approved').length
+
+/* Same rule as the hero: a thumbnail appears whole or not at all, so the rail
+   never shows a photograph half-decoded and never reflows as one arrives. */
+const decoded = ref(new Set<string>())
+
+function ready(id: string): void {
+  if (decoded.value.has(id)) return
+  decoded.value = new Set(decoded.value).add(id)
+}
 </script>
 
 <template>
@@ -36,12 +46,17 @@ const approved = () => props.inputs.filter((i) => i.status === 'approved').lengt
         @click="$emit('select', input.id)"
       >
         <div
-          v-if="loading"
+          v-show="loading || !decoded.has(input.id)"
           class="rail__placeholder"
           :style="{ aspectRatio: `${input.width} / ${input.height}` }"
         />
-        <div v-else class="lighten">
-          <img class="rail__thumb" :src="photoUrl(input.id)" :alt="input.id" />
+        <div v-show="!loading && decoded.has(input.id)" class="lighten">
+          <img
+            class="rail__thumb"
+            :src="photoUrl(input.id)"
+            :alt="input.id"
+            @load="ready(input.id)"
+          />
         </div>
         <span class="rail__foot mono">
           <span>{{ input.id.split('_').slice(1).join('_') || input.id }}</span>

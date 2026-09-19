@@ -60,5 +60,23 @@ export function useBatch() {
     edited.value = new Set(edited.value).add(id)
   }
 
-  return { info, inputs, current, index, edited, loading, failure, load, refresh, select, step, markEdited }
+  const allApproved = computed(
+    () => inputs.value.length > 0 && inputs.value.every((i) => i.status === 'approved'),
+  )
+
+  return {
+    info,
+    inputs,
+    current,
+    index,
+    edited,
+    loading,
+    failure,
+    allApproved,
+    load,
+    refresh,
+    select,
+    step,
+    markEdited,
+  }
 }

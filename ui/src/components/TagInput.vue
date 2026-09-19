@@ -17,6 +17,8 @@ const props = defineProps<{
   field: string
   vocabulary: number
   focused: boolean
+  /* The word the schema says this field's tags are spelled with, or null. */
+  hint: string | null
   chips: number
   selected: number | null
 }>()
@@ -73,6 +75,15 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault()
     if (matches.value.length) clear()
     else fragment.value = ''
+  } else if (event.key === ' ' && fragment.value === '' && props.hint) {
+    /* Space on an empty field types the word the schema says the field is
+       spelled with, so the operator can see what fits before knowing what to
+       ask for. It is a shortcut for typing that word, not a second ranking:
+       the rows are `vocabulary.search()`'s, in `vocabulary.search()`'s order,
+       exactly as any other fragment. A field the schema gives no suffix gets
+       nothing, because there would be nothing honest to put there. */
+    event.preventDefault()
+    fragment.value = props.hint
   } else if (event.key === 'Backspace' && fragment.value === '') {
     emit('back')
   } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && !fragment.value) {

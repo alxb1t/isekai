@@ -18,6 +18,8 @@ defineProps<{
   approvedAt: string | null
   refusal: string | null
 }>()
+
+defineSlots<{ status?: () => unknown }>()
 </script>
 
 <template>
@@ -27,6 +29,7 @@ defineProps<{
       <span class="app-header__run mono">
         {{ flow }} · {{ inputs }} inputs · {{ approved }} approved
       </span>
+      <slot name="status" />
       <div class="app-header__receipts mono">
         <span v-if="draft">{{ draft }}<template v-if="saved"> · saved {{ saved }}</template></span>
         <span v-if="approvedName" class="app-header__receipt--approved">

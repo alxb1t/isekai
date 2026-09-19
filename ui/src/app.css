@@ -356,6 +356,13 @@ body {
   color: var(--color-neutral-500);
 }
 
+.row__pending {
+  display: inline-block;
+  width: 96px;
+  height: 9px;
+  background: var(--color-neutral-900);
+}
+
 .row__tokens {
   font-size: 11px;
   color: var(--color-neutral-500);
@@ -527,4 +534,146 @@ body {
   font-size: 12px;
   caret-color: var(--color-accent);
   outline: none;
+}
+
+/* — photo overlay — */
+
+.overlay {
+  /* Below the app header, which stays: the run line, the count and the save
+     receipt still read, so the operator never loses their place. It is not
+     dimmed with an opacity wrapper -- that is how the header first became
+     illegible. */
+  position: fixed;
+  top: 41px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-8) var(--space-8);
+  /* One shade below the app's, mixed from the token rather than invented. */
+  background: color-mix(in srgb, var(--color-bg) 72%, black);
+  overflow: auto;
+}
+
+.overlay__figure {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* No `.lighten` here, and that is the point: this is where colour is judged. */
+.overlay__photo {
+  max-height: calc(100vh - 140px);
+  width: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.overlay__photo--actual {
+  max-height: none;
+  max-width: none;
+}
+
+.overlay__meta {
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+.overlay__side {
+  flex: 1;
+  min-width: 0;
+  max-width: 620px;
+  display: flex;
+  flex-direction: column;
+}
+
+.overlay__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+}
+
+.overlay__exit {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+.overlay__caption {
+  margin-top: var(--space-2);
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: var(--color-neutral-300);
+}
+
+.overlay__caption p {
+  margin: 0 0 var(--space-4);
+}
+
+.overlay__foot {
+  margin-top: auto;
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-neutral-800);
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+/* — loading — */
+
+.skeleton__line {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--color-neutral-500);
+}
+
+/* — run manifest — */
+
+.manifest {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-8) var(--space-8) var(--space-8) 34px;
+  overflow-y: auto;
+}
+
+.manifest__title {
+  font-size: 25px;
+  margin: 0 0 var(--space-2);
+}
+
+.manifest__where {
+  font-size: 12px;
+  color: var(--color-accent-300);
+  margin-bottom: var(--space-8);
+}
+
+.manifest__table {
+  max-width: 640px;
+}
+
+.manifest__right {
+  text-align: right;
+}
+
+.manifest__over {
+  color: var(--color-accent-300);
+}
+
+.manifest__note {
+  margin-top: var(--space-8);
+  font-size: 14px;
+}
+
+.manifest__aside {
+  font-size: 12px;
+  color: var(--color-neutral-500);
+}
+
+.manifest__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
 }

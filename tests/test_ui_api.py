@@ -232,5 +232,10 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     assert body["readonly"] is True
     assert body["draft"] is None
     assert body["approved"] == "001.approved.json"
+    # `saved` reports the draft, which approval unlinks, so the approved
+    # artifact carries its own time -- otherwise the manifest's `approved`
+    # column would be blank for every row in it.
+    assert body["saved"] is None
+    assert body["approved_at"] is not None
     assert body["fields"] == expected
     assert not (made.directory(FLOW, REVIEW) / "001.draft.json").exists()

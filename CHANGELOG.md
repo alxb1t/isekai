@@ -27,6 +27,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The photo overlay, the loading state and the run manifest.** `PhotoOverlay` is teleported to body on
+  a ground of `color-mix(in srgb, var(--color-bg) 72%, black)`, with **no `.lighten` blend** — this is the
+  one place the photograph must be seen as it is, because it is where colour is judged. `Fit` / `1:1
+  pixels` with the percentage stated, because a judgement made at 64% is not the same judgement; `esc`,
+  a click anywhere or the × leave it, and **the arrow keys still move through the batch without
+  closing**, so the overlay doubles as a way to compare inputs. It sits below the 41px header rather
+  than over it, so the run line and the receipts still read — not dimmed with an opacity wrapper, which
+  is how that header first became illegible.
+- **Loading is counted, not spun, and no photograph appears until it has decoded.** 135° striped
+  placeholders at each photograph's true aspect ratio, all sixteen schema keys rendered immediately with
+  flat 9px bars and dashed gutter rings so nothing reflows on arrival, the token total as `—`, and
+  `vocabulary 8,106 tags · loaded` from a real `len()`. **No shimmer** — an animated skeleton pulls the
+  eye off the photograph. The line names the input being read rather than counting `2 of 3`: the browser
+  reads one input at a time, so a count would say `1 of 3` forever, while the stated reason for counting
+  at all is *if it does not finish, the operator wants to know which file it is stuck on*.
+- **`RunManifest`, reached by approving the last input or from the rail at any time.** One row per
+  approved sheet — its path, its token count, the time it was written — with over-budget totals in
+  `accent-300` and stated once more at the exit. It names the artifact and gives no order: the operator
+  wrote the CLI and does not need to be told to run `generate`. Real paths throughout:
+  `<run>/<flow>/review/` and `NNN.approved.json`, never the frames' invented `runs/2026-09-17/`.
+- **`Alt+↑` / `Alt+↓` move through the batch too.** The rail is a vertical list and the photographs read
+  left to right, so both readings of *next* are true and both now work.
+- **Space on an empty field types the word the schema says that field is spelled with** — `eyebrows` on
+  `eyebrows`, `hair` on `hair_colour` — so the operator can see what fits before knowing what to ask
+  for. It is a shortcut for typing that word and **not a second ranking**: the rows are
+  `vocabulary.search()`'s, in `vocabulary.search()`'s order, exactly as for any other fragment, which
+  leaves the design's *ranking is global* rule untouched. A field the schema declares no suffix for gets
+  nothing, because there would be nothing honest to put there.
 - **Approve, read-only, and the one line a `Refusal` lands on.** `ApproveBar` is accent-outlined and
   **always live** — no scroll gate, no dwell timer, no confirmation step, no disabled twin, and no
   empties action: the only thing that stops an approve is a refusal, never a ritual. On success the
@@ -46,6 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The manifest's `approved` column was blank.** `saved` reports the draft's own time and `approve()`
+  unlinks the draft, so `GET /api/inputs/{id}` now reports `approved_at` beside it.
 - **One caret, not two.** The fragment carried a 1px accent `border-right` *and* the browser's own
   recoloured caret — two marks for one insertion point, which is the *committed and in-flight never
   look alike* rule read backwards. The border is gone; the caret is the caret.
