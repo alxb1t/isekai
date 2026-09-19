@@ -1,0 +1,449 @@
+/* This application's own layout, kept apart from the vendored token sheet so the
+   copy of `ui/design/design-system/styles.css` stays a copy. Every colour,
+   space, radius and shadow below comes from that sheet's variables -- nothing
+   here invents a hex. */
+
+:root {
+  /* Numbers, field keys, file paths, keystrokes and post counts. Load-bearing
+     for the autocomplete: the post count is read by digit count, which only
+     works if the digits align. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-neutral-500);
+}
+
+/* — the shell — */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.work {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* — app header — */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: 41px;
+  flex: none;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-neutral-900);
+}
+
+.app-header__brand {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.app-header__run {
+  font-size: 11.5px;
+  color: var(--color-neutral-400);
+}
+
+.app-header__receipts {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-4);
+  font-size: 11.5px;
+  color: var(--color-neutral-500);
+}
+
+.app-header__receipt--approved {
+  color: var(--color-accent-300);
+}
+
+/* The one place a refusal lands. Blunt, no modal, and it never implies the
+   operator's work was lost -- the design's own rule for states it specified and
+   deliberately did not draw. */
+.app-header__refusal {
+  flex: none;
+  padding: var(--space-2) var(--space-4);
+  font-size: 11.5px;
+  color: var(--color-accent-300);
+  background: var(--color-accent-900);
+  border-bottom: 1px solid var(--color-accent-700);
+}
+
+/* — batch rail — */
+
+.rail {
+  width: 132px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-2);
+  border-right: 1px solid var(--color-neutral-900);
+  overflow-y: auto;
+}
+
+.rail__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.rail__card {
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.rail__card:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.rail__card--current {
+  border-color: var(--color-neutral-800);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.rail__thumb {
+  width: 100%;
+  border-radius: 2px;
+}
+
+.rail__placeholder {
+  width: 100%;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--color-neutral-900) 0 6px,
+    var(--color-bg) 6px 12px
+  );
+}
+
+.rail__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: 5px;
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
+}
+
+.rail__legend {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
+}
+
+.rail__legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rail__run {
+  margin-top: var(--space-3);
+  padding: var(--space-2) 5px;
+  border-top: 1px solid var(--color-neutral-900);
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
+  background: none;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+
+.rail__run:hover {
+  color: var(--color-accent-300);
+}
+
+/* — source column — */
+
+.source {
+  flex: none;
+  padding: var(--space-6);
+  border-right: 1px solid var(--color-neutral-900);
+  overflow-y: auto;
+}
+
+.source--portrait {
+  width: 492px;
+}
+
+.source--landscape {
+  width: 620px;
+}
+
+.source__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.source__meta {
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
+  text-align: right;
+}
+
+.photo-frame {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.photo-frame img {
+  width: 100%;
+}
+
+.caption {
+  margin-top: var(--space-6);
+}
+
+.caption__body {
+  margin-top: var(--space-2);
+  font-size: 13px;
+  line-height: 1.62;
+  color: var(--color-neutral-300);
+}
+
+.caption__body p {
+  margin: 0 0 var(--space-3);
+}
+
+/* — form column — */
+
+.form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  padding: var(--space-6) 18px var(--space-3);
+}
+
+.sheet-header__line {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: var(--color-neutral-400);
+}
+
+.budget {
+  margin-left: auto;
+  text-align: right;
+  flex: none;
+}
+
+.budget__total {
+  font-size: 22px;
+  color: var(--color-neutral-600);
+}
+
+.budget__total--over {
+  color: var(--color-accent);
+}
+
+.budget__window {
+  font-size: 12px;
+  color: var(--color-neutral-500);
+}
+
+.budget__bar {
+  width: 190px;
+  height: 3px;
+  margin: var(--space-2) 0 var(--space-2) auto;
+  background: var(--color-neutral-900);
+}
+
+.budget__fill {
+  height: 100%;
+  background: var(--color-accent-700);
+}
+
+.budget__fill--over {
+  background: var(--color-accent);
+}
+
+.budget__heaviest {
+  font-size: 10.5px;
+  color: var(--color-neutral-500);
+}
+
+.rows {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 12px 148px 1fr 30px;
+  gap: 10px;
+  align-items: center;
+  min-height: 34px;
+  padding: 4px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-neutral-900) 60%, transparent);
+}
+
+.row--focused {
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.row__key {
+  font-size: 12px;
+  color: var(--color-neutral-400);
+}
+
+.row__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+
+.row__empty {
+  font-style: italic;
+  font-size: 12px;
+  color: var(--color-neutral-500);
+}
+
+.row__tokens {
+  font-size: 11px;
+  color: var(--color-neutral-500);
+  text-align: right;
+}
+
+/* — chips — */
+
+.chip {
+  font-size: 12px;
+  padding: 1px 5px 1px 8px;
+  gap: 5px;
+  border-radius: var(--radius-sm);
+}
+
+.chip__x {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  color: var(--color-accent-600);
+}
+
+.chip__x:hover {
+  color: var(--color-accent);
+}
+
+/* — status marks — */
+
+.mark {
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+}
+
+.mark--filled {
+  background: var(--color-neutral-800);
+}
+
+.mark--hollow {
+  border: 1px solid var(--color-neutral-600);
+}
+
+.mark--dashed {
+  border: 1px dashed var(--color-neutral-700);
+}
+
+.mark--half {
+  border: 1px solid var(--color-accent-500);
+  background: linear-gradient(
+    to right,
+    var(--color-accent-500) 0 50%,
+    transparent 50% 100%
+  );
+}
+
+.mark--rail-filled {
+  background: var(--color-accent);
+}
+
+/* — footer — */
+
+.approve-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4) 18px;
+  border-top: 1px solid var(--color-neutral-900);
+}
+
+.approve-bar__note {
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
+.approve-bar__fact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-accent-200);
+}
+
+.approve-bar__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}

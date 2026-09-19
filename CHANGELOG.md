@@ -27,6 +27,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`ui/` — the Vue 3 app, its shell and the read-only sheet.** Vite, no router, dark theme only,
+  desktop from 1280px. `AppHeader`, `BatchRail`, `StatusMark`, `SourcePanel`, `PhotoFrame`,
+  `CaptionPanel`, `SheetForm`, `SheetHeader`, `TokenBudget`, `FieldRow` and `TagChip`, built against a
+  static fixture so the marks and the rows are right before a fetch can be blamed for them. **Six of
+  the ten frame deltas land here**: no `Show ② draft` pill (its ON state is drawn nowhere); the run
+  line reads `summon-v1 · 3 inputs · 0 approved`, because a run id is `<12 hex>_<slug>` and carries no
+  date; receipts name `<flow>/review/001.draft.json`; the caption shows paragraphs only, because
+  `sheet.py` discards the phrases a highlight would need; no empties action anywhere; and above 77 the
+  budget bar clamps at 100% with the total in the accent, since counting the assembled prompt puts
+  every real sheet over.
+- **Inter is vendored and the token sheet is copied, not imported.** `ui/design/` is read-only, so
+  `ui/src/styles.css` is a copy of it with exactly two deltas: its Google Fonts `@import` deleted, and
+  four local `@font-face` rules over woff2 files in `ui/src/assets/fonts/`. A private tool over a
+  directory of personal photographs must not reach a third party on every load, and offline it would
+  have rendered in the wrong typeface — on an interface whose type sizes are load-bearing.
 - **`isekai ui <ids…> --flow F` — the review surface, and the pipeline's seventh verb.** One FastAPI
   process on `127.0.0.1` serving a built Vue bundle and six endpoints. It resolves the flow, every named
   input, a draft for each, each photograph's dimensions, the vocabulary and the bundle **before a port

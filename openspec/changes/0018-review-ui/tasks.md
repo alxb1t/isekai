@@ -7,7 +7,7 @@
 - [x] 3 — `wiring_from()`, and the seams a ③-only caller does not need
 - [x] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
 - [x] 5 — The server and the verb
-- [ ] 6 — Vue: shell, tokens, rail, and the read-only sheet
+- [x] 6 — Vue: shell, tokens, rail, and the read-only sheet
 - [ ] 7 — Vue: the autocomplete
 - [ ] 8 — Vue: editing and autosave
 - [ ] 9 — Vue: approve, read-only, and the refusal line
@@ -247,23 +247,23 @@ build order, the three things that are easy to get wrong and the keyboard model.
 
 > `ui/design/components.md` build order 1–2, and `design.md` § *Build reference*. **This is most of the pixels.**
 
-- [ ] 6.1 Scaffold `ui/` — `package.json`, `vite.config.ts`, `index.html`, `src/main.ts`,
+- [x] 6.1 Scaffold `ui/` — `package.json`, `vite.config.ts`, `index.html`, `src/main.ts`,
       `src/ReviewApp.vue`. Add `ui/dist/` and `ui/node_modules/` to `.gitignore`.
-- [ ] 6.2 Copy `ui/design/design-system/styles.css` to `ui/src/styles.css` **and delete line 2's
+- [x] 6.2 Copy `ui/design/design-system/styles.css` to `ui/src/styles.css` **and delete line 2's
       Google Fonts `@import`.** Download Inter 400/500/600/700 as woff2 into `ui/src/assets/fonts/` and
       add a local `@font-face` block. `ui/design/` is imported and read-only — **never edit it.**
-- [ ] 6.3 Build `AppHeader.vue`, `BatchRail.vue` and `StatusMark.vue` against a static fixture. Four
+- [x] 6.3 Build `AppHeader.vue`, `BatchRail.vue` and `StatusMark.vue` against a static fixture. Four
       marks, not five — `square` went with 5a. Header run line is **`summon-v1 · 3 inputs · 0 approved`**
       (frame delta 2), receipts are **`<flow>/review/001.draft.json`** (delta 3), **no ② draft pill**
       (delta 1).
-- [ ] 6.4 Build `SheetForm.vue`, `SheetHeader.vue`, `TokenBudget.vue`, `FieldRow.vue`, `TagChip.vue` —
+- [x] 6.4 Build `SheetForm.vue`, `SheetHeader.vue`, `TokenBudget.vue`, `FieldRow.vue`, `TagChip.vue` —
       read-only. Schema order, never re-sorted. Empty rows read `empty` with a hollow ring and **no
       empties action anywhere** (delta 5). Above 77 the bar **clamps at 100%** and the total takes
       `--color-accent` — nothing else of 4b (delta 8).
-- [ ] 6.5 Verify it builds: `cd ui && npm install && npm run build`
-- [ ] 6.6 Verify by eye against `ui/design/screens/01-review-draft-loaded.png`, less deltas 1, 2, 3,
+- [x] 6.5 Verify it builds: `cd ui && npm install && npm run build`
+- [x] 6.6 Verify by eye against `ui/design/screens/01-review-draft-loaded.png`, less deltas 1, 2, 3,
       4, 5 and 8. **State which deltas you applied and confirm nothing else differs.**
-- [ ] 6.7 Verify the gate: `make gate`
+- [x] 6.7 Verify the gate: `make gate`
 
 ## 7. Vue: the autocomplete
 
