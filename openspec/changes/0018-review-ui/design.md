@@ -277,9 +277,9 @@ green.
 **Reproduced on the operator's machine:**
 
 ```
-  REPOSITORY : /Users/alexey/Developer/AI_Engineering/isekai
-  probe      : /users/alexey/Developer/AI_Engineering/isekai/runs    ← lowercase u
-  resolve()  : /users/alexey/Developer/AI_Engineering/isekai/runs    ← case not folded
+  REPOSITORY : /Users/<user>/<path>/isekai
+  probe      : /users/<user>/<path>/isekai/runs                       ← lowercase u
+  resolve()  : /users/<user>/<path>/isekai/runs                       ← case not folded
   samefile   : True                                                   ← it IS the working tree
   GUARD      : PASSED — a run root inside the tree, outside .data
 ```
