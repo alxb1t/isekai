@@ -68,6 +68,44 @@ class Wiring:
 REPOSITORY = DATA_ROOT.parent
 
 
+def _identity(path: Path) -> tuple[int, int] | None:
+    """Return what the filesystem calls this directory, or `None` if it has none.
+
+    A directory that does not exist has no identity. That is the only reason this
+    returns an option rather than a pair.
+    """
+    try:
+        info = path.stat()
+    except OSError:
+        return None
+    return (info.st_dev, info.st_ino)
+
+
+def _is_within(resolved: Path, ancestor: Path) -> bool:
+    """Decide whether `resolved` is that directory, or sits inside it.
+
+    Decided by identity rather than by the text of the two paths. `Path.resolve()`
+    follows symlinks and drops `..` segments, but it does **not** fold case -- so
+    on a case-insensitive filesystem a differently-cased spelling of a directory
+    inside the working tree resolves to a path that *compares* as a different path
+    and *is* the same directory. A prefix test accepted it, which is the exact
+    outcome the rule exists to refuse, reached by a typing mistake rather than by
+    an adversary (design.md D10). `os.path.normcase` does not close this: it is a
+    no-op on darwin.
+
+    An ancestor that does not exist yet has no identity to compare against, so the
+    textual test stands in for it. That is not a weakening of the rule: where a
+    directory has never been created there is no second name for the filesystem to
+    open as it.
+    """
+    target = _identity(ancestor)
+    if target is None:
+        return resolved.is_relative_to(ancestor)
+    return any(
+        _identity(candidate) == target for candidate in (resolved, *resolved.parents)
+    )
+
+
 def _check_run_root(runs: Path) -> None:
     """Refuse a run root inside the working tree that is not under `DATA_ROOT`.
 
@@ -78,7 +116,7 @@ def _check_run_root(runs: Path) -> None:
     (design.md D7).
     """
     resolved = runs.resolve()
-    if resolved.is_relative_to(REPOSITORY) and not resolved.is_relative_to(DATA_ROOT):
+    if _is_within(resolved, REPOSITORY) and not _is_within(resolved, DATA_ROOT):
         raise Refusal(
             f"--runs {resolved} is inside this repository and outside "
             f"{DATA_ROOT}, the one directory git ignores; a run holds a copy of "

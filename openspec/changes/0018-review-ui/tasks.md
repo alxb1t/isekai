@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The nine `## Purpose` lines, before anything is folded
-- [ ] 2 — `security/S1`: containment decided by identity, not by text
+- [x] 2 — `security/S1`: containment decided by identity, not by text
 - [ ] 3 — `wiring_from()`, and the seams a ③-only caller does not need
 - [ ] 4 — `review.py`: `save_draft()`, `TokenBudget`, and two refusals that do not run
 - [ ] 5 — The server and the verb
@@ -75,7 +75,7 @@ build order, the three things that are easy to get wrong and the keyboard model.
 > Design D10, and spec delta `run-directory`. **This is a fix inside the function phase 3 extracts.**
 > Do it before the extraction so the extraction never carries a broken guard, not even for one commit.
 
-- [ ] 2.1 **Reproduce it first, and paste the output.** Verify:
+- [x] 2.1 **Reproduce it first, and paste the output.** Verify:
       ```
       uv run python -c "
       from pathlib import Path
@@ -89,21 +89,21 @@ build order, the three things that are easy to get wrong and the keyboard model.
       ```
       Expect **`samefile: True`** and **`GUARD: PASSED`**. On a case-sensitive filesystem the probe's
       parent will not exist; say so and use the skip in 2.4 instead.
-- [ ] 2.2 Write the failing test first, in `tests/test_run_directory.py`, bound to
+- [x] 2.2 Write the failing test first, in `tests/test_run_directory.py`, bound to
       `run-directory:containment:containment-is-decided-by-identity`: a run root naming a directory
       inside the working tree by a spelling the filesystem resolves to the same directory is refused.
       **Guard it** with a probe for filesystem case-insensitivity and `pytest.mark.skipif` — CI is Linux.
       Verify: `uv run pytest tests/test_run_directory.py -k identity` — **fails, for the stated reason.**
-- [ ] 2.3 Replace the textual comparison in `isekai/interface/wiring.py:71-88`. Decide containment by
+- [x] 2.3 Replace the textual comparison in `isekai/interface/wiring.py:71-88`. Decide containment by
       walking `runs.resolve()` and its parents and comparing `(st_dev, st_ino)` against `REPOSITORY` and
       `DATA_ROOT`. A run root that does not exist yet must still be decidable, so compare against the
       nearest ancestor that does. **`os.path.normcase` is a no-op on darwin and will not close this** —
       do not reach for it. Keep the refusal message exactly as it is.
-- [ ] 2.4 Verify the new test passes and the three existing containment scenarios still do:
+- [x] 2.4 Verify the new test passes and the three existing containment scenarios still do:
       `uv run pytest tests/test_run_directory.py -k containment -v`
-- [ ] 2.5 Verify the other axes are still sound — traversal, symlinks, `..`, relative paths and a
+- [x] 2.5 Verify the other axes are still sound — traversal, symlinks, `..`, relative paths and a
       non-existent root all behave as before. Verify: `uv run pytest tests/test_run_directory.py`
-- [ ] 2.6 Verify the gate: `make gate`
+- [x] 2.6 Verify the gate: `make gate`
 
 ## 3. `wiring_from()`, and the seams a ③-only caller does not need
 

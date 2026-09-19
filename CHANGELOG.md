@@ -27,6 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`security/S1`: the run-root containment guard is decided by directory identity, not by the text of
+  a path.** `Path.resolve()` follows symlinks and drops `..` segments but does **not** fold case, so on
+  the case-insensitive filesystem this project is developed on, `--runs` naming a directory inside the
+  working tree with one letter of its own path in the wrong case compared as a different path and was
+  **accepted** — the exact outcome the rule exists to refuse, reached by a typing mistake rather than by
+  an adversary, leaving a directory of personal photographs somewhere `.gitignore` does not cover.
+  `_check_run_root` now walks the resolved root and its parents comparing `(st_dev, st_ino)` against the
+  repository and the ignored data root; an ancestor that does not exist yet has no identity, so the
+  textual test stands in for it, where there is no second name to be fooled by either. The refusal
+  message is unchanged. `os.path.normcase` would not have closed this: it is a no-op on darwin. The fix
+  lands **before** the extraction that exposes it, so no commit carries a broken guard through a new
+  door.
+
 - **The nine living specs gain `## Purpose`, and the tooling stops answering from an empty parse.**
   Every one of `caption`, `cli`, `comfy-transport`, `evaluation`, `image-generation`,
   `model-provisioning`, `review`, `run-directory` and `sheet` failed
