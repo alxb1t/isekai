@@ -42,6 +42,35 @@ different seeds and the difference between the two images is not attributable to
 version deliberately measures nothing and claims nothing about which arm is better; a comparison that
 matters needs the seed fixed by hand.
 
+### Acceptance — run live, on three photographs
+
+**The open arm runs end to end and reaches Claude by no path.** Three of the operator's photographs
+through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-v1`, on his own machine for
+①② and one RunPod session for ④.
+
+- **Stages ① and ② ran on localhost and cost nothing.** A cold caption takes ~21 s and a cold sheet
+  ~25 s, the two models evicting each other between stages exactly as `design.md` D10 predicts — which
+  is why one 900 s ceiling serves both rather than two tuned numbers.
+- **Re-running every verb reports already-complete in well under a second** and makes no call. A model
+  call could not hide inside that: the cold load alone is twenty times longer.
+- **The briefings and the sheets were judged good by the operator.** The authored caption briefing — the
+  named risk of this change, an 8B fine-tune against a long structured briefing — held.
+- **`claude` genuinely absent from `PATH`, and a fresh caption and sheet were still written.** Running
+  the already-complete batch that way proves nothing, because nothing calls a model on a resumed run;
+  the evidence is a *new* run, from a copy of a photograph, into a fresh runs root. This is the real
+  twin of the suite's monkeypatched isolation test.
+- **Every artifact's `producer` names what produced it**: captions `ollama · joycaption-beta-one-q4k`,
+  sheets `ollama · qwen3:8b`, and **`pinned` is `false` throughout** — which is what this version
+  deliberately does not deliver.
+- **Three PNGs rendered at an explicit `--seed 20190`** in 2 m 39 s total, downloaded before teardown.
+
+**Cost.** Pod `q9q2h3qhkbywfo`, RTX PRO 4500 Blackwell in EU-RO-1, **7 m 50 s of uptime** against the
+45-minute ceiling. Teardown confirmed by the RunPod MCP: `list-pods` returns `[]` and the pod id returns
+404. The first creation attempt failed with a transient 500 and created nothing, so it billed nothing.
+
+**This version measures nothing and claims nothing about which arm is better.** No comparison against
+`summon-v1` was run; that is the next version's, and it needs the instrument that prices it.
+
 ### Added
 
 - **`scripts/joycaption.Modelfile` — the open reader's `ollama create` recipe, recovered from the

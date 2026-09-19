@@ -11,8 +11,8 @@
 - [x] 7 — `flows/summon-open-v1/`: the directory, both briefings, the pin
 - [x] 8 — The isolation proof, in the suite, non-vacuous
 - [x] 9 — The documents this version makes false
-- [ ] 10 — ⚠️ **HUMAN · FREE** — the open flow end to end, stopping before the pod
-- [ ] 11 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance render
+- [x] 10 — ⚠️ **HUMAN · FREE** — the open flow end to end, stopping before the pod
+- [x] 11 — ⚠️ **HUMAN · METERED · GPU · HALT** — the acceptance render
 
 ## The per-phase ritual
 
@@ -262,16 +262,16 @@ and one of the operator's own photographs.
 
 **Free: ①② run on localhost. The operator's own photograph, on his own machine.**
 
-- [ ] 10.1 `caption --flow summon-open-v1 <photo>` and **read the prose against the photograph.** Verify
+- [x] 10.1 `caption --flow summon-open-v1 <photo>` and **read the prose against the photograph.** Verify
       the caption describes what is actually there — this is the projector check and the briefing check
       at once, and it is the first time the authored briefing meets the model.
-- [ ] 10.2 `sheet --flow summon-open-v1` and verify the sixteen fields are canonical, no absence clause
+- [x] 10.2 `sheet --flow summon-open-v1` and verify the sixteen fields are canonical, no absence clause
       survived, and no tag is outside the vocabulary — by `approve` refusing, or not, on its own.
-- [ ] 10.3 `review --flow summon-open-v1` through the v0.18 UI and `approve` **unedited**, verifying the
+- [x] 10.3 `review --flow summon-open-v1` through the v0.18 UI and `approve` **unedited**, verifying the
       surface needs no change because it is already flow-aware.
-- [ ] 10.4 Re-run all three verbs and verify each reports already-complete and makes no call, which is
+- [x] 10.4 Re-run all three verbs and verify each reports already-complete and makes no call, which is
       the whole of resume at these stages.
-- [ ] 10.5 **Halt and report** before phase 11: the caption, the sheet, what the briefings got wrong, and
+- [x] 10.5 **Halt and report** before phase 11: the caption, the sheet, what the briefings got wrong, and
       the wall-clock cost of each stage including the cold reload between them.
 
 ## 11. ⚠️ HUMAN · METERED · GPU · HALT — the acceptance render
@@ -279,12 +279,12 @@ and one of the operator's own photographs.
 **Do not start this phase on phase 10's success. The operator confirms the spend and says go.**
 Ceiling **45 minutes and ~$0.30**.
 
-- [ ] 11.1 `generate --flow summon-open-v1 --seed N --server <tunnel>` and verify a PNG lands under the
+- [x] 11.1 `generate --flow summon-open-v1 --seed N --server <tunnel>` and verify a PNG lands under the
       flow's own `outputs/`.
-- [ ] 11.2 **The same five verbs again with `claude` absent from `PATH`**, and verify the run completes
+- [x] 11.2 **The same five verbs again with `claude` absent from `PATH`**, and verify the run completes
       unchanged. **This is the only evidence that no path reaches Claude** — phase 8 proves it offline,
       this proves it in the real invocation.
-- [ ] 11.3 Verify every artifact's `producer` names `ollama` and both model names, by `isekai show`, and
+- [x] 11.3 Verify every artifact's `producer` names `ollama` and both model names, by `isekai show`, and
       that `pinned` is `false` throughout — which is what this version deliberately does not deliver.
-- [ ] 11.4 Report the render, the cost against the ceiling, and **no claim about which arm is better** —
+- [x] 11.4 Report the render, the cost against the ceiling, and **no claim about which arm is better** —
       that is v0.20's, and this version measures nothing.
