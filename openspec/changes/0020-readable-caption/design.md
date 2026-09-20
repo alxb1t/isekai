@@ -435,17 +435,27 @@ exits 18 — and `urllib` does not. So a dropped connection yields a **well-form
 SHA-256, a plausible byte count, written to a tracked file by the deriver whose whole contract is to be
 byte-identical, on a re-run the gate never performs.
 
-**Two guards, and only the first is the one that fired.**
+**Three refusals, and only the first is the one that fired.**
 
 ```
   ① a body shorter than Content-Length is refused, never hashed   ← observed, twice
-  ② the request accepts only the identity coding                  ← latent, never observed
+  ② a response that declares no length at all is refused          ← ①'s silent opt-out
+  ③ a response whose Content-Encoding is not identity is refused  ← latent, never observed
 ```
 
-② is kept despite not being the fault, and it is not defensive padding: a request naming no acceptable
+③ is kept despite not being the fault, and it is not defensive padding: a request naming no acceptable
 coding accepts every coding (RFC 7231 §5.3.4), `urllib` neither negotiates nor decompresses, and
 `Content-Length` on a coded response is the *coded* length — so ① would pass while the digest is of a
-gzip stream. The two guards close different holes and neither subsumes the other.
+gzip stream.
+
+**Simplify corrected where ③ sits.** It first shipped as `Accept-Encoding: identity` on the request
+and nothing else, which is a *favour asked* rather than a fact checked — and a server that ignores it
+puts ①'s hole straight back. The header stays as the polite half; the guard is the response's own
+`Content-Encoding`. That also surfaced ②: `if declared is not None` let a response with no
+`Content-Length` opt out of ① silently, and on a route whose whole contract is byte-identical
+re-derivation, *"I will not say how long this is"* is not a thing to hash. All three are checks on
+what came back, which is the posture the module already takes toward the LFS route — stated and
+verified, never sniffed and hoped for.
 
 **Why this version is where they land.** Before v0.20 a poisoned pin cost a provisioning refusal on a
 300 KB file. **After v0.20 the consumer is `boundary/wd14.py`**, which verifies both digests before its
@@ -456,6 +466,48 @@ loop, which is what earns the exception to *do not open a file this version neve
 **Only `vocabulary.json` is re-derived here.** `models.json` and `eval_models.json` are left exactly as
 they are: re-deriving them is a different change with a different diff to review.
 
+
+### D27 · What the simplify pass changed, and why two of them were D14 and D17 becoming true
+
+**Recorded because three of these edit decisions this document states, rather than only the code
+under them.** The pass ran four read-only reviews over the change's own diff.
+
+**D14 was a claim the build did not keep.** It says the session opens on first use, and `wiring`
+resolved it that way — but `cli.py` called the resolver **unconditionally**, before
+`caption_wd14`'s own idempotence guard, so a batch whose lists were already written hashed 467 MB and
+loaded a graph in order to return `None` from every stage call. It also meant a *completed* run could
+not resume on a machine that had since emptied `models/`. The stage now takes a **thunk**, which is
+`Wiring.vocabulary`'s own shape and argued from the same sentence: *an eager read made a verb
+impossible on a clone that had not provisioned the file it never used.* The memo drops to one slot,
+because `tagger_for` reads nothing from the `Flow` it takes and a per-flow key bought two sessions
+and no behaviour.
+
+**D17 was half a claim.** The producer recorded the digests `scripts/vocabulary.json` held **at write
+time**, not the ones the session had been verified against — so an artifact could assert a pin it was
+not produced under, which is the one thing `pinned: true` exists to rule out. `open_session` now
+returns the pins it checked, as part of a `LocalTagger` value, and `_pins()` — with its per-photograph
+re-read of the manifest — is gone.
+
+**D6's `BUDGETS` entry was decorative, and the comment under it cited a precedent that does not
+exist.** `check_budget` decides entirely from error records on disk and `caption_wd14` wrote none, so
+`BUDGETS["wd14"] = 1` was a number nothing read; `run.py` justified that by pointing at `assemble` and
+`render`, **both of which record**. The thunk is what resolves it, by separating the two failures
+cleanly: an absent or corrupt model is a condition about this *build*, identical for every input, and
+refuses the batch **before** the stage's `try` without writing one record per photograph; a header no
+decoder can read is this *photograph's*, and is recorded and permanent like every other stage's. The
+budget of one now means what `run.py` says it means.
+
+**One decision was widened rather than corrected.** `hosted_tagger_for` bypassed `_resolve` and
+answered `None` for any arm not in its table. D3's argument — that there should be no *Claude tagger
+implementation* — is sound and untouched, but it is a different question from whether the registry
+should **record** that `claude-cli` has none. Left out, an arm this build has never heard of resolved
+to silence, and D20 makes silence unreportable by design. `claude-cli` is now in the table mapping to
+nothing, and the resolution goes through the one mechanism all three seams use.
+
+The rest were local: a `_require` that refuses by name instead of raising `ModuleNotFoundError`,
+constants un-duplicated against `shared/vocabulary.py`, two dead constants deleted, one normalisation
+per tag instead of three in the UI payload, `read_artifact` in tests that had been skipping the schema
+guard, and a shared post-count formatter so one number reads the same in two panes.
 
 ### D26 · The `Session` seam takes the photograph, not a prepared array
 

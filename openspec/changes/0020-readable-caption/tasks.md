@@ -193,11 +193,14 @@ defeats D14.
 
 ## 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 
-- [x] 5.1 `caption_wd14(run, flow, tagger, *, new_version=False) -> Path | None` — the guard is
+- [x] 5.1 `caption_wd14(run, flow, open_tagger, *, new_version=False) -> Path | None` — the guard is
       `caption()`'s, character for character (`caption.py:252-254`), against `run.directory(flow, WD14)`.
       Body: a list of `{tag, confidence}` above a **0.15** floor, sorted by confidence descending
       (`design.md` D13). Producer: `implementation: "wd14"`, the model name, **`pinned: true`**, and
-      both digests (`design.md` D17).
+      both digests (`design.md` D17). **Amended by the simplify pass — `design.md` D27:** the tagger
+      arrives as a **thunk** and the digests are the ones it was verified against, not a re-read of
+      the manifest; and the stage records a per-photograph failure, which is what makes its budget of
+      one mean anything.
 - [x] 5.2 `caption_tags(run, flow, tagger, *, new_version=False) -> Path | None` — the same guard
       against `run.directory(flow, TAGS)`. The prompt is a module constant,
       `"Write a long list of Booru tags for this image.\n"` (D11); `TAGGER_OPTIONS` is
