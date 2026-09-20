@@ -34,14 +34,17 @@ export interface ScoredTag {
   confidence: number
 }
 
-/* One tag from the hosted tagger, marked server-side for what can actually be
-   committed. `posts` is null where the tag is outside the vocabulary, and the
-   missing number is the signal: a chip with no count reads as the model's word
-   rather than Danbooru's. */
+/* One tag from the hosted tagger that the vocabulary actually carries. The
+   server sends only these: on v0.20's acceptance batch roughly nine in ten of
+   this model's tags were committable to no field, and reading nine to find the
+   tenth is attention spent on the busiest pane in the surface.
+
+   So `posts` is never null here, and there is no membership flag — every tag
+   that reaches the page is in the vocabulary by construction. The artifact on
+   disk still holds the ones that were dropped. */
 export interface OfferedTag {
   tag: string
-  in_vocabulary: boolean
-  posts: number | null
+  posts: number
 }
 
 export interface InputDetail {

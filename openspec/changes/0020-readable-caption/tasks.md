@@ -12,7 +12,7 @@
 - [x] 8 — The surface: sentences, two chip lists, and the payload that feeds them
 - [x] 9 — The documents this version makes false
 - [x] 10 — ⚠️ **HUMAN · FREE** — the three artifacts end to end, on one synthetic portrait
-- [ ] 11 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
+- [x] 11 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
 
 ## The per-phase ritual
 
@@ -349,8 +349,8 @@ nobody reads a green gate as proof of more.
 `.data/v0.19/runs/` — the claim is about reading a caption for the first time, and it cannot be tested
 on captions already read.
 
-- [ ] 11.1 Run the batch through `caption` → `sheet` → `ui` on the open flow and review it.
-- [ ] 11.2 **Record ③ and ④ separately. They can fail independently, and a no is a finding.**
+- [x] 11.1 Run the batch through `caption` → `sheet` → `ui` on the open flow and review it.
+- [x] 11.2 **Record ③ and ④ separately. They can fail independently, and a no is a finding.**
 
       > **④** *Reading the caption one sentence to a block made it easier to keep my place than reading
       > paragraphs did.* — and, mechanically: **was any sentence split in the wrong place?**
@@ -361,7 +361,7 @@ on captions already read.
       > **③b — JoyCaption** *The raw list surfaced at least one tag I would not otherwise have reached,
       > and the vocabulary marking made the unusable ones obvious.*
 
-- [ ] 11.3 Write the verdict into `CHANGELOG.md` under `## [Unreleased]`, in the shape v0.18's and
+- [x] 11.3 Write the verdict into `CHANGELOG.md` under `## [Unreleased]`, in the shape v0.18's and
       v0.19's acceptance entries take. **A no is recorded as a no**, with what it was.
 
 **Gate green. Commit. Hand back to `mf-converge`.**

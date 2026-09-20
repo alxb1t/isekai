@@ -220,39 +220,44 @@ def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
 
 
 def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
-    """Return the hosted tagger's raw list, marked for what is committable.
+    """Return the hosted tagger's committable tags for the page, or None if absent.
 
-    **Membership is decided here, on the server, and that is the decision rather
-    than a convenience.** `/api/tags` answers a *fragment* query and there is no
-    membership endpoint; marking N tags from the browser would be N round trips
-    against a surface whose whole job is to be instant. The vocabulary is already
-    loaded in this process, and `count()` answers both questions at once -- in or
-    out, and how many posts back it.
+    **Filtered to what the vocabulary carries, and the filter is v0.20's
+    acceptance rather than a preference.** On the acceptance batch roughly nine
+    in ten of this model's tags were outside the vocabulary -- `fashion
+    photography`, `centered subject`, `detailed textures in lace fabric` -- and
+    could be committed to no field at all. The operator's verdict on the
+    unfiltered list was that only the marked ones carried value, so the rest are
+    attention spent on the busiest pane in the surface (design.md D29).
 
-    **A tag outside the vocabulary carries no count**, and that absence is the
-    point: a chip with no number reads as the model's word rather than
-    Danbooru's, which is the scepticism that defuses the anchoring risk of
-    showing a list that is three-quarters unusable.
+    **Filtered on the way to the page and never on the way to disk.** The
+    artifact keeps every tag the model returned; that is `tagging`'s rule and
+    nothing here touches it. Narrowing the *record* would make it disagree with
+    what the model actually said, and being able to look behind the sorter is
+    why it exists.
+
+    Membership is decided here for the reason it always was: `/api/tags` answers
+    a fragment query and has no membership form, so asking per tag would be one
+    round trip each, and the vocabulary is already held by this process.
+
+    The local tagger's list is **not** filtered, and the asymmetry is the whole
+    point -- it is scored against the vocabulary it emits, so every tag it
+    returns is committable by construction.
     """
     path = batch.tags_path(held)
     if path is None:
         return None
     listed: Any = read_artifact(path)["tags"]
-    # One `str()` and one lookup per tag. `count()` and `__contains__` both
-    # normalise the spelling and both hit the same mapping, so asking twice
-    # normalises a ~50-tag list a hundred times for one answer -- and the two
-    # questions are not the same question: a tag the vocabulary carries with a
-    # count of zero is *in* it, so membership cannot be derived from the number.
+    # One `str()` and one lookup per tag. `count()` normalises the spelling and
+    # hits the same mapping `__contains__` does, so asking both questions
+    # separately would normalise a forty-tag list eighty times for one answer --
+    # and they are not the same question: a tag the vocabulary carries with a
+    # count of zero is *in* it, so membership cannot be read off the number.
     marked: list[dict[str, Any]] = []
     for tag in listed:
         name = str(tag)
-        marked.append(
-            {
-                "tag": name,
-                "in_vocabulary": name in batch.vocabulary,
-                "posts": batch.vocabulary.count(name) or None,
-            }
-        )
+        if name in batch.vocabulary:
+            marked.append({"tag": name, "posts": batch.vocabulary.count(name)})
     return marked
 
 

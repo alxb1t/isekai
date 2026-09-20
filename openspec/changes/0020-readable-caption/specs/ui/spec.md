@@ -23,50 +23,60 @@ a person, and the acceptance looks for it specifically.
 - **THEN** each sentence is rendered as its own block
 - **AND** the prose's own text is unchanged, with nothing added, dropped or re-ordered
 
-### Requirement: Both tag lists are shown beside the prose, raw and read-only
+### Requirement: Both tag lists are shown beside the prose, read-only, and neither is editable there
 
-The system SHALL show every tag each tagger produced, in the order the artifact records, without
-filtering any of them against the vocabulary, and SHALL make none of them committable.
+The system SHALL show, beside the caption, the scored list the local tagger produced and the
+committable tags the hosted tagger offered, and SHALL make neither list a way to change a sheet.
 
-The lists exist so the operator can see what was offered **before** the sorter narrowed it, and the
-sorter's narrowing is exactly what he is trying to see behind — so a surface that filtered them would
-answer a question he can already ask. Showing a score where the tagger returned one lets the list be
-read in confidence order, which is what makes a long list cheap to scan and a wrong entry cheap to
-dismiss: a low-scored tag sitting beneath a high-scored contradiction is refuted by the row above it.
+**The two lists are narrowed differently, and the asymmetry is measured rather than chosen.** The local
+tagger is scored against the vocabulary it emits, so every tag it returns is committable by
+construction and all of them are shown, with the confidence beside each — a wrong tag sorted below a
+right one refutes itself. The hosted tagger free-associates: on the acceptance batch roughly nine in
+ten of its tags were outside the vocabulary, could not be committed to any field, and the operator's
+verdict was that only the marked ones carried any value. So its list is **filtered to what the
+vocabulary carries** before it is shown.
 
-They are read-only because the picker in the sheet is the only path into a field, and it is the only
-path that validates. A chip that could commit would be a second writer into an artifact whose whole
-correctness argument is that one function validates every value entering it.
+**Filtered on the way to the page, never on the way to disk.** The artifact keeps every tag the model
+returned — that is `tagging`'s requirement and it is untouched — because narrowing what is *stored*
+would make the record disagree with what the model said, and the reason the artifact exists is to be
+able to look behind the sorter. What changes is only which of those tags the surface spends the
+operator's attention on.
 
-#### Scenario: every tag is shown, and none of them can be committed
+#### Scenario: the local list is shown whole and the hosted list is shown filtered
 - **Key:** `ui:source:both-tag-lists-are-shown-raw-and-read-only`
 - **Layers:** unit
 - **WHEN** an input whose tag artifacts contain tags outside the flow's vocabulary is opened
-- **THEN** every tag in both artifacts is present in the response the surface renders
+- **THEN** every tag the local tagger scored is present in the response the surface renders
+- **AND** only the hosted tags the vocabulary contains are present in it
 - **AND** no interaction on either list writes to a draft
+
+#### Scenario: filtering the panel does not filter the artifact
+- **Key:** `ui:source:the-artifact-keeps-what-the-panel-drops`
+- **Layers:** unit
+- **WHEN** a hosted tag outside the vocabulary is withheld from the payload
+- **THEN** that tag is still present in the stored artifact, unchanged
 
 ### Requirement: Vocabulary membership is decided by the server, not by the browser
 
-The system SHALL resolve, for each tag it shows, whether the flow's pinned vocabulary contains it and
-what its post count is, and SHALL deliver that with the input's own payload rather than through a
-per-tag query.
+The system SHALL resolve, for each hosted tag, whether the flow's pinned vocabulary contains it and what
+its post count is; SHALL use that to decide which of them reach the page; and SHALL deliver the count
+with the input's own payload rather than through a per-tag query.
 
-Marking is what makes an unfiltered list usable: it shows at a glance which suggestions can actually be
-committed, and a tag shown with no post count reads as the model's word rather than as Danbooru's, which
-is the scepticism that defuses a measured hazard — a reader pushed toward a field list invented nineteen
-identity marks across seven of ten subjects and its score fell from 0.518 to 0.307.
+Membership is what makes the hosted list worth showing at all. Unfiltered it was measured at roughly
+one usable tag in ten, and an operator reading nine unusable ones to find the tenth is spending
+attention on the busiest pane in the surface. The count travels with each tag that survives, because a
+number is what distinguishes a suggestion Danbooru can actually render from one a model merely said.
 
-The tag search endpoint answers a **fragment query** and has no membership form, so marking a list of
-forty tags through it would be forty round trips on the busiest pane in the surface. The vocabulary is
-already resolved at startup and already held by the process that assembles this payload; deciding
-membership there costs one dictionary lookup per tag and no request at all.
+The tag search endpoint answers a **fragment query** and has no membership form, so deciding this in
+the browser would be one round trip per tag. The vocabulary is already resolved at startup and already
+held by the process that assembles this payload; the decision costs one dictionary lookup per tag and
+no request at all.
 
-#### Scenario: the payload carries membership and count for every tag
+#### Scenario: the server decides which hosted tags reach the page, and sends their counts
 - **Key:** `ui:source:vocabulary-membership-is-marked-by-the-server`
 - **Layers:** unit
-- **WHEN** an input with a tag artifact is requested
-- **THEN** each tag in the payload carries whether the vocabulary contains it, and its post count where
-  it does
+- **WHEN** an input with a hosted tag artifact is requested
+- **THEN** the payload carries only the tags the vocabulary contains, each with its post count
 - **AND** the surface makes no additional request to resolve any of them
 
 ### Requirement: A tag artifact that is absent is silent

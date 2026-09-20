@@ -467,6 +467,42 @@ loop, which is what earns the exception to *do not open a file this version neve
 they are: re-deriving them is a different change with a different diff to review.
 
 
+### D29 · The hosted list is filtered to the vocabulary, and the acceptance is what decided it
+
+**This overturns part of D1, on the operator's judgement in phase 11 — which is the one place a
+decision like this could have come from.** D1 shipped the hosted list *unfiltered* on an explicit
+argument: *"the operator asked for the raw JoyCaption list knowing it is wrong, because the panel is
+advisory and a wrong tag costs a glance."* The acceptance tested that sentence and it did not hold.
+
+```
+  ③a  WD14        "works awesome ... better than expected"     the highest-impact half
+  ③b  JoyCaption  "makes sense only for those with a number"   the rest is not a glance
+  ④   sentences   "made it easier indeed"                       unqualified yes
+```
+
+**A wrong tag does cost a glance; nine wrong tags cost the pane.** On the acceptance batch the hosted
+model returned 35 tags of which **4** were in the vocabulary — `fashion photography`, `centered
+subject`, `detailed textures in lace fabric` and twenty-eight more that can be committed to no field
+at all. The measured 9–26% band held; what did not hold was the inference that a list at the bottom of
+that band is still worth reading. Marking made the unusable ones *obvious*, which was the claim — and
+obvious-and-present is still nine rows of nothing on the busiest pane in the surface.
+
+**The filter is on the way to the page and never on the way to disk**, and that split is the whole of
+what keeps D1's substance. `tagging:output:the-list-is-stored-unnarrowed` is untouched: the artifact
+keeps every tag the model returned, because narrowing the *record* would make it disagree with what
+the model said, and being able to look behind the sorter is the reason it exists. A later version that
+disagrees with this decision changes one function and loses no data.
+
+**The asymmetry with WD14 is the point rather than an inconsistency.** The local tagger is scored
+against the vocabulary it emits — row N of the CSV *is* the output layer — so every tag it returns is
+committable by construction and all of them are shown. One list is whole because it can be; the other
+is filtered because it cannot.
+
+**What this costs, stated rather than discovered:** a hosted tag that is *right about the photograph*
+and merely absent from the vocabulary is now invisible on the page. That is accepted on the same
+evidence — none of the twenty-eight was reachable by any field, so invisibility costs nothing a
+correction could have used.
+
 ### D28 · `ensure_built` rebuilds a stale bundle, and phase 10 is how that was found
 
 **Found by running the surface, which is the only thing that could have found it.** The caption

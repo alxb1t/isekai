@@ -270,7 +270,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
 
 
 @pytest.mark.spec("ui:source:both-tag-lists-are-shown-raw-and-read-only")
-def test_the_payload_carries_both_lists_whole_and_in_the_order_produced(
+def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
     caption_wd14(made, FLOW, fake_tagger)
@@ -282,11 +282,32 @@ def test_the_payload_carries_both_lists_whole_and_in_the_order_produced(
 
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
 
+    # Whole: every tag the local tagger scored, because it is scored against the
+    # vocabulary it emits and so every one of them is committable.
     assert body["wd14"] == [{"tag": "1girl", "confidence": 0.9}]
-    # Whole and unnarrowed: `fashion photography` is not in the vocabulary and is
-    # still on the page, because narrowing is stage ②'s job and seeing behind it
-    # is the point (design.md D1).
-    assert [one["tag"] for one in body["tags"]] == [
+    # Filtered: `fashion photography` is in no field's reach, and on the
+    # acceptance batch nine in ten of this model's tags were like it (D29).
+    assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
+
+
+@pytest.mark.spec("ui:source:the-artifact-keeps-what-the-panel-drops")
+def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    # Filtered on the way to the page, never on the way to disk. Narrowing the
+    # record would make it disagree with what the model said, and looking behind
+    # the sorter is the whole reason the artifact exists.
+    written = caption_tags(
+        made,
+        FLOW,
+        FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
+    )
+
+    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+
+    assert "fashion photography" not in [one["tag"] for one in body["tags"]]
+    assert written is not None
+    assert read_artifact(written)["tags"] == [
         "brown hair",
         "fashion photography",
         "blue eyes",
@@ -294,12 +315,11 @@ def test_the_payload_carries_both_lists_whole_and_in_the_order_produced(
 
 
 @pytest.mark.spec("ui:source:vocabulary-membership-is-marked-by-the-server")
-def test_membership_and_post_counts_are_decided_server_side(
+def test_membership_is_decided_server_side_and_the_count_travels_with_it(
     wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
-    # Marked here, not in the browser: `/api/tags` answers a *fragment* query and
-    # there is no membership endpoint, so marking N tags client-side would be N
-    # round trips. The vocabulary is already in this process.
+    # Decided here, not in the browser: `/api/tags` answers a fragment query and
+    # has no membership form, so asking per tag would be one round trip each.
     caption_tags(
         made,
         FLOW,
@@ -309,14 +329,13 @@ def test_membership_and_post_counts_are_decided_server_side(
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
     marked = {one["tag"]: one for one in body["tags"]}
 
-    assert marked["brown hair"]["in_vocabulary"] is True
     assert marked["brown hair"]["posts"] == vocabulary.count("brown hair")
-    assert marked["blue eyes"]["in_vocabulary"] is True
-    # Out of the vocabulary, and carrying **no** count. The missing number is the
-    # mark: a chip with no count reads as the model's word rather than
-    # Danbooru's, which is the scepticism that defuses the anchoring risk.
-    assert marked["fashion photography"]["in_vocabulary"] is False
-    assert marked["fashion photography"]["posts"] is None
+    assert marked["blue eyes"]["posts"] == vocabulary.count("blue eyes")
+    # Every tag that reaches the page carries a number, because every tag that
+    # reaches the page is in the vocabulary. There is no membership flag left to
+    # send: it would be `true` on all of them.
+    assert all(one["posts"] > 0 for one in body["tags"])
+    assert all(set(one) == {"tag", "posts"} for one in body["tags"])
 
 
 @pytest.mark.spec("ui:source:an-absent-tag-artifact-is-silent")

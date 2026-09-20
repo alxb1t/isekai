@@ -31,10 +31,11 @@ defineEmits<{ open: [] }>()
 const landscape = computed(() => props.width > props.height)
 
 /* WD14 first, JoyCaption second: the order the pipeline produces them in, and
-   it puts the usable list nearer the prose. The local tagger's tags are in the
-   vocabulary by construction -- the CSV it is scored against IS the vocabulary
-   -- while roughly three-quarters of the hosted list cannot be committed at all
-   (design.md D1). */
+   it puts the stronger list nearer the prose. The local tagger's tags are in
+   the vocabulary by construction -- the CSV it is scored against IS the
+   vocabulary -- so all of them are shown, scored. The hosted list arrives
+   already filtered to what the vocabulary carries, which on the acceptance
+   batch was about one tag in ten (design.md D1, D29). */
 const scored = computed(() => props.wd14 ?? [])
 
 const offered = computed(() => props.tags ?? [])
@@ -101,19 +102,16 @@ defineExpose({
     <section v-if="offered.length" class="caption">
       <div class="source__head">
         <span class="kicker">offered tags</span>
-        <span class="source__meta mono">
-          {{ offered.filter((one) => one.in_vocabulary).length }} of
-          {{ offered.length }} in vocabulary
-        </span>
+        <span class="source__meta mono">{{ offered.length }} in vocabulary</span>
       </div>
       <div class="row__tags">
-        <!-- A chip with no count is a tag the vocabulary does not carry, so it
-             cannot be committed to any field. The missing number is the mark:
-             it reads as the model's word rather than Danbooru's. -->
+        <!-- Every chip here carries a count, because the server sends only the
+             tags the vocabulary carries. The ones it dropped are still in the
+             artifact; what they are not is worth the operator's attention. -->
         <TagChip
           v-for="one in offered"
           :key="one.tag"
-          :tag="one.posts === null ? one.tag : `${one.tag} ${grouped(one.posts)}`"
+          :tag="`${one.tag} ${grouped(one.posts)}`"
           readonly
         />
       </div>

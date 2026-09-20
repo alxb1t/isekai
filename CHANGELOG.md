@@ -192,6 +192,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SourcePanel` already owned the column; the chip rows reuse `row__tags`, the sheet row's own
   layout, rather than restating a flex-wrap rule five pixels away from it.
 
+### Acceptance — read live, on eight fresh photographs
+
+Run through `caption` → `sheet` → `ui` on `summon-open-v1`, then rendered. The three claims were
+recorded separately because they can fail independently, and one of them did.
+
+- **④ — yes, unqualified.** *"Reading the caption one sentence made it easier indeed."* No sentence
+  was reported split in the wrong place; the abbreviation edge the splitter is naive about did not
+  appear in eight captions of constrained descriptive prose.
+- **③a — WD14, yes, and it is the version's strongest half.** *"Works just awesome… better than
+  expected,"* and *"the highest impact is the WD14 danbooru tags."* Every tag it returns is
+  committable by construction, and the confidences made the wrong ones dismissible at a glance.
+- **③b — JoyCaption, a qualified no.** *"The JoyCaption danbooru tags do not work really well…
+  makes sense only for those that have a number in the chip."* The marking worked — the unusable
+  ones were obvious — but obvious-and-present is still nine unusable rows in ten. D1's argument that
+  *a wrong tag costs a glance* held for one wrong tag and not for nine, and the hosted list is now
+  filtered to the vocabulary on its way to the page (design.md D29).
+
+**③ earned its keep before the acceptance question was even asked.** Reading the panel against the
+assembled prompt caught two stage-② defects at zero cost, with no pod running: `skin_ancestry: light`
+and `eyebrows: dark` were reaching the prompt as the bare tags `light` and `dark` — both canonical
+Danbooru tags meaning *lighting* and *darkness*, so they passed every guard and would have been
+drawn, and `light, brown hair` would likely have encoded as *light brown hair*; and one sheet had lost
+`1girl` from its `count` field. Four sheets were corrected and re-approved before rendering.
+
 ### Verified — the three artifacts end to end, on two synthetic portraits
 
 Run on `synthetic_portrait_00003` and `synthetic_portrait_00035` through `summon-open-v1`, against a
@@ -215,6 +239,17 @@ throwaway runs root. Free: two local models on `127.0.0.1:11434`, one local ONNX
 - **The surface renders all three panes**: the caption one sentence to a block, the scored list with
   its confidences, the offered list with a post count on the four committable tags and none on the
   thirty-one that are not.
+
+### Changed
+
+- **The hosted tag list is filtered to the vocabulary before it reaches the page** (design.md D29),
+  which overturns part of D1 on the acceptance's own evidence. It shipped unfiltered on the argument
+  that *a wrong tag costs a glance*; at 4 usable tags in 35 the operator's verdict was that only the
+  marked ones carried value. **The artifact is untouched** — it still stores every tag the model
+  returned, because narrowing the record would make it disagree with what the model said. The local
+  list stays whole, and the asymmetry is the point: WD14 is scored against the vocabulary it emits,
+  so all of its tags are committable by construction. `OfferedTag` loses `in_vocabulary` and its
+  `posts` is no longer nullable — every tag that reaches the page is in the vocabulary now.
 
 ### Fixed
 
