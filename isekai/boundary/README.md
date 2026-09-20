@@ -13,6 +13,7 @@ outside this directory opens a socket or spawns a binary.
 | `multipart.py` | builds one multipart body; internal to the transport | nothing |
 | `ollama.py` | one POST to a local runtime, and the classification of what comes back | the hosted model, over HTTP to localhost |
 | `provision.py` | plan → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy | a download, on the pod |
+| `wd14.py` | the local tagger: a digest-verified ONNX session, the label index whose file order names its neurons, and the scored list it emits | a 467 MB file on disk, and nothing else |
 
 ## Imported by
 
@@ -23,10 +24,18 @@ outside this directory opens a socket or spawns a binary.
 | `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
 | `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/sheet.py` | `tests/test_ollama.py` |
-| `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, nine test modules |
+| `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py`, `wd14.py` | `../../evaluate.py`, ten test modules |
+| `wd14.py` | `pipeline/tagging.py`, `interface/cli.py`, `interface/wiring.py` | `tests/test_wd14.py`, `tests/stages.py` |
 
 > `provision.py` is not on `python -m isekai`'s import graph, so the stdlib-only
 > runtime rule is untouched either way.
+>
+> **`wd14.py` is**, and it is the only module in the package that touches the
+> `tagging` extra. Every one of its three imports -- `onnxruntime`, `numpy`,
+> `Pillow` -- is **function-local**, which is what keeps the `-S` guard green;
+> `tests/test_wd14.py` asserts none of them sits at module scope. It reaches no
+> network at all, which makes it the one file here that is a boundary to a *file*
+> rather than to a host.
 >
 > **`ollama.py` imports nothing from `claude_cli.py`.** It is the weaker half of
 > the isolation law and named here anyway: the edge that matters is the call

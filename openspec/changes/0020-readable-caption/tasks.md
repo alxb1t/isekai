@@ -10,7 +10,7 @@
 - [x] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
 - [x] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
 - [x] 8 — The surface: sentences, two chip lists, and the payload that feeds them
-- [ ] 9 — The documents this version makes false
+- [x] 9 — The documents this version makes false
 - [ ] 10 — ⚠️ **HUMAN · FREE** — the three artifacts end to end, on one synthetic portrait
 - [ ] 11 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
 
@@ -298,11 +298,11 @@ nobody reads a green gate as proof of more.
 
 ## 9 — The documents this version makes false
 
-- [ ] 9.1 `README.md` and `CLAUDE.md`: the `caption` verb produces three artifacts;
+- [x] 9.1 `README.md` and `CLAUDE.md`: the `caption` verb produces three artifacts;
       `isekai/boundary/wd14.py` and `isekai/pipeline/tagging.py` join the layout paragraph; the
       `tagging` extra joins the extras; `models/wd14/model.onnx` is named as a pinned artifact the
       operator fetches. Each group directory's `README.md` names its new file and who imports it.
-- [ ] 9.2 **Three specific lines, found by a sweep at the cut, so they are fixed rather than
+- [x] 9.2 **Three specific lines, found by a sweep at the cut, so they are fixed rather than
       rediscovered:**
       - **`CLAUDE.md:132` says *"nine capabilities"* and there are already TEN** — `caption`, `cli`,
         `comfy-transport`, `evaluation`, `image-generation`, `model-provisioning`, `review`,
@@ -313,7 +313,7 @@ nobody reads a green gate as proof of more.
         verb. Say so rather than making the count wrong in the other direction.
       - **`CLAUDE.md:237`'s *"driven in four staged verbs"*** is unchanged and correct. Leave it.
       **Verify:** `ls openspec/specs/ | wc -l` agrees with the number `CLAUDE.md` states.
-- [ ] 9.3 `CLAUDE.md`'s gate paragraph gains the sixth command.
+- [x] 9.3 `CLAUDE.md`'s gate paragraph gains the sixth command.
       **Verify:** `git grep -n "nine capabilities\|ten capabilities"` returns nothing stale; then
       `make gate` — six commands now, all exiting 0.
 

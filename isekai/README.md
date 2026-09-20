@@ -7,11 +7,16 @@ what it is, not by what calls it.
 | directory | is | files |
 |---|---|---|
 | [`foundation/`](foundation/README.md) | what a run, a flow and a refusal are | 3 |
-| [`pipeline/`](pipeline/README.md) | the four staged verbs | 4 |
+| [`pipeline/`](pipeline/README.md) | the four staged verbs, and `tagging.py`, which is not one | 5 |
 | [`shared/`](shared/README.md) | primitives with no domain of their own | 4 |
-| [`boundary/`](boundary/README.md) | everything that leaves this process | 5 |
+| [`boundary/`](boundary/README.md) | everything that leaves this process | 7 |
 | [`evaluation/`](evaluation/README.md) | scoring a render against its photograph | 5 |
-| [`interface/`](interface/README.md) | what an operator touches | 3 + `ui/` (4) |
+| [`interface/`](interface/README.md) | what an operator touches | 3 + `ui/` (3) |
+
+**These counts are `ls` and nothing else.** Two of them were wrong before v0.20
+touched them — `boundary/` read 5 against 6 files and `interface/ui/` read 4
+against 3 — the same drift that left `CLAUDE.md` miscounting the living spec's
+capabilities through two versions. Count; do not trust the row.
 
 **The groups do not re-export.** Every `__init__.py` here holds a docstring and no
 code, so a module is imported by its own path and a group never becomes a place

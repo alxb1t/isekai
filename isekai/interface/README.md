@@ -14,7 +14,7 @@ neither is privileged and neither goes through the other.
 | file | does |
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
-| `wiring.py` | composes the modules — builds the reader, the sorter, the transport and the vocabulary thunk, with or without a parser |
+| `wiring.py` | composes the modules — resolves the reader, the sorter and the two taggers per flow, and builds the transport and the vocabulary thunk, with or without a parser |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions and producers. Reads everything, decides nothing |
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
 | `ui/batch.py` | the batch and the whole startup refusal order. **Imports no web framework**, which is what keeps that order testable in the main suite |

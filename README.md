@@ -101,10 +101,17 @@ an endpoint.
    python -m isekai caption --flow summon-v1 me.jpg
    python -m isekai sheet --flow summon-v1 me.jpg
    ```
+   **`caption` writes three artifacts and reports three times** — the prose, then a scored tag list
+   from a local WD14 tagger, then a raw one from the hosted model where the flow declares an arm
+   that can produce it. Neither tag list is narrowed: they are what the review surface shows beside
+   the prose so a human can see what the sorter filtered out. The local one runs for every flow and
+   needs `uv sync --extra tagging` plus `bash scripts/download_models.sh scripts/vocabulary.json`;
+   the hosted one is silently absent where a flow declares none, which is never an error.
+
    Each run gets a directory under `.data/runs/`, named for the photograph's digest and its
    filename, and every artifact sits under the flow that produced it:
-   `<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`. Offer the photograph again, or
-   the run's id — which one you meant is decided by what is on disk.
+   `<input-id>/<flow-id>/{captions,wd14,tags,sheets,review,prompts,outputs}/`. Offer the photograph
+   again, or the run's id — which one you meant is decided by what is on disk.
 2. Correct the sheet. `review` copies it somewhere you may edit it; `approve` validates the edit
    and marks it approved. **Only an approved sheet is ever rendered** — the correction is the
    single largest measured gain in this pipeline.
@@ -152,9 +159,17 @@ a model or a GPU** — its scope is stage ③ alone.
 - `--flow` is **required and takes exactly one** here, unlike on the stage verbs: the surface shows one
   schema's fields in one fixed order, so a second flow would be a second page rather than a wider one.
 - It needs the optional extra and **node**: `uv sync --extra ui`, and `npm install` in `ui/` the first
-  time. The bundle is built on demand; a missing toolchain refuses naming what installs it.
+  time. The bundle is built on demand; a missing toolchain refuses naming what installs it. The
+  scored tag list additionally needs `uv sync --extra tagging` — `onnxruntime`, `numpy`, `Pillow`,
+  and **deliberately not the `eval` extra**, which resolves the same three names beside `torch` and
+  `transformers`: roughly 2 GB the tagger never imports.
 - `review` and `approve` keep working exactly as before. They are deprecated as *guidance*, never as
   code — deleting the hand path would make ③ a single point of failure for the whole pipeline.
+- **The source pane shows the caption one sentence to a block**, and under it the two tag lists
+  `caption` produced: the scored WD14 list with its confidences, then the hosted model's raw list
+  with a post count on the tags the vocabulary actually carries and nothing on the ones it does not.
+  Both are read-only — the picker at stage ② is still the only path into a field — and an absent
+  list simply draws nothing.
 
 Useful flags, as the parser states them:
 
@@ -254,11 +269,13 @@ isekai/
 │   ├── __main__.py            # the path `python -m isekai` resolves — a shim over interface/cli.py
 │   ├── foundation/            # run directory & layout names, flow manifest & Schema, refusal
 │   ├── pipeline/              # the four staged verbs: caption · sheet · review · generate
+│   │                          #   + tagging.py, not a verb: the two tag artifacts caption writes
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
-│   ├── boundary/              # ComfyUI transport, the hosted model, provisioning
+│   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
 │   ├── evaluation/            # the scorer, and the only importer of the [eval] extra
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
 ├── tests/                     # the suite and its fakes
+├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-v1/           # one flow: five flat files, and it is immutable
 │   ├── flow.json              # the manifest: inputs, vocabulary, models, dials, prompt, node roles
 │   ├── graph.json             # the API graph
@@ -274,7 +291,7 @@ isekai/
 ├── scripts/
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
-│   ├── vocabulary.json        # the tag list's manifest: `download_models.sh scripts/vocabulary.json`
+│   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)

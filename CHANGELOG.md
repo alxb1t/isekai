@@ -194,6 +194,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`README.md` and `CLAUDE.md`: `caption` produces three artifacts.** The run layout gains
+  `wd14` and `tags`, `isekai/boundary/wd14.py` and `isekai/pipeline/tagging.py` join the layout
+  paragraphs, `tagging` joins the extras, and `models/wd14/` is named as a pinned artifact the
+  operator fetches — the tag list **and** the 467 MB graph it is the output layer of, at one
+  revision.
+- **Three stale counts, fixed by counting rather than by trusting the sentence.** `CLAUDE.md` said
+  the living spec held *nine* capabilities and it had held ten since v0.18 — it now states ten,
+  names all ten, and says outright that a capability enters the living spec on **archive**, so the
+  number is always the count on disk and never the one a pending change implies. `isekai/README.md`
+  said `boundary/` held 5 files against 6 and `interface/ui/` 4 against 3; both were wrong before
+  this version touched either.
+- **`pipeline/` is described as four verbs and five modules**, rather than making the count wrong in
+  the other direction: `tagging.py` is a file in that directory and is not a verb. `CLAUDE.md`'s
+  *"driven in four staged verbs"* is unchanged and still correct — v0.20 adds no verb.
+- Each group `README.md` names its new file and who imports it, and `isekai/interface/README.md`'s
+  one-line description of `wiring.py` names the two taggers beside the reader and the sorter.
 - **The resume assertion now counts five doubles, not three**, and two of them are the taggers.
   A second pass that re-opened the graph would cost ~0.9 s a photograph while making no request, so
   an assertion that only counted network calls would have called that inert.
