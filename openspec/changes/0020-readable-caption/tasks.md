@@ -101,7 +101,17 @@ under it (`design.md` D22).
       same revision as the CSV already there: sha256
       `e6774bff34d43bd49f75a47db4ef217dce701c9847b546523eb85ff6dbba1db1`, 467460978 bytes, source
       `https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/627aef95638667ddcaa3ac8ae625e88ea5b02f51/model.onnx`.
-      **Verify:** `shasum -a 256 models/wd14/model.onnx` matches the digest recorded.
+      **Leave `lfs` at its default `True`** — `digest_of()` routes an LFS object through
+      `published_digest()`, which reads the object id from the API, so this costs no download.
+      **Verify:** `shasum -a 256 models/wd14/model.onnx` matches the digest the manifest now records.
+- [ ] 3.1a **Rewrite `derive_vocabulary.py`'s module docstring, which currently argues the opposite.**
+      It says *"One entry, and deliberately one… the tagger is not here: this repository does not run
+      it… a manifest that carried both would make swapping the vocabulary a decision about a model
+      nobody loads."* **That premise is what this version falsifies**, and leaving it would put a
+      tracked file in direct contradiction with `design.md` — a halt condition, not a stale comment.
+      Replace it with D18's reason: the two files are **one artifact split in two**, row N of the CSV
+      naming neuron N, so a manifest holding one without the other cannot detect the mismatch that
+      matters. **Do not delete the paragraph silently**; the new text must say what changed and why.
 - [ ] 3.2 Re-derive and prove the derivation is stable.
       **Verify:** `uv run python scripts/derive_vocabulary.py && git diff --exit-code scripts/vocabulary.json`
       — exits 0, the file is byte-identical to what the script produces.
@@ -249,14 +259,24 @@ nobody reads a green gate as proof of more.
 
 ## 9 — The documents this version makes false
 
-- [ ] 9.1 `README.md` and `CLAUDE.md`: the `caption` verb produces three artifacts; `tagging` is the
-      eleventh capability; `isekai/boundary/wd14.py` and `isekai/pipeline/tagging.py` join the layout
-      paragraph; the `tagging` extra joins the extras; `models/wd14/model.onnx` is named as a pinned
-      artifact the operator fetches. Each group directory's `README.md` names its new file and who
-      imports it.
-- [ ] 9.2 `CLAUDE.md`'s gate paragraph gains the sixth command.
-      **Verify:** `git grep -n "six verbs\|four staged verbs\|ten capabilities"` returns nothing stale;
-      then `make gate`.
+- [ ] 9.1 `README.md` and `CLAUDE.md`: the `caption` verb produces three artifacts;
+      `isekai/boundary/wd14.py` and `isekai/pipeline/tagging.py` join the layout paragraph; the
+      `tagging` extra joins the extras; `models/wd14/model.onnx` is named as a pinned artifact the
+      operator fetches. Each group directory's `README.md` names its new file and who imports it.
+- [ ] 9.2 **Three specific lines, found by a sweep at the cut, so they are fixed rather than
+      rediscovered:**
+      - **`CLAUDE.md:132` says *"nine capabilities"* and there are already TEN** — `caption`, `cli`,
+        `comfy-transport`, `evaluation`, `image-generation`, `model-provisioning`, `review`,
+        `run-directory`, `sheet`, `ui`. It was stale before this version. **Write `eleven`**, and count
+        `openspec/specs/*/` rather than trusting either number.
+      - **`CLAUDE.md:167` and `README.md:251` describe `pipeline/` as *"the four staged verbs"***. That
+        stays true — v0.20 adds no verb — but `pipeline/` now holds a fifth module that is **not** a
+        verb. Say so rather than making the count wrong in the other direction.
+      - **`CLAUDE.md:237`'s *"driven in four staged verbs"*** is unchanged and correct. Leave it.
+      **Verify:** `ls openspec/specs/ | wc -l` agrees with the number `CLAUDE.md` states.
+- [ ] 9.3 `CLAUDE.md`'s gate paragraph gains the sixth command.
+      **Verify:** `git grep -n "nine capabilities\|ten capabilities"` returns nothing stale; then
+      `make gate` — six commands now, all exiting 0.
 
 **Gate green. Commit.**
 

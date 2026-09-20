@@ -285,7 +285,19 @@ neuron N of the ONNX graph; a mismatched pair mislabels every tag silently, and 
 could notice. Pinning one and leaving the other unrecorded is the defect, and `vocabulary.json` —
 publisher SmilingWolf, revision `627aef95…` — is where the other half already lives. `sha256`
 `e6774bff34d43bd49f75a47db4ef217dce701c9847b546523eb85ff6dbba1db1`, 467,460,978 bytes.
-`derive_vocabulary.py` must stay byte-identical on re-run.
+`derive_vocabulary.py` must stay byte-identical on re-run, and `lfs=True` — the default — is correct
+for it: `digest_of()` routes an LFS object through `published_digest()`, which reads the object id from
+Hugging Face's API, so pinning a 467 MB file costs no download.
+
+**`derive_vocabulary.py`'s own docstring argues the opposite, and it must be rewritten in the same
+phase.** It reads, verbatim: *"One entry, and deliberately one. `selected_tags.csv` is published
+alongside a tagger model, and **the tagger is not here: this repository does not run it**… a manifest
+that carried both would make swapping the vocabulary a decision about a model nobody loads."* **That
+premise is exactly what this version falsifies.** The argument was correct when written and is false
+the moment `boundary/wd14.py` exists, and leaving it in place would put a tracked file in direct
+contradiction with this design — which is a halt condition, not a stale comment. The replacement states
+the new reason: the two files are **one artifact split in two**, row N of the CSV naming neuron N, so a
+manifest carrying one without the other is a manifest that cannot detect the mismatch that matters.
 
 ### D19 · A `tagging` extra, and **no new third-party code enters the tree**
 
