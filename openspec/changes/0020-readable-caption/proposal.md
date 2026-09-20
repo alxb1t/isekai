@@ -111,6 +111,14 @@ label anything.** Splitting solves the lost-my-place problem on its own, before 
   path where it has one"*, because a module constant has no path and `instructions_record()` takes one.
 - `ui`: the source pane gains its first requirement — what it shows, that all of it is read-only, and
   that an absent tag artifact is silent rather than a refusal.
+- `model-provisioning`: **added during the build, and the cut was wrong to omit it.** D18 pins
+  `wd14/model.onnx` beside the CSV, and a live scenario —
+  `model-provisioning:vocabulary:tagger-model-is-not-included` — forbade exactly that, with two tests
+  bound to it. The vocabulary requirement is replaced whole (openspec cannot retire one scenario in
+  place): four scenarios move across under their existing keys, and the fifth is **inverted** into
+  `label-index-and-model-share-a-revision`, which asserts the stronger property the old one made
+  unreachable. The derivation requirement additionally gains
+  `fetched-digest-demands-identity-encoding` — see D25.
 
 ## Impact
 

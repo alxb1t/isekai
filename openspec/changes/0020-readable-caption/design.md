@@ -10,6 +10,12 @@ both changed the version.
 checked and **fourteen did not survive**, including the call site the largest simplification was argued
 from. Where a decision overturns the brief that preceded it, it says so and what the evidence was.
 
+**Two decisions were added during the build and are marked as such — D24 and D25.** Both are
+corrections to this document rather than decisions taken inside it: the cut omitted a
+`model-provisioning` spec delta that D18 requires, and phase 3 was bitten by a latent defect in
+`scripts/manifest.py` that D18's own second entry makes materially worse. Neither re-opens a settled
+decision; D24 is what makes D18 buildable and D25 is what makes it safe.
+
 See `proposal.md` — Why, for motivation. See `specs/` for the requirements.
 
 ---
@@ -349,6 +355,83 @@ touches, and by that rule this is out of scope. **The rule does not apply**: v0.
 this defect, it is creating it, and shipping a stage `show` cannot see is shipping a verb that lies
 about what a run holds. The same shape as v0.18 taking `security/S1` because its own extraction made
 the guard load-bearing.
+
+### D24 · The `model-provisioning` delta the cut omitted, and why the omission was invisible
+
+**Added during the build, at phase 3, and it is a correction to this document rather than a decision
+taken inside it.** D18 pins `wd14/model.onnx` in `scripts/vocabulary.json`. The living spec forbade
+exactly that, in a scenario the cut never read:
+
+```
+  openspec/specs/model-provisioning/spec.md
+  Scenario: the tagger model is not in the vocabulary manifest
+    Key:  model-provisioning:vocabulary:tagger-model-is-not-included
+    THEN  it declares the tag list and not the model published alongside it
+    AND   the two are treated as different artifacts with different consumers
+```
+
+Two tests are bound to that key and three more encode the same premise. So the phase could not go
+green without either a delta or a deleted test, and a deleted test bound to a live scenario is a plan
+problem rather than a coding shortcut — which is why the build halted here instead of working around
+it.
+
+**Why the cut missed it.** The grilling checked roughly forty assertions about `main` and fourteen
+failed, but every one of them was about a **body** — a call site, a signature, a constant. This is a
+claim in the **living spec** with no body of its own: nothing in `derive_vocabulary.py` says *the model
+is excluded*, it simply has one `Spec`. The forbidding sentence lives only in prose and in two test
+names. **The lesson is specific rather than general: a version that pins, unpins or re-scopes a
+manifest entry must read `model-provisioning`'s spec before it is cut**, because that capability is
+almost entirely assertions about what is *absent*, and absence has no body to grill.
+
+**The shape of the delta, and the one thing it is not.** openspec refuses to retire a single scenario
+through a `MODIFIED` block — a modified requirement replaces the whole block and the validator checks
+that none of the current scenarios went missing. So the vocabulary requirement is `REMOVED` whole and a
+successor `ADDED`: **The tag vocabulary and the model it indexes are provisioned from one manifest**.
+Four scenarios cross **under their existing keys**, two of them reworded for a manifest with more than
+one entry. The fifth is **inverted rather than dropped**, which is the substance of the change:
+
+```
+  before   tagger-model-is-not-included              the model must NOT be here
+  after    label-index-and-model-share-a-revision    both are here, at ONE revision
+```
+
+That is a strictly stronger claim than the one it replaces. The old scenario permitted a `model.onnx`
+provisioned anywhere by any route at any revision, and forbade only the manifest that could check it;
+the new one makes the revision itself the contract. The two tests bound to the retired key are
+rebound to the new one rather than deleted.
+
+**What was genuinely right about the old scenario, and stays said.** While no build loaded the model,
+the vocabulary really did outlive any particular tagger, and pinning one would have made swapping the
+tag list a decision about a model nobody opened. The successor requirement records that as a condition
+rather than deleting it — the claim is scoped to *where a build loads the model that tag list is the
+output layer of*, so the retired argument is preserved as the case the new rule does not cover.
+
+### D25 · `blob_digest` must demand the identity coding, and this was found by being bitten
+
+**A defect in `scripts/manifest.py`, inherited rather than created, folded into v0.20 on the
+operator's call.** `digest_of_url()` sends `User-Agent` and nothing else. **A request that states no
+`Accept-Encoding` accepts every coding** — RFC 7231 §5.3.4 — so Hugging Face is free to answer one
+fetch compressed and the next one not, and `urllib` neither negotiates nor decompresses. Observed, on
+the CSV this change re-derives, during phase 3:
+
+```
+  one fetch      e6125b7c…  143049 bytes      the gzip stream, hashed in place of the file
+  every other    298633d9…  308468 bytes      the artifact, and what the tracked manifest says
+```
+
+**It is worth breaking the "do not open a file this version never touches" rule for, and the reason is
+this version specifically.** The wrong digest is well-formed: it is a real SHA-256, it is written to a
+tracked manifest by the deriver whose whole contract is to be byte-identical, and the gate never
+re-derives so nothing goes red. Before v0.20 the consequence was a provisioning refusal on a 300 KB
+file. **After v0.20 the consumer is `boundary/wd14.py`**, which verifies both digests before its first
+inference — so a manifest poisoned by one unlucky fetch refuses the *correct* 467 MB model and names a
+fetch command that will re-download it and fail again. This version is what turns a stale pin into a
+loop.
+
+The fix is one header, `Accept-Encoding: identity`, on the one request the module makes. It is the only
+change to `manifest.py`, **and no other manifest is re-derived in this version** — `models.json` and
+`eval_models.json` are left exactly as they are, because re-deriving them is a different change with a
+different diff to review.
 
 ---
 

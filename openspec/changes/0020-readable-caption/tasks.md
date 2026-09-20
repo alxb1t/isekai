@@ -121,6 +121,37 @@ under it (`design.md` D22).
       The manifest's existing home is `tests/test_vocabulary_manifest.py`, whose rules — an immutable
       revision, a digest and a byte count on every entry — the new entry must already satisfy.
       **Verify:** `uv run pytest tests/test_vocabulary_manifest.py -v`
+- [ ] 3.4 **The `model-provisioning` spec delta the cut omitted** (`design.md` D24). The living spec's
+      `model-provisioning:vocabulary:tagger-model-is-not-included` forbids 3.1 in as many words, and
+      two tests are bound to it. The delta is authored at
+      `specs/model-provisioning/spec.md`: the vocabulary requirement `REMOVED` whole and a successor
+      `ADDED` — openspec cannot retire one scenario through `MODIFIED` — with four scenarios crossing
+      under their **existing keys** and the fifth inverted into
+      `model-provisioning:vocabulary:label-index-and-model-share-a-revision`.
+      Rebind the two tests in `tests/test_vocabulary_manifest.py` that name the retired key — the one
+      asserting no model weights and the one asserting no model source — to the new key, asserting the
+      **positive** property: both entries resolve one revision of one publisher's repository. Do not
+      delete either; a manifest naming two revisions must still fail.
+      Two more tests in that file encode the one-entry premise and must widen rather than be dropped:
+      `…answers_one_question` (asserts `entries == [csv]`) and the provisioner's
+      `…plans_the_vocabulary_when_pointed_at_its_manifest` (asserts one planned target).
+      **Verify:** `npx @fission-ai/openspec@1.11.0 validate 0020-readable-caption --strict`
+- [ ] 3.5 `scripts/eval_licences.md`: `wd14/model.onnx` gains a record, because
+      `test_every_vocabulary_artifact_is_named_in_the_licence_record` walks every manifest entry. Same
+      repository and the same Apache-2.0 grant the CSV's row already cites, **re-read and re-dated**
+      rather than inherited. The section's existing paragraph *"The tagger it is published beside is
+      not pinned and is not loaded"* is now false and must be rewritten, not left.
+      **Verify:** `uv run pytest tests/test_vocabulary_manifest.py -k licence -v`
+- [ ] 3.6 **`scripts/manifest.py`: `digest_of_url()` sends `Accept-Encoding: identity`**
+      (`design.md` D25). A request naming no acceptable coding accepts every coding, and a gzip
+      answer was hashed in place of the artifact during this phase — a well-formed wrong digest,
+      written to a tracked manifest, which after this version makes `boundary/wd14.py` refuse the
+      correct 467 MB model. One header, on the one request the module makes.
+      **Only `vocabulary.json` is re-derived in this version**; `models.json` and `eval_models.json`
+      are not touched. Bind the test
+      `@pytest.mark.spec("model-provisioning:derivation:fetched-digest-demands-identity-encoding")`
+      and drive it through a fake opener rather than the network — the suite is offline.
+      **Verify:** `uv run pytest tests/test_derivation.py -v`
 
 **Gate green. Commit.**
 
