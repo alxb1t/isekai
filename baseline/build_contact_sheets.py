@@ -74,7 +74,12 @@ def _scaled(path: Path) -> Image.Image:
     with Image.open(path) as handle:
         image = handle.convert("RGB")
         width = round(image.width * PANEL_HEIGHT / image.height)
-        return image.resize((width, PANEL_HEIGHT), Image.LANCZOS)
+        # `Image.Resampling.LANCZOS`, not `Image.LANCZOS`: the flat alias was
+        # removed in Pillow 10. It went unnoticed while nothing in the gate's
+        # environment had Pillow installed at all -- v0.20's `tagging` extra is
+        # the first that does, so the operator it now breaks for is the one
+        # following this version's own setup instructions.
+        return image.resize((width, PANEL_HEIGHT), Image.Resampling.LANCZOS)
 
 
 def build_sheet(reference: Path, a: Path, b: Path, pair: str, out: Path) -> None:

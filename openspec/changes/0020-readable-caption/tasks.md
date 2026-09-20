@@ -11,7 +11,7 @@
 - [x] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
 - [x] 8 — The surface: sentences, two chip lists, and the payload that feeds them
 - [x] 9 — The documents this version makes false
-- [ ] 10 — ⚠️ **HUMAN · FREE** — the three artifacts end to end, on one synthetic portrait
+- [x] 10 — ⚠️ **HUMAN · FREE** — the three artifacts end to end, on one synthetic portrait
 - [ ] 11 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
 
 ## The per-phase ritual
@@ -327,18 +327,18 @@ nobody reads a green gate as proof of more.
 **Stop here and hand back.** This needs Ollama running, `joycaption-beta-one-q4k` and
 `models/wd14/model.onnx` present, and `uv sync --extra tagging`. An agent must not assume any of them.
 
-- [ ] 10.1 Pick **one or two** images from `.data/inputs/synthetic/` — synthetic portraits, not
+- [x] 10.1 Pick **one or two** images from `.data/inputs/synthetic/` — synthetic portraits, not
       personal photographs — and a throwaway `--runs` root. **Do not write into `.data/v0.19/runs/`**:
       those directories are the recorded evidence of the last release's acceptance.
-- [ ] 10.2 `python -m isekai caption <input> --flow summon-open-v1 --runs <throwaway>` — expect three
+- [x] 10.2 `python -m isekai caption <input> --flow summon-open-v1 --runs <throwaway>` — expect three
       lines. Then `python -m isekai sheet` and `python -m isekai ui` for the same input.
       **Verify:** paste all three `caption` lines; paste `python -m isekai show`'s output showing
       `captions`, `wd14` and `tags`, with the wd14 line **not** marked `unpinned`.
-- [ ] 10.3 Re-run `caption` unchanged. **Verify:** three *already complete* lines, and not one byte of
+- [x] 10.3 Re-run `caption` unchanged. **Verify:** three *already complete* lines, and not one byte of
       the run directory differs — `git status` is not the check here; diff the tree or compare mtimes.
-- [ ] 10.4 Open the surface and confirm the three panes render: sentences one to a block, the WD14 list
+- [x] 10.4 Open the surface and confirm the three panes render: sentences one to a block, the WD14 list
       with confidences, the JoyCaption list with post counts on the in-vocabulary ones only.
-- [ ] 10.5 Run the same input under `--flow summon-v1`. **Verify:** a `wd14` directory appears and a
+- [x] 10.5 Run the same input under `--flow summon-v1`. **Verify:** a `wd14` directory appears and a
       `tags` directory does not, and the surface shows one list rather than two — `design.md` D3.
 
 **Gate green. Commit.**

@@ -467,6 +467,42 @@ loop, which is what earns the exception to *do not open a file this version neve
 they are: re-deriving them is a different change with a different diff to review.
 
 
+### D28 · `ensure_built` rebuilds a stale bundle, and phase 10 is how that was found
+
+**Found by running the surface, which is the only thing that could have found it.** The caption
+rendered as one paragraph and neither tag list appeared — with the right code on disk, a green gate,
+and `npm run typecheck` passing. `ensure_built` returned any non-empty `ui/dist/`, so a bundle built
+on 19 Sep went on being served while the source it was built from had moved on 20 Sep.
+
+**It passes every check this repository has, by construction.** `npm run typecheck` compiles
+`ui/src/`; the server reads `ui/dist/`; nothing compares them. The gate cannot see it and neither can
+a test that never builds.
+
+```
+  ui/src/   ──vite build──▶  ui/dist/  ──uvicorn──▶  the page
+     ▲                          ▲
+     └── npm run typecheck      └── what is actually served
+         (the gate's only        (what nothing checked)
+          browser check)
+```
+
+**Why it is v0.20's, under the rule that a version does not open files it never touches.** The gap
+has existed since v0.18 shipped the on-demand build. It was unobservable because **no version had
+changed `ui/src/` since** — a first run builds, and every later run serves what that first run built,
+correctly. v0.20 is the first version in which a stale `dist/` and a fresh checkout disagree, which is
+D23's shape exactly: not a defect inherited, a defect made reachable.
+
+Freshness is an mtime comparison rather than a content hash. `vite` emits content-hashed filenames, so
+a rebuild that changes nothing is cheap and a rebuild that changes something is the point;
+`index.html` counts as source because it is the entry `vite` reads.
+
+**A second fix travels with it, and the same phase surfaced it.** `uv sync --extra tagging` put Pillow
+into the environment for the first time, and `uv run ty check` went red on
+`baseline/build_contact_sheets.py` — `Image.LANCZOS` was removed in Pillow 10. CI never installs the
+extra, so CI stayed green; the person it breaks is the operator following **this version's own setup
+instructions**. Corrected to `Image.Resampling.LANCZOS`, which is the spelling `boundary/wd14.py`
+already uses.
+
 ### D27 · What the simplify pass changed, and why two of them were D14 and D17 becoming true
 
 **Recorded because three of these edit decisions this document states, rather than only the code

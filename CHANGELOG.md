@@ -192,6 +192,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SourcePanel` already owned the column; the chip rows reuse `row__tags`, the sheet row's own
   layout, rather than restating a flex-wrap rule five pixels away from it.
 
+### Verified — the three artifacts end to end, on two synthetic portraits
+
+Run on `synthetic_portrait_00003` and `synthetic_portrait_00035` through `summon-open-v1`, against a
+throwaway runs root. Free: two local models on `127.0.0.1:11434`, one local ONNX pass, no render.
+
+- **`caption` writes three artifacts and says three times**, in the designed order — *caption ·
+  wd14 · tags* — 58 s cold for both inputs.
+- **`show` lists `captions · wd14 · tags`, and the `wd14` line is the first artifact in this
+  repository it prints without the word `unpinned`.** The other two still carry it, so the absence
+  means something.
+- **Re-running changes nothing and opens nothing**: six *already complete* lines, the run tree's
+  content digest **and every mtime** identical, in **0.25 s** against the first pass's 58 s — which
+  is the thunk working, since opening the graph alone costs ~0.9 s plus a 467 MB hash.
+- **`summon-v1` produced two lines, not three** — `wd14/` present and `tags/` absent, because the
+  flow declares no arm to tag on.
+- **The measurements behind D1 reproduced on a photograph nobody had run them against.** WD14
+  returned 44 general tags and recovered `1girl 1.00`, `solo 0.95`, `looking_at_viewer 0.69` and
+  `navel_piercing 0.56`. JoyCaption returned 35, of which **4 are in the vocabulary** — the low end
+  of the measured 9–26% band — and it answered `blue eyes` for a subject whose caption reads *light
+  brown*, which is the contradiction D1 recorded, live.
+- **The surface renders all three panes**: the caption one sentence to a block, the scored list with
+  its confidences, the offered list with a post count on the four committable tags and none on the
+  thirty-one that are not.
+
+### Fixed
+
+- **`isekai ui` served a stale bundle, and nothing could have caught it but running the surface.**
+  `ensure_built` returned any non-empty `ui/dist/`, so a bundle built by an earlier version went on
+  being served while `ui/src/` had moved under it — with a green gate, because `npm run typecheck`
+  compiles the source and the server reads the build, and nothing compared them. The gap dates from
+  v0.18's on-demand build and was unobservable until now because **no version had changed `ui/src/`
+  since**; v0.20 is the first in which a stale bundle and a fresh checkout disagree, which is
+  `run_view.STAGES`'s case exactly — a defect made reachable rather than inherited (design.md D28).
+  The bundle is now rebuilt when any source file is newer than the newest built file.
+- **`baseline/build_contact_sheets.py` used `Image.LANCZOS`, removed in Pillow 10.** Exposed by this
+  version's own `tagging` extra putting Pillow in the environment for the first time: CI never
+  installs the extra so CI stayed green, but every operator following v0.20's setup instructions
+  would meet a red `ty check`. Corrected to `Image.Resampling.LANCZOS`, the spelling
+  `boundary/wd14.py` already uses.
+
 ### Changed
 
 - **`README.md` and `CLAUDE.md`: `caption` produces three artifacts.** The run layout gains
