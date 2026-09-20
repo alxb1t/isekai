@@ -17,20 +17,22 @@ import argparse
 import dataclasses
 import random
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy_client import ComfyClient
 from isekai.boundary.comfy_types import ComfyTransport
-from isekai.foundation.flow import FLOWS_DIR
+from isekai.foundation.flow import FLOWS_DIR, Flow, Hosted
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
-from isekai.pipeline.caption import ClaudeReader, Reader
-from isekai.pipeline.sheet import ClaudeSorter, Sorter
+from isekai.pipeline.caption import ClaudeReader, OllamaReader, Reader
+from isekai.pipeline.sheet import ClaudeSorter, OllamaSorter, Sorter
 from isekai.shared.vocabulary import Vocabulary
 from isekai.shared.vocabulary import load as load_vocabulary
+
+T = TypeVar("T")
 
 
 @dataclass
@@ -49,8 +51,15 @@ class Wiring:
     # end that only serves stage ③ reaches no hosted model at all, and fabricating
     # a `ClaudeReader()` it never calls would be a lie in the code -- so the verbs
     # that do reach one say so at their own call site instead.
-    reader: Reader | None
-    sorter: Sorter | None
+    #
+    # **Resolvers rather than values**, which is the shape `vocabulary` already
+    # has one line below and for a related reason: the flow decides which
+    # implementation runs, so a value composed here would have to be composed
+    # before any flow was loaded. One invocation naming two flows on two
+    # implementations would then resolve one reader and hand it to both, and the
+    # provenance the artifacts record would be false for one of them.
+    reader: Callable[[Flow], Reader] | None
+    sorter: Callable[[Flow], Sorter] | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
@@ -62,6 +71,92 @@ class Wiring:
     rng: random.Random = dataclasses.field(default_factory=random.Random)
     out: TextIO = sys.stdout
     err: TextIO = sys.stderr
+
+
+# The implementation a flow that declares no `hosted` block runs: the behaviour of
+# every flow written before that key existed, which is what keeps both incumbent
+# manifests unedited and their digests still.
+DEFAULT_IMPLEMENTATION = "claude-cli"
+
+
+def _claude_reader(flow: Flow) -> Reader:
+    """Return the CLI reader, which takes nothing from the manifest."""
+    return ClaudeReader()
+
+
+def _claude_sorter(flow: Flow) -> Sorter:
+    """Return the CLI sorter, which takes nothing from the manifest."""
+    return ClaudeSorter()
+
+
+def _named_by(flow: Flow) -> Hosted:
+    """Return the block that named this implementation, narrowing away its absence.
+
+    `_resolve` reached a hosted builder by reading `flow.hosted.implementation`,
+    so the block is present; this refuses rather than raising `AttributeError` if
+    `DEFAULT_IMPLEMENTATION` ever names an arm that needs one.
+    """
+    if flow.hosted is None:
+        raise Refusal(f"flow {flow.id} declares no `hosted` block to run")
+    return flow.hosted
+
+
+def _ollama_reader(flow: Flow) -> Reader:
+    """Return the Ollama reader, named by the flow's own manifest."""
+    return OllamaReader(model=_named_by(flow).reader)
+
+
+def _ollama_sorter(flow: Flow) -> Sorter:
+    """Return the Ollama sorter, named by the flow's own manifest."""
+    return OllamaSorter(model=_named_by(flow).sorter)
+
+
+# **A table rather than a two-branch conditional, and the argument is the
+# refusal.** A conditional gives an unrecognised implementation the default one,
+# producing a complete run on the wrong models with the artifact's own provenance
+# disagreeing with the manifest that asked for it -- silent, and it corrupts any
+# later comparison between the two arms. A table makes that a refusal by
+# construction rather than by remembering to check.
+#
+# **The keys are the strings the artifacts record**, and a test holds the two
+# equal so the duplication cannot drift (design.md D6).
+READERS: Mapping[str, Callable[[Flow], Reader]] = {
+    "claude-cli": _claude_reader,
+    "ollama": _ollama_reader,
+}
+
+SORTERS: Mapping[str, Callable[[Flow], Sorter]] = {
+    "claude-cli": _claude_sorter,
+    "ollama": _ollama_sorter,
+}
+
+
+def _resolve(flow: Flow, registry: Mapping[str, Callable[[Flow], T]], seam: str) -> T:
+    """Return the implementation this flow asks for, or refuse naming what we have.
+
+    Nothing is constructed until a flow asks. That is what lets a machine with one
+    implementation available never touch the other -- the check that a host is
+    running or a binary installed fires at the first call, not here.
+    """
+    declared = flow.hosted.implementation if flow.hosted else DEFAULT_IMPLEMENTATION
+    build = registry.get(declared)
+    if build is None:
+        raise Refusal(
+            f"flow {flow.id} declares the {seam} implementation {declared!r}, and "
+            f"this build carries {', '.join(sorted(registry))}; correct the "
+            f"manifest's `hosted`, or point at a flow this build can run"
+        )
+    return build(flow)
+
+
+def reader_for(flow: Flow) -> Reader:
+    """Return the reader `flow`'s manifest declares, constructing no other."""
+    return _resolve(flow, READERS, "reader")
+
+
+def sorter_for(flow: Flow) -> Sorter:
+    """Return the sorter `flow`'s manifest declares, constructing no other."""
+    return _resolve(flow, SORTERS, "sorter")
 
 
 # Derived from `DATA_ROOT` rather than recomputed, so the two halves of the check
@@ -147,8 +242,8 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
     """
     _check_run_root(runs)
     return Wiring(
-        reader=ClaudeReader(),
-        sorter=ClaudeSorter(),
+        reader=reader_for,
+        sorter=sorter_for,
         client=ComfyClient(server) if server else None,
         vocabulary=load_vocabulary,
         runs_root=runs,

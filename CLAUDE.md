@@ -80,7 +80,12 @@ and nowhere else. In brief, the load-bearing seams are:
 - **`isekai/pipeline/generate.py`** — assembly, seed drawing and the render. Assembly happens before
   any endpoint is acquired, for the whole batch, so a malformed sheet costs nothing rather than a boot.
 - **`ComfyTransport`** (`isekai/boundary/comfy_types.py`, implemented in `comfy_client.py`) — the
-  network boundary, and the only one.
+  boundary to the rented GPU. **`boundary/ollama.py`** is the second network boundary the pipeline
+  has: `HOST` as a module constant with no flag and no environment variable behind it, one POST over
+  stdlib `urllib`, an injectable `Transport`, and the classification of what comes back. It imports
+  nothing from `claude_cli.py` — though the edge that matters is the **call graph**, because
+  `pipeline/caption.py` imports nine names from `claude_cli` for `ClaudeReader` and every flow
+  traverses that file.
 - **The run owns the layout, not the stages.** The stage directory names live in
   `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, and **no stage
   imports another** — the last such edge closed when `validate` moved to `isekai/shared/fields.py`,
@@ -162,7 +167,7 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   the `Schema` type, `refusal.py`. **`pipeline/`** — the four staged verbs, `caption` · `sheet` ·
   `review` · `generate`. **`shared/`** — `image.py`'s header reader, `vocabulary.py`,
   `fields.py`'s sheet validation, `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
-  `multipart.py`), `claude_cli.py`, and `provision.py`: the manifest's reader, the byte verification,
+  `multipart.py`), `claude_cli.py`, `ollama.py`, and `provision.py`: the manifest's reader, the byte verification,
   the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is **not** in the entry
   point's import graph, so the stdlib-only runtime rule is untouched either way.
   **`evaluation/`** — the scorer and the only importer of the `[eval]` extra. **`interface/`** —
@@ -179,8 +184,11 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   can only ever hold one value is not a declaration — and they sit *directly* in the directory,
   because the digest that freezes a flow covers regular files only, so a nested layout would leave
   three of the five outside the freeze with the gate green. A flow is immutable — editing any of the
-  five is not a variant of a flow, it is an untested flow — it shares nothing with another flow, and
-  `flows/summon-v1/` is the only one. **`infra/`** — `up.sh` / `down.sh`,
+  five is not a variant of a flow, it is an untested flow — and it shares nothing with another flow.
+  Three are tracked: `summon-v1`, `conjure-v1`, and `summon-open-v1`, whose graph and schema are
+  byte-identical copies of `summon-v1`'s and whose manifest differs in exactly two places, the
+  identifier and the `hosted` block. Adding one costs a line in `tests/test_flow.py`'s `PINNED`,
+  which is the designed price of the freeze rather than a defect. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — `models.json`, the pinned and checksummed manifest of every
   model artifact the graph needs and the source of truth for what the stack *is*;
   `download_models.sh`, the thin driver that provisions it, run *on the pod*; and
@@ -225,8 +233,20 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## The path
 
-One flow, `summon-v1`, on a **WAI-illustrious-SDXL v17.0** (Illustrious/SDXL anime) base, driven in
-four staged verbs — `caption` → `sheet` → `review`/`approve` → `generate`. **Every one of them takes
+Two flows on the same render, `summon-v1` and `summon-open-v1`, on a **WAI-illustrious-SDXL v17.0**
+(Illustrious/SDXL anime) base, driven in four staged verbs — `caption` → `sheet` →
+`review`/`approve` → `generate`. (`conjure-v1` is the third tracked flow.)
+
+**The flow declares which implementation stages ① and ② run, in one optional `hosted` key**, and a
+manifest that declares none runs the Claude arm — which is what keeps both incumbent flows unedited
+and their digests still. `summon-open-v1` declares `ollama`, names JoyCaption Beta One and Qwen3-8B,
+and **reaches Claude by no path at all**; a suite-resident test runs it with both entry points of
+the Claude transport rigged to raise, and a second test points the same fixture at `summon-v1` so
+that proof cannot pass vacuously. The registry in `interface/wiring.py` resolves the pair **per
+flow**, inside `cli.py`'s loop, so one command naming flows on both arms gives each its own.
+**Neither arm's hosted models are pinned by digest** — the manifest names them and nothing verifies
+the bytes; that travels with provisioning, and `models` (the twelve render weights) is the key that
+*does* carry digests. **Every one of them takes
 `--flow`, required and repeatable**, because the flow is what supplies the briefing the stage reads,
 the schema it fills against and the directory it writes into. The stages before the last are free and
 local; only `generate` needs an endpoint, and assembly happens for the whole batch before one is
@@ -241,11 +261,15 @@ the surface shows one schema's fields in one fixed order, so a second flow would
 `review` and `approve` stay fully working verbs, deprecated as *guidance* and never as code, because
 deleting the hand path would make ③ a single point of failure for the whole pipeline.
 
-**node is this repository's second system dependency**, after the `claude` binary, and it is needed by
-`isekai ui` alone. A missing one refuses naming what installs it, as `claude_cli.require_binary()`
-already does; every other verb is unaffected. The `[ui]` extra (`fastapi`, `uvicorn`, both pinned) is
-optional and is not installed by CI — `dependencies = []` is untouched and the runtime stays
-stdlib-only.
+**This repository has three system dependencies, and every one of them refuses rather than assuming.**
+`claude`, the first. **node**, the second, needed by `isekai ui` alone to build the bundle once. And
+**Ollama**, the third, needed by the first two stages of a flow that declares a `hosted` block — the
+operator installs it and creates both models by hand, from `scripts/joycaption.Modelfile` and one
+`ollama pull qwen3:8b`. A missing one names what installs it, as `claude_cli.require_binary()`
+already does; `ollama` copies that shape, applied to a **port and a model name** rather than to a
+`PATH` entry. No verb needs more than one of the three, and none is a Python dependency: the `[ui]`
+extra (`fastapi`, `uvicorn`, both pinned) is optional and is not installed by CI, `dependencies = []`
+is untouched, and the runtime stays stdlib-only.
 
 Identity is carried by mechanisms rather than by a sentence someone types:
 

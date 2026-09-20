@@ -23,12 +23,19 @@ from isekai.foundation.run import (
     versions,
 )
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import ClaudeSorter, FakeSorter, Schema, output_shape
+from isekai.pipeline.sheet import (
+    ClaudeSorter,
+    FakeSorter,
+    OllamaSorter,
+    Schema,
+    output_shape,
+)
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
 from tests.stages import SHEET_BRIEFING as BRIEFING_PATH
 from tests.stages import caption, sheet
+from tests.transports import FakeTransport, sorted_answer
 
 FLOW = "summon-v1"
 
@@ -422,3 +429,143 @@ def test_the_briefing_carries_two_worked_examples() -> None:
 
     assert text.count("**The prose:**") == 2
     assert text.count("**The sheet:**") == 2
+
+
+# --- the Ollama adapter -------------------------------------------------------
+
+
+@pytest.mark.spec("sheet:selection:structure-is-required-of-every-implementation")
+def test_the_open_sorters_format_is_the_schemas_own_shape(schema: Schema) -> None:
+    """`format` equals `output_shape(schema)`, not merely resembles it.
+
+    The constraint is what keeps a malformed answer permanent: the runtime
+    compiles this into a grammar, so the structure is required server-side rather
+    than asked for politely. An adapter carrying its own near-copy would drift
+    from the Claude arm's `--json-schema` without a test noticing.
+    """
+    body = OllamaSorter(model="a-sorter").body(PROSE, schema, "Sort it.")
+
+    assert body["format"] == output_shape(schema)
+
+
+@pytest.mark.spec("sheet:selection:structure-is-required-of-every-implementation")
+def test_the_open_sorter_sends_thinking_off_and_the_pinned_sampling(
+    schema: Schema,
+) -> None:
+    """`think: false` and `repeat_penalty` are the two the compatible endpoint lacks.
+
+    Both are load-bearing by measurement: thinking tokens truncated the JSON
+    mid-string on the third subject, and at temperature 0 one field came back with
+    the same phrase forty times until the budget ran out.
+    """
+    body = OllamaSorter(model="a-sorter").body(PROSE, schema, "Sort it.")
+
+    assert body["think"] is False
+    assert body["stream"] is False
+    assert body["options"] == {
+        "temperature": 0,
+        "seed": 1,
+        "num_predict": 2048,
+        "repeat_penalty": 1.15,
+    }
+
+
+@pytest.mark.spec("sheet:selection:answer-in-the-body-is-read")
+def test_the_answer_is_read_from_the_response_body(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """No separate structured field, and the stage records no failure for it.
+
+    `answers_from` already falls back to parsing the body; this is what stops a
+    later edit from breaking the only path an Ollama answer takes.
+    """
+    transport = FakeTransport(raw=sorted_answer(schema, hair_colour=["dark brown"]))
+
+    written = sheet(
+        run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
+    )
+
+    assert written is not None
+    assert _body(written)["fields"]["hair_colour"] == ["brown hair"]
+    assert attempts(run.directory(FLOW, "sheets"), 1) == []
+
+
+@pytest.mark.spec("sheet:selection:truncation-is-permanent-and-named")
+def test_a_truncated_answer_is_permanent_and_the_record_carries_done_reason(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """Truncated and malformed are indistinguishable without `done_reason`.
+
+    Only one of the two is fixed by raising the output budget, so the record has
+    to say which it was rather than leaving the operator to guess.
+    """
+    transport = FakeTransport(
+        payload={"response": '{"hair_colour": ["dark bro', "done_reason": "length"}
+    )
+
+    with pytest.raises(Refusal):
+        sheet(
+            run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
+        )
+
+    recorded = attempts(run.directory(FLOW, "sheets"), 1)
+    assert [one.kind for one in recorded] == ["permanent"]
+    assert "length" in json.loads(recorded[0].path.read_text())["detail"]
+
+
+@pytest.mark.spec("sheet:selection:the-flow-names-the-implementation")
+def test_the_open_sorters_sheet_names_ollama_and_the_model_that_ran(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    transport = FakeTransport(raw=sorted_answer(schema, hair_colour=["dark brown"]))
+
+    written = sheet(
+        run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
+    )
+
+    producer = _body(written)["producer"]
+    assert producer["implementation"] == "ollama"
+    assert producer["models"] == ["a-sorter"]
+    assert producer["pinned"] is False
+
+
+@pytest.mark.spec("sheet:purity:absence-clause-is-dropped")
+def test_an_absence_clause_from_the_open_sorter_still_empties_the_field(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """The cascade is downstream of the seam and does not know which arm filled it.
+
+    `shared/vocabulary.py` and `shared/fields.py` are unmodified by this change,
+    and this is the assertion that says so behaviourally rather than by diff.
+    """
+    transport = FakeTransport(
+        raw=sorted_answer(
+            schema, marks=["no visible tattoos"], hair_colour=["dark brown"]
+        )
+    )
+
+    written = sheet(
+        run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
+    )
+
+    fields = _body(written)["fields"]
+    assert fields["marks"] == []
+    assert fields["hair_colour"] == ["brown hair"]
+
+
+@pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")
+def test_a_non_vocabulary_tag_from_the_open_sorter_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """The validation is shared too, and an open arm gets no exemption from it."""
+    transport = FakeTransport(
+        raw=sorted_answer(
+            schema, hair_colour=["a shade nothing in the vocabulary names"]
+        )
+    )
+
+    written = sheet(
+        run, OllamaSorter(model="a-sorter", transport=transport), schema, vocabulary
+    )
+
+    assert _body(written)["fields"]["hair_colour"] == []

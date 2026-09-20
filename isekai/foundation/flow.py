@@ -72,6 +72,27 @@ REQUIRED = (
 )
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 
+# Every top-level key this build knows, and a manifest carrying any other is
+# refused naming it -- `load_flow` is where that reason lives.
+#
+# `hosted` is the one key a flow may declare and need not. It names what the
+# first two stages call, and is deliberately not `models`, which is required and
+# holds the render weights a rented GPU loads, pinned by digest: one names a
+# network call, the other a file on disk (design.md D2).
+#
+# **Optional, so `MANIFEST_VERSION` stays 2.** Required plus a version bump was
+# this change's first shape and it was wrong: it forced an edit to two frozen
+# directories in a change whose whole point is to add one and touch nothing.
+KNOWN = REQUIRED + ("hosted",)
+
+# What a hosted block declares, when it declares one. All three or none: the
+# implementation is stated once rather than per stage, so "this flow is wholly
+# one implementation" is a property of the document rather than of two lookups
+# that happen to agree. Checked the way `prompt`'s fragments already are, so a
+# block missing one is named here instead of reaching the registry as a
+# `KeyError` three frames later.
+REQUIRED_HOSTED = ("implementation", "reader", "sorter")
+
 # The node roles every image flow has, checked at load the way the prompt's
 # fragments already are. Every other role is optional and guarded at the patch
 # site: a photograph, an identity adapter and a pose preprocessor are absent from
@@ -197,6 +218,23 @@ class Model:
 
 
 @dataclass(frozen=True)
+class Hosted:
+    """The hosted models a flow's first two stages call, and how they are reached.
+
+    Separate from `Model` because the two pin nothing alike: a `Model` is a file
+    with a digest, fetched onto a rented machine before a render, and this is a
+    name a host resolves at call time. **Nothing here is verified** -- no bytes
+    are checked behind either model name, and this version says so rather than
+    implying otherwise by sitting beside a digest. Verification travels with
+    provisioning (design.md D2).
+    """
+
+    implementation: str
+    reader: str
+    sorter: str
+
+
+@dataclass(frozen=True)
 class Flow:
     """One flow, loaded: what it needs, what it renders, and the dials it runs at."""
 
@@ -208,6 +246,7 @@ class Flow:
     dials: Mapping[str, Any]
     nodes: Mapping[str, str]
     models: tuple[Model, ...]
+    hosted: Hosted | None = None
 
     @property
     def graph_path(self) -> Path:
@@ -283,6 +322,15 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     Nothing here is derived at load time: every value returned is a value the
     manifest states. The refusals are all shape, so a broken flow fails in the
     suite rather than on a rented machine.
+
+    **A key this build does not read is refused too, not ignored.** `hosted` is
+    optional and its absence means the default implementation, so a misspelling
+    is indistinguishable from a deliberate omission -- and a flow meant to run
+    one implementation would run the other, with a complete and correct-looking
+    run to show for it. Every other way of getting that block wrong already
+    fails: an unknown implementation has no entry to resolve, and an unreachable
+    one refuses at first call. The typo is the only silent path left, and an
+    allowlist is the only thing that closes it (design.md D12).
     """
     directory = flow_path(flow, flows_dir)
     manifest = directory / MANIFEST_NAME
@@ -299,6 +347,14 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             f"{flow}/{MANIFEST_NAME} declares no {', '.join(missing)}; add the "
             "field to the manifest, which declares every value and derives none"
         )
+    unknown = [key for key in document if key not in KNOWN]
+    if unknown:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME} declares {', '.join(sorted(unknown))}, which "
+            f"this build does not read; the keys it reads are "
+            f"{', '.join(KNOWN)} -- correct the spelling, or point at a flow this "
+            "build reads"
+        )
     declared = document["manifest_version"]
     if declared != MANIFEST_VERSION:
         raise Refusal(
@@ -312,6 +368,15 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             f"{flow}/{MANIFEST_NAME}: `prompt` declares no {', '.join(absent)}; "
             "every fragment a prompt is assembled from is stated by the flow"
         )
+    if "hosted" in document:
+        lacking = [key for key in REQUIRED_HOSTED if key not in document["hosted"]]
+        if lacking:
+            raise Refusal(
+                f"{flow}/{MANIFEST_NAME}: `hosted` declares no "
+                f"{', '.join(lacking)}; a flow that names a hosted model names "
+                "the implementation it is reached through and the model both "
+                "stages run, or it names none at all"
+            )
     if document["flow"] != flow:
         raise Refusal(
             f"{flow}/{MANIFEST_NAME} calls itself {document['flow']!r}; a flow's "
@@ -356,6 +421,15 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
         models=tuple(
             Model(str(entry["dest"]), str(entry["sha256"]))
             for entry in document["models"]
+        ),
+        hosted=(
+            Hosted(
+                implementation=str(document["hosted"]["implementation"]),
+                reader=str(document["hosted"]["reader"]),
+                sorter=str(document["hosted"]["sorter"]),
+            )
+            if "hosted" in document
+            else None
         ),
     )
 

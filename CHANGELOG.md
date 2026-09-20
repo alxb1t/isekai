@@ -25,6 +25,345 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-20
+
+### Release notes — two things this version does not check, and hands to the operator
+
+**① Read the first caption against the photograph.** Nothing here detects a reader whose vision
+projector is missing. Such a model loads, reports no error, answers fluently and **describes nothing**
+— it writes a plausible portrait because that is what the prompt implies, and a digest cannot catch it
+because the file is the file that was pinned. After `ollama create`, `ollama show` must list `vision`
+under Capabilities **and** print a Projector block; after the first `caption`, read the prose against
+the picture. It is also the only check on the two briefings, which are **authored rather than ported**:
+the prompt that produced the measured captions is gitignored and was never on this branch, and how an
+8B fine-tune follows a long structured briefing is the untested variable of this version.
+
+**② Pass an explicit `--seed` for any run meant to be compared.** Each flow draws its own seed, **even
+at `--count 1`**, so the same photograph through `summon-v1` and `summon-open-v1` renders at two
+different seeds and the difference between the two images is not attributable to the arms. This
+version deliberately measures nothing and claims nothing about which arm is better; a comparison that
+matters needs the seed fixed by hand.
+
+### Acceptance — run live, on three photographs
+
+**The open arm runs end to end and reaches Claude by no path.** Three of the operator's photographs
+through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-v1`, on his own machine for
+①② and one RunPod session for ④.
+
+- **Stages ① and ② ran on localhost and cost nothing.** A cold caption takes ~21 s and a cold sheet
+  ~25 s, the two models evicting each other between stages exactly as `design.md` D10 predicts — which
+  is why one 900 s ceiling serves both rather than two tuned numbers.
+- **Re-running every verb reports already-complete in well under a second** and makes no call. A model
+  call could not hide inside that: the cold load alone is twenty times longer.
+- **The briefings and the sheets were judged good by the operator.** The authored caption briefing — the
+  named risk of this change, an 8B fine-tune against a long structured briefing — held.
+- **`claude` genuinely absent from `PATH`, and a fresh caption and sheet were still written.** Running
+  the already-complete batch that way proves nothing, because nothing calls a model on a resumed run;
+  the evidence is a *new* run, from a copy of a photograph, into a fresh runs root. This is the real
+  twin of the suite's monkeypatched isolation test.
+- **Every artifact's `producer` names what produced it**: captions `ollama · joycaption-beta-one-q4k`,
+  sheets `ollama · qwen3:8b`, and **`pinned` is `false` throughout** — which is what this version
+  deliberately does not deliver.
+- **Three PNGs rendered at an explicit `--seed 20190`** in 2 m 39 s total, downloaded before teardown.
+
+**Cost.** Pod `q9q2h3qhkbywfo`, RTX PRO 4500 Blackwell in EU-RO-1, **7 m 50 s of uptime** against the
+45-minute ceiling. Teardown confirmed by the RunPod MCP: `list-pods` returns `[]` and the pod id returns
+404. The first creation attempt failed with a transient 500 and created nothing, so it billed nothing.
+
+**This version measures nothing and claims nothing about which arm is better.** No comparison against
+`summon-v1` was run; that is the next version's, and it needs the instrument that prices it.
+
+### Added
+
+- **`scripts/joycaption.Modelfile` — the open reader's `ollama create` recipe, recovered from the
+  operator's live model because it was never committed.** The two-`FROM` projector pairing is
+  undocumented in Ollama's own import and modelfile docs, and the model is a machine-local alias rather
+  than a registry tag, so the recipe is the only thing that makes the name in a flow manifest mean
+  something. It sits beside `models.json` and `download_models.sh`, where provisioning artifacts already
+  live, rather than inside a flow directory — a flow is **five flat files** and that structural
+  requirement is not weakened to house a file nothing reads.
+
+  Recovered with `ollama show --modelfile`, and the recovery found one thing the on-disk original did not
+  state: **`TEMPLATE {{ .Prompt }}`**. The quantisation ships no chat template, so Ollama passed the
+  prompt through verbatim and every measured caption was produced under that default. The committed file
+  states it, pinning the behaviour to the recipe instead of to a version of Ollama. The two `FROM` lines
+  name the GGUFs by repository-relative path — **the `ollama show` output addresses them through the
+  operator's own content-addressed blob store, and a real absolute path from the machine a run is on is
+  not committed here.** Both forms build a byte-identical model: same two layer digests, same config
+  layer `b507b9c2f6ca…`.
+
+  Its header carries the two commands the release notes will repeat — `ollama create` for the reader,
+  `ollama pull qwen3:8b` for the sorter — with both artifacts' sha256 and byte counts, their pinned
+  source revision, and the silent failure to check for: a LLaVA-family model whose vision projector is
+  missing loads, answers fluently and cannot see the photograph.
+
+- **`tests/test_isolation.py` — the proof that a flow declaring one implementation reaches no name from
+  the other, built so it cannot pass vacuously.** The obvious form of this test — monkeypatch
+  `shutil.which` to `None`, as the absent-binary test already does — only fires if `require_binary` is
+  *called*, so a run touching no Claude path is green **for the wrong reason**, which is precisely the
+  thing under test. Instead `claude_cli.spawn` **and** `claude_cli.require_binary` are both replaced with
+  functions that raise, and the open flow is run through both stages against them.
+
+  **The falsification is resident rather than performed once by hand.** A second test points the same
+  sealed fixture at `summon-v1`, which declares no `hosted` block and so resolves to the CLI arm, and
+  asserts the seal fires. Without it the first test would stay green if the seal ever stopped sealing,
+  and would go on looking like a proof. A third covers the failure path, where a fallback would be added:
+  a permanent open failure records its kind, writes no artifact, and reaches no other implementation.
+
+  This is the CI-resident twin of the operator's `claude`-off-`PATH` acceptance run, and strictly
+  stronger than the PATH removal it stands in for.
+
+- **A test in that module briefly reached the live Ollama on the developer's machine, and the fix is
+  structural.** Monkeypatching `isekai.boundary.ollama.post` does nothing: `OllamaReader` is a frozen
+  dataclass, so `ollama.post` is captured as an `__init__` default at class-creation time and the patched
+  module attribute is never consulted. The failure is silent — the call simply goes to the real host. The
+  transport is now injected at the seam the adapter declares for it, via `dataclasses.replace` on what
+  `reader_for` actually returned, so the **resolution is still exercised and the socket is not**. Checked
+  by running the whole suite with `socket.socket.connect` rigged to raise: **749 passed**, nothing opened.
+
+- **`flows/summon-open-v1/` — the third tracked flow, and the first to declare a `hosted` block.** Five
+  flat files, as every flow is. `graph.json` and `schema.json` are **byte-identical copies** of
+  `summon-v1`'s, verified by `cmp`, and `flow.json` differs from that manifest in **exactly two places**
+  — the identifier and the block naming `joycaption-beta-one-q4k` and `qwen3:8b`. The render is the same
+  render; only the two hosted stages change.
+
+  **Both briefings are authored, not ported**, because the prompt that produced the measured captions is
+  gitignored and was never on this branch. The caption briefing carries `summon-v1`'s absence-licence
+  paragraph **byte for byte** — licensing absence is what stopped a reader confabulating nineteen
+  identity marks across seven of ten subjects, and a paraphrase would be an untested briefing wearing a
+  tested one's reasoning. The rest is written for a reader that is handed raw bytes under
+  `TEMPLATE {{ .Prompt }}` with no chat template: it opens on the shape of the one-sentence instruction
+  that was actually measured, keeps its coverage list as prose rather than bullets so an 8B model does
+  not echo the formatting back, and adds one sentence pressing on the skin, which is where the scored
+  identity marks live.
+
+  The sheet briefing ports both worked examples and all seven rules, and adds the two things Qwen3-8B was
+  measured getting wrong: **write the whole label, not the bare adjective** — `blonde hair`, not
+  `blonde`; `brown eyes`, not `brown`, which was 68 of 88 out-of-vocabulary tags — and do not repeat a
+  phrase within a field, which is the failure `repeat_penalty` also guards.
+
+  **The flow is pinned by whole-directory digest** at `e035d227…`, the designed cost of adding a flow.
+  And one assertion closes the last hole `design.md` D12 names: an absent `hosted` block has no key for
+  the allowlist to refuse and a digest cannot tell a correct manifest from a wrong one, so
+  `load_flow("summon-open-v1").hosted.implementation == "ollama"` is asserted directly — verified
+  non-vacuous by deleting the block and watching it go red.
+
+- **Five test bindings named scenarios that do not exist.** Nothing in this repository checks that a
+  `@pytest.mark.spec(...)` key resolves — pytest accepts any string — so five invented keys looked
+  exactly like bindings while binding nothing. All five now name real scenarios, and every key this
+  change adds was audited against the living spec and this change's delta.
+
+- **`Wiring.reader` and `Wiring.sorter` become resolvers — `Callable[[Flow], …] | None`, the shape
+  `vocabulary` already had — and the resolution moves inside `cli.py`'s per-flow loop.** It was hoisted
+  above it, so one invocation naming flows on both arms resolved a single reader and handed it to both:
+  one of the two captions would have recorded a producer that did not produce it, with the whole gate
+  green. A test drives one command over two flows on two implementations and asserts each artifact names
+  its own, through a resolver that reports what each flow declared — a double that ignored the flow would
+  make that test pass for the bug it exists to catch.
+
+  **`READERS` and `SORTERS` are tables, not two-branch conditionals, and the argument is the refusal.** A
+  conditional hands an unrecognised implementation the default one, producing a complete run on the wrong
+  models with the artifact's provenance disagreeing with the manifest that asked for it — silent, and it
+  corrupts any later comparison between the arms. The table makes that a refusal naming both
+  implementations this build carries. A further test holds each registry's **keys equal to the strings
+  the artifacts record**, so the duplication cannot drift; changing `OllamaReader.implementation` to
+  `"ollama-x"` turns it red.
+
+  **Nothing is constructed until a flow asks**, which is what lets a machine with one implementation
+  available never touch the other: composing a wiring with `shutil.which` and `urllib.request.urlopen`
+  both monkeypatched to raise still succeeds. `_seam` is unchanged, and the two front ends that compose
+  a wiring with no reader and no sorter — the ③-only UI — still pass `None` and still refuse by name.
+
+  `tests/stages.py` gains `Always`, a resolver handing every flow the same double, so the counting
+  assertions still reach the object that did the counting.
+
+- **`OllamaSorter`, in `isekai/pipeline/sheet.py`** — beside `ClaudeSorter` and `FakeSorter`. Its
+  `format` **equals `output_shape(schema)`** rather than resembling it, which is the same object the
+  Claude arm puts behind `--json-schema`: the transport differs and the constraint does not. That
+  equality is what keeps a malformed answer classified **permanent** for either arm — the structure is
+  required server-side, where Ollama compiles it into a grammar, so a second attempt would spend for
+  nothing. An adapter carrying its own near-copy would have drifted from the Claude arm silently.
+
+  `think: false` and `repeat_penalty: 1.15` ride with it, and both are load-bearing by measurement: a
+  hybrid reasoner's thinking tokens come out of the answer's budget and truncated the JSON mid-string on
+  the third subject, and at temperature 0 there is no sampling noise to break a loop, so one field came
+  back with `"white robe"` forty times. Those two absences are the whole reason this repository speaks
+  `/api/generate` rather than the OpenAI-compatible endpoint.
+
+  The answer arrives **as the response body** rather than as a separate structured field, which is the
+  path `answers_from` already falls back to — unchanged, and now held by a test, so a later edit cannot
+  break the only path an Ollama answer takes. A truncated answer is permanent **and the record carries
+  `done_reason`**, because truncated and malformed are indistinguishable from outside and only one of
+  them is fixed by raising the output budget.
+
+  **Everything downstream of the seam is shared and provably unmoved.** Two tests drive the open sorter
+  through the same cascade the Claude arm uses: an absence clause becomes an empty field, and a tag
+  outside the vocabulary is dropped. `isekai/shared/vocabulary.py` and `isekai/shared/fields.py` are
+  byte-identical in the diff, and the open arm gets no exemption from either.
+
+- **`OllamaReader`, in `isekai/pipeline/caption.py`** — beside `ClaudeReader` and the `FakeReader` they
+  share a Protocol with, rather than in `boundary/`, because two implementations of one Protocol in two
+  different layers is the arrangement that avoids. It carries `implementation = "ollama"`, an injectable
+  transport, and a `body()` method the way `ClaudeReader` has `argv()` — so the request is assertable
+  without a call.
+
+  **The photograph goes as its own bytes, base64, unresized**, which is D7 built rather than assumed: the
+  prototype's encoder downscaled through PIL, and PIL is in the `eval` extra and unreachable from a module
+  `isekai.__main__` imports. Nothing is resampled and nothing needs to be — the vision tower encodes at
+  patch14-384 whatever it is handed. **No runtime dependency is added.**
+
+  **No `format` and no schema**, asserted as an absence. Pressing a reader into a field list is measured
+  to make it invent — told never to leave a field blank, one manufactured nineteen identity marks across
+  seven of ten subjects and its score fell from 0.518 to 0.307. Structure is stage ②'s to require, and
+  `format` is the field that would have required it here.
+
+  **No path from this machine reaches the model either.** The Claude adapter names the photograph's path
+  because its reader opens the file with a `Read` tool; this one is handed the bytes, so a path would be
+  an instruction it cannot act on and a detail about the operator's machine sent for nothing. The
+  `workspace` argument stays in the signature — one `Reader` Protocol, not two — and is inert, asserted
+  with a workspace the photograph is nowhere inside.
+
+- **An unreachable host and an absent model refuse without spending an attempt**, and the tests assert
+  the error-record directory is **empty** rather than merely that a refusal was raised. A spent attempt
+  leaves a run whose records must be deleted by hand before it resumes, and neither of these is a model
+  tried and failed. The reader's remedy names `ollama create … -f scripts/joycaption.Modelfile`, not
+  `ollama pull`: the two hosted models are not the same kind of name, and the registry command would send
+  the operator after a tag that does not exist. Two further tests hold the distinction honest — a 503
+  *does* record a transient attempt, and a `done_reason: length` records a permanent one with
+  `done_reason` in the detail and no caption written — so the "records no attempt" assertions cannot pass
+  for a stage that records nothing at all.
+
+- **`tests/transports.py`** — `FakeTransport`, hand-written and shared by the boundary's tests and both
+  adapters', rather than imported from one test module by another, which would make that module
+  undeletable. The same rule `tests/images.py` and `tests/stages.py` are under.
+
+- **`isekai/boundary/ollama.py` — the third network boundary, and the second the pipeline has.** One
+  POST to a local runtime over stdlib `urllib`, an injectable `Transport` protocol, and the
+  classification of what comes back. **It imports nothing from `claude_cli.py`**, and it imports nothing
+  outside the standard library — asserted by `python -S`, with site-packages off `sys.path`.
+
+  `/api/generate` rather than the OpenAI-compatible endpoint, because that endpoint expresses neither
+  `think` nor `repeat_penalty` and both are load-bearing *by measurement*: a hybrid reasoner's thinking
+  tokens come out of the same budget as its answer and truncated the sorter's JSON mid-string, and at
+  temperature 0 there is no sampling noise to break a loop, so one field came back with `"white robe"`
+  forty times. Using the compatible endpoint would re-measure the two known failure modes of the model
+  being adopted.
+
+  **The address is a module constant — no flag, no environment variable.** The runtime reads no
+  environment at all, a fixed local address is what `interface/ui/` and `interface/cli.py` already do,
+  and making the destination of a photograph operator-controlled is a security surface this version
+  declines to open. `--server`'s deliberate no-default exists because rendering costs money; a free
+  loopback call does not inherit that reason.
+
+- **The failure classification, one test per row, all through an injected transport.** A missing model
+  (404) and an unreachable host (`URLError`) are **refusals that spend no attempt** — both are the
+  operator's one-command fix, and a retry budget counts models tried and failed, which neither of them
+  is; spending an attempt on one leaves a run whose error records must be deleted by hand before it can
+  resume. That is the posture `require_binary()` already takes for an absent binary, applied to a port
+  rather than to a `PATH` entry. A 5xx and a timeout are transient; an unparseable body, a body that is
+  not an object, an answerless body, and any other non-200 are permanent.
+
+  **`HTTPError` is caught before `URLError`, because it is a subclass of it** — the prototype's single
+  handler mislabelled every 404 and every 502 as "did not answer". It is caught inside `post` and turned
+  into a returned status, so a fake transport states one the way a real host does. A **timeout arriving
+  wrapped in a `URLError`** is read as transient rather than as an unreachable host: otherwise a
+  retryable failure is spent as a refusal and the operator is told to start a server already running.
+
+  `done_reason == "length"` is permanent **and the detail carries `done_reason`**, because a truncated
+  answer and a malformed one are indistinguishable from outside and only one of them is fixed by raising
+  the output budget.
+
+  The kind is carried by `OllamaFailure`, which is deliberately neither `CliFailure` — this module may
+  not import it — nor a third vocabulary: it holds the same `Kind` the run directory already records, so
+  an adapter translates it in one line and the stage that catches it is untouched.
+
+- **A flow manifest may declare the hosted models its first two stages call — `hosted`, one optional
+  top-level key.** It carries the implementation the reader and sorter are reached through and the model
+  name each of them runs, parsed into a frozen `Hosted` on the loaded flow. Deliberately **not** `models`,
+  which is required and holds the twelve pinned render weights a rented GPU loads: one names a file on
+  disk with a digest behind it, the other a name a host resolves at call time, and nothing behind either
+  hosted name is verified — stated in `Hosted`'s own docstring rather than implied away by sitting beside
+  a digest.
+
+  The implementation is declared **once for both stages, not once per stage**, so *this flow is wholly one
+  implementation* is a property of the document rather than of two lookups that happen to agree. Declaring
+  a block that names fewer than all three is refused naming what is absent, the shape `prompt`'s fragments
+  are already checked in — otherwise it reaches the registry as a `KeyError` three frames later.
+
+  **Optional, and that is what keeps `MANIFEST_VERSION` at `2`.** A required key plus a version bump was
+  this change's first shape: it would have re-cut two frozen manifests to record a value already implied.
+  Both incumbent flows are untouched and carry the digests they had — `summon-v1` at `1d3c206b…`,
+  `conjure-v1` at `260ea7a3…`.
+
+- **A manifest key this build does not read is now refused naming it, rather than silently ignored.**
+  `load_flow` checked for *missing* keys only. Because `hosted` is optional and its absence means the
+  default implementation, a misspelling — `hostd`, `Hosted`, `host` — was **indistinguishable from a
+  deliberate omission**: a flow meant to run one implementation would have run the other and produced a
+  complete, correct-looking run on the wrong models. Every other way of getting that block wrong already
+  fails, an unknown implementation having no entry to resolve and an unreachable one refusing at first
+  call, which left the typo as the only silent path. The refusal names the offending key and lists the
+  nine this build reads, and it fires from reading the manifest alone — asserted with the graph file
+  deleted, so nothing executed the flow to catch it.
+
+- **D7 is decided and stands: the photograph is sent as its own bytes, base64, unresized.** The caveat
+  behind this change's `feasible-with-caveats` verdict was that no real photograph had ever been sent
+  unresized — the prototype always downscaled through PIL first. One of the operator's own photographs,
+  3.08 MB on disk, made a **4.11 MB** POST that `/api/generate` **accepted, HTTP 200 in 12.3 s**, with
+  `done_reason` `stop` and a caption that describes the photograph. **No runtime dependency is added**,
+  and D7's contingency — PIL as a function-local import — is not taken.
+
+### Changed
+
+- **`README.md` and `CLAUDE.md`: Ollama is named as the third system dependency**, beside `claude` and
+  `node`, with the two commands that create both models, the `scripts/joycaption.Modelfile` path, and
+  the projector check to make after the first. README's work-in-progress banner is replaced: the first
+  two stages **are** open now, on the flow that declares them, and a clone with no Anthropic
+  subscription can run the whole pipeline. Three further CLAUDE.md claims this version falsified are
+  corrected — `ComfyTransport` is no longer *"the network boundary, and the only one"*, `boundary/`
+  lists `ollama.py`, and `flows/summon-v1/` is no longer *"the only one"* (it had not been since
+  `conjure-v1`).
+
+- **The roadmap's v0.19 claims are struck where this version does not deliver them.** *"Both readers
+  pinned"* is **withdrawn**: `hosted` names two models and verifies no bytes behind either, which is
+  recorded as a deferral rather than left looking like an omission, and deliberately asymmetric with
+  `models`, which pairs all twelve render weights with a digest. The Qwen revision and `--model` /
+  `--effort` for the Claude arm move to the **provisioning** version, which opens the file that does
+  byte verification anyway. The argument that v0.19 is the first version with two implementations to
+  choose between held — and what it bought was **selection**, through the manifest key and the
+  registry, which is a different mechanism from pinning.
+
+- **`both stdlib over HTTPS` is corrected wherever it appeared.** It is **plain HTTP to
+  `127.0.0.1:11434`**. There is no TLS on a loopback call to a process on the same machine and there
+  should not be.
+
+### Fixed
+
+- **The photograph could be sent to whatever `http_proxy` named.** `boundary/ollama.py`'s `post()` used
+  `urllib.request.urlopen`, whose default opener builds a `ProxyHandler` from the environment — and
+  urllib does **not** auto-bypass loopback, only an explicit `no_proxy` entry does. On a machine with
+  `http_proxy` exported, every base64-encoded photograph was addressed to the proxy instead of to
+  `127.0.0.1:11434`: precisely the operator-controlled destination D4 says this version will not open,
+  opened by a variable nobody chose. Worse, the proxy's own failure then fell into the *"nothing is
+  listening … start the runtime (`ollama serve`)"* refusal, which points away from the leak. The module
+  now owns its opener — `build_opener(ProxyHandler({}))`, which reads no environment at all — so `HOST`
+  is reachable by no configuration rather than merely undocumented. Held by a test that drives `post()`
+  against a stand-in connection with a proxy exported and asserts the address urllib resolved, with a
+  falsification twin proving the same environment *would* have captured a default opener.
+
+- **A connection dropped mid-answer escaped classification and killed the batch.** `ask()` caught
+  `(TimeoutError, URLError)`, and urllib wraps only what the *send* raised — anything `getresponse()` or
+  `read()` raises surfaces as an `http.client` exception or a bare socket error, neither of which is a
+  `URLError`. Uncaught, such a failure was not an `OllamaFailure`, so no adapter translated it, not a
+  `CliFailure`, so no stage recorded it, and not a `Refusal`, so `run.across()` did not collect it: the
+  command died in a traceback, the remaining photographs were never attempted, and nothing on disk said
+  why — breaking `run-directory:budget:one-failure-does-not-halt-the-batch`. The host being OOM-killed
+  between two models that D10 already states **do not co-reside in 16 GiB** is the designed-in
+  condition, not an exotic one. The handler now covers `OSError` and `http.client.HTTPException`, keeps
+  the timeout discrimination first, keeps the "nothing is listening" refusal for `URLError` alone — a
+  connection that was never made — and classifies a host that answered and then died as **transient**.
+  Three rows added to the `FakeTransport(error=…)` seam that already existed and had only ever been
+  asked three exception types: `RemoteDisconnected`, `IncompleteRead`, `ConnectionResetError`.
+
 ## [0.18.0] - 2026-09-19
 
 ### Fixed

@@ -10,9 +10,10 @@ Shared here rather than imported from one test module by another, which would
 make that module undeletable -- the same rule `tests/images.py` is under.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 
-from isekai.foundation.flow import Schema, load_flow
+from isekai.foundation.flow import Flow, Schema, load_flow
 from isekai.foundation.run import Run
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import sheet as sheet_stage
@@ -57,3 +58,21 @@ def sheet(
         briefing_path=briefing_path,
         new_version=new_version,
     )
+
+
+@dataclass(frozen=True)
+class Always[T]:
+    """A resolver that hands every flow the same double.
+
+    `Wiring.reader` and `Wiring.sorter` are resolvers now, because the flow is
+    what decides which implementation runs. A test that means to drive one double
+    over any number of flows says so with this rather than by repeating a lambda,
+    and `.double` is what keeps the counting assertions -- how many times was the
+    reader actually reached -- reaching the object that did the counting.
+    """
+
+    double: T
+
+    def __call__(self, flow: Flow) -> T:
+        """Return the one double, whatever flow asked."""
+        return self.double

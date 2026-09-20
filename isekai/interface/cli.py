@@ -360,8 +360,12 @@ def _per_item(
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
         if verb == "caption":
-            reader = _seam(wired.reader, "reader", "reads the photograph")
             for name, flow in flows.items():
+                # **Resolved per flow, not once per invocation.** One command
+                # naming two flows on two implementations would otherwise resolve
+                # one reader and hand it to both, and the provenance one of the
+                # two artifacts records would be false (design.md D6).
+                reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
                 _say(
                     wired,
                     run,
@@ -375,8 +379,8 @@ def _per_item(
                     ),
                 )
         elif verb == "sheet":
-            sorter = _seam(wired.sorter, "sorter", "fills the sheet")
             for name, flow in flows.items():
+                sorter = _seam(wired.sorter, "sorter", "fills the sheet")(flow)
                 _say(
                     wired,
                     run,

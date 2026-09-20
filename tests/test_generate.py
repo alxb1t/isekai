@@ -55,7 +55,7 @@ from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, sheet
+from tests.stages import Always, caption, sheet
 
 FLOW = "summon-v1"
 
@@ -573,8 +573,8 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     open_run(photo, runs)
     err = io.StringIO()
     wired = Wiring(
-        reader=FakeReader(prose="unused"),
-        sorter=FakeSorter(answers={}),
+        reader=Always(FakeReader(prose="unused")),
+        sorter=Always(FakeSorter(answers={})),
         client=FakeComfyClient(),
         vocabulary=lambda: vocabulary,
         runs_root=runs,
