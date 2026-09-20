@@ -155,6 +155,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   constructing a dataclass; this opens a 467 MB graph and reads a 10,861-row index, so it is
   memoised beside the vocabulary thunk that exists for the same reason.
 
+- **`run_view.STAGES` gains `WD14` and `TAGS`**, in the order a run passes through them —
+  `(captions, wd14, tags, sheets, review, prompts)`. The tuple is explicit, so a new stage directory
+  is invisible to `show` until it is named in it. By the standing rule that a version does not open
+  files it never touches this would be out of scope, and **the rule does not apply**: v0.20 does not
+  inherit this gap, it creates it, and shipping a stage `show` cannot see is shipping a verb that
+  lies about what a run holds (design.md D23).
+- **`show` prints a WD14 artifact without the word `unpinned` — the first one in this repository
+  that it can.** `run_view.py` appends it for `pinned is False`, and every artifact in the tree
+  recorded exactly that until now. A test asserts the absence *and* asserts the hosted tag list is
+  still marked, so the absence means something.
+- **A run captioned before these stages existed lists them empty rather than refusing.** No
+  migration and nothing to detect: an old run simply lacks the two directories, which is the same
+  state as a run whose caption has not been produced.
+
 ### Changed
 
 - **The resume assertion now counts five doubles, not three**, and two of them are the taggers.

@@ -8,7 +8,7 @@
 - [x] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
 - [x] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 - [x] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
-- [ ] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
+- [x] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
 - [ ] 8 — The surface: sentences, two chip lists, and the payload that feeds them
 - [ ] 9 — The documents this version makes false
 - [ ] 10 — ⚠️ **HUMAN · FREE** — the three artifacts end to end, on one synthetic portrait
@@ -248,11 +248,11 @@ defeats D14.
 
 ## 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
 
-- [ ] 7.1 `isekai/interface/run_view.py:40` — `STAGES` gains `WD14` and `TAGS`, in the order a run
+- [x] 7.1 `isekai/interface/run_view.py:40` — `STAGES` gains `WD14` and `TAGS`, in the order a run
       passes through them: `(CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS)`.
-- [ ] 7.2 A test asserting `show` reports both new stages for a run that has them, and does not refuse
+- [x] 7.2 A test asserting `show` reports both new stages for a run that has them, and does not refuse
       for a run that does not. Bound `@pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")`.
-- [ ] 7.3 A test asserting `show` prints a WD14 artifact **without** the word `unpinned` — it is the
+- [x] 7.3 A test asserting `show` prints a WD14 artifact **without** the word `unpinned` — it is the
       first producer in this repository that can honestly claim a pin (`design.md` D17,
       `run_view.py:66`). Bound `@pytest.mark.spec("tagging:provenance:the-local-tagger-declares-its-pin")`.
       **Verify:** `uv run pytest tests/test_run_view.py -v`
