@@ -136,8 +136,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   repository that can honestly claim a pin, and the first thing `show` will report without the word
   *unpinned* (design.md D17).
 
+- **`isekai/interface/wiring.py` gains two tagging seams, and they are deliberately not one.**
+  `tagger_for(flow)` takes a `Flow` and **reads nothing from it** — the local tagger resolves through
+  no manifest key at all, because it is a file this build pins, it costs nothing, it reaches no
+  network, and there is no flow for which it would be wrong. Requiring a key would have meant
+  re-pinning three frozen flow directories to state an opinion none of them has.
+  `hosted_tagger_for(flow)` answers `None` where a flow declares no arm this build can tag on, and
+  that is the one resolver allowed to: `_resolve`'s argument — an unrecognised implementation must
+  refuse rather than default — holds where a wrong model would silently produce a complete run whose
+  provenance disagrees with the manifest, and here there is no wrong model to fall back to.
+- **`isekai/interface/cli.py`'s `caption` branch says three times, in one order and no other.**
+  Prose → WD14 → JoyCaption. `across()` catches `Refusal` per *input* rather than per stage, so the
+  ordering **is** the failure isolation: the one stage with a port, a timeout and a retry budget runs
+  last, and its refusal blocks nothing that would have succeeded (design.md D7). A test proves it —
+  a hosted tagger rigged to fail leaves the caption and the WD14 list on disk and complete.
+- **The local tagger is opened once per flow per invocation, not once per photograph.** The reader
+  and the sorter are resolved inside the per-photograph loop because constructing one is
+  constructing a dataclass; this opens a 467 MB graph and reads a 10,861-row index, so it is
+  memoised beside the vocabulary thunk that exists for the same reason.
+
 ### Changed
 
+- **The resume assertion now counts five doubles, not three**, and two of them are the taggers.
+  A second pass that re-opened the graph would cost ~0.9 s a photograph while making no request, so
+  an assertion that only counted network calls would have called that inert.
 - **The `Session` seam takes the photograph rather than a prepared array** (design.md D26, a
   build-time correction to `tasks.md` 4.1). Built the other way the boundary tests pass and the
   **stage** is untestable: `caption_wd14()` would reach `prepare()`, which imports `numpy` and

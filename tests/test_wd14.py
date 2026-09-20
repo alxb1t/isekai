@@ -38,41 +38,7 @@ from isekai.boundary.wd14 import (
 )
 from isekai.evaluation import eval_models
 from isekai.foundation.refusal import Refusal
-
-# A three-row label index, in the shipped file's own column order and with one
-# row of each category that matters: a general tag, a character name and a rating
-# meta-tag. Small enough that "row 1" is a thing a human can check by eye.
-INDEX = """tag_id,name,category,count
-9999999,sensitive,9,3994361
-1,1girl,0,6000000
-2,hatsune_miku,4,300000
-"""
-
-
-class FakeSession:
-    """A session that answers one fixed vector and counts how often it was asked.
-
-    The double `tagging:seam:offline-double-satisfies-the-interface` names. It
-    opens nothing, reads nothing and imports nothing -- which is only possible
-    because the seam takes the photograph rather than a prepared array, and so
-    `numpy` and `Pillow` sit behind it with the graph.
-
-    The counter is what makes the idempotence assertion provable: showing that a
-    completed stage opens no session needs something that counts.
-    """
-
-    def __init__(self, vector: list[float]) -> None:
-        """Answer `vector` to every call."""
-        self.vector = vector
-        self.calls = 0
-        self.seen: list[Path] = []
-
-    def run(self, photo: Path) -> list[float]:
-        """Return the fixed vector, recording that it was asked and about what."""
-        self.calls += 1
-        self.seen.append(photo)
-        return self.vector
-
+from tests.stages import INDEX, FakeSession
 
 # --- the label index ----------------------------------------------------------
 

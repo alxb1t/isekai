@@ -7,7 +7,7 @@
 - [x] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
 - [x] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
 - [x] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
-- [ ] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
+- [x] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
 - [ ] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
 - [ ] 8 — The surface: sentences, two chip lists, and the payload that feeds them
 - [ ] 9 — The documents this version makes false
@@ -224,23 +224,23 @@ defeats D14.
 
 ## 6 — `wiring` resolves a tagger per flow, and `caption` says three times
 
-- [ ] 6.1 `isekai/interface/wiring.py`: `tagger_for(flow)` and a hosted-tagger resolver, both
+- [x] 6.1 `isekai/interface/wiring.py`: `tagger_for(flow)` and a hosted-tagger resolver, both
       `Callable[[Flow], …] | None` on `Wiring`, **constructing nothing until a flow asks**
       (`design.md` D14). The local tagger resolves for **every** flow; the hosted one resolves only
       where `flow.hosted` exists and is absent — not a refusal — where it does not (D3, D20).
-- [ ] 6.2 `isekai/interface/cli.py`: the `caption` branch (`cli.py:362-380`) gains two `_say` calls
+- [x] 6.2 `isekai/interface/cli.py`: the `caption` branch (`cli.py:362-380`) gains two `_say` calls
       **in this order and no other** — prose, then wd14, then tags (`design.md` D7). Inline the calls
       as the existing one is; bind no locals.
-- [ ] 6.3 A test proving the ordering isolates failures: a hosted tagger rigged to fail leaves the
+- [x] 6.3 A test proving the ordering isolates failures: a hosted tagger rigged to fail leaves the
       caption and the wd14 artifact on disk and complete. Bound
       `@pytest.mark.spec("tagging:order:a-late-failure-leaves-the-earlier-artifacts-complete")`.
-- [ ] 6.4 Tests for the two resolution scenarios: a flow with no `hosted` block gets a local tagger and
+- [x] 6.4 Tests for the two resolution scenarios: a flow with no `hosted` block gets a local tagger and
       no hosted one; two flows on two implementations each get their own.
       **Verify:** `uv run pytest tests/test_tagging.py tests/test_pipeline_cli.py -v` with bindings
       `tagging:independence:the-local-tagger-needs-no-manifest-key`,
       `tagging:independence:the-hosted-tagger-is-absent-without-a-hosted-block`,
       `cli:resolution:a-seam-without-a-manifest-key-resolves-for-every-flow`.
-- [ ] 6.5 **Prove resume still holds across all three stages.**
+- [x] 6.5 **Prove resume still holds across all three stages.**
       **Verify:** `uv run pytest -k second_pass_is_inert -v` — and the test must now assert that a
       second pass opens **no session** as well as making no network call.
 

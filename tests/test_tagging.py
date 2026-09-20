@@ -12,6 +12,7 @@ are checking that content survived untouched.
 """
 
 import base64
+import io
 import json
 from pathlib import Path
 from typing import Any
@@ -19,20 +20,28 @@ from typing import Any
 import pytest
 
 from isekai.boundary import provision
-from isekai.boundary.claude_cli import constant_record
+from isekai.boundary.claude_cli import CliFailure, constant_record
+from isekai.foundation.flow import load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import TAGS, WD14, Run, open_run, record_failure
+from isekai.interface import wiring
+from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.wiring import Wiring
+from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.sheet import FakeSorter
 from isekai.pipeline.tagging import (
     SEPARATOR,
     TAG_PROMPT,
     TAGGER_OPTIONS,
     FakeTagger,
     OllamaTagger,
+    Tagging,
     caption_tags,
     caption_wd14,
 )
+from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
-from tests.test_wd14 import INDEX, FakeSession
+from tests.stages import INDEX, Always, FakeSession, fake_wd14
 from tests.transports import FakeTransport
 
 from isekai.boundary.wd14 import read_labels  # isort: skip
@@ -333,3 +342,110 @@ def test_the_producer_names_the_model_that_actually_answered(run: Run) -> None:
 @pytest.mark.spec_exempt("structural: the separator this stage splits on")
 def test_the_separator_is_a_comma() -> None:
     assert SEPARATOR == ","
+
+
+# --- resolution and ordering, through the CLI ---------------------------------
+
+
+@pytest.mark.spec("tagging:independence:the-local-tagger-needs-no-manifest-key")
+def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Proved by calling it, with the 467 MB open replaced: every tracked flow
+    # gets a tagger, none of them is refused, and **no flow is ever read** -- the
+    # local tagger resolves through no manifest key, because it is a file this
+    # build pins and there is no flow for which it would be wrong (design.md D3).
+    opened = FakeSession([0.0, 0.9, 0.0]), read_labels(INDEX)
+    monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
+
+    resolved = {
+        flow_id: wiring.tagger_for(load_flow(flow_id))
+        for flow_id in ("summon-v1", "conjure-v1", "summon-open-v1")
+    }
+
+    assert set(resolved) == {"summon-v1", "conjure-v1", "summon-open-v1"}
+    assert all(pair == opened for pair in resolved.values())
+    # Two of those three declare no `hosted` block at all, which is the case a
+    # key-driven registry would have had to refuse or default.
+    assert [load_flow(flow_id).hosted is None for flow_id in resolved] == [
+        True,
+        True,
+        False,
+    ]
+
+
+@pytest.mark.spec(
+    "tagging:independence:the-hosted-tagger-is-absent-without-a-hosted-block"
+)
+@pytest.mark.parametrize(
+    ("flow_id", "expected"),
+    [("summon-v1", None), ("conjure-v1", None), ("summon-open-v1", "ollama")],
+)
+def test_the_hosted_tagger_resolves_only_where_a_flow_declares_an_arm(
+    flow_id: str, expected: str | None
+) -> None:
+    resolved = wiring.hosted_tagger_for(load_flow(flow_id))
+
+    if expected is None:
+        # Absent, not refused. A flow with no `hosted` block simply has no hosted
+        # tag list, and that may not stop a review (design.md D20).
+        assert resolved is None
+    else:
+        assert isinstance(resolved, OllamaTagger)
+        assert resolved.implementation == expected
+
+
+@pytest.mark.spec(
+    "cli:resolution:a-seam-without-a-manifest-key-resolves-for-every-flow"
+)
+def test_two_flows_on_two_arms_each_get_their_own_hosted_tagger() -> None:
+    hosted = wiring.hosted_tagger_for(load_flow("summon-open-v1"))
+    default = wiring.hosted_tagger_for(load_flow("summon-v1"))
+
+    assert isinstance(hosted, OllamaTagger)
+    assert hosted.model == "joycaption-beta-one-q4k"
+    assert default is None
+    # And both get a local tagger, resolved through no manifest key at all.
+    assert wiring.HOSTED_TAGGERS.keys() == {"ollama"}
+
+
+@pytest.mark.spec("tagging:order:a-late-failure-leaves-the-earlier-artifacts-complete")
+def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
+    tmp_path: Path,
+) -> None:
+    # `across()` catches `Refusal` per *input*, not per stage, so the ordering is
+    # the failure isolation: prose, then the deterministic local tagger, then the
+    # one with a port and a retry budget (design.md D7).
+    photo = tmp_path / "aunt-ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    flow = "summon-v1"
+
+    class Failing:
+        """A hosted tagger that cannot succeed, however many times it is asked."""
+
+        def tag(self, photo: Path) -> Tagging:
+            raise CliFailure("permanent", "the host answered with prose")
+
+    wired = Wiring(
+        reader=Always(FakeReader()),
+        sorter=Always(FakeSorter(answers={})),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(Failing()),
+        client=None,
+        vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, {}),
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=io.StringIO(),
+    )
+
+    status = dispatch(
+        build_parser().parse_args(["caption", "--flow", flow, str(photo)]), wired
+    )
+
+    assert status == 1
+    run = open_run(photo, wired.runs_root)
+    # Both earlier artifacts are on disk and complete; only the last one failed.
+    assert (run.directory(flow, "captions") / "001.json").is_file()
+    assert (run.directory(flow, WD14) / "001.json").is_file()
+    assert not list(run.directory(flow, TAGS).glob("001.json"))
+    assert (run.directory(flow, TAGS) / "001.error.1.permanent.json").is_file()

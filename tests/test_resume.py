@@ -17,6 +17,7 @@ import json
 import random
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -26,11 +27,12 @@ from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.sheet import FakeSorter
+from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import Always
+from tests.stages import Always, FakeSession, fake_wd14
 
 FLOW = "summon-v1"
 
@@ -62,6 +64,8 @@ def wired(tmp_path: Path) -> Wiring:
                 }
             )
         ),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
         client=FakeComfyClient(),
         vocabulary=lambda: Vocabulary(
             "wd14/selected_tags.csv",
@@ -96,16 +100,36 @@ def _flags(extra: dict[str, object]) -> list[str]:
     return rendered
 
 
-def _calls(wired: Wiring) -> tuple[int, int, int]:
-    """Return how many times each external double has been reached."""
+def _calls(wired: Wiring) -> tuple[int, int, int, int, int]:
+    """Return how many times each external double has been reached.
+
+    Five now, not three. **The two taggers are counted separately and both are
+    counted**, because they fail differently and one of them is not a network
+    call at all: a second pass that re-opened the 467 MB graph would cost ~0.9 s
+    per photograph while making no request, so an assertion that only counted
+    requests would call that inert.
+    """
     resolve_reader, resolve_sorter = wired.reader, wired.sorter
+    resolve_wd14, resolve_hosted = wired.tagger, wired.hosted_tagger
     client = wired.client
     assert isinstance(resolve_reader, Always) and isinstance(resolve_sorter, Always)
+    assert isinstance(resolve_wd14, Always) and isinstance(resolve_hosted, Always)
     reader, sorter = resolve_reader.double, resolve_sorter.double
+    wd14_double: Any = resolve_wd14.double
+    session, _labels = wd14_double
+    hosted = resolve_hosted.double
     assert isinstance(reader, FakeReader)
     assert isinstance(sorter, FakeSorter)
+    assert isinstance(session, FakeSession)
+    assert isinstance(hosted, FakeTagger)
     assert isinstance(client, FakeComfyClient)
-    return len(reader.calls), len(sorter.calls), len(client.submissions)
+    return (
+        len(reader.calls),
+        session.calls,
+        len(hosted.calls),
+        len(sorter.calls),
+        len(client.submissions),
+    )
 
 
 def _pass(wired: Wiring, target: str) -> int:
@@ -143,11 +167,13 @@ def test_the_first_pass_actually_produced_something_to_be_inert_about(
 
     names = sorted(files)
     assert any(name.endswith(f"{FLOW}/captions/001.json") for name in names)
+    assert any(name.endswith(f"{FLOW}/wd14/001.json") for name in names)
+    assert any(name.endswith(f"{FLOW}/tags/001.json") for name in names)
     assert any(name.endswith(f"{FLOW}/sheets/001.json") for name in names)
     assert any(name.endswith(f"{FLOW}/review/001.approved.json") for name in names)
     assert any(name.endswith(f"{FLOW}/prompts/001.json") for name in names)
     assert any(".png" in name for name in names)
-    assert _calls(wired) == (1, 1, 1)
+    assert _calls(wired) == (1, 1, 1, 1, 1)
 
 
 @pytest.mark.spec("cli:resume:second-pass-is-inert")

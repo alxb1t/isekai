@@ -47,6 +47,8 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
     return Wiring(
         reader=None,
         sorter=None,
+        tagger=None,
+        hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
         runs_root=tmp_path / "runs",

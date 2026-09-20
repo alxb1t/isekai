@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
+from isekai.boundary.wd14 import Label, Session
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
@@ -52,6 +53,7 @@ from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
+from isekai.pipeline.tagging import caption_tags, caption_wd14
 from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
@@ -350,12 +352,34 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     parsed: list[Vocabulary] = []
+    opened: dict[str, tuple[Session, Sequence[Label]]] = {}
 
     def vocabulary() -> Vocabulary:
         """Return this invocation's vocabulary, reading it at most once."""
         if not parsed:
             parsed.append(wired.vocabulary())
         return parsed[0]
+
+    def _tagger(wired: Wiring, flow: Flow) -> tuple[Session, Sequence[Label]]:
+        """Return this invocation's local tagger for `flow`, opening it once.
+
+        **Memoised per flow and per invocation, which is the whole reason this is
+        a function rather than a call.** The reader and the sorter are resolved
+        inside the per-photograph loop and that costs nothing, because
+        constructing one is constructing a dataclass. This opens a 467 MB graph
+        and reads a 10,861-row index -- ~0.9 s -- so resolving it the same way
+        would pay that once per photograph instead of once per batch
+        (design.md D14).
+
+        Keyed by flow even though the local tagger reads no manifest key, because
+        the seam's shape is per flow and a cache that ignored its own key would
+        be the thing to fix the day one of them does.
+        """
+        if flow.id not in opened:
+            opened[flow.id] = _seam(wired.tagger, "tagger", "scores the photograph")(
+                flow
+            )
+        return opened[flow.id]
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
@@ -378,6 +402,36 @@ def _per_item(
                         new_version=new_version,
                     ),
                 )
+                # **The order is the failure isolation, not a habit.** `across()`
+                # catches `Refusal` per *input* rather than per stage, so the
+                # first refusal on a photograph abandons the rest of that
+                # photograph's work. Prose first, because it is the only one of
+                # the three anything downstream reads. WD14 second: local and
+                # deterministic, it fails only on a missing or corrupt file,
+                # which is one operator fix and worth stopping on. The hosted
+                # tagger last, because it is the one with a port, a timeout and
+                # a retry budget -- so its refusal blocks nothing that would
+                # have succeeded (design.md D7).
+                session, labels = _tagger(wired, flow)
+                _say(
+                    wired,
+                    run,
+                    "wd14",
+                    caption_wd14(run, name, session, labels, new_version=new_version),
+                )
+                hosted = _seam(
+                    wired.hosted_tagger, "hosted tagger", "tags the photograph"
+                )(flow)
+                # `None` is an absence rather than a failure: a flow declaring no
+                # arm this build can tag on simply has no hosted tag list, and a
+                # missing tag artifact is silent (design.md D20).
+                if hosted is not None:
+                    _say(
+                        wired,
+                        run,
+                        "tags",
+                        caption_tags(run, name, hosted, new_version=new_version),
+                    )
         elif verb == "sheet":
             for name, flow in flows.items():
                 sorter = _seam(wired.sorter, "sorter", "fills the sheet")(flow)
