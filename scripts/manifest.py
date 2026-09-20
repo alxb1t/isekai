@@ -19,6 +19,13 @@ for LFS objects, so a small file stored as a plain git blob has to be fetched an
 hashed -- and which route applies is stated per entry rather than sniffed, so a
 file silently moving out of LFS is a loud failure rather than a quiet switch.
 
+**The fetching route digests the artifact and nothing else**, which is two guards
+rather than one: a body shorter than the length the response declares is refused
+instead of hashed, and only the identity coding is accepted. Both close the same
+failure, which is the byte-identical rule breaking in the one direction nothing
+notices -- a real SHA-256 over the wrong bytes, written to a tracked file, which
+becomes a refusal of the *correct* artifact at whatever verifies it later.
+
 Operator tooling, not a package: nothing installs it, nothing imports it at
 runtime, and it is not on `convert.py`'s import graph. `pyproject.toml` declares
 `scripts/` a source root so the type checker and the suite see it the way a human
@@ -38,6 +45,14 @@ from typing import NamedTuple, TypedDict
 # The agent string every derivation reaches upstream with. One value, so a
 # publisher reading its logs sees one client rather than three.
 USER_AGENT = "isekai-derive"
+
+# The only coding a fetched digest may be taken over. A request naming none
+# accepts every one of them (RFC 7231 5.3.4) and `urllib` neither negotiates nor
+# decompresses, so an unasked-for gzip would be hashed in place of the artifact --
+# and the length check below could not catch it, because a coded response declares
+# its *coded* length. Latent rather than observed, and kept for that reason
+# (design.md D25).
+IDENTITY_ONLY = "identity"
 
 # Above this, a file is not a config and something is wrong with the spec. Every
 # non-LFS file pinned anywhere here is a few hundred kilobytes at most; the cap
@@ -130,12 +145,28 @@ def digest_of_url(url: str, cap: int) -> tuple[str, int]:
     statement about the artifact and not about the strategy. A file that overruns
     it is a mistake in a spec, and failing loudly is what stops a checkpoint
     arriving down a path meant for a config file.
+
+    A short read is refused rather than hashed. `read()` returns whatever arrived
+    before EOF, so a connection dropped mid-body yields a real SHA-256 over a
+    partial file -- which is a pin that refuses the correct artifact later, and
+    the one failure mode a derivation cannot self-detect. `curl` compares against
+    `Content-Length` and exits 18 on this; the standard library does not, so the
+    comparison is made here (design.md D25).
     """
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": USER_AGENT, "Accept-Encoding": IDENTITY_ONLY},
+    )
     with urllib.request.urlopen(request, timeout=300) as response:
+        declared = response.headers.get("Content-Length")
         body: bytes = response.read(cap + 1)
     if len(body) > cap:
         raise SystemExit(f"{url}: larger than {cap} bytes, which its spec declares")
+    if declared is not None and len(body) != int(declared):
+        raise SystemExit(
+            f"{url}: truncated -- read {len(body)} bytes of the {int(declared)} "
+            "the response declared; nothing was hashed, re-run the derivation"
+        )
     return hashlib.sha256(body).hexdigest(), len(body)
 
 

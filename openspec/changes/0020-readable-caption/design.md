@@ -406,32 +406,56 @@ tag list a decision about a model nobody opened. The successor requirement recor
 rather than deleting it — the claim is scoped to *where a build loads the model that tag list is the
 output layer of*, so the retired argument is preserved as the case the new rule does not cover.
 
-### D25 · `blob_digest` must demand the identity coding, and this was found by being bitten
+### D25 · `digest_of_url` hashes whatever arrived, and a dropped connection is a valid-looking digest
 
 **A defect in `scripts/manifest.py`, inherited rather than created, folded into v0.20 on the
-operator's call.** `digest_of_url()` sends `User-Agent` and nothing else. **A request that states no
-`Accept-Encoding` accepts every coding** — RFC 7231 §5.3.4 — so Hugging Face is free to answer one
-fetch compressed and the next one not, and `urllib` neither negotiates nor decompresses. Observed, on
-the CSV this change re-derives, during phase 3:
+operator's call. Its first diagnosis in this document was wrong and is corrected here rather than
+quietly replaced.**
+
+**What was observed.** Re-deriving `vocabulary.json` during phase 3 produced two different digests for
+`selected_tags.csv` on two runs, against one pinned revision:
 
 ```
-  one fetch      e6125b7c…  143049 bytes      the gzip stream, hashed in place of the file
-  every other    298633d9…  308468 bytes      the artifact, and what the tracked manifest says
+  308468 bytes   298633d9…   the artifact, and what the tracked manifest says
+  143049 bytes   e6125b7c…   written to the tracked manifest by a re-run
+   64311 bytes   b8be5a32…   written to the tracked manifest by the next re-run
 ```
 
-**It is worth breaking the "do not open a file this version never touches" rule for, and the reason is
-this version specifically.** The wrong digest is well-formed: it is a real SHA-256, it is written to a
-tracked manifest by the deriver whose whole contract is to be byte-identical, and the gate never
-re-derives so nothing goes red. Before v0.20 the consequence was a provisioning refusal on a 300 KB
-file. **After v0.20 the consumer is `boundary/wd14.py`**, which verifies both digests before its first
-inference — so a manifest poisoned by one unlucky fetch refuses the *correct* 467 MB model and names a
-fetch command that will re-download it and fail again. This version is what turns a stale pin into a
-loop.
+**The first diagnosis was compression, and it was wrong.** `curl` without `--compressed` had failed
+the same fetch with exit 18, *transferred a partial file*, and `--compressed` had succeeded — which
+reads like content negotiation and is not. Six instrumented fetches settle it: `Content-Encoding` is
+absent on every one, `Content-Length` is `308468` on every one, and the two short runs coincided with
+`RemoteDisconnected` and `SSLEOFError` from the same host. **The link was dropping mid-body.**
+`--compressed` succeeded because the compressed body is smaller and finished before the drop, not
+because compression was the mechanism.
 
-The fix is one header, `Accept-Encoding: identity`, on the one request the module makes. It is the only
-change to `manifest.py`, **and no other manifest is re-derived in this version** — `models.json` and
-`eval_models.json` are left exactly as they are, because re-deriving them is a different change with a
-different diff to review.
+**The defect is that nothing notices.** `response.read(cap + 1)` returns what arrived before EOF, and
+`digest_of_url` hashes it and returns. `curl` catches this — it compares against `Content-Length` and
+exits 18 — and `urllib` does not. So a dropped connection yields a **well-formed wrong digest**: a real
+SHA-256, a plausible byte count, written to a tracked file by the deriver whose whole contract is to be
+byte-identical, on a re-run the gate never performs.
+
+**Two guards, and only the first is the one that fired.**
+
+```
+  ① a body shorter than Content-Length is refused, never hashed   ← observed, twice
+  ② the request accepts only the identity coding                  ← latent, never observed
+```
+
+② is kept despite not being the fault, and it is not defensive padding: a request naming no acceptable
+coding accepts every coding (RFC 7231 §5.3.4), `urllib` neither negotiates nor decompresses, and
+`Content-Length` on a coded response is the *coded* length — so ① would pass while the digest is of a
+gzip stream. The two guards close different holes and neither subsumes the other.
+
+**Why this version is where they land.** Before v0.20 a poisoned pin cost a provisioning refusal on a
+300 KB file. **After v0.20 the consumer is `boundary/wd14.py`**, which verifies both digests before its
+first inference — so one unlucky fetch makes the build refuse the *correct* 467 MB model and name a
+command that re-downloads the same bytes and fails again. This version is what turns a stale pin into a
+loop, which is what earns the exception to *do not open a file this version never touches*.
+
+**Only `vocabulary.json` is re-derived here.** `models.json` and `eval_models.json` are left exactly as
+they are: re-deriving them is a different change with a different diff to review.
+
 
 ---
 

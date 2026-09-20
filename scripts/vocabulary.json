@@ -11,6 +11,14 @@
       "sources": [
         "https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/627aef95638667ddcaa3ac8ae625e88ea5b02f51/selected_tags.csv"
       ]
+    },
+    {
+      "dest": "wd14/model.onnx",
+      "sha256": "e6774bff34d43bd49f75a47db4ef217dce701c9847b546523eb85ff6dbba1db1",
+      "bytes": 467460978,
+      "sources": [
+        "https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/627aef95638667ddcaa3ac8ae625e88ea5b02f51/model.onnx"
+      ]
     }
   ]
 }

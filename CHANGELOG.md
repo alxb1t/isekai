@@ -63,10 +63,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   would have worked and would have made the refusal say *caption failed permanently* about the
   `wd14/` directory.
 
+- **`scripts/vocabulary.json` gains `wd14/model.onnx`** — same publisher, same revision as the CSV
+  already there, 467,460,978 bytes, digest read from its LFS object id so pinning it costs no
+  download. **The two are one artifact split in two**: row N of `selected_tags.csv` names output
+  neuron N of the graph, so a pair from different revisions mislabels every tag — silently, because
+  the vector has the right length and every name in it is a real tag. A test asserts both entries
+  resolve one revision of one repository, and a second asserts a mismatched pair fails it.
+- **`scripts/eval_licences.md` gains a record for the model**, read and dated on its own rather than
+  inherited from the CSV's row above it: Apache-2.0, the same grant, re-read 2026-09-20. The
+  section that said *"the tagger it is published beside is not pinned and is not loaded"* is
+  rewritten rather than left standing.
+- **Two guards on `scripts/manifest.py`'s `digest_of_url`, one of which fired during this phase.**
+  Twice, a connection dropped mid-body and the partial read was hashed and written to the tracked
+  manifest — 143049 and 64311 bytes of a 308468-byte file, each a real SHA-256 over the wrong bytes.
+  `curl` catches this and exits 18; `urllib` returns it without complaint. So a body shorter than
+  the response's declared `Content-Length` is now refused naming the shortfall, and the request
+  additionally accepts only the identity coding — latent rather than observed, and not subsumed by
+  the first, because a coded response declares its *coded* length. `models.json` and
+  `eval_models.json` are **not** re-derived here.
+
 ### Changed
 
 - **`pyproject.toml`, `README.md` and `CLAUDE.md` stop saying the gate is five commands.** Three
   separate prose claims counted it; all three now say six.
+- **`derive_vocabulary.py`'s docstring argued the opposite of what this version does**, in as many
+  words: *"the tagger is not here: this repository does not run it… a manifest that carried both
+  would make swapping the vocabulary a decision about a model nobody loads."* Rewritten to D18's
+  reason, with the retired argument kept rather than deleted — it names the case the new rule does
+  not cover.
+- **The living spec's `model-provisioning:vocabulary:tagger-model-is-not-included` is retired, and
+  inverted rather than dropped.** It forbade exactly this version's pin. Its successor,
+  `label-index-and-model-share-a-revision`, is a strictly stronger claim: the old scenario permitted
+  a `model.onnx` at any revision by any route and forbade only the manifest that could check it. The
+  two tests bound to the retired key are rebound to the new one, not deleted. The change's
+  `specs/model-provisioning/` delta was authored during the build; the cut omitted it (design.md
+  D24).
 
 ## [0.19.0] - 2026-09-20
 

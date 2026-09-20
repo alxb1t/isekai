@@ -64,19 +64,23 @@ one would have made swapping the list a decision about a model nobody opened.
 The system SHALL derive every manifest through one shared module carrying the entry types and both
 digest strategies — reading a published digest where the artifact is stored as a large file, and
 hashing the bytes where it is small enough to fetch — and each deriver SHALL continue to produce output
-that is byte-identical on a re-run. A deriver that hashes fetched bytes SHALL require the identity
-content coding, so that what it hashes is the artifact rather than a transfer representation of it.
+that is byte-identical on a re-run. A deriver that hashes fetched bytes SHALL digest the artifact
+itself and nothing else: it SHALL refuse a response whose body is shorter than the length that response
+declares, and SHALL require the identity content coding.
 
 Two derivers already share these names by import, which makes that structure load-bearing the moment a
 third arrives; the entry type is currently declared twice under one name with two different shapes, and
 a third shape is how that becomes a defect rather than an oddity. The byte-identical rule is what makes
 the extraction verifiable for nothing: re-run all three, and any difference is the refactor's fault.
 
-**A request that states no acceptable coding accepts every coding**, and a host is free to answer one
-fetch compressed and the next one not. A deriver that hashes whatever arrives therefore has a digest
-that depends on the weather, which is the byte-identical rule failing in the one direction nothing
-would notice: the wrong digest is well-formed, is written to a tracked file, and turns into a refusal
-of the correct artifact at the consumer that verifies it.
+**A digest of whatever arrived is not a digest of the artifact**, and the byte-identical rule fails
+here in the one direction nothing would notice: the wrong digest is a real SHA-256 with a plausible
+byte count, it is written to a tracked file, and it becomes a refusal of the *correct* artifact at
+whatever verifies it later. Two different things produce it. A connection dropped mid-body leaves a
+truncated read that the standard library returns without complaint, where a length comparison catches
+it. And a request naming no acceptable coding accepts every coding, so a host may answer one fetch
+compressed and the next one not — which the length comparison cannot catch, because a coded response
+declares its coded length.
 
 #### Scenario: the entry type is declared once
 - **Key:** `model-provisioning:derivation:entry-type-has-one-definition`
@@ -98,6 +102,13 @@ of the correct artifact at the consumer that verifies it.
 - **WHEN** a deriver is re-run against unchanged upstream state
 - **THEN** its manifest file is byte-identical to the committed one
 - **AND** any difference is surfaced as a change to be reviewed rather than applied silently
+
+#### Scenario: a truncated response is refused rather than digested
+- **Key:** `model-provisioning:derivation:a-truncated-fetch-is-refused`
+- **Layers:** unit
+- **WHEN** a deriver fetches an artifact and the body it receives is shorter than the declared length
+- **THEN** the derivation fails naming the shortfall
+- **AND** no digest is computed over the partial body
 
 #### Scenario: a fetched digest is of the artifact and not of a transfer encoding
 - **Key:** `model-provisioning:derivation:fetched-digest-demands-identity-encoding`

@@ -1,10 +1,16 @@
 """The vocabulary's manifest, held to the same rules as the graph's and the scorer's.
 
-One entry, pinned to an immutable revision and digested by fetching, because at
-roughly 300 KB the artifact is not stored as a large file and so publishes no
-digest to read. It reaches the tree through a manifest at all so that a fresh
-clone can fill a sheet: it used to arrive as a side effect of downloading a
-tagger this repository does not load (design.md D9).
+Two entries, and one artifact split in two: `selected_tags.csv` is the output
+layer of the `model.onnx` beside it, row N naming neuron N, so a pair at two
+revisions mislabels every tag with nothing downstream able to notice. That is why
+the revision the two share is asserted here rather than assumed (design.md D18,
+D24). Both are pinned to an immutable revision; the CSV's digest is obtained by
+fetching and hashing, because at roughly 300 KB it is not stored as a large file
+and so publishes none, and the graph's is read from its LFS object id.
+
+The manifest exists at all so that a fresh clone can fill a sheet: the CSV used to
+arrive as a side effect of downloading a tagger this repository did not load
+(design.md D9). It now loads it.
 """
 
 import copy
@@ -30,6 +36,13 @@ from isekai.shared.vocabulary import load as load_vocabulary
 from tests.fakes import FakeFetcher
 
 VOCABULARY = "wd14/selected_tags.csv"
+TAGGER = "wd14/model.onnx"
+
+# The immutable revision both halves resolve, and the repository that publishes
+# them. Written out rather than read back off the manifest, so the assertion is
+# against a value a human pinned and not against whatever the file happens to say.
+REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
+REPOSITORY = "SmilingWolf/wd-swinv2-tagger-v3"
 
 # The tracked note that sits beside the manifests. It is one record for every
 # artifact this repository pins, rather than one per manifest: a licence is a
@@ -41,8 +54,9 @@ LICENCES_PATH = Path(__file__).resolve().parent.parent / "scripts" / "eval_licen
 # driver that would have to be kept in step with this one.
 DRIVER_PATH = Path(__file__).resolve().parent.parent / "scripts" / "download_models.sh"
 
-# Extensions a model's weights arrive under. The vocabulary is published beside
-# one; the point of this manifest is that it declares the list and not the model.
+# Extensions a model's weights arrive under. Exactly one entry here carries one,
+# and which one is asserted: the graph the tag list is the output layer of. A
+# second would mean this manifest had started answering somebody else's question.
 WEIGHT_SUFFIXES = (".onnx", ".safetensors", ".pt", ".pth", ".bin")
 
 
@@ -125,11 +139,13 @@ def test_the_vocabulary_appears_only_in_its_own_manifest() -> None:
 def test_the_vocabulary_manifest_answers_one_question(
     vocabulary_manifest: Manifest,
 ) -> None:
-    assert [e["dest"] for e in vocabulary_manifest["entries"]] == [VOCABULARY]
+    assert [e["dest"] for e in vocabulary_manifest["entries"]] == [VOCABULARY, TAGGER]
 
 
-@pytest.mark.spec("model-provisioning:vocabulary:tagger-model-is-not-included")
-def test_the_vocabulary_manifest_declares_no_model_weights(
+@pytest.mark.spec(
+    "model-provisioning:vocabulary:label-index-and-model-share-a-revision"
+)
+def test_the_label_index_and_the_model_it_indexes_are_both_declared(
     vocabulary_manifest: Manifest,
 ) -> None:
     weights = [
@@ -137,20 +153,37 @@ def test_the_vocabulary_manifest_declares_no_model_weights(
         for entry in vocabulary_manifest["entries"]
         if entry["dest"].endswith(WEIGHT_SUFFIXES)
     ]
-    assert weights == []
+    assert weights == [TAGGER]
 
 
-@pytest.mark.spec("model-provisioning:vocabulary:tagger-model-is-not-included")
-def test_no_source_in_the_vocabulary_manifest_fetches_a_model_file(
+@pytest.mark.spec(
+    "model-provisioning:vocabulary:label-index-and-model-share-a-revision"
+)
+def test_every_vocabulary_source_resolves_one_revision_of_one_repository(
     vocabulary_manifest: Manifest,
 ) -> None:
-    weights = [
-        source
-        for entry in vocabulary_manifest["entries"]
-        for source in entry["sources"]
-        if source.endswith(WEIGHT_SUFFIXES)
+    for entry in vocabulary_manifest["entries"]:
+        for source in entry["sources"]:
+            assert source.startswith(
+                f"https://huggingface.co/{REPOSITORY}/resolve/{REVISION}/"
+            ), f"{entry['dest']} is not pinned to {REVISION}"
+
+
+@pytest.mark.spec(
+    "model-provisioning:vocabulary:label-index-and-model-share-a-revision"
+)
+def test_a_label_index_and_a_model_at_two_revisions_fail_the_check(
+    vocabulary_manifest: Manifest,
+) -> None:
+    (tagger,) = [e for e in vocabulary_manifest["entries"] if e["dest"] == TAGGER]
+    tagger["sources"] = [
+        source.replace(REVISION, "0" * 40) for source in tagger["sources"]
     ]
-    assert weights == []
+
+    with pytest.raises(AssertionError):
+        test_every_vocabulary_source_resolves_one_revision_of_one_repository(
+            vocabulary_manifest
+        )
 
 
 @pytest.mark.spec("model-provisioning:licences:vocabulary-terms-are-recorded")
@@ -163,8 +196,11 @@ def test_every_vocabulary_artifact_is_named_in_the_licence_record(
 
 
 @pytest.mark.spec("model-provisioning:licences:vocabulary-terms-are-recorded")
-def test_the_vocabularys_row_names_its_terms_its_source_and_the_date_read() -> None:
-    section = _section_naming(LICENCES_PATH.read_text(), VOCABULARY)
+@pytest.mark.parametrize("artifact", [VOCABULARY, TAGGER])
+def test_each_vocabulary_row_names_its_terms_its_source_and_the_date_read(
+    artifact: str,
+) -> None:
+    section = _section_naming(LICENCES_PATH.read_text(), artifact)
     terms = re.search(r"- \*\*Licence:\*\* (?P<terms>\S.*)", section)
     assert terms is not None and terms.group("terms").strip()
     read_at = re.search(
@@ -178,8 +214,15 @@ def test_the_vocabularys_row_names_its_terms_its_source_and_the_date_read() -> N
 
 
 def _section_naming(record: str, artifact: str) -> str:
-    """Return the one `###` section of the licence record that names `artifact`."""
-    sections = re.split(r"^### ", record, flags=re.MULTILINE)[1:]
+    """Return the one `###` section of the licence record that names `artifact`.
+
+    The closing summary table is excluded rather than searched. It names every
+    artifact by design -- it is the index over the records, not a record -- so
+    leaving it in would make "recorded in exactly one section" unsatisfiable for
+    all of them the moment a second artifact was added under the last heading.
+    """
+    body = record.split("\n## Summary", 1)[0]
+    sections = re.split(r"^### ", body, flags=re.MULTILINE)[1:]
     naming = [section for section in sections if artifact in section]
     assert len(naming) == 1, f"{artifact} is recorded in {len(naming)} sections"
     return naming[0]
@@ -205,7 +248,10 @@ def test_the_provisioner_plans_the_vocabulary_when_pointed_at_its_manifest(
 
     assert provision.main(["plan", str(tmp_path), str(VOCABULARY_MANIFEST_PATH)]) == 0
 
-    assert _targets(capsys.readouterr().out) == [str(tmp_path / VOCABULARY)]
+    assert _targets(capsys.readouterr().out) == [
+        str(tmp_path / VOCABULARY),
+        str(tmp_path / TAGGER),
+    ]
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:driver-provisions-the-manifest")

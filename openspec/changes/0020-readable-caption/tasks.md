@@ -4,7 +4,7 @@
 
 - [x] 1 — The gate learns to see the browser, and the `tagging` extra
 - [x] 2 — `run.py`: two layout names, two budget entries
-- [ ] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
+- [x] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
 - [ ] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
 - [ ] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 - [ ] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
@@ -97,14 +97,14 @@ under it (`design.md` D22).
 
 **Why here:** phase 4 verifies against this pin, so it must exist first.
 
-- [ ] 3.1 Add a second entry to `scripts/vocabulary.json` for `wd14/model.onnx`, same publisher and
+- [x] 3.1 Add a second entry to `scripts/vocabulary.json` for `wd14/model.onnx`, same publisher and
       same revision as the CSV already there: sha256
       `e6774bff34d43bd49f75a47db4ef217dce701c9847b546523eb85ff6dbba1db1`, 467460978 bytes, source
       `https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3/resolve/627aef95638667ddcaa3ac8ae625e88ea5b02f51/model.onnx`.
       **Leave `lfs` at its default `True`** — `digest_of()` routes an LFS object through
       `published_digest()`, which reads the object id from the API, so this costs no download.
       **Verify:** `shasum -a 256 models/wd14/model.onnx` matches the digest the manifest now records.
-- [ ] 3.1a **Rewrite `derive_vocabulary.py`'s module docstring, which currently argues the opposite.**
+- [x] 3.1a **Rewrite `derive_vocabulary.py`'s module docstring, which currently argues the opposite.**
       It says *"One entry, and deliberately one… the tagger is not here: this repository does not run
       it… a manifest that carried both would make swapping the vocabulary a decision about a model
       nobody loads."* **That premise is what this version falsifies**, and leaving it would put a
@@ -112,16 +112,16 @@ under it (`design.md` D22).
       Replace it with D18's reason: the two files are **one artifact split in two**, row N of the CSV
       naming neuron N, so a manifest holding one without the other cannot detect the mismatch that
       matters. **Do not delete the paragraph silently**; the new text must say what changed and why.
-- [ ] 3.2 Re-derive and prove the derivation is stable.
+- [x] 3.2 Re-derive and prove the derivation is stable.
       **Verify:** `uv run python scripts/derive_vocabulary.py && git diff --exit-code scripts/vocabulary.json`
       — exits 0, the file is byte-identical to what the script produces.
-- [ ] 3.3 A test asserting both entries carry the **same revision**, because row N of the CSV names
+- [x] 3.3 A test asserting both entries carry the **same revision**, because row N of the CSV names
       neuron N and a mismatched pair mislabels every tag silently (`design.md` D18). Bound
       `@pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")`.
       The manifest's existing home is `tests/test_vocabulary_manifest.py`, whose rules — an immutable
       revision, a digest and a byte count on every entry — the new entry must already satisfy.
       **Verify:** `uv run pytest tests/test_vocabulary_manifest.py -v`
-- [ ] 3.4 **The `model-provisioning` spec delta the cut omitted** (`design.md` D24). The living spec's
+- [x] 3.4 **The `model-provisioning` spec delta the cut omitted** (`design.md` D24). The living spec's
       `model-provisioning:vocabulary:tagger-model-is-not-included` forbids 3.1 in as many words, and
       two tests are bound to it. The delta is authored at
       `specs/model-provisioning/spec.md`: the vocabulary requirement `REMOVED` whole and a successor
@@ -136,21 +136,24 @@ under it (`design.md` D22).
       `…answers_one_question` (asserts `entries == [csv]`) and the provisioner's
       `…plans_the_vocabulary_when_pointed_at_its_manifest` (asserts one planned target).
       **Verify:** `npx @fission-ai/openspec@1.11.0 validate 0020-readable-caption --strict`
-- [ ] 3.5 `scripts/eval_licences.md`: `wd14/model.onnx` gains a record, because
+- [x] 3.5 `scripts/eval_licences.md`: `wd14/model.onnx` gains a record, because
       `test_every_vocabulary_artifact_is_named_in_the_licence_record` walks every manifest entry. Same
       repository and the same Apache-2.0 grant the CSV's row already cites, **re-read and re-dated**
       rather than inherited. The section's existing paragraph *"The tagger it is published beside is
       not pinned and is not loaded"* is now false and must be rewritten, not left.
       **Verify:** `uv run pytest tests/test_vocabulary_manifest.py -k licence -v`
-- [ ] 3.6 **`scripts/manifest.py`: `digest_of_url()` sends `Accept-Encoding: identity`**
-      (`design.md` D25). A request naming no acceptable coding accepts every coding, and a gzip
-      answer was hashed in place of the artifact during this phase — a well-formed wrong digest,
-      written to a tracked manifest, which after this version makes `boundary/wd14.py` refuse the
-      correct 467 MB model. One header, on the one request the module makes.
+- [x] 3.6 **`scripts/manifest.py`: `digest_of_url()` gets two guards** (`design.md` D25). Twice during
+      this phase a dropped connection left a short read that was hashed and written to the tracked
+      manifest — 143049 and 64311 bytes of a 308468-byte file, each a well-formed wrong digest.
+      **① Refuse a body shorter than the response's declared `Content-Length`**, naming the
+      shortfall; `curl` exits 18 on exactly this and `urllib` returns it silently. **② Send
+      `Accept-Encoding: identity`** — latent rather than observed, and not subsumed by ①, because a
+      coded response declares its *coded* length so ① would pass over a hashed gzip stream.
       **Only `vocabulary.json` is re-derived in this version**; `models.json` and `eval_models.json`
-      are not touched. Bind the test
-      `@pytest.mark.spec("model-provisioning:derivation:fetched-digest-demands-identity-encoding")`
-      and drive it through a fake opener rather than the network — the suite is offline.
+      are not touched. Two tests, bound
+      `@pytest.mark.spec("model-provisioning:derivation:a-truncated-fetch-is-refused")` and
+      `@pytest.mark.spec("model-provisioning:derivation:fetched-digest-demands-identity-encoding")`,
+      driven through a fake opener rather than the network — the suite is offline.
       **Verify:** `uv run pytest tests/test_derivation.py -v`
 
 **Gate green. Commit.**
