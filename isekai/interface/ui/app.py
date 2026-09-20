@@ -130,6 +130,11 @@ def create_app(batch: Batch) -> FastAPI:
             "width": held.width,
             "height": held.height,
             "caption": str(read_artifact(caption)["prose"]) if caption else None,
+            # Both lists ride on this payload rather than on endpoints of their
+            # own, and both are `null` where the artifact is absent -- which is
+            # three legitimate states, none of them a failure (design.md D20).
+            "wd14": _wd14(batch, held),
+            "tags": _tags(batch, held),
             "fields": fields,
             "readonly": draft is None,
             "draft": draft.name if draft else None,
@@ -195,6 +200,55 @@ def _summary(batch: Batch, held: Input) -> dict[str, Any]:
         "height": held.height,
         "status": "approved" if batch.approved_path(held) is not None else "draft",
     }
+
+
+def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
+    """Return the local tagger's scored list for the page, or None if absent.
+
+    Stored sorted by confidence descending, and passed through in that order:
+    the sort is what makes a wrong tag arrive pre-refuted by the right one above
+    it, so re-ordering here would throw away the reason the number is shown.
+    """
+    path = batch.wd14_path(held)
+    if path is None:
+        return None
+    found: Any = read_artifact(path)["tags"]
+    return [
+        {"tag": str(one["tag"]), "confidence": float(one["confidence"])}
+        for one in found
+    ]
+
+
+def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
+    """Return the hosted tagger's raw list, marked for what is committable.
+
+    **Membership is decided here, on the server, and that is the decision rather
+    than a convenience.** `/api/tags` answers a *fragment* query and there is no
+    membership endpoint; marking N tags from the browser would be N round trips
+    against a surface whose whole job is to be instant. The vocabulary is already
+    loaded in this process, and `count()` answers both questions at once -- in or
+    out, and how many posts back it.
+
+    **A tag outside the vocabulary carries no count**, and that absence is the
+    point: a chip with no number reads as the model's word rather than
+    Danbooru's, which is the scepticism that defuses the anchoring risk of
+    showing a list that is three-quarters unusable.
+    """
+    path = batch.tags_path(held)
+    if path is None:
+        return None
+    listed: Any = read_artifact(path)["tags"]
+    marked: list[dict[str, Any]] = []
+    for tag in listed:
+        posts = batch.vocabulary.count(str(tag))
+        marked.append(
+            {
+                "tag": str(tag),
+                "in_vocabulary": str(tag) in batch.vocabulary,
+                "posts": posts or None,
+            }
+        )
+    return marked
 
 
 def _budget(budget: TokenBudget) -> dict[str, Any]:

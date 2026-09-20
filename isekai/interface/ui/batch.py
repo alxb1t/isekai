@@ -31,6 +31,8 @@ from isekai.foundation.run import (
     CAPTIONS,
     FRAME_NAME,
     REVIEW,
+    TAGS,
+    WD14,
     Run,
     across,
     latest_artifact,
@@ -88,6 +90,23 @@ class Batch:
     def caption_path(self, held: Input) -> Path | None:
         """Return the highest caption for this input, or None if there is none."""
         return latest_artifact(held.run.directory(self.flow.id, CAPTIONS))
+
+    def wd14_path(self, held: Input) -> Path | None:
+        """Return the local tagger's scored list for this input, or None.
+
+        **`None` is never a refusal here**, and neither is it for `tags_path`
+        below. A run captioned before v0.20 has no such directory, a flow with no
+        `hosted` block never produces the sibling, and a failed tagger leaves
+        neither -- three legitimate absences, none of which may stop a review.
+        The tag lists are an aid, and a surface that refused to open because a
+        helper was missing would have confused an aid for an input
+        (design.md D20).
+        """
+        return latest_artifact(held.run.directory(self.flow.id, WD14))
+
+    def tags_path(self, held: Input) -> Path | None:
+        """Return the hosted tagger's raw list for this input, or None."""
+        return latest_artifact(held.run.directory(self.flow.id, TAGS))
 
     def draft_path(self, held: Input) -> Path | None:
         """Return the draft waiting for this input, or None once it is approved."""

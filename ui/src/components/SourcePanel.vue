@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import CaptionPanel from './CaptionPanel.vue'
 import PhotoFrame from './PhotoFrame.vue'
+import TagChip from './TagChip.vue'
+import type { OfferedTag, ScoredTag } from '../types'
 
 /* Owns the 492/620px width rule: one rule, two shapes, no second layout. The
    photo always fills its column's width and the form column absorbs the
@@ -12,12 +14,34 @@ const props = defineProps<{
   height: number
   photo: string
   caption: string | null
+  /* Both null where the artifact is absent, and an absent list draws nothing --
+     no panel, no message. Three ways it is legitimately missing (a run
+     captioned before v0.20, a flow with no hosted block, a failed tagger) and
+     none of them may interrupt a review; a line explaining an absence the
+     operator caused is chrome on the busiest pane in the surface
+     (design.md D20). */
+  wd14?: ScoredTag[] | null
+  tags?: OfferedTag[] | null
   loading?: boolean
 }>()
 
 defineEmits<{ open: [] }>()
 
 const landscape = computed(() => props.width > props.height)
+
+/* WD14 first, JoyCaption second: the order the pipeline produces them in, and
+   it puts the usable list nearer the prose. The local tagger's tags are in the
+   vocabulary by construction -- the CSV it is scored against IS the vocabulary
+   -- while roughly three-quarters of the hosted list cannot be committed at all
+   (design.md D1). */
+const scored = computed(() => props.wd14 ?? [])
+
+const offered = computed(() => props.tags ?? [])
+
+/* Two digits, because the panel's job is to make `black hair 0.31` sitting
+   under `brown hair 0.91` self-refuting, and a third digit adds nothing to that
+   comparison. */
+const confidence = (value: number): string => value.toFixed(2)
 
 /* `ref="source"` on a component hands back the component, not its element, and
    `Alt+→` has to focus and scroll the real one. */
@@ -51,5 +75,43 @@ defineExpose({
       @open="$emit('open')"
     />
     <CaptionPanel :prose="caption" :loading="loading" />
+    <section v-if="scored.length" class="caption">
+      <div class="source__head">
+        <span class="kicker">③ scored tags</span>
+        <span class="source__meta mono">{{ scored.length }} above 0.15</span>
+      </div>
+      <!-- `row__tags` is the sheet row's own chip layout, reused rather than
+           restated: D21's constraint is no new component, colour, spacing or
+           type step outside what v0.18 shipped, and a second flex-wrap rule
+           five pixels apart is exactly the drift it forbids. -->
+      <div class="row__tags">
+        <TagChip
+          v-for="one in scored"
+          :key="one.tag"
+          :tag="`${one.tag} ${confidence(one.confidence)}`"
+          readonly
+        />
+      </div>
+    </section>
+    <section v-if="offered.length" class="caption">
+      <div class="source__head">
+        <span class="kicker">③ offered tags</span>
+        <span class="source__meta mono">
+          {{ offered.filter((one) => one.in_vocabulary).length }} of
+          {{ offered.length }} in vocabulary
+        </span>
+      </div>
+      <div class="row__tags">
+        <!-- A chip with no count is a tag the vocabulary does not carry, so it
+             cannot be committed to any field. The missing number is the mark:
+             it reads as the model's word rather than Danbooru's. -->
+        <TagChip
+          v-for="one in offered"
+          :key="one.tag"
+          :tag="one.posts === null ? one.tag : `${one.tag} ${one.posts}`"
+          readonly
+        />
+      </div>
+    </section>
   </aside>
 </template>

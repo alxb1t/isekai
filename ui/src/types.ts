@@ -26,11 +26,34 @@ export interface Budget {
   overhead: number
 }
 
+/* One scored tag from the local tagger. The confidence is shown on the chip
+   because a wrong tag sorted below a right one refutes itself -- `black hair
+   0.31` under `brown hair 0.91` needs no explanation. */
+export interface ScoredTag {
+  tag: string
+  confidence: number
+}
+
+/* One tag from the hosted tagger, marked server-side for what can actually be
+   committed. `posts` is null where the tag is outside the vocabulary, and the
+   missing number is the signal: a chip with no count reads as the model's word
+   rather than Danbooru's. */
+export interface OfferedTag {
+  tag: string
+  in_vocabulary: boolean
+  posts: number | null
+}
+
 export interface InputDetail {
   id: string
   width: number
   height: number
   caption: string | null
+  /* Null where the artifact is absent, which is never a failure: a run
+     captioned before v0.20, a flow with no hosted block, or a tagger that
+     failed. The panel simply is not drawn. */
+  wd14: ScoredTag[] | null
+  tags: OfferedTag[] | null
   fields: Record<string, string[]>
   readonly: boolean
   draft: string | null

@@ -169,6 +169,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   migration and nothing to detect: an old run simply lacks the two directories, which is the same
   state as a run whose caption has not been produced.
 
+- **The source pane shows the caption one sentence to a block, and two read-only tag lists under
+  it.** `sentencesOf()` joins `paragraphsOf()` in `ui/src/caption.ts` — the split is the browser's,
+  because sending prose to the server to be split and back would be a round trip for a regex
+  (design.md D10). It is **naive against abbreviations** and knowingly so: the prose is constrained
+  by briefing to plain description of a person, and the acceptance names the edge rather than
+  guarding it with a list of exceptions nobody can test.
+- **WD14 first, JoyCaption second** — the order the pipeline produces them in, which also puts the
+  usable list nearer the prose. WD14 chips carry the confidence to two digits, so `black hair 0.31`
+  arrives under `brown hair 0.91` and refutes itself. JoyCaption chips carry the post count where
+  the tag is in the vocabulary and **nothing where it is not**; the missing number is the mark,
+  because a chip with no count reads as the model's word rather than Danbooru's.
+- **Membership is decided server-side**, in `read_input`'s payload. `/api/tags` answers a *fragment*
+  query and there is no membership endpoint, so marking N tags from the browser would be N round
+  trips against a surface whose job is to be instant — and the vocabulary is already loaded in that
+  process. No new endpoint; both lists ride on `inputDetail()`.
+- **An absent tag artifact is `null` and draws nothing** — no panel, no message, never a refusal.
+  Three legitimate absences (a run captioned before v0.20, a flow with no `hosted` block, a failed
+  tagger), and a line explaining one the operator caused would be chrome on the busiest pane.
+  `batch.py`'s startup refusal order does not change: nothing new can block the port being bound.
+- **No new component, colour, spacing or type step** (design.md D21). Both lists are `TagChip` and
+  `SourcePanel` already owned the column; the chip rows reuse `row__tags`, the sheet row's own
+  layout, rather than restating a flex-wrap rule five pixels away from it.
+
 ### Changed
 
 - **The resume assertion now counts five doubles, not three**, and two of them are the taggers.

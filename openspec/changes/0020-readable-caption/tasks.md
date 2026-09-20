@@ -9,7 +9,7 @@
 - [x] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 - [x] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
 - [x] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
-- [ ] 8 — The surface: sentences, two chip lists, and the payload that feeds them
+- [x] 8 — The surface: sentences, two chip lists, and the payload that feeds them
 - [ ] 9 — The documents this version makes false
 - [ ] 10 — ⚠️ **HUMAN · FREE** — the three artifacts end to end, on one synthetic portrait
 - [ ] 11 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
@@ -266,20 +266,20 @@ checks that it compiles and that its props typecheck; nothing mechanical checks 
 a sentence broke in the right place. That is phase 10 and phase 11's job, and it is stated here so
 nobody reads a green gate as proof of more.
 
-- [ ] 8.1 `isekai/interface/ui/batch.py`: two resolvers beside `caption_path()` — `tags_path(held)` and
+- [x] 8.1 `isekai/interface/ui/batch.py`: two resolvers beside `caption_path()` — `tags_path(held)` and
       `wd14_path(held)`, each `latest_artifact(held.run.directory(self.flow.id, …))`. **An absent one
       returns `None` and is never a refusal** (`design.md` D20). Startup's refusal order does not
       change: no new thing may block the port being bound.
-- [ ] 8.2 `isekai/interface/ui/app.py`: `read_input`'s payload gains `tags: [{tag, in_vocabulary,
+- [x] 8.2 `isekai/interface/ui/app.py`: `read_input`'s payload gains `tags: [{tag, in_vocabulary,
       posts}] | null` and `wd14: [{tag, confidence}] | null`. **Membership is marked server-side**
       (`design.md` D6 of the grilling record — `/api/tags` answers a fragment query and there is no
       membership endpoint; marking N tags must not mean N round trips). No new endpoint.
-- [ ] 8.3 `ui/src/types.ts`: the two new payload types. `ui/src/api.ts`: nothing new — the data rides
+- [x] 8.3 `ui/src/types.ts`: the two new payload types. `ui/src/api.ts`: nothing new — the data rides
       on `inputDetail()`.
-- [ ] 8.4 `ui/src/caption.ts`: `sentencesOf(prose)`, beside `paragraphsOf()`. Split on sentence-ending
+- [x] 8.4 `ui/src/caption.ts`: `sentencesOf(prose)`, beside `paragraphsOf()`. Split on sentence-ending
       punctuation followed by whitespace; the naive-against-abbreviations edge is known and accepted
       (`design.md` D2, and phase 11 looks for it).
-- [ ] 8.5 `ui/src/components/CaptionPanel.vue`: render one sentence to a block. `SourcePanel.vue`: two
+- [x] 8.5 `ui/src/components/CaptionPanel.vue`: render one sentence to a block. `SourcePanel.vue`: two
       `TagChip` lists stacked below the prose, **always visible, read-only, in this order — WD14 first,
       JoyCaption second**, matching the order the pipeline produces them and putting the usable list
       nearer the prose. WD14 chips carry the confidence; JoyCaption chips carry the post count where
@@ -287,7 +287,7 @@ nobody reads a green gate as proof of more.
       model's word rather than Danbooru's, which is the scepticism that defuses the anchoring risk.
       **No new component, colour, spacing or type step** (`design.md` D21). If one proves necessary,
       that is a halt and a finding.
-- [ ] 8.6 **Verify:** `uv run pytest tests/test_ui_api.py -v` with bindings
+- [x] 8.6 **Verify:** `uv run pytest tests/test_ui_api.py -v` with bindings
       `ui:source:both-tag-lists-are-shown-raw-and-read-only`,
       `ui:source:vocabulary-membership-is-marked-by-the-server`,
       `ui:source:an-absent-tag-artifact-is-silent` — the last asserting the payload carries `null` and

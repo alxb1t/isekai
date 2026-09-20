@@ -36,10 +36,15 @@ from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.pipeline.sheet import FakeSorter  # noqa: E402
+from isekai.pipeline.tagging import (  # noqa: E402
+    FakeTagger,
+    caption_tags,
+    caption_wd14,
+)
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import caption, sheet  # noqa: E402
+from tests.stages import caption, fake_wd14, sheet  # noqa: E402
 
 FLOW = "summon-v1"
 
@@ -77,14 +82,24 @@ def made(wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary) 
     return run
 
 
-@pytest.fixture
-def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
-    """Return a client over the surface, with a stand-in for the built bundle."""
+def _client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
+    """Return a client over the surface, with a stand-in for the built bundle.
+
+    A function as well as a fixture, because `establish()` resolves every
+    artifact path at startup -- so a test that writes a tag artifact has to write
+    it *before* the batch is established, which a fixture ordering cannot express.
+    """
     dist = tmp_path / "dist"
-    dist.mkdir()
+    dist.mkdir(exist_ok=True)
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
     return TestClient(create_app(batch))
+
+
+@pytest.fixture
+def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
+    """Return a client over the surface, with a stand-in for the built bundle."""
+    return _client(wired, made, tmp_path)
 
 
 # --- the batch, and the payload the page is drawn from ------------------------
@@ -249,3 +264,100 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     assert body["approved_at"] is not None
     assert body["fields"] == expected
     assert not (made.directory(FLOW, REVIEW) / "001.draft.json").exists()
+
+
+# --- the two tag lists the source pane shows ----------------------------------
+
+
+@pytest.mark.spec("ui:source:both-tag-lists-are-shown-raw-and-read-only")
+def test_the_payload_carries_both_lists_whole_and_in_the_order_produced(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    session, labels = fake_wd14().double
+    caption_wd14(made, FLOW, session, labels)
+    caption_tags(
+        made,
+        FLOW,
+        FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
+    )
+
+    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+
+    assert body["wd14"] == [{"tag": "1girl", "confidence": 0.9}]
+    # Whole and unnarrowed: `fashion photography` is not in the vocabulary and is
+    # still on the page, because narrowing is stage ②'s job and seeing behind it
+    # is the point (design.md D1).
+    assert [one["tag"] for one in body["tags"]] == [
+        "brown hair",
+        "fashion photography",
+        "blue eyes",
+    ]
+
+
+@pytest.mark.spec("ui:source:vocabulary-membership-is-marked-by-the-server")
+def test_membership_and_post_counts_are_decided_server_side(
+    wired: Wiring, made: Run, tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    # Marked here, not in the browser: `/api/tags` answers a *fragment* query and
+    # there is no membership endpoint, so marking N tags client-side would be N
+    # round trips. The vocabulary is already in this process.
+    caption_tags(
+        made,
+        FLOW,
+        FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
+    )
+
+    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    marked = {one["tag"]: one for one in body["tags"]}
+
+    assert marked["brown hair"]["in_vocabulary"] is True
+    assert marked["brown hair"]["posts"] == vocabulary.count("brown hair")
+    assert marked["blue eyes"]["in_vocabulary"] is True
+    # Out of the vocabulary, and carrying **no** count. The missing number is the
+    # mark: a chip with no count reads as the model's word rather than
+    # Danbooru's, which is the scepticism that defuses the anchoring risk.
+    assert marked["fashion photography"]["in_vocabulary"] is False
+    assert marked["fashion photography"]["posts"] is None
+
+
+@pytest.mark.spec("ui:source:an-absent-tag-artifact-is-silent")
+def test_an_input_with_neither_artifact_carries_null_and_still_serves(
+    client: TestClient, made: Run
+) -> None:
+    # The `made` fixture captions and fills a sheet and tags nothing, which is
+    # exactly a run captioned before v0.20. Both are null, the surface answers
+    # 200, and nothing anywhere is a refusal (design.md D20).
+    response = client.get(f"/api/inputs/{made.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["wd14"] is None
+    assert body["tags"] is None
+    assert body["caption"] == "Dark brown hair, brown eyes."
+
+
+@pytest.mark.spec("ui:source:an-absent-tag-artifact-is-silent")
+def test_one_list_present_and_the_other_absent_is_also_silent(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    # The state every `summon-v1` run is in: a WD14 list and no hosted one,
+    # because the flow declares no arm to tag on (design.md D3).
+    session, labels = fake_wd14().double
+    caption_wd14(made, FLOW, session, labels)
+
+    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+
+    assert body["wd14"] is not None
+    assert body["tags"] is None
+
+
+@pytest.mark.spec("ui:source:the-caption-is-shown-one-sentence-to-a-block")
+def test_the_caption_reaches_the_page_whole_and_the_browser_splits_it(
+    client: TestClient, made: Run
+) -> None:
+    # The split is `ui/src/caption.ts`'s and the server does not do it: sending
+    # prose to be split and back would be a round trip for a regex
+    # (design.md D10). What the server owes is the prose, unmodified.
+    body = client.get(f"/api/inputs/{made.id}").json()
+
+    assert body["caption"] == "Dark brown hair, brown eyes."
