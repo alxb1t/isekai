@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import CaptionPanel from './CaptionPanel.vue'
 import PhotoFrame from './PhotoFrame.vue'
 import TagChip from './TagChip.vue'
+import { grouped } from '../caption'
 import type { OfferedTag, ScoredTag } from '../types'
 
 /* Owns the 492/620px width rule: one rule, two shapes, no second layout. The
@@ -77,8 +78,12 @@ defineExpose({
     <CaptionPanel :prose="caption" :loading="loading" />
     <section v-if="scored.length" class="caption">
       <div class="source__head">
-        <span class="kicker">③ scored tags</span>
-        <span class="source__meta mono">{{ scored.length }} above 0.15</span>
+        <span class="kicker">scored tags</span>
+        <!-- The count, not the floor. `FLOOR` lives in `boundary/wd14.py` and
+             its comment says to move it the day a flow wants a different one;
+             printing the number here would have the panel state a threshold no
+             artifact was filtered at, with nothing failing. -->
+        <span class="source__meta mono">{{ scored.length }} above the floor</span>
       </div>
       <!-- `row__tags` is the sheet row's own chip layout, reused rather than
            restated: D21's constraint is no new component, colour, spacing or
@@ -95,7 +100,7 @@ defineExpose({
     </section>
     <section v-if="offered.length" class="caption">
       <div class="source__head">
-        <span class="kicker">③ offered tags</span>
+        <span class="kicker">offered tags</span>
         <span class="source__meta mono">
           {{ offered.filter((one) => one.in_vocabulary).length }} of
           {{ offered.length }} in vocabulary
@@ -108,7 +113,7 @@ defineExpose({
         <TagChip
           v-for="one in offered"
           :key="one.tag"
-          :tag="one.posts === null ? one.tag : `${one.tag} ${one.posts}`"
+          :tag="one.posts === null ? one.tag : `${one.tag} ${grouped(one.posts)}`"
           readonly
         />
       </div>

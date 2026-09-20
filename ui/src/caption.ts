@@ -29,3 +29,11 @@ export function sentencesOf(prose: string | null): string[] {
 export function wordsOf(prose: string | null): number {
   return (prose ?? '').split(/\s+/).filter(Boolean).length
 }
+
+/* One spelling of a Danbooru post count, because two panes show them: the
+   autocomplete dropdown and the offered-tag chips beside the prose. Raw in one
+   and grouped in the other made the same number read as `6000000` and
+   `6,000,000` two panes apart. */
+export function grouped(posts: number): string {
+  return posts.toLocaleString('en-GB')
+}

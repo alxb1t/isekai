@@ -176,9 +176,51 @@ def test_the_fetch_declares_that_only_the_identity_coding_is_acceptable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     seen: list[dict[str, str]] = []
-    monkeypatch.setattr(shared.urllib.request, "urlopen", _opener(b"whole", {}, seen))
+    monkeypatch.setattr(
+        shared.urllib.request,
+        "urlopen",
+        _opener(b"whole", {"Content-Length": "5"}, seen),
+    )
 
     shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
 
     # urllib title-cases every header name it is handed.
     assert seen == [{"User-agent": shared.USER_AGENT, "Accept-encoding": "identity"}]
+
+
+@pytest.mark.spec(
+    "model-provisioning:derivation:fetched-digest-demands-identity-encoding"
+)
+def test_a_coded_response_is_refused_even_though_identity_was_asked_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The ask is not the guard. A server may ignore `Accept-Encoding`, and a
+    # gzip stream has the right `Content-Length` for itself -- so the truncation
+    # check would pass over it and the digest would be of the compressed bytes.
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        shared.urllib.request,
+        "urlopen",
+        _opener(b"gzipped", {"Content-Length": "7", "Content-Encoding": "gzip"}, seen),
+    )
+
+    with pytest.raises(SystemExit) as refused:
+        shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
+
+    assert "gzip" in str(refused.value)
+
+
+@pytest.mark.spec("model-provisioning:derivation:a-truncated-fetch-is-refused")
+def test_a_response_declaring_no_length_is_refused_rather_than_trusted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Without a declared length there is nothing to compare a short read
+    # against, so the truncation guard silently opts out. On a route whose whole
+    # contract is byte-identical re-derivation, that is worth refusing.
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(shared.urllib.request, "urlopen", _opener(b"whole", {}, seen))
+
+    with pytest.raises(SystemExit) as refused:
+        shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
+
+    assert "Content-Length" in str(refused.value)

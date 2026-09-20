@@ -12,8 +12,8 @@ are checking that content survived untouched.
 """
 
 import base64
+import dataclasses
 import io
-import json
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +21,17 @@ import pytest
 
 from isekai.boundary import provision
 from isekai.boundary.claude_cli import CliFailure, constant_record
-from isekai.foundation.flow import load_flow
+from isekai.boundary.wd14 import LocalTagger
+from isekai.foundation.flow import Flow, Hosted, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import TAGS, WD14, Run, open_run, record_failure
+from isekai.foundation.run import (
+    TAGS,
+    WD14,
+    Run,
+    open_run,
+    read_artifact,
+    record_failure,
+)
 from isekai.interface import wiring
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
@@ -41,10 +49,8 @@ from isekai.pipeline.tagging import (
 )
 from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
-from tests.stages import INDEX, Always, FakeSession, fake_wd14
+from tests.stages import FAKE_PINS, Always, FakeSession, fake_tagger, fake_wd14
 from tests.transports import FakeTransport
-
-from isekai.boundary.wd14 import read_labels  # isort: skip
 
 FLOW = "summon-open-v1"
 
@@ -57,16 +63,20 @@ def run(tmp_path: Path) -> Run:
     return open_run(photo, tmp_path / "runs")
 
 
-def _artifact(path: Path) -> dict[str, Any]:
-    """Return one written artifact, parsed."""
-    parsed: Any = json.loads(path.read_text())
-    return parsed
-
-
 def _producer(path: Path) -> dict[str, Any]:
     """Return one written artifact's producer record."""
-    producer: Any = _artifact(path)["producer"]
+    producer: Any = read_artifact(path)["producer"]
     return producer
+
+
+@pytest.fixture
+def local() -> LocalTagger:
+    """Return one opened fake tagger: row 1 of the index is `1girl` at 0.9.
+
+    Stated once rather than at six call sites -- the vector and the index are
+    the ordering contract, and six spellings of it are six places to drift.
+    """
+    return fake_tagger()
 
 
 def _answer(text: str) -> FakeTransport:
@@ -126,7 +136,7 @@ def test_the_hosted_artifact_is_a_list_of_tags_under_the_flow(run: Run) -> None:
 
     assert path is not None
     assert path.parent == run.directory(FLOW, TAGS)
-    assert _artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
+    assert read_artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
 
 
 @pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
@@ -143,7 +153,7 @@ def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
     path = caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
 
     assert path is not None
-    assert _artifact(path)["tags"] == answered.split(", ")
+    assert read_artifact(path)["tags"] == answered.split(", ")
 
 
 @pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
@@ -155,20 +165,18 @@ def test_whitespace_is_stripped_and_nothing_else_is(run: Run) -> None:
     assert path is not None
     # Empty elements go, because an empty chip is not a tag anyone offered. The
     # order is the model's and no tag is rewritten.
-    assert _artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
+    assert read_artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
 
 
 @pytest.mark.spec("tagging:output:artifact-is-a-list-of-tags")
 def test_the_local_artifact_is_scored_and_sorted_under_its_own_directory(
-    run: Run,
+    run: Run, local: LocalTagger
 ) -> None:
-    labels = read_labels(INDEX)
-
-    path = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+    path = caption_wd14(run, FLOW, lambda: local)
 
     assert path is not None
     assert path.parent == run.directory(FLOW, WD14)
-    assert _artifact(path)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
+    assert read_artifact(path)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
 
 
 # --- failure ------------------------------------------------------------------
@@ -193,7 +201,7 @@ def test_a_single_comma_is_enough_and_content_is_never_judged(run: Run) -> None:
     path = caption_tags(run, FLOW, OllamaTagger("m", _answer("nonsense, drivel")))
 
     assert path is not None
-    assert _artifact(path)["tags"] == ["nonsense", "drivel"]
+    assert read_artifact(path)["tags"] == ["nonsense", "drivel"]
 
 
 @pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
@@ -240,50 +248,50 @@ def test_a_second_pass_over_a_complete_hosted_artifact_makes_no_call(
 
 @pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")
 def test_a_second_pass_over_a_complete_local_artifact_opens_no_session(
-    run: Run,
+    run: Run, local: LocalTagger
 ) -> None:
-    labels = read_labels(INDEX)
-    session = FakeSession([0.0, 0.9, 0.0])
-    assert caption_wd14(run, FLOW, session, labels) is not None
+    assert caption_wd14(run, FLOW, lambda: local) is not None
 
-    assert caption_wd14(run, FLOW, session, labels) is None
-    assert session.calls == 1
+    assert caption_wd14(run, FLOW, lambda: local) is None
+    assert isinstance(local.session, FakeSession)
+    assert local.session.calls == 1
 
 
 @pytest.mark.spec("tagging:independence:each-tagger-resumes-on-its-own")
-def test_a_failed_hosted_tagger_leaves_the_local_artifact_complete(run: Run) -> None:
-    labels = read_labels(INDEX)
-    local = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+def test_a_failed_hosted_tagger_leaves_the_local_artifact_complete(
+    run: Run, local: LocalTagger
+) -> None:
+    written = caption_wd14(run, FLOW, lambda: local)
 
     with pytest.raises(Refusal):
         caption_tags(run, FLOW, OllamaTagger("m", _answer("prose, ".replace(", ", ""))))
 
-    assert local is not None and local.is_file()
-    assert _artifact(local)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
+    assert written is not None and written.is_file()
+    assert read_artifact(written)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
     # And the complete one is not re-run to repair the failed one.
-    assert caption_wd14(run, FLOW, FakeSession([1.0, 1.0, 1.0]), labels) is None
+    assert caption_wd14(run, FLOW, lambda: fake_tagger([1.0, 1.0, 1.0])) is None
 
 
 @pytest.mark.spec("tagging:independence:each-tagger-resumes-on-its-own")
-def test_the_two_taggers_write_into_two_directories(run: Run) -> None:
-    labels = read_labels(INDEX)
-
-    local = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+def test_the_two_taggers_write_into_two_directories(
+    run: Run, local: LocalTagger
+) -> None:
+    scored = caption_wd14(run, FLOW, lambda: local)
     hosted = caption_tags(run, FLOW, FakeTagger())
 
-    assert local is not None and hosted is not None
-    assert local.parent != hosted.parent
-    assert {local.parent.name, hosted.parent.name} == {WD14, TAGS}
+    assert scored is not None and hosted is not None
+    assert scored.parent != hosted.parent
+    assert {scored.parent.name, hosted.parent.name} == {WD14, TAGS}
 
 
 # --- provenance ---------------------------------------------------------------
 
 
 @pytest.mark.spec("tagging:provenance:the-local-tagger-declares-its-pin")
-def test_the_local_producer_claims_a_pin_and_names_both_digests(run: Run) -> None:
-    labels = read_labels(INDEX)
-
-    path = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+def test_the_local_producer_claims_a_pin_and_names_both_digests(
+    run: Run, local: LocalTagger
+) -> None:
+    path = caption_wd14(run, FLOW, lambda: local)
 
     assert path is not None
     producer = _producer(path)
@@ -292,18 +300,21 @@ def test_the_local_producer_claims_a_pin_and_names_both_digests(run: Run) -> Non
     # (design.md D17).
     assert producer["pinned"] is True
     assert producer["implementation"] == "wd14"
+    # **The digests the session was verified against**, carried through from
+    # `verified_paths`, not re-read from the manifest at write time. They are the
+    # fake's, which is what proves they came from the tagger rather than from
+    # `scripts/vocabulary.json` -- a re-read would have recorded the real ones.
+    assert producer["artifacts"] == FAKE_PINS
 
-    committed = {
-        entry["dest"]: entry["sha256"]
-        for entry in provision.load_manifest(provision.VOCABULARY_MANIFEST_PATH)[
-            "entries"
-        ]
-    }
-    # Both, because either alone proves nothing: the graph's bytes say nothing
-    # about which names its neurons carry.
-    assert producer["artifacts"] == {
-        dest: {"sha256": digest} for dest, digest in committed.items()
-    }
+
+@pytest.mark.spec("tagging:provenance:the-local-tagger-declares-its-pin")
+def test_the_real_pins_are_the_two_the_manifest_commits(tmp_path: Path) -> None:
+    # And the shape the fake stands in for: both entries the vocabulary manifest
+    # declares, each with the digest it commits. Either alone is half a claim.
+    manifest = provision.load_manifest(provision.VOCABULARY_MANIFEST_PATH)
+
+    assert set(FAKE_PINS) == {entry["dest"] for entry in manifest["entries"]}
+    assert all(set(pin) == {"sha256"} for pin in FAKE_PINS.values())
 
 
 @pytest.mark.spec("tagging:provenance:the-hosted-tagger-records-its-prompt-digest")
@@ -355,7 +366,7 @@ def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
     # gets a tagger, none of them is refused, and **no flow is ever read** -- the
     # local tagger resolves through no manifest key, because it is a file this
     # build pins and there is no flow for which it would be wrong (design.md D3).
-    opened = FakeSession([0.0, 0.9, 0.0]), read_labels(INDEX)
+    opened = fake_tagger()
     monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
     resolved = {
@@ -405,8 +416,11 @@ def test_two_flows_on_two_arms_each_get_their_own_hosted_tagger() -> None:
     assert isinstance(hosted, OllamaTagger)
     assert hosted.model == "joycaption-beta-one-q4k"
     assert default is None
-    # And both get a local tagger, resolved through no manifest key at all.
-    assert wiring.HOSTED_TAGGERS.keys() == {"ollama"}
+    # `claude-cli` is in the table and maps to nothing, which is not the same as
+    # being absent from it: an arm this build has never heard of must name what
+    # it does carry rather than resolve to silence.
+    assert wiring.HOSTED_TAGGERS.keys() == {"claude-cli", "ollama"}
+    assert wiring.HOSTED_TAGGERS["claude-cli"](load_flow("summon-v1")) is None
 
 
 @pytest.mark.spec("tagging:order:a-late-failure-leaves-the-earlier-artifacts-complete")
@@ -449,3 +463,78 @@ def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
     assert (run.directory(flow, WD14) / "001.json").is_file()
     assert not list(run.directory(flow, TAGS).glob("001.json"))
     assert (run.directory(flow, TAGS) / "001.error.1.permanent.json").is_file()
+
+
+@pytest.mark.spec("cli:resolution:uncomposed-seam-refuses-by-name")
+def test_an_arm_this_build_has_no_tagger_for_refuses_naming_what_it_carries(
+    tmp_path: Path,
+) -> None:
+    # The reason `hosted_tagger_for` goes through `_resolve` rather than a
+    # `.get()`: silence is the right answer for "this arm has no tagger" and the
+    # wrong one for "nobody has heard of this arm", and only a table tells them
+    # apart. Without the table an unknown arm resolves to `None`, and D20 then
+    # makes that silence unreportable anywhere by design.
+    declared = load_flow("summon-open-v1")
+    unknown = dataclasses.replace(
+        declared,
+        hosted=dataclasses.replace(_hosted(declared), implementation="vllm"),
+    )
+
+    with pytest.raises(Refusal) as refused:
+        wiring.hosted_tagger_for(unknown)
+
+    message = str(refused.value)
+    assert "vllm" in message
+    assert "ollama" in message
+
+
+def _hosted(flow: Flow) -> Hosted:
+    """Return `flow`'s hosted block, narrowing away an absence a fixture rules out."""
+    assert flow.hosted is not None
+    return flow.hosted
+
+
+@pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")
+def test_a_complete_local_artifact_is_not_paid_for_by_opening_the_graph(
+    run: Run, local: LocalTagger
+) -> None:
+    # The whole reason the seam is a thunk. Opening the tagger hashes 467 MB and
+    # loads a graph; a run whose list is already written must not pay for that
+    # to return `None`, and a completed run must still resume on a machine that
+    # has since emptied `models/` (design.md D14).
+    assert caption_wd14(run, FLOW, lambda: local) is not None
+
+    def refuse() -> LocalTagger:
+        raise AssertionError("the completed stage opened the graph anyway")
+
+    assert caption_wd14(run, FLOW, refuse) is None
+
+
+@pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
+def test_a_photograph_the_decoder_cannot_read_is_recorded_and_is_permanent(
+    run: Run,
+) -> None:
+    # The budget of one is not decoration: what can still fail once the session
+    # is open is this photograph's own bytes, and that is permanent by
+    # construction. Without a record, `show` and the run directory would carry
+    # no trace of it while an identical `tags` failure leaves one.
+    def unreadable() -> LocalTagger:
+        tagger = fake_tagger()
+
+        class Broken:
+            def run(self, photo: Path) -> list[float]:
+                raise OSError("cannot identify image file")
+
+        return dataclasses.replace(tagger, session=Broken())
+
+    with pytest.raises(Refusal) as refused:
+        caption_wd14(run, FLOW, unreadable)
+
+    assert "permanent" in str(refused.value)
+    recorded = list(run.directory(FLOW, WD14).glob("*.error.*.json"))
+    assert [path.name for path in recorded] == ["001.error.1.permanent.json"]
+
+    # And the budget of one is then spent: a second pass refuses without calling.
+    with pytest.raises(Refusal) as again:
+        caption_wd14(run, FLOW, unreadable)
+    assert "failed permanently" in str(again.value)

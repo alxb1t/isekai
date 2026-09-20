@@ -37,6 +37,13 @@ from isekai.foundation.refusal import Refusal
 VOCABULARY_DEST = "wd14/selected_tags.csv"
 DEFAULT_MODELS_DIR = Path("models")
 
+# The one command that provisions anything in this repository, pointed at the
+# manifest that declares this file. Named here because two modules refuse over
+# it -- this one and `boundary/wd14.py`, which loads the tagger the list is the
+# output layer of -- and two literals is two chances to name different commands
+# for one fix.
+VOCABULARY_REMEDY = "bash scripts/download_models.sh scripts/vocabulary.json"
+
 # The tagger's own category numbering. `0` is the general tags; `4` is character
 # names and `9` is the rating meta-tags, and neither describes a person's
 # appearance, so neither belongs in a sheet about one.
@@ -252,9 +259,9 @@ def load(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
         # build can perform, and a traceback names a path instead of naming it.
         raise Refusal(
             f"{VOCABULARY_DEST} is not provisioned under {models_dir}/, and no "
-            "sheet can be filled or approved without it; run `bash "
-            "scripts/download_models.sh scripts/vocabulary.json` from the "
-            "repository root to fetch and verify it against its pinned manifest"
+            f"sheet can be filled or approved without it; run `{VOCABULARY_REMEDY}` "
+            "from the repository root to fetch and verify it against its pinned "
+            "manifest"
         ) from absent
     entry = next(e for e in manifest["entries"] if e["dest"] == VOCABULARY_DEST)
     match = _REVISION.search(entry["sources"][0])

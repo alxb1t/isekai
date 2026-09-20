@@ -226,7 +226,16 @@ def test_both_halves_present_and_matching_resolve_to_their_two_paths(
     manifest = _planted(tmp_path, {LABELS_DEST: INDEX.encode(), MODEL_DEST: b"graph"})
     monkeypatch.setattr(provision, "load_manifest", lambda _path=None: manifest)
 
-    assert verified_paths(tmp_path) == (tmp_path / LABELS_DEST, tmp_path / MODEL_DEST)
+    labels, model, pins = verified_paths(tmp_path)
+
+    assert (labels, model) == (tmp_path / LABELS_DEST, tmp_path / MODEL_DEST)
+    # And the digests it checked come back with them, so whatever records a
+    # provenance records what was verified rather than what the manifest says
+    # at write time (design.md D17).
+    assert pins == {
+        LABELS_DEST: {"sha256": hashlib.sha256(INDEX.encode()).hexdigest()},
+        MODEL_DEST: {"sha256": hashlib.sha256(b"graph").hexdigest()},
+    }
 
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
@@ -252,15 +261,40 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
 def test_no_wheel_the_tagging_extra_carries_is_imported_at_module_scope() -> None:
     # The rule the `-S` guard rests on: this file is the only one in the package
-    # that touches `onnxruntime`, `numpy` or `Pillow`, and it touches them inside
-    # the functions that need them.
+    # that touches `onnxruntime`, `numpy` or `Pillow`, and it reaches every one
+    # of them through `_require`, inside the function that needs it.
     import isekai.boundary.wd14 as boundary
 
     source = Path(boundary.__file__ or "").read_text()
 
     for wheel in ("import numpy", "from PIL import", "import onnxruntime"):
         assert f"\n{wheel}" not in source, f"{wheel} is at module scope"
-        assert f"    {wheel}" in source, f"{wheel} is not imported at all"
+    for module in ("numpy", "PIL.Image", "onnxruntime"):
+        assert f'_require("{module}")' in source, f"{module} bypasses _require"
+
+
+@pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
+def test_an_uninstalled_extra_refuses_by_name_rather_than_raising_importerror(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Without this the ordinary case -- a machine that has not opted into the
+    # extra -- is a bare `ModuleNotFoundError` traceback, in a package whose
+    # rule is that every failure is a named `Refusal` naming its remedy.
+    import isekai.boundary.wd14 as boundary
+
+    def absent(module: str) -> object:
+        raise ModuleNotFoundError(f"No module named {module!r}")
+
+    boundary._require.cache_clear()
+    monkeypatch.setattr(boundary, "import_module", absent)
+
+    with pytest.raises(Refusal) as refused:
+        boundary._require("numpy")
+
+    boundary._require.cache_clear()
+    message = str(refused.value)
+    assert "numpy" in message
+    assert "uv sync --extra tagging" in message
 
 
 @pytest.mark.spec_exempt("structural: the seam's shape, which the doubles satisfy")

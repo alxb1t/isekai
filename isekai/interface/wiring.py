@@ -17,14 +17,14 @@ import argparse
 import dataclasses
 import random
 import sys
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy_client import ComfyClient
 from isekai.boundary.comfy_types import ComfyTransport
-from isekai.boundary.wd14 import Label, Session, open_session
+from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.flow import FLOWS_DIR, Flow, Hosted
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
@@ -70,7 +70,7 @@ class Wiring:
     # Both are `| None` on the dataclass for `reader`'s reason: a front end that
     # serves stage (3) alone reaches neither, and fabricating a tagger it never
     # calls would open a 467 MB file to be thrown away.
-    tagger: Callable[[Flow], tuple[Session, Sequence[Label]]] | None
+    tagger: Callable[[Flow], LocalTagger] | None
     hosted_tagger: Callable[[Flow], Tagger | None] | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
@@ -123,6 +123,15 @@ def _ollama_sorter(flow: Flow) -> Sorter:
     return OllamaSorter(model=_named_by(flow).sorter)
 
 
+def _no_tagger(flow: Flow) -> Tagger | None:
+    """Return nothing: this arm has a reader and a sorter but no tagger.
+
+    An entry rather than an omission, so an arm this build does not carry is
+    still a refusal naming what it does carry. See `HOSTED_TAGGERS`.
+    """
+    return None
+
+
 def _ollama_tagger(flow: Flow) -> Tagger:
     """Return the Ollama tagger, on the same alias the reader runs.
 
@@ -153,12 +162,16 @@ SORTERS: Mapping[str, Callable[[Flow], Sorter]] = {
     "ollama": _ollama_sorter,
 }
 
-# **Not keyed on `claude-cli`, and the absence is the decision.** There is no
-# Claude tagger, so a flow on the default arm gets no hosted tag list at all --
-# which is silent rather than a refusal, because a missing tag artifact is an
-# absent aid and never a blocked review (design.md D3, D20). A `claude-cli` entry
-# here would be a second hosted model spending money on an advisory panel.
-HOSTED_TAGGERS: Mapping[str, Callable[[Flow], Tagger]] = {
+# **`claude-cli` is in the table and maps to nothing**, which is not the same as
+# being absent from it. There is no Claude tagger and there should not be -- a
+# second hosted model spending money on an advisory panel -- but *recording* that
+# the arm has none costs nothing and keeps one resolution mechanism for all three
+# seams. Left out of the table, an unrecognised arm (`"vllm"`, a typo) would
+# resolve to silence, and D20 makes silence unreportable by design; in the table,
+# `_resolve` names what this build carries, exactly as it does for the reader and
+# the sorter.
+HOSTED_TAGGERS: Mapping[str, Callable[[Flow], Tagger | None]] = {
+    "claude-cli": _no_tagger,
     "ollama": _ollama_tagger,
 }
 
@@ -194,27 +207,25 @@ def sorter_for(flow: Flow) -> Sorter:
 def hosted_tagger_for(flow: Flow) -> Tagger | None:
     """Return the hosted tagger `flow` declares, or `None` where it declares none.
 
-    **`None` rather than a refusal, and this is the one resolver that may answer
-    it.** Three ways a flow legitimately has no hosted tag list -- it declares no
-    `hosted` block at all, it declares an arm this build has no tagger for, or the
-    call failed -- and none of them may stop a review: the panel is an aid, and a
-    surface that refused to open because a helper was missing would have confused
-    an aid for an input (design.md D20).
+    **Two absences, and only one of them is this function's to decide.** A flow
+    with no `hosted` block has nothing to resolve and answers `None` here; an arm
+    that *is* declared goes through `_resolve` like every other seam, and whether
+    that arm has a tagger is the registry's answer rather than a missing key's.
+    Both absences are silent downstream, because a missing tag artifact is an
+    absent aid and never a blocked review (design.md D20).
 
-    That is why this does not go through `_resolve`, whose whole argument is that
-    an unrecognised implementation must be a refusal rather than a default. It is
-    still a refusal there, for the reader and the sorter, where the wrong model
-    would silently produce a complete run whose provenance disagrees with the
-    manifest. Here there is no wrong model to fall back to -- there is one entry
-    or no answer.
+    What `_resolve` still buys, and the reason this does not skip it: an arm this
+    build has never heard of names what it does carry instead of resolving to
+    nothing. Silence is the right answer for *"this arm has no tagger"* and the
+    wrong one for *"nobody has heard of this arm"*, and only a table can tell
+    them apart.
     """
     if flow.hosted is None:
         return None
-    build = HOSTED_TAGGERS.get(flow.hosted.implementation)
-    return build(flow) if build else None
+    return _resolve(flow, HOSTED_TAGGERS, "hosted tagger")
 
 
-def tagger_for(flow: Flow) -> tuple[Session, Sequence[Label]]:
+def tagger_for(flow: Flow) -> LocalTagger:
     """Open the local tagger and read its label index, for any flow at all.
 
     **It takes a `Flow` and reads nothing from it**, which is the whole point

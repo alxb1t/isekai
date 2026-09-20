@@ -45,37 +45,47 @@ wrong without saying so.
 
 import csv
 import io
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from functools import cache
+from importlib import import_module
 from pathlib import Path
+from types import ModuleType
 from typing import Protocol
 
 from isekai.foundation.refusal import Refusal
+from isekai.shared.vocabulary import (
+    DEFAULT_MODELS_DIR,
+    VOCABULARY_DEST,
+    VOCABULARY_REMEDY,
+)
 
 # The two destinations the vocabulary manifest declares. Both are verified before
 # the first inference, because either one alone proves nothing: the graph's bytes
 # say nothing about which names its neurons carry, and the list's say nothing
 # about which graph it indexes.
-LABELS_DEST = "wd14/selected_tags.csv"
+#
+# The label index's dest and the models root are `shared/vocabulary.py`'s,
+# imported rather than restated: the same file is read by the sorting stage for
+# a different purpose, and a re-pin that moved it must not have two places to be
+# found. `VOCABULARY_REMEDY` is that module's too, for the same reason -- the
+# refusals below and its own have to name one command.
+LABELS_DEST = VOCABULARY_DEST
 MODEL_DEST = "wd14/model.onnx"
+REMEDY = VOCABULARY_REMEDY
 
-# The models root every consumer of a manifest already defaults to. One tree, one
-# provisioning rule, and `shared/vocabulary.py` reaching the same place.
-DEFAULT_MODELS_DIR = Path("models")
-
-# The one command that provisions anything in this repository, pointed at the
-# manifest that declares both halves. Named once, so the two refusals below and
-# `shared/vocabulary.py`'s cannot drift into naming different commands for the
-# same fix.
-REMEDY = "bash scripts/download_models.sh scripts/vocabulary.json"
-
-# The tagger's own category numbering, and the same three numbers
-# `shared/vocabulary.py` reads off the same file. `0` is the general tags -- what
-# a person looks like. `4` is character names and `9` is the rating meta-tags;
-# neither describes a person's appearance, and neither is ever returned.
+# The tagger's own category numbering. `0` is the general tags -- what a person
+# looks like -- and 4 (character names) and 9 (rating meta-tags) describe no
+# part of a person's appearance, so neither is ever returned. Only the general
+# number is a constant, because it is the only one anything compares against;
+# the other two are excluded by *not* matching this, which is one rule rather
+# than three.
+#
+# An `int`, where `shared/vocabulary.py`'s is the `str` `csv.DictReader` yields.
+# The two are deliberately not shared: this module parses the column to an int so
+# the comparison cannot silently be a no-op against the wrong type, and a single
+# constant would have to be one or the other and be wrong in one place.
 GENERAL_CATEGORY = 0
-CHARACTER_CATEGORY = 4
-RATING_CATEGORY = 9
 
 # Below this, a tag is not shown. Measured rather than chosen: at 0.35 the panel
 # loses `blurry background 0.19`, `cowboy shot 0.20` and `head tilt 0.28`, three
@@ -111,6 +121,25 @@ class Scored:
     confidence: float
 
 
+@dataclass(frozen=True)
+class LocalTagger:
+    """An opened session, its label index, and the pins both were verified under.
+
+    The three always travel together and never apart, so they travel as one
+    value rather than as a tuple threaded through four layers.
+
+    **The pins are carried rather than re-read**, and that is the point of
+    holding them here: they are the digests `verified_paths` actually checked
+    the bytes against a moment earlier. An artifact that re-read the manifest at
+    write time could record a pin it was *not* produced under -- which is exactly
+    the claim `pinned: true` exists to make trustworthy (design.md D17, D18).
+    """
+
+    session: "Session"
+    labels: tuple[Label, ...]
+    pins: Mapping[str, Mapping[str, str]]
+
+
 class Session(Protocol):
     """How a photograph becomes a probability vector. Faked, so the suite runs.
 
@@ -133,6 +162,34 @@ class Session(Protocol):
         ...
 
 
+@cache
+def _require(module: str) -> ModuleType:
+    """Import one module of the `tagging` extra, or refuse naming how to get it.
+
+    `eval_backends._require`'s shape, for `eval_backends`' reason: without it a
+    machine that has not installed the extra gets a bare `ModuleNotFoundError`
+    traceback, in a package whose rule is that every failure is a named
+    `Refusal` naming its remedy. The extra is deliberately not installed in the
+    environment the gate runs in, so this path is the ordinary one for anyone
+    who has not opted in.
+
+    Not shared with `eval_backends`' copy, and that is the whole content of the
+    difference: the two name **different extras**, so one function would have to
+    be told which — and the sentence it prints is the only thing either does.
+
+    Cached, so the import machinery is consulted once per module rather than
+    once per photograph.
+    """
+    try:
+        return import_module(module)
+    except ModuleNotFoundError as absent:  # pragma: no cover - environment
+        raise Refusal(
+            f"the local tagger's stack is not installed ({module} is missing); "
+            "run `uv sync --extra tagging`. It is deliberately not installed in "
+            "CI, and every test runs against a fake session instead."
+        ) from absent
+
+
 def read_labels(body: str) -> list[Label]:
     """Parse `selected_tags.csv` into the label index, **in file order**.
 
@@ -151,8 +208,10 @@ def read_labels(body: str) -> list[Label]:
     return [Label(name=row["name"], category=int(row["category"])) for row in rows]
 
 
-def verified_paths(models_dir: Path = DEFAULT_MODELS_DIR) -> tuple[Path, Path]:
-    """Return the label index and the graph, both digest-verified, or refuse.
+def verified_paths(
+    models_dir: Path = DEFAULT_MODELS_DIR,
+) -> tuple[Path, Path, dict[str, dict[str, str]]]:
+    """Return both digest-verified paths and the pins they were verified against.
 
     **Both, before the first inference, and neither alone is worth anything.**
     Verification goes through the scorer's resolver rather than a second copy of
@@ -167,10 +226,11 @@ def verified_paths(models_dir: Path = DEFAULT_MODELS_DIR) -> tuple[Path, Path]:
     one is read by a human deciding whether a pin is stale or a file was swapped.
     """
     from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH, load_manifest
-    from isekai.evaluation.eval_models import resolve
+    from isekai.evaluation.eval_models import entry_for, resolve
 
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     resolved: list[Path] = []
+    pins: dict[str, dict[str, str]] = {}
     for dest in (LABELS_DEST, MODEL_DEST):
         try:
             resolved.append(resolve(dest, models_dir, manifest))
@@ -181,8 +241,12 @@ def verified_paths(models_dir: Path = DEFAULT_MODELS_DIR) -> tuple[Path, Path]:
                 "repository root to fetch and verify it against its pinned "
                 "manifest"
             ) from absent
-    labels, model = resolved
-    return labels, model
+        # `entry_for` rather than a comprehension over `entries`: a dest the
+        # manifest does not declare must raise here, not quietly leave a pin out
+        # -- an artifact claiming `pinned: true` with one of the two digests is
+        # half a claim, and half of this one is worth nothing.
+        pins[dest] = {"sha256": entry_for(manifest, dest)["sha256"]}
+    return resolved[0], resolved[1], pins
 
 
 def prepare(photo: Path, dimension: int) -> object:
@@ -211,8 +275,8 @@ def prepare(photo: Path, dimension: int) -> object:
     The non-stdlib imports are function-local, which is what keeps
     `python -m isekai`'s import graph stdlib-only.
     """
-    import numpy
-    from PIL import Image
+    numpy = _require("numpy")
+    Image = _require("PIL.Image")
 
     opened = Image.open(photo)
     opened.load()
@@ -297,7 +361,7 @@ class OnnxSession:
 
     def __init__(self, model: Path) -> None:
         """Open `model` for inference on the CPU."""
-        import onnxruntime
+        onnxruntime = _require("onnxruntime")
 
         self._session = onnxruntime.InferenceSession(
             str(model), providers=["CPUExecutionProvider"]
@@ -326,27 +390,37 @@ class OnnxSession:
         return list(outputs[0][0])
 
 
-def open_session(models_dir: Path = DEFAULT_MODELS_DIR) -> tuple[Session, list[Label]]:
+def open_session(models_dir: Path = DEFAULT_MODELS_DIR) -> LocalTagger:
     """Verify both halves, then open the session and read its label index.
 
     The one function a caller needs, and the order inside it is the point: the
     digests are checked **before** 467 MB is opened, so a stale pin costs a
-    refusal rather than a load followed by one.
+    refusal rather than a load followed by one. The pins it checked come back
+    with the session, so whatever records a provenance records what was actually
+    verified rather than what the manifest says at write time.
+
+    **Expensive, and called lazily.** Hashing the graph is a full pass over
+    467 MB and opening it is ~0.9 s more, so nothing calls this until a
+    photograph actually needs scoring -- `interface/cli.py` holds it behind a
+    thunk for the same reason `Wiring.vocabulary` is one.
     """
-    labels_path, model_path = verified_paths(models_dir)
-    return OnnxSession(model_path), read_labels(labels_path.read_text())
+    labels_path, model_path, pins = verified_paths(models_dir)
+    return LocalTagger(
+        session=OnnxSession(model_path),
+        labels=tuple(read_labels(labels_path.read_text())),
+        pins=pins,
+    )
 
 
 __all__: Sequence[str] = (
-    "CHARACTER_CATEGORY",
     "DEFAULT_MODELS_DIR",
     "FLOOR",
     "GENERAL_CATEGORY",
     "LABELS_DEST",
     "MODEL_DEST",
-    "RATING_CATEGORY",
     "REMEDY",
     "Label",
+    "LocalTagger",
     "OnnxSession",
     "Scored",
     "Session",

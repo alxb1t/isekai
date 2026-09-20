@@ -19,7 +19,7 @@ from isekai.pipeline.tagging import FakeTagger, caption_tags, caption_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, fake_wd14, sheet
+from tests.stages import caption, fake_tagger, sheet
 
 FLOW = "summon-v1"
 
@@ -139,8 +139,7 @@ def test_show_reports_both_tagging_stages_for_a_run_that_has_them(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    session, labels = fake_wd14().double
-    caption_wd14(made, FLOW, session, labels)
+    caption_wd14(made, FLOW, fake_tagger)
     caption_tags(made, FLOW, FakeTagger())
 
     by_name = {(item.stage, item.flow): item for item in listings(made)}
@@ -184,8 +183,7 @@ def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    session, labels = fake_wd14().double
-    caption_wd14(made, FLOW, session, labels)
+    caption_wd14(made, FLOW, fake_tagger)
     caption_tags(made, FLOW, FakeTagger())
 
     by_name = {(item.stage, item.flow): item for item in listings(made)}

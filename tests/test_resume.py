@@ -17,10 +17,10 @@ import json
 import random
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
 
 import pytest
 
+from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import BUDGETS
 from isekai.interface.cli import build_parser, dispatch
@@ -115,8 +115,9 @@ def _calls(wired: Wiring) -> tuple[int, int, int, int, int]:
     assert isinstance(resolve_reader, Always) and isinstance(resolve_sorter, Always)
     assert isinstance(resolve_wd14, Always) and isinstance(resolve_hosted, Always)
     reader, sorter = resolve_reader.double, resolve_sorter.double
-    wd14_double: Any = resolve_wd14.double
-    session, _labels = wd14_double
+    local = resolve_wd14.double
+    assert isinstance(local, LocalTagger)
+    session = local.session
     hosted = resolve_hosted.double
     assert isinstance(reader, FakeReader)
     assert isinstance(sorter, FakeSorter)

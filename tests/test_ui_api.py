@@ -44,7 +44,7 @@ from isekai.pipeline.tagging import (  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import caption, fake_wd14, sheet  # noqa: E402
+from tests.stages import caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-v1"
 
@@ -273,8 +273,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
 def test_the_payload_carries_both_lists_whole_and_in_the_order_produced(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    session, labels = fake_wd14().double
-    caption_wd14(made, FLOW, session, labels)
+    caption_wd14(made, FLOW, fake_tagger)
     caption_tags(
         made,
         FLOW,
@@ -342,8 +341,7 @@ def test_one_list_present_and_the_other_absent_is_also_silent(
 ) -> None:
     # The state every `summon-v1` run is in: a WD14 list and no hosted one,
     # because the flow declares no arm to tag on (design.md D3).
-    session, labels = fake_wd14().double
-    caption_wd14(made, FLOW, session, labels)
+    caption_wd14(made, FLOW, fake_tagger)
 
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
 

@@ -238,14 +238,19 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     if path is None:
         return None
     listed: Any = read_artifact(path)["tags"]
+    # One `str()` and one lookup per tag. `count()` and `__contains__` both
+    # normalise the spelling and both hit the same mapping, so asking twice
+    # normalises a ~50-tag list a hundred times for one answer -- and the two
+    # questions are not the same question: a tag the vocabulary carries with a
+    # count of zero is *in* it, so membership cannot be derived from the number.
     marked: list[dict[str, Any]] = []
     for tag in listed:
-        posts = batch.vocabulary.count(str(tag))
+        name = str(tag)
         marked.append(
             {
-                "tag": str(tag),
-                "in_vocabulary": str(tag) in batch.vocabulary,
-                "posts": posts or None,
+                "tag": name,
+                "in_vocabulary": name in batch.vocabulary,
+                "posts": batch.vocabulary.count(name) or None,
             }
         )
     return marked

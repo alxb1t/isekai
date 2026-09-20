@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
-from isekai.boundary.wd14 import Label, Session
+from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
@@ -352,7 +352,7 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     parsed: list[Vocabulary] = []
-    opened: dict[str, tuple[Session, Sequence[Label]]] = {}
+    opened: list[LocalTagger] = []
 
     def vocabulary() -> Vocabulary:
         """Return this invocation's vocabulary, reading it at most once."""
@@ -360,26 +360,33 @@ def _per_item(
             parsed.append(wired.vocabulary())
         return parsed[0]
 
-    def _tagger(wired: Wiring, flow: Flow) -> tuple[Session, Sequence[Label]]:
-        """Return this invocation's local tagger for `flow`, opening it once.
+    def tagger(flow: Flow) -> Callable[[], LocalTagger]:
+        """Return a thunk that opens this invocation's local tagger, once.
 
-        **Memoised per flow and per invocation, which is the whole reason this is
-        a function rather than a call.** The reader and the sorter are resolved
-        inside the per-photograph loop and that costs nothing, because
-        constructing one is constructing a dataclass. This opens a 467 MB graph
-        and reads a 10,861-row index -- ~0.9 s -- so resolving it the same way
-        would pay that once per photograph instead of once per batch
-        (design.md D14).
+        **A thunk rather than a value, and one slot rather than one per flow.**
 
-        Keyed by flow even though the local tagger reads no manifest key, because
-        the seam's shape is per flow and a cache that ignored its own key would
-        be the thing to fix the day one of them does.
+        Lazy, because opening it hashes 467 MB and loads a graph: a batch whose
+        lists are all already written must not pay for that to write nothing,
+        and a completed run must still resume on a machine that has since
+        emptied `models/`. `vocabulary()` above is a thunk for exactly this
+        reason and says so.
+
+        One slot, because `wiring.tagger_for` takes a `Flow` and reads nothing
+        from it -- the local tagger resolves through no manifest key at all
+        (design.md D3). Keying the memo by flow would open the same graph once
+        per flow named on one command line and hold every copy for the rest of
+        the invocation. The parameter stays because the seam's shape is per flow
+        and the day one of them selects a different tagger is the day this needs
+        a key; giving it one before then buys two sessions and no behaviour.
         """
-        if flow.id not in opened:
-            opened[flow.id] = _seam(wired.tagger, "tagger", "scores the photograph")(
-                flow
-            )
-        return opened[flow.id]
+        resolve = _seam(wired.tagger, "tagger", "scores the photograph")
+
+        def opening() -> LocalTagger:
+            if not opened:
+                opened.append(resolve(flow))
+            return opened[0]
+
+        return opening
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
@@ -412,12 +419,11 @@ def _per_item(
                 # tagger last, because it is the one with a port, a timeout and
                 # a retry budget -- so its refusal blocks nothing that would
                 # have succeeded (design.md D7).
-                session, labels = _tagger(wired, flow)
                 _say(
                     wired,
                     run,
                     "wd14",
-                    caption_wd14(run, name, session, labels, new_version=new_version),
+                    caption_wd14(run, name, tagger(flow), new_version=new_version),
                 )
                 hosted = _seam(
                     wired.hosted_tagger, "hosted tagger", "tags the photograph"

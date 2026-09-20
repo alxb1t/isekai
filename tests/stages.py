@@ -17,7 +17,7 @@ one test module and reached from three is the coupling this file exists to avoid
 from dataclasses import dataclass
 from pathlib import Path
 
-from isekai.boundary.wd14 import Label, read_labels
+from isekai.boundary.wd14 import LocalTagger, read_labels
 from isekai.foundation.flow import Flow, Schema, load_flow
 from isekai.foundation.run import Run
 from isekai.pipeline import caption as caption_stage
@@ -96,38 +96,59 @@ INDEX = """tag_id,name,category,count
 
 
 class FakeSession:
-    """A WD14 session that answers one fixed vector and counts how often it was asked.
+    """A WD14 session that answers one fixed vector and records what it was asked.
 
     The double `tagging:seam:offline-double-satisfies-the-interface` names. It
     opens nothing, reads nothing and imports nothing -- which is only possible
     because the seam takes the photograph rather than a prepared array, so
     `numpy` and `Pillow` sit behind it with the graph (design.md D26).
 
-    The counter is what makes the idempotence assertion provable: showing that a
-    completed stage opens no session needs something that counts.
+    `seen` is what makes the idempotence assertion provable: showing that a
+    completed stage opens no session needs something that counts. `calls` is
+    derived from it rather than incremented beside it -- two counters in one
+    method are two things that can disagree -- and `FakeTagger` keeps the same
+    one list for the same reason.
     """
 
     def __init__(self, vector: list[float]) -> None:
         """Answer `vector` to every call."""
         self.vector = vector
-        self.calls = 0
         self.seen: list[Path] = []
+
+    @property
+    def calls(self) -> int:
+        """Return how many times this session has been asked."""
+        return len(self.seen)
 
     def run(self, photo: Path) -> list[float]:
         """Return the fixed vector, recording that it was asked and about what."""
-        self.calls += 1
         self.seen.append(photo)
         return self.vector
 
 
-def fake_wd14(
-    vector: list[float] | None = None,
-) -> Always[tuple[FakeSession, list[Label]]]:
-    """Return a resolver handing every flow one fake session and one label index.
+# The digests a fake tagger claims it was verified against. Not the real ones:
+# an artifact written in a test must not be mistakable for one written against
+# the provisioned bytes, and every assertion about a pin names this dict.
+FAKE_PINS: dict[str, dict[str, str]] = {
+    "wd14/selected_tags.csv": {"sha256": "c" * 64},
+    "wd14/model.onnx": {"sha256": "m" * 64},
+}
+
+
+def fake_tagger(vector: list[float] | None = None) -> LocalTagger:
+    """Return an opened local tagger that touches no file and no wheel."""
+    return LocalTagger(
+        session=FakeSession([0.0, 0.9, 0.0] if vector is None else vector),
+        labels=tuple(read_labels(INDEX)),
+        pins=FAKE_PINS,
+    )
+
+
+def fake_wd14(vector: list[float] | None = None) -> Always[LocalTagger]:
+    """Return a resolver handing every flow one opened fake tagger.
 
     `Always`'s reason, applied to the local tagger: a test driving one double over
     any number of flows should not repeat a lambda, and a wiring composed for a
     verb that never tags still has to say what it *would* have tagged with.
     """
-    session = FakeSession([0.0, 0.9, 0.0] if vector is None else vector)
-    return Always((session, read_labels(INDEX)))
+    return Always(fake_tagger(vector))

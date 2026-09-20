@@ -35,13 +35,14 @@ doubles are what keep the suite offline.
 """
 
 import base64
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama, wd14
 from isekai.boundary.claude_cli import CliFailure, constant_record, refusal_for
+from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
     WD14,
@@ -54,13 +55,6 @@ from isekai.foundation.run import (
     record_failure,
     write_json,
 )
-
-# The two names these stages' budgets are keyed by, and the two directories they
-# write into. Both are the run's to name rather than the stage's -- `run.WD14`
-# and `run.TAGS` -- and a name with no `BUDGETS` entry is an uncaught `KeyError`
-# rather than a missing feature, which is why they are the same strings.
-WD14_STAGE = WD14
-TAGS_STAGE = TAGS
 
 # The verb a refusal tells the operator to run again, and it is `caption` rather
 # than either stage name above: one verb produces all three artifacts, so there
@@ -217,8 +211,7 @@ class OllamaTagger:
 def caption_wd14(
     run: Run,
     flow: str,
-    tagger: wd14.Session,
-    labels: Sequence[wd14.Label],
+    open_tagger: Callable[[], wd14.LocalTagger],
     *,
     new_version: bool = False,
 ) -> Path | None:
@@ -228,11 +221,26 @@ def caption_wd14(
     has already written is a stage that does nothing the second time, with no
     special mode and no state machine.
 
+    **`open_tagger` is a thunk, and the laziness is the point.** Opening the
+    tagger hashes 467 MB and loads a graph; a run whose list is already complete
+    must not pay for that to return `None`, and on a machine that has since
+    deleted `models/` a completed run must still resume. `Wiring.vocabulary` is
+    a thunk for the same reason, stated the same way: an eager read made a verb
+    impossible on a clone that had not provisioned the file it never used.
+
+    It is called **after** the guard and **outside** the `try` below, which is
+    what keeps the two kinds of failure apart. An absent or corrupt model is a
+    condition about this *build*, identical for every photograph in the batch,
+    so it refuses without accruing one error record per input; what the `try`
+    catches is this *photograph* -- a header no decoder can read -- which is
+    per-input, permanent, and exactly what a budget of one is for.
+
     **This is the first producer in this repository that can honestly claim a
     pin.** Every artifact in the tree records `pinned: false` and `show` prints
     *"unpinned"* over all of them; a local file with a digest is not the hosted
     service that field was written for, so it records `true` and carries **both**
-    digests to back it (design.md D17).
+    digests -- the ones the session was actually verified against, not the ones
+    the manifest happens to hold at write time (design.md D17).
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete.
@@ -242,26 +250,40 @@ def caption_wd14(
         return None
 
     version = next_version(directory)
-    check_budget(WD14_STAGE, directory, version, run.id)
+    check_budget(WD14, directory, version, run.id)
 
-    # No `try` and no error record, unlike the hosted stage below. This tagger is
-    # deterministic: it fails only when a file is absent or its bytes disagree
-    # with the pin, both of which are one operator fix and neither of which a
-    # second attempt could get past. `wd14` raises a `Refusal` naming that fix
-    # directly, and `across()` collects it per photograph. Recording an attempt
-    # to be retried is exactly what a budget of one says not to do.
-    found = wd14.scored(run.photo, tagger, labels)
+    tagger = open_tagger()
+    try:
+        found = wd14.scored(run.photo, tagger.session, tagger.labels)
+    except (Refusal, OSError) as failed:
+        # Permanent, always. Nothing here is transient: the session is open and
+        # the index is read, so what is left to fail is this photograph's own
+        # bytes, and a second pass over them decodes exactly as badly.
+        record = record_failure(
+            directory,
+            version,
+            "permanent",
+            {"stage": WD14, "detail": str(failed), "envelope": ""},
+        )
+        raise refusal_for(
+            "tagger",
+            run.id,
+            CliFailure("permanent", str(failed)),
+            record,
+            f"{flow}/{WD14}/",
+            VERB,
+        ) from failed
 
     path = directory / artifact_name(version)
     write_json(
         path,
         envelope(
-            WD14_STAGE,
+            WD14,
             {
                 "implementation": "wd14",
                 "models": [wd14.MODEL_DEST],
                 "pinned": True,
-                "artifacts": _pins(),
+                "artifacts": dict(tagger.pins),
             },
             {"tags": [{"tag": one.tag, "confidence": one.confidence} for one in found]},
         ),
@@ -296,7 +318,7 @@ def caption_tags(
         return None
 
     version = next_version(directory)
-    check_budget(TAGS_STAGE, directory, version, run.id)
+    check_budget(TAGS, directory, version, run.id)
 
     try:
         tagging = tagger.tag(run.photo)
@@ -305,7 +327,7 @@ def caption_tags(
             directory,
             version,
             failed.kind,
-            {"stage": TAGS_STAGE, "detail": failed.detail, "envelope": failed.envelope},
+            {"stage": TAGS, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
             "tagger", run.id, failed, record, f"{flow}/{TAGS}/", VERB
@@ -315,7 +337,7 @@ def caption_tags(
     write_json(
         path,
         envelope(
-            TAGS_STAGE,
+            TAGS,
             {
                 "implementation": tagging.implementation,
                 "models": list(tagging.models),
@@ -326,24 +348,6 @@ def caption_tags(
         ),
     )
     return path
-
-
-def _pins() -> dict[str, dict[str, str]]:
-    """Return both halves' digests, as the manifest commits them.
-
-    **Both, because either alone proves nothing.** The graph's bytes say nothing
-    about which names its neurons carry and the list's say nothing about which
-    graph it indexes, so an artifact claiming a pin has to name the pair it was
-    produced under or the claim is half of one.
-    """
-    from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH, load_manifest
-
-    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
-    return {
-        entry["dest"]: {"sha256": entry["sha256"]}
-        for entry in manifest["entries"]
-        if entry["dest"] in (wd14.LABELS_DEST, wd14.MODEL_DEST)
-    }
 
 
 __all__: Sequence[str] = (
