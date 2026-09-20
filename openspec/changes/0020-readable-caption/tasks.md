@@ -5,7 +5,7 @@
 - [x] 1 — The gate learns to see the browser, and the `tagging` extra
 - [x] 2 — `run.py`: two layout names, two budget entries
 - [x] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
-- [ ] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
+- [x] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
 - [ ] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 - [ ] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
 - [ ] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
@@ -164,19 +164,19 @@ under it (`design.md` D22).
 D19). This module must not be importable-with-side-effects: opening a 467 MB file at import time
 defeats D14.
 
-- [ ] 4.1 A `Session` Protocol — one method taking a prepared array and returning a probability vector
+- [x] 4.1 A `Session` Protocol — one method taking a prepared array and returning a probability vector
       — with the real `onnxruntime.InferenceSession` behind a module function as its default, exactly
       as `ollama.Transport` has `ollama.post`.
-- [ ] 4.2 The preparation rule, pure and testable without the model: open, composite onto white, pad to
+- [x] 4.2 The preparation rule, pure and testable without the model: open, composite onto white, pad to
       a square, resize to the session's own input dimension with bicubic, convert to BGR float32,
       add a batch axis. **Do not hard-code 448** — read it from the session's declared input shape.
-- [ ] 4.3 The label index: parse `selected_tags.csv` into `(name, category)` in file order, **and
+- [x] 4.3 The label index: parse `selected_tags.csv` into `(name, category)` in file order, **and
       assert the ordering is what indexes the output vector.** Category 0 is general; 4 is character
       and 9 is rating, and neither is returned.
-- [ ] 4.4 Verify both digests against `scripts/vocabulary.json` before the first inference, and refuse
+- [x] 4.4 Verify both digests against `scripts/vocabulary.json` before the first inference, and refuse
       naming the fetch command when either is absent or wrong — the posture `require_binary()` and
       `READER_REMEDY` already take, applied to two files.
-- [ ] 4.5 A fake session returning a known vector over a known three-row label index.
+- [x] 4.5 A fake session returning a known vector over a known three-row label index.
       **Verify — all of it offline, no model file touched:**
       `uv run pytest tests/test_wd14.py -v`, with bindings
       `tagging:seam:offline-double-satisfies-the-interface` and

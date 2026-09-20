@@ -82,6 +82,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the first, because a coded response declares its *coded* length. `models.json` and
   `eval_models.json` are **not** re-derived here.
 
+- **`isekai/boundary/wd14.py` — the local tagger's boundary, and the only module in the package
+  that touches the `tagging` extra.** A `Session` Protocol whose real implementation is
+  `OnnxSession` and whose double is what keeps the suite offline, the pad-and-resize preparation
+  rule, the label index, and the two-digest verification. The arrangement `ollama.py` already has:
+  the transport here, the adapter in `pipeline/`. **All three wheel imports are function-local**, so
+  `python -m isekai`'s import graph stays stdlib-only and a test asserts none of them sits at module
+  scope.
+- **The label index is read in file order and nothing is dropped from it.** Row N of
+  `selected_tags.csv` names output neuron N, so the vector is indexed **before** anything is
+  filtered — character (category 4) and rating (category 9) rows are excluded from the *result* and
+  never from the index. `shared/vocabulary.py` reads the same file and discards the order, which is
+  correct for mapping a phrase and would be silently wrong here.
+- **The pure half is separated from the half that needs a wheel, deliberately.** `select()` turns a
+  probability vector into sorted tags and imports nothing; `prepare()` is the only place `numpy` and
+  `Pillow` appear. The `tagging` extra is not installed in the environment the gate runs in, so a
+  suite that could not test the ordering without it would be a suite that silently stops covering
+  this capability. `test_wd14.py` runs with no wheel and no model file.
+- **A vector whose length disagrees with the index refuses rather than zipping short**, which is the
+  one mismatch that is otherwise undetectable: `zip` without `strict` would truncate to the shorter
+  of the two and produce a quietly shorter tag list instead of a message.
+- **Both digests are verified before 467 MB is opened**, through the scorer's resolver rather than a
+  second copy of it — the repository's single enforcement site for the containment and digest rules.
+  An absent half is a `Refusal` naming `bash scripts/download_models.sh scripts/vocabulary.json`; a
+  half whose bytes disagree is left to `DigestMismatch`, whose message already names the file and
+  both digests. A test proves the *model* is checked and not only the 300 KB list.
+- **The input dimension is read off the session, not hard-coded.** A sibling tagger in the same
+  family declares a different edge, and a constant would resize correctly against the one graph it
+  was written for and silently wrongly against every other.
+
 ### Changed
 
 - **`pyproject.toml`, `README.md` and `CLAUDE.md` stop saying the gate is five commands.** Three

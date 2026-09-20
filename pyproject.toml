@@ -182,11 +182,12 @@ known-first-party = ["isekai"]
 # installation. Declaring it a source root here lets the type checker and the
 # suite see `derive_manifest` the way a human running it does. It widens where
 # real code is looked for; it suppresses no check.
-# Two files bridge to packages the gate's environment deliberately does NOT
+# Three files bridge to packages the gate's environment deliberately does NOT
 # install, so `unresolved-import` in them is the configuration working, not a
-# defect: `eval_backends.py`, the scorer's model boundary, and
-# `build_contact_sheets.py`, a labelling aid that needs Pillow to paste three
-# images side by side. Scoped to those files and to that one rule -- every other
+# defect: `eval_backends.py`, the scorer's model boundary; `wd14.py`, the local
+# tagger's, which is the ONLY file in the package that touches the `tagging`
+# extra and touches it function-locally; and `build_contact_sheets.py`, a
+# labelling aid that needs Pillow to paste three images side by side. Scoped to those files and to that one rule -- every other
 # check still applies, which is how the `invalid-return-type` on
 # `OnnxSession.run` was caught and fixed rather than suppressed.
 #
@@ -197,7 +198,11 @@ known-first-party = ["isekai"]
 # installed, which is the property that matters -- `make gate` must not depend on
 # what the operator happens to have synced.
 [[tool.ty.overrides]]
-include = ["isekai/evaluation/eval_backends.py", "baseline/build_contact_sheets.py"]
+include = [
+    "isekai/evaluation/eval_backends.py",
+    "isekai/boundary/wd14.py",
+    "baseline/build_contact_sheets.py",
+]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"
