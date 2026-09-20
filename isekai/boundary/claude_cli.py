@@ -270,3 +270,22 @@ def instructions_record(path: Path) -> dict[str, str]:
         "path": str(resolved.relative_to(ROOT)) if inside else resolved.name,
         "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
     }
+
+
+def constant_record(text: str) -> dict[str, str]:
+    """Return the digest of an instruction text this build holds, with no path.
+
+    `instructions_record` above takes a `Path` and hashes the file behind it,
+    which a producer whose instructions are a module constant cannot use: there
+    is no file and no location, and **a record that invented a path would assert
+    one that does not exist** (design.md D16).
+
+    So the key is simply absent rather than empty or placeheld. A consumer asking
+    where the text came from gets no answer, which is the true one -- it came
+    from this build, and the digest is what identifies which build. The
+    alternative considered and refused was a sixth file in the flow directory:
+    that is the trade v0.19 already priced when `joycaption.Modelfile` went to
+    `scripts/` instead, and a tag prompt shapes the operator's reading rather
+    than the render, so it makes no per-flow claim.
+    """
+    return {"sha256": hashlib.sha256(text.encode()).hexdigest()}

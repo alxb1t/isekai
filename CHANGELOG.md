@@ -111,8 +111,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   family declares a different edge, and a constant would resize correctly against the one graph it
   was written for and silently wrongly against every other.
 
+- **`isekai/pipeline/tagging.py` — `caption_wd14()` and `caption_tags()`, two functions and two
+  seams.** Deliberately **not** one `Tagger` Protocol with two implementations: one resolves through
+  the manifest's `hosted.implementation` and the other through nothing at all, so a shared name
+  would be a shared name rather than a seam (design.md D3). Each has `caption()`'s guard against its
+  own directory, its own `BUDGETS` entry and its own `latest()` check, so a complete caption and a
+  complete WD14 list beside a failed hosted one is an ordinary resumable state.
+- **`caption()` is byte-identical to `main`**, asserted by `git diff` rather than by a test. It is
+  the one function in this change whose behaviour has to be provably unchanged, and a function with
+  no edit is provably unchanged.
+- **Nothing is narrowed.** Neither stage canonicalises, maps to the vocabulary, deduplicates or
+  re-orders on anything but confidence. The hosted list is roughly three-quarters unusable — stock
+  photo keywording, and it contradicts its own prose on the same photograph — and it is stored
+  exactly as it came, because narrowing is stage ②'s job and seeing behind it is the point.
+- **A response containing no comma is a permanent failure**, recorded like any other. That is the
+  whole content check, and it separates *not a list at all* from *wrong*: the operator asked for the
+  raw list knowing it is wrong, so wrongness is not what is being guarded. Anything richer starts
+  filtering (design.md D15).
+- **`constant_record(text)` in `isekai/boundary/claude_cli.py`, beside `instructions_record(path)`.**
+  Digest only and **no `path` key**: `instructions_record` resolves a path and hashes the file behind
+  it, which a producer whose instructions are a module constant cannot use, and a record that
+  invented a path would assert a location that does not exist (design.md D16).
+- **The WD14 producer records `pinned: true` and both digests** — the first artifact in this
+  repository that can honestly claim a pin, and the first thing `show` will report without the word
+  *unpinned* (design.md D17).
+
 ### Changed
 
+- **The `Session` seam takes the photograph rather than a prepared array** (design.md D26, a
+  build-time correction to `tasks.md` 4.1). Built the other way the boundary tests pass and the
+  **stage** is untestable: `caption_wd14()` would reach `prepare()`, which imports `numpy` and
+  `Pillow`, which the gate's environment deliberately does not install — leaving
+  `tagging:seam:offline-double-satisfies-the-interface` unprovable. Preparation goes behind the seam,
+  where `ollama.Transport`'s precedent already puts request encoding. The cost is stated rather than
+  discovered: `prepare()` is now reachable only through `OnnxSession`, so no gate command executes
+  it and its acceptance is the live run.
 - **`pyproject.toml`, `README.md` and `CLAUDE.md` stop saying the gate is five commands.** Three
   separate prose claims counted it; all three now say six.
 - **`derive_vocabulary.py`'s docstring argued the opposite of what this version does**, in as many

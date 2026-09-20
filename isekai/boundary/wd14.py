@@ -31,6 +31,12 @@ every tag silently: the vector has the right length and every name in it is a re
 tag. That is why both halves are pinned in `scripts/vocabulary.json` and why both
 digests are verified before the first inference (design.md D17, D18).
 
+**Preparation sits behind the seam rather than in front of it**, so `Session`
+takes a photograph and not a prepared array. That is what makes the stage itself
+runnable in the suite: `prepare` needs `numpy` and `Pillow`, the gate installs
+neither, and a seam beginning after preparation would leave
+`tagging:seam:offline-double-satisfies-the-interface` unprovable.
+
 **The one silent failure mode is the ordering**, which is exactly what the suite
 asserts against a fake session: a vector whose only high value sits at index 1
 must yield the tag on CSV row 1 and no other. Nothing else in this module can go
@@ -106,26 +112,23 @@ class Scored:
 
 
 class Session(Protocol):
-    """How a prepared image becomes a probability vector. Faked, so the suite runs.
+    """How a photograph becomes a probability vector. Faked, so the suite runs.
 
     The precedent is one file away -- `ollama.Transport`, whose real
     implementation is `ollama.post` and whose double is what makes the request
-    body assertable without a socket. Here the double is what makes the label
-    index assertable without a 467 MB file, and the whole suite is offline
-    because of it.
+    body assertable without a socket. Here the double is what makes the whole
+    stage runnable without a 467 MB file, and the suite is offline because of it.
 
-    `dimension` is on the seam rather than a constant because the preparation
-    rule reads it: the graph declares its own input size and the fake declares a
-    small one, so a test proves the resize follows the session instead of
-    following a number this module guessed.
+    **The seam takes the photograph rather than a prepared array**, and the
+    difference is what the double is worth. `prepare` needs `numpy` and
+    `Pillow`, which the environment the gate runs in deliberately does not
+    install -- so a seam that began *after* preparation would leave the stage
+    itself untestable and `tagging:seam:offline-double-satisfies-the-interface`
+    unprovable. Preparing an image is this boundary's business in exactly the way
+    encoding a request body is `ollama.post`'s: it belongs behind the seam.
     """
 
-    @property
-    def dimension(self) -> int:
-        """The square edge, in pixels, this session's input expects."""
-        ...
-
-    def run(self, prepared: object) -> Sequence[float]:
+    def run(self, photo: Path) -> Sequence[float]:
         """Return one probability per output neuron, in the index's own order."""
         ...
 
@@ -191,10 +194,10 @@ def prepare(photo: Path, dimension: int) -> object:
     edge the **session** declares, convert RGB to BGR, widen to float32, and add
     the batch axis.
 
-    `dimension` is a parameter rather than a constant for the reason `Session`
-    carries it: a sibling tagger in the same family declares a different input
-    size, and a number hard-coded here would resize correctly against the one
-    graph it was written for and silently wrongly against every other.
+    `dimension` is a parameter rather than a constant because `OnnxSession` reads
+    it off the graph: a sibling tagger in the same family declares a different
+    input size, and a number hard-coded here would resize correctly against the
+    one graph it was written for and silently wrongly against every other.
 
     **The return type is `object` rather than `Any`**, and that is the honest one
     as well as the one that needs no suppression: the array is opaque to every
@@ -274,13 +277,14 @@ def scored(
     *,
     floor: float = FLOOR,
 ) -> list[Scored]:
-    """Prepare `photo`, run it through `session`, and select what it emitted.
+    """Run `photo` through `session` and select what it emitted.
 
-    Three lines, and the whole of what they add over `select` is the image: the
-    preparation rule and the session are the two things that need a wheel, and
-    everything decidable without one is decided in `select`.
+    One line, and the whole of what it adds over `select` is the session: the
+    preparation rule and the graph are the two things that need a wheel, both sit
+    behind `Session`, and everything decidable without one is decided in
+    `select`.
     """
-    return select(session.run(prepare(photo, session.dimension)), labels, floor=floor)
+    return select(session.run(photo), labels, floor=floor)
 
 
 class OnnxSession:
@@ -308,9 +312,17 @@ class OnnxSession:
         _, height, _width, _channels = self._input.shape
         return int(height)
 
-    def run(self, prepared: object) -> Sequence[float]:
-        """Return the one output row this graph produces for one image."""
-        outputs = self._session.run(None, {self._input.name: prepared})
+    def run(self, photo: Path) -> Sequence[float]:
+        """Prepare `photo` to this graph's own input size, then infer over it.
+
+        The dimension is read off the graph rather than written down: a sibling
+        tagger in the same family declares a different edge, and a constant would
+        resize correctly against the one graph it was written for and silently
+        wrongly against every other.
+        """
+        outputs = self._session.run(
+            None, {self._input.name: prepare(photo, self.dimension)}
+        )
         return list(outputs[0][0])
 
 

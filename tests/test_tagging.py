@@ -1,0 +1,335 @@
+"""Stage (1)'s two tag artifacts: what goes out, what is stored, what refuses.
+
+Offline throughout. The hosted tagger is driven through `FakeTransport` and
+`FakeTagger`, and the local one through `tests/test_wd14.py`'s fake session over
+a three-row label index -- no network, no 467 MB file, and nothing here imports
+`numpy`, `Pillow` or `onnxruntime`.
+
+**What is deliberately not asserted anywhere in this file is narrowing.** Neither
+stage canonicalises, filters against the vocabulary, deduplicates or re-orders on
+anything but confidence, and the tests that look like they are checking content
+are checking that content survived untouched.
+"""
+
+import base64
+import json
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from isekai.boundary import provision
+from isekai.boundary.claude_cli import constant_record
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import TAGS, WD14, Run, open_run, record_failure
+from isekai.pipeline.tagging import (
+    SEPARATOR,
+    TAG_PROMPT,
+    TAGGER_OPTIONS,
+    FakeTagger,
+    OllamaTagger,
+    caption_tags,
+    caption_wd14,
+)
+from tests.images import jpeg_bytes
+from tests.test_wd14 import INDEX, FakeSession
+from tests.transports import FakeTransport
+
+from isekai.boundary.wd14 import read_labels  # isort: skip
+
+FLOW = "summon-open-v1"
+
+
+@pytest.fixture
+def run(tmp_path: Path) -> Run:
+    """Return a run with a photograph in it and nothing else."""
+    photo = tmp_path / "aunt-ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    return open_run(photo, tmp_path / "runs")
+
+
+def _artifact(path: Path) -> dict[str, Any]:
+    """Return one written artifact, parsed."""
+    parsed: Any = json.loads(path.read_text())
+    return parsed
+
+
+def _producer(path: Path) -> dict[str, Any]:
+    """Return one written artifact's producer record."""
+    producer: Any = _artifact(path)["producer"]
+    return producer
+
+
+def _answer(text: str) -> FakeTransport:
+    """Return a transport answering `text` as the hosted tagger's whole reply."""
+    return FakeTransport(payload={"response": text, "done_reason": "stop"})
+
+
+# --- what the hosted tagger is given -----------------------------------------
+
+
+@pytest.mark.spec("tagging:inputs:only-the-photograph-is-passed")
+def test_the_hosted_tagger_is_sent_the_photograph_and_one_fixed_prompt(
+    run: Run,
+) -> None:
+    transport = _answer("1girl, solo, brown hair")
+
+    caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+
+    (body,) = transport.bodies()
+    assert body["prompt"] == TAG_PROMPT
+    assert body["images"] == [base64.b64encode(run.photo.read_bytes()).decode()]
+    assert body["options"] == dict(TAGGER_OPTIONS)
+    # No briefing, no schema, no vocabulary, no flow identifier: a tagger told
+    # what a sheet wants is a tagger being pressed into stage (2)'s job.
+    assert set(body) == {"model", "prompt", "images", "stream", "options"}
+
+
+@pytest.mark.spec("tagging:inputs:only-the-photograph-is-passed")
+def test_the_prompt_asks_for_a_long_list_and_is_not_chat_framed() -> None:
+    # "Long" is the lever -- 34-40 tags becomes 45-51, and in-vocabulary yield
+    # 11-23% becomes 24%. The llama-3 framing is refused because the Modelfile
+    # pins `TEMPLATE {{ .Prompt }}` and the prose briefing goes through it
+    # unframed (design.md D11).
+    assert TAG_PROMPT == "Write a long list of Booru tags for this image.\n"
+    assert "<|" not in TAG_PROMPT
+
+
+@pytest.mark.spec("tagging:inputs:only-the-photograph-is-passed")
+def test_the_sampling_options_carry_the_sorters_repeat_penalty() -> None:
+    # Kept on the sorter's precedent rather than a budget argument: at
+    # temperature 0 there is no sampling noise to break a loop, and a
+    # comma-separated list is that loop with more surface (design.md D12).
+    assert TAGGER_OPTIONS == {
+        "temperature": 0,
+        "seed": 1,
+        "num_predict": 1024,
+        "repeat_penalty": 1.15,
+    }
+
+
+# --- what is stored -----------------------------------------------------------
+
+
+@pytest.mark.spec("tagging:output:artifact-is-a-list-of-tags")
+def test_the_hosted_artifact_is_a_list_of_tags_under_the_flow(run: Run) -> None:
+    path = caption_tags(run, FLOW, FakeTagger())
+
+    assert path is not None
+    assert path.parent == run.directory(FLOW, TAGS)
+    assert _artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
+
+
+@pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
+def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
+    run: Run,
+) -> None:
+    # `fashion photography` and `high resolution` are out of the vocabulary and
+    # `blue eyes` contradicts what the reader wrote about the same photograph.
+    # All three are stored: narrowing is stage (2)'s job, and seeing behind it is
+    # why this artifact exists (design.md D1).
+    answered = "1girl, fashion photography, blue eyes, high resolution, solo"
+    transport = _answer(answered)
+
+    path = caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+
+    assert path is not None
+    assert _artifact(path)["tags"] == answered.split(", ")
+
+
+@pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
+def test_whitespace_is_stripped_and_nothing_else_is(run: Run) -> None:
+    transport = _answer("  1girl ,solo,   looking at viewer  ,, ")
+
+    path = caption_tags(run, FLOW, OllamaTagger("m", transport))
+
+    assert path is not None
+    # Empty elements go, because an empty chip is not a tag anyone offered. The
+    # order is the model's and no tag is rewritten.
+    assert _artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
+
+
+@pytest.mark.spec("tagging:output:artifact-is-a-list-of-tags")
+def test_the_local_artifact_is_scored_and_sorted_under_its_own_directory(
+    run: Run,
+) -> None:
+    labels = read_labels(INDEX)
+
+    path = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+
+    assert path is not None
+    assert path.parent == run.directory(FLOW, WD14)
+    assert _artifact(path)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
+
+
+# --- failure ------------------------------------------------------------------
+
+
+@pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
+def test_a_response_with_no_comma_is_a_permanent_failure(run: Run) -> None:
+    transport = _answer("The photograph shows a person standing in a garden.")
+
+    with pytest.raises(Refusal) as refused:
+        caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+
+    assert "permanent" in str(refused.value)
+    recorded = list(run.directory(FLOW, TAGS).glob("*.error.*.json"))
+    assert [path.name for path in recorded] == ["001.error.1.permanent.json"]
+
+
+@pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
+def test_a_single_comma_is_enough_and_content_is_never_judged(run: Run) -> None:
+    # One comma separates "not a list at all" from "wrong", and only the first is
+    # a failure here. Anything richer starts filtering (design.md D15).
+    path = caption_tags(run, FLOW, OllamaTagger("m", _answer("nonsense, drivel")))
+
+    assert path is not None
+    assert _artifact(path)["tags"] == ["nonsense", "drivel"]
+
+
+@pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
+def test_the_refusal_names_the_verb_the_operator_would_actually_run(run: Run) -> None:
+    # `python -m isekai tags` does not exist: one verb produces all three
+    # artifacts (design.md D8), so naming the stage here would name a command
+    # that refuses with "unknown verb".
+    with pytest.raises(Refusal) as refused:
+        caption_tags(run, FLOW, OllamaTagger("m", _answer("prose with no separator")))
+
+    message = str(refused.value)
+    assert "python -m isekai caption" in message
+    assert f"{FLOW}/{TAGS}/" in message
+
+
+@pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
+def test_the_hosted_tagger_stops_after_its_own_three_attempts(run: Run) -> None:
+    directory = run.directory(FLOW, TAGS)
+    directory.mkdir(parents=True, exist_ok=True)
+    for _ in range(3):
+        record_failure(directory, 1, "transient", {})
+    tagger = FakeTagger()
+
+    with pytest.raises(Refusal) as refused:
+        caption_tags(run, FLOW, tagger)
+
+    assert "3 attempts" in str(refused.value)
+    assert tagger.calls == []
+
+
+# --- independence -------------------------------------------------------------
+
+
+@pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")
+def test_a_second_pass_over_a_complete_hosted_artifact_makes_no_call(
+    run: Run,
+) -> None:
+    tagger = FakeTagger()
+    assert caption_tags(run, FLOW, tagger) is not None
+
+    assert caption_tags(run, FLOW, tagger) is None
+    assert len(tagger.calls) == 1
+
+
+@pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")
+def test_a_second_pass_over_a_complete_local_artifact_opens_no_session(
+    run: Run,
+) -> None:
+    labels = read_labels(INDEX)
+    session = FakeSession([0.0, 0.9, 0.0])
+    assert caption_wd14(run, FLOW, session, labels) is not None
+
+    assert caption_wd14(run, FLOW, session, labels) is None
+    assert session.calls == 1
+
+
+@pytest.mark.spec("tagging:independence:each-tagger-resumes-on-its-own")
+def test_a_failed_hosted_tagger_leaves_the_local_artifact_complete(run: Run) -> None:
+    labels = read_labels(INDEX)
+    local = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+
+    with pytest.raises(Refusal):
+        caption_tags(run, FLOW, OllamaTagger("m", _answer("prose, ".replace(", ", ""))))
+
+    assert local is not None and local.is_file()
+    assert _artifact(local)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
+    # And the complete one is not re-run to repair the failed one.
+    assert caption_wd14(run, FLOW, FakeSession([1.0, 1.0, 1.0]), labels) is None
+
+
+@pytest.mark.spec("tagging:independence:each-tagger-resumes-on-its-own")
+def test_the_two_taggers_write_into_two_directories(run: Run) -> None:
+    labels = read_labels(INDEX)
+
+    local = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+    hosted = caption_tags(run, FLOW, FakeTagger())
+
+    assert local is not None and hosted is not None
+    assert local.parent != hosted.parent
+    assert {local.parent.name, hosted.parent.name} == {WD14, TAGS}
+
+
+# --- provenance ---------------------------------------------------------------
+
+
+@pytest.mark.spec("tagging:provenance:the-local-tagger-declares-its-pin")
+def test_the_local_producer_claims_a_pin_and_names_both_digests(run: Run) -> None:
+    labels = read_labels(INDEX)
+
+    path = caption_wd14(run, FLOW, FakeSession([0.0, 0.9, 0.0]), labels)
+
+    assert path is not None
+    producer = _producer(path)
+    # The first producer in this repository that can honestly claim one: a local
+    # file with a digest is not the hosted service `pinned` was written for
+    # (design.md D17).
+    assert producer["pinned"] is True
+    assert producer["implementation"] == "wd14"
+
+    committed = {
+        entry["dest"]: entry["sha256"]
+        for entry in provision.load_manifest(provision.VOCABULARY_MANIFEST_PATH)[
+            "entries"
+        ]
+    }
+    # Both, because either alone proves nothing: the graph's bytes say nothing
+    # about which names its neurons carry.
+    assert producer["artifacts"] == {
+        dest: {"sha256": digest} for dest, digest in committed.items()
+    }
+
+
+@pytest.mark.spec("tagging:provenance:the-hosted-tagger-records-its-prompt-digest")
+def test_the_hosted_producer_records_the_prompt_digest_and_no_path(run: Run) -> None:
+    path = caption_tags(run, FLOW, FakeTagger())
+
+    assert path is not None
+    producer = _producer(path)
+    assert producer["pinned"] is False
+    # Digest only. A module constant has no file, and a record that invented a
+    # path would assert a location that does not exist (design.md D16).
+    assert producer["prompt"] == constant_record(TAG_PROMPT)
+    assert "path" not in producer["prompt"]
+
+
+@pytest.mark.spec("tagging:provenance:the-hosted-tagger-records-its-prompt-digest")
+def test_constant_record_carries_a_digest_and_nothing_else() -> None:
+    record = constant_record("some instructions\n")
+
+    assert set(record) == {"sha256"}
+    assert len(record["sha256"]) == 64
+
+
+@pytest.mark.spec("tagging:provenance:the-hosted-tagger-records-its-prompt-digest")
+def test_the_producer_names_the_model_that_actually_answered(run: Run) -> None:
+    transport = _answer("1girl, solo")
+
+    path = caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+
+    assert path is not None
+    producer = _producer(path)
+    assert producer["implementation"] == "ollama"
+    assert producer["models"] == ["joycaption-beta-one-q4k"]
+
+
+@pytest.mark.spec_exempt("structural: the separator this stage splits on")
+def test_the_separator_is_a_comma() -> None:
+    assert SEPARATOR == ","

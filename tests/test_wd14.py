@@ -32,6 +32,7 @@ from isekai.boundary.wd14 import (
     Label,
     Scored,
     read_labels,
+    scored,
     select,
     verified_paths,
 )
@@ -52,24 +53,24 @@ class FakeSession:
     """A session that answers one fixed vector and counts how often it was asked.
 
     The double `tagging:seam:offline-double-satisfies-the-interface` names. It
-    declares a small `dimension` so a test can prove the preparation rule reads
-    the session rather than a constant, and it opens nothing.
+    opens nothing, reads nothing and imports nothing -- which is only possible
+    because the seam takes the photograph rather than a prepared array, and so
+    `numpy` and `Pillow` sit behind it with the graph.
+
+    The counter is what makes the idempotence assertion provable: showing that a
+    completed stage opens no session needs something that counts.
     """
 
-    def __init__(self, vector: list[float], dimension: int = 8) -> None:
-        """Answer `vector` to every call, from a session of edge `dimension`."""
+    def __init__(self, vector: list[float]) -> None:
+        """Answer `vector` to every call."""
         self.vector = vector
-        self._dimension = dimension
         self.calls = 0
+        self.seen: list[Path] = []
 
-    @property
-    def dimension(self) -> int:
-        """The square edge this fake declares."""
-        return self._dimension
-
-    def run(self, prepared: object) -> list[float]:
-        """Return the fixed vector, recording that it was asked."""
+    def run(self, photo: Path) -> list[float]:
+        """Return the fixed vector, recording that it was asked and about what."""
         self.calls += 1
+        self.seen.append(photo)
         return self.vector
 
 
@@ -297,11 +298,28 @@ def test_no_wheel_the_tagging_extra_carries_is_imported_at_module_scope() -> Non
 
 
 @pytest.mark.spec_exempt("structural: the seam's shape, which the doubles satisfy")
-def test_the_fake_session_satisfies_the_interface_the_real_one_does() -> None:
+def test_the_fake_session_satisfies_the_interface_the_real_one_does(
+    tmp_path: Path,
+) -> None:
     from isekai.boundary.wd14 import Session
 
     fake: Session = FakeSession([0.0, 0.9, 0.0])
+    photo = tmp_path / "aunt-ada.jpg"
 
-    assert fake.dimension == 8
-    assert fake.run(object()) == [0.0, 0.9, 0.0]
+    assert fake.run(photo) == [0.0, 0.9, 0.0]
     assert FakeSession([0.0]).calls == 0
+
+
+@pytest.mark.spec("tagging:seam:offline-double-satisfies-the-interface")
+def test_the_session_is_handed_the_photograph_and_nothing_else(
+    tmp_path: Path,
+) -> None:
+    # The seam takes a `Path` rather than a prepared array precisely so the
+    # double needs no wheel. Nothing but the photograph crosses it: no briefing,
+    # no schema, no flow identifier.
+    session = FakeSession([0.0, 0.9, 0.0])
+    photo = tmp_path / "aunt-ada.jpg"
+
+    scored(photo, session, read_labels(INDEX))
+
+    assert session.seen == [photo]

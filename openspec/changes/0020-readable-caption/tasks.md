@@ -6,7 +6,7 @@
 - [x] 2 — `run.py`: two layout names, two budget entries
 - [x] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
 - [x] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
-- [ ] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
+- [x] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 - [ ] 6 — `wiring` resolves a tagger per flow, and `caption` says three times
 - [ ] 7 — `run_view.STAGES`: the two stages `show` would otherwise not see
 - [ ] 8 — The surface: sentences, two chip lists, and the payload that feeds them
@@ -164,9 +164,14 @@ under it (`design.md` D22).
 D19). This module must not be importable-with-side-effects: opening a 467 MB file at import time
 defeats D14.
 
-- [x] 4.1 A `Session` Protocol — one method taking a prepared array and returning a probability vector
-      — with the real `onnxruntime.InferenceSession` behind a module function as its default, exactly
-      as `ollama.Transport` has `ollama.post`.
+- [x] 4.1 A `Session` Protocol — one method **taking the photograph** and returning a probability
+      vector, with `OnnxSession` behind it wrapping `onnxruntime.InferenceSession`, exactly as
+      `ollama.Transport` has `ollama.post`. **Amended at phase 5 — `design.md` D26.** This sub-task
+      said *taking a prepared array*; built that way the **stage** is untestable, because
+      `caption_wd14()` then reaches `prepare()`, which imports `numpy` and `Pillow`, which the gate's
+      environment deliberately does not install. `tagging:seam:offline-double-satisfies-the-interface`
+      requires both artifacts written with no model file, so preparation goes behind the seam — where
+      `ollama.Transport`'s precedent already puts request encoding.
 - [x] 4.2 The preparation rule, pure and testable without the model: open, composite onto white, pad to
       a square, resize to the session's own input dimension with bicubic, convert to BGR float32,
       add a batch axis. **Do not hard-code 448** — read it from the session's declared input shape.
@@ -188,23 +193,23 @@ defeats D14.
 
 ## 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
 
-- [ ] 5.1 `caption_wd14(run, flow, tagger, *, new_version=False) -> Path | None` — the guard is
+- [x] 5.1 `caption_wd14(run, flow, tagger, *, new_version=False) -> Path | None` — the guard is
       `caption()`'s, character for character (`caption.py:252-254`), against `run.directory(flow, WD14)`.
       Body: a list of `{tag, confidence}` above a **0.15** floor, sorted by confidence descending
       (`design.md` D13). Producer: `implementation: "wd14"`, the model name, **`pinned: true`**, and
       both digests (`design.md` D17).
-- [ ] 5.2 `caption_tags(run, flow, tagger, *, new_version=False) -> Path | None` — the same guard
+- [x] 5.2 `caption_tags(run, flow, tagger, *, new_version=False) -> Path | None` — the same guard
       against `run.directory(flow, TAGS)`. The prompt is a module constant,
       `"Write a long list of Booru tags for this image.\n"` (D11); `TAGGER_OPTIONS` is
       `{temperature: 0, seed: 1, num_predict: 1024, repeat_penalty: 1.15}` (D12). **Split at the
       adapter, store the list**; no canonicalisation, no vocabulary filtering, no re-ordering.
       Producer: `implementation: "ollama"`, the model, `pinned: false`, and the prompt's digest.
-- [ ] 5.3 `constant_record(text: str) -> dict[str, str]` beside `instructions_record(path)` in
+- [x] 5.3 `constant_record(text: str) -> dict[str, str]` beside `instructions_record(path)` in
       `isekai/boundary/claude_cli.py` — digest only, **no `path` key**, because a constant has none
       (`design.md` D16).
-- [ ] 5.4 A response containing **no comma** is a permanent `CliFailure`, recorded like any other
+- [x] 5.4 A response containing **no comma** is a permanent `CliFailure`, recorded like any other
       (D15). Everything with at least one comma is stored exactly as it came.
-- [ ] 5.5 `FakeTagger` counting its calls, so the idempotence assertion is provable.
+- [x] 5.5 `FakeTagger` counting its calls, so the idempotence assertion is provable.
       **Verify:** `uv run pytest tests/test_tagging.py -v` — bindings
       `tagging:inputs:only-the-photograph-is-passed`, `tagging:output:artifact-is-a-list-of-tags`,
       `tagging:output:the-list-is-stored-unnarrowed`,
@@ -212,7 +217,7 @@ defeats D14.
       `tagging:independence:a-complete-tagger-makes-no-call`,
       `tagging:provenance:the-local-tagger-declares-its-pin`,
       `tagging:provenance:the-hosted-tagger-records-its-prompt-digest`.
-- [ ] 5.6 **Prove `caption()` did not move.**
+- [x] 5.6 **Prove `caption()` did not move.**
       **Verify:** `git diff main -- isekai/pipeline/caption.py` prints nothing.
 
 **Gate green. Commit.**

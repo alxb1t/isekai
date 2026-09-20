@@ -457,6 +457,43 @@ loop, which is what earns the exception to *do not open a file this version neve
 they are: re-deriving them is a different change with a different diff to review.
 
 
+### D26 · The `Session` seam takes the photograph, not a prepared array
+
+**A correction to `tasks.md` 4.1 made at phase 5, on a conflict with this change's
+own spec.** 4.1 described the Protocol as *"one method taking a prepared array and
+returning a probability vector"*. Built that way it works, it typechecks, and the
+boundary's own tests pass — and the **stage** is untestable, because
+`caption_wd14()` then calls `prepare()`, which imports `numpy` and `Pillow`, which
+the environment the gate runs in deliberately does not install (D19).
+
+```
+  seam AFTER preparation      stage -> prepare -> numpy   ✗ ModuleNotFoundError
+  seam BEFORE preparation     stage -> Session.run(photo) ✓ the double answers
+```
+
+`specs/tagging/` requires the other side of that line in as many words:
+`tagging:seam:offline-double-satisfies-the-interface` says *the stage runs with
+the test doubles in place · **both** tag artifacts are written · no network call
+is attempted and no model file is opened*. Five tests failed on exactly this, and
+neither a fixture nor a skip could satisfy the scenario — a skip would leave the
+capability covered by a binding that binds nothing, which is the failure the
+marker-registration rule exists to prevent.
+
+**So preparation goes behind the seam, where the precedent already put it.**
+`ollama.Transport` does not take a serialised body and leave JSON encoding to its
+caller; it takes the request. `Session.run` takes the photograph for the same
+reason. `prepare()` survives unchanged as a module function, `OnnxSession.run`
+calls it, and `dimension` moves off the Protocol onto `OnnxSession` — which is
+where it was always read from, since it comes off the graph's declared input
+shape and a fake has no graph to declare one.
+
+**What this costs, stated rather than discovered later:** `prepare()` is now
+reachable only through `OnnxSession`, so **nothing in the gate executes it**. It
+was already true that no gate command could, since it needs two wheels the gate
+does not install; what changes is that it is no longer even reachable from a test
+that skips. Its acceptance is phase 10, on a real photograph, and that is where
+the resize, the white composite and the BGR order are actually checked.
+
 ---
 
 ## Risks / Trade-offs
