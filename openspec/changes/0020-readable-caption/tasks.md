@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The gate learns to see the browser, and the `tagging` extra
-- [ ] 2 — `run.py`: two layout names, two budget entries
+- [x] 2 — `run.py`: two layout names, two budget entries
 - [ ] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
 - [ ] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
 - [ ] 5 — `pipeline/tagging.py`: two functions, two seams, `constant_record()`
@@ -81,9 +81,9 @@ under it (`design.md` D22).
 
 **Why here:** phases 4 and 5 write into directories these constants name, and phase 7 reads them.
 
-- [ ] 2.1 `isekai/foundation/run.py`: add `TAGS = "tags"` and `WD14 = "wd14"` beside `CAPTIONS`,
+- [x] 2.1 `isekai/foundation/run.py`: add `TAGS = "tags"` and `WD14 = "wd14"` beside `CAPTIONS`,
       `SHEETS`, `REVIEW`, `PROMPTS`, `OUTPUTS` (`run.py:106-111`).
-- [ ] 2.2 `BUDGETS` (`run.py:128-133`) gains `"tags": 3` and `"wd14": 1`. **Three for the hosted
+- [x] 2.2 `BUDGETS` (`run.py:128-133`) gains `"tags": 3` and `"wd14": 1`. **Three for the hosted
       tagger** — it is over HTTP and flaky, like `caption` and `sheet`. **One for the local tagger** —
       it is deterministic, so a second attempt cannot succeed where the first failed, exactly as
       `assemble` and `render` are one.

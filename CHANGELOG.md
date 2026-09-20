@@ -49,6 +49,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   does not move, `uv.lock` gains only the extra's own three entries because the pins already
   existed, and the three stdlib-only runtime guards still pass under `python -S`.
 
+- **Two stage directories and two budgets, in `isekai/foundation/run.py`.** `WD14 = "wd14"` and
+  `TAGS = "tags"` join the layout names, between `CAPTIONS` and `SHEETS` — the order a run passes
+  through them. The run owns the layout, so the two tagging stages name their directories the same
+  way every other stage does, through `run.directory(flow, CONSTANT)`.
+- **`BUDGETS` gains `"wd14": 1` and `"tags": 3`, split on the axis every other entry is split on.**
+  The hosted tagger is a model over HTTP and is flaky exactly as `caption` and `sheet` are, so it
+  gets their three; the local tagger is a deterministic matrix multiply against a digest-verified
+  file, so a second attempt cannot succeed where the first failed and it gets `assemble`'s and
+  `render`'s one. This is not bookkeeping: `BUDGETS[stage]` is a bare dict lookup and both
+  `across()` and `main()` catch only `Refusal`, so a stage with no entry would escape as a raw
+  traceback in a package where every failure is named (design.md D6). Sharing `caption`'s entry
+  would have worked and would have made the refusal say *caption failed permanently* about the
+  `wd14/` directory.
+
 ### Changed
 
 - **`pyproject.toml`, `README.md` and `CLAUDE.md` stop saying the gate is five commands.** Three

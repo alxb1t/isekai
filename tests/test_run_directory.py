@@ -551,7 +551,45 @@ def test_a_stage_below_its_budget_is_allowed_to_attempt_again(
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
 def test_the_rendering_stages_budget_is_one() -> None:
-    assert BUDGETS == {"caption": 3, "sheet": 3, "assemble": 1, "render": 1}
+    assert BUDGETS == {
+        "caption": 3,
+        "wd14": 1,
+        "tags": 3,
+        "sheet": 3,
+        "assemble": 1,
+        "render": 1,
+    }
+
+
+@pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
+@pytest.mark.parametrize(("stage", "spend"), [("wd14", 1), ("tags", 3)])
+def test_each_tagger_refuses_by_name_at_its_own_budget(
+    tmp_path: Path, stage: str, spend: int
+) -> None:
+    assert BUDGETS[stage] == spend
+    directory = tmp_path / stage
+    directory.mkdir()
+    for _ in range(spend):
+        record_failure(directory, 1, "transient", {})
+
+    with pytest.raises(Refusal) as refused:
+        check_budget(stage, directory, 1, "aunt-ada.jpg")
+
+    message = str(refused.value)
+    assert stage in message
+    assert f"{stage}/" in message
+    assert f"001.error.{spend}.transient.json" in message
+
+
+@pytest.mark.spec("tagging:budget:each-tagger-has-its-own-budget")
+@pytest.mark.parametrize("stage", ["wd14", "tags"])
+def test_a_tagger_below_its_budget_attempts_again_rather_than_raising_keyerror(
+    tmp_path: Path, stage: str
+) -> None:
+    directory = tmp_path / stage
+    directory.mkdir()
+
+    check_budget(stage, directory, 1, "aunt-ada.jpg")
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
