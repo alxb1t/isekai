@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-20
+
 ### Release notes — two things this version does not check, and hands to the operator
 
 **① Read the first caption against the photograph.** Nothing here detects a reader whose vision
