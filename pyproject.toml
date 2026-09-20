@@ -11,8 +11,8 @@ dependencies = []
 #
 # CI never installs this. The eval tests skip there and run on the operator's
 # machine, which is the same posture this repository already takes toward
-# diffusion quality: verified by eye on a pod, never in CI. The gate array stays
-# five commands.
+# diffusion quality: verified by eye on a pod, never in CI. This extra adds no
+# gate command -- the array is six, and none of them installs it.
 #
 # Five packages, and each one is load-bearing:
 #   torch, transformers -- StyleID publishes only a CLIPModel safetensors, and
@@ -32,6 +32,32 @@ dependencies = []
 eval = [
     "torch>=2.6",
     "transformers>=4.49",
+    "onnxruntime>=1.20",
+    "numpy>=2.1",
+    "Pillow>=11.0",
+]
+
+# The local tagger's stack, and NOT the runtime's. `dependencies = []` above is
+# untouched and so is the `-S` guard: this extra is imported from exactly one
+# module, the tagger's own boundary, and function-locally there -- the same
+# shape the `ui` extra takes, which `cli.py` imports inside its handler.
+#
+# Three packages, and it is deliberately NOT the `eval` extra even though that
+# one already resolves all three. `eval` also carries `torch>=2.6` and
+# `transformers>=4.49` -- roughly 2 GB that this tagger never imports -- and
+# installing a measurement stack to read a 467 MB ONNX graph would make the
+# cheap half of stage ③ cost the expensive half's download (design.md D19). The
+# `ui` extra is the precedent: a narrow extra for one surface.
+#
+# Floored rather than pinned, matching `eval` and not `ui`: these are the floors
+# the tagger needs, and the pins the lockfile already carries were resolved for
+# `eval` from the same three names, so `uv sync --locked` -- gate command one --
+# stays green without a new resolution.
+#
+#   onnxruntime -- the SwinV2 session `models/wd14/model.onnx` is loaded through.
+#   numpy       -- the prepared array in and the probability vector out.
+#   Pillow      -- open, composite onto white, pad to a square, resize.
+tagging = [
     "onnxruntime>=1.20",
     "numpy>=2.1",
     "Pillow>=11.0",
@@ -66,7 +92,7 @@ ui = [
 ]
 
 # Test and gate tooling only, and NOT runtime: `uv sync --locked` installs this
-# group by default, so everything here is present for all five gate commands and
+# group by default, so everything here is present for all six gate commands and
 # for none of `python -m isekai`. `dependencies = []` above is untouched, and the
 # stdlib-only runtime rule with it.
 #

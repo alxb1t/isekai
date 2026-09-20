@@ -31,7 +31,7 @@ Hard constraints that shape the code here:
 
 ---
 
-## The quality gate — this repo's five commands
+## The quality gate — this repo's six commands
 
 **These** are the commands this repo declares, in `.minions/minions.toml`'s `gate` array, in order:
 
@@ -39,12 +39,14 @@ Hard constraints that shape the code here:
 - `uv run ruff format --check .` — format, in check mode (a rewrite is not the check)
 - `uv run ruff check .` — lint
 - `uv run ty check` — strict types
+- `bash scripts/typecheck_ui.sh` — strict types, in the browser: `vue-tsc --noEmit` over `ui/`,
+  wrapped so a missing `ui/node_modules/` refuses by name rather than exiting 127
 - `uv run pytest` — tests
 
 `Makefile`'s `gate` target, `README.md` and CI (`.github/workflows/ci.yml`) mirror that array; the array is
 the one that is run. Change one, change all four.
 
-All five green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
+All six green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
 
 Beyond the array, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
 That is a convention for those phases, not an entry in the array; adding it to one means adding it to the

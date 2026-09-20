@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The gate learns to see the browser, and the `tagging` extra
+- [x] 1 — The gate learns to see the browser, and the `tagging` extra
 - [ ] 2 — `run.py`: two layout names, two budget entries
 - [ ] 3 — `scripts/vocabulary.json`: the model pinned beside its own label index
 - [ ] 4 — `boundary/wd14.py`: the session, the label index, and the fake that keeps the suite offline
@@ -58,17 +58,17 @@ localhost, and the acceptance requires no render. If a phase appears to need a p
 Adding the one check that can, before anything is built, is what makes every later browser phase run
 under it (`design.md` D22).
 
-- [ ] 1.1 Add `npm run typecheck` to the `gate` array in `.minions/minions.toml` **and** to the `gate`
+- [x] 1.1 Add `npm run typecheck` to the `gate` array in `.minions/minions.toml` **and** to the `gate`
       target in `Makefile`, in the same position in both. It runs `vue-tsc --noEmit` from `ui/`, so it
       needs `ui/node_modules/`; make it refuse by name when that is absent rather than failing
       obscurely — `bundle.py`'s existing refusal is the shape to copy.
       **Verify:** `make gate` — every command exits 0, and the new one appears in the output.
-- [ ] 1.2 Add the `tagging` extra to `pyproject.toml`:
+- [x] 1.2 Add the `tagging` extra to `pyproject.toml`:
       `tagging = ["onnxruntime>=1.20", "numpy>=2.1", "Pillow>=11.0"]`, with a comment above it stating
       why it is not the `eval` extra (`design.md` D19). **`dependencies = []` does not move.**
       **Verify:** `uv lock && git diff --stat uv.lock` — commit the lockfile if it changed;
       then `uv sync --locked` exits 0.
-- [ ] 1.3 Prove the runtime rule still holds.
+- [x] 1.3 Prove the runtime rule still holds.
       **Verify:** the three existing guards, by name —
       `uv run pytest tests/test_pipeline_cli.py -k "site_packages_off_the_path or stdlib_guard" -v`
       (`test_the_pipeline_entry_point_imports_with_site_packages_off_the_path`,

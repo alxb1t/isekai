@@ -25,6 +25,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The gate gains a sixth command — `bash scripts/typecheck_ui.sh`, the browser half.** The Vue
+  frontend has no automated tests of any kind, and `vue-tsc --noEmit` was declared in
+  `ui/package.json` and named by no gate command, so a phase whose whole product is browser code
+  could end green while the bundle did not compile. It sits beside `uv run ty check` because it is
+  the same axis in the other language, and it is added **before** any browser code is written so
+  every later phase runs under it (design.md D22). It is a script rather than a bare `npm run`
+  because the array's entries run from the repository root and because a missing `ui/node_modules/`
+  has to refuse **by name** — `isekai/interface/ui/bundle.py`'s shape, say what is absent and what
+  installs it — rather than exit 127 with `vue-tsc: command not found`. `npm install` is still never
+  run for you: it fetches third-party packages, which is why `ui/node_modules/` is an ignored root.
+- **`.github/workflows/ci.yml` restores that toolchain, and it is the only place that does.** CI
+  invokes `make gate`, so the sixth command would refuse on a bare checkout. A `setup-node` step and
+  an `npm ci` from the tracked `ui/package-lock.json` install exactly the pinned tree — deterministic,
+  and failing rather than resolving a new one. The gate array's four mirrors — the array,
+  `Makefile`, `README.md` and CI — are updated in this one commit, as the contract requires.
+- **A `tagging` extra — `onnxruntime`, `numpy`, `Pillow`.** Deliberately **not** the `eval` extra,
+  which resolves the same three names and also carries `torch` and `transformers`: roughly 2 GB the
+  local tagger never imports, which would make the cheap half of stage ③ cost the expensive half's
+  download (design.md D19). The `ui` extra is the precedent for a narrow one. `dependencies = []`
+  does not move, `uv.lock` gains only the extra's own three entries because the pins already
+  existed, and the three stdlib-only runtime guards still pass under `python -S`.
+
+### Changed
+
+- **`pyproject.toml`, `README.md` and `CLAUDE.md` stop saying the gate is five commands.** Three
+  separate prose claims counted it; all three now say six.
+
 ## [0.19.0] - 2026-09-20
 
 ### Release notes — two things this version does not check, and hands to the operator

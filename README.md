@@ -224,17 +224,22 @@ change all four, in the same commit.
 make gate
 ```
 
-runs exactly these five, in this order:
+runs exactly these six, in this order:
 
 ```sh
 uv sync --locked            # environment, from the tracked lock
 uv run ruff format --check .  # format
 uv run ruff check .         # lint
 uv run ty check             # types
+bash scripts/typecheck_ui.sh  # types, in the browser
 uv run pytest               # tests
 ```
 
-All five green, or the work is not done. The suite is **fully offline and deterministic** —
+The fifth is the browser half: `vue-tsc --noEmit` over `ui/`, wrapped so that a missing
+`ui/node_modules/` refuses by name instead of exiting 127. It is **not** restored for you —
+run `npm install` in `ui/` once, as the review surface already asks.
+
+All six green, or the work is not done. The suite is **fully offline and deterministic** —
 the ComfyUI transport is faked behind a Protocol and no test touches a GPU or the network.
 Image quality and identity fidelity are judged live on a pod, by eye.
 
