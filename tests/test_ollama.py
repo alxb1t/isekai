@@ -6,8 +6,11 @@ another attempt, which will fail the same way every time, and which two are the
 operator's one-command fix and must not spend an attempt at all.
 """
 
+import http.client
 import json
 import urllib.error
+import urllib.request
+from collections.abc import Mapping
 
 import pytest
 
@@ -17,6 +20,7 @@ from isekai.boundary.ollama import (
     TIMEOUT,
     OllamaFailure,
     ask,
+    post,
 )
 from isekai.foundation.refusal import Refusal
 from tests.transports import FakeTransport
@@ -33,6 +37,63 @@ def test_the_boundary_speaks_one_endpoint_at_one_ceiling() -> None:
     assert GENERATE == "/api/generate"
     assert HOST == "http://127.0.0.1:11434"
     assert TIMEOUT == 900
+
+
+class RefusingConnection(http.client.HTTPConnection):
+    """Stands in for the real connection and refuses, naming the host it was given.
+
+    The only stand-in in this file that is not a `Transport`, because the thing
+    under test is `post` itself -- which address urllib resolves the request to,
+    below the seam every other test here drives. Nothing binds a socket: the
+    connection refuses before it would open one, and the host it names is the
+    assertion.
+    """
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        body: object = None,
+        headers: Mapping[str, object] | None = None,
+        *,
+        encode_chunked: bool = False,
+    ) -> None:
+        """Refuse, carrying the address this connection was constructed for."""
+        raise ConnectionRefusedError(f"asked for {self.host}:{self.port}")
+
+
+@pytest.mark.spec_exempt("structural: no environment may redirect a fixed address")
+def test_no_proxy_in_the_environment_can_capture_the_photograph(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A configured proxy must not stand between this call and the loopback host.
+
+    urllib does **not** auto-bypass a proxy for loopback -- only an explicit
+    `no_proxy` entry does -- and `urlopen`'s default opener builds its
+    `ProxyHandler` from the environment. So an exported `http_proxy` would send
+    every photograph, base64 in the body, to whatever it names: the one
+    destination this module says it will not open, reached by a variable nobody
+    chose.
+
+    The second half is the falsification. Without it this test would pass on a
+    machine that simply has no proxy set, which is every machine the suite
+    usually runs on.
+    """
+    monkeypatch.setenv("http_proxy", "http://proxy.invalid:8080")
+    monkeypatch.setenv("https_proxy", "http://proxy.invalid:8080")
+    monkeypatch.setattr(http.client, "HTTPConnection", RefusingConnection)
+
+    with pytest.raises(urllib.error.URLError) as refused:
+        post(GENERATE, b"{}")
+
+    assert str(refused.value.reason) == "asked for 127.0.0.1:11434"
+
+    with pytest.raises(urllib.error.URLError) as captured:
+        urllib.request.build_opener().open(
+            urllib.request.Request(f"{HOST}{GENERATE}", data=b"{}"), timeout=TIMEOUT
+        )
+
+    assert str(captured.value.reason) == "asked for proxy.invalid:8080"
 
 
 @pytest.mark.spec_exempt("structural: the body reaches the transport unaltered")
@@ -123,6 +184,35 @@ def test_a_timeout_wrapped_in_a_url_error_is_still_transient() -> None:
         ask(BODY, remedy=REMEDY, transport=transport)
 
     assert failed.value.kind == "transient"
+
+
+@pytest.mark.spec_exempt("the failure-kind scenarios are bound at the adapters")
+@pytest.mark.parametrize(
+    "dropped",
+    [
+        http.client.RemoteDisconnected("Remote end closed connection"),
+        http.client.IncompleteRead(b"partia", 94),
+        ConnectionResetError(54, "Connection reset by peer"),
+    ],
+    ids=["remote-disconnected", "incomplete-read", "connection-reset"],
+)
+def test_a_connection_dropped_mid_answer_is_transient(dropped: BaseException) -> None:
+    """The drop family must not escape, and must not be read as an absent host.
+
+    urllib wraps only what the send raised, so nothing here is a `URLError`:
+    uncaught, none of them is an `OllamaFailure`, a `CliFailure` or a `Refusal`,
+    and one evicted model would take the whole batch down in a traceback with no
+    error record written. Transient rather than a refusal, because the host did
+    answer -- telling the operator to start `ollama serve` points away from the
+    eviction that actually happened.
+    """
+    transport = FakeTransport(error=dropped)
+
+    with pytest.raises(OllamaFailure) as failed:
+        ask(BODY, remedy=REMEDY, transport=transport)
+
+    assert failed.value.kind == "transient"
+    assert type(dropped).__name__ in failed.value.detail
 
 
 # --- permanent: it will fail the same way every time --------------------------

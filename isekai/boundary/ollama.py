@@ -27,6 +27,10 @@ address is what `interface/ui/` and `interface/cli.py` already do, and an operat
 -controlled destination for a photograph is a security surface this version
 declines to open. `--server`'s deliberate no-default exists because rendering
 costs money; a free loopback call does not inherit that reason (design.md D4).
+**Which is why the opener is built by hand**: `urlopen`'s default carries a proxy
+read from the environment, and urllib bypasses loopback for no address it was not
+explicitly told to -- so `http_proxy` alone would have made the photograph's
+destination configurable after all, by a variable nobody chose.
 
 **There is no adapter in this file.** `OllamaReader` and `OllamaSorter` live
 beside their twins in `pipeline/`, because two implementations of one Protocol in
@@ -35,6 +39,7 @@ two different layers is the thing that arrangement avoids.
 Stdlib only.
 """
 
+import http.client
 import json
 import urllib.error
 import urllib.request
@@ -51,6 +56,16 @@ HOST = "http://127.0.0.1:11434"
 # The one endpoint this repository speaks. Named rather than inlined so the two
 # adapters and their tests agree on it by construction.
 GENERATE = "/api/generate"
+
+# The opener every request goes through, and the empty mapping is the whole point
+# of it. `urllib.request.urlopen` uses a default opener whose `ProxyHandler` is
+# built from `getproxies()`, and urllib does **not** auto-bypass loopback -- only
+# an explicit `no_proxy` entry does. So on a machine with `http_proxy` exported,
+# the default opener addresses `127.0.0.1:11434` to the proxy instead, and a
+# photograph base64-encoded into the body goes with it. `ProxyHandler({})` reads
+# no environment at all, which is what makes `HOST` reachable by no configuration
+# rather than merely undocumented (design.md D4).
+OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 # One ceiling, for both stages, and it is a ceiling on a hang rather than a
 # budget. The prototype used 300 for the reader and 900 for the sorter because it
@@ -105,12 +120,15 @@ def post(path: str, body: bytes) -> tuple[int, bytes]:
 
     A status is a return value rather than an exception, so a fake transport
     states one the same way a real host does.
+
+    **`OPENER`, not `urlopen`**, so no proxy the environment happens to name can
+    stand between this call and the loopback address above.
     """
     request = urllib.request.Request(
         f"{HOST}{path}", data=body, headers={"Content-Type": "application/json"}
     )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        with OPENER.open(request, timeout=TIMEOUT) as response:
             return response.status, response.read()
     except urllib.error.HTTPError as answered:
         return answered.code, answered.read()
@@ -135,6 +153,16 @@ def ask(
     a run whose error records have to be deleted by hand before it resumes. It is
     the posture `require_binary()` already takes for an absent binary, applied to a
     port rather than to a `PATH` entry (design.md D9).
+
+    **A connection that drops mid-answer is transient, and catching it is not
+    optional.** urllib wraps only what the send raised; anything `getresponse()`
+    or `read()` raises comes out as an `http.client` exception or a bare socket
+    error, neither of which is a `URLError`. Uncaught, it is not an
+    `OllamaFailure`, so no adapter translates it, not a `CliFailure`, so no stage
+    records it, and not a `Refusal`, so `run.across()` does not collect it -- one
+    evicted model would end the whole batch in a traceback with nothing written
+    down. The host being OOM-killed between two models that do not co-reside is
+    the designed-in condition, not an exotic one.
     """
     model = str(body["model"])
     # Serialised into a local and the mapping dropped before the call: a
@@ -145,11 +173,16 @@ def ask(
     del body
     try:
         status, payload = transport(GENERATE, request)
-    except (TimeoutError, urllib.error.URLError) as failed:
-        # **A timeout can arrive raw or wrapped in a `URLError`**, and the two
-        # branches below are opposite answers: one waits again, the other tells
-        # the operator to start a server. Read the wrapped form as its parent
-        # class and a retryable failure is spent as a refusal.
+    except (OSError, http.client.HTTPException) as failed:
+        # The whole surface a socket presents, in the order the three answers
+        # differ. `OSError` covers `TimeoutError`, `URLError` and the reset
+        # family; `HTTPException` covers what a truncated response raises, which
+        # is not an `OSError` at all.
+        #
+        # **A timeout can arrive raw or wrapped in a `URLError`**, and the first
+        # two branches are opposite answers: one waits again, the other tells the
+        # operator to start a server. Read the wrapped form as its parent class
+        # and a retryable failure is spent as a refusal.
         expired = isinstance(failed, TimeoutError) or isinstance(
             getattr(failed, "reason", None), TimeoutError
         )
@@ -157,10 +190,21 @@ def ask(
             raise OllamaFailure(
                 "transient", f"{model} did not answer within {TIMEOUT}s"
             ) from failed
-        raise Refusal(
-            f"nothing is listening at {HOST}, and stages 1 and 2 of this flow are "
-            "the two that need it; start the runtime (`ollama serve`), then run "
-            "this command again"
+        if isinstance(failed, urllib.error.URLError):
+            # urllib wraps what the *send* raised, so this is a connection that
+            # was never made: no host, refused port, unresolvable name.
+            raise Refusal(
+                f"nothing is listening at {HOST}, and stages 1 and 2 of this flow "
+                "are the two that need it; start the runtime (`ollama serve`), "
+                "then run this command again"
+            ) from failed
+        # Everything left reached a host and lost it. Transient rather than a
+        # refusal: telling the operator to start a server that answered and then
+        # died points away from the eviction that actually happened.
+        raise OllamaFailure(
+            "transient",
+            f"{HOST} dropped the connection while {model} was answering "
+            f"({type(failed).__name__})",
         ) from failed
 
     if status == 404:
@@ -203,6 +247,7 @@ def ask(
 __all__: Sequence[str] = (
     "GENERATE",
     "HOST",
+    "OPENER",
     "TIMEOUT",
     "OllamaFailure",
     "Transport",

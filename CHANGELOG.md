@@ -334,6 +334,34 @@ through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-
   `127.0.0.1:11434`**. There is no TLS on a loopback call to a process on the same machine and there
   should not be.
 
+### Fixed
+
+- **The photograph could be sent to whatever `http_proxy` named.** `boundary/ollama.py`'s `post()` used
+  `urllib.request.urlopen`, whose default opener builds a `ProxyHandler` from the environment — and
+  urllib does **not** auto-bypass loopback, only an explicit `no_proxy` entry does. On a machine with
+  `http_proxy` exported, every base64-encoded photograph was addressed to the proxy instead of to
+  `127.0.0.1:11434`: precisely the operator-controlled destination D4 says this version will not open,
+  opened by a variable nobody chose. Worse, the proxy's own failure then fell into the *"nothing is
+  listening … start the runtime (`ollama serve`)"* refusal, which points away from the leak. The module
+  now owns its opener — `build_opener(ProxyHandler({}))`, which reads no environment at all — so `HOST`
+  is reachable by no configuration rather than merely undocumented. Held by a test that drives `post()`
+  against a stand-in connection with a proxy exported and asserts the address urllib resolved, with a
+  falsification twin proving the same environment *would* have captured a default opener.
+
+- **A connection dropped mid-answer escaped classification and killed the batch.** `ask()` caught
+  `(TimeoutError, URLError)`, and urllib wraps only what the *send* raised — anything `getresponse()` or
+  `read()` raises surfaces as an `http.client` exception or a bare socket error, neither of which is a
+  `URLError`. Uncaught, such a failure was not an `OllamaFailure`, so no adapter translated it, not a
+  `CliFailure`, so no stage recorded it, and not a `Refusal`, so `run.across()` did not collect it: the
+  command died in a traceback, the remaining photographs were never attempted, and nothing on disk said
+  why — breaking `run-directory:budget:one-failure-does-not-halt-the-batch`. The host being OOM-killed
+  between two models that D10 already states **do not co-reside in 16 GiB** is the designed-in
+  condition, not an exotic one. The handler now covers `OSError` and `http.client.HTTPException`, keeps
+  the timeout discrimination first, keeps the "nothing is listening" refusal for `URLError` alone — a
+  connection that was never made — and classifies a host that answered and then died as **transient**.
+  Three rows added to the `FakeTransport(error=…)` seam that already existed and had only ever been
+  asked three exception types: `RemoteDisconnected`, `IncompleteRead`, `ConnectionResetError`.
+
 ## [0.18.0] - 2026-09-19
 
 ### Fixed
