@@ -32,7 +32,7 @@ read from the environment, and urllib bypasses loopback for no address it was no
 explicitly told to -- so `http_proxy` alone would have made the photograph's
 destination configurable after all, by a variable nobody chose.
 
-**There is no adapter in this file.** `OllamaReader` and `OllamaSorter` live
+**There is no adapter in this file.** `OllamaReader` and `OllamaTagger` live
 beside their twins in `pipeline/`, because two implementations of one Protocol in
 two different layers is the thing that arrangement avoids.
 
@@ -143,9 +143,11 @@ def ask(
     """Return the model's own answer to `body`, or refuse, or raise.
 
     `remedy` is the one command that fixes an absent model, and the caller supplies
-    it because the two models are not the same kind of name: the reader is a
-    machine-local alias built by `ollama create`, the sorter a registry tag fetched
-    by `ollama pull`. A boundary that knew both would know the flow.
+    it rather than this module holding one: which command fixes an absent model
+    depends on how that model was named, and a boundary that knew that would know
+    the flow. Both callers here build a machine-local alias with `ollama create`;
+    a registry tag fetched by `ollama pull` is the other shape, and the manifest
+    still names one.
 
     **A missing model and a missing host refuse rather than spending an attempt.**
     A retry budget counts models tried and failed, and neither of those is that;

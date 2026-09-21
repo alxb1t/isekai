@@ -104,7 +104,8 @@ an endpoint.
    **`caption` writes three artifacts and reports three times** — the prose, then a scored tag list
    from a local WD14 tagger, then a raw one from the hosted model where the flow declares an arm
    that can produce it. Neither tag list is narrowed: they are what the review surface shows beside
-   the prose so a human can see what the sorter filtered out. The local one runs for every flow and
+   the prose so a human can see what the router dropped. **The local list is what fills the sheet**,
+   so `sheet` refuses without it; the prose is a reading aid with no machine consumer. The local one runs for every flow and
    needs `uv sync --extra tagging` plus `bash scripts/download_models.sh scripts/vocabulary.json`;
    the hosted one is silently absent where a flow declares none, which is never an error.
 
@@ -223,8 +224,11 @@ ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
 ollama pull qwen3:8b
 ```
 
-The first builds the reader from a committed recipe; the second fetches the sorter, which is a
-public registry tag. **`scripts/joycaption.Modelfile`'s header names the two GGUF files it needs,
+The first builds the reader from a committed recipe. **The second is no longer used by any stage**
+— `qwen3:8b` filled the sheet until v0.21, and the manifest still names it because dropping the key
+would move a frozen flow's digest. It is kept here for a flow that declares it and for the record.
+It is a public registry tag rather than a machine-local alias, which is why the two commands
+differ. **`scripts/joycaption.Modelfile`'s header names the two GGUF files it needs,
 with their sha256, their byte counts and their pinned source revision** — they are not in this
 repository and `models/` is gitignored, so fetch them into `models/joycaption/` first.
 

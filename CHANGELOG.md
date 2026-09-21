@@ -212,6 +212,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exactly as `sheet.briefing.md` is, and both have the same trigger: the version that deletes the flows
   they belong to (design.md D22).
 
+### Fixed
+
+- **`CLAUDE.md` gains the `event.code` rule, with a corrected reason.** *An Option-modified keybinding
+  matches `event.code` and calls `preventDefault()`, because Option is a character-producing modifier on
+  macOS.* Not a layout rule: on plain US ABC, `Option+Space` emits **U+00A0** and `Option+F` emits `ƒ`,
+  so an `event.key` handler inserts an invisible non-breaking space into a tag field — the silent dead
+  end the cheatsheet exists to remove. `event.code` appears **nowhere** in this repository today, so
+  v0.21's two bindings are the **first** such matches and not the second. `Cmd+Z` at `ReviewApp.vue:243`
+  is recorded as a known live violation rather than fixed here.
+- **Four sentences in `CLAUDE.md` that this version makes false.** *"a missing tag artifact is an absent
+  aid, never a refusal"* narrows to the **hosted** tagger. *"prose first because it is the only one
+  anything downstream reads"* — it is the WD14 list, and the ordering stays as it is for the reason it
+  was chosen. *"ten capabilities today"* was already stale: `ls -d openspec/specs/*/` returns **eleven**
+  since `0020` archived, and this change's delta makes it twelve only when it is archived. And the seam
+  paragraph now reads the rule the other way — stage ② has no seam because there is nothing left to pass
+  through the parameter.
+- **The call-graph sentence, corrected past what the record predicted.** D29 said deleting `ClaudeSorter`
+  would leave `caption.py` the sole `pipeline/` importer of `boundary/claude_cli.py`. It does not:
+  `tagging.py` imports `CliFailure`, `constant_record` and `refusal_for` from it and has since v0.20.
+  `CLAUDE.md` names **two** importers.
+- **`CHANGELOG.md`'s `[0.18.0]` entry claimed a suffix-anchored `Space` picker that never shipped.** The
+  feature lived on a prop named `hint` and was deleted in **`8aa6fb0`, *"feat(ui): rework the keyboard
+  model"*, an ancestor of the `v0.18.0` tag** — introduced and removed inside one version. It could not
+  have worked either: `ui/app.py` sends `list(batch.flow.schema.names)`, names only, so a field's suffix
+  has never reached the browser in any version. The entry is **corrected in place, not deleted**.
+- **The design documents written around *"the sorter is mediocre"*.** `ui/design/README.md`'s brief,
+  its ② draft-diff and caption bullets, `ui/design/states.md`'s screen descriptions, and
+  `ui/design/ux-flow.md`'s claim that *"out-of-vocabulary tags only arrive from the sorter"* — that
+  refusal kind is now **unreachable** and is kept as a guard on a future producer rather than as a state
+  this surface can reach.
+- **`ReviewApp.vue` said `draft from the sorter` on screen.** It says `draft from the tagger`.
+- **The group `README.md` files, `README.md` and `boundary/ollama.py`'s docstring.**
+  `isekai/shared/README.md` gains `field_map.py` with its importers; `isekai/pipeline/README.md`'s
+  `sheet.py` row costs **free** rather than *a model call*; `isekai/interface/README.md` stops naming a
+  sorter in `wiring.py`; `README.md` says the local tag list is what fills the sheet, and that
+  `ollama pull qwen3:8b` is no longer used by any stage. `CLAUDE.md`'s `scripts/` paragraph gains
+  `field_map.json` and `derive_field_map.py` — the first tracked artifact there that is **authored**
+  rather than fetched, which is why it carries its own monotonic revision.
+
 ## [0.20.0] - 2026-09-21
 
 ### Added
@@ -955,12 +994,15 @@ through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-
   `<run>/<flow>/review/` and `NNN.approved.json`, never the frames' invented `runs/2026-09-17/`.
 - **`Alt+↑` / `Alt+↓` move through the batch too.** The rail is a vertical list and the photographs read
   left to right, so both readings of *next* are true and both now work.
-- **Space on an empty field types the word the schema says that field is spelled with** — `eyebrows` on
-  `eyebrows`, `hair` on `hair_colour` — so the operator can see what fits before knowing what to ask
-  for. It is a shortcut for typing that word and **not a second ranking**: the rows are
-  `vocabulary.search()`'s, in `vocabulary.search()`'s order, exactly as for any other fragment, which
-  leaves the design's *ranking is global* rule untouched. A field the schema declares no suffix for gets
-  nothing, because there would be nothing honest to put there.
+- ~~**Space on an empty field types the word the schema says that field is spelled with**~~ — **this
+  entry was wrong when it was written, and is corrected here in v0.21 rather than deleted.** The
+  feature existed on a prop named `hint` and was **removed in `8aa6fb0`, *"feat(ui): rework the
+  keyboard model"*, which is an ancestor of the `v0.18.0` tag** — so it was introduced and deleted
+  inside this very version and never shipped in any release. It could not have worked either:
+  `ui/app.py` sends `list(batch.flow.schema.names)`, names only, so a field's suffix has never
+  reached the browser in any version. What did ship, and still does, is the autocomplete: the rows
+  are `vocabulary.search()`'s, in `vocabulary.search()`'s order, for every fragment, which leaves the
+  design's *ranking is global* rule untouched.
 - **Approve, read-only, and the one line a `Refusal` lands on.** `ApproveBar` is accent-outlined and
   **always live** — no scroll gate, no dwell timer, no confirmation step, no disabled twin, and no
   empties action: the only thing that stops an approve is a refusal, never a ritual. On success the

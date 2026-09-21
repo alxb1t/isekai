@@ -53,11 +53,11 @@ bar, and `heaviest: clothes 8 · background 7 · expression 4` in mono 10.5px.
 
 `screens/01-review-draft-loaded.png`
 
-The sorter's output, untouched. This is what the operator lands on.
+The routed draft, untouched. This is what the operator lands on.
 
 - Header: `run 2026-09-17 · 3 inputs · 0 approved`. Draft receipt only.
 - Rail: current input hollow (read, untouched); the other two hollow.
-- Sheet header: `③ sheet — draft from the sorter` / `16 fields, schema order. 10 filled · 6 empty,
+- Sheet header: `③ sheet — draft from the tagger` / `16 fields, schema order. 10 filled · 6 empty,
   none marked intentional.` / **30** of 77 tokens.
 - Empty rows show the italic word `empty` in `neutral-500` and a **hollow** gutter ring.
 - Footer left: `Mark 6 empty fields intentional` (secondary button) with
@@ -129,8 +129,9 @@ The same screen for a wide photograph. **Only the column widths change**: source
 column absorbs the difference. The photo fills the column width; the caption gets the vertical space
 the shorter photo frees.
 
-Its draft also demonstrates the sorter's typical failure: `brown` and `grey` sitting in `clothes` —
-real vocabulary tags, wrong field, no colour bound to a garment.
+Its draft also demonstrates the draft's typical failure: `brown` and `grey` sitting in `clothes` —
+real vocabulary tags, wrong field, no colour bound to a garment. The router's version of that failure
+is the same shape: it cannot invent a tag, and what it can get wrong is which criterion one answers.
 
 Header `3 inputs · 0 approved`, receipt `16_01.draft.json · saved 14:11:02`, `9 filled · 7 empty`,
 **28** of 77 tokens, footer button `Mark 7 empty fields intentional`.
@@ -182,7 +183,7 @@ Refusals as drawn:
 | `hair_silhouette` | `underscore — vocabulary spells it with a space` | `wavy hair` |
 | `eye_colour` | `not one of the 8,106 tags` | none — out of vocabulary has no honest fix |
 | `clothes` | `capitals — vocabulary is lowercase` | `lace trim` |
-| `mood` | `not a schema field — the sorter invented it` | — |
+| `mood` | `not a schema field — some producer invented it` | — |
 | `body_shape` | `absent from the sheet file, not empty` | — |
 
 Clicking a suggestion replaces the offending tag in place: the bad tag is removed, the canonical one

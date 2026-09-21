@@ -20,7 +20,7 @@ provably unchanged by `git diff`.
 |---|---|---|
 | `caption.py` | ① turns a photograph into descriptive prose | a model call |
 | `tagging.py` | ① twice more: a scored tag list from a local ONNX session, and a raw one from a hosted model. **Neither is narrowed** — filtering is ②'s job | free, then a model call |
-| `sheet.py` | ② sorts prose into the flow's schema's fields | a model call |
+| `sheet.py` | ② routes the local tag list into the flow's schema's fields, through the authored table | free |
 | `review.py` | ③ copies a sheet somewhere a human may correct it, then approves it | a human — the largest measured gain in the pipeline |
 | `generate.py` | ④ assembles every prompt locally, then renders each against an endpoint | free, then **money** |
 
@@ -30,7 +30,7 @@ provably unchanged by `git diff`.
 |---|---|---|
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | nine test modules |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | six test modules |
-| `sheet.py` | `interface/cli.py`, `interface/wiring.py` | twelve test modules |
+| `sheet.py` | `interface/cli.py` | `tests/stages.py`, which every other module reaches it through |
 | `review.py` | `interface/cli.py` | five test modules |
 | `generate.py` | `interface/cli.py`, `interface/run_view.py` | four test modules |
 

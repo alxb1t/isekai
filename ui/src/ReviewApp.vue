@@ -111,7 +111,7 @@ const approvedReceipt = computed(() =>
    The reading is taken from disk rather than from anything held here: approval
    deletes the draft, so "has no draft" IS "is approved". */
 const kicker = computed(() =>
-  sheet.detail.value && sheet.readonly.value ? 'approved' : 'draft from the sorter',
+  sheet.detail.value && sheet.readonly.value ? 'approved' : 'draft from the tagger',
 )
 
 async function approve(): Promise<void> {
