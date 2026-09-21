@@ -36,7 +36,12 @@ const box = ref<HTMLInputElement | null>(null)
    field back on close. */
 onMounted(() => box.value?.focus())
 
-const needle = computed(() => fragment.value.trim().toLowerCase())
+/* Normalised the way `isekai/shared/vocabulary.py`'s `normalise()` is, so a
+   fragment typed here matches what the same fragment matches in the autocomplete:
+   Danbooru writes `blue_eyes` and this vocabulary reads `blue eyes`. */
+const needle = computed(() =>
+  fragment.value.trim().toLowerCase().replace(/[_\s]+/g, ' '),
+)
 
 /* Every declared criterion stays in the list, including one the filter empties
    and one the table holds nothing for: a row saying *nothing here* is a fact
@@ -50,6 +55,8 @@ const groups = computed(() =>
   })),
 )
 
+/* Out of the same pass rather than a second reduce over 3,000 rows: the groups
+   are already in hand when this is asked for. */
 const shown = computed(() => groups.value.reduce((sum, one) => sum + one.tags.length, 0))
 </script>
 

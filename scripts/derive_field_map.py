@@ -52,6 +52,7 @@ from pathlib import Path
 # root is not -- the same hop `derive_eval_manifest.py` makes, for the same reason.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from isekai.foundation.run import read_artifact  # noqa: E402
 from isekai.shared.field_map import FIELD_MAP_PATH, declared_fields  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary, load  # noqa: E402
 
@@ -137,6 +138,14 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
         (),
     ),
 }
+
+# Tags no criterion can hold. **A list this script writes, not one the table
+# keeps**: a hand-edit of `field_map.json` is destroyed by the next run, so the
+# authored home for an exclusion is here. The definition is semantic and not
+# empirical -- *never a criterion*, rather than *WD14 was wrong about it on this
+# photograph* -- because the second kind would silently shrink `clothes` by seven
+# ordinary garments (design.md D8). Empty until the operator's pass fills it.
+EXCLUDED: tuple[str, ...] = ()
 
 # The 41 example tags `flows/conjure-v1/sheet.briefing.md` names, by the field it
 # names them under. Transcribed rather than parsed: the briefing is prose with no
@@ -286,9 +295,9 @@ def claims(vocabulary: Vocabulary, fields: Iterable[str]) -> dict[str, set[str]]
     groups["hair_silhouette"] |= hair - coloured
     for field, (stems, explicit) in SEEDS.items():
         groups[field] |= expand(stems.split(), vocabulary)
-        groups[field] |= {tag for tag in explicit if tag in vocabulary.counts}
+        groups[field] |= {tag for tag in explicit if tag in vocabulary}
     for field, examples in BRIEFING.items():
-        groups[field] |= {tag for tag in examples if tag in vocabulary.counts}
+        groups[field] |= {tag for tag in examples if tag in vocabulary}
     return groups
 
 
@@ -302,7 +311,10 @@ def filings(root: Path = Path(".")) -> dict[str, Counter[str]]:
     """
     filed: dict[str, Counter[str]] = defaultdict(Counter)
     for path in sorted(root.glob(APPROVED)):
-        document = json.loads(path.read_text())
+        # Through the pipeline's own reader, which refuses an artifact written
+        # to a schema version this build does not know -- the table is committed,
+        # so a silently mis-parsed sheet would be committed with it.
+        document = read_artifact(path)
         for field, tags in document["fields"].items():
             for tag in tags:
                 filed[tag][field] += 1
@@ -323,8 +335,9 @@ def resolve(
     primary = {}
     for tag, fields in candidates.items():
         if tag in filed:
+            # `best` comes from these counts, so at least one field matches.
             best = max(filed[tag].values())
-            fields = {f for f in filed[tag] if filed[tag][f] == best} or fields
+            fields = {f for f in filed[tag] if filed[tag][f] == best}
         primary[tag] = min(fields, key=lambda field: rank[field])
     return primary
 
@@ -351,20 +364,21 @@ def build(
     # and `navel` under all three of clothes, pose and body shape; one of those
     # routes it and the rest are how he finds it again.
     for tag, counts in filed.items():
-        if tag in vocabulary.counts:
+        if tag in vocabulary:
             for field in counts:
                 browsable[field].add(tag)
     for tag, field in primary.items():
-        if tag in vocabulary.counts:
+        if tag in vocabulary:
             browsable[field].add(tag)
-
-    def rank(tags: Iterable[str]) -> list[str]:
-        return sorted(tags, key=lambda tag: (-vocabulary.count(tag), tag))
 
     document = {
         field: {
-            "primary": rank(t for t in browsable[field] if primary.get(t) == field),
-            "also": rank(t for t in browsable[field] if primary.get(t) != field),
+            "primary": vocabulary.rank(
+                t for t in browsable[field] if primary.get(t) == field
+            ),
+            "also": vocabulary.rank(
+                t for t in browsable[field] if primary.get(t) != field
+            ),
         }
         for field in sorted(names)
     }
@@ -441,7 +455,7 @@ def main() -> None:
                 "name": "scripts/field_map.json",
                 "revision": REVISION,
                 "fields": document,
-                "excluded": [],
+                "excluded": list(vocabulary.rank(EXCLUDED)),
             },
             indent=2,
             ensure_ascii=False,

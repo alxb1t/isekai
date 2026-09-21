@@ -63,7 +63,7 @@ def wired(tmp_path: Path) -> Wiring:
             "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217",
             read_tags(CSV),
         ),
-        field_map=lambda: FIELD_MAP,
+        field_map=lambda _: FIELD_MAP,
         runs_root=tmp_path / "runs",
         rng=random.Random(7),
         out=io.StringIO(),

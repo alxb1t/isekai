@@ -25,7 +25,6 @@ from isekai.foundation.run import (
     Run,
     artifact_name,
     envelope,
-    latest,
     write_json,
 )
 from isekai.pipeline import caption as caption_stage
@@ -152,8 +151,13 @@ def sheet(
     **`tags` writes the artifact the stage refuses without**, so a test says what
     it wants routed on one line instead of composing a `wd14/` directory. Pass
     `tags=None` to leave the directory empty, which is how the refusal is driven.
+
+    Written unconditionally rather than only when the directory is empty: a
+    parameter whose effect depends on invisible prior state is one a second call
+    on the same run would silently ignore, and two of the tests here do call
+    twice. The write replaces version 1 in place, so a repeat is a no-op.
     """
-    if tags is not None and latest(run.directory(flow, WD14)) is None:
+    if tags is not None:
         write_wd14(run, tags, flow=flow)
     return sheet_stage.sheet(
         run, flow, schema, vocabulary, field_map, new_version=new_version

@@ -43,14 +43,14 @@ def _bundle() -> Path:
 
 @pytest.fixture
 def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
-    """Return a ③-only wiring: no reader, no sorter, no transport."""
+    """Return a ③-only wiring: no reader, no tagger, no transport."""
     return Wiring(
         reader=None,
         tagger=None,
         hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
-        field_map=lambda: FIELD_MAP,
+        field_map=lambda _: FIELD_MAP,
         runs_root=tmp_path / "runs",
         rng=random.Random(0),
         out=io.StringIO(),

@@ -59,14 +59,14 @@ FLOW = "summon-v1"
 
 @pytest.fixture
 def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
-    """Return a ③-only wiring: no reader, no sorter, no transport."""
+    """Return a ③-only wiring: no reader, no tagger, no transport."""
     return Wiring(
         reader=None,
         tagger=None,
         hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
-        field_map=lambda: FIELD_MAP,
+        field_map=lambda _: FIELD_MAP,
         runs_root=tmp_path / "runs",
         rng=random.Random(0),
         out=io.StringIO(),
@@ -140,7 +140,7 @@ def test_an_input_carries_its_caption_its_fields_and_its_budget(
 
     assert body["caption"] == "Dark brown hair, brown eyes."
     # Every field the schema declares, in schema order, never re-sorted -- the
-    # sorter's own canonical spelling is what stage ② wrote, not the fixture's.
+    # tagger's own canonical spelling is what stage ② routed, not the fixture's.
     assert list(body["fields"]) == list(schema.names)
     assert body["fields"]["hair_colour"]
     assert body["draft"] == "001.draft.json"
@@ -313,7 +313,7 @@ def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
 ) -> None:
     # Filtered on the way to the page, never on the way to disk. Narrowing the
     # record would make it disagree with what the model said, and looking behind
-    # the sorter is the whole reason the artifact exists.
+    # the router is the whole reason the artifact exists.
     written = caption_tags(
         made,
         FLOW,
@@ -455,7 +455,7 @@ def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
     withheld = replace(FIELD_MAP, excluded=frozenset({"glasses"}))
     fields = dict(FIELD_MAP.fields)
     fields["accessories"] = Group(primary=(), also=())
-    wired.field_map = lambda: replace(withheld, fields=fields)
+    wired.field_map = lambda _: replace(withheld, fields=fields)
 
     body = _client(wired, made, tmp_path).get("/api/fields").json()
 

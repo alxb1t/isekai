@@ -576,7 +576,7 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
         hosted_tagger=Always(FakeTagger()),
         client=FakeComfyClient(),
         vocabulary=lambda: vocabulary,
-        field_map=lambda: FIELD_MAP,
+        field_map=lambda _: FIELD_MAP,
         runs_root=runs,
         out=io.StringIO(),
         err=err,

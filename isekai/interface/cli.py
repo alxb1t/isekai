@@ -39,6 +39,7 @@ import urllib.error
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -325,9 +326,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
 def _seam(value: T | None, name: str, does: str) -> T:
     """Return a wiring seam the verb in hand cannot run without, or refuse.
 
-    `reader` and `sorter` are optional on `Wiring` because a front end that
-    serves stage (3) alone reaches no hosted model and would otherwise fabricate
-    doubles it never calls. The verbs that *do* call one say so here, in one
+    `reader` is optional on `Wiring` because a front end that serves stage (3)
+    alone reaches no hosted model and would otherwise fabricate a double it never
+    calls. The verbs that *do* call one say so here, in one
     place, rather than each inlining the same guard.
     """
     if value is None:
@@ -352,26 +353,23 @@ def _per_item(
     two verbs need it at all.
     """
     new_version = bool(getattr(args, "new_version", False))
-    parsed: list[Vocabulary] = []
-    routed: list[FieldMap] = []
     opened: list[LocalTagger] = []
 
+    @cache
     def vocabulary() -> Vocabulary:
         """Return this invocation's vocabulary, reading it at most once."""
-        if not parsed:
-            parsed.append(wired.vocabulary())
-        return parsed[0]
+        return wired.vocabulary()
 
+    @cache
     def field_map() -> FieldMap:
         """Return this invocation's field map, reading it at most once.
 
         Memoised beside the vocabulary and for its reason: the table is held
         against the vocabulary at load, so reading it per photograph would
-        re-run four whole-table checks for every input in a batch.
+        re-run four whole-table checks for every input in a batch. It is handed
+        the memoised vocabulary rather than finding its own.
         """
-        if not routed:
-            routed.append(wired.field_map())
-        return routed[0]
+        return wired.field_map(vocabulary())
 
     def tagger(flow: Flow) -> Callable[[], LocalTagger]:
         """Return a thunk that opens this invocation's local tagger, once.

@@ -49,16 +49,22 @@ const focused = ref<string | null>(null)
 const lastField = ref<string | null>(null)
 let pane: Pane = 'rail'
 const source = ref<HTMLElement | null>(null)
-const overlay = ref(false)
-/* The reference, and the criterion it was opened from. Fetched once per sitting
-   and then held: the table does not move while a surface is up. */
-const cheatsheet = ref(false)
+/* **One state, not two booleans.** Which lens is up, or none. Opening and
+   closing are the only two transitions, and each of them owns the focus
+   round-trip — so a new way to open one cannot skip the blur, which is exactly
+   what a `overlay = true` on a click handler did while the flags were separate.
+
+   `candidates` is fetched once per sitting and then held: the table does not
+   move while a surface is up. */
+type Lens = 'photo' | 'cheatsheet'
+
+const lens = ref<Lens | null>(null)
 const candidates = ref<FieldCandidates | null>(null)
-const openedFrom = ref<string | null>(null)
-/* True while either lens is up. `TagInput` reads it and yields Escape and the
-   arrows, so `Esc` closes the lens rather than clearing a fragment behind it and
-   `←`/`→` do not fire twice — once for chip selection and once for the batch. */
-const suspended = computed(() => overlay.value || cheatsheet.value)
+/* True while a lens is up, by construction rather than by remembering to set two
+   flags together. `TagInput` reads it and yields Escape and the arrows, so `Esc`
+   closes the lens rather than clearing a fragment behind it and `←`/`→` do not
+   fire twice — once for chip selection and once for the batch. */
+const suspended = computed(() => lens.value !== null)
 const manifest = ref(false)
 const sheets = ref<ApprovedSheet[]>([])
 const selectedChip = ref<number | null>(null)
@@ -248,31 +254,30 @@ function back(field: string): void {
   batch.markEdited(batch.current.value)
 }
 
-/* Open a lens from wherever the focus is, remembering the criterion to give it
-   back to. `blur()` rather than a flag: the field must stop receiving keys, and
-   the overlay's own input takes the focus on mount. The fragment survives
-   untouched because `TagInput` stays mounted behind the lens — nothing is copied
-   out and copied back, so nothing can come back different. */
-function suspend(): void {
-  openedFrom.value = focused.value ?? lastField.value
+/* Open a lens from wherever the focus is. `blur()` rather than a flag: the field
+   must stop receiving keys, and the lens's own input takes the focus on mount.
+   The fragment survives untouched because `TagInput` stays mounted behind the
+   lens — nothing is copied out and copied back, so nothing can come back
+   different. Every path that opens a lens goes through here, including the click
+   on the photograph. */
+async function openLens(which: Lens): Promise<void> {
+  if (which === 'cheatsheet' && !candidates.value) {
+    candidates.value = await fieldCandidates()
+  }
   if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  lens.value = which
 }
 
 /* Give the criterion back exactly. `enter('sheet')` focuses `lastField`, which
-   is what the operator was typing into. */
-function resume(): void {
+   is what the operator was typing into, and `focus()` keeps the two in step. */
+function closeLens(): void {
+  lens.value = null
   void nextTick(() => enter('sheet'))
 }
 
-async function toggleCheatsheet(): Promise<void> {
-  if (cheatsheet.value) {
-    cheatsheet.value = false
-    resume()
-    return
-  }
-  if (!candidates.value) candidates.value = await fieldCandidates()
-  suspend()
-  cheatsheet.value = true
+function toggleLens(which: Lens): void {
+  if (lens.value === which) closeLens()
+  else void openLens(which)
 }
 
 function onKey(event: KeyboardEvent): void {
@@ -285,18 +290,12 @@ function onKey(event: KeyboardEvent): void {
      activation key of a focused `<button>`, and this app focuses one on mount. */
   if (event.altKey && event.code === 'Space') {
     event.preventDefault()
-    void toggleCheatsheet()
+    toggleLens('cheatsheet')
     return
   }
   if (event.altKey && event.code === 'KeyF') {
     event.preventDefault()
-    if (overlay.value) {
-      overlay.value = false
-      resume()
-    } else if (sheet.detail.value) {
-      suspend()
-      overlay.value = true
-    }
+    if (lens.value === 'photo' || sheet.detail.value) toggleLens('photo')
     return
   }
   if (meta && event.key.toLowerCase() === 'z') {
@@ -329,10 +328,11 @@ function onKey(event: KeyboardEvent): void {
     void approve()
   } else if (event.key === 'Escape' && suspended.value) {
     event.preventDefault()
-    overlay.value = false
-    cheatsheet.value = false
-    resume()
-  } else if (overlay.value && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    closeLens()
+  } else if (
+    lens.value === 'photo' &&
+    (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
+  ) {
     // Arrow keys still move through the batch, so the overlay doubles as a way
     // to compare inputs without closing it.
     event.preventDefault()
@@ -432,7 +432,7 @@ watch(batch.current, (id) => {
         :wd14="sheet.detail.value?.wd14 ?? null"
         :tags="sheet.detail.value?.tags ?? null"
         :loading="sheet.loading.value"
-        @open="overlay = true"
+        @open="openLens('photo')"
       />
       <SheetForm
         :schema="batch.info.value?.schema ?? []"
@@ -476,20 +476,20 @@ watch(batch.current, (id) => {
     </div>
 
     <PhotoOverlay
-      v-if="overlay && sheet.detail.value"
+      v-if="lens === 'photo' && sheet.detail.value"
       :id="sheet.detail.value.id"
       :width="sheet.detail.value.width"
       :height="sheet.detail.value.height"
       :photo="photoUrl(sheet.detail.value.id)"
       :caption="sheet.detail.value.caption"
-      @close="(overlay = false), resume()"
+      @close="closeLens"
     />
 
     <CheatsheetOverlay
-      v-if="cheatsheet && candidates"
+      v-if="lens === 'cheatsheet' && candidates"
       :candidates="candidates"
-      :field="openedFrom"
-      @close="(cheatsheet = false), resume()"
+      :field="lastField"
+      @close="closeLens"
     />
   </div>
 </template>

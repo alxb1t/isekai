@@ -19,7 +19,6 @@ from isekai.shared.field_map import (
     declared_fields,
     identity,
     load,
-    parse,
 )
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
@@ -28,6 +27,17 @@ from tests.conftest import CSV
 # Two criteria, because the coverage check is about a declared name being absent
 # and one name is enough to prove it while two prove the listing.
 DECLARED = {"summon-v1": ("hair_colour", "hair_silhouette")}
+
+
+@pytest.fixture
+def provisioned() -> Vocabulary:
+    """Return the provisioned vocabulary, or skip: the group sizes are its own."""
+    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
+    from isekai.shared.vocabulary import load as load_vocabulary
+
+    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
+        pytest.skip("the vocabulary is not provisioned in this environment")
+    return load_vocabulary()
 
 
 @pytest.fixture
@@ -83,7 +93,13 @@ def test_the_reverse_index_is_computed_from_the_authored_direction(
 
 @pytest.mark.spec("field-map:table:it-is-not-read-from-a-flow")
 def test_the_table_lives_outside_every_flow_directory() -> None:
-    from isekai.foundation.flow import FLOWS_DIR, load_schema, tracked_flows
+    from isekai.foundation.flow import (
+        FLOWS_DIR,
+        SCHEMA_NAME,
+        flow_path,
+        load_schema,
+        tracked_flows,
+    )
 
     assert FLOWS_DIR not in FIELD_MAP_PATH.parents
     assert FIELD_MAP_PATH.parent.name == "scripts"
@@ -91,7 +107,7 @@ def test_the_table_lives_outside_every_flow_directory() -> None:
     # And no flow's schema document says which tags exist: a field entry carries
     # a name, a scored flag and a suffix, and never a tag list.
     for flow in tracked_flows():
-        schema = load_schema(FLOWS_DIR / flow / "schema.json")
+        schema = load_schema(flow_path(flow) / SCHEMA_NAME)
         for field in schema.fields:
             assert not hasattr(field, "tags")
 
@@ -143,7 +159,9 @@ def test_a_tag_the_vocabulary_does_not_carry_is_refused(
 
 
 @pytest.mark.spec("field-map:membership:every-tag-has-exactly-one-primary")
-def test_a_tag_claimed_as_primary_by_two_criteria_is_refused(tmp_path: Path) -> None:
+def test_a_tag_claimed_as_primary_by_two_criteria_is_refused(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
     path = table(
         tmp_path,
         {
@@ -153,7 +171,7 @@ def test_a_tag_claimed_as_primary_by_two_criteria_is_refused(tmp_path: Path) -> 
     )
 
     with pytest.raises(Refusal) as refused:
-        parse(path.read_text(), DECLARED)
+        load(vocabulary, path, DECLARED)
 
     assert "brown hair" in str(refused.value)
     assert "hair_colour" in str(refused.value)
@@ -182,7 +200,7 @@ def test_a_tag_is_browsable_under_several_criteria_and_routes_to_one(
 
 @pytest.mark.spec("field-map:excluded:no-tag-is-in-both")
 def test_a_tag_in_both_a_group_and_the_excluded_list_is_refused(
-    tmp_path: Path,
+    tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
     path = table(
         tmp_path,
@@ -194,7 +212,7 @@ def test_a_tag_in_both_a_group_and_the_excluded_list_is_refused(
     )
 
     with pytest.raises(Refusal) as refused:
-        parse(path.read_text(), DECLARED)
+        load(vocabulary, path, DECLARED)
 
     assert "long hair" in str(refused.value)
 
@@ -220,12 +238,12 @@ def test_a_tag_in_no_group_and_not_excluded_routes_nowhere_and_is_not_refused(
 
 @pytest.mark.spec("field-map:coverage:every-declared-field-has-an-entry")
 def test_a_criterion_a_tracked_flow_declares_with_no_entry_is_refused(
-    tmp_path: Path,
+    tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
     path = table(tmp_path, {"hair_colour": {"primary": ["brown hair"], "also": []}})
 
     with pytest.raises(Refusal) as refused:
-        parse(path.read_text(), DECLARED)
+        load(vocabulary, path, DECLARED)
 
     assert "hair_silhouette" in str(refused.value)
     assert "summon-v1" in str(refused.value)
@@ -250,14 +268,9 @@ def test_an_empty_group_loads_and_is_reported_as_empty(
 
 
 @pytest.mark.spec("field-map:integrity:the-check-runs-against-the-pin")
-def test_the_committed_table_resolves_in_the_provisioned_vocabulary() -> None:
-    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
-    from isekai.shared.vocabulary import load as load_vocabulary
-
-    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
-        pytest.skip("the vocabulary is not provisioned in this environment")
-    provisioned = load_vocabulary()
-
+def test_the_committed_table_resolves_in_the_provisioned_vocabulary(
+    provisioned: Vocabulary,
+) -> None:
     # `load` raises all four checks, so reaching a `FieldMap` at all is the
     # assertion; the revision is named so a moved pin is visible in the failure.
     field_map = load(provisioned)
@@ -294,17 +307,6 @@ BUNNIES = (
     "male playboy bunny",
     "bunny day",
 )
-
-
-@pytest.fixture
-def provisioned() -> Vocabulary:
-    """Return the provisioned vocabulary, or skip: the group sizes are its own."""
-    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
-    from isekai.shared.vocabulary import load as load_vocabulary
-
-    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
-        pytest.skip("the vocabulary is not provisioned in this environment")
-    return load_vocabulary()
 
 
 @pytest.mark.spec_exempt("structural: the authoring script's matcher, not a scenario")
@@ -362,7 +364,6 @@ def test_a_bare_word_boundary_loses_the_plurals_the_inflections_keep(
 def test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in(
     provisioned: Vocabulary,
 ) -> None:
-    import json as json_module
     from collections import defaultdict
 
     from derive_field_map import APPROVED
@@ -373,7 +374,7 @@ def test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in(
 
     filed: dict[str, set[str]] = defaultdict(set)
     for path in approved:
-        for field, tags in json_module.loads(path.read_text())["fields"].items():
+        for field, tags in json.loads(path.read_text())["fields"].items():
             for tag in tags:
                 filed[tag].add(field)
 

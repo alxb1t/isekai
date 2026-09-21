@@ -7,7 +7,6 @@ than by counting a fake's calls. `tests/stages.sheet` writes the tag list the
 stage refuses without, which is why a test says what it wants routed on one line.
 """
 
-import json
 import re
 from dataclasses import replace
 from pathlib import Path
@@ -52,18 +51,6 @@ def run(tmp_path: Path) -> Run:
     made = open_run(photo, tmp_path / "runs")
     caption(made, FakeReader(prose=PROSE))
     return made
-
-
-def _envelope(**fields: object) -> str:
-    """Return a `claude -p --output-format json` envelope as the CLI prints it."""
-    body: dict[str, object] = {
-        "type": "result",
-        "subtype": "success",
-        "is_error": False,
-        "api_error_status": None,
-    }
-    body.update(fields)
-    return json.dumps(body)
 
 
 # --- the router ---------------------------------------------------------------

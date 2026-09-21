@@ -28,7 +28,6 @@ layering edge -- `shared/fields.py` already imports `Schema` from
 Stdlib only: `hashlib`, `json`, `pathlib`.
 """
 
-import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -40,10 +39,12 @@ from isekai.foundation.flow import (
     FLOWS_DIR,
     SCHEMA_NAME,
     Schema,
+    flow_path,
     load_schema,
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import digest_of
 from isekai.shared.vocabulary import Vocabulary
 
 # Beside `scripts/vocabulary.json`, which the runtime already verifies against.
@@ -65,9 +66,15 @@ class Group:
     primary: tuple[str, ...]
     also: tuple[str, ...]
 
-    @property
+    @cached_property
     def tags(self) -> tuple[str, ...]:
-        """Return everything browsable under this criterion, owned tags first."""
+        """Return everything browsable under this criterion, owned tags first.
+
+        Cached for `_primary`'s reason: it is walked once per criterion by every
+        check the loader runs and once more per request by the surface that
+        browses it, and a frozen dataclass has nothing that could make the answer
+        move between two of them.
+        """
         seen = dict.fromkeys(self.primary)
         seen.update(dict.fromkeys(self.also))
         return tuple(seen)
@@ -127,19 +134,22 @@ def declared_fields(flows_dir: Path | None = None) -> dict[str, tuple[str, ...]]
     """
     root = FLOWS_DIR if flows_dir is None else flows_dir
     return {
-        flow: load_schema(root / flow / SCHEMA_NAME).names
+        flow: load_schema(flow_path(flow, root) / SCHEMA_NAME).names
         for flow in tracked_flows(root)
     }
 
 
-def parse(body: str, declared: Mapping[str, Sequence[str]]) -> FieldMap:
+def _parse(body: str, declared: Mapping[str, Sequence[str]]) -> FieldMap:
     """Build the table from its bytes, refusing every way it can be wrong but one.
 
-    The vocabulary check is not here, because it needs an artifact this function
-    is not given; `load` runs it. Everything decidable from the document alone --
-    one primary per tag, disjointness from the excluded list, an entry per
-    declared criterion -- is decided before a `FieldMap` exists, so no partial
-    table is ever returned.
+    Private, because `load` is the one door: a `FieldMap` that has never been
+    held against the vocabulary is exactly the rot `load` exists to prevent, and
+    the split is about *ordering* the checks rather than about offering a way to
+    skip one. The vocabulary check is not here because it needs an artifact this
+    function is not given; `load` runs it. Everything decidable from the document
+    alone -- one primary per tag, disjointness from the excluded list, an entry
+    per declared criterion -- is decided before a `FieldMap` exists, so no
+    partial table is ever returned.
     """
     document: Any = json.loads(body)
     fields = {
@@ -191,14 +201,14 @@ def parse(body: str, declared: Mapping[str, Sequence[str]]) -> FieldMap:
     return FieldMap(
         name=name,
         revision=int(document["revision"]),
-        digest=hashlib.sha256(body.encode()).hexdigest(),
+        digest=digest_of(body.encode()),
         fields=fields,
         excluded=excluded,
     )
 
 
 def load(
-    vocabulary: Vocabulary | None = None,
+    vocabulary: Vocabulary,
     path: Path = FIELD_MAP_PATH,
     declared: Mapping[str, Sequence[str]] | None = None,
 ) -> FieldMap:
@@ -207,23 +217,22 @@ def load(
     An authored artifact held against nothing rots in the worst direction: a tag
     that no longer exists routes nothing and shows nothing, and both failures are
     silent. The vocabulary is already provisioned by digest, so the check is free.
+
+    **It is a parameter and not a default**, because every caller already holds
+    one: reading a second copy would re-verify 308 KB against the manifest and
+    re-parse 8,106 rows to answer a question the caller's own vocabulary answers.
     """
-    if vocabulary is None:
-        from isekai.shared.vocabulary import load as load_vocabulary
-
-        vocabulary = load_vocabulary()
     body = path.read_text()
-    field_map = parse(body, declared_fields() if declared is None else declared)
+    field_map = _parse(body, declared_fields() if declared is None else declared)
 
-    outside = sorted(
-        {
-            tag
-            for group in field_map.fields.values()
-            for tag in group.tags
-            if tag not in vocabulary
-        }
-        | {tag for tag in field_map.excluded if tag not in vocabulary}
-    )
+    # One set difference rather than a membership test per tag: the table is
+    # authored in the vocabulary's own spelling, so `__contains__`'s `normalise`
+    # would run a regex over every one of ~3,000 tags to answer what a set
+    # already knows.
+    named = {
+        tag for group in field_map.fields.values() for tag in group.tags
+    } | field_map.excluded
+    outside = sorted(named - vocabulary.counts.keys())
     if outside:
         listed = ", ".join(repr(tag) for tag in outside)
         raise Refusal(

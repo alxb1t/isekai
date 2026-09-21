@@ -25,7 +25,7 @@ Stdlib only: `csv`, `re`, `pathlib`.
 import csv
 import io
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -86,18 +86,22 @@ class Vocabulary:
         """
         return self.counts.get(normalise(tag), 0)
 
-    def search(self, term: str) -> list[str]:
-        """Return every tag containing `term`, most-posted first, then alphabetical.
+    def rank(self, tags: Iterable[str]) -> list[str]:
+        """Return `tags` most-posted first, then alphabetical.
 
-        Popularity is the ranking because the vocabulary is a frequency table:
-        among tags that fit a phrase equally well, the one the base model has seen
-        most is the one it can actually draw.
+        **The one ranking rule, and there is no second one.** Popularity, because
+        the vocabulary is a frequency table: among tags that fit equally well, the
+        one the base model has seen most is the one it can actually draw. Every
+        tag surface in this repository sorts through here, so a tie-break that
+        moved would move all of them together rather than desynchronising the
+        cheatsheet from the autocomplete.
         """
+        return sorted(tags, key=lambda tag: (-self.counts.get(tag, 0), tag))
+
+    def search(self, term: str) -> list[str]:
+        """Return every tag containing `term`, ranked."""
         needle = normalise(term)
-        return sorted(
-            (tag for tag in self.counts if needle in tag),
-            key=lambda tag: (-self.counts[tag], tag),
-        )
+        return self.rank(tag for tag in self.counts if needle in tag)
 
 
 def read_tags(body: str) -> dict[str, int]:

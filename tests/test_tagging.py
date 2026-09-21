@@ -452,7 +452,7 @@ def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
         hosted_tagger=Always(Failing()),
         client=None,
         vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, {}),
-        field_map=lambda: FIELD_MAP,
+        field_map=lambda _: FIELD_MAP,
         runs_root=tmp_path / "runs",
         out=io.StringIO(),
         err=io.StringIO(),

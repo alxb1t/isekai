@@ -78,10 +78,12 @@ class Wiring:
     # eager read made `python -m isekai show` impossible on a clone that had not
     # provisioned it. The doubles still inject one; they inject a lambda.
     vocabulary: Callable[[], Vocabulary]
-    # A thunk for the same reason, and resolved after it: `field_map.load` holds
-    # the table against the vocabulary, so reading it eagerly would drag the
-    # 308 KB tag list into every verb that never fills a sheet.
-    field_map: Callable[[], FieldMap]
+    # Lazy for the same reason, and it **takes** the vocabulary rather than
+    # finding its own: the table is only meaningful held against one, and every
+    # caller already has the invocation's. A zero-argument thunk would re-verify
+    # 308 KB against the manifest and re-parse 8,106 rows to answer a question
+    # the caller's own vocabulary answers.
+    field_map: Callable[[Vocabulary], FieldMap]
     runs_root: Path = RUNS_ROOT
     flows_dir: Path = FLOWS_DIR
     rng: random.Random = dataclasses.field(default_factory=random.Random)

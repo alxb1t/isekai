@@ -162,8 +162,9 @@ def establish(
             "show` prints, and the surface will open a draft for each"
         )
 
+    vocabulary = wired.vocabulary()
     return Batch(
-        loaded, tuple(resolved), wired.vocabulary(), wired.field_map(), bundle()
+        loaded, tuple(resolved), vocabulary, wired.field_map(vocabulary), bundle()
     )
 
 
