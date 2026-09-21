@@ -111,8 +111,8 @@ def write_wd14(
     """Write the tag artifact the sheet stage reads, in `caption_wd14`'s own shape.
 
     One helper rather than a fixture per module: `sheet()` below calls it for any
-    test that has not written one, which is why forty-six call sites lost a
-    `FakeSorter` and gained nothing.
+    test that has not written one, which is why forty-six call sites that used to
+    pass an offline sorter double lost it and gained nothing.
     """
     directory = run.directory(flow, WD14)
     path = directory / artifact_name(version)

@@ -9,14 +9,13 @@ stage refuses without, which is why a test says what it wants routed on one line
 
 import json
 import re
-from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from isekai.boundary.claude_cli import BASE_FLAGS, CliFailure
+from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
@@ -28,12 +27,6 @@ from isekai.foundation.run import (
     versions,
 )
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import (
-    ClaudeSorter,
-    OllamaSorter,
-    Schema,
-    output_shape,
-)
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
@@ -73,7 +66,7 @@ def _envelope(**fields: object) -> str:
     return json.dumps(body)
 
 
-# --- the seam -----------------------------------------------------------------
+# --- the router ---------------------------------------------------------------
 
 
 @pytest.mark.spec("field-map:routing:a-tag-goes-to-its-primary")
@@ -142,76 +135,6 @@ def test_nothing_the_tagger_did_not_return_reaches_the_sheet(
 
     fields = _body(written)["fields"]
     assert [tag for tags in fields.values() for tag in tags] == offered
-
-
-@pytest.mark.spec("sheet:seam:structure-constrained-content-free")
-def test_the_model_is_required_to_return_exactly_the_schemas_fields(
-    schema: Schema,
-) -> None:
-    shape = output_shape(schema)
-
-    assert list(shape["properties"]) == list(schema.names)
-    assert shape["required"] == list(schema.names)
-    assert shape["additionalProperties"] is False
-
-
-@pytest.mark.spec("sheet:seam:structure-constrained-content-free")
-def test_the_wording_is_not_restricted_to_vocabulary_terms(schema: Schema) -> None:
-    shape = output_shape(schema)
-
-    for field in shape["properties"].values():
-        assert field == {"type": "array", "items": {"type": "string"}}
-        assert "enum" not in field["items"]
-    assert "wd14" not in json.dumps(shape)
-
-
-@pytest.mark.spec("sheet:seam:structure-constrained-content-free")
-def test_the_argument_vector_disables_every_tool_and_states_the_shape(
-    schema: Schema,
-) -> None:
-    argv = ClaudeSorter().argv(PROSE, schema, "the briefing")
-
-    assert set(BASE_FLAGS) <= set(argv)
-    assert argv[argv.index("--tools") + 1] == ""
-    assert json.loads(argv[argv.index("--json-schema") + 1]) == output_shape(schema)
-    assert PROSE in argv[2]
-
-
-@pytest.mark.spec("sheet:seam:offline-double-satisfies-the-interface")
-def test_the_adapter_reads_the_structured_answer_out_of_the_envelope(
-    schema: Schema, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(
-        "isekai.boundary.claude_cli.shutil.which", lambda _: "/bin/claude"
-    )
-    answer = {name: [] for name in schema.names}
-    answer["hair_colour"] = ["dark brown"]
-
-    def runner(argv: Sequence[str]) -> tuple[int, str, str]:
-        return 0, _envelope(structured_output=answer, result=json.dumps(answer)), ""
-
-    sorting = ClaudeSorter(runner=runner).sort(PROSE, schema, "brief")
-
-    assert sorting.answers["hair_colour"] == ["dark brown"]
-    assert sorting.answers["marks"] == []
-
-
-@pytest.mark.spec("sheet:failure:structural-mismatch-is-permanent")
-def test_a_response_that_does_not_carry_the_schemas_fields_is_permanent(
-    schema: Schema, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(
-        "isekai.boundary.claude_cli.shutil.which", lambda _: "/bin/claude"
-    )
-
-    def runner(argv: Sequence[str]) -> tuple[int, str, str]:
-        return 0, _envelope(result=json.dumps({"hair_colour": ["brown"]})), ""
-
-    with pytest.raises(CliFailure) as failed:
-        ClaudeSorter(runner=runner).sort(PROSE, schema, "brief")
-
-    assert failed.value.kind == "permanent"
-    assert "age_band" in failed.value.detail
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
@@ -499,42 +422,3 @@ def test_the_briefing_carries_two_worked_examples() -> None:
 
     assert text.count("**The prose:**") == 2
     assert text.count("**The sheet:**") == 2
-
-
-# --- the Ollama adapter -------------------------------------------------------
-
-
-@pytest.mark.spec("sheet:selection:structure-is-required-of-every-implementation")
-def test_the_open_sorters_format_is_the_schemas_own_shape(schema: Schema) -> None:
-    """`format` equals `output_shape(schema)`, not merely resembles it.
-
-    The constraint is what keeps a malformed answer permanent: the runtime
-    compiles this into a grammar, so the structure is required server-side rather
-    than asked for politely. An adapter carrying its own near-copy would drift
-    from the Claude arm's `--json-schema` without a test noticing.
-    """
-    body = OllamaSorter(model="a-sorter").body(PROSE, schema, "Sort it.")
-
-    assert body["format"] == output_shape(schema)
-
-
-@pytest.mark.spec("sheet:selection:structure-is-required-of-every-implementation")
-def test_the_open_sorter_sends_thinking_off_and_the_pinned_sampling(
-    schema: Schema,
-) -> None:
-    """`think: false` and `repeat_penalty` are the two the compatible endpoint lacks.
-
-    Both are load-bearing by measurement: thinking tokens truncated the JSON
-    mid-string on the third subject, and at temperature 0 one field came back with
-    the same phrase forty times until the budget ran out.
-    """
-    body = OllamaSorter(model="a-sorter").body(PROSE, schema, "Sort it.")
-
-    assert body["think"] is False
-    assert body["stream"] is False
-    assert body["options"] == {
-        "temperature": 0,
-        "seed": 1,
-        "num_predict": 2048,
-        "repeat_penalty": 1.15,
-    }

@@ -160,6 +160,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `git diff main` over both paths and over `flows/` is empty, and `tests/test_flow.py`'s `PINNED`
   passes untouched. Verified rather than assumed.
 
+### Removed
+
+- **Both sorter implementations, and the seam they lived behind.** `Sorting`, `Sorter`, `FakeSorter`,
+  `ClaudeSorter`, `OllamaSorter`, `output_shape`, `sorter_prompt`, `answers_from`, `SORTER_OPTIONS` and
+  `SORTER_REMEDY` leave `isekai/pipeline/sheet.py`, with the **nine names it imported from
+  `boundary/claude_cli.py`**. `CLAUDE.md` says a selectable implementation *"is removed only by the
+  version that retires it"* — this is that version: with one implementation left, `implementation` for
+  this stage would be a key that could hold one value, which the same rule calls not a declaration.
+- **Ten scenarios, with their tests and their bindings.** Five `sheet:selection:*` describe choosing
+  between implementations, refusing an unknown one, constraining each one's output shape, reading an
+  answer out of a response body and naming a truncated one; `sheet:seam:offline-double-satisfies-the-interface`,
+  `sheet:seam:structure-constrained-content-free` and `sheet:failure:structural-mismatch-is-permanent`
+  describe a failure mode a deterministic router cannot have. **`CLAUDE.md:158` states there is no
+  spec↔test binding checker**, so a marker naming a deleted scenario passes the gate green — every key
+  was therefore grepped by name rather than trusted to surface.
+- **`tests/transports.py`'s `sorted_answer`**, which built a sorter response envelope and now has no
+  caller.
+- **Not removed, and deliberately: `hosted.sorter`.** It is a *required* key of the manifest's `hosted`
+  block (`flow.py:234`, read unguarded at `:429`, asserted by three tests), and dropping
+  `"sorter": "qwen3:8b"` from `flows/summon-open-v1/flow.json` would move that flow's `manifest_digest`
+  — which `CLAUDE.md` makes a **new flow identifier** rather than an edit. It is carried dead, unread,
+  exactly as `sheet.briefing.md` is, and both have the same trigger: the version that deletes the flows
+  they belong to (design.md D22).
+
 ## [0.20.0] - 2026-09-21
 
 ### Added

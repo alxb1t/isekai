@@ -5,7 +5,7 @@
 - [x] 1 — `field-map`: the artifact, the loader, and the four checks
 - [x] 2 — The authoring script: seven seeded criteria and the dead briefing's own examples
 - [x] 3 — The router fills the sheet, and the sorter seam is unwired
-- [ ] 4 — Retirement one: the sorter bodies and their ten scenarios
+- [x] 4 — Retirement one: the sorter bodies and their ten scenarios
 - [ ] 5 — Retirement two: the free-text mapping cascade
 - [ ] 6 — The documents this version makes false
 - [ ] 7 — `/api/fields`, the cheatsheet overlay, and the two keystrokes
