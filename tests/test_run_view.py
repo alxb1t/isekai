@@ -15,10 +15,11 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import FakeSorter
+from isekai.pipeline.tagging import FakeTagger, caption_tags, caption_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, sheet
+from tests.stages import caption, fake_tagger, sheet
 
 FLOW = "summon-v1"
 
@@ -126,3 +127,68 @@ def test_renders_are_listed_under_the_sheet_version_they_came_from(
     assert rendered(run) == [(FLOW, 1, [42])]
     assert any(line.strip() == "42" for line in report(run))
     assert any(line.strip() == f"{FLOW}/outputs/001" for line in report(run))
+
+
+# --- the two stages v0.20 adds ------------------------------------------------
+
+
+@pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
+def test_show_reports_both_tagging_stages_for_a_run_that_has_them(
+    tmp_path: Path,
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    made = open_run(photo, tmp_path / "runs")
+    caption_wd14(made, FLOW, fake_tagger)
+    caption_tags(made, FLOW, FakeTagger())
+
+    by_name = {(item.stage, item.flow): item for item in listings(made)}
+
+    assert by_name[("wd14", FLOW)].versions == [1]
+    assert by_name[("tags", FLOW)].versions == [1]
+    # And in the order a run passes through them, between the caption and the
+    # sheet the two of them feed a human's reading of.
+    assert [item.stage for item in listings(made)] == [
+        "captions",
+        "wd14",
+        "tags",
+        "sheets",
+        "review",
+        "prompts",
+    ]
+
+
+@pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
+def test_show_does_not_refuse_for_a_run_captioned_before_these_stages_existed(
+    run: Run,
+) -> None:
+    # An old run simply lacks the two directories, which is the same state as a
+    # run whose caption has not been produced. No migration, and nothing to
+    # detect (design.md, Migration Plan).
+    by_name = {(item.stage, item.flow): item for item in listings(run)}
+
+    assert by_name[("wd14", FLOW)].versions == []
+    assert by_name[("tags", FLOW)].versions == []
+    assert any("wd14" in line for line in report(run))
+
+
+@pytest.mark.spec("tagging:provenance:the-local-tagger-declares-its-pin")
+def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
+    tmp_path: Path,
+) -> None:
+    # `run_view` appends "unpinned" for `pinned is False`, and every artifact in
+    # this repository recorded exactly that until v0.20. A WD14 artifact is the
+    # first one `show` can report as pinned, which is the field finally doing its
+    # job rather than a surprise (design.md D17).
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    made = open_run(photo, tmp_path / "runs")
+    caption_wd14(made, FLOW, fake_tagger)
+    caption_tags(made, FLOW, FakeTagger())
+
+    by_name = {(item.stage, item.flow): item for item in listings(made)}
+
+    assert "unpinned" not in by_name[("wd14", FLOW)].producers[1]
+    assert by_name[("wd14", FLOW)].producers[1].startswith("wd14")
+    # The hosted one still is unpinned, so the absence above means something.
+    assert "unpinned" in by_name[("tags", FLOW)].producers[1]

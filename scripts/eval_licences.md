@@ -5,8 +5,9 @@ The tracked note that sits beside `scripts/eval_models.json`, the way that manif
 under, the URL that licence was read at, and the date it was read.
 
 **It is one record, not one per manifest.** A licence is a property of an artifact rather than of
-the file that pins it, so the vocabulary `scripts/vocabulary.json` declares is recorded here too,
-under its own heading and with its own read date — three notes would be three places to forget.
+the file that pins it, so both artifacts `scripts/vocabulary.json` declares are recorded here too,
+each under its own heading and with its own read date — three notes would be three places to
+forget, and one read date shared across two artifacts is one artifact nobody checked.
 The filename is the evaluator's for historical reasons only; the record is the repository's.
 
 **Every scorer licence below was read on 2026-09-06, and none of them forbids this use.** That was checked
@@ -200,7 +201,7 @@ checkable.
 
 ---
 
-## The vocabulary — a tag list, not a model
+## The vocabulary and the tagger it indexes — one artifact, split in two
 
 ### `wd14/selected_tags.csv` — the canonical tag vocabulary
 
@@ -214,15 +215,44 @@ tags with their post counts. It is pinned in `scripts/vocabulary.json` at revisi
 rather than read from a published record — at roughly 300 KB it is not stored as a large file, so
 Hugging Face publishes no SHA-256 for it.
 
-**The tagger it is published beside is not pinned and is not loaded**, so its own terms are not
-this repository's problem and are deliberately not recorded as though they were. What is recorded
-is that the tag list carries the repository's licence, which the card states over the whole
-repository and therefore over this file.
+**Until v0.20 the tagger it is published beside was neither pinned nor loaded**, and this note said
+so — its terms were deliberately not recorded, on the ground that they were not this repository's
+problem. That is no longer true: the tagger is now pinned in the same manifest, at the same
+revision, and loaded by `isekai/boundary/wd14.py`. It has its own section below, with its own read
+date — this record keeps one section per artifact path. What stays true is
+that the tag list carries the repository's licence, which the card states over the whole repository
+and therefore over this file.
 
 **A residual, stated rather than assumed away:** the tags themselves are Danbooru's vocabulary and
 the post counts are Danbooru's statistics. Apache-2.0 is SmilingWolf's grant over the artifact
 published here, which is what this repository consumes; it is not a claim about the upstream
 booru's data. This project distributes neither.
+
+### `wd14/model.onnx` — WD SwinV2 Tagger v3, the graph the list indexes
+
+- **Licence:** **Apache-2.0.** Permissive; nothing to record beyond the fact.
+- **Read at:** <https://huggingface.co/SmilingWolf/wd-swinv2-tagger-v3>, 2026-09-20; the model
+  card's frontmatter declares `license: apache-2.0`, and the API's `cardData.license` returns
+  `apache-2.0` at that revision. **Read again on its own date rather than inherited from the row
+  above**, because a grant that covers a 300 KB CSV is not thereby known to still cover the 467 MB
+  weights eleven months later — even where, as here, it is the same repository and the same
+  statement.
+
+A SwinV2 vision transformer, 467,460,978 bytes, pinned in `scripts/vocabulary.json` at revision
+`627aef95638667ddcaa3ac8ae625e88ea5b02f51` — **the same revision as the CSV above, which is a
+contract and not a coincidence**: `selected_tags.csv` is this graph's output layer, row N naming
+neuron N, so a pair from two revisions mislabels every tag and nothing downstream could notice. Its
+digest is read from its LFS object id rather than fetched, which is what makes pinning it free.
+
+**It is loaded, not merely pinned**, and that is what changed at v0.20: `isekai/boundary/wd14.py`
+opens it to produce the scored tag list the review surface shows beside a caption. **Loading weights
+is not linking code** — the same reading this record already takes for every ONNX artifact the
+scorer opens — so what is at stake here is the grant over the file, which is permissive.
+
+**The same residual applies, for the same reason:** the tags this graph emits are Danbooru's
+vocabulary and it was trained on Danbooru's images. Apache-2.0 is SmilingWolf's grant over the
+weights published here. It is not a claim about that upstream data, and this project distributes
+neither the data nor the weights.
 
 ---
 
@@ -235,5 +265,6 @@ booru's data. This project distributes neither.
 | `glintr100` / antelopev2 | non-commercial research; weights not MIT | recorded deviation, **shipping since v0.9** | both manifests, byte-identical |
 | DWPose (`yolox_l`, `dw-ll_ucoco_384_bs5`) | **Apache-2.0** | permissive; the open entry, now closed | both manifests, byte-identical |
 | `deepghs/anime_face_detection` | **MIT** | permissive; replaces D19's AGPL artifact | `eval_models.json` |
-| `wd14/selected_tags.csv` (`SmilingWolf/wd-swinv2-tagger-v3`) | **Apache-2.0** | permissive; the tag list, not the tagger | `vocabulary.json` |
+| `wd14/selected_tags.csv` (`SmilingWolf/wd-swinv2-tagger-v3`) | **Apache-2.0** | permissive; the tag list | `vocabulary.json` |
+| `wd14/model.onnx` (`SmilingWolf/wd-swinv2-tagger-v3`) | **Apache-2.0** | permissive; the tagger, loaded since v0.20 | `vocabulary.json` |
 | `RealESRGAN_x4plus_anime_6B.pth` (`xinntao/Real-ESRGAN`) | **BSD-3-Clause** | permissive; mirror-primary, held against the publisher's own bytes | `models.json` |

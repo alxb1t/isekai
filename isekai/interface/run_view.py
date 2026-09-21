@@ -29,6 +29,8 @@ from isekai.foundation.run import (
     PROMPTS,
     REVIEW,
     SHEETS,
+    TAGS,
+    WD14,
     Run,
 )
 from isekai.pipeline.generate import rendered_seeds
@@ -37,7 +39,14 @@ from isekai.pipeline.generate import rendered_seeds
 # flow's own now -- the run is input above and flow below -- so there is nothing
 # left for a per-flow-ness column to say. Declared once here so the listing cannot
 # drift from the layout it describes.
-STAGES: tuple[str, ...] = (CAPTIONS, SHEETS, REVIEW, PROMPTS)
+#
+# **The tuple is explicit, so a new stage directory is invisible to `show` until
+# it is named here.** By the standing rule that a version does not go into files
+# it never touches, editing this would be out of v0.20's scope -- and the rule
+# does not apply, because v0.20 does not inherit this gap, it **creates** it.
+# Shipping a stage `show` cannot see is shipping a verb that lies about what a
+# run holds (design.md D23).
+STAGES: tuple[str, ...] = (CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS)
 
 
 @dataclass(frozen=True)

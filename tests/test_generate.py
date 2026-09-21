@@ -51,11 +51,12 @@ from isekai.pipeline.generate import (
 )
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import FakeSorter
+from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import Always, caption, sheet
+from tests.stages import Always, caption, fake_wd14, sheet
 
 FLOW = "summon-v1"
 
@@ -575,6 +576,8 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     wired = Wiring(
         reader=Always(FakeReader(prose="unused")),
         sorter=Always(FakeSorter(answers={})),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
         client=FakeComfyClient(),
         vocabulary=lambda: vocabulary,
         runs_root=runs,

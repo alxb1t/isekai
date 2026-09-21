@@ -30,10 +30,11 @@ from isekai.interface.wiring import (
 )
 from isekai.pipeline.caption import ClaudeReader, FakeReader, OllamaReader
 from isekai.pipeline.sheet import ClaudeSorter, FakeSorter, OllamaSorter
+from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
-from tests.stages import Always
+from tests.stages import Always, fake_wd14
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -65,6 +66,8 @@ def _wiring(tmp_path: Path, flows_dir: Path | None = None) -> Wiring:
     return Wiring(
         reader=Always(FakeReader()),
         sorter=Always(FakeSorter(answers={})),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
         client=None,
         vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, read_tags(CSV)),
         runs_root=tmp_path / "runs",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { VocabEntry } from '../types'
+import { grouped } from '../caption'
 
 /* The dropdown.
 
@@ -24,7 +25,6 @@ defineProps<{
 
 defineEmits<{ commit: [tag: string] }>()
 
-const grouped = (posts: number) => posts.toLocaleString('en-GB')
 </script>
 
 <template>

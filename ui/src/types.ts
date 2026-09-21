@@ -26,11 +26,37 @@ export interface Budget {
   overhead: number
 }
 
+/* One scored tag from the local tagger. The confidence is shown on the chip
+   because a wrong tag sorted below a right one refutes itself -- `black hair
+   0.31` under `brown hair 0.91` needs no explanation. */
+export interface ScoredTag {
+  tag: string
+  confidence: number
+}
+
+/* One tag from the hosted tagger that the vocabulary actually carries. The
+   server sends only these: on v0.20's acceptance batch roughly nine in ten of
+   this model's tags were committable to no field, and reading nine to find the
+   tenth is attention spent on the busiest pane in the surface.
+
+   So `posts` is never null here, and there is no membership flag — every tag
+   that reaches the page is in the vocabulary by construction. The artifact on
+   disk still holds the ones that were dropped. */
+export interface OfferedTag {
+  tag: string
+  posts: number
+}
+
 export interface InputDetail {
   id: string
   width: number
   height: number
   caption: string | null
+  /* Null where the artifact is absent, which is never a failure: a run
+     captioned before v0.20, a flow with no hosted block, or a tagger that
+     failed. The panel simply is not drawn. */
+  wd14: ScoredTag[] | null
+  tags: OfferedTag[] | null
   fields: Record<string, string[]>
   readonly: boolean
   draft: string | null

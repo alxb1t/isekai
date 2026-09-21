@@ -98,7 +98,10 @@ record in the producer which upstream artifact version the work was derived from
 A producer that names only a model cannot explain its own result. The instruction text given to a
 reader is the variable with the largest measured effect on what comes back — one briefing change moved
 a reader's score from 0.518 to 0.307 and manufactured nineteen identity marks that were not in the
-photographs — so the digest of that text is recorded beside the model that read it.
+photographs — so the digest of that text is recorded beside the model that read it. Instruction text
+does not always come from a file: a producer whose instructions are fixed by this build rather than by
+a flow has bytes to hash and no path to name, and a record that invented a path for it would assert a
+location that does not exist.
 
 #### Scenario: an artifact carries its schema name and version
 - **Key:** `run-directory:provenance:artifact-declares-its-schema`
@@ -111,7 +114,7 @@ photographs — so the digest of that text is recorded beside the model that rea
 - **Key:** `run-directory:provenance:producer-records-the-briefing`
 - **Layers:** unit
 - **WHEN** a stage that is given instruction text writes its artifact
-- **THEN** the producer records that text's path and digest
+- **THEN** the producer records that text's digest, and its path where the text has one
 - **AND** two artifacts written under different instructions are distinguishable from the record alone
 
 #### Scenario: a producer records which upstream version it came from
@@ -354,14 +357,16 @@ once however many flows run. Nesting stage-first meant adding a flow scattered f
 stage directories; nesting flow-first means adding a flow adds one subtree, and retiring one flow's work
 for one input is removing one directory. Keeping captions below the split is what makes a flow's
 briefing binding: a caption written under one flow's instructions can never be picked up by a flow whose
-instructions differ, because the two never name the same directory.
+instructions differ, because the two never name the same directory. The same holds for every artifact a
+photograph yields, including those a flow cannot produce at all: a stage directory that is simply absent
+is how a run records that a flow did not declare what it would take to fill it.
 
 #### Scenario: every stage writes under the flow
 - **Key:** `run-directory:layout:stage-artifacts-live-under-the-flow`
 - **Layers:** unit
 - **WHEN** a run has been carried through every stage for a flow
-- **THEN** that flow's captions, sheets, reviews, prompts and outputs are all under one directory named
-  for the flow
+- **THEN** that flow's captions, tag lists, sheets, reviews, prompts and outputs are all under one
+  directory named for the flow
 - **AND** the only entries above it are the input and its frame
 
 #### Scenario: a second flow adds one subtree

@@ -317,7 +317,7 @@ wheels = [
 
 [[package]]
 name = "isekai"
-version = "0.19.0"
+version = "0.20.0"
 source = { virtual = "." }
 
 [package.optional-dependencies]
@@ -327,6 +327,11 @@ eval = [
     { name = "pillow" },
     { name = "torch" },
     { name = "transformers" },
+]
+tagging = [
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "pillow" },
 ]
 ui = [
     { name = "fastapi" },
@@ -347,13 +352,16 @@ dev = [
 requires-dist = [
     { name = "fastapi", marker = "extra == 'ui'", specifier = "==0.141.1" },
     { name = "numpy", marker = "extra == 'eval'", specifier = ">=2.1" },
+    { name = "numpy", marker = "extra == 'tagging'", specifier = ">=2.1" },
     { name = "onnxruntime", marker = "extra == 'eval'", specifier = ">=1.20" },
+    { name = "onnxruntime", marker = "extra == 'tagging'", specifier = ">=1.20" },
     { name = "pillow", marker = "extra == 'eval'", specifier = ">=11.0" },
+    { name = "pillow", marker = "extra == 'tagging'", specifier = ">=11.0" },
     { name = "torch", marker = "extra == 'eval'", specifier = ">=2.6" },
     { name = "transformers", marker = "extra == 'eval'", specifier = ">=4.49" },
     { name = "uvicorn", marker = "extra == 'ui'", specifier = "==0.53.0" },
 ]
-provides-extras = ["eval", "ui"]
+provides-extras = ["eval", "tagging", "ui"]
 
 [package.metadata.requires-dev]
 dev = [

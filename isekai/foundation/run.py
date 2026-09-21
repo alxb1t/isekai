@@ -104,6 +104,8 @@ FRAME_NAME = "run.json"
 # four entries across four stage directories; flow-first, adding a flow adds one
 # subtree and retiring one flow's work is removing one directory.
 CAPTIONS = "captions"
+WD14 = "wd14"
+TAGS = "tags"
 SHEETS = "sheets"
 REVIEW = "review"
 PROMPTS = "prompts"
@@ -125,8 +127,28 @@ Kind = Literal["transient", "permanent"]
 # and sorting are cheap and flaky, so they get three; assembling and rendering get
 # one, because a render that has failed once should be looked at rather than paid
 # for again.
+#
+# The two taggers are split on the same axis rather than sharing a number.
+# `tags` is a hosted model over HTTP, so it is flaky in exactly the way `caption`
+# and `sheet` are and gets their three. `wd14` is a local pass over a
+# digest-verified graph, and what can still fail there is **this photograph's own
+# bytes** -- a header no decoder can read. That is permanent by construction, so
+# one attempt is the whole budget, exactly as `assemble` and `render` are one.
+#
+# The two file conditions that would fail identically for every input -- an
+# absent model, bytes that disagree with the pin -- are deliberately **not**
+# counted here. They are conditions about this build rather than about a
+# photograph, so the tagger is opened before the stage's `try` and refuses the
+# batch once instead of writing one error record per input for a single fix.
+#
+# A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
+# below is a bare lookup, and `across()` and `main()` both catch only `Refusal`
+# -- so an unlisted stage name escapes as a raw traceback in a package where
+# every failure is a named refusal (design.md D6).
 BUDGETS: Mapping[str, int] = {
     "caption": 3,
+    "wd14": 1,
+    "tags": 3,
     "sheet": 3,
     "assemble": 1,
     "render": 1,

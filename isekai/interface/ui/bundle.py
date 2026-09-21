@@ -31,15 +31,58 @@ SOURCE = REPOSITORY / "ui"
 BINARY = "npm"
 
 
+def _newest(root: Path) -> float:
+    """Return the newest mtime under `root`, or 0.0 where it holds no files."""
+    return max(
+        (item.stat().st_mtime for item in root.rglob("*") if item.is_file()),
+        default=0.0,
+    )
+
+
+def _is_fresh(dist: Path, source: Path) -> bool:
+    """Say whether the built bundle is newer than every source it is built from.
+
+    **Presence is not freshness, and this is the whole of the defect it fixes.**
+    The first version of this function returned any non-empty `dist/`, so an
+    operator whose bundle was built by an earlier version went on being served
+    that earlier version's page -- silently, with a green gate, because
+    `npm run typecheck` compiles the *source* and the server reads the *build*.
+    Nothing was wrong except that nothing had been rebuilt.
+
+    It was unobservable until now for a reason that has just expired: v0.20 is
+    the first version to change `ui/src/` since the bundle began being built on
+    demand, so it is the first in which a stale `dist/` and a fresh checkout
+    disagree. The rule about not going into files a version never touches does
+    not apply to a gap the version itself makes reachable (design.md D28).
+
+    Compared by mtime rather than by a content hash: `vite` emits
+    content-hashed filenames, so a rebuild that changes nothing is cheap and a
+    rebuild that changes something is exactly what is wanted. `index.html` is
+    counted as source because it is the entry `vite` reads.
+    """
+    if not (dist.is_dir() and any(dist.iterdir())):
+        return False
+    built = _newest(dist)
+    return all(
+        built >= _newest(item) if item.is_dir() else built >= item.stat().st_mtime
+        for item in (source / "src", source / "index.html")
+        if item.exists()
+    )
+
+
 def ensure_built(source: Path = SOURCE) -> Path:
     """Return the built bundle's directory, building it first if it is absent.
 
     Called at startup, before a port is bound, so a missing toolchain is a
     message in the terminal the operator is already standing in rather than a
     blank page they have to diagnose.
+
+    **Rebuilt when the source has moved under it**, not only when it is absent:
+    see `_is_fresh`. A bundle that is present but older than the code it was
+    built from is the one failure here that looks like success.
     """
     dist = source / "dist"
-    if dist.is_dir() and any(dist.iterdir()):
+    if _is_fresh(dist, source):
         return dist
 
     if shutil.which(BINARY) is None:

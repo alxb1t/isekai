@@ -25,6 +25,306 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-09-21
+
+### Added
+
+- **The gate gains a sixth command — `bash scripts/typecheck_ui.sh`, the browser half.** The Vue
+  frontend has no automated tests of any kind, and `vue-tsc --noEmit` was declared in
+  `ui/package.json` and named by no gate command, so a phase whose whole product is browser code
+  could end green while the bundle did not compile. It sits beside `uv run ty check` because it is
+  the same axis in the other language, and it is added **before** any browser code is written so
+  every later phase runs under it (design.md D22). It is a script rather than a bare `npm run`
+  because the array's entries run from the repository root and because a missing `ui/node_modules/`
+  has to refuse **by name** — `isekai/interface/ui/bundle.py`'s shape, say what is absent and what
+  installs it — rather than exit 127 with `vue-tsc: command not found`. `npm install` is still never
+  run for you: it fetches third-party packages, which is why `ui/node_modules/` is an ignored root.
+- **`.github/workflows/ci.yml` restores that toolchain, and it is the only place that does.** CI
+  invokes `make gate`, so the sixth command would refuse on a bare checkout. A `setup-node` step and
+  an `npm ci` from the tracked `ui/package-lock.json` install exactly the pinned tree — deterministic,
+  and failing rather than resolving a new one. The gate array's four mirrors — the array,
+  `Makefile`, `README.md` and CI — are updated in this one commit, as the contract requires.
+- **A `tagging` extra — `onnxruntime`, `numpy`, `Pillow`.** Deliberately **not** the `eval` extra,
+  which resolves the same three names and also carries `torch` and `transformers`: roughly 2 GB the
+  local tagger never imports, which would make the cheap half of stage ③ cost the expensive half's
+  download (design.md D19). The `ui` extra is the precedent for a narrow one. `dependencies = []`
+  does not move, `uv.lock` gains only the extra's own three entries because the pins already
+  existed, and the three stdlib-only runtime guards still pass under `python -S`.
+
+- **Two stage directories and two budgets, in `isekai/foundation/run.py`.** `WD14 = "wd14"` and
+  `TAGS = "tags"` join the layout names, between `CAPTIONS` and `SHEETS` — the order a run passes
+  through them. The run owns the layout, so the two tagging stages name their directories the same
+  way every other stage does, through `run.directory(flow, CONSTANT)`.
+- **`BUDGETS` gains `"wd14": 1` and `"tags": 3`, split on the axis every other entry is split on.**
+  The hosted tagger is a model over HTTP and is flaky exactly as `caption` and `sheet` are, so it
+  gets their three; the local tagger is a deterministic matrix multiply against a digest-verified
+  file, so a second attempt cannot succeed where the first failed and it gets `assemble`'s and
+  `render`'s one. This is not bookkeeping: `BUDGETS[stage]` is a bare dict lookup and both
+  `across()` and `main()` catch only `Refusal`, so a stage with no entry would escape as a raw
+  traceback in a package where every failure is named (design.md D6). Sharing `caption`'s entry
+  would have worked and would have made the refusal say *caption failed permanently* about the
+  `wd14/` directory.
+
+- **`scripts/vocabulary.json` gains `wd14/model.onnx`** — same publisher, same revision as the CSV
+  already there, 467,460,978 bytes, digest read from its LFS object id so pinning it costs no
+  download. **The two are one artifact split in two**: row N of `selected_tags.csv` names output
+  neuron N of the graph, so a pair from different revisions mislabels every tag — silently, because
+  the vector has the right length and every name in it is a real tag. A test asserts both entries
+  resolve one revision of one repository, and a second asserts a mismatched pair fails it.
+- **`scripts/eval_licences.md` gains a record for the model**, read and dated on its own rather than
+  inherited from the CSV's row above it: Apache-2.0, the same grant, re-read 2026-09-20. The
+  section that said *"the tagger it is published beside is not pinned and is not loaded"* is
+  rewritten rather than left standing.
+- **Two guards on `scripts/manifest.py`'s `digest_of_url`, one of which fired during this phase.**
+  Twice, a connection dropped mid-body and the partial read was hashed and written to the tracked
+  manifest — 143049 and 64311 bytes of a 308468-byte file, each a real SHA-256 over the wrong bytes.
+  `curl` catches this and exits 18; `urllib` returns it without complaint. So a body shorter than
+  the response's declared `Content-Length` is now refused naming the shortfall, and the request
+  additionally accepts only the identity coding — latent rather than observed, and not subsumed by
+  the first, because a coded response declares its *coded* length. `models.json` and
+  `eval_models.json` are **not** re-derived here.
+
+- **`isekai/boundary/wd14.py` — the local tagger's boundary, and the only module in the package
+  that touches the `tagging` extra.** A `Session` Protocol whose real implementation is
+  `OnnxSession` and whose double is what keeps the suite offline, the pad-and-resize preparation
+  rule, the label index, and the two-digest verification. The arrangement `ollama.py` already has:
+  the transport here, the adapter in `pipeline/`. **All three wheel imports are function-local**, so
+  `python -m isekai`'s import graph stays stdlib-only and a test asserts none of them sits at module
+  scope.
+- **The label index is read in file order and nothing is dropped from it.** Row N of
+  `selected_tags.csv` names output neuron N, so the vector is indexed **before** anything is
+  filtered — character (category 4) and rating (category 9) rows are excluded from the *result* and
+  never from the index. `shared/vocabulary.py` reads the same file and discards the order, which is
+  correct for mapping a phrase and would be silently wrong here.
+- **The pure half is separated from the half that needs a wheel, deliberately.** `select()` turns a
+  probability vector into sorted tags and imports nothing; `prepare()` is the only place `numpy` and
+  `Pillow` appear. The `tagging` extra is not installed in the environment the gate runs in, so a
+  suite that could not test the ordering without it would be a suite that silently stops covering
+  this capability. `test_wd14.py` runs with no wheel and no model file.
+- **A vector whose length disagrees with the index refuses rather than zipping short**, which is the
+  one mismatch that is otherwise undetectable: `zip` without `strict` would truncate to the shorter
+  of the two and produce a quietly shorter tag list instead of a message.
+- **Both digests are verified before 467 MB is opened**, through the scorer's resolver rather than a
+  second copy of it — the repository's single enforcement site for the containment and digest rules.
+  An absent half is a `Refusal` naming `bash scripts/download_models.sh scripts/vocabulary.json`; a
+  half whose bytes disagree is left to `DigestMismatch`, whose message already names the file and
+  both digests. A test proves the *model* is checked and not only the 300 KB list.
+- **The input dimension is read off the session, not hard-coded.** A sibling tagger in the same
+  family declares a different edge, and a constant would resize correctly against the one graph it
+  was written for and silently wrongly against every other.
+
+- **`isekai/pipeline/tagging.py` — `caption_wd14()` and `caption_tags()`, two functions and two
+  seams.** Deliberately **not** one `Tagger` Protocol with two implementations: one resolves through
+  the manifest's `hosted.implementation` and the other through nothing at all, so a shared name
+  would be a shared name rather than a seam (design.md D3). Each has `caption()`'s guard against its
+  own directory, its own `BUDGETS` entry and its own `latest()` check, so a complete caption and a
+  complete WD14 list beside a failed hosted one is an ordinary resumable state.
+- **`caption()` is byte-identical to `main`**, asserted by `git diff` rather than by a test. It is
+  the one function in this change whose behaviour has to be provably unchanged, and a function with
+  no edit is provably unchanged.
+- **Nothing is narrowed.** Neither stage canonicalises, maps to the vocabulary, deduplicates or
+  re-orders on anything but confidence. The hosted list is roughly three-quarters unusable — stock
+  photo keywording, and it contradicts its own prose on the same photograph — and it is stored
+  exactly as it came, because narrowing is stage ②'s job and seeing behind it is the point.
+- **A response containing no comma is a permanent failure**, recorded like any other. That is the
+  whole content check, and it separates *not a list at all* from *wrong*: the operator asked for the
+  raw list knowing it is wrong, so wrongness is not what is being guarded. Anything richer starts
+  filtering (design.md D15).
+- **`constant_record(text)` in `isekai/boundary/claude_cli.py`, beside `instructions_record(path)`.**
+  Digest only and **no `path` key**: `instructions_record` resolves a path and hashes the file behind
+  it, which a producer whose instructions are a module constant cannot use, and a record that
+  invented a path would assert a location that does not exist (design.md D16).
+- **The WD14 producer records `pinned: true` and both digests** — the first artifact in this
+  repository that can honestly claim a pin, and the first thing `show` will report without the word
+  *unpinned* (design.md D17).
+
+- **`isekai/interface/wiring.py` gains two tagging seams, and they are deliberately not one.**
+  `tagger_for(flow)` takes a `Flow` and **reads nothing from it** — the local tagger resolves through
+  no manifest key at all, because it is a file this build pins, it costs nothing, it reaches no
+  network, and there is no flow for which it would be wrong. Requiring a key would have meant
+  re-pinning three frozen flow directories to state an opinion none of them has.
+  `hosted_tagger_for(flow)` answers `None` where a flow declares no arm this build can tag on, and
+  that is the one resolver allowed to: `_resolve`'s argument — an unrecognised implementation must
+  refuse rather than default — holds where a wrong model would silently produce a complete run whose
+  provenance disagrees with the manifest, and here there is no wrong model to fall back to.
+- **`isekai/interface/cli.py`'s `caption` branch says three times, in one order and no other.**
+  Prose → WD14 → JoyCaption. `across()` catches `Refusal` per *input* rather than per stage, so the
+  ordering **is** the failure isolation: the one stage with a port, a timeout and a retry budget runs
+  last, and its refusal blocks nothing that would have succeeded (design.md D7). A test proves it —
+  a hosted tagger rigged to fail leaves the caption and the WD14 list on disk and complete.
+- **The local tagger is opened once per flow per invocation, not once per photograph.** The reader
+  and the sorter are resolved inside the per-photograph loop because constructing one is
+  constructing a dataclass; this opens a 467 MB graph and reads a 10,861-row index, so it is
+  memoised beside the vocabulary thunk that exists for the same reason.
+
+- **`run_view.STAGES` gains `WD14` and `TAGS`**, in the order a run passes through them —
+  `(captions, wd14, tags, sheets, review, prompts)`. The tuple is explicit, so a new stage directory
+  is invisible to `show` until it is named in it. By the standing rule that a version does not open
+  files it never touches this would be out of scope, and **the rule does not apply**: v0.20 does not
+  inherit this gap, it creates it, and shipping a stage `show` cannot see is shipping a verb that
+  lies about what a run holds (design.md D23).
+- **`show` prints a WD14 artifact without the word `unpinned` — the first one in this repository
+  that it can.** `run_view.py` appends it for `pinned is False`, and every artifact in the tree
+  recorded exactly that until now. A test asserts the absence *and* asserts the hosted tag list is
+  still marked, so the absence means something.
+- **A run captioned before these stages existed lists them empty rather than refusing.** No
+  migration and nothing to detect: an old run simply lacks the two directories, which is the same
+  state as a run whose caption has not been produced.
+
+- **The source pane shows the caption one sentence to a block, and two read-only tag lists under
+  it.** `sentencesOf()` joins `paragraphsOf()` in `ui/src/caption.ts` — the split is the browser's,
+  because sending prose to the server to be split and back would be a round trip for a regex
+  (design.md D10). It is **naive against abbreviations** and knowingly so: the prose is constrained
+  by briefing to plain description of a person, and the acceptance names the edge rather than
+  guarding it with a list of exceptions nobody can test.
+- **WD14 first, JoyCaption second** — the order the pipeline produces them in, which also puts the
+  usable list nearer the prose. WD14 chips carry the confidence to two digits, so `black hair 0.31`
+  arrives under `brown hair 0.91` and refutes itself. JoyCaption chips carry the post count where
+  the tag is in the vocabulary and **nothing where it is not**; the missing number is the mark,
+  because a chip with no count reads as the model's word rather than Danbooru's.
+- **Membership is decided server-side**, in `read_input`'s payload. `/api/tags` answers a *fragment*
+  query and there is no membership endpoint, so marking N tags from the browser would be N round
+  trips against a surface whose job is to be instant — and the vocabulary is already loaded in that
+  process. No new endpoint; both lists ride on `inputDetail()`.
+- **An absent tag artifact is `null` and draws nothing** — no panel, no message, never a refusal.
+  Three legitimate absences (a run captioned before v0.20, a flow with no `hosted` block, a failed
+  tagger), and a line explaining one the operator caused would be chrome on the busiest pane.
+  `batch.py`'s startup refusal order does not change: nothing new can block the port being bound.
+- **No new component, colour, spacing or type step** (design.md D21). Both lists are `TagChip` and
+  `SourcePanel` already owned the column; the chip rows reuse `row__tags`, the sheet row's own
+  layout, rather than restating a flex-wrap rule five pixels away from it.
+
+### Acceptance — read live, on eight fresh photographs
+
+Run through `caption` → `sheet` → `ui` on `summon-open-v1`, then rendered. The three claims were
+recorded separately because they can fail independently, and one of them did.
+
+- **④ — yes, unqualified.** *"Reading the caption one sentence made it easier indeed."* No sentence
+  was reported split in the wrong place; the abbreviation edge the splitter is naive about did not
+  appear in eight captions of constrained descriptive prose.
+- **③a — WD14, yes, and it is the version's strongest half.** *"Works just awesome… better than
+  expected,"* and *"the highest impact is the WD14 danbooru tags."* Every tag it returns is
+  committable by construction, and the confidences made the wrong ones dismissible at a glance.
+- **③b — JoyCaption, a qualified no.** *"The JoyCaption danbooru tags do not work really well…
+  makes sense only for those that have a number in the chip."* The marking worked — the unusable
+  ones were obvious — but obvious-and-present is still nine unusable rows in ten. D1's argument that
+  *a wrong tag costs a glance* held for one wrong tag and not for nine, and the hosted list is now
+  filtered to the vocabulary on its way to the page (design.md D29).
+
+**③ earned its keep before the acceptance question was even asked.** Reading the panel against the
+assembled prompt caught two stage-② defects at zero cost, with no pod running: `skin_ancestry: light`
+and `eyebrows: dark` were reaching the prompt as the bare tags `light` and `dark` — both canonical
+Danbooru tags meaning *lighting* and *darkness*, so they passed every guard and would have been
+drawn, and `light, brown hair` would likely have encoded as *light brown hair*; and one sheet had lost
+`1girl` from its `count` field. Four sheets were corrected and re-approved before rendering.
+
+### Verified — the three artifacts end to end, on two synthetic portraits
+
+Run on `synthetic_portrait_00003` and `synthetic_portrait_00035` through `summon-open-v1`, against a
+throwaway runs root. Free: two local models on `127.0.0.1:11434`, one local ONNX pass, no render.
+
+- **`caption` writes three artifacts and says three times**, in the designed order — *caption ·
+  wd14 · tags* — 58 s cold for both inputs.
+- **`show` lists `captions · wd14 · tags`, and the `wd14` line is the first artifact in this
+  repository it prints without the word `unpinned`.** The other two still carry it, so the absence
+  means something.
+- **Re-running changes nothing and opens nothing**: six *already complete* lines, the run tree's
+  content digest **and every mtime** identical, in **0.25 s** against the first pass's 58 s — which
+  is the thunk working, since opening the graph alone costs ~0.9 s plus a 467 MB hash.
+- **`summon-v1` produced two lines, not three** — `wd14/` present and `tags/` absent, because the
+  flow declares no arm to tag on.
+- **The measurements behind D1 reproduced on a photograph nobody had run them against.** WD14
+  returned 44 general tags and recovered `1girl 1.00`, `solo 0.95`, `looking_at_viewer 0.69` and
+  `navel_piercing 0.56`. JoyCaption returned 35, of which **4 are in the vocabulary** — the low end
+  of the measured 9–26% band — and it answered `blue eyes` for a subject whose caption reads *light
+  brown*, which is the contradiction D1 recorded, live.
+- **The surface renders all three panes**: the caption one sentence to a block, the scored list with
+  its confidences, the offered list with a post count on the four committable tags and none on the
+  thirty-one that are not.
+
+### Changed
+
+- **The hosted tag list is filtered to the vocabulary before it reaches the page** (design.md D29),
+  which overturns part of D1 on the acceptance's own evidence. It shipped unfiltered on the argument
+  that *a wrong tag costs a glance*; at 4 usable tags in 35 the operator's verdict was that only the
+  marked ones carried value. **The artifact is untouched** — it still stores every tag the model
+  returned, because narrowing the record would make it disagree with what the model said. The local
+  list stays whole, and the asymmetry is the point: WD14 is scored against the vocabulary it emits,
+  so all of its tags are committable by construction. `OfferedTag` loses `in_vocabulary` and its
+  `posts` is no longer nullable — every tag that reaches the page is in the vocabulary now.
+
+### Fixed
+
+- **`isekai ui` served a stale bundle, and nothing could have caught it but running the surface.**
+  `ensure_built` returned any non-empty `ui/dist/`, so a bundle built by an earlier version went on
+  being served while `ui/src/` had moved under it — with a green gate, because `npm run typecheck`
+  compiles the source and the server reads the build, and nothing compared them. The gap dates from
+  v0.18's on-demand build and was unobservable until now because **no version had changed `ui/src/`
+  since**; v0.20 is the first in which a stale bundle and a fresh checkout disagree, which is
+  `run_view.STAGES`'s case exactly — a defect made reachable rather than inherited (design.md D28).
+  The bundle is now rebuilt when any source file is newer than the newest built file.
+- **`baseline/build_contact_sheets.py` used `Image.LANCZOS`, removed in Pillow 10.** Exposed by this
+  version's own `tagging` extra putting Pillow in the environment for the first time: CI never
+  installs the extra so CI stayed green, but every operator following v0.20's setup instructions
+  would meet a red `ty check`. Corrected to `Image.Resampling.LANCZOS`, the spelling
+  `boundary/wd14.py` already uses.
+
+### Changed
+
+- **`README.md` and `CLAUDE.md`: `caption` produces three artifacts.** The run layout gains
+  `wd14` and `tags`, `isekai/boundary/wd14.py` and `isekai/pipeline/tagging.py` join the layout
+  paragraphs, `tagging` joins the extras, and `models/wd14/` is named as a pinned artifact the
+  operator fetches — the tag list **and** the 467 MB graph it is the output layer of, at one
+  revision.
+- **Three stale counts, fixed by counting rather than by trusting the sentence.** `CLAUDE.md` said
+  the living spec held *nine* capabilities and it had held ten since v0.18 — it now states ten,
+  names all ten, and says outright that a capability enters the living spec on **archive**, so the
+  number is always the count on disk and never the one a pending change implies. `isekai/README.md`
+  said `boundary/` held 5 files against 6 and `interface/ui/` 4 against 3; both were wrong before
+  this version touched either.
+- **`pipeline/` is described as four verbs and five modules**, rather than making the count wrong in
+  the other direction: `tagging.py` is a file in that directory and is not a verb. `CLAUDE.md`'s
+  *"driven in four staged verbs"* is unchanged and still correct — v0.20 adds no verb.
+- Each group `README.md` names its new file and who imports it, and `isekai/interface/README.md`'s
+  one-line description of `wiring.py` names the two taggers beside the reader and the sorter.
+- **The resume assertion now counts five doubles, not three**, and two of them are the taggers.
+  A second pass that re-opened the graph would cost ~0.9 s a photograph while making no request, so
+  an assertion that only counted network calls would have called that inert.
+- **The `Session` seam takes the photograph rather than a prepared array** (design.md D26, a
+  build-time correction to `tasks.md` 4.1). Built the other way the boundary tests pass and the
+  **stage** is untestable: `caption_wd14()` would reach `prepare()`, which imports `numpy` and
+  `Pillow`, which the gate's environment deliberately does not install — leaving
+  `tagging:seam:offline-double-satisfies-the-interface` unprovable. Preparation goes behind the seam,
+  where `ollama.Transport`'s precedent already puts request encoding. The cost is stated rather than
+  discovered: `prepare()` is now reachable only through `OnnxSession`, so no gate command executes
+  it and its acceptance is the live run.
+- **`pyproject.toml`, `README.md` and `CLAUDE.md` stop saying the gate is five commands.** Three
+  separate prose claims counted it; all three now say six.
+- **`derive_vocabulary.py`'s docstring argued the opposite of what this version does**, in as many
+  words: *"the tagger is not here: this repository does not run it… a manifest that carried both
+  would make swapping the vocabulary a decision about a model nobody loads."* Rewritten to D18's
+  reason, with the retired argument kept rather than deleted — it names the case the new rule does
+  not cover.
+- **The living spec's `model-provisioning:vocabulary:tagger-model-is-not-included` is retired, and
+  inverted rather than dropped.** It forbade exactly this version's pin. Its successor,
+  `label-index-and-model-share-a-revision`, is a strictly stronger claim: the old scenario permitted
+  a `model.onnx` at any revision by any route and forbade only the manifest that could check it. The
+  two tests bound to the retired key are rebound to the new one, not deleted. The change's
+  `specs/model-provisioning/` delta was authored during the build; the cut omitted it (design.md
+  D24).
+
+### Fixed
+
+- **`README.md`'s `isekai ui` section described the hosted tag list as phase 11 deleted it.** It said
+  the pane shows the model's *raw* list *"with a post count on the tags the vocabulary actually
+  carries and nothing on the ones it does not"* — the marked-but-whole list D29 replaced with a
+  filtered one, written into the phase-9 entry before the acceptance overturned it. Those tags do not
+  reach the page at all now, so an operator following that sentence would count four chips against
+  thirty-five and go looking in `caption_tags` for a loss that never happened — where the artifact
+  holds all thirty-five, exactly as `tagging:output:the-list-is-stored-unnarrowed` requires. The
+  sentence now states the split the spec and D29 already state: the local list whole, the hosted list
+  filtered to the vocabulary, and the filter on the way to the page and never on the way to disk.
+
 ## [0.19.0] - 2026-09-20
 
 ### Release notes — two things this version does not check, and hands to the operator

@@ -7,6 +7,7 @@ which is the decision, and the fetch itself is the derivers' own business and is
 verified by re-running them.
 """
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -98,3 +99,128 @@ def test_writing_the_same_manifest_twice_produces_the_same_bytes(
     shared.write(body, first)
     shared.write(json.loads(first.read_text()), second)
     assert first.read_bytes() == second.read_bytes()
+
+
+# --- what a fetched digest is taken over -------------------------------------
+#
+# Offline, through a fake `urlopen`. The module docstring's rule stands -- nothing
+# here reaches the network -- and these two assert what `digest_of_url` refuses
+# rather than what any host happens to serve.
+
+
+class _FakeResponse:
+    """The two things `digest_of_url` reads off a response, and nothing else."""
+
+    def __init__(self, body: bytes, headers: dict[str, str]) -> None:
+        self.headers = headers
+        self._body = body
+
+    def read(self, amount: int) -> bytes:
+        return self._body[:amount]
+
+    def __enter__(self) -> "_FakeResponse":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+
+def _opener(body: bytes, headers: dict[str, str], seen: list[dict[str, str]]) -> object:
+    """Return a `urlopen` double that records the headers each request carried."""
+
+    def urlopen(request: object, timeout: int = 0) -> _FakeResponse:
+        seen.append(dict(getattr(request, "headers", {})))
+        return _FakeResponse(body, headers)
+
+    return urlopen
+
+
+@pytest.mark.spec("model-provisioning:derivation:a-truncated-fetch-is-refused")
+def test_a_body_shorter_than_the_declared_length_is_refused_not_hashed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        shared.urllib.request,
+        "urlopen",
+        _opener(b"partial", {"Content-Length": "308468"}, seen),
+    )
+
+    with pytest.raises(SystemExit) as refused:
+        shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
+
+    message = str(refused.value)
+    assert "truncated" in message
+    assert "7" in message and "308468" in message
+
+
+@pytest.mark.spec("model-provisioning:derivation:a-truncated-fetch-is-refused")
+def test_a_complete_body_is_hashed(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        shared.urllib.request,
+        "urlopen",
+        _opener(b"whole", {"Content-Length": "5"}, seen),
+    )
+
+    assert shared.digest_of_url("https://example.invalid/a.csv", 1 << 20) == (
+        hashlib.sha256(b"whole").hexdigest(),
+        5,
+    )
+
+
+@pytest.mark.spec(
+    "model-provisioning:derivation:fetched-digest-demands-identity-encoding"
+)
+def test_the_fetch_declares_that_only_the_identity_coding_is_acceptable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        shared.urllib.request,
+        "urlopen",
+        _opener(b"whole", {"Content-Length": "5"}, seen),
+    )
+
+    shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
+
+    # urllib title-cases every header name it is handed.
+    assert seen == [{"User-agent": shared.USER_AGENT, "Accept-encoding": "identity"}]
+
+
+@pytest.mark.spec(
+    "model-provisioning:derivation:fetched-digest-demands-identity-encoding"
+)
+def test_a_coded_response_is_refused_even_though_identity_was_asked_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The ask is not the guard. A server may ignore `Accept-Encoding`, and a
+    # gzip stream has the right `Content-Length` for itself -- so the truncation
+    # check would pass over it and the digest would be of the compressed bytes.
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(
+        shared.urllib.request,
+        "urlopen",
+        _opener(b"gzipped", {"Content-Length": "7", "Content-Encoding": "gzip"}, seen),
+    )
+
+    with pytest.raises(SystemExit) as refused:
+        shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
+
+    assert "gzip" in str(refused.value)
+
+
+@pytest.mark.spec("model-provisioning:derivation:a-truncated-fetch-is-refused")
+def test_a_response_declaring_no_length_is_refused_rather_than_trusted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Without a declared length there is nothing to compare a short read
+    # against, so the truncation guard silently opts out. On a route whose whole
+    # contract is byte-identical re-derivation, that is worth refusing.
+    seen: list[dict[str, str]] = []
+    monkeypatch.setattr(shared.urllib.request, "urlopen", _opener(b"whole", {}, seen))
+
+    with pytest.raises(SystemExit) as refused:
+        shared.digest_of_url("https://example.invalid/a.csv", 1 << 20)
+
+    assert "Content-Length" in str(refused.value)

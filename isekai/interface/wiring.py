@@ -24,11 +24,13 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy_client import ComfyClient
 from isekai.boundary.comfy_types import ComfyTransport
+from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.flow import FLOWS_DIR, Flow, Hosted
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
 from isekai.pipeline.caption import ClaudeReader, OllamaReader, Reader
 from isekai.pipeline.sheet import ClaudeSorter, OllamaSorter, Sorter
+from isekai.pipeline.tagging import OllamaTagger, Tagger
 from isekai.shared.vocabulary import Vocabulary
 from isekai.shared.vocabulary import load as load_vocabulary
 
@@ -60,6 +62,16 @@ class Wiring:
     # provenance the artifacts record would be false for one of them.
     reader: Callable[[Flow], Reader] | None
     sorter: Callable[[Flow], Sorter] | None
+    # The two tagging seams, and they are deliberately not one. `tagger` resolves
+    # for **every** flow because the local tagger reads no manifest key at all;
+    # `hosted_tagger` answers `None` where a flow declares no arm this build can
+    # tag on, which is an absence rather than a failure (design.md D3, D20).
+    #
+    # Both are `| None` on the dataclass for `reader`'s reason: a front end that
+    # serves stage (3) alone reaches neither, and fabricating a tagger it never
+    # calls would open a 467 MB file to be thrown away.
+    tagger: Callable[[Flow], LocalTagger] | None
+    hosted_tagger: Callable[[Flow], Tagger | None] | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
@@ -111,6 +123,26 @@ def _ollama_sorter(flow: Flow) -> Sorter:
     return OllamaSorter(model=_named_by(flow).sorter)
 
 
+def _no_tagger(flow: Flow) -> Tagger | None:
+    """Return nothing: this arm has a reader and a sorter but no tagger.
+
+    An entry rather than an omission, so an arm this build does not carry is
+    still a refusal naming what it does carry. See `HOSTED_TAGGERS`.
+    """
+    return None
+
+
+def _ollama_tagger(flow: Flow) -> Tagger:
+    """Return the Ollama tagger, on the same alias the reader runs.
+
+    One model answers both prompts, which is exactly why `TAG_PROMPT` is not
+    chat-framed: two calls to the same alias must not arrive framed differently.
+    The manifest carries no separate tagger name, and adding one would be
+    re-pinning three frozen flow directories to say twice what they say once.
+    """
+    return OllamaTagger(model=_named_by(flow).reader)
+
+
 # **A table rather than a two-branch conditional, and the argument is the
 # refusal.** A conditional gives an unrecognised implementation the default one,
 # producing a complete run on the wrong models with the artifact's own provenance
@@ -128,6 +160,19 @@ READERS: Mapping[str, Callable[[Flow], Reader]] = {
 SORTERS: Mapping[str, Callable[[Flow], Sorter]] = {
     "claude-cli": _claude_sorter,
     "ollama": _ollama_sorter,
+}
+
+# **`claude-cli` is in the table and maps to nothing**, which is not the same as
+# being absent from it. There is no Claude tagger and there should not be -- a
+# second hosted model spending money on an advisory panel -- but *recording* that
+# the arm has none costs nothing and keeps one resolution mechanism for all three
+# seams. Left out of the table, an unrecognised arm (`"vllm"`, a typo) would
+# resolve to silence, and D20 makes silence unreportable by design; in the table,
+# `_resolve` names what this build carries, exactly as it does for the reader and
+# the sorter.
+HOSTED_TAGGERS: Mapping[str, Callable[[Flow], Tagger | None]] = {
+    "claude-cli": _no_tagger,
+    "ollama": _ollama_tagger,
 }
 
 
@@ -157,6 +202,46 @@ def reader_for(flow: Flow) -> Reader:
 def sorter_for(flow: Flow) -> Sorter:
     """Return the sorter `flow`'s manifest declares, constructing no other."""
     return _resolve(flow, SORTERS, "sorter")
+
+
+def hosted_tagger_for(flow: Flow) -> Tagger | None:
+    """Return the hosted tagger `flow` declares, or `None` where it declares none.
+
+    **Two absences, and only one of them is this function's to decide.** A flow
+    with no `hosted` block has nothing to resolve and answers `None` here; an arm
+    that *is* declared goes through `_resolve` like every other seam, and whether
+    that arm has a tagger is the registry's answer rather than a missing key's.
+    Both absences are silent downstream, because a missing tag artifact is an
+    absent aid and never a blocked review (design.md D20).
+
+    What `_resolve` still buys, and the reason this does not skip it: an arm this
+    build has never heard of names what it does carry instead of resolving to
+    nothing. Silence is the right answer for *"this arm has no tagger"* and the
+    wrong one for *"nobody has heard of this arm"*, and only a table can tell
+    them apart.
+    """
+    if flow.hosted is None:
+        return None
+    return _resolve(flow, HOSTED_TAGGERS, "hosted tagger")
+
+
+def tagger_for(flow: Flow) -> LocalTagger:
+    """Open the local tagger and read its label index, for any flow at all.
+
+    **It takes a `Flow` and reads nothing from it**, which is the whole point
+    rather than an oversight: the local tagger resolves through no manifest key,
+    because it is a file this build pins, it costs nothing, it reaches no network,
+    and there is no flow for which it would be wrong. Requiring a key would mean
+    re-pinning every existing flow directory to state an opinion none of them has
+    (design.md D3). The parameter stays so that both tagging seams have one shape
+    and `cli.py` resolves them the same way.
+
+    **Both digests are verified and 467 MB is opened here**, so nothing calls this
+    until a flow asks -- and `cli.py` calls it once per flow per invocation rather
+    than once per photograph, which is the difference between 0.89 s and 0.89 s
+    times the batch (design.md D14).
+    """
+    return open_session()
 
 
 # Derived from `DATA_ROOT` rather than recomputed, so the two halves of the check
@@ -244,6 +329,8 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
     return Wiring(
         reader=reader_for,
         sorter=sorter_for,
+        tagger=tagger_for,
+        hosted_tagger=hosted_tagger_for,
         client=ComfyClient(server) if server else None,
         vocabulary=load_vocabulary,
         runs_root=runs,

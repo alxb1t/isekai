@@ -8,6 +8,7 @@ endpoints that do are in `tests/test_ui_api.py`.
 
 import importlib.util
 import io
+import os
 import random
 import subprocess
 import tomllib
@@ -47,6 +48,8 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
     return Wiring(
         reader=None,
         sorter=None,
+        tagger=None,
+        hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
         runs_root=tmp_path / "runs",
@@ -353,3 +356,45 @@ def test_the_extra_and_the_dev_group_pin_the_server_identically() -> None:
     dev = set(config["dependency-groups"]["dev"])
 
     assert extra <= dev, f"the `dev` group is missing {sorted(extra - dev)}"
+
+
+# --- the bundle is rebuilt when the source moves under it ---------------------
+
+
+@pytest.mark.spec_exempt("structural: when the on-demand build actually fires")
+def test_a_bundle_older_than_its_source_is_rebuilt_rather_than_served(
+    tmp_path: Path,
+) -> None:
+    # The defect this replaces: `ensure_built` returned any non-empty `dist/`,
+    # so a bundle built by an earlier version went on being served while the
+    # source sat rebuilt. Silent, and green -- `npm run typecheck` compiles the
+    # source and the server reads the build (design.md D28).
+    source = tmp_path / "ui"
+    (source / "src").mkdir(parents=True)
+    (source / "dist").mkdir()
+    (source / "index.html").write_text("<!doctype html>")
+    (source / "dist" / "index.html").write_text("built")
+    component = source / "src" / "App.vue"
+    component.write_text("old")
+    os.utime(source / "dist" / "index.html", (2_000, 2_000))
+    os.utime(component, (1_000, 1_000))
+    os.utime(source / "index.html", (1_000, 1_000))
+
+    assert bundle._is_fresh(source / "dist", source)
+
+    # One source file edited after the build is the whole condition.
+    os.utime(component, (3_000, 3_000))
+
+    assert not bundle._is_fresh(source / "dist", source)
+
+
+@pytest.mark.spec_exempt("structural: when the on-demand build actually fires")
+def test_an_absent_or_empty_bundle_is_still_not_fresh(tmp_path: Path) -> None:
+    source = tmp_path / "ui"
+    (source / "src").mkdir(parents=True)
+
+    assert not bundle._is_fresh(source / "dist", source)
+
+    (source / "dist").mkdir()
+
+    assert not bundle._is_fresh(source / "dist", source)
