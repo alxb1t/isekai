@@ -58,8 +58,8 @@ from isekai.shared.vocabulary import Vocabulary, load  # noqa: E402
 
 # The table's own monotonic counter. There is no upstream revision to name --
 # the artifact is authored here -- so it is bumped by whoever edits this spec.
-# Phase 1 shipped 1; this is the seeded table.
-REVISION = 2
+# Phase 1 shipped 1, phase 2 the seeded table; this is the operator's pass.
+REVISION = 3
 
 # Where the operator's approved sheets live. Gitignored, and read only as an
 # authoring aid: this script is operator tooling whose *output* is committed, so
@@ -144,8 +144,16 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 # authored home for an exclusion is here. The definition is semantic and not
 # empirical -- *never a criterion*, rather than *WD14 was wrong about it on this
 # photograph* -- because the second kind would silently shrink `clothes` by seven
-# ordinary garments (design.md D8). Empty until the operator's pass fills it.
-EXCLUDED: tuple[str, ...] = ()
+# ordinary garments (design.md D8).
+#
+# **One entry, at the operator's call, and it is a start rather than a survey.**
+# `photorealistic` describes how the picture was rendered and not the person in
+# it, so no identity criterion can hold it -- and the router drops it either way.
+# What the entry buys is the record: the absence is a decision somebody took
+# rather than a gap nobody had looked at. `realistic` 19,111 is the same kind of
+# tag and appeared on all eight of the v0.20 photographs; it is deliberately not
+# here yet, because the operator named one.
+EXCLUDED: tuple[str, ...] = ("photorealistic",)
 
 # The 41 example tags `flows/conjure-v1/sheet.briefing.md` names, by the field it
 # names them under. Transcribed rather than parsed: the briefing is prose with no

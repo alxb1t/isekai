@@ -1,6 +1,6 @@
 {
   "name": "scripts/field_map.json",
-  "revision": 2,
+  "revision": 3,
   "fields": {
     "accessories": {
       "primary": [
@@ -3311,5 +3311,7 @@
       "also": []
     }
   },
-  "excluded": []
+  "excluded": [
+    "photorealistic"
+  ]
 }

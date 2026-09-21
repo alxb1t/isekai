@@ -198,6 +198,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `git diff main` over both paths and over `flows/` is empty, and `tests/test_flow.py`'s `PINNED`
   passes untouched. Verified rather than assumed.
 
+### Changed
+
+- **Phase 8 — the operator's pass, and it is deliberately one entry rather than a survey.** The seven
+  seeded groups and the fourteen remaining criteria are **accepted as derived**: `clothes` 1,407 ·
+  `pose` 672 · `background` 214 · `expression` 115 · `body_shape` 93 · `hair_silhouette` 66 ·
+  `eye_colour` 49 · `framing` 27 · `hair_colour` 26 · `skin_ancestry` 25 · `gaze` 24, with `age_band`,
+  `lips` and `marks` empty. **The table is `revision: 3`.**
+- **`EXCLUDED` gains `photorealistic`.** It describes how the picture was rendered and not the person
+  in it, so no identity criterion can hold it — and the router drops it either way. What the entry buys
+  is the **record**: the absence is now a decision somebody took rather than a gap nobody had looked
+  at. It lives in `scripts/derive_field_map.py` and not in the table, because the table is regenerated
+  and a hand-edit to it would be erased by the next run. `realistic` 19,111 is the same kind of tag and
+  appeared on all eight v0.20 photographs; it is deliberately **not** here, because one was named.
+- **`lips` ships with zero primaries, knowingly.** All thirteen of its tags lose to `expression`'s
+  `lips` stem, which is what the operator's own sheets say — he filed `lips` twice and `parted lips`
+  four times under `expression`. The criterion browses all thirteen through `also` and routes none, and
+  on `conjure-v1`, which declares `lips` as a field of its own, nothing will route to it. One
+  vocabulary-keyed assignment cannot serve both flows (design.md D4); this is which way it was pointed.
+
 ### Removed
 
 - **Both sorter implementations, and the seam they lived behind.** `Sorting`, `Sorter`, `FakeSorter`,
