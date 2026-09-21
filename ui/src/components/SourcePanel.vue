@@ -66,7 +66,7 @@ defineExpose({
       <span class="kicker">① photograph</span>
       <span class="source__meta mono">
         {{ id }} · {{ width }}×{{ height }} ·
-        {{ loading ? 'reading…' : 'click to fill window' }}
+        {{ loading ? 'reading…' : 'click or ⌥f to fill window' }}
       </span>
     </div>
     <PhotoFrame

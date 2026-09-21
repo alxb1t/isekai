@@ -666,6 +666,22 @@ body {
   color: var(--color-neutral-500);
 }
 
+/* The cheatsheet's side is the photo overlay's, without the 620px reading
+   measure: `clothes` is a four-figure list of chips and a column that narrow
+   would wrap it into a ribbon. Nothing else about the ground changes. */
+.overlay__side--wide {
+  max-width: none;
+}
+
+.cheatsheet__group {
+  margin-bottom: var(--space-6);
+}
+
+.cheatsheet__empty {
+  font-size: 11px;
+  color: var(--color-neutral-500);
+}
+
 /* — loading — */
 
 .skeleton__line {

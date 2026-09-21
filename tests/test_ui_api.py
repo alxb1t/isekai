@@ -1,4 +1,4 @@
-"""The six endpoints, against a running application.
+"""The seven endpoints, against a running application.
 
 **This module runs in the gate.** FastAPI is pinned in the `dev` dependency
 group, so `uv sync --locked` installs it and the four `ui` scenarios bound here
@@ -19,7 +19,9 @@ Everything that can be asserted without a server is in `tests/test_ui.py`.
 """
 
 import io
+import json
 import random
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -46,6 +48,7 @@ from isekai.pipeline.tagging import (  # noqa: E402
     caption_tags,
     caption_wd14,
 )
+from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
@@ -396,3 +399,65 @@ def test_the_caption_reaches_the_page_whole_and_the_browser_splits_it(
     body = client.get(f"/api/inputs/{made.id}").json()
 
     assert body["caption"] == "Dark brown hair, brown eyes."
+
+
+# --- the cheatsheet, which is the table read the other way ---------------------
+
+
+@pytest.mark.spec("ui:cheatsheet:every-declared-criterion-is-answered")
+def test_every_criterion_the_flow_declares_is_answered_and_no_other(
+    client: TestClient, schema: Schema
+) -> None:
+    body = client.get("/api/fields").json()
+
+    assert tuple(body["fields"]) == schema.names
+    # `summon-v1` declares sixteen of the twenty-one the table carries; the five
+    # only `conjure-v1` declares are absent rather than empty.
+    assert "bangs" in FIELD_MAP.fields
+    assert "bangs" not in body["fields"]
+
+
+@pytest.mark.spec("ui:cheatsheet:an-empty-group-is-present")
+def test_a_criterion_the_table_holds_nothing_for_is_present_and_empty(
+    client: TestClient,
+) -> None:
+    body = client.get("/api/fields").json()
+
+    assert FIELD_MAP.group("age_band") == ()
+    assert body["fields"]["age_band"] == []
+    assert "age_band" in body["fields"]
+
+
+@pytest.mark.spec("ui:cheatsheet:candidates-are-ordered-by-post-count")
+def test_candidates_are_ordered_by_descending_post_count(
+    client: TestClient, vocabulary: Vocabulary
+) -> None:
+    body = client.get("/api/fields").json()
+
+    group = body["fields"]["hair_silhouette"]
+    assert len(group) > 1
+    assert [one["posts"] for one in group] == sorted(
+        (one["posts"] for one in group), reverse=True
+    )
+    for one in group:
+        assert one["posts"] == vocabulary.count(one["tag"])
+    # The browsable group, not the primaries alone: `brown hair` is browsable
+    # under both hair criteria and routes to one of them.
+    assert {one["tag"] for one in group} == set(FIELD_MAP.group("hair_silhouette"))
+
+
+@pytest.mark.spec("ui:cheatsheet:the-excluded-list-is-not-served")
+def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    # The committed table's excluded list is empty, so the assertion is driven
+    # from a table that has one -- otherwise it would pass vacuously.
+    withheld = replace(FIELD_MAP, excluded=frozenset({"glasses"}))
+    fields = dict(FIELD_MAP.fields)
+    fields["accessories"] = Group(primary=(), also=())
+    wired.field_map = lambda: replace(withheld, fields=fields)
+
+    body = _client(wired, made, tmp_path).get("/api/fields").json()
+
+    assert set(body) == {"fields"}
+    assert "glasses" not in json.dumps(body)

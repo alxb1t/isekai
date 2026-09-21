@@ -100,6 +100,45 @@ def create_app(batch: Batch) -> FastAPI:
             "total": len(found),
         }
 
+    @app.get("/api/fields")
+    def read_fields() -> dict[str, Any]:
+        """Answer every candidate tag for every criterion the acting flow declares.
+
+        **The whole table in one response, once.** ~40 KB for a couple of thousand
+        tags, so the overlay filters with no round trip per keystroke, and a
+        sitting that never opens the reference pays nothing because this is not on
+        `/api/batch`'s payload. Riding that one would tax every page load for a
+        surface that may never open; a `?field=` form would be a round trip per
+        field and would pre-build a per-field ranking that is deliberately
+        deferred (design.md D13).
+
+        **Ordered by post count and cut at nothing.** The count is the same global
+        ranking every other tag surface here uses, so no second ranking enters the
+        system. A cutoff was measured against the operator's own approved sheets
+        and refused: `>10,000` hides ten of the 113 tags he approved, and the ones
+        he reaches for -- `gold bracelet` 2,081, `train station` 2,180 -- are in
+        the tail (design.md D7).
+
+        **A declared field the table holds nothing for is present and empty**, and
+        the excluded list is not served at all. An empty group is the honest answer
+        for a criterion the vocabulary cannot express, and a missing row is
+        indistinguishable from one nobody has authored yet; the excluded list is an
+        assertion about the table rather than material to browse, and showing the
+        tags that are never an answer is the opposite of what the reference is for.
+        """
+        return {
+            "fields": {
+                name: sorted(
+                    (
+                        {"tag": tag, "posts": batch.vocabulary.count(tag)}
+                        for tag in batch.field_map.group(name)
+                    ),
+                    key=lambda row: (-int(row["posts"]), str(row["tag"])),
+                )
+                for name in batch.flow.schema.names
+            }
+        }
+
     @app.get("/api/inputs/{identifier}")
     def read_input(identifier: str) -> dict[str, Any]:
         """Return everything the page shows for one input, joined into one payload.

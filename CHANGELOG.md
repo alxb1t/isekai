@@ -117,6 +117,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct approved tags are reachable in every field they were approved in, 0 unreachable** — asserted
   as a test rather than claimed.
 
+- **`GET /api/fields` and the cheatsheet overlay — `Option+Space`.** The measured gap it closes is not
+  ranking and not speed: the operator looks at a photograph, goes to type a tag, and **does not know
+  what Danbooru calls the thing he is looking at**. The autocomplete cannot help, because it needs a
+  fragment he already has and a fragment that matches nothing commits nothing — so the failure is a
+  dead end rather than a bad tag. The endpoint answers the **whole table in one response** for the
+  acting flow, tens of kilobytes, so the overlay's filter is instant with no round trip per keystroke
+  and a sitting that never opens the reference pays nothing. Riding `/api/batch` was rejected — it
+  would tax every page load for a surface that may never open (design.md D13).
+- **The overlay is read-only, cuts nothing, and introduces no new component, colour, space or type
+  step.** Clicking a tag does not insert it: inserting would make a reference surface own a target
+  field and commit into it. It composes `PhotoOverlay`'s ground — the same `Teleport`, the same
+  `.overlay` block below the app header, `.overlay__controls` / `.overlay__exit` / `.overlay__foot`,
+  `.source__head` + `.kicker`, `.row__tags` + `TagChip`, `.input`, `.drop__posts`. Not `.dialog`,
+  which no component references and which caps at `min(440px, 100%)` — wrong for a four-figure group
+  (design.md D12). A declared criterion the table holds nothing for shows **nothing here** rather than
+  vanishing, and the filter never removes a group heading.
+- **`Option+F` opens the photograph from the keyboard**, so the lens the operator already had stops
+  needing the mouse.
+- **Both bindings match `event.code` and both call `preventDefault()`** — the rule this version put in
+  `CLAUDE.md`, and the first `event.code` matches in this repository. `preventDefault()` is
+  load-bearing twice: U+00A0 into a tag field is the silent dead end the feature exists to remove, and
+  Space is the **native activation key** of a focused `<button>`, which this app focuses on mount.
+- **The focus round-trip, which both keystrokes need.** On open the criterion is remembered and the
+  field blurred; the lens's own filter takes the focus. While a lens is open `TagInput` **yields**
+  Escape and the arrows, so `Esc` closes the lens rather than clearing a fragment behind it and
+  `←`/`→` do not double-fire. On close the field is restored — and the fragment survives untouched
+  because `TagInput` stays mounted behind the lens, so nothing is copied out and copied back and
+  nothing can come back different. Without this, `PhotoOverlay`'s printed *"Editing is suspended …
+  the sheet is behind this, untouched"* was **false** (design.md D11, D27).
+- **Three corrections in the same files.** `PhotoOverlay`'s `step` emit is **declared and never
+  emitted**, and `ReviewApp` bound it — dead code that read as the mechanism; both go.
+  `SourcePanel`'s `'click to fill window'` asserted click is the only route and now names `⌥f`.
+- **Neither keystroke is proven by any check in this repository.** There is no browser test runner
+  here and the gate's whole browser half is `vue-tsc --noEmit` over the *source*. The four
+  `ui:cheatsheet:*` scenarios are server-side and are proved in `tests/test_ui_api.py`; the keystrokes
+  and the overlay's behaviour are verified by the operator in a named human phase, and a green gate on
+  this phase is **not** evidence they work (design.md D10).
+
 ### Changed
 
 - **The sheet comes from the tagger.** `isekai sheet` reads `<flow>/wd14/` instead of

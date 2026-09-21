@@ -8,7 +8,7 @@
 - [x] 4 — Retirement one: the sorter bodies and their ten scenarios
 - [x] 5 — Retirement two: the free-text mapping cascade
 - [x] 6 — The documents this version makes false
-- [ ] 7 — `/api/fields`, the cheatsheet overlay, and the two keystrokes
+- [x] 7 — `/api/fields`, the cheatsheet overlay, and the two keystrokes
 - [ ] 8 — ⚠️ **HUMAN · FREE** — author the remaining groups and prune the excluded list
 - [ ] 9 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
 

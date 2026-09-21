@@ -1,4 +1,4 @@
-/* The shapes the six endpoints return. One file, because a type that disagreed
+/* The shapes the seven endpoints return. One file, because a type that disagreed
    with `app.py` would be wrong in every component at once. */
 
 export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half'
@@ -45,6 +45,16 @@ export interface ScoredTag {
 export interface OfferedTag {
   tag: string
   posts: number
+}
+
+/* Every candidate tag for every criterion the acting flow declares — the same
+   table the router fills a sheet from, read the other way. A declared criterion
+   the table holds nothing for is present with an empty array rather than absent,
+   because a missing row is indistinguishable from one nobody has authored yet.
+   The excluded list is never here: it is an assertion about the table, not
+   material to browse. */
+export interface FieldCandidates {
+  fields: Record<string, OfferedTag[]>
 }
 
 export interface InputDetail {

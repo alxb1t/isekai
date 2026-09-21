@@ -10,13 +10,21 @@ import TagAutocomplete from './TagAutocomplete.vue'
    appears only while this input holds the focus.
 
    A fragment that matches nothing shows no rows and cannot be committed. There
-   is no path to free text in a chip, and that is what underwrites two of the
-   four refusal kinds this version defers: an out-of-vocabulary tag can only ever
-   arrive from the sorter. */
+   is no path to free text in a chip — and since v0.21 there is no path to one
+   from the pipeline either, because the sheet is routed from a tagger whose
+   output layer *is* the vocabulary.
+
+   `suspended` is true while a lens is open over the page. This input stays
+   mounted behind it, which is what makes the fragment survive: nothing is copied
+   out and copied back, so nothing can come back different. What it must not do
+   is answer keys the lens owns — Escape, which would clear a fragment instead of
+   closing the lens, and the horizontal arrows, which would move chip selection
+   while the lens moves the batch. */
 const props = defineProps<{
   field: string
   vocabulary: number
   focused: boolean
+  suspended: boolean
   chips: number
   selected: number | null
 }>()
@@ -49,6 +57,7 @@ function reset(): void {
 }
 
 function onKey(event: KeyboardEvent): void {
+  if (props.suspended) return
   if (event.key === 'ArrowDown' && open.value) {
     event.preventDefault()
     selected.value = (selected.value + 1) % matches.value.length

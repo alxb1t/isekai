@@ -1,11 +1,17 @@
-/* The six endpoints, in one module.
+/* The seven endpoints, in one module.
 
    A URL here is a contract between this app and `isekai/interface/ui/app.py` in
    the same repository, which is why the flow is in none of the paths: the batch
    has exactly one and `/api/batch` names it. Widening that later is a
    find-and-replace, not a migration. */
 
-import type { BatchInfo, Budget, InputDetail, TagMatches } from './types'
+import type {
+  BatchInfo,
+  Budget,
+  FieldCandidates,
+  InputDetail,
+  TagMatches,
+} from './types'
 
 /* One place where a `Refusal` stops being HTTP and becomes an error carrying the
    pipeline's own string. `app.py` answers every refusal the same way, so this
@@ -38,6 +44,14 @@ export function tags(fragment: string, limit: number): Promise<TagMatches> {
 
 export function batch(): Promise<BatchInfo> {
   return get<BatchInfo>('/api/batch')
+}
+
+/* The whole table, once, the first time the reference is opened. Tens of
+   kilobytes, so the filter is instant with no round trip per keystroke — and a
+   sitting that never opens it pays nothing, because this is not on `/api/batch`'s
+   payload. */
+export function fieldCandidates(): Promise<FieldCandidates> {
+  return get<FieldCandidates>('/api/fields')
 }
 
 export function inputDetail(id: string): Promise<InputDetail> {

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { inputDetail, photoUrl } from './api'
+import { fieldCandidates, inputDetail, photoUrl } from './api'
 import AppHeader from './components/AppHeader.vue'
 import ApproveBar from './components/ApproveBar.vue'
 import BatchRail from './components/BatchRail.vue'
+import CheatsheetOverlay from './components/CheatsheetOverlay.vue'
 import LoadingSkeleton from './components/LoadingSkeleton.vue'
 import PhotoOverlay from './components/PhotoOverlay.vue'
 import RunManifest from './components/RunManifest.vue'
@@ -13,7 +14,7 @@ import TagInput from './components/TagInput.vue'
 import { useApproval } from './composables/useApproval'
 import { useBatch } from './composables/useBatch'
 import { useSheet } from './composables/useSheet'
-import type { ApprovedSheet } from './types'
+import type { ApprovedSheet, FieldCandidates } from './types'
 
 /* The root. It shows exactly one of the loading state, the review layout, or
    the manifest; the photo overlay layers over any of them.
@@ -49,6 +50,15 @@ const lastField = ref<string | null>(null)
 let pane: Pane = 'rail'
 const source = ref<HTMLElement | null>(null)
 const overlay = ref(false)
+/* The reference, and the criterion it was opened from. Fetched once per sitting
+   and then held: the table does not move while a surface is up. */
+const cheatsheet = ref(false)
+const candidates = ref<FieldCandidates | null>(null)
+const openedFrom = ref<string | null>(null)
+/* True while either lens is up. `TagInput` reads it and yields Escape and the
+   arrows, so `Esc` closes the lens rather than clearing a fragment behind it and
+   `←`/`→` do not fire twice — once for chip selection and once for the batch. */
+const suspended = computed(() => overlay.value || cheatsheet.value)
 const manifest = ref(false)
 const sheets = ref<ApprovedSheet[]>([])
 const selectedChip = ref<number | null>(null)
@@ -238,8 +248,57 @@ function back(field: string): void {
   batch.markEdited(batch.current.value)
 }
 
+/* Open a lens from wherever the focus is, remembering the criterion to give it
+   back to. `blur()` rather than a flag: the field must stop receiving keys, and
+   the overlay's own input takes the focus on mount. The fragment survives
+   untouched because `TagInput` stays mounted behind the lens — nothing is copied
+   out and copied back, so nothing can come back different. */
+function suspend(): void {
+  openedFrom.value = focused.value ?? lastField.value
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+}
+
+/* Give the criterion back exactly. `enter('sheet')` focuses `lastField`, which
+   is what the operator was typing into. */
+function resume(): void {
+  void nextTick(() => enter('sheet'))
+}
+
+async function toggleCheatsheet(): Promise<void> {
+  if (cheatsheet.value) {
+    cheatsheet.value = false
+    resume()
+    return
+  }
+  if (!candidates.value) candidates.value = await fieldCandidates()
+  suspend()
+  cheatsheet.value = true
+}
+
 function onKey(event: KeyboardEvent): void {
   const meta = event.metaKey || event.ctrlKey
+  /* **Option is a character-producing modifier on macOS**, so both of these match
+     `event.code` and both call `preventDefault()`. `Option+Space` emits U+00A0 and
+     `Option+F` emits `ƒ`; an `event.key` branch would let the character through
+     into a tag field, which is the silent dead end this feature exists to remove.
+     `preventDefault()` is load-bearing a second time because Space is the native
+     activation key of a focused `<button>`, and this app focuses one on mount. */
+  if (event.altKey && event.code === 'Space') {
+    event.preventDefault()
+    void toggleCheatsheet()
+    return
+  }
+  if (event.altKey && event.code === 'KeyF') {
+    event.preventDefault()
+    if (overlay.value) {
+      overlay.value = false
+      resume()
+    } else if (sheet.detail.value) {
+      suspend()
+      overlay.value = true
+    }
+    return
+  }
   if (meta && event.key.toLowerCase() === 'z') {
     event.preventDefault()
     if (event.shiftKey) sheet.redo()
@@ -268,9 +327,11 @@ function onKey(event: KeyboardEvent): void {
   } else if (meta && event.key === 'Enter') {
     event.preventDefault()
     void approve()
-  } else if (event.key === 'Escape' && overlay.value) {
+  } else if (event.key === 'Escape' && suspended.value) {
     event.preventDefault()
     overlay.value = false
+    cheatsheet.value = false
+    resume()
   } else if (overlay.value && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
     // Arrow keys still move through the batch, so the overlay doubles as a way
     // to compare inputs without closing it.
@@ -390,6 +451,7 @@ watch(batch.current, (id) => {
             :vocabulary="batch.info.value?.vocabulary ?? 0"
             :field="field"
             :focused="focused === field"
+            :suspended="suspended"
             :chips="chips(field)"
             :selected="focused === field ? selectedChip : null"
             @focus="focus(field)"
@@ -420,8 +482,14 @@ watch(batch.current, (id) => {
       :height="sheet.detail.value.height"
       :photo="photoUrl(sheet.detail.value.id)"
       :caption="sheet.detail.value.caption"
-      @close="overlay = false"
-      @step="batch.step"
+      @close="(overlay = false), resume()"
+    />
+
+    <CheatsheetOverlay
+      v-if="cheatsheet && candidates"
+      :candidates="candidates"
+      :field="openedFrom"
+      @close="(cheatsheet = false), resume()"
     />
   </div>
 </template>
