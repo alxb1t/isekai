@@ -166,8 +166,12 @@ a model or a GPU** — its scope is stage ③ alone.
 - `review` and `approve` keep working exactly as before. They are deprecated as *guidance*, never as
   code — deleting the hand path would make ③ a single point of failure for the whole pipeline.
 - **The source pane shows the caption one sentence to a block**, and under it the two tag lists
-  `caption` produced: the scored WD14 list with its confidences, then the hosted model's raw list
-  with a post count on the tags the vocabulary actually carries and nothing on the ones it does not.
+  `caption` produced: the scored WD14 list **whole**, with its confidences, then the hosted model's
+  list **filtered to what the flow's vocabulary carries**, every chip with its post count. The
+  asymmetry is the point — WD14 is scored against the vocabulary it emits, so every tag it returns is
+  committable by construction, while the hosted model's is not. **The filter is on the way to the
+  page and never on the way to disk**: the artifact under `tags/` still holds every tag the model
+  returned, so a tag missing from the pane is one no field could have taken, not one that was lost.
   Both are read-only — the picker at stage ② is still the only path into a field — and an absent
   list simply draws nothing.
 

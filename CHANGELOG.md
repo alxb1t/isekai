@@ -311,6 +311,18 @@ throwaway runs root. Free: two local models on `127.0.0.1:11434`, one local ONNX
   `specs/model-provisioning/` delta was authored during the build; the cut omitted it (design.md
   D24).
 
+### Fixed
+
+- **`README.md`'s `isekai ui` section described the hosted tag list as phase 11 deleted it.** It said
+  the pane shows the model's *raw* list *"with a post count on the tags the vocabulary actually
+  carries and nothing on the ones it does not"* — the marked-but-whole list D29 replaced with a
+  filtered one, written into the phase-9 entry before the acceptance overturned it. Those tags do not
+  reach the page at all now, so an operator following that sentence would count four chips against
+  thirty-five and go looking in `caption_tags` for a loss that never happened — where the artifact
+  holds all thirty-five, exactly as `tagging:output:the-list-is-stored-unnarrowed` requires. The
+  sentence now states the split the spec and D29 already state: the local list whole, the hosted list
+  filtered to the vocabulary, and the filter on the way to the page and never on the way to disk.
+
 ## [0.19.0] - 2026-09-20
 
 ### Release notes — two things this version does not check, and hands to the operator
