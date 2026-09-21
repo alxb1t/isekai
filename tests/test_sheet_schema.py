@@ -20,7 +20,6 @@ from isekai.foundation.flow import (
     tracked_flows,
 )
 from isekai.foundation.refusal import Refusal
-from isekai.pipeline.sheet import fill
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
@@ -170,60 +169,7 @@ def test_asking_for_a_field_the_schema_does_not_declare_is_refused(
     assert "hair_colour" in str(refused.value)
 
 
-# --- filling and validating ---------------------------------------------------
-
-
-@pytest.mark.spec("sheet:output:sheet-stores-fields-only")
-def test_a_filled_sheet_carries_one_entry_per_schema_field(
-    schema: Schema, vocabulary: Vocabulary
-) -> None:
-    filled = fill({"hair_colour": ["brown"]}, schema, vocabulary)
-
-    assert tuple(filled) == schema.names
-    assert "prompt" not in filled
-    assert "positive" not in filled
-
-
-@pytest.mark.spec("sheet:output:empty-field-is-legal")
-def test_a_field_the_prose_carried_nothing_for_is_present_and_empty(
-    schema: Schema, vocabulary: Vocabulary
-) -> None:
-    filled = fill({"hair_colour": ["brown"]}, schema, vocabulary)
-
-    assert filled["hair_colour"] == ["brown hair"]
-    assert filled["marks"] == []
-    validate(filled, schema, vocabulary)
-
-
-@pytest.mark.spec("sheet:purity:absence-clause-is-dropped")
-def test_an_absence_clause_leaves_its_field_empty_rather_than_negated(
-    schema: Schema, vocabulary: Vocabulary
-) -> None:
-    filled = fill({"accessories": ["no glasses"]}, schema, vocabulary)
-
-    assert filled["accessories"] == []
-
-
-@pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")
-def test_every_tag_a_fill_produces_is_in_the_vocabulary(
-    schema: Schema, vocabulary: Vocabulary
-) -> None:
-    filled = fill(
-        {
-            "hair_colour": ["brown"],
-            "eye_colour": ["hazel"],
-            "clothes": ["a crisp collared shirt", "tucked into jeans"],
-            "expression": ["an air of quiet competence"],
-        },
-        schema,
-        vocabulary,
-    )
-
-    for tags in filled.values():
-        for tag in tags:
-            assert tag in vocabulary
-    assert filled["eye_colour"] == []
-    assert filled["expression"] == []
+# --- validating ---------------------------------------------------------------
 
 
 @pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")

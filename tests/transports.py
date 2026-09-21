@@ -20,8 +20,6 @@ import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
-from isekai.foundation.flow import Schema
-
 
 @dataclass(frozen=True)
 class FakeTransport:
@@ -53,16 +51,4 @@ class FakeTransport:
         return [json.loads(body) for _, body in self.sent]
 
 
-def sorted_answer(schema: Schema, **fields: list[str]) -> bytes:
-    """Return a sorter response body carrying every field `schema` names.
-
-    The Ollama envelope is JSON inside JSON -- the sixteen fields arrive as the
-    `response` string rather than as a separate structured field. Spelled here
-    once because both the sheet stage's tests and the isolation proof need it,
-    and a second copy would be a second place the envelope's shape is asserted.
-    """
-    answers = {name: fields.get(name, []) for name in schema.names}
-    return json.dumps({"response": json.dumps(answers)}).encode()
-
-
-__all__: Sequence[str] = ("FakeTransport", "sorted_answer")
+__all__: Sequence[str] = ("FakeTransport",)

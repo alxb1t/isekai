@@ -29,7 +29,6 @@ from isekai.pipeline.review import (
     save_draft,
     token_budget,
 )
-from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
@@ -53,7 +52,6 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     caption(made, FakeReader(prose="Dark brown hair, brown eyes."))
     sheet(
         made,
-        FakeSorter(answers={"hair_colour": ["dark brown"], "eye_colour": ["brown"]}),
         schema,
         vocabulary,
     )
@@ -102,7 +100,6 @@ def test_the_highest_sheet_is_copied_and_its_version_recorded(
 ) -> None:
     sheet(
         run,
-        FakeSorter(answers={"hair_colour": ["black"]}),
         schema,
         vocabulary,
         new_version=True,

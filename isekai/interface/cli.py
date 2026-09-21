@@ -39,6 +39,7 @@ import urllib.error
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -54,6 +55,7 @@ from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import caption_tags, caption_wd14
+from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
@@ -324,9 +326,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
 def _seam(value: T | None, name: str, does: str) -> T:
     """Return a wiring seam the verb in hand cannot run without, or refuse.
 
-    `reader` and `sorter` are optional on `Wiring` because a front end that
-    serves stage (3) alone reaches no hosted model and would otherwise fabricate
-    doubles it never calls. The verbs that *do* call one say so here, in one
+    `reader` is optional on `Wiring` because a front end that serves stage (3)
+    alone reaches no hosted model and would otherwise fabricate a double it never
+    calls. The verbs that *do* call one say so here, in one
     place, rather than each inlining the same guard.
     """
     if value is None:
@@ -351,14 +353,23 @@ def _per_item(
     two verbs need it at all.
     """
     new_version = bool(getattr(args, "new_version", False))
-    parsed: list[Vocabulary] = []
     opened: list[LocalTagger] = []
 
+    @cache
     def vocabulary() -> Vocabulary:
         """Return this invocation's vocabulary, reading it at most once."""
-        if not parsed:
-            parsed.append(wired.vocabulary())
-        return parsed[0]
+        return wired.vocabulary()
+
+    @cache
+    def field_map() -> FieldMap:
+        """Return this invocation's field map, reading it at most once.
+
+        Memoised beside the vocabulary and for its reason: the table is held
+        against the vocabulary at load, so reading it per photograph would
+        re-run four whole-table checks for every input in a batch. It is handed
+        the memoised vocabulary rather than finding its own.
+        """
+        return wired.field_map(vocabulary())
 
     def tagger(flow: Flow) -> Callable[[], LocalTagger]:
         """Return a thunk that opens this invocation's local tagger, once.
@@ -440,7 +451,6 @@ def _per_item(
                     )
         elif verb == "sheet":
             for name, flow in flows.items():
-                sorter = _seam(wired.sorter, "sorter", "fills the sheet")(flow)
                 _say(
                     wired,
                     run,
@@ -448,10 +458,9 @@ def _per_item(
                     sheet(
                         run,
                         name,
-                        sorter,
                         flow.schema,
                         vocabulary(),
-                        briefing_path=flow.sheet_briefing_path,
+                        field_map(),
                         new_version=new_version,
                     ),
                 )

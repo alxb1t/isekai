@@ -25,6 +25,334 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-09-21
+
+### Added
+
+- **`field-map` — one authored `tag ↔ field` table, read in two directions.** `scripts/field_map.json`
+  assigns each tag in the pinned vocabulary a **primary** criterion — the one a router writes it to —
+  and any further criteria it may be **browsed** under. It is **one data structure with two indexes**:
+  the cheatsheet is the table read `field → tags`, the router is the same table read `tag → field`, and
+  **the reverse index is computed in `isekai/shared/field_map.py` and never stored**, because two copies
+  of one mapping is two things to keep true. It sits in `scripts/` beside `vocabulary.json` rather than
+  in a flow's schema: `twintails` answers *hair silhouette* in every flow that declares that field, so
+  the assignment is a property of the **vocabulary** and not of a schema — and fixing one tag's criterion
+  is one edit here rather than three digest-frozen flow directories.
+- **A tag has exactly one primary and may sit in several groups.** The earlier rule — *no tag appears in
+  two field groups* — is falsified by the operator's own approved sheets, which file `navel` under
+  `clothes`, `pose` **and** `body_shape`, `collarbone` under `pose` and `body_shape`, and `standing`
+  under `framing` and `pose`; a structural case is worse, since `lips` is a declared field of its own on
+  `conjure-v1` while it is part of `expression` on `summon-v1`. Routing needs one answer and browsing
+  needs all of them, so the table carries both and the check becomes **exactly one primary per tag**
+  (design.md D4).
+- **The loader raises all four checks, and eleven bound tests prove them.** The spec scenarios say
+  *loading it is refused*, so a check living only in a test would implement nothing: every tag resolves
+  in the pinned vocabulary · every tag has exactly one primary · the excluded list and the union of every
+  group are disjoint · **every field any tracked flow declares has an entry**. The field list for that
+  last check is read from the flows' own `Schema` objects rather than from a constant — a hardcoded
+  twenty-one would stay green while a schema moved underneath it. `shared/` importing `foundation/` for
+  it is not a new edge: `shared/fields.py` already imports `Schema` from `foundation/flow.py`.
+- **An empty group is legal and an absent entry is not.** Over the eight-photograph v0.20 batch `age_band`
+  and `marks` were approved **zero** times, `age_band` has no candidate in the vocabulary at all, and
+  `eyelashes` holds four tags in total. A criterion the tag list cannot express is a fact about the
+  vocabulary, and the table is the right place to say so; an absent entry, by contrast, is
+  indistinguishable from one nobody has authored yet (design.md D9).
+- **The table carries its own `revision`, a monotonic integer, and reports a `sha256` of its own bytes.**
+  Unlike `scripts/vocabulary.json`'s entries there is no upstream revision to name — the artifact is
+  authored here — so a consumer can record which revision routed it and two sheets filled under different
+  revisions are distinguishable from the record alone. **This phase ships `revision: 1`.**
+- **The ten suffix-carrying criteria are populated mechanically; the eleven without a suffix are present
+  and empty until the next phase.** The rule that reproduces the record's group sizes is *tag equals the
+  suffix, or ends in `" " + suffix`* — not substring, which gives `hair` 265 rather than 103. Sizes
+  against the pinned 8,106: `hair` **103** · `eyes` **55** · `background` **47** · `skin` **23** ·
+  `bangs` **15** · `lips` **13** · `nose` **12** · `eyebrows` **9** · `eyelashes` **4**. **281 primaries
+  across 21 criteria.**
+- **The `hair` group is one derived set serving two fields, split by a colour test.** `hair_colour` and
+  `hair_silhouette` both declare the suffix `hair`, so both derive the identical 103 tags — right for the
+  cheatsheet and impossible for the router, since `long hair` must have one primary. A `hair` tag whose
+  non-suffix words contain a colour word takes `hair_colour` (**26**), every other takes
+  `hair_silhouette` (**77**), and **both fields list all 103** so nothing is hidden from browsing. The
+  operator's own sheets prove the split separates cleanly — `brown hair ×5`, `blonde hair ×2`,
+  `black hair` against `long hair ×7`, `wavy hair ×6`, `straight hair ×2`, `medium hair` (design.md D16).
+
+- **`scripts/derive_field_map.py` — the authoring aid, stdlib and offline.** The route the roadmap
+  credited to Danbooru's `search[name_matches]` wildcard needs no Danbooru at all: **a wildcard
+  intersected with the pinned vocabulary *is* a match against the pinned vocabulary**, and the 240
+  candidates the API would return are the 74% that get thrown away (design.md D15). The script reads
+  `models/wd14/selected_tags.csv`, expands a seed list per criterion, resolves one primary per tag and
+  rewrites the table; `--report` prints what every seed pulled in, so the operator's pruning pass sees
+  the junk rather than inheriting it. **Every input it reads is tracked or pinned**, so re-running it
+  leaves the file byte-identical on any machine: the 113 filings the operator made over the v0.20 batch
+  are transcribed into a `FILED` constant, exactly as the dead briefing's 41 examples already were, and
+  the gitignored runs they came from are read by `--refresh` alone — which prints the drift between the
+  constant and the sheets on disk and writes nothing. Reading them at derivation time would have made
+  the committed table reproducible on exactly one machine: without them 17 tags change or lose their
+  primary and `accessories` empties.
+- **Matching is word-boundary against a stem and its inflections, not `in` and not the bare boundary.**
+  Substring is the defect the roadmap flagged — `scar` matches `scarf`, and `\bscar\b` takes 44 matches
+  to 15. But the roadmap's own remedy introduces a second one: `\bbraid\b` alone loses `twin braids`
+  153,036 and seven more. And plurals alone leave **12 of the operator's 113 approved tags unreachable**
+  — `pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift` — so `-s/-es/-ing/-ed`,
+  the drop-`e` case and consonant doubling are all handled and **seeds are written as stems**.
+- **The record's one verifiable number reproduces, and it is 57 rather than 63.** The seven seeds at
+  `notes/v0.19_improvements/ui.md:575` reach **59** tags, **57** of them beyond the 103-tag suffix
+  group. 63 is the *substring* number, and the whole difference is **six tags, every one junk**:
+  `playboy bunny` 82,752 · `reverse bunnysuit` · `nontraditional playboy bunny` · `setsubun` ·
+  `male playboy bunny` · `bunny day`, all from the seed `bun`, and `\bbun\b` matches none of them. All
+  three figures — 59, 57 and the six — are asserted so a later change to the matcher cannot move them
+  silently.
+- **Seven criteria are seeded, and they are larger than the brief said.** Measured against the pinned
+  8,106 from the stem lists alone: `clothes` **1,411** · `pose` **788** · `background` **235** ·
+  `body_shape` **196** · `expression` **132** · `framing` **40** · `gaze` **23**. The brief's
+  *"`clothes` is 900 tags from 20 seeds"* and *"63 seeds reach 2,126 tags"* both understate it — seven
+  criteria alone exceed the figure claimed for twenty-one. That makes design.md D7's decision to cut
+  nothing **more** consequential and does not change it: a `>10,000` cutoff still hides 10 of the 113
+  tags the operator approved.
+- **The dead briefing is harvested before it stops being read.** `flows/conjure-v1/sheet.briefing.md`
+  names **41 example tags across ten criteria** — `framing` 8, `bangs` 6, `count` 4, `lips` 4,
+  `facial_hair` 4, `gaze` 4, `skin_ancestry` 3, `eyebrows` 3, `nose` 3, `eyelashes` 2 — and it is the
+  only authored group content that exists anywhere in either tree. This version carries that file dead
+  (design.md D22), so the content is taken out of it now.
+- **One primary per tag, decided in three steps.** The operator's own filings decide first, because a
+  tag he approved and then rendered is render-tested and no ordering is; they settle **22** of the
+  **301** collisions. A declared precedence order — `gaze > clothes > pose > body_shape > expression >
+  framing > background`, then the suffix criteria — settles the rest. It is a tie-break and not a claim
+  to be right: eleven of the seventeen filed collisions is the ceiling for any of the 5,040 orderings of
+  the seven and 210 of them reach it. **Phase 8 overrides individual tags.**
+- **Every criterion that loses a tag keeps it under `also`.** So `navel` still appears under `clothes`,
+  `pose` and `body_shape` in the cheatsheet and routes to exactly one, and both hair criteria browse all
+  103 while only one routes each tag. Measured against the ten approved sheets on disk: **all 113
+  distinct approved tags are reachable in every field they were approved in, 0 unreachable** — asserted
+  as a test rather than claimed.
+
+- **`GET /api/fields` and the cheatsheet overlay — `Option+Space`.** The measured gap it closes is not
+  ranking and not speed: the operator looks at a photograph, goes to type a tag, and **does not know
+  what Danbooru calls the thing he is looking at**. The autocomplete cannot help, because it needs a
+  fragment he already has and a fragment that matches nothing commits nothing — so the failure is a
+  dead end rather than a bad tag. The endpoint answers the **whole table in one response** for the
+  acting flow, tens of kilobytes, so the overlay's filter is instant with no round trip per keystroke
+  and a sitting that never opens the reference pays nothing. Riding `/api/batch` was rejected — it
+  would tax every page load for a surface that may never open (design.md D13).
+- **The overlay is read-only, cuts nothing, and introduces no new component, colour, space or type
+  step.** Clicking a tag does not insert it: inserting would make a reference surface own a target
+  field and commit into it. It composes `PhotoOverlay`'s ground — the same `Teleport`, the same
+  `.overlay` block below the app header, `.overlay__controls` / `.overlay__exit` / `.overlay__foot`,
+  `.source__head` + `.kicker`, `.row__tags` + `TagChip`, `.input`, `.drop__posts`. Not `.dialog`,
+  which no component references and which caps at `min(440px, 100%)` — wrong for a four-figure group
+  (design.md D12). A declared criterion the table holds nothing for shows **nothing here** rather than
+  vanishing, and the filter never removes a group heading.
+- **`Option+F` opens the photograph from the keyboard**, so the lens the operator already had stops
+  needing the mouse.
+- **Both bindings match `event.code` and both call `preventDefault()`** — the rule this version put in
+  `CLAUDE.md`, and the first `event.code` matches in this repository. `preventDefault()` is
+  load-bearing twice: U+00A0 into a tag field is the silent dead end the feature exists to remove, and
+  Space is the **native activation key** of a focused `<button>`, which this app focuses on mount.
+- **The focus round-trip, which both keystrokes need.** On open the criterion is remembered and the
+  field blurred; the lens's own filter takes the focus. While a lens is open `TagInput` **yields**
+  Escape and the arrows, so `Esc` closes the lens rather than clearing a fragment behind it and
+  `←`/`→` do not double-fire. On close the field is restored — and the fragment survives untouched
+  because `TagInput` stays mounted behind the lens, so nothing is copied out and copied back and
+  nothing can come back different. Without this, `PhotoOverlay`'s printed *"Editing is suspended …
+  the sheet is behind this, untouched"* was **false** (design.md D11, D27).
+- **Three corrections in the same files.** `PhotoOverlay`'s `step` emit is **declared and never
+  emitted**, and `ReviewApp` bound it — dead code that read as the mechanism; both go.
+  `SourcePanel`'s `'click to fill window'` asserted click is the only route and now names `⌥f`.
+- **Neither keystroke is proven by any check in this repository.** There is no browser test runner
+  here and the gate's whole browser half is `vue-tsc --noEmit` over the *source*. The four
+  `ui:cheatsheet:*` scenarios are server-side and are proved in `tests/test_ui_api.py`; the keystrokes
+  and the overlay's behaviour are verified by the operator in a named human phase, and a green gate on
+  this phase is **not** evidence they work (design.md D10).
+
+- **The acceptance passed, on eight fresh photographs.** `caption` → `sheet` → `ui` → approve on
+  `summon-open-v1`, all eight approved. **Measured, with no pass mark set** (design.md D2):
+
+  | | |
+  |---|---|
+  | WD14 offered | 309 tags · 38.6/photo |
+  | the router placed | **226 · 73%** |
+  | of those, survived review | **204 · 90%** |
+  | approved | 225 · 28.1/photo, of which **21 typed by hand** · 2.6/photo |
+
+  For the figures this change was cut against: Qwen supplied 33.5% of the approved sheet at **56.3%**
+  precision and **6.5 deletions** a photograph. The router is at **90%** and **2.6**. There is no
+  like-for-like baseline — D2 retired it as circular — but both numbers clear the arm it replaced.
+- **The operator's verdict, on the three sub-claims.** ① *the router* — "the tags land in the right
+  field, 1–2 edits per sheet." ② *the cheatsheet* — "works well and helps indeed"; `Option+Space`,
+  `Option+F`, the filter and the focus round-trip all behave, **and none of them is proven by any check
+  in this repository** (design.md D10). ③ *coverage* — recorded above, for v0.22 to read.
+- **The eight were rendered on a pod, outside the change's phases and at the operator's explicit
+  request.** `tasks.md` marks no phase ⚠️ GPU and phase 9 requires no render; this was an operator
+  session, recorded here so *"money: zero, every phase"* stays true of the **phases**. 21m36s on an
+  RTX PRO 4500 Blackwell, ≈$0.30, all eight downloaded before teardown, `infra/down.sh` run and the
+  RunPod MCP confirming `pods: []`. **`no bra` and `no pants` rendered as intended** — the failure
+  `CLAUDE.md` records for absence clauses did not reproduce, which is the first live evidence for
+  design.md D24's claim that deleting the guard was a repair.
+
+### Changed
+
+- **The sheet comes from the tagger.** `isekai sheet` reads `<flow>/wd14/` instead of
+  `<flow>/captions/` and routes each tag through `field_map.primary_of`. **It reaches nothing** — no
+  model, no network, no free-text cascade — so the class of error the stage used to have is gone
+  rather than guarded: a reader asked for a field structure can invent a tag that merely looks
+  canonical, and it did (`light` and `dark` reached an assembled prompt past every guard), while a
+  tagger whose output layer *is* the vocabulary cannot express a tag outside it. **Prose stays a
+  reading aid** and stops being a machine input, so a failed reader no longer blocks a sheet it does
+  not feed.
+- **The router is a dictionary lookup and it does not call `map_phrase`.** The cascade's first act is
+  not a pass — it is an absence guard, and swept over the whole provisioned vocabulary it drops **37
+  of 8,106 canonical tags before pass 1 runs**, including `no bra` 93,761 and `no panties` 87,258,
+  **both of which are in the operator's own approved sheets**. A router built on it would silently
+  discard tags from the ground truth it is measured against (design.md D24).
+- **An absent `wd14/` is a refusal naming `caption`.** A sheet with every field empty is legal and
+  therefore silent, so writing one when the tagger never ran would hide the one thing the operator
+  needs told. **This narrows `CLAUDE.md`'s rule** that a missing tag artifact is *an absent aid, never
+  a refusal* to the **hosted** tagger, which contributes nothing to a sheet; the local one the sheet
+  is filled from is a prerequisite (design.md D21).
+- **The sheet's producer records what actually filled it.** `implementation: wd14`, `pinned: true`,
+  and **both WD14 digests carried across from the tag artifact** rather than re-derived — those are
+  the bytes that session was verified against. `briefing` goes, because nothing reads a briefing here
+  any more, and `field_map: {name, revision, sha256}` arrives beside `vocabulary`, so two sheets
+  routed by different revisions of the table are distinguishable from the record alone.
+- **`BUDGETS["sheet"]` drops from 3 to 1.** A deterministic router has no transient failure for a
+  second attempt to catch, which is exactly what `"wd14": 1` already records for the other local
+  producer (design.md D29).
+- **The sorter seam is unwired.** `Wiring.sorter`, `SORTERS`, `sorter_for`, `_claude_sorter`,
+  `_ollama_sorter` and the CLI's `_seam(wired.sorter, …)` are gone; `DEFAULT_IMPLEMENTATION` and
+  `_named_by` survive, because the reader and the hosted taggers still resolve through them.
+  `Wiring` gains a `field_map` thunk beside `vocabulary`, memoised per invocation for the same reason:
+  the table is held against the vocabulary at load, so reading it per photograph would re-run four
+  whole-table checks for every input in a batch.
+- **The suite fills a sheet with no double at all**, which is stronger than filling it with one.
+  `tests/stages.py` gains the field map every test routes through and one helper that writes the tag
+  artifact the stage reads, so forty-six call sites lost a `FakeSorter` and gained nothing. Both
+  transports are rigged to explode in the routing test, on `tests/test_isolation.py`'s argument: a
+  router that reached a model is caught rather than trusted not to.
+- **`caption()` and `boundary/wd14.py` are byte-identical in the diff, and no flow is re-pinned** —
+  `git diff main` over both paths and over `flows/` is empty, and `tests/test_flow.py`'s `PINNED`
+  passes untouched. Verified rather than assumed.
+
+### Changed
+
+- **Phase 8 — the operator's pass, and it is deliberately one entry rather than a survey.** The seven
+  seeded groups and the fourteen remaining criteria are **accepted as derived**: `clothes` 1,407 ·
+  `pose` 672 · `background` 214 · `expression` 115 · `body_shape` 93 · `hair_silhouette` 66 ·
+  `eye_colour` 49 · `framing` 27 · `hair_colour` 26 · `skin_ancestry` 25 · `gaze` 24, with `age_band`,
+  `lips` and `marks` empty. **The table is `revision: 3`.**
+- **`EXCLUDED` gains `photorealistic`.** It describes how the picture was rendered and not the person
+  in it, so no identity criterion can hold it — and the router drops it either way. What the entry buys
+  is the **record**: the absence is now a decision somebody took rather than a gap nobody had looked
+  at. It lives in `scripts/derive_field_map.py` and not in the table, because the table is regenerated
+  and a hand-edit to it would be erased by the next run. `realistic` 19,111 is the same kind of tag and
+  appeared on all eight v0.20 photographs; it is deliberately **not** here, because one was named.
+- **`lips` ships with zero primaries, knowingly.** All thirteen of its tags lose to `expression`'s
+  `lips` stem, which is what the operator's own sheets say — he filed `lips` twice and `parted lips`
+  four times under `expression`. The criterion browses all thirteen through `also` and routes none, and
+  on `conjure-v1`, which declares `lips` as a field of its own, nothing will route to it. One
+  vocabulary-keyed assignment cannot serve both flows (design.md D4); this is which way it was pointed.
+
+### Removed
+
+- **Both sorter implementations, and the seam they lived behind.** `Sorting`, `Sorter`, `FakeSorter`,
+  `ClaudeSorter`, `OllamaSorter`, `output_shape`, `sorter_prompt`, `answers_from`, `SORTER_OPTIONS` and
+  `SORTER_REMEDY` leave `isekai/pipeline/sheet.py`, with the **nine names it imported from
+  `boundary/claude_cli.py`**. `CLAUDE.md` says a selectable implementation *"is removed only by the
+  version that retires it"* — this is that version: with one implementation left, `implementation` for
+  this stage would be a key that could hold one value, which the same rule calls not a declaration.
+- **Ten scenarios, with their tests and their bindings.** Five `sheet:selection:*` describe choosing
+  between implementations, refusing an unknown one, constraining each one's output shape, reading an
+  answer out of a response body and naming a truncated one; `sheet:seam:offline-double-satisfies-the-interface`,
+  `sheet:seam:structure-constrained-content-free` and `sheet:failure:structural-mismatch-is-permanent`
+  describe a failure mode a deterministic router cannot have. **`CLAUDE.md:158` states there is no
+  spec↔test binding checker**, so a marker naming a deleted scenario passes the gate green — every key
+  was therefore grepped by name rather than trusted to surface.
+- **`tests/transports.py`'s `sorted_answer`**, which built a sorter response envelope and now has no
+  caller.
+- **The free-text mapping cascade — twelve names, not the five the record listed.** `map_phrase`,
+  `CURATED`, `CURATED_SPANS`, `_curated_pass`, `_index_of`, `contained_in`, `Vocabulary.words`,
+  `Vocabulary.by_word`, `asserts_absence`, `_ABSENCE`, `_spans` and `_in_order` leave
+  `isekai/shared/vocabulary.py`, and `fill()` leaves `isekai/pipeline/sheet.py` with them. There is no
+  phrase to map: the four passes existed to turn a language model's free text into canonical tags, and
+  a tagger's output is canonical on arrival — 8,069 of the vocabulary's 8,106 tags would terminate at
+  the first pass and the other three would never run.
+- **Deleting the absence guard is a repair as much as a retirement.** `asserts_absence` fired *before*
+  any pass and, swept over the whole provisioned vocabulary, dropped **37 of 8,106 canonical tags**,
+  `no bra` and `no panties` among them — both in the operator's own approved sheets. A prompt still
+  carries no negation; what enforced it was a text rule on prose, and prose is no longer an input.
+- **`normalise()` stays, and it is not a near miss.** It is called by `Vocabulary.__contains__`,
+  `count`, `search` — the UI autocomplete, pinned by `ui:vocabulary:matches-are-ranked-by-post-count` —
+  and `read_tags`, and by `isekai/shared/fields.py`'s `validate()` on the **approval** path, where it
+  enforces the *written in the vocabulary's own spelling* refusal. A sheet's spelling refusal is
+  unchanged by this version.
+- **Six more scenarios, with 16 test functions (21 collected) and four more in `test_sheet_schema.py`.**
+  Five `sheet:mapping:*` describe the cascade's passes; `sheet:purity:absence-clause-is-dropped` is
+  implemented wholly by the guard that eats `no bra`, and after this change a canonical tag stream
+  cannot contain a clause — so the scenario would be **unreachable** rather than merely unneeded.
+- **Four of the five `sheet.briefing.md` tests.** One called `map_phrase`; three asserted sentences in
+  instructions nothing follows. The fifth is kept: *every field name the briefing mentions exists in the
+  schema* is still a real consistency check, and the file itself stays, unread, because `load_flow`
+  refuses a flow missing it and deleting it would move all three flow digests.
+- **`Field.suffix` now has no consumer anywhere in the tree.** Its only live read was `fill()`. The key
+  stays in all three frozen `schema.json` files, because editing them means new flow identifiers
+  (design.md D28), and `scripts/derive_field_map.py` authors its own suffix table rather than reading it
+  — resurrecting the consumer to build the artifact that replaced it would be the wrong kind of tidy.
+- **Not removed, and deliberately: `hosted.sorter`.** It is a *required* key of the manifest's `hosted`
+  block (`flow.py:234`, read unguarded at `:429`, asserted by three tests), and dropping
+  `"sorter": "qwen3:8b"` from `flows/summon-open-v1/flow.json` would move that flow's `manifest_digest`
+  — which `CLAUDE.md` makes a **new flow identifier** rather than an edit. It is carried dead, unread,
+  exactly as `sheet.briefing.md` is, and both have the same trigger: the version that deletes the flows
+  they belong to (design.md D22).
+
+### Fixed
+
+- **The router dropped every multi-word tag, silently.** `boundary/wd14.py` stores the label index's
+  own Danbooru spelling — `blonde_hair` — because `tagging`'s rule is that neither tag list is
+  narrowed or canonicalised; the vocabulary and the field map are normalised at their own read.
+  `route()` did a bare dict lookup between the two, so `blonde_hair`, `long_hair`, `brown_eyes` and
+  `open_mouth` matched nothing and were indistinguishable from a tag no criterion claims. **Measured
+  over the eight v0.20 photographs: 112 tags routed, 230 with `normalise()` applied — 118 lost**, and
+  the survivors were the single-word tags, so a sheet still looked plausible while losing the
+  identity-bearing half. The normalised spelling is what is written, because `shared/fields.py`'s
+  `validate()` refuses a sheet whose tags are not in the vocabulary's own spelling.
+- **The fixture encoded the bug.** `tests/stages.write_wd14` wrote space-spelled tags, so the whole
+  suite was green on a case production cannot produce. The routing test now writes the underscore.
+
+- **`CLAUDE.md` gains the `event.code` rule, with a corrected reason.** *An Option-modified keybinding
+  matches `event.code` and calls `preventDefault()`, because Option is a character-producing modifier on
+  macOS.* Not a layout rule: on plain US ABC, `Option+Space` emits **U+00A0** and `Option+F` emits `ƒ`,
+  so an `event.key` handler inserts an invisible non-breaking space into a tag field — the silent dead
+  end the cheatsheet exists to remove. `event.code` appears **nowhere** in this repository today, so
+  v0.21's two bindings are the **first** such matches and not the second. `Cmd+Z` at `ReviewApp.vue:243`
+  is recorded as a known live violation rather than fixed here.
+- **Four sentences in `CLAUDE.md` that this version makes false.** *"a missing tag artifact is an absent
+  aid, never a refusal"* narrows to the **hosted** tagger. *"prose first because it is the only one
+  anything downstream reads"* — it is the WD14 list, and the ordering stays as it is for the reason it
+  was chosen. *"ten capabilities today"* was already stale: `ls -d openspec/specs/*/` returns **eleven**
+  since `0020` archived, and this change's delta makes it twelve only when it is archived. And the seam
+  paragraph now reads the rule the other way — stage ② has no seam because there is nothing left to pass
+  through the parameter.
+- **The call-graph sentence, corrected past what the record predicted.** D29 said deleting `ClaudeSorter`
+  would leave `caption.py` the sole `pipeline/` importer of `boundary/claude_cli.py`. It does not:
+  `tagging.py` imports `CliFailure`, `constant_record` and `refusal_for` from it and has since v0.20.
+  `CLAUDE.md` names **two** importers.
+- **`CHANGELOG.md`'s `[0.18.0]` entry claimed a suffix-anchored `Space` picker that never shipped.** The
+  feature lived on a prop named `hint` and was deleted in **`8aa6fb0`, *"feat(ui): rework the keyboard
+  model"*, an ancestor of the `v0.18.0` tag** — introduced and removed inside one version. It could not
+  have worked either: `ui/app.py` sends `list(batch.flow.schema.names)`, names only, so a field's suffix
+  has never reached the browser in any version. The entry is **corrected in place, not deleted**.
+- **The design documents written around *"the sorter is mediocre"*.** `ui/design/README.md`'s brief,
+  its ② draft-diff and caption bullets, `ui/design/states.md`'s screen descriptions, and
+  `ui/design/ux-flow.md`'s claim that *"out-of-vocabulary tags only arrive from the sorter"* — that
+  refusal kind is now **unreachable** and is kept as a guard on a future producer rather than as a state
+  this surface can reach.
+- **`ReviewApp.vue` said `draft from the sorter` on screen.** It says `draft from the tagger`.
+- **The group `README.md` files, `README.md` and `boundary/ollama.py`'s docstring.**
+  `isekai/shared/README.md` gains `field_map.py` with its importers; `isekai/pipeline/README.md`'s
+  `sheet.py` row costs **free** rather than *a model call*; `isekai/interface/README.md` stops naming a
+  sorter in `wiring.py`; `README.md` says the local tag list is what fills the sheet, and that
+  `ollama pull qwen3:8b` is no longer used by any stage. `CLAUDE.md`'s `scripts/` paragraph gains
+  `field_map.json` and `derive_field_map.py` — the first tracked artifact there that is **authored**
+  rather than fetched, which is why it carries its own monotonic revision.
+
 ## [0.20.0] - 2026-09-21
 
 ### Added
@@ -768,12 +1096,15 @@ through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-
   `<run>/<flow>/review/` and `NNN.approved.json`, never the frames' invented `runs/2026-09-17/`.
 - **`Alt+↑` / `Alt+↓` move through the batch too.** The rail is a vertical list and the photographs read
   left to right, so both readings of *next* are true and both now work.
-- **Space on an empty field types the word the schema says that field is spelled with** — `eyebrows` on
-  `eyebrows`, `hair` on `hair_colour` — so the operator can see what fits before knowing what to ask
-  for. It is a shortcut for typing that word and **not a second ranking**: the rows are
-  `vocabulary.search()`'s, in `vocabulary.search()`'s order, exactly as for any other fragment, which
-  leaves the design's *ranking is global* rule untouched. A field the schema declares no suffix for gets
-  nothing, because there would be nothing honest to put there.
+- ~~**Space on an empty field types the word the schema says that field is spelled with**~~ — **this
+  entry was wrong when it was written, and is corrected here in v0.21 rather than deleted.** The
+  feature existed on a prop named `hint` and was **removed in `8aa6fb0`, *"feat(ui): rework the
+  keyboard model"*, which is an ancestor of the `v0.18.0` tag** — so it was introduced and deleted
+  inside this very version and never shipped in any release. It could not have worked either:
+  `ui/app.py` sends `list(batch.flow.schema.names)`, names only, so a field's suffix has never
+  reached the browser in any version. What did ship, and still does, is the autocomplete: the rows
+  are `vocabulary.search()`'s, in `vocabulary.search()`'s order, for every fragment, which leaves the
+  design's *ranking is global* rule untouched.
 - **Approve, read-only, and the one line a `Refusal` lands on.** `ApproveBar` is accent-outlined and
   **always live** — no scroll gate, no dwell timer, no confirmation step, no disabled twin, and no
   empties action: the only thing that stops an approve is a refusal, never a ritual. On success the

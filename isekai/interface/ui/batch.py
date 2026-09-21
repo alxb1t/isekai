@@ -39,6 +39,7 @@ from isekai.foundation.run import (
 )
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import DRAFT, review
+from isekai.shared.field_map import FieldMap
 from isekai.shared.image import image_dimensions
 from isekai.shared.vocabulary import Vocabulary
 
@@ -75,6 +76,7 @@ class Batch:
     flow: Flow
     inputs: tuple[Input, ...]
     vocabulary: Vocabulary
+    field_map: FieldMap
     bundle: Path
 
     def find(self, identifier: str) -> Input:
@@ -132,7 +134,8 @@ def establish(
     """Resolve everything the surface needs, refusing before any port is bound.
 
     The order is the refusal order: the flow, then every named input with a draft
-    taken and its header read, then the vocabulary, then the bundle. A refusal the
+    taken and its header read, then the vocabulary, then the table held against
+    it, then the bundle. A refusal the
     operator cannot read is a refusal that did not happen, and the terminal is
     where they already are when they start this -- the browser has no designed
     home for one until a refusal surface exists (design.md D6).
@@ -159,7 +162,10 @@ def establish(
             "show` prints, and the surface will open a draft for each"
         )
 
-    return Batch(loaded, tuple(resolved), wired.vocabulary(), bundle())
+    vocabulary = wired.vocabulary()
+    return Batch(
+        loaded, tuple(resolved), vocabulary, wired.field_map(vocabulary), bundle()
+    )
 
 
 def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:

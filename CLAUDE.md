@@ -68,8 +68,10 @@ and nowhere else. In brief, the load-bearing seams are:
 
 - **A parameter is a seam only if something else is actually passed through it.** That is why `client` is a
   parameter of `generate.render` — `FakeComfyClient` is what makes the whole suite offline — and why `rng`
-  is one, while the reader and the sorter are seams because each has a real double. A one-entry registry
-  is a dispatch mechanism with nothing to dispatch.
+  is one, while the reader is a seam because it has a real double. **Stage ② has no seam at all any
+  more**, and that is the rule read the other way: v0.21 replaced two sorter implementations behind a
+  Protocol with a dictionary lookup, so there was nothing left to pass through the parameter. A
+  one-entry registry is a dispatch mechanism with nothing to dispatch.
 - **The flow manifest declares; nothing computes.** `flows/<id>/flow.json` names every node the render
   path edits, by role — `flow.node("sampler")`, `flow.node("photo")` — so no node is ever located by
   class at runtime. That is what lets a broken flow be caught by the suite rather than by a boot, and
@@ -87,13 +89,25 @@ and nowhere else. In brief, the load-bearing seams are:
   stdlib `urllib`, an injectable `Transport`, and the classification of what comes back. It imports
   nothing from `claude_cli.py` — though the edge that matters is the **call graph**, because
   `pipeline/caption.py` imports nine names from `claude_cli` for `ClaudeReader` and every flow
-  traverses that file.
+  traverses that file. **Two `pipeline/` modules import that file, not three**: `sheet.py` stopped
+  when v0.21 deleted `ClaudeSorter`, and `tagging.py` still does — `CliFailure`, `constant_record`
+  and `refusal_for`, for the failure shape rather than for a reader.
 - **The run owns the layout, not the stages.** The stage directory names live in
   `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, and **no stage
   imports another** — the last such edge closed when `validate` moved to `isekai/shared/fields.py`,
   which is behaviour rather than layout. The layout itself is **input above, flow below**:
   `runs/<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`, so adding a flow adds one
   subtree and no flow can read another's artifacts.
+- **An Option-modified keybinding matches `event.code` and calls `preventDefault()`, because Option
+  is a character-producing modifier on macOS.** Not a layout rule and not hygiene: on plain US ABC,
+  `Option+Space` emits U+00A0 and `Option+F` emits `ƒ`, so a handler matching `event.key` inserts an
+  invisible non-breaking space into a tag field — the silent dead end the cheatsheet exists to
+  remove. `preventDefault()` is load-bearing twice, because Space is also the **native activation
+  key** of a focused `<button>` and this app focuses one on mount (`ReviewApp.vue`'s
+  `.rail__card--current`). v0.21's two bindings are the **first** `event.code` matches in this
+  repository; `Cmd+Z` at `ReviewApp.vue:243` still matches `event.key.toLowerCase()` and so does
+  nothing under a Cyrillic layout — a known live violation, in the backlog with this rule as its
+  trigger, deferred to a keybinding re-work of its own.
 
 **Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
 proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both are registered in
@@ -131,14 +145,15 @@ A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `d
 unchecked box**. A phase is advanced by a commit **and** a ticked box, in that phase's own commit — either
 alone is not an advance.
 
-**The living spec** is `openspec/specs/<capability>/spec.md` — **ten capabilities today**, each a
+**The living spec** is `openspec/specs/<capability>/spec.md` — **eleven capabilities today**, each a
 contract with one owner: `caption`, `cli`, `comfy-transport`, `evaluation`, `image-generation`,
-`model-provisioning`, `review`, `run-directory`, `sheet`, `ui`. **Count `openspec/specs/*/` rather
-than trusting this sentence** — it said *nine* through two versions in which the answer was ten.
+`model-provisioning`, `review`, `run-directory`, `sheet`, `tagging`, `ui`. **Count
+`openspec/specs/*/` rather than trusting this sentence** — it said *nine* through two versions in
+which the answer was ten, and *ten* through one in which it was eleven.
 A capability enters and leaves the living spec only when a change is **archived**, which is
 `mf-release`'s act and never the builder's, so the number here is always the count on disk and never
-the count a pending change implies: v0.20's delta adds `tagging` and makes it eleven, and until that
-change is archived it is ten. Every `#### Scenario:` carries a
+the count a pending change implies: v0.21's delta adds `field-map` and makes it twelve, and until
+that change is archived it is eleven. Every `#### Scenario:` carries a
 `- **Key:**` and a `- **Layers:**` bullet, and the key is
 `<capability>:<requirement-slug>:<scenario-slug>` — so a key locates its own file. On release the delta is
 folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
@@ -172,8 +187,8 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   the `Schema` type, `refusal.py`. **`pipeline/`** — the four staged verbs, `caption` · `sheet` ·
   `review` · `generate`, **and `tagging.py`, which is not a verb**: its two functions produce the two
   tag artifacts `caption` also writes, so the count of *verbs* is still four and the count of modules
-  is five. **`shared/`** — `image.py`'s header reader, `vocabulary.py`,
-  `fields.py`'s sheet validation, `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
+  is five. **`shared/`** — `image.py`'s header reader, `vocabulary.py`, `field_map.py`'s authored
+  `tag ↔ field` table and the router over it, `fields.py`'s sheet validation, `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
   `multipart.py`), `claude_cli.py`, `ollama.py`, `wd14.py`, and `provision.py`: the manifest's reader, the byte verification,
   the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is **not** in the entry
   point's import graph, so the stdlib-only runtime rule is untouched either way. **`wd14.py` is**,
@@ -209,6 +224,14 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   `eval_licences.md`, where each of those artifacts' licences is recorded with the URL and the date
   it was read. Three destinations appear in **both** manifests, byte for byte — `glintr100` and the
   two DWPose artifacts — and a test fails if the two files ever disagree about them.
+  Beside all of those and unlike every one of them, `field_map.json` is **authored here rather than
+  fetched**: it assigns each tag in the pinned vocabulary one primary identity criterion and any
+  further criteria it may be browsed under, and it carries its own monotonic `revision` because
+  there is no upstream revision to name. `derive_field_map.py` writes it, stdlib and offline, and is
+  under the same byte-identical re-run rule — which holds because **every input it reads is tracked or
+  pinned**: the operator's own filings are transcribed into a constant in the script, and the
+  gitignored runs they came from are read by `--refresh` alone, which prints a drift and writes
+  nothing.
   **`Dockerfile`** — the image that *is* the pod.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
@@ -247,27 +270,37 @@ Two flows on the same render, `summon-v1` and `summon-open-v1`, on a **WAI-illus
 (Illustrious/SDXL anime) base, driven in four staged verbs — `caption` → `sheet` →
 `review`/`approve` → `generate`. (`conjure-v1` is the third tracked flow.)
 
-**The flow declares which implementation stages ① and ② run, in one optional `hosted` key**, and a
+**The flow declares which implementation stage ① runs, in one optional `hosted` key**, and a
 manifest that declares none runs the Claude arm — which is what keeps both incumbent flows unedited
 and their digests still. `summon-open-v1` declares `ollama`, names JoyCaption Beta One and Qwen3-8B,
 and **reaches Claude by no path at all**; a suite-resident test runs it with both entry points of
 the Claude transport rigged to raise, and a second test points the same fixture at `summon-v1` so
-that proof cannot pass vacuously. The registry in `interface/wiring.py` resolves the pair **per
+that proof cannot pass vacuously. The registry in `interface/wiring.py` resolves the reader **per
 flow**, inside `cli.py`'s loop, so one command naming flows on both arms gives each its own.
+**`hosted.sorter` is a required key that nothing reads.** Stage ② calls no hosted model since v0.21,
+and the key stays because removing `"sorter": "qwen3:8b"` from `summon-open-v1`'s manifest would move
+that flow's digest — which this file makes a new flow rather than an edit. It is carried dead, like
+`sheet.briefing.md`, and both go with the version that deletes the flows they belong to.
 **Neither arm's hosted models are pinned by digest** — the manifest names them and nothing verifies
 the bytes; that travels with provisioning, and `models` (the twelve render weights) is the key that
 *does* carry digests.
 
 **`caption` writes three artifacts and says three times** — *prose · wd14 · tags*, in that order and
 no other. `across()` catches a `Refusal` per **input** rather than per stage, so the ordering *is*
-the failure isolation: prose first because it is the only one anything downstream reads, the local
-WD14 tagger second because it is deterministic and fails only on a missing or corrupt file, and the
-hosted tagger last because it is the one with a port, a timeout and a retry budget. **Neither tag
+the failure isolation: prose first because it is the one a human reads before anything else, the
+local WD14 tagger second because it is deterministic and fails only on a missing or corrupt file,
+and the hosted tagger last because it is the one with a port, a timeout and a retry budget. **The
+one anything downstream reads is the WD14 list, not the prose** — v0.21 made it the sheet's source
+and left prose a reading aid with no machine consumer. The ordering does not move with it: a failure
+in prose still costs the two artifacts behind it, which is the trade it was chosen for. **Neither tag
 list is narrowed** — no canonicalisation, no vocabulary filtering, no re-ordering but by confidence —
 because narrowing is stage ②'s job and the whole point of these two artifacts is seeing behind it.
 The local tagger resolves through **no manifest key at all** and runs for every flow; the hosted one
 resolves only where a flow declares an arm this build can tag on, and its **absence is silent** — a
-missing tag artifact is an absent aid, never a refusal. It is still **one verb**: there is no
+missing **hosted** tag artifact is an absent aid, never a refusal. **The rule stops there.** Since
+v0.21 the sheet is filled from `wd14/`, so a missing **local** tag list is a refusal naming
+`caption`: an all-empty sheet is legal and therefore silent, which is the failure mode this
+repository keeps paying for. It is still **one verb**: there is no
 `isekai tags`.
 
 **`models/wd14/` is one artifact split in two, and both halves are pinned in

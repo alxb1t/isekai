@@ -10,8 +10,10 @@ one, closes the tab and runs `isekai generate`.
 One operator, their own laptop, localhost, desktop browser, no auth, no other users. Photos are
 personal — this is a private tool, not a product. A run is a batch: 1–10 photos in one sitting.
 
-The operator's job per photo: **look at the photograph, read what the VLM said, and correct the tags
-the sorter produced.** The sorter is mediocre, and the gap between its draft and a corrected sheet is
+The operator's job per photo: **look at the photograph, read what the tagger offered, and correct
+the tags the router placed.** Since v0.21 the draft comes from the local WD14 tagger through one
+authored `tag ↔ field` table, not from a language model; the router cannot invent a tag, and what it
+can get wrong is which criterion a tag answers. The gap between that draft and a corrected sheet is
 the entire reason this step exists. Then approve.
 
 ## About the design files
@@ -137,15 +139,16 @@ the decision, the reason is what you are arguing with.
 
 ### Everything else
 
-- **The ② draft diff is behind a toggle, off by default.** The diff between the sorter's output and
-  the human's correction is interesting, but not while typing.
+- **The ② draft diff is behind a toggle, off by default.** The diff between the routed draft and the
+  human's correction is interesting, but not while typing.
 - **Clicking the photograph opens a full-window overlay** on a ground one shade below the app's, with
   the caption expanded beside it and a Fit / 1:1 toggle. This is the one place the `.lighten` blend is
   **not** applied — the photo must be seen as it is. Arrow keys still move through the batch, so the
   overlay doubles as a way to compare inputs. Nothing in it can change the sheet.
-- **The caption shows all paragraphs, expanded.** Focusing a field brightens the phrase that field
-  was mapped from; caption text no field claimed is underlined dashed — that is where the sorter
-  dropped something, and it is the operator's cheapest clue about what is missing.
+- **The caption shows all paragraphs, expanded.** It is a reading aid and no longer a machine input:
+  since v0.21 nothing downstream reads it, so there is no per-phrase mapping to highlight. The
+  operator's cheapest clue about what is missing is the raw WD14 list beside it — every tag the
+  tagger offered, including the ones the table routed nowhere.
 - **Undo is per edit across the whole sheet**, like a text editor, not per field.
 - **Token budget is soft.** 104 tokens is approvable. Real sheets run 80–122, so over-budget is the
   normal case and is styled as information, not an error.

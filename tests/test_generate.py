@@ -50,13 +50,12 @@ from isekai.pipeline.generate import (
     seeds_for,
 )
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import Always, caption, fake_wd14, sheet
+from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
 
 FLOW = "summon-v1"
 
@@ -78,7 +77,6 @@ def _run(
     caption(made, FakeReader(prose="Brown hair, brown eyes."))
     sheet(
         made,
-        FakeSorter(answers={"hair_colour": ["brown"], "eye_colour": ["brown"]}),
         schema,
         vocabulary,
     )
@@ -160,7 +158,6 @@ def _run_for_fewer(
     caption(made, FakeReader(prose="Brown hair, brown eyes."), flow=FEWER)
     sheet(
         made,
-        FakeSorter(answers={"hair_colour": ["brown"]}),
         schema,
         vocabulary,
         flow=FEWER,
@@ -251,7 +248,7 @@ def test_a_flow_with_no_approved_sheet_is_refused_naming_the_commands(
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
     caption(made, FakeReader())
-    sheet(made, FakeSorter(), schema, vocabulary)
+    sheet(made, schema, vocabulary)
     review(made, FLOW)
 
     with pytest.raises(Refusal) as refused:
@@ -268,7 +265,7 @@ def test_every_flow_with_an_approved_artifact_is_selected_without_a_flag(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     caption(run, FakeReader(), flow="summon-v2")
-    sheet(run, FakeSorter(), schema, vocabulary, flow="summon-v2")
+    sheet(run, schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
     approve(run, "summon-v2", schema, vocabulary)
 
@@ -280,7 +277,7 @@ def test_a_flow_with_only_a_draft_is_not_selected(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     caption(run, FakeReader(), flow="summon-v2")
-    sheet(run, FakeSorter(), schema, vocabulary, flow="summon-v2")
+    sheet(run, schema, vocabulary, flow="summon-v2")
     review(run, "summon-v2")
 
     assert approved_flows(run) == [FLOW]
@@ -575,11 +572,11 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     err = io.StringIO()
     wired = Wiring(
         reader=Always(FakeReader(prose="unused")),
-        sorter=Always(FakeSorter(answers={})),
         tagger=fake_wd14(),
         hosted_tagger=Always(FakeTagger()),
         client=FakeComfyClient(),
         vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
         runs_root=runs,
         out=io.StringIO(),
         err=err,

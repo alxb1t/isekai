@@ -68,8 +68,10 @@ discover — the dropdown and the refusal queue state their own contracts on scr
 | `Esc` again | clear the fragment |
 
 A fragment that matches nothing shows no rows and cannot be committed — there is no way to type free
-text into a chip. Out-of-vocabulary tags only arrive from the sorter, which is why they are a refusal
-kind rather than an input error.
+text into a chip. **The out-of-vocabulary refusal kind is now unreachable**: it existed because a
+sorter could emit a tag that merely looked canonical, and since v0.21 the draft is routed from a
+tagger whose output layer *is* the vocabulary. It is kept as a guard on what a later producer would
+have to satisfy, not as a state this surface can reach.
 
 ### Removing a tag
 

@@ -20,7 +20,7 @@ const props = defineProps<{
   caption: string | null
 }>()
 
-defineEmits<{ close: []; step: [direction: -1 | 1] }>()
+defineEmits<{ close: [] }>()
 
 const actual = ref(false)
 
@@ -70,7 +70,7 @@ const words = computed(() => wordsOf(props.caption))
           >
             1:1 pixels
           </button>
-          <span class="overlay__exit mono">esc · click anywhere</span>
+          <span class="overlay__exit mono">esc · ⌥f · click anywhere</span>
           <button class="btn btn-secondary btn-icon" type="button" @click="$emit('close')">
             ×
           </button>

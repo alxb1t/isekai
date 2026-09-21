@@ -29,8 +29,9 @@ from isekai.foundation.flow import FLOWS_DIR, Flow, Hosted
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
 from isekai.pipeline.caption import ClaudeReader, OllamaReader, Reader
-from isekai.pipeline.sheet import ClaudeSorter, OllamaSorter, Sorter
 from isekai.pipeline.tagging import OllamaTagger, Tagger
+from isekai.shared.field_map import FieldMap
+from isekai.shared.field_map import load as load_field_map
 from isekai.shared.vocabulary import Vocabulary
 from isekai.shared.vocabulary import load as load_vocabulary
 
@@ -42,14 +43,14 @@ class Wiring:
     """Everything the verbs reach the outside world through, in one place.
 
     A parameter is a seam only if something else is actually passed through it,
-    and something is passed through every one of these: the reader and the sorter
-    take their offline doubles, the transport takes the fake the existing suite
+    and something is passed through every one of these: the reader takes its
+    offline double, the transport takes the fake the existing suite
     already drives `pipeline.run` with, and the roots take a temporary directory.
     That is what makes the resume assertion -- run everything twice, and nothing
     moved and nothing was called -- provable without a GPU or a network.
     """
 
-    # `reader` and `sorter` follow `client`'s precedent and may be absent. A front
+    # `reader` follows `client`'s precedent and may be absent. A front
     # end that only serves stage ③ reaches no hosted model at all, and fabricating
     # a `ClaudeReader()` it never calls would be a lie in the code -- so the verbs
     # that do reach one say so at their own call site instead.
@@ -61,7 +62,6 @@ class Wiring:
     # implementations would then resolve one reader and hand it to both, and the
     # provenance the artifacts record would be false for one of them.
     reader: Callable[[Flow], Reader] | None
-    sorter: Callable[[Flow], Sorter] | None
     # The two tagging seams, and they are deliberately not one. `tagger` resolves
     # for **every** flow because the local tagger reads no manifest key at all;
     # `hosted_tagger` answers `None` where a flow declares no arm this build can
@@ -78,6 +78,12 @@ class Wiring:
     # eager read made `python -m isekai show` impossible on a clone that had not
     # provisioned it. The doubles still inject one; they inject a lambda.
     vocabulary: Callable[[], Vocabulary]
+    # Lazy for the same reason, and it **takes** the vocabulary rather than
+    # finding its own: the table is only meaningful held against one, and every
+    # caller already has the invocation's. A zero-argument thunk would re-verify
+    # 308 KB against the manifest and re-parse 8,106 rows to answer a question
+    # the caller's own vocabulary answers.
+    field_map: Callable[[Vocabulary], FieldMap]
     runs_root: Path = RUNS_ROOT
     flows_dir: Path = FLOWS_DIR
     rng: random.Random = dataclasses.field(default_factory=random.Random)
@@ -94,11 +100,6 @@ DEFAULT_IMPLEMENTATION = "claude-cli"
 def _claude_reader(flow: Flow) -> Reader:
     """Return the CLI reader, which takes nothing from the manifest."""
     return ClaudeReader()
-
-
-def _claude_sorter(flow: Flow) -> Sorter:
-    """Return the CLI sorter, which takes nothing from the manifest."""
-    return ClaudeSorter()
 
 
 def _named_by(flow: Flow) -> Hosted:
@@ -118,13 +119,8 @@ def _ollama_reader(flow: Flow) -> Reader:
     return OllamaReader(model=_named_by(flow).reader)
 
 
-def _ollama_sorter(flow: Flow) -> Sorter:
-    """Return the Ollama sorter, named by the flow's own manifest."""
-    return OllamaSorter(model=_named_by(flow).sorter)
-
-
 def _no_tagger(flow: Flow) -> Tagger | None:
-    """Return nothing: this arm has a reader and a sorter but no tagger.
+    """Return nothing: this arm has a reader but no tagger.
 
     An entry rather than an omission, so an arm this build does not carry is
     still a refusal naming what it does carry. See `HOSTED_TAGGERS`.
@@ -157,19 +153,13 @@ READERS: Mapping[str, Callable[[Flow], Reader]] = {
     "ollama": _ollama_reader,
 }
 
-SORTERS: Mapping[str, Callable[[Flow], Sorter]] = {
-    "claude-cli": _claude_sorter,
-    "ollama": _ollama_sorter,
-}
-
 # **`claude-cli` is in the table and maps to nothing**, which is not the same as
 # being absent from it. There is no Claude tagger and there should not be -- a
 # second hosted model spending money on an advisory panel -- but *recording* that
 # the arm has none costs nothing and keeps one resolution mechanism for all three
 # seams. Left out of the table, an unrecognised arm (`"vllm"`, a typo) would
 # resolve to silence, and D20 makes silence unreportable by design; in the table,
-# `_resolve` names what this build carries, exactly as it does for the reader and
-# the sorter.
+# `_resolve` names what this build carries, exactly as it does for the reader.
 HOSTED_TAGGERS: Mapping[str, Callable[[Flow], Tagger | None]] = {
     "claude-cli": _no_tagger,
     "ollama": _ollama_tagger,
@@ -197,11 +187,6 @@ def _resolve(flow: Flow, registry: Mapping[str, Callable[[Flow], T]], seam: str)
 def reader_for(flow: Flow) -> Reader:
     """Return the reader `flow`'s manifest declares, constructing no other."""
     return _resolve(flow, READERS, "reader")
-
-
-def sorter_for(flow: Flow) -> Sorter:
-    """Return the sorter `flow`'s manifest declares, constructing no other."""
-    return _resolve(flow, SORTERS, "sorter")
 
 
 def hosted_tagger_for(flow: Flow) -> Tagger | None:
@@ -328,11 +313,11 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
     _check_run_root(runs)
     return Wiring(
         reader=reader_for,
-        sorter=sorter_for,
         tagger=tagger_for,
         hosted_tagger=hosted_tagger_for,
         client=ComfyClient(server) if server else None,
         vocabulary=load_vocabulary,
+        field_map=load_field_map,
         runs_root=runs,
     )
 

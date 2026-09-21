@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+import isekai
 from isekai.foundation.flow import (
     GRAPH_NAME,
     KNOWN,
@@ -702,6 +703,32 @@ def test_the_open_flow_declares_the_implementation_it_is_meant_to_run() -> None:
     assert hosted.implementation == "ollama"
     assert hosted.reader == "joycaption-beta-one-q4k"
     assert hosted.sorter == "qwen3:8b"
+
+
+@pytest.mark.spec("image-generation:hosted:an-unread-key-is-carried")
+def test_the_sorter_key_is_carried_dead_and_has_not_moved_the_digest() -> None:
+    """A key no stage reads, and the reason it is still in the manifest.
+
+    Stage (2) calls no hosted model after v0.21, so `hosted.sorter` is read by
+    nothing -- and removing it would move `summon-open-v1`'s manifest digest,
+    which `CLAUDE.md` makes a **new flow** rather than an edit. Both halves are
+    asserted in one body because the scenario is the pair: the key loads, and
+    the digest is the one it had before the stage stopped reading it.
+    """
+    package = Path(isekai.__file__).parent
+    readers = sorted(
+        str(module.relative_to(package))
+        for module in package.rglob("*.py")
+        if ".sorter" in module.read_text()
+    )
+
+    hosted = load_flow("summon-open-v1").hosted
+
+    assert hosted is not None
+    assert hosted.sorter == "qwen3:8b"
+    assert "sorter" in REQUIRED_HOSTED
+    assert readers == []
+    assert manifest_digest("summon-open-v1") == PINNED["summon-open-v1"]
 
 
 @pytest.mark.spec("image-generation:hosted:incumbent-flows-are-unchanged")
