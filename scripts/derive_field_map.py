@@ -38,6 +38,12 @@ render-tested and no ordering is; then the declared precedence order settles wha
 he has never filed; then phase 8 overrides individual tags by hand. Every
 criterion that loses a tag keeps it under `also`, so nothing is hidden from
 browsing and exactly one criterion routes it.
+
+**Every input this script reads is tracked or pinned, so the table re-derives
+byte-identically anywhere.** The filings are `FILED`, transcribed below; the
+vocabulary is the pinned, digested `models/wd14/selected_tags.csv`; the field
+names come from the flows' own schemas. `.data/` is read by `--refresh` alone,
+which prints a diff and writes nothing.
 """
 
 import argparse
@@ -61,9 +67,10 @@ from isekai.shared.vocabulary import Vocabulary, load  # noqa: E402
 # Phase 1 shipped 1, phase 2 the seeded table; this is the operator's pass.
 REVISION = 3
 
-# Where the operator's approved sheets live. Gitignored, and read only as an
-# authoring aid: this script is operator tooling whose *output* is committed, so
-# a run without the runs on disk skips rule 1 and says so rather than refusing.
+# Where the operator's approved sheets live. Gitignored, and read by `--refresh`
+# and by nothing else: this script's *output* is committed, so an input that
+# exists on one machine would make the committed table unreproducible on every
+# other. What the sheets said is transcribed into `FILED` instead.
 APPROVED = ".data/v0.20/runs/*/summon-open-v1/review/*.approved.json"
 
 # A `hair` tag whose non-suffix words carry one of these takes `hair_colour`;
@@ -193,6 +200,139 @@ BRIEFING: Mapping[str, tuple[str, ...]] = {
     ),
 }
 
+# What the operator filed, transcribed. **The table is derived from tracked
+# inputs only, and this constant is why.** The filings are the strongest signal
+# the table can be built from -- a tag he approved and then rendered is
+# render-tested, which no precedence order is (design.md D30 (3)) -- and they
+# live in `.data/`, which is gitignored and exists on one machine. Reading them
+# at derivation time made the committed table unreproducible off that machine:
+# 17 tags changed or lost their primary and `accessories` emptied. So they are
+# transcribed here, exactly as `BRIEFING` above transcribes the dead briefing's
+# 41 examples, and `filings()` below is kept as an authoring aid that prints the
+# drift rather than as an input.
+#
+# 113 tags over the ten approved sheets of the v0.20 batch, as
+# `tag -> criterion -> how often`. The counts are load-bearing and not decoration:
+# they are what puts `collarbone` in `pose` (3 against `body_shape` 1), `navel` in
+# `clothes` (2 against one each) and `standing` in `pose` (7 against `framing` 1).
+# Refresh it with `--refresh` after a batch, never by hand.
+FILED: Mapping[str, Mapping[str, int]] = {
+    "1girl": {"count": 10},
+    "arm support": {"pose": 1},
+    "ass": {"pose": 2},
+    "bare arms": {"pose": 1},
+    "bare shoulders": {"clothes": 6},
+    "bed": {"background": 1},
+    "bedroom": {"background": 1},
+    "black bra": {"clothes": 1},
+    "black footwear": {"clothes": 1},
+    "black hair": {"hair_colour": 1},
+    "black leotard": {"clothes": 1},
+    "black panties": {"clothes": 1},
+    "black shorts": {"clothes": 1},
+    "blonde hair": {"hair_colour": 2},
+    "blue eyes": {"eye_colour": 2},
+    "blue sweater": {"clothes": 1},
+    "breasts": {"body_shape": 5},
+    "breasts apart": {"pose": 1},
+    "breasts out": {"pose": 1},
+    "brown eyes": {"eye_colour": 5},
+    "brown hair": {"hair_colour": 7},
+    "cleavage": {"clothes": 3},
+    "clothes lift": {"clothes": 2},
+    "clothes pull": {"clothes": 1},
+    "collarbone": {"body_shape": 1, "pose": 3},
+    "cowboy shot": {"framing": 5},
+    "crop top": {"clothes": 3},
+    "dark": {"eyebrows": 1},
+    "dress lift": {"clothes": 1},
+    "expressionless": {"expression": 1},
+    "finger to mouth": {"pose": 1},
+    "fishnet pantyhose": {"clothes": 1},
+    "foot out of frame": {"pose": 1},
+    "from behind": {"pose": 1},
+    "from side": {"pose": 1},
+    "full body": {"framing": 2},
+    "garter belt": {"clothes": 1},
+    "garter straps": {"clothes": 1},
+    "gold bracelet": {"accessories": 1},
+    "gold necklace": {"accessories": 1},
+    "grin": {"expression": 1},
+    "hands on own chest": {"pose": 2},
+    "hands on own hips": {"pose": 2},
+    "head tilt": {"pose": 1},
+    "holding phone": {"pose": 1},
+    "indoors": {"background": 4},
+    "kneeling": {"pose": 1},
+    "lace-trimmed bra": {"clothes": 1},
+    "large breasts": {"body_shape": 2},
+    "legs": {"pose": 3},
+    "licking": {"expression": 1},
+    "lifted by self": {"pose": 1},
+    "light": {"skin_ancestry": 2},
+    "light smile": {"expression": 3},
+    "lingerie": {"clothes": 1},
+    "lips": {"expression": 2},
+    "long hair": {"hair_silhouette": 9},
+    "looking at phone": {"gaze": 1},
+    "looking at viewer": {"gaze": 9},
+    "looking back": {"gaze": 2},
+    "lying": {"pose": 1},
+    "medium breasts": {"body_shape": 4},
+    "medium hair": {"hair_silhouette": 1},
+    "midriff": {"clothes": 3},
+    "navel": {"body_shape": 1, "clothes": 2, "pose": 1},
+    "nipples": {"body_shape": 1},
+    "no bra": {"clothes": 1},
+    "no panties": {"clothes": 1},
+    "no pants": {"clothes": 1},
+    "off shoulder": {"clothes": 3},
+    "on bed": {"pose": 1},
+    "on side": {"pose": 1},
+    "open mouth": {"expression": 1},
+    "panties": {"clothes": 1},
+    "parted lips": {"expression": 4},
+    "pillow": {"background": 1},
+    "pink skirt": {"clothes": 2},
+    "pulling": {"pose": 1},
+    "red bra": {"clothes": 1},
+    "red panties": {"clothes": 1},
+    "selfie": {"framing": 2},
+    "shirt": {"clothes": 1},
+    "shoes": {"clothes": 1},
+    "short dress": {"clothes": 2},
+    "short shorts": {"clothes": 1},
+    "simple background": {"background": 1},
+    "sitting": {"pose": 1},
+    "skirt": {"clothes": 2},
+    "small breasts": {"body_shape": 1},
+    "smile": {"expression": 3},
+    "solo": {"count": 10},
+    "standing": {"framing": 1, "pose": 7},
+    "stomach": {"body_shape": 1},
+    "stone wall": {"background": 1},
+    "straight hair": {"hair_silhouette": 2},
+    "sweater lift": {"clothes": 1},
+    "teeth": {"expression": 1},
+    "thighs": {"pose": 1},
+    "thong": {"clothes": 1},
+    "toes": {"pose": 1},
+    "tongue out": {"expression": 2},
+    "train station": {"background": 2},
+    "tube dress": {"clothes": 2},
+    "underwear": {"clothes": 3},
+    "underwear only": {"clothes": 2},
+    "upper body": {"framing": 2},
+    "wavy hair": {"hair_silhouette": 8},
+    "white background": {"background": 2},
+    "white bra": {"clothes": 1},
+    "white dress": {"clothes": 3},
+    "white panties": {"clothes": 1},
+    "white shirt": {"clothes": 1},
+    "white thighhighs": {"clothes": 1},
+}
+
+
 # Which criterion owns a tag two of them claim, where the operator has never
 # filed it. **It is a tie-break and not a claim to be right.** Measured against
 # the seventeen collisions he has filed, eleven is the ceiling for any of the
@@ -312,10 +452,11 @@ def claims(vocabulary: Vocabulary, fields: Iterable[str]) -> dict[str, set[str]]
 def filings(root: Path = Path(".")) -> dict[str, Counter[str]]:
     """Return, per tag, how often the operator filed it under each criterion.
 
-    The strongest signal the table can be built from: a tag he approved and then
-    rendered is render-tested, which no precedence order is. The runs are
-    gitignored, so an absent directory returns nothing and rule 1 simply does not
-    fire -- the committed table is the record either way.
+    **Nothing in the derivation calls this.** It is what `--refresh` diffs
+    `FILED` against after a batch, and `FILED` is what the table is built from --
+    the runs are gitignored, so a derivation that read them here would be
+    reproducible on exactly one machine. An absent directory returns nothing,
+    which `--refresh` reports as an absent aid rather than as drift.
     """
     filed: dict[str, Counter[str]] = defaultdict(Counter)
     for path in sorted(root.glob(APPROVED)):
@@ -329,10 +470,14 @@ def filings(root: Path = Path(".")) -> dict[str, Counter[str]]:
     return filed
 
 
-def resolve(
-    groups: Mapping[str, set[str]], filed: Mapping[str, Counter[str]]
-) -> dict[str, str]:
-    """Return `tag -> primary criterion`, by the operator's filings then the order."""
+def resolve(groups: Mapping[str, set[str]]) -> dict[str, str]:
+    """Return `tag -> primary criterion`, by the operator's filings then the order.
+
+    `FILED` rather than a parameter: a parameter is a seam only if something else
+    is passed through it, and since the filings are transcribed there is exactly
+    one thing to pass.
+    """
+    filed = FILED
     rank = {field: index for index, field in enumerate(PRECEDENCE)}
     candidates: dict[str, set[str]] = defaultdict(set)
     for field, tags in groups.items():
@@ -351,12 +496,12 @@ def resolve(
 
 
 def build(
-    vocabulary: Vocabulary, fields: Iterable[str], filed: Mapping[str, Counter[str]]
+    vocabulary: Vocabulary, fields: Iterable[str]
 ) -> tuple[dict[str, dict[str, list[str]]], dict[str, set[str]]]:
     """Return the table's `fields` document and the candidate groups behind it."""
     names = list(fields)
     groups = claims(vocabulary, names)
-    primary = resolve(groups, filed)
+    primary = resolve(groups)
     browsable: dict[str, set[str]] = {field: set(groups[field]) for field in names}
 
     # Both hair criteria browse all 103. The split decides which one *routes* a
@@ -371,7 +516,7 @@ def build(
     # or not it won the primary. He files `standing` under both framing and pose
     # and `navel` under all three of clothes, pose and body shape; one of those
     # routes it and the rest are how he finds it again.
-    for tag, counts in filed.items():
+    for tag, counts in FILED.items():
         if tag in vocabulary:
             for field in counts:
                 browsable[field].add(tag)
@@ -393,12 +538,9 @@ def build(
     return document, groups
 
 
-def report(
-    vocabulary: Vocabulary,
-    groups: Mapping[str, set[str]],
-    filed: Mapping[str, Counter[str]],
-) -> None:
+def report(vocabulary: Vocabulary, groups: Mapping[str, set[str]]) -> None:
     """Print what each seed pulled in, and every collision, for the pruning pass."""
+    filed = FILED
     print("== the suffix walk ==")
     for field, suffix in SUFFIXES.items():
         print(f"  {field:16} {suffix:12} {len(by_suffix(suffix, vocabulary)):5}")
@@ -440,8 +582,33 @@ def report(
         print("    " + ", ".join(unfiled[:12]))
 
     print(f"\n== {len(filed)} tags the operator has filed, over the v0.20 batch ==")
-    if not filed:
-        print("    (no approved sheets on disk; rule 1 did not fire)")
+
+
+def refresh(root: Path = Path(".")) -> None:
+    """Print how `FILED` differs from the approved sheets that are on disk.
+
+    The one place the gitignored runs are read, and it writes nothing. A batch
+    the operator has just approved is transcribed into `FILED` by hand from this
+    output, so the crossing from `.data/` into a tracked file is a deliberate
+    edit rather than a side effect of re-running the deriver.
+    """
+    on_disk = filings(root)
+    if not on_disk:
+        print(f"\n== no approved sheets under {APPROVED}; nothing to diff ==")
+        return
+    drifted = sorted(
+        tag
+        for tag in set(on_disk) | set(FILED)
+        if dict(on_disk.get(tag, {})) != dict(FILED.get(tag, {}))
+    )
+    print(f"\n== {len(on_disk)} tags on disk against {len(FILED)} transcribed ==")
+    if not drifted:
+        print("    FILED matches the approved sheets exactly")
+    for tag in drifted:
+        print(
+            f"    {tag:24} disk {dict(on_disk.get(tag, {}))} "
+            f"!= FILED {dict(FILED.get(tag, {}))}"
+        )
 
 
 def main() -> None:
@@ -450,12 +617,16 @@ def main() -> None:
     parser.add_argument(
         "--report", action="store_true", help="print the expansion and the collisions"
     )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="diff FILED against the operator's approved sheets, if they are on disk",
+    )
     arguments = parser.parse_args()
 
     vocabulary = load()
     fields = sorted({name for names in declared_fields().values() for name in names})
-    filed = filings()
-    document, groups = build(vocabulary, fields, filed)
+    document, groups = build(vocabulary, fields)
 
     FIELD_MAP_PATH.write_text(
         json.dumps(
@@ -471,7 +642,9 @@ def main() -> None:
         + "\n"
     )
     if arguments.report:
-        report(vocabulary, groups, filed)
+        report(vocabulary, groups)
+    if arguments.refresh:
+        refresh()
     sizes = ", ".join(
         f"{field} {len(entry['primary'])}"
         for field, entry in sorted(

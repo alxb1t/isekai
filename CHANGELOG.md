@@ -79,7 +79,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   candidates the API would return are the 74% that get thrown away (design.md D15). The script reads
   `models/wd14/selected_tags.csv`, expands a seed list per criterion, resolves one primary per tag and
   rewrites the table; `--report` prints what every seed pulled in, so the operator's pruning pass sees
-  the junk rather than inheriting it. Re-running it leaves the file byte-identical.
+  the junk rather than inheriting it. **Every input it reads is tracked or pinned**, so re-running it
+  leaves the file byte-identical on any machine: the 113 filings the operator made over the v0.20 batch
+  are transcribed into a `FILED` constant, exactly as the dead briefing's 41 examples already were, and
+  the gitignored runs they came from are read by `--refresh` alone — which prints the drift between the
+  constant and the sheets on disk and writes nothing. Reading them at derivation time would have made
+  the committed table reproducible on exactly one machine: without them 17 tags change or lose their
+  primary and `accessories` empties.
 - **Matching is word-boundary against a stem and its inflections, not `in` and not the bare boundary.**
   Substring is the defect the roadmap flagged — `scar` matches `scarf`, and `\bscar\b` takes 44 matches
   to 15. But the roadmap's own remedy introduces a second one: `\bbraid\b` alone loses `twin braids`

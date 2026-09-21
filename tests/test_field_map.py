@@ -388,3 +388,58 @@ def test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in(
 
     assert len(filed) == 113
     assert unreachable == []
+
+
+@pytest.mark.spec("model-provisioning:derivation:rerun-is-byte-identical")
+def test_the_committed_table_re_derives_without_reading_the_gitignored_runs(
+    provisioned: Vocabulary,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The byte-identical rule, and the reason the table can carry it at all.
+
+    `derive_field_map` cannot join `tests/test_derivation.py`'s `DERIVERS`: that
+    tuple is the roster of the shared *manifest* module, and `manifest.write`
+    reads an `entries` key this artifact does not have. So the rule is asserted
+    here instead, and it is asserted the strict way -- `filings()` is rigged to
+    raise, so a derivation that reached back into `.data/` fails loudly rather
+    than passing on this machine and nowhere else.
+    """
+    import sys
+
+    import derive_field_map
+
+    def refuse(root: Path = Path(".")) -> dict[str, object]:
+        raise AssertionError("the derivation read the gitignored approved runs")
+
+    written = tmp_path / "field_map.json"
+    monkeypatch.setattr(derive_field_map, "filings", refuse)
+    monkeypatch.setattr(derive_field_map, "FIELD_MAP_PATH", written)
+    monkeypatch.setattr(sys, "argv", ["derive_field_map.py"])
+
+    derive_field_map.main()
+
+    assert written.read_bytes() == FIELD_MAP_PATH.read_bytes()
+
+
+@pytest.mark.spec_exempt(
+    "structural: the transcription against the sheets it came from"
+)
+def test_the_transcribed_filings_match_the_operator_s_approved_sheets(
+    provisioned: Vocabulary,
+) -> None:
+    """`FILED` is authored, and this is what says it was authored faithfully.
+
+    Environment-conditional for the same reason its neighbour above is: the runs
+    are gitignored. The point of the transcription is that the *derivation* no
+    longer needs them -- checking it does, where they happen to be present.
+    """
+    from derive_field_map import FILED, filings
+
+    on_disk = filings()
+    if not on_disk:
+        pytest.skip("the v0.20 runs are not on disk in this environment")
+
+    assert {tag: dict(counts) for tag, counts in on_disk.items()} == {
+        tag: dict(counts) for tag, counts in FILED.items()
+    }

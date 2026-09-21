@@ -228,7 +228,10 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   fetched**: it assigns each tag in the pinned vocabulary one primary identity criterion and any
   further criteria it may be browsed under, and it carries its own monotonic `revision` because
   there is no upstream revision to name. `derive_field_map.py` writes it, stdlib and offline, and is
-  under the same byte-identical re-run rule.
+  under the same byte-identical re-run rule — which holds because **every input it reads is tracked or
+  pinned**: the operator's own filings are transcribed into a constant in the script, and the
+  gitignored runs they came from are read by `--refresh` alone, which prints a drift and writes
+  nothing.
   **`Dockerfile`** — the image that *is* the pod.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
