@@ -45,7 +45,7 @@ from isekai.foundation.flow import (
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import digest_of
-from isekai.shared.vocabulary import Vocabulary
+from isekai.shared.vocabulary import Vocabulary, normalise
 
 # Beside `scripts/vocabulary.json`, which the runtime already verifies against.
 # The table is authored in this repository rather than fetched, so it is tracked
@@ -250,10 +250,21 @@ def route(
     """Place each tag in its primary criterion, dropping what the flow does not ask.
 
     **It is a dictionary lookup and it reaches nothing.** No model, no network, no
-    free-text cascade -- the tagger's output layer *is* the vocabulary, so the
-    tags arrive canonical and nothing has to be completed, corrected or
-    substituted on the way. That property is what allows the sheet's author to
+    free-text cascade -- the tagger's output layer *is* the vocabulary, so a tag
+    arriving here names something that exists and nothing has to be completed,
+    corrected or invented. That property is what allows the sheet's author to
     change at all.
+
+    **`normalise()` is the one thing applied, and it is a spelling and not a
+    mapping.** Danbooru writes `blonde_hair` and this repository reads
+    `blonde hair`: `boundary/wd14.py` stores the label index's own spelling
+    because `tagging`'s rule is that neither list is narrowed or canonicalised,
+    while the vocabulary and this table are normalised at their own read. A bare
+    lookup therefore misses **every multi-word tag** -- measured at 118 of 230
+    over the v0.20 batch, and silently, since a tag that matches nothing is
+    indistinguishable from a tag no criterion claims. The normalised spelling is
+    also what is written, because `shared/fields.py`'s `validate()` refuses a
+    sheet whose tags are not in the vocabulary's own spelling.
 
     Dropping by declared field is what lets one table serve every flow: a
     criterion five of twenty-one tags answer exists whether the acting flow asked
@@ -263,7 +274,8 @@ def route(
     general-form-first, and the general forms are what he deletes.
     """
     routed: dict[str, list[str]] = {name: [] for name in schema.names}
-    for tag in tags:
+    for offered in tags:
+        tag = normalise(offered)
         field = field_map.primary_of(tag)
         if field in routed and tag not in routed[field]:
             routed[field].append(tag)

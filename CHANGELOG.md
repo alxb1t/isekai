@@ -252,6 +252,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The router dropped every multi-word tag, silently.** `boundary/wd14.py` stores the label index's
+  own Danbooru spelling — `blonde_hair` — because `tagging`'s rule is that neither tag list is
+  narrowed or canonicalised; the vocabulary and the field map are normalised at their own read.
+  `route()` did a bare dict lookup between the two, so `blonde_hair`, `long_hair`, `brown_eyes` and
+  `open_mouth` matched nothing and were indistinguishable from a tag no criterion claims. **Measured
+  over the eight v0.20 photographs: 112 tags routed, 230 with `normalise()` applied — 118 lost**, and
+  the survivors were the single-word tags, so a sheet still looked plausible while losing the
+  identity-bearing half. The normalised spelling is what is written, because `shared/fields.py`'s
+  `validate()` refuses a sheet whose tags are not in the vocabulary's own spelling.
+- **The fixture encoded the bug.** `tests/stages.write_wd14` wrote space-spelled tags, so the whole
+  suite was green on a case production cannot produce. The routing test now writes the underscore.
+
 - **`CLAUDE.md` gains the `event.code` rule, with a corrected reason.** *An Option-modified keybinding
   matches `event.code` and calls `preventDefault()`, because Option is a character-producing modifier on
   macOS.* Not a layout rule: on plain US ABC, `Option+Space` emits **U+00A0** and `Option+F` emits `ƒ`,

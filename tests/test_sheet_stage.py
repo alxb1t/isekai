@@ -81,6 +81,25 @@ def test_a_tag_is_placed_in_its_primary_criterion_and_no_model_is_reached(
     assert all(tags == [] for name, tags in fields.items() if name != "hair_colour")
 
 
+@pytest.mark.spec("field-map:routing:a-tag-goes-to-its-primary")
+def test_the_taggers_own_underscore_spelling_routes(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """The list arrives in Danbooru's spelling, because `wd14/` is not narrowed.
+
+    `boundary/wd14.py` stores the label index's own `blonde_hair`; the vocabulary
+    and the table are normalised at their own read. A bare lookup between them
+    misses every multi-word tag and says nothing, which is the shape of defect
+    this repository keeps paying for -- so the fixture writes the underscore
+    rather than the spelling that would make the test pass either way.
+    """
+    written = sheet(run, schema, vocabulary, tags=["brown_hair", "blue_eyes"])
+
+    fields = _body(written)["fields"]
+    assert fields["hair_colour"] == ["brown hair"]
+    assert fields["eye_colour"] == ["blue eyes"]
+
+
 @pytest.mark.spec("field-map:routing:an-undeclared-criterion-drops-its-tags")
 def test_a_tag_whose_criterion_the_flow_does_not_declare_is_dropped(
     run: Run, schema: Schema, vocabulary: Vocabulary
