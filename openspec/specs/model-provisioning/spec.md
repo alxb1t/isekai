@@ -288,61 +288,28 @@ unrecognised node are load-bearing while nothing checks that they are still decl
   itself cannot pass by not matching a pattern
 </content>
 
-### Requirement: The tag vocabulary is a provisioned artifact with its own manifest
-
-The system SHALL declare the tag list the pipeline fills sheets from as a pinned, digested artifact in
-its own manifest, and SHALL provision and verify it exactly as every other model artifact is.
-
-The file is currently untracked and produced only as a side effect of downloading an unrelated model,
-so a fresh clone cannot fill a sheet at all. Giving it its own manifest also makes swapping the
-vocabulary a matter of pointing one manifest somewhere else, rather than a code change.
-
-#### Scenario: the vocabulary has a pinned, digested entry
-- **Key:** `model-provisioning:vocabulary:entry-is-pinned-and-digested`
-- **Layers:** unit
-- **WHEN** the vocabulary manifest is read
-- **THEN** its entry carries a destination, a digest, a byte count and at least one source
-- **AND** no source resolves a mutable reference
-
-#### Scenario: the vocabulary manifest is separate from the graph's and the scorer's
-- **Key:** `model-provisioning:vocabulary:manifest-is-its-own-file`
-- **Layers:** unit
-- **WHEN** the three manifests are read
-- **THEN** the vocabulary's entry appears only in its own manifest
-- **AND** each manifest continues to answer one question about one consumer
-
-#### Scenario: the tagger model is not in the vocabulary manifest
-- **Key:** `model-provisioning:vocabulary:tagger-model-is-not-included`
-- **Layers:** unit
-- **WHEN** the vocabulary manifest is read
-- **THEN** it declares the tag list and not the model published alongside it
-- **AND** the two are treated as different artifacts with different consumers
-
-#### Scenario: the shipped driver fetches the vocabulary from its own manifest
-- **Key:** `model-provisioning:vocabulary:driver-provisions-the-manifest`
-- **Layers:** unit
-- **WHEN** the provisioning driver is pointed at the vocabulary manifest
-- **THEN** it plans and lands that manifest's entries
-- **AND** it does so through the same command every other artifact is provisioned by
-
-#### Scenario: an unprovisioned vocabulary refuses naming that command
-- **Key:** `model-provisioning:vocabulary:absent-vocabulary-names-the-command`
-- **Layers:** unit
-- **WHEN** a stage reads the vocabulary and the artifact has not been provisioned
-- **THEN** the read is refused rather than raising a file error
-- **AND** the message names the command that would provision it
-
 ### Requirement: Manifest derivation is shared and each manifest stays byte-identical
 
 The system SHALL derive every manifest through one shared module carrying the entry types and both
 digest strategies — reading a published digest where the artifact is stored as a large file, and
 hashing the bytes where it is small enough to fetch — and each deriver SHALL continue to produce output
-that is byte-identical on a re-run.
+that is byte-identical on a re-run. A deriver that hashes fetched bytes SHALL digest the artifact
+itself and nothing else: it SHALL refuse a response whose body is shorter than the length that response
+declares, and SHALL require the identity content coding.
 
 Two derivers already share these names by import, which makes that structure load-bearing the moment a
 third arrives; the entry type is currently declared twice under one name with two different shapes, and
 a third shape is how that becomes a defect rather than an oddity. The byte-identical rule is what makes
 the extraction verifiable for nothing: re-run all three, and any difference is the refactor's fault.
+
+**A digest of whatever arrived is not a digest of the artifact**, and the byte-identical rule fails
+here in the one direction nothing would notice: the wrong digest is a real SHA-256 with a plausible
+byte count, it is written to a tracked file, and it becomes a refusal of the *correct* artifact at
+whatever verifies it later. Two different things produce it. A connection dropped mid-body leaves a
+truncated read that the standard library returns without complaint, where a length comparison catches
+it. And a request naming no acceptable coding accepts every coding, so a host may answer one fetch
+compressed and the next one not — which the length comparison cannot catch, because a coded response
+declares its coded length.
 
 #### Scenario: the entry type is declared once
 - **Key:** `model-provisioning:derivation:entry-type-has-one-definition`
@@ -365,6 +332,20 @@ the extraction verifiable for nothing: re-run all three, and any difference is t
 - **THEN** its manifest file is byte-identical to the committed one
 - **AND** any difference is surfaced as a change to be reviewed rather than applied silently
 
+#### Scenario: a truncated response is refused rather than digested
+- **Key:** `model-provisioning:derivation:a-truncated-fetch-is-refused`
+- **Layers:** unit
+- **WHEN** a deriver fetches an artifact and the body it receives is shorter than the declared length
+- **THEN** the derivation fails naming the shortfall
+- **AND** no digest is computed over the partial body
+
+#### Scenario: a fetched digest is of the artifact and not of a transfer encoding
+- **Key:** `model-provisioning:derivation:fetched-digest-demands-identity-encoding`
+- **Layers:** unit
+- **WHEN** a deriver digests an artifact by fetching and hashing its bytes
+- **THEN** the request declares that only the identity coding is acceptable
+- **AND** a compressed response is therefore never hashed in place of the artifact
+
 ### Requirement: Every provisioned artifact's licence is recorded before it is relied on
 
 The system SHALL record, for each artifact it provisions, the terms that artifact carries, the source
@@ -381,3 +362,59 @@ happened to check.
 - **WHEN** the licence record is read
 - **THEN** it carries an entry for the vocabulary artifact
 - **AND** that entry names the terms, the source and the date they were read
+### Requirement: The tag vocabulary and the model it indexes are provisioned from one manifest
+
+The system SHALL declare the tag list the pipeline fills sheets from as a pinned, digested artifact in
+its own manifest, and SHALL provision and verify it exactly as every other model artifact is. Where a
+build loads the model that tag list is the output layer of, the manifest SHALL pin that model beside
+it, at the same revision, and a consumer SHALL verify both before its first use.
+
+The file was untracked and produced only as a side effect of downloading a model this repository did
+not run, so a fresh clone could not fill a sheet at all. Giving it its own manifest also makes swapping
+the vocabulary a matter of pointing one manifest somewhere else, rather than a code change.
+
+**The tag list and the tagger are one artifact split in two, and this version is what makes that
+true.** Row N of the list names output neuron N of the graph, so a list and a graph from different
+revisions mislabel every tag — silently, because the vector has the right length and every name in it
+is a real tag. Nothing downstream can detect it. A manifest holding one half without the other is
+therefore a manifest that cannot catch the one failure that matters, which is why the revision the two
+entries name is itself a contract rather than a coincidence.
+
+That claim is conditional on a build loading the model, and it was correct to refuse it while none
+did: until the model is loaded, the vocabulary genuinely outlives any particular tagger and pinning
+one would have made swapping the list a decision about a model nobody opened.
+
+#### Scenario: the vocabulary has a pinned, digested entry
+- **Key:** `model-provisioning:vocabulary:entry-is-pinned-and-digested`
+- **Layers:** unit
+- **WHEN** the vocabulary manifest is read
+- **THEN** every entry carries a destination, a digest, a byte count and at least one source
+- **AND** no source resolves a mutable reference
+
+#### Scenario: the vocabulary manifest is separate from the graph's and the scorer's
+- **Key:** `model-provisioning:vocabulary:manifest-is-its-own-file`
+- **Layers:** unit
+- **WHEN** the three manifests are read
+- **THEN** no destination the vocabulary manifest declares appears in either of the other two
+- **AND** each manifest continues to answer one question about one consumer
+
+#### Scenario: the label index and the model it indexes are pinned to one revision
+- **Key:** `model-provisioning:vocabulary:label-index-and-model-share-a-revision`
+- **Layers:** unit
+- **WHEN** the vocabulary manifest declares both the tag list and the model it is the output layer of
+- **THEN** both entries resolve the same immutable revision of the same publisher's repository
+- **AND** a pair naming two revisions fails the check rather than being provisioned
+
+#### Scenario: the shipped driver fetches the vocabulary from its own manifest
+- **Key:** `model-provisioning:vocabulary:driver-provisions-the-manifest`
+- **Layers:** unit
+- **WHEN** the provisioning driver is pointed at the vocabulary manifest
+- **THEN** it plans and lands every entry that manifest declares
+- **AND** it does so through the same command every other artifact is provisioned by
+
+#### Scenario: an unprovisioned vocabulary refuses naming that command
+- **Key:** `model-provisioning:vocabulary:absent-vocabulary-names-the-command`
+- **Layers:** unit
+- **WHEN** a stage reads the vocabulary and the artifact has not been provisioned
+- **THEN** the read is refused rather than raising a file error
+- **AND** the message names the command that would provision it

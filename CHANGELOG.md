@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-09-21
+
 ### Added
 
 - **The gate gains a sixth command — `bash scripts/typecheck_ui.sh`, the browser half.** The Vue
