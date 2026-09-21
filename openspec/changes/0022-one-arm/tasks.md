@@ -46,7 +46,9 @@ the rest is a move and a rename. `design.md` D12–D15.
   | `constant_record` | `:275-291` | no change to the body |
 
   `run.py` already imports `hashlib` (`:32`), `Path` (`:38`) and `Refusal` (`:41`), so **no new import is
-  needed**. Place them after `record_failure`.
+  needed**. Append all four at the **end of the module**, after `check_budget` (`:511`) — not between
+  `record_failure` (`:485-510`) and `check_budget`, which would split the failure-recording group that
+  reads as one unit.
 
   **Do not create `foundation/refusal.py` entries for these.** That module's first line is *"The one
   refusal exception, in a module that imports nothing"*, and `run.py:41` already imports it — a cycle.
@@ -125,8 +127,10 @@ phase on a red gate — `design.md` D26 has the full argument. **This is the lar
     here (D2).
   - Delete `class Hosted` (`:221-234`), `Flow.hosted` (`:249`), `REQUIRED_HOSTED` (`:94`) and its
     `:88-93` comment, the missing-key check (`:371-379`) and the construction (`:425-433`).
-  - Add `model: str` to `Flow`, and `"model"` to `REQUIRED` (`:63-72`). `KNOWN` (`:86`) becomes
-    `REQUIRED` alone — delete the `+ ("hosted",)`.
+  - Add `model: str` to `Flow` as the **last field**, where `hosted` was (`:249`) — every field is then
+    required and none carries a default. Field order is otherwise free: `Flow` is constructed in exactly
+    one place, `flow.py:413`, with keyword arguments only. Add `"model"` to `REQUIRED` (`:63-72`) as its
+    **last** entry, and make `KNOWN` (`:86`) just `REQUIRED` — delete the `+ ("hosted",)`.
   - Parse it with a **non-empty-string check**, refused by name (D4). Today `flow.py:427-429` applies a
     bare `str()`, so `{"reader": null}` loads as the string `"None"`.
   - Update `load_flow`'s docstring at `:326-333`: the typo path it describes is now closed by the
@@ -138,6 +142,14 @@ phase on a red gate — `design.md` D26 has the full argument. **This is the lar
 ### 2b — the flow set (D5)
 
 **A flow is never edited. Delete the directory, create the new one.**
+
+**⚠️ The byte shape of a manifest is load-bearing**, because `manifest_digest` hashes file bytes and
+`PINNED` freezes the result. Every existing `flow.json` is `json.dumps(..., indent=2)` plus **one
+trailing newline**, keys in the order written, no trailing spaces. Produce the new manifests by
+**editing a copy of the source file's text**, not by round-tripping through a JSON library with
+different defaults — and put `"model"` **exactly where the key it replaces sat**: last in the document
+for `summon-anime-wai` (where `hosted` was), and appended after `models` for `conjure-anime-wai`, which
+had no `hosted` block. Re-run 2.6's digest command after any later edit to either directory.
 
 - [ ] 2.3 **Delete** `flows/summon-v1/`, `flows/conjure-v1/`, `flows/summon-open-v1/` — `git rm -r`.
 
@@ -235,11 +247,11 @@ phase on a red gate — `design.md` D26 has the full argument. **This is the lar
   | `tests/test_flow.py:155-176` | `test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory` | drop the `sheet_briefing_path` entry at `:169` |
   | `tests/test_generate.py:145` | copies `SHEET_BRIEFING_NAME` from the source flow | drop it and the `:23` import — otherwise `FileNotFoundError` |
   | `tests/test_pipeline_cli.py:92-117` | `_flow_declaring` | writes `manifest["hosted"]` and loads `summon-v1`; rewrite onto `model` + `summon-anime-wai` |
-  | `tests/test_pipeline_cli.py:116-138` | `_two_arms` | there is one arm; rewrite as two flows on one model, or delete with `:475-501` |
+  | `tests/test_pipeline_cli.py:116-138` | `_two_arms` | **rewrite, do not delete.** Rename to `_two_models` and build both scratch flows the same way — each gets a top-level `model`, one `"a-reader"` and one `"b-reader"`, and neither omits the key. Its one consumer, `:475-501`, is rewritten with it (next row) |
   | `tests/test_pipeline_cli.py:151-154` | `_arm_aware_reader` | reads `flow.hosted` and `DEFAULT_IMPLEMENTATION` |
   | `tests/test_pipeline_cli.py:394` | `assert "claude-cli" in message and "ollama" in message` | `"ollama"` only |
   | `tests/test_pipeline_cli.py:398-412` | `test_each_registrys_keys_are_the_strings_the_artifacts_record` | one entry |
-  | `tests/test_pipeline_cli.py:501` | `{"summon-v1": "claude-cli", "open-v1": "ollama"}` | the new flows |
+  | `tests/test_pipeline_cli.py:474-501` | `test_one_command_over_two_flows_writes_two_artifacts_each_naming_its_own` | **rewrite, keep the test.** Re-bind from `cli:resolution:one-command-two-implementations` to **`cli:resolution:one-command-two-models`**; build the flows with `_two_models`; drop `_arm_aware_reader` and read the **model** out of each producer instead of the implementation, so the assertion becomes `{"flow-a": "a-reader", "flow-b": "b-reader"}`. The docstring's argument survives verbatim — hoisting the resolution still hands one flow's model to the other's artifact |
   | `tests/test_tagging.py:423-429` | `test_two_flows_on_two_arms_each_get_their_own_hosted_tagger` | one arm |
   | `tests/test_tagging.py:483-495` | builds a `Hosted` via `dataclasses.replace` | the `model` field |
   | `tests/test_caption.py:367` | `test_a_response_the_stage_cannot_read_as_prose_is_permanent` | `OllamaReader` + `FakeTransport({"response": ""})` — `:603` shows the shape |
@@ -357,10 +369,25 @@ a real requirement removal, not only prose.**
   `summon-v1` — not red, but stale) · `tests/test_run_directory.py:315, :323, :344, :368` (hand-built
   envelopes with `"implementation": "claude-cli"`).
 
-- [ ] 3.7 **Verify the scrub, and read every survivor rather than counting them:**
-  `grep -rniI "claude" --exclude-dir=.git --exclude-dir=archive --exclude-dir=node_modules --exclude-dir=.venv . | grep -v "^./CHANGELOG.md" | grep -v "^./ui/design/" | grep -v "^./CLAUDE.md:1:"`
-  and
-  `grep -rniI "qwen" --exclude-dir=.git --exclude-dir=archive --exclude-dir=node_modules --exclude-dir=.venv . | grep -v "^./CHANGELOG.md"`
+- [ ] 3.7 **Verify the scrub, and read every survivor rather than counting them.** Run both, from the
+  repository root:
+
+  ```sh
+  grep -rniI claude --exclude-dir=.git --exclude-dir=archive --exclude-dir=node_modules \
+    --exclude-dir=.venv --exclude-dir=.minions --exclude-dir=0022-one-arm . \
+    | grep -Ev '^(\./)?(CHANGELOG\.md|ui/design/|CLAUDE\.md:1:)'
+  grep -rniI qwen --exclude-dir=.git --exclude-dir=archive --exclude-dir=node_modules \
+    --exclude-dir=.venv --exclude-dir=.minions --exclude-dir=0022-one-arm . \
+    | grep -Ev '^(\./)?CHANGELOG\.md'
+  ```
+
+  Three things the filters are doing, each for a reason rather than to make the count look good.
+  **`(\./)?`** — BSD `grep` on this machine prints `CHANGELOG.md`, GNU prints `./CHANGELOG.md`, and a
+  pattern anchored to one of them silently passes the other through.
+  **`--exclude-dir=.minions`** — gitignored orchestrator output, not part of the repository.
+  **`--exclude-dir=0022-one-arm`** — this change's own directory, which quotes both words heavily and is
+  *a live document until `mf-release` archives it*. That is the same position `0021` was in while it
+  named the sorter, and it resolves itself the same way. Do not scrub it.
   **The test is *does this sentence claim something untrue of the running system*, not *does the word
   appear*** (D28). Every remaining hit must be a historical record — `openspec/changes/archive/`,
   `CHANGELOG.md`'s released sections, `ui/design/`, `CLAUDE.md`'s own filename, or a
