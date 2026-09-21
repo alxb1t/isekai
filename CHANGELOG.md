@@ -155,6 +155,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the overlay's behaviour are verified by the operator in a named human phase, and a green gate on
   this phase is **not** evidence they work (design.md D10).
 
+- **The acceptance passed, on eight fresh photographs.** `caption` → `sheet` → `ui` → approve on
+  `summon-open-v1`, all eight approved. **Measured, with no pass mark set** (design.md D2):
+
+  | | |
+  |---|---|
+  | WD14 offered | 309 tags · 38.6/photo |
+  | the router placed | **226 · 73%** |
+  | of those, survived review | **204 · 90%** |
+  | approved | 225 · 28.1/photo, of which **21 typed by hand** · 2.6/photo |
+
+  For the figures this change was cut against: Qwen supplied 33.5% of the approved sheet at **56.3%**
+  precision and **6.5 deletions** a photograph. The router is at **90%** and **2.6**. There is no
+  like-for-like baseline — D2 retired it as circular — but both numbers clear the arm it replaced.
+- **The operator's verdict, on the three sub-claims.** ① *the router* — "the tags land in the right
+  field, 1–2 edits per sheet." ② *the cheatsheet* — "works well and helps indeed"; `Option+Space`,
+  `Option+F`, the filter and the focus round-trip all behave, **and none of them is proven by any check
+  in this repository** (design.md D10). ③ *coverage* — recorded above, for v0.22 to read.
+- **The eight were rendered on a pod, outside the change's phases and at the operator's explicit
+  request.** `tasks.md` marks no phase ⚠️ GPU and phase 9 requires no render; this was an operator
+  session, recorded here so *"money: zero, every phase"* stays true of the **phases**. 21m36s on an
+  RTX PRO 4500 Blackwell, ≈$0.30, all eight downloaded before teardown, `infra/down.sh` run and the
+  RunPod MCP confirming `pods: []`. **`no bra` and `no pants` rendered as intended** — the failure
+  `CLAUDE.md` records for absence clauses did not reproduce, which is the first live evidence for
+  design.md D24's claim that deleting the guard was a repair.
+
 ### Changed
 
 - **The sheet comes from the tagger.** `isekai sheet` reads `<flow>/wd14/` instead of

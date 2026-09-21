@@ -10,7 +10,7 @@
 - [x] 6 — The documents this version makes false
 - [x] 7 — `/api/fields`, the cheatsheet overlay, and the two keystrokes
 - [x] 8 — ⚠️ **HUMAN · FREE** — author the remaining groups and prune the excluded list
-- [ ] 9 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
+- [x] 9 — ⚠️ **HUMAN · FREE** — the acceptance, on fresh photographs
 
 ## The per-phase ritual
 
