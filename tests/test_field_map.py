@@ -276,3 +276,114 @@ def test_the_committed_table_covers_every_declared_criterion() -> None:
 
     assert len(declared) == 21
     assert set(document["fields"]) == declared
+
+
+# The seven seeds `notes/v0.19_improvements/ui.md:575` records for hair
+# silhouette -- the only seed list that exists on disk anywhere, and the version's
+# one verifiable number. `hime_cut` is ONE seed: splitting it yields a bare `cut`
+# that pulls in the whole `cutout` family, a 32-tag error.
+SEVEN = ("ponytail", "braid", "bun", "bangs", "twintails", "updo", "hime cut")
+
+# The six the record's substring route adds and the matcher's rule does not.
+# Every one is junk, and every one comes from the seed `bun`.
+BUNNIES = (
+    "playboy bunny",
+    "reverse bunnysuit",
+    "nontraditional playboy bunny",
+    "setsubun",
+    "male playboy bunny",
+    "bunny day",
+)
+
+
+@pytest.fixture
+def provisioned() -> Vocabulary:
+    """Return the provisioned vocabulary, or skip: the group sizes are its own."""
+    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
+    from isekai.shared.vocabulary import load as load_vocabulary
+
+    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
+        pytest.skip("the vocabulary is not provisioned in this environment")
+    return load_vocabulary()
+
+
+@pytest.mark.spec_exempt("structural: the authoring script's matcher, not a scenario")
+def test_the_seven_recorded_seeds_reach_fifty_seven_beyond_the_suffix_group(
+    provisioned: Vocabulary,
+) -> None:
+    from derive_field_map import by_suffix, expand
+
+    hair = by_suffix("hair", provisioned)
+    reached = expand(SEVEN, provisioned)
+    substring = {
+        tag for tag in provisioned.counts if any(seed in tag for seed in SEVEN)
+    }
+
+    assert len(hair) == 103
+    assert len(reached) == 59
+    assert len(reached - hair) == 57
+
+    # The record's own route is substring, which 2.2's rule forbids. The whole
+    # difference is the six bunnies, and `\bbun\b` matches none of them.
+    assert len(substring - hair) == 63
+    assert sorted((substring - reached) - hair) == sorted(BUNNIES)
+    assert reached <= substring
+
+
+@pytest.mark.spec_exempt("structural: the authoring script's matcher, not a scenario")
+def test_a_bare_word_boundary_loses_the_plurals_the_inflections_keep(
+    provisioned: Vocabulary,
+) -> None:
+    import re
+
+    from derive_field_map import expand
+
+    bare = {
+        tag
+        for tag in provisioned.counts
+        if re.search(r"\b(?:" + "|".join(SEVEN) + r")\b", tag)
+    }
+    reached = expand(SEVEN, provisioned)
+
+    assert len(bare) == 51
+    assert sorted(reached - bare) == [
+        "braided hair rings",
+        "braiding hair",
+        "low twin braids",
+        "low-braided long hair",
+        "multiple braids",
+        "side braids",
+        "tri braids",
+        "twin braids",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: the committed table against the operator's runs")
+def test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in(
+    provisioned: Vocabulary,
+) -> None:
+    import json as json_module
+    from collections import defaultdict
+
+    from derive_field_map import APPROVED
+
+    approved = sorted(Path().glob(APPROVED))
+    if not approved:
+        pytest.skip("the v0.20 runs are not on disk in this environment")
+
+    filed: dict[str, set[str]] = defaultdict(set)
+    for path in approved:
+        for field, tags in json_module.loads(path.read_text())["fields"].items():
+            for tag in tags:
+                filed[tag].add(field)
+
+    field_map = load(provisioned)
+    unreachable = sorted(
+        (tag, field)
+        for tag, fields in filed.items()
+        for field in fields
+        if tag not in field_map.group(field)
+    )
+
+    assert len(filed) == 113
+    assert unreachable == []

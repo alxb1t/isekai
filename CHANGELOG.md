@@ -73,6 +73,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   operator's own sheets prove the split separates cleanly — `brown hair ×5`, `blonde hair ×2`,
   `black hair` against `long hair ×7`, `wavy hair ×6`, `straight hair ×2`, `medium hair` (design.md D16).
 
+- **`scripts/derive_field_map.py` — the authoring aid, stdlib and offline.** The route the roadmap
+  credited to Danbooru's `search[name_matches]` wildcard needs no Danbooru at all: **a wildcard
+  intersected with the pinned vocabulary *is* a match against the pinned vocabulary**, and the 240
+  candidates the API would return are the 74% that get thrown away (design.md D15). The script reads
+  `models/wd14/selected_tags.csv`, expands a seed list per criterion, resolves one primary per tag and
+  rewrites the table; `--report` prints what every seed pulled in, so the operator's pruning pass sees
+  the junk rather than inheriting it. Re-running it leaves the file byte-identical.
+- **Matching is word-boundary against a stem and its inflections, not `in` and not the bare boundary.**
+  Substring is the defect the roadmap flagged — `scar` matches `scarf`, and `\bscar\b` takes 44 matches
+  to 15. But the roadmap's own remedy introduces a second one: `\bbraid\b` alone loses `twin braids`
+  153,036 and seven more. And plurals alone leave **12 of the operator's 113 approved tags unreachable**
+  — `pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift` — so `-s/-es/-ing/-ed`,
+  the drop-`e` case and consonant doubling are all handled and **seeds are written as stems**.
+- **The record's one verifiable number reproduces, and it is 57 rather than 63.** The seven seeds at
+  `notes/v0.19_improvements/ui.md:575` reach **59** tags, **57** of them beyond the 103-tag suffix
+  group. 63 is the *substring* number, and the whole difference is **six tags, every one junk**:
+  `playboy bunny` 82,752 · `reverse bunnysuit` · `nontraditional playboy bunny` · `setsubun` ·
+  `male playboy bunny` · `bunny day`, all from the seed `bun`, and `\bbun\b` matches none of them. All
+  three figures — 59, 57 and the six — are asserted so a later change to the matcher cannot move them
+  silently.
+- **Seven criteria are seeded, and they are larger than the brief said.** Measured against the pinned
+  8,106 from the stem lists alone: `clothes` **1,411** · `pose` **788** · `background` **235** ·
+  `body_shape` **196** · `expression` **132** · `framing` **40** · `gaze` **23**. The brief's
+  *"`clothes` is 900 tags from 20 seeds"* and *"63 seeds reach 2,126 tags"* both understate it — seven
+  criteria alone exceed the figure claimed for twenty-one. That makes design.md D7's decision to cut
+  nothing **more** consequential and does not change it: a `>10,000` cutoff still hides 10 of the 113
+  tags the operator approved.
+- **The dead briefing is harvested before it stops being read.** `flows/conjure-v1/sheet.briefing.md`
+  names **41 example tags across ten criteria** — `framing` 8, `bangs` 6, `count` 4, `lips` 4,
+  `facial_hair` 4, `gaze` 4, `skin_ancestry` 3, `eyebrows` 3, `nose` 3, `eyelashes` 2 — and it is the
+  only authored group content that exists anywhere in either tree. This version carries that file dead
+  (design.md D22), so the content is taken out of it now.
+- **One primary per tag, decided in three steps.** The operator's own filings decide first, because a
+  tag he approved and then rendered is render-tested and no ordering is; they settle **22** of the
+  **301** collisions. A declared precedence order — `gaze > clothes > pose > body_shape > expression >
+  framing > background`, then the suffix criteria — settles the rest. It is a tie-break and not a claim
+  to be right: eleven of the seventeen filed collisions is the ceiling for any of the 5,040 orderings of
+  the seven and 210 of them reach it. **Phase 8 overrides individual tags.**
+- **Every criterion that loses a tag keeps it under `also`.** So `navel` still appears under `clothes`,
+  `pose` and `body_shape` in the cheatsheet and routes to exactly one, and both hair criteria browse all
+  103 while only one routes each tag. Measured against the ten approved sheets on disk: **all 113
+  distinct approved tags are reachable in every field they were approved in, 0 unreachable** — asserted
+  as a test rather than claimed.
+
 ## [0.20.0] - 2026-09-21
 
 ### Added
