@@ -603,6 +603,49 @@ and the cross-capability spec damage (D26) are covered above. Three more are cod
   (`os.environ` appears zero times in `isekai/`), no `--sorter` flag was ever added, and
   **`DEFAULT_IMPLEMENTATION` survives** because the readers and hosted taggers still resolve through it.
 
+
+### D30 · The seven seed lists were authored and verified at the cut, and three of the brief's sizings were wrong
+
+**Added after the cut, on the question of whether `mf-build` could run this confidently.** Sub-task 2.4
+originally said *"seed the seven criteria"* and named no seeds, which is ~200 words of taste inside a
+builder phase and a halt under *a task ambiguous enough that two readings give different work*. So the
+lists were authored and then measured. Three findings came out of measuring them:
+
+**① Plurals are not enough — the matcher needs `-s/-es/-ing/-ed`.** D18 showed `\bbraid\b` losing
+`twin braids`; with plural handling alone, **12 of the operator's 113 approved tags are unreachable** —
+`pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift`. With stem morphology and the
+`also`-group rule below, it is **0 of 113**. Seeds are therefore written as **stems**.
+
+**② The seven groups are 2,829 tags and `clothes` alone is 1,411.** The brief said *"`clothes` is 900 tags
+from 20 seeds"* and *"63 seeds reach 2,126 tags — 26% of the whole vocabulary"*. **Seven criteria exceed
+the figure claimed for twenty-one.** Measured against the pinned 8,106: `clothes` 1,411 · `pose` 791 ·
+`background` 235 · `body_shape` 196 · `expression` 132 · `framing` 40 · `gaze` 24. This makes D7's
+decision to cut nothing **more** consequential and does not change it: a `>10,000` cutoff still hides 10
+of the 113 tags he approved.
+
+**③ 265 tags are matched by more than one of the seven, and no precedence order is right.** Hand-deciding
+265 primaries inside a builder phase is not a build, so the rule is ordered: **the operator's own approved
+sheets decide first** — 17 of the 265 — then a declared precedence order settles the remaining 248, then
+phase 8 overrides individual tags. **Step 1 leads because no ordering reproduces his filing:** he puts
+`bare shoulders` in `clothes` (4×) where the seeds offer `body_shape` or `clothes`, `open mouth` in
+`expression` where they offer `clothes` or `expression`, `clothes lift` in `clothes` where they offer
+`clothes` or `pose`, and `navel` in **all three** of `pose`, `clothes` and `body_shape`. A tag he approved
+and then rendered is render-tested, which is the argument `ui.md` § ⑥ already makes for mining his
+corrections — applied here to the one decision the table cannot derive.
+
+**The losing criteria keep the tag in `also`**, which is also why eight of the twelve originally-unreachable
+approved tags need no seed: `collarbone`, `thighs`, `ass` and `breasts out` reach `pose` through `also`,
+and `standing` reaches `framing` the same way.
+
+**Two further defects in the cut's own `tasks.md`, found in the same pass and fixed:** 6.4 said to correct
+`CLAUDE.md`'s capability count to **twelve**, which contradicts that paragraph's own rule — the count is
+the number on disk, which is **eleven**, and twelve arrives when `mf-release` archives this change. And
+1.3/1.4 left it ambiguous whether the four checks are raised by the loader or only asserted by tests; the
+spec scenarios say *"loading it is refused"*, so **the loader raises and the tests prove it**. `shared/`
+may import `foundation/` for the coverage check — `shared/fields.py:17` already imports `Schema` from
+`foundation.flow`, so it is not a new edge. And `revision` is the table's **own monotonic integer**,
+declared in the file, because an authored artifact has no upstream revision to name.
+
 ---
 
 ## Risks / Trade-offs

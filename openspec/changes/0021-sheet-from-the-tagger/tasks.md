@@ -71,7 +71,19 @@ four ways it can be wrong, and the suite proves all four against the provisioned
 - [ ] 1.3 `isekai/shared/field_map.py` — the loader, beside `vocabulary.py` because both `pipeline/` and
   `interface/` import from `shared/`. It exposes the table, the derived `field → tags` grouping, and
   `primary_of(tag) -> str | None`. **The reverse index is computed, never stored.**
-- [ ] 1.4 The four checks, each a test with a `spec` binding:
+
+  **`revision` is the table's own integer, declared in the file and bumped by whoever edits it.** Unlike
+  `scripts/vocabulary.json`'s entries there is no upstream revision to name — the table is authored here —
+  so `revision` is a monotonic counter and `sha256` is the digest of the file's bytes. **Phase 1 ships
+  `revision: 1`; phase 2 bumps it to 2; phase 8 bumps it again.** That is what makes
+  `sheet:output:sheet-names-its-field-map` worth recording: two sheets routed by different revisions are
+  distinguishable from the record alone.
+- [ ] 1.4 The four checks. **All four are raised by the loader, and each is proven by a test with a `spec`
+  binding** — the spec scenarios say *"loading it is refused"*, so a check that lived only in a test would
+  not implement them. `shared/` may import `foundation/` for this: `shared/fields.py:17` already imports
+  `Schema` from `foundation.flow`, so reading the tracked flows' schemas for the coverage check is
+  layering-legal and not a new edge. **Take the field list from the flows' `Schema` objects, not from a
+  constant** — a hardcoded 21 would pass while a flow's schema moved underneath it.
   - every tag resolves in the pinned vocabulary → `field-map:integrity:a-tag-outside-the-vocabulary-is-refused`
   - every tag has exactly one primary → `field-map:membership:every-tag-has-exactly-one-primary`
   - the excluded list and the union of every group are disjoint → `field-map:excluded:no-tag-is-in-both`
@@ -109,10 +121,81 @@ pruning sees the junk rather than inheriting it.
   `male playboy bunny`, `bunny day` and `setsubun`**, all from the seed `bun`. The script must print them
   so they are pruned rather than shipped.
 - [ ] 2.4 Seed the seven criteria the measurement says carry the weight. **`clothes`, `pose` and
-  `body_shape` hold 102 of the 200 approved tags between them and none declares a suffix.** Note from the
-  ground truth that `clothes` is **not** only garments — `cleavage`, `midriff`, `navel`, `bare shoulders`,
-  `underwear only`, `no bra`, `no panties` and `clothes lift` are all in the operator's approved `clothes`,
-  so state-of-dress and exposure need seeds of their own.
+  `body_shape` hold 102 of the 200 approved tags between them and none declares a suffix.** **Use the
+  lists below verbatim** — they were authored at the cut and **verified: every one of the operator's 113
+  approved tags is reachable**, 0 unreachable. Do not invent a different set; 2.7's report is what phase 8
+  prunes, and a builder-invented list makes that pass unreviewable against the cut.
+
+  **The matcher needs `-s/-es/-ing/-ed`, not only plurals.** `design.md` D18 already showed `\bbraid\b`
+  losing `twin braids`; measured again here, plurals alone leave **12 of 113 approved tags unreachable** —
+  `pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift`. Handle the drop-`e` and
+  final-consonant-doubling cases (`expose` → `exposing`, `stop` → `stopping`). **Seeds are therefore
+  written as stems** — `stand`, `expose`, `look` — not as inflected words.
+
+  **`clothes`** — `shirt blouse dress skirt shorts pants trousers jeans sweater cardigan jacket coat
+  hoodie vest robe kimono uniform swimsuit bikini leotard bodysuit lingerie bra panties underwear thong
+  pantyhose thighhighs stockings socks garter footwear shoes boots heels sandals gloves sleeves collar
+  belt apron cape corset camisole top tank crop fishnet lace strap hem` · and the exposure and
+  state-of-dress half, which a garment-only list misses entirely: `bare cleavage midriff navel expose
+  lift pull open unbutton unzip see-through sheer torn wet shoulder` *(singular `shoulder`, so
+  `off shoulder` is reached as well as `bare shoulders`)*
+
+  **`pose`** — `stand sit kneel lie lying squat crouch lean walk run jump stretch arm hand leg knee foot
+  toes finger head tilt bend cross spread raise hold hug touch cover support bed side back front lift
+  pull` · plus the explicit tags no safe seed reaches: `from behind`, `from side`, `from above`,
+  `from below`
+
+  **`body_shape`** — `breasts hips waist thighs stomach abs shoulder collarbone navel nipples ass butt
+  muscular slim curvy plump petite build body`
+
+  **`expression`** — `smile grin smirk frown pout blush laugh cry tears sad angry surprised embarrass
+  serious expressionless mouth lips tongue teeth lick wink sweat sigh yawn closed`
+
+  **`gaze`** — `look gaze glance stare` · plus `eye contact`
+
+  **`framing`** — `shot portrait close-up crop focus selfie view angle foreshortening` · plus
+  `out of frame`, `upper body`, `full body`, `lower body`
+
+  **`background`** — `background indoors outdoors sky cloud sun moon night day forest beach ocean city
+  cityscape street room bedroom bathroom kitchen office wall window door floor ceiling bed pillow curtain
+  chair table tree grass water rain snow station building interior exterior`
+
+  **The script takes two inputs per criterion, not one:** a stem list it expands, and an optional list of
+  explicit tags added verbatim. A tag reachable only by a stem that would pull in hundreds — `from`, `no`,
+  `body` — belongs in the second list.
+
+- [ ] 2.4a **The seven groups are 2,829 tags and `clothes` alone is 1,411 — both larger than the brief
+  said.** Measured at the cut against the pinned 8,106: `clothes` **1,411** · `pose` **791** ·
+  `background` **235** · `body_shape` **196** · `expression` **132** · `framing` **40** · `gaze` **24**.
+  The brief's *"`clothes` is 900 tags from 20 seeds"* and *"63 seeds reach 2,126 tags"* both **understate
+  it** — seven criteria alone exceed the figure claimed for twenty-one. **This makes `design.md` D7's
+  no-cut decision more consequential, not less**, and it is the right call anyway: a `>10,000` cutoff
+  hides 10 of the 113 tags the operator approved. Record the real sizes in the phase's `CHANGELOG` entry.
+
+- [ ] 2.4b **265 tags are matched by more than one of the seven, and no single precedence order is right.**
+  Each needs one primary (`design.md` D4), and hand-deciding 265 inside a builder phase is not a build.
+  **The rule, in this order:**
+  1. **If the operator has filed the tag in an approved sheet, his filing decides its primary** — the
+     field he used most often, ties broken by step 2. That covers **17** of the 265, and it is the
+     strongest signal available: a tag he approved and then rendered is render-tested, which no ordering
+     is. Read `.data/v0.20/runs/*/summon-open-v1/review/*.approved.json`; the script is operator tooling
+     and its output is committed, so reading a gitignored directory is fine.
+  2. **Otherwise a declared precedence order over the 21 criteria decides**, written once in
+     `derive_field_map.py` and printed in the report. That settles the remaining **248** mechanically.
+  3. **Phase 8 overrides individual tags.** The override list lives in the table, not in the script.
+
+  **Do not try to find an order that matches the ground truth — there isn't one.** Measured: he files
+  `bare shoulders` under `clothes` (4×) while the seeds say `body_shape` or `clothes`; `open mouth` under
+  `expression` while the seeds say `clothes` or `expression`; `clothes lift` under `clothes` while the
+  seeds say `clothes` or `pose`; and `navel` under all three of `pose`, `clothes` and `body_shape`. **That
+  is why step 1 exists and why it comes first.**
+
+  **Every tag that loses a collision goes into the winning criterion's `primary` and the losing ones'
+  `also`** — so `navel` still appears under `clothes`, `pose` and `body_shape` in the cheatsheet, and
+  routes to exactly one. This is also why eight of the twelve originally-unreachable approved tags needed
+  no seed of their own: `collarbone`, `thighs`, `ass` and `breasts out` reach `pose` through `also`, and
+  `standing` reaches `framing` the same way.
+
 - [ ] 2.5 **Harvest `flows/*/sheet.briefing.md`.** It names roughly **40 example tags across 10 of the 21
   criteria** — `bangs` 6, `framing` 8, `gaze` 4, `lips` 4, `facial_hair` 4, `count` 4, `nose` 3,
   `eyebrows` 3, `skin_ancestry` 3, `eyelashes` 2 — and it is the **only authored group content that exists
@@ -126,7 +209,10 @@ pruning sees the junk rather than inheriting it.
   uv run python scripts/derive_field_map.py --report
   uv run pytest tests/test_field_map.py -v
   ```
-  Paste both, including the per-seed expansion report.
+  Paste both, including the per-seed expansion report. **One of the tests must assert the reachability
+  claim in 2.4** — every tag in every approved sheet on disk resolves into the group of the field it was
+  approved in, whether as a `primary` or an `also`. It was 0 unreachable at the cut; if it is not 0 after
+  the build, the seed lists moved and that is a halt.
 
 ---
 
@@ -287,9 +373,14 @@ spelling refusal on the approval path is unchanged.
 - [ ] 6.3 **`CLAUDE.md:263`** — *"prose first because it is the only one anything downstream reads"* is false;
   WD14 is. **The ordering itself does not change** — prose → WD14 → JoyCaption stands, and the failure
   isolation it buys is unchanged.
-- [ ] 6.4 **`CLAUDE.md:134`** — *"ten capabilities today"* is already stale at eleven and this version makes
-  it **twelve**. Correct the sentence and the list, and keep the instruction to count `openspec/specs/*/`
-  rather than trust it.
+- [ ] 6.4 **`CLAUDE.md:134`** — *"ten capabilities today"* is stale: `ls -d openspec/specs/*/` returns
+  **eleven**, because `0020` is archived and `tagging` is in the living spec. **Correct it to eleven, not
+  twelve.** That same paragraph states the rule that makes twelve wrong here — *"a capability enters and
+  leaves the living spec only when a change is archived, which is `mf-release`'s act and never the
+  builder's, so the number here is always the count on disk and never the count a pending change
+  implies."* So: list the eleven, and replace the trailing v0.20 clause with its v0.21 equivalent — **this
+  change's delta adds `field-map` and makes it twelve, and until this change is archived it is eleven.**
+  Keep the instruction to count `openspec/specs/*/` rather than trust the sentence.
 - [ ] 6.5 **`CLAUDE.md:88-90`** — the call-graph sentence, now that `caption.py` is the sole `pipeline/`
   importer of `boundary/claude_cli.py`.
 - [ ] 6.6 **`CHANGELOG.md:771-776`, inside `[0.18.0]`** — it claims a suffix-anchored `Space` picker that
