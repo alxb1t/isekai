@@ -54,6 +54,7 @@ from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import caption_tags, caption_wd14
+from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
 
 # One line of prose per verb, used for both the subcommand list and its own help,
@@ -352,6 +353,7 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     parsed: list[Vocabulary] = []
+    routed: list[FieldMap] = []
     opened: list[LocalTagger] = []
 
     def vocabulary() -> Vocabulary:
@@ -359,6 +361,17 @@ def _per_item(
         if not parsed:
             parsed.append(wired.vocabulary())
         return parsed[0]
+
+    def field_map() -> FieldMap:
+        """Return this invocation's field map, reading it at most once.
+
+        Memoised beside the vocabulary and for its reason: the table is held
+        against the vocabulary at load, so reading it per photograph would
+        re-run four whole-table checks for every input in a batch.
+        """
+        if not routed:
+            routed.append(wired.field_map())
+        return routed[0]
 
     def tagger(flow: Flow) -> Callable[[], LocalTagger]:
         """Return a thunk that opens this invocation's local tagger, once.
@@ -440,7 +453,6 @@ def _per_item(
                     )
         elif verb == "sheet":
             for name, flow in flows.items():
-                sorter = _seam(wired.sorter, "sorter", "fills the sheet")(flow)
                 _say(
                     wired,
                     run,
@@ -448,10 +460,9 @@ def _per_item(
                     sheet(
                         run,
                         name,
-                        sorter,
                         flow.schema,
                         vocabulary(),
-                        briefing_path=flow.sheet_briefing_path,
+                        field_map(),
                         new_version=new_version,
                     ),
                 )

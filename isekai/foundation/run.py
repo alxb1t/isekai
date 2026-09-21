@@ -130,7 +130,7 @@ Kind = Literal["transient", "permanent"]
 #
 # The two taggers are split on the same axis rather than sharing a number.
 # `tags` is a hosted model over HTTP, so it is flaky in exactly the way `caption`
-# and `sheet` are and gets their three. `wd14` is a local pass over a
+# is and gets its three. `wd14` is a local pass over a
 # digest-verified graph, and what can still fail there is **this photograph's own
 # bytes** -- a header no decoder can read. That is permanent by construction, so
 # one attempt is the whole budget, exactly as `assemble` and `render` are one.
@@ -141,6 +141,11 @@ Kind = Literal["transient", "permanent"]
 # photograph, so the tagger is opened before the stage's `try` and refuses the
 # batch once instead of writing one error record per input for a single fix.
 #
+# **`sheet` is one for `wd14`'s reason.** It reached a hosted model once and had
+# three; it is now a dictionary lookup over an artifact already on disk, so there
+# is no transient failure left for a second attempt to catch -- which is exactly
+# what `"wd14": 1` above already records for the other local producer.
+#
 # A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
 # below is a bare lookup, and `across()` and `main()` both catch only `Refusal`
 # -- so an unlisted stage name escapes as a raw traceback in a package where
@@ -149,7 +154,7 @@ BUDGETS: Mapping[str, int] = {
     "caption": 3,
     "wd14": 1,
     "tags": 3,
-    "sheet": 3,
+    "sheet": 1,
     "assemble": 1,
     "render": 1,
 }

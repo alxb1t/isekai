@@ -48,17 +48,14 @@ from isekai.boundary.claude_cli import (
     BINARY,
     CliFailure,
     Runner,
-    briefing_text,
-    instructions_record,
     invoke,
-    refusal_for,
     spawn,
 )
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    CAPTIONS,
     SHEETS,
+    WD14,
     Run,
     artifact_name,
     check_budget,
@@ -66,9 +63,10 @@ from isekai.foundation.run import (
     latest,
     next_version,
     read_artifact,
-    record_failure,
     write_json,
 )
+from isekai.shared.field_map import FieldMap, route
+from isekai.shared.field_map import identity as field_map_identity
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary, map_phrase
 from isekai.shared.vocabulary import identity as vocabulary_identity
@@ -102,6 +100,12 @@ def fill(
 # The name this stage's budget is keyed by. Its directory inside a run is the
 # run's to name, not the stage's -- `run.SHEETS`.
 STAGE = "sheet"
+
+# What the sheet records as having filled it. The string the *tag* artifact's
+# producer carries, because that is what the sheet's content now comes from --
+# written out rather than imported from `tagging.py`, since no stage imports
+# another.
+TAGGER = "wd14"
 
 
 @dataclass(frozen=True)
@@ -331,20 +335,26 @@ def answers_from(structured: object, text: str, schema: Schema) -> dict[str, lis
 def sheet(
     run: Run,
     flow: str,
-    sorter: Sorter,
     schema: Schema,
     vocabulary: Vocabulary,
+    field_map: FieldMap,
     *,
-    briefing_path: Path,
     new_version: bool = False,
 ) -> Path | None:
-    """Sort this flow's caption into a sheet, under that flow.
+    """Route this flow's tag list into a sheet, under that flow.
 
-    **The fill itself is told nothing about flows.** The sorter is handed the
-    prose, the schema and the briefing, and nothing else, so the same code serves
-    every flow without learning that flows exist; `flow` decides only which
-    directory is read and written. A flow shares nothing, so the caption read here
-    is the one produced under this flow's own instructions (design.md D5).
+    **The fill is told nothing about flows and reaches nothing at all.** It is
+    handed a tag list, the schema, the vocabulary and the table, so the same code
+    serves every flow without learning that flows exist; `flow` decides only which
+    directory is read and written. A flow shares nothing, so the tag list read
+    here is the one produced under this flow's own directory (design.md D5).
+
+    **An absent tag list is a refusal, and that is the one rule this version
+    narrows.** A sheet with every field empty is legal and therefore silent, so
+    writing one when the tagger never ran would hide the only thing the operator
+    needs told. The rule that a missing tag artifact is an absent aid still holds
+    for the *hosted* tagger, which contributes nothing to a sheet; it cannot hold
+    for the local one the sheet is filled from (design.md D21).
 
     Returns the artifact's path, or None when this flow already had a sheet.
     """
@@ -352,32 +362,22 @@ def sheet(
     if latest(directory) is not None and not new_version:
         return None
 
-    captions = run.directory(flow, CAPTIONS)
-    source = latest(captions)
+    tagged = run.directory(flow, WD14)
+    source = latest(tagged)
     if source is None:
         raise Refusal(
-            f"{run.id}: there is no caption to sort for {flow}; run "
-            f"`python -m isekai caption --flow {flow}` for this photograph first"
+            f"{run.id}: there is no tag list to fill a sheet for {flow} from; run "
+            f"`python -m isekai caption --flow {flow}` for this photograph first, "
+            f"which writes {flow}/{WD14}/ beside the prose"
         )
 
     check_budget(STAGE, directory, next_version(directory), run.id)
 
-    prose = str(read_artifact(captions / artifact_name(source))["prose"])
-    briefing = briefing_text(briefing_path)
-    try:
-        sorted_answers = sorter.sort(prose, schema, briefing)
-    except CliFailure as failed:
-        record = record_failure(
-            directory,
-            next_version(directory),
-            failed.kind,
-            {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
-        )
-        raise refusal_for(
-            "sorter", run.id, failed, record, f"{flow}/{SHEETS}/", STAGE
-        ) from failed
+    artifact = read_artifact(tagged / artifact_name(source))
+    listed: Any = artifact["tags"]
+    tags = [str(one["tag"]) for one in listed]
 
-    fields = fill(sorted_answers.answers, schema, vocabulary)
+    fields = route(tags, field_map, schema)
     validate(fields, schema, vocabulary)
 
     path = directory / artifact_name(next_version(directory))
@@ -386,15 +386,19 @@ def sheet(
         envelope(
             STAGE,
             {
-                "implementation": sorted_answers.implementation,
-                "models": list(sorted_answers.models),
-                "pinned": sorted_answers.pinned,
-                "briefing": instructions_record(briefing_path),
+                # The producer of the *tags* is the producer of the sheet now, so
+                # the pin it was verified against travels across rather than being
+                # re-derived: these are the digests that session actually opened.
+                "implementation": TAGGER,
+                "models": list(artifact["producer"]["models"]),
+                "pinned": bool(artifact["producer"]["pinned"]),
+                "artifacts": dict(artifact["producer"]["artifacts"]),
                 "from": source,
             },
             {
                 "schema_document": {"name": schema.name},
                 "vocabulary": vocabulary_identity(vocabulary),
+                "field_map": field_map_identity(field_map),
                 "fields": fields,
             },
         ),

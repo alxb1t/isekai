@@ -7,7 +7,7 @@ laptop and a week-long pause are the same event, and the answer to all three is
 the same invocation.
 
 The doubles are what make the second half of the claim checkable. `FakeReader`
-and `FakeSorter` count their calls and `FakeComfyClient` records every
+counts its calls and `FakeComfyClient` records every
 submission, so "not one external call was made" is a number rather than a hope.
 """
 
@@ -26,13 +26,12 @@ from isekai.foundation.run import BUDGETS
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import FakeSorter
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import Always, FakeSession, fake_wd14
+from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
 
 FLOW = "summon-v1"
 
@@ -55,15 +54,6 @@ def wired(tmp_path: Path) -> Wiring:
     """Return a wiring with every external thing replaced by a counting double."""
     return Wiring(
         reader=Always(FakeReader(prose="Brown hair, brown eyes, a collared shirt.")),
-        sorter=Always(
-            FakeSorter(
-                answers={
-                    "hair_colour": ["brown"],
-                    "eye_colour": ["brown"],
-                    "clothes": ["a crisp collared shirt"],
-                }
-            )
-        ),
         tagger=fake_wd14(),
         hosted_tagger=Always(FakeTagger()),
         client=FakeComfyClient(),
@@ -73,6 +63,7 @@ def wired(tmp_path: Path) -> Wiring:
             "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217",
             read_tags(CSV),
         ),
+        field_map=lambda: FIELD_MAP,
         runs_root=tmp_path / "runs",
         rng=random.Random(7),
         out=io.StringIO(),
@@ -100,27 +91,30 @@ def _flags(extra: dict[str, object]) -> list[str]:
     return rendered
 
 
-def _calls(wired: Wiring) -> tuple[int, int, int, int, int]:
+def _calls(wired: Wiring) -> tuple[int, int, int, int]:
     """Return how many times each external double has been reached.
 
-    Five now, not three. **The two taggers are counted separately and both are
+    Four now, not five. **The two taggers are counted separately and both are
     counted**, because they fail differently and one of them is not a network
     call at all: a second pass that re-opened the 467 MB graph would cost ~0.9 s
     per photograph while making no request, so an assertion that only counted
     requests would call that inert.
+
+    **The sorter is gone rather than uncounted.** Stage ② reaches nothing to
+    count -- it reads one artifact and routes it through a committed table -- so
+    its inertness is the `wd14/` directory's, which the snapshot already covers.
     """
-    resolve_reader, resolve_sorter = wired.reader, wired.sorter
+    resolve_reader = wired.reader
     resolve_wd14, resolve_hosted = wired.tagger, wired.hosted_tagger
     client = wired.client
-    assert isinstance(resolve_reader, Always) and isinstance(resolve_sorter, Always)
+    assert isinstance(resolve_reader, Always)
     assert isinstance(resolve_wd14, Always) and isinstance(resolve_hosted, Always)
-    reader, sorter = resolve_reader.double, resolve_sorter.double
+    reader = resolve_reader.double
     local = resolve_wd14.double
     assert isinstance(local, LocalTagger)
     session = local.session
     hosted = resolve_hosted.double
     assert isinstance(reader, FakeReader)
-    assert isinstance(sorter, FakeSorter)
     assert isinstance(session, FakeSession)
     assert isinstance(hosted, FakeTagger)
     assert isinstance(client, FakeComfyClient)
@@ -128,7 +122,6 @@ def _calls(wired: Wiring) -> tuple[int, int, int, int, int]:
         len(reader.calls),
         session.calls,
         len(hosted.calls),
-        len(sorter.calls),
         len(client.submissions),
     )
 
@@ -174,7 +167,7 @@ def test_the_first_pass_actually_produced_something_to_be_inert_about(
     assert any(name.endswith(f"{FLOW}/review/001.approved.json") for name in names)
     assert any(name.endswith(f"{FLOW}/prompts/001.json") for name in names)
     assert any(".png" in name for name in names)
-    assert _calls(wired) == (1, 1, 1, 1, 1)
+    assert _calls(wired) == (1, 1, 1, 1)
 
 
 @pytest.mark.spec("cli:resume:second-pass-is-inert")
@@ -269,13 +262,13 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     bare = open_run(photo, wired.runs_root)
     flow = load_flow(FLOW)
     messages: list[str] = []
-    # `reader` and `sorter` are optional resolvers on `Wiring` now -- optional
-    # because a ③-only front end composes one without either, and resolvers
-    # because the flow decides which implementation runs. Both narrowings below
-    # are assertions about this fixture, not about the code.
-    resolve_reader, resolve_sorter = wired.reader, wired.sorter
-    assert resolve_reader is not None and resolve_sorter is not None
-    reader, sorter = resolve_reader(flow), resolve_sorter(flow)
+    # `reader` is an optional resolver on `Wiring` -- optional because a ③-only
+    # front end composes one without it, and a resolver because the flow decides
+    # which implementation runs. The narrowing below is an assertion about this
+    # fixture, not about the code.
+    resolve_reader = wired.reader
+    assert resolve_reader is not None
+    reader = resolve_reader(flow)
 
     def collect(work: object) -> None:
         try:
@@ -289,7 +282,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
     collect(lambda: read_artifact(_future_artifact(tmp_path)))
     schema = flow.schema
-    collect(lambda: sheet(bare, sorter, schema, wired.vocabulary()))
+    collect(lambda: sheet(bare, schema, wired.vocabulary(), tags=None))
     collect(lambda: review(bare, FLOW))
     collect(lambda: approve(bare, FLOW, schema, wired.vocabulary()))
     collect(lambda: prompt_artifact(bare, flow, schema))

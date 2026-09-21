@@ -9,12 +9,11 @@ from pathlib import Path
 import pytest
 
 from isekai.foundation.flow import Schema, load_flow
-from isekai.foundation.run import Run, open_run
+from isekai.foundation.run import WD14, Run, open_run
 from isekai.interface.run_view import listings, rendered, report
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter
 from isekai.pipeline.tagging import FakeTagger, caption_tags, caption_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
@@ -31,7 +30,7 @@ def run(tmp_path: Path, schema: Schema, vocabulary: Vocabulary) -> Run:
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
     caption(made, FakeReader(implementation="fake-reader", models=("m1", "m2")))
-    sheet(made, FakeSorter(implementation="fake-sorter"), schema, vocabulary)
+    sheet(made, schema, vocabulary)
     review(made, FLOW)
     approve(made, FLOW, schema, vocabulary)
     review(made, FLOW, new_version=True)
@@ -74,7 +73,7 @@ def test_each_artifacts_producer_is_shown(run: Run) -> None:
     assert "fake-reader" in by_name[("captions", FLOW)].producers[1]
     assert "m1+m2" in by_name[("captions", FLOW)].producers[1]
     assert "unpinned" in by_name[("captions", FLOW)].producers[1]
-    assert "fake-sorter" in by_name[("sheets", FLOW)].producers[1]
+    assert "wd14" in by_name[("sheets", FLOW)].producers[1]
     assert "unedited" in by_name[("review", FLOW)].producers[1]
 
 
@@ -165,6 +164,12 @@ def test_show_does_not_refuse_for_a_run_captioned_before_these_stages_existed(
     # An old run simply lacks the two directories, which is the same state as a
     # run whose caption has not been produced. No migration, and nothing to
     # detect (design.md, Migration Plan).
+    #
+    # `wd14/` is removed rather than never written: a sheet cannot be filled
+    # without a tag list now, so the fixture has one -- and a run from before
+    # v0.20 has a sheet and neither list, which is exactly this state on disk.
+    for path in run.directory(FLOW, WD14).iterdir():
+        path.unlink()
     by_name = {(item.stage, item.flow): item for item in listings(run)}
 
     assert by_name[("wd14", FLOW)].versions == []

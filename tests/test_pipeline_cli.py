@@ -22,19 +22,16 @@ from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import (
     DEFAULT_IMPLEMENTATION,
     READERS,
-    SORTERS,
     Wiring,
     reader_for,
-    sorter_for,
     wiring_from,
 )
 from isekai.pipeline.caption import ClaudeReader, FakeReader, OllamaReader
-from isekai.pipeline.sheet import ClaudeSorter, FakeSorter, OllamaSorter
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
-from tests.stages import Always, fake_wd14
+from tests.stages import FIELD_MAP, Always, fake_wd14
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -65,11 +62,11 @@ def _wiring(tmp_path: Path, flows_dir: Path | None = None) -> Wiring:
 
     return Wiring(
         reader=Always(FakeReader()),
-        sorter=Always(FakeSorter(answers={})),
         tagger=fake_wd14(),
         hosted_tagger=Always(FakeTagger()),
         client=None,
         vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, read_tags(CSV)),
+        field_map=lambda: FIELD_MAP,
         runs_root=tmp_path / "runs",
         flows_dir=flows_dir or FLOWS_DIR,
         out=io.StringIO(),
@@ -397,35 +394,21 @@ def test_an_unknown_reader_implementation_refuses_naming_what_this_build_carries
     assert "claude-cli" in message and "ollama" in message
 
 
-@pytest.mark.spec("sheet:selection:unknown-implementation-is-refused")
-def test_an_unknown_sorter_implementation_refuses_naming_what_this_build_carries(
-    tmp_path: Path,
-) -> None:
-    flow = _flow_declaring(tmp_path, implementation="vllm")
-
-    with pytest.raises(Refusal) as refused:
-        sorter_for(flow)
-
-    message = str(refused.value)
-    assert "vllm" in message
-    assert "claude-cli" in message and "ollama" in message
-
-
 @pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
 def test_each_registrys_keys_are_the_strings_the_artifacts_record() -> None:
     """The duplication between the table and the adapter cannot drift.
 
-    The registry's keys and `Reading.implementation` / `Sorting.implementation`
-    are the same strings in two places, and a run whose provenance disagreed with
-    the manifest that asked for it would be silent. `Model`'s own docstring
-    establishes this pattern for the digest it duplicates.
+    The registry's keys and `Reading.implementation` are the same strings in two
+    places, and a run whose provenance disagreed with the manifest that asked for
+    it would be silent. `Model`'s own docstring establishes this pattern for the
+    digest it duplicates.
+
+    **One registry rather than two**: the sheet's seam is gone, so `READERS` is
+    what is left of this property on the reading side.
     """
     assert set(READERS) == {"claude-cli", "ollama"}
-    assert set(SORTERS) == set(READERS)
     assert ClaudeReader().implementation == "claude-cli"
-    assert ClaudeSorter().implementation == "claude-cli"
     assert OllamaReader(model="r").implementation == "ollama"
-    assert OllamaSorter(model="s").implementation == "ollama"
     assert DEFAULT_IMPLEMENTATION in READERS
 
 
@@ -435,7 +418,6 @@ def test_a_flow_declaring_no_block_resolves_to_the_default_implementation() -> N
 
     assert flow.hosted is None
     assert isinstance(reader_for(flow), ClaudeReader)
-    assert isinstance(sorter_for(flow), ClaudeSorter)
 
 
 @pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
@@ -444,10 +426,9 @@ def test_a_flow_declaring_ollama_resolves_to_the_models_its_manifest_names(
 ) -> None:
     flow = _flow_declaring(tmp_path, reader="a-reader", sorter="a-sorter")
 
-    reader, sorter = reader_for(flow), sorter_for(flow)
+    reader = reader_for(flow)
 
     assert isinstance(reader, OllamaReader) and reader.model == "a-reader"
-    assert isinstance(sorter, OllamaSorter) and sorter.model == "a-sorter"
 
 
 @pytest.mark.spec("caption:reachability:the-check-fires-at-first-call")
@@ -469,7 +450,7 @@ def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
 
     wired = wiring_from(runs=tmp_path / "runs")
 
-    assert wired.reader is not None and wired.sorter is not None
+    assert wired.reader is not None
 
 
 @pytest.mark.spec("cli:resolution:uncomposed-seam-refuses-by-name")

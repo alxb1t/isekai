@@ -48,7 +48,6 @@ from isekai.interface.wiring import Wiring, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact, render
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.fakes import FakeComfyClient
@@ -555,7 +554,7 @@ def test_the_rendering_stages_budget_is_one() -> None:
         "caption": 3,
         "wd14": 1,
         "tags": 3,
-        "sheet": 3,
+        "sheet": 1,
         "assemble": 1,
         "render": 1,
     }
@@ -830,7 +829,6 @@ def _carry(
     caption(run, FakeReader(prose="Brown hair, brown eyes."), flow=flow)
     sheet(
         run,
-        FakeSorter(answers={"hair_colour": ["brown"]}),
         schema,
         vocabulary,
         flow=flow,

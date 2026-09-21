@@ -117,6 +117,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   distinct approved tags are reachable in every field they were approved in, 0 unreachable** — asserted
   as a test rather than claimed.
 
+### Changed
+
+- **The sheet comes from the tagger.** `isekai sheet` reads `<flow>/wd14/` instead of
+  `<flow>/captions/` and routes each tag through `field_map.primary_of`. **It reaches nothing** — no
+  model, no network, no free-text cascade — so the class of error the stage used to have is gone
+  rather than guarded: a reader asked for a field structure can invent a tag that merely looks
+  canonical, and it did (`light` and `dark` reached an assembled prompt past every guard), while a
+  tagger whose output layer *is* the vocabulary cannot express a tag outside it. **Prose stays a
+  reading aid** and stops being a machine input, so a failed reader no longer blocks a sheet it does
+  not feed.
+- **The router is a dictionary lookup and it does not call `map_phrase`.** The cascade's first act is
+  not a pass — it is an absence guard, and swept over the whole provisioned vocabulary it drops **37
+  of 8,106 canonical tags before pass 1 runs**, including `no bra` 93,761 and `no panties` 87,258,
+  **both of which are in the operator's own approved sheets**. A router built on it would silently
+  discard tags from the ground truth it is measured against (design.md D24).
+- **An absent `wd14/` is a refusal naming `caption`.** A sheet with every field empty is legal and
+  therefore silent, so writing one when the tagger never ran would hide the one thing the operator
+  needs told. **This narrows `CLAUDE.md`'s rule** that a missing tag artifact is *an absent aid, never
+  a refusal* to the **hosted** tagger, which contributes nothing to a sheet; the local one the sheet
+  is filled from is a prerequisite (design.md D21).
+- **The sheet's producer records what actually filled it.** `implementation: wd14`, `pinned: true`,
+  and **both WD14 digests carried across from the tag artifact** rather than re-derived — those are
+  the bytes that session was verified against. `briefing` goes, because nothing reads a briefing here
+  any more, and `field_map: {name, revision, sha256}` arrives beside `vocabulary`, so two sheets
+  routed by different revisions of the table are distinguishable from the record alone.
+- **`BUDGETS["sheet"]` drops from 3 to 1.** A deterministic router has no transient failure for a
+  second attempt to catch, which is exactly what `"wd14": 1` already records for the other local
+  producer (design.md D29).
+- **The sorter seam is unwired.** `Wiring.sorter`, `SORTERS`, `sorter_for`, `_claude_sorter`,
+  `_ollama_sorter` and the CLI's `_seam(wired.sorter, …)` are gone; `DEFAULT_IMPLEMENTATION` and
+  `_named_by` survive, because the reader and the hosted taggers still resolve through them.
+  `Wiring` gains a `field_map` thunk beside `vocabulary`, memoised per invocation for the same reason:
+  the table is held against the vocabulary at load, so reading it per photograph would re-run four
+  whole-table checks for every input in a batch.
+- **The suite fills a sheet with no double at all**, which is stronger than filling it with one.
+  `tests/stages.py` gains the field map every test routes through and one helper that writes the tag
+  artifact the stage reads, so forty-six call sites lost a `FakeSorter` and gained nothing. Both
+  transports are rigged to explode in the routing test, on `tests/test_isolation.py`'s argument: a
+  router that reached a model is caught rather than trusted not to.
+- **`caption()` and `boundary/wd14.py` are byte-identical in the diff, and no flow is re-pinned** —
+  `git diff main` over both paths and over `flows/` is empty, and `tests/test_flow.py`'s `PINNED`
+  passes untouched. Verified rather than assumed.
+
 ## [0.20.0] - 2026-09-21
 
 ### Added

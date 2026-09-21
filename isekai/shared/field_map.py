@@ -36,7 +36,13 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from isekai.foundation.flow import FLOWS_DIR, SCHEMA_NAME, load_schema, tracked_flows
+from isekai.foundation.flow import (
+    FLOWS_DIR,
+    SCHEMA_NAME,
+    Schema,
+    load_schema,
+    tracked_flows,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.shared.vocabulary import Vocabulary
 
@@ -227,3 +233,29 @@ def load(
             "vocabulary the flows pin"
         )
     return field_map
+
+
+def route(
+    tags: Sequence[str], field_map: FieldMap, schema: Schema
+) -> dict[str, list[str]]:
+    """Place each tag in its primary criterion, dropping what the flow does not ask.
+
+    **It is a dictionary lookup and it reaches nothing.** No model, no network, no
+    free-text cascade -- the tagger's output layer *is* the vocabulary, so the
+    tags arrive canonical and nothing has to be completed, corrected or
+    substituted on the way. That property is what allows the sheet's author to
+    change at all.
+
+    Dropping by declared field is what lets one table serve every flow: a
+    criterion five of twenty-one tags answer exists whether the acting flow asked
+    for it or not, and a tag routed to a criterion the flow does not declare has
+    nowhere legal to go. The tagger's order survives inside each criterion because
+    it is the operator's deletion aid -- a Danbooru hierarchy arrives
+    general-form-first, and the general forms are what he deletes.
+    """
+    routed: dict[str, list[str]] = {name: [] for name in schema.names}
+    for tag in tags:
+        field = field_map.primary_of(tag)
+        if field in routed and tag not in routed[field]:
+            routed[field].append(tag)
+    return routed

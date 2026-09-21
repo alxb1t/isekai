@@ -21,13 +21,11 @@ import pytest
 from isekai.boundary import ollama
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import CAPTIONS, SHEETS, Run, attempts, open_run, versions
-from isekai.interface.wiring import reader_for, sorter_for
+from isekai.foundation.run import CAPTIONS, Run, attempts, open_run, versions
+from isekai.interface.wiring import reader_for
 from isekai.pipeline.caption import OllamaReader, caption
-from isekai.pipeline.sheet import OllamaSorter, sheet
-from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
-from tests.transports import FakeTransport, sorted_answer
+from tests.transports import FakeTransport
 
 REACHED = "Claude was reached"
 
@@ -68,47 +66,41 @@ def _offline[T](resolved: T, transport: ollama.Transport) -> T:
     frozen dataclass captures the default in `__init__`, so a patched module
     attribute is never consulted and the call goes to the real host.
     """
-    if isinstance(resolved, OllamaReader | OllamaSorter):
+    if isinstance(resolved, OllamaReader):
         return replace(resolved, transport=transport)
     return resolved
 
 
-def _stage(flow: Flow, run: Run, vocabulary: Vocabulary, payload: bytes) -> None:
-    """Run stages ① and ② of `flow`, resolving each seam the way the CLI does."""
+def _stage(flow: Flow, run: Run) -> None:
+    """Run stage ① of `flow`, resolving its seam the way the CLI does.
+
+    **Stage ② is no longer part of this proof, and it is not an omission.** It
+    reaches no model on either arm now -- it reads one artifact and routes it
+    through a committed table -- so running it here would prove that a dictionary
+    lookup does not call Claude. The reader is the one seam left that two
+    implementations resolve through, so it is the whole of what this narrows to.
+    """
     caption(
         run,
         flow.id,
         _offline(reader_for(flow), FakeTransport(payload={"response": PROSE})),
         briefing_path=flow.caption_briefing_path,
     )
-    sheet(
-        run,
-        flow.id,
-        _offline(sorter_for(flow), FakeTransport(raw=payload)),
-        flow.schema,
-        vocabulary,
-        briefing_path=flow.sheet_briefing_path,
-    )
 
 
 @pytest.mark.spec("caption:selection:no-path-reaches-another-implementation")
-def test_the_open_flow_captions_and_sorts_without_reaching_claude(
-    sealed: None, run: Run, vocabulary: Vocabulary
-) -> None:
-    """Both stages complete with the Claude transport rigged to explode."""
+def test_the_open_flow_captions_without_reaching_claude(sealed: None, run: Run) -> None:
+    """The stage completes with the Claude transport rigged to explode."""
     flow = load_flow("summon-open-v1")
 
-    _stage(
-        flow, run, vocabulary, sorted_answer(flow.schema, hair_colour=["dark brown"])
-    )
+    _stage(flow, run)
 
     assert versions(run.directory(flow.id, CAPTIONS)) == [1]
-    assert versions(run.directory(flow.id, SHEETS)) == [1]
 
 
 @pytest.mark.spec("caption:selection:no-path-reaches-another-implementation")
 def test_the_same_test_pointed_at_the_incumbent_flow_reaches_claude(
-    sealed: None, run: Run, vocabulary: Vocabulary
+    sealed: None, run: Run
 ) -> None:
     """The falsification, resident rather than performed once by hand.
 
@@ -119,7 +111,7 @@ def test_the_same_test_pointed_at_the_incumbent_flow_reaches_claude(
     flow = load_flow("summon-v1")
 
     with pytest.raises(AssertionError, match=REACHED):
-        _stage(flow, run, vocabulary, b"")
+        _stage(flow, run)
 
 
 @pytest.mark.spec("caption:failure:decline-is-permanent")

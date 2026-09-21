@@ -24,11 +24,10 @@ from isekai.interface.ui.batch import establish
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.sheet import FakeSorter
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
-from tests.stages import caption, sheet
+from tests.stages import FIELD_MAP, caption, sheet
 
 FLOW = "summon-v1"
 
@@ -47,11 +46,11 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
     """Return a ③-only wiring: no reader, no sorter, no transport."""
     return Wiring(
         reader=None,
-        sorter=None,
         tagger=None,
         hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
+        field_map=lambda: FIELD_MAP,
         runs_root=tmp_path / "runs",
         rng=random.Random(0),
         out=io.StringIO(),
@@ -82,7 +81,6 @@ def _input(
     if with_sheet:
         sheet(
             made,
-            FakeSorter(answers={"hair_colour": ["dark brown"]}),
             schema,
             vocabulary,
         )

@@ -29,13 +29,18 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from isekai.foundation.flow import Schema  # noqa: E402
-from isekai.foundation.run import REVIEW, Run, open_run, read_artifact  # noqa: E402
+from isekai.foundation.run import (  # noqa: E402
+    REVIEW,
+    WD14,
+    Run,
+    open_run,
+    read_artifact,
+)
 from isekai.interface.ui.app import RARE_BELOW, create_app  # noqa: E402
 from isekai.interface.ui.batch import establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.review import approve, review  # noqa: E402
-from isekai.pipeline.sheet import FakeSorter  # noqa: E402
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
     caption_tags,
@@ -44,7 +49,7 @@ from isekai.pipeline.tagging import (  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import caption, fake_tagger, sheet  # noqa: E402
+from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-v1"
 
@@ -54,11 +59,11 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
     """Return a ③-only wiring: no reader, no sorter, no transport."""
     return Wiring(
         reader=None,
-        sorter=None,
         tagger=None,
         hosted_tagger=None,
         client=None,
         vocabulary=lambda: vocabulary,
+        field_map=lambda: FIELD_MAP,
         runs_root=tmp_path / "runs",
         rng=random.Random(0),
         out=io.StringIO(),
@@ -75,11 +80,16 @@ def made(wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary) 
     caption(run, FakeReader(prose="Dark brown hair, brown eyes."))
     sheet(
         run,
-        FakeSorter(answers={"hair_colour": ["dark brown"], "eye_colour": ["brown"]}),
         schema,
         vocabulary,
     )
     return run
+
+
+def _clear_wd14(run: Run) -> None:
+    """Remove the tag list `stages.sheet` wrote, leaving the sheet in place."""
+    for path in run.directory(FLOW, WD14).iterdir():
+        path.unlink()
 
 
 def _client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
@@ -273,6 +283,10 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
 def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
+    # The sheet the `made` fixture filled needed a tag list, so one is already on
+    # disk; this test is about what the *real* local tagger writes, so it replaces
+    # it rather than writing a second version beside it.
+    _clear_wd14(made)
     caption_wd14(made, FLOW, fake_tagger)
     caption_tags(
         made,
@@ -342,9 +356,13 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
 def test_an_input_with_neither_artifact_carries_null_and_still_serves(
     client: TestClient, made: Run
 ) -> None:
-    # The `made` fixture captions and fills a sheet and tags nothing, which is
-    # exactly a run captioned before v0.20. Both are null, the surface answers
-    # 200, and nothing anywhere is a refusal (design.md D20).
+    # A run whose sheet was filled before v0.20 and whose tag lists were never
+    # written. It cannot be produced by filling a sheet now -- the stage refuses
+    # without a tag list -- so it is produced by removing the one the fixture
+    # wrote, which is the state on disk either way. Both are null, the surface
+    # answers 200, and nothing anywhere is a refusal (design.md D20).
+    _clear_wd14(made)
+
     response = client.get(f"/api/inputs/{made.id}")
 
     assert response.status_code == 200

@@ -36,7 +36,6 @@ from isekai.interface import wiring
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.sheet import FakeSorter
 from isekai.pipeline.tagging import (
     SEPARATOR,
     TAG_PROMPT,
@@ -49,7 +48,14 @@ from isekai.pipeline.tagging import (
 )
 from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
-from tests.stages import FAKE_PINS, Always, FakeSession, fake_tagger, fake_wd14
+from tests.stages import (
+    FAKE_PINS,
+    FIELD_MAP,
+    Always,
+    FakeSession,
+    fake_tagger,
+    fake_wd14,
+)
 from tests.transports import FakeTransport
 
 FLOW = "summon-open-v1"
@@ -442,11 +448,11 @@ def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
 
     wired = Wiring(
         reader=Always(FakeReader()),
-        sorter=Always(FakeSorter(answers={})),
         tagger=fake_wd14(),
         hosted_tagger=Always(Failing()),
         client=None,
         vocabulary=lambda: Vocabulary("v", "r" * 40, "d" * 64, {}),
+        field_map=lambda: FIELD_MAP,
         runs_root=tmp_path / "runs",
         out=io.StringIO(),
         err=io.StringIO(),
