@@ -114,12 +114,29 @@ pruning sees the junk rather than inheriting it.
 - [ ] 2.2 Matching is **word-boundary against the seed and its plural**, not `in`. `design.md` D18: `\bscar\b`
   correctly takes 44 matches to 15, but `\bbraid\b` alone loses `twin braids` (153,036), `side braids`,
   `low twin braids`, `multiple braids`, `tri braids` and `braided hair rings`.
-- [ ] 2.3 **Reproduce the record's one verifiable number first, as a test.** The seven seeds at
-  `notes/v0.19_improvements/ui.md:575` — `ponytail braid bun bangs twintails updo hime_cut` — must yield
-  **63** `hair_silhouette` tags not already in the derived 103. That number is real; *"63 usable"* is not —
-  **at least six are `playboy bunny` 82,752, `reverse bunnysuit`, `nontraditional playboy bunny`,
-  `male playboy bunny`, `bunny day` and `setsubun`**, all from the seed `bun`. The script must print them
-  so they are pruned rather than shipped.
+- [ ] 2.3 **Reproduce the record's one verifiable number first, as a test — and expect 57, not 63.**
+  The seven seeds at `notes/v0.19_improvements/ui.md:575` are `ponytail braid bun bangs twintails updo
+  hime_cut`. **`hime_cut` is ONE seed, not two** — splitting it yields a bare `cut` that pulls in the whole
+  `cutout` family, which is a 32-tag error and was made once already while measuring this.
+
+  | matcher | matched | new beyond the derived 103 |
+  |---|---|---|
+  | substring — **the record's route** | 66 | **63** |
+  | word-boundary only | 51 | 51 |
+  | **word-boundary + morphology — 2.2's rule** | **59** | **57** |
+
+  **63 is the substring number and 2.2 forbids substring, so the test asserts 57.** The difference is
+  exactly **six tags, and every one is junk**: `playboy bunny` 82,752 · `reverse bunnysuit` 4,453 ·
+  `nontraditional playboy bunny` 2,537 · `setsubun` 2,302 · `male playboy bunny` 1,902 · `bunny day` 1,064
+  — all from `bun`, and **`\bbun\b` does not match `bunny` or `setsubun`**. Nothing else changes: the rule
+  adds zero tags the record's route had and drops nothing but those six.
+
+  **So the matcher removes the defect the roadmap flagged and could not solve, and keeps the eight tags a
+  bare word boundary would have lost** — `twin braids` 153,036 · `side braids` 6,720 · `low twin braids`
+  5,536 · `braided hair rings` 3,917 · `multiple braids` 1,868 · `low-braided long hair` 1,044 ·
+  `braiding hair` 807 · `tri braids` 805. **Assert all three numbers — 59, 57 and the six-tag
+  difference — so a later change to the matcher cannot move them silently.**
+
 - [ ] 2.4 Seed the seven criteria the measurement says carry the weight. **`clothes`, `pose` and
   `body_shape` hold 102 of the 200 approved tags between them and none declares a suffix.** **Use the
   lists below verbatim** — they were authored at the cut and **verified: every one of the operator's 113
@@ -180,8 +197,19 @@ pruning sees the junk rather than inheriting it.
      strongest signal available: a tag he approved and then rendered is render-tested, which no ordering
      is. Read `.data/v0.20/runs/*/summon-open-v1/review/*.approved.json`; the script is operator tooling
      and its output is committed, so reading a gitignored directory is fine.
-  2. **Otherwise a declared precedence order over the 21 criteria decides**, written once in
-     `derive_field_map.py` and printed in the report. That settles the remaining **248** mechanically.
+  2. **Otherwise this precedence order decides** — written once in `derive_field_map.py`, printed in the
+     report, and **not chosen by the builder**:
+
+     ```
+     gaze > clothes > pose > body_shape > expression > framing > background
+     ```
+
+     It settles the remaining **248** mechanically. **It is a tie-break and not a claim to be right**:
+     measured against the 17 collisions he has actually filed, **11 is the ceiling for any of the 5,040
+     possible orders, and 210 of them reach it** — so this one was picked from the winners rather than
+     reasoned to. Rule 1 overrides all 17 regardless, which is the point; the order only ever decides the
+     248 he has never filed, where there is nothing to be right or wrong against. **The report must print
+     the 248 grouped by which criteria collided**, so phase 8 scans clusters rather than a flat list.
   3. **Phase 8 overrides individual tags.** The override list lives in the table, not in the script.
 
   **Do not try to find an order that matches the ground truth — there isn't one.** Measured: he files
