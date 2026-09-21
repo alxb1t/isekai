@@ -25,9 +25,8 @@ Stdlib only: `csv`, `re`, `pathlib`.
 import csv
 import io
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 
 from isekai.foundation.refusal import Refusal
@@ -56,94 +55,10 @@ _UNDERSCORES = re.compile(r"[_\s]+")
 # A commit sha inside a pinned source URL, which is the vocabulary's revision.
 _REVISION = re.compile(r"/resolve/(?P<revision>[0-9a-f]{40})/")
 
-# A phrase asserting that something is *not* there. A positive prompt carries no
-# negation, so an absence clause passed through becomes a presence instruction --
-# a sheet stating that no tattoos were visible produced a render with tattoos.
-# The clause is dropped whole rather than mapped, because every word left in it
-# ("tattoos") is exactly the word that would be drawn.
-_ABSENCE = re.compile(
-    r"(?:^|\b)(?:no|not|none|never|without|absent|lacks|lacking|free of|"
-    r"nothing|neither|unremarkable|n/a)\b"
-)
-
-# Curated spans: phrases a photograph's prose really carries and this vocabulary
-# really has a tag for, where neither an exact match nor a suffix finds it. Each
-# one is a recorded correction rather than a synonym dictionary's worth of
-# guesses, and each is looked up in the vocabulary before it is emitted, so an
-# entry that goes stale is inert rather than poisonous.
-#
-# **The `camera` entries are the load-bearing ones**, and they are here because
-# the acceptance run caught them. A reader writes "looking at the camera" because
-# that is English; `camera` is itself a canonical tag, meaning *a camera is in the
-# picture*, so the exact-match pass would take it and the render would contain a
-# camera. Naming the photographer's equipment instead of the subject's attribute
-# is worse than an empty field, because what is named is what gets drawn. The
-# briefing teaches the right register and this catches the cases where it does not
-# take -- two defences, because one of them is a document nobody can test.
-CURATED: Mapping[str, str] = {
-    "chin length": "short hair",
-    "shoulder length": "medium hair",
-    "waist length": "very long hair",
-    "buzz cut": "very short hair",
-    "crew cut": "very short hair",
-    "salt and pepper": "grey hair",
-    "greying": "grey hair",
-    "spectacles": "glasses",
-    "eyeglasses": "glasses",
-    "t shirt": "shirt",
-    "button up": "collared shirt",
-    "button down": "collared shirt",
-    "stubble": "facial hair",
-    "head and shoulders": "upper body",
-    "eye contact": "looking at viewer",
-    "looking at the camera": "looking at viewer",
-    "looking at the lens": "looking at viewer",
-    "looking into the lens": "looking at viewer",
-    "straight at the camera": "looking at viewer",
-    "three quarter view": "looking to the side",
-    "profile view": "looking to the side",
-    "one person": "solo",
-    "one woman": "1girl",
-    "one man": "1boy",
-    "a woman": "1girl",
-    "a man": "1boy",
-    "two women": "2girls",
-    "waist up": "cowboy shot",
-    "neutral expression": "expressionless",
-    "slight smile": "light smile",
-}
-
-
-def _spans(curated: Mapping[str, str]) -> tuple[tuple[tuple[str, ...], str], ...]:
-    """Return the curated table as needle words and target tag, longest span first.
-
-    Precomputed rather than rebuilt per phrase: the table is a constant, and
-    normalising and sorting thirty entries for every field of every photograph is
-    setup pretended to be work.
-    """
-    return tuple(
-        sorted(
-            (
-                (tuple(normalise(span).split()), normalise(curated[span]))
-                for span in curated
-            ),
-            key=lambda entry: -len(entry[0]),
-        )
-    )
-
 
 def normalise(phrase: str) -> str:
     """Return the one spelling the rest of this module reads: lowercase, spaced."""
     return _UNDERSCORES.sub(" ", phrase.strip().lower()).strip()
-
-
-# The curated table, precomputed once into the shape the cascade walks.
-CURATED_SPANS = _spans(CURATED)
-
-
-def asserts_absence(phrase: str) -> bool:
-    """Say whether `phrase` claims an attribute is missing rather than present."""
-    return _ABSENCE.search(normalise(phrase)) is not None
 
 
 @dataclass(frozen=True)
@@ -182,50 +97,6 @@ class Vocabulary:
         return sorted(
             (tag for tag in self.counts if needle in tag),
             key=lambda tag: (-self.counts[tag], tag),
-        )
-
-    @cached_property
-    def words(self) -> Mapping[str, frozenset[str]]:
-        """Return each tag's words, for the containment pass to test against."""
-        return {tag: frozenset(tag.split()) for tag in self.counts}
-
-    @cached_property
-    def by_word(self) -> Mapping[str, tuple[str, ...]]:
-        """Return, for each word, every tag containing it.
-
-        The containment pass already requires a candidate to share at least one
-        word with the phrase, so this index is not an approximation of that test
-        -- it is the same test, done by lookup instead of by scanning all 8,106
-        tags per phrase. Built once per vocabulary, beside `words`.
-        """
-        index: dict[str, list[str]] = {}
-        for tag, needed in self.words.items():
-            for word in needed:
-                index.setdefault(word, []).append(tag)
-        return {word: tuple(tags) for word, tags in index.items()}
-
-    def contained_in(
-        self, words: Iterable[str], suffix: Iterable[str] = ()
-    ) -> list[str]:
-        """Return every tag all of whose words appear in `words`, best first.
-
-        *Every* word, with no threshold. Scoring by overlap ratio let a tag win
-        while containing a word the phrase never had; requiring the whole tag
-        removes that class of error without a number anybody has to tune. The
-        longest tag wins, because it is the most specific thing the phrase
-        actually said, and the post count breaks ties.
-
-        `suffix` lets a field's convention complete a bare value here as well as
-        in the pass above -- "wavy" in a hair field can reach "wavy hair". A
-        candidate must still use at least one word the phrase itself carried, so
-        the suffix can complete a value but can never be the whole of one.
-        """
-        phrase = frozenset(words)
-        available = phrase | frozenset(suffix)
-        candidates = {tag for word in phrase for tag in self.by_word.get(word, ())}
-        return sorted(
-            (tag for tag in candidates if self.words[tag] <= available),
-            key=lambda tag: (-len(self.words[tag]), -self.counts[tag], tag),
         )
 
 
@@ -280,92 +151,3 @@ def identity(vocabulary: Vocabulary) -> dict[str, str]:
         "revision": vocabulary.revision,
         "sha256": vocabulary.digest,
     }
-
-
-def map_phrase(
-    phrase: str,
-    vocabulary: Vocabulary,
-    suffix: str | None = None,
-    curated: Mapping[str, str] = CURATED,
-) -> list[str]:
-    """Map one free-text phrase onto canonical tags, by a fixed four-pass cascade.
-
-    Exact match, then the field's suffix convention, then a curated pass that
-    consumes the span it matched and carries on, then containment over whatever
-    words are left. Each rule in that order is a recorded correction, and the
-    order is what makes the result reproducible rather than a matter of which
-    rule happened to fire.
-
-    `suffix` is the field's, passed in from the schema rather than looked up by
-    field name here. That is the whole reason this function is independent of the
-    field list: expecting hair-colour values to end in "hair" is a statement about
-    a particular tag list paired with a particular field, and it belongs with the
-    schema that pairs them (design.md D8).
-
-    An empty list is a real answer. Nothing is substituted for a phrase that maps
-    to nothing, because a nearest neighbour is a tag nobody said.
-    """
-    text = normalise(phrase)
-    if not text or asserts_absence(text):
-        return []
-
-    if text in vocabulary:
-        return [text]
-
-    if suffix:
-        completed = f"{text} {normalise(suffix)}"
-        if completed in vocabulary:
-            return [completed]
-
-    found, words = _curated_pass(text.split(), vocabulary, curated)
-
-    # A phrase the curated pass consumed entirely has nothing left to contain, and
-    # the containment test would be false for every candidate anyway.
-    if words:
-        remaining = vocabulary.contained_in(
-            words, normalise(suffix).split() if suffix else ()
-        )
-        if remaining:
-            found.append(remaining[0])
-
-    return _in_order(found)
-
-
-def _curated_pass(
-    words: list[str],
-    vocabulary: Vocabulary,
-    curated: Mapping[str, str],
-) -> tuple[list[str], list[str]]:
-    """Emit every curated span present, consuming each one and continuing.
-
-    Returning on the first hit lost concepts from multi-concept phrases, so this
-    keeps going over what is left. Longest span first, so a specific curated
-    phrase is never pre-empted by a shorter one nested inside it.
-    """
-    spans = CURATED_SPANS if curated is CURATED else _spans(curated)
-    found: list[str] = []
-    for needle, tag in spans:
-        if tag not in vocabulary:
-            continue
-        while (at := _index_of(words, needle)) is not None:
-            found.append(tag)
-            words = words[:at] + words[at + len(needle) :]
-    return found, words
-
-
-def _index_of(words: Sequence[str], needle: Sequence[str]) -> int | None:
-    """Return where `needle` appears contiguously in `words`, or None."""
-    if not needle:
-        return None
-    for start in range(len(words) - len(needle) + 1):
-        if list(words[start : start + len(needle)]) == list(needle):
-            return start
-    return None
-
-
-def _in_order(tags: Iterable[str]) -> list[str]:
-    """Return `tags` with duplicates dropped, keeping the order they were found."""
-    seen: dict[str, None] = {}
-    for tag in tags:
-        seen.setdefault(tag, None)
-    return list(seen)

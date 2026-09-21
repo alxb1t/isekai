@@ -177,6 +177,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was therefore grepped by name rather than trusted to surface.
 - **`tests/transports.py`'s `sorted_answer`**, which built a sorter response envelope and now has no
   caller.
+- **The free-text mapping cascade — twelve names, not the five the record listed.** `map_phrase`,
+  `CURATED`, `CURATED_SPANS`, `_curated_pass`, `_index_of`, `contained_in`, `Vocabulary.words`,
+  `Vocabulary.by_word`, `asserts_absence`, `_ABSENCE`, `_spans` and `_in_order` leave
+  `isekai/shared/vocabulary.py`, and `fill()` leaves `isekai/pipeline/sheet.py` with them. There is no
+  phrase to map: the four passes existed to turn a language model's free text into canonical tags, and
+  a tagger's output is canonical on arrival — 8,069 of the vocabulary's 8,106 tags would terminate at
+  the first pass and the other three would never run.
+- **Deleting the absence guard is a repair as much as a retirement.** `asserts_absence` fired *before*
+  any pass and, swept over the whole provisioned vocabulary, dropped **37 of 8,106 canonical tags**,
+  `no bra` and `no panties` among them — both in the operator's own approved sheets. A prompt still
+  carries no negation; what enforced it was a text rule on prose, and prose is no longer an input.
+- **`normalise()` stays, and it is not a near miss.** It is called by `Vocabulary.__contains__`,
+  `count`, `search` — the UI autocomplete, pinned by `ui:vocabulary:matches-are-ranked-by-post-count` —
+  and `read_tags`, and by `isekai/shared/fields.py`'s `validate()` on the **approval** path, where it
+  enforces the *written in the vocabulary's own spelling* refusal. A sheet's spelling refusal is
+  unchanged by this version.
+- **Six more scenarios, with 16 test functions (21 collected) and four more in `test_sheet_schema.py`.**
+  Five `sheet:mapping:*` describe the cascade's passes; `sheet:purity:absence-clause-is-dropped` is
+  implemented wholly by the guard that eats `no bra`, and after this change a canonical tag stream
+  cannot contain a clause — so the scenario would be **unreachable** rather than merely unneeded.
+- **Four of the five `sheet.briefing.md` tests.** One called `map_phrase`; three asserted sentences in
+  instructions nothing follows. The fifth is kept: *every field name the briefing mentions exists in the
+  schema* is still a real consistency check, and the file itself stays, unread, because `load_flow`
+  refuses a flow missing it and deleting it would move all three flow digests.
+- **`Field.suffix` now has no consumer anywhere in the tree.** Its only live read was `fill()`. The key
+  stays in all three frozen `schema.json` files, because editing them means new flow identifiers
+  (design.md D28), and `scripts/derive_field_map.py` authors its own suffix table rather than reading it
+  — resurrecting the consumer to build the artifact that replaced it would be the wrong kind of tidy.
 - **Not removed, and deliberately: `hosted.sorter`.** It is a *required* key of the manifest's `hosted`
   block (`flow.py:234`, read unguarded at `:429`, asserted by three tests), and dropping
   `"sorter": "qwen3:8b"` from `flows/summon-open-v1/flow.json` would move that flow's `manifest_digest`

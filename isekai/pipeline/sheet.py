@@ -35,7 +35,6 @@ error.
 Stdlib only.
 """
 
-from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -56,34 +55,10 @@ from isekai.foundation.run import (
 from isekai.shared.field_map import FieldMap, route
 from isekai.shared.field_map import identity as field_map_identity
 from isekai.shared.fields import validate
-from isekai.shared.vocabulary import Vocabulary, map_phrase
+from isekai.shared.vocabulary import Vocabulary
 from isekai.shared.vocabulary import identity as vocabulary_identity
 
-
-def fill(
-    answers: Mapping[str, Sequence[str]],
-    schema: Schema,
-    vocabulary: Vocabulary,
-) -> dict[str, list[str]]:
-    """Map a model's free-text answers onto canonical tags, field by field.
-
-    Every field the schema declares appears in the result, empty if the prose
-    carried nothing for it -- an empty field is a real answer and is not a reason
-    to reject a sheet. Nothing outside the vocabulary survives, because the
-    cascade emits only tags it found there.
-    """
-    filled: dict[str, list[str]] = {}
-    for field in schema.fields:
-        tags: list[str] = []
-        for phrase in answers.get(field.name, ()):
-            for tag in map_phrase(phrase, vocabulary, field.suffix):
-                if tag not in tags:
-                    tags.append(tag)
-        filled[field.name] = tags
-    return filled
-
-
-# --- the stage: prose in, canonical fields out --------------------------------
+# --- the stage: a tag list in, canonical fields out ---------------------------
 
 # The name this stage's budget is keyed by. Its directory inside a run is the
 # run's to name, not the stage's -- `run.SHEETS`.

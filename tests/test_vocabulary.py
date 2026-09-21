@@ -1,10 +1,13 @@
-"""The vocabulary object and the four-pass mapping cascade.
+"""The vocabulary object: what a tag is, whether it exists, and how strong it is.
 
-Offline by construction: every test builds its vocabulary from a CSV written to
-`tmp_path`, so nothing here needs the provisioned artifact or the network. The
-count that proves the real file parses -- 8,106 general tags -- is the task's
-stated verification, run as a command against the provisioned tree; a test that
-needed a gitignored 300 KB download would not run in CI at all.
+**The four-pass cascade this module used to carry is gone**, and with it sixteen
+of this file's tests. Nothing maps free text onto a tag any more: the sheet's
+input is a list the tagger already emitted, so every tag arrives canonical and
+the only question left about one is whether the list contains it.
+
+Offline by construction: every test builds its vocabulary from a CSV written in
+`tests/conftest.py`, so nothing here needs the provisioned artifact or the
+network. The two that read the provisioned file skip when it is absent.
 """
 
 from pathlib import Path
@@ -12,11 +15,8 @@ from pathlib import Path
 import pytest
 
 from isekai.shared.vocabulary import (
-    CURATED,
     Vocabulary,
-    asserts_absence,
     identity,
-    map_phrase,
     normalise,
     read_tags,
 )
@@ -76,163 +76,6 @@ def test_the_vocabularys_identity_is_its_name_revision_and_digest(
         "revision": "f" * 40,
         "sha256": "a" * 64,
     }
-
-
-# --- the cascade --------------------------------------------------------------
-
-
-@pytest.mark.spec("sheet:mapping:exact-match-wins-first")
-def test_a_phrase_already_in_the_vocabulary_maps_to_itself(
-    vocabulary: Vocabulary,
-) -> None:
-    assert map_phrase("blue eyes", vocabulary, "eyes") == ["blue eyes"]
-
-
-@pytest.mark.spec("sheet:mapping:exact-match-wins-first")
-def test_no_later_pass_alters_an_exact_match(vocabulary: Vocabulary) -> None:
-    # `shirt` is exact, and `collared shirt` would win on containment if the
-    # cascade ever got that far. It does not.
-    assert map_phrase("shirt", vocabulary) == ["shirt"]
-
-
-@pytest.mark.spec("sheet:mapping:suffix-completes-a-bare-value")
-def test_a_fields_suffix_completes_a_bare_value(vocabulary: Vocabulary) -> None:
-    assert map_phrase("brown", vocabulary, "hair") == ["brown hair"]
-    assert map_phrase("brown", vocabulary, "eyes") == ["brown eyes"]
-
-
-@pytest.mark.spec("sheet:mapping:suffix-completes-a-bare-value")
-def test_the_suffix_comes_from_the_caller_and_not_from_the_field_name(
-    vocabulary: Vocabulary,
-) -> None:
-    # The same phrase, two suffixes, two answers -- and the mapper was never told
-    # a field name at all.
-    assert map_phrase("brown", vocabulary, None) == []
-
-
-@pytest.mark.spec("sheet:mapping:curated-pass-consumes-and-continues")
-def test_a_curated_match_consumes_its_span_and_the_rest_continues(
-    vocabulary: Vocabulary,
-) -> None:
-    assert map_phrase("shoulder length wavy", vocabulary, "hair") == [
-        "medium hair",
-        "wavy hair",
-    ]
-
-
-@pytest.mark.spec("sheet:mapping:curated-pass-consumes-and-continues")
-def test_a_curated_entry_whose_tag_is_not_in_the_vocabulary_is_inert(
-    vocabulary: Vocabulary,
-) -> None:
-    assert map_phrase("beehive", vocabulary, "hair", {"beehive": "not a tag"}) == []
-
-
-@pytest.mark.spec("sheet:mapping:containment-requires-every-word")
-def test_a_candidate_containing_a_word_the_phrase_lacks_is_not_emitted(
-    vocabulary: Vocabulary,
-) -> None:
-    # "collared shirt" needs "collared", which "tucked in shirt" does not carry.
-    assert map_phrase("tucked in shirt", vocabulary) == ["shirt"]
-
-
-@pytest.mark.spec("sheet:mapping:containment-requires-every-word")
-def test_a_candidate_whose_every_word_appears_may_be_emitted(
-    vocabulary: Vocabulary,
-) -> None:
-    assert map_phrase("a crisp collared shirt", vocabulary) == ["collared shirt"]
-
-
-@pytest.mark.spec("sheet:mapping:containment-requires-every-word")
-def test_the_suffix_can_complete_a_value_but_never_be_the_whole_of_one(
-    vocabulary: Vocabulary,
-) -> None:
-    # `hair` is a tag in its own right, and a hair field must not collapse an
-    # unmappable phrase into it.
-    assert map_phrase("wavy", vocabulary, "hair") == ["wavy hair"]
-    assert map_phrase("frizzy", vocabulary, "hair") == []
-
-
-@pytest.mark.spec("sheet:mapping:no-match-emits-nothing")
-def test_a_phrase_that_maps_to_nothing_emits_nothing(
-    vocabulary: Vocabulary,
-) -> None:
-    assert map_phrase("an air of quiet competence", vocabulary) == []
-
-
-@pytest.mark.spec("sheet:mapping:no-match-emits-nothing")
-def test_the_mapper_does_not_substitute_a_nearest_neighbour(
-    vocabulary: Vocabulary,
-) -> None:
-    # "hazel" shares no word with any tag; the nearest neighbour would be a
-    # colour nobody said.
-    assert map_phrase("hazel", vocabulary, "eyes") == []
-
-
-@pytest.mark.spec("sheet:purity:absence-clause-is-dropped")
-@pytest.mark.parametrize(
-    "phrase",
-    [
-        "no glasses",
-        "not wearing glasses",
-        "none visible",
-        "without glasses",
-        "no visible marks",
-        "nothing in her hair",
-    ],
-)
-def test_an_absence_clause_produces_nothing(
-    vocabulary: Vocabulary, phrase: str
-) -> None:
-    assert asserts_absence(phrase)
-    assert map_phrase(phrase, vocabulary) == []
-
-
-@pytest.mark.spec("sheet:purity:absence-clause-is-dropped")
-def test_a_positive_phrase_is_not_mistaken_for_an_absence_clause(
-    vocabulary: Vocabulary,
-) -> None:
-    assert not asserts_absence("wearing glasses")
-    assert map_phrase("wearing glasses", vocabulary) == ["glasses"]
-
-
-@pytest.mark.spec("sheet:purity:no-tag-outside-the-vocabulary")
-def test_no_pass_of_the_cascade_can_emit_a_tag_the_vocabulary_lacks(
-    vocabulary: Vocabulary,
-) -> None:
-    phrases = [
-        "blue eyes",
-        "brown",
-        "shoulder length wavy",
-        "a crisp collared shirt",
-        "an air of quiet competence",
-        "hazel",
-    ]
-    for phrase in phrases:
-        for tag in map_phrase(phrase, vocabulary, "hair"):
-            assert tag in vocabulary
-
-
-@pytest.mark.spec_exempt("structural: the curated table's own shape")
-def test_every_curated_span_and_tag_is_written_in_the_normal_spelling() -> None:
-    for span, tag in CURATED.items():
-        assert span == normalise(span)
-        assert tag == normalise(tag)
-        assert span != tag
-
-
-@pytest.mark.spec_exempt(
-    "structural: the provisioned artifact is gitignored, so this asserts the "
-    "curated table against it only where it is present"
-)
-def test_every_curated_tag_is_in_the_provisioned_vocabulary() -> None:
-    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
-
-    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
-        pytest.skip("the vocabulary is not provisioned in this environment")
-    provisioned = load()
-
-    dead = [tag for tag in CURATED.values() if tag not in provisioned]
-    assert dead == []
 
 
 @pytest.mark.spec_exempt("structural: the loader against the provisioned file")
