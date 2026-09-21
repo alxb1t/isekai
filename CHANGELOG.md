@@ -25,6 +25,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`field-map` — one authored `tag ↔ field` table, read in two directions.** `scripts/field_map.json`
+  assigns each tag in the pinned vocabulary a **primary** criterion — the one a router writes it to —
+  and any further criteria it may be **browsed** under. It is **one data structure with two indexes**:
+  the cheatsheet is the table read `field → tags`, the router is the same table read `tag → field`, and
+  **the reverse index is computed in `isekai/shared/field_map.py` and never stored**, because two copies
+  of one mapping is two things to keep true. It sits in `scripts/` beside `vocabulary.json` rather than
+  in a flow's schema: `twintails` answers *hair silhouette* in every flow that declares that field, so
+  the assignment is a property of the **vocabulary** and not of a schema — and fixing one tag's criterion
+  is one edit here rather than three digest-frozen flow directories.
+- **A tag has exactly one primary and may sit in several groups.** The earlier rule — *no tag appears in
+  two field groups* — is falsified by the operator's own approved sheets, which file `navel` under
+  `clothes`, `pose` **and** `body_shape`, `collarbone` under `pose` and `body_shape`, and `standing`
+  under `framing` and `pose`; a structural case is worse, since `lips` is a declared field of its own on
+  `conjure-v1` while it is part of `expression` on `summon-v1`. Routing needs one answer and browsing
+  needs all of them, so the table carries both and the check becomes **exactly one primary per tag**
+  (design.md D4).
+- **The loader raises all four checks, and eleven bound tests prove them.** The spec scenarios say
+  *loading it is refused*, so a check living only in a test would implement nothing: every tag resolves
+  in the pinned vocabulary · every tag has exactly one primary · the excluded list and the union of every
+  group are disjoint · **every field any tracked flow declares has an entry**. The field list for that
+  last check is read from the flows' own `Schema` objects rather than from a constant — a hardcoded
+  twenty-one would stay green while a schema moved underneath it. `shared/` importing `foundation/` for
+  it is not a new edge: `shared/fields.py` already imports `Schema` from `foundation/flow.py`.
+- **An empty group is legal and an absent entry is not.** Over the eight-photograph v0.20 batch `age_band`
+  and `marks` were approved **zero** times, `age_band` has no candidate in the vocabulary at all, and
+  `eyelashes` holds four tags in total. A criterion the tag list cannot express is a fact about the
+  vocabulary, and the table is the right place to say so; an absent entry, by contrast, is
+  indistinguishable from one nobody has authored yet (design.md D9).
+- **The table carries its own `revision`, a monotonic integer, and reports a `sha256` of its own bytes.**
+  Unlike `scripts/vocabulary.json`'s entries there is no upstream revision to name — the artifact is
+  authored here — so a consumer can record which revision routed it and two sheets filled under different
+  revisions are distinguishable from the record alone. **This phase ships `revision: 1`.**
+- **The ten suffix-carrying criteria are populated mechanically; the eleven without a suffix are present
+  and empty until the next phase.** The rule that reproduces the record's group sizes is *tag equals the
+  suffix, or ends in `" " + suffix`* — not substring, which gives `hair` 265 rather than 103. Sizes
+  against the pinned 8,106: `hair` **103** · `eyes` **55** · `background` **47** · `skin` **23** ·
+  `bangs` **15** · `lips` **13** · `nose` **12** · `eyebrows` **9** · `eyelashes` **4**. **281 primaries
+  across 21 criteria.**
+- **The `hair` group is one derived set serving two fields, split by a colour test.** `hair_colour` and
+  `hair_silhouette` both declare the suffix `hair`, so both derive the identical 103 tags — right for the
+  cheatsheet and impossible for the router, since `long hair` must have one primary. A `hair` tag whose
+  non-suffix words contain a colour word takes `hair_colour` (**26**), every other takes
+  `hair_silhouette` (**77**), and **both fields list all 103** so nothing is hidden from browsing. The
+  operator's own sheets prove the split separates cleanly — `brown hair ×5`, `blonde hair ×2`,
+  `black hair` against `long hair ×7`, `wavy hair ×6`, `straight hair ×2`, `medium hair` (design.md D16).
+
 ## [0.20.0] - 2026-09-21
 
 ### Added

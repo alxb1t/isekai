@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — `field-map`: the artifact, the loader, and the four checks
+- [x] 1 — `field-map`: the artifact, the loader, and the four checks
 - [ ] 2 — The authoring script: seven seeded criteria and the dead briefing's own examples
 - [ ] 3 — The router fills the sheet, and the sorter seam is unwired
 - [ ] 4 — Retirement one: the sorter bodies and their ten scenarios
