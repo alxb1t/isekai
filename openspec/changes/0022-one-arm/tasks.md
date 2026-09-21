@@ -193,6 +193,12 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
   | `tests/conftest.py:98` | `_shipped_schema` → `load_flow("summon-v1").schema` | **`summon-anime-wai`, not conjure** — `test_sheet_schema.py:59` expects 16 fields and conjure declares 21 |
   | `tests/test_sheet_schema.py:26` | `SCHEMA_PATH = load_flow("summon-v1").schema_path` | `summon-anime-wai` |
 
+  And one real load the earlier sweeps missed, in a file otherwise untouched by this change:
+  **`tests/test_image.py:26`** — `flow = load_flow("summon-v1")` inside
+  `test_the_scale_node_is_found_by_role_not_by_class`. Re-point at `summon-anime-wai`, which carries the
+  same graph byte for byte, so the two `ImageScale` nodes its comment at `:23` depends on are still
+  there. **Do not point it at `conjure-anime-wai`** — that graph has 14 nodes and no identity leg.
+
   Then the plain `FLOW = "summon-v1"` string constants: `tests/test_run_view.py:23`,
   `tests/test_ui.py:32`, `tests/test_resume.py:36`, `tests/test_review.py:37`,
   `tests/test_run_directory.py:58`, `tests/test_ui_api.py:57`, `tests/test_generate.py:60`,
