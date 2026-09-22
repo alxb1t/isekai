@@ -4,7 +4,7 @@
 
 - [x] 1 — The middleware: `Host`/`Origin` on all seven routes
 - [x] 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
-- [ ] 3 — Refusal strings: the path order, and the flag the remedy omits
+- [x] 3 — Refusal strings: the path order, and the flag the remedy omits
 - [ ] 4 — Load-time validation: the dials and the node ids
 - [ ] 5 — The UI server: nine entries
 - [ ] 6 — The local arm: measure, then pin
@@ -94,19 +94,19 @@ is a halt.
 > `run.py:569-590` emits `` "run `python -m isekai {verb}` again" `` for **every caption and tagging
 > budget refusal** too. Fixing only the two `generate.py` sites leaves the bound scenario still false.
 
-- [ ] 3.1 **`v0.16 review/R4` — the path order.** `pipeline/generate.py:180` prints
+- [x] 3.1 **`v0.16 review/R4` — the path order.** `pipeline/generate.py:180` prints
   `{PROMPTS}/{flow.id}/` against a real layout of `{flow.id}/{PROMPTS}/` (`generate.py:158`).
   `review.py:319` already has it right — match it.
 
-- [ ] 3.2 **`v0.16 review/R5` — thread the flow into `refusal_for` as its own argument**, rather than
+- [x] 3.2 **`v0.16 review/R5` — thread the flow into `refusal_for` as its own argument**, rather than
   patching call sites. Covers `generate.py:213-214` **and** every `run.py:569-590` caller. **Verify:**
   extract every `python -m isekai` string the suite produces and assert each carries `--flow`.
 
-- [ ] 3.3 **Update `tests/test_resume.py:340-360`'s `AVAILABLE` list.** It currently holds the bare
+- [x] 3.3 **Update `tests/test_resume.py:340-360`'s `AVAILABLE` list.** It currently holds the bare
   command strings without the flag, which is the only reason
   `cli:refusals:refusal-names-the-remedy` passes today.
 
-- [ ] 3.4 **Gate green. CHANGELOG. Tick 3. Commit.**
+- [x] 3.4 **Gate green. CHANGELOG. Tick 3. Commit.**
 
 ---
 

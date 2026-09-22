@@ -574,16 +574,25 @@ def refusal_for(
     record: Path,
     where: str,
     verb: str,
+    flow: str,
 ) -> Refusal:
     """Build the refusal a stage raises after recording a failed attempt.
 
     One shape for both stages: what failed, how it failed, where the record is,
     and the command to run once what it names is fixed. Stated here beside
     `StageFailure` rather than twice, because the two stages differ only in nouns.
+
+    **`flow` is an argument of its own and not read out of `where`.** Every stage
+    verb has taken `--flow`, required, since v0.16, so the command this built
+    without it was one argparse refuses -- and copy-pasting the remedy a refusal
+    states got an operator a usage error instead of the fix. Threading it here
+    rather than patching the call sites is what makes that true of every caller
+    at once, including the ones a later stage adds.
     """
     return Refusal(
         f"{run_id}: the {stage} failed ({kind}) -- {detail}; "
-        f"see {record.name} in {where}, and run `python -m isekai {verb}` again "
+        f"see {record.name} in {where}, and run "
+        f"`python -m isekai {verb} --flow {flow}` again "
         "once what it names is fixed"
     )
 

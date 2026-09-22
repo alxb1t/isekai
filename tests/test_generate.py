@@ -9,6 +9,7 @@ rather than a hope.
 import io
 import json
 import random
+import re
 import urllib.error
 from pathlib import Path
 
@@ -598,6 +599,14 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     assert FLOW in message
     assert "python -m isekai review" in message
     assert "python -m isekai approve" in message
+    # *Names the commands that would produce one* -- so the commands it names
+    # have to be ones this build accepts. Every stage verb has required `--flow`
+    # since v0.16, and until v0.22.1 both of these were printed without it, so
+    # copy-pasting the remedy got an argparse usage error (v0.16 R5).
+    named = re.findall(r"`python -m isekai ([^`]+)`", message)
+    assert len(named) == 2
+    for command in named:
+        assert build_parser().parse_args([*command.split(), str(photo)]).flows == [FLOW]
 
 
 @pytest.mark.spec("image-generation:inputs:every-approved-flow-renders")

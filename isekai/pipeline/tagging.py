@@ -273,6 +273,7 @@ def caption_wd14(
             record,
             f"{flow}/{WD14}/",
             VERB,
+            flow,
         ) from failed
 
     path = directory / artifact_name(version)
@@ -338,6 +339,7 @@ def caption_tags(
             record,
             f"{flow}/{TAGS}/",
             VERB,
+            flow,
         ) from failed
 
     path = directory / artifact_name(version)

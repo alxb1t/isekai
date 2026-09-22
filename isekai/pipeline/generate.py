@@ -178,7 +178,7 @@ def prompt_artifact(
         )
         raise Refusal(
             f"{run.id}: flow {flow.id}'s approved sheet cannot be assembled -- "
-            f"{broken}; see {record.name} in {PROMPTS}/{flow.id}/"
+            f"{broken}; see {record.name} in {flow.id}/{PROMPTS}/"
         ) from broken
 
     write_json(
@@ -216,10 +216,13 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     ready = [flow for flow in approved_flows(run) if flow in flows]
     if flows and not ready:
         asked = ", ".join(sorted(flows))
+        # `--flow` is required and repeatable, so the remedy names every flow
+        # that was asked for rather than a command argparse would refuse.
+        naming = " ".join(f"--flow {one}" for one in sorted(flows))
         raise Refusal(
             f"{run.id}: no approved sheet for {asked}, and only an approved sheet "
-            "is rendered; run `python -m isekai review`, edit the draft, then "
-            "`python -m isekai approve`"
+            f"is rendered; run `python -m isekai review {naming}`, edit the "
+            f"draft, then `python -m isekai approve {naming}`"
         )
     assembled: dict[str, Path] = {}
     refused: list[str] = []

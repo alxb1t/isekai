@@ -222,6 +222,7 @@ def caption(
             record,
             f"{flow}/{CAPTIONS}/",
             STAGE,
+            flow,
         ) from failed
 
     path = directory / artifact_name(version)

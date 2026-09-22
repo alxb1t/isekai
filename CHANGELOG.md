@@ -40,6 +40,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flow's own directory. It now collects per flow the way `across` collects per photograph, returning what
   was assembled beside what refused, and `_generate` reports both together at the end.
 
+- **Every command a refusal prints is one the parser accepts.** `refusal_for` emitted
+  `` `python -m isekai {verb}` `` and `prepare()` emitted `` `python -m isekai review` `` and
+  `` `python -m isekai approve` `` -- all without the `--flow` v0.16 made required on every stage verb,
+  so copy-pasting the remedy a refusal states returned an argparse usage error instead of the fix. The
+  flow is now threaded into `refusal_for` as an argument of its own rather than patched at call sites,
+  which covers every caption and tagging budget refusal as well as the two in `generate.py`
+  (design.md D10). `tests/test_resume.py`'s `AVAILABLE` list held the bare forms, which was the only
+  reason `cli:refusals:refusal-names-the-remedy` passed; a new test parses what is printed with the
+  parser that ships, so the scenario can no longer be stronger than the fixture bound to it.
+- **An assembly failure names the directory the record is actually in.** `prompt_artifact` printed
+  `prompts/<flow>/` against a layout that has been `<flow>/prompts/` since v0.16 -- input above, flow
+  below -- so the one path in the message pointed at a directory that does not exist. `review.py` had
+  it right and is now matched.
+
 ### Security
 
 - **`Host` and `Origin` are validated on every request the review surface answers.** Until now
