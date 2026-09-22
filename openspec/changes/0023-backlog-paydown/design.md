@@ -215,6 +215,45 @@ command strings without the flag, so the scenario text is stronger than the test
 **Phase 3 threads the flow through `refusal_for` as its own argument** rather than patching call sites,
 and updates that fixture.
 
+## D11 — `transient` classifies the failure; rendering's budget stays one
+
+> **Settled at converge, not at the cut.** Round 1's review (`R1`) found that nothing covered the budget
+> arithmetic behind `v0.13 review/R7`, and it was right: no decision here reached it.
+
+`render()` now records `"transient"` for an `Unreachable`, which lifts `check_budget`'s permanent
+short-circuit. **It does not let the next pass through**, because that function refuses on either of two
+conditions and the second does not read `kind`: `BUDGETS["render"]` is `1`, so one record of any kind is
+already at budget. The operator's remedy after a closed tunnel is still deleting the record by hand.
+
+**That is kept, and the two ways out of it were both refused.**
+
+- *Count only non-`transient` records against the budget.* The living spec says the opposite in the
+  requirement itself — `run-directory`'s *"SHALL refuse a stage whose **transient** attempts have reached
+  its budget"* — so an unbounded transient retry is not a reading of it.
+- *Give `render` a budget above one.* That falsifies the same requirement's stated reason — *"A render
+  that has failed once should cost a person's attention rather than another attempt, which is why that
+  stage's budget is one"* — and `tests/test_run_directory.py`'s `test_the_rendering_stages_budget_is_one`
+  pins the number against that scenario. **It is also a spending decision**: rendering is the one stage
+  that costs money on every pass, and doubling what a resume may spend without a person is not a patch
+  release's call, let alone a fix station's. It needs a spec delta, which D2 says this change does not
+  have.
+
+**What the reclassification does buy** is the kind in the filename — `run-directory:failure:kind-and-
+attempt-are-in-the-filename` exists so the operator can read *why* from a directory listing — the refusal
+sentence that matches what happened, and a classification that is correct for every stage whose budget is
+not one. That is the *record lying*, the third clause of this change's selection rule, and it is the
+clause the row is in scope under.
+
+> ⚠️ **`proposal.md`'s Why overstates this row.** *"`check_budget` then refuses that stage forever"* was
+> never true — deleting the record clears the permanent short-circuit exactly as it clears the count — and
+> *"the operator's fix is deleting an error record by hand"* is the remedy **after** this change as well
+> as before it. The `CHANGELOG` entry is rewritten to say so; the proposal is left as the statement of why
+> the change was cut, and this is where the correction is recorded.
+
+`tests/test_generate.py::test_a_transient_render_record_still_refuses_the_next_attempt_on_the_count` makes
+the arithmetic visible to the suite, which is what let R1 be found by reading rather than by an operator
+losing a pod session to it.
+
 ---
 
 ## Open questions

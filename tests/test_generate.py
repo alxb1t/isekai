@@ -37,6 +37,7 @@ from isekai.foundation.run import (
     attempts,
     open_run,
     read_artifact,
+    record_failure,
 )
 from isekai.interface.cli import _Reporting
 from isekai.pipeline.caption import FakeReader
@@ -737,6 +738,41 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
     assert "the rendering endpoint could not be reached" in str(refused.value)
     assert [one.kind for one in attempts(directory, 1)] == ["transient"]
     assert not list(directory.glob("001.error.1.permanent.json"))
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+def test_a_transient_render_record_still_refuses_the_next_attempt_on_the_count(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    """`transient` classifies the failure; it does not buy a second attempt here.
+
+    Rendering's budget is **one**, deliberately -- `run-directory`'s own
+    requirement is that a render which has failed once costs a person's attention
+    rather than another attempt, and `test_the_rendering_stages_budget_is_one`
+    pins the number. So the remedy after a closed tunnel is still deleting the
+    record by hand; what the classification changes is which sentence says so,
+    and that the failure is not short-circuited as one that would recur.
+
+    Asserted rather than left implicit, because the arithmetic is invisible from
+    the record alone and the test beside this one could be read as promising the
+    next attempt proceeds (converge R1).
+    """
+    prepare(run, {FLOW: flow})
+    directory = run.path / FLOW / OUTPUTS / "001"
+    directory.mkdir(parents=True)
+    record_failure(directory, 1, "transient", {"stage": "render", "seed": 42})
+
+    client = FakeComfyClient()
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, client, seeds=[42], poll=0)
+
+    message = str(refused.value)
+    assert "used its 1 attempt" in message
+    assert "001.error.1.transient.json" in message
+    # Not the permanent short-circuit's wording, which is the whole of what the
+    # classification changed for this stage.
+    assert "failed permanently" not in message
+    assert client.submissions == []
 
 
 @pytest.mark.spec("run-directory:atomicity:interrupted-write-leaves-nothing")

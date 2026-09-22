@@ -136,7 +136,15 @@ async function approve(): Promise<void> {
   // Awaited, not merely started: the debounced write has to be ON DISK before
   // the approve `POST` goes out, or the artifact is built from the previous
   // draft and the last correction is unlinked along with it.
-  await sheet.flush()
+  //
+  // **And read, not merely awaited.** A refused `PUT` used to mean a network
+  // error and nothing else; it now means 409 too -- an approved input, or a
+  // `saved` the disk has moved past -- so waiting for an answer nobody looks at
+  // would approve the draft as of the last write that *did* land and discard
+  // everything typed after it, behind a banner the operator has no reason to
+  // read as "your approval is about to be wrong". `flush()` leaves the refusal
+  // on the header line; stopping here is what makes it true.
+  if (!(await sheet.flush())) return
   if (!(await approval.approve(id))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
   await Promise.all([batch.refresh(), sheet.open(id)])

@@ -46,9 +46,17 @@ export function useSheet() {
   let inFlight = 0
   /* A slow earlier answer must never overwrite a newer one. Two saves can be in
      flight at once -- the debounce is what puts them there -- so the receipt of
-     the first can land after the second's and set `saved` back to a value the
-     server has already moved past, which the server then answers 409 for. The
-     pattern is `useVocabulary`'s, applied to the write side. */
+     the first can land after the second's. The pattern is `useVocabulary`'s,
+     applied to the write side.
+
+     **It governs `budget` and `refusal` and nothing else.** Those describe the
+     request that produced them, so an older one's answer is stale. `saved` is
+     not that kind of value: it is a monotonic fact about the file on disk, so a
+     late receipt carries a time the disk has already reached and the *larger*
+     value wins rather than the later receipt. Discarding it was how a recoverable
+     409 became a permanent one -- the client went on echoing a precondition the
+     server had already moved past, and every autosave after it was refused with
+     a banner blaming another tab that did not exist. */
   let generation = 0
   let timer: ReturnType<typeof setTimeout> | undefined
   let current = ''
@@ -89,33 +97,43 @@ export function useSheet() {
      nobody awaits races the approve `POST`, and the loser of that race is the
      operator's last correction -- either the artifact is built from the previous
      draft and the correction is unlinked with it, or the `PUT` lands after the
-     approve and is refused for having no draft. */
-  async function flush(): Promise<void> {
+     approve and is refused for having no draft.
+
+     **And it answers whether the draft reached disk**, because since the
+     precondition landed a `PUT` can be *refused* rather than merely fail: an
+     approved input and a stale `saved` both answer 409. A caller that waits
+     without reading the answer waits for nothing. `false` is also what a
+     read-only sheet answers -- nothing was written, so nothing may be built
+     from it. */
+  async function flush(): Promise<boolean> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
-    if (detail.value === null || detail.value.readonly) return
+    if (detail.value === null || detail.value.readonly) return false
     const id = current
     const payload = { ...fields.value }
     const asked = (generation += 1)
     inFlight += 1
     saving.value = true
-    await saveDraft(id, payload, saved.value)
-      .then((receipt) => {
-        if (current !== id || asked !== generation) return
-        budget.value = receipt.budget
+    try {
+      const receipt = await saveDraft(id, payload, saved.value)
+      if (current === id) {
         // The server's clock, never the browser's: a receipt the client wrote
-        // for itself is a claim about a save rather than a record of one.
-        saved.value = receipt.saved
-        refusal.value = null
-      })
-      .catch((reason: Error) => {
-        if (current !== id || asked !== generation) return
-        refusal.value = reason.message
-      })
-      .finally(() => {
-        inFlight -= 1
-        if (inFlight === 0) saving.value = false
-      })
+        // for itself is a claim about a save rather than a record of one. Taken
+        // whatever the generation, and only ever forwards -- see above.
+        saved.value = Math.max(saved.value ?? 0, receipt.saved)
+        if (asked === generation) {
+          budget.value = receipt.budget
+          refusal.value = null
+        }
+      }
+      return true
+    } catch (reason) {
+      if (current === id && asked === generation) refusal.value = (reason as Error).message
+      return false
+    } finally {
+      inFlight -= 1
+      if (inFlight === 0) saving.value = false
+    }
   }
 
   function schedule(): void {

@@ -60,10 +60,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **An unreachable endpoint is recorded `transient`, not `permanent`.** `_reported()` in `cli.py` turned
   every `URLError`/`OSError` from the transport into a `Refusal`, and `render()` wrote `permanent` for
   any `Refusal` it caught -- so a closed tunnel, a pod that went away, or a `--server` address typed
-  before the tunnel was up left a record `check_budget` short-circuits on for good, and the operator's
-  remedy was deleting a file by hand. `comfy_types.py` now declares `Unreachable(Refusal)`, `_reported()`
+  before the tunnel was up left a record classified as one that would recur, on the one failure that is
+  over the moment the pod comes back. `comfy_types.py` now declares `Unreachable(Refusal)`, `_reported()`
   raises it, and the one caller that writes a record branches on it. Everything that only *reports* a
   refusal is unchanged: the CLI still prints the same string and exits 1.
+
+  **It classifies the failure; it does not buy a second attempt.** Rendering's budget is one, so the next
+  pass is refused on the *count* whichever kind is on disk, and the operator's remedy is still deleting
+  the record by hand -- what changes is the kind the filename carries and the sentence the refusal states.
+  That is deliberate: `run-directory`'s own requirement is that a render which has failed once costs a
+  person's attention rather than another attempt, and letting a resume spend a second time without a
+  person is a spec delta and a spending decision, not a patch (design.md D11).
 - **One flow's malformed sheet no longer costs its siblings their assembly.** `prepare()` assembled in a
   dict comprehension, so the first flow whose approved sheet could not be read took every other flow of
   that run with it -- after `prompt_artifact` had already written a permanent record into the broken
@@ -108,7 +115,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the only monotonic fact on disk: the draft carries no timestamp, no revision counter and no digest,
   and a `revision` field would change the artifact shape (design.md D6). A payload carrying no `saved`
   states no precondition and behaves as before. `useSheet.ts` gains the generation counter
-  `useVocabulary.ts` already had, so a slow earlier receipt no longer sets `saved` back.
+  `useVocabulary.ts` already had, so a slow earlier answer no longer replaces a newer one's `budget` or
+  `refusal`.
+
+  **The counter governs those two and never `saved`.** Applied to the receipt as a whole it made the
+  recoverable `409` a permanent one: the two overlapping writes the precondition exists for are exactly
+  the case where the *earlier* receipt carries the *later* time, so dropping it left the client echoing a
+  precondition the server had already moved past and refusing every autosave after it, with a banner
+  blaming another tab that did not exist. `saved` is a monotonic fact about the file on disk, so it is
+  taken whatever the generation and only ever forwards.
+- **Approve stops when the write it waits for was refused.** `approve()` awaited `flush()` -- so the
+  debounced `PUT` is on disk before the approve `POST` goes out -- but read nothing back, which was
+  sound only while a refused `flush()` meant a network error. It now means `409` as well, so an approve
+  on top of one would have built the artifact from the last draft that *did* land and unlinked
+  everything typed after it. `flush()` answers whether the draft reached disk, and the refusal stays on
+  the header line.
 - **One unreadable photograph no longer kills the whole review batch.** `batch.py` called
   `image_dimensions()` unguarded and it exits via `sys.exit`, a `BaseException` that `across` -- which
   catches `Refusal` -- walks straight past; with two bad photographs neither was named. The same wrap
