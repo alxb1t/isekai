@@ -125,6 +125,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `openspec/changes/archive/`, `CHANGELOG.md`'s released sections, `ui/design/` and `CLAUDE.md`'s own
   filename keep both words, and every remaining live mention is a past-tense record at the site it
   explains.
+- **The scrub was scoped to two words, and the third one is what it missed.** The pass above tested
+  *Claude* and *Qwen*; `hosted` was not on the list, so `isekai/boundary/wd14.py`'s module docstring
+  went on saying that `ollama.py` *"exists only where a flow's manifest declares a `hosted` block"* and
+  that the two taggers are not one Protocol because *"the registry that would key it is keyed on
+  `hosted.implementation`"*. This change deleted both — the loader now refuses that block and there is
+  no registry left to key. The paragraph now makes the argument its sibling in
+  `isekai/pipeline/tagging.py` was rewritten to make: the hosted tagger resolves on the required `model`
+  key and therefore runs for every flow, the local one through no manifest key at all, and a Protocol
+  whose two implementations resolve through different mechanisms is a shared name rather than a seam.
 - **`README.md`'s quickstart no longer contradicts itself seven lines apart.** Step 1 said *sort the
   prose into a sheet of canonical tags* and then, below, *the local list is what fills the sheet*. The
   first was true until v0.21 and was missed by that version's converge.

@@ -1,11 +1,15 @@
 """The WD14 boundary: a local ONNX session, its label index, and what it emits.
 
 **The heavier of the pipeline's two tagger boundaries, and the only one that
-reaches no network at all.** `ollama.py` reaches a model over HTTP and exists only
-where a flow's manifest declares a `hosted` block; this one opens a file on disk
-and resolves through nothing. They are deliberately not two implementations of one
-Protocol: the registry that would key it is keyed on `hosted.implementation`, a
-string WD14 does not have (design.md D3).
+reaches no network at all.** `ollama.py` reaches a model over HTTP, on the alias
+the flow's manifest names in its `model` key -- a key every flow is required to
+declare, so it runs for every flow; this one opens a digest-verified file and
+resolves through **no manifest key at all**. They are deliberately not two
+implementations of one Protocol: one is selected by a string in a frozen manifest,
+because which model answers is a claim a flow makes about itself, and the other by
+a pin in this build that no flow has an opinion about. A Protocol whose two
+implementations resolve through different mechanisms is a shared name rather than
+a seam (design.md D3).
 
 **The whole non-stdlib import of this package lives in this file and is
 function-local.** `onnxruntime`, `numpy` and `Pillow` arrive through the `tagging`
