@@ -1,8 +1,8 @@
-"""The HTTP surface, and the only module in this package that imports the `ui` extra.
+"""The HTTP surface, and the only module in this package that imports a web framework.
 
 Kept to one file deliberately. `batch.py` performs the whole startup refusal
 order and imports no web framework, so that order is exercised by the main suite
-with the `ui` extra uninstalled; only what genuinely needs a server lives here,
+whether or not a server is installed; only what genuinely needs one lives here,
 and `tests/test_ui_api.py` opens with an `importorskip` for it.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status
@@ -18,11 +18,13 @@ builds an artifact body or an artifact filename, and `tests/test_ui.py`'s grep i
 what keeps that at three (design.md D11).
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
-calls this module's `run()` instead, so the whole `ui` extra is reached from this
-one file and `python -m isekai`'s import graph never reaches it at all. Nothing
-is suppressed for it anywhere: the `dev` group pins `fastapi` and `uvicorn`, so
-`uv sync --locked` installs both and the import resolves in the environment the
-gate runs in.
+calls this module's `run()` instead, so the server is reached from this one file
+and `python -m isekai`'s import graph never reaches it at all. That is worth more
+since v0.22.3, not less: `fastapi` and `uvicorn` are declared dependencies now,
+so nothing fails at import time if a module-scope import appears elsewhere -- the
+`-S` guard in `tests/test_pipeline_cli.py` is the only thing that would catch it.
+Nothing is suppressed for this module anywhere; `uv sync --locked` installs both
+packages and the import resolves in the environment the gate runs in.
 
 **The flow is in none of the paths.** The batch has exactly one and
 `/api/batch` names it; a URL here is a contract between a server and a Vue app in
@@ -475,6 +477,6 @@ def run(app: FastAPI, *, host: str, port: int) -> None:
     """Block, serving `app`, until the operator stops it.
 
     A thin wrapper so that `__init__.py` composes the surface without importing
-    the `ui` extra at module scope.
+    a web framework at module scope.
     """
     uvicorn.run(app, host=host, port=port, log_level="warning")

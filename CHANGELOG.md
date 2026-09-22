@@ -56,6 +56,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   assembly had not read the graph; the emptied node makes that claim structurally, and the assert
   that the node is empty means a string reappearing in it fails rather than quietly becoming a
   second source of truth.
+- **The gate was uninstalling the local tagger on every run, and the repair is that the tagger's stack
+  is a declared dependency.** `onnxruntime`, `numpy` and `Pillow` left the `tagging` extra and
+  `fastapi` and `uvicorn` left the `ui` extra; all five are now in `[project] dependencies`, pinned
+  exactly at what `uv.lock` resolved. The symptom was an operator re-running `uv sync --extra tagging`,
+  which is a once-per-checkout command — so the question was what removed the packages, and the
+  environment answered it: `fastapi` present, the other three absent. `uv sync` makes the environment
+  match exactly what it is told and removes extras it is not told about, and gate command one is
+  `uv sync --locked` with no `--extra`.
+- **`[tool.uv] default-extras` was refused as the fix.** It would have kept `dependencies = []`
+  literally true while every real checkout carried 2 GB of onnxruntime under a manifest claiming it
+  needed nothing. The local tagger runs on every `caption` for every flow, so *"optional"* was false in
+  the plainest sense; the review surface moves on the operator's reading that it is part of running a
+  flow rather than an add-on to it. **`eval` stays optional** — it is the scorer, and an evaluator is
+  not a way to render.
+- **`dependencies = []` is retired; the claim that replaces it is narrower and is what the architecture
+  actually rests on** — *the entry point imports no third-party package at module scope*. `wd14.py`'s
+  three imports are function-local and `interface/ui/__init__.py` keeps FastAPI off `python -m isekai`'s
+  import graph the same way, which is why `isekai show` works on a checkout that has provisioned
+  nothing.
+- **The `-S` guard is narrowed rather than deleted, and is now falsified against a declared
+  dependency.** With the packages installed by default it is the only thing that would catch a
+  module-scope import appearing in the entry point's graph — nothing else fails when one is added. Its
+  falsification imported `pytest`, a dev-only package; it imports `onnxruntime` now, so a guard that
+  stayed green while `-S` leaked the very wheels it excludes is no longer possible.
+- **The `dev` group's duplicate `fastapi` and `uvicorn` pins are gone, and a test keeps them gone.** The
+  duplication existed only because the `ui` extra was never installed by gate command one, which made
+  `tests/test_ui_api.py`'s `importorskip` fire and four `ui` scenarios bound only there prove nothing.
+  The test that held the two pin lists equal is replaced by one asserting there is only one list: a
+  `dev` entry re-pinning a declared dependency would reinstate the drift this removes. A second new
+  test asserts the tagger's three are declared and that `torch` did not follow them out of `eval`.
+- **The tagger's refusal names `uv sync` instead of a removed extra**, and the docstrings in
+  `interface/ui/app.py`, `batch.py` and `tests/test_ui.py` that described a `ui` extra now describe a
+  web framework, because the extra no longer exists to name.
+- **CI's resolution checked rather than assumed** — onnxruntime wheels are platform-specific, and
+  `1.29.0` publishes `cp312-manylinux_2_28_x86_64`, so `ubuntu-latest` resolves it and no floor is
+  needed in the manifest.
 
 ## [0.22.2] - 2026-09-22
 

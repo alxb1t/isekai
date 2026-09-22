@@ -1,8 +1,19 @@
-"""The pipeline's own entry point: its verbs, its refusals, and its stdlib guard.
+"""The pipeline's own entry point: its verbs, its refusals, and its import guard.
 
 This is the only entry point: v0.14 deleted the single-command surface `convert.py`
-carried, so the stdlib-only runtime rule now has exactly one subject and the guard
-that holds it lives here, beside the falsification that keeps it honest.
+carried, so the rule below has exactly one subject and the guard that holds it lives
+here, beside the falsification that keeps it honest.
+
+**The rule narrowed in v0.22.3 and the guard got more load-bearing, not less.** It
+used to be *the runtime is stdlib-only*, backed by `dependencies = []`; onnxruntime,
+numpy, Pillow, fastapi and uvicorn are declared dependencies now, because the local
+tagger runs on every `caption` and `uv sync` was stripping an extra it was never told
+about. What survives is the claim the architecture actually rests on: **the entry
+point imports no third-party package at module scope.** `wd14.py`'s three imports are
+function-local and `interface/ui/__init__.py` keeps FastAPI off the graph the same
+way, which is why `isekai show` works on a checkout that has provisioned nothing.
+With the packages now installed by default, this guard is the only thing that would
+catch a module-scope import appearing here -- nothing else fails when one is added.
 """
 
 import argparse
@@ -196,6 +207,10 @@ def test_no_verb_at_all_is_refused_too() -> None:
 
 @pytest.mark.spec("cli:pipeline-surface:entry-point-is-stdlib-only")
 def test_the_pipeline_entry_point_imports_with_site_packages_off_the_path() -> None:
+    # The whole entry point's module-scope graph, walked by the interpreter with
+    # nowhere to resolve a wheel from. `onnxruntime` and `fastapi` are installed
+    # in this environment, so only `-S` distinguishes a function-local import
+    # from a module-scope one here.
     result = _stdlib_import("import isekai.__main__")
 
     assert result.returncode == 0, result.stderr
@@ -217,10 +232,15 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
     # accidental wheel in `python -m isekai`'s import graph would ship silently.
     # It moved here with the guard it falsifies: it used to sit beside the one
     # that held `convert.py`, and that guard died with its target.
-    result = _stdlib_import("import pytest")
+    #
+    # **Falsified against a dependency the project now declares**, not against
+    # `pytest`. v0.22.3 made `onnxruntime` required, so a guard falsified by a
+    # dev-only package would stay green even if `-S` started leaking the very
+    # wheels the guards above exist to exclude.
+    result = _stdlib_import("import onnxruntime")
 
     assert result.returncode != 0
-    assert "No module named 'pytest'" in result.stderr
+    assert "No module named 'onnxruntime'" in result.stderr
 
 
 @pytest.mark.spec_exempt("structural: the parser dispatches nothing yet")

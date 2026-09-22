@@ -168,18 +168,24 @@ class Session(Protocol):
 
 @cache
 def _require(module: str) -> ModuleType:
-    """Import one module of the `tagging` extra, or refuse naming how to get it.
+    """Import one module of the tagger's stack, or refuse naming how to get it.
 
     `eval_backends._require`'s shape, for `eval_backends`' reason: without it a
-    machine that has not installed the extra gets a bare `ModuleNotFoundError`
-    traceback, in a package whose rule is that every failure is a named
-    `Refusal` naming its remedy. The extra is deliberately not installed in the
-    environment the gate runs in, so this path is the ordinary one for anyone
-    who has not opted in.
+    machine whose environment is missing the stack gets a bare
+    `ModuleNotFoundError` traceback, in a package whose rule is that every
+    failure is a named `Refusal` naming its remedy.
+
+    **The import is still function-local, and that is what this indirection is
+    for now.** v0.22.3 made these three declared dependencies rather than an
+    extra, so a synced checkout has them and this path is the unsynced case
+    rather than the ordinary one — but the entry point still reaches no
+    third-party package at module scope, which is why `isekai show` works on a
+    checkout that has provisioned nothing.
 
     Not shared with `eval_backends`' copy, and that is the whole content of the
-    difference: the two name **different extras**, so one function would have to
-    be told which — and the sentence it prints is the only thing either does.
+    difference: that one names an extra and this one no longer does, so one
+    function would have to be told which sentence to print — and the sentence it
+    prints is the only thing either does.
 
     Cached, so the import machinery is consulted once per module rather than
     once per photograph.
@@ -189,8 +195,9 @@ def _require(module: str) -> ModuleType:
     except ModuleNotFoundError as absent:  # pragma: no cover - environment
         raise Refusal(
             f"the local tagger's stack is not installed ({module} is missing); "
-            "run `uv sync --extra tagging`. It is deliberately not installed in "
-            "CI, and every test runs against a fake session instead."
+            "run `uv sync`. It is a declared dependency of this project as of "
+            "v0.22.3, so a synced checkout has it and every test runs against a "
+            "fake session regardless."
         ) from absent
 
 

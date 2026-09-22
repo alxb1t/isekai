@@ -17,7 +17,9 @@ must yield the tag on row 1 and no other.
 
 import hashlib
 import importlib
+import re
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -259,10 +261,46 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
 
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
-def test_no_wheel_the_tagging_extra_carries_is_imported_at_module_scope() -> None:
+def test_the_taggers_stack_is_declared_rather_than_optional() -> None:
+    # **The defect this asserts against was the gate itself.** While these three
+    # sat in a `tagging` extra, `uv sync --locked` -- gate command one, with no
+    # `--extra` -- removed them on every run, because uv makes the environment
+    # match exactly what it is told. The symptom looked like a missing install
+    # and so recurred: the operator kept re-running `uv sync --extra tagging`.
+    # The local tagger runs on every `caption` for every flow, so declaring them
+    # is what makes them un-strippable (design.md D3).
+    root = Path(__file__).resolve().parent.parent
+    config = tomllib.loads((root / "pyproject.toml").read_text())
+
+    declared = {
+        re.split(r"[=<>!\[]", spec)[0].strip().lower()
+        for spec in config["project"]["dependencies"]
+    }
+    optional = {
+        name
+        for specs in config["project"]["optional-dependencies"].values()
+        for name in (re.split(r"[=<>!\[]", spec)[0].strip().lower() for spec in specs)
+    }
+
+    for wheel in ("onnxruntime", "numpy", "pillow"):
+        assert wheel in declared, (
+            f"{wheel} is not a declared dependency, so `uv sync --locked` will "
+            "strip it and the next `caption` will refuse"
+        )
+
+    # `eval` is the one extra left, and it resolves the same three names. That
+    # is fine -- an extra may repeat a requirement -- but `torch` must not have
+    # followed them in, or the scorer's 2 GB would land on every checkout.
+    assert "torch" in optional and "torch" not in declared
+
+
+@pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
+def test_no_wheel_the_tagger_needs_is_imported_at_module_scope() -> None:
     # The rule the `-S` guard rests on: this file is the only one in the package
     # that touches `onnxruntime`, `numpy` or `Pillow`, and it reaches every one
-    # of them through `_require`, inside the function that needs it.
+    # of them through `_require`, inside the function that needs it. **Now that
+    # the three are installed by default, this is the only thing that would
+    # catch one moving to module scope** -- nothing else fails when it does.
     import isekai.boundary.wd14 as boundary
 
     source = Path(boundary.__file__ or "").read_text()
@@ -274,12 +312,13 @@ def test_no_wheel_the_tagging_extra_carries_is_imported_at_module_scope() -> Non
 
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
-def test_an_uninstalled_extra_refuses_by_name_rather_than_raising_importerror(
+def test_an_unsynced_environment_refuses_by_name_rather_than_raising_importerror(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Without this the ordinary case -- a machine that has not opted into the
-    # extra -- is a bare `ModuleNotFoundError` traceback, in a package whose
-    # rule is that every failure is a named `Refusal` naming its remedy.
+    # Without this an unsynced checkout gets a bare `ModuleNotFoundError`
+    # traceback, in a package whose rule is that every failure is a named
+    # `Refusal` naming its remedy. The remedy is now plain `uv sync`, because
+    # there is no extra to opt into any more.
     import isekai.boundary.wd14 as boundary
 
     def absent(module: str) -> object:
@@ -294,7 +333,8 @@ def test_an_uninstalled_extra_refuses_by_name_rather_than_raising_importerror(
     boundary._require.cache_clear()
     message = str(refused.value)
     assert "numpy" in message
-    assert "uv sync --extra tagging" in message
+    assert "uv sync" in message
+    assert "--extra" not in message
 
 
 @pytest.mark.spec_exempt("structural: the seam's shape, which the doubles satisfy")

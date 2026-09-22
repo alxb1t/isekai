@@ -2,7 +2,7 @@
 
 Every test here is stdlib-only and in the main suite, because `batch.py` imports
 no web framework -- which is the whole reason the startup refusal order lives
-there rather than in `app.py`. Nothing in this file needs the `ui` extra; the
+there rather than in `app.py`. Nothing in this file needs a web framework; the
 endpoints that do are in `tests/test_ui_api.py`.
 """
 
@@ -10,6 +10,7 @@ import importlib.util
 import io
 import os
 import random
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -371,22 +372,36 @@ def test_the_gate_installs_the_web_framework_the_api_tests_need() -> None:
     assert importlib.util.find_spec("fastapi") is not None, (
         "FastAPI is absent, so tests/test_ui_api.py will skip and the four `ui` "
         "scenarios bound only there will be proved by nothing -- restore the "
-        "`fastapi` pin in pyproject.toml's `dev` dependency group"
+        "`fastapi` pin in pyproject.toml's `dependencies`"
     )
 
 
-@pytest.mark.spec_exempt("structural: it holds two pin lists equal, not a behaviour")
-def test_the_extra_and_the_dev_group_pin_the_server_identically() -> None:
-    # The `ui` extra is what an operator installs to serve the surface; the
-    # `dev` group is what the gate installs to test it. They name the same two
-    # packages, so a bump to one that missed the other would have the suite
-    # proving a version nobody runs.
+@pytest.mark.spec_exempt("structural: it keeps one pin list from becoming two")
+def test_the_server_is_pinned_in_exactly_one_place() -> None:
+    # **What this replaces, and why the shape changed.** While the server lived
+    # in a `ui` extra that gate command one never installed, the `dev` group had
+    # to re-pin the same two packages so `tests/test_ui_api.py` would actually
+    # run, and a test held the two lists equal so a bump to one could not miss
+    # the other. v0.22.3 made them declared dependencies, which removes the
+    # second list rather than keeping it in step -- so what is asserted now is
+    # that it stays removed. A `dev` entry re-pinning a declared dependency
+    # would silently reinstate the drift this phase deleted.
     root = Path(__file__).resolve().parent.parent
     config = tomllib.loads((root / "pyproject.toml").read_text())
-    extra = set(config["project"]["optional-dependencies"]["ui"])
-    dev = set(config["dependency-groups"]["dev"])
 
-    assert extra <= dev, f"the `dev` group is missing {sorted(extra - dev)}"
+    def names(specs: list[str]) -> set[str]:
+        return {re.split(r"[=<>!\[]", spec)[0].strip().lower() for spec in specs}
+
+    required = names(config["project"]["dependencies"])
+    dev = names(config["dependency-groups"]["dev"])
+
+    assert {"fastapi", "uvicorn"} <= required, (
+        f"the review surface's server is not a declared dependency: {sorted(required)}"
+    )
+    assert not (required & dev), (
+        f"{sorted(required & dev)} is pinned twice -- once in `dependencies` and "
+        "once in the `dev` group. One of the two will drift."
+    )
 
 
 # --- the bundle is rebuilt when the source moves under it ---------------------

@@ -2,9 +2,8 @@
 
 **No web framework is imported here, and that is the point.** Everything the
 surface refuses, it refuses before a port is bound -- so the whole startup order
-is exercised by the main suite, stdlib-only and offline, without the `ui` extra
-being installed at all. `app.py` is the only module in this package that imports
-FastAPI.
+is exercised by the main suite, stdlib-only and offline, with no server involved
+at all. `app.py` is the only module in this package that imports FastAPI.
 
 **The batch lives in memory and nothing writes it down.** Nothing on disk says
 that ten photographs belong together: a run is one input and the layout has no
