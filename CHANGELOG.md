@@ -27,6 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An eleventh false self-claim, caught by the convergence pass rather than by the sweep.**
+  `interface/ui/app.py` said the type checker's override for `uvicorn` was *"scoped to this one file
+  and this one rule, because CI never installs the extra"*. There is no such override — `app.py`
+  appears in neither `[[tool.ty.overrides]]` block nor in `[tool.ruff.lint.per-file-ignores]` — and
+  the `dev` group pins `fastapi` and `uvicorn`, so gate command one installs both; `pyproject.toml`
+  already said exactly that, in the opposite direction. The docstring now states what is configured:
+  the extra is reached from this one module so `python -m isekai`'s import graph never reaches it,
+  and nothing is suppressed for it anywhere. The sweep rewrote the paragraph immediately below this
+  one and left it standing, which is what *"every claim … checked against the tree"* is worth as a
+  description of a pass rather than a guarantee.
+
 - **The acceptance ran, and it cost nothing: no pod, no render, no `generate`.** `make gate` exits 0 on
   all six commands, 815 tests pass, and `grep spec_exempt tests/ | grep 0024` returns nothing. Every
   numeral this version touched was re-derived from the tree rather than from the sentence it replaced —

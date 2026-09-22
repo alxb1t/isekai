@@ -17,10 +17,12 @@ startup, `save_draft()` on autosave and `approve()` on the button. Nothing here
 builds an artifact body or an artifact filename, and `tests/test_ui.py`'s grep is
 what keeps that at three (design.md D11).
 
-**uvicorn is imported here too, and not in `__init__.py`.** The type checker's
-override is scoped to this one file and this one rule, because CI never installs
-the extra; a second module importing it would have to widen that scope for no
-reason other than where a line was put.
+**uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
+calls this module's `run()` instead, so the whole `ui` extra is reached from this
+one file and `python -m isekai`'s import graph never reaches it at all. Nothing
+is suppressed for it anywhere: the `dev` group pins `fastapi` and `uvicorn`, so
+`uv sync --locked` installs both and the import resolves in the environment the
+gate runs in.
 
 **The flow is in none of the paths.** The batch has exactly one and
 `/api/batch` names it; a URL here is a contract between a server and a Vue app in
