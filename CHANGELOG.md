@@ -25,6 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Seventeen scenarios for behaviour `v0.22.1` shipped bound to nothing**, one per
+  `spec_exempt("behaviour; the scenario lands in 0024")` marker it left, plus two more inside the
+  modified `ui` requirement that no marker covers because that version did not build the state. They
+  land across four capabilities: `ui` gains Host/Origin validation, the draft-update precondition,
+  bundle staleness and the panel's hosted-tag dedup; `cli` gains flow-manifest validation at load;
+  `image-generation` gains the transient-transport classification and per-flow assembly;
+  `run-directory` gains `show`'s injected flows root and its refusal before any line is printed.
+
+- **The `ui` approval requirement is rewritten rather than deleted** — *"An approved input is read-only
+  on the surface"* becomes *"…until it is re-opened"*. Its old rationale inferred from *approval
+  deletes the draft* that nothing on disk could hold an edit after approval; the premise is true and
+  the inference is not, because `review --new-version` is exactly the explicit act that writes one. Two
+  capabilities described one state and disagreed about it, and `review` was the one that was right.
+
+  Each scenario was re-read against the tree before being counted as landed, and each is true at HEAD.
+  The key check prints the two `ui:approval:*` keys the `MODIFIED` block restates, as a `MODIFIED`
+  requirement must, and nothing else; `openspec validate 0024-the-documents --strict` is green.
+
 ### Changed
 
 - **An input re-opened with `review --new-version` is editable on the surface again, and the rail

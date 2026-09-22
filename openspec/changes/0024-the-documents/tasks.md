@@ -6,7 +6,7 @@
 - [x] 2 — `docs/arc/`: the module graph and the data flow
 - [x] 3 — `CLAUDE.md`: cut to agent operating instructions
 - [x] 4 — The spec catches up with the code, and the one code change
-- [ ] 5 — Seventeen scenarios
+- [x] 5 — Seventeen scenarios
 - [ ] 6 — Rebind the seventeen tests
 - [ ] 7 — The acceptance
 
@@ -208,12 +208,12 @@ image-generation    2    transient transport · per-flow assembly
 run-directory       2    show's injected flows root · the mid-stream refusal
 ```
 
-- [ ] 5.1 **Read `specs/` and confirm each scenario describes behaviour that exists at HEAD.** These
+- [x] 5.1 **Read `specs/` and confirm each scenario describes behaviour that exists at HEAD.** These
   describe what `v0.22.1` already built, so a scenario that does not match is a **defect in the
   scenario** — fix it here rather than changing code to suit it. The exception is the four
   `ui:approval:*`, which describe phase 4's work.
 
-- [ ] 5.2 **Verify no key collides** with an existing one. The naive check prints two false positives —
+- [x] 5.2 **Verify no key collides** with an existing one. The naive check prints two false positives —
   `ui:approval:approved-input-opens-read-only` and `ui:approval:approved-input-refuses-a-draft-update`
   are **restated on purpose**, because a `MODIFIED` requirement carries all of its scenarios. So:
   ```
@@ -222,7 +222,7 @@ run-directory       2    show's injected flows root · the mid-stream refusal
   ```
   must print **those two and nothing else**.
 
-- [ ] 5.3 **`openspec validate 0024-the-documents --strict`.** **Gate green. CHANGELOG. Tick 5. Commit.**
+- [x] 5.3 **`openspec validate 0024-the-documents --strict`.** **Gate green. CHANGELOG. Tick 5. Commit.**
 
 ---
 
