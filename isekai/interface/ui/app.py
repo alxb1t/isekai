@@ -134,13 +134,18 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
     @app.get("/api/batch")
     def read_batch() -> dict[str, Any]:
         """Describe the batch: its flow, its schema, its inputs and their state."""
-        # Once per input, not twice: the count is what the summaries already say.
+        # **The count reads the directory, not the status strings.** It used to
+        # be derived from `status == "approved"`, which agreed with
+        # `Batch.approved_count` only while every input holding an approved
+        # artifact also reported approved. `re-opened` is a status that means
+        # *holds one, and is open again*, so deriving the count would have split
+        # the two answers the moment the third status existed (design.md D5).
         summaries = [_summary(batch, held) for held in batch.inputs]
         return {
             "flow": batch.flow.id,
             "schema": list(batch.flow.schema.names),
             "vocabulary": len(batch.vocabulary),
-            "approved": sum(1 for held in summaries if held["status"] == "approved"),
+            "approved": batch.approved_count,
             "inputs": summaries,
         }
 
@@ -248,13 +253,13 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "wd14": _wd14(batch, held),
             "tags": _tags(batch, held),
             "fields": fields,
-            # **Approval is what makes a sheet read-only, not the absence of a
-            # draft.** The rail has always keyed on `approved_path` and the form
-            # keyed on `draft is None`, so in the state `review --new-version`
-            # produces -- approved, and a fresh draft beside it -- the two
-            # disagreed and the `PUT` below went through. `ui/spec.md` already
-            # says it must not (design.md D5).
-            "readonly": approved is not None,
+            # **Approval with nothing newer beside it is what makes a sheet
+            # read-only.** Not the absence of a draft, which the rail never
+            # keyed on; and not approval alone, which `v0.22.1` used and which
+            # made `review --new-version` write a draft this page would not
+            # edit. The verb is right: `--new-version` exists for exactly this
+            # (design.md D5).
+            "readonly": approved is not None and not batch.reopened(held),
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
             "saved": _saved(draft),
@@ -278,25 +283,25 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         partial update here: a debounced `PUT` of everything is what makes the
         receipt the page shows true.
 
-        **Two preconditions, and both answer `409`.** An approved input refuses
-        an update at all, which is `ui/spec.md`'s own requirement and was false
-        in code: `save_draft` refuses on *no draft* and never on *approved*, and
-        this had no approval gate whatever (design.md D5). And an update whose
-        `saved` does not match the draft on disk refuses, because the page
-        autosaves on a debounce and two overlapping `PUT`s were free to commit
-        in the order the server happened to finish them -- last write wins,
-        where "last" is not the operator's last keystroke (design.md D6).
+        **Two preconditions, and both answer `409`.** An input that is approved
+        **and holds no later draft** refuses an update at all: an approved sheet
+        is never edited in place, and approval is the end of a review. An input
+        re-opened with `review --new-version` is not that state and is accepted,
+        which is what the verb writes the draft for. And an update whose `saved`
+        does not match the draft on disk refuses, because the page autosaves on a
+        debounce and two overlapping `PUT`s were free to commit in the order the
+        server happened to finish them -- last write wins, where "last" is not
+        the operator's last keystroke (design.md D6).
         """
         held = batch.find(identifier)
-        if batch.approved_path(held) is not None:
+        if batch.approved_path(held) is not None and not batch.reopened(held):
             raise Refusal(
                 f"{identifier} is approved, and an approved sheet is never "
                 "edited in place; approval is the end of a review -- correct it "
                 f"with `python -m isekai review --flow {batch.flow.id} "
                 "--new-version`, which writes a fresh draft beside the approved "
-                "artifact for the command line to edit; this page keeps showing "
-                "the input approved and read-only either way, because the "
-                "re-opened state is v0.22.2's (design.md D5)"
+                "artifact, and reload: the input comes back re-opened and "
+                "editable, with its approved artifact still named"
             )
         _precondition(batch, held, payload)
         fields = {
@@ -331,12 +336,22 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
 
 
 def _summary(batch: Batch, held: Input) -> dict[str, Any]:
-    """Describe one input for the rail: its size, and where it is in stage ③."""
+    """Describe one input for the rail: its size, and where it is in stage ③.
+
+    **Three statuses, because there are three states.** `draft` holds no
+    approved artifact; `approved` holds one and nothing newer; `re-opened` holds
+    one *and* a later draft, which is what `review --new-version` writes and the
+    only state in which the form is offered over an approved input.
+    """
+    if batch.approved_path(held) is None:
+        status = "draft"
+    else:
+        status = "re-opened" if batch.reopened(held) else "approved"
     return {
         "id": held.id,
         "width": held.width,
         "height": held.height,
-        "status": "approved" if batch.approved_path(held) is not None else "draft",
+        "status": status,
     }
 
 

@@ -1,9 +1,12 @@
 /* The shapes the seven endpoints return. One file, because a type that disagreed
    with `app.py` would be wrong in every component at once. */
 
-export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half'
+export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'reopened'
 
-export type InputStatus = 'approved' | 'draft'
+/* `re-opened` is approved *and* carrying a later draft -- the state
+   `review --flow F --new-version` writes, and the only one in which an
+   approved input is editable again. */
+export type InputStatus = 'approved' | 're-opened' | 'draft'
 
 export interface BatchInput {
   id: string

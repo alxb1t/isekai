@@ -124,11 +124,15 @@ const approvedReceipt = computed(() =>
 )
 
 /* `③ sheet — approved` once it is, which is also when the fields go read-only.
-   The reading is taken from disk rather than from anything held here: approval
-   deletes the draft, so "has no draft" IS "is approved". */
-const kicker = computed(() =>
-  sheet.detail.value && sheet.readonly.value ? 'approved' : 'draft from the tagger',
-)
+   The reading is taken from disk rather than from anything held here. It is NOT
+   "has no draft": `review --new-version` writes a draft beside the approved
+   artifact, and that input is re-opened -- editable, and carrying a correction
+   the tagger did not write. */
+const kicker = computed(() => {
+  if (!sheet.detail.value) return 'draft from the tagger'
+  if (sheet.readonly.value) return 'approved'
+  return sheet.detail.value.approved ? 're-opened' : 'draft from the tagger'
+})
 
 async function approve(): Promise<void> {
   const id = batch.current.value
@@ -219,7 +223,10 @@ function movePane(direction: -1 | 1): void {
    time its artifact was written. Reached by approving the last unapproved input,
    or from the rail's `run` entry at any point in the batch. */
 async function openManifest(): Promise<void> {
-  const approved = batch.inputs.value.filter((i) => i.status === 'approved')
+  // Every input holding an approved artifact, re-opened ones included: the
+  // rail's count reads the directory the same way, and a manifest listing
+  // fewer rows than the count beside it would be two answers to one question.
+  const approved = batch.inputs.value.filter((i) => i.status !== 'draft')
   sheets.value = await Promise.all(
     approved.map(async (input) => {
       const body = await inputDetail(input.id)

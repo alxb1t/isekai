@@ -5,7 +5,7 @@
 - [x] 1 — The sweep: what this repository says about itself
 - [x] 2 — `docs/arc/`: the module graph and the data flow
 - [x] 3 — `CLAUDE.md`: cut to agent operating instructions
-- [ ] 4 — The spec catches up with the code, and the one code change
+- [x] 4 — The spec catches up with the code, and the one code change
 - [ ] 5 — Seventeen scenarios
 - [ ] 6 — Rebind the seventeen tests
 - [ ] 7 — The acceptance
@@ -176,24 +176,24 @@ code change, that is a backlog row, not a task here.
 
 ## 4 — The spec catches up with the code, and the one code change
 
-- [ ] 4.1 **The one code change** (`design.md` D5). `isekai/interface/ui/app.py:288`'s gate is
+- [x] 4.1 **The one code change** (`design.md` D5). `isekai/interface/ui/app.py:288`'s gate is
   `if batch.approved_path(held) is not None`. It becomes *approved **and no draft numbered above the
   approved artifact's `approved_from`***. The refusal's forward reference to *"the re-opened state is
   v0.22.2's"* is removed, because this is v0.22.2.
 
-- [ ] 4.2 **The rail reports `re-opened`** as a third status, and the form is editable in that state.
+- [x] 4.2 **The rail reports `re-opened`** as a third status, and the form is editable in that state.
 
-- [ ] 4.3 ⛔ **HALT CHECK — the two approved counts must still agree.**
+- [x] 4.3 ⛔ **HALT CHECK — the two approved counts must still agree.**
   `/api/batch["approved"]` derives from the status string; `Batch.approved_count` reads the directory.
   A third status splits them. `ui:batch:approved-count-comes-from-disk` must stay green, and the new
   `ui:approval:a-re-opened-input-is-not-counted-approved` pins it from the other side. **If they diverge,
   stop** — do not adjust the test to match.
 
-- [ ] 4.4 **Audit `image-generation`, `ui`, `review` and `cli` against the code** — the four capabilities
+- [x] 4.4 **Audit `image-generation`, `ui`, `review` and `cli` against the code** — the four capabilities
   `v0.22.1` touched. For each scenario: is its `THEN` true at HEAD, and can its `WHEN` occur? **Report
   every finding; fix only prose.** A scenario that is false because the *code* is wrong is a backlog row.
 
-- [ ] 4.5 **Gate green. CHANGELOG. Tick 4. Commit.**
+- [x] 4.5 **Gate green. CHANGELOG. Tick 4. Commit.**
 
 ---
 

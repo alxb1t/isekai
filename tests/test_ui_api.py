@@ -311,33 +311,68 @@ def test_a_draft_update_against_an_approved_input_is_refused_and_writes_nothing(
     assert snapshot(made.path) == before
 
 
-@pytest.mark.spec("ui:approval:approved-input-refuses-a-draft-update")
-def test_an_approved_input_with_a_fresh_draft_beside_it_still_refuses(
+@pytest.mark.spec("ui:approval:a-re-opened-input-is-editable")
+def test_an_input_re_opened_with_a_new_version_is_editable_again(
     client: TestClient, made: Run
 ) -> None:
-    """The state `review --flow F --new-version` produces, and the one that was false.
+    """The state `review --flow F --new-version` produces, and what it is for.
 
-    The scenario's `WHEN` carries no *and no draft* guard -- its sibling does --
-    so it matches this state, and here `save_draft` had nothing to refuse on:
-    it refuses on *no draft*, and there is one. `put_draft` had no approval gate
-    whatever, so the `PUT` went through and wrote into a reopened draft while
-    the rail showed the input approved (design.md D5).
+    `v0.22.1` refused every update to an approved input, which made this state a
+    dead end: the verb wrote a draft the surface would not edit, and the refusal
+    it shipped said so outright, naming this version as the one that resolves it.
+    The gate is now *approved and no later draft*, so the page shows the draft,
+    offers the form and accepts the write (design.md D5).
     """
     fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
     assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
-    # Reopened: an approved artifact, and a draft copied from it beside it.
+    # Approved and read-only, until the operator asks for a new version.
+    assert client.get(f"/api/inputs/{made.id}").json()["readonly"] is True
+
     review(made, FLOW, new_version=True)
-    before = snapshot(made.path)
+
+    body = client.get(f"/api/inputs/{made.id}").json()
+    assert body["readonly"] is False
+    # The draft's sheet, not the approved artifact's -- and the approved
+    # artifact is still named, because it has not gone anywhere.
+    assert body["draft"] == "002.draft.json"
+    assert body["approved"] == "001.approved.json"
+    assert body["fields"] == fields
 
     response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
 
-    assert response.status_code == 409
-    assert "is approved" in response.json()["refusal"]
-    assert snapshot(made.path) == before
-    # The rail and the form agree, which is the whole of the defect: both key
-    # on `approved_path` now, so nothing on the page offers an edit the server
-    # would refuse.
-    assert client.get(f"/api/inputs/{made.id}").json()["readonly"] is True
+    assert response.status_code == 200
+    assert response.json()["draft"] == "002.draft.json"
+    # The approved artifact is never edited in place, in either state.
+    assert (
+        read_artifact(made.directory(FLOW, REVIEW) / "001.approved.json")["fields"]
+        == fields
+    )
+
+
+@pytest.mark.spec("ui:approval:a-re-opened-input-is-not-counted-approved")
+def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
+    client: TestClient, made: Run
+) -> None:
+    """The hazard a third status creates, pinned from the side the count is on.
+
+    `/api/batch["approved"]` was derived from the status string and
+    `Batch.approved_count` reads the directory. They agree only while every
+    input holding an approved artifact also *reports* approved -- which stops
+    being true the moment a status exists meaning *has one, and is open again*.
+    So the payload's count reads the directory too (design.md D5).
+    """
+    assert client.get("/api/batch").json()["inputs"][0]["status"] == "draft"
+    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    assert client.get("/api/batch").json()["inputs"][0]["status"] == "approved"
+
+    review(made, FLOW, new_version=True)
+
+    body = client.get("/api/batch").json()
+    assert body["inputs"][0]["status"] == "re-opened"
+    # Neither approved nor a plain draft -- and the count still says what the
+    # directory says, which is that an approved artifact is on disk.
+    assert body["approved"] == 1
+    assert (made.directory(FLOW, REVIEW) / "001.approved.json").is_file()
 
 
 @pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")

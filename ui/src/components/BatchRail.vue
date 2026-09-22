@@ -18,10 +18,14 @@ defineEmits<{ select: [id: string]; manifest: [] }>()
 function mark(input: BatchInput): MarkKind {
   if (props.loading) return 'dashed'
   if (input.status === 'approved') return 'filled'
+  if (input.status === 're-opened') return 'reopened'
   return props.edited.has(input.id) ? 'half' : 'hollow'
 }
 
-const approved = () => props.inputs.filter((i) => i.status === 'approved').length
+/* Counts what the run directories hold, which is what `/api/batch`'s own
+   `approved` reports -- a re-opened input still has an approved artifact, so
+   excluding it here would make the rail disagree with the header. */
+const approved = () => props.inputs.filter((i) => i.status !== 'draft').length
 
 /* Same rule as the hero: a thumbnail appears whole or not at all, so the rail
    never shows a photograph half-decoded and never reflows as one arrives. */
@@ -67,6 +71,7 @@ function ready(id: string): void {
 
     <div class="rail__legend">
       <span class="rail__legend-row"><StatusMark kind="filled" :size="8" rail /> approved</span>
+      <span class="rail__legend-row"><StatusMark kind="reopened" :size="8" /> re-opened</span>
       <span class="rail__legend-row"><StatusMark kind="half" :size="8" /> edited</span>
       <span class="rail__legend-row"><StatusMark kind="hollow" :size="8" /> untouched</span>
     </div>

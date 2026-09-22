@@ -27,6 +27,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **An input re-opened with `review --new-version` is editable on the surface again, and the rail
+  reports it as re-opened.** This is the change's only code change, and it is in scope because shipped
+  code named this version as the one that resolves it: `v0.22.1` refused every update to an approved
+  input, which made `--new-version` write a draft the surface would not edit, and the refusal it
+  shipped said exactly that. `review` is the capability that was right — `--new-version` exists for
+  this case and `review:copy:second-review-appends` is the older, tested contract — so the gate is now
+  **approved and no later draft** rather than approved (`0024` design.md D5). The refusal's forward
+  reference to v0.22.2 is gone, replaced by what to do: correct it with the verb, reload, and the input
+  comes back re-opened with its approved artifact still named. An approved artifact is still never
+  edited in place, in either state.
+
+- **`Batch.reopened()` is the predicate, and it compares against `approved_from` rather than against
+  *a draft exists*.** An approved artifact records the draft version it consumed; a draft numbered
+  above that is the one the verb wrote, and nothing else produces it. A draft that somehow predated the
+  approval could therefore never re-open one.
+
+- **`/api/batch`'s approved count now reads the run directories, and that is the fix for the hazard a
+  third status creates.** It used to be derived from the status string, which agreed with
+  `Batch.approved_count` only while every input holding an approved artifact also *reported* approved —
+  a coincidence that ends the moment a status exists meaning *holds one, and is open again*. Deriving
+  it would have split the two answers; reading the directory keeps them one answer.
+  `ui:batch:approved-count-comes-from-disk` stayed green throughout, and the new
+  `ui:approval:a-re-opened-input-is-not-counted-approved` pins the same property from the other side.
+
+- **On the page**: a third rail mark and legend row, a `re-opened` kicker in place of *draft from the
+  tagger* for a draft copied from an approved artifact, and the closing manifest now lists every input
+  holding an approved artifact rather than only those reporting `approved` — the rail's count reads the
+  directory the same way, and a manifest shorter than the count beside it would be two answers to one
+  question. `allApproved` stays strict: a re-opened input has a correction waiting and the batch is not
+  finished.
+
+- **The four capabilities `v0.22.1` touched were audited against the tree, scenario by scenario.**
+  Three false statements were fixed, all of them non-normative: `cli`'s Purpose said *"six that run a
+  stage"* when five do — the same file already says *"the five stage verbs"* two requirements later,
+  and `isekai/interface/cli.py`'s docstring carried the identical error; and `image-generation`'s
+  **Source** line named one tracked flow when two exist, the second being the one that exercises its
+  own *optional roles are not assumed* scenarios.
+
+  **Eight further findings are requirement-level and are reported rather than fixed here**, because
+  changing a `SHALL` or a scenario is a spec delta and this phase fixes prose (`0024` tasks 4.4):
+  `image-generation:inputs:every-approved-flow-renders` claims selecting among approved flows *"requires
+  no flag"*, which `generate` has not done since `--flow` became required — and `cli`'s own requirement
+  says the opposite, so two capabilities disagree; `cli:generate-signature:count-defaults-to-one` says
+  *per approved flow* where the code renders per *named* approved flow;
+  `image-generation:working-resolution:scale-precedes-every-consumer` reads *"a tracked flow's graph"*
+  and is false for `conjure-anime-wai`, which declares no photograph and carries no image loader;
+  `review:copy:second-review-appends`'s `WHEN` omits `--new-version`, without which `review()`
+  short-circuits and writes nothing; `review:approval:approve-validates-then-renames` says the
+  artifact's bytes are unchanged, while `approve()` builds a fresh envelope — a deviation `review.py`
+  documents and the scenario does not; `review`'s provenance requirement records *edited* against the
+  **sheet** while a re-opened draft is copied from the **approved artifact**, which this version makes
+  a first-class state; `cli:resolution:uncomposed-seam-refuses-by-name`'s `WHEN` is unreachable outside
+  the suite, because `wiring_from` always composes all three resolvers; and the `ui` bundle requirement
+  covers only *absent*, not the staleness and timeout the code also has — which this change's own delta
+  adds. **The other capabilities were not audited**; that full pass is a version of its own.
+
 - **`CLAUDE.md` is agent operating instructions, and nothing else.** 420 lines to 316. `## The path`
   is gone — an audit's verdict on it was *"almost entirely data flow and architecture, with no agent
   instruction in it"* — and `## Layout`'s per-group inventory is **deleted rather than moved**, because

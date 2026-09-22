@@ -7,7 +7,7 @@ an approved sheet performed locally before any GPU is rented, and rendering with
 an output identifies the configuration that produced it.
 
 **Source:** `isekai/foundation/flow.py`, `isekai/pipeline/generate.py`, `isekai/shared/image.py`,
-`flows/summon-anime-wai/` ·
+`flows/summon-anime-wai/`, `flows/conjure-anime-wai/` ·
 **Tests:** `tests/test_flow.py`, `tests/test_generate.py`, `tests/test_image.py`,
 `tests/test_resume.py`
 
