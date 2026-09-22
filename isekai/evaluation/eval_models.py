@@ -16,7 +16,7 @@ This module owns two things, and deliberately nothing about any axis:
   cannot drift apart unnoticed" a check rather than a comment.
 
 Not on `python -m isekai`'s import graph, and not on the scorer's axes either --
-this is the gate they pass through. The runtime stays stdlib-only regardless:
+this is the gate they pass through. It would reach no wheel even if it were:
 this module is `json`, `pathlib` and its sibling `isekai.boundary.provision`.
 """
 

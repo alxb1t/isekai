@@ -4,8 +4,8 @@ from typing import Any, cast
 import pytest
 
 # `scripts/` is declared a source root in `pyproject.toml` -- operator tooling, not
-# a package. It is not on `python -m isekai`'s import graph, so the stdlib-only runtime
-# rule is untouched either way.
+# a package. It is not on `python -m isekai`'s import graph, so the module-scope
+# import rule is untouched either way.
 from derive_manifest import civitai_file
 
 from isekai.boundary.provision import (

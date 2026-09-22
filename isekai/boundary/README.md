@@ -34,12 +34,14 @@ at least once; a list of names cannot.
 | `provision.py` | `wd14.py`, `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
 | `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_wd14.py` |
 
-> `provision.py` is not on `python -m isekai`'s import graph, so the stdlib-only
-> runtime rule is untouched either way.
+> `provision.py` is not on `python -m isekai`'s import graph, so the module-scope
+> import rule is untouched either way.
 >
 > **`wd14.py` is**, and it is the only module in the package that touches the
-> `tagging` extra. Every one of its imports from that extra -- `onnxruntime`,
-> `numpy`, `Pillow` -- is **function-local**, which keeps the `-S` guard green;
+> tagger's stack. Every one of those imports -- `onnxruntime`, `numpy`,
+> `Pillow` -- is **function-local**, which keeps the `-S` guard green; they are
+> declared dependencies as of v0.22.3, so that guard is the only thing that would
+> catch one moving to module scope;
 > `tests/test_wd14.py` asserts none of them sits at module scope. It reaches no
 > network at all, which makes it the one file here that is a boundary to a *file*
 > rather than to a host.

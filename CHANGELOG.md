@@ -92,6 +92,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI's resolution checked rather than assumed** — onnxruntime wheels are platform-specific, and
   `1.29.0` publishes `cp312-manylinux_2_28_x86_64`, so `ubuntu-latest` resolves it and no floor is
   needed in the manifest.
+- **`## Quickstart` is rewritten as `## Running a flow`, in place** — one guide, photograph to image,
+  pod included, rather than a second one beside the old. Commands read as a sequence with the
+  explanation under them; the boundary where it stops being free is drawn at the top and repeated at
+  the step that crosses it, because `CLAUDE.md`'s spend guardrail wants that visible and a guide that
+  hides it is worse than no guide. It now covers what the old one left implicit: where the photograph
+  goes (`.inputs/`, gitignored, because it holds a person's likeness), `uv sync` with no flag, the
+  tunnel in a second terminal, downloading renders before teardown, and the teardown itself.
+- **Every sentence phases 1 and 2 falsified is repaid, in the same version rather than two releases
+  later.** `README.md`, `isekai/README.md`, `isekai/boundary/README.md`, `CLAUDE.md` and
+  `docs/arc/modules.md` said *the runtime is stdlib-only* or named `dependencies = []`; they now state
+  the narrower claim that is true — the entry point imports no third-party package at module scope —
+  and say that the `-S` guard is the only thing holding it. `CLAUDE.md` and `README.md` also said *a
+  flow is immutable*, which phase 1 made false; both now say what the modified requirement says, that
+  a flow is pinned by equality and a divergence is what costs a new identifier. Docstrings in
+  `multipart.py`, `provision.py`, `ciede2000.py`, `eval_models.py`, `cli.py`, `evaluate.py` and
+  `tests/test_manifest.py` carried the retired claim too and are corrected.
+  **This is the third consecutive version whose prose was falsified by the next one** —
+  `docs/arc/modules.md`'s rule was written by `v0.22.2` three commits before this change retired it —
+  which is the cost of splitting prose from code, and cheaper than the alternative only if the
+  documentation version ships close behind the code version it describes.
 
 ## [0.22.2] - 2026-09-22
 

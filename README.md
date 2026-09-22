@@ -40,8 +40,10 @@ learning** are the point.
   provisioned from a **pinned, checksummed manifest** — every artifact is addressed by an
   immutable revision and verified by SHA-256 before anything loads it. The volume is
   **namespaced per project**, so a volume shared with another project has no shared files.
-- **Interface:** a headless CLI (`python -m isekai`) that drives ComfyUI over its API. The
-  runtime is **stdlib-only** — no wheels needed to run a conversion.
+- **Interface:** a headless CLI (`python -m isekai`) that drives ComfyUI over its API. Its
+  **entry point imports no third-party package at module scope** — the ComfyUI transport is
+  `urllib`, and the wheels a run does need are reached from inside the verb that needs them, which
+  is why `isekai show` works on a checkout that has provisioned nothing.
 
 ```
 Local (your machine)                          RunPod
@@ -79,8 +81,11 @@ A flow is a directory of four tracked files: `flow.json`, which declares its inp
 vocabulary, its models, its dials, its prompt fragments and the graph id of every node the render
 path edits; `graph.json`, the API graph; `schema.json`, the sheet's field list; and
 `caption.briefing.md`, the standing instructions a photograph is read under. **Nothing locates a node by class** — the manifest names them, which is what lets a broken
-flow be caught by the suite rather than by a boot. A flow is immutable: editing one is not a variant
-of a flow, it is an untested flow.
+flow be caught by the suite rather than by a boot. A flow is pinned by equality against a committed
+digest, so nothing in one changes silently: a *divergence* — a variant, another base, a second
+generation — costs a new flow identifier, because two flows are only comparable over one cohort if an
+identifier means one configuration. Re-pinning is for the other case, where the old configuration is
+simply abandoned, and it owes a statement of what moved.
 
 Before any node reads the photo, it is scaled to a working resolution derived from its own
 dimensions: aspect preserved, short side at 1024, both dimensions a multiple of 64, and refused past
@@ -89,83 +94,139 @@ scaled image. That is a claim about which image each consumer *receives*, not ab
 internally — a preprocessor's own working resolution is a separate dial on that node, and
 `DWPreprocessor` derives its pose hint at 512 today.
 
-## Quickstart
+## Running a flow
 
-Run `cp .env.example .env` and fill in your RunPod values.
+Photograph in, anime image out, in the order an operator actually types it. Do `## Setup` below once
+first — it is the prerequisites, the `.env`, and the system binaries — then this page is the whole
+run.
 
-The first three stages need **no GPU and no pod** — they are free and local. Only `generate` needs
-an endpoint.
+**Everything through `approve` is local and free. `generate` rents a GPU and spends real money.**
 
-1. Read the photograph — into prose for a human, and into a tag list the sheet is filled from.
-   Every stage verb takes `--flow`, and it is required — a stage cannot act without knowing which flow asked,
-   because the flow supplies the briefing it reads and the schema it fills against:
-   ```sh
-   python -m isekai caption --flow summon-anime-wai me.jpg
-   python -m isekai sheet --flow summon-anime-wai me.jpg
-   ```
-   **`caption` writes three artifacts and reports three times** — the prose, then a scored tag list
-   from a local WD14 tagger, then a raw one from the hosted model. Neither tag list is narrowed:
-   they are what the review surface shows beside the prose so a human can see what the router
-   dropped. **The local list is what fills the sheet**, so `sheet` refuses without it; the prose is
-   a reading aid with no machine consumer. The local one needs `uv sync --extra tagging` plus
-   `bash scripts/download_models.sh scripts/vocabulary.json`; the hosted one is silently absent when
-   the model is not running, which is never an error.
+```
+   free, on your machine                     │  metered, on a rented GPU
+   ① caption   ② sheet   ③ review/approve    │  ④ up.sh → tunnel → generate → down.sh
+                                             ▲
+                                   the line where it starts costing
+```
 
-   Each run gets a directory under `.data/runs/`, named for the photograph's digest and its
-   filename, and every artifact sits under the flow that produced it:
-   `<input-id>/<flow-id>/{captions,wd14,tags,sheets,review,prompts,outputs}/`. Offer the photograph
-   again, or the run's id — which one you meant is decided by what is on disk.
-2. Correct the sheet. `review` copies it somewhere you may edit it; `approve` validates the edit
-   and marks it approved. **Only an approved sheet is ever rendered** — the correction is the
-   single largest measured gain in this pipeline.
-   ```sh
-   python -m isekai review --flow summon-anime-wai me.jpg   # then edit the file it prints
-   python -m isekai approve --flow summon-anime-wai me.jpg
-   ```
-3. Create the pod. It prints the SSH and tunnel commands when ready, and tears itself down if it
-   never becomes usable.
-   ```sh
-   ./infra/up.sh
-   ```
-4. In a second terminal, open the tunnel it printed:
-   ```sh
-   ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@<ip> -p <port>
-   ```
-5. Back in the first terminal, render:
-   ```sh
-   python -m isekai generate --flow summon-anime-wai me.jpg --server http://127.0.0.1:8188
-   ```
-   Each image lands under the run directory, named for the seed that produced it, beside a
-   provenance artifact recording the flow, the seed, the sheet version and the digest of the graph
-   actually submitted.
-6. Tear the pod down to stop billing — **this is the step that costs money if you skip it**:
-   ```sh
-   ./infra/down.sh
-   ```
+### ① Read the photograph
 
-`python -m isekai show me.jpg` prints a run's artifacts, versions and what produced each one.
+Put the photograph somewhere gitignored — `.inputs/` exists for exactly this, because a photograph an
+operator supplies is an input rather than something a run generated, and it holds a person's likeness.
+Then:
+
+```sh
+python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
+```
+
+One verb, and it writes and reports each artifact in order: the prose, then a scored tag list from the
+local WD14 tagger, then a raw one from the hosted model. **The local list is what fills the sheet**, so it
+needs `bash scripts/download_models.sh scripts/vocabulary.json` to have been run; the hosted one is
+silently absent when Ollama is not running, which is never an error; the prose is a reading aid with
+no machine consumer. Neither tag list is narrowed — they are what the review surface shows beside the
+prose, so a human can see what the router dropped.
+
+`--flow` is required on every stage verb. A stage cannot act without knowing which flow asked, because
+the flow supplies the briefing it reads and the schema it fills against.
+
+### ② Fill the sheet
+
+```sh
+python -m isekai sheet --flow summon-anime-wai .inputs/me.jpg
+```
+
+Each run gets a directory under `.data/runs/`, named for the photograph's digest and its filename,
+and every artifact sits under the flow that produced it:
+`<input-id>/<flow-id>/{captions,wd14,tags,sheets,review,prompts,outputs}/`. From here on, offer the
+photograph again or the run's id — which one you meant is decided by what is on disk.
+
+### ③ Correct the sheet, and approve it
+
+In a browser, which is the recommended path:
+
+```sh
+python -m isekai ui <run-id> --flow summon-anime-wai
+```
+
+Or by hand, which stays a fully working path:
+
+```sh
+python -m isekai review --flow summon-anime-wai .inputs/me.jpg   # then edit the file it prints
+python -m isekai approve --flow summon-anime-wai .inputs/me.jpg
+```
+
+**Only an approved sheet is ever rendered**, and the correction is the single largest measured gain in
+this pipeline. `ui` is described under *Correcting the sheets in a browser* below; when you are done
+there, stop it with Ctrl-C.
+
+### ④ Rent the GPU — this is where it starts costing
+
+```sh
+./infra/up.sh
+```
+
+It prints the SSH and tunnel commands when the pod is ready, and tears itself down if the pod never
+becomes usable. **Billing is per second and starts here.**
+
+### ⑤ Open the tunnel, in a second terminal
+
+```sh
+ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@<ip> -p <port>
+```
+
+Use the address `up.sh` printed. Leave it running.
+
+### ⑥ Render, back in the first terminal
+
+```sh
+python -m isekai generate --flow summon-anime-wai .inputs/me.jpg --server http://127.0.0.1:8188
+```
+
+Each image lands under the run directory, named for the seed that produced it, beside a provenance
+artifact recording the flow, the seed, the sheet version and the digest of the graph actually
+submitted. **Download anything you want to keep before the next step** — renders live on the pod's
+ephemeral disk, and only the models volume persists.
+
+Omit `--server` to assemble every prompt and stop without rendering, which is how a whole batch is
+checked before anything is rented. Assembly happens before any endpoint is acquired either way, so a
+malformed sheet costs nothing rather than a boot.
+
+### ⑦ Tear the pod down
+
+```sh
+./infra/down.sh
+```
+
+**This is the step that costs money if you skip it.** The volume persists; the pod does not.
+
+### Afterwards
+
+```sh
+python -m isekai show .inputs/me.jpg
+```
+
+Prints a run's artifacts, versions and what produced each one. It reaches no model and no GPU, and it
+works on a checkout that has provisioned nothing.
 
 ### Correcting the sheets in a browser
 
-Steps ③ and ④ above edit a JSON file by hand. `isekai ui` does the same work on a surface that knows
-the vocabulary — canonical spelling, the post count behind every tag, and a live token count against
-the encoder's 77-token window, none of which a text editor can tell you:
+Step ③ by hand edits a JSON file in a text editor. `isekai ui` does the same work on a surface that
+knows the vocabulary — canonical spelling, the post count behind every tag, and a live token count
+against the encoder's 77-token window, none of which a text editor can tell you:
 
 ```sh
 python -m isekai ui <run-id> [<run-id> …] --flow summon-anime-wai
 ```
 
 It resolves the batch, refuses everything it can refuse, prints a URL and blocks; correct and approve
-each sheet in the browser, then stop it with Ctrl-C and run `generate`. **Nothing on the page reaches
-a model or a GPU** — its scope is stage ③ alone.
+each sheet in the browser, then stop it with Ctrl-C and go on to `generate`. **Nothing on the page
+reaches a model or a GPU** — its scope is stage ③ alone.
 
 - `--flow` is **required and takes exactly one** here, unlike on the stage verbs: the surface shows one
   schema's fields in one fixed order, so a second flow would be a second page rather than a wider one.
-- It needs the optional extra and **node**: `uv sync --extra ui`, and `npm install` in `ui/` the first
-  time. The bundle is built on demand; a missing toolchain refuses naming what installs it. The
-  scored tag list additionally needs `uv sync --extra tagging` — `onnxruntime`, `numpy`, `Pillow`,
-  and **deliberately not the `eval` extra**, which resolves the same three names beside `torch` and
-  `transformers`: roughly 2 GB the tagger never imports.
+- It needs **node**, to build the bundle: `npm install` in `ui/` the first time. The bundle is built on
+  demand, and a missing toolchain refuses naming what installs it. Nothing else has to be installed —
+  the server is a declared dependency of this project, as is the local tagger's stack.
 - `review` and `approve` keep working exactly as before. They are deprecated as *guidance*, never as
   code — deleting the hand path would make ③ a single point of failure for the whole pipeline.
 - **The source pane shows the caption one sentence to a block**, and under it the two tag lists
@@ -178,7 +239,7 @@ a model or a GPU** — its scope is stage ③ alone.
   Both are read-only — the picker at stage ② is still the only path into a field — and an absent
   list simply draws nothing.
 
-Useful flags, as the parser states them:
+### Useful flags, as the parser states them
 
 - `--runs RUNS` — the directory runs live under. It may point outside the repository entirely, but
   not inside the working tree and outside `.data/`: a run directory holds a copy of the photograph,
@@ -208,6 +269,16 @@ Useful flags, as the parser states them:
 
 Then `cp .env.example .env` and fill it in; it is gitignored and holds every secret.
 
+**The Python side is one command and takes no flag:**
+
+```sh
+uv sync
+```
+
+It installs everything a run needs, because the local tagger's stack and the review surface's server
+are declared dependencies. There is no extra to opt into — `[eval]`, the scorer's stack, is the only
+one left, and no verb in the pipeline needs it.
+
 **System dependencies — two, and no verb needs both.**
 
 | binary | needed by | absent means |
@@ -216,8 +287,8 @@ Then `cp .env.example .env` and fill it in; it is gitignored and holds every sec
 | `node` | `isekai ui`, to build the bundle once | that verb refuses, naming the install |
 
 *(There were three. `claude` was the first, and v0.22 removed the arm that needed it.)* Each refuses
-rather than assuming, and neither is a Python dependency: the runtime declares `dependencies = []`
-and the gate proves it under `python -S`.
+rather than assuming, and neither is a Python dependency — `uv sync` cannot install either, which is
+why each refusal names the command that does.
 
 **To run stage ①**, install [Ollama](https://ollama.com), then, from the repository root:
 

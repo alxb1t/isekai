@@ -39,9 +39,11 @@ edge missing outright, a laziness annotated backwards, and `interface/ui`
 collapsed away. The file tables below stay, because a file table is a local fact
 and a graph is not.
 
-**Two rules the layout is holding, not describing.** The runtime is stdlib-only:
-nothing in `python -m isekai`'s import graph may need a wheel, and a subprocess
-guard under `-S` proves it. And a set of constants anchors a repository path on
+**Two rules the layout is holding, not describing.** The entry point imports no
+third-party package at module scope: nothing in `python -m isekai`'s import graph
+may need a wheel, and a subprocess guard under `-S` proves it -- the wheels a run
+does need are declared dependencies as of v0.22.3, reached from inside the verb
+that needs them, so that guard is the only check on this. And a set of constants anchors a repository path on
 its own `__file__` -- `run.DATA_ROOT`, `run.REPOSITORY`, `flow.FLOWS_DIR`,
 `provision.MANIFEST_PATH`, `provision.VOCABULARY_MANIFEST_PATH` and
 `eval_models.EVAL_MANIFEST_PATH`; `tests/test_package_paths.py` pins every one of

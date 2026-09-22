@@ -1,7 +1,7 @@
 """CIEDE2000, the colour-difference formula the hair axis is measured in.
 
-Spelled here rather than pulled in, for the reason the runtime is stdlib-only:
-`scikit-image` has `deltaE_ciede2000`, and taking it would pull scipy, networkx,
+Spelled here rather than pulled in, for the reason this project's declared list is
+short: `scikit-image` has `deltaE_ciede2000`, and taking it would pull scipy, networkx,
 imageio, tifffile and lazy_loader into the lock for one closed-form function of
 six numbers. It is the whole of Sharma, Wu & Dalal (2005), and it is checked
 against that paper's own 34-pair reference table in the suite -- which is a
