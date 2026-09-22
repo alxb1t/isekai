@@ -1,9 +1,10 @@
 """The repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
-Five constants across four files anchor a repository path on their own `__file__`
+Six constants across four files anchor a repository path on their own `__file__`
 -- v0.16's fold took `SCHEMAS_DIR` and `BRIEFINGS_DIR` with it, because a schema
 and a briefing are a flow's now and a flow is reached through `FLOWS_DIR`, and
-v0.22 took `claude_cli.ROOT` with the file it lived in. Each is
+v0.22 replaced `claude_cli.ROOT` with `run.REPOSITORY` when the file it lived in
+was deleted -- the same anchor, named where `DATA_ROOT` already is. Each is
 asserted **absolutely**: strip the anchor's own suffix, and what remains must be
 the directory holding `pyproject.toml`. None of them is compared against another
 constant, because two constants that move together prove nothing about where
@@ -38,6 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # count.
 ANCHORS = (
     pytest.param(run.DATA_ROOT, (".data",), id="run.DATA_ROOT"),
+    pytest.param(run.REPOSITORY, (), id="run.REPOSITORY"),
     pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
     pytest.param(
         provision.MANIFEST_PATH,
@@ -90,8 +92,8 @@ def test_each_anchor_resolves_to_the_repository_root(
 def test_the_assertion_fails_when_it_lands_on_the_package_instead() -> None:
     # Where every one of these constants strips back to if its module moves into a
     # group directory and its expression does not gain a `.parent`: the package,
-    # not the repository. One case, not five -- each anchor's suffix cancels
-    # against its own hops, so all five reduce to exactly this path, and
+    # not the repository. One case, not six -- each anchor's suffix cancels
+    # against its own hops, so all six reduce to exactly this path, and
     # parametrizing would advertise per-anchor coverage that does not exist.
     with pytest.raises(AssertionError):
         _assert_anchors_the_repository_root(REPO_ROOT / "isekai", ())

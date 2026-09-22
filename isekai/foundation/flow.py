@@ -324,6 +324,23 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
         )
     document: Any = json.loads(manifest.read_text())
 
+    # **The version is checked before any shape check, because it decides what
+    # the other keys mean.** A version 2 manifest is a live input -- it declares
+    # `hosted` and no `model` -- and under a shape-first order it is refused for a
+    # misspelling it does not have, never reaching the one refusal that names the
+    # real fix. Version, then the key set, then the values, then the files.
+    if "manifest_version" not in document:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME} declares no manifest_version; add the field "
+            "to the manifest, which declares every value and derives none"
+        )
+    declared = document["manifest_version"]
+    if declared != MANIFEST_VERSION:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME}: declares manifest version {declared!r} and "
+            f"this build reads version {MANIFEST_VERSION}; upgrade isekai, or "
+            "point at a flow this build reads"
+        )
     # **The allowlist runs before the missing-key check, and the order is the
     # message.** Every key is required, so a misspelling fails twice at once: the
     # key this build reads is absent, and one it does not read is present.
@@ -343,13 +360,6 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
         raise Refusal(
             f"{flow}/{MANIFEST_NAME} declares no {', '.join(missing)}; add the "
             "field to the manifest, which declares every value and derives none"
-        )
-    declared = document["manifest_version"]
-    if declared != MANIFEST_VERSION:
-        raise Refusal(
-            f"{flow}/{MANIFEST_NAME}: declares manifest version {declared!r} and "
-            f"this build reads version {MANIFEST_VERSION}; upgrade isekai, or "
-            "point at a flow this build reads"
         )
     absent = [key for key in REQUIRED_PROMPT if key not in document["prompt"]]
     if absent:

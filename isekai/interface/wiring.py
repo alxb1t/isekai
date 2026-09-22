@@ -27,7 +27,7 @@ from isekai.boundary.comfy_types import ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.flow import FLOWS_DIR, Flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
+from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
 from isekai.pipeline.caption import OllamaReader, Reader
 from isekai.pipeline.tagging import OllamaTagger, Tagger
 from isekai.shared.field_map import FieldMap
@@ -144,12 +144,10 @@ def tagger_for(flow: Flow) -> LocalTagger:
     return open_session()
 
 
-# Derived from `DATA_ROOT` rather than recomputed, so the two halves of the check
-# below cannot drift apart: both the repository and the ignored root are then
-# anchored to one `__file__`. That anchor is deliberate -- `python -m isekai` may
-# be run from anywhere, and a CWD-relative answer would make the same run root
-# legal or illegal depending on where the operator happened to be standing.
-REPOSITORY = DATA_ROOT.parent
+# `REPOSITORY` is imported rather than re-derived, so the two halves of the check
+# below cannot drift apart. The anchor is deliberate -- `python -m isekai` may be
+# run from anywhere, and a CWD-relative answer would make the same run root legal
+# or illegal depending on where the operator happened to be standing.
 
 
 def _identity(path: Path) -> tuple[int, int] | None:

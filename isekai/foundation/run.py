@@ -52,6 +52,13 @@ from isekai.shared.atomic_write import write_atomically
 DATA_ROOT = Path(__file__).resolve().parent.parent.parent / ".data"
 RUNS_ROOT = DATA_ROOT / "runs"
 
+# The repository root, derived from `DATA_ROOT` rather than recomputed, so the
+# two cannot drift apart: both are then anchored to one `__file__`. Named here
+# because this module owns `DATA_ROOT`; `interface/wiring.py` spelled the same
+# expression until v0.22 rehomed `instructions_record`, which needs it too, and
+# a second derivation is a second thing to keep true.
+REPOSITORY = DATA_ROOT.parent
+
 # The only schema version this build reads. There is no migration ladder because
 # there is nothing to migrate: version 2 does not exist, so a command to upgrade
 # to it would be a dispatch table with no entries (design.md D2). What does ship
@@ -552,14 +559,11 @@ def across(items: Sequence[T], work: Callable[[T], None]) -> list[str]:
 class StageFailure(Exception):
     """The CLI did not return what a stage can use, and the kind says what next."""
 
-    def __init__(
-        self, kind: Kind, detail: str, envelope: Mapping[str, Any] | None = None
-    ) -> None:
+    def __init__(self, kind: Kind, detail: str) -> None:
         """Carry the kind and the detail an error record is written from."""
         super().__init__(detail)
         self.kind = kind
         self.detail = detail
-        self.envelope = dict(envelope or {})
 
 
 def refusal_for(
@@ -592,12 +596,11 @@ def instructions_record(path: Path) -> dict[str, str]:
     identity marks. An artifact whose provenance names the model but not the
     instructions cannot explain its own result (design.md D7).
     """
-    root = DATA_ROOT.parent
     resolved = path.resolve()
-    inside = resolved.is_relative_to(root)
+    inside = resolved.is_relative_to(REPOSITORY)
     return {
-        "path": str(resolved.relative_to(root)) if inside else resolved.name,
-        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "path": str(resolved.relative_to(REPOSITORY)) if inside else resolved.name,
+        "sha256": digest_of(path.read_bytes()),
     }
 
 
@@ -617,4 +620,4 @@ def constant_record(text: str) -> dict[str, str]:
     `scripts/` instead, and a tag prompt shapes the operator's reading rather
     than the render, so it makes no per-flow claim.
     """
-    return {"sha256": hashlib.sha256(text.encode()).hexdigest()}
+    return {"sha256": digest_of(text.encode())}

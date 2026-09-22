@@ -656,20 +656,8 @@ def test_refusing_an_unknown_key_does_not_require_the_flow_to_be_executed(
     assert "quality" in str(refused.value)
 
 
-@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
-@pytest.mark.parametrize("typo", ["modl", "Model", "models", "model_name"])
-def test_a_misspelled_model_key_is_refused_rather_than_ignored(
-    tmp_path: Path, typo: str
-) -> None:
-    """What flattening the block bought, and it cost no new check.
-
-    The `hosted` block had no allowlist of its own -- `{"sortr": "x"}` inside it
-    loaded clean -- and a top-level key is guarded by the allowlist that already
-    existed. `modl` is caught as an unknown key *and* as a missing one, in the
-    same load. `models` is the interesting row: it is a real key, so the typo
-    lands as a **missing** `model` rather than an unknown one, and is still
-    refused naming it (design.md D3).
-    """
+def _misspelled(tmp_path: Path, typo: str) -> Refusal:
+    """Return the refusal from a manifest whose model key is written `typo`."""
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     document[typo] = document.pop("model")
@@ -677,14 +665,41 @@ def test_a_misspelled_model_key_is_refused_rather_than_ignored(
 
     with pytest.raises(Refusal) as refused:
         load_flow("summon-anime-wai", root)
+    return refused.value
 
-    message = str(refused.value)
-    if typo in KNOWN:
-        # `models` is the degenerate row: it is a real key, so writing it clobbers
-        # the render weights and the load fails on the absent `model` instead.
-        assert "model" in message
-    else:
-        assert typo in message
+
+@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
+@pytest.mark.parametrize("typo", ["modl", "Model", "model_name"])
+def test_a_misspelled_model_key_is_refused_naming_what_was_written(
+    tmp_path: Path, typo: str
+) -> None:
+    """What flattening the block bought, and it cost no new check.
+
+    The `hosted` block had no allowlist of its own -- `{"sortr": "x"}` inside it
+    loaded clean -- and a top-level key is guarded by the allowlist that already
+    existed. Each of these fails twice at once, as an unknown key *and* as a
+    missing one, and the allowlist runs first so the message names the key the
+    operator actually wrote rather than the one he did not (design.md D3).
+    """
+    assert typo not in KNOWN
+
+    assert typo in str(_misspelled(tmp_path, typo))
+
+
+@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
+def test_a_typo_that_collides_with_a_real_key_is_refused_for_the_absence(
+    tmp_path: Path,
+) -> None:
+    """`models` is the one near-miss the allowlist cannot see, and it is still caught.
+
+    It is a real key -- the render weights -- so writing `model`'s value into it
+    is not an unknown key at all. What the loader has left is the absence, and
+    naming `model` is the correct diagnosis for this row: the operator did write
+    a key this build reads, just not that one.
+    """
+    assert "models" in KNOWN
+
+    assert "model" in str(_misspelled(tmp_path, "models"))
 
 
 @pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")

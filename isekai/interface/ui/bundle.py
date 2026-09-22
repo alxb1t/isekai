@@ -24,7 +24,7 @@ import subprocess
 from pathlib import Path
 
 from isekai.foundation.refusal import Refusal
-from isekai.interface.wiring import REPOSITORY
+from isekai.foundation.run import REPOSITORY
 
 SOURCE = REPOSITORY / "ui"
 

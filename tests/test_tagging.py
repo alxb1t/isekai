@@ -376,11 +376,11 @@ def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
     opened = fake_tagger()
     monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
-    resolved = {
-        flow_id: wiring.tagger_for(load_flow(flow_id)) for flow_id in tracked_flows()
-    }
+    tracked = tracked_flows()
 
-    assert set(resolved) == set(tracked_flows())
+    resolved = {flow_id: wiring.tagger_for(load_flow(flow_id)) for flow_id in tracked}
+
+    assert tracked
     assert all(pair == opened for pair in resolved.values())
 
 

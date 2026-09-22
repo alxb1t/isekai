@@ -212,7 +212,7 @@ def caption(
             directory,
             version,
             failed.kind,
-            {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
+            {"stage": STAGE, "detail": failed.detail},
         )
         raise refusal_for(
             "reader",

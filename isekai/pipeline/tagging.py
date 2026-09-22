@@ -263,7 +263,7 @@ def caption_wd14(
             directory,
             version,
             "permanent",
-            {"stage": WD14, "detail": str(failed), "envelope": ""},
+            {"stage": WD14, "detail": str(failed)},
         )
         raise refusal_for(
             "tagger",
@@ -328,7 +328,7 @@ def caption_tags(
             directory,
             version,
             failed.kind,
-            {"stage": TAGS, "detail": failed.detail, "envelope": failed.envelope},
+            {"stage": TAGS, "detail": failed.detail},
         )
         raise refusal_for(
             "tagger",
