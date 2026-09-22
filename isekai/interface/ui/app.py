@@ -475,7 +475,6 @@ def run(app: FastAPI, *, host: str, port: int) -> None:
     """Block, serving `app`, until the operator stops it.
 
     A thin wrapper so that `__init__.py` composes the surface without importing
-    the `ui` extra at module scope -- the type checker's override covers this
-    file alone, and CI installs neither package.
+    the `ui` extra at module scope.
     """
     uvicorn.run(app, host=host, port=port, log_level="warning")

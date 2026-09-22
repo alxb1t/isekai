@@ -38,6 +38,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   one and left it standing, which is what *"every claim … checked against the tree"* is worth as a
   description of a pass rather than a guarantee.
 
+  **The same claim stood twice in that file, and the first fix left the twin.** `run()`'s docstring
+  carried it too — *"the type checker's override covers this file alone, and CI installs neither
+  package"* — 450 lines below the paragraph that had just been corrected, so for one commit the module
+  answered *"is anything suppressed for the `ui` extra, and does the gate install it?"* in both
+  directions. The clause is deleted; the paragraph above already carries the configuration facts, and
+  a repo-wide grep now leaves only `pyproject.toml`'s *"CI never installs this"*, which is about the
+  `eval` extra and is true. Two convergence rounds found one claim at one site each: the lesson is
+  that a false sentence is worth grepping for, not just fixing where it was seen.
+
 - **The acceptance ran, and it cost nothing: no pod, no render, no `generate`.** `make gate` exits 0 on
   all six commands, 815 tests pass, and `grep spec_exempt tests/ | grep 0024` returns nothing. Every
   numeral this version touched was re-derived from the tree rather than from the sentence it replaced —
