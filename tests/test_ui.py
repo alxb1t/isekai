@@ -322,8 +322,8 @@ def test_an_absent_toolchain_refuses_naming_what_to_install(
         bundle.ensure_built(source)
 
     message = str(refused.value)
-    # node is this repository's second system dependency, after the `claude`
-    # binary, and the refusal copies `require_binary()`'s shape.
+    # node is one of this repository's two system dependencies, beside Ollama,
+    # and its refusal takes the shape both are under.
     assert "nodejs.org" in message
     assert "isekai ui" in message
 

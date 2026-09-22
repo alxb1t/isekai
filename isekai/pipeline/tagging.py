@@ -2,13 +2,12 @@
 
 **Two functions and two seams, deliberately not one Protocol with two
 implementations.** A Protocol earns its name when the thing behind it is
-interchangeable, and these are not. `caption_tags` reaches a model over HTTP and
-exists only where a flow's manifest declares a `hosted` block; `caption_wd14`
-opens a digest-verified file on disk and resolves through **nothing at all**. The
-registry that would key the Protocol is keyed on `hosted.implementation`
-(`wiring.py`), a string WD14 does not have -- and a Protocol whose two
-implementations resolve through different mechanisms is a shared name rather than
-a seam (design.md D3).
+interchangeable, and these are not. `caption_tags` reaches a model over HTTP, on
+the alias the flow's manifest names in its `model` key; `caption_wd14` opens a
+digest-verified file on disk and resolves through **nothing at all** -- there is
+no manifest key it reads and no flow for which it would be wrong. A Protocol
+whose two implementations resolve through different mechanisms is a shared name
+rather than a seam (design.md D3).
 
 **Neither narrows anything, and that is the product.** Stage (2) is where a tag
 list is filtered down to a sheet; seeing *behind* that filter is the whole reason
@@ -167,8 +166,7 @@ class OllamaTagger:
         """Return the exact request this tagger is invoked with.
 
         A method rather than a local, so the request is assertable without a
-        call -- the property `ClaudeReader.argv()` and `OllamaReader.body()` both
-        have, for the same reason.
+        call -- the property `OllamaReader.body()` has, for the same reason.
         """
         return {
             "model": self.model,

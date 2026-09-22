@@ -6,9 +6,9 @@ third-party packages, so a missing `ui/node_modules/` refuses and names the
 command -- a verb that fetched silently would be the surprise every other
 network-touching default in this system avoids.
 
-**node is this repository's second system dependency**, after the `claude`
-binary, and the refusal copies `claude_cli.require_binary()`'s shape: say what is
-absent, say what installs it, and say which part of the system needs it.
+**node is one of this repository's two system dependencies**, beside Ollama, and
+the refusal takes the shape both are under: say what is absent, say what installs
+it, and say which part of the system needs it.
 
 **The bundle is not tracked.** Vite emits content-hashed filenames, so committing
 it would churn version control on every build for no reading a human does.
@@ -16,7 +16,7 @@ it would churn version control on every build for no reading a human does.
 and they fail differently from the other two: losing this one costs a
 deterministic rebuild, losing the other an `npm install` (design.md D12).
 
-Stdlib only -- `subprocess` and `shutil`, the same two `claude_cli.py` uses.
+Stdlib only -- `subprocess` and `shutil`, and nothing else reaches for either.
 """
 
 import shutil

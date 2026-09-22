@@ -13,13 +13,14 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 > for what is being built next — this banner deliberately names no version, because a forward
 > reference here is one reordering away from being wrong.
 >
-> **The first two stages come in two arms, and the flow picks.** `summon-v1` and `conjure-v1` read
-> and sort through the **`claude` CLI**, so they need that binary on `PATH` and an Anthropic
-> subscription. **`summon-open-v1` runs both on open models over a local Ollama** and reaches
-> Claude by no path at all — so a clone with no subscription can run the whole pipeline. Nothing
-> else here needs either: the render, the provisioning and the whole test suite are unaffected.
-> **Neither arm's models are digest-pinned yet**; the flow names them and nothing verifies the
-> bytes behind the names. That travels with provisioning, and this version does not claim it.
+> **The whole pipeline runs on open models.** Stage ① reaches JoyCaption over a local
+> [Ollama](https://ollama.com) and nothing here needs an API key or a subscription; stage ② reaches
+> no model at all. The flow's manifest names the one model it runs, in a required `model` key, and
+> both tracked flows name the same one. *(Until v0.22 there was a second arm over the `claude` CLI,
+> selected by a flow declaring no `hosted` block. Nothing had called it for anything measured since
+> v0.19, so v0.22 removed it and the block with it.)*
+> **The model is not digest-pinned**; the flow names it and nothing verifies the bytes behind the
+> name. That travels with provisioning, and this version does not claim it.
 
 ## Why this exists
 
@@ -63,8 +64,8 @@ ephemeral and metered.
 
 ## The path
 
-There is one flow, `flows/summon-v1/`, and it is driven in staged verbs rather than typed as
-options. Identity is carried by mechanisms rather than by a sentence:
+There are two flows, `flows/summon-anime-wai/` and `flows/conjure-anime-wai/`, and each is driven
+in staged verbs rather than typed as options. Identity is carried by mechanisms rather than by a sentence:
 
 | Axis | Carried by |
 |---|---|
@@ -94,20 +95,20 @@ Run `cp .env.example .env` and fill in your RunPod values.
 The first three stages need **no GPU and no pod** — they are free and local. Only `generate` needs
 an endpoint.
 
-1. Read the photograph into prose, then sort the prose into a sheet of canonical tags. Every stage
-   verb takes `--flow`, and it is required — a stage cannot act without knowing which flow asked,
+1. Read the photograph — into prose for a human, and into a tag list the sheet is filled from.
+   Every stage verb takes `--flow`, and it is required — a stage cannot act without knowing which flow asked,
    because the flow supplies the briefing it reads and the schema it fills against:
    ```sh
-   python -m isekai caption --flow summon-v1 me.jpg
-   python -m isekai sheet --flow summon-v1 me.jpg
+   python -m isekai caption --flow summon-anime-wai me.jpg
+   python -m isekai sheet --flow summon-anime-wai me.jpg
    ```
    **`caption` writes three artifacts and reports three times** — the prose, then a scored tag list
-   from a local WD14 tagger, then a raw one from the hosted model where the flow declares an arm
-   that can produce it. Neither tag list is narrowed: they are what the review surface shows beside
-   the prose so a human can see what the router dropped. **The local list is what fills the sheet**,
-   so `sheet` refuses without it; the prose is a reading aid with no machine consumer. The local one runs for every flow and
-   needs `uv sync --extra tagging` plus `bash scripts/download_models.sh scripts/vocabulary.json`;
-   the hosted one is silently absent where a flow declares none, which is never an error.
+   from a local WD14 tagger, then a raw one from the hosted model. Neither tag list is narrowed:
+   they are what the review surface shows beside the prose so a human can see what the router
+   dropped. **The local list is what fills the sheet**, so `sheet` refuses without it; the prose is
+   a reading aid with no machine consumer. The local one needs `uv sync --extra tagging` plus
+   `bash scripts/download_models.sh scripts/vocabulary.json`; the hosted one is silently absent when
+   the model is not running, which is never an error.
 
    Each run gets a directory under `.data/runs/`, named for the photograph's digest and its
    filename, and every artifact sits under the flow that produced it:
@@ -117,8 +118,8 @@ an endpoint.
    and marks it approved. **Only an approved sheet is ever rendered** — the correction is the
    single largest measured gain in this pipeline.
    ```sh
-   python -m isekai review --flow summon-v1 me.jpg   # then edit the file it prints
-   python -m isekai approve --flow summon-v1 me.jpg
+   python -m isekai review --flow summon-anime-wai me.jpg   # then edit the file it prints
+   python -m isekai approve --flow summon-anime-wai me.jpg
    ```
 3. Create the pod. It prints the SSH and tunnel commands when ready, and tears itself down if it
    never becomes usable.
@@ -131,7 +132,7 @@ an endpoint.
    ```
 5. Back in the first terminal, render:
    ```sh
-   python -m isekai generate --flow summon-v1 me.jpg --server http://127.0.0.1:8188
+   python -m isekai generate --flow summon-anime-wai me.jpg --server http://127.0.0.1:8188
    ```
    Each image lands under the run directory, named for the seed that produced it, beside a
    provenance artifact recording the flow, the seed, the sheet version and the digest of the graph
@@ -150,7 +151,7 @@ the vocabulary — canonical spelling, the post count behind every tag, and a li
 the encoder's 77-token window, none of which a text editor can tell you:
 
 ```sh
-python -m isekai ui <run-id> [<run-id> …] --flow summon-v1
+python -m isekai ui <run-id> [<run-id> …] --flow summon-anime-wai
 ```
 
 It resolves the batch, refuses everything it can refuse, prints a URL and blocks; correct and approve
@@ -206,29 +207,27 @@ Useful flags, as the parser states them:
 
 Then `cp .env.example .env` and fill it in; it is gitignored and holds every secret.
 
-**System dependencies — three, and each verb needs at most one of them.**
+**System dependencies — two, and no verb needs both.**
 
 | binary | needed by | absent means |
 |---|---|---|
-| `claude` | ① and ② of a flow that declares no `hosted` block | that flow's first two stages refuse, naming the install |
+| `ollama` | ① of every flow, for the reader and the hosted tagger | stage ① refuses, naming the command that creates the model |
 | `node` | `isekai ui`, to build the bundle once | that verb refuses, naming the install |
-| `ollama` | ① and ② of a flow that declares `hosted` | that flow's first two stages refuse, naming the command |
 
-Each refuses rather than assuming, and none of the three is a Python dependency: the runtime
-declares `dependencies = []` and the gate proves it under `python -S`.
+*(There were three. `claude` was the first, and v0.22 removed the arm that needed it.)* Each refuses
+rather than assuming, and neither is a Python dependency: the runtime declares `dependencies = []`
+and the gate proves it under `python -S`.
 
-**To run the open arm**, install [Ollama](https://ollama.com), then, from the repository root:
+**To run stage ①**, install [Ollama](https://ollama.com), then, from the repository root:
 
 ```sh
 ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
-ollama pull qwen3:8b
 ```
 
-The first builds the reader from a committed recipe. **The second is no longer used by any stage**
-— `qwen3:8b` filled the sheet until v0.21, and the manifest still names it because dropping the key
-would move a frozen flow's digest. It is kept here for a flow that declares it and for the record.
-It is a public registry tag rather than a machine-local alias, which is why the two commands
-differ. **`scripts/joycaption.Modelfile`'s header names the two GGUF files it needs,
+**One command, because there is one model.** It builds the reader from a committed recipe, and the
+same alias answers the hosted tagger — which is exactly why the tag prompt is unframed: two calls to
+one model must not arrive framed differently.
+**`scripts/joycaption.Modelfile`'s header names the two GGUF files it needs,
 with their sha256, their byte counts and their pinned source revision** — they are not in this
 repository and `models/` is gitignored, so fetch them into `models/joycaption/` first.
 
@@ -284,12 +283,11 @@ isekai/
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
-├── flows/summon-v1/           # one flow: five flat files, and it is immutable
-│   ├── flow.json              # the manifest: inputs, vocabulary, models, dials, prompt, node roles
+├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable
+│   ├── flow.json              # the manifest: inputs, vocabulary, model, models, dials, prompt, nodes
 │   ├── graph.json             # the API graph
 │   ├── schema.json            # the sheet's field list, in prompt order
-│   ├── caption.briefing.md    # the standing instructions the photograph is read under
-│   └── sheet.briefing.md      # the standing instructions the caption is sorted under
+│   └── caption.briefing.md    # the standing instructions the photograph is read under
 ├── ui/                        # the review surface: Vue 3 + Vite; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is a copy of design/, Inter vendored beside it
 │   └── design/                # the imported design handoff — read-only, never edited
@@ -355,7 +353,7 @@ PROVISION TIME (every session — this is up.sh / down.sh)
 
 USE IT
   ssh -L 8188:localhost:8188 ...    opens a private tunnel to the pod
-  python -m isekai generate --flow summon-v1 photo.jpg --server http://127.0.0.1:8188
+  python -m isekai generate --flow summon-anime-wai photo.jpg --server http://127.0.0.1:8188
                        ──▶ localhost:8188 ──tunnel──▶ ComfyUI ──▶ GPU ──▶ anime.png
 
 TEAR DOWN

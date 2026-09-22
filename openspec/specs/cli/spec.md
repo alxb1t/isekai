@@ -12,7 +12,7 @@ review surface — and every refusal a batch produced reported together rather t
 
 The CLI is where a bad value is cheapest to catch — `--seed` and `--count` are range-checked **at parse
 time**, so a bad one fails before a pod is touched rather than after a paid render. **There are no dial
-flags.** A flow's dials are declared in `flows/summon-v1/flow.json` and are not reachable from the
+flags.** A flow's dials are declared in its own `flows/<id>/flow.json` and are not reachable from the
 command line, because a tuned dial is not a variant of a flow — it is an untested flow.
 
 `isekai/__main__.py` is the path `runpy` resolves and is a shim; the parser, the verb table and the

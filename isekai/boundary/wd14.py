@@ -220,7 +220,7 @@ def verified_paths(
     manifest.
 
     An absent file is a `Refusal` naming the one command that fixes it, which is
-    the posture `require_binary()` takes for an absent binary. A file present with
+    the posture this repository takes for every absent dependency. A file present with
     the wrong bytes is left to `DigestMismatch`, whose message already names the
     file, the digest expected and the digest computed -- all three, because that
     one is read by a human deciding whether a pin is stale or a file was swapped.

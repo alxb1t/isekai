@@ -75,8 +75,8 @@ and nowhere else. In brief, the load-bearing seams are:
 - **The flow manifest declares; nothing computes.** `flows/<id>/flow.json` names every node the render
   path edits, by role — `flow.node("sampler")`, `flow.node("photo")` — so no node is ever located by
   class at runtime. That is what lets a broken flow be caught by the suite rather than by a boot, and
-  it is not optional: `summon-v1` has two `KSampler` nodes and two `ImageScale` nodes, so a class
-  lookup is ambiguous against the graph that actually ships.
+  it is not optional: `summon-anime-wai` has two `KSampler` nodes and two `ImageScale` nodes, so a
+  class lookup is ambiguous against the graph that actually ships.
 - **`isekai/shared/image.py`** — what an image *is*: the JPEG/PNG header walk, the EXIF transpose the
   loader will apply, and `working_resolution`, the render target the image's own dimensions imply. It
   touches no ComfyUI graph; the caller writes the target into the node the manifest names. It is
@@ -85,13 +85,16 @@ and nowhere else. In brief, the load-bearing seams are:
   any endpoint is acquired, for the whole batch, so a malformed sheet costs nothing rather than a boot.
 - **`ComfyTransport`** (`isekai/boundary/comfy_types.py`, implemented in `comfy_client.py`) — the
   boundary to the rented GPU. **`boundary/ollama.py`** is the second network boundary the pipeline
-  has: `HOST` as a module constant with no flag and no environment variable behind it, one POST over
-  stdlib `urllib`, an injectable `Transport`, and the classification of what comes back. It imports
-  nothing from `claude_cli.py` — though the edge that matters is the **call graph**, because
-  `pipeline/caption.py` imports nine names from `claude_cli` for `ClaudeReader` and every flow
-  traverses that file. **Two `pipeline/` modules import that file, not three**: `sheet.py` stopped
-  when v0.21 deleted `ClaudeSorter`, and `tagging.py` still does — `CliFailure`, `constant_record`
-  and `refusal_for`, for the failure shape rather than for a reader.
+  has, and since v0.22 the only one the *pipeline* has: `HOST` as a module constant with no flag and
+  no environment variable behind it, one POST over stdlib `urllib`, an injectable `Transport`, and
+  the classification of what comes back. It reaches no third party and there is no longer a second
+  transport beside it — `boundary/claude_cli.py` was deleted with the arm it served, and with it the
+  thirteen names that existed only for `ClaudeReader`.
+  **The failure shape the stages share lives in `foundation/run.py`, not at a boundary**:
+  `StageFailure` (named `CliFailure` until two of its three raising modules had no CLI in them),
+  `refusal_for`, `instructions_record` and `constant_record`. It cannot live in `refusal.py` — that
+  module imports nothing by design, the class needs `Kind`, and `run.py` already imports `refusal.py`:
+  a cycle.
 - **The run owns the layout, not the stages.** The stage directory names live in
   `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, and **no stage
   imports another** — the last such edge closed when `validate` moved to `isekai/shared/fields.py`,
@@ -145,15 +148,17 @@ A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `d
 unchecked box**. A phase is advanced by a commit **and** a ticked box, in that phase's own commit — either
 alone is not an advance.
 
-**The living spec** is `openspec/specs/<capability>/spec.md` — **eleven capabilities today**, each a
-contract with one owner: `caption`, `cli`, `comfy-transport`, `evaluation`, `image-generation`,
-`model-provisioning`, `review`, `run-directory`, `sheet`, `tagging`, `ui`. **Count
-`openspec/specs/*/` rather than trusting this sentence** — it said *nine* through two versions in
-which the answer was ten, and *ten* through one in which it was eleven.
+**The living spec** is `openspec/specs/<capability>/spec.md` — **twelve capabilities today**, each a
+contract with one owner: `caption`, `cli`, `comfy-transport`, `evaluation`, `field-map`,
+`image-generation`, `model-provisioning`, `review`, `run-directory`, `sheet`, `tagging`, `ui`.
+**Count `openspec/specs/*/` rather than trusting this sentence** — it said *nine* through two
+versions in which the answer was ten, *ten* through one in which it was eleven, and *eleven* through
+one in which it was twelve. It has now been wrong three times, which is the whole argument for the
+clause.
 A capability enters and leaves the living spec only when a change is **archived**, which is
 `mf-release`'s act and never the builder's, so the number here is always the count on disk and never
-the count a pending change implies: v0.21's delta adds `field-map` and makes it twelve, and until
-that change is archived it is eleven. Every `#### Scenario:` carries a
+the count a pending change implies: v0.22's delta retires requirements from four capabilities and
+adds none, so the count does not move. Every `#### Scenario:` carries a
 `- **Key:**` and a `- **Layers:**` bullet, and the key is
 `<capability>:<requirement-slug>:<scenario-slug>` — so a key locates its own file. On release the delta is
 folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
@@ -189,7 +194,7 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   tag artifacts `caption` also writes, so the count of *verbs* is still four and the count of modules
   is five. **`shared/`** — `image.py`'s header reader, `vocabulary.py`, `field_map.py`'s authored
   `tag ↔ field` table and the router over it, `fields.py`'s sheet validation, `atomic_write.py`. **`boundary/`** — the ComfyUI transport (`comfy_types.py`, `comfy_client.py`,
-  `multipart.py`), `claude_cli.py`, `ollama.py`, `wd14.py`, and `provision.py`: the manifest's reader, the byte verification,
+  `multipart.py`), `ollama.py`, `wd14.py`, and `provision.py`: the manifest's reader, the byte verification,
   the skip/abort/fetch policy and the graph↔manifest binding. `provision.py` is **not** in the entry
   point's import graph, so the stdlib-only runtime rule is untouched either way. **`wd14.py` is**,
   and it holds the whole of this package's non-stdlib surface: `onnxruntime`, `numpy` and `Pillow`
@@ -202,18 +207,27 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   `[ui]` extra. `cli.py` imports that package **inside** its handler, so the stdlib-only runtime rule
   is untouched.
   **`tests/`** — the suite and its fakes.
-  **`flows/<id>/`** — one flow, and **five flat files**: `flow.json`, the manifest that declares its
-  inputs, vocabulary, models, dials, prompt fragments and the graph id of every node the render path
-  edits; `graph.json`, the API graph; `schema.json`, the sheet's field list; and the two briefings,
-  `caption.briefing.md` and `sheet.briefing.md`. The manifest names none of its siblings — a key that
-  can only ever hold one value is not a declaration — and they sit *directly* in the directory,
-  because the digest that freezes a flow covers regular files only, so a nested layout would leave
-  three of the five outside the freeze with the gate green. A flow is immutable — editing any of the
-  five is not a variant of a flow, it is an untested flow — and it shares nothing with another flow.
-  Three are tracked: `summon-v1`, `conjure-v1`, and `summon-open-v1`, whose graph and schema are
-  byte-identical copies of `summon-v1`'s and whose manifest differs in exactly two places, the
-  identifier and the `hosted` block. Adding one costs a line in `tests/test_flow.py`'s `PINNED`,
-  which is the designed price of the freeze rather than a defect. **`infra/`** — `up.sh` / `down.sh`,
+  **`flows/<id>/`** — one flow, **flat, and its files are named rather than counted**: `flow.json`,
+  the manifest that declares its inputs, vocabulary, models, dials, prompt fragments, the model its
+  first two stages run and the graph id of every node the render path edits; `graph.json`, the API
+  graph; `schema.json`, the sheet's field list; and `caption.briefing.md`, the standing instructions
+  a photograph is read under. The manifest names none of its siblings — a key that can only ever hold
+  one value is not a declaration — and they sit *directly* in the directory, because the digest that
+  freezes a flow covers regular files only, so a nested layout would leave the schema and the briefing
+  outside the freeze with the gate green. **The rule does not tally them, and that is deliberate**:
+  it said *five* until v0.22 deleted `sheet.briefing.md`, a numeral is the part of a rule that goes
+  stale, and `tests/test_flow.py` asserts `len(SIBLINGS)` so a sixth cannot be added silently.
+  A flow is immutable — editing any of its files is not a variant of a flow, it is an untested flow —
+  and it shares nothing with another flow.
+  Two are tracked: `summon-anime-wai` and `conjure-anime-wai`, whose caption briefing is a
+  byte-identical copy of the other's, because both read the same model for the same purpose and a
+  second authored briefing would be a second untested artifact. Adding one costs a line in
+  `tests/test_flow.py`'s `PINNED`, which is the designed price of the freeze rather than a defect.
+  **A flow's identifier is `<verb>-<style>-<base>`**, with `-v2` appended only for a second
+  generation of the same triple. The base is in the name because the catalogue holds twelve candidate
+  checkpoints of which eleven are untried, so `summon-anime` could not tell two of them apart — and
+  the rule exists at all because its absence is what produced `summon-open-v1`, a name describing the
+  *arm* rather than the flow, which v0.22 deleted for that reason. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — `models.json`, the pinned and checksummed manifest of every
   model artifact the graph needs and the source of truth for what the stack *is*;
   `download_models.sh`, the thin driver that provisions it, run *on the pod*; and
@@ -266,24 +280,25 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 ## The path
 
-Two flows on the same render, `summon-v1` and `summon-open-v1`, on a **WAI-illustrious-SDXL v17.0**
+Two flows, `summon-anime-wai` and `conjure-anime-wai`, on a **WAI-illustrious-SDXL v17.0**
 (Illustrious/SDXL anime) base, driven in four staged verbs — `caption` → `sheet` →
-`review`/`approve` → `generate`. (`conjure-v1` is the third tracked flow.)
+`review`/`approve` → `generate`. `summon` renders from a photograph through the identity and pose
+legs; `conjure` declares `inputs: ["sheet"]` and renders from the corrected sheet alone.
 
-**The flow declares which implementation stage ① runs, in one optional `hosted` key**, and a
-manifest that declares none runs the Claude arm — which is what keeps both incumbent flows unedited
-and their digests still. `summon-open-v1` declares `ollama`, names JoyCaption Beta One and Qwen3-8B,
-and **reaches Claude by no path at all**; a suite-resident test runs it with both entry points of
-the Claude transport rigged to raise, and a second test points the same fixture at `summon-v1` so
-that proof cannot pass vacuously. The registry in `interface/wiring.py` resolves the reader **per
-flow**, inside `cli.py`'s loop, so one command naming flows on both arms gives each its own.
-**`hosted.sorter` is a required key that nothing reads.** Stage ② calls no hosted model since v0.21,
-and the key stays because removing `"sorter": "qwen3:8b"` from `summon-open-v1`'s manifest would move
-that flow's digest — which this file makes a new flow rather than an edit. It is carried dead, like
-`sheet.briefing.md`, and both go with the version that deletes the flows they belong to.
-**Neither arm's hosted models are pinned by digest** — the manifest names them and nothing verifies
-the bytes; that travels with provisioning, and `models` (the twelve render weights) is the key that
-*does* carry digests.
+**There is one reader implementation, and the flow declares the model it runs** — a required
+top-level `model` key, `joycaption-beta-one-q4k` in both tracked flows, reached over HTTP to Ollama
+on this machine. It replaced an optional `hosted` block naming an implementation, and the deletion
+was not a shrink: `hosted` named *a model reached over a network to a third party* as against *one
+over a socket to this machine*, only the second survives, and a block whose name no longer
+distinguishes anything, holding a single key, is not a declaration. **The key is `model` and not
+`reader` because one alias answers both prompts stage ① sends** — `wiring.py` builds the reader and
+the hosted tagger from it, which is exactly why `TAG_PROMPT` is not chat-framed. It is resolved
+**per flow**, inside `cli.py`'s loop, so one command naming two flows gives each the model its own
+manifest declares. **There is no registry** and no default: with one implementation there is no
+string to key one on.
+**The model is not pinned by digest** — the manifest names it and nothing verifies the bytes; that
+travels with provisioning, and `models` (the twelve render weights) is the key that *does* carry
+digests.
 
 **`caption` writes three artifacts and says three times** — *prose · wd14 · tags*, in that order and
 no other. `across()` catches a `Refusal` per **input** rather than per stage, so the ordering *is*
@@ -296,8 +311,10 @@ in prose still costs the two artifacts behind it, which is the trade it was chos
 list is narrowed** — no canonicalisation, no vocabulary filtering, no re-ordering but by confidence —
 because narrowing is stage ②'s job and the whole point of these two artifacts is seeing behind it.
 The local tagger resolves through **no manifest key at all** and runs for every flow; the hosted one
-resolves only where a flow declares an arm this build can tag on, and its **absence is silent** — a
-missing **hosted** tag artifact is an absent aid, never a refusal. **The rule stops there.** Since
+resolves on the `model` key the reader also reads, so it runs for every flow too — v0.22 made that
+key required, and *a flow declaring no hosted model* stopped being a state a manifest can express.
+What is still silent is the **artifact**: a missing **hosted** tag list is an absent aid, never a
+refusal, because the model may simply not be running. **The rule stops there.** Since
 v0.21 the sheet is filled from `wd14/`, so a missing **local** tag list is a refusal naming
 `caption`: an all-empty sheet is legal and therefore silent, which is the failure mode this
 repository keeps paying for. It is still **one verb**: there is no
@@ -325,13 +342,14 @@ the surface shows one schema's fields in one fixed order, so a second flow would
 `review` and `approve` stay fully working verbs, deprecated as *guidance* and never as code, because
 deleting the hand path would make ③ a single point of failure for the whole pipeline.
 
-**This repository has three system dependencies, and every one of them refuses rather than assuming.**
-`claude`, the first. **node**, the second, needed by `isekai ui` alone to build the bundle once. And
-**Ollama**, the third, needed by the first two stages of a flow that declares a `hosted` block — the
-operator installs it and creates both models by hand, from `scripts/joycaption.Modelfile` and one
-`ollama pull qwen3:8b`. A missing one names what installs it, as `claude_cli.require_binary()`
-already does; `ollama` copies that shape, applied to a **port and a model name** rather than to a
-`PATH` entry. No verb needs more than one of the three, and none is a Python dependency: the `[ui]`
+**This repository has two system dependencies, and both of them refuse rather than assuming.**
+**Ollama**, the first, needed by stage ① of every flow — the operator installs it and creates the one
+model by hand, `ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile`. And **node**,
+the second, needed by `isekai ui` alone to build the bundle once. A missing one names what installs
+it; Ollama's refusal is applied to a **port and a model name** rather than to a `PATH` entry, which
+is the shape a hosted model needs and a binary check cannot give. *(There were three. The `claude`
+CLI was the first, and v0.22 removed the arm that needed it.)*
+Neither verb needs both, and neither is a Python dependency: the `[ui]`
 extra (`fastapi`, `uvicorn`, both pinned) is optional and is not installed by CI, `dependencies = []`
 is untouched, and the runtime stays stdlib-only. **There are three optional extras**, and the third
 is `tagging` — `onnxruntime`, `numpy`, `Pillow`, deliberately not the `eval` extra, which resolves
@@ -362,8 +380,8 @@ committed to the graph file, because every published WAI v17 sample generates at
 of its prose says so.
 
 **Nothing locates a node by class.** The manifest names every node the render path edits, by role, and
-`summon-v1` has two `KSampler` nodes and two `ImageScale` nodes — so a class lookup is ambiguous
-against the graph that actually ships.
+`summon-anime-wai` has two `KSampler` nodes and two `ImageScale` nodes — so a class lookup is
+ambiguous against the graph that actually ships.
 
 ---
 

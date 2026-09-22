@@ -312,7 +312,7 @@ def test_each_stage_numbers_within_its_own_directory(
 
 @pytest.mark.spec("run-directory:numbering:each-directory-counts-its-own")
 def test_the_link_between_stages_is_the_producer_record(tmp_path: Path) -> None:
-    sheet = envelope("sheet", {"implementation": "claude-cli", "from": 2}, {"f": []})
+    sheet = envelope("sheet", {"implementation": "ollama", "from": 2}, {"f": []})
 
     assert sheet["producer"]["from"] == 2
     assert "counter" not in sheet
@@ -320,7 +320,7 @@ def test_the_link_between_stages_is_the_producer_record(tmp_path: Path) -> None:
 
 @pytest.mark.spec("run-directory:provenance:artifact-declares-its-schema")
 def test_every_artifact_carries_a_schema_name_and_an_integer_version() -> None:
-    artifact = envelope("caption", {"implementation": "claude-cli"}, {"prose": "x"})
+    artifact = envelope("caption", {"implementation": "ollama"}, {"prose": "x"})
 
     assert artifact["schema"]["name"] == "caption"
     assert isinstance(artifact["schema"]["version"], int)
@@ -341,7 +341,7 @@ def test_a_producer_records_the_briefings_path_and_digest(
             path,
             envelope(
                 "caption",
-                {"implementation": "claude-cli", "briefing": record},
+                {"implementation": "ollama", "briefing": record},
                 {"prose": "the same prose either way"},
             ),
         )
@@ -368,7 +368,7 @@ def test_a_producer_names_the_upstream_version_it_came_from() -> None:
 
 @pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
 def test_an_unpinnable_producer_says_so_rather_than_claiming_a_pin() -> None:
-    producer = {"implementation": "claude-cli", "models": ["x"], "pinned": False}
+    producer = {"implementation": "ollama", "models": ["x"], "pinned": False}
     artifact = envelope("caption", producer, {})
 
     assert artifact["producer"]["pinned"] is False
@@ -419,7 +419,7 @@ def test_the_schema_refusal_states_a_remedy_this_build_can_point_at(
 
 @pytest.mark.spec("run-directory:readdir:approval-is-in-the-filename")
 def test_approval_is_determinable_without_opening_the_file(tmp_path: Path) -> None:
-    directory = tmp_path / "review" / "summon-v1"
+    directory = tmp_path / "review" / "summon-anime-wai"
     directory.mkdir(parents=True)
     (directory / "001.draft.json").write_text("{}")
     (directory / "002.approved.json").write_text("{}")
@@ -431,7 +431,7 @@ def test_approval_is_determinable_without_opening_the_file(tmp_path: Path) -> No
 
 @pytest.mark.spec("run-directory:readdir:approval-is-in-the-filename")
 def test_deciding_approval_reads_no_file(tmp_path: Path) -> None:
-    directory = tmp_path / "review" / "summon-v1"
+    directory = tmp_path / "review" / "summon-anime-wai"
     directory.mkdir(parents=True)
     unreadable = directory / "001.approved.json"
     unreadable.write_text("{ this is not json at all")
@@ -454,11 +454,13 @@ def test_the_producing_model_appears_only_inside_the_artifact(
     name = artifact_name(1)
     write_json(
         directory / name,
-        envelope("caption", {"models": ["claude-opus-5"], "pinned": False}, {}),
+        envelope(
+            "caption", {"models": ["joycaption-beta-one-q4k"], "pinned": False}, {}
+        ),
     )
 
-    assert "claude" not in name
-    assert "claude-opus-5" in (directory / name).read_text()
+    assert "joycaption" not in name
+    assert "joycaption-beta-one-q4k" in (directory / name).read_text()
 
 
 # --- failures and budgets -----------------------------------------------------

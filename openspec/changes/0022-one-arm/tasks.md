@@ -4,7 +4,7 @@
 
 - [x] 1 — The split: five names to `foundation/run.py`, the arm still working
 - [x] 2 — The flow set, the loader and the arm, together
-- [ ] 3 — The documents and the spec delta
+- [x] 3 — The documents and the spec delta
 - [ ] 4 — ⚠️ **HUMAN · METERED** — the acceptance, both flows, the same photographs
 
 ## The per-phase ritual
@@ -329,10 +329,10 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
 why it needs its own phase and its own review rather than being folded into phase 2. **This phase carries
 a real requirement removal, not only prose.**
 
-- [ ] 3.1 **`openspec/specs/` deltas** — written under `openspec/changes/0022-one-arm/specs/`, five
+- [x] 3.1 **`openspec/specs/` deltas** — written under `openspec/changes/0022-one-arm/specs/`, five
   capabilities. See that directory; `openspec validate 0022-one-arm --strict` must pass.
 
-- [ ] 3.2 **`CLAUDE.md`:**
+- [x] 3.2 **`CLAUDE.md`:**
   - `:205-215` — the flow layout paragraph: four files not five, named not counted (D10); the three
     tracked flows become two; `sheet.briefing.md` leaves the list.
   - `:269-283` — the `hosted` paragraph and the `hosted.sorter` paragraph: replaced by the top-level
@@ -345,7 +345,7 @@ a real requirement removal, not only prose.**
     v0.21's fold. Correct it, and keep the *"count the directory rather than trusting this sentence"*
     clause that it already carries.
 
-- [ ] 3.3 **`README.md`:**
+- [x] 3.3 **`README.md`:**
   - `:16-22` — the banner still says `summon-v1` and `conjure-v1` *"read and sort through the `claude`
     CLI"*. Rewrite for one arm.
   - `:97`, `:99` — v0.21's converge left these: the quickstart's first numbered step still says the sheet
@@ -355,17 +355,17 @@ a real requirement removal, not only prose.**
     explaining why the key is kept (`:227-229`). **Two of the nine qwen lines.**
   - `:287-292` — the flow tree: four files, and `sheet.briefing.md`'s line goes.
 
-- [ ] 3.4 **`scripts/joycaption.Modelfile`** — `:34-38`. Delete the `ollama pull qwen3:8b` line (`:35`)
+- [x] 3.4 **`scripts/joycaption.Modelfile`** — `:34-38`. Delete the `ollama pull qwen3:8b` line (`:35`)
   and rewrite `:37`, which still calls it *"the sorter, stage ②"* in the present tense. That sentence is
   false today, not merely after this change: v0.21's phase 6 corrected `README.md` and `CLAUDE.md` and
   missed this file (D28).
 
-- [ ] 3.5 **The package READMEs:** `isekai/boundary/README.md` (`:10`, `:22`, `:40-43` — the
+- [x] 3.5 **The package READMEs:** `isekai/boundary/README.md` (`:10`, `:22`, `:40-43` — the
   `claude_cli.py` row and the "imports nine names" sentence), `isekai/foundation/README.md` (`:12`,
   `:18-20` — the importer rows for `refusal.py`, `run.py` and `flow.py` now gain the rehomed names),
   `isekai/README.md`.
 
-- [ ] 3.6 **Docstrings and comments naming a deleted thing** — none is red, all are false:
+- [x] 3.6 **Docstrings and comments naming a deleted thing** — none is red, all are false:
   `isekai/boundary/ollama.py:6, :9, :11, :12, :86, :102, :156, :163` · `isekai/pipeline/tagging.py:168`
   (`ClaudeReader.argv()`) · `isekai/boundary/wd14.py:223` · `isekai/interface/ui/bundle.py:10, :19`
   (prose only — its own `BINARY = "npm"` is unrelated) · `isekai/pipeline/generate.py:289` ·
@@ -375,7 +375,7 @@ a real requirement removal, not only prose.**
   `summon-v1` — not red, but stale) · `tests/test_run_directory.py:315, :323, :344, :368` (hand-built
   envelopes with `"implementation": "claude-cli"`).
 
-- [ ] 3.7 **Verify the scrub, and read every survivor rather than counting them.** Run both, from the
+- [x] 3.7 **Verify the scrub, and read every survivor rather than counting them.** Run both, from the
   repository root:
 
   ```sh
@@ -399,9 +399,9 @@ a real requirement removal, not only prose.**
   `CHANGELOG.md`'s released sections, `ui/design/`, `CLAUDE.md`'s own filename, or a
   `Co-Authored-By` trailer. **Paste the full output and justify each survivor by name.**
 
-- [ ] 3.8 **Verify:** `npx @fission-ai/openspec@1.11.0 validate 0022-one-arm --strict`
+- [x] 3.8 **Verify:** `npx @fission-ai/openspec@1.11.0 validate 0022-one-arm --strict`
 
-- [ ] 3.9 **Verify:** `make gate`
+- [x] 3.9 **Verify:** `make gate`
 
 ---
 

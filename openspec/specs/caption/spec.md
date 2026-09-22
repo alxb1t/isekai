@@ -6,8 +6,8 @@ Stage ① of the pipeline: reading a photograph into descriptive English prose u
 instructions of the flow that asked, knowing nothing about schemas, vocabularies or what happens next,
 and licensed to say that something is absent.
 
-**Source:** `isekai/pipeline/caption.py`, `isekai/boundary/claude_cli.py`,
-`flows/summon-v1/caption.briefing.md` ·
+**Source:** `isekai/pipeline/caption.py`, `isekai/boundary/ollama.py`,
+`flows/summon-anime-wai/caption.briefing.md` ·
 **Tests:** `tests/test_caption.py`
 
 ## Requirements

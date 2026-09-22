@@ -7,7 +7,7 @@ import StatusMark from './StatusMark.vue'
    state is never drawn anywhere in the design and a control with no drawn
    consequence is worse than an absent one. And the run line loses its date: a
    run id is `<12 hex>_<slug>` and carries none, so it reads
-   `summon-v1 · 3 inputs · 0 approved` instead of `run 2026-09-17 · …`. */
+   `summon-anime-wai · 3 inputs · 0 approved` instead of `run 2026-09-17 · …`. */
 defineProps<{
   flow: string
   inputs: number

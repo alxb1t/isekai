@@ -20,8 +20,8 @@ identifies a configuration only if a flow identifier never silently means
 something else. The suite holds each tracked directory against a committed digest,
 the same mechanism this repository already uses to pin its committed prompts.
 
-**The dials are the measured ones, not the graph file's.** `summon-v1`'s graph
-carries a guidance scale of 7 and an identity control strength of 0.5, and every
+**The dials are the measured ones, not the graph file's.** `summon-anime-wai`'s
+graph carries a guidance scale of 7 and an identity control strength of 0.5, and every
 measured run overrode them to 5 and 0.8. A manifest transcribed from the graph
 would ship a configuration nothing measured (design.md D12), so the two disagree
 on purpose and a test says so.

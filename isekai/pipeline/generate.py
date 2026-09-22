@@ -286,8 +286,9 @@ def build_graph(
 ) -> Workflow:
     """Return the graph to submit: the flow's own, with its dials and this seed.
 
-    The dials come from the manifest and not from the graph file. `summon-v1`'s
-    graph carries cfg 7 and identity strength 0.5; the measured configuration is
+    The dials come from the manifest and not from the graph file.
+    `summon-anime-wai`'s graph carries cfg 7 and identity strength 0.5; the
+    measured configuration is
     5 and 0.8, and a render that used the file's values would be a configuration
     nothing measured (design.md D12).
 

@@ -114,6 +114,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   have reported it. Two further scenarios keep their keys and lose a clause —
   `caption:seam:producer-names-the-implementation` and `caption:failure:decline-is-permanent` each
   asserted something a one-armed system cannot fail.
+### Documentation
+
+- **The live documents stop claiming a subscription this pipeline does not need.** `README.md`'s
+  banner said two of three flows read and sort through the `claude` CLI and so needed that binary and
+  an Anthropic subscription; the system-dependency table listed three binaries; the provisioning block
+  told an operator to `ollama pull qwen3:8b` and then explained, at length, why the command it had just
+  given was no longer used. All of it is rewritten for one arm. The test applied throughout was **does
+  this sentence claim something untrue of the running system**, not *does the word appear* — so
+  `openspec/changes/archive/`, `CHANGELOG.md`'s released sections, `ui/design/` and `CLAUDE.md`'s own
+  filename keep both words, and every remaining live mention is a past-tense record at the site it
+  explains.
+- **`README.md`'s quickstart no longer contradicts itself seven lines apart.** Step 1 said *sort the
+  prose into a sheet of canonical tags* and then, below, *the local list is what fills the sheet*. The
+  first was true until v0.21 and was missed by that version's converge.
+- **`scripts/joycaption.Modelfile` stops calling `qwen3:8b` "the sorter, stage ②" in the present
+  tense.** That sentence was false before this change, not after it: v0.21's phase 6 corrected
+  `README.md` and `CLAUDE.md` and missed this file. Its header also named `summon-open-v1` as the flow
+  that calls the model it builds.
+- **`CLAUDE.md` gains this repository's first flow naming rule**, `<verb>-<style>-<base>` with `-v2`
+  only for a second generation of the same triple. What was recorded before was an *identity* rule —
+  that a changed digest is a new flow — which forces a new identifier without saying what one looks
+  like, and that gap is what produced `summon-open-v1`: a name describing the **arm** rather than the
+  flow, deleted by this change for that reason. The base is in the name because the catalogue holds
+  twelve candidate checkpoints of which eleven are untried.
+- **`CLAUDE.md`'s capability count was wrong for the third time**, saying eleven where the directory
+  holds twelve. The clause telling a reader to count `openspec/specs/*/` rather than trust the sentence
+  is kept and now records all three misses, which is the whole argument for the clause.
+- **Four `**Source:**` headers in the living spec pointed at files this change deletes** —
+  `isekai/boundary/claude_cli.py`, `flows/summon-v1/`, `flows/summon-v1/sheet.briefing.md`. They are
+  capability metadata above `## Requirements`, not requirement text, so correcting them is not a fold;
+  the requirement and scenario bodies are left to the delta and to release.
+
 
 ## [0.21.0] - 2026-09-21
 

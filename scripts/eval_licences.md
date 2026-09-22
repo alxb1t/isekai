@@ -187,7 +187,7 @@ silently.
 - **Read at:** <https://github.com/xinntao/Real-ESRGAN/blob/v0.2.2.4/LICENSE>, 2026-09-14; the file
   is the BSD 3-Clause License verbatim from its first line, `Copyright (c) 2021, Xintao Wang`.
 
-What the flow `summon-v1` upscales its first pass with before sampling again — the pass WAI's own
+What the flow `summon-anime-wai` upscales its first pass with before sampling again — the pass WAI's own
 model page asks for: *"Upscale with R-ESRGAN 4x+ Anime6B, 20 steps, and a Denoising strength of
 0.35~0.5"*.
 

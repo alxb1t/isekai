@@ -7,7 +7,6 @@ outside this directory opens a socket or spawns a binary.
 
 | file | does | reaches |
 |---|---|---|
-| `claude_cli.py` | one locked-down model invocation, one envelope back | the hosted model, over its CLI |
 | `comfy_types.py` | the `ComfyTransport` Protocol and the workflow/image types — the network boundary's shape, with no network in it | nothing |
 | `comfy_client.py` | upload · submit · poll · retrieve, over `urllib` | the rented GPU |
 | `multipart.py` | builds one multipart body; internal to the transport | nothing |
@@ -19,11 +18,10 @@ outside this directory opens a socket or spawns a binary.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `claude_cli.py` | `pipeline/caption.py`, `pipeline/sheet.py` | `tests/test_caption.py`, `tests/test_sheet_stage.py`, `tests/test_package_paths.py`, `tests/test_run_directory.py` |
 | `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | five test modules |
 | `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
 | `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
-| `ollama.py` | `pipeline/caption.py`, `pipeline/sheet.py` | `tests/test_ollama.py` |
+| `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/test_ollama.py` |
 | `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py`, `wd14.py` | `../../evaluate.py`, ten test modules |
 | `wd14.py` | `pipeline/tagging.py`, `interface/cli.py`, `interface/wiring.py` | `tests/test_wd14.py`, `tests/stages.py` |
 
@@ -37,11 +35,12 @@ outside this directory opens a socket or spawns a binary.
 > network at all, which makes it the one file here that is a boundary to a *file*
 > rather than to a host.
 >
-> **`ollama.py` imports nothing from `claude_cli.py`.** It is the weaker half of
-> the isolation law and named here anyway: the edge that matters is the call
-> graph, because `pipeline/caption.py` imports nine names from `claude_cli` for
-> `ClaudeReader` and every flow traverses that file. The suite is what proves an
-> open flow reaches none of them.
+> **`ollama.py` is now the only way out of this process to a model.** There was a
+> second, `claude_cli.py`, and the isolation law that kept the two apart was the
+> reason this note existed. v0.22 deleted that file with the arm it served, so
+> there is no second transport to be isolated from -- and nothing in the gate
+> would catch one being reintroduced. What makes that visible is that there is no
+> registry to add an entry to: a second reader is a second adapter, in review.
 
 > Files and importers only. What a seam *is*, and what could replace it, is the
 > design record's; neither restates the other.

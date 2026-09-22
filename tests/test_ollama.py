@@ -200,7 +200,7 @@ def test_a_connection_dropped_mid_answer_is_transient(dropped: BaseException) ->
     """The drop family must not escape, and must not be read as an absent host.
 
     urllib wraps only what the send raised, so nothing here is a `URLError`:
-    uncaught, none of them is an `OllamaFailure`, a `CliFailure` or a `Refusal`,
+    uncaught, none of them is an `OllamaFailure`, a `StageFailure` or a `Refusal`,
     and one evicted model would take the whole batch down in a traceback with no
     error record written. Transient rather than a refusal, because the host did
     answer -- telling the operator to start `ollama serve` points away from the

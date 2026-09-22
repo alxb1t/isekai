@@ -13,7 +13,7 @@ knows about a GPU.
 
 Hand-written rather than mocked. The suite has no HTTP server, no bound socket
 and no `unittest.mock`, and this is what keeps it that way while still making the
-request body assertable -- the property `ClaudeReader.runner` gives `argv()`.
+request body assertable -- the property `ComfyTransport` gives the workflow.
 """
 
 import json
