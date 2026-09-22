@@ -8,7 +8,7 @@
 - [x] 4 — Load-time validation: the dials and the node ids
 - [x] 5 — The UI server: nine entries
 - [x] 6 — The local arm: measure, then pin
-- [ ] 7 — The acceptance: gate green and one local pass, no pod
+- [x] 7 — The acceptance: gate green and one local pass, no pod
 
 ## The per-phase ritual
 
@@ -247,22 +247,75 @@ written.
 **This version adds no capability and changes no generated image, so *"the gate is green"* is what the
 gate says on any day and cannot be the acceptance on its own.**
 
-- [ ] 7.1 **`make gate` — all six commands, output pasted.**
+- [x] 7.1 **`make gate` — all six commands, output pasted.**
 
-- [ ] 7.2 **One local pass through ①②③ on a fresh photograph, no render.** Ollama and WD14 run on this
+- [x] 7.2 **One local pass through ①②③ on a fresh photograph, no render.** Ollama and WD14 run on this
   machine; the pod is needed only for ④. Confirm: the caption is written, both tag lists are written, the
   sheet is filled, the review surface serves it, a draft saves and the receipt returns.
 
-- [ ] 7.3 **Confirm the three operator-visible behaviour changes**, each by hand:
+- [x] 7.3 **Confirm the three operator-visible behaviour changes**, each by hand:
   a draft update against an approved input is refused · an overlapping `PUT` answers `409` ·
   the hosted tag panel shows each tag once.
 
-- [ ] 7.4 **Confirm `Cmd+Z` under a Cyrillic layout**, which is the defect's whole subject.
+- [x] 7.4 **Confirm `Cmd+Z` under a Cyrillic layout**, which is the defect's whole subject.
 
 - [ ] 7.5 **`/simplify` over this change's own diff**, as every change in this repository closes.
 
-- [ ] 7.6 **Record what was NOT verified**: stage ④ was not run, so no render was produced and no pod was
+- [x] 7.6 **Record what was NOT verified**: stage ④ was not run, so no render was produced and no pod was
   rented. **That is the design, not a gap** — the flow directories are untouched and `manifest_digest`
   did not move.
 
-- [ ] 7.7 **Gate green. CHANGELOG. Tick 7. Commit.**
+- [x] 7.7 **Gate green. CHANGELOG. Tick 7. Commit.**
+
+---
+
+## The acceptance, as it ran
+
+**Five photographs, `summon-anime-wai`, stages ①②③ on this machine. No pod, no `generate`, no
+`infra/up.sh`. Metered cost zero, as designed.**
+
+**7.1 — the gate.** All six commands from `.minions/minions.toml`'s `gate` array, in order, from the
+locked environment: `uv sync --locked` · `ruff format --check` 234 files · `ruff check` · `ty check` ·
+`vue-tsc --noEmit` · **811 passed**.
+
+**7.2 — one local pass.** `caption` wrote all three artifacts for all five inputs, in the order the
+stage declares — *prose · wd14 · tags* — in 2m04s total. `sheet` filled all five from the WD14 list.
+`show` reports the local tagger without the word *unpinned* and the hosted one with it, which is the
+`pinned: true` distinction. The surface built its bundle, bound 127.0.0.1:8517 and served the batch:
+16 schema fields, 8,106 vocabulary rows, five inputs with their header dimensions. One input's payload
+carried its caption, 35 scored local tags, 6 hosted tags, a filled sheet and an 81-token budget. A
+`PUT` of the draft answered 200 with a receipt naming `001.draft.json` and a fresh `saved`.
+
+> **The `tagging` extra had to be installed to run stage ①** — `uv sync --extra tagging` — and
+> `uv sync --locked` removed it again as gate command one. That is the extra working as designed, not a
+> defect: CI never installs it and the suite covers the tagger against the fake session.
+
+**7.3 — the three operator-visible changes, by hand against the running server.**
+
+| | result |
+|---|---|
+| a draft update against an approved input | `409` · *"is approved, and an approved sheet is never edited in place"* |
+| the same in the **re-opened** state — `001.approved.json` **and** `002.draft.json` on disk | `409`, and `readonly: true`. **This is the state that was false**: before this change the form keyed on `draft is None`, so it reported editable and the `PUT` went through (design.md D5) |
+| an overlapping `PUT` — the stale `saved` replayed | `409` · *"changed since this page last read it"*; the fresh receipt is accepted, `200` |
+| the hosted tag panel | each tag once. **This sitting's five artifacts held no repeat**, so one was forced by hand into an in-vocabulary tag: the artifact went to 40 tags with `black hair` and `blue eyes` twice, the panel still showed 8, and the local list stayed whole at 39 rows. The artifact was restored |
+
+**Phase 1's middleware, on the live server**, since it is the one change every other request rode
+through: bound `Host` **200** · `localhost:8517` **200** · `Host: evil.example:8517` **403**
+*"not addressed here"* · right `Host` with `Origin: http://evil.example` on a `PUT` **403** *"not from
+this page"* · the static mount, same guard, **403**.
+
+**7.4 — `Cmd+Z` under a Cyrillic layout.** Confirmed by the operator, in the browser, on the running
+surface. It is the one check in this list that cannot be made a passing test: `event.code` is
+layout-independent by definition and the suite has no browser.
+
+**7.6 — what was NOT verified.**
+
+- **Stage ④ was not run.** No render was produced and no pod was rented. **That is the design rather
+  than a gap**: this version changes no flow file, so `manifest_digest` did not move and `PINNED` holds,
+  and the two rows that cannot be reached locally are failure paths whose acceptance is a test that
+  forces the failure.
+- **`conjure-anime-wai` was not driven.** The surface takes exactly one flow and the pass was
+  `summon-anime-wai`'s; nothing in this change is flow-conditional except `ROLE_DIALS`, and both
+  tracked flows are asserted against it by the suite — 11/11 and 12/12, 7/7 and 9/9.
+- **The duplicate-tag case is the suite's, not this sitting's.** The model returned no repeat across
+  five photographs; the live check above had to manufacture one.

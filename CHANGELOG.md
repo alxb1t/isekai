@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **The acceptance ran: gate green and one local pass through ①②③, on five photographs, with no pod.**
+  `caption` wrote prose, the local list and the hosted list for every input, in that order; `sheet`
+  filled all five from the WD14 list; the surface built its bundle, served the batch and returned a
+  receipt for a saved draft. The three operator-visible changes were confirmed by hand against the
+  running server, including the **re-opened** state — an approved artifact with a fresh draft beside it —
+  which is the one that was actually false before this version. `Cmd+Z` under a Cyrillic layout was
+  confirmed by the operator in the browser. **Stage ④ was not run and no pod was rented**, which is the
+  design: this version edits no flow file, so `manifest_digest` did not move.
+
 ### Changed
 
 - **`num_ctx` is pinned at 4096 in both option maps, and the number is the one that was already in
