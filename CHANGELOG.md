@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-09-22
+
 ### Changed
 
 - **Five shared names leave `isekai/boundary/claude_cli.py` for `isekai/foundation/run.py`**, one version

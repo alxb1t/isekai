@@ -118,34 +118,6 @@ invocation produces exactly what is missing.
 - **THEN** the command refuses naming that tagger's own directory and the records in it
 - **AND** the refusal is a named refusal rather than an unhandled error
 
-### Requirement: The local tagger runs for every flow and the hosted one only where a flow declares it
-
-The system SHALL resolve the local tagger without reference to any manifest key, for every flow, and
-SHALL resolve a hosted tagger only from the implementation a flow's manifest declares. A flow declaring
-no hosted model SHALL produce the local tag list and no hosted one, and that absence SHALL NOT be a
-failure.
-
-The two are not implementations of one thing and must not be made to look like one. A hosted tagger is
-selected by a string in a frozen manifest, because which third party or which local runtime answers is
-a claim the flow makes about itself. The local tagger makes no such claim: it is a file this build pins,
-it costs nothing, it reaches no network, and there is no flow for which it would be wrong. Requiring a
-manifest key for it would mean re-pinning every existing flow to get a capability none of them declares
-an opinion about.
-
-#### Scenario: a flow with no hosted block still gets a local tag list
-- **Key:** `tagging:independence:the-local-tagger-needs-no-manifest-key`
-- **Layers:** unit
-- **WHEN** a flow whose manifest declares no hosted model is captioned
-- **THEN** the local tagger's artifact is written
-- **AND** the flow's manifest and its committed digest are unchanged
-
-#### Scenario: a flow with no hosted block produces no hosted tag list, and that is not a failure
-- **Key:** `tagging:independence:the-hosted-tagger-is-absent-without-a-hosted-block`
-- **Layers:** unit
-- **WHEN** a flow whose manifest declares no hosted model is captioned
-- **THEN** no hosted tag artifact is written and no attempt is recorded
-- **AND** the command does not refuse
-
 ### Requirement: A tagger's producer names what made the artifact, and claims a pin only when it has one
 
 The system SHALL record in each tag artifact's producer the implementation and the model that ran, SHALL
@@ -239,3 +211,36 @@ cost a tag list that takes a second and cannot fail.
 - **WHEN** the hosted tagger fails for a photograph whose caption and local tag list succeeded
 - **THEN** both of those artifacts are complete on disk
 - **AND** the next invocation produces only the missing tag list
+
+### Requirement: The local tagger runs for every flow, and the hosted one runs on the model the flow names
+
+The system SHALL resolve the local tagger without reference to any manifest key, for every flow, and
+SHALL resolve the hosted tagger on the model that flow's manifest names. A hosted tagger that cannot
+reach its model SHALL refuse without spending an attempt, and that refusal SHALL NOT prevent the local
+tag list from being written.
+
+The two are not implementations of one thing and must not be made to look like one. The hosted tagger is
+selected by a string in a frozen manifest, because which model answers is a claim the flow makes about
+itself. The local tagger makes no such claim: it is a file this build pins, it costs nothing, it reaches
+no network, and there is no flow for which it would be wrong. Requiring a manifest key for it would mean
+re-pinning every existing flow to get a capability none of them declares an opinion about.
+
+**The hosted tagger reads the same key the reader does, and that is a decision rather than an economy.**
+One alias answers both prompts, which is why the tag prompt is not chat-framed — two calls to one model
+must not arrive framed differently. A key of its own would let a flow be written in which the prose and
+the hosted tags came from different models with nothing in the record saying which was which, and it
+would say twice what the manifest already says once.
+
+#### Scenario: the local tagger needs no manifest key
+- **Key:** `tagging:independence:the-local-tagger-needs-no-manifest-key`
+- **Layers:** unit
+- **WHEN** any tracked flow is captioned
+- **THEN** the local tagger's artifact is written
+- **AND** the flow's manifest and its committed digest are unchanged
+
+#### Scenario: the hosted tagger runs the model the flow names
+- **Key:** `tagging:independence:the-hosted-tagger-runs-the-flows-model`
+- **Layers:** unit
+- **WHEN** a flow is captioned
+- **THEN** the hosted tag artifact's producer names the model that flow's manifest declares
+- **AND** it is the same model the caption's producer names

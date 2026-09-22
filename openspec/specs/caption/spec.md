@@ -39,6 +39,12 @@ through it. A stand-in for the offline suite is what passes through this one, an
 way the idempotence guarantee can be asserted — proving no call was made requires something that counts
 calls.
 
+**The producer still names the implementation, and the reason has changed.** It used to be what
+distinguished two arms in the record. With one arm it is what distinguishes a real run from a run
+produced by the offline stand-in, and what will distinguish this arm from whatever a later version adds
+beside it — a record that stops naming the implementation because there is only one is a record that
+cannot be read back once there are two.
+
 #### Scenario: the suite produces a caption with no network
 - **Key:** `caption:seam:offline-double-satisfies-the-interface`
 - **Layers:** unit
@@ -51,16 +57,16 @@ calls.
 - **Layers:** unit
 - **WHEN** a caption is written
 - **THEN** its producer names the implementation and the model or models that ran
-- **AND** a caption produced by a different implementation is distinguishable from the record alone
 
 ### Requirement: A reader failure is classified and the stage refuses rather than guessing
 
 The system SHALL classify a reader failure as transient or permanent, SHALL treat a declined request as
-permanent, and SHALL NOT substitute a fallback implementation for the one that was asked for.
+permanent, and SHALL NOT produce a caption by any means other than the reader that was asked for.
 
-Falling back to a different reader when one declines would write an artifact whose provenance record is
-untrue — the whole discipline of this pipeline is that a producer names what actually made the
-artifact. A refusal is a result to be recorded and surfaced, not routed around.
+A refusal is a result to be recorded and surfaced, not routed around. The rule was first written against
+a second implementation that a failure could silently fall through to; with one arm there is nothing to
+fall through to, and the rule now protects the weaker but still live case — that a failed read produces a
+recorded failure rather than an artifact assembled from something else.
 
 #### Scenario: a rate limit or server error is transient
 - **Key:** `caption:failure:rate-limit-is-transient`
@@ -74,7 +80,7 @@ artifact. A refusal is a result to be recorded and surfaced, not routed around.
 - **Layers:** unit
 - **WHEN** the reader declines to answer
 - **THEN** the failure is recorded as permanent, naming the photograph
-- **AND** no other implementation is substituted to produce the caption
+- **AND** no caption artifact is written for that attempt
 
 #### Scenario: an unusable response is permanent
 - **Key:** `caption:failure:unusable-response-is-permanent`
@@ -82,22 +88,6 @@ artifact. A refusal is a result to be recorded and surfaced, not routed around.
 - **WHEN** the reader returns something the stage cannot read as prose
 - **THEN** the failure is recorded as permanent
 - **AND** no caption artifact is written
-
-### Requirement: An absent reader is a refusal that names its remedy
-
-The system SHALL refuse with a message naming what to install or configure when the reader cannot be
-reached at all, rather than failing with an unhandled error.
-
-This is the posture the repository already takes for an optional dependency: the failure states the
-command that would fix it. It matters more here, because the reader is the first thing a fresh clone
-touches.
-
-#### Scenario: a missing reader names the remedy
-- **Key:** `caption:refusal:absent-reader-names-the-fix`
-- **Layers:** unit
-- **WHEN** the reader is not available on the machine
-- **THEN** the command refuses with a message naming what to install or configure
-- **AND** no run directory is left in a partially written state
 
 ### Requirement: The reader takes a photograph and returns prose, for one flow
 
@@ -152,49 +142,6 @@ sends a schema or a field list to any model.
 - **THEN** the standing instructions are read from that flow's own directory
 - **AND** the caption records the digest of the instructions it was produced under
 
-### Requirement: The flow selects the reader implementation, and every way of getting that wrong is a refusal
-
-The system SHALL select the reader implementation from the string the flow's manifest declares, SHALL
-construct no implementation a flow has not asked for, and SHALL refuse — naming the implementations the
-build carries — when a flow declares one it does not have. A flow declaring an implementation SHALL NOT
-reach any other implementation by any path, including when the one it declared fails.
-
-The standing rule that a producer names what actually made the artifact is only true if the selection
-cannot silently miss. A two-branch test on the declared string would give an unrecognised implementation
-the default one, producing a complete run on the wrong models with the artifact's own provenance record
-disagreeing with the manifest that asked for it — silent, and it corrupts any later comparison between
-the two. Resolving through a table of known strings makes an unrecognised one a refusal by construction
-rather than by remembering to check. Constructing nothing until a flow asks is what keeps a machine with
-one implementation available from needing the other to exist.
-
-The implementations this build carries are not interchangeable and must not be treated as such: one
-reaches a model over a network to a third party, the other over a socket to this machine. A run that
-declared the second and got the first has spent money the operator did not authorise and produced an
-artifact whose provenance is false.
-
-#### Scenario: the declared implementation is the one that runs
-- **Key:** `caption:selection:the-flow-names-the-implementation`
-- **Layers:** unit
-- **WHEN** a flow declaring an implementation is captioned
-- **THEN** the caption's producer names that implementation
-- **AND** no other implementation was constructed
-
-#### Scenario: an implementation this build does not carry is refused naming the ones it does
-- **Key:** `caption:selection:unknown-implementation-is-refused`
-- **Layers:** unit
-- **WHEN** a flow declares a reader implementation the build does not carry
-- **THEN** the command refuses naming the implementations it does carry
-- **AND** no caption is written and no attempt is recorded
-
-#### Scenario: a flow declaring one implementation cannot reach another
-- **Key:** `caption:selection:no-path-reaches-another-implementation`
-- **Layers:** unit
-- **WHEN** a flow declaring one implementation is captioned while every entry point of a different
-  implementation is instrumented to fail loudly
-- **THEN** the caption is produced without any of them being entered
-- **AND** the same run with the other implementation's binary absent from the environment succeeds
-  unchanged
-
 ### Requirement: A hosted model that is not running or not installed is refused before any attempt is spent
 
 The system SHALL refuse, naming the command that would fix it, when the host serving a declared model
@@ -228,3 +175,36 @@ implementation avoid touching it at all.
 - **Layers:** unit
 - **WHEN** a wiring is composed and no captioning is performed
 - **THEN** no host is contacted and no binary is looked up
+
+### Requirement: The flow names the model its reader runs
+
+The system SHALL read the model a flow's reader runs from a required key in that flow's manifest, SHALL
+construct no reader until a flow asks for one, and SHALL refuse — naming the model and the flow — when
+the manifest names a model this build cannot reach.
+
+The implementation no longer varies, so the manifest no longer declares one: a key that can only ever
+hold one value is not a declaration. The model still varies, still differs between flows, and is still
+the thing that costs the operator time when it is wrong — an alias that was never created is the failure
+that will actually happen, and it is the one this key makes nameable. The reader is constructed per flow
+rather than once per invocation for the same reason it always was: one command naming two flows must not
+hand one flow's model to the other's artifact.
+
+The same key names the model the hosted tagger runs, and that is deliberate rather than an economy. One
+alias answers both prompts, which is why the tag prompt is not chat-framed — two calls to one model must
+not arrive framed differently. A second key would say twice what the manifest says once, and would make
+a flow expressible in which the prose and the tags came from different models with nothing recording
+which.
+
+#### Scenario: the flow's manifest names the model that runs
+- **Key:** `caption:selection:the-flow-names-the-model`
+- **Layers:** unit
+- **WHEN** a flow is captioned
+- **THEN** the reader runs the model that flow's manifest names
+- **AND** the caption's producer records that model
+
+#### Scenario: a model this build cannot reach is refused, naming it
+- **Key:** `caption:selection:an-unreachable-model-is-refused`
+- **Layers:** unit
+- **WHEN** a flow names a model the runtime does not hold
+- **THEN** the stage refuses naming the model and the command that would create it
+- **AND** no attempt is spent and no artifact is written
