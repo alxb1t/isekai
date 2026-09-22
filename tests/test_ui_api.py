@@ -38,7 +38,12 @@ from isekai.foundation.run import (  # noqa: E402
     open_run,
     read_artifact,
 )
-from isekai.interface.ui.app import RARE_BELOW, create_app  # noqa: E402
+from isekai.interface.ui import HOST  # noqa: E402
+from isekai.interface.ui.app import (  # noqa: E402
+    RARE_BELOW,
+    authorities,
+    create_app,
+)
 from isekai.interface.ui.batch import establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
@@ -55,6 +60,13 @@ from tests.images import jpeg_bytes  # noqa: E402
 from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-anime-wai"
+
+# The address every client below is built against. Since v0.22.1 the app
+# refuses a request not addressed to the loopback address it was bound to, so
+# a test client has to speak that address rather than `TestClient`'s default
+# `http://testserver` -- which is exactly the header an attacker's page sends.
+PORT = 8765
+ADDRESS = f"http://{HOST}:{PORT}"
 
 
 @pytest.fixture
@@ -106,13 +118,66 @@ def _client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
     dist.mkdir(exist_ok=True)
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    return TestClient(create_app(batch))
+    return TestClient(create_app(batch, host=HOST, port=PORT), base_url=ADDRESS)
 
 
 @pytest.fixture
 def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
     """Return a client over the surface, with a stand-in for the built bundle."""
     return _client(wired, made, tmp_path)
+
+
+# --- the address every request is checked against -----------------------------
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_request_addressed_to_the_bound_address_is_answered(
+    client: TestClient,
+) -> None:
+    # The `client` fixture speaks `ADDRESS`, so this is the ordinary path every
+    # other test in this module rides: it is here to make the two refusals below
+    # mean something other than "the middleware refuses everything".
+    assert client.get("/api/batch").status_code == 200
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_request_carrying_someone_elses_host_is_refused(
+    client: TestClient,
+) -> None:
+    # DNS rebinding: the attacker's domain resolves to 127.0.0.1, so the socket
+    # is right and only the name is wrong.
+    answered = client.get("/api/batch", headers={"host": f"evil.example:{PORT}"})
+
+    assert answered.status_code == 403
+    assert answered.json() == {"refusal": "not addressed here"}
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_write_carrying_another_pages_origin_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    # The cross-site write: the browser sends this server's `Host` because that
+    # is where it is connecting, and the attacking page's `Origin` because that
+    # is where the script came from.
+    answered = client.put(
+        f"/api/inputs/{made.id}/draft",
+        json={"fields": {}},
+        headers={"origin": "http://evil.example"},
+    )
+
+    assert answered.status_code == 403
+    assert answered.json() == {"refusal": "not from this page"}
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
+    # `localhost` is what an operator types and `127.0.0.1` is what the startup
+    # line prints, so refusing either would be a defect rather than a defence --
+    # and neither name can be made to point anywhere else.
+    assert authorities("127.0.0.1", PORT) == authorities("localhost", PORT)
+    assert f"localhost:{PORT}" in authorities("127.0.0.1", PORT)
+    # A non-loopback bind answers to its own name only.
+    assert authorities("example.test", PORT) == {f"example.test:{PORT}"}
 
 
 # --- the batch, and the payload the page is drawn from ------------------------
@@ -261,7 +326,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    reopened = TestClient(create_app(batch))
+    reopened = TestClient(create_app(batch, host=HOST, port=PORT), base_url=ADDRESS)
 
     body = reopened.get(f"/api/inputs/{made.id}").json()
 

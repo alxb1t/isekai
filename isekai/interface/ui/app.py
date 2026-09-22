@@ -27,11 +27,12 @@ reason other than where a line was put.
 the same repository, so widening it later is a find-and-replace.
 """
 
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -58,10 +59,69 @@ DEFAULT_LIMIT = 10
 # never branches on the number (design.md D6).
 REFUSED = 409
 
+# A request that did not come from this machine's own browser, addressed to this
+# server's own address. Not a `Refusal`: nothing about the run directory is in
+# conflict, the request is simply not one this surface answers, so it carries no
+# string for the page and never reaches a handler.
+FORBIDDEN = 403
 
-def create_app(batch: Batch) -> FastAPI:
-    """Return the review surface's application, bound to one established batch."""
+# The names a loopback listener answers to. `Host: evil.example` resolving to
+# 127.0.0.1 is the whole of the DNS-rebinding attack against an unauthenticated
+# local API, and it is defeated by comparing the name rather than the socket.
+# These four are the only names an attacker cannot make point anywhere: they are
+# reserved, so allowing the alias the operator actually types costs nothing.
+LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
+
+
+def authorities(host: str, port: int) -> frozenset[str]:
+    """Return every `Host` value this server, bound to `host:port`, answers to.
+
+    One function rather than two comparisons, because `Origin` is checked
+    against exactly the same set with a scheme in front of it -- and a header
+    pair that is allowed to disagree about what the server's address is has no
+    security value at all.
+    """
+    names = LOOPBACK if host in LOOPBACK else frozenset({host})
+    return frozenset(f"{name}:{port}" for name in names)
+
+
+def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
+    """Return the review surface's application, bound to one established batch.
+
+    `host` and `port` are the address the server binds, and they are parameters
+    rather than the module constant because they are what every request is
+    checked against: an app that inferred its own address could not be tested
+    for rejecting someone else's.
+    """
     app = FastAPI(title="isekai review", docs_url=None, redoc_url=None)
+    allowed = authorities(host, port)
+    origins = frozenset(f"http://{one}" for one in allowed)
+
+    @app.middleware("http")
+    async def _addressed_here(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Answer only a request addressed to this server, from this server's page.
+
+        **The first middleware in this repository, and it guards all seven
+        routes** -- which is why it is a middleware rather than a dependency:
+        the static mount is not a route and would not carry one, and a route
+        added later would have to remember to.
+
+        This API is unauthenticated by design, so the browser's own origin rules
+        are the whole of its protection, and both halves of that are checked
+        here. `Host` defeats DNS rebinding, where a page on an attacker's domain
+        resolves that domain to 127.0.0.1 and talks to this port with the
+        browser's full cooperation. `Origin`, when the browser sends one,
+        defeats the cross-site write: a `PUT` from another page carries its
+        origin and never this one's.
+        """
+        if request.headers.get("Host", "") not in allowed:
+            return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
+        origin = request.headers.get("Origin")
+        if origin is not None and origin not in origins:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        return await call_next(request)
 
     @app.exception_handler(Refusal)
     async def _refused(request: Request, refusal: Exception) -> JSONResponse:

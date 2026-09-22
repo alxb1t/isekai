@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The middleware: `Host`/`Origin` on all seven routes
+- [x] 1 — The middleware: `Host`/`Origin` on all seven routes
 - [ ] 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
 - [ ] 3 — Refusal strings: the path order, and the flag the remedy omits
 - [ ] 4 — Load-time validation: the dials and the node ids
@@ -51,21 +51,21 @@ is a halt.
 
 **First, so every later UI phase is tested behind the request path that ships** (`design.md` D3).
 
-- [ ] 1.1 **Add host validation to `create_app()`** — `isekai/interface/ui/app.py:62`. Today
+- [x] 1.1 **Add host validation to `create_app()`** — `isekai/interface/ui/app.py:62`. Today
   `grep -rn "add_middleware\|Origin\|TrustedHost" isekai/` exits 1 with **zero hits**. Reject a request
   whose `Host` is not the loopback address the server bound, and whose `Origin`, when present, does not
   match it. **Verify:** paste that grep before and after.
 
-- [ ] 1.2 **A test per direction** — a request with the bound `Host` succeeds; one with an attacker's
+- [x] 1.2 **A test per direction** — a request with the bound `Host` succeeds; one with an attacker's
   `Host` is refused; one with a mismatched `Origin` is refused. Marker:
   `spec_exempt("behaviour; the scenario lands in 0024")`.
 
-- [ ] 1.3 **Verify the count is seven, not six** —
+- [x] 1.3 **Verify the count is seven, not six** —
   `grep -c '@app\.\(get\|put\|post\)' isekai/interface/ui/app.py`. ⚠️ **Do not correct the module
   docstring's "six" at `:1` and `:25`.** That is prose and belongs to `v0.22.2`; correcting it here
   widens a patch into the version that was cut to avoid exactly that.
 
-- [ ] 1.4 **Gate green. CHANGELOG. Tick 1. Commit.**
+- [x] 1.4 **Gate green. CHANGELOG. Tick 1. Commit.**
 
 ---
 

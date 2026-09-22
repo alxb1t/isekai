@@ -25,6 +25,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`Host` and `Origin` are validated on every request the review surface answers.** Until now
+  `grep -rn "add_middleware\|Origin\|TrustedHost" isekai/` returned **zero hits**: the loopback API is
+  unauthenticated by design, so the browser's own origin rules are the whole of its protection, and
+  neither half of them was checked. `create_app()` now takes the address it is bound to and refuses with
+  `403` any request whose `Host` is not one of that port's loopback names — which is the entirety of the
+  DNS-rebinding attack, where a page on an attacker's domain resolves that domain to `127.0.0.1` and
+  talks to this port with the browser's full cooperation — and any request carrying an `Origin` that is
+  not this server's own, which is the cross-site write. **Raised independently by four converge security
+  stations, across v0.18, v0.20, v0.21 and v0.22**, and landed first in this version so that every later
+  UI fix is tested behind the request path that ships. It is a middleware rather than a dependency
+  because the static mount is not a route and would not carry one, and it guards all **seven** routes —
+  `GET /api/fields` arrived at v0.21 and the module docstring still says six; that numeral is prose and
+  belongs to `v0.22.2`'s sweep.
+
 ## [0.22.0] - 2026-09-22
 
 ### Changed
