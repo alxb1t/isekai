@@ -55,7 +55,7 @@ from tests.images import jpeg_bytes, png_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
 from tests.stages import caption, sheet
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 
 @pytest.fixture
@@ -352,7 +352,10 @@ def test_a_producer_records_the_briefings_path_and_digest(
 
     one, other = written(BRIEFING_PATH), written(elsewhere)
 
-    assert one["producer"]["briefing"]["path"] == "flows/summon-v1/caption.briefing.md"
+    assert (
+        one["producer"]["briefing"]["path"]
+        == "flows/summon-anime-wai/caption.briefing.md"
+    )
     assert (
         one["producer"]["briefing"]["sha256"] != other["producer"]["briefing"]["sha256"]
     )

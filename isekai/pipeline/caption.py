@@ -18,14 +18,13 @@ routed around: substituting a different implementation would write an artifact
 whose provenance record is untrue, and the whole discipline of this pipeline is
 that a producer names what actually made the artifact (design.md D6).
 
-**Two implementations ship, and a flow says which.** `ClaudeReader` reaches a
-model over the `claude` CLI, `OllamaReader` over HTTP to a runtime on this
-machine, and they are not interchangeable: one spends money with a third party
-and the other does not. The flow's manifest declares which, `interface/wiring.py`
-resolves it, and a flow that declared one never reaches the other -- including
-when the one it declared fails. Both adapters live here, beside the Protocol and
-the double they share, rather than in `boundary/`: two implementations of one
-Protocol in two different layers is the arrangement that avoids (design.md D5).
+**One implementation ships, and the flow names the model it runs.**
+`OllamaReader` reaches a runtime over HTTP to a socket on this machine, and the
+flow's manifest declares the alias -- `interface/wiring.py` resolves it per flow,
+so one command over two flows gives each its own. The adapter lives here, beside
+the Protocol and the double it shares, rather than in `boundary/`: an
+implementation of a Protocol in a different layer from the Protocol is the
+arrangement that avoids (design.md D5).
 
 Stdlib only. The transports are behind `Reader`, and `FakeReader` is what keeps
 the suite offline.
@@ -38,13 +37,6 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama
-from isekai.boundary.claude_cli import (
-    BASE_FLAGS,
-    BINARY,
-    Runner,
-    invoke,
-    spawn,
-)
 from isekai.foundation.run import (
     CAPTIONS,
     Run,
@@ -64,12 +56,6 @@ from isekai.foundation.run import (
 # run's to name, not the stage's -- `run.CAPTIONS`.
 STAGE = "caption"
 
-# The photograph's path goes *in the prompt*. A trailing positional after the
-# prompt is silently ignored by the CLI's argument parser, which would leave the
-# reader told to describe a photograph and never told where it is; `--add-dir` is
-# what grants the read, and this line is what points at the file.
-PHOTOGRAPH_LINE = "The photograph is the file at this path: {path}"
-
 # What the open reader is sampled at. Pinned, and ported verbatim from the
 # measurement: a reader whose output moves between runs cannot replace a
 # transcript on the grounds of reproducibility, which was the whole argument for
@@ -82,9 +68,9 @@ READER_OPTIONS: Mapping[str, Any] = {
 }
 
 # The one command that turns an absent reader into a present one. It is the
-# adapter's rather than the boundary's because the two hosted models are not the
-# same kind of name: this one is a machine-local alias built from a committed
-# recipe, and the sorter's is a registry tag (design.md D3).
+# adapter's rather than the boundary's: the alias is machine-local and built from
+# a committed recipe, so what fixes its absence is a property of this adapter
+# rather than of the HTTP boundary underneath it (design.md D3).
 READER_REMEDY = "ollama create {model} -f scripts/joycaption.Modelfile"
 
 
@@ -129,41 +115,6 @@ class FakeReader:
 
 
 @dataclass(frozen=True)
-class ClaudeReader:
-    """The `claude -p` adapter: the photograph, the briefing, and `Read`."""
-
-    binary: str = BINARY
-    runner: Runner = spawn
-    implementation: str = "claude-cli"
-
-    def prompt(self, photo: Path, briefing: str) -> str:
-        """Return the whole of what the reader is told: its briefing and the file."""
-        return f"{briefing.rstrip()}\n\n{PHOTOGRAPH_LINE.format(path=photo)}\n"
-
-    def argv(self, photo: Path, workspace: Path, briefing: str) -> list[str]:
-        """Return the exact argument vector this reader is invoked with."""
-        return [
-            self.binary,
-            "-p",
-            self.prompt(photo, briefing),
-            *BASE_FLAGS,
-            "--tools",
-            "Read",
-            "--add-dir",
-            str(workspace),
-        ]
-
-    def read(self, photo: Path, briefing: str, workspace: Path) -> Reading:
-        """Invoke the CLI and read prose out of its envelope, or raise."""
-        result = invoke(self.argv(photo, workspace, briefing), self.runner, self.binary)
-        if not result.result:
-            raise StageFailure(
-                "permanent", "the envelope carries no prose the stage can read"
-            )
-        return Reading(result.result, self.implementation, result.models)
-
-
-@dataclass(frozen=True)
 class OllamaReader:
     """The Ollama adapter: the photograph's own bytes, the briefing, and no schema.
 
@@ -187,10 +138,9 @@ class OllamaReader:
     def prompt(self, briefing: str) -> str:
         """Return the whole of what the reader is told.
 
-        **The photograph's path is not in it.** The Claude adapter names a path
-        because its reader opens the file itself with a `Read` tool; this one is
-        handed the bytes, so a path would be an instruction it cannot act on and
-        a detail about the operator's machine sent to a model for nothing.
+        **The photograph's path is not in it.** This reader is handed the bytes,
+        so a path would be an instruction it cannot act on and a detail about the
+        operator's machine sent to a model for nothing.
         """
         return f"{briefing.rstrip()}\n"
 
@@ -198,7 +148,7 @@ class OllamaReader:
         """Return the exact request this reader is invoked with.
 
         A method rather than a local, so the request is assertable without a call
-        -- the property `ClaudeReader.argv()` has, for the same reason.
+        and a flag can be wrong in the suite rather than against a live model.
         """
         return {
             "model": self.model,
@@ -211,10 +161,9 @@ class OllamaReader:
     def read(self, photo: Path, briefing: str, workspace: Path) -> Reading:
         """Send the photograph and return the prose, or raise.
 
-        `workspace` is accepted and unused: it exists because the Claude adapter
-        needs a directory to grant `--add-dir` over, and this reader reads the
-        file itself. Keeping it in the signature is what keeps one `Reader`
-        Protocol rather than two.
+        `workspace` is accepted and unused: it is a directory a reader may need
+        to be granted, and this one reads the file's bytes itself. Keeping it in
+        the signature is what keeps one `Reader` Protocol rather than two.
         """
         try:
             prose = ollama.ask(
@@ -293,7 +242,6 @@ def caption(
 
 
 __all__: Sequence[str] = (
-    "ClaudeReader",
     "FakeReader",
     "OllamaReader",
     "Reader",

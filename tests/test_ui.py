@@ -29,7 +29,7 @@ from tests.conftest import snapshot
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, caption, sheet
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 # The bundle seam. `establish` takes it as an argument rather than reaching for
 # `bundle.ensure_built`, so the suite never runs npm and never needs node.

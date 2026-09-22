@@ -2,7 +2,7 @@
 
 A briefing is part of a flow now, so `caption` and `sheet` are handed the path
 they read it from rather than defaulting to a file at the repository root. Almost
-every test in the suite drives them over `summon-v1`; binding that argument once
+every test in the suite drives them over `summon-anime-wai`; binding it once
 here keeps it from being repeated at seventy call sites, and a test that means to
 vary the briefing passes `briefing_path=` and overrides it.
 
@@ -32,9 +32,8 @@ from isekai.pipeline import sheet as sheet_stage
 from isekai.shared.field_map import FieldMap, Group
 from isekai.shared.vocabulary import Vocabulary
 
-FLOW = load_flow("summon-v1")
+FLOW = load_flow("summon-anime-wai")
 CAPTION_BRIEFING = FLOW.caption_briefing_path
-SHEET_BRIEFING = FLOW.sheet_briefing_path
 
 
 def caption(
@@ -45,7 +44,7 @@ def caption(
     briefing_path: Path = CAPTION_BRIEFING,
     new_version: bool = False,
 ) -> Path | None:
-    """Call the caption stage under `summon-v1`'s standing instructions."""
+    """Call the caption stage under `summon-anime-wai`'s standing instructions."""
     return caption_stage.caption(
         run, flow, reader, briefing_path=briefing_path, new_version=new_version
     )
@@ -146,7 +145,7 @@ def sheet(
     tags: Sequence[str] | None = TAGS,
     new_version: bool = False,
 ) -> Path | None:
-    """Call the sheet stage under `summon-v1`, writing the list it reads.
+    """Call the sheet stage under `summon-anime-wai`, writing the list it reads.
 
     **`tags` writes the artifact the stage refuses without**, so a test says what
     it wants routed on one line instead of composing a `wd14/` directory. Pass

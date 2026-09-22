@@ -9,16 +9,10 @@ import base64
 import json
 import re
 import urllib.error
-from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
-from isekai.boundary.claude_cli import (
-    BASE_FLAGS,
-    classify,
-    models_that_ran,
-)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
@@ -31,12 +25,7 @@ from isekai.foundation.run import (
     read_artifact,
     versions,
 )
-from isekai.pipeline.caption import (
-    ClaudeReader,
-    FakeReader,
-    OllamaReader,
-    Reading,
-)
+from isekai.pipeline.caption import FakeReader, OllamaReader
 from tests.images import jpeg_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
 from tests.stages import FLOW, caption
@@ -49,13 +38,6 @@ def run(tmp_path: Path) -> Run:
     photo = tmp_path / "aunt-ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     return open_run(photo, tmp_path / "runs")
-
-
-def _envelope(**fields: object) -> str:
-    """Return a `claude -p --output-format json` envelope as the CLI prints it."""
-    body = {"type": "result", "subtype": "success", "is_error": False}
-    body.update(fields)
-    return json.dumps(body)
 
 
 # --- the seam -----------------------------------------------------------------
@@ -228,84 +210,12 @@ def test_the_producer_records_the_briefings_path_and_digest(
     assert first is not None and second is not None
     one = read_artifact(first)["producer"]["briefing"]
     two = read_artifact(second)["producer"]["briefing"]
-    assert one["path"] == "flows/summon-v1/caption.briefing.md"
+    assert one["path"] == "flows/summon-anime-wai/caption.briefing.md"
     assert one["sha256"] != two["sha256"]
     assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
 
 
-# --- the adapter --------------------------------------------------------------
-
-
-@pytest.mark.spec_exempt("structural: the invocation's locked-down argument vector")
-def test_the_argument_vector_carries_every_load_bearing_flag(tmp_path: Path) -> None:
-    argv = ClaudeReader().argv(tmp_path / "photo.jpg", tmp_path, "the briefing")
-
-    for flag in (
-        "--safe-mode",
-        "--strict-mcp-config",
-        "--no-session-persistence",
-        "--permission-prompts",
-        "--output-format",
-    ):
-        assert flag in argv
-    assert argv[argv.index("--tools") + 1] == "Read"
-    assert argv[argv.index("--add-dir") + 1] == str(tmp_path)
-    assert argv[argv.index("--permission-prompts") + 1] == "none"
-    assert argv[argv.index("--output-format") + 1] == "json"
-    assert argv[:2] == ["claude", "-p"]
-    assert set(BASE_FLAGS) <= set(argv)
-    # The photograph's path travels in the prompt. A trailing positional is
-    # silently dropped by the CLI's parser, which would leave the reader told to
-    # describe a photograph and never told where it is.
-    assert "the briefing" in argv[2]
-    assert str(tmp_path / "photo.jpg") in argv[2]
-
-
-@pytest.mark.spec("caption:seam:offline-double-satisfies-the-interface")
-def test_the_adapter_reads_prose_out_of_the_envelope(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    seen: list[list[str]] = []
-
-    def fake_runner(argv: Sequence[str]) -> tuple[int, str, str]:
-        seen.append(list(argv))
-        return 0, _envelope(result="  She is wearing a grey coat.  "), ""
-
-    monkeypatch.setattr(
-        "isekai.boundary.claude_cli.shutil.which", lambda _: "/usr/bin/claude"
-    )
-    reading = ClaudeReader(runner=fake_runner).read(
-        tmp_path / "p.jpg", "brief", tmp_path
-    )
-
-    assert reading == Reading("She is wearing a grey coat.", "claude-cli", ())
-    assert seen and seen[0][0] == "claude"
-
-
-@pytest.mark.spec("caption:seam:producer-names-the-implementation")
-def test_the_models_that_ran_come_from_the_envelope_not_from_the_flag() -> None:
-    parsed = json.loads(
-        _envelope(
-            model="claude-opus-5",
-            modelUsage={"claude-opus-5": {}, "claude-haiku-4-5-20251001": {}},
-        )
-    )
-
-    assert models_that_ran(parsed) == ("claude-haiku-4-5-20251001", "claude-opus-5")
-
-
 # --- failure classification ---------------------------------------------------
-
-
-@pytest.mark.spec("caption:failure:rate-limit-is-transient")
-@pytest.mark.parametrize(
-    "subtype",
-    ["rate_limit_error", "overloaded_error", "timeout", "api_error", "503 from edge"],
-)
-def test_a_rate_limit_a_server_error_or_a_timeout_is_transient(subtype: str) -> None:
-    parsed = json.loads(_envelope(is_error=True, subtype=subtype))
-
-    assert classify(parsed) == "transient"
 
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
@@ -336,16 +246,15 @@ def test_the_stage_refuses_once_the_budget_is_spent(run: Run) -> None:
 
 
 @pytest.mark.spec("caption:failure:decline-is-permanent")
-def test_a_declined_request_is_permanent() -> None:
-    parsed = json.loads(_envelope(is_error=False, stop_reason="refusal"))
+def test_a_decline_names_the_photograph_and_writes_no_artifact(run: Run) -> None:
+    """The scenario lost its second clause with the second arm (design.md D21).
 
-    assert classify(parsed) == "permanent"
-
-
-@pytest.mark.spec("caption:failure:decline-is-permanent")
-def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
-    run: Run,
-) -> None:
+    It used to assert that no *other implementation* was substituted. With one
+    arm that is vacuously true, and this repository has a written standard against
+    asserting what cannot fail. What survives is the live half: a decline is
+    recorded as permanent, naming the photograph, and no caption is written for
+    the attempt.
+    """
     reader = FakeReader(failure=StageFailure("permanent", "the reader declined"))
 
     with pytest.raises(Refusal) as refused:
@@ -353,29 +262,27 @@ def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
 
     assert run.id in str(refused.value)
     assert "declined" in str(refused.value)
-
-    # No fallback: a second invocation does not reach for another implementation,
-    # it refuses on the permanent record.
-    other = FakeReader(implementation="other-reader")
-    with pytest.raises(Refusal):
-        caption(run, other)
-    assert other.calls == []
     assert versions(run.path / FLOW.id / "captions") == []
 
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
 def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(
-        "isekai.boundary.claude_cli.shutil.which", lambda _: "/usr/bin/claude"
+    """A 200 carrying nothing readable, which is not a transport failure.
+
+    The host answered and the model ran; what came back is unusable, so the
+    adapter -- not `ollama.py` -- is what classifies it, and permanently: a
+    second pass over the same photograph returns the same nothing.
+    """
+    photo = tmp_path / "aunt-ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    reader = OllamaReader(
+        model="a-reader", transport=FakeTransport(payload={"response": ""})
     )
 
-    def empty(argv: Sequence[str]) -> tuple[int, str, str]:
-        return 0, _envelope(result="   "), ""
-
     with pytest.raises(StageFailure) as failed:
-        ClaudeReader(runner=empty).read(tmp_path / "p.jpg", "brief", tmp_path)
+        reader.read(photo, "brief", tmp_path)
 
     assert failed.value.kind == "permanent"
 
@@ -388,55 +295,6 @@ def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> No
         caption(run, reader)
 
     assert versions(run.path / FLOW.id / "captions") == []
-
-
-@pytest.mark.spec("caption:failure:unusable-response-is-permanent")
-def test_output_that_is_not_an_envelope_at_all_is_a_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(
-        "isekai.boundary.claude_cli.shutil.which", lambda _: "/usr/bin/claude"
-    )
-
-    def garbage(argv: Sequence[str]) -> tuple[int, str, str]:
-        return 1, "not json", "command not understood"
-
-    with pytest.raises(StageFailure) as failed:
-        ClaudeReader(runner=garbage).read(tmp_path / "p.jpg", "brief", tmp_path)
-
-    assert failed.value.kind == "permanent"
-
-
-# --- the absent binary --------------------------------------------------------
-
-
-@pytest.mark.spec("caption:refusal:absent-reader-names-the-fix")
-def test_an_absent_reader_refuses_naming_what_to_install(
-    run: Run, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr("isekai.boundary.claude_cli.shutil.which", lambda _: None)
-
-    with pytest.raises(Refusal) as refused:
-        ClaudeReader().read(run.photo, "brief", run.path)
-
-    message = str(refused.value)
-    assert "not on PATH" in message
-    assert "npm install -g @anthropic-ai/claude-code" in message
-
-
-@pytest.mark.spec("caption:refusal:absent-reader-names-the-fix")
-def test_an_absent_reader_leaves_the_run_directory_untouched(
-    run: Run, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr("isekai.boundary.claude_cli.shutil.which", lambda _: None)
-    before = sorted(p.name for p in run.path.rglob("*"))
-
-    with pytest.raises(Refusal):
-        caption(run, ClaudeReader())
-
-    assert versions(run.path / FLOW.id / "captions") == []
-    assert attempts(run.path / FLOW.id / "captions", 1) == []
-    assert sorted(p.name for p in run.path.rglob("*")) == before
 
 
 # --- the Ollama adapter -------------------------------------------------------
@@ -498,8 +356,8 @@ def test_the_open_reader_ignores_the_workspace_and_reads_the_file_itself(
 ) -> None:
     """A workspace the photograph is nowhere inside, and the caption still arrives.
 
-    The argument exists because the Claude adapter needs a directory to grant
-    `--add-dir` over. This reader is handed the bytes, so the parameter is inert --
+    The argument is in the `Reader` Protocol because a reader may need a directory
+    granted to it. This one is handed the bytes, so the parameter is inert --
     asserted rather than assumed, because an adapter that quietly needed it would
     fail only on a real machine.
     """
@@ -521,8 +379,7 @@ def test_the_open_readers_prompt_carries_no_path_from_this_machine(
 ) -> None:
     """No path from this machine goes to the model, because none would mean anything.
 
-    The Claude adapter names a path because its reader opens the file with a
-    `Read` tool. This one is handed the bytes, so a path would be an unactionable
+    This reader is handed the bytes, so a path would be an unactionable
     instruction and a detail about the operator's machine sent for nothing.
     """
     photo = tmp_path / "aunt-ada.jpg"
@@ -534,8 +391,8 @@ def test_the_open_readers_prompt_carries_no_path_from_this_machine(
     assert str(tmp_path) not in json.dumps(body["prompt"])
 
 
-@pytest.mark.spec("caption:selection:the-flow-names-the-implementation")
-def test_the_open_readers_artifact_names_ollama_and_the_model_that_ran(
+@pytest.mark.spec("caption:selection:the-flow-names-the-model")
+def test_the_readers_artifact_names_ollama_and_the_model_that_ran(
     run: Run,
 ) -> None:
     reader = OllamaReader(
@@ -580,9 +437,9 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
 ) -> None:
     """The reader's remedy is `ollama create`, not `ollama pull`.
 
-    The two hosted models are not the same kind of name: this one is a
-    machine-local alias built from the committed recipe, and naming the registry
-    command instead would send the operator after a tag that does not exist.
+    The alias is machine-local and built from the committed recipe, so naming the
+    registry command instead would send the operator after a tag that does not
+    exist.
     """
     reader = OllamaReader(
         model="a-reader",
@@ -618,13 +475,14 @@ def test_an_open_reader_failure_is_recorded_with_its_kind(run: Run) -> None:
 
 
 @pytest.mark.spec("caption:failure:decline-is-permanent")
-def test_a_permanent_open_reader_failure_substitutes_no_other_reader(
+def test_a_truncated_response_is_recorded_permanent_and_written_nowhere(
     run: Run,
 ) -> None:
-    """The truncation row, and the no-fallback rule on the failure path.
+    """The truncation row: a permanent failure is recorded and surfaced.
 
-    A permanent failure is recorded and surfaced, never routed around: substituting
-    an implementation would write an artifact whose provenance record is untrue.
+    Never routed around and never assembled from something else -- the artifact
+    that is not written is the assertion, because writing one would mean a
+    provenance record naming a read that did not produce it.
     """
     reader = OllamaReader(
         model="a-reader",

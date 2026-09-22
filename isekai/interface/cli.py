@@ -404,9 +404,9 @@ def _per_item(
         if verb == "caption":
             for name, flow in flows.items():
                 # **Resolved per flow, not once per invocation.** One command
-                # naming two flows on two implementations would otherwise resolve
-                # one reader and hand it to both, and the provenance one of the
-                # two artifacts records would be false (design.md D6).
+                # naming two flows on two models would otherwise resolve one
+                # reader and hand it to both, and the provenance one of the two
+                # artifacts records would be false (design.md D6).
                 reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
                 _say(
                     wired,
@@ -439,16 +439,12 @@ def _per_item(
                 hosted = _seam(
                     wired.hosted_tagger, "hosted tagger", "tags the photograph"
                 )(flow)
-                # `None` is an absence rather than a failure: a flow declaring no
-                # arm this build can tag on simply has no hosted tag list, and a
-                # missing tag artifact is silent (design.md D20).
-                if hosted is not None:
-                    _say(
-                        wired,
-                        run,
-                        "tags",
-                        caption_tags(run, name, hosted, new_version=new_version),
-                    )
+                _say(
+                    wired,
+                    run,
+                    "tags",
+                    caption_tags(run, name, hosted, new_version=new_version),
+                )
         elif verb == "sheet":
             for name, flow in flows.items():
                 _say(

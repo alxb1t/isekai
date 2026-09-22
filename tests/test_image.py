@@ -20,10 +20,10 @@ from tests.images import jpeg_bytes, jpeg_with_header, png_bytes, png_with_exif
 def test_a_scale_node_sits_between_the_loader_and_every_consumer(
     workflow: Workflow,
 ) -> None:
-    # By role, not by class: `summon-v1` has two `ImageScale` nodes -- one on the
-    # photograph and one on the hires pass -- so a class lookup is ambiguous
+    # By role, not by class: `summon-anime-wai` has two `ImageScale` nodes -- one
+    # on the photograph and one on the hires pass -- so a class lookup is ambiguous
     # against it, and the flow's manifest is what names the photograph's.
-    flow = load_flow("summon-v1")
+    flow = load_flow("summon-anime-wai")
     load_id = flow.node("photo")
     scale_id = flow.node("scale")
     assert workflow[scale_id]["inputs"]["image"] == [load_id, 0]

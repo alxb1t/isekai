@@ -20,7 +20,7 @@ from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import caption, fake_tagger, sheet
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 
 @pytest.fixture

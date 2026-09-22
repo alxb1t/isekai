@@ -6,13 +6,15 @@ flow be caught by the suite rather than after a pod boot and several minutes of
 waiting. That property is also the standing argument against anyone later adding
 a computed field.
 
-**A flow is five files: a manifest, a graph, a schema and two briefings.** The
-manifest names none of them -- a key that can only ever hold one value is not a
-declaration -- and all five sit directly in the directory, because the digest that
-freezes a flow covers regular files only.
+**A flow is flat, and its files are the manifest and its siblings.** The manifest
+names none of them -- a key that can only ever hold one value is not a
+declaration -- and they all sit directly in the directory, because the digest that
+freezes a flow covers regular files only. The rule names its files rather than
+tallying them: the count has changed once already, and a rule carrying a numeral
+is a rule that goes stale (design.md D10).
 
 **A flow is immutable.** Changing a dial, a prompt fragment, the graph, the schema
-or either briefing does not edit this flow -- it creates a new identifier. A tuned
+or the briefing does not edit this flow -- it creates a new identifier. A tuned
 dial is not a variant of a flow, it is an untested flow, and an output's path
 identifies a configuration only if a flow identifier never silently means
 something else. The suite holds each tracked directory against a committed digest,
@@ -44,19 +46,23 @@ FLOWS_DIR = Path(__file__).resolve().parent.parent.parent / "flows"
 # The only version of `flow.json`'s own format this build reads. It is the
 # manifest's format, not the schema document's -- the schema carries no version
 # at all, because inside a frozen directory a version protects nothing.
-MANIFEST_VERSION = 2
+MANIFEST_VERSION = 3
 
-# The five files a flow is, none of them named by the manifest: a key that can
-# only ever hold one value is not a declaration. They sit directly in the
-# directory because `manifest_digest` covers regular files only, so a nested
-# layout would leave the schema and the briefings outside the freeze while the
-# gate stayed green (design.md D1, D3).
+# The files a flow is, none of them named by the manifest: a key that can only
+# ever hold one value is not a declaration. They sit directly in the directory
+# because `manifest_digest` covers regular files only, so a nested layout would
+# leave the schema and the briefing outside the freeze while the gate stayed
+# green (design.md D1, D3).
+#
+# **Named, not counted.** `sheet.briefing.md` was the fifth and has had no reader
+# since v0.21, so the rule's numeral has now been wrong once; a rule that tallies
+# is a rule that goes stale, and `tests/test_flow.py` asserts the length here so
+# a sixth sibling cannot be added silently (design.md D10).
 MANIFEST_NAME = "flow.json"
 GRAPH_NAME = "graph.json"
 SCHEMA_NAME = "schema.json"
 CAPTION_BRIEFING_NAME = "caption.briefing.md"
-SHEET_BRIEFING_NAME = "sheet.briefing.md"
-SIBLINGS = (GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME, SHEET_BRIEFING_NAME)
+SIBLINGS = (GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)
 
 # Every key a flow must declare. Checked as a set, so a flow missing one is named
 # rather than crashing three frames later on a `KeyError`.
@@ -69,29 +75,30 @@ REQUIRED = (
     "dials",
     "nodes",
     "models",
+    "model",
 )
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 
 # Every top-level key this build knows, and a manifest carrying any other is
 # refused naming it -- `load_flow` is where that reason lives.
 #
-# `hosted` is the one key a flow may declare and need not. It names what the
-# first two stages call, and is deliberately not `models`, which is required and
-# holds the render weights a rented GPU loads, pinned by digest: one names a
-# network call, the other a file on disk (design.md D2).
-#
-# **Optional, so `MANIFEST_VERSION` stays 2.** Required plus a version bump was
-# this change's first shape and it was wrong: it forced an edit to two frozen
-# directories in a change whose whole point is to add one and touch nothing.
-KNOWN = REQUIRED + ("hosted",)
+# **It is exactly `REQUIRED`: there is no optional key.** `hosted` was the one,
+# and it is gone. That block named a distinction -- a model reached over a
+# network to a third party, as against one over a socket to this machine -- and
+# only the second survives, so a block whose name no longer distinguishes
+# anything, holding a single key, is not a declaration (design.md D1).
+KNOWN = REQUIRED
 
-# What a hosted block declares, when it declares one. All three or none: the
-# implementation is stated once rather than per stage, so "this flow is wholly
-# one implementation" is a property of the document rather than of two lookups
-# that happen to agree. Checked the way `prompt`'s fragments already are, so a
-# block missing one is named here instead of reaching the registry as a
-# `KeyError` three frames later.
-REQUIRED_HOSTED = ("implementation", "reader", "sorter")
+# What `model` names, and why it is not `reader`. **One alias answers both
+# prompts stage (1) sends**: `wiring.py` builds the reader and the hosted tagger
+# from this single key, and `TAG_PROMPT` is unframed for exactly that reason --
+# two calls to the same alias must not arrive framed differently. A key named
+# `reader` would name it after one of its two callers; `model` names what it is.
+#
+# Deliberately not `models`, which is required, holds the render weights a rented
+# GPU loads and pins every one by digest: one names a file on disk, the other a
+# name a host resolves at call time, and **nothing verifies the bytes behind
+# this one** (design.md D1).
 
 # The node roles every image flow has, checked at load the way the prompt's
 # fragments already are. Every other role is optional and guarded at the patch
@@ -218,23 +225,6 @@ class Model:
 
 
 @dataclass(frozen=True)
-class Hosted:
-    """The hosted models a flow's first two stages call, and how they are reached.
-
-    Separate from `Model` because the two pin nothing alike: a `Model` is a file
-    with a digest, fetched onto a rented machine before a render, and this is a
-    name a host resolves at call time. **Nothing here is verified** -- no bytes
-    are checked behind either model name, and this version says so rather than
-    implying otherwise by sitting beside a digest. Verification travels with
-    provisioning (design.md D2).
-    """
-
-    implementation: str
-    reader: str
-    sorter: str
-
-
-@dataclass(frozen=True)
 class Flow:
     """One flow, loaded: what it needs, what it renders, and the dials it runs at."""
 
@@ -246,7 +236,7 @@ class Flow:
     dials: Mapping[str, Any]
     nodes: Mapping[str, str]
     models: tuple[Model, ...]
-    hosted: Hosted | None = None
+    model: str
 
     @property
     def graph_path(self) -> Path:
@@ -277,11 +267,6 @@ class Flow:
     def caption_briefing_path(self) -> Path:
         """Return the standing instructions this flow reads a photograph under."""
         return self.path / CAPTION_BRIEFING_NAME
-
-    @property
-    def sheet_briefing_path(self) -> Path:
-        """Return the standing instructions this flow sorts a caption under."""
-        return self.path / SHEET_BRIEFING_NAME
 
     def graph(self) -> Workflow:
         """Return a fresh copy of this flow's graph, parsed."""
@@ -323,14 +308,12 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     manifest states. The refusals are all shape, so a broken flow fails in the
     suite rather than on a rented machine.
 
-    **A key this build does not read is refused too, not ignored.** `hosted` is
-    optional and its absence means the default implementation, so a misspelling
-    is indistinguishable from a deliberate omission -- and a flow meant to run
-    one implementation would run the other, with a complete and correct-looking
-    run to show for it. Every other way of getting that block wrong already
-    fails: an unknown implementation has no entry to resolve, and an unreachable
-    one refuses at first call. The typo is the only silent path left, and an
-    allowlist is the only thing that closes it (design.md D12).
+    **A key this build does not read is refused too, not ignored**, and with
+    every key now required the allowlist below is the whole of what closes a
+    misspelling: `modl` is caught as an unknown key *and* as a missing one, in
+    the same load, with no check written for it. That is what flattening `hosted`
+    bought -- the block had no allowlist of its own, so `{"sortr": "x"}` inside it
+    loaded clean (design.md D3).
     """
     directory = flow_path(flow, flows_dir)
     manifest = directory / MANIFEST_NAME
@@ -341,12 +324,12 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
         )
     document: Any = json.loads(manifest.read_text())
 
-    missing = [key for key in REQUIRED if key not in document]
-    if missing:
-        raise Refusal(
-            f"{flow}/{MANIFEST_NAME} declares no {', '.join(missing)}; add the "
-            "field to the manifest, which declares every value and derives none"
-        )
+    # **The allowlist runs before the missing-key check, and the order is the
+    # message.** Every key is required, so a misspelling fails twice at once: the
+    # key this build reads is absent, and one it does not read is present.
+    # Reporting the absence first names `model` -- a key the operator did not
+    # misspell -- and sends him to add a second one rather than to fix the one he
+    # wrote.
     unknown = [key for key in document if key not in KNOWN]
     if unknown:
         raise Refusal(
@@ -354,6 +337,12 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             f"this build does not read; the keys it reads are "
             f"{', '.join(KNOWN)} -- correct the spelling, or point at a flow this "
             "build reads"
+        )
+    missing = [key for key in REQUIRED if key not in document]
+    if missing:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME} declares no {', '.join(missing)}; add the "
+            "field to the manifest, which declares every value and derives none"
         )
     declared = document["manifest_version"]
     if declared != MANIFEST_VERSION:
@@ -368,15 +357,16 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             f"{flow}/{MANIFEST_NAME}: `prompt` declares no {', '.join(absent)}; "
             "every fragment a prompt is assembled from is stated by the flow"
         )
-    if "hosted" in document:
-        lacking = [key for key in REQUIRED_HOSTED if key not in document["hosted"]]
-        if lacking:
-            raise Refusal(
-                f"{flow}/{MANIFEST_NAME}: `hosted` declares no "
-                f"{', '.join(lacking)}; a flow that names a hosted model names "
-                "the implementation it is reached through and the model both "
-                "stages run, or it names none at all"
-            )
+    # The value, not only its presence. A bare `str()` here would load
+    # `{"model": null}` as the string `"None"` and send a run at an alias that
+    # cannot exist, which is a refusal at first call with the manifest looking
+    # correct on the way there (design.md D4).
+    named = document["model"]
+    if not isinstance(named, str) or not named.strip():
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME}: `model` declares {named!r}; a flow names "
+            "the one model its first two stages run, as a non-empty string"
+        )
     if document["flow"] != flow:
         raise Refusal(
             f"{flow}/{MANIFEST_NAME} calls itself {document['flow']!r}; a flow's "
@@ -407,8 +397,9 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     absent_files = [name for name in SIBLINGS if not (directory / name).is_file()]
     if absent_files:
         raise Refusal(
-            f"{flow}/ has no {', '.join(absent_files)}; a flow is five files in "
-            "one directory -- add the file, or point at a flow that is complete"
+            f"{flow}/ has no {', '.join(absent_files)}; a flow is "
+            f"{MANIFEST_NAME} and {', '.join(SIBLINGS)}, flat in one directory "
+            "-- add the file, or point at a flow that is complete"
         )
     return Flow(
         id=flow,
@@ -422,15 +413,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             Model(str(entry["dest"]), str(entry["sha256"]))
             for entry in document["models"]
         ),
-        hosted=(
-            Hosted(
-                implementation=str(document["hosted"]["implementation"]),
-                reader=str(document["hosted"]["reader"]),
-                sorter=str(document["hosted"]["sorter"]),
-            )
-            if "hosted" in document
-            else None
-        ),
+        model=named,
     )
 
 

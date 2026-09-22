@@ -48,7 +48,7 @@ def _shipped_workflow() -> Workflow:
     than through a path constant, so the fixture and the render path agree on
     which file the shipped graph is by construction.
     """
-    return json.loads(load_flow("summon-v1").graph_path.read_text())
+    return json.loads(load_flow("summon-anime-wai").graph_path.read_text())
 
 
 @pytest.fixture
@@ -89,13 +89,13 @@ def photo(tmp_path: Path) -> str:
 
 @pytest.fixture(scope="session")
 def _shipped_schema() -> Schema:
-    """Read and parse `summon-v1`'s own schema once for the whole session.
+    """Read and parse `summon-anime-wai`'s own schema once for the whole session.
 
     Same argument as the shipped graph and the tracked manifest above: the suite
     reads the tracked file itself, and reads it once. It is reached through the
     flow that owns it -- there is no schema outside a flow directory.
     """
-    return load_flow("summon-v1").schema
+    return load_flow("summon-anime-wai").schema
 
 
 @pytest.fixture

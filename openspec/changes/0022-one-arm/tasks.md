@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The split: five names to `foundation/run.py`, the arm still working
-- [ ] 2 — The flow set, the loader and the arm, together
+- [x] 2 — The flow set, the loader and the arm, together
 - [ ] 3 — The documents and the spec delta
 - [ ] 4 — ⚠️ **HUMAN · METERED** — the acceptance, both flows, the same photographs
 
@@ -120,7 +120,7 @@ phase on a red gate — `design.md` D26 has the full argument. **This is the lar
 
 ### 2a — the loader
 
-- [ ] 2.1 **`isekai/foundation/flow.py`:**
+- [x] 2.1 **`isekai/foundation/flow.py`:**
   - `SIBLINGS` (`:59`) → `(GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)`. Delete
     `SHEET_BRIEFING_NAME` (`:58`) and `Flow.sheet_briefing_path` (`:282-284`) (D9).
   - `MANIFEST_VERSION` (`:47`) → `3`. Replace the `:78-85` comment block — its stated reason expires
@@ -136,7 +136,7 @@ phase on a red gate — `design.md` D26 has the full argument. **This is the lar
   - Update `load_flow`'s docstring at `:326-333`: the typo path it describes is now closed by the
     top-level allowlist at `:350-357`, which needs no change (D3).
 
-- [ ] 2.2 **Verify the refusals by hand before touching a flow:**
+- [x] 2.2 **Verify the refusals by hand before touching a flow:**
   `uv run pytest tests/test_flow.py -v -k "manifest or refused or version"`
 
 ### 2b — the flow set (D5)
@@ -151,9 +151,9 @@ different defaults — and put `"model"` **exactly where the key it replaces sat
 for `summon-anime-wai` (where `hosted` was), and appended after `models` for `conjure-anime-wai`, which
 had no `hosted` block. Re-run 2.6's digest command after any later edit to either directory.
 
-- [ ] 2.3 **Delete** `flows/summon-v1/`, `flows/conjure-v1/`, `flows/summon-open-v1/` — `git rm -r`.
+- [x] 2.3 **Delete** `flows/summon-v1/`, `flows/conjure-v1/`, `flows/summon-open-v1/` — `git rm -r`.
 
-- [ ] 2.4 **Create `flows/summon-anime-wai/`, four files:**
+- [x] 2.4 **Create `flows/summon-anime-wai/`, four files:**
   - `flow.json` — `summon-open-v1`'s, with `"flow": "summon-anime-wai"`, `"manifest_version": 3`, the
     whole `hosted` block (its last four lines, `:96-100`) replaced by a top-level
     `"model": "joycaption-beta-one-q4k"`. **Every dial, node binding and all 12 model digests
@@ -164,7 +164,7 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
   - `caption.briefing.md` — `summon-open-v1`'s, **byte-identical**.
   - **No `sheet.briefing.md`.**
 
-- [ ] 2.5 **Create `flows/conjure-anime-wai/`, four files:**
+- [x] 2.5 **Create `flows/conjure-anime-wai/`, four files:**
   - `flow.json` — `conjure-v1`'s, with `"flow": "conjure-anime-wai"`, `"manifest_version": 3`, and a
     top-level `"model": "joycaption-beta-one-q4k"` appended after `models`. `conjure-v1` has no `hosted`
     block to remove. **`inputs` stays `["sheet"]`** — it gates only `generate.py:405`'s `upload_image`
@@ -176,13 +176,13 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
   - `caption.briefing.md` — a **byte-identical copy of `summon-anime-wai`'s** (D8). Not conjure-v1's.
   - **No `sheet.briefing.md`.**
 
-- [ ] 2.6 **Rewrite `PINNED`** (`tests/test_flow.py:48-70`) to the two new flows. **Compute the digests,
+- [x] 2.6 **Rewrite `PINNED`** (`tests/test_flow.py:48-70`) to the two new flows. **Compute the digests,
   never invent them:**
   `uv run python -c "from isekai.foundation.flow import manifest_digest, tracked_flows; [print(f'{n}: {manifest_digest(n)}') for n in tracked_flows()]"`
   Replace the three entries and their comments with two, and record in the comment that this is a flow-set
   replacement rather than a re-pin — the exception at `:54-60` is not being used.
 
-- [ ] 2.7 **Re-point the session fixtures. These are module-scope loads and each one is a collection
+- [x] 2.7 **Re-point the session fixtures. These are module-scope loads and each one is a collection
   error for every module that imports it:**
 
   | file:line | today | becomes |
@@ -206,19 +206,19 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
 
 ### 2c — the arm (D16, D17, D18)
 
-- [ ] 2.8 **`isekai/pipeline/caption.py`** — delete `class ClaudeReader` (`:132-164`), the nine
+- [x] 2.8 **`isekai/pipeline/caption.py`** — delete `class ClaudeReader` (`:132-164`), the nine
   `claude_cli` imports (`:41-51`, keeping only what `run.py` now provides), `"ClaudeReader"` from
   `__all__` (`:291`), and the module docstring's Claude sentences (`:21-22`).
 
-- [ ] 2.9 **`isekai/interface/wiring.py`** — delete `DEFAULT_IMPLEMENTATION` (`:97`), `_claude_reader`
+- [x] 2.9 **`isekai/interface/wiring.py`** — delete `DEFAULT_IMPLEMENTATION` (`:97`), `_claude_reader`
   (`:100-103`), `_no_tagger` (`:122-128`), `_named_by` (`:105-114`), `_resolve` (`:169-184`), the
   `Hosted` import (`:28`), and both `"claude-cli"` entries (`:152`, `:164`). `READERS` and
   `HOSTED_TAGGERS` collapse: `reader_for` and `hosted_tagger_for` read `flow.model` directly.
   **Rewrite the `:142-150` comment** — its premise is gone (D17).
 
-- [ ] 2.10 **`git rm isekai/boundary/claude_cli.py`** and **`git rm tests/test_isolation.py`** (D18).
+- [x] 2.10 **`git rm isekai/boundary/claude_cli.py`** and **`git rm tests/test_isolation.py`** (D18).
 
-- [ ] 2.11 **Tests to delete outright** — each named with its reason, none of them a silent drop:
+- [x] 2.11 **Tests to delete outright** — each named with its reason, none of them a silent drop:
 
   | file:line | test | why |
   |---|---|---|
@@ -242,7 +242,7 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
   | `tests/test_caption.py:394` | `test_output_that_is_not_an_envelope_at_all_is_a_failure` | key kept by `:384` and the rewritten `:367` |
   | `tests/test_caption.py:414`, `:428` | the two absent-reader tests | D20 |
 
-- [ ] 2.12 **Tests to rewrite, not delete:**
+- [x] 2.12 **Tests to rewrite, not delete:**
 
   | file:line | test | onto what |
   |---|---|---|
@@ -263,11 +263,11 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
   | `tests/test_caption.py:367` | `test_a_response_the_stage_cannot_read_as_prose_is_permanent` | `OllamaReader` + `FakeTransport({"response": ""})` — `:603` shows the shape |
   | `tests/test_resume.py:255, :292` | `ClaudeReader(binary="not-a-real-binary")` in the refusal collector | an `OllamaReader` unreachable-host case |
 
-- [ ] 2.13 **Add the assertion the rule has never had** (D10): `len(SIBLINGS) == 3`, and a flow directory
+- [x] 2.13 **Add the assertion the rule has never had** (D10): `len(SIBLINGS) == 3`, and a flow directory
   holding exactly `MANIFEST_NAME` plus `SIBLINGS`. Rename
   `test_a_flow_is_five_flat_files_and_the_manifest_names_none_of_them` and re-bind it.
 
-- [ ] 2.14 **The bindings, by key.** The spec delta is already written under `specs/`; these are the keys
+- [x] 2.14 **The bindings, by key.** The spec delta is already written under `specs/`; these are the keys
   the suite must name after this phase. **Do not invent a key — every one below is in the delta.**
 
   | key | bound by |
@@ -304,22 +304,22 @@ had no `hosted` block. Re-run 2.6's digest command after any later edit to eithe
   different implementation is distinguishable"*; `caption:failure:decline-is-permanent` loses *"no other
   implementation is substituted"*.
 
-- [ ] 2.15 **Verify:** `uv run pytest tests/test_flow.py tests/test_pipeline_cli.py tests/test_tagging.py tests/test_caption.py -v`
+- [x] 2.15 **Verify:** `uv run pytest tests/test_flow.py tests/test_pipeline_cli.py tests/test_tagging.py tests/test_caption.py -v`
 
-- [ ] 2.16 **Verify no arm remains reachable:**
+- [x] 2.16 **Verify no arm remains reachable:**
   `uv run python -c "import isekai.interface.wiring as w; print(sorted(w.READERS)); print(sorted(w.HOSTED_TAGGERS))"`
   **Expected: `['ollama']` twice.**
 
-- [ ] 2.17 **Verify both flows load and name their model:**
+- [x] 2.17 **Verify both flows load and name their model:**
   `uv run python -c "from isekai.foundation.flow import load_flow, tracked_flows; [print(n, load_flow(n).model, len(load_flow(n).schema.names)) for n in tracked_flows()]"`
   **Expected: `conjure-anime-wai joycaption-beta-one-q4k 21` and `summon-anime-wai joycaption-beta-one-q4k 16`.**
 
-- [ ] 2.18 **Verify the table is untouched** (D7, D30) — this is the phase's negative claim:
+- [x] 2.18 **Verify the table is untouched** (D7, D30) — this is the phase's negative claim:
   `git diff --stat main -- scripts/field_map.json scripts/derive_field_map.py isekai/shared/field_map.py tests/test_field_map.py`
   **Expected: no output.** Then `uv run pytest tests/test_field_map.py -v` — all green, none skipped for
   a reason this change introduced.
 
-- [ ] 2.19 **Verify:** `make gate`
+- [x] 2.19 **Verify:** `make gate`
 
 ---
 

@@ -47,6 +47,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already spelled literally one line above for `record_failure`. The fabrication is deleted, and
   `caption_wd14` now holds no `StageFailure` reference at all.
 
+- **Two flows replace three, and the `claude` arm goes with them.** `summon-v1` and `conjure-v1`
+  selected that arm by declaring *no* `hosted` block at all, so it could not be removed without
+  replacing them; `summon-open-v1` loses `sheet.briefing.md`, which moves a digest and so makes a new
+  flow rather than an edited one. **A flow is never edited** — three directories were deleted and two
+  created. `summon-anime-wai` carries `summon-open-v1`'s graph, schema and caption briefing byte for
+  byte; `conjure-anime-wai` carries `conjure-v1`'s graph and schema byte for byte — all 21 fields,
+  `eyelashes` among them — and a caption briefing that is a byte-identical copy of
+  `summon-anime-wai`'s, because both flows now read the same model for the same purpose and a second
+  authored briefing would be a second untested artifact. The names carry the base:
+  `<verb>-<style>-<base>`, because the catalogue holds eleven untried checkpoints and `summon-anime`
+  could not tell two of them apart.
+- **The `hosted` block is deleted rather than shrunk, and a required top-level `model` replaces it.**
+  `hosted` named a distinction — a model reached over a network to a third party, as against one over a
+  socket to this machine — and only the second survives. A block whose name no longer distinguishes
+  anything, holding a single key, is not a declaration. The key is `model` and not `reader` because one
+  alias answers **both** prompts stage ① sends: the reader and the hosted tagger are built from it, and
+  the tag prompt is unframed for exactly that reason. `MANIFEST_VERSION` goes 2 → 3, and the reason it
+  stayed at 2 — that a bump would force an edit to two frozen directories — expires with those
+  directories.
+- **Flattening closed the misspelling path for free, and no new check was written.** The `hosted` block
+  had no key allowlist of its own, so `{"sortr": "x"}` inside it loaded clean; a top-level key is
+  guarded by the allowlist that already existed. That allowlist now runs **before** the missing-key
+  check, because a misspelling fails twice at once and reporting the absence first names `model` — a
+  key the operator did not misspell — sending him to add a second one rather than fix the one he wrote.
+- **The loader validates the value, not only its presence.** A bare `str()` loaded `{"model": null}` as
+  the Python string `"None"` and sent a run at an alias that cannot exist. It is refused by name now.
+- **The structural rule stops counting.** *"A flow is five flat files"* becomes *a flow is flat, and its
+  files are the manifest and its siblings* — named rather than tallied, because the count has changed
+  once and a rule carrying a numeral goes stale. `sheet.briefing.md` leaves `SIBLINGS` and every flow;
+  it has had no reader since v0.21. `len(SIBLINGS)` gains the assertion it has never had: the
+  set-equality that guarded this rule shrinks on both sides at once, so it stayed green through the
+  removal and would stay green through a silent addition.
+
+
 ### Removed
 
 - **`briefing_text` is inlined at its one caller and deleted.** Its whole body was `return
@@ -58,6 +92,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   steps, and `interface/wiring.py` already spells that expression as `REPOSITORY`. Its one outside
   reference, a `pytest.param` in `tests/test_package_paths.py`, goes with it — that file's parameter list
   evaluates at module scope, so leaving it would have been a collection error rather than a test failure.
+- **`isekai/boundary/claude_cli.py` and `tests/test_isolation.py`.** Thirteen names die with
+  `ClaudeReader` — `BINARY`, `BASE_FLAGS`, `Runner`, `spawn`, `require_binary`, `invoke`, `Envelope`,
+  `classify`, `classify_text`, `detail`, `models_that_ran`, `TRANSIENT_MARKERS`, `DECLINED` — every one
+  unreferenced once the reader goes. The isolation file is deleted **whole** rather than having its
+  third test rehomed: its own docstring is the argument, *"the obvious form of this test passes
+  vacuously, and that is the whole reason this module exists separately"*, and with one arm the sealed
+  form **is** the vacuous one. Retiring a guard deliberately is different from losing one.
+- **Both reader registries, and the default they fell back to.** `DEFAULT_IMPLEMENTATION`, `READERS`,
+  `HOSTED_TAGGERS`, `_resolve` and `_named_by` are gone: with one implementation there is no string to
+  key a registry on, and a one-entry registry is a dispatch mechanism with nothing to dispatch.
+  `reader_for` and `hosted_tagger_for` read `flow.model` directly. The table's recorded justification —
+  that a conditional would hand an unrecognised name the default arm and corrupt any later comparison
+  between the two — is **rewritten rather than carried**, because its premise was the second arm. What
+  survives is that a manifest naming a model this build cannot reach still refuses by name, at the
+  first call.
+- **Six scenarios, and one of them would otherwise have been left bound to nothing.**
+  `caption:selection:no-path-reaches-another-implementation` had exactly two bindings, both in the file
+  this change deletes, and it is not merely unbound but **unprovable**: there is no other implementation
+  for a path to reach. This repository has no spec↔test binding checker, so nothing in the gate would
+  have reported it. Two further scenarios keep their keys and lose a clause —
+  `caption:seam:producer-names-the-implementation` and `caption:failure:decline-is-permanent` each
+  asserted something a one-armed system cannot fail.
 
 ## [0.21.0] - 2026-09-21
 

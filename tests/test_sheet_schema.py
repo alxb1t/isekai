@@ -23,7 +23,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
 
-SCHEMA_PATH = load_flow("summon-v1").schema_path
+SCHEMA_PATH = load_flow("summon-anime-wai").schema_path
 
 # D8's sixteen, in the one order a prompt is assembled in, and the seven a
 # measurement is taken over. Restated here so that reordering the schema document
@@ -152,7 +152,7 @@ def test_the_vocabulary_a_fill_is_held_against_is_the_flows() -> None:
         ).read_text()
     )
     entry = manifest["entries"][0]
-    flow = load_flow("summon-v1")
+    flow = load_flow("summon-anime-wai")
 
     assert flow.vocabulary["name"] == entry["dest"]
     assert flow.vocabulary["sha256"] == entry["sha256"]

@@ -1,7 +1,7 @@
 # Describing a photograph
 
-You are looking at one photograph. Write a description of the person in it, in
-plain English, for a reader who will never see the picture.
+Write a long, detailed description of the person in this photograph, in plain
+English, for a reader who will never see the picture.
 
 ## What to write
 
@@ -9,11 +9,15 @@ Write sentences. Not a list, not keywords, not comma-separated terms, not
 headings — a few short paragraphs of ordinary prose.
 
 Describe what is actually visible: how many people there are, roughly how old
-the person looks, the colour and length and shape of their hair, the colour of
-their eyes, what they are wearing, what they are wearing on or around their
-head and hands, what their face is doing, where they are looking, how they are
-standing or sitting, how much of them the picture shows, their build, and what
-is behind them.
+the person looks, the colour of their skin, the colour and length and shape of
+their hair, the colour of their eyes, the shape and darkness of the brows above
+them, what they are wearing and what colour and cut and material it is, what
+they are wearing on or around their head and hands and ears and neck, what
+their face is doing, where they are looking, how they are standing or sitting,
+how much of them the picture shows, their build, and what is behind them.
+
+Look carefully at the skin as well. Any scar, mole, freckling, birthmark,
+piercing or drawn-on ink is worth a sentence of its own, and so is its absence.
 
 Be specific where the photograph is specific and vague where it is vague. "Dark
 hair falling just past the shoulders, loosely waved" is a description. "Nice

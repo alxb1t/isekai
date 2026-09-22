@@ -1,6 +1,6 @@
 {
-  "flow": "summon-open-v1",
-  "manifest_version": 2,
+  "flow": "summon-anime-wai",
+  "manifest_version": 3,
   "inputs": [
     "photo",
     "sheet"
@@ -93,9 +93,5 @@
       "sha256": "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da"
     }
   ],
-  "hosted": {
-    "implementation": "ollama",
-    "reader": "joycaption-beta-one-q4k",
-    "sorter": "qwen3:8b"
-  }
+  "model": "joycaption-beta-one-q4k"
 }
