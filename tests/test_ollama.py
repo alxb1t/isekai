@@ -81,6 +81,14 @@ def test_no_proxy_in_the_environment_can_capture_the_photograph(
     """
     monkeypatch.setenv("http_proxy", "http://proxy.invalid:8080")
     monkeypatch.setenv("https_proxy", "http://proxy.invalid:8080")
+    # **Deleted, not set.** `getproxies()` reads `no_proxy` too, and urllib does
+    # bypass a proxy for a host that entry names -- so on a machine exporting
+    # `no_proxy=localhost,127.0.0.1`, which is an ordinary thing to export, the
+    # falsification below would take the direct route and assert the very thing
+    # it exists to rule out. The test was true only in a clean environment
+    # (v0.19 R7).
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
     monkeypatch.setattr(http.client, "HTTPConnection", RefusingConnection)
 
     with pytest.raises(urllib.error.URLError) as refused:

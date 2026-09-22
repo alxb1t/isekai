@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from isekai.foundation.flow import Schema, load_flow
+from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import WD14, Run, open_run
 from isekai.interface.run_view import listings, rendered, report
 from isekai.pipeline.caption import FakeReader
@@ -197,3 +198,51 @@ def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
     assert by_name[("wd14", FLOW)].producers[1].startswith("wd14")
     # The hosted one still is unpinned, so the absence above means something.
     assert "unpinned" in by_name[("tags", FLOW)].producers[1]
+
+
+# --- the injected flows root, and where the refusal lands ---------------------
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_show_reads_the_flows_root_it_is_given(run: Run, tmp_path: Path) -> None:
+    """`Wiring` has a `flows_dir` seam and this was the one reader ignoring it.
+
+    `rendered()` called `load_flow` with the module default, so `show` against
+    an injected flows root went to `flows/` regardless of what was passed
+    (v0.16 R2).
+    """
+    scratch = tmp_path / "scratch-flows" / FLOW
+    scratch.mkdir(parents=True)
+    source = load_flow(FLOW).path
+    for item in source.iterdir():
+        if item.is_file():
+            (scratch / item.name).write_bytes(item.read_bytes())
+
+    lines = list(report(run, scratch.parent))
+
+    assert any(line.strip() == run.id for line in lines)
+    # And a root that does not hold the flow refuses, which is what proves the
+    # argument reached `load_flow` at all rather than being accepted and dropped.
+    with pytest.raises(Refusal):
+        list(report(run, tmp_path / "empty-flows"))
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
+    run: Run,
+) -> None:
+    """`report` is a generator, so a lazy `load_flow` refused mid-stream.
+
+    `run.flows` is an unfiltered listing of the run's subdirectories, so a
+    stray directory becomes a flow the report tries to load -- and fifteen
+    lines of record had already streamed to the terminal above the refusal
+    (v0.16 R2).
+    """
+    (run.path / "not-a-flow").mkdir()
+    printed: list[str] = []
+
+    with pytest.raises(Refusal):
+        for line in report(run):
+            printed.append(line)
+
+    assert printed == []

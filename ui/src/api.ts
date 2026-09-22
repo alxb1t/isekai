@@ -61,11 +61,16 @@ export function inputDetail(id: string): Promise<InputDetail> {
 /* The whole draft, every time. There is no Save control on the page and no
    partial update here: a debounced PUT of everything is what makes the receipt
    the page shows true. */
+/* `saved` is the receipt this page last received, echoed back as a precondition:
+   the server compares it to the draft's own mtime and answers 409 on a mismatch.
+   It is the only monotonic fact on disk -- the draft carries no timestamp, no
+   revision counter and no digest. */
 export function saveDraft(
   id: string,
   fields: Record<string, string[]>,
+  saved: number | null,
 ): Promise<{ draft: string; saved: number; budget: Budget }> {
-  return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields })
+  return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields, saved })
 }
 
 export function approve(

@@ -25,6 +25,187 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-09-22
+
+- **The acceptance ran: gate green and one local pass through ①②③, on five photographs, with no pod.**
+  `caption` wrote prose, the local list and the hosted list for every input, in that order; `sheet`
+  filled all five from the WD14 list; the surface built its bundle, served the batch and returned a
+  receipt for a saved draft. The three operator-visible changes were confirmed by hand against the
+  running server, including the **re-opened** state — an approved artifact with a fresh draft beside it —
+  which is the one that was actually false before this version. `Cmd+Z` under a Cyrillic layout was
+  confirmed by the operator in the browser. **Stage ④ was not run and no pod was rented**, which is the
+  design: this version edits no flow file, so `manifest_digest` did not move.
+
+### Changed
+
+- **`num_ctx` is pinned at 4096 in both option maps, and the number is the one that was already in
+  force.** It was unset, so the effective window was whatever Ollama resolved from the host -- an
+  invisible dependency on a machine, on the two stages that decide what every sheet and every render is
+  built from. Measured on the operator's machine before pinning, which is a measurement this repository
+  did not have: the reader's `prompt_eval_count` is **1275** (briefing + prompt + photograph),
+  `num_predict` draws 1024 from the same window, and `/api/ps` reports the window Ollama resolved with
+  nothing pinned as **4096** -- so 2299 of 4096 and nothing was being truncated. **The photograph's
+  share is constant at ~729 tokens**: 1275 exactly for 0.17 MB at 800x1125, 2.20 MB at 1248x1824 and
+  2.28 MB at 1024x1472, because the vision tower encodes at a fixed grid and does not tile. That is
+  what makes 4096 a ceiling rather than a guess, since a larger photograph cannot grow it. The tagger's
+  prompt is the cheaper of the two at **779**. `v0.19 review/R4`'s own figure -- *"a 7,440-byte
+  briefing"* -- was measured against a constant that no longer exists and was wrong by 3.4x
+  (design.md D8).
+
+  **The halt check ran and the pin held**: two existing inputs were re-captioned with the pin in place
+  and both artifacts came back byte-identical to the ones on disk, prose and body alike. Pinning at the
+  window already in force is the only value that leaves the models' output unchanged, which is the whole
+  point of pinning rather than raising.
+
+### Removed
+
+- **The `vite` dev-server proxy, which the Host/Origin guard had just turned into a trap.**
+  `ui/vite.config.ts` forwarded `/api` to `127.0.0.1:8517`, and `vite`'s proxy does not rewrite the
+  browser's `Host`/`Origin`, so every call through it now answers `403 not addressed here`. Nothing
+  tracked in this repository references `npm run dev` or port `5173`: the config was dead, and dead
+  config that 403s is worse than none. `isekai ui` builds and serves the bundle itself.
+
+### Fixed
+
+- **The approved-sheet refusal says what `--new-version` actually buys.** It told the operator to
+  *reopen* the input, but `review --new-version` leaves the approved artifact in place, so
+  `approved_path` stays set and this page keeps serving the sheet read-only -- the reopened draft is
+  the command line's to edit until the re-opened state lands in v0.22.2 (design.md D5). The command is
+  still the remedy; the sentence no longer promises an effect the surface does not have.
+- **An unreachable endpoint is recorded `transient`, not `permanent`.** `_reported()` in `cli.py` turned
+  every `URLError`/`OSError` from the transport into a `Refusal`, and `render()` wrote `permanent` for
+  any `Refusal` it caught -- so a closed tunnel, a pod that went away, or a `--server` address typed
+  before the tunnel was up left a record classified as one that would recur, on the one failure that is
+  over the moment the pod comes back. `comfy_types.py` now declares `Unreachable(Refusal)`, `_reported()`
+  raises it, and the one caller that writes a record branches on it. Everything that only *reports* a
+  refusal is unchanged: the CLI still prints the same string and exits 1.
+
+  **It classifies the failure; it does not buy a second attempt.** Rendering's budget is one, so the next
+  pass is refused on the *count* whichever kind is on disk, and the operator's remedy is still deleting
+  the record by hand -- what changes is the kind the filename carries and the sentence the refusal states.
+  That is deliberate: `run-directory`'s own requirement is that a render which has failed once costs a
+  person's attention rather than another attempt, and letting a resume spend a second time without a
+  person is a spec delta and a spending decision, not a patch (design.md D11).
+- **One flow's malformed sheet no longer costs its siblings their assembly.** `prepare()` assembled in a
+  dict comprehension, so the first flow whose approved sheet could not be read took every other flow of
+  that run with it -- after `prompt_artifact` had already written a permanent record into the broken
+  flow's own directory. It now collects per flow the way `across` collects per photograph, returning what
+  was assembled beside what refused, and `_generate` reports both together at the end.
+
+- **Every command a refusal prints is one the parser accepts.** `refusal_for` emitted
+  `` `python -m isekai {verb}` `` and `prepare()` emitted `` `python -m isekai review` `` and
+  `` `python -m isekai approve` `` -- all without the `--flow` v0.16 made required on every stage verb,
+  so copy-pasting the remedy a refusal states returned an argparse usage error instead of the fix. The
+  flow is now threaded into `refusal_for` as an argument of its own rather than patched at call sites,
+  which covers every caption and tagging budget refusal as well as the two in `generate.py`
+  (design.md D10). `tests/test_resume.py`'s `AVAILABLE` list held the bare forms, which was the only
+  reason `cli:refusals:refusal-names-the-remedy` passed; a new test parses what is printed with the
+  parser that ships, so the scenario can no longer be stronger than the fixture bound to it.
+- **An assembly failure names the directory the record is actually in.** `prompt_artifact` printed
+  `prompts/<flow>/` against a layout that has been `<flow>/prompts/` since v0.16 -- input above, flow
+  below -- so the one path in the message pointed at a directory that does not exist. `review.py` had
+  it right and is now matched.
+
+- **A manifest missing a dial, or naming a node the graph does not carry, is refused at load.** Both
+  passed all six gate commands, rented the pod and uploaded the photograph before raising a bare
+  `KeyError` out of `patch()` -- not a `Refusal`, so `across` never collected it and the rest of the
+  batch died with it. The dial check is **role-conditional and never a flat list**: a flat one rejects
+  `conjure-anime-wai`, which legitimately declares no identity adapter and no pose preprocessor
+  (design.md D4). `ROLE_DIALS` in `foundation/flow.py` encodes what each role costs, including
+  `hires_resize`'s `hires_scale`, which `_hires_target` reads unconditionally and no reader of `patch()`
+  alone would see; `SAMPLER_DIALS` and `SECOND_PASS_DIALS` moved there with it, so the list `load_flow`
+  validates and the list `build_graph` reads cannot drift apart. Both tracked flows pass unchanged --
+  `summon-anime-wai` 11/11 nodes and 12/12 dials, `conjure-anime-wai` 7/7 and 9/9 -- so no flow file is
+  edited and `manifest_digest` does not move.
+
+- **`approved_path` is authoritative for whether a sheet may be edited.** The rail keyed on it and the
+  form keyed on `draft is None`, so in the state `review --flow F --new-version` produces -- approved,
+  with a fresh draft beside it -- the two disagreed and `put_draft` had no approval gate at all. The
+  `PUT` went through. `ui/spec.md` already required otherwise, so this makes an already-false scenario
+  true (design.md D5). **The re-opened rail status is `v0.22.2`'s**; no third status is added here.
+- **An overlapping draft `PUT` answers `409` instead of committing out of order.** The page autosaves on
+  a debounce, so two writes could be in flight at once and committed in whatever order the server
+  finished them -- last write wins, where *last* was not the operator's last keystroke. The client
+  echoes the `saved` it last received and the server compares it to the draft's own `st_mtime`, which is
+  the only monotonic fact on disk: the draft carries no timestamp, no revision counter and no digest,
+  and a `revision` field would change the artifact shape (design.md D6). A payload carrying no `saved`
+  states no precondition and behaves as before. `useSheet.ts` gains the generation counter
+  `useVocabulary.ts` already had, so a slow earlier answer no longer replaces a newer one's `budget` or
+  `refusal`.
+
+  **The counter governs those two and never `saved`.** Applied to the receipt as a whole it made the
+  recoverable `409` a permanent one: the two overlapping writes the precondition exists for are exactly
+  the case where the *earlier* receipt carries the *later* time, so dropping it left the client echoing a
+  precondition the server had already moved past and refusing every autosave after it, with a banner
+  blaming another tab that did not exist. `saved` is a monotonic fact about the file on disk, so it is
+  taken whatever the generation and only ever forwards.
+- **Approve stops when the write it waits for was refused.** `approve()` awaited `flush()` -- so the
+  debounced `PUT` is on disk before the approve `POST` goes out -- but read nothing back, which was
+  sound only while a refused `flush()` meant a network error. It now means `409` as well, so an approve
+  on top of one would have built the artifact from the last draft that *did* land and unlinked
+  everything typed after it. `flush()` answers whether the draft reached disk, and the refusal stays on
+  the header line.
+- **One unreadable photograph no longer kills the whole review batch.** `batch.py` called
+  `image_dimensions()` unguarded and it exits via `sys.exit`, a `BaseException` that `across` -- which
+  catches `Refusal` -- walks straight past; with two bad photographs neither was named. The same wrap
+  already existed one module away at `generate.photo_resolution`.
+- **The bundle is rebuilt when anything it is built from changes, not only its source.** `_is_fresh`
+  compared `ui/src/` and `ui/index.html` alone, so a bumped dependency, an added vite plugin or a changed
+  build script left the previous build being served, silently and with a green gate. It now compares
+  everything under `ui/` **except the two ignored roots** — `dist/`, its own output, and `node_modules/`,
+  which is fetched. Stated as an exclusion rather than as a list of build inputs, because that list was
+  wrong twice: naming `vite.config.ts`, `package.json` and `package-lock.json` would still have missed
+  `tsconfig.json`, which `vite` reads and which is in that directory today.
+- **`npm run build` is bounded in time.** It can reach the network resolving a missing dependency, and
+  an `isekai ui` that hangs with no port bound and no output is indistinguishable from one that died.
+- **The hosted tag panel shows each tag once.** `OfferedTag` is `{tag, posts}` where `posts` is a pure
+  function of `tag`, so a repeat was a byte-identical object carrying no information and a duplicate Vue
+  key. **The local list is deliberately not deduplicated**: `ScoredTag` is `{tag, confidence}`, where
+  two rows can legitimately differ, and narrowing it would falsify
+  `ui:source:both-tag-lists-are-shown-raw-and-read-only` (design.md D7). Neither artifact on disk is
+  touched.
+- **`show` honours the flows root it is given, and refuses before it prints.** `run_view.rendered()`
+  called `load_flow` with the module default, ignoring `Wiring.flows_dir`; and `report` was a generator,
+  so a run holding a directory no flow answers for printed fifteen lines of record and *then* failed.
+  `report` now returns its lines as a list, so *everything refusable is read before the first line is
+  printed* is a property of the shape rather than a docstring asking the next editor to keep it so --
+  and both callers drain it in full, so the laziness bought nothing and cost the ordering.
+- **`Cmd+Z` matches either `event.key` or `event.code`.** Under a Cyrillic layout it produced
+  `event.key === 'я'` and the branch did nothing; matching the physical key alone would have traded that
+  for Dvorak, where `code: 'KeyZ'` is the key printed `;` and the key printed `Z` reports `code: 'Slash'`.
+  Either test alone is partial, and both are available here precisely because a meta-modified Z emits no
+  character -- which is what separates this from the Option bindings thirteen lines earlier, where
+  `event.key` is unusable. This is that binding only -- `TagInput.vue`'s thirteen `event.key` branches
+  are a keyboard re-work of their own.
+- **One wrap around `image_dimensions`, in the module that owns it.** `shared/image.py` gains
+  `dimensions_or_refuse`; the render path and the review surface had grown two copies of the same
+  `SystemExit` → `Refusal` translation, with two wordings for one failure.
+- **A dead guard is gone from `/api/tags`.** `if (posts := vocabulary.count(tag)) is not None` dropped no
+  row -- `count()` returns `int` -- and read as though a fragment match might have no count.
+
+- **A test that was true only in a clean environment.** `tests/test_ollama.py`'s falsification twin set
+  `http_proxy`/`https_proxy` and never cleared `no_proxy` -- and `getproxies()` reads that too, so on a
+  machine exporting `no_proxy=localhost,127.0.0.1` the twin took the direct route and asserted the very
+  thing it exists to rule out. Both spellings are now deleted for the duration of the test.
+- **A dead public function is gone.** `evaluation/labels.py`'s `load_records` had no reference anywhere
+  in the repository but its own definition line.
+
+### Security
+
+- **`Host` and `Origin` are validated on every request the review surface answers.** Until now
+  `grep -rn "add_middleware\|Origin\|TrustedHost" isekai/` returned **zero hits**: the loopback API is
+  unauthenticated by design, so the browser's own origin rules are the whole of its protection, and
+  neither half of them was checked. `create_app()` now takes the address it is bound to and refuses with
+  `403` any request whose `Host` is not one of that port's loopback names — which is the entirety of the
+  DNS-rebinding attack, where a page on an attacker's domain resolves that domain to `127.0.0.1` and
+  talks to this port with the browser's full cooperation — and any request carrying an `Origin` that is
+  not this server's own, which is the cross-site write. **Raised independently by four converge security
+  stations, across v0.18, v0.20, v0.21 and v0.22**, and landed first in this version so that every later
+  UI fix is tested behind the request path that ships. It is a middleware rather than a dependency
+  because the static mount is not a route and would not carry one, and it guards all **seven** routes —
+  `GET /api/fields` arrived at v0.21 and the module docstring still says six; that numeral is prose and
+  belongs to `v0.22.2`'s sweep.
+
 ## [0.22.0] - 2026-09-22
 
 ### Changed

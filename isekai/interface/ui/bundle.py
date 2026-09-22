@@ -30,6 +30,31 @@ SOURCE = REPOSITORY / "ui"
 
 BINARY = "npm"
 
+# **What freshness is measured against: everything under `ui/` that is not one
+# of the two ignored roots.** Stated as an exclusion rather than as a list of
+# build inputs, because that list was wrong twice. It held `src/` and
+# `index.html` alone until v0.22.1, so a bumped dependency, a plugin added to
+# `vite.config.ts` or a changed build script left the previous bundle being
+# served with a green gate -- `npm run typecheck` compiles the source and the
+# server reads the build (v0.20 R6, v0.20 security/S2). Naming those three
+# would have left out `tsconfig.json`, which `vite` reads and which sits in
+# that directory today, and `postcss.config.js` or `public/` for whoever adds
+# one next.
+#
+# The exclusion cannot go stale the same way: `dist/` is this function's own
+# output and `node_modules/` is fetched, and both are ignored roots this
+# repository already names as such. Everything else under `ui/` is tracked
+# source, so the worst this rule can do is rebuild when a design note changes
+# -- a few seconds, against a stale bundle nobody notices, which is the failure
+# this entry was raised twice to stop.
+NOT_SOURCE = frozenset({"dist", "node_modules"})
+
+# The build is local, free and ordinarily a few seconds. A ceiling anyway,
+# because `npm run build` can reach the network resolving a missing dependency
+# and an `isekai ui` that hangs with no port bound and no output is
+# indistinguishable from one that died (v0.20 R9').
+BUILD_TIMEOUT = 300
+
 
 def _newest(root: Path) -> float:
     """Return the newest mtime under `root`, or 0.0 where it holds no files."""
@@ -57,16 +82,20 @@ def _is_fresh(dist: Path, source: Path) -> bool:
 
     Compared by mtime rather than by a content hash: `vite` emits
     content-hashed filenames, so a rebuild that changes nothing is cheap and a
-    rebuild that changes something is exactly what is wanted. `index.html` is
-    counted as source because it is the entry `vite` reads.
+    rebuild that changes something is exactly what is wanted. What counts as
+    source is an exclusion rather than a list -- see `NOT_SOURCE`.
     """
     if not (dist.is_dir() and any(dist.iterdir())):
         return False
-    built = _newest(dist)
-    return all(
-        built >= _newest(item) if item.is_dir() else built >= item.stat().st_mtime
-        for item in (source / "src", source / "index.html")
-        if item.exists()
+    # Pruned at the top level rather than filtered after the walk, because
+    # `node_modules/` is thousands of files and this runs at every startup.
+    return _newest(dist) >= max(
+        (
+            _newest(item) if item.is_dir() else item.stat().st_mtime
+            for item in source.iterdir()
+            if item.name not in NOT_SOURCE
+        ),
+        default=0.0,
     )
 
 
@@ -98,9 +127,21 @@ def ensure_built(source: Path = SOURCE) -> Path:
             "-- it is not done for you, because it fetches third-party packages"
         )
 
-    built = subprocess.run(
-        [BINARY, "run", "build"], cwd=source, capture_output=True, text=True
-    )
+    try:
+        built = subprocess.run(
+            [BINARY, "run", "build"],
+            cwd=source,
+            capture_output=True,
+            text=True,
+            timeout=BUILD_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as slow:
+        raise Refusal(
+            f"{BINARY} run build did not finish within {BUILD_TIMEOUT} seconds "
+            f"and was stopped; run it in {source.name}/ by hand to see where it "
+            "stops -- a build that reaches the network for a missing dependency "
+            "is the usual cause"
+        ) from slow
     if built.returncode != 0:
         raise Refusal(
             f"building the browser bundle failed ({BINARY} run build exited "

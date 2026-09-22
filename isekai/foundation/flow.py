@@ -118,6 +118,33 @@ REQUIRED_NODES = ("positive", "negative", "latent", "sampler")
 # photograph is transferred and read nowhere.
 TRANSFERRED_INPUTS = ("photo",)
 
+# The dials the sampler reads, and the ones the second pass reads on top of its
+# own. Declared here rather than at the patch site because `load_flow` has to
+# check them: a manifest missing `steps` passed all six gate commands, rented the
+# pod, uploaded the photograph, and then raised a bare `KeyError` out of
+# `patch()` -- not a `Refusal`, so `across` never collected it and the rest of
+# the batch died with it (v0.16 R8, v0.17 R6).
+SAMPLER_DIALS = ("steps", "cfg", "sampler_name", "scheduler", "denoise")
+SECOND_PASS_DIALS = ("cfg", "sampler_name", "scheduler")
+
+# What each role costs in dials, **role-conditional and never a flat list**. A
+# flat "every dial in a fixed list is present" check rejects
+# `conjure-anime-wai`, which legitimately declares no `ip_weight`, no
+# `identity_cn_strength`, no `openpose_strength` and no `identity` or `openpose`
+# role at all (design.md D4). This mirrors `generate.patch()`'s own guards, and
+# `hires_resize` is in it because `_hires_target` reads `hires_scale`
+# unconditionally whenever that role is declared -- a dependency no reader of
+# `patch()` alone would see, which is why the mapping is encoded here rather
+# than inferred anywhere.
+ROLE_DIALS: Mapping[str, tuple[str, ...]] = {
+    "sampler": SAMPLER_DIALS,
+    "identity": ("ip_weight", "identity_cn_strength"),
+    "openpose": ("openpose_strength",),
+    "clip_skip": ("clip_skip",),
+    "hires_resize": ("hires_scale",),
+    "hires_sampler": ("hires_steps", "hires_denoise", *SECOND_PASS_DIALS),
+}
+
 # The form every flow this build carries produces. It is answered by the flow
 # rather than written into the resume predicate, so "which of my outputs are
 # already produced" is a question asked of the flow and not of an extension
@@ -301,6 +328,19 @@ def tracked_flows(flows_dir: Path = FLOWS_DIR) -> list[str]:
     )
 
 
+def dials_read(nodes: Mapping[str, Any]) -> set[str]:
+    """Return every dial the roles in `nodes` are patched from.
+
+    The production rule, stated once. `load_flow` refuses a manifest missing
+    any of these and `tests/test_flow.py` checks the other direction -- that a
+    tracked flow declares no dial nothing reads -- and a test that re-derived
+    the rule would be checking its own copy of it rather than this one.
+    """
+    return {
+        dial for role, dials in ROLE_DIALS.items() if role in nodes for dial in dials
+    }
+
+
 def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     """Read one flow's manifest, refusing naming the field that is wrong.
 
@@ -404,12 +444,41 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
                 f"transfers a {role} no node reads -- add {role!r} to "
                 f"`{sides[0]}`, under a new flow identifier"
             )
+    # Role-conditional: only the dials the roles this flow *declares* are read.
+    # A flow with no identity adapter and no pose preprocessor declares neither
+    # `ip_weight` nor `openpose_strength`, and is correct (design.md D4).
+    needed = sorted(dials_read(document["nodes"]) - set(document["dials"]))
+    if needed:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME}: `dials` declares no {', '.join(needed)}, "
+            "which the roles `nodes` declares are patched from; add the value to "
+            "the manifest, under a new flow identifier -- unchecked, this flow "
+            "rents the pod and uploads the photograph before it fails"
+        )
     absent_files = [name for name in SIBLINGS if not (directory / name).is_file()]
     if absent_files:
         raise Refusal(
             f"{flow}/ has no {', '.join(absent_files)}; a flow is "
             f"{MANIFEST_NAME} and {', '.join(SIBLINGS)}, flat in one directory "
             "-- add the file, or point at a flow that is complete"
+        )
+    # Last, because it is the only check that reads a second file -- and it can
+    # only run once the check above has established there is one. Nothing
+    # locates a node by class, so a role naming an id the graph does not carry
+    # is a manifest that agrees with nothing, and until now it agreed with the
+    # gate right up to the rented machine (v0.17 R6).
+    committed: Any = json.loads((directory / GRAPH_NAME).read_text())
+    dangling = sorted(
+        f"{role} -> {node}"
+        for role, node in document["nodes"].items()
+        if str(node) not in committed
+    )
+    if dangling:
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME}: `nodes` names {', '.join(dangling)}, and "
+            f"{GRAPH_NAME} carries no such node; the manifest names every node "
+            "the render path edits, by role, so correct the id -- under a new "
+            "flow identifier"
         )
     return Flow(
         id=flow,

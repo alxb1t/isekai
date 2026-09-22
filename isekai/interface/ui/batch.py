@@ -40,7 +40,7 @@ from isekai.foundation.run import (
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import DRAFT, review
 from isekai.shared.field_map import FieldMap
-from isekai.shared.image import image_dimensions
+from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
 
 
@@ -50,8 +50,9 @@ class Input:
 
     The dimensions are read once, here, because `image_dimensions()` reports an
     unreadable header by calling `sys.exit()` -- a `BaseException` that inside a
-    request handler would take the worker down rather than become a response. A
-    second consumer of it inside the server is the trigger to fix that properly.
+    request handler would take the worker down rather than become a response.
+    Since v0.22.1 `_prepare` turns that exit into a `Refusal` at startup, so an
+    unreadable header costs its own photograph and not the batch.
     """
 
     run: Run
@@ -179,5 +180,14 @@ def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:
         )
     run = Run(identifier, directory)
     review(run, flow)
-    width, height = image_dimensions(str(run.photo))
+    # Through the one wrap, in the module that owns the hazard: an unreadable
+    # header is reported by `sys.exit`, a `BaseException` that `across` walks
+    # straight past -- so unwrapped, one bad photograph killed the batch and
+    # named nothing (v0.18 R7).
+    width, height = dimensions_or_refuse(
+        run.photo,
+        "the surface reads the photograph's own header to size the page and "
+        "there is nothing to fall back to -- re-export it as a JPEG or PNG and "
+        "start the surface again",
+    )
     return Input(run, width, height)

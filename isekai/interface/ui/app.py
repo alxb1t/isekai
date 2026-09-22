@@ -27,11 +27,12 @@ reason other than where a line was put.
 the same repository, so widening it later is a find-and-replace.
 """
 
+from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -58,10 +59,69 @@ DEFAULT_LIMIT = 10
 # never branches on the number (design.md D6).
 REFUSED = 409
 
+# A request that did not come from this machine's own browser, addressed to this
+# server's own address. Not a `Refusal`: nothing about the run directory is in
+# conflict, the request is simply not one this surface answers, so it carries no
+# string for the page and never reaches a handler.
+FORBIDDEN = 403
 
-def create_app(batch: Batch) -> FastAPI:
-    """Return the review surface's application, bound to one established batch."""
+# The names a loopback listener answers to. `Host: evil.example` resolving to
+# 127.0.0.1 is the whole of the DNS-rebinding attack against an unauthenticated
+# local API, and it is defeated by comparing the name rather than the socket.
+# These four are the only names an attacker cannot make point anywhere: they are
+# reserved, so allowing the alias the operator actually types costs nothing.
+LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
+
+
+def authorities(host: str, port: int) -> frozenset[str]:
+    """Return every `Host` value this server, bound to `host:port`, answers to.
+
+    One function rather than two comparisons, because `Origin` is checked
+    against exactly the same set with a scheme in front of it -- and a header
+    pair that is allowed to disagree about what the server's address is has no
+    security value at all.
+    """
+    names = LOOPBACK if host in LOOPBACK else frozenset({host})
+    return frozenset(f"{name}:{port}" for name in names)
+
+
+def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
+    """Return the review surface's application, bound to one established batch.
+
+    `host` and `port` are the address the server binds, and they are parameters
+    rather than the module constant because they are what every request is
+    checked against: an app that inferred its own address could not be tested
+    for rejecting someone else's.
+    """
     app = FastAPI(title="isekai review", docs_url=None, redoc_url=None)
+    allowed = authorities(host, port)
+    origins = frozenset(f"http://{one}" for one in allowed)
+
+    @app.middleware("http")
+    async def _addressed_here(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        """Answer only a request addressed to this server, from this server's page.
+
+        **The first middleware in this repository, and it guards all seven
+        routes** -- which is why it is a middleware rather than a dependency:
+        the static mount is not a route and would not carry one, and a route
+        added later would have to remember to.
+
+        This API is unauthenticated by design, so the browser's own origin rules
+        are the whole of its protection, and both halves of that are checked
+        here. `Host` defeats DNS rebinding, where a page on an attacker's domain
+        resolves that domain to 127.0.0.1 and talks to this port with the
+        browser's full cooperation. `Origin`, when the browser sends one,
+        defeats the cross-site write: a `PUT` from another page carries its
+        origin and never this one's.
+        """
+        if request.headers.get("Host", "") not in allowed:
+            return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
+        origin = request.headers.get("Origin")
+        if origin is not None and origin not in origins:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        return await call_next(request)
 
     @app.exception_handler(Refusal)
     async def _refused(request: Request, refusal: Exception) -> JSONResponse:
@@ -92,10 +152,16 @@ def create_app(batch: Batch) -> FastAPI:
         fragment = q.strip()
         found = batch.vocabulary.search(fragment) if fragment else []
         return {
+            # The count is bound where it is used. The `is not None` guard this
+            # once carried dropped no row -- `count()` returns `int` -- and read
+            # as though some fragment match might have no count (v0.18 R11).
             "matches": [
-                {"tag": tag, "posts": posts, "rare": posts < RARE_BELOW}
+                {
+                    "tag": tag,
+                    "posts": (posts := batch.vocabulary.count(tag)),
+                    "rare": posts < RARE_BELOW,
+                }
                 for tag in found[: max(limit, 0)]
-                if (posts := batch.vocabulary.count(tag)) is not None
             ],
             "total": len(found),
         }
@@ -179,7 +245,13 @@ def create_app(batch: Batch) -> FastAPI:
             "wd14": _wd14(batch, held),
             "tags": _tags(batch, held),
             "fields": fields,
-            "readonly": draft is None,
+            # **Approval is what makes a sheet read-only, not the absence of a
+            # draft.** The rail has always keyed on `approved_path` and the form
+            # keyed on `draft is None`, so in the state `review --new-version`
+            # produces -- approved, and a fresh draft beside it -- the two
+            # disagreed and the `PUT` below went through. `ui/spec.md` already
+            # says it must not (design.md D5).
+            "readonly": approved is not None,
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
             "saved": _saved(draft),
@@ -202,8 +274,28 @@ def create_app(batch: Batch) -> FastAPI:
         The whole draft, every time. There is no Save control on the page and no
         partial update here: a debounced `PUT` of everything is what makes the
         receipt the page shows true.
+
+        **Two preconditions, and both answer `409`.** An approved input refuses
+        an update at all, which is `ui/spec.md`'s own requirement and was false
+        in code: `save_draft` refuses on *no draft* and never on *approved*, and
+        this had no approval gate whatever (design.md D5). And an update whose
+        `saved` does not match the draft on disk refuses, because the page
+        autosaves on a debounce and two overlapping `PUT`s were free to commit
+        in the order the server happened to finish them -- last write wins,
+        where "last" is not the operator's last keystroke (design.md D6).
         """
         held = batch.find(identifier)
+        if batch.approved_path(held) is not None:
+            raise Refusal(
+                f"{identifier} is approved, and an approved sheet is never "
+                "edited in place; approval is the end of a review -- correct it "
+                f"with `python -m isekai review --flow {batch.flow.id} "
+                "--new-version`, which writes a fresh draft beside the approved "
+                "artifact for the command line to edit; this page keeps showing "
+                "the input approved and read-only either way, because the "
+                "re-opened state is v0.22.2's (design.md D5)"
+            )
+        _precondition(batch, held, payload)
         fields = {
             name: [str(tag) for tag in tags]
             for name, tags in dict(payload.get("fields", {})).items()
@@ -296,12 +388,50 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     # separately would normalise a forty-tag list eighty times for one answer --
     # and they are not the same question: a tag the vocabulary carries with a
     # count of zero is *in* it, so membership cannot be read off the number.
-    marked: list[dict[str, Any]] = []
-    for tag in listed:
-        name = str(tag)
-        if name in batch.vocabulary:
-            marked.append({"tag": name, "posts": batch.vocabulary.count(name)})
-    return marked
+    # Deduplicated, and **only here**. `OfferedTag` is `{tag, posts}` where
+    # `posts` is a pure function of `tag`, so a repeat is a byte-identical
+    # object carrying no information -- and it was a duplicate Vue key.
+    # `tagging:output:the-list-is-stored-unnarrowed` forbids canonicalising,
+    # filtering against a vocabulary and re-ordering, none of which this is, and
+    # the artifact on disk is untouched either way. `_wd14` must **not** get the
+    # same treatment: `ScoredTag` is `{tag, confidence}`, where two rows can
+    # legitimately differ (design.md D7).
+    # `dict.fromkeys` preserves order, so the dedup is visible in the iterator
+    # rather than spread across a parallel set and a two-clause condition.
+    return [
+        {"tag": name, "posts": batch.vocabulary.count(name)}
+        for name in dict.fromkeys(str(tag) for tag in listed)
+        if name in batch.vocabulary
+    ]
+
+
+def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+    """Refuse an update written against a draft that has since moved on disk.
+
+    **`st_mtime` is the precondition because nothing else exists.** The draft
+    carries no timestamp, no revision counter and no digest; `schema.version` is
+    the constant `1`, an artifact *format* version, and `save_draft` never
+    advances the filename's `NNN` by design. A `revision` int in the body is the
+    correct answer and changes the artifact shape, which `read_artifact` refuses
+    for any unknown schema -- that touches every reader in the package and is
+    not a patch. A lock around `save_draft` fixes nothing: out-of-order *sends*
+    still commit out of order (design.md D6).
+
+    **A payload carrying no `saved` states no precondition**, and is allowed:
+    the mtime is already on the wire as the field every response returns, so a
+    client that echoes it gets the check and one that cannot has the behaviour
+    it had before.
+    """
+    offered = payload.get("saved")
+    if offered is None:
+        return
+    draft = batch.draft_path(held)
+    if draft is not None and _saved(draft) != offered:
+        raise Refusal(
+            f"{draft.name} changed since this page last read it; another tab or "
+            "another save got there first -- reload the input to see what is on "
+            "disk, then make the correction again"
+        )
 
 
 def _budget(budget: TokenBudget) -> dict[str, Any]:

@@ -38,7 +38,12 @@ from isekai.foundation.run import (  # noqa: E402
     open_run,
     read_artifact,
 )
-from isekai.interface.ui.app import RARE_BELOW, create_app  # noqa: E402
+from isekai.interface.ui import HOST  # noqa: E402
+from isekai.interface.ui.app import (  # noqa: E402
+    RARE_BELOW,
+    authorities,
+    create_app,
+)
 from isekai.interface.ui.batch import establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
@@ -55,6 +60,13 @@ from tests.images import jpeg_bytes  # noqa: E402
 from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-anime-wai"
+
+# The address every client below is built against. Since v0.22.1 the app
+# refuses a request not addressed to the loopback address it was bound to, so
+# a test client has to speak that address rather than `TestClient`'s default
+# `http://testserver` -- which is exactly the header an attacker's page sends.
+PORT = 8765
+ADDRESS = f"http://{HOST}:{PORT}"
 
 
 @pytest.fixture
@@ -106,13 +118,66 @@ def _client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
     dist.mkdir(exist_ok=True)
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    return TestClient(create_app(batch))
+    return TestClient(create_app(batch, host=HOST, port=PORT), base_url=ADDRESS)
 
 
 @pytest.fixture
 def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
     """Return a client over the surface, with a stand-in for the built bundle."""
     return _client(wired, made, tmp_path)
+
+
+# --- the address every request is checked against -----------------------------
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_request_addressed_to_the_bound_address_is_answered(
+    client: TestClient,
+) -> None:
+    # The `client` fixture speaks `ADDRESS`, so this is the ordinary path every
+    # other test in this module rides: it is here to make the two refusals below
+    # mean something other than "the middleware refuses everything".
+    assert client.get("/api/batch").status_code == 200
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_request_carrying_someone_elses_host_is_refused(
+    client: TestClient,
+) -> None:
+    # DNS rebinding: the attacker's domain resolves to 127.0.0.1, so the socket
+    # is right and only the name is wrong.
+    answered = client.get("/api/batch", headers={"host": f"evil.example:{PORT}"})
+
+    assert answered.status_code == 403
+    assert answered.json() == {"refusal": "not addressed here"}
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_write_carrying_another_pages_origin_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    # The cross-site write: the browser sends this server's `Host` because that
+    # is where it is connecting, and the attacking page's `Origin` because that
+    # is where the script came from.
+    answered = client.put(
+        f"/api/inputs/{made.id}/draft",
+        json={"fields": {}},
+        headers={"origin": "http://evil.example"},
+    )
+
+    assert answered.status_code == 403
+    assert answered.json() == {"refusal": "not from this page"}
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
+    # `localhost` is what an operator types and `127.0.0.1` is what the startup
+    # line prints, so refusing either would be a defect rather than a defence --
+    # and neither name can be made to point anywhere else.
+    assert authorities("127.0.0.1", PORT) == authorities("localhost", PORT)
+    assert f"localhost:{PORT}" in authorities("127.0.0.1", PORT)
+    # A non-loopback bind answers to its own name only.
+    assert authorities("example.test", PORT) == {f"example.test:{PORT}"}
 
 
 # --- the batch, and the payload the page is drawn from ------------------------
@@ -242,8 +307,90 @@ def test_a_draft_update_against_an_approved_input_is_refused_and_writes_nothing(
     response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
 
     assert response.status_code == 409
-    assert "draft" in response.json()["refusal"]
+    assert "is approved" in response.json()["refusal"]
     assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:approval:approved-input-refuses-a-draft-update")
+def test_an_approved_input_with_a_fresh_draft_beside_it_still_refuses(
+    client: TestClient, made: Run
+) -> None:
+    """The state `review --flow F --new-version` produces, and the one that was false.
+
+    The scenario's `WHEN` carries no *and no draft* guard -- its sibling does --
+    so it matches this state, and here `save_draft` had nothing to refuse on:
+    it refuses on *no draft*, and there is one. `put_draft` had no approval gate
+    whatever, so the `PUT` went through and wrote into a reopened draft while
+    the rail showed the input approved (design.md D5).
+    """
+    fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
+    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    # Reopened: an approved artifact, and a draft copied from it beside it.
+    review(made, FLOW, new_version=True)
+    before = snapshot(made.path)
+
+    response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
+
+    assert response.status_code == 409
+    assert "is approved" in response.json()["refusal"]
+    assert snapshot(made.path) == before
+    # The rail and the form agree, which is the whole of the defect: both key
+    # on `approved_path` now, so nothing on the page offers an edit the server
+    # would refuse.
+    assert client.get(f"/api/inputs/{made.id}").json()["readonly"] is True
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_an_update_written_against_a_stale_draft_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    """The page autosaves on a debounce, so two `PUT`s can be in flight at once.
+
+    Nothing ordered them: they committed in whatever order the server finished
+    them, so last write won where *last* was not the operator's last keystroke.
+    `st_mtime` is the precondition because nothing else exists on disk -- the
+    draft carries no timestamp, no revision counter and no digest (design.md D6).
+    """
+    body = client.get(f"/api/inputs/{made.id}").json()
+    fields, saved = body["fields"], body["saved"]
+
+    # The first of the two in-flight saves lands and moves the draft's mtime.
+    first = client.put(
+        f"/api/inputs/{made.id}/draft", json={"fields": fields, "saved": saved}
+    )
+    assert first.status_code == 200
+    assert first.json()["saved"] != saved
+
+    # The second was written against what the page read before the first, which
+    # is exactly the state a debounce produces.
+    second = client.put(
+        f"/api/inputs/{made.id}/draft", json={"fields": fields, "saved": saved}
+    )
+
+    assert second.status_code == 409
+    assert "changed since this page last read it" in second.json()["refusal"]
+    # And the receipt the first save returned is the one that lets the page
+    # carry on: echoing it back is accepted.
+    third = client.put(
+        f"/api/inputs/{made.id}/draft",
+        json={"fields": fields, "saved": first.json()["saved"]},
+    )
+    assert third.status_code == 200
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_an_update_stating_no_precondition_is_still_accepted(
+    client: TestClient, made: Run
+) -> None:
+    # A payload carrying no `saved` states no precondition, and gets the
+    # behaviour it had before -- the mtime is already on the wire as the field
+    # every response returns, so a client that echoes it gets the check.
+    fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
+
+    assert (
+        client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields}).status_code
+        == 200
+    )
 
 
 @pytest.mark.spec("ui:approval:approved-input-opens-read-only")
@@ -261,7 +408,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
     batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    reopened = TestClient(create_app(batch))
+    reopened = TestClient(create_app(batch, host=HOST, port=PORT), base_url=ADDRESS)
 
     body = reopened.get(f"/api/inputs/{made.id}").json()
 
@@ -305,6 +452,35 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     # Filtered: `fashion photography` is in no field's reach, and on the
     # acceptance batch nine in ten of this model's tags were like it (D29).
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    """Deduplicated on the hosted side only, and the asymmetry is the point.
+
+    `OfferedTag` is `{tag, posts}` where `posts` is a pure function of `tag`, so
+    a repeat is a byte-identical object carrying no information -- and it was a
+    duplicate Vue key. `ScoredTag` is `{tag, confidence}`, where two rows can
+    legitimately differ, so `_wd14` is left whole: deduping it would falsify
+    `ui:source:both-tag-lists-are-shown-raw-and-read-only`'s first `THEN`
+    (design.md D7).
+    """
+    _clear_wd14(made)
+    caption_wd14(made, FLOW, fake_tagger)
+    caption_tags(
+        made,
+        FLOW,
+        FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
+    )
+
+    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+
+    assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
+    # Unchanged, and asserted here rather than left to the test above: the two
+    # lists are narrowed by different rules and this is the one that says so.
+    assert [one["tag"] for one in body["wd14"]] == ["1girl"]
 
 
 @pytest.mark.spec("ui:source:the-artifact-keeps-what-the-panel-drops")

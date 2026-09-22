@@ -8,7 +8,10 @@ target, and the caller writes it there.
 
 import struct
 import sys
+from pathlib import Path
 from typing import BinaryIO, NamedTuple
+
+from isekai.foundation.refusal import Refusal
 
 # The short side every render is normalised to, and the step both dimensions are
 # rounded to. 1024 is the SDXL family's trained scale; 64 is the latent stride, so
@@ -312,3 +315,25 @@ def working_resolution(width: int, height: int) -> tuple[int, int]:
     scale = WORKING_SCALE / min(width, height)
     long_side = round(max(width, height) * scale / DIMENSION_STEP) * DIMENSION_STEP
     return (long_side, WORKING_SCALE) if width >= height else (WORKING_SCALE, long_side)
+
+
+def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
+    """Return a photograph's dimensions as a `Refusal` rather than an exit.
+
+    `image_dimensions` stops the process with `sys.exit`, which is correct for
+    the single-photograph command it was written for and wrong for every batch:
+    a `SystemExit` is a `BaseException`, so `across` walks straight past it and
+    the remaining photographs die with it.
+
+    **One wrap, because there were two.** `generate.photo_resolution` had it and
+    `ui/batch.py` grew a second copy in v0.22.1 -- with a second wording for the
+    identical failure. It lives here rather than at either caller because the
+    hazard is a property of `image_dimensions` and every future caller inherits
+    it; `remedy` is a parameter because what to do about it is not -- the render
+    path says *open the run again* and the review surface says *start the
+    surface again*.
+    """
+    try:
+        return image_dimensions(str(photo))
+    except SystemExit as unreadable:
+        raise Refusal(f"{unreadable}; {remedy}") from unreadable

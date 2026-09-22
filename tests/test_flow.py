@@ -19,11 +19,13 @@ from isekai.foundation.flow import (
     MANIFEST_VERSION,
     REQUIRED,
     REQUIRED_NODES,
+    SAMPLER_DIALS,
     SCHEMA_NAME,
     SIBLINGS,
     TRANSFERRED_INPUTS,
     Flow,
     assemble,
+    dials_read,
     load_flow,
     manifest_digest,
     tracked_flows,
@@ -335,6 +337,108 @@ def test_a_flow_declaring_fewer_than_the_required_nodes_is_refused(
         load_flow("summon-anime-wai", root)
 
     assert role in str(refused.value)
+
+
+# --- what a role costs, and where its node has to be --------------------------
+
+
+@pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
+@pytest.mark.parametrize("dial", sorted(set(SAMPLER_DIALS)))
+def test_a_manifest_missing_a_dial_its_own_roles_read_is_refused_naming_it(
+    tmp_path: Path, dial: str
+) -> None:
+    """A manifest with an incomplete `dials` block used to load clean.
+
+    It then passed all six gate commands, rented the pod, uploaded the
+    photograph, and raised a bare `KeyError` out of `patch()` -- not a `Refusal`,
+    so `across` never collected it and the rest of the batch died with it
+    (v0.16 R8).
+    """
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
+    del document["dials"][dial]
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+
+    assert dial in str(refused.value)
+    assert "`dials` declares no" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
+def test_a_dial_no_declared_role_reads_is_not_required(tmp_path: Path) -> None:
+    """Role-conditional, never a flat list (design.md D4).
+
+    A flat *every dial in a fixed list is present* check rejects
+    `conjure-anime-wai`, which declares no identity adapter and no pose
+    preprocessor and is correct. Asserted here on a scratch rather than only by
+    the tracked flow below, so the property survives a change to either flow.
+    """
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
+    document["inputs"] = [name for name in document["inputs"] if name != "photo"]
+    for role in ("identity", "openpose", "photo"):
+        del document["nodes"][role]
+    for dial in ("ip_weight", "identity_cn_strength", "openpose_strength"):
+        del document["dials"][dial]
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    loaded = load_flow("summon-anime-wai", root)
+
+    assert "ip_weight" not in loaded.dials
+    assert "identity" not in loaded.nodes
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_role_naming_a_node_the_graph_does_not_carry_is_refused(
+    tmp_path: Path,
+) -> None:
+    """Nothing locates a node by class, so a dangling id agrees with nothing.
+
+    Until v0.22.1 it agreed with the gate too, right up to the rented machine
+    (v0.17 R6).
+    """
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
+    document["nodes"]["sampler"] = "9999"
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+
+    assert "sampler -> 9999" in str(refused.value)
+    assert GRAPH_NAME in str(refused.value)
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.parametrize("name", tracked_flows())
+def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
+    name: str,
+) -> None:
+    loaded = load_flow(name)
+    committed = loaded.graph()
+
+    assert loaded.nodes
+    assert [role for role, node in loaded.nodes.items() if node not in committed] == []
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.parametrize("name", tracked_flows())
+def test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads(
+    name: str,
+) -> None:
+    """Both directions, on both flows: nothing missing, and nothing spare.
+
+    The refusal in `load_flow` only checks the first. This checks the second as
+    a property of the flows that ship -- 12/12 for `summon-anime-wai` and 9/9
+    for `conjure-anime-wai` -- so a dial added to `ROLE_DIALS` for a role
+    nothing declares, or left in a manifest after its role went away, fails
+    here rather than sitting unread.
+    """
+    loaded = load_flow(name)
+
+    assert set(loaded.dials) == dials_read(loaded.nodes)
 
 
 @pytest.mark.spec("image-generation:roles:transferred-input-and-node-must-agree")

@@ -36,7 +36,7 @@ from isekai.foundation.run import (
 from isekai.interface import wiring
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.caption import FakeReader, OllamaReader
+from isekai.pipeline.caption import READER_OPTIONS, FakeReader, OllamaReader
 from isekai.pipeline.tagging import (
     SEPARATOR,
     TAG_PROMPT,
@@ -130,8 +130,17 @@ def test_the_sampling_options_carry_the_sorters_repeat_penalty() -> None:
         "temperature": 0,
         "seed": 1,
         "num_predict": 1024,
+        # The reader's window, for the reader's reason. This prompt is the
+        # cheaper of the two: measured `prompt_eval_count` 779 against the
+        # reader's 1275, the 48-byte prompt costing ~50 tokens beside the same
+        # constant ~729 for the photograph.
+        "num_ctx": 4096,
         "repeat_penalty": 1.15,
     }
+    # One window for both prompts, because one model answers both -- and the
+    # pinned value is the one Ollama was already resolving, so neither output
+    # moves.
+    assert TAGGER_OPTIONS["num_ctx"] == READER_OPTIONS["num_ctx"]
 
 
 # --- what is stored -----------------------------------------------------------
