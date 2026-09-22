@@ -1,11 +1,13 @@
 """The WD14 boundary, exercised with no model file and no wheel installed.
 
 **Nothing here imports `numpy`, `Pillow` or `onnxruntime`**, and that is the
-point rather than a limitation: the `tagging` extra is not installed in the
-environment the gate runs in, exactly as `eval` is not, so a suite that needed it
-would be a suite that silently stops covering this capability. Everything that can
-be decided without a wheel is decided in `select` and `read_labels`, and this file
-is what holds that split honest.
+point rather than a limitation. It used to hold because the `tagging` extra was
+absent from the environment the gate ran in; v0.22.3 made those three declared
+dependencies, so they are now installed and the discipline is the suite's own --
+everything that can be decided without a wheel is decided in `select` and
+`read_labels`, against `FakeSession`, and this file is what holds that split
+honest. A test here that reached for a real wheel would still pass, which is
+exactly why the split has to be kept deliberately rather than by absence.
 
 **The one silent failure mode is the label-index ordering.** Row N of
 `selected_tags.csv` names output neuron N, so a pair from two revisions mislabels
@@ -17,9 +19,7 @@ must yield the tag on row 1 and no other.
 
 import hashlib
 import importlib
-import re
 import sys
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -258,40 +258,6 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
     boundary = importlib.import_module("isekai.boundary.wd14")
 
     assert callable(boundary.open_session)
-
-
-@pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
-def test_the_taggers_stack_is_declared_rather_than_optional() -> None:
-    # **The defect this asserts against was the gate itself.** While these three
-    # sat in a `tagging` extra, `uv sync --locked` -- gate command one, with no
-    # `--extra` -- removed them on every run, because uv makes the environment
-    # match exactly what it is told. The symptom looked like a missing install
-    # and so recurred: the operator kept re-running `uv sync --extra tagging`.
-    # The local tagger runs on every `caption` for every flow, so declaring them
-    # is what makes them un-strippable (design.md D3).
-    root = Path(__file__).resolve().parent.parent
-    config = tomllib.loads((root / "pyproject.toml").read_text())
-
-    declared = {
-        re.split(r"[=<>!\[]", spec)[0].strip().lower()
-        for spec in config["project"]["dependencies"]
-    }
-    optional = {
-        name
-        for specs in config["project"]["optional-dependencies"].values()
-        for name in (re.split(r"[=<>!\[]", spec)[0].strip().lower() for spec in specs)
-    }
-
-    for wheel in ("onnxruntime", "numpy", "pillow"):
-        assert wheel in declared, (
-            f"{wheel} is not a declared dependency, so `uv sync --locked` will "
-            "strip it and the next `caption` will refuse"
-        )
-
-    # `eval` is the one extra left, and it resolves the same three names. That
-    # is fine -- an extra may repeat a requirement -- but `torch` must not have
-    # followed them in, or the scorer's 2 GB would land on every checkout.
-    assert "torch" in optional and "torch" not in declared
 
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")

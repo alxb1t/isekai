@@ -57,15 +57,19 @@ dependencies = [
 # gate command -- and none of the commands in the array installs it, which is
 # exactly the mechanism that used to strip the tagger and now cannot.
 #
-# Five packages, and each one is load-bearing:
-#   torch, transformers -- StyleID publishes only a CLIPModel safetensors, and
-#     the DWPose artifact `models.json` pins is a TorchScript `.pt`. There is no
-#     ONNX route to either, so this is not a convenience.
-#   onnxruntime -- MIT, and what the region parser and the anime-face detector
-#     are loaded through. Loading weights is not linking code, which is what
-#     keeps the detector's copyleft question closed (design.md D19).
-#   numpy, Pillow -- arrays, and the loader's orientation transpose. The header
-#     parser returns dimensions; the scorer has to transpose the pixels itself.
+# **It names only what it adds.** `torch` and `transformers` -- StyleID publishes
+# only a CLIPModel safetensors, and the DWPose artifact `models.json` pins is a
+# TorchScript `.pt`, so there is no ONNX route to either and this is not a
+# convenience. The scorer also reaches `onnxruntime` (the region parser and the
+# anime-face detector; loading weights is not linking code, which is what keeps
+# the detector's copyleft question closed -- design.md D19), `numpy` and `Pillow`
+# (arrays, and the loader's orientation transpose) -- and it no longer floors any
+# of those three, because `dependencies` above pins them for every checkout.
+#
+# **Re-floor them here and the drift is back.** Two lists naming one package is
+# the shape v0.22.3 deleted between the `ui` extra and the `dev` group; a floor
+# here beside a pin above would be the same defect wearing the other hat, and
+# `tests/test_packaging.py` fails on it rather than leaving it to review.
 #
 # Deliberately absent: `ultralytics`, asserted by a test rather than left to a
 # licence review nobody runs. `scipy`/`scikit-image` are absent too -- CIEDE2000
@@ -75,9 +79,6 @@ dependencies = [
 eval = [
     "torch>=2.6",
     "transformers>=4.49",
-    "onnxruntime>=1.20",
-    "numpy>=2.1",
-    "Pillow>=11.0",
 ]
 
 # Test and gate tooling only, and NOT runtime: `uv sync --locked` installs this

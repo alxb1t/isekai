@@ -233,9 +233,10 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
     # It moved here with the guard it falsifies: it used to sit beside the one
     # that held `convert.py`, and that guard died with its target.
     #
-    # **Falsified against a dependency the project now declares**, not against
-    # `pytest`. v0.22.3 made `onnxruntime` required, so a guard falsified by a
-    # dev-only package would stay green even if `-S` started leaking the very
+    # **It names a declared dependency for readability, not for reach.** Both
+    # `pytest` and `onnxruntime` resolve from the same site-packages, so either
+    # would go red the moment `-S` stopped removing it -- this is not a stronger
+    # probe than the `import pytest` it replaced, only a clearer one about which
     # wheels the guards above exist to exclude.
     result = _stdlib_import("import onnxruntime")
 

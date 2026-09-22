@@ -164,6 +164,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   targeted re-run did not reproduce it. Exit codes were not captured on the invocations where it
   fired, so whether it aborted those processes is unknown rather than benign.
 
+### Fixed
+
+- **The re-pin record test could not fail for a re-pin.** It asserted each pinned flow was *named*
+  in `CHANGELOG.md` — but a name enters when the flow is introduced and cannot leave an append-only
+  file, so it would have passed for every re-pin that ever forgot to record itself, while binding a
+  scenario whose THEN is *"records which flow moved and what changed in it"*. It asserts the
+  **digest** now, which is what a re-pin actually moves, and fires exactly when one changes with no
+  entry carrying it. The falsification that "proved" the original renamed a key to a flow the
+  changelog never mentions — the new-flow case, not the re-pin case.
+- **`test_no_text_is_taken_from_the_graphs_own_committed_strings` had degenerated into a
+  tautology.** With the graph's negative emptied, `committed_negative == ""` asserts the fixture and
+  `negative != committed_negative` holds for any non-empty negative, so the leak the scenario exists
+  to catch had nothing left to fail on. It now runs against a scratch flow whose graph carries a
+  string no manifest can supply — a witness that can fail — and a second test asserts the tracked
+  flows' negative nodes are empty, which is the structural half.
+- **The manifest's invariants moved into `tests/test_packaging.py`.** Two tests asserting the shape
+  of `pyproject.toml` had been split across `test_wd14.py` and `test_ui.py` by which feature
+  noticed them, carrying three copies of one requirement-name parser and two per-test reads of the
+  manifest. One module, one parser, one session-scoped fixture — the shape `conftest.py` already
+  uses for every tracked file the suite reads.
+- **A borrowed spec binding, removed.** The tagger-stack test carried
+  `tagging:pin:the-check-fires-at-first-use`, a scenario about no model file being opened when no
+  tagging is performed — nothing to do with where a wheel is declared. The replacements are
+  `spec_exempt` and say why.
+- **`eval` names only what it adds, and the non-overlap rule is stated over every list.** It still
+  floored `onnxruntime`, `numpy` and `Pillow` beside the pins `dependencies` now carries — the
+  same two-lists-one-package shape this version deleted between the `ui` extra and the `dev` group,
+  wearing the other hat. The narrow `dependencies`-vs-`dev` check is replaced by the general rule.
+- **A comment claimed a distinction that does not exist.** The `-S` falsification swap from
+  `import pytest` to `import onnxruntime` was justified as catching a leak a dev-only probe would
+  miss; both resolve from the same site-packages, so either goes red identically. The comment now
+  says it names a runtime dependency for readability, not for reach.
+- **Three more dead references to the deleted extras** — `interface/ui/__init__.py` twice and
+  `boundary/wd14.py` once — plus `tests/test_wd14.py`'s module docstring, which rested its
+  "nothing here imports a wheel" discipline on the `tagging` extra being absent from the gate's
+  environment. It is installed now, so that discipline is the suite's own and the docstring says so.
+
 ## [0.22.2] - 2026-09-22
 
 ### Changed

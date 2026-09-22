@@ -545,7 +545,7 @@ def test_every_tracked_flow_matches_its_committed_digest(name: str) -> None:
 
 @pytest.mark.spec("image-generation:immutability:a-re-pin-is-recorded")
 def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
-    """Every pinned flow is named in the changelog, which is where the record lives.
+    """Every committed digest appears in the changelog that moved it there.
 
     **Nothing on disk says which side of a re-pin a run falls on** -- a run's
     provenance records the graph digest, not the flow directory's -- so the only
@@ -553,20 +553,22 @@ def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
     exist is the prose of the change that moved it. `CHANGELOG.md` is that prose's
     permanent home: append-only, and cut per release.
 
-    **What this can and cannot check.** That a flow is accounted for there is
-    mechanical and asserted here. *Which* digest moved in a given release is not:
-    it would need the previous digest stored somewhere, and storing it would make
-    a second source of truth out of the thing this constant exists to be the only
-    one of. So the substantive half of the requirement is met by review, and this
-    catches the cheap half -- a flow pinned here and mentioned in no release.
+    **The digest is the witness, not the flow's name.** A name enters the
+    changelog when the flow is introduced and cannot leave an append-only file,
+    so asserting it would pass for every re-pin that ever forgot to record
+    itself. A digest is what a re-pin actually moves, so requiring each one to
+    appear fires exactly when a digest changes and no entry says so.
+
+    `CHANGELOG.md` is history and `PINNED` stays authoritative, so this makes no
+    second source of truth: nothing reads a digest back out of the changelog.
     """
     changelog = (Path(__file__).resolve().parent.parent / "CHANGELOG.md").read_text()
 
-    for name in PINNED:
-        assert name in changelog, (
-            f"flow {name} is pinned but named in no CHANGELOG.md entry. A flow "
-            "that arrives, or whose digest moves, owes a statement of what moved "
-            "in prose a later reader can find."
+    for name, digest in PINNED.items():
+        assert digest in changelog, (
+            f"flow {name} is pinned at {digest[:12]}... and no CHANGELOG.md entry "
+            "carries that digest. A re-pin owes a statement of what moved, in "
+            "prose a later reader can find."
         )
 
 
@@ -654,28 +656,51 @@ def test_a_prompt_is_the_flows_fragments_and_the_sheets_fields_in_schema_order(
 
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
-def test_no_text_is_taken_from_the_graphs_own_committed_strings(flow: Flow) -> None:
-    """The graph's own strings reach no prompt, and its negative has none left.
+def test_no_text_is_taken_from_the_graphs_own_committed_strings(
+    tmp_path: Path,
+) -> None:
+    """Assembly ignores the graph's committed strings, proved against a witness.
 
-    **The negative's tell used to be `worst detail`** -- a tag that appeared in
-    the graph and in no manifest, so finding it absent from the assembled prompt
-    proved the assembly had not read the graph. `0025-running-the-flow` emptied
-    that node instead, which is the same claim made structurally: there is no
-    committed negative to take. The emptiness is asserted here so that a string
-    reappearing in it is a failure rather than a silent second source of truth.
+    **Run on a scratch flow whose graph carries a distinctive negative**, not on
+    the tracked one. The tell used to be `worst detail`, a tag the graph had and
+    no manifest did; `0025-running-the-flow` emptied that node, and asserting
+    that emptiness against the tracked flow would be asserting the fixture --
+    `negative != ""` holds for any non-empty prompt, so the leak this scenario
+    exists to catch would no longer have anything to fail on. Planting a string
+    the manifest cannot supply keeps a witness that can.
     """
+    root = _scratch(tmp_path)
+    scratch = root / "summon-anime-wai"
+    flow = load_flow("summon-anime-wai", root)
     schema = flow.schema
-    graph = flow.graph()
-    committed = graph[flow.node("positive")]["inputs"]["text"]
-    committed_negative = graph[flow.node("negative")]["inputs"]["text"]
+
+    graph = json.loads((scratch / GRAPH_NAME).read_text())
+    graph[flow.node("negative")]["inputs"]["text"] = "a string no manifest carries"
+    (scratch / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+
+    flow = load_flow("summon-anime-wai", root)
+    committed = flow.graph()[flow.node("positive")]["inputs"]["text"]
+    committed_negative = flow.graph()[flow.node("negative")]["inputs"]["text"]
 
     positive, negative = assemble(
         {name: [] for name in schema.names}, schema.names, flow
     )
 
     assert committed not in positive
-    assert committed_negative == ""
-    assert negative == flow.prompt["negative"] != committed_negative
+    assert committed_negative not in negative
+    assert negative == flow.prompt["negative"]
+
+
+@pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
+def test_every_tracked_flows_graph_carries_no_negative_of_its_own(flow: Flow) -> None:
+    # The other half, on the tracked flows: `flow.json`'s fragment is the only
+    # negative there is. `generate.py` patches this node on every render, so a
+    # string here would be dead data that reads like a second source of truth --
+    # which is exactly what it was until v0.22.3, drifted and unnoticed.
+    for name in tracked_flows():
+        tracked = load_flow(name)
+        node = tracked.graph()[tracked.node("negative")]["inputs"]["text"]
+        assert node == "", f"{name}'s graph carries a negative of its own: {node!r}"
 
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")

@@ -10,9 +10,7 @@ import importlib.util
 import io
 import os
 import random
-import re
 import subprocess
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -376,32 +374,10 @@ def test_the_gate_installs_the_web_framework_the_api_tests_need() -> None:
     )
 
 
-@pytest.mark.spec_exempt("structural: it keeps one pin list from becoming two")
-def test_the_server_is_pinned_in_exactly_one_place() -> None:
-    # **What this replaces, and why the shape changed.** While the server lived
-    # in a `ui` extra that gate command one never installed, the `dev` group had
-    # to re-pin the same two packages so `tests/test_ui_api.py` would actually
-    # run, and a test held the two lists equal so a bump to one could not miss
-    # the other. v0.22.3 made them declared dependencies, which removes the
-    # second list rather than keeping it in step -- so what is asserted now is
-    # that it stays removed. A `dev` entry re-pinning a declared dependency
-    # would silently reinstate the drift this phase deleted.
-    root = Path(__file__).resolve().parent.parent
-    config = tomllib.loads((root / "pyproject.toml").read_text())
-
-    def names(specs: list[str]) -> set[str]:
-        return {re.split(r"[=<>!\[]", spec)[0].strip().lower() for spec in specs}
-
-    required = names(config["project"]["dependencies"])
-    dev = names(config["dependency-groups"]["dev"])
-
-    assert {"fastapi", "uvicorn"} <= required, (
-        f"the review surface's server is not a declared dependency: {sorted(required)}"
-    )
-    assert not (required & dev), (
-        f"{sorted(required & dev)} is pinned twice -- once in `dependencies` and "
-        "once in the `dev` group. One of the two will drift."
-    )
+# The manifest's own invariants -- that the server is declared, and declared
+# once -- moved to `tests/test_packaging.py` in v0.22.3. They are not facts about
+# the review surface, and split across two feature files they carried two copies
+# of one requirement-name parser.
 
 
 # --- the bundle is rebuilt when the source moves under it ---------------------
