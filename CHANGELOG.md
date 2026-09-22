@@ -145,6 +145,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `isekai/boundary/claude_cli.py`, `flows/summon-v1/`, `flows/summon-v1/sheet.briefing.md`. They are
   capability metadata above `## Requirements`, not requirement text, so correcting them is not a fold;
   the requirement and scenario bodies are left to the delta and to release.
+- **The acceptance ran on a pod and the claim held — both flows, five photographs, ten renders,
+  15m08s.** v0.19's isolation proof inverted: there is no second arm to prove separation from, so what
+  was shown is that the one arm is **complete**. `caption` → `sheet` → `ui` → `generate` for
+  `summon-anime-wai` and `conjure-anime-wai` over one set of photographs, two reviews, no refusal and no
+  manual repair at any stage. **The operator's verdict was yes for both flows**, on the first ten renders
+  the pod produced.
+- **The router placed 118/160 tags (73%) for `summon` and 124/160 (77%) for `conjure`**, against v0.21's
+  73% over eight photographs — and the tag table, its deriver, its router and its tests were **not
+  touched** by this version. The rate not moving is the negative result that matters: retiring the arm
+  changed nothing about what the router can place.
+- **`conjure-anime-wai`'s five face-only fields were filled by hand in 7 of 25 cells.** That flow has
+  neither an identity leg nor a pose leg, so the face reaches the render only as tags, and `eyelashes` —
+  the field this change argued about keeping rather than dropping — is among those filled. Keeping it
+  cost nothing at runtime, as predicted; dropping it would have forced a table regeneration. The
+  prediction is now measured rather than reasoned.
+- **Pod `r8gcl050ob1dox`, RTX PRO 4500 Blackwell, EU-RO-1, torn down and confirmed gone.**
+  `infra/down.sh` reported billing stopped, and the RunPod MCP confirmed it twice — `list-pods` returned
+  `pods: []` and `get-pod` returned `404 pod not found`. **The GPU cost is unposted rather than zero**:
+  RunPod had posted only the network volume's `storageStandardAmount: 0.0117` for the day when this was
+  written. At v0.21's implied rate 15m08s is ≈$0.21. Recorded as unposted because a figure read off a
+  lagging ledger and reported as final is not a measurement.
+
 
 
 ## [0.21.0] - 2026-09-21

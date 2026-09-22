@@ -429,6 +429,50 @@ and `marks` holding none while `mole` was dropped on four — are **left deferre
 call, so this version stays the arm and not the table. *Trigger: the next version that opens the table
 for a reason of its own.*
 
+### D31 · The acceptance ran, and the claim held — both flows, five photographs, one pod
+
+Recorded here rather than in `CHANGELOG.md` alone because D29 set the claim and this is its answer.
+
+**The operator's verdict: yes, both flows.** Stated directly, as 4.2 requires. Nothing was retried into
+it — the ten renders this judgement was made on are the first ten the pod produced.
+
+| | `summon-anime-wai` | `conjure-anime-wai` |
+|---|---|---|
+| WD14 offered | 160 | 160 |
+| router placed | 118 (73%) | 124 (77%) |
+| survived review | 114 | 126 |
+| sheets the operator corrected | 3 of 5 | 4 of 5 |
+| face-only fields filled by hand | — | **7 of 25** |
+
+**The 7-of-25 is 4.3's number, and it is the one a later version re-reads.** `conjure` declares five
+fields `summon` does not — `bangs`, `eyelashes`, `nose`, `lips`, `facial_hair` — because it has neither
+an identity leg nor a pose leg, so the face reaches the render only as tags. Across five photographs the
+operator filled seven of those twenty-five cells. `eyelashes`, the field D7 argued about keeping, is in
+that set: keeping it cost nothing at runtime, exactly as D7 predicted, and dropping it would have cost a
+table regeneration. **The prediction was right and is now measured rather than reasoned.**
+
+**Both routing rates sit where v0.21's did** — 73% and 77% against v0.21's 73% over eight photographs.
+The table was not touched by this change (D30) and the rate did not move, which is the negative result
+that matters: retiring the arm changed nothing about what the router can place.
+
+**The pod.** `r8gcl050ob1dox`, RTX PRO 4500 Blackwell in EU-RO-1, on `ghcr.io/alxb1t/isekai:latest` —
+the released image, correct here because this version changes no `Dockerfile` and no model pin.
+**Wall time 15m08s** against a 45-minute ceiling: created 06:19:03Z, ComfyUI reachable 06:24:08Z, first
+render 06:24:48Z, all ten landed 06:33:55Z, `infra/down.sh` at 06:34:11Z.
+Teardown confirmed twice by the RunPod MCP — `list-pods` returned `pods: []` and `get-pod
+r8gcl050ob1dox` returned `404 pod not found`.
+
+**The cost is not asserted.** At the time of writing RunPod had posted `podGpuAmount: 0` for the day and
+only `storageStandardAmount: 0.0117` (the network volume, which bills whether or not a pod exists).
+Billing lags, so the GPU figure is **unposted rather than zero**; at v0.21's implied rate 15m08s is
+≈$0.21. Written this way because a number read off a lagging ledger and reported as final is exactly the
+kind of claim this repository does not make.
+
+**What the acceptance did not prove, stated so it is not read as proven.** Ten renders on five
+photographs is a judgement, not a measurement: no identity score was taken, no pass mark was set, and
+`--count 1` means no seed variance was sampled. D29 asked whether the one arm is *complete*, and the
+answer is yes — every stage ran, both flows, end to end, with no refusal and no manual repair.
+
 ## Risks / Trade-offs
 
 | risk | what it costs, and why it is accepted |

@@ -5,7 +5,7 @@
 - [x] 1 — The split: five names to `foundation/run.py`, the arm still working
 - [x] 2 — The flow set, the loader and the arm, together
 - [x] 3 — The documents and the spec delta
-- [ ] 4 — ⚠️ **HUMAN · METERED** — the acceptance, both flows, the same photographs
+- [x] 4 — ⚠️ **HUMAN · METERED** — the acceptance, both flows, the same photographs
 
 ## The per-phase ritual
 
@@ -413,17 +413,17 @@ v0.21's comparable run was 21m36s on an RTX PRO 4500 Blackwell at ≈$0.30 for e
 **The claim, and it is v0.19's isolation proof inverted:** there is no second arm to prove separation
 from, so what is being shown is that **the one arm is complete**.
 
-- [ ] 4.1 **Both flows, end to end, on the same photographs.** `caption` → `sheet` → `ui` → `generate`,
+- [x] 4.1 **Both flows, end to end, on the same photographs.** `caption` → `sheet` → `ui` → `generate`,
   for `summon-anime-wai` and `conjure-anime-wai`, over one set of photographs. Two reviews, one per flow
   — the surface serves one flow at a time (`cli:flow-selection:a-serving-verb-takes-one-flow`).
-- [ ] 4.2 **The renders are what the operator wants.** A judgement, stated directly. **A no is a
+- [x] 4.2 **The renders are what the operator wants.** A judgement, stated directly. **A no is a
   finding**, recorded as such rather than retried into a yes.
-- [ ] 4.3 **Record, beside it:** that `conjure-anime-wai` carries all 21 fields including `eyelashes`,
+- [x] 4.3 **Record, beside it:** that `conjure-anime-wai` carries all 21 fields including `eyelashes`,
   and how many of the five face-only fields the operator filled by hand. That number is what a later
   version re-reads if the schema is ever revisited (D7).
-- [ ] 4.4 **Tear the pod down and confirm it.** `infra/down.sh`, then verify no pod remains. Record the
+- [x] 4.4 **Tear the pod down and confirm it.** `infra/down.sh`, then verify no pod remains. Record the
   wall time and the cost.
-- [ ] 4.5 **Write the result into `design.md` as a new decision**, and say which of the claims failed if
+- [x] 4.5 **Write the result into `design.md` as a new decision**, and say which of the claims failed if
   any did. *(v0.21's phase 9 recorded its result in `CHANGELOG.md` and the commit body instead, at the
   operator's call; converge accepted that. If the same call is made here, record it in the same two
   places and say so — the point is that the result is written somewhere durable, not which file.)*
