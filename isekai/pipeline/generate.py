@@ -37,7 +37,13 @@ from pathlib import Path
 from typing import Any
 
 from isekai.boundary.comfy_types import ComfyTransport, Unreachable, Workflow
-from isekai.foundation.flow import Flow, Schema, assemble
+from isekai.foundation.flow import (
+    SAMPLER_DIALS,
+    SECOND_PASS_DIALS,
+    Flow,
+    Schema,
+    assemble,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -287,10 +293,10 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
     return width, height
 
 
-# The dials each sampler takes from the manifest. The hires pass declares its own
-# `denoise` and `steps`, so it takes neither from this list.
-SAMPLER_DIALS = ("steps", "cfg", "sampler_name", "scheduler", "denoise")
-SECOND_PASS_DIALS = ("cfg", "sampler_name", "scheduler")
+# The dials each sampler takes from the manifest -- the hires pass declares its
+# own `denoise` and `steps`, so it takes neither from that list -- now live in
+# `foundation/flow.py` beside `ROLE_DIALS`, because `load_flow` validates what
+# this module reads and a second copy of the list is a second thing to drift.
 
 
 def build_graph(

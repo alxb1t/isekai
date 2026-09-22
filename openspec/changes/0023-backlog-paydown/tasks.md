@@ -5,7 +5,7 @@
 - [x] 1 — The middleware: `Host`/`Origin` on all seven routes
 - [x] 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
 - [x] 3 — Refusal strings: the path order, and the flag the remedy omits
-- [ ] 4 — Load-time validation: the dials and the node ids
+- [x] 4 — Load-time validation: the dials and the node ids
 - [ ] 5 — The UI server: nine entries
 - [ ] 6 — The local arm: measure, then pin
 - [ ] 7 — The acceptance: gate green and one local pass, no pod
@@ -122,18 +122,18 @@ written.
 > `identity` role. Mirror `patch()`'s own guards at `generate.py:315-346`, and note `_hires_target` reads
 > `hires_scale` unconditionally whenever `hires_resize` is declared.
 
-- [ ] 4.1 **Validate at load that every node id resolves in the graph** — `foundation/flow.py:385-391`.
+- [x] 4.1 **Validate at load that every node id resolves in the graph** — `foundation/flow.py:385-391`.
 
-- [ ] 4.2 **Validate at load that every dial the declared roles require is present.**
+- [x] 4.2 **Validate at load that every dial the declared roles require is present.**
 
-- [ ] 4.3 **One test iterating `tracked_flows()`** asserting every value of `flow.nodes` is a key of
+- [x] 4.3 **One test iterating `tracked_flows()`** asserting every value of `flow.nodes` is a key of
   `flow.graph()`. **Verify first that both tracked flows pass unchanged** — `summon-anime-wai` 11/11 and
   12/12, `conjure-anime-wai` 7/7 and 9/9. **If either fails, halt**: a flow file cannot be edited without
   moving `manifest_digest`, and that is a different change.
 
-- [ ] 4.4 **Confirm `manifest_digest` has not moved** — `uv run pytest -k test_every_tracked_flow_matches`.
+- [x] 4.4 **Confirm `manifest_digest` has not moved** — `uv run pytest -k test_every_tracked_flow_matches`.
 
-- [ ] 4.5 **Gate green. CHANGELOG. Tick 4. Commit.**
+- [x] 4.5 **Gate green. CHANGELOG. Tick 4. Commit.**
 
 ---
 

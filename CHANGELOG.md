@@ -54,6 +54,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   below -- so the one path in the message pointed at a directory that does not exist. `review.py` had
   it right and is now matched.
 
+- **A manifest missing a dial, or naming a node the graph does not carry, is refused at load.** Both
+  passed all six gate commands, rented the pod and uploaded the photograph before raising a bare
+  `KeyError` out of `patch()` -- not a `Refusal`, so `across` never collected it and the rest of the
+  batch died with it. The dial check is **role-conditional and never a flat list**: a flat one rejects
+  `conjure-anime-wai`, which legitimately declares no identity adapter and no pose preprocessor
+  (design.md D4). `ROLE_DIALS` in `foundation/flow.py` encodes what each role costs, including
+  `hires_resize`'s `hires_scale`, which `_hires_target` reads unconditionally and no reader of `patch()`
+  alone would see; `SAMPLER_DIALS` and `SECOND_PASS_DIALS` moved there with it, so the list `load_flow`
+  validates and the list `build_graph` reads cannot drift apart. Both tracked flows pass unchanged --
+  `summon-anime-wai` 11/11 nodes and 12/12 dials, `conjure-anime-wai` 7/7 and 9/9 -- so no flow file is
+  edited and `manifest_digest` does not move.
+
 ### Security
 
 - **`Host` and `Origin` are validated on every request the review surface answers.** Until now
