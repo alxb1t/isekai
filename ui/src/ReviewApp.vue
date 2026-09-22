@@ -306,10 +306,13 @@ function onKey(event: KeyboardEvent): void {
     if (lens.value === 'photo' || sheet.detail.value) toggleLens('photo')
     return
   }
-  /* `event.code`, for the reason stated above: under a Cyrillic layout `Cmd+Z`
-     produces `event.key === 'я'` and this branch did nothing at all. The physical
-     key is what an undo shortcut names. */
-  if (meta && event.code === 'KeyZ') {
+  /* **Both properties, because `Cmd+Z` produces no character.** Either test
+     alone is partial: under a Cyrillic layout `event.key` is `'я'`, and under
+     Dvorak `code: 'KeyZ'` is the key printed `;` while the key printed `Z`
+     reports `code: 'Slash'`. This is not the Option case above -- Option emits a
+     character, so `event.key` there is unusable and only the physical key will
+     do; a meta-modified Z emits nothing, so accepting both swallows no text. */
+  if (meta && (event.key.toLowerCase() === 'z' || event.code === 'KeyZ')) {
     event.preventDefault()
     if (event.shiftKey) sheet.redo()
     else sheet.undo()

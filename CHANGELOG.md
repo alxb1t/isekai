@@ -55,8 +55,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   window already in force is the only value that leaves the models' output unchanged, which is the whole
   point of pinning rather than raising.
 
+### Removed
+
+- **The `vite` dev-server proxy, which the Host/Origin guard had just turned into a trap.**
+  `ui/vite.config.ts` forwarded `/api` to `127.0.0.1:8517`, and `vite`'s proxy does not rewrite the
+  browser's `Host`/`Origin`, so every call through it now answers `403 not addressed here`. Nothing
+  tracked in this repository references `npm run dev` or port `5173`: the config was dead, and dead
+  config that 403s is worse than none. `isekai ui` builds and serves the bundle itself.
+
 ### Fixed
 
+- **The approved-sheet refusal says what `--new-version` actually buys.** It told the operator to
+  *reopen* the input, but `review --new-version` leaves the approved artifact in place, so
+  `approved_path` stays set and this page keeps serving the sheet read-only -- the reopened draft is
+  the command line's to edit until the re-opened state lands in v0.22.2 (design.md D5). The command is
+  still the remedy; the sentence no longer promises an effect the surface does not have.
 - **An unreachable endpoint is recorded `transient`, not `permanent`.** `_reported()` in `cli.py` turned
   every `URLError`/`OSError` from the transport into a `Refusal`, and `render()` wrote `permanent` for
   any `Refusal` it caught -- so a closed tunnel, a pod that went away, or a `--server` address typed
@@ -150,15 +163,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ui:source:both-tag-lists-are-shown-raw-and-read-only` (design.md D7). Neither artifact on disk is
   touched.
 - **`show` honours the flows root it is given, and refuses before it prints.** `run_view.rendered()`
-  called `load_flow` with the module default, ignoring `Wiring.flows_dir`; and `report` is a generator,
+  called `load_flow` with the module default, ignoring `Wiring.flows_dir`; and `report` was a generator,
   so a run holding a directory no flow answers for printed fifteen lines of record and *then* failed.
-  Everything refusable is now read before the first line is yielded.
-- **`Cmd+Z` matches `event.code`.** Under a Cyrillic layout it produced `event.key === 'я'` and the
-  branch did nothing. The same handler already argued for `event.code` thirteen lines earlier; this is
-  that binding only -- `TagInput.vue`'s thirteen `event.key` branches are a keyboard re-work of their own.
-- **`show` returns its lines rather than yielding them.** `report` was a generator, so the guarantee that
-  everything refusable is read before the first line is printed rested on a docstring asking the next
-  editor to keep it so. Both callers drain it in full, so laziness bought nothing and cost the ordering.
+  `report` now returns its lines as a list, so *everything refusable is read before the first line is
+  printed* is a property of the shape rather than a docstring asking the next editor to keep it so --
+  and both callers drain it in full, so the laziness bought nothing and cost the ordering.
+- **`Cmd+Z` matches either `event.key` or `event.code`.** Under a Cyrillic layout it produced
+  `event.key === 'я'` and the branch did nothing; matching the physical key alone would have traded that
+  for Dvorak, where `code: 'KeyZ'` is the key printed `;` and the key printed `Z` reports `code: 'Slash'`.
+  Either test alone is partial, and both are available here precisely because a meta-modified Z emits no
+  character -- which is what separates this from the Option bindings thirteen lines earlier, where
+  `event.key` is unusable. This is that binding only -- `TagInput.vue`'s thirteen `event.key` branches
+  are a keyboard re-work of their own.
 - **One wrap around `image_dimensions`, in the module that owns it.** `shared/image.py` gains
   `dimensions_or_refuse`; the render path and the review surface had grown two copies of the same
   `SystemExit` → `Refusal` translation, with two wordings for one failure.

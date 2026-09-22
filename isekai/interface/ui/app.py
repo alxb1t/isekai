@@ -288,9 +288,12 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         if batch.approved_path(held) is not None:
             raise Refusal(
                 f"{identifier} is approved, and an approved sheet is never "
-                "edited in place; approval is the end of a review -- reopen it "
+                "edited in place; approval is the end of a review -- correct it "
                 f"with `python -m isekai review --flow {batch.flow.id} "
-                "--new-version` if it has to be corrected"
+                "--new-version`, which writes a fresh draft beside the approved "
+                "artifact for the command line to edit; this page keeps showing "
+                "the input approved and read-only either way, because the "
+                "re-opened state is v0.22.2's (design.md D5)"
             )
         _precondition(batch, held, payload)
         fields = {
