@@ -25,6 +25,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The negative prompt is quality-only, and the graph no longer carries a second copy of it.**
+  `censor, nsfw` left both tracked flows' `flow.json` negative — a negative whose job, per the base
+  model's publisher, is quality, while the positive is what decides content. The operator measured
+  the difference by eye across real renders. `lens flare, light particles, dust` was already present
+  in both, so that half of the ask was a no-op.
+- **`graph.json`'s negative node is emptied rather than synchronised, in both flows.** It read
+  `bad quality, worst quality, worst detail, sketch, censor, nsfw`, and `worst detail` appeared
+  nowhere else — the two strings had already drifted, unnoticed, because nothing reads the second
+  one: `generate.py`'s `patch("negative", text=prompt["negative"])` overwrites that node on every
+  render from `flow.json`'s fragment, and `negative` is a required role so the patch is
+  unconditional. A shipped prompt artifact confirms it, carrying `flow.json`'s string and no
+  `worst detail`. Two strings that agree today are two strings that disagree later, so there is now
+  one source of truth; if a future path ever renders without patching, it renders with no negative,
+  which is visible in the output rather than silently wrong. Same class as the stale
+  `filename_prefix` recorded at `v0.22 review/R6`.
+- **Both flows are re-pinned, and that is the second exception ever taken to flow immutability.**
+  The comment above `tests/test_flow.py`'s `PINNED` now states the rule the repository actually
+  follows — the freeze exists so that nothing changes *silently*, not so that nothing changes — and
+  keeps the load-bearing half intact: a *divergence* still costs a new identifier, because two flows
+  are only comparable over one cohort if an identifier means one configuration. Only an abandoned
+  configuration may be re-pinned, and this one is: nothing compares against the old negative. The
+  failure message itself is unchanged and still gains no *"unless"* clause. A new test binds the
+  obligation rather than leaving it as prose — a re-pin that forgets to name itself above `PINNED`
+  now fails.
+- **`test_no_text_is_taken_from_the_graphs_own_committed_strings` asserts the emptiness instead of
+  its old tell.** It used `worst detail`, a tag in the graph and in no manifest, to prove the
+  assembly had not read the graph; the emptied node makes that claim structurally, and the assert
+  that the node is empty means a string reappearing in it fails rather than quietly becoming a
+  second source of truth.
+
 ## [0.22.2] - 2026-09-22
 
 ### Changed

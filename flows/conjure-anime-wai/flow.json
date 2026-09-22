@@ -12,7 +12,7 @@
   "prompt": {
     "prefix": "masterpiece, best quality, amazing quality, newest",
     "trailer": "anime screencap, detailed eyes, soft lighting",
-    "negative": "bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust",
+    "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
     "separator": ", "
   },
   "dials": {

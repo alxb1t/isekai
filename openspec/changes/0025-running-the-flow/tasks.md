@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The negative prompt becomes quality-only
+- [x] 1 — The negative prompt becomes quality-only
 - [ ] 2 — `tagging` and `ui` become required dependencies
 - [ ] 3 — `## Quickstart` becomes the guide to running a flow
 - [ ] 4 — ⚠️ **HUMAN · METERED** — the acceptance, both flows, one pod
