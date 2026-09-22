@@ -648,7 +648,7 @@ def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
     assert list(bad.directory(FLOW, PROMPTS).glob("001.error.1.permanent.json"))
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("image-generation:assembly:a-bad-sheet-is-per-flow")
 def test_one_flows_malformed_sheet_does_not_cost_its_siblings_their_assembly(
     tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
@@ -712,7 +712,7 @@ def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
     assert list(directory.glob("001.error.1.permanent.json"))
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("image-generation:failure:an-unreachable-endpoint-is-transient")
 def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
     run: Run, flow: Flow, schema: Schema
 ) -> None:

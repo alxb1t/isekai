@@ -391,7 +391,7 @@ def test_a_dial_no_declared_role_reads_is_not_required(tmp_path: Path) -> None:
     assert "identity" not in loaded.nodes
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("cli:manifest:a-dangling-node-id-is-refused-at-load")
 def test_a_role_naming_a_node_the_graph_does_not_carry_is_refused(
     tmp_path: Path,
 ) -> None:
@@ -412,7 +412,7 @@ def test_a_role_naming_a_node_the_graph_does_not_carry_is_refused(
     assert GRAPH_NAME in str(refused.value)
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("cli:manifest:every-tracked-role-resolves")
 @pytest.mark.parametrize("name", tracked_flows())
 def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
     name: str,
@@ -424,7 +424,7 @@ def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
     assert [role for role, node in loaded.nodes.items() if node not in committed] == []
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("cli:manifest:every-tracked-dial-is-read")
 @pytest.mark.parametrize("name", tracked_flows())
 def test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads(
     name: str,

@@ -203,7 +203,7 @@ def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
 # --- the injected flows root, and where the refusal lands ---------------------
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("run-directory:inspection:the-injected-flows-root-is-used")
 def test_show_reads_the_flows_root_it_is_given(run: Run, tmp_path: Path) -> None:
     """`Wiring` has a `flows_dir` seam and this was the one reader ignoring it.
 
@@ -227,7 +227,7 @@ def test_show_reads_the_flows_root_it_is_given(run: Run, tmp_path: Path) -> None
         list(report(run, tmp_path / "empty-flows"))
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("run-directory:inspection:an-unanswerable-directory-refuses-first")
 def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
     run: Run,
 ) -> None:

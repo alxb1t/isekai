@@ -436,7 +436,7 @@ def _built_tree(tmp_path: Path) -> Path:
     return source
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:bundle:a-changed-build-input-makes-the-bundle-stale")
 @pytest.mark.parametrize("name", _CONFIGS)
 def test_a_build_config_edited_after_the_build_makes_the_bundle_stale(
     tmp_path: Path, name: str
@@ -460,7 +460,7 @@ def test_a_build_config_edited_after_the_build_makes_the_bundle_stale(
     assert not bundle._is_fresh(source / "dist", source)
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:bundle:a-fetched-tree-is-not-an-input")
 def test_a_fetched_dependency_tree_is_not_source(tmp_path: Path) -> None:
     # The other half of the exclusion: `node_modules/` is fetched and `dist/` is
     # this function's own output, so neither may make the bundle look stale --
@@ -472,7 +472,7 @@ def test_a_fetched_dependency_tree_is_not_source(tmp_path: Path) -> None:
     assert bundle._is_fresh(source / "dist", source)
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:bundle:an-unfinished-build-is-stopped-and-named")
 def test_a_build_that_does_not_finish_is_stopped_and_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

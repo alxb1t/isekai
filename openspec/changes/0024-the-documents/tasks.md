@@ -7,7 +7,7 @@
 - [x] 3 — `CLAUDE.md`: cut to agent operating instructions
 - [x] 4 — The spec catches up with the code, and the one code change
 - [x] 5 — Seventeen scenarios
-- [ ] 6 — Rebind the seventeen tests
+- [x] 6 — Rebind the seventeen tests
 - [ ] 7 — The acceptance
 
 ## The per-phase ritual
@@ -228,7 +228,7 @@ run-directory       2    show's injected flows root · the mid-stream refusal
 
 ## 6 — Rebind the seventeen tests
 
-- [ ] 6.1 **Replace each `spec_exempt("behaviour; the scenario lands in 0024")` with `spec("<key>")`:**
+- [x] 6.1 **Replace each `spec_exempt("behaviour; the scenario lands in 0024")` with `spec("<key>")`:**
 
   | file:line | test | key |
   |---|---|---|
@@ -250,12 +250,12 @@ run-directory       2    show's injected flows root · the mid-stream refusal
   | `test_generate.py:651` | `…malformed_sheet_does_not_cost_its_siblings…` | `image-generation:assembly:a-bad-sheet-is-per-flow` |
   | `test_generate.py:715` | `…recorded_transient_not_permanent` | `image-generation:failure:an-unreachable-endpoint-is-transient` |
 
-- [ ] 6.2 **Add tests for the two *new* `ui:approval:*` scenarios** phase 4 built —
+- [x] 6.2 **Add tests for the two *new* `ui:approval:*` scenarios** phase 4 built —
   `a-re-opened-input-is-editable` and `a-re-opened-input-is-not-counted-approved`. The other two keys in
   that requirement already exist and are already bound; **re-run their tests** against the narrowed gate,
   because `approved-input-refuses-a-draft-update`'s `WHEN` gained an *and no later draft* clause.
 
-- [ ] 6.3 ✅ **Done when `grep spec_exempt tests/ | grep 0024` returns nothing.** Paste the empty output.
+- [x] 6.3 ✅ **Done when `grep spec_exempt tests/ | grep 0024` returns nothing.** Paste the empty output.
   **Gate green. CHANGELOG. Tick 6. Commit.**
 
 ---

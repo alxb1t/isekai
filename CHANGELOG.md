@@ -25,6 +25,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The seventeen `spec_exempt` markers are repaid**, one for one, and
+  `grep spec_exempt tests/ | grep 0024` returns nothing. `v0.22.1` borrowed a marker whose documented
+  meaning is *genuinely structural* on the explicit condition that this version repay it; the debt was
+  nearly a fifth of the repository's exemptions and was made countable so its discharge would be
+  countable too. **No test in this change carries a `spec_exempt` naming `0024`** — the marker that
+  exists to be repaid cannot be the instrument of its own refinancing.
+
+- **The two tests for the state phase 4 built were written red first**, against the keys
+  `ui:approval:a-re-opened-input-is-editable` and
+  `ui:approval:a-re-opened-input-is-not-counted-approved`. The requirement's two older keys keep their
+  tests, re-run against the narrowed gate: `approved-input-refuses-a-draft-update`'s `WHEN` gained an
+  *and holds no later draft* clause, and the test that used to prove the re-opened case still refused
+  now proves it is accepted — which is the behaviour change, stated where the old assertion was.
+
+- **One binding gained an assertion rather than the scenario losing a clause.**
+  `ui:source:each-hosted-tag-is-offered-once` ends *"both artifacts on disk are unchanged"*, which a
+  sibling test proved and the test bound to that key did not. It asserts it now, scoped to the two tag
+  artifacts: `establish()` opens a draft for every input it is given, so a whole-run snapshot would
+  have caught stage ③ starting normally and called it a write by the panel.
+
 ### Added
 
 - **Seventeen scenarios for behaviour `v0.22.1` shipped bound to nothing**, one per

@@ -33,6 +33,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     REVIEW,
+    TAGS,
     WD14,
     Run,
     open_run,
@@ -130,7 +131,7 @@ def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
 # --- the address every request is checked against -----------------------------
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:a-request-to-the-bound-address-is-answered")
 def test_a_request_addressed_to_the_bound_address_is_answered(
     client: TestClient,
 ) -> None:
@@ -140,7 +141,7 @@ def test_a_request_addressed_to_the_bound_address_is_answered(
     assert client.get("/api/batch").status_code == 200
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:another-host-is-refused")
 def test_a_request_carrying_someone_elses_host_is_refused(
     client: TestClient,
 ) -> None:
@@ -152,7 +153,7 @@ def test_a_request_carrying_someone_elses_host_is_refused(
     assert answered.json() == {"refusal": "not addressed here"}
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:another-origin-is-refused")
 def test_a_write_carrying_another_pages_origin_is_refused(
     client: TestClient, made: Run
 ) -> None:
@@ -169,7 +170,7 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     assert answered.json() == {"refusal": "not from this page"}
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:every-loopback-spelling-is-answered")
 def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
     # `localhost` is what an operator types and `127.0.0.1` is what the startup
     # line prints, so refusing either would be a defect rather than a defence --
@@ -375,7 +376,7 @@ def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
     assert (made.directory(FLOW, REVIEW) / "001.approved.json").is_file()
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:draft-update:a-stale-precondition-is-refused")
 def test_an_update_written_against_a_stale_draft_is_refused(
     client: TestClient, made: Run
 ) -> None:
@@ -413,7 +414,7 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     assert third.status_code == 200
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")
 def test_an_update_stating_no_precondition_is_still_accepted(
     client: TestClient, made: Run
 ) -> None:
@@ -489,7 +490,7 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:source:each-hosted-tag-is-offered-once")
 def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
@@ -510,12 +511,24 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
         FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
     )
 
+    # The two tag artifacts, and only those: `establish()` opens a draft for
+    # every input it is given, which is stage ③ starting normally rather than
+    # the panel writing anything.
+    before = {stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)}
+
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
 
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
     # Unchanged, and asserted here rather than left to the test above: the two
     # lists are narrowed by different rules and this is the one that says so.
     assert [one["tag"] for one in body["wd14"]] == ["1girl"]
+    # The scenario's last `THEN`: narrowing the panel is not narrowing the
+    # artifact. A sibling test proves the hosted list keeps what the page drops;
+    # this one is bound to the key that says *both* artifacts are untouched, so
+    # it asserts that clause rather than borrowing it.
+    assert {
+        stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)
+    } == before
 
 
 @pytest.mark.spec("ui:source:the-artifact-keeps-what-the-panel-drops")
