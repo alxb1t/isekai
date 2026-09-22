@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.foundation.flow import load_flow
+from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.run import (
     APPROVED,
     ARTIFACT,
@@ -123,31 +123,46 @@ def listings(run: Run) -> list[Listing]:
     ]
 
 
-def rendered(run: Run) -> list[tuple[str, int, list[int]]]:
+def rendered(run: Run, flows_dir: Path = FLOWS_DIR) -> list[tuple[str, int, list[int]]]:
     """Return each flow's rendered seeds, by sheet version, from filenames alone.
 
     The flow is loaded once, not once per sheet version, and it is loaded at all
     because what counts as a produced output is the flow's answer rather than an
     extension written in here.
+
+    **`flows_dir` is a parameter because `Wiring` has one**, and this was the one
+    place in the package that read the module default instead -- so `show`
+    against an injected flows root went to `flows/` regardless of what was
+    passed, and refused naming a flow the caller never asked about (v0.16 R2).
     """
     return [
         (flow, int(group.name), rendered_seeds(group, suffix))
         for flow in run.flows
-        for suffix in (load_flow(flow).output_suffix,)
+        for suffix in (load_flow(flow, flows_dir).output_suffix,)
         for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
         if group.is_dir() and group.name.isdigit()
     ]
 
 
-def report(run: Run) -> Iterator[str]:
-    """Yield the lines a person reads to answer "where is this run"."""
+def report(run: Run, flows_dir: Path = FLOWS_DIR) -> Iterator[str]:
+    """Yield the lines a person reads to answer "where is this run".
+
+    **Everything that can refuse is read before the first line is yielded.**
+    This is a generator, so its body does not start until the caller asks for a
+    line -- and `rendered()` loads a flow, which refuses. Computed lazily, a run
+    holding a directory no flow answers for printed fifteen lines of a report
+    and then failed, leaving half a record on the terminal above the refusal
+    (v0.16 R2).
+    """
     frame = run.frame
     photo = frame["photo"]
+    stages = listings(run)
+    outputs = rendered(run, flows_dir)
     yield f"{run.id}"
     yield f"  photo    {photo['name']}  {photo['media_type']}  {photo['bytes']} bytes"
     yield f"           sha256 {photo['sha256']}"
 
-    for listing in listings(run):
+    for listing in stages:
         name = f"{listing.flow}/{listing.stage}"
         if not listing.versions:
             yield f"  {name:<22} (none)"
@@ -159,7 +174,7 @@ def report(run: Run) -> Iterator[str]:
             producer = listing.producers.get(version, "")
             yield f"   {mark} {version:03d}{state}  {producer}"
 
-    for flow, version, seeds in rendered(run):
+    for flow, version, seeds in outputs:
         yield f"  {flow}/{OUTPUTS}/{version:03d}"
         for seed in seeds:
             yield f"     {seed}"

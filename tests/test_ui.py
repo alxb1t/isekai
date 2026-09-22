@@ -58,6 +58,9 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
     )
 
 
+# The build config files `_is_fresh` watches beside `src/` and `index.html`.
+_CONFIGS = ("package.json", "package-lock.json")
+
 # A run id is a digest of the photograph, so two inputs need two photographs --
 # identical bytes would collapse a "batch of three" into one run directory and
 # quietly make every multi-input assertion here vacuous.
@@ -135,6 +138,34 @@ def test_every_input_that_cannot_be_prepared_is_named_in_one_refusal(
     # rather than making the operator find them one restart at a time.
     assert first.id in message
     assert second.id in message
+
+
+@pytest.mark.spec("ui:startup:refusals-are-reported-together")
+def test_every_unreadable_photograph_is_named_rather_than_killing_the_batch(
+    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """Two of them, because the scenario asserts *every* one is named.
+
+    `image_dimensions()` reports an unreadable header with `sys.exit()`, a
+    `BaseException` that `across` -- which catches `Refusal` -- walks straight
+    past. With one bad photograph the batch died naming nothing; with two, the
+    first one killed it before the second was ever looked at (v0.18 R7).
+    """
+    first = _input(wired, tmp_path, "ada", schema, vocabulary)
+    ready = _input(wired, tmp_path, "grace", schema, vocabulary)
+    second = _input(wired, tmp_path, "ida", schema, vocabulary)
+    # A run admits a photograph on its magic bytes alone, so a truncated JPEG
+    # opens a run cleanly and only the header read ever finds it.
+    for broken in (first, second):
+        broken.photo.write_bytes(b"\xff\xd8\xff")
+
+    with pytest.raises(Refusal) as refused:
+        establish(wired, FLOW, [first.id, ready.id, second.id], bundle=_bundle)
+
+    message = str(refused.value)
+    assert first.id in message
+    assert second.id in message
+    assert "re-export it" in message
 
 
 @pytest.mark.spec("ui:startup:refusals-are-reported-together")
@@ -384,6 +415,47 @@ def test_a_bundle_older_than_its_source_is_rebuilt_rather_than_served(
     os.utime(component, (3_000, 3_000))
 
     assert not bundle._is_fresh(source / "dist", source)
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.parametrize(
+    "name", ["vite.config.ts", "package.json", "package-lock.json"]
+)
+def test_a_build_config_edited_after_the_build_makes_the_bundle_stale(
+    tmp_path: Path, name: str
+) -> None:
+    """The three inputs `_is_fresh` did not watch until v0.22.1.
+
+    A bumped dependency, an added vite plugin or a changed build script all
+    change the emitted bundle and move nothing under `src/` -- so the operator
+    went on being served the previous build, silently, with a green gate
+    (v0.20 R6, v0.20 security/S2).
+    """
+    source = tmp_path / "ui"
+    (source / "src").mkdir(parents=True)
+    (source / "dist").mkdir()
+    (source / "index.html").write_text("<!doctype html>")
+    (source / "dist" / "index.html").write_text("built")
+    (source / "src" / "App.vue").write_text("component")
+    for every in (source / "vite.config.ts", *(source / n for n in _CONFIGS)):
+        every.write_text("{}")
+    for item in source.rglob("*"):
+        os.utime(item, (1_000, 1_000))
+    os.utime(source / "dist" / "index.html", (2_000, 2_000))
+
+    assert bundle._is_fresh(source / "dist", source)
+
+    os.utime(source / name, (3_000, 3_000))
+
+    assert not bundle._is_fresh(source / "dist", source)
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_the_build_is_bounded_in_time() -> None:
+    # `npm run build` can reach the network resolving a missing dependency, and
+    # an `isekai ui` that hangs with no port bound and no output is
+    # indistinguishable from one that died (v0.20 R9').
+    assert bundle.BUILD_TIMEOUT > 0
 
 
 @pytest.mark.spec_exempt("structural: when the on-demand build actually fires")

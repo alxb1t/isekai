@@ -27,7 +27,7 @@ reason other than where a line was put.
 the same repository, so widening it later is a find-and-replace.
 """
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -155,7 +155,10 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "matches": [
                 {"tag": tag, "posts": posts, "rare": posts < RARE_BELOW}
                 for tag in found[: max(limit, 0)]
-                if (posts := batch.vocabulary.count(tag)) is not None
+                # `count()` returns `int`, so the `is not None` guard this once
+                # carried dropped no row and read as though some fragment match
+                # might have no count (v0.18 R11).
+                for posts in (batch.vocabulary.count(tag),)
             ],
             "total": len(found),
         }
@@ -239,7 +242,13 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "wd14": _wd14(batch, held),
             "tags": _tags(batch, held),
             "fields": fields,
-            "readonly": draft is None,
+            # **Approval is what makes a sheet read-only, not the absence of a
+            # draft.** The rail has always keyed on `approved_path` and the form
+            # keyed on `draft is None`, so in the state `review --new-version`
+            # produces -- approved, and a fresh draft beside it -- the two
+            # disagreed and the `PUT` below went through. `ui/spec.md` already
+            # says it must not (design.md D5).
+            "readonly": approved is not None,
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
             "saved": _saved(draft),
@@ -262,8 +271,25 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         The whole draft, every time. There is no Save control on the page and no
         partial update here: a debounced `PUT` of everything is what makes the
         receipt the page shows true.
+
+        **Two preconditions, and both answer `409`.** An approved input refuses
+        an update at all, which is `ui/spec.md`'s own requirement and was false
+        in code: `save_draft` refuses on *no draft* and never on *approved*, and
+        this had no approval gate whatever (design.md D5). And an update whose
+        `saved` does not match the draft on disk refuses, because the page
+        autosaves on a debounce and two overlapping `PUT`s were free to commit
+        in the order the server happened to finish them -- last write wins,
+        where "last" is not the operator's last keystroke (design.md D6).
         """
         held = batch.find(identifier)
+        if batch.approved_path(held) is not None:
+            raise Refusal(
+                f"{identifier} is approved, and an approved sheet is never "
+                "edited in place; approval is the end of a review -- reopen it "
+                f"with `python -m isekai review --flow {batch.flow.id} "
+                "--new-version` if it has to be corrected"
+            )
+        _precondition(batch, held, payload)
         fields = {
             name: [str(tag) for tag in tags]
             for name, tags in dict(payload.get("fields", {})).items()
@@ -356,12 +382,51 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     # separately would normalise a forty-tag list eighty times for one answer --
     # and they are not the same question: a tag the vocabulary carries with a
     # count of zero is *in* it, so membership cannot be read off the number.
+    # Deduplicated, and **only here**. `OfferedTag` is `{tag, posts}` where
+    # `posts` is a pure function of `tag`, so a repeat is a byte-identical
+    # object carrying no information -- and it was a duplicate Vue key.
+    # `tagging:output:the-list-is-stored-unnarrowed` forbids canonicalising,
+    # filtering against a vocabulary and re-ordering, none of which this is, and
+    # the artifact on disk is untouched either way. `_wd14` must **not** get the
+    # same treatment: `ScoredTag` is `{tag, confidence}`, where two rows can
+    # legitimately differ (design.md D7).
     marked: list[dict[str, Any]] = []
+    seen: set[str] = set()
     for tag in listed:
         name = str(tag)
-        if name in batch.vocabulary:
+        if name in batch.vocabulary and name not in seen:
+            seen.add(name)
             marked.append({"tag": name, "posts": batch.vocabulary.count(name)})
     return marked
+
+
+def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+    """Refuse an update written against a draft that has since moved on disk.
+
+    **`st_mtime` is the precondition because nothing else exists.** The draft
+    carries no timestamp, no revision counter and no digest; `schema.version` is
+    the constant `1`, an artifact *format* version, and `save_draft` never
+    advances the filename's `NNN` by design. A `revision` int in the body is the
+    correct answer and changes the artifact shape, which `read_artifact` refuses
+    for any unknown schema -- that touches every reader in the package and is
+    not a patch. A lock around `save_draft` fixes nothing: out-of-order *sends*
+    still commit out of order (design.md D6).
+
+    **A payload carrying no `saved` states no precondition**, and is allowed:
+    the mtime is already on the wire as the field every response returns, so a
+    client that echoes it gets the check and one that cannot has the behaviour
+    it had before.
+    """
+    offered = payload.get("saved")
+    if offered is None:
+        return
+    draft = batch.draft_path(held)
+    if draft is not None and _saved(draft) != offered:
+        raise Refusal(
+            f"{draft.name} changed since this page last read it; another tab or "
+            "another save got there first -- reload the input to see what is on "
+            "disk, then make the correction again"
+        )
 
 
 def _budget(budget: TokenBudget) -> dict[str, Any]:

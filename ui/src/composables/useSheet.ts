@@ -44,6 +44,12 @@ export function useSheet() {
   // Counted, not a flag: a second PUT can start before the first has answered,
   // and the spinner must go when the last one lands rather than the first.
   let inFlight = 0
+  /* A slow earlier answer must never overwrite a newer one. Two saves can be in
+     flight at once -- the debounce is what puts them there -- so the receipt of
+     the first can land after the second's and set `saved` back to a value the
+     server has already moved past, which the server then answers 409 for. The
+     pattern is `useVocabulary`'s, applied to the write side. */
+  let generation = 0
   let timer: ReturnType<typeof setTimeout> | undefined
   let current = ''
 
@@ -68,6 +74,7 @@ export function useSheet() {
       return
     }
     if (current !== id) return
+    generation += 1
     detail.value = body
     fields.value = { ...body.fields }
     budget.value = body.budget
@@ -89,11 +96,12 @@ export function useSheet() {
     if (detail.value === null || detail.value.readonly) return
     const id = current
     const payload = { ...fields.value }
+    const asked = (generation += 1)
     inFlight += 1
     saving.value = true
-    await saveDraft(id, payload)
+    await saveDraft(id, payload, saved.value)
       .then((receipt) => {
-        if (current !== id) return
+        if (current !== id || asked !== generation) return
         budget.value = receipt.budget
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one.
@@ -101,7 +109,7 @@ export function useSheet() {
         refusal.value = null
       })
       .catch((reason: Error) => {
-        if (current !== id) return
+        if (current !== id || asked !== generation) return
         refusal.value = reason.message
       })
       .finally(() => {

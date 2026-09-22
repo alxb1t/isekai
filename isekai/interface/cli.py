@@ -475,7 +475,7 @@ def _per_item(
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
         elif verb == "show":
-            for line in report(run):
+            for line in report(run, wired.flows_dir):
                 print(line, file=wired.out)
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")

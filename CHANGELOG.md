@@ -66,6 +66,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `summon-anime-wai` 11/11 nodes and 12/12 dials, `conjure-anime-wai` 7/7 and 9/9 -- so no flow file is
   edited and `manifest_digest` does not move.
 
+- **`approved_path` is authoritative for whether a sheet may be edited.** The rail keyed on it and the
+  form keyed on `draft is None`, so in the state `review --flow F --new-version` produces -- approved,
+  with a fresh draft beside it -- the two disagreed and `put_draft` had no approval gate at all. The
+  `PUT` went through. `ui/spec.md` already required otherwise, so this makes an already-false scenario
+  true (design.md D5). **The re-opened rail status is `v0.22.2`'s**; no third status is added here.
+- **An overlapping draft `PUT` answers `409` instead of committing out of order.** The page autosaves on
+  a debounce, so two writes could be in flight at once and committed in whatever order the server
+  finished them -- last write wins, where *last* was not the operator's last keystroke. The client
+  echoes the `saved` it last received and the server compares it to the draft's own `st_mtime`, which is
+  the only monotonic fact on disk: the draft carries no timestamp, no revision counter and no digest,
+  and a `revision` field would change the artifact shape (design.md D6). A payload carrying no `saved`
+  states no precondition and behaves as before. `useSheet.ts` gains the generation counter
+  `useVocabulary.ts` already had, so a slow earlier receipt no longer sets `saved` back.
+- **One unreadable photograph no longer kills the whole review batch.** `batch.py` called
+  `image_dimensions()` unguarded and it exits via `sys.exit`, a `BaseException` that `across` -- which
+  catches `Refusal` -- walks straight past; with two bad photographs neither was named. The same wrap
+  already existed one module away at `generate.photo_resolution`.
+- **The bundle is rebuilt when a build *config* changes, not only its source.** `_is_fresh` compared
+  `ui/src/` and `ui/index.html` alone, so a bumped dependency, an added vite plugin or a changed build
+  script left the previous build being served, silently and with a green gate. `vite.config.ts`,
+  `package.json` and `package-lock.json` join them.
+- **`npm run build` is bounded in time.** It can reach the network resolving a missing dependency, and
+  an `isekai ui` that hangs with no port bound and no output is indistinguishable from one that died.
+- **The hosted tag panel shows each tag once.** `OfferedTag` is `{tag, posts}` where `posts` is a pure
+  function of `tag`, so a repeat was a byte-identical object carrying no information and a duplicate Vue
+  key. **The local list is deliberately not deduplicated**: `ScoredTag` is `{tag, confidence}`, where
+  two rows can legitimately differ, and narrowing it would falsify
+  `ui:source:both-tag-lists-are-shown-raw-and-read-only` (design.md D7). Neither artifact on disk is
+  touched.
+- **`show` honours the flows root it is given, and refuses before it prints.** `run_view.rendered()`
+  called `load_flow` with the module default, ignoring `Wiring.flows_dir`; and `report` is a generator,
+  so a run holding a directory no flow answers for printed fifteen lines of record and *then* failed.
+  Everything refusable is now read before the first line is yielded.
+- **`Cmd+Z` matches `event.code`.** Under a Cyrillic layout it produced `event.key === 'я'` and the
+  branch did nothing. The same handler already argued for `event.code` thirteen lines earlier; this is
+  that binding only -- `TagInput.vue`'s thirteen `event.key` branches are a keyboard re-work of their own.
+- **A dead guard is gone from `/api/tags`.** `if (posts := vocabulary.count(tag)) is not None` dropped no
+  row -- `count()` returns `int` -- and read as though a fragment match might have no count.
+
 ### Security
 
 - **`Host` and `Origin` are validated on every request the review surface answers.** Until now

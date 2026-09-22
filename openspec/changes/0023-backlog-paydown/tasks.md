@@ -6,7 +6,7 @@
 - [x] 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
 - [x] 3 — Refusal strings: the path order, and the flag the remedy omits
 - [x] 4 — Load-time validation: the dials and the node ids
-- [ ] 5 — The UI server: nine entries
+- [x] 5 — The UI server: nine entries
 - [ ] 6 — The local arm: measure, then pin
 - [ ] 7 — The acceptance: gate green and one local pass, no pod
 
@@ -139,7 +139,7 @@ written.
 
 ## 5 — The UI server: nine entries
 
-- [ ] 5.1 **`v0.18 review/R6` — `approved_path` becomes authoritative, and `put_draft` gains an approval
+- [x] 5.1 **`v0.18 review/R6` — `approved_path` becomes authoritative, and `put_draft` gains an approval
   gate.** `app.py:244` keys the rail on `approved_path`; `:182` keys the form on `draft is None`. **Read
   `design.md` D5 before writing this**: `ui/spec.md` and `review/spec.md` contradict each other and the
   `ui` side is already false in code, because `put_draft` has no approval gate at all. This makes an
@@ -147,44 +147,44 @@ written.
   `spec("ui:approval:approved-input-refuses-a-draft-update")`. ⛔ **Do not add a third rail status** —
   the re-opened state is `v0.22.2`'s.
 
-- [ ] 5.2 **`v0.18 review/R10` — an mtime precondition and a `409`.** `app.py:198-217` ·
+- [x] 5.2 **`v0.18 review/R10` — an mtime precondition and a `409`.** `app.py:198-217` ·
   `review.py:180-204`. The client echoes the `saved` it last received; the server compares to
   `path.stat().st_mtime` and refuses on mismatch (`design.md` D6).
 
-- [ ] 5.3 **A generation counter in `ui/src/composables/useSheet.ts`**, so a stale response is dropped.
+- [x] 5.3 **A generation counter in `ui/src/composables/useSheet.ts`**, so a stale response is dropped.
   **The pattern already exists** at `useVocabulary.ts:32-57` — copy it rather than inventing one.
 
-- [ ] 5.4 **`v0.18 review/R7` — one unreadable photograph stops killing the batch.** `batch.py:182` calls
+- [x] 5.4 **`v0.18 review/R7` — one unreadable photograph stops killing the batch.** `batch.py:182` calls
   `image_dimensions()` unguarded; it exits via `sys.exit` (`shared/image.py:277,279,285,288`) and `across`
   catches only `Refusal`. **The fix already exists one module away** — `generate.py:240-262` wraps the same
   call in `except SystemExit`. Marker: `spec("ui:startup:refusals-are-reported-together")`; **the test
   needs two unreadable photographs**, since the scenario asserts *every* one is named.
 
-- [ ] 5.5 **`v0.18 review/R11` — delete the dead guard.** `app.py:98`'s
+- [x] 5.5 **`v0.18 review/R11` — delete the dead guard.** `app.py:98`'s
   `if (posts := batch.vocabulary.count(tag)) is not None` never drops a row; `count()` is `-> int`. No
   test — no behaviour change.
 
-- [ ] 5.6 **`v0.18 review/R9`′ — a `timeout=` on the `npm run build` subprocess.** `bundle.py:101-103`.
+- [x] 5.6 **`v0.18 review/R9`′ — a `timeout=` on the `npm run build` subprocess.** `bundle.py:101-103`.
 
-- [ ] 5.7 **`v0.20 review/R5` — dedupe `_tags()`.** `app.py:265-304`. ⚠️ **Hosted side only**
+- [x] 5.7 **`v0.20 review/R5` — dedupe `_tags()`.** `app.py:265-304`. ⚠️ **Hosted side only**
   (`design.md` D7). Deduping `_wd14` would falsify
   `ui:source:both-tag-lists-are-shown-raw-and-read-only`'s first `THEN`.
 
-- [ ] 5.8 **`v0.20 review/R6` + `security/S2` — `_is_fresh` watches the build config.**
+- [x] 5.8 **`v0.20 review/R6` + `security/S2` — `_is_fresh` watches the build config.**
   `bundle.py:66-70` compares only `ui/src/` and `ui/index.html`; add `vite.config.ts`, `package.json` and
   `package-lock.json`. **Verify:** touch `package.json`, start the server, assert a rebuild.
 
-- [ ] 5.9 **`v0.16 review/R2` — `run_view` honours the injected seam.** `run_view.py:136` calls
+- [x] 5.9 **`v0.16 review/R2` — `run_view` honours the injected seam.** `run_view.py:136` calls
   `load_flow` with the default `FLOWS_DIR`, ignoring `Wiring.flows_dir` (`wiring.py:86`), over an
   unfiltered `iterdir()`; and `report` is a generator, so the refusal lands after fifteen lines have
   streamed. Fix both halves — the seam **and** the mid-stream refusal.
 
-- [ ] 5.10 **`v0.21 B1` — `Cmd+Z` matches `event.code`.** `ui/src/ReviewApp.vue:301`. **The same handler
+- [x] 5.10 **`v0.21 B1` — `Cmd+Z` matches `event.code`.** `ui/src/ReviewApp.vue:301`. **The same handler
   already argues for `event.code` thirteen lines earlier** at `:285-288`; `:291` and `:296` already use
   it. ⛔ **This binding only** — the keyboard re-work is its own version, and `TagInput.vue:59`'s thirteen
   `event.key` branches are not this change's.
 
-- [ ] 5.11 **Gate green. CHANGELOG. Tick 5. Commit.**
+- [x] 5.11 **Gate green. CHANGELOG. Tick 5. Commit.**
 
 ---
 

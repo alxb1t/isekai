@@ -50,8 +50,9 @@ class Input:
 
     The dimensions are read once, here, because `image_dimensions()` reports an
     unreadable header by calling `sys.exit()` -- a `BaseException` that inside a
-    request handler would take the worker down rather than become a response. A
-    second consumer of it inside the server is the trigger to fix that properly.
+    request handler would take the worker down rather than become a response.
+    Since v0.22.1 `_prepare` turns that exit into a `Refusal` at startup, so an
+    unreadable header costs its own photograph and not the batch.
     """
 
     run: Run
@@ -179,5 +180,17 @@ def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:
         )
     run = Run(identifier, directory)
     review(run, flow)
-    width, height = image_dimensions(str(run.photo))
+    try:
+        width, height = image_dimensions(str(run.photo))
+    except SystemExit as unreadable:
+        # `image_dimensions` stops the process, which is correct for the
+        # single-photograph command it was written for and wrong here: a
+        # `SystemExit` is a `BaseException`, so `across` walks straight past it
+        # and the batch dies naming nothing. The same wrap already exists one
+        # module away, at `generate.photo_resolution` (v0.18 R7).
+        raise Refusal(
+            f"{identifier}: {unreadable}; the surface reads the photograph's "
+            "own header to size the page and there is nothing to fall back to "
+            "-- re-export it as a JPEG or PNG and start the surface again"
+        ) from unreadable
     return Input(run, width, height)

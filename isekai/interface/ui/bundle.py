@@ -30,6 +30,28 @@ SOURCE = REPOSITORY / "ui"
 
 BINARY = "npm"
 
+# **What the bundle is built from, and every one of them decides its contents.**
+# `ui/src/` and `index.html` are what it held until v0.22.1; the three added
+# beside them are what the build *reads*, not what it compiles. A dependency
+# bumped in `package-lock.json`, a plugin added to `vite.config.ts` or a build
+# script changed in `package.json` all change the emitted bundle and moved none
+# of `src/`, so the operator went on being served the previous build with a
+# green gate -- `npm run typecheck` compiles the source and the server reads the
+# build (v0.20 R6, v0.20 security/S2).
+BUILD_INPUTS = (
+    "src",
+    "index.html",
+    "vite.config.ts",
+    "package.json",
+    "package-lock.json",
+)
+
+# The build is local, free and ordinarily a few seconds. A ceiling anyway,
+# because `npm run build` can reach the network resolving a missing dependency
+# and an `isekai ui` that hangs with no port bound and no output is
+# indistinguishable from one that died (v0.20 R9').
+BUILD_TIMEOUT = 300
+
 
 def _newest(root: Path) -> float:
     """Return the newest mtime under `root`, or 0.0 where it holds no files."""
@@ -65,7 +87,7 @@ def _is_fresh(dist: Path, source: Path) -> bool:
     built = _newest(dist)
     return all(
         built >= _newest(item) if item.is_dir() else built >= item.stat().st_mtime
-        for item in (source / "src", source / "index.html")
+        for item in (source / name for name in BUILD_INPUTS)
         if item.exists()
     )
 
@@ -98,9 +120,21 @@ def ensure_built(source: Path = SOURCE) -> Path:
             "-- it is not done for you, because it fetches third-party packages"
         )
 
-    built = subprocess.run(
-        [BINARY, "run", "build"], cwd=source, capture_output=True, text=True
-    )
+    try:
+        built = subprocess.run(
+            [BINARY, "run", "build"],
+            cwd=source,
+            capture_output=True,
+            text=True,
+            timeout=BUILD_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired as slow:
+        raise Refusal(
+            f"{BINARY} run build did not finish within {BUILD_TIMEOUT} seconds "
+            f"and was stopped; run it in {source.name}/ by hand to see where it "
+            "stops -- a build that reaches the network for a missing dependency "
+            "is the usual cause"
+        ) from slow
     if built.returncode != 0:
         raise Refusal(
             f"building the browser bundle failed ({BINARY} run build exited "

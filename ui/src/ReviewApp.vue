@@ -298,7 +298,10 @@ function onKey(event: KeyboardEvent): void {
     if (lens.value === 'photo' || sheet.detail.value) toggleLens('photo')
     return
   }
-  if (meta && event.key.toLowerCase() === 'z') {
+  /* `event.code`, for the reason stated above: under a Cyrillic layout `Cmd+Z`
+     produces `event.key === 'я'` and this branch did nothing at all. The physical
+     key is what an undo shortcut names. */
+  if (meta && event.code === 'KeyZ') {
     event.preventDefault()
     if (event.shiftKey) sheet.redo()
     else sheet.undo()
