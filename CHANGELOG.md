@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-09-22
+
 - **The acceptance ran: gate green and one local pass through ①②③, on five photographs, with no pod.**
   `caption` wrote prose, the local list and the hosted list for every input, in that order; `sheet`
   filled all five from the WD14 list; the surface built its bundle, served the batch and returned a
