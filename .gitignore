@@ -31,8 +31,8 @@ models/
 # why the line is load-bearing.
 .inputs/
 
-# The browser bundle and its fetched dependencies. Two of this repository's four
-# ignored roots, and they fail differently from the other two: `ui/dist/` is
+# The browser bundle and its fetched dependencies. Two of this repository's
+# ignored roots, and they fail differently from the ones above: `ui/dist/` is
 # built from tracked source by `vite build`, so losing it costs a deterministic
 # rebuild; `ui/node_modules/` is fetched from npm, so losing it costs an `npm
 # install`. Neither is captured work, which is why neither sits under `.data/`

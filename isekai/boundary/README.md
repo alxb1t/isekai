@@ -1,7 +1,13 @@
 # `boundary/` — everything that leaves this process
 
-A hosted model, a rented GPU, a download. Each file is one way out, and nothing
-outside this directory opens a socket or spawns a binary.
+A hosted model, a rented GPU, a download. Each file is one way out, and this is
+where a way out belongs.
+
+**It is not yet where every way out lives.** Three sit outside this directory
+today: `evaluation/labels.py` spawns `git`, `interface/ui/bundle.py` spawns
+`npm`, and `interface/ui/app.py` binds a port. Moving them behind this boundary
+is the better repository and is filed rather than done — a documentation release
+that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 ## Files
 
@@ -16,21 +22,24 @@ outside this directory opens a socket or spawns a binary.
 
 ## Imported by
 
+**Named, not counted.** A count in this column has gone stale in every group here
+at least once; a list of names cannot.
+
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | five test modules |
+| `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_generate.py`, `tests/test_image.py`, `tests/test_infra.py`, `tests/test_manifest_binding.py` |
 | `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
 | `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/test_ollama.py` |
-| `provision.py` | `evaluation/eval_models.py`, `shared/vocabulary.py`, `wd14.py` | `../../evaluate.py`, ten test modules |
-| `wd14.py` | `pipeline/tagging.py`, `interface/cli.py`, `interface/wiring.py` | `tests/test_wd14.py`, `tests/stages.py` |
+| `provision.py` | `wd14.py`, `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_wd14.py` |
 
 > `provision.py` is not on `python -m isekai`'s import graph, so the stdlib-only
 > runtime rule is untouched either way.
 >
 > **`wd14.py` is**, and it is the only module in the package that touches the
-> `tagging` extra. Every one of its three imports -- `onnxruntime`, `numpy`,
-> `Pillow` -- is **function-local**, which is what keeps the `-S` guard green;
+> `tagging` extra. Every one of its imports from that extra -- `onnxruntime`,
+> `numpy`, `Pillow` -- is **function-local**, which keeps the `-S` guard green;
 > `tests/test_wd14.py` asserts none of them sits at module scope. It reaches no
 > network at all, which makes it the one file here that is a boundary to a *file*
 > rather than to a host.

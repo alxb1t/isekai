@@ -12,7 +12,7 @@ it, and say which part of the system needs it.
 
 **The bundle is not tracked.** Vite emits content-hashed filenames, so committing
 it would churn version control on every build for no reading a human does.
-`ui/dist/` and `ui/node_modules/` are two of the repository's four ignored roots,
+`ui/dist/` and `ui/node_modules/` are two of the repository's ignored roots,
 and they fail differently from the other two: losing this one costs a
 deterministic rebuild, losing the other an `npm install` (design.md D12).
 

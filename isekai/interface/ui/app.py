@@ -1,4 +1,4 @@
-"""The six endpoints, and the only module in this package that imports the `ui` extra.
+"""The HTTP surface, and the only module in this package that imports the `ui` extra.
 
 Kept to one file deliberately. `batch.py` performs the whole startup refusal
 order and imports no web framework, so that order is exercised by the main suite
@@ -22,9 +22,12 @@ override is scoped to this one file and this one rule, because CI never installs
 the extra; a second module importing it would have to widen that scope for no
 reason other than where a line was put.
 
-**The flow is in none of the six paths.** The batch has exactly one and
+**The flow is in none of the paths.** The batch has exactly one and
 `/api/batch` names it; a URL here is a contract between a server and a Vue app in
-the same repository, so widening it later is a find-and-replace.
+the same repository, so widening it later is a find-and-replace. The paths are
+`GET /api/batch`, `/api/tags`, `/api/fields`, `/api/inputs/{identifier}` and
+`/api/inputs/{identifier}/photo`, `PUT /api/inputs/{identifier}/draft` and
+`POST /api/inputs/{identifier}/approve`, with the built bundle mounted at `/`.
 """
 
 from collections.abc import Awaitable, Callable, Mapping

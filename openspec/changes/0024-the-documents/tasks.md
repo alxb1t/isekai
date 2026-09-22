@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The sweep: what this repository says about itself
+- [x] 1 — The sweep: what this repository says about itself
 - [ ] 2 — `docs/arc/`: the module graph and the data flow
 - [ ] 3 — `CLAUDE.md`: cut to agent operating instructions
 - [ ] 4 — The spec catches up with the code, and the one code change
@@ -47,7 +47,7 @@ is a halt. No flow file is edited in any phase — `manifest_digest` must not mo
 **Every fix in this phase changes a claim, never code** (`design.md` D6). If a claim would be truer with a
 code change, that is a backlog row, not a task here.
 
-- [ ] 1.1 **The ten false self-claims.** Each verified false at `b4abe12`:
+- [x] 1.1 **The ten false self-claims.** Each verified false at `b4abe12`:
 
   | at | says | truth |
   |---|---|---|
@@ -69,7 +69,7 @@ code change, that is a backlog row, not a task here.
   ✅ `isekai/evaluation/labels.py`'s `load_records` is **already gone** — deleted by `v0.22.1`. Verified:
   `grep -rn load_records` returns no code hit.
 
-- [ ] 1.2 **The six stale `CLAUDE.md` numerals**, plus two more the audit found:
+- [x] 1.2 **The six stale `CLAUDE.md` numerals**, plus two more the audit found:
 
   | at | says | truth |
   |---|---|---|
@@ -86,28 +86,28 @@ code change, that is a backlog row, not a task here.
   line load-bearing because it holds a person's likeness. And `:166-168` says the changelog heading is
   `## [X.Y.0]`; `CHANGELOG.md:28` is `## [0.22.1]`.
 
-- [ ] 1.3 **Strip every quantity from the group READMEs** (`design.md` D2), replacing each with the names
+- [x] 1.3 **Strip every quantity from the group READMEs** (`design.md` D2), replacing each with the names
   it counted. **Eight are wrong at HEAD**: `foundation/README.md:18` *"fifteen"* (16) ·
   `pipeline/README.md:31` *"nine"* (11) and `:34` *"five"* (7) · `boundary/README.md:21` *"five"* (6) and
   `:25` *"ten"* (9) · `interface/README.md:28` and `:29` *"four"* (5 and 7) ·
   `evaluation/README.md:25` *"three"* (2). Also: `isekai/README.md:11` `shared/` 4 → **5**, `:12`
   `boundary/` 7 → **6**, and the self-aware paragraph at `:16-19` goes with them.
 
-- [ ] 1.4 **Three claims that are wrong for a reason other than a count:**
+- [x] 1.4 **Three claims that are wrong for a reason other than a count:**
   `isekai/shared/README.md:3-4` says these modules read *"no run, no flow"* — `field_map.py` imports
   both (`:39`, `:48`) and `fields.py` imports `flow` (`:17`). `isekai/interface/README.md:22` says
   *"the six endpoints"* — there are **seven**, and `app.py:1` and `:25` say six too.
   `isekai/evaluation/README.md:28-30` says *"v0.19 owes either coverage or a narrower override"* — the
   debt is real and the version is three releases stale.
 
-- [ ] 1.5 **`v0.20 review/R2`** — `ci.yml:22` calls `typecheck_ui.sh` the gate's *"sixth command"*; it is
+- [x] 1.5 **`v0.20 review/R2`** — `ci.yml:22` calls `typecheck_ui.sh` the gate's *"sixth command"*; it is
   the **fifth of six**. ⛔ `CHANGELOG.md:30`'s *"gains a sixth command"* is correct — do not touch it.
 
-- [ ] 1.6 **`0008 S1b`** — add *pod id* to `CLAUDE.md`'s guardrail bullet at `:390-394`. ⛔ **The three
+- [x] 1.6 **`0008 S1b`** — add *pod id* to `CLAUDE.md`'s guardrail bullet at `:390-394`. ⛔ **The three
   `CHANGELOG.md` pod ids stay.** That file is append-only history; the guardrail is what stops a fourth
   being added.
 
-- [ ] 1.7 **Verify nothing in this phase touched code.** `git diff --stat` shows no `.py`, `.vue` or
+- [x] 1.7 **Verify nothing in this phase touched code.** `git diff --stat` shows no `.py`, `.vue` or
   `.ts` change except docstrings and comments. **Gate green. CHANGELOG. Tick 1. Commit.**
 
 ---

@@ -1,4 +1,4 @@
-# `pipeline/` — the four staged verbs, and one module that is not one
+# `pipeline/` — the staged verbs, and one module that is not one
 
 One file per stage, in the order a photograph passes through them. No stage reads
 another's output directly: each is handed a path inside a run and hands back a
@@ -7,10 +7,10 @@ when `validate` moved to `shared/fields.py`. Every stage is per flow: the flow
 supplies the briefing it reads, the schema it fills against and the directory it
 writes into.
 
-**`tagging.py` is the fifth file and not a fifth verb.** Its two functions write
-the two tag artifacts `caption` also produces, in the same invocation and under
-the same flow — so the count of *verbs* stays four while the count of files here
-is five. It sits beside `caption.py` rather than inside it because `caption()`
+**The verbs are `caption` · `sheet` · `review` · `generate`, and `tagging.py` is
+not one of them.** Its two functions write the two tag artifacts `caption` also
+produces, in the same invocation and under the same flow — so it is a file here
+without being a verb. It sits beside `caption.py` rather than inside it because `caption()`
 had to be provably unchanged by this version, and a function with no edit is
 provably unchanged by `git diff`.
 
@@ -26,13 +26,16 @@ provably unchanged by `git diff`.
 
 ## Imported by
 
+**Named, not counted.** A count in this column has gone stale in every group here
+at least once; a list of names cannot.
+
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `caption.py` | `interface/cli.py`, `interface/wiring.py` | nine test modules |
-| `tagging.py` | `interface/cli.py`, `interface/wiring.py` | six test modules |
-| `sheet.py` | `interface/cli.py` | `tests/stages.py`, which every other module reaches it through |
-| `review.py` | `interface/cli.py` | five test modules |
-| `generate.py` | `interface/cli.py`, `interface/run_view.py` | four test modules |
+| `caption.py` | `interface/cli.py`, `interface/wiring.py` | `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
+| `tagging.py` | `interface/cli.py`, `interface/wiring.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_view.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
+| `sheet.py` | `interface/cli.py` | `tests/stages.py` |
+| `review.py` | `interface/cli.py`, `interface/ui/app.py`, `interface/ui/batch.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
+| `generate.py` | `interface/cli.py`, `interface/run_view.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_run_view.py` |
 
 > Files and importers only. What a seam *is*, and what could replace it, is the
 > design record's; neither restates the other.

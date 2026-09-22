@@ -25,6 +25,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The sweep: every claim this repository makes about itself, checked against the tree.** Ten false
+  self-claims in tracked prose, eight stale numerals in `CLAUDE.md`, and every quantity in the group
+  READMEs replaced by the names it counted. **No code changed** — `git diff` over `*.py`, `*.vue` and
+  `*.ts` touches docstrings and comments only (`0024` design.md D6). Where a claim would be truer with
+  a code change, the claim moved and the code change was filed.
+
+- **The ten.** `README.md` called a flow *"two tracked files"* and it is four, now named.
+  `isekai/README.md` claimed *"five files … with a falsification twin each"* against six constants
+  across four files and **one** twin, and annotated the `shared → boundary` edge as eager when both
+  imports sit inside `load()`. `boundary/README.md` claimed *"nothing outside this directory opens a
+  socket or spawns a binary"* against three live violations — `evaluation/labels.py` spawns `git`,
+  `interface/ui/bundle.py` spawns `npm`, `interface/ui/app.py` binds a port — which are now named as
+  filed work rather than denied. `pipeline/sheet.py` said *"the sixteen fields"*, true of
+  `summon-anime-wai` and not of `conjure-anime-wai`'s 21. `evaluation/evaluate.py` invoked *"the
+  one-path rule"*, which `CLAUDE.md` records as replaced. `scripts/manifest.py` named a `convert.py`
+  that does not exist, and `scripts/derive_manifest.py` promised *"the SHA-256 and byte count"* from a
+  function returning the digest alone. `tests/test_flow.py` said *"the tracked flow"* singular twice;
+  one reference is now plural and the other says which flow it reads and why one suffices. Three
+  `CHANGELOG.md` lines 136–153 characters wide were re-wrapped, byte-unchanged in content.
+
+- **`CLAUDE.md`'s numerals.** *"Change one, change all four"* became three copies, because CI invokes
+  `make gate` rather than keeping its own. The run layout gained `wd14` and `tags`, the two stage ①
+  directories `run.py` has declared since v0.21. The `Cmd+Z` keybinding is no longer described as a
+  live violation — v0.22.1 made it match `event.code === 'KeyZ'` as well, so it answers under Cyrillic
+  *and* Dvorak. A change is four artifacts or more, not exactly four. The change-id formula now states
+  that it has **no patch case** and that a patch takes the next free number, as `v0.22.1` → `0023` did.
+  `skip_specs: true` **plus** `specs/.gitkeep` is a pair, and the sentence calling them mutually
+  exclusive is gone. The `__init__.py` rule is now a rule about *groups*, with
+  `interface/ui/__init__.py` named as the subpackage front door it is. The *"catalogue of twelve
+  candidate checkpoints"* referenced no artifact in this repository and is restated without one. The
+  ignored-roots table gained `.inputs/`, which holds a person's likeness exactly as `.data/` does, and
+  is now named rather than counted — as are the two further *"four ignored roots"* claims in
+  `.gitignore` and `interface/ui/bundle.py`. The version line covers `X.Y.Z`, because `## [0.22.1]` is
+  in this file.
+
+- **Quantities are gone from the group READMEs.** `isekai/README.md`'s file column names each group's
+  files instead of counting them, and the *"count; do not trust the row"* disclaimer goes with the
+  numbers it failed to protect: two were wrong again at v0.22, one in the opposite direction from the
+  drift the disclaimer described. Every *"Imported by"* table was re-derived from the import graph and
+  now names its importers; eight of the counts it replaces were wrong. That re-derivation also
+  corrected the importer lists themselves — `pipeline/review.py` is imported by `interface/ui/app.py`
+  and `interface/ui/batch.py`, `shared/image.py` by `interface/ui/batch.py`, and
+  `foundation/refusal.py` by `boundary/comfy_types.py` and `shared/image.py`, none of which the tables
+  had.
+
+- **Three claims wrong for a reason other than a count.** `shared/README.md` said none of its modules
+  reads a run or a flow; `field_map.py` imports both and `fields.py` imports `flow`, because a schema
+  is a flow's. `interface/README.md` and `ui/app.py` both said *"the six endpoints"*; there are seven,
+  now listed by path, with the bundle mount named beside them. `evaluation/README.md`'s
+  `eval_backends.py` coverage debt was owed by *"v0.19"* three releases ago; the debt is stated as open
+  and the version is dropped, since naming one is what let it go stale.
+
+- **Two smaller repairs.** `ci.yml` called `typecheck_ui.sh` the gate's *"sixth command"*; it is the
+  fifth of six (`CHANGELOG.md`'s *"gains a sixth command"* is about the count and is correct).
+  `CLAUDE.md`'s never-commit guardrail now names **a pod id** beside the API key and the volume id —
+  the three already in this file stay, because it is append-only history and the guardrail is what
+  stops a fourth.
+
 ## [0.22.1] - 2026-09-22
 
 - **The acceptance ran: gate green and one local pass through ①②③, on five photographs, with no pod.**
@@ -1965,22 +2025,25 @@ through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-
   there needed editing.
 
 - **The parser, the verb table and the dispatch functions move out of `__main__.py`, which becomes a
-  shim** — to `isekai/interface/cli.py`, after the restructure below. `runpy` pins where the entry point's *path* is, not where the parser lives, and a
-  package's largest interface surface has no business being the one module outside the filing scheme
+  shim** — to `isekai/interface/cli.py`, after the restructure below. `runpy` pins where the entry
+  point's *path* is, not where the parser lives, and a package's largest interface surface has no
+  business being the one module outside the filing scheme
   (design.md D3). **The shim keeps its `if __name__ == "__main__":` guard**, a one-line departure from
   the snippet in D3: without it, importing `isekai.__main__` runs the parser, which exits 2 on an
   empty argv — and the `-S` guard that proves the entry point needs no third-party import does
   exactly that import. D3 names that risk; this is the line that discharges it. Callers move rather
   than being re-exported: `VERBS`, `build_parser` and `dispatch` are imported from `isekai.cli`.
 
-- **`Wiring`, `wiring()` and `_check_run_root` are their own module** — `isekai/interface/wiring.py`, after the restructure below. The
+- **`Wiring`, `wiring()` and `_check_run_root` are their own module** — `isekai/interface/wiring.py`,
+  after the restructure below. The
   composition root had a second consumer that never sees an argv: the suite builds a `Wiring`
   directly, with no parser at all, in fourteen tests. A parser is one way to fill that dataclass and
   not the only one, so the module that owns the parser is not its home. `_check_run_root` travels
   with `wiring()`, its only caller, and `REPOSITORY` with it. **No compatibility re-export is left in
   `__main__`** — the three test import sites moved, and the name did not stay behind.
 
-- **`write_atomically` is its own module** — `isekai/shared/atomic_write.py`, after the restructure below. It takes a path and bytes and
+- **`write_atomically` is its own module** — `isekai/shared/atomic_write.py`, after the restructure
+  below. It takes a path and bytes and
   knows nothing about runs, and it already had a consumer outside `run.py`: `generate.py` writes the
   rendered PNG with it — a file that is neither JSON nor numbered by the run's artifact convention.
   **`write_json` stays in `run`**, because `indent=2` and a trailing newline are a run's artifact

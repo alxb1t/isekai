@@ -43,8 +43,10 @@ Hard constraints that shape the code here:
   wrapped so a missing `ui/node_modules/` refuses by name rather than exiting 127
 - `uv run pytest` — tests
 
-`Makefile`'s `gate` target, `README.md` and CI (`.github/workflows/ci.yml`) mirror that array; the array is
-the one that is run. Change one, change all four.
+**The array is the one that is run, and there are three copies of it, not four.** `Makefile`'s `gate`
+target mirrors it and `README.md` lists it; CI (`.github/workflows/ci.yml`) **invokes that mirror** —
+`run: make gate` — rather than keeping a third copy, because its own steps had already drifted.
+Change the array, change the other two in the same commit.
 
 All six green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
 
@@ -99,18 +101,20 @@ and nowhere else. In brief, the load-bearing seams are:
   `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`, and **no stage
   imports another** — the last such edge closed when `validate` moved to `isekai/shared/fields.py`,
   which is behaviour rather than layout. The layout itself is **input above, flow below**:
-  `runs/<input-id>/<flow-id>/{captions,sheets,review,prompts,outputs}/`, so adding a flow adds one
-  subtree and no flow can read another's artifacts.
+  `runs/<input-id>/<flow-id>/{captions,wd14,tags,sheets,review,prompts,outputs}/` — the names are
+  `run.py`'s, and `wd14` and `tags` are stage ①'s two tag artifacts, not stages of their own. So
+  adding a flow adds one subtree and no flow can read another's artifacts. (`approved` is a
+  filename label there, not a directory.)
 - **An Option-modified keybinding matches `event.code` and calls `preventDefault()`, because Option
   is a character-producing modifier on macOS.** Not a layout rule and not hygiene: on plain US ABC,
   `Option+Space` emits U+00A0 and `Option+F` emits `ƒ`, so a handler matching `event.key` inserts an
   invisible non-breaking space into a tag field — the silent dead end the cheatsheet exists to
   remove. `preventDefault()` is load-bearing twice, because Space is also the **native activation
   key** of a focused `<button>` and this app focuses one on mount (`ReviewApp.vue`'s
-  `.rail__card--current`). v0.21's two bindings are the **first** `event.code` matches in this
-  repository; `Cmd+Z` at `ReviewApp.vue:243` still matches `event.key.toLowerCase()` and so does
-  nothing under a Cyrillic layout — a known live violation, in the backlog with this rule as its
-  trigger, deferred to a keybinding re-work of its own.
+  `.rail__card--current`). v0.21's two bindings were the **first** `event.code` matches in this
+  repository, and `Cmd+Z` was the rule's one live violation until v0.22.1 closed it: the handler
+  now matches `event.key.toLowerCase() === 'z' || event.code === 'KeyZ'`, which answers under a
+  Cyrillic layout *and* under Dvorak, where the two disagree. There is no live violation left.
 
 **Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
 proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both are registered in
@@ -125,7 +129,9 @@ Behaviour gets a scenario first; a new test gets a binding.
 Work is defined before it is built, as a change under `openspec/changes/<id>/`. A change is the unit of
 work **and** the unit of release.
 
-A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `design.md` · `tasks.md`.
+A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `design.md` · `tasks.md`,
+plus the tracked `.openspec.yaml` where one is needed. A change may carry a fifth of its own —
+`0023-backlog-paydown` shipped `no-spec-delta.md` beside the four — but never fewer than the four.
 
 1. **Settle the decisions first.** A change is cut from decisions argued against a person, not from a first
    draft. The verdict — `feasible` / `feasible-with-caveats` / `needs-precursor` /
@@ -134,14 +140,17 @@ A change is **four artifacts, always all four**: `proposal.md` · `specs/` · `d
    use it: it writes into the root `openspec/config.yaml` declares, this repo keeps no such file, and
    the id rule below is not one the CLI knows. The directory is created directly.
    The id is `<digits>-<lowercase-slug>`, and version → id is `(major × 100) + minor`,
-   zero-padded: `v0.7` → `0007`, `v0.10` → `0010`, which stays monotonic past 1.0. (`0001-mf-standard`
-   predates this rule and keeps its id — an id is never renamed once commits carry it as a trailer.)
+   zero-padded: `v0.7` → `0007`, `v0.10` → `0010`, which stays monotonic past 1.0. **The formula has
+   no patch case**, and a patch release still needs an id: `v0.22.1` shipped as `0023`, the next
+   free number rather than anything the formula produces. Take the next free number for a patch, and
+   keep it monotonic. (`0001-mf-standard` predates all of this and keeps its id — an id is never
+   renamed once commits carry it as a trailer.)
 3. **Author** each artifact against `openspec instructions <proposal|specs|design|tasks> --change
    <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally opens with `version: vX.Y`
    frontmatter — **the CLI neither emits nor checks that key; it is on the author.**
 4. **A change that changes no requirement** declares the absence rather than inventing one: `skip_specs:
-   true` in the change's tracked `.openspec.yaml`, plus `specs/.gitkeep`. The two are mutually exclusive.
-   Never write a requirement solely to satisfy the validator.
+   true` in the change's tracked `.openspec.yaml`, **plus** `specs/.gitkeep`. Both, not either —
+   `0023-backlog-paydown` carries the pair. Never write a requirement solely to satisfy the validator.
 5. **Finish on a green check** — `openspec validate <NNNN-slug> --strict`.
 
 **Progress lives in `tasks.md`**, in its `## Progress` checklist, and **the current phase is the first
@@ -163,9 +172,10 @@ adds none, so the count does not move. Every `#### Scenario:` carries a
 `<capability>:<requirement-slug>:<scenario-slug>` — so a key locates its own file. On release the delta is
 folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
 
-**The version line is one line in four places** — `proposal.md`'s `version: vX.Y`, `CHANGELOG.md`'s
-`## [X.Y.0]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.0`. All four agree or the release
-halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog + SemVer, with an entry appended
+**The version line is one line in four places** — `proposal.md`'s `version:`, `CHANGELOG.md`'s
+`## [X.Y.Z]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.Z`. A minor release spells that
+`vX.Y` / `## [X.Y.0]` / `vX.Y.0`; a patch release spells it `vX.Y.Z` throughout, as `0.22.1` did. All
+four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog + SemVer, with an entry appended
 **per phase** under `## [Unreleased]` and cut at release.
 
 Every commit is a Conventional Commit, **one phase = one commit**, staged **by name** and never with
@@ -185,9 +195,11 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 - **`isekai/__main__.py`** — the path `runpy` resolves for `python -m isekai <verb>`, and a shim
   over `interface/cli.py`. It is the only entry point.
   **`isekai/`** — the package, filed into **six group directories**, each with its own `README.md`
-  naming its files and who imports them (and `isekai/README.md` over the six). Every `__init__.py`
-  holds a docstring and **no code**: a group never becomes a place two modules reach each other
-  through.
+  naming its files and who imports them (and `isekai/README.md` over the six). **A group's
+  `__init__.py` holds a docstring and no code**: a group never becomes a place two modules reach each
+  other through. The one exception is `interface/ui/__init__.py`, which is not a group but a
+  subpackage with a front door — it holds `HOST` and `serve()`, the composition of `batch`, `bundle`
+  and `app`, and the lazy import of the `[ui]` extra that keeps the rest off the runtime graph.
   **`foundation/`** — `run.py`'s run directory and the layout names, `flow.py`'s manifest loader and
   the `Schema` type, `refusal.py`. **`pipeline/`** — the four staged verbs, `caption` · `sheet` ·
   `review` · `generate`, **and `tagging.py`, which is not a verb**: its two functions produce the two
@@ -224,8 +236,9 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   second authored briefing would be a second untested artifact. Adding one costs a line in
   `tests/test_flow.py`'s `PINNED`, which is the designed price of the freeze rather than a defect.
   **A flow's identifier is `<verb>-<style>-<base>`**, with `-v2` appended only for a second
-  generation of the same triple. The base is in the name because the catalogue holds twelve candidate
-  checkpoints of which eleven are untried, so `summon-anime` could not tell two of them apart — and
+  generation of the same triple. The base is in the name because one anime base is in use and others
+  were candidates, so `summon-anime` could not tell two of them apart — there is **no catalogue file
+  in this repository**, and the only checkpoint it pins is the one `scripts/models.json` names — and
   the rule exists at all because its absence is what produced `summon-open-v1`, a name describing the
   *arm* rather than the flow, which v0.22 deleted for that reason. **`infra/`** — `up.sh` / `down.sh`,
   the pod lifecycle. **`scripts/`** — `models.json`, the pinned and checksummed manifest of every
@@ -260,20 +273,23 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
   a top-level `runs/` the standing rule that no personal photograph is committed would depend on one
   `.gitignore` line staying correct forever; under an ignored root that rule is structurally true
   instead, because **nothing a run produces is written outside it**.
-- **There are four ignored roots, not one, and the boundary is named so the rule does not drift into
-  meaning "everything untracked".** v0.18 added the last two. Each fails differently, and what it
-  costs to lose is the whole of why it sits where it does:
+- **The ignored roots are named rather than counted, and the boundary is named so the rule does not
+  drift into meaning "everything untracked".** Each fails differently, and what it costs to lose is
+  the whole of why it sits where it does:
 
   | root | what it is | losing it costs |
   |---|---|---|
   | `.data/` | captured or generated by a run | **the loss of work** — nothing regenerates it |
+  | `.inputs/` | source photographs an operator put there by hand | **the loss of work**, and it holds a person's likeness exactly as `.data/` does — which is why `.gitignore` calls that line load-bearing |
   | `models/` | fetched from a pinned, checksummed manifest — including `models/wd14/`, the tag list **and** the 467 MB graph it is the output layer of | a re-download that is byte-identical by construction |
   | `ui/dist/` | built from tracked source by `vite build` | a deterministic rebuild, which `isekai ui` does for you |
   | `ui/node_modules/` | fetched from npm | an `npm install`, which nothing does for you — it pulls arbitrary third-party packages |
 
-  **Only the first is work.** The other three are derivable, which is why none of them lives under
-  `.data/`: that root's failure mode is loss of work and `rm -rf .data` is an ordinary cleanup, so a
-  rebuildable bundle in there would muddle the boundary the paragraph exists to keep sharp.
+  **Only the first two are work.** `.inputs/` is outside `.data/` because a photograph an operator
+  supplies is an input rather than something a run generated. The rest are derivable, which is why
+  none of them lives under `.data/`: that root's failure mode is loss of work and `rm -rf .data` is
+  an ordinary cleanup, so a rebuildable bundle in there would muddle the boundary the paragraph
+  exists to keep sharp.
 - **Everything a run reads or writes is inside the repository.** No path outside the repo is resolved by
   anything tracked here. Research notes and the running log live in the operator's own notebook; nothing
   in this repo reaches into it, and its location is not recorded here.
@@ -388,8 +404,10 @@ ambiguous against the graph that actually ships.
 ## Guardrails (invariants — hold for every role)
 
 - **Never commit a secret, or a *real* absolute path from the machine the run is on** — the RunPod API key,
-  the volume id, the operator's home, or this repository's own root, transcribed out of a run artefact or a
-  tool's output into tracked prose. `.env` is gitignored and holds all of it; `.env.example` declares shape
+  the volume id, **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
+  artefact or a tool's output into tracked prose. `.runpod_pod_id` is gitignored for that reason; the three
+  pod ids already in `CHANGELOG.md` stay, because that file is append-only history and this rule is what
+  stops a fourth being added. `.env` is gitignored and holds all of it; `.env.example` declares shape
   only. A path a fixture *constructs* is not the target of this rule; a rendered one, carrying a real
   username, is.
 - **Deps minimal + human-gated.** The runtime is stdlib-only. Any new dependency — argue for it and **wait

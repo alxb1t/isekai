@@ -17,17 +17,22 @@ absent.
 
 ## Imported by
 
+**Named, not counted.** A count in this column has gone stale in every group here
+at least once; a list of names cannot.
+
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `evaluate.py` | `eval_backends.py` | `../../evaluate.py`, `tests/eval_fakes.py`, `tests/test_evaluate.py` |
-| `eval_backends.py` | — | `../../evaluate.py` only |
+| `eval_backends.py` | — | `../../evaluate.py` |
 | `ciede2000.py` | `eval_backends.py`, `evaluate.py` | `tests/eval_fakes.py`, `tests/test_ciede2000.py` |
-| `eval_models.py` | `eval_backends.py`, `shared/vocabulary.py` | `scripts/derive_eval_manifest.py`, three test modules |
+| `eval_models.py` | `boundary/wd14.py`, `eval_backends.py`, `shared/vocabulary.py` | `scripts/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
 | `labels.py` | — | `tests/test_labels.py` |
 
 > `eval_backends.py` has **no test importer** and `pyproject.toml`'s
 > `unresolved-import` override blinds `ty` to its first-party imports, so no gate
-> command reads them. v0.19 owes either coverage or a narrower override.
+> command reads them. **That debt is open and unpaid**, and naming a version that
+> would pay it has not worked: it was written against v0.19 and has outlasted
+> three releases since. It is in the backlog, not in a sentence here.
 
 > Files and importers only. What a seam *is*, and what could replace it, is the
 > design record's; neither restates the other.

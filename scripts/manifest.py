@@ -27,7 +27,8 @@ notices -- a real SHA-256 over the wrong bytes, written to a tracked file, which
 becomes a refusal of the *correct* artifact at whatever verifies it later.
 
 Operator tooling, not a package: nothing installs it, nothing imports it at
-runtime, and it is not on `convert.py`'s import graph. `pyproject.toml` declares
+runtime, and nothing in `python -m isekai`'s import graph reaches it.
+`pyproject.toml` declares
 `scripts/` a source root so the type checker and the suite see it the way a human
 running it does.
 
