@@ -26,7 +26,7 @@ from tests.conftest import CSV
 # The fixture vocabulary's field names, as a table under test has to cover them.
 # Two criteria, because the coverage check is about a declared name being absent
 # and one name is enough to prove it while two prove the listing.
-DECLARED = {"summon-v1": ("hair_colour", "hair_silhouette")}
+DECLARED = {"summon-anime-wai": ("hair_colour", "hair_silhouette")}
 
 
 @pytest.fixture
@@ -246,7 +246,7 @@ def test_a_criterion_a_tracked_flow_declares_with_no_entry_is_refused(
         load(vocabulary, path, DECLARED)
 
     assert "hair_silhouette" in str(refused.value)
-    assert "summon-v1" in str(refused.value)
+    assert "summon-anime-wai" in str(refused.value)
 
 
 @pytest.mark.spec("field-map:coverage:an-empty-group-is-legal")

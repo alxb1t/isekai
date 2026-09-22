@@ -16,7 +16,8 @@ edit here rather than three frozen flow directories.
 **A tag has exactly one primary and may sit in several groups.** Single
 assignment cannot serve both consumers: the operator's own approved sheets file
 `navel` under clothes, pose *and* body shape, and `lips` is a declared field of
-its own on `conjure-v1` while it is part of *expression* on `summon-v1`. Routing
+its own on `conjure-anime-wai` while it is part of *expression* on
+`summon-anime-wai`. Routing
 needs one answer and browsing needs all of them (design.md D4).
 
 **The loader raises all four checks, and the tests prove them.** The spec says

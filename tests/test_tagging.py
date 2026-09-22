@@ -20,14 +20,15 @@ from typing import Any
 import pytest
 
 from isekai.boundary import provision
-from isekai.boundary.claude_cli import CliFailure, constant_record
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.flow import Flow, Hosted, load_flow
+from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    StageFailure,
+    constant_record,
     open_run,
     read_artifact,
     record_failure,
@@ -35,7 +36,7 @@ from isekai.foundation.run import (
 from isekai.interface import wiring
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.tagging import (
     SEPARATOR,
     TAG_PROMPT,
@@ -58,7 +59,7 @@ from tests.stages import (
 )
 from tests.transports import FakeTransport
 
-FLOW = "summon-open-v1"
+FLOW = "summon-anime-wai"
 
 
 @pytest.fixture
@@ -375,58 +376,52 @@ def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
     opened = fake_tagger()
     monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
-    resolved = {
-        flow_id: wiring.tagger_for(load_flow(flow_id))
-        for flow_id in ("summon-v1", "conjure-v1", "summon-open-v1")
-    }
+    tracked = tracked_flows()
 
-    assert set(resolved) == {"summon-v1", "conjure-v1", "summon-open-v1"}
+    resolved = {flow_id: wiring.tagger_for(load_flow(flow_id)) for flow_id in tracked}
+
+    assert tracked
     assert all(pair == opened for pair in resolved.values())
-    # Two of those three declare no `hosted` block at all, which is the case a
-    # key-driven registry would have had to refuse or default.
-    assert [load_flow(flow_id).hosted is None for flow_id in resolved] == [
-        True,
-        True,
-        False,
-    ]
 
 
-@pytest.mark.spec(
-    "tagging:independence:the-hosted-tagger-is-absent-without-a-hosted-block"
-)
-@pytest.mark.parametrize(
-    ("flow_id", "expected"),
-    [("summon-v1", None), ("conjure-v1", None), ("summon-open-v1", "ollama")],
-)
-def test_the_hosted_tagger_resolves_only_where_a_flow_declares_an_arm(
-    flow_id: str, expected: str | None
-) -> None:
-    resolved = wiring.hosted_tagger_for(load_flow(flow_id))
+@pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-flows-model")
+@pytest.mark.parametrize("flow_id", tracked_flows())
+def test_the_hosted_tagger_runs_the_model_the_flow_names(flow_id: str) -> None:
+    """There is no absence case left, which is what this replaces.
 
-    if expected is None:
-        # Absent, not refused. A flow with no `hosted` block simply has no hosted
-        # tag list, and that may not stop a review (design.md D20).
-        assert resolved is None
-    else:
-        assert isinstance(resolved, OllamaTagger)
-        assert resolved.implementation == expected
+    The scenario it retires described a flow declaring no hosted model. `model`
+    is required of every flow now, so that state is not merely unreached but
+    unrepresentable -- the loader refuses the manifest before anything resolves.
+    What is asserted instead is what the tagger does (design.md D25).
+    """
+    flow = load_flow(flow_id)
+
+    resolved = wiring.hosted_tagger_for(flow)
+
+    assert isinstance(resolved, OllamaTagger)
+    assert resolved.implementation == "ollama"
+    assert resolved.model == flow.model
 
 
 @pytest.mark.spec(
     "cli:resolution:a-seam-without-a-manifest-key-resolves-for-every-flow"
 )
-def test_two_flows_on_two_arms_each_get_their_own_hosted_tagger() -> None:
-    hosted = wiring.hosted_tagger_for(load_flow("summon-open-v1"))
-    default = wiring.hosted_tagger_for(load_flow("summon-v1"))
+def test_each_flow_gets_a_hosted_tagger_on_the_model_its_own_reader_runs() -> None:
+    """Resolved per flow, on the key the reader also reads.
 
-    assert isinstance(hosted, OllamaTagger)
-    assert hosted.model == "joycaption-beta-one-q4k"
-    assert default is None
-    # `claude-cli` is in the table and maps to nothing, which is not the same as
-    # being absent from it: an arm this build has never heard of must name what
-    # it does carry rather than resolve to silence.
-    assert wiring.HOSTED_TAGGERS.keys() == {"claude-cli", "ollama"}
-    assert wiring.HOSTED_TAGGERS["claude-cli"](load_flow("summon-v1")) is None
+    One alias answers both prompts, which is why the tag prompt is not
+    chat-framed -- so the tagger's model being the reader's model is asserted
+    rather than left as a coincidence of the two flows shipping the same alias.
+    """
+    for flow_id in tracked_flows():
+        flow = load_flow(flow_id)
+
+        tagger = wiring.hosted_tagger_for(flow)
+        reader = wiring.reader_for(flow)
+
+        assert isinstance(tagger, OllamaTagger)
+        assert isinstance(reader, OllamaReader)
+        assert tagger.model == reader.model == flow.model
 
 
 @pytest.mark.spec("tagging:order:a-late-failure-leaves-the-earlier-artifacts-complete")
@@ -438,13 +433,13 @@ def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
     # one with a port and a retry budget (design.md D7).
     photo = tmp_path / "aunt-ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
-    flow = "summon-v1"
+    flow = FLOW
 
     class Failing:
         """A hosted tagger that cannot succeed, however many times it is asked."""
 
         def tag(self, photo: Path) -> Tagging:
-            raise CliFailure("permanent", "the host answered with prose")
+            raise StageFailure("permanent", "the host answered with prose")
 
     wired = Wiring(
         reader=Always(FakeReader()),
@@ -469,35 +464,6 @@ def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
     assert (run.directory(flow, WD14) / "001.json").is_file()
     assert not list(run.directory(flow, TAGS).glob("001.json"))
     assert (run.directory(flow, TAGS) / "001.error.1.permanent.json").is_file()
-
-
-@pytest.mark.spec("cli:resolution:uncomposed-seam-refuses-by-name")
-def test_an_arm_this_build_has_no_tagger_for_refuses_naming_what_it_carries(
-    tmp_path: Path,
-) -> None:
-    # The reason `hosted_tagger_for` goes through `_resolve` rather than a
-    # `.get()`: silence is the right answer for "this arm has no tagger" and the
-    # wrong one for "nobody has heard of this arm", and only a table tells them
-    # apart. Without the table an unknown arm resolves to `None`, and D20 then
-    # makes that silence unreportable anywhere by design.
-    declared = load_flow("summon-open-v1")
-    unknown = dataclasses.replace(
-        declared,
-        hosted=dataclasses.replace(_hosted(declared), implementation="vllm"),
-    )
-
-    with pytest.raises(Refusal) as refused:
-        wiring.hosted_tagger_for(unknown)
-
-    message = str(refused.value)
-    assert "vllm" in message
-    assert "ollama" in message
-
-
-def _hosted(flow: Flow) -> Hosted:
-    """Return `flow`'s hosted block, narrowing away an absence a fixture rules out."""
-    assert flow.hosted is not None
-    return flow.hosted
 
 
 @pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")

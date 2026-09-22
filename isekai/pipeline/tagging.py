@@ -2,13 +2,12 @@
 
 **Two functions and two seams, deliberately not one Protocol with two
 implementations.** A Protocol earns its name when the thing behind it is
-interchangeable, and these are not. `caption_tags` reaches a model over HTTP and
-exists only where a flow's manifest declares a `hosted` block; `caption_wd14`
-opens a digest-verified file on disk and resolves through **nothing at all**. The
-registry that would key the Protocol is keyed on `hosted.implementation`
-(`wiring.py`), a string WD14 does not have -- and a Protocol whose two
-implementations resolve through different mechanisms is a shared name rather than
-a seam (design.md D3).
+interchangeable, and these are not. `caption_tags` reaches a model over HTTP, on
+the alias the flow's manifest names in its `model` key; `caption_wd14` opens a
+digest-verified file on disk and resolves through **nothing at all** -- there is
+no manifest key it reads and no flow for which it would be wrong. A Protocol
+whose two implementations resolve through different mechanisms is a shared name
+rather than a seam (design.md D3).
 
 **Neither narrows anything, and that is the product.** Stage (2) is where a tag
 list is filtered down to a sheet; seeing *behind* that filter is the whole reason
@@ -41,18 +40,20 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama, wd14
-from isekai.boundary.claude_cli import CliFailure, constant_record, refusal_for
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    StageFailure,
     artifact_name,
     check_budget,
+    constant_record,
     envelope,
     latest,
     next_version,
     record_failure,
+    refusal_for,
     write_json,
 )
 
@@ -165,8 +166,7 @@ class OllamaTagger:
         """Return the exact request this tagger is invoked with.
 
         A method rather than a local, so the request is assertable without a
-        call -- the property `ClaudeReader.argv()` and `OllamaReader.body()` both
-        have, for the same reason.
+        call -- the property `OllamaReader.body()` has, for the same reason.
         """
         return {
             "model": self.model,
@@ -192,10 +192,10 @@ class OllamaTagger:
                 transport=self.transport,
             )
         except ollama.OllamaFailure as failed:
-            raise CliFailure(failed.kind, failed.detail) from failed
+            raise StageFailure(failed.kind, failed.detail) from failed
 
         if SEPARATOR not in answer:
-            raise CliFailure(
+            raise StageFailure(
                 "permanent",
                 f"{self.model} answered without a single {SEPARATOR!r}, so it "
                 "returned prose rather than a tag list; the prompt asks for a "
@@ -263,12 +263,13 @@ def caption_wd14(
             directory,
             version,
             "permanent",
-            {"stage": WD14, "detail": str(failed), "envelope": ""},
+            {"stage": WD14, "detail": str(failed)},
         )
         raise refusal_for(
             "tagger",
             run.id,
-            CliFailure("permanent", str(failed)),
+            "permanent",
+            str(failed),
             record,
             f"{flow}/{WD14}/",
             VERB,
@@ -322,15 +323,21 @@ def caption_tags(
 
     try:
         tagging = tagger.tag(run.photo)
-    except CliFailure as failed:
+    except StageFailure as failed:
         record = record_failure(
             directory,
             version,
             failed.kind,
-            {"stage": TAGS, "detail": failed.detail, "envelope": failed.envelope},
+            {"stage": TAGS, "detail": failed.detail},
         )
         raise refusal_for(
-            "tagger", run.id, failed, record, f"{flow}/{TAGS}/", VERB
+            "tagger",
+            run.id,
+            failed.kind,
+            failed.detail,
+            record,
+            f"{flow}/{TAGS}/",
+            VERB,
         ) from failed
 
     path = directory / artifact_name(version)

@@ -1,16 +1,16 @@
 """The Ollama boundary: one POST to a local runtime, and what its answer means.
 
-**The third network boundary, and the second the pipeline has.** Stages (1) and
-(2) of a flow that declares an open implementation both reach their model through
-this module, so the request, the classification and the two refusals live here
-once rather than twice -- the same discipline `claude_cli.py` and
-`ComfyTransport` are already under.
+**The second network boundary, and since v0.22 the only one the pipeline has.**
+Stage (1)'s reader and its hosted tagger both reach their model through this
+module, so the request, the classification and the two refusals live here once
+rather than twice -- the same discipline `ComfyTransport` is already under.
 
-**This module imports nothing from `claude_cli.py`, and that is the isolation
-law.** It is also the weaker half of it: the edge that matters is the call graph,
-because `pipeline/caption.py` imports nine names from `claude_cli` for
-`ClaudeReader` and every flow traverses that file. What the suite proves is that
-running an open flow reaches none of them (design.md D5, D11).
+**There was a second transport beside this one**, `claude_cli.py`, and an
+isolation law keeping a flow that declared one arm from reaching a name from the
+other. v0.22 deleted it, so the law has nothing left to separate. Nothing in the
+gate would catch a second transport being reintroduced; what makes one visible is
+that there is no registry to add an entry to -- a second reader is a second
+adapter, in review (design.md D18, D27).
 
 **`/api/generate`, not the OpenAI-compatible endpoint**, and the two missing
 fields are why. `think: false` is load-bearing because a hybrid reasoner draws its
@@ -83,10 +83,10 @@ TRUNCATED = "length"
 class OllamaFailure(Exception):
     """The host answered and a stage cannot use it; the kind says what comes next.
 
-    Deliberately not `claude_cli.CliFailure`, which this module may not import,
-    and deliberately not a third vocabulary either: it carries the same `Kind` the
-    run directory already records, so an adapter translates it in one line and the
-    stage that catches it is unchanged.
+    Deliberately not `run.StageFailure`, which is the *stage's* vocabulary and
+    would make a boundary depend on one, and deliberately not a third vocabulary
+    either: it carries the same `Kind` the run directory already records, so an
+    adapter translates it in one line and the stage that catches it is unchanged.
     """
 
     def __init__(self, kind: Kind, detail: str) -> None:
@@ -99,9 +99,8 @@ class OllamaFailure(Exception):
 class Transport(Protocol):
     """How a request is sent. Faked, so the request body itself is testable.
 
-    The precedent is one line away -- `ClaudeReader.runner: Runner = spawn`, which
-    is what makes `argv()` assertable without a subprocess. Here it is what makes
-    the body assertable without a socket, and the suite has neither.
+    The same shape `ComfyTransport` is under, for the same reason: it is what
+    makes the request body assertable without a socket, and the suite has none.
     """
 
     def __call__(self, path: str, body: bytes) -> tuple[int, bytes]:
@@ -153,15 +152,16 @@ def ask(
     A retry budget counts models tried and failed, and neither of those is that;
     both are the operator's one-command fix, and spending an attempt on one leaves
     a run whose error records have to be deleted by hand before it resumes. It is
-    the posture `require_binary()` already takes for an absent binary, applied to a
-    port rather than to a `PATH` entry (design.md D9).
+    the posture this repository already takes for an absent system dependency,
+    applied to a **port and a model name** rather than to a `PATH` entry, which is
+    the shape a hosted model needs and a binary check cannot give (design.md D9).
 
     **A connection that drops mid-answer is transient, and catching it is not
     optional.** urllib wraps only what the send raised; anything `getresponse()`
     or `read()` raises comes out as an `http.client` exception or a bare socket
     error, neither of which is a `URLError`. Uncaught, it is not an
-    `OllamaFailure`, so no adapter translates it, not a `CliFailure`, so no stage
-    records it, and not a `Refusal`, so `run.across()` does not collect it -- one
+    `OllamaFailure`, so no adapter translates it, not a `StageFailure`, so no
+    stage records it, and not a `Refusal`, so `run.across()` does not collect it -- one
     evicted model would end the whole batch in a traceback with nothing written
     down. The host being OOM-killed between two models that do not co-reside is
     the designed-in condition, not an exotic one.

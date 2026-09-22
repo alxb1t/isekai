@@ -11,19 +11,18 @@ from pathlib import Path
 
 import pytest
 
-import isekai
 from isekai.foundation.flow import (
+    CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
     KNOWN,
     MANIFEST_NAME,
     MANIFEST_VERSION,
     REQUIRED,
-    REQUIRED_HOSTED,
     REQUIRED_NODES,
+    SCHEMA_NAME,
     SIBLINGS,
     TRANSFERRED_INPUTS,
     Flow,
-    Hosted,
     assemble,
     load_flow,
     manifest_digest,
@@ -34,10 +33,10 @@ from isekai.foundation.refusal import Refusal
 # The digest of every tracked flow's whole directory, committed here.
 #
 # **Changing a dial does not edit a flow; it creates a new one.** A tuned dial is
-# not a variant of a flow, it is an untested flow -- so editing `summon-v1` fails
+# not a variant of a flow, it is an untested flow -- so editing a flow fails
 # this test naming it, exactly as changing one of the graph's committed prompts is
 # a deliberate test edit. Updating this constant to make a change pass is the
-# wrong move; adding `summon-v2` is the right one.
+# wrong move; adding a flow under a new identifier is the right one.
 #
 # **Re-pinned once, by 0016-flow-registry, under the exception that change's
 # design.md D2 records: the flow's configuration did not change; its manifest's
@@ -45,49 +44,48 @@ from isekai.foundation.refusal import Refusal
 # digest now covers five files rather than two, and `manifest_version: 2` is that
 # distinction in data. The failure message below gains no "unless" clause -- a
 # test message that explains how to evade itself is one that gets evaded.
+# **Rewritten whole by 0022-one-arm, and that is a flow-set replacement rather
+# than a re-pin.** The exception recorded below -- a flow still inside the change
+# that introduces it, never released -- is *not* what is being used here. The
+# three flows this list used to hold were deleted: two of them selected the
+# `claude` arm by declaring no `hosted` block and could not survive its removal,
+# and the third lost `sheet.briefing.md`, which moves a digest and so makes a new
+# flow rather than an edited one. Nothing was re-pinned; three identifiers went
+# and two arrived.
 PINNED: dict[str, str] = {
-    "summon-v1": "1d3c206b394d78d8547f808fb0f2a969f030f9a51468c950e2f235a2d2cfc3a5",
-    # Added by 0017-conjure, the second flow. Adding a line here is the designed
-    # cost of adding a flow, not a defect the change found: the pin list is what
-    # makes adding or removing one a deliberate act.
-    #
-    # Re-pinned once within that same change, by converge round 1, when review
-    # finding R1 showed both briefings eliciting skin tone and brow lightness in
-    # words the vocabulary routes to `light` and `dark` -- a light source and a
-    # dark image -- rather than to `pale skin` and nothing. The exception is that
-    # the flow was still inside the change that introduces it and had never been
-    # released: `v0.17` was not tagged, so no pinned digest had left the branch.
-    # Once it has, this route is closed and the correction is `conjure-v2`.
-    "conjure-v1": "260ea7a343166d60976bf0e77175eb01f3d85294d2e1db897243f9dac22e0116",
-    # Added by 0019-open-models, the third flow and the first to declare a
-    # `hosted` block. Its graph and schema are byte-identical copies of
-    # `summon-v1`'s and its manifest differs from that one in exactly two places
-    # -- the identifier and the block -- so what this digest freezes that the
-    # incumbent's does not is the two briefings, which are authored rather than
-    # ported: the prompt that produced the measured captions is gitignored and
-    # was never on this branch.
-    "summon-open-v1": (
-        "e035d227dbaee2b935502a392bbd096876379cc5201ca17ed7c0e87ed4bafcc1"
+    # `conjure-v1`'s graph and schema, byte for byte, including all 21 fields --
+    # `eyelashes` among them. Its caption briefing is a byte-identical copy of
+    # `summon-anime-wai`'s: both flows read the same model for the same purpose,
+    # and a second authored briefing would be a second untested artifact.
+    "conjure-anime-wai": (
+        "1e991c2be7290a40dbe3301619c67b0bb9c5bb9914f22e6c54ce7078903c6615"
+    ),
+    # `summon-open-v1`'s graph, schema and caption briefing, byte for byte. What
+    # moved is the manifest -- the identifier, `manifest_version` 3, and the
+    # `hosted` block flattened to one required top-level `model` -- and the
+    # deletion of `sheet.briefing.md`, which has had no reader since v0.21.
+    "summon-anime-wai": (
+        "8ddd4016dadd16d2b8a740e420e9478ae37ef5b43959c4e86ec1974f5d0792fb"
     ),
 }
 
 
 @pytest.fixture
 def flow() -> Flow:
-    """Return the one tracked flow."""
-    return load_flow("summon-v1")
+    """Return the identity flow."""
+    return load_flow("summon-anime-wai")
 
 
 def _scratch(tmp_path: Path, **overrides: object) -> Path:
-    """Copy `summon-v1` into a scratch flows root, with the given fields changed.
+    """Copy `summon-anime-wai` into a scratch flows root, with fields changed.
 
-    **All five files, not two.** The digest covers the whole directory, so a
-    scratch carrying only the manifest and the graph would make the assertion that
-    it matches `PINNED` accidentally true of a different set of bytes.
+    **Every file, not two.** The digest covers the whole directory, so a scratch
+    carrying only the manifest and the graph would make the assertion that it
+    matches `PINNED` accidentally true of a different set of bytes.
     """
-    root = tmp_path / "flows" / "summon-v1"
+    root = tmp_path / "flows" / "summon-anime-wai"
     root.mkdir(parents=True)
-    source = load_flow("summon-v1").path
+    source = load_flow("summon-anime-wai").path
     document = json.loads((source / MANIFEST_NAME).read_text())
     document.update(overrides)
     (root / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
@@ -166,7 +164,6 @@ def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -
             flow.graph_path,
             flow.schema_path,
             flow.caption_briefing_path,
-            flow.sheet_briefing_path,
         ):
             assert path.is_file(), path
             assert path.parent == flow.path
@@ -176,8 +173,20 @@ def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -
         assert flow.vocabulary["revision"] in vocabulary["sources"][0]
 
 
-@pytest.mark.spec("image-generation:manifest:flow-is-five-flat-files")
-def test_a_flow_is_five_flat_files_and_the_manifest_names_none_of_them() -> None:
+@pytest.mark.spec("image-generation:manifest:a-flow-is-flat-and-its-files-are-named")
+def test_a_flow_is_flat_and_holds_its_named_files_and_nothing_else() -> None:
+    """The rule names its files rather than tallying them, and asserts both ends.
+
+    **`len(SIBLINGS)` is the assertion this rule has never had.** The set-equality
+    below shrinks on both sides at once -- it stayed green through the removal of
+    `sheet.briefing.md` and would stay green through the silent addition of a
+    sixth sibling, which is exactly the thing the freeze exists to make loud. The
+    count is pinned here, and only here, so the prose elsewhere can stop carrying
+    a numeral (design.md D10).
+    """
+    assert len(SIBLINGS) == 3
+    assert SIBLINGS == (GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)
+
     for name in tracked_flows():
         flow = load_flow(name)
         document = json.loads((flow.path / MANIFEST_NAME).read_text())
@@ -235,12 +244,12 @@ def test_a_flow_whose_model_digest_disagrees_fails_naming_the_flow(
     tmp_path: Path,
 ) -> None:
     root = _scratch(tmp_path)
-    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     document["models"][0]["sha256"] = "0" * 64
-    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
     digests = _manifest_digests()
 
-    flow = load_flow("summon-v1", root)
+    flow = load_flow("summon-anime-wai", root)
     wrong = [model.dest for model in flow.models if model.sha256 != digests[model.dest]]
 
     assert wrong == [flow.models[0].dest]
@@ -287,12 +296,12 @@ def test_a_manifest_missing_a_declared_field_is_refused_naming_it(
     tmp_path: Path, field: str
 ) -> None:
     root = _scratch(tmp_path)
-    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     del document[field]
-    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert field in str(refused.value)
 
@@ -302,12 +311,12 @@ def test_a_manifest_missing_a_prompt_fragment_is_refused_naming_it(
     tmp_path: Path,
 ) -> None:
     root = _scratch(tmp_path)
-    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     del document["prompt"]["trailer"]
-    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert "trailer" in str(refused.value)
 
@@ -318,12 +327,12 @@ def test_a_flow_declaring_fewer_than_the_required_nodes_is_refused(
     tmp_path: Path, role: str
 ) -> None:
     root = _scratch(tmp_path)
-    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     del document["nodes"][role]
-    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert role in str(refused.value)
 
@@ -338,17 +347,17 @@ def test_a_flow_declaring_a_photograph_on_one_side_only_is_refused(
     # render of whoever that file names. Declared under `inputs` alone, it is
     # uploaded and read nowhere. Both are refused here, off any endpoint.
     root = _scratch(tmp_path)
-    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     if key == "inputs":
         document["inputs"] = [name for name in document["inputs"] if name != "photo"]
     else:
         del document["nodes"]["photo"]
-    (root / "summon-v1" / MANIFEST_NAME).write_text(json.dumps(document))
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
-    assert "summon-v1" in str(refused.value)
+    assert "summon-anime-wai" in str(refused.value)
     assert f"`{key}` declares no 'photo'" in str(refused.value)
 
 
@@ -367,14 +376,14 @@ def test_the_required_roles_are_the_four_every_image_flow_has(flow: Flow) -> Non
 
 @pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
 @pytest.mark.parametrize("sibling", SIBLINGS)
-def test_a_flow_missing_one_of_its_five_files_is_refused_naming_it(
+def test_a_flow_missing_one_of_its_named_files_is_refused_naming_it(
     tmp_path: Path, sibling: str
 ) -> None:
     root = _scratch(tmp_path)
-    (root / "summon-v1" / sibling).unlink()
+    (root / "summon-anime-wai" / sibling).unlink()
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert sibling in str(refused.value)
 
@@ -384,10 +393,10 @@ def test_refusing_a_manifest_does_not_require_the_flow_to_be_executed(
     tmp_path: Path,
 ) -> None:
     root = _scratch(tmp_path)
-    (root / "summon-v1" / GRAPH_NAME).unlink()
+    (root / "summon-anime-wai" / GRAPH_NAME).unlink()
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert GRAPH_NAME in str(refused.value)
 
@@ -397,7 +406,7 @@ def test_a_manifest_from_an_unknown_version_is_refused(tmp_path: Path) -> None:
     root = _scratch(tmp_path, manifest_version=MANIFEST_VERSION + 1)
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     message = str(refused.value)
     assert str(MANIFEST_VERSION + 1) in message
@@ -408,12 +417,12 @@ def test_a_manifest_from_an_unknown_version_is_refused(tmp_path: Path) -> None:
 def test_a_manifest_that_calls_itself_something_else_is_refused(
     tmp_path: Path,
 ) -> None:
-    root = _scratch(tmp_path, flow="summon-v2")
+    root = _scratch(tmp_path, flow="summon-anime-wai-2")
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
-    assert "summon-v2" in str(refused.value)
+    assert "summon-anime-wai-2" in str(refused.value)
 
 
 @pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
@@ -423,7 +432,7 @@ def test_a_flow_that_does_not_exist_is_refused_naming_the_ones_that_do(
     with pytest.raises(Refusal) as refused:
         load_flow("summon-v9")
 
-    assert "summon-v1" in str(refused.value)
+    assert "summon-anime-wai" in str(refused.value)
 
 
 # --- immutability -------------------------------------------------------------
@@ -447,52 +456,56 @@ def test_every_tracked_flow_is_pinned_at_all() -> None:
 @pytest.mark.spec("image-generation:immutability:flow-manifest-is-pinned-by-equality")
 def test_editing_a_dial_in_a_scratch_copy_changes_the_digest(tmp_path: Path) -> None:
     root = _scratch(tmp_path)
-    assert manifest_digest("summon-v1", root) == PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) == PINNED["summon-anime-wai"]
 
-    document = json.loads((root / "summon-v1" / MANIFEST_NAME).read_text())
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     document["dials"]["cfg"] = 6
-    (root / "summon-v1" / MANIFEST_NAME).write_text(
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(
         json.dumps(document, indent=2) + "\n"
     )
 
-    assert manifest_digest("summon-v1", root) != PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) != PINNED["summon-anime-wai"]
 
 
 @pytest.mark.spec("image-generation:immutability:flow-manifest-is-pinned-by-equality")
 def test_editing_the_graph_changes_the_digest_too(tmp_path: Path) -> None:
     root = _scratch(tmp_path)
-    graph = json.loads((root / "summon-v1" / GRAPH_NAME).read_text())
+    graph = json.loads((root / "summon-anime-wai" / GRAPH_NAME).read_text())
     graph["10"]["inputs"]["steps"] = 30
-    (root / "summon-v1" / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+    (root / "summon-anime-wai" / GRAPH_NAME).write_text(
+        json.dumps(graph, indent=2) + "\n"
+    )
 
-    assert manifest_digest("summon-v1", root) != PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) != PINNED["summon-anime-wai"]
 
 
 @pytest.mark.spec("image-generation:immutability:flow-manifest-is-pinned-by-equality")
 @pytest.mark.parametrize("sibling", SIBLINGS)
-def test_editing_any_of_the_five_files_changes_the_digest(
+def test_editing_any_of_its_named_files_changes_the_digest(
     tmp_path: Path, sibling: str
 ) -> None:
     root = _scratch(tmp_path)
-    assert manifest_digest("summon-v1", root) == PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) == PINNED["summon-anime-wai"]
 
-    path = root / "summon-v1" / sibling
+    path = root / "summon-anime-wai" / sibling
     path.write_bytes(path.read_bytes() + b"\n")
 
-    assert manifest_digest("summon-v1", root) != PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) != PINNED["summon-anime-wai"]
 
 
 @pytest.mark.spec("image-generation:immutability:a-new-file-moves-the-digest")
 def test_adding_a_new_file_to_a_flow_moves_its_digest(tmp_path: Path) -> None:
     # The property the fold rests on: the freeze covers the directory, not a
-    # named pair. A sixth declared value has to move the digest, or holding the
-    # schema and the briefings inside the flow means less than its own sentence.
+    # named pair. A further declared value has to move the digest, or holding the
+    # schema and the briefing inside the flow means less than its own sentence.
     root = _scratch(tmp_path)
-    assert manifest_digest("summon-v1", root) == PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) == PINNED["summon-anime-wai"]
 
-    (root / "summon-v1" / "extra.briefing.md").write_text("a sixth declared value\n")
+    (root / "summon-anime-wai" / "extra.briefing.md").write_text(
+        "a further declared value\n"
+    )
 
-    assert manifest_digest("summon-v1", root) != PINNED["summon-v1"]
+    assert manifest_digest("summon-anime-wai", root) != PINNED["summon-anime-wai"]
 
 
 # --- assembly -----------------------------------------------------------------
@@ -546,63 +559,73 @@ def test_the_fields_appear_in_the_order_the_schema_declares(flow: Flow) -> None:
     assert order == sorted(order)
 
 
-# --- the hosted-model block, and the allowlist --------------------------------
+# --- the model key, and the allowlist -----------------------------------------
 
 
-@pytest.mark.spec("image-generation:hosted:flow-declares-its-hosted-models")
-def test_a_flow_declaring_hosted_models_is_loaded_with_them(tmp_path: Path) -> None:
-    root = _scratch(
-        tmp_path,
-        hosted={
-            "implementation": "ollama",
-            "reader": "a-reader",
-            "sorter": "a-sorter",
-        },
-    )
+@pytest.mark.spec("image-generation:model:flow-declares-the-model-it-runs")
+def test_a_flow_declaring_a_model_is_loaded_with_it(tmp_path: Path) -> None:
+    """Read verbatim: what comes back is what the document said.
 
-    hosted = load_flow("summon-v1", root).hosted
-
-    assert hosted == Hosted(
-        implementation="ollama", reader="a-reader", sorter="a-sorter"
-    )
-
-
-@pytest.mark.spec("image-generation:hosted:flow-declares-its-hosted-models")
-def test_no_value_in_a_hosted_block_is_derived_at_load_time(tmp_path: Path) -> None:
-    """The block is read verbatim: what comes back is what the document said.
-
-    The same property the manifest as a whole has, asserted of the one key this
-    change adds. A derived value here would be a second place the implementation
-    a flow runs on is decided, and the registry is the first.
+    The same property the manifest as a whole has, asserted of the key that
+    replaced the `hosted` block. A derived value here would be a second place the
+    model a flow runs on is decided, and the manifest is the first.
     """
-    declared = {"implementation": "x", "reader": "y", "sorter": "z"}
-    root = _scratch(tmp_path, hosted=dict(declared))
+    root = _scratch(tmp_path, model="a-reader")
 
-    hosted = load_flow("summon-v1", root).hosted
-
-    assert hosted is not None
-    assert vars(hosted) == declared
+    assert load_flow("summon-anime-wai", root).model == "a-reader"
 
 
-@pytest.mark.spec("image-generation:hosted:absent-block-means-the-default")
-def test_a_flow_declaring_no_hosted_block_reports_none(tmp_path: Path) -> None:
-    root = _scratch(tmp_path)
+@pytest.mark.spec("image-generation:model:flow-declares-the-model-it-runs")
+def test_the_tracked_flows_each_declare_the_model_they_are_meant_to_run() -> None:
+    """The last hole, and the only thing that closes it.
 
-    assert load_flow("summon-v1", root).hosted is None
+    `manifest_digest` freezes bytes without knowing whether they are the right
+    ones, so a flow committed naming the wrong alias would be frozen naming the
+    wrong alias. **The first commit is exactly where this mistake lives**, and one
+    assertion on the shipped flows is what it costs (design.md D1).
+    """
+    for name in tracked_flows():
+        assert load_flow(name).model == "joycaption-beta-one-q4k"
 
 
-@pytest.mark.spec("image-generation:hosted:absent-block-means-the-default")
-def test_the_incumbent_flows_declare_no_hosted_block_and_load(
-    flow: Flow,
+@pytest.mark.spec("image-generation:model:an-absent-model-is-refused")
+def test_a_manifest_declaring_no_model_is_refused_naming_the_key(
+    tmp_path: Path,
 ) -> None:
-    """Omitting the key is not refused -- which is what leaves both incumbents alone.
+    """Required, not optional, and that is what carries `MANIFEST_VERSION` to 3.
 
-    Asserted against the flows that actually ship rather than a scratch copy,
-    because "the version that adds this key edits no existing manifest" is a
-    claim about the tracked directories.
+    The key it replaced was optional so that adding it edited no frozen
+    directory. That cost is no longer payable in either direction: the
+    directories it was protecting are deleted by this change.
     """
-    assert flow.hosted is None
-    assert load_flow("conjure-v1").hosted is None
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
+    del document["model"]
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+
+    assert "model" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:model:an-empty-model-is-refused")
+@pytest.mark.parametrize("value", [None, "", "   ", 3, [], {}])
+def test_a_model_that_is_not_a_non_empty_string_is_refused(
+    tmp_path: Path, value: object
+) -> None:
+    """The value, not only its presence.
+
+    A bare `str()` loaded `{"model": null}` as the Python string `"None"` and sent
+    a run at an alias that cannot exist -- a refusal at the first call, with the
+    manifest looking correct the whole way there (design.md D4).
+    """
+    root = _scratch(tmp_path, model=value)
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+
+    assert "model" in str(refused.value)
 
 
 @pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")
@@ -610,7 +633,7 @@ def test_an_unrecognised_manifest_key_is_refused_naming_it(tmp_path: Path) -> No
     root = _scratch(tmp_path, quality="high")
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert "quality" in str(refused.value)
 
@@ -625,142 +648,68 @@ def test_refusing_an_unknown_key_does_not_require_the_flow_to_be_executed(
     reading the manifest, not by running the flow that carries it.
     """
     root = _scratch(tmp_path, quality="high")
-    (root / "summon-v1" / GRAPH_NAME).unlink()
+    (root / "summon-anime-wai" / GRAPH_NAME).unlink()
 
     with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
+        load_flow("summon-anime-wai", root)
 
     assert "quality" in str(refused.value)
 
 
-@pytest.mark.spec("image-generation:manifest:misspelled-hosted-block-is-refused")
-@pytest.mark.parametrize("typo", ["hostd", "Hosted", "host", "hosted_models"])
-def test_a_misspelled_hosted_block_is_refused_rather_than_ignored(
+def _misspelled(tmp_path: Path, typo: str) -> Refusal:
+    """Return the refusal from a manifest whose model key is written `typo`."""
+    root = _scratch(tmp_path)
+    document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
+    document[typo] = document.pop("model")
+    (root / "summon-anime-wai" / MANIFEST_NAME).write_text(json.dumps(document))
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+    return refused.value
+
+
+@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
+@pytest.mark.parametrize("typo", ["modl", "Model", "model_name"])
+def test_a_misspelled_model_key_is_refused_naming_what_was_written(
     tmp_path: Path, typo: str
 ) -> None:
-    """The silent path this allowlist exists to close.
+    """What flattening the block bought, and it cost no new check.
 
-    Absent means the default implementation, so without the allowlist a typo is
-    indistinguishable from a deliberate omission and the flow runs the wrong
-    models with a complete, correct-looking run to show for it.
+    The `hosted` block had no allowlist of its own -- `{"sortr": "x"}` inside it
+    loaded clean -- and a top-level key is guarded by the allowlist that already
+    existed. Each of these fails twice at once, as an unknown key *and* as a
+    missing one, and the allowlist runs first so the message names the key the
+    operator actually wrote rather than the one he did not (design.md D3).
     """
-    root = _scratch(
-        tmp_path,
-        **{typo: {"implementation": "ollama", "reader": "r", "sorter": "s"}},
-    )
+    assert typo not in KNOWN
 
-    with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
-
-    assert typo in str(refused.value)
+    assert typo in str(_misspelled(tmp_path, typo))
 
 
-@pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
-@pytest.mark.parametrize("absent", REQUIRED_HOSTED)
-def test_a_hosted_block_missing_one_of_its_three_keys_is_refused(
-    tmp_path: Path, absent: str
+@pytest.mark.spec("image-generation:manifest:a-misspelled-model-key-is-refused")
+def test_a_typo_that_collides_with_a_real_key_is_refused_for_the_absence(
+    tmp_path: Path,
 ) -> None:
-    """A declared block declares all three, or it is named rather than crashing.
+    """`models` is the one near-miss the allowlist cannot see, and it is still caught.
 
-    The shape `prompt`'s fragments are already checked in: an absent key here
-    would otherwise reach the registry as a `KeyError` three frames later.
+    It is a real key -- the render weights -- so writing `model`'s value into it
+    is not an unknown key at all. What the loader has left is the absence, and
+    naming `model` is the correct diagnosis for this row: the operator did write
+    a key this build reads, just not that one.
     """
-    block = {"implementation": "ollama", "reader": "r", "sorter": "s"}
-    del block[absent]
-    root = _scratch(tmp_path, hosted=block)
+    assert "models" in KNOWN
 
-    with pytest.raises(Refusal) as refused:
-        load_flow("summon-v1", root)
-
-    assert absent in str(refused.value)
+    assert "model" in str(_misspelled(tmp_path, "models"))
 
 
-@pytest.mark.spec("image-generation:hosted:incumbent-flows-are-unchanged")
-def test_the_manifest_format_version_is_unchanged_by_the_optional_key() -> None:
-    """Optional is what keeps this at 2, and 2 is what keeps the digests still.
+@pytest.mark.spec("image-generation:manifest:unknown-key-is-refused")
+def test_every_key_this_build_reads_is_required() -> None:
+    """There is no optional key, which is what leaves the allowlist doing it all.
 
-    A required key plus a version bump was this change's first shape: it would
-    have re-cut two frozen manifests to record a value that was already implied.
+    `hosted` was the one, and with it gone `KNOWN` and `REQUIRED` are the same
+    tuple -- so a misspelling can no longer be indistinguishable from a
+    deliberate omission, because there are no deliberate omissions.
     """
-    assert MANIFEST_VERSION == 2
-    assert "hosted" in KNOWN
-    assert "hosted" not in REQUIRED
-
-
-@pytest.mark.spec("image-generation:hosted:flow-declares-its-hosted-models")
-def test_the_open_flow_declares_the_implementation_it_is_meant_to_run() -> None:
-    """The last hole, and the only thing that closes it.
-
-    An absent `hosted` block means the default implementation, deliberately -- it
-    is what keeps both incumbent manifests unedited. So the allowlist cannot
-    refuse an omission, `manifest_digest` freezes bytes without knowing whether
-    they are the right ones, and **the first commit is exactly where this mistake
-    lives**. One assertion on the shipped flow is what costs (design.md D12).
-    """
-    hosted = load_flow("summon-open-v1").hosted
-
-    assert hosted is not None
-    assert hosted.implementation == "ollama"
-    assert hosted.reader == "joycaption-beta-one-q4k"
-    assert hosted.sorter == "qwen3:8b"
-
-
-@pytest.mark.spec("image-generation:hosted:an-unread-key-is-carried")
-def test_the_sorter_key_is_carried_dead_and_has_not_moved_the_digest() -> None:
-    """A key no stage reads, and the reason it is still in the manifest.
-
-    Stage (2) calls no hosted model after v0.21, so `hosted.sorter` is read by
-    nothing -- and removing it would move `summon-open-v1`'s manifest digest,
-    which `CLAUDE.md` makes a **new flow** rather than an edit. Both halves are
-    asserted in one body because the scenario is the pair: the key loads, and
-    the digest is the one it had before the stage stopped reading it.
-    """
-    package = Path(isekai.__file__).parent
-    readers = sorted(
-        str(module.relative_to(package))
-        for module in package.rglob("*.py")
-        if ".sorter" in module.read_text()
-    )
-
-    hosted = load_flow("summon-open-v1").hosted
-
-    assert hosted is not None
-    assert hosted.sorter == "qwen3:8b"
-    assert "sorter" in REQUIRED_HOSTED
-    assert readers == []
-    assert manifest_digest("summon-open-v1") == PINNED["summon-open-v1"]
-
-
-@pytest.mark.spec("image-generation:hosted:incumbent-flows-are-unchanged")
-def test_the_open_flows_graph_and_schema_are_the_incumbents_byte_for_byte() -> None:
-    """A copied flow, so what differs is the manifest and the two briefings only."""
-    incumbent, open_flow = load_flow("summon-v1"), load_flow("summon-open-v1")
-
-    for name in (GRAPH_NAME, "schema.json"):
-        assert (open_flow.path / name).read_bytes() == (
-            incumbent.path / name
-        ).read_bytes()
-
-
-@pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
-def test_the_open_caption_briefing_licenses_absence_verbatim() -> None:
-    """Licensing absence is the single largest measured gain in this pipeline.
-
-    It is what stopped a reader confabulating nineteen identity marks across seven
-    of ten subjects and dropping its score from 0.518 to 0.307, and it is carried
-    byte for byte rather than paraphrased because a paraphrase is an untested
-    briefing wearing a tested one's reasoning.
-    """
-    incumbent = load_flow("summon-v1").caption_briefing_path.read_text()
-    start = incumbent.index("**Say so when something is not visible")
-    licence = incumbent[start : incumbent.index("\n\n", start)]
-
-    assert licence in load_flow("summon-open-v1").caption_briefing_path.read_text()
-
-
-@pytest.mark.spec("sheet:schema:schema-is-read-from-the-flow")
-def test_the_open_sheet_briefing_names_every_one_of_the_sixteen_fields() -> None:
-    flow = load_flow("summon-open-v1")
-    text = flow.sheet_briefing_path.read_text()
-
-    assert [name for name in flow.schema.names if f"`{name}`" not in text] == []
+    assert MANIFEST_VERSION == 3
+    assert KNOWN == REQUIRED
+    assert "model" in REQUIRED

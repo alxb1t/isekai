@@ -15,6 +15,7 @@ import argparse
 import io
 import json
 import random
+import urllib.error
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -32,8 +33,9 @@ from tests.conftest import CSV, snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
+from tests.transports import FakeTransport
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 # Every verb, in the order a run passes through them. `approve` follows `review`
 # with no edit in between, which is a legitimate act: it renders the machine's
@@ -252,7 +254,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     """Provoke one refusal from each stage that has one, and return the messages."""
     from isekai.foundation.flow import load_flow
     from isekai.foundation.run import open_run, read_artifact, record_failure
-    from isekai.pipeline.caption import ClaudeReader
+    from isekai.pipeline.caption import OllamaReader
     from isekai.pipeline.generate import photo_resolution, prompt_artifact
     from isekai.pipeline.review import approve, review
     from tests.stages import CAPTION_BRIEFING, caption, sheet
@@ -263,9 +265,9 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     flow = load_flow(FLOW)
     messages: list[str] = []
     # `reader` is an optional resolver on `Wiring` -- optional because a ③-only
-    # front end composes one without it, and a resolver because the flow decides
-    # which implementation runs. The narrowing below is an assertion about this
-    # fixture, not about the code.
+    # front end composes one without it, and a resolver because the flow names the
+    # model it runs. The narrowing below is an assertion about this fixture, not
+    # about the code.
     resolve_reader = wired.reader
     assert resolve_reader is not None
     reader = resolve_reader(flow)
@@ -288,8 +290,15 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: prompt_artifact(bare, flow, schema))
     collect(lambda: photo_resolution(_unreadable(tmp_path)))
     collect(lambda: load_flow("summon-v9"))
-    collect(lambda: load_flow("summon-v1", _incomplete_flow(tmp_path)))
-    collect(lambda: ClaudeReader(binary="not-a-real-binary").read(photo, "b", tmp_path))
+    collect(lambda: load_flow(FLOW, _incomplete_flow(tmp_path)))
+    # An unreachable host rather than an absent binary: the surviving arm is
+    # HTTP to a local port, so there is nothing on PATH to be missing.
+    collect(
+        lambda: OllamaReader(
+            model="a-reader",
+            transport=FakeTransport(error=urllib.error.URLError("Connection refused")),
+        ).read(photo, "b", tmp_path)
+    )
 
     directory = bare.directory(FLOW, "captions")
     for _ in range(BUDGETS["caption"]):
@@ -316,8 +325,8 @@ def _incomplete_flow(tmp_path: Path) -> Path:
     """Return a flows root holding a flow whose directory is missing a file."""
     from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, load_flow
 
-    source = load_flow("summon-v1").path
-    root = tmp_path / "incomplete" / "summon-v1"
+    source = load_flow(FLOW).path
+    root = tmp_path / "incomplete" / FLOW
     root.mkdir(parents=True)
     (root / MANIFEST_NAME).write_bytes((source / MANIFEST_NAME).read_bytes())
     for name in SIBLINGS[1:]:
@@ -336,7 +345,11 @@ AVAILABLE: Sequence[str] = (
     "python -m isekai generate",
     "python -m isekai show",
     "scripts/download_models.sh",
-    "npm install -g @anthropic-ai/claude-code",
+    # The two Ollama remedies, which replaced the `npm install -g` one that told
+    # an operator to install a CLI this build no longer reaches.
+    "ollama serve",
+    "ollama create",
+    "npm install",
     "upgrade isekai",
     "convert the photograph",
     "re-export the photograph",

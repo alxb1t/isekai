@@ -7,7 +7,6 @@ than by counting a fake's calls. `tests/stages.sheet` writes the tag list the
 stage refuses without, which is why a test says what it wants routed on one line.
 """
 
-import re
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -30,9 +29,8 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
 from tests.stages import FAKE_PINS, FIELD_MAP, caption, sheet
-from tests.stages import SHEET_BRIEFING as BRIEFING_PATH
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 PROSE = "Dark brown hair past the shoulders, brown eyes, a white collared shirt."
 
@@ -104,8 +102,8 @@ def test_the_taggers_own_underscore_spelling_routes(
 def test_a_tag_whose_criterion_the_flow_does_not_declare_is_dropped(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    # `thick eyebrows` routes to `eyebrows`, which `summon-v1` declares; the
-    # table also places `brown hair` under `hair_colour`. A criterion no flow
+    # `thick eyebrows` routes to `eyebrows`, which `summon-anime-wai` declares;
+    # the table also places `brown hair` under `hair_colour`. A criterion no flow
     # declared would take its tags nowhere -- proven by narrowing the schema.
     narrowed = Schema(name=schema.name, fields=tuple(schema.fields[:1]))
 
@@ -360,25 +358,3 @@ def test_a_repeat_invocation_writes_nothing(
 
 # --- the briefing, which nothing reads any more --------------------------------
 #
-# Four of the five tests that stood here are gone with the sorter they taught: one
-# called `map_phrase`, and three asserted sentences in instructions nothing
-# follows. **The file stays** -- `load_flow` refuses a flow missing it, and
-# deleting it would move all three flow digests, which `CLAUDE.md` makes a new
-# flow identifier rather than an edit (design.md D22). What survives is the one
-# check that is still about the schema rather than about the sorter.
-
-
-@pytest.mark.spec("sheet:schema:field-names-are-identifier-safe")
-def test_every_field_name_the_briefing_mentions_exists_in_the_schema(
-    schema: Schema,
-) -> None:
-    # The two places a briefing names a *field*: the field list's bullets, and
-    # the left column of each worked example's sheet. Tag names in prose are not
-    # field names and are deliberately not matched here.
-    text = BRIEFING_PATH.read_text()
-    mentioned = set(re.findall(r"^- `([a-z_]+)` —", text, re.MULTILINE)) | set(
-        re.findall(r"^(\w+)\s{2,}\[", text, re.MULTILINE)
-    )
-
-    assert mentioned - set(schema.names) == set()
-    assert set(schema.names) - mentioned == set()

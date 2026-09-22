@@ -20,7 +20,6 @@ from isekai.foundation.flow import (
     MANIFEST_NAME,
     MANIFEST_VERSION,
     SCHEMA_NAME,
-    SHEET_BRIEFING_NAME,
     Flow,
     Schema,
     load_flow,
@@ -57,7 +56,7 @@ from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 
 @pytest.fixture
@@ -139,10 +138,13 @@ def _fewer_roles_flow(tmp_path: Path) -> Flow:
         },
         "nodes": {"positive": "3", "negative": "4", "latent": "9", "sampler": "10"},
         "models": [],
+        # Required of every flow since manifest version 3, and this one never
+        # reaches it: nothing in the render path resolves a reader.
+        "model": source.model,
     }
     (root / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
     (root / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
-    for name in (SCHEMA_NAME, CAPTION_BRIEFING_NAME, SHEET_BRIEFING_NAME):
+    for name in (SCHEMA_NAME, CAPTION_BRIEFING_NAME):
         (root / name).write_bytes((source.path / name).read_bytes())
     return load_flow(FEWER, root.parent)
 

@@ -29,7 +29,7 @@ from tests.conftest import snapshot
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, caption, sheet
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 # The bundle seam. `establish` takes it as an argument rather than reaching for
 # `bundle.ensure_built`, so the suite never runs npm and never needs node.
@@ -322,8 +322,8 @@ def test_an_absent_toolchain_refuses_naming_what_to_install(
         bundle.ensure_built(source)
 
     message = str(refused.value)
-    # node is this repository's second system dependency, after the `claude`
-    # binary, and the refusal copies `require_binary()`'s shape.
+    # node is one of this repository's two system dependencies, beside Ollama,
+    # and its refusal takes the shape both are under.
     assert "nodejs.org" in message
     assert "isekai ui" in message
 

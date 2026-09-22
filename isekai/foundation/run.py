@@ -52,6 +52,13 @@ from isekai.shared.atomic_write import write_atomically
 DATA_ROOT = Path(__file__).resolve().parent.parent.parent / ".data"
 RUNS_ROOT = DATA_ROOT / "runs"
 
+# The repository root, derived from `DATA_ROOT` rather than recomputed, so the
+# two cannot drift apart: both are then anchored to one `__file__`. Named here
+# because this module owns `DATA_ROOT`; `interface/wiring.py` spelled the same
+# expression until v0.22 rehomed `instructions_record`, which needs it too, and
+# a second derivation is a second thing to keep true.
+REPOSITORY = DATA_ROOT.parent
+
 # The only schema version this build reads. There is no migration ladder because
 # there is nothing to migrate: version 2 does not exist, so a command to upgrade
 # to it would be a dispatch table with no entries (design.md D2). What does ship
@@ -547,3 +554,70 @@ def across(items: Sequence[T], work: Callable[[T], None]) -> list[str]:
         except Refusal as refusal:
             refused.append(str(refusal))
     return refused
+
+
+class StageFailure(Exception):
+    """The CLI did not return what a stage can use, and the kind says what next."""
+
+    def __init__(self, kind: Kind, detail: str) -> None:
+        """Carry the kind and the detail an error record is written from."""
+        super().__init__(detail)
+        self.kind = kind
+        self.detail = detail
+
+
+def refusal_for(
+    stage: str,
+    run_id: str,
+    kind: Kind,
+    detail: str,
+    record: Path,
+    where: str,
+    verb: str,
+) -> Refusal:
+    """Build the refusal a stage raises after recording a failed attempt.
+
+    One shape for both stages: what failed, how it failed, where the record is,
+    and the command to run once what it names is fixed. Stated here beside
+    `StageFailure` rather than twice, because the two stages differ only in nouns.
+    """
+    return Refusal(
+        f"{run_id}: the {stage} failed ({kind}) -- {detail}; "
+        f"see {record.name} in {where}, and run `python -m isekai {verb}` again "
+        "once what it names is fixed"
+    )
+
+
+def instructions_record(path: Path) -> dict[str, str]:
+    """Return the path and digest of an instruction text, for a producer record.
+
+    This is the variable the evidence says matters most: one change to a reader's
+    instructions moved its score from 0.518 to 0.307 and manufactured nineteen
+    identity marks. An artifact whose provenance names the model but not the
+    instructions cannot explain its own result (design.md D7).
+    """
+    resolved = path.resolve()
+    inside = resolved.is_relative_to(REPOSITORY)
+    return {
+        "path": str(resolved.relative_to(REPOSITORY)) if inside else resolved.name,
+        "sha256": digest_of(path.read_bytes()),
+    }
+
+
+def constant_record(text: str) -> dict[str, str]:
+    """Return the digest of an instruction text this build holds, with no path.
+
+    `instructions_record` above takes a `Path` and hashes the file behind it,
+    which a producer whose instructions are a module constant cannot use: there
+    is no file and no location, and **a record that invented a path would assert
+    one that does not exist** (design.md D16).
+
+    So the key is simply absent rather than empty or placeheld. A consumer asking
+    where the text came from gets no answer, which is the true one -- it came
+    from this build, and the digest is what identifies which build. The
+    alternative considered and refused was a sixth file in the flow directory:
+    that is the trade v0.19 already priced when `joycaption.Modelfile` went to
+    `scripts/` instead, and a tag prompt shapes the operator's reading rather
+    than the render, so it makes no per-flow claim.
+    """
+    return {"sha256": digest_of(text.encode())}

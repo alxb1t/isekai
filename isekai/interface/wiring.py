@@ -17,25 +17,23 @@ import argparse
 import dataclasses
 import random
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO, TypeVar
+from typing import TextIO
 
 from isekai.boundary.comfy_client import ComfyClient
 from isekai.boundary.comfy_types import ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
-from isekai.foundation.flow import FLOWS_DIR, Flow, Hosted
+from isekai.foundation.flow import FLOWS_DIR, Flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import DATA_ROOT, RUNS_ROOT
-from isekai.pipeline.caption import ClaudeReader, OllamaReader, Reader
+from isekai.foundation.run import DATA_ROOT, REPOSITORY, RUNS_ROOT
+from isekai.pipeline.caption import OllamaReader, Reader
 from isekai.pipeline.tagging import OllamaTagger, Tagger
 from isekai.shared.field_map import FieldMap
 from isekai.shared.field_map import load as load_field_map
 from isekai.shared.vocabulary import Vocabulary
 from isekai.shared.vocabulary import load as load_vocabulary
-
-T = TypeVar("T")
 
 
 @dataclass
@@ -52,8 +50,8 @@ class Wiring:
 
     # `reader` follows `client`'s precedent and may be absent. A front
     # end that only serves stage ③ reaches no hosted model at all, and fabricating
-    # a `ClaudeReader()` it never calls would be a lie in the code -- so the verbs
-    # that do reach one say so at their own call site instead.
+    # an `OllamaReader()` it never calls would be a lie in the code -- so the
+    # verbs that do reach one say so at their own call site instead.
     #
     # **Resolvers rather than values**, which is the shape `vocabulary` already
     # has one line below and for a related reason: the flow decides which
@@ -64,14 +62,14 @@ class Wiring:
     reader: Callable[[Flow], Reader] | None
     # The two tagging seams, and they are deliberately not one. `tagger` resolves
     # for **every** flow because the local tagger reads no manifest key at all;
-    # `hosted_tagger` answers `None` where a flow declares no arm this build can
-    # tag on, which is an absence rather than a failure (design.md D3, D20).
+    # `hosted_tagger` resolves on the one key the reader also reads, because which
+    # model answers is a claim the flow makes about itself (design.md D3).
     #
     # Both are `| None` on the dataclass for `reader`'s reason: a front end that
     # serves stage (3) alone reaches neither, and fabricating a tagger it never
     # calls would open a 467 MB file to be thrown away.
     tagger: Callable[[Flow], LocalTagger] | None
-    hosted_tagger: Callable[[Flow], Tagger | None] | None
+    hosted_tagger: Callable[[Flow], Tagger] | None
     client: ComfyTransport | None
     # A thunk, not a value. Only `sheet` and `approve` read the vocabulary, and
     # parsing the 308 KB tag list costs ~50 ms -- but the real cost is that an
@@ -91,123 +89,40 @@ class Wiring:
     err: TextIO = sys.stderr
 
 
-# The implementation a flow that declares no `hosted` block runs: the behaviour of
-# every flow written before that key existed, which is what keeps both incumbent
-# manifests unedited and their digests still.
-DEFAULT_IMPLEMENTATION = "claude-cli"
-
-
-def _claude_reader(flow: Flow) -> Reader:
-    """Return the CLI reader, which takes nothing from the manifest."""
-    return ClaudeReader()
-
-
-def _named_by(flow: Flow) -> Hosted:
-    """Return the block that named this implementation, narrowing away its absence.
-
-    `_resolve` reached a hosted builder by reading `flow.hosted.implementation`,
-    so the block is present; this refuses rather than raising `AttributeError` if
-    `DEFAULT_IMPLEMENTATION` ever names an arm that needs one.
-    """
-    if flow.hosted is None:
-        raise Refusal(f"flow {flow.id} declares no `hosted` block to run")
-    return flow.hosted
-
-
-def _ollama_reader(flow: Flow) -> Reader:
-    """Return the Ollama reader, named by the flow's own manifest."""
-    return OllamaReader(model=_named_by(flow).reader)
-
-
-def _no_tagger(flow: Flow) -> Tagger | None:
-    """Return nothing: this arm has a reader but no tagger.
-
-    An entry rather than an omission, so an arm this build does not carry is
-    still a refusal naming what it does carry. See `HOSTED_TAGGERS`.
-    """
-    return None
-
-
-def _ollama_tagger(flow: Flow) -> Tagger:
-    """Return the Ollama tagger, on the same alias the reader runs.
-
-    One model answers both prompts, which is exactly why `TAG_PROMPT` is not
-    chat-framed: two calls to the same alias must not arrive framed differently.
-    The manifest carries no separate tagger name, and adding one would be
-    re-pinning three frozen flow directories to say twice what they say once.
-    """
-    return OllamaTagger(model=_named_by(flow).reader)
-
-
-# **A table rather than a two-branch conditional, and the argument is the
-# refusal.** A conditional gives an unrecognised implementation the default one,
-# producing a complete run on the wrong models with the artifact's own provenance
-# disagreeing with the manifest that asked for it -- silent, and it corrupts any
-# later comparison between the two arms. A table makes that a refusal by
-# construction rather than by remembering to check.
+# **What the seams resolve on is the model, not an implementation string.** There
+# was a table here, keyed on the arm a manifest named, and the argument for it was
+# that a two-branch conditional would hand an unrecognised name the default arm --
+# a complete run on the wrong models, with the artifact's own provenance
+# disagreeing with the manifest that asked for it. **That premise is gone**: there
+# is no second arm to fall into and no default to fall back on, so a one-entry
+# table would be a dispatch mechanism with nothing to dispatch (design.md D16, D17).
 #
-# **The keys are the strings the artifacts record**, and a test holds the two
-# equal so the duplication cannot drift (design.md D6).
-READERS: Mapping[str, Callable[[Flow], Reader]] = {
-    "claude-cli": _claude_reader,
-    "ollama": _ollama_reader,
-}
-
-# **`claude-cli` is in the table and maps to nothing**, which is not the same as
-# being absent from it. There is no Claude tagger and there should not be -- a
-# second hosted model spending money on an advisory panel -- but *recording* that
-# the arm has none costs nothing and keeps one resolution mechanism for all three
-# seams. Left out of the table, an unrecognised arm (`"vllm"`, a typo) would
-# resolve to silence, and D20 makes silence unreportable by design; in the table,
-# `_resolve` names what this build carries, exactly as it does for the reader.
-HOSTED_TAGGERS: Mapping[str, Callable[[Flow], Tagger | None]] = {
-    "claude-cli": _no_tagger,
-    "ollama": _ollama_tagger,
-}
-
-
-def _resolve(flow: Flow, registry: Mapping[str, Callable[[Flow], T]], seam: str) -> T:
-    """Return the implementation this flow asks for, or refuse naming what we have.
-
-    Nothing is constructed until a flow asks. That is what lets a machine with one
-    implementation available never touch the other -- the check that a host is
-    running or a binary installed fires at the first call, not here.
-    """
-    declared = flow.hosted.implementation if flow.hosted else DEFAULT_IMPLEMENTATION
-    build = registry.get(declared)
-    if build is None:
-        raise Refusal(
-            f"flow {flow.id} declares the {seam} implementation {declared!r}, and "
-            f"this build carries {', '.join(sorted(registry))}; correct the "
-            f"manifest's `hosted`, or point at a flow this build can run"
-        )
-    return build(flow)
+# What survives is the half of the argument that was never about having two: a
+# manifest naming a model this build cannot reach still refuses by name, and it
+# refuses at the first call rather than here -- `ollama.py` is what checks that a
+# host is running and an alias created, and nothing is constructed until a flow
+# asks.
 
 
 def reader_for(flow: Flow) -> Reader:
-    """Return the reader `flow`'s manifest declares, constructing no other."""
-    return _resolve(flow, READERS, "reader")
+    """Return the reader running the model `flow`'s manifest names."""
+    return OllamaReader(model=flow.model)
 
 
-def hosted_tagger_for(flow: Flow) -> Tagger | None:
-    """Return the hosted tagger `flow` declares, or `None` where it declares none.
+def hosted_tagger_for(flow: Flow) -> Tagger:
+    """Return the hosted tagger, on the same alias the reader runs.
 
-    **Two absences, and only one of them is this function's to decide.** A flow
-    with no `hosted` block has nothing to resolve and answers `None` here; an arm
-    that *is* declared goes through `_resolve` like every other seam, and whether
-    that arm has a tagger is the registry's answer rather than a missing key's.
-    Both absences are silent downstream, because a missing tag artifact is an
-    absent aid and never a blocked review (design.md D20).
+    **One model answers both prompts**, which is exactly why `TAG_PROMPT` is not
+    chat-framed: two calls to the same alias must not arrive framed differently.
+    The manifest carries no separate tagger name, and adding one would be a second
+    key saying what `model` already says once.
 
-    What `_resolve` still buys, and the reason this does not skip it: an arm this
-    build has never heard of names what it does carry instead of resolving to
-    nothing. Silence is the right answer for *"this arm has no tagger"* and the
-    wrong one for *"nobody has heard of this arm"*, and only a table can tell
-    them apart.
+    It is not optional any more. `model` is required, so there is no flow whose
+    manifest leaves this unresolvable -- what can still go wrong is the alias not
+    being created, and that is a refusal at the first call naming the one command
+    that fixes it (design.md D25).
     """
-    if flow.hosted is None:
-        return None
-    return _resolve(flow, HOSTED_TAGGERS, "hosted tagger")
+    return OllamaTagger(model=flow.model)
 
 
 def tagger_for(flow: Flow) -> LocalTagger:
@@ -229,12 +144,10 @@ def tagger_for(flow: Flow) -> LocalTagger:
     return open_session()
 
 
-# Derived from `DATA_ROOT` rather than recomputed, so the two halves of the check
-# below cannot drift apart: both the repository and the ignored root are then
-# anchored to one `__file__`. That anchor is deliberate -- `python -m isekai` may
-# be run from anywhere, and a CWD-relative answer would make the same run root
-# legal or illegal depending on where the operator happened to be standing.
-REPOSITORY = DATA_ROOT.parent
+# `REPOSITORY` is imported rather than re-derived, so the two halves of the check
+# below cannot drift apart. The anchor is deliberate -- `python -m isekai` may be
+# run from anywhere, and a CWD-relative answer would make the same run root legal
+# or illegal depending on where the operator happened to be standing.
 
 
 def _identity(path: Path) -> tuple[int, int] | None:

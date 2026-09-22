@@ -7,8 +7,7 @@ vocabulary tags, using the schema and the standing instructions inside the flow 
 nothing about flows beyond the one directory it reads and writes.
 
 **Source:** `isekai/pipeline/sheet.py`, `isekai/shared/fields.py`, `isekai/shared/vocabulary.py`,
-`isekai/boundary/claude_cli.py`, `isekai/foundation/flow.py`, `flows/summon-v1/schema.json`,
-`flows/summon-v1/sheet.briefing.md` ·
+`isekai/shared/field_map.py`, `isekai/foundation/flow.py`, `flows/summon-anime-wai/schema.json` ·
 **Tests:** `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`,
 `tests/test_vocabulary.py`
 

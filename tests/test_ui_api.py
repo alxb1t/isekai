@@ -54,7 +54,7 @@ from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
 from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 
 @pytest.fixture
@@ -379,8 +379,9 @@ def test_an_input_with_neither_artifact_carries_null_and_still_serves(
 def test_one_list_present_and_the_other_absent_is_also_silent(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    # The state every `summon-v1` run is in: a WD14 list and no hosted one,
-    # because the flow declares no arm to tag on (design.md D3).
+    # The state a run is in when the hosted tagger has not been reached: a WD14
+    # list and no hosted one. A missing hosted list is an absent aid, never a
+    # blocked review (design.md D3).
     caption_wd14(made, FLOW, fake_tagger)
 
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
@@ -411,8 +412,8 @@ def test_every_criterion_the_flow_declares_is_answered_and_no_other(
     body = client.get("/api/fields").json()
 
     assert tuple(body["fields"]) == schema.names
-    # `summon-v1` declares sixteen of the twenty-one the table carries; the five
-    # only `conjure-v1` declares are absent rather than empty.
+    # `summon-anime-wai` declares sixteen of the twenty-one the table carries; the
+    # five only `conjure-anime-wai` declares are absent rather than empty.
     assert "bangs" in FIELD_MAP.fields
     assert "bangs" not in body["fields"]
 

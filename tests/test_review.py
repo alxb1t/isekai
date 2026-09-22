@@ -34,7 +34,7 @@ from tests.conftest import snapshot
 from tests.images import jpeg_bytes
 from tests.stages import caption, sheet
 
-FLOW = "summon-v1"
+FLOW = "summon-anime-wai"
 
 
 @pytest.fixture

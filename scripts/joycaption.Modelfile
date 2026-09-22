@@ -1,6 +1,6 @@
-# The `ollama create` recipe for the open reader — JoyCaption Beta One, the Q4_K
-# quantisation paired with its SigLIP2 vision projector. Stage ① of the
-# `summon-open-v1` flow calls the model this file builds.
+# The `ollama create` recipe for the reader — JoyCaption Beta One, the Q4_K
+# quantisation paired with its SigLIP2 vision projector. Stage ① of every tracked
+# flow calls the model this file builds, for the prose and for the hosted tags.
 #
 # Committed because it was never in the repository and cannot be reconstructed
 # from it: the two-`FROM` projector pairing is undocumented in Ollama's own
@@ -29,13 +29,15 @@
 # check `ollama show` lists `vision` under Capabilities **and** prints a
 # Projector block.
 #
-# ── the two commands, from the repository root ────────────────────────────────
+# ── the one command, from the repository root ─────────────────────────────────
 #
 #   ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
-#   ollama pull qwen3:8b
 #
-# The first builds the reader, stage ①. The second fetches the sorter, stage ② —
-# a public registry tag, which is why it needs no recipe of its own.
+# It builds the reader, stage ①, and the same alias answers the hosted tagger —
+# which is why TEMPLATE below matters: two calls to one model must not arrive
+# framed differently. There was a second command here, `ollama pull qwen3:8b`,
+# fetching the sorter for stage ②. Nothing has called it since v0.21 filled the
+# sheet from the tagger instead, and v0.22 removed the key that named it.
 #
 # ── why the TEMPLATE line is here when the original did not carry one ─────────
 # The quantisation ships no chat template, so Ollama defaults to passing the

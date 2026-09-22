@@ -1,8 +1,10 @@
 """The repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
-Six constants across five files anchor a repository path on their own `__file__`
+Six constants across four files anchor a repository path on their own `__file__`
 -- v0.16's fold took `SCHEMAS_DIR` and `BRIEFINGS_DIR` with it, because a schema
-and a briefing are a flow's now and a flow is reached through `FLOWS_DIR`. Each is
+and a briefing are a flow's now and a flow is reached through `FLOWS_DIR`, and
+v0.22 replaced `claude_cli.ROOT` with `run.REPOSITORY` when the file it lived in
+was deleted -- the same anchor, named where `DATA_ROOT` already is. Each is
 asserted **absolutely**: strip the anchor's own suffix, and what remains must be
 the directory holding `pyproject.toml`. None of them is compared against another
 constant, because two constants that move together prove nothing about where
@@ -25,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary import claude_cli, provision
+from isekai.boundary import provision
 from isekai.evaluation import eval_models
 from isekai.foundation import flow, run
 
@@ -37,6 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # count.
 ANCHORS = (
     pytest.param(run.DATA_ROOT, (".data",), id="run.DATA_ROOT"),
+    pytest.param(run.REPOSITORY, (), id="run.REPOSITORY"),
     pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
     pytest.param(
         provision.MANIFEST_PATH,
@@ -53,7 +56,6 @@ ANCHORS = (
         ("scripts", "eval_models.json"),
         id="eval_models.EVAL_MANIFEST_PATH",
     ),
-    pytest.param(claude_cli.ROOT, (), id="claude_cli.ROOT"),
 )
 
 
