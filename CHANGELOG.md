@@ -25,6 +25,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`CLAUDE.md` is agent operating instructions, and nothing else.** 420 lines to 316. `## The path`
+  is gone — an audit's verdict on it was *"almost entirely data flow and architecture, with no agent
+  instruction in it"* — and `## Layout`'s per-group inventory is **deleted rather than moved**, because
+  the six group READMEs already hold it and moving it would have created a seventh copy (`0024`
+  design.md D3). What was rule rather than description in either section stayed, relocated to the
+  section that owns the rule: *only an approved artifact is ever rendered*, *assembly happens before
+  any endpoint is acquired*, *refuse the input rather than the batch*, *stage ① is one verb*, *`review`
+  and `approve` stay working verbs*, and the two system dependencies now sit together under a new
+  **`## Rules the render path is under`**, which opens by saying what it is not restating.
+
+- **The file states its own ceiling.** The system summary is one paragraph, and the note under it says
+  so: a fuller account belongs in `docs/arc/`, and a paragraph here that starts explaining how
+  something works rather than what to do about it belongs there too. The ceiling is the point — an
+  unbounded summary paragraph is how `## The path` grew the first time.
+
+- **The identity mechanisms moved to `docs/arc/data-flow.md` with the rest of the path**, and the
+  dials are **named without their values**: the values live in `flows/<id>/flow.json`, and a value
+  written twice is a value that can disagree with itself. The working-resolution rule, `clip_skip`'s
+  home in the manifest, and the `models/wd14/` pairing travel with them.
+
+- **Smaller cuts, all of them description.** The measured-implementation constraint lost its
+  version-by-version history and kept its rule. The seam list lost `image.py`'s and `generate.py`'s
+  module descriptions, whose rules now sit in the render-path section, and the `ComfyTransport` entry
+  lost the account of the transport that was deleted a version ago. The living-spec paragraph lost the
+  history of its own wrong counts, which was three sentences explaining why the names below it should
+  be read instead. The keybinding rule lost the narrative of the violation `v0.22.1` closed.
+
 ### Added
 
 - **`docs/arc/`, and it is where this repository's architecture is drawn.** Two files, prose and ASCII,

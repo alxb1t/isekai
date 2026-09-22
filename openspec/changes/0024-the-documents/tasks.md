@@ -4,7 +4,7 @@
 
 - [x] 1 — The sweep: what this repository says about itself
 - [x] 2 — `docs/arc/`: the module graph and the data flow
-- [ ] 3 — `CLAUDE.md`: cut to agent operating instructions
+- [x] 3 — `CLAUDE.md`: cut to agent operating instructions
 - [ ] 4 — The spec catches up with the code, and the one code change
 - [ ] 5 — Seventeen scenarios
 - [ ] 6 — Rebind the seventeen tests
@@ -157,18 +157,18 @@ code change, that is a backlog row, not a task here.
 
 ## 3 — `CLAUDE.md`: cut to agent operating instructions
 
-- [ ] 3.1 **`## The path` (`:281-386`) leaves.** Its content is `docs/arc/data-flow.md`'s. Anything in it
+- [x] 3.1 **`## The path` (`:281-386`) leaves.** Its content is `docs/arc/data-flow.md`'s. Anything in it
   that is a *rule* rather than a description stays, relocated to the section that owns the rule.
 
-- [ ] 3.2 **`## Layout`'s per-group inventory (`:191-249`) is deleted, not moved** — the six group
+- [x] 3.2 **`## Layout`'s per-group inventory (`:191-249`) is deleted, not moved** — the six group
   READMEs already hold it, and moving it would create a seventh copy (`design.md` D3). What stays from
   that section: the flow-directory rules, the ignored-roots table (with `.inputs/`), and the precedence
   statements.
 
-- [ ] 3.3 **Add a one-paragraph system summary with a stated ceiling in the file itself.** The ceiling is
+- [x] 3.3 **Add a one-paragraph system summary with a stated ceiling in the file itself.** The ceiling is
   the point: that paragraph is how `## The path` grew the first time.
 
-- [ ] 3.4 **Verify the result is instructions.** Read every remaining paragraph and ask *does this tell an
+- [x] 3.4 **Verify the result is instructions.** Read every remaining paragraph and ask *does this tell an
   agent what to do?* **Target ~200 lines from 420** — a target, not a gate. **Gate green. CHANGELOG.
   Tick 3. Commit.**
 

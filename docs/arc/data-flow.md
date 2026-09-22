@@ -89,6 +89,43 @@ a directory an artifact is `NNN.json`, with `NNN.draft.json` and
 `NNN.approved.json` where a stage has that concept — `approved` is a filename
 label, not a directory of its own.
 
+## How identity is carried
+
+Identity is carried by mechanisms, not by a sentence someone types into a prompt. Each axis is a leg
+of the graph, and each leg's strength is a **dial the flow's manifest declares** — the values live in
+`flows/<id>/flow.json` and are not repeated here, because a value written twice is a value that can
+disagree with itself.
+
+| axis | carried by | its dials |
+|---|---|---|
+| Face | InstantID + InsightFace — face embedding and keypoints | `ip_weight`, `identity_cn_strength` |
+| Composition | **from noise** — `EmptyLatentImage` at full `denoise` | — |
+| Pose | a ControlNet on OpenPose, off `DWPreprocessor` | `openpose_strength` |
+| Detail | a hires pass — `RealESRGAN_x4plus_anime_6B` upscale, then a second sampler | `hires_scale`, `hires_denoise` |
+| Register | the prompts, **assembled per run** from an approved sheet | the manifest's prefix, trailer and negative |
+
+**Composition comes from noise, and that is settled.** Taking the photograph out of the latent is what
+removed the blur; img2img is a closed avenue here.
+
+**Register is the one a human touches.** The manifest carries a prefix, a trailer and the negative;
+the subject's own canonical tags come from the sheet a human corrected. That correction is the single
+largest measured gain in this pipeline, which is why only an approved artifact is ever rendered.
+
+Before any node reads the photograph, an `ImageScale` node puts it on one working resolution computed
+by `isekai/shared/image.py` from the photograph's own JPEG or PNG header: aspect preserved, short side
+fixed, both dimensions on the grid the sampler needs, and refused past the aspect limit rather than
+clamped. No node available here can derive that. A header the reader cannot parse refuses *that
+photograph*, rather than defaulting or ending the batch. `clip_skip` is declared in the manifest
+rather than committed to the graph file, because the published samples for this base all generate at
+a clip skip their prose never states.
+
+**`models/wd14/` is one artifact split in two**, and both halves are pinned in
+`scripts/vocabulary.json`. Row N of `selected_tags.csv` names output neuron N of `model.onnx`, so a
+pair from mismatched revisions mislabels every tag — silently, because the vector still has the right
+length and every name in it is still a real tag. Both digests are verified before the first inference,
+and a WD14 artifact is the only producer here that records `pinned: true`; `python -m isekai show`
+reports it without the word *unpinned* that every other artifact still carries.
+
 ## What costs money, and what does not
 
 Everything before `generate` is free and local. Prompt assembly happens for the
