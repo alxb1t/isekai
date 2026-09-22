@@ -116,6 +116,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which is the cost of splitting prose from code, and cheaper than the alternative only if the
   documentation version ships close behind the code version it describes.
 
+### Verified
+
+- **The re-pin, recorded: what moved, in both flows.** `design.md` D2 and the modified requirement
+  both oblige a re-pinning change to leave this behind in prose a later reader can find.
+
+  | flow | digest before | digest after |
+  |---|---|---|
+  | `conjure-anime-wai` | `1e991c2be7290a40dbe3301619c67b0bb9c5bb9914f22e6c54ce7078903c6615` | `5de6632e33a83377347f887663213eb69733636edb3a380372e00ab3a9171f61` |
+  | `summon-anime-wai` | `8ddd4016dadd16d2b8a740e420e9478ae37ef5b43959c4e86ec1974f5d0792fb` | `3ad0f323d0f4a826cd06a0c37b47fbcceceaa4e8c6074a1153529b5f2ee73e7f` |
+
+  Two strings moved in each flow, and nothing else did — `git diff --stat -- flows/` shows exactly
+  `flow.json` and `graph.json` in each of the two directories. In `flow.json`,
+  `"bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust"` became
+  `"bad quality, worst quality, sketch, lens flare, light particles, dust"`. In `graph.json`,
+  `"bad quality, worst quality, worst detail, sketch, censor, nsfw"` became `""`. **Neither flow
+  identifier changed**, because the old configuration is abandoned rather than still wanted; no run
+  is orphaned, since orphaning follows a changed id and `manifest_digest` has one consumer.
+- **Accepted on a pod, by eye, on the operator's own photographs.** Seven photographs, both flows,
+  fourteen renders in one pod session — 20m 07s on an RTX PRO 4500 Blackwell at $0.72/hr, ≈$0.24,
+  inside the 45-minute and ~$0.30 guardrail. The pod was torn down in the same session and its
+  absence confirmed against the provider's API, not against the teardown script's own output.
+  Assembly of all fourteen prompts was proved with `--server` omitted before the pod existed, and
+  every assembled negative read `bad quality, worst quality, sketch, lens flare, light particles,
+  dust` with none carrying `censor`, `nsfw` or `worst detail`. **The operator's verdict on the
+  images was that they are good, and the acceptance passed on that.**
+- **A clean checkout runs `caption` with no extra flag** — `rm -rf .venv && uv sync --locked`, then
+  `caption` wrote the prose, the local WD14 tag list and the hosted tag list. The middle one is the
+  artifact the gate used to make impossible.
+
+### Not verified
+
+- **No cohort was scored, and the claim is not that the images are measurably better.** Every render
+  made for this version is post-change: there is no before-image for any of these photographs at
+  these seeds, so nothing here is a controlled comparison against the old negative. The operator's
+  original finding came from their own earlier renders, and this version does not reproduce it — it
+  establishes that the new negative renders cleanly end to end on both flows, and rests the rest on
+  judgement by eye. **That is the posture this repository already takes toward diffusion quality**,
+  and the evaluation sub-system that would replace it is v0.23's; this version does not anticipate it.
+- **Nothing on disk says which side of the re-pin a run falls on.** A run's provenance records the
+  graph digest, not the flow directory's, so a cohort spanning the edit cannot be split by it after
+  the fact. Filed as a run-provenance change rather than fixed here.
+- **An intermittent native abort in the tagger, on macOS, seen and not diagnosed.** Three `caption`
+  invocations printed `libc++abi: terminating due to uncaught exception of type
+  std::__1::system_error: recursive_mutex lock failed` — an onnxruntime threadpool teardown race at
+  interpreter exit. It fired *after* every artifact was written, all runs are complete, and a
+  targeted re-run did not reproduce it. Exit codes were not captured on the invocations where it
+  fired, so whether it aborted those processes is unknown rather than benign.
+
 ## [0.22.2] - 2026-09-22
 
 ### Changed
