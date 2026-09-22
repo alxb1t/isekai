@@ -18,6 +18,18 @@ class Unreachable(Refusal):
     went away, and `check_budget` short-circuits a `permanent` record for good.
     Recording a closed tunnel as permanent made the operator's remedy deleting a
     file by hand.
+
+    **A subclass, and not the `Kind` this repository otherwise classifies
+    with.** `ollama.OllamaFailure` carries a `Kind` field precisely so a
+    boundary need not invent a vocabulary, and that is the better pattern where
+    it fits. It does not fit here: this one has to stay a `Refusal`, because
+    `main()` prints it and exits 1 and every other caller must be unchanged --
+    and a `Kind` cannot be attached to `Refusal` itself, since `refusal.py`
+    imports nothing by design and `Kind` lives in `run.py`, which imports
+    `refusal.py`. A `kind` attribute read through `getattr` with a default
+    would be the same conditional, spelled less honestly. If a second transient
+    transport failure ever appears -- a queue eviction, a 5xx from the proxy --
+    that is the point to add the field rather than a second subclass.
     """
 
 

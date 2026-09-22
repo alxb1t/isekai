@@ -58,8 +58,10 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
     )
 
 
-# The build config files `_is_fresh` watches beside `src/` and `index.html`.
-_CONFIGS = ("package.json", "package-lock.json")
+# Every file in `ui/` that is neither `src/` nor an ignored root. `_is_fresh`
+# watches them by exclusion rather than by name, so `tsconfig.json` -- which
+# `vite` reads and which no allowlist here ever named -- is in this list.
+_CONFIGS = ("vite.config.ts", "tsconfig.json", "package.json", "package-lock.json")
 
 # A run id is a digest of the photograph, so two inputs need two photographs --
 # identical bytes would collapse a "batch of three" into one run directory and
@@ -417,31 +419,39 @@ def test_a_bundle_older_than_its_source_is_rebuilt_rather_than_served(
     assert not bundle._is_fresh(source / "dist", source)
 
 
+def _built_tree(tmp_path: Path) -> Path:
+    """Return a `ui/` whose `dist/` is newer than every source beside it."""
+    source = tmp_path / "ui"
+    (source / "src").mkdir(parents=True)
+    (source / "dist").mkdir()
+    (source / "node_modules").mkdir()
+    (source / "index.html").write_text("<!doctype html>")
+    (source / "dist" / "index.html").write_text("built")
+    (source / "src" / "App.vue").write_text("component")
+    for name in _CONFIGS:
+        (source / name).write_text("{}")
+    for item in source.rglob("*"):
+        os.utime(item, (1_000, 1_000))
+    os.utime(source / "dist" / "index.html", (2_000, 2_000))
+    return source
+
+
 @pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
-@pytest.mark.parametrize(
-    "name", ["vite.config.ts", "package.json", "package-lock.json"]
-)
+@pytest.mark.parametrize("name", _CONFIGS)
 def test_a_build_config_edited_after_the_build_makes_the_bundle_stale(
     tmp_path: Path, name: str
 ) -> None:
-    """The three inputs `_is_fresh` did not watch until v0.22.1.
+    """The inputs `_is_fresh` did not watch until v0.22.1.
 
     A bumped dependency, an added vite plugin or a changed build script all
     change the emitted bundle and move nothing under `src/` -- so the operator
     went on being served the previous build, silently, with a green gate
-    (v0.20 R6, v0.20 security/S2).
+    (v0.20 R6, v0.20 security/S2). `tsconfig.json` is in this list because the
+    fix is an exclusion rather than a list of build inputs: an allowlist naming
+    the other three would have missed it, which is how the list was wrong the
+    first time.
     """
-    source = tmp_path / "ui"
-    (source / "src").mkdir(parents=True)
-    (source / "dist").mkdir()
-    (source / "index.html").write_text("<!doctype html>")
-    (source / "dist" / "index.html").write_text("built")
-    (source / "src" / "App.vue").write_text("component")
-    for every in (source / "vite.config.ts", *(source / n for n in _CONFIGS)):
-        every.write_text("{}")
-    for item in source.rglob("*"):
-        os.utime(item, (1_000, 1_000))
-    os.utime(source / "dist" / "index.html", (2_000, 2_000))
+    source = _built_tree(tmp_path)
 
     assert bundle._is_fresh(source / "dist", source)
 
@@ -451,11 +461,46 @@ def test_a_build_config_edited_after_the_build_makes_the_bundle_stale(
 
 
 @pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
-def test_the_build_is_bounded_in_time() -> None:
-    # `npm run build` can reach the network resolving a missing dependency, and
-    # an `isekai ui` that hangs with no port bound and no output is
-    # indistinguishable from one that died (v0.20 R9').
-    assert bundle.BUILD_TIMEOUT > 0
+def test_a_fetched_dependency_tree_is_not_source(tmp_path: Path) -> None:
+    # The other half of the exclusion: `node_modules/` is fetched and `dist/` is
+    # this function's own output, so neither may make the bundle look stale --
+    # `npm install` alone would otherwise force a rebuild on every startup.
+    source = _built_tree(tmp_path)
+    (source / "node_modules" / "left-pad.js").write_text("module.exports = 1")
+    os.utime(source / "node_modules" / "left-pad.js", (3_000, 3_000))
+
+    assert bundle._is_fresh(source / "dist", source)
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_a_build_that_does_not_finish_is_stopped_and_named(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The ceiling is applied, not merely declared.
+
+    Asserting `BUILD_TIMEOUT > 0` restates the constant and stays green if the
+    `timeout=` kwarg is dropped from the call, which is the only way this can
+    regress. `npm run build` can reach the network resolving a missing
+    dependency, and an `isekai ui` that hangs with no port bound and no output
+    is indistinguishable from one that died (v0.20 R9').
+    """
+    source = tmp_path / "ui"
+    (source / "node_modules").mkdir(parents=True)
+    passed: dict[str, object] = {}
+
+    def never_finishes(*args: object, **kwargs: object) -> object:
+        passed.update(kwargs)
+        raise subprocess.TimeoutExpired(cmd="npm run build", timeout=1)
+
+    monkeypatch.setattr(bundle.shutil, "which", lambda _: "/usr/bin/npm")
+    monkeypatch.setattr(bundle.subprocess, "run", never_finishes)
+
+    with pytest.raises(Refusal) as refused:
+        bundle.ensure_built(source)
+
+    assert passed["timeout"] == bundle.BUILD_TIMEOUT
+    assert f"{bundle.BUILD_TIMEOUT} seconds" in str(refused.value)
+    assert "by hand" in str(refused.value)
 
 
 @pytest.mark.spec_exempt("structural: when the on-demand build actually fires")

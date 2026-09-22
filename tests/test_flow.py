@@ -19,13 +19,13 @@ from isekai.foundation.flow import (
     MANIFEST_VERSION,
     REQUIRED,
     REQUIRED_NODES,
-    ROLE_DIALS,
     SAMPLER_DIALS,
     SCHEMA_NAME,
     SIBLINGS,
     TRANSFERRED_INPUTS,
     Flow,
     assemble,
+    dials_read,
     load_flow,
     manifest_digest,
     tracked_flows,
@@ -437,14 +437,8 @@ def test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads(
     here rather than sitting unread.
     """
     loaded = load_flow(name)
-    read = {
-        dial
-        for role, dials in ROLE_DIALS.items()
-        if role in loaded.nodes
-        for dial in dials
-    }
 
-    assert set(loaded.dials) == read
+    assert set(loaded.dials) == dials_read(loaded.nodes)
 
 
 @pytest.mark.spec("image-generation:roles:transferred-input-and-node-must-agree")

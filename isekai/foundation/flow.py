@@ -328,6 +328,19 @@ def tracked_flows(flows_dir: Path = FLOWS_DIR) -> list[str]:
     )
 
 
+def dials_read(nodes: Mapping[str, Any]) -> set[str]:
+    """Return every dial the roles in `nodes` are patched from.
+
+    The production rule, stated once. `load_flow` refuses a manifest missing
+    any of these and `tests/test_flow.py` checks the other direction -- that a
+    tracked flow declares no dial nothing reads -- and a test that re-derived
+    the rule would be checking its own copy of it rather than this one.
+    """
+    return {
+        dial for role, dials in ROLE_DIALS.items() if role in nodes for dial in dials
+    }
+
+
 def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     """Read one flow's manifest, refusing naming the field that is wrong.
 
@@ -434,15 +447,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     # Role-conditional: only the dials the roles this flow *declares* are read.
     # A flow with no identity adapter and no pose preprocessor declares neither
     # `ip_weight` nor `openpose_strength`, and is correct (design.md D4).
-    needed = sorted(
-        {
-            dial
-            for role, dials in ROLE_DIALS.items()
-            if role in document["nodes"]
-            for dial in dials
-        }
-        - set(document["dials"])
-    )
+    needed = sorted(dials_read(document["nodes"]) - set(document["dials"]))
     if needed:
         raise Refusal(
             f"{flow}/{MANIFEST_NAME}: `dials` declares no {', '.join(needed)}, "

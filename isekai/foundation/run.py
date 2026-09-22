@@ -572,7 +572,7 @@ def refusal_for(
     kind: Kind,
     detail: str,
     record: Path,
-    where: str,
+    area: str,
     verb: str,
     flow: str,
 ) -> Refusal:
@@ -582,16 +582,22 @@ def refusal_for(
     and the command to run once what it names is fixed. Stated here beside
     `StageFailure` rather than twice, because the two stages differ only in nouns.
 
-    **`flow` is an argument of its own and not read out of `where`.** Every stage
+    **`flow` is threaded in rather than patched at the call sites.** Every stage
     verb has taken `--flow`, required, since v0.16, so the command this built
     without it was one argparse refuses -- and copy-pasting the remedy a refusal
-    states got an operator a usage error instead of the fix. Threading it here
-    rather than patching the call sites is what makes that true of every caller
-    at once, including the ones a later stage adds.
+    states got an operator a usage error instead of the fix. One argument makes
+    that true of every caller at once, including the ones a later stage adds.
+
+    **And the flow is passed once, not twice.** The record's location is
+    `<flow>/<area>/`, so taking a ready-made `where` beside `flow` would be the
+    same fact in two forms, with nothing but caller discipline holding them in
+    agreement -- a refusal naming one flow's record and another flow's remedy is
+    the exact class of defect this argument exists to close. `area` is the stage
+    directory alone; this joins them.
     """
     return Refusal(
         f"{run_id}: the {stage} failed ({kind}) -- {detail}; "
-        f"see {record.name} in {where}, and run "
+        f"see {record.name} in {flow}/{area}/, and run "
         f"`python -m isekai {verb} --flow {flow}` again "
         "once what it names is fixed"
     )

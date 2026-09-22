@@ -50,8 +50,8 @@ from isekai.foundation.run import (
     OUTPUTS,
     PROMPTS,
     REVIEW,
-    Kind,
     Run,
+    across,
     approved_versions,
     artifact_name,
     check_budget,
@@ -63,7 +63,7 @@ from isekai.foundation.run import (
 from isekai.shared.atomic_write import write_atomically
 from isekai.shared.image import (
     MAX_TARGET_LONG_SIDE,
-    image_dimensions,
+    dimensions_or_refuse,
     working_resolution,
 )
 
@@ -212,12 +212,12 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     so "a run renders everything it has been approved for" is unchanged and
     "rendering did nothing and said nothing" is no longer reachable.
 
-    **One flow's malformed sheet costs that flow alone.** This returns what was
-    assembled *and* what refused, for the same reason `across` collects per
-    photograph rather than stopping at the first: the flows of one run are
-    independent -- separate subtrees, separate sheets, separate error records --
-    so a dict comprehension raising at the first broken one took every sibling's
-    turn with it, and did it after already writing a permanent record (v0.16 R6).
+    **One flow's malformed sheet costs that flow alone**, and it is `across`
+    that says so -- the same call `cli.py` collects photographs with, one axis
+    down. The flows of a run are independent -- separate subtrees, separate
+    sheets, separate error records -- so a dict comprehension raising at the
+    first broken one took every sibling's turn with it, and did it after
+    already writing a permanent record (v0.16 R6).
     """
     ready = [flow for flow in approved_flows(run) if flow in flows]
     if flows and not ready:
@@ -231,13 +231,11 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
             f"draft, then `python -m isekai approve {naming}`"
         )
     assembled: dict[str, Path] = {}
-    refused: list[str] = []
-    for flow in ready:
-        try:
-            assembled[flow] = prompt_artifact(run, flows[flow], flows[flow].schema)
-        except Refusal as broken:
-            refused.append(str(broken))
-    return assembled, refused
+
+    def assemble_one(flow: str) -> None:
+        assembled[flow] = prompt_artifact(run, flows[flow], flows[flow].schema)
+
+    return assembled, across(ready, assemble_one)
 
 
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:
@@ -261,11 +259,9 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
 def photo_resolution(photo: Path) -> tuple[int, int]:
     """Return the working resolution for `photo`, as a refusal rather than an exit.
 
-    `image_dimensions` stops the process with `sys.exit` -- correct for the
-    single-photograph command it was written for, wrong here. A batch must survive
-    one unreadable header: `across` collects refusals and a `SystemExit` walks
-    straight past it, taking the remaining photographs with it after the endpoint
-    is already rented.
+    The `sys.exit` that `image_dimensions` reports an unreadable header with is
+    turned into a `Refusal` by `shared.image.dimensions_or_refuse`, which owns
+    that wrap for every caller -- this one and the review surface's.
 
     `MAX_TARGET_LONG_SIDE` is enforced here for the same reason and in the same
     currency -- see its own comment in `isekai.shared.image` for what it bounds and why.
@@ -275,14 +271,14 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
     value would silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect
     (design.md D4).
     """
-    try:
-        width, height = working_resolution(*image_dimensions(str(photo)))
-    except SystemExit as unreadable:
-        raise Refusal(
-            f"{unreadable}; the render target is derived from the photograph's "
-            "own header and there is nothing to fall back to -- re-export the "
-            "photograph as a JPEG or PNG and open the run again"
-        ) from unreadable
+    width, height = working_resolution(
+        *dimensions_or_refuse(
+            photo,
+            "the render target is derived from the photograph's own header and "
+            "there is nothing to fall back to -- re-export the photograph as a "
+            "JPEG or PNG and open the run again",
+        )
+    )
     if max(width, height) > MAX_TARGET_LONG_SIDE:
         raise Refusal(
             f"{photo.name}: a {width}x{height} target is past the "
@@ -442,11 +438,10 @@ def render(
             # short-circuits a `permanent` record for good -- so recording one
             # here made the operator's remedy deleting a file by hand, on the
             # one failure that is over the moment the pod comes back (v0.13 R7).
-            kind: Kind = "transient" if isinstance(failed, Unreachable) else "permanent"
             record_failure(
                 directory,
                 version,
-                kind,
+                "transient" if isinstance(failed, Unreachable) else "permanent",
                 {"stage": STAGE_RENDER, "seed": seed, "detail": str(failed)},
             )
             raise

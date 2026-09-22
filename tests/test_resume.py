@@ -417,8 +417,6 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     that ships, so a remedy an operator pastes back cannot be a usage error
     (v0.16 R5, design.md D10).
     """
-    from isekai.interface.cli import build_parser
-
     printed = [
         command
         for message in _every_refusal(wired, tmp_path)
@@ -432,8 +430,7 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
         words = command.split()
         # `show` reads a run directory and takes no flow; every other verb does,
         # required, so a bare one would be refused by the parser below.
-        expected = [] if words[0] == "show" else ["--flow"]
-        assert [word for word in words if word == "--flow"][:1] == expected
+        assert ("--flow" in words) == (words[0] != "show")
         build_parser().parse_args([*words, "an-identifier"])
 
 

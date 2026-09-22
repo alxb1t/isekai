@@ -113,10 +113,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `image_dimensions()` unguarded and it exits via `sys.exit`, a `BaseException` that `across` -- which
   catches `Refusal` -- walks straight past; with two bad photographs neither was named. The same wrap
   already existed one module away at `generate.photo_resolution`.
-- **The bundle is rebuilt when a build *config* changes, not only its source.** `_is_fresh` compared
-  `ui/src/` and `ui/index.html` alone, so a bumped dependency, an added vite plugin or a changed build
-  script left the previous build being served, silently and with a green gate. `vite.config.ts`,
-  `package.json` and `package-lock.json` join them.
+- **The bundle is rebuilt when anything it is built from changes, not only its source.** `_is_fresh`
+  compared `ui/src/` and `ui/index.html` alone, so a bumped dependency, an added vite plugin or a changed
+  build script left the previous build being served, silently and with a green gate. It now compares
+  everything under `ui/` **except the two ignored roots** — `dist/`, its own output, and `node_modules/`,
+  which is fetched. Stated as an exclusion rather than as a list of build inputs, because that list was
+  wrong twice: naming `vite.config.ts`, `package.json` and `package-lock.json` would still have missed
+  `tsconfig.json`, which `vite` reads and which is in that directory today.
 - **`npm run build` is bounded in time.** It can reach the network resolving a missing dependency, and
   an `isekai ui` that hangs with no port bound and no output is indistinguishable from one that died.
 - **The hosted tag panel shows each tag once.** `OfferedTag` is `{tag, posts}` where `posts` is a pure
@@ -132,6 +135,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Cmd+Z` matches `event.code`.** Under a Cyrillic layout it produced `event.key === 'я'` and the
   branch did nothing. The same handler already argued for `event.code` thirteen lines earlier; this is
   that binding only -- `TagInput.vue`'s thirteen `event.key` branches are a keyboard re-work of their own.
+- **`show` returns its lines rather than yielding them.** `report` was a generator, so the guarantee that
+  everything refusable is read before the first line is printed rested on a docstring asking the next
+  editor to keep it so. Both callers drain it in full, so laziness bought nothing and cost the ordering.
+- **One wrap around `image_dimensions`, in the module that owns it.** `shared/image.py` gains
+  `dimensions_or_refuse`; the render path and the review surface had grown two copies of the same
+  `SystemExit` → `Refusal` translation, with two wordings for one failure.
 - **A dead guard is gone from `/api/tags`.** `if (posts := vocabulary.count(tag)) is not None` dropped no
   row -- `count()` returns `int` -- and read as though a fragment match might have no count.
 

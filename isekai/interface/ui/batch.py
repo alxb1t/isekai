@@ -40,7 +40,7 @@ from isekai.foundation.run import (
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import DRAFT, review
 from isekai.shared.field_map import FieldMap
-from isekai.shared.image import image_dimensions
+from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
 
 
@@ -180,17 +180,14 @@ def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:
         )
     run = Run(identifier, directory)
     review(run, flow)
-    try:
-        width, height = image_dimensions(str(run.photo))
-    except SystemExit as unreadable:
-        # `image_dimensions` stops the process, which is correct for the
-        # single-photograph command it was written for and wrong here: a
-        # `SystemExit` is a `BaseException`, so `across` walks straight past it
-        # and the batch dies naming nothing. The same wrap already exists one
-        # module away, at `generate.photo_resolution` (v0.18 R7).
-        raise Refusal(
-            f"{identifier}: {unreadable}; the surface reads the photograph's "
-            "own header to size the page and there is nothing to fall back to "
-            "-- re-export it as a JPEG or PNG and start the surface again"
-        ) from unreadable
+    # Through the one wrap, in the module that owns the hazard: an unreadable
+    # header is reported by `sys.exit`, a `BaseException` that `across` walks
+    # straight past -- so unwrapped, one bad photograph killed the batch and
+    # named nothing (v0.18 R7).
+    width, height = dimensions_or_refuse(
+        run.photo,
+        "the surface reads the photograph's own header to size the page and "
+        "there is nothing to fall back to -- re-export it as a JPEG or PNG and "
+        "start the surface again",
+    )
     return Input(run, width, height)

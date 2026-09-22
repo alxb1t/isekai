@@ -240,7 +240,7 @@ def caption(
             failed.kind,
             failed.detail,
             record,
-            f"{flow}/{CAPTIONS}/",
+            CAPTIONS,
             STAGE,
             flow,
         ) from failed

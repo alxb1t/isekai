@@ -259,7 +259,7 @@ gate says on any day and cannot be the acceptance on its own.**
 
 - [x] 7.4 **Confirm `Cmd+Z` under a Cyrillic layout**, which is the defect's whole subject.
 
-- [ ] 7.5 **`/simplify` over this change's own diff**, as every change in this repository closes.
+- [x] 7.5 **`/simplify` over this change's own diff**, as every change in this repository closes.
 
 - [x] 7.6 **Record what was NOT verified**: stage ④ was not run, so no render was produced and no pod was
   rented. **That is the design, not a gap** — the flow directories are untouched and `manifest_digest`

@@ -152,13 +152,16 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         fragment = q.strip()
         found = batch.vocabulary.search(fragment) if fragment else []
         return {
+            # The count is bound where it is used. The `is not None` guard this
+            # once carried dropped no row -- `count()` returns `int` -- and read
+            # as though some fragment match might have no count (v0.18 R11).
             "matches": [
-                {"tag": tag, "posts": posts, "rare": posts < RARE_BELOW}
+                {
+                    "tag": tag,
+                    "posts": (posts := batch.vocabulary.count(tag)),
+                    "rare": posts < RARE_BELOW,
+                }
                 for tag in found[: max(limit, 0)]
-                # `count()` returns `int`, so the `is not None` guard this once
-                # carried dropped no row and read as though some fragment match
-                # might have no count (v0.18 R11).
-                for posts in (batch.vocabulary.count(tag),)
             ],
             "total": len(found),
         }
@@ -390,14 +393,13 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     # the artifact on disk is untouched either way. `_wd14` must **not** get the
     # same treatment: `ScoredTag` is `{tag, confidence}`, where two rows can
     # legitimately differ (design.md D7).
-    marked: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for tag in listed:
-        name = str(tag)
-        if name in batch.vocabulary and name not in seen:
-            seen.add(name)
-            marked.append({"tag": name, "posts": batch.vocabulary.count(name)})
-    return marked
+    # `dict.fromkeys` preserves order, so the dedup is visible in the iterator
+    # rather than spread across a parallel set and a two-clause condition.
+    return [
+        {"tag": name, "posts": batch.vocabulary.count(name)}
+        for name in dict.fromkeys(str(tag) for tag in listed)
+        if name in batch.vocabulary
+    ]
 
 
 def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:

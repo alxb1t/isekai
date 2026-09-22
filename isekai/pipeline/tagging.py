@@ -278,7 +278,7 @@ def caption_wd14(
             "permanent",
             str(failed),
             record,
-            f"{flow}/{WD14}/",
+            WD14,
             VERB,
             flow,
         ) from failed
@@ -344,7 +344,7 @@ def caption_tags(
             failed.kind,
             failed.detail,
             record,
-            f"{flow}/{TAGS}/",
+            TAGS,
             VERB,
             flow,
         ) from failed
