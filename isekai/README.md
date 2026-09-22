@@ -29,23 +29,15 @@ two modules can reach each other through.
 
 **A group is a filing decision, not a layering rule.** The *module* graph has no
 cycles and never has; the *group* graph does, and drawing it as a stack would be a
-lie. `foundation` holds `refusal`, which everything raises, so `boundary` imports
-back into it; `shared/vocabulary.py` reaches both `boundary/provision.py` and
-`evaluation/eval_models.py` **lazily, at call time** — both imports sit inside
-`load()`, so neither is an import-time edge. Every cross-group edge that exists
-today, by source:
+lie.
 
-```
-  interface   ──▶ pipeline · foundation · shared · boundary
-  pipeline    ──▶ foundation · shared · boundary
-  evaluation  ──▶ foundation · shared · boundary
-  foundation  ──▶ shared · boundary
-  shared      ──▶ foundation · boundary (lazy) · evaluation (lazy)
-  boundary    ──▶ foundation · shared · evaluation (lazy)
-```
-
-Read it as *what each group is allowed to know about*, and check the module graph
-— not this table — when the question is whether something is acyclic.
+**The graph itself is drawn in [`docs/arc/modules.md`](../docs/arc/modules.md)**,
+and only there — every cross-group edge, which of them are lazy, the subpackage
+cycles and why each one exists. It is one drawing in one place because two
+drawings is how the one that used to sit here acquired its errors: a module-level
+edge missing outright, a laziness annotated backwards, and `interface/ui`
+collapsed away. The file tables below stay, because a file table is a local fact
+and a graph is not.
 
 **Two rules the layout is holding, not describing.** The runtime is stdlib-only:
 nothing in `python -m isekai`'s import graph may need a wheel, and a subprocess

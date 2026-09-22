@@ -300,6 +300,7 @@ isekai/
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
+├── docs/arc/                  # the module graph and the stage data flow — drawn once, here
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)
 ├── Makefile                   # `make gate`

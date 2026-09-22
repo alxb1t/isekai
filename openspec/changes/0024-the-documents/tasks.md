@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The sweep: what this repository says about itself
-- [ ] 2 — `docs/arc/`: the module graph and the data flow
+- [x] 2 — `docs/arc/`: the module graph and the data flow
 - [ ] 3 — `CLAUDE.md`: cut to agent operating instructions
 - [ ] 4 — The spec catches up with the code, and the one code change
 - [ ] 5 — Seventeen scenarios
@@ -116,7 +116,7 @@ code change, that is a backlog row, not a task here.
 
 **Two files. Prose, short sentences, ASCII where it helps, and no quantities** (`design.md` D2).
 
-- [ ] 2.1 **`docs/arc/modules.md`.** Measured at HEAD and unchanged since `bb01f79`:
+- [x] 2.1 **`docs/arc/modules.md`.** Measured at HEAD and unchanged since `bb01f79`:
 
   ```
   Module-level, cross-group:
@@ -141,16 +141,16 @@ code change, that is a backlog row, not a task here.
   has; the group graph does, and drawing it as a stack would be a lie"* — and say **why** each cycle
   exists: `refusal` is what everything raises, and `atomic_write` is a primitive `run` writes through.
 
-- [ ] 2.2 **`docs/arc/data-flow.md`.** The seven verbs from `interface/cli.py:70-78`, what each stage
+- [x] 2.2 **`docs/arc/data-flow.md`.** The seven verbs from `interface/cli.py:70-78`, what each stage
   reads and writes, and the run layout `runs/<input-id>/<flow-id>/<stage>/` with **all seven** stage
   directories. Name the two facts a reader most needs: **`caption` writes three artifacts in one
   invocation** and the ordering is failure isolation; and **the WD14 list, not the prose, is what the
   sheet is built from.**
 
-- [ ] 2.3 **Delete `isekai/README.md`'s edge table** (`:33-38`) and replace it with a pointer to
+- [x] 2.3 **Delete `isekai/README.md`'s edge table** (`:33-38`) and replace it with a pointer to
   `docs/arc/modules.md` (`design.md` D4). The group READMEs keep their file tables.
 
-- [ ] 2.4 **Verify no quantity survives in either file** — read both back and check every sentence.
+- [x] 2.4 **Verify no quantity survives in either file** — read both back and check every sentence.
   **Gate green. CHANGELOG. Tick 2. Commit.**
 
 ---

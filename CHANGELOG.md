@@ -25,6 +25,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`docs/arc/`, and it is where this repository's architecture is drawn.** Two files, prose and ASCII,
+  **and no quantities in either** (`0024` design.md D2) — a number is the part of a document that goes
+  stale, and this repository has now watched that happen to the same column twice.
+
+- **`docs/arc/modules.md` — the module graph.** Every cross-group edge by source; the lazy ones marked
+  as lazy with the function each import sits in, including `interface ──▶ interface/ui`, which the
+  drawing it replaces collapsed away entirely; the subpackage cycles, each with the reason it exists.
+  `isekai/README.md`'s structural sentence moves here with it — *the module graph has no cycles and
+  never has; the group graph does, and drawing it as a stack would be a lie* — because it is the most
+  useful sentence in that file and this is the file it is about. The two cycles are stated with their
+  causes rather than merely reported: `refusal` is what everything raises, and `atomic_write` is a
+  primitive `run` writes through.
+
+- **`docs/arc/data-flow.md` — the stages.** The verbs, what each reads and writes, and the run layout
+  with every stage directory in it. It leads with the two facts a reader needs before any other:
+  **`caption` writes prose, the local list and the hosted list in one invocation**, and the ordering is
+  the failure isolation, because the batch loop catches a refusal per *input*; and **the sheet is built
+  from the WD14 list, not from the prose**, which is why a missing hosted list is an absent aid and a
+  missing local one is a refusal.
+
+### Removed
+
+- **`isekai/README.md`'s edge table**, replaced by a pointer to `docs/arc/modules.md`. It was the
+  nearest thing this repository had to a module graph and it carried three errors — a module-level
+  `boundary ──▶ shared` missing outright, the `shared ──▶ boundary` laziness annotated backwards, and
+  `interface/ui` collapsed away — which is what two drawings of one graph produces. The group READMEs
+  keep their file tables: a file table is a local fact and a graph is not (`0024` design.md D4).
+
 ### Changed
 
 - **The sweep: every claim this repository makes about itself, checked against the tree.** Ten false
