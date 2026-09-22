@@ -75,8 +75,15 @@ Rules the graph is holding rather than describing:
 - **The runtime is stdlib-only.** Nothing on `python -m isekai`'s import graph may
   need a wheel. Each optional extra is reached from a single named module —
   `[ui]` from `interface/ui/app.py`, `[eval]` from `evaluation/eval_backends.py`,
-  `tagging` from `boundary/wd14.py` — and in every case the import is
-  function-local.
+  `tagging` from `boundary/wd14.py` — but by two different mechanisms, and the
+  difference matters to anyone reading this as a rule to apply. `[eval]` and
+  `tagging` are reached by an `import_module` call **inside a function**, so the
+  module that reaches them imports cleanly without the wheel. `[ui]` is not:
+  `app.py` imports `uvicorn` and `fastapi` at module scope, and the laziness sits
+  one level up — `interface/ui/__init__.py`'s `serve()` imports `app.py` inside
+  the function, and nothing else imports `app.py` outside the suite. The rule the
+  two mechanisms share is the one that matters: no wheel is reached on the import
+  graph of `python -m isekai`, only on the path of the verb that needs it.
 - **A group never becomes a place two modules reach each other through.** A
   group's `__init__.py` holds a docstring and no code, so a module is imported by
   its own path. `interface/ui/__init__.py` is the exception and is not a group: it

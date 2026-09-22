@@ -106,10 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   comes back re-opened with its approved artifact still named. An approved artifact is still never
   edited in place, in either state.
 
-- **`Batch.reopened()` is the predicate, and it compares against `approved_from` rather than against
-  *a draft exists*.** An approved artifact records the draft version it consumed; a draft numbered
-  above that is the one the verb wrote, and nothing else produces it. A draft that somehow predated the
-  approval could therefore never re-open one.
+- **`Batch.state()` is the one definition of the three states, and `re-opened` is *a draft numbered
+  above the approved artifact* rather than *a draft exists*.** The comparison is against the approved
+  artifact's own version, which is the same number `approve()` records as `approved_from` — it derives
+  the filename and the field from one local — so the state is read from filenames alone and no artifact
+  is opened. A draft numbered above the approved one is what the verb wrote and nothing else produces
+  it; a draft that somehow predated the approval could therefore never re-open one. `readonly`, the
+  `PUT` gate and the rail's status were three expressions over the same two predicates, true together
+  only because they agreed; they now all read `state()`.
 
 - **`/api/batch`'s approved count now reads the run directories, and that is the fix for the hazard a
   third status creates.** It used to be derived from the status string, which agreed with

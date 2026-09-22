@@ -7,8 +7,9 @@ when `validate` moved to `shared/fields.py`. Every stage is per flow: the flow
 supplies the briefing it reads, the schema it fills against and the directory it
 writes into.
 
-**The verbs are `caption` · `sheet` · `review` · `generate`, and `tagging.py` is
-not one of them.** Its two functions write the two tag artifacts `caption` also
+**The verbs are `caption` · `sheet` · `review` · `approve` · `generate` — five
+verbs over four files, because `review.py` holds two of them — and `tagging.py`
+is not one of them.** Its two functions write the two tag artifacts `caption` also
 produces, in the same invocation and under the same flow — so it is a file here
 without being a verb. It sits beside `caption.py` rather than inside it because `caption()`
 had to be provably unchanged by this version, and a function with no edit is

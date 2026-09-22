@@ -34,11 +34,13 @@ its neighbours.
 Beside them, `show` reads a run's artifacts, versions and producers and decides
 nothing — it writes no file and reaches no model.
 
-Every verb takes `--flow`, required and repeatable, because the flow supplies the
-briefing a stage reads, the schema it fills against and the directory it writes
-into. `ui`'s `--flow` is the exception: required and exactly one, because the
-surface shows a single schema's fields in a fixed order and a second flow would
-be a second page.
+Every stage verb takes `--flow`, required and repeatable, because the flow
+supplies the briefing a stage reads, the schema it fills against and the
+directory it writes into. The two verbs outside the stages each differ, and in
+different directions: `show` takes no `--flow` at all, because it reports every
+flow the run already holds and so names none by design; `ui`'s is required and
+exactly one, because the surface shows a single schema's fields in a fixed order
+and a second flow would be a second page.
 
 ## What a reader needs first
 

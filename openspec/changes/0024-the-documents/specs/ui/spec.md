@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: An approved input is read-only on the surface`
+- TO: `### Requirement: An approved input is read-only on the surface until it is re-opened`
+
 ## MODIFIED Requirements
 
 ### Requirement: An approved input is read-only on the surface until it is re-opened
