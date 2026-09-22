@@ -23,12 +23,12 @@ Stdlib only.
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
-    ARTIFACT,
     CAPTIONS,
     FRAME_NAME,
     REVIEW,
@@ -36,14 +36,20 @@ from isekai.foundation.run import (
     WD14,
     Run,
     across,
+    approved_versions,
     latest_artifact,
-    read_artifact,
+    versions,
 )
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import DRAFT, review
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
+
+# The three states stage ③ has, and the strings the surface puts on the wire.
+# Declared here rather than in `app.py` because `state()` below is what decides
+# them and this module imports no web framework.
+Status = Literal["draft", "approved", "re-opened"]
 
 
 @dataclass(frozen=True)
@@ -128,28 +134,30 @@ class Batch:
         """Return this input's approved artifact, or None while it is still a draft."""
         return latest_artifact(held.run.directory(self.flow.id, REVIEW), APPROVED)
 
-    def reopened(self, held: Input) -> bool:
-        """Say whether this input was deliberately re-opened after approval.
+    def state(self, held: Input) -> Status:
+        """Return where this input stands in stage ③, from filenames alone.
 
-        True when an approved artifact exists **and** a draft numbered above the
-        version that artifact records as its origin sits beside it -- which is
-        exactly what `python -m isekai review --flow F --new-version` produces
-        and nothing else does. The comparison is against `approved_from` rather
-        than against *a draft exists at all*, so a draft that predates the
-        approval could never re-open one (design.md D5).
+        **The one definition of the three states**, because the alternative is
+        what this replaced: `readonly`, the `PUT` gate and the rail's status
+        were three expressions over the same two predicates, true together only
+        because they happened to agree.
 
-        `approved_from` is the draft version `approve()` consumed, and the
-        approved artifact's own filename carries the same number; the filename
-        is the fallback so an artifact written before the field existed reads
-        the same answer rather than raising.
+        `re-opened` is an approved artifact with a **later** version beside it,
+        which is exactly what `review --flow F --new-version` writes and nothing
+        else does. Later rather than merely present, so a draft that predated
+        the approval could never re-open one -- and `approved_versions()[-1]` is
+        the number the approved artifact records as `approved_from`, because
+        `approve()` derives its filename and that field from one local.
+
+        Filenames only: no artifact is opened, and the common unapproved case
+        costs a single listing.
         """
-        approved = self.approved_path(held)
-        draft = self.draft_path(held)
-        if approved is None or draft is None:
-            return False
-        producer = read_artifact(approved).get("producer", {})
-        origin = int(producer.get("approved_from", _version_of(approved)))
-        return _version_of(draft) > origin
+        directory = held.run.directory(self.flow.id, REVIEW)
+        approved = approved_versions(directory)
+        if not approved:
+            return "draft"
+        later = [version for version in versions(directory) if version > approved[-1]]
+        return "re-opened" if later else "approved"
 
     @property
     def approved_count(self) -> int:
@@ -159,19 +167,6 @@ class Batch:
         what the directory holds, not what the rail calls it.
         """
         return sum(1 for held in self.inputs if self.approved_path(held) is not None)
-
-
-def _version_of(path: Path) -> int:
-    """Return the version number an artifact's filename carries.
-
-    The run owns the pattern, so this reads `ARTIFACT` rather than slicing the
-    name. Every path reaching here came from `latest_artifact`, which only ever
-    returns a name that pattern matched -- so a non-match is a programming error
-    and not a state on disk.
-    """
-    match = ARTIFACT.match(path.name)
-    assert match is not None, path.name
-    return int(match.group("version"))
 
 
 def establish(

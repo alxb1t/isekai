@@ -372,8 +372,13 @@ def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
     assert body["inputs"][0]["status"] == "re-opened"
     # Neither approved nor a plain draft -- and the count still says what the
     # directory says, which is that an approved artifact is on disk.
+    # The scenario's second `THEN`, against the directory rather than against
+    # another of the server's own numbers: what is on disk is one approved
+    # artifact, and the payload says one.
+    assert body["approved"] == len(
+        list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
+    )
     assert body["approved"] == 1
-    assert (made.directory(FLOW, REVIEW) / "001.approved.json").is_file()
 
 
 @pytest.mark.spec("ui:draft-update:a-stale-precondition-is-refused")

@@ -1,7 +1,7 @@
 /* The shapes the seven endpoints return. One file, because a type that disagreed
    with `app.py` would be wrong in every component at once. */
 
-export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'reopened'
+export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
 
 /* `re-opened` is approved *and* carrying a later draft -- the state
    `review --flow F --new-version` writes, and the only one in which an

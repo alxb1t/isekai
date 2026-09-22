@@ -129,9 +129,11 @@ const approvedReceipt = computed(() =>
    artifact, and that input is re-opened -- editable, and carrying a correction
    the tagger did not write. */
 const kicker = computed(() => {
-  if (!sheet.detail.value) return 'draft from the tagger'
-  if (sheet.readonly.value) return 'approved'
-  return sheet.detail.value.approved ? 're-opened' : 'draft from the tagger'
+  // No approved artifact is the tagger's draft, whether or not the payload has
+  // arrived -- `readonly` defaults to true while `detail` is null, so testing
+  // it first would call an unloaded sheet approved.
+  if (!sheet.detail.value?.approved) return 'draft from the tagger'
+  return sheet.readonly.value ? 'approved' : 're-opened'
 })
 
 async function approve(): Promise<void> {
@@ -425,6 +427,7 @@ watch(batch.current, (id) => {
     <div v-if="batch.info.value" class="work">
       <BatchRail
         :inputs="batch.inputs.value"
+        :approved="batch.info.value?.approved ?? 0"
         :current="batch.current.value"
         :edited="batch.edited.value"
         :photo-url="photoUrl"

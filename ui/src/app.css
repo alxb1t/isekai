@@ -466,7 +466,7 @@ body {
   );
 }
 
-.mark--reopened {
+.mark--ring {
   border: 2px solid var(--color-neutral-800);
 }
 

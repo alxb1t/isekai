@@ -60,6 +60,11 @@ export function useBatch() {
     edited.value = new Set(edited.value).add(id)
   }
 
+  /* `=== 'approved'` deliberately, and not `!== 'draft'` like the manifest's
+     filter. This gates "nothing left to review" -- the closing banner and the
+     auto-open of the manifest -- and a re-opened input demonstrably has
+     something left: the server accepts a draft update for it. The two
+     comparisons are two different questions, not an inconsistency. */
   const allApproved = computed(
     () => inputs.value.length > 0 && inputs.value.every((i) => i.status === 'approved'),
   )

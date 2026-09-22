@@ -134,18 +134,19 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
     @app.get("/api/batch")
     def read_batch() -> dict[str, Any]:
         """Describe the batch: its flow, its schema, its inputs and their state."""
-        # **The count reads the directory, not the status strings.** It used to
-        # be derived from `status == "approved"`, which agreed with
-        # `Batch.approved_count` only while every input holding an approved
-        # artifact also reported approved. `re-opened` is a status that means
-        # *holds one, and is open again*, so deriving the count would have split
-        # the two answers the moment the third status existed (design.md D5).
+        # **The count is every input holding an approved artifact**, which is
+        # what `Batch.approved_count` reads off the directory -- and `re-opened`
+        # holds one. Deriving it from `status == "approved"` was the trap: that
+        # agreed with the directory only while the two states were the only two,
+        # and the third ends the coincidence (design.md D5). Read off `state()`
+        # rather than by walking the directory a second time, so the count and
+        # the statuses cannot disagree by construction rather than by luck.
         summaries = [_summary(batch, held) for held in batch.inputs]
         return {
             "flow": batch.flow.id,
             "schema": list(batch.flow.schema.names),
             "vocabulary": len(batch.vocabulary),
-            "approved": batch.approved_count,
+            "approved": sum(1 for held in summaries if held["status"] != "draft"),
             "inputs": summaries,
         }
 
@@ -228,6 +229,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         held = batch.find(identifier)
         draft = batch.draft_path(held)
         approved = batch.approved_path(held)
+        state = batch.state(held)
         # The draft while one exists, the approved artifact once it does not.
         # That is what makes an input approved in an earlier sitting open with
         # its sheet rather than empty (design.md D5).
@@ -254,12 +256,12 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "tags": _tags(batch, held),
             "fields": fields,
             # **Approval with nothing newer beside it is what makes a sheet
-            # read-only.** Not the absence of a draft, which the rail never
-            # keyed on; and not approval alone, which `v0.22.1` used and which
-            # made `review --new-version` write a draft this page would not
-            # edit. The verb is right: `--new-version` exists for exactly this
+            # read-only**, which is precisely `state() == "approved"`. Not the
+            # absence of a draft, which the rail never keyed on; and not
+            # approval alone, which `v0.22.1` used and which made
+            # `review --new-version` write a draft this page would not edit
             # (design.md D5).
-            "readonly": approved is not None and not batch.reopened(held),
+            "readonly": state == "approved",
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
             "saved": _saved(draft),
@@ -294,7 +296,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         the operator's last keystroke (design.md D6).
         """
         held = batch.find(identifier)
-        if batch.approved_path(held) is not None and not batch.reopened(held):
+        if batch.state(held) == "approved":
             raise Refusal(
                 f"{identifier} is approved, and an approved sheet is never "
                 "edited in place; approval is the end of a review -- correct it "
@@ -338,20 +340,16 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
 def _summary(batch: Batch, held: Input) -> dict[str, Any]:
     """Describe one input for the rail: its size, and where it is in stage ③.
 
-    **Three statuses, because there are three states.** `draft` holds no
+    The state is `Batch.state`'s and is not recomputed here. `draft` holds no
     approved artifact; `approved` holds one and nothing newer; `re-opened` holds
     one *and* a later draft, which is what `review --new-version` writes and the
     only state in which the form is offered over an approved input.
     """
-    if batch.approved_path(held) is None:
-        status = "draft"
-    else:
-        status = "re-opened" if batch.reopened(held) else "approved"
     return {
         "id": held.id,
         "width": held.width,
         "height": held.height,
-        "status": status,
+        "status": batch.state(held),
     }
 
 

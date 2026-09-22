@@ -7,6 +7,10 @@ import StatusMark from './StatusMark.vue'
    operator recognises an input, so a square crop would take that away. */
 const props = defineProps<{
   inputs: BatchInput[]
+  /* The server's own count of inputs holding an approved artifact, the same
+     number `AppHeader` is given. Computing a second answer here from the status
+     strings would be one number with two derivations, kept in step by prose. */
+  approved: number
   current: string
   edited: Set<string>
   photoUrl: (id: string) => string
@@ -18,14 +22,9 @@ defineEmits<{ select: [id: string]; manifest: [] }>()
 function mark(input: BatchInput): MarkKind {
   if (props.loading) return 'dashed'
   if (input.status === 'approved') return 'filled'
-  if (input.status === 're-opened') return 'reopened'
+  if (input.status === 're-opened') return 'ring'
   return props.edited.has(input.id) ? 'half' : 'hollow'
 }
-
-/* Counts what the run directories hold, which is what `/api/batch`'s own
-   `approved` reports -- a re-opened input still has an approved artifact, so
-   excluding it here would make the rail disagree with the header. */
-const approved = () => props.inputs.filter((i) => i.status !== 'draft').length
 
 /* Same rule as the hero: a thumbnail appears whole or not at all, so the rail
    never shows a photograph half-decoded and never reflows as one arrives. */
@@ -71,14 +70,14 @@ function ready(id: string): void {
 
     <div class="rail__legend">
       <span class="rail__legend-row"><StatusMark kind="filled" :size="8" rail /> approved</span>
-      <span class="rail__legend-row"><StatusMark kind="reopened" :size="8" /> re-opened</span>
+      <span class="rail__legend-row"><StatusMark kind="ring" :size="8" /> re-opened</span>
       <span class="rail__legend-row"><StatusMark kind="half" :size="8" /> edited</span>
       <span class="rail__legend-row"><StatusMark kind="hollow" :size="8" /> untouched</span>
     </div>
 
     <!-- The only route to the manifest mid-batch, clickable at any time. -->
     <button class="rail__run mono" type="button" @click="$emit('manifest')">
-      run · {{ approved() }} of {{ inputs.length }} approved
+      run · {{ approved }} of {{ inputs.length }} approved
     </button>
   </nav>
 </template>
