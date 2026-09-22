@@ -75,9 +75,10 @@ in staged verbs rather than typed as options. Identity is carried by mechanisms 
 | Detail | a hires pass — RealESRGAN upscale, then a second sampler at `hires_denoise` 0.35 |
 | Register | the prompts, **assembled per run** from a sheet of canonical tags a human approved |
 
-A flow is a directory of two tracked files: `flow.json`, which declares its inputs, its dials, its
-prompt fragments and the graph id of every node the render path edits; and `graph.json`, the API
-graph. **Nothing locates a node by class** — the manifest names them, which is what lets a broken
+A flow is a directory of four tracked files: `flow.json`, which declares its inputs, its
+vocabulary, its models, its dials, its prompt fragments and the graph id of every node the render
+path edits; `graph.json`, the API graph; `schema.json`, the sheet's field list; and
+`caption.briefing.md`, the standing instructions a photograph is read under. **Nothing locates a node by class** — the manifest names them, which is what lets a broken
 flow be caught by the suite rather than by a boot. A flow is immutable: editing one is not a variant
 of a flow, it is an untested flow.
 
@@ -299,6 +300,7 @@ isekai/
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
+├── docs/arc/                  # the module graph and the stage data flow — drawn once, here
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)
 ├── Makefile                   # `make gate`

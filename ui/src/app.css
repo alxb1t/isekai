@@ -466,6 +466,10 @@ body {
   );
 }
 
+.mark--ring {
+  border: 2px solid var(--color-neutral-800);
+}
+
 .mark--rail-filled {
   background: var(--color-accent);
 }

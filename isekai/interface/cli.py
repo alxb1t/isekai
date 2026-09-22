@@ -19,10 +19,14 @@ refusal would be unreachable -- nothing can write a version 2 artifact
     show          print a run's artifacts and what produced each one
     ui        (3) serve the review surface for a batch of inputs
 
-**Six of them run a stage and the seventh serves one.** `ui` is the second front
-end rather than a client of the first: it calls `wiring` and the stage functions
-directly, exactly as this module does, so neither surface is privileged and
-neither goes through the other (design.md D1).
+**Five of them run a stage, one inspects a run and one serves a surface.** The
+five that run a stage take `--flow` repeatably; `ui` takes exactly one, because
+the surface is one schema's fields in one order; `show` takes none, because it
+reports every flow the run already holds. `show` reads a run and decides
+nothing, and `ui` is the second front end rather than a client of the first --
+it calls `wiring` and the stage functions directly, exactly as this module does,
+so neither surface is privileged and neither goes through the other
+(design.md D1).
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest

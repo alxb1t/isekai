@@ -20,15 +20,18 @@ construction rather than by filtering.
 
 **The schema is a data file, not code.** It can be checked without executing
 anything, and a second schema -- a photoreal flow's, say -- is a file rather than
-a branch. It declares, in order, the sixteen fields and which seven are scored; it
+a branch. It declares, in order, that flow's own fields and which seven of them
+are scored -- `summon-anime-wai` and `conjure-anime-wai` do not declare the same
+field list, and neither number is a property of the stage; it
 carries no version and no vocabulary, because inside a frozen flow directory the
 digest proves the field list and the flow declares the vocabulary. Its reader
 lives beside `Schema` in `isekai/foundation/flow.py`.
 
 **Field names are slugs because they have to be.** The structured-output flag
 became a tool input schema at the API, which enforces `^[a-zA-Z0-9_.-]{1,64}$` on
-property keys; six of the sixteen names carried a space or a slash and the first
-call hit a hard 400. The flag is gone with the sorters and the rule is not:
+property keys; several of the names then in the schema carried a space or a slash
+and the first call hit a hard 400. The flag is gone with the sorters and the rule
+is not:
 `flow.py`'s reader still enforces it, and one name everywhere removes the class of
 error.
 

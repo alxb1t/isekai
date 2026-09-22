@@ -13,11 +13,14 @@ endpoint or a score; everything here is imported by something that does.
 
 ## Imported by
 
+**Named, not counted.** A count in this column has gone stale in every group here
+at least once; a list of names cannot.
+
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `refusal.py` | `boundary/ollama.py`, `boundary/wd14.py`, `evaluation/evaluate.py`, `flow.py`, `run.py`, `interface/cli.py`, `interface/wiring.py`, `interface/ui/app.py`, `interface/ui/batch.py`, `interface/ui/bundle.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `pipeline/tagging.py`, `shared/field_map.py`, `shared/fields.py`, `shared/vocabulary.py` | fifteen test modules |
-| `run.py` | `boundary/ollama.py`, `interface/cli.py`, `interface/run_view.py`, `interface/wiring.py`, `interface/ui/app.py`, `interface/ui/batch.py`, `shared/field_map.py`, and all five of `pipeline/` | eleven test modules |
-| `flow.py` | `interface/cli.py`, `interface/run_view.py`, `interface/wiring.py`, `interface/ui/batch.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `shared/field_map.py`, `shared/fields.py` | seventeen test modules |
+| `refusal.py` | `boundary/comfy_types.py`, `boundary/ollama.py`, `boundary/wd14.py`, `evaluation/evaluate.py`, `flow.py`, `run.py`, `interface/cli.py`, `interface/ui/app.py`, `interface/ui/batch.py`, `interface/ui/bundle.py`, `interface/wiring.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `pipeline/tagging.py`, `shared/field_map.py`, `shared/fields.py`, `shared/image.py`, `shared/vocabulary.py` | `tests/test_caption.py`, `tests/test_field_map.py`, `tests/test_flow.py`, `tests/test_generate.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `run.py` | `boundary/ollama.py`, `interface/cli.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/batch.py`, `interface/ui/bundle.py`, `interface/wiring.py`, `pipeline/caption.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `pipeline/tagging.py`, `shared/field_map.py` | `scripts/derive_field_map.py`, `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
+| `flow.py` | `interface/cli.py`, `interface/run_view.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/generate.py`, `pipeline/review.py`, `pipeline/sheet.py`, `shared/field_map.py`, `shared/fields.py` | `tests/conftest.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_flow.py`, `tests/test_generate.py`, `tests/test_image.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 
 > Files and importers only. What a seam *is*, and what could replace it, is the
 > design record's; neither restates the other.

@@ -373,7 +373,8 @@ def test_a_dial_no_declared_role_reads_is_not_required(tmp_path: Path) -> None:
     A flat *every dial in a fixed list is present* check rejects
     `conjure-anime-wai`, which declares no identity adapter and no pose
     preprocessor and is correct. Asserted here on a scratch rather than only by
-    the tracked flow below, so the property survives a change to either flow.
+    the tracked flows below, so the property survives a change to either of
+    them.
     """
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
@@ -390,7 +391,7 @@ def test_a_dial_no_declared_role_reads_is_not_required(tmp_path: Path) -> None:
     assert "identity" not in loaded.nodes
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("cli:manifest:a-dangling-node-id-is-refused-at-load")
 def test_a_role_naming_a_node_the_graph_does_not_carry_is_refused(
     tmp_path: Path,
 ) -> None:
@@ -411,7 +412,7 @@ def test_a_role_naming_a_node_the_graph_does_not_carry_is_refused(
     assert GRAPH_NAME in str(refused.value)
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("cli:manifest:every-tracked-role-resolves")
 @pytest.mark.parametrize("name", tracked_flows())
 def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
     name: str,
@@ -423,7 +424,7 @@ def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
     assert [role for role, node in loaded.nodes.items() if node not in committed] == []
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("cli:manifest:every-tracked-dial-is-read")
 @pytest.mark.parametrize("name", tracked_flows())
 def test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads(
     name: str,
@@ -467,6 +468,13 @@ def test_a_flow_declaring_a_photograph_on_one_side_only_is_refused(
 
 @pytest.mark.spec("image-generation:roles:transferred-input-and-node-must-agree")
 def test_the_tracked_flow_declares_its_photograph_on_both_sides(flow: Flow) -> None:
+    """`summon-anime-wai`, which is the only tracked flow that transfers one.
+
+    Singular on purpose: `conjure-anime-wai` declares `inputs: ["sheet"]` and no
+    `photo` node, so the property holds there vacuously and asserting it would
+    advertise coverage the second flow does not give. The `flow` fixture is the
+    identity flow and is not parametrized.
+    """
     assert TRANSFERRED_INPUTS == ("photo",)
     for name in TRANSFERRED_INPUTS:
         assert (name in flow.inputs) == (name in flow.nodes)

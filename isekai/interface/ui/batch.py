@@ -23,6 +23,7 @@ Stdlib only.
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
@@ -35,13 +36,20 @@ from isekai.foundation.run import (
     WD14,
     Run,
     across,
+    approved_versions,
     latest_artifact,
+    versions,
 )
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import DRAFT, review
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
 from isekai.shared.vocabulary import Vocabulary
+
+# The three states stage ③ has, and the strings the surface puts on the wire.
+# Declared here rather than in `app.py` because `state()` below is what decides
+# them and this module imports no web framework.
+Status = Literal["draft", "approved", "re-opened"]
 
 
 @dataclass(frozen=True)
@@ -112,16 +120,52 @@ class Batch:
         return latest_artifact(held.run.directory(self.flow.id, TAGS))
 
     def draft_path(self, held: Input) -> Path | None:
-        """Return the draft waiting for this input, or None once it is approved."""
+        """Return the highest draft waiting for this input, or None if there is none.
+
+        `approve()` unlinks the draft it approved, so an approved input usually
+        has none -- but `review --new-version` writes a fresh one beside the
+        approved artifact, and that draft is this one. *Approved* and *has a
+        draft* are therefore not opposites, which is what `reopened` below is
+        for.
+        """
         return latest_artifact(held.run.directory(self.flow.id, REVIEW), DRAFT)
 
     def approved_path(self, held: Input) -> Path | None:
         """Return this input's approved artifact, or None while it is still a draft."""
         return latest_artifact(held.run.directory(self.flow.id, REVIEW), APPROVED)
 
+    def state(self, held: Input) -> Status:
+        """Return where this input stands in stage ③, from filenames alone.
+
+        **The one definition of the three states**, because the alternative is
+        what this replaced: `readonly`, the `PUT` gate and the rail's status
+        were three expressions over the same two predicates, true together only
+        because they happened to agree.
+
+        `re-opened` is an approved artifact with a **later** version beside it,
+        which is exactly what `review --flow F --new-version` writes and nothing
+        else does. Later rather than merely present, so a draft that predated
+        the approval could never re-open one -- and `approved_versions()[-1]` is
+        the number the approved artifact records as `approved_from`, because
+        `approve()` derives its filename and that field from one local.
+
+        Filenames only: no artifact is opened, and the common unapproved case
+        costs a single listing.
+        """
+        directory = held.run.directory(self.flow.id, REVIEW)
+        approved = approved_versions(directory)
+        if not approved:
+            return "draft"
+        later = [version for version in versions(directory) if version > approved[-1]]
+        return "re-opened" if later else "approved"
+
     @property
     def approved_count(self) -> int:
-        """Return how many of the batch's inputs are approved, from disk."""
+        """Return how many of the batch's inputs hold an approved artifact, from disk.
+
+        A re-opened input is counted here, because it *has* one: this answers
+        what the directory holds, not what the rail calls it.
+        """
         return sum(1 for held in self.inputs if self.approved_path(held) is not None)
 
 

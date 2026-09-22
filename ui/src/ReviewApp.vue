@@ -124,11 +124,17 @@ const approvedReceipt = computed(() =>
 )
 
 /* `③ sheet — approved` once it is, which is also when the fields go read-only.
-   The reading is taken from disk rather than from anything held here: approval
-   deletes the draft, so "has no draft" IS "is approved". */
-const kicker = computed(() =>
-  sheet.detail.value && sheet.readonly.value ? 'approved' : 'draft from the tagger',
-)
+   The reading is taken from disk rather than from anything held here. It is NOT
+   "has no draft": `review --new-version` writes a draft beside the approved
+   artifact, and that input is re-opened -- editable, and carrying a correction
+   the tagger did not write. */
+const kicker = computed(() => {
+  // No approved artifact is the tagger's draft, whether or not the payload has
+  // arrived -- `readonly` defaults to true while `detail` is null, so testing
+  // it first would call an unloaded sheet approved.
+  if (!sheet.detail.value?.approved) return 'draft from the tagger'
+  return sheet.readonly.value ? 'approved' : 're-opened'
+})
 
 async function approve(): Promise<void> {
   const id = batch.current.value
@@ -219,7 +225,10 @@ function movePane(direction: -1 | 1): void {
    time its artifact was written. Reached by approving the last unapproved input,
    or from the rail's `run` entry at any point in the batch. */
 async function openManifest(): Promise<void> {
-  const approved = batch.inputs.value.filter((i) => i.status === 'approved')
+  // Every input holding an approved artifact, re-opened ones included: the
+  // rail's count reads the directory the same way, and a manifest listing
+  // fewer rows than the count beside it would be two answers to one question.
+  const approved = batch.inputs.value.filter((i) => i.status !== 'draft')
   sheets.value = await Promise.all(
     approved.map(async (input) => {
       const body = await inputDetail(input.id)
@@ -418,6 +427,7 @@ watch(batch.current, (id) => {
     <div v-if="batch.info.value" class="work">
       <BatchRail
         :inputs="batch.inputs.value"
+        :approved="batch.info.value?.approved ?? 0"
         :current="batch.current.value"
         :edited="batch.edited.value"
         :photo-url="photoUrl"

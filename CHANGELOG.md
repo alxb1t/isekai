@@ -25,6 +25,275 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-09-22
+
+### Changed
+
+- **An eleventh false self-claim, caught by the convergence pass rather than by the sweep.**
+  `interface/ui/app.py` said the type checker's override for `uvicorn` was *"scoped to this one file
+  and this one rule, because CI never installs the extra"*. There is no such override — `app.py`
+  appears in neither `[[tool.ty.overrides]]` block nor in `[tool.ruff.lint.per-file-ignores]` — and
+  the `dev` group pins `fastapi` and `uvicorn`, so gate command one installs both; `pyproject.toml`
+  already said exactly that, in the opposite direction. The docstring now states what is configured:
+  the extra is reached from this one module so `python -m isekai`'s import graph never reaches it,
+  and nothing is suppressed for it anywhere. The sweep rewrote the paragraph immediately below this
+  one and left it standing, which is what *"every claim … checked against the tree"* is worth as a
+  description of a pass rather than a guarantee.
+
+  **The same claim stood twice in that file, and the first fix left the twin.** `run()`'s docstring
+  carried it too — *"the type checker's override covers this file alone, and CI installs neither
+  package"* — 450 lines below the paragraph that had just been corrected, so for one commit the module
+  answered *"is anything suppressed for the `ui` extra, and does the gate install it?"* in both
+  directions. The clause is deleted; the paragraph above already carries the configuration facts, and
+  a repo-wide grep now leaves only `pyproject.toml`'s *"CI never installs this"*, which is about the
+  `eval` extra and is true. Two convergence rounds found one claim at one site each: the lesson is
+  that a false sentence is worth grepping for, not just fixing where it was seen.
+
+- **The acceptance ran, and it cost nothing: no pod, no render, no `generate`.** `make gate` exits 0 on
+  all six commands, 815 tests pass, and `grep spec_exempt tests/ | grep 0024` returns nothing. Every
+  numeral this version touched was re-derived from the tree rather than from the sentence it replaced —
+  four tracked files per flow, six repo-root anchors across four modules, seven stage directories, seven
+  endpoints, seven verbs, five ignored roots, twelve capabilities on disk, three copies of the gate.
+  `pytest -k test_every_tracked_flow_matches` passes, so no flow moved and `manifest_digest` did not.
+
+- **The re-opened path was walked by hand against a running surface**, twice — once on the phase-4 code
+  and again after `/simplify` rewrote the predicate, with identical results. Approve an input; the edit
+  is refused `409` with the new refusal, which now names the verb and says the input comes back
+  editable rather than pointing at a future version; `review --flow F --new-version` writes
+  `002.draft.json` beside `001.approved.json`; the reload reports `readonly: false`, status
+  `re-opened`, and still names the approved artifact; the edit saves into the draft and the approved
+  artifact is byte-unchanged; and `/api/batch`'s count equals the approved artifacts the batch's run
+  directories hold.
+
+- **What was not verified, stated rather than left to inference.** No pod was created and nothing was
+  rendered, so diffusion quality and identity fidelity are untouched by this version and unmeasured by
+  it. **Only the four capabilities `v0.22.1` touched were audited** — the other scenarios in the living
+  spec were not read against the code, and the eight requirement-level findings this version reports
+  are what that partial pass turned up. A full audit is a version of its own and is filed, not done
+  here. The browser was exercised through its own HTTP API rather than by a person clicking; the rail's
+  rendering of the third state is covered by the type checker and the status the API returns, not by a
+  screenshot.
+
+
+- **The seventeen `spec_exempt` markers are repaid**, one for one, and
+  `grep spec_exempt tests/ | grep 0024` returns nothing. `v0.22.1` borrowed a marker whose documented
+  meaning is *genuinely structural* on the explicit condition that this version repay it; the debt was
+  nearly a fifth of the repository's exemptions and was made countable so its discharge would be
+  countable too. **No test in this change carries a `spec_exempt` naming `0024`** — the marker that
+  exists to be repaid cannot be the instrument of its own refinancing.
+
+- **The two tests for the state phase 4 built were written red first**, against the keys
+  `ui:approval:a-re-opened-input-is-editable` and
+  `ui:approval:a-re-opened-input-is-not-counted-approved`. The requirement's two older keys keep their
+  tests, re-run against the narrowed gate: `approved-input-refuses-a-draft-update`'s `WHEN` gained an
+  *and holds no later draft* clause, and the test that used to prove the re-opened case still refused
+  now proves it is accepted — which is the behaviour change, stated where the old assertion was.
+
+- **One binding gained an assertion rather than the scenario losing a clause.**
+  `ui:source:each-hosted-tag-is-offered-once` ends *"both artifacts on disk are unchanged"*, which a
+  sibling test proved and the test bound to that key did not. It asserts it now, scoped to the two tag
+  artifacts: `establish()` opens a draft for every input it is given, so a whole-run snapshot would
+  have caught stage ③ starting normally and called it a write by the panel.
+
+### Added
+
+- **Seventeen scenarios for behaviour `v0.22.1` shipped bound to nothing**, one per
+  `spec_exempt("behaviour; the scenario lands in 0024")` marker it left, plus two more inside the
+  modified `ui` requirement that no marker covers because that version did not build the state. They
+  land across four capabilities: `ui` gains Host/Origin validation, the draft-update precondition,
+  bundle staleness and the panel's hosted-tag dedup; `cli` gains flow-manifest validation at load;
+  `image-generation` gains the transient-transport classification and per-flow assembly;
+  `run-directory` gains `show`'s injected flows root and its refusal before any line is printed.
+
+- **The `ui` approval requirement is rewritten rather than deleted** — *"An approved input is read-only
+  on the surface"* becomes *"…until it is re-opened"*. Its old rationale inferred from *approval
+  deletes the draft* that nothing on disk could hold an edit after approval; the premise is true and
+  the inference is not, because `review --new-version` is exactly the explicit act that writes one. Two
+  capabilities described one state and disagreed about it, and `review` was the one that was right.
+
+  Each scenario was re-read against the tree before being counted as landed, and each is true at HEAD.
+  The key check prints the two `ui:approval:*` keys the `MODIFIED` block restates, as a `MODIFIED`
+  requirement must, and nothing else; `openspec validate 0024-the-documents --strict` is green.
+
+### Changed
+
+- **An input re-opened with `review --new-version` is editable on the surface again, and the rail
+  reports it as re-opened.** This is the change's only code change, and it is in scope because shipped
+  code named this version as the one that resolves it: `v0.22.1` refused every update to an approved
+  input, which made `--new-version` write a draft the surface would not edit, and the refusal it
+  shipped said exactly that. `review` is the capability that was right — `--new-version` exists for
+  this case and `review:copy:second-review-appends` is the older, tested contract — so the gate is now
+  **approved and no later draft** rather than approved (`0024` design.md D5). The refusal's forward
+  reference to v0.22.2 is gone, replaced by what to do: correct it with the verb, reload, and the input
+  comes back re-opened with its approved artifact still named. An approved artifact is still never
+  edited in place, in either state.
+
+- **`Batch.state()` is the one definition of the three states, and `re-opened` is *a draft numbered
+  above the approved artifact* rather than *a draft exists*.** The comparison is against the approved
+  artifact's own version, which is the same number `approve()` records as `approved_from` — it derives
+  the filename and the field from one local — so the state is read from filenames alone and no artifact
+  is opened. A draft numbered above the approved one is what the verb wrote and nothing else produces
+  it; a draft that somehow predated the approval could therefore never re-open one. `readonly`, the
+  `PUT` gate and the rail's status were three expressions over the same two predicates, true together
+  only because they agreed; they now all read `state()`.
+
+- **`/api/batch`'s approved count now reads the run directories, and that is the fix for the hazard a
+  third status creates.** It used to be derived from the status string, which agreed with
+  `Batch.approved_count` only while every input holding an approved artifact also *reported* approved —
+  a coincidence that ends the moment a status exists meaning *holds one, and is open again*. Deriving
+  it would have split the two answers; reading the directory keeps them one answer.
+  `ui:batch:approved-count-comes-from-disk` stayed green throughout, and the new
+  `ui:approval:a-re-opened-input-is-not-counted-approved` pins the same property from the other side.
+
+- **On the page**: a third rail mark and legend row, a `re-opened` kicker in place of *draft from the
+  tagger* for a draft copied from an approved artifact, and the closing manifest now lists every input
+  holding an approved artifact rather than only those reporting `approved` — the rail's count reads the
+  directory the same way, and a manifest shorter than the count beside it would be two answers to one
+  question. `allApproved` stays strict: a re-opened input has a correction waiting and the batch is not
+  finished.
+
+- **The four capabilities `v0.22.1` touched were audited against the tree, scenario by scenario.**
+  Three false statements were fixed, all of them non-normative: `cli`'s Purpose said *"six that run a
+  stage"* when five do — the same file already says *"the five stage verbs"* two requirements later,
+  and `isekai/interface/cli.py`'s docstring carried the identical error; and `image-generation`'s
+  **Source** line named one tracked flow when two exist, the second being the one that exercises its
+  own *optional roles are not assumed* scenarios.
+
+  **Eight further findings are requirement-level and are reported rather than fixed here**, because
+  changing a `SHALL` or a scenario is a spec delta and this phase fixes prose (`0024` tasks 4.4):
+  `image-generation:inputs:every-approved-flow-renders` claims selecting among approved flows *"requires
+  no flag"*, which `generate` has not done since `--flow` became required — and `cli`'s own requirement
+  says the opposite, so two capabilities disagree; `cli:generate-signature:count-defaults-to-one` says
+  *per approved flow* where the code renders per *named* approved flow;
+  `image-generation:working-resolution:scale-precedes-every-consumer` reads *"a tracked flow's graph"*
+  and is false for `conjure-anime-wai`, which declares no photograph and carries no image loader;
+  `review:copy:second-review-appends`'s `WHEN` omits `--new-version`, without which `review()`
+  short-circuits and writes nothing; `review:approval:approve-validates-then-renames` says the
+  artifact's bytes are unchanged, while `approve()` builds a fresh envelope — a deviation `review.py`
+  documents and the scenario does not; `review`'s provenance requirement records *edited* against the
+  **sheet** while a re-opened draft is copied from the **approved artifact**, which this version makes
+  a first-class state; `cli:resolution:uncomposed-seam-refuses-by-name`'s `WHEN` is unreachable outside
+  the suite, because `wiring_from` always composes all three resolvers; and the `ui` bundle requirement
+  covers only *absent*, not the staleness and timeout the code also has — which this change's own delta
+  adds. **The other capabilities were not audited**; that full pass is a version of its own.
+
+- **`CLAUDE.md` is agent operating instructions, and nothing else.** 420 lines to 316. `## The path`
+  is gone — an audit's verdict on it was *"almost entirely data flow and architecture, with no agent
+  instruction in it"* — and `## Layout`'s per-group inventory is **deleted rather than moved**, because
+  the six group READMEs already hold it and moving it would have created a seventh copy (`0024`
+  design.md D3). What was rule rather than description in either section stayed, relocated to the
+  section that owns the rule: *only an approved artifact is ever rendered*, *assembly happens before
+  any endpoint is acquired*, *refuse the input rather than the batch*, *stage ① is one verb*, *`review`
+  and `approve` stay working verbs*, and the two system dependencies now sit together under a new
+  **`## Rules the render path is under`**, which opens by saying what it is not restating.
+
+- **The file states its own ceiling.** The system summary is one paragraph, and the note under it says
+  so: a fuller account belongs in `docs/arc/`, and a paragraph here that starts explaining how
+  something works rather than what to do about it belongs there too. The ceiling is the point — an
+  unbounded summary paragraph is how `## The path` grew the first time.
+
+- **The identity mechanisms moved to `docs/arc/data-flow.md` with the rest of the path**, and the
+  dials are **named without their values**: the values live in `flows/<id>/flow.json`, and a value
+  written twice is a value that can disagree with itself. The working-resolution rule, `clip_skip`'s
+  home in the manifest, and the `models/wd14/` pairing travel with them.
+
+- **Smaller cuts, all of them description.** The measured-implementation constraint lost its
+  version-by-version history and kept its rule. The seam list lost `image.py`'s and `generate.py`'s
+  module descriptions, whose rules now sit in the render-path section, and the `ComfyTransport` entry
+  lost the account of the transport that was deleted a version ago. The living-spec paragraph lost the
+  history of its own wrong counts, which was three sentences explaining why the names below it should
+  be read instead. The keybinding rule lost the narrative of the violation `v0.22.1` closed.
+
+### Added
+
+- **`docs/arc/`, and it is where this repository's architecture is drawn.** Two files, prose and ASCII,
+  **and no quantities in either** (`0024` design.md D2) — a number is the part of a document that goes
+  stale, and this repository has now watched that happen to the same column twice.
+
+- **`docs/arc/modules.md` — the module graph.** Every cross-group edge by source; the lazy ones marked
+  as lazy with the function each import sits in, including `interface ──▶ interface/ui`, which the
+  drawing it replaces collapsed away entirely; the subpackage cycles, each with the reason it exists.
+  `isekai/README.md`'s structural sentence moves here with it — *the module graph has no cycles and
+  never has; the group graph does, and drawing it as a stack would be a lie* — because it is the most
+  useful sentence in that file and this is the file it is about. The two cycles are stated with their
+  causes rather than merely reported: `refusal` is what everything raises, and `atomic_write` is a
+  primitive `run` writes through.
+
+- **`docs/arc/data-flow.md` — the stages.** The verbs, what each reads and writes, and the run layout
+  with every stage directory in it. It leads with the two facts a reader needs before any other:
+  **`caption` writes prose, the local list and the hosted list in one invocation**, and the ordering is
+  the failure isolation, because the batch loop catches a refusal per *input*; and **the sheet is built
+  from the WD14 list, not from the prose**, which is why a missing hosted list is an absent aid and a
+  missing local one is a refusal.
+
+### Removed
+
+- **`isekai/README.md`'s edge table**, replaced by a pointer to `docs/arc/modules.md`. It was the
+  nearest thing this repository had to a module graph and it carried three errors — a module-level
+  `boundary ──▶ shared` missing outright, the `shared ──▶ boundary` laziness annotated backwards, and
+  `interface/ui` collapsed away — which is what two drawings of one graph produces. The group READMEs
+  keep their file tables: a file table is a local fact and a graph is not (`0024` design.md D4).
+
+### Changed
+
+- **The sweep: every claim this repository makes about itself, checked against the tree.** Ten false
+  self-claims in tracked prose, eight stale numerals in `CLAUDE.md`, and every quantity in the group
+  READMEs replaced by the names it counted. **No code changed** — `git diff` over `*.py`, `*.vue` and
+  `*.ts` touches docstrings and comments only (`0024` design.md D6). Where a claim would be truer with
+  a code change, the claim moved and the code change was filed.
+
+- **The ten.** `README.md` called a flow *"two tracked files"* and it is four, now named.
+  `isekai/README.md` claimed *"five files … with a falsification twin each"* against six constants
+  across four files and **one** twin, and annotated the `shared → boundary` edge as eager when both
+  imports sit inside `load()`. `boundary/README.md` claimed *"nothing outside this directory opens a
+  socket or spawns a binary"* against three live violations — `evaluation/labels.py` spawns `git`,
+  `interface/ui/bundle.py` spawns `npm`, `interface/ui/app.py` binds a port — which are now named as
+  filed work rather than denied. `pipeline/sheet.py` said *"the sixteen fields"*, true of
+  `summon-anime-wai` and not of `conjure-anime-wai`'s 21. `evaluation/evaluate.py` invoked *"the
+  one-path rule"*, which `CLAUDE.md` records as replaced. `scripts/manifest.py` named a `convert.py`
+  that does not exist, and `scripts/derive_manifest.py` promised *"the SHA-256 and byte count"* from a
+  function returning the digest alone. `tests/test_flow.py` said *"the tracked flow"* singular twice;
+  one reference is now plural and the other says which flow it reads and why one suffices. Three
+  `CHANGELOG.md` lines 136–153 characters wide were re-wrapped, byte-unchanged in content.
+
+- **`CLAUDE.md`'s numerals.** *"Change one, change all four"* became three copies, because CI invokes
+  `make gate` rather than keeping its own. The run layout gained `wd14` and `tags`, the two stage ①
+  directories `run.py` has declared since v0.21. The `Cmd+Z` keybinding is no longer described as a
+  live violation — v0.22.1 made it match `event.code === 'KeyZ'` as well, so it answers under Cyrillic
+  *and* Dvorak. A change is four artifacts or more, not exactly four. The change-id formula now states
+  that it has **no patch case** and that a patch takes the next free number, as `v0.22.1` → `0023` did.
+  `skip_specs: true` **plus** `specs/.gitkeep` is a pair, and the sentence calling them mutually
+  exclusive is gone. The `__init__.py` rule is now a rule about *groups*, with
+  `interface/ui/__init__.py` named as the subpackage front door it is. The *"catalogue of twelve
+  candidate checkpoints"* referenced no artifact in this repository and is restated without one. The
+  ignored-roots table gained `.inputs/`, which holds a person's likeness exactly as `.data/` does, and
+  is now named rather than counted — as are the two further *"four ignored roots"* claims in
+  `.gitignore` and `interface/ui/bundle.py`. The version line covers `X.Y.Z`, because `## [0.22.1]` is
+  in this file.
+
+- **Quantities are gone from the group READMEs.** `isekai/README.md`'s file column names each group's
+  files instead of counting them, and the *"count; do not trust the row"* disclaimer goes with the
+  numbers it failed to protect: two were wrong again at v0.22, one in the opposite direction from the
+  drift the disclaimer described. Every *"Imported by"* table was re-derived from the import graph and
+  now names its importers; eight of the counts it replaces were wrong. That re-derivation also
+  corrected the importer lists themselves — `pipeline/review.py` is imported by `interface/ui/app.py`
+  and `interface/ui/batch.py`, `shared/image.py` by `interface/ui/batch.py`, and
+  `foundation/refusal.py` by `boundary/comfy_types.py` and `shared/image.py`, none of which the tables
+  had.
+
+- **Three claims wrong for a reason other than a count.** `shared/README.md` said none of its modules
+  reads a run or a flow; `field_map.py` imports both and `fields.py` imports `flow`, because a schema
+  is a flow's. `interface/README.md` and `ui/app.py` both said *"the six endpoints"*; there are seven,
+  now listed by path, with the bundle mount named beside them. `evaluation/README.md`'s
+  `eval_backends.py` coverage debt was owed by *"v0.19"* three releases ago; the debt is stated as open
+  and the version is dropped, since naming one is what let it go stale.
+
+- **Two smaller repairs.** `ci.yml` called `typecheck_ui.sh` the gate's *"sixth command"*; it is the
+  fifth of six (`CHANGELOG.md`'s *"gains a sixth command"* is about the count and is correct).
+  `CLAUDE.md`'s never-commit guardrail now names **a pod id** beside the API key and the volume id —
+  the three already in this file stay, because it is append-only history and the guardrail is what
+  stops a fourth.
+
 ## [0.22.1] - 2026-09-22
 
 - **The acceptance ran: gate green and one local pass through ①②③, on five photographs, with no pod.**
@@ -1965,22 +2234,25 @@ through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-
   there needed editing.
 
 - **The parser, the verb table and the dispatch functions move out of `__main__.py`, which becomes a
-  shim** — to `isekai/interface/cli.py`, after the restructure below. `runpy` pins where the entry point's *path* is, not where the parser lives, and a
-  package's largest interface surface has no business being the one module outside the filing scheme
+  shim** — to `isekai/interface/cli.py`, after the restructure below. `runpy` pins where the entry
+  point's *path* is, not where the parser lives, and a package's largest interface surface has no
+  business being the one module outside the filing scheme
   (design.md D3). **The shim keeps its `if __name__ == "__main__":` guard**, a one-line departure from
   the snippet in D3: without it, importing `isekai.__main__` runs the parser, which exits 2 on an
   empty argv — and the `-S` guard that proves the entry point needs no third-party import does
   exactly that import. D3 names that risk; this is the line that discharges it. Callers move rather
   than being re-exported: `VERBS`, `build_parser` and `dispatch` are imported from `isekai.cli`.
 
-- **`Wiring`, `wiring()` and `_check_run_root` are their own module** — `isekai/interface/wiring.py`, after the restructure below. The
+- **`Wiring`, `wiring()` and `_check_run_root` are their own module** — `isekai/interface/wiring.py`,
+  after the restructure below. The
   composition root had a second consumer that never sees an argv: the suite builds a `Wiring`
   directly, with no parser at all, in fourteen tests. A parser is one way to fill that dataclass and
   not the only one, so the module that owns the parser is not its home. `_check_run_root` travels
   with `wiring()`, its only caller, and `REPOSITORY` with it. **No compatibility re-export is left in
   `__main__`** — the three test import sites moved, and the name did not stay behind.
 
-- **`write_atomically` is its own module** — `isekai/shared/atomic_write.py`, after the restructure below. It takes a path and bytes and
+- **`write_atomically` is its own module** — `isekai/shared/atomic_write.py`, after the restructure
+  below. It takes a path and bytes and
   knows nothing about runs, and it already had a consumer outside `run.py`: `generate.py` writes the
   rendered PNG with it — a file that is neither JSON nor numbered by the run's artifact convention.
   **`write_json` stays in `run`**, because `indent=2` and a trailing newline are a run's artifact

@@ -255,7 +255,7 @@ SPECS: tuple[Spec, ...] = (
 
 
 def civitai_file(payload: dict[str, Any], filename: str) -> str:
-    """Return the SHA-256 and byte count Civitai publishes for one file of a version.
+    """Return the SHA-256 Civitai publishes for one file of a version.
 
     Pure, so the suite holds it offline; `civitai_version` is the thin fetch
     around it. The digest is lowercased because Civitai serves it uppercase and

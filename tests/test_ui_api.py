@@ -33,6 +33,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     REVIEW,
+    TAGS,
     WD14,
     Run,
     open_run,
@@ -130,7 +131,7 @@ def client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
 # --- the address every request is checked against -----------------------------
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:a-request-to-the-bound-address-is-answered")
 def test_a_request_addressed_to_the_bound_address_is_answered(
     client: TestClient,
 ) -> None:
@@ -140,7 +141,7 @@ def test_a_request_addressed_to_the_bound_address_is_answered(
     assert client.get("/api/batch").status_code == 200
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:another-host-is-refused")
 def test_a_request_carrying_someone_elses_host_is_refused(
     client: TestClient,
 ) -> None:
@@ -152,7 +153,7 @@ def test_a_request_carrying_someone_elses_host_is_refused(
     assert answered.json() == {"refusal": "not addressed here"}
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:another-origin-is-refused")
 def test_a_write_carrying_another_pages_origin_is_refused(
     client: TestClient, made: Run
 ) -> None:
@@ -169,7 +170,7 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     assert answered.json() == {"refusal": "not from this page"}
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:address:every-loopback-spelling-is-answered")
 def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
     # `localhost` is what an operator types and `127.0.0.1` is what the startup
     # line prints, so refusing either would be a defect rather than a defence --
@@ -311,36 +312,76 @@ def test_a_draft_update_against_an_approved_input_is_refused_and_writes_nothing(
     assert snapshot(made.path) == before
 
 
-@pytest.mark.spec("ui:approval:approved-input-refuses-a-draft-update")
-def test_an_approved_input_with_a_fresh_draft_beside_it_still_refuses(
+@pytest.mark.spec("ui:approval:a-re-opened-input-is-editable")
+def test_an_input_re_opened_with_a_new_version_is_editable_again(
     client: TestClient, made: Run
 ) -> None:
-    """The state `review --flow F --new-version` produces, and the one that was false.
+    """The state `review --flow F --new-version` produces, and what it is for.
 
-    The scenario's `WHEN` carries no *and no draft* guard -- its sibling does --
-    so it matches this state, and here `save_draft` had nothing to refuse on:
-    it refuses on *no draft*, and there is one. `put_draft` had no approval gate
-    whatever, so the `PUT` went through and wrote into a reopened draft while
-    the rail showed the input approved (design.md D5).
+    `v0.22.1` refused every update to an approved input, which made this state a
+    dead end: the verb wrote a draft the surface would not edit, and the refusal
+    it shipped said so outright, naming this version as the one that resolves it.
+    The gate is now *approved and no later draft*, so the page shows the draft,
+    offers the form and accepts the write (design.md D5).
     """
     fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
     assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
-    # Reopened: an approved artifact, and a draft copied from it beside it.
+    # Approved and read-only, until the operator asks for a new version.
+    assert client.get(f"/api/inputs/{made.id}").json()["readonly"] is True
+
     review(made, FLOW, new_version=True)
-    before = snapshot(made.path)
+
+    body = client.get(f"/api/inputs/{made.id}").json()
+    assert body["readonly"] is False
+    # The draft's sheet, not the approved artifact's -- and the approved
+    # artifact is still named, because it has not gone anywhere.
+    assert body["draft"] == "002.draft.json"
+    assert body["approved"] == "001.approved.json"
+    assert body["fields"] == fields
 
     response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
 
-    assert response.status_code == 409
-    assert "is approved" in response.json()["refusal"]
-    assert snapshot(made.path) == before
-    # The rail and the form agree, which is the whole of the defect: both key
-    # on `approved_path` now, so nothing on the page offers an edit the server
-    # would refuse.
-    assert client.get(f"/api/inputs/{made.id}").json()["readonly"] is True
+    assert response.status_code == 200
+    assert response.json()["draft"] == "002.draft.json"
+    # The approved artifact is never edited in place, in either state.
+    assert (
+        read_artifact(made.directory(FLOW, REVIEW) / "001.approved.json")["fields"]
+        == fields
+    )
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:approval:a-re-opened-input-is-not-counted-approved")
+def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
+    client: TestClient, made: Run
+) -> None:
+    """The hazard a third status creates, pinned from the side the count is on.
+
+    `/api/batch["approved"]` was derived from the status string and
+    `Batch.approved_count` reads the directory. They agree only while every
+    input holding an approved artifact also *reports* approved -- which stops
+    being true the moment a status exists meaning *has one, and is open again*.
+    So the payload's count reads the directory too (design.md D5).
+    """
+    assert client.get("/api/batch").json()["inputs"][0]["status"] == "draft"
+    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    assert client.get("/api/batch").json()["inputs"][0]["status"] == "approved"
+
+    review(made, FLOW, new_version=True)
+
+    body = client.get("/api/batch").json()
+    assert body["inputs"][0]["status"] == "re-opened"
+    # Neither approved nor a plain draft -- and the count still says what the
+    # directory says, which is that an approved artifact is on disk.
+    # The scenario's second `THEN`, against the directory rather than against
+    # another of the server's own numbers: what is on disk is one approved
+    # artifact, and the payload says one.
+    assert body["approved"] == len(
+        list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
+    )
+    assert body["approved"] == 1
+
+
+@pytest.mark.spec("ui:draft-update:a-stale-precondition-is-refused")
 def test_an_update_written_against_a_stale_draft_is_refused(
     client: TestClient, made: Run
 ) -> None:
@@ -378,7 +419,7 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     assert third.status_code == 200
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")
 def test_an_update_stating_no_precondition_is_still_accepted(
     client: TestClient, made: Run
 ) -> None:
@@ -454,7 +495,7 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
 
 
-@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+@pytest.mark.spec("ui:source:each-hosted-tag-is-offered-once")
 def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
@@ -475,12 +516,24 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
         FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
     )
 
+    # The two tag artifacts, and only those: `establish()` opens a draft for
+    # every input it is given, which is stage ③ starting normally rather than
+    # the panel writing anything.
+    before = {stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)}
+
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
 
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
     # Unchanged, and asserted here rather than left to the test above: the two
     # lists are narrowed by different rules and this is the one that says so.
     assert [one["tag"] for one in body["wd14"]] == ["1girl"]
+    # The scenario's last `THEN`: narrowing the panel is not narrowing the
+    # artifact. A sibling test proves the hosted list keeps what the page drops;
+    # this one is bound to the key that says *both* artifacts are untouched, so
+    # it asserts that clause rather than borrowing it.
+    assert {
+        stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)
+    } == before
 
 
 @pytest.mark.spec("ui:source:the-artifact-keeps-what-the-panel-drops")

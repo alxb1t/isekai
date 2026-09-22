@@ -19,16 +19,19 @@ neither is privileged and neither goes through the other.
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
 | `ui/batch.py` | the batch and the whole startup refusal order. **Imports no web framework**, which is what keeps that order testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
-| `ui/app.py` | the six endpoints, and the only module in the package that imports the `[ui]` extra |
+| `ui/app.py` | the endpoints — `GET /api/batch`, `/api/tags`, `/api/fields`, `/api/inputs/{id}`, `/api/inputs/{id}/photo`, `PUT /api/inputs/{id}/draft`, `POST /api/inputs/{id}/approve`, and the bundle mounted at `/` — and the only module in the package that imports the `[ui]` extra |
 
 ## Imported by
 
+**Named, not counted.** A count in this column has gone stale in every group here
+at least once; a list of names cannot.
+
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `cli.py` | `isekai/__main__.py` | four test modules |
-| `wiring.py` | `cli.py` | four test modules |
+| `cli.py` | `__main__.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py` |
+| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `run_view.py` | `cli.py` | `tests/test_run_view.py` |
-| `ui/` | `cli.py`, **inside the handler** | `tests/test_ui.py`, `tests/test_ui_api.py` |
+| `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py` |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
 > tests pin it.

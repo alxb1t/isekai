@@ -1,4 +1,4 @@
-"""The six endpoints, and the only module in this package that imports the `ui` extra.
+"""The HTTP surface, and the only module in this package that imports the `ui` extra.
 
 Kept to one file deliberately. `batch.py` performs the whole startup refusal
 order and imports no web framework, so that order is exercised by the main suite
@@ -17,14 +17,19 @@ startup, `save_draft()` on autosave and `approve()` on the button. Nothing here
 builds an artifact body or an artifact filename, and `tests/test_ui.py`'s grep is
 what keeps that at three (design.md D11).
 
-**uvicorn is imported here too, and not in `__init__.py`.** The type checker's
-override is scoped to this one file and this one rule, because CI never installs
-the extra; a second module importing it would have to widen that scope for no
-reason other than where a line was put.
+**uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
+calls this module's `run()` instead, so the whole `ui` extra is reached from this
+one file and `python -m isekai`'s import graph never reaches it at all. Nothing
+is suppressed for it anywhere: the `dev` group pins `fastapi` and `uvicorn`, so
+`uv sync --locked` installs both and the import resolves in the environment the
+gate runs in.
 
-**The flow is in none of the six paths.** The batch has exactly one and
+**The flow is in none of the paths.** The batch has exactly one and
 `/api/batch` names it; a URL here is a contract between a server and a Vue app in
-the same repository, so widening it later is a find-and-replace.
+the same repository, so widening it later is a find-and-replace. The paths are
+`GET /api/batch`, `/api/tags`, `/api/fields`, `/api/inputs/{identifier}` and
+`/api/inputs/{identifier}/photo`, `PUT /api/inputs/{identifier}/draft` and
+`POST /api/inputs/{identifier}/approve`, with the built bundle mounted at `/`.
 """
 
 from collections.abc import Awaitable, Callable, Mapping
@@ -131,13 +136,19 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
     @app.get("/api/batch")
     def read_batch() -> dict[str, Any]:
         """Describe the batch: its flow, its schema, its inputs and their state."""
-        # Once per input, not twice: the count is what the summaries already say.
+        # **The count is every input holding an approved artifact**, which is
+        # what `Batch.approved_count` reads off the directory -- and `re-opened`
+        # holds one. Deriving it from `status == "approved"` was the trap: that
+        # agreed with the directory only while the two states were the only two,
+        # and the third ends the coincidence (design.md D5). Read off `state()`
+        # rather than by walking the directory a second time, so the count and
+        # the statuses cannot disagree by construction rather than by luck.
         summaries = [_summary(batch, held) for held in batch.inputs]
         return {
             "flow": batch.flow.id,
             "schema": list(batch.flow.schema.names),
             "vocabulary": len(batch.vocabulary),
-            "approved": sum(1 for held in summaries if held["status"] == "approved"),
+            "approved": sum(1 for held in summaries if held["status"] != "draft"),
             "inputs": summaries,
         }
 
@@ -220,6 +231,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         held = batch.find(identifier)
         draft = batch.draft_path(held)
         approved = batch.approved_path(held)
+        state = batch.state(held)
         # The draft while one exists, the approved artifact once it does not.
         # That is what makes an input approved in an earlier sitting open with
         # its sheet rather than empty (design.md D5).
@@ -245,13 +257,13 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "wd14": _wd14(batch, held),
             "tags": _tags(batch, held),
             "fields": fields,
-            # **Approval is what makes a sheet read-only, not the absence of a
-            # draft.** The rail has always keyed on `approved_path` and the form
-            # keyed on `draft is None`, so in the state `review --new-version`
-            # produces -- approved, and a fresh draft beside it -- the two
-            # disagreed and the `PUT` below went through. `ui/spec.md` already
-            # says it must not (design.md D5).
-            "readonly": approved is not None,
+            # **Approval with nothing newer beside it is what makes a sheet
+            # read-only**, which is precisely `state() == "approved"`. Not the
+            # absence of a draft, which the rail never keyed on; and not
+            # approval alone, which `v0.22.1` used and which made
+            # `review --new-version` write a draft this page would not edit
+            # (design.md D5).
+            "readonly": state == "approved",
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
             "saved": _saved(draft),
@@ -275,25 +287,25 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         partial update here: a debounced `PUT` of everything is what makes the
         receipt the page shows true.
 
-        **Two preconditions, and both answer `409`.** An approved input refuses
-        an update at all, which is `ui/spec.md`'s own requirement and was false
-        in code: `save_draft` refuses on *no draft* and never on *approved*, and
-        this had no approval gate whatever (design.md D5). And an update whose
-        `saved` does not match the draft on disk refuses, because the page
-        autosaves on a debounce and two overlapping `PUT`s were free to commit
-        in the order the server happened to finish them -- last write wins,
-        where "last" is not the operator's last keystroke (design.md D6).
+        **Two preconditions, and both answer `409`.** An input that is approved
+        **and holds no later draft** refuses an update at all: an approved sheet
+        is never edited in place, and approval is the end of a review. An input
+        re-opened with `review --new-version` is not that state and is accepted,
+        which is what the verb writes the draft for. And an update whose `saved`
+        does not match the draft on disk refuses, because the page autosaves on a
+        debounce and two overlapping `PUT`s were free to commit in the order the
+        server happened to finish them -- last write wins, where "last" is not
+        the operator's last keystroke (design.md D6).
         """
         held = batch.find(identifier)
-        if batch.approved_path(held) is not None:
+        if batch.state(held) == "approved":
             raise Refusal(
                 f"{identifier} is approved, and an approved sheet is never "
                 "edited in place; approval is the end of a review -- correct it "
                 f"with `python -m isekai review --flow {batch.flow.id} "
                 "--new-version`, which writes a fresh draft beside the approved "
-                "artifact for the command line to edit; this page keeps showing "
-                "the input approved and read-only either way, because the "
-                "re-opened state is v0.22.2's (design.md D5)"
+                "artifact, and reload: the input comes back re-opened and "
+                "editable, with its approved artifact still named"
             )
         _precondition(batch, held, payload)
         fields = {
@@ -328,12 +340,18 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
 
 
 def _summary(batch: Batch, held: Input) -> dict[str, Any]:
-    """Describe one input for the rail: its size, and where it is in stage ③."""
+    """Describe one input for the rail: its size, and where it is in stage ③.
+
+    The state is `Batch.state`'s and is not recomputed here. `draft` holds no
+    approved artifact; `approved` holds one and nothing newer; `re-opened` holds
+    one *and* a later draft, which is what `review --new-version` writes and the
+    only state in which the form is offered over an approved input.
+    """
     return {
         "id": held.id,
         "width": held.width,
         "height": held.height,
-        "status": "approved" if batch.approved_path(held) is not None else "draft",
+        "status": batch.state(held),
     }
 
 
@@ -457,7 +475,6 @@ def run(app: FastAPI, *, host: str, port: int) -> None:
     """Block, serving `app`, until the operator stops it.
 
     A thin wrapper so that `__init__.py` composes the surface without importing
-    the `ui` extra at module scope -- the type checker's override covers this
-    file alone, and CI installs neither package.
+    the `ui` extra at module scope.
     """
     uvicorn.run(app, host=host, port=port, log_level="warning")

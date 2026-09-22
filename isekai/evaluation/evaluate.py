@@ -16,9 +16,11 @@ in CI with the `[eval]` extra absent. That is the same seam discipline
 `ComfyTransport` is under, for the same reason: a fake is what keeps the suite
 offline.
 
-**It is not on `python -m isekai`'s import graph**, and the one-path rule is untouched
--- that rule is about there being one way to *render*, and an evaluator is not a
-second way to render (design.md D12).
+**It is not on `python -m isekai`'s import graph**, and the rule that a selectable
+implementation is a measured one is untouched -- that rule is about what may enter
+the registry the render path dispatches on, and an evaluator is not a second way
+to render (design.md D12). It was *"there is one path"* when this module was
+written; `CLAUDE.md` records the replacement, and the reading here survives it.
 """
 
 from collections.abc import Mapping
