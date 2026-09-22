@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy_types import ComfyTransport, Workflow
+from isekai.boundary.comfy_types import ComfyTransport, Unreachable, Workflow
 from isekai.foundation.flow import Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -44,6 +44,7 @@ from isekai.foundation.run import (
     OUTPUTS,
     PROMPTS,
     REVIEW,
+    Kind,
     Run,
     approved_versions,
     artifact_name,
@@ -196,7 +197,7 @@ def prompt_artifact(
     return path
 
 
-def prepare(run: Run, flows: Mapping[str, Flow]) -> dict[str, Path]:
+def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[str]]:
     """Assemble every approved flow's prompt for one run, before anything is rented.
 
     A run that has been approved for *nothing* asked for is refused rather than
@@ -204,6 +205,13 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> dict[str, Path]:
     the refusal fires only when none of the flows asked for has an approved sheet,
     so "a run renders everything it has been approved for" is unchanged and
     "rendering did nothing and said nothing" is no longer reachable.
+
+    **One flow's malformed sheet costs that flow alone.** This returns what was
+    assembled *and* what refused, for the same reason `across` collects per
+    photograph rather than stopping at the first: the flows of one run are
+    independent -- separate subtrees, separate sheets, separate error records --
+    so a dict comprehension raising at the first broken one took every sibling's
+    turn with it, and did it after already writing a permanent record (v0.16 R6).
     """
     ready = [flow for flow in approved_flows(run) if flow in flows]
     if flows and not ready:
@@ -213,9 +221,14 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> dict[str, Path]:
             "is rendered; run `python -m isekai review`, edit the draft, then "
             "`python -m isekai approve`"
         )
-    return {
-        flow: prompt_artifact(run, flows[flow], flows[flow].schema) for flow in ready
-    }
+    assembled: dict[str, Path] = {}
+    refused: list[str] = []
+    for flow in ready:
+        try:
+            assembled[flow] = prompt_artifact(run, flows[flow], flows[flow].schema)
+        except Refusal as broken:
+            refused.append(str(broken))
+    return assembled, refused
 
 
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:
@@ -416,10 +429,15 @@ def render(
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
             body = _submit(client, graph, poll)
         except Refusal as failed:
+            # A closed tunnel says nothing about this graph, and `check_budget`
+            # short-circuits a `permanent` record for good -- so recording one
+            # here made the operator's remedy deleting a file by hand, on the
+            # one failure that is over the moment the pod comes back (v0.13 R7).
+            kind: Kind = "transient" if isinstance(failed, Unreachable) else "permanent"
             record_failure(
                 directory,
                 version,
-                "permanent",
+                kind,
                 {"stage": STAGE_RENDER, "seed": seed, "detail": str(failed)},
             )
             raise

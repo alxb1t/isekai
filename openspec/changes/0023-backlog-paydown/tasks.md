@@ -3,7 +3,7 @@
 ## Progress
 
 - [x] 1 — The middleware: `Host`/`Origin` on all seven routes
-- [ ] 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
+- [x] 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
 - [ ] 3 — Refusal strings: the path order, and the flag the remedy omits
 - [ ] 4 — Load-time validation: the dials and the node ids
 - [ ] 5 — The UI server: nine entries
@@ -71,20 +71,20 @@ is a halt.
 
 ## 2 — Failure records: a transport failure is transient, a bad sheet spares its siblings
 
-- [ ] 2.1 **`v0.13 review/R7` — a closed tunnel stops being `permanent`.** `pipeline/generate.py:418-423`
+- [x] 2.1 **`v0.13 review/R7` — a closed tunnel stops being `permanent`.** `pipeline/generate.py:418-423`
   calls `record_failure(..., "permanent", ...)` unconditionally, while `_reported()`
   (`interface/cli.py:557-566`) turns `URLError`/`OSError` into that same `Refusal`. `check_budget`
   (`run.py:527`) then short-circuits forever. **Fix:** raise a distinct type from `_reported()` and branch
   on it at the `record_failure` call. **Verify:** a test forcing a `URLError` through the transport and
   asserting the record's kind is `transient`.
 
-- [ ] 2.2 **`v0.16 review/R6` — one malformed sheet stops aborting its siblings.**
+- [x] 2.2 **`v0.16 review/R6` — one malformed sheet stops aborting its siblings.**
   `pipeline/generate.py:216-218` assembles in a dict comprehension, and `prompt_artifact`'s failure path
   at `:172-176` has already written a **permanent** record before raising at `:178`. **Fix:** collect
   per-flow refusals the way `across` does per photograph. **Verify:** two flows, one malformed sheet —
   assert the good flow is assembled and that the bad flow's record does not poison a later run.
 
-- [ ] 2.3 **Gate green. CHANGELOG. Tick 2. Commit.**
+- [x] 2.3 **Gate green. CHANGELOG. Tick 2. Commit.**
 
 ---
 

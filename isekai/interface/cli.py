@@ -43,7 +43,12 @@ from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
-from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
+from isekai.boundary.comfy_types import (
+    ComfyTransport,
+    Image,
+    Unreachable,
+    Workflow,
+)
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
@@ -493,14 +498,20 @@ def _generate(
     machine and then discover the third sheet was broken.
     """
     ready: list[tuple[Run, str]] = []
+    # Collected alongside `across`'s, not raised: `prepare` already tried every
+    # flow, so one run's broken sheet is a refusal to report at the end rather
+    # than a reason its sibling flows go unrendered.
+    broken: list[str] = []
 
     def assemble_one(identifier: str) -> None:
         run = _run_for(identifier, wired)
-        for flow, path in prepare(run, flows).items():
+        assembled, refusals = prepare(run, flows)
+        broken.extend(refusals)
+        for flow, path in assembled.items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))
 
-    refused = across(list(targets), assemble_one)
+    refused = across(list(targets), assemble_one) + broken
     if wired.client is None:
         return refused
 
@@ -553,11 +564,17 @@ class _Reporting:
 
 @contextmanager
 def _reported() -> Iterator[None]:
-    """Turn a transport-level network error into a `Refusal` naming the remedy."""
+    """Turn a transport-level network error into a `Refusal` naming the remedy.
+
+    `Unreachable` rather than a bare `Refusal`, because nothing that reaches
+    here says anything about the graph: the pod went away, the tunnel closed, or
+    it was never opened. Every caller that only reports a refusal is unaffected;
+    the one that writes an error record records this as transient (v0.13 R7).
+    """
     try:
         yield
     except (urllib.error.URLError, OSError) as unreachable:
-        raise Refusal(
+        raise Unreachable(
             f"the rendering endpoint could not be reached ({unreachable}); "
             "bring a pod up with `bash infra/up.sh`, open the tunnel, and pass "
             "its address with `--server` -- or drop `--server` to assemble the "

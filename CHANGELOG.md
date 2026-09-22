@@ -25,6 +25,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An unreachable endpoint is recorded `transient`, not `permanent`.** `_reported()` in `cli.py` turned
+  every `URLError`/`OSError` from the transport into a `Refusal`, and `render()` wrote `permanent` for
+  any `Refusal` it caught -- so a closed tunnel, a pod that went away, or a `--server` address typed
+  before the tunnel was up left a record `check_budget` short-circuits on for good, and the operator's
+  remedy was deleting a file by hand. `comfy_types.py` now declares `Unreachable(Refusal)`, `_reported()`
+  raises it, and the one caller that writes a record branches on it. Everything that only *reports* a
+  refusal is unchanged: the CLI still prints the same string and exits 1.
+- **One flow's malformed sheet no longer costs its siblings their assembly.** `prepare()` assembled in a
+  dict comprehension, so the first flow whose approved sheet could not be read took every other flow of
+  that run with it -- after `prompt_artifact` had already written a permanent record into the broken
+  flow's own directory. It now collects per flow the way `across` collects per photograph, returning what
+  was assembled beside what refused, and `_generate` reports both together at the end.
+
 ### Security
 
 - **`Host` and `Origin` are validated on every request the review surface answers.** Until now

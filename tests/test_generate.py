@@ -9,11 +9,13 @@ rather than a hope.
 import io
 import json
 import random
+import urllib.error
 from pathlib import Path
 
 import pytest
 
 import isekai.foundation.run as run_module
+from isekai.boundary.comfy_types import Workflow
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -31,12 +33,15 @@ from isekai.foundation.run import (
     Run,
     across,
     artifact_name,
+    attempts,
     open_run,
     read_artifact,
 )
+from isekai.interface.cli import _Reporting
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import (
     SEED_BITS,
+    approved_artifact,
     approved_flows,
     build_graph,
     draw_seeds,
@@ -179,9 +184,9 @@ def test_assembly_contacts_no_endpoint_and_writes_an_artifact(
 ) -> None:
     client = FakeComfyClient()
 
-    written = prepare(run, {FLOW: flow})
+    written, refused = prepare(run, {FLOW: flow})
 
-    assert list(written) == [FLOW]
+    assert list(written) == [FLOW] and refused == []
     body = read_artifact(written[FLOW])
     assert body["positive"].startswith("masterpiece, best quality")
     assert body["negative"] == flow.prompt["negative"]
@@ -601,7 +606,8 @@ def test_an_approved_flow_still_needs_no_flag_to_be_selected(
 ) -> None:
     # The refusal above fires only when *nothing* asked for is approved, so the
     # "a run renders everything it has been approved for" rule is untouched.
-    assert list(prepare(run, {FLOW: flow})) == [FLOW]
+    assembled, refused = prepare(run, {FLOW: flow})
+    assert list(assembled) == [FLOW] and refused == []
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
@@ -616,15 +622,67 @@ def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
     # opens a run cleanly and only the header read ever finds it.
     bad.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
 
-    def assemble_one(one: Run) -> None:
-        prepare(one, {FLOW: flow})
+    # `_generate`'s own composition: `prepare` now returns one run's per-flow
+    # refusals rather than raising at the first, so the batch's collection is
+    # `across`'s list plus theirs (v0.16 R6).
+    broken: list[str] = []
 
-    refused = across([bad, good], assemble_one)
+    def assemble_one(one: Run) -> None:
+        broken.extend(prepare(one, {FLOW: flow})[1])
+
+    refused = across([bad, good], assemble_one) + broken
 
     assert len(refused) == 1
     assert "re-export the photograph" in refused[0]
     assert (good.directory(FLOW, PROMPTS) / artifact_name(1)).is_file()
     assert list(bad.directory(FLOW, PROMPTS).glob("001.error.1.permanent.json"))
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_one_flows_malformed_sheet_does_not_cost_its_siblings_their_assembly(
+    tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    """Two flows on one run, one of them broken: the other is still assembled.
+
+    The flows of a run are independent -- separate subtrees, separate sheets,
+    separate error records -- so the dict comprehension that raised at the first
+    broken one took its siblings' turn with it, after having already written a
+    permanent record into the broken flow's own directory (v0.16 R6).
+    """
+    fewer = _fewer_roles_flow(tmp_path)
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    made = open_run(photo, tmp_path / "runs")
+    for name in (FLOW, FEWER):
+        caption(made, FakeReader(prose="Brown hair, brown eyes."), flow=name)
+        sheet(made, schema, vocabulary, flow=name)
+        review(made, name)
+        approve(made, name, schema, vocabulary)
+
+    # The one sheet nothing can assemble: the approved artifact has lost the
+    # key the whole prompt is built from.
+    _, source = approved_artifact(made, FEWER)
+    body = json.loads(source.read_text())
+    del body["fields"]
+    source.write_text(json.dumps(body, indent=2) + "\n")
+
+    assembled, refused = prepare(made, {FLOW: flow, FEWER: fewer})
+
+    assert list(assembled) == [FLOW]
+    assert (made.directory(FLOW, PROMPTS) / artifact_name(1)).is_file()
+    assert len(refused) == 1 and FEWER in refused[0]
+    # The record is written into the broken flow's own subtree, so the flow
+    # beside it is untouched by it -- and stays assembled on the next pass.
+    assert list(made.directory(FEWER, PROMPTS).glob("001.error.1.permanent.json"))
+    assert not list(made.directory(FLOW, PROMPTS).glob("*.error.*"))
+
+    again, still = prepare(made, {FLOW: flow, FEWER: fewer})
+
+    assert list(again) == [FLOW]
+    # Still exactly one refusal on the second pass, and it is the budget
+    # short-circuit reading the record the first pass wrote -- into the broken
+    # flow's directory, which is why the flow beside it assembles again.
+    assert len(still) == 1 and "failed permanently" in still[0]
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
@@ -642,6 +700,34 @@ def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
     assert "re-export the photograph" in str(refused.value)
     assert client.submissions == []
     assert list(directory.glob("001.error.1.permanent.json"))
+
+
+@pytest.mark.spec_exempt("behaviour; the scenario lands in 0024")
+def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
+    run: Run, flow: Flow, schema: Schema
+) -> None:
+    """A closed tunnel says nothing about the graph, so it is not permanent.
+
+    Through `cli._Reporting`, the wrapper that actually ships, rather than by
+    raising `Unreachable` directly: what is under test is that a transport-level
+    `URLError` reaches the record as transient, and the classification happens in
+    that wrapper.
+    """
+    prepare(run, {FLOW: flow})
+
+    class Closed(FakeComfyClient):
+        """The tunnel is down: every call fails the way a closed socket does."""
+
+        def submit(self, workflow: Workflow) -> str:
+            raise urllib.error.URLError("Connection refused")
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, _Reporting(Closed()), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert "the rendering endpoint could not be reached" in str(refused.value)
+    assert [one.kind for one in attempts(directory, 1)] == ["transient"]
+    assert not list(directory.glob("001.error.1.permanent.json"))
 
 
 @pytest.mark.spec("run-directory:atomicity:interrupted-write-leaves-nothing")
