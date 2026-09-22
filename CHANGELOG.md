@@ -27,6 +27,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The acceptance ran, and it cost nothing: no pod, no render, no `generate`.** `make gate` exits 0 on
+  all six commands, 815 tests pass, and `grep spec_exempt tests/ | grep 0024` returns nothing. Every
+  numeral this version touched was re-derived from the tree rather than from the sentence it replaced —
+  four tracked files per flow, six repo-root anchors across four modules, seven stage directories, seven
+  endpoints, seven verbs, five ignored roots, twelve capabilities on disk, three copies of the gate.
+  `pytest -k test_every_tracked_flow_matches` passes, so no flow moved and `manifest_digest` did not.
+
+- **The re-opened path was walked by hand against a running surface**, twice — once on the phase-4 code
+  and again after `/simplify` rewrote the predicate, with identical results. Approve an input; the edit
+  is refused `409` with the new refusal, which now names the verb and says the input comes back
+  editable rather than pointing at a future version; `review --flow F --new-version` writes
+  `002.draft.json` beside `001.approved.json`; the reload reports `readonly: false`, status
+  `re-opened`, and still names the approved artifact; the edit saves into the draft and the approved
+  artifact is byte-unchanged; and `/api/batch`'s count equals the approved artifacts the batch's run
+  directories hold.
+
+- **What was not verified, stated rather than left to inference.** No pod was created and nothing was
+  rendered, so diffusion quality and identity fidelity are untouched by this version and unmeasured by
+  it. **Only the four capabilities `v0.22.1` touched were audited** — the other scenarios in the living
+  spec were not read against the code, and the eight requirement-level findings this version reports
+  are what that partial pass turned up. A full audit is a version of its own and is filed, not done
+  here. The browser was exercised through its own HTTP API rather than by a person clicking; the rail's
+  rendering of the third state is covered by the type checker and the status the API returns, not by a
+  screenshot.
+
+
 - **The seventeen `spec_exempt` markers are repaid**, one for one, and
   `grep spec_exempt tests/ | grep 0024` returns nothing. `v0.22.1` borrowed a marker whose documented
   meaning is *genuinely structural* on the explicit condition that this version repay it; the debt was

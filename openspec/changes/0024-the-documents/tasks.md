@@ -8,7 +8,7 @@
 - [x] 4 — The spec catches up with the code, and the one code change
 - [x] 5 — Seventeen scenarios
 - [x] 6 — Rebind the seventeen tests
-- [ ] 7 — The acceptance
+- [x] 7 — The acceptance
 
 ## The per-phase ritual
 
@@ -262,22 +262,22 @@ run-directory       2    show's injected flows root · the mid-stream refusal
 
 ## 7 — The acceptance
 
-- [ ] 7.1 **`make gate` — all six commands, output pasted.**
+- [x] 7.1 **`make gate` — all six commands, output pasted.**
 
-- [ ] 7.2 **`grep spec_exempt tests/ | grep 0024` returns nothing.**
+- [x] 7.2 **`grep spec_exempt tests/ | grep 0024` returns nothing.**
 
-- [ ] 7.3 **Every numeral this change touched was re-derived from the tree**, not from the sentence it
+- [x] 7.3 **Every numeral this change touched was re-derived from the tree**, not from the sentence it
   replaced. For each: the command that produced it, and its output.
 
-- [ ] 7.4 **Walk the re-opened path by hand.** Approve an input · try to edit it, and confirm the refusal
+- [x] 7.4 **Walk the re-opened path by hand.** Approve an input · try to edit it, and confirm the refusal
   · run `review --flow F --new-version` · reload the surface · confirm the input is **editable** and the
   rail says **re-opened** · save an edit · confirm the batch's approved count still matches the
   directories.
 
-- [ ] 7.5 **Confirm no flow moved** — `uv run pytest -k test_every_tracked_flow_matches`.
+- [x] 7.5 **Confirm no flow moved** — `uv run pytest -k test_every_tracked_flow_matches`.
 
-- [ ] 7.6 **Record what was not verified.** No pod, no render, and **the other 244 scenarios were not
+- [x] 7.6 **Record what was not verified.** No pod, no render, and **the other 244 scenarios were not
   audited** — only the four capabilities `v0.22.1` touched. That is the design; the full pass is a
   backlog row.
 
-- [ ] 7.7 **`/simplify` over this change's own diff.** **Gate green. CHANGELOG. Tick 7. Commit.**
+- [x] 7.7 **`/simplify` over this change's own diff.** **Gate green. CHANGELOG. Tick 7. Commit.**
