@@ -61,10 +61,30 @@ STAGE = "caption"
 # transcript on the grounds of reproducibility, which was the whole argument for
 # adopting it. The budget is this stage's alone -- prose runs longer than one
 # word and shorter than sixteen fields (design.md D10).
+#
+# **`num_ctx` is pinned at the window Ollama was already resolving**, which is
+# the only value that leaves what this reader produces unchanged -- and that is
+# the whole point of pinning it rather than raising it. Measured on this
+# machine, at v0.22.1:
+#
+# | | tokens |
+# |---|---|
+# | briefing + prompt + the photograph, `prompt_eval_count` | 1275 |
+# | of which the photograph, by difference | ~729 |
+# | `num_predict`, drawn from the same window | 1024 |
+# | the window Ollama resolved with nothing pinned, `/api/ps` | 4096 |
+#
+# **The photograph's share is constant.** 1275 exactly, for 0.17 MB at
+# 800x1125, 2.20 MB at 1248x1824 and 2.28 MB at 1024x1472 -- the vision tower
+# encodes at a fixed grid and does not tile, so a larger photograph cannot grow
+# it. That is what makes 4096 a ceiling rather than a guess: the worst case is
+# 2299 of 4096, and the GGUF declares 131072 while the Modelfile pins nothing,
+# so what was unpinned here was Ollama's default and not the model's.
 READER_OPTIONS: Mapping[str, Any] = {
     "temperature": 0,
     "seed": 1,
     "num_predict": 1024,
+    "num_ctx": 4096,
 }
 
 # The one command that turns an absent reader into a present one. It is the

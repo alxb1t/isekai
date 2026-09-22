@@ -7,7 +7,7 @@
 - [x] 3 — Refusal strings: the path order, and the flag the remedy omits
 - [x] 4 — Load-time validation: the dials and the node ids
 - [x] 5 — The UI server: nine entries
-- [ ] 6 — The local arm: measure, then pin
+- [x] 6 — The local arm: measure, then pin
 - [ ] 7 — The acceptance: gate green and one local pass, no pod
 
 ## The per-phase ritual
@@ -195,27 +195,50 @@ written.
 > constant that no longer exists and is wrong by 3.4×; the real briefing is 2,185 bytes ≈ 546 tokens, and
 > the open question is entirely whether the base64 photograph in the same request body consumes `num_ctx`.
 
-- [ ] 6.1 **Measure before pinning.** One local `caption` call on a real photograph; read
+- [x] 6.1 **Measure before pinning.** One local `caption` call on a real photograph; read
   `prompt_eval_count` off the response and record it in the task list. **This is a number nobody in this
   repository has.**
 
-- [ ] 6.2 **Pin `num_ctx` at or above the measured effective window** in `READER_OPTIONS`
+  **Measured, v0.22.1, this machine, `joycaption-beta-one-q4k` on Ollama 0.34.1:**
+
+  | | tokens |
+  |---|---|
+  | reader `prompt_eval_count` — briefing + prompt + photograph | **1275** |
+  | of which the photograph, by difference from ~546 of text | **~729** |
+  | tagger `prompt_eval_count` — 48-byte prompt + photograph | **779** |
+  | `num_predict`, drawn from the same window | 1024 |
+  | the window Ollama resolved with nothing pinned (`/api/ps`) | **4096** |
+  | what the GGUF declares (`/api/show`, `llama.context_length`) | 131072 |
+
+  **The photograph's share is constant.** `prompt_eval_count` was 1275 for all three of 0.17 MB at
+  800×1125, 2.20 MB at 1248×1824 and 2.28 MB at 1024×1472 — the vision tower encodes at a fixed grid
+  and does not tile. So the open question D8 states is answered twice over: image tokens **do** consume
+  `num_ctx`, and they consume a fixed number of them. Worst case is 1275 + 1024 = **2299 of 4096**, so
+  nothing is being truncated today and 4096 is a ceiling rather than a guess.
+
+- [x] 6.2 **Pin `num_ctx` at or above the measured effective window** in `READER_OPTIONS`
   (`caption.py:64-68`) and `TAGGER_OPTIONS` (`tagging.py:87-92`), **with the measurement in the comment** —
   this file's convention is that a pinned value carries the measurement it came from.
 
-- [ ] 6.3 ⛔ **HALT CHECK — re-caption an existing input and byte-compare the artifact.** If the caption
+- [x] 6.3 ⛔ **HALT CHECK — re-caption an existing input and byte-compare the artifact.** If the caption
   moved, **the pin is wrong and this phase stops**. Do not argue it away in a commit message; record the
   measurement and hand it back. A moved caption moves the sheet, and the sheet moves the render.
 
-- [ ] 6.4 **`v0.19 review/R7` — clear `no_proxy` in the falsification twin.** `tests/test_ollama.py:82-96`
+  **Ran, on two existing inputs, and the pin held.** Each was copied into a scratch runs root and
+  re-captioned with `--new-version` against the pinned build; `002.json`'s prose is byte-identical to
+  `001.json`'s in both (737 and 701 bytes), and the whole artifact body matches with only the producer
+  record differing. Pinning at the window already in force is the only value that can leave the output
+  unchanged, which is why it was chosen over raising it.
+
+- [x] 6.4 **`v0.19 review/R7` — clear `no_proxy` in the falsification twin.** `tests/test_ollama.py:82-96`
   sets `http_proxy`/`https_proxy` and never clears `no_proxy`, so the assertion is true only in a clean
   environment. **Keeps its existing `spec_exempt` marker.**
 
-- [ ] 6.5 **`v0.15 review/R7` — delete `load_records`.** `evaluation/labels.py:317-319`; the definition
+- [x] 6.5 **`v0.15 review/R7` — delete `load_records`.** `evaluation/labels.py:317-319`; the definition
   line is its only reference repo-wide. **Verify:** `grep -rn "load_records" isekai/ tests/ scripts/`
   returns nothing after.
 
-- [ ] 6.6 **Gate green. CHANGELOG. Tick 6. Commit.**
+- [x] 6.6 **Gate green. CHANGELOG. Tick 6. Commit.**
 
 ---
 

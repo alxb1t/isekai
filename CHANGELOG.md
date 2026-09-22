@@ -25,6 +25,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`num_ctx` is pinned at 4096 in both option maps, and the number is the one that was already in
+  force.** It was unset, so the effective window was whatever Ollama resolved from the host -- an
+  invisible dependency on a machine, on the two stages that decide what every sheet and every render is
+  built from. Measured on the operator's machine before pinning, which is a measurement this repository
+  did not have: the reader's `prompt_eval_count` is **1275** (briefing + prompt + photograph),
+  `num_predict` draws 1024 from the same window, and `/api/ps` reports the window Ollama resolved with
+  nothing pinned as **4096** -- so 2299 of 4096 and nothing was being truncated. **The photograph's
+  share is constant at ~729 tokens**: 1275 exactly for 0.17 MB at 800x1125, 2.20 MB at 1248x1824 and
+  2.28 MB at 1024x1472, because the vision tower encodes at a fixed grid and does not tile. That is
+  what makes 4096 a ceiling rather than a guess, since a larger photograph cannot grow it. The tagger's
+  prompt is the cheaper of the two at **779**. `v0.19 review/R4`'s own figure -- *"a 7,440-byte
+  briefing"* -- was measured against a constant that no longer exists and was wrong by 3.4x
+  (design.md D8).
+
+  **The halt check ran and the pin held**: two existing inputs were re-captioned with the pin in place
+  and both artifacts came back byte-identical to the ones on disk, prose and body alike. Pinning at the
+  window already in force is the only value that leaves the models' output unchanged, which is the whole
+  point of pinning rather than raising.
+
 ### Fixed
 
 - **An unreachable endpoint is recorded `transient`, not `permanent`.** `_reported()` in `cli.py` turned
@@ -104,6 +125,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that binding only -- `TagInput.vue`'s thirteen `event.key` branches are a keyboard re-work of their own.
 - **A dead guard is gone from `/api/tags`.** `if (posts := vocabulary.count(tag)) is not None` dropped no
   row -- `count()` returns `int` -- and read as though a fragment match might have no count.
+
+- **A test that was true only in a clean environment.** `tests/test_ollama.py`'s falsification twin set
+  `http_proxy`/`https_proxy` and never cleared `no_proxy` -- and `getproxies()` reads that too, so on a
+  machine exporting `no_proxy=localhost,127.0.0.1` the twin took the direct route and asserted the very
+  thing it exists to rule out. Both spellings are now deleted for the duration of the test.
+- **A dead public function is gone.** `evaluation/labels.py`'s `load_records` had no reference anywhere
+  in the repository but its own definition line.
 
 ### Security
 

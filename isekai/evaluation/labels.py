@@ -26,7 +26,6 @@ Stdlib only, like `isekai.evaluation.evaluate`, so all of it is testable in CI w
 
 import csv
 import itertools
-import json
 import subprocess
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -312,8 +311,3 @@ def scores_from_records(records: list[dict], axis: str) -> dict[str, float | Non
                 value = entry.get("value")
         out[f"{subject}/{image}"] = value
     return out
-
-
-def load_records(paths: list[Path]) -> list[dict]:
-    """Read the scorer's per-render records."""
-    return [json.loads(p.read_text()) for p in paths]

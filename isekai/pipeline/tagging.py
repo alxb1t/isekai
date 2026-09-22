@@ -84,10 +84,17 @@ TAG_PROMPT = "Write a long list of Booru tags for this image.\n"
 # every one `done_reason: stop`, the longest 200 tokens. Stated rather than
 # inherited, so nobody later reads the number as evidence of a measurement it did
 # not come from (design.md D12).
+#
+# `num_ctx` is the reader's 4096 and for the reader's reason -- the window
+# Ollama was already resolving, pinned so it stops depending on the host. This
+# prompt is the cheaper of the two: measured at v0.22.1, `prompt_eval_count` is
+# **779** against the reader's 1275, the 48-byte prompt costing ~50 tokens
+# beside the same constant ~729 for the photograph. 779 + 1024 of 4096.
 TAGGER_OPTIONS: Mapping[str, Any] = {
     "temperature": 0,
     "seed": 1,
     "num_predict": 1024,
+    "num_ctx": 4096,
     "repeat_penalty": 1.15,
 }
 

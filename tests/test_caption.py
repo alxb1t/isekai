@@ -313,7 +313,15 @@ def test_the_open_readers_body_carries_the_photograph_and_the_pinned_sampling(
     assert body["model"] == "a-reader"
     assert body["images"] == [base64.b64encode(photo.read_bytes()).decode()]
     assert body["stream"] is False
-    assert body["options"] == {"temperature": 0, "seed": 1, "num_predict": 1024}
+    assert body["options"] == {
+        "temperature": 0,
+        "seed": 1,
+        "num_predict": 1024,
+        # The window Ollama was already resolving, pinned so it stops depending
+        # on the host: measured 1275 + 1024 of 4096, with the photograph's share
+        # constant across sizes. See `READER_OPTIONS` for the table.
+        "num_ctx": 4096,
+    }
 
 
 @pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
