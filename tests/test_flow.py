@@ -35,56 +35,20 @@ from isekai.foundation.refusal import Refusal
 # The digest of every tracked flow's whole directory, committed here.
 #
 # **The freeze's job is that nothing changes silently, not that nothing changes.**
-# A dial or a prompt fragment edited in place fails this test naming the flow, so
-# the move can only happen in a change that says so. Updating this constant to
-# make some *other* test pass is the wrong move; re-pinning is a thing a change
-# does deliberately, as its own subject, with what moved written down.
+# Editing any file in a flow fails the test below naming it, so the move can only
+# happen in a change that says so and records what moved.
 #
-# **What a *divergence* still costs is a new identifier.** Two flows exist to be
-# compared over one cohort, and that only works if an identifier means one
-# configuration. So the test is not *did a file change* but *is the old
-# configuration still wanted*: where both must exist -- a variant, another base, a
-# second generation -- the answer is a new flow, and re-pinning would destroy the
-# comparison. Only an abandoned configuration may be re-pinned.
-#
-# **Re-pinned twice.**
-#
-# *0016-flow-registry*, under the exception that change's design.md D2 records:
-# the flow's configuration did not change; its manifest's format did. The schema
-# and both briefings folded into the directory, so the digest covers five files
-# rather than two, and `manifest_version: 2` is that distinction in data.
-#
-# *0025-running-the-flow*, and this one did change the configuration: `censor,
-# nsfw` left both flows' `flow.json` negative, and both `graph.json` negatives
-# were emptied -- that string is overwritten by `generate.py`'s `patch("negative",
-# ...)` on every render and had already drifted, so it never reached an image.
-# **The reason for the edit was that the renders are better**, which is a claim
-# about output, and surfacing such a claim is what this freeze is for rather than
-# what it forbids. The old configuration is abandoned; nothing compares against
-# it. `image-generation:immutability:a-re-pin-is-recorded` is the requirement
-# that obliges the paragraph you are reading.
-#
-# **Rewritten whole by 0022-one-arm, and that is a flow-set replacement rather
-# than a re-pin.** The three flows this list used to hold were deleted: two of
-# them selected the `claude` arm by declaring no `hosted` block and could not
-# survive its removal, and the third lost `sheet.briefing.md`, which moves a
-# digest and so makes a new flow rather than an edited one. Nothing was re-pinned;
-# three identifiers went and two arrived.
+# **A divergence costs a new identifier.** Two flows are only comparable over one
+# cohort if an identifier means one configuration, so a variant, another base or a
+# second generation is a new flow, not a re-pin. Re-pinning is for the other case,
+# where the old configuration is abandoned.
 #
 # The failure message below gains no "unless" clause -- a test message that
 # explains how to evade itself is one that gets evaded.
 PINNED: dict[str, str] = {
-    # `conjure-v1`'s graph and schema, byte for byte, including all 21 fields --
-    # `eyelashes` among them. Its caption briefing is a byte-identical copy of
-    # `summon-anime-wai`'s: both flows read the same model for the same purpose,
-    # and a second authored briefing would be a second untested artifact.
     "conjure-anime-wai": (
         "5de6632e33a83377347f887663213eb69733636edb3a380372e00ab3a9171f61"
     ),
-    # `summon-open-v1`'s graph, schema and caption briefing, byte for byte. What
-    # moved is the manifest -- the identifier, `manifest_version` 3, and the
-    # `hosted` block flattened to one required top-level `model` -- and the
-    # deletion of `sheet.briefing.md`, which has had no reader since v0.21.
     "summon-anime-wai": (
         "3ad0f323d0f4a826cd06a0c37b47fbcceceaa4e8c6074a1153529b5f2ee73e7f"
     ),
@@ -580,23 +544,29 @@ def test_every_tracked_flow_matches_its_committed_digest(name: str) -> None:
 
 
 @pytest.mark.spec("image-generation:immutability:a-re-pin-is-recorded")
-def test_a_re_pin_leaves_a_record_naming_the_change_that_moved_it() -> None:
-    """A digest may move, but not without the paragraph that says what moved.
+def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
+    """Every pinned flow is named in the changelog, which is where the record lives.
 
-    **The obligation is the whole of what re-pinning buys back.** Nothing on disk
-    records which side of a re-pin a run falls on, so the prose above `PINNED` is
-    the only place a later reader can learn that the bytes a run was produced from
-    no longer exist. Prose is not self-enforcing, which is why this asserts it:
-    every change that moved a digest is named here, and a re-pin that forgets to
-    add itself fails rather than passing quietly.
+    **Nothing on disk says which side of a re-pin a run falls on** -- a run's
+    provenance records the graph digest, not the flow directory's -- so the only
+    place a later reader learns that the bytes a run was produced from no longer
+    exist is the prose of the change that moved it. `CHANGELOG.md` is that prose's
+    permanent home: append-only, and cut per release.
+
+    **What this can and cannot check.** That a flow is accounted for there is
+    mechanical and asserted here. *Which* digest moved in a given release is not:
+    it would need the previous digest stored somewhere, and storing it would make
+    a second source of truth out of the thing this constant exists to be the only
+    one of. So the substantive half of the requirement is met by review, and this
+    catches the cheap half -- a flow pinned here and mentioned in no release.
     """
-    record = Path(__file__).read_text().split("PINNED: dict[str, str] = {")[0]
+    changelog = (Path(__file__).resolve().parent.parent / "CHANGELOG.md").read_text()
 
-    for change in ("0016-flow-registry", "0025-running-the-flow"):
-        assert change in record, (
-            f"{change} moved a committed digest and left no record of it. A "
-            "re-pin owes a paragraph above PINNED naming the flow that moved "
-            "and what changed in it."
+    for name in PINNED:
+        assert name in changelog, (
+            f"flow {name} is pinned but named in no CHANGELOG.md entry. A flow "
+            "that arrives, or whose digest moves, owes a statement of what moved "
+            "in prose a later reader can find."
         )
 
 

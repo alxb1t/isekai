@@ -48,9 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   keeps the load-bearing half intact: a *divergence* still costs a new identifier, because two flows
   are only comparable over one cohort if an identifier means one configuration. Only an abandoned
   configuration may be re-pinned, and this one is: nothing compares against the old negative. The
-  failure message itself is unchanged and still gains no *"unless"* clause. A new test binds the
-  obligation rather than leaving it as prose — a re-pin that forgets to name itself above `PINNED`
-  now fails.
+  failure message itself is unchanged and still gains no *"unless"* clause. **The comment states the
+  rule and no longer narrates the history behind it** — which release re-pinned what belongs in this
+  file, not in a test module — and a new test asserts the cheap, mechanical half of the obligation:
+  a flow pinned in `PINNED` and named in no `CHANGELOG.md` entry fails. Which digest moved in a given
+  release is left to review, because checking it would mean storing the previous digest and so making
+  a second source of truth out of the constant that exists to be the only one.
 - **`test_no_text_is_taken_from_the_graphs_own_committed_strings` asserts the emptiness instead of
   its old tell.** It used `worst detail`, a tag in the graph and in no manifest, to prove the
   assembly had not read the graph; the emptied node makes that claim structurally, and the assert
