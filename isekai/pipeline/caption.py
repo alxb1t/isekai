@@ -41,23 +41,22 @@ from isekai.boundary import ollama
 from isekai.boundary.claude_cli import (
     BASE_FLAGS,
     BINARY,
-    CliFailure,
     Runner,
-    briefing_text,
-    instructions_record,
     invoke,
-    refusal_for,
     spawn,
 )
 from isekai.foundation.run import (
     CAPTIONS,
     Run,
+    StageFailure,
     artifact_name,
     check_budget,
     envelope,
+    instructions_record,
     latest,
     next_version,
     record_failure,
+    refusal_for,
     write_json,
 )
 
@@ -118,7 +117,7 @@ class FakeReader:
     prose: str = "A person, described in prose."
     implementation: str = "fake-reader"
     models: tuple[str, ...] = ("fake-model",)
-    failure: CliFailure | None = None
+    failure: StageFailure | None = None
     calls: list[tuple[Path, str]] = field(default_factory=list)
 
     def read(self, photo: Path, briefing: str, workspace: Path) -> Reading:
@@ -158,7 +157,7 @@ class ClaudeReader:
         """Invoke the CLI and read prose out of its envelope, or raise."""
         result = invoke(self.argv(photo, workspace, briefing), self.runner, self.binary)
         if not result.result:
-            raise CliFailure(
+            raise StageFailure(
                 "permanent", "the envelope carries no prose the stage can read"
             )
         return Reading(result.result, self.implementation, result.models)
@@ -224,7 +223,7 @@ class OllamaReader:
                 transport=self.transport,
             )
         except ollama.OllamaFailure as failed:
-            raise CliFailure(failed.kind, failed.detail) from failed
+            raise StageFailure(failed.kind, failed.detail) from failed
         return Reading(prose, self.implementation, (self.model,))
 
 
@@ -256,10 +255,10 @@ def caption(
     version = next_version(directory)
     check_budget(STAGE, directory, version, run.id)
 
-    briefing = briefing_text(briefing_path)
+    briefing = briefing_path.read_text()
     try:
         reading = reader.read(run.photo, briefing, run.path)
-    except CliFailure as failed:
+    except StageFailure as failed:
         record = record_failure(
             directory,
             version,
@@ -267,7 +266,13 @@ def caption(
             {"stage": STAGE, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "reader", run.id, failed, record, f"{flow}/{CAPTIONS}/", STAGE
+            "reader",
+            run.id,
+            failed.kind,
+            failed.detail,
+            record,
+            f"{flow}/{CAPTIONS}/",
+            STAGE,
         ) from failed
 
     path = directory / artifact_name(version)

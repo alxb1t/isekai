@@ -20,7 +20,6 @@ from typing import Any
 import pytest
 
 from isekai.boundary import provision
-from isekai.boundary.claude_cli import CliFailure, constant_record
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, Hosted, load_flow
 from isekai.foundation.refusal import Refusal
@@ -28,6 +27,8 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    StageFailure,
+    constant_record,
     open_run,
     read_artifact,
     record_failure,
@@ -444,7 +445,7 @@ def test_a_failing_hosted_tagger_leaves_the_caption_and_the_wd14_list_on_disk(
         """A hosted tagger that cannot succeed, however many times it is asked."""
 
         def tag(self, photo: Path) -> Tagging:
-            raise CliFailure("permanent", "the host answered with prose")
+            raise StageFailure("permanent", "the host answered with prose")
 
     wired = Wiring(
         reader=Always(FakeReader()),

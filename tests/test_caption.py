@@ -16,9 +16,7 @@ import pytest
 
 from isekai.boundary.claude_cli import (
     BASE_FLAGS,
-    CliFailure,
     classify,
-    instructions_record,
     models_that_ran,
 )
 from isekai.foundation.refusal import Refusal
@@ -26,7 +24,9 @@ from isekai.foundation.run import (
     BUDGETS,
     CAPTIONS,
     Run,
+    StageFailure,
     attempts,
+    instructions_record,
     open_run,
     read_artifact,
     versions,
@@ -310,7 +310,7 @@ def test_a_rate_limit_a_server_error_or_a_timeout_is_transient(subtype: str) -> 
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
 def test_a_transient_failure_counts_against_the_budget(run: Run) -> None:
-    reader = FakeReader(failure=CliFailure("transient", "rate limited"))
+    reader = FakeReader(failure=StageFailure("transient", "rate limited"))
 
     with pytest.raises(Refusal):
         caption(run, reader)
@@ -322,7 +322,7 @@ def test_a_transient_failure_counts_against_the_budget(run: Run) -> None:
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
 def test_the_stage_refuses_once_the_budget_is_spent(run: Run) -> None:
-    reader = FakeReader(failure=CliFailure("transient", "rate limited"))
+    reader = FakeReader(failure=StageFailure("transient", "rate limited"))
     for _ in range(BUDGETS["caption"]):
         with pytest.raises(Refusal):
             caption(run, reader)
@@ -346,7 +346,7 @@ def test_a_declined_request_is_permanent() -> None:
 def test_a_decline_names_the_photograph_and_no_other_reader_is_substituted(
     run: Run,
 ) -> None:
-    reader = FakeReader(failure=CliFailure("permanent", "the reader declined"))
+    reader = FakeReader(failure=StageFailure("permanent", "the reader declined"))
 
     with pytest.raises(Refusal) as refused:
         caption(run, reader)
@@ -374,7 +374,7 @@ def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
     def empty(argv: Sequence[str]) -> tuple[int, str, str]:
         return 0, _envelope(result="   "), ""
 
-    with pytest.raises(CliFailure) as failed:
+    with pytest.raises(StageFailure) as failed:
         ClaudeReader(runner=empty).read(tmp_path / "p.jpg", "brief", tmp_path)
 
     assert failed.value.kind == "permanent"
@@ -382,7 +382,7 @@ def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
 def test_no_caption_artifact_is_written_for_an_unusable_response(run: Run) -> None:
-    reader = FakeReader(failure=CliFailure("permanent", "not prose"))
+    reader = FakeReader(failure=StageFailure("permanent", "not prose"))
 
     with pytest.raises(Refusal):
         caption(run, reader)
@@ -401,7 +401,7 @@ def test_output_that_is_not_an_envelope_at_all_is_a_failure(
     def garbage(argv: Sequence[str]) -> tuple[int, str, str]:
         return 1, "not json", "command not understood"
 
-    with pytest.raises(CliFailure) as failed:
+    with pytest.raises(StageFailure) as failed:
         ClaudeReader(runner=garbage).read(tmp_path / "p.jpg", "brief", tmp_path)
 
     assert failed.value.kind == "permanent"

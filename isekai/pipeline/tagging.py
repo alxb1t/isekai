@@ -41,18 +41,20 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama, wd14
-from isekai.boundary.claude_cli import CliFailure, constant_record, refusal_for
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    StageFailure,
     artifact_name,
     check_budget,
+    constant_record,
     envelope,
     latest,
     next_version,
     record_failure,
+    refusal_for,
     write_json,
 )
 
@@ -192,10 +194,10 @@ class OllamaTagger:
                 transport=self.transport,
             )
         except ollama.OllamaFailure as failed:
-            raise CliFailure(failed.kind, failed.detail) from failed
+            raise StageFailure(failed.kind, failed.detail) from failed
 
         if SEPARATOR not in answer:
-            raise CliFailure(
+            raise StageFailure(
                 "permanent",
                 f"{self.model} answered without a single {SEPARATOR!r}, so it "
                 "returned prose rather than a tag list; the prompt asks for a "
@@ -268,7 +270,8 @@ def caption_wd14(
         raise refusal_for(
             "tagger",
             run.id,
-            CliFailure("permanent", str(failed)),
+            "permanent",
+            str(failed),
             record,
             f"{flow}/{WD14}/",
             VERB,
@@ -322,7 +325,7 @@ def caption_tags(
 
     try:
         tagging = tagger.tag(run.photo)
-    except CliFailure as failed:
+    except StageFailure as failed:
         record = record_failure(
             directory,
             version,
@@ -330,7 +333,13 @@ def caption_tags(
             {"stage": TAGS, "detail": failed.detail, "envelope": failed.envelope},
         )
         raise refusal_for(
-            "tagger", run.id, failed, record, f"{flow}/{TAGS}/", VERB
+            "tagger",
+            run.id,
+            failed.kind,
+            failed.detail,
+            record,
+            f"{flow}/{TAGS}/",
+            VERB,
         ) from failed
 
     path = directory / artifact_name(version)

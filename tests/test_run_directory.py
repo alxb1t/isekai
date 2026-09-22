@@ -15,7 +15,6 @@ from typing import Any
 import pytest
 
 import isekai.shared.atomic_write as atomic_write_module
-from isekai.boundary.claude_cli import instructions_record
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -31,6 +30,7 @@ from isekai.foundation.run import (
     attempts,
     check_budget,
     envelope,
+    instructions_record,
     is_approved,
     latest,
     next_version,

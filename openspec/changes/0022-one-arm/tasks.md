@@ -2,7 +2,7 @@
 
 ## Progress
 
-- [ ] 1 — The split: five names to `foundation/run.py`, the arm still working
+- [x] 1 — The split: five names to `foundation/run.py`, the arm still working
 - [ ] 2 — The flow set, the loader and the arm, together
 - [ ] 3 — The documents and the spec delta
 - [ ] 4 — ⚠️ **HUMAN · METERED** — the acceptance, both flows, the same photographs
@@ -35,7 +35,7 @@ of them is a halt.
 **The arm still works at the end of this phase.** Nothing is deleted except `briefing_text` and `ROOT`;
 the rest is a move and a rename. `design.md` D12–D15.
 
-- [ ] 1.1 **Move four names from `isekai/boundary/claude_cli.py` into `isekai/foundation/run.py`**, with
+- [x] 1.1 **Move four names from `isekai/boundary/claude_cli.py` into `isekai/foundation/run.py`**, with
   their docstrings carried verbatim:
 
   | name | at | note |
@@ -53,7 +53,7 @@ the rest is a move and a rename. `design.md` D12–D15.
   **Do not create `foundation/refusal.py` entries for these.** That module's first line is *"The one
   refusal exception, in a module that imports nothing"*, and `run.py:41` already imports it — a cycle.
 
-- [ ] 1.2 **Widen `refusal_for`** from `(stage, run_id, failed: CliFailure, record, where, verb)` to
+- [x] 1.2 **Widen `refusal_for`** from `(stage, run_id, failed: CliFailure, record, where, verb)` to
   `(stage, run_id, kind: Kind, detail: str, record, where, verb)`. It reads exactly two attributes today,
   both at `claude_cli.py:163`. Update all three call sites:
 
@@ -65,12 +65,12 @@ the rest is a move and a rename. `design.md` D12–D15.
 
   After this, `caption_wd14` (`tagging.py:211-291`) holds **no** `StageFailure` reference at all.
 
-- [ ] 1.3 **Inline and delete `briefing_text`** (`claude_cli.py:143-145`). Its one caller anywhere,
+- [x] 1.3 **Inline and delete `briefing_text`** (`claude_cli.py:143-145`). Its one caller anywhere,
   including tests, is `caption.py:259` — replace with `briefing_path.read_text()`. Verified: a repo-wide
   grep finds only the definition, the import at `caption.py:46`, that call, and one prose mention in
   `openspec/changes/archive/0019-open-models/design.md:172`.
 
-- [ ] 1.4 **Delete `ROOT`** (`claude_cli.py:51`). It has no production importer — its only reads are
+- [x] 1.4 **Delete `ROOT`** (`claude_cli.py:51`). It has no production importer — its only reads are
   `:268` and `:270`, inside `instructions_record`, which now uses `DATA_ROOT.parent` (`run.py:52`).
   Delete `pytest.param(claude_cli.ROOT, (), id="claude_cli.ROOT")` at **`tests/test_package_paths.py:56`**
   and drop `claude_cli` from that file's import at `:28`.
@@ -79,11 +79,11 @@ the rest is a move and a rename. `design.md` D12–D15.
   at collection, not a test failure. Nothing asserts the param count; the "six constants" claim is prose
   at `:3` and `:95`, corrected in phase 3.
 
-- [ ] 1.5 **Tidy `claude_cli.py`'s imports.** Once `instructions_record`, `constant_record` and `ROOT`
+- [x] 1.5 **Tidy `claude_cli.py`'s imports.** Once `instructions_record`, `constant_record` and `ROOT`
   leave, `import hashlib` (`:39`) and `from pathlib import Path` (`:45`) are unused → `ruff check` F401.
   Remove them in this commit.
 
-- [ ] 1.6 **Re-point and rename in six test files.** Every one of these is a module-scope import, so a
+- [x] 1.6 **Re-point and rename in six test files.** Every one of these is a module-scope import, so a
   miss is a collection error:
 
   | file:line | what |
@@ -102,13 +102,13 @@ the rest is a move and a rename. `design.md` D12–D15.
 
   `tests/test_ollama.py:203` mentions `CliFailure` in a **docstring only**. Leave it; phase 3.
 
-- [ ] 1.7 **Verify:** `uv run pytest tests/test_caption.py tests/test_tagging.py tests/test_run_directory.py tests/test_package_paths.py tests/test_isolation.py -v`
+- [x] 1.7 **Verify:** `uv run pytest tests/test_caption.py tests/test_tagging.py tests/test_run_directory.py tests/test_package_paths.py tests/test_isolation.py -v`
 
-- [ ] 1.8 **Verify the arm still resolves** — this phase's whole claim:
+- [x] 1.8 **Verify the arm still resolves** — this phase's whole claim:
   `uv run python -c "from isekai.foundation.flow import load_flow; from isekai.interface.wiring import reader_for; r = reader_for(load_flow('summon-v1')); print(type(r).__name__, r.implementation)"`
   **Expected: `ClaudeReader claude-cli`.**
 
-- [ ] 1.9 **Verify:** `make gate`
+- [x] 1.9 **Verify:** `make gate`
 
 ---
 

@@ -36,19 +36,15 @@ that a producer names what actually produced it.
 Stdlib only.
 """
 
-import hashlib
 import json
 import shutil
 import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import Kind
-
-ROOT = Path(__file__).resolve().parent.parent.parent
+from isekai.foundation.run import Kind, StageFailure
 
 # The binary every stage resolves on PATH. New for this repository: tooling has
 # always resolved binaries, the runtime never has. It is bounded -- the open,
@@ -86,19 +82,6 @@ TRANSIENT_MARKERS: tuple[str, ...] = (
 
 # Stop reasons that mean the model declined rather than failed.
 DECLINED: frozenset[str] = frozenset({"refusal", "declined"})
-
-
-class CliFailure(Exception):
-    """The CLI did not return what a stage can use, and the kind says what next."""
-
-    def __init__(
-        self, kind: Kind, detail: str, envelope: Mapping[str, Any] | None = None
-    ) -> None:
-        """Carry the kind and the detail an error record is written from."""
-        super().__init__(detail)
-        self.kind = kind
-        self.detail = detail
-        self.envelope = dict(envelope or {})
 
 
 class Runner(Protocol):
@@ -140,32 +123,6 @@ class Envelope:
     models: tuple[str, ...]
 
 
-def briefing_text(path: Path) -> str:
-    """Return a stage's standing instructions."""
-    return path.read_text()
-
-
-def refusal_for(
-    stage: str,
-    run_id: str,
-    failed: CliFailure,
-    record: Path,
-    where: str,
-    verb: str,
-) -> Refusal:
-    """Build the refusal a stage raises after recording a failed attempt.
-
-    One shape for both stages: what failed, how it failed, where the record is,
-    and the command to run once what it names is fixed. Stated here beside
-    `CliFailure` rather than twice, because the two stages differ only in nouns.
-    """
-    return Refusal(
-        f"{run_id}: the {stage} failed ({failed.kind}) -- {failed.detail}; "
-        f"see {record.name} in {where}, and run `python -m isekai {verb}` again "
-        "once what it names is fixed"
-    )
-
-
 def invoke(
     argv: Sequence[str], runner: Runner = spawn, binary: str = BINARY
 ) -> Envelope:
@@ -180,16 +137,16 @@ def invoke(
     try:
         parsed: Any = json.loads(out)
     except ValueError:
-        raise CliFailure(
+        raise StageFailure(
             classify_text(f"{status} {err}"),
             f"the CLI returned no JSON envelope (exit {status}): "
             f"{(err or out).strip()[:400]}",
         ) from None
     if not isinstance(parsed, dict):
-        raise CliFailure("permanent", "the envelope is not an object")
+        raise StageFailure("permanent", "the envelope is not an object")
     kind = classify(parsed, status)
     if kind is not None:
-        raise CliFailure(kind, detail(parsed), parsed)
+        raise StageFailure(kind, detail(parsed), parsed)
     return Envelope(
         result=str(parsed.get("result", "")).strip(),
         structured=parsed.get("structured_output"),
@@ -254,38 +211,3 @@ def models_that_ran(parsed: Mapping[str, Any]) -> tuple[str, ...]:
         return tuple(sorted(str(name) for name in usage))
     model = parsed.get("model")
     return (str(model),) if isinstance(model, str) and model else ()
-
-
-def instructions_record(path: Path) -> dict[str, str]:
-    """Return the path and digest of an instruction text, for a producer record.
-
-    This is the variable the evidence says matters most: one change to a reader's
-    instructions moved its score from 0.518 to 0.307 and manufactured nineteen
-    identity marks. An artifact whose provenance names the model but not the
-    instructions cannot explain its own result (design.md D7).
-    """
-    resolved = path.resolve()
-    inside = resolved.is_relative_to(ROOT)
-    return {
-        "path": str(resolved.relative_to(ROOT)) if inside else resolved.name,
-        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-    }
-
-
-def constant_record(text: str) -> dict[str, str]:
-    """Return the digest of an instruction text this build holds, with no path.
-
-    `instructions_record` above takes a `Path` and hashes the file behind it,
-    which a producer whose instructions are a module constant cannot use: there
-    is no file and no location, and **a record that invented a path would assert
-    one that does not exist** (design.md D16).
-
-    So the key is simply absent rather than empty or placeheld. A consumer asking
-    where the text came from gets no answer, which is the true one -- it came
-    from this build, and the digest is what identifies which build. The
-    alternative considered and refused was a sixth file in the flow directory:
-    that is the trade v0.19 already priced when `joycaption.Modelfile` went to
-    `scripts/` instead, and a tag prompt shapes the operator's reading rather
-    than the render, so it makes no per-flow claim.
-    """
-    return {"sha256": hashlib.sha256(text.encode()).hexdigest()}

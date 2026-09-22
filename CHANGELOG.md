@@ -25,6 +25,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Five shared names leave `isekai/boundary/claude_cli.py` for `isekai/foundation/run.py`**, one version
+  ahead of the arm they sat behind. `CliFailure`, `refusal_for`, `instructions_record` and
+  `constant_record` are what `pipeline/caption.py` and `pipeline/tagging.py` reach that file for beyond
+  the CLI itself; leaving them there would make the next phase's deletion a move *and* a rewrite in one
+  commit. `foundation/refusal.py` cannot host them — its first line is *"the one refusal exception, in a
+  module that imports nothing"* and the class needs `Kind` from `run.py`, which already imports
+  `refusal.py`: a cycle. `run.py` already owns `Kind`, `record_failure`, `attempts` and `hashlib`, so all
+  four land without a new import.
+- **`CliFailure` is renamed `StageFailure`, with no compatibility alias.** The name says CLI and two of
+  its three raising modules have no CLI in them: `tagging.py` raises it for an Ollama transport failure
+  and `caption.py` for an Ollama reader failure. An alias is how an old name survives the version that
+  existed to remove it, so the rename is done in one commit across production and the suite —
+  `FakeReader.failure` in `pipeline/caption.py` included, which is production code in its own `__all__`.
+- **`refusal_for` widens from a `CliFailure` to `(kind, detail)`.** It read exactly two attributes off
+  its `failed` argument and nothing else, and the type was friction that one call site paid for by
+  **fabricating** an exception purely to satisfy the signature — `tagging.py`'s `caption_wd14` built
+  `CliFailure("permanent", str(failed))` from a `Refusal | OSError`, with the very same two values
+  already spelled literally one line above for `record_failure`. The fabrication is deleted, and
+  `caption_wd14` now holds no `StageFailure` reference at all.
+
+### Removed
+
+- **`briefing_text` is inlined at its one caller and deleted.** Its whole body was `return
+  path.read_text()`; `pipeline/caption.py` was its only caller anywhere including the suite, so it was a
+  one-line alias over a stdlib method carried for a single call site.
+- **`claude_cli.ROOT` is deleted rather than rehomed.** It had no production importer at all — it was
+  read only inside `instructions_record`, which now reads `run.DATA_ROOT.parent`. The two are the same
+  path by construction: both are computed from a file at the same depth with the same three `.parent`
+  steps, and `interface/wiring.py` already spells that expression as `REPOSITORY`. Its one outside
+  reference, a `pytest.param` in `tests/test_package_paths.py`, goes with it — that file's parameter list
+  evaluates at module scope, so leaving it would have been a collection error rather than a test failure.
+
 ## [0.21.0] - 2026-09-21
 
 ### Added

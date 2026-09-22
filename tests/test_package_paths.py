@@ -25,7 +25,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary import claude_cli, provision
+from isekai.boundary import provision
 from isekai.evaluation import eval_models
 from isekai.foundation import flow, run
 
@@ -53,7 +53,6 @@ ANCHORS = (
         ("scripts", "eval_models.json"),
         id="eval_models.EVAL_MANIFEST_PATH",
     ),
-    pytest.param(claude_cli.ROOT, (), id="claude_cli.ROOT"),
 )
 
 
