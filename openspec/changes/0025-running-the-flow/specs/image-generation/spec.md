@@ -31,6 +31,21 @@ left nothing in its place.
 - **WHEN** any file in a tracked flow directory differs from its committed digest
 - **THEN** the suite fails naming the flow
 
+#### Scenario: adding a file to a flow moves its digest
+- **Key:** `image-generation:immutability:a-new-file-moves-the-digest`
+- **Layers:** unit
+- **WHEN** a file is added to a tracked flow's directory
+- **THEN** that flow's digest differs from the committed one
+- **AND** the suite fails naming the flow
+
+#### Scenario: an output's provenance carries the graph digest
+- **Key:** `image-generation:immutability:output-records-the-graph-digest`
+- **Layers:** unit
+- **WHEN** a render is written
+- **THEN** its provenance records the flow identifier, the seed, the sheet version and the digest of the
+  submitted graph
+- **AND** two renders from the same flow identifier with different graphs are distinguishable
+
 #### Scenario: a re-pin states what moved
 - **Key:** `image-generation:immutability:a-re-pin-is-recorded`
 - **Layers:** unit
