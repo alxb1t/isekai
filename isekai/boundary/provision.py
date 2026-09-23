@@ -7,9 +7,8 @@ fetch it. The bytes move through `wget` on the pod (design.md D3, D14); the only
 network call here is the cheap pre-flight HEAD behind the `Fetcher` seam, which a
 fake replaces so the whole suite stays offline.
 
-Not on `python -m isekai`'s import graph. The runtime stays stdlib-only either
-way -- this module is `json`, `re` and `pathlib` -- but the graph stays narrow
-too.
+Not on `python -m isekai`'s import graph. It would break no rule if it were --
+this module is `json`, `re` and `pathlib` -- but the graph stays narrow too.
 """
 
 import hashlib

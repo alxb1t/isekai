@@ -7,9 +7,9 @@ exit codes, and a `Refusal` is caught rather than scraped out of stderr prose
 
 Four modules, and the split is what keeps the suite offline. `batch.py` holds the
 batch and the whole startup refusal order and imports no web framework, so that
-order is tested without the `ui` extra; `bundle.py` builds the browser bundle or
-refuses naming the command; `app.py` is the only module that imports the extra at
-all; and `serve()` below composes the three.
+order is tested with no server involved; `bundle.py` builds the browser bundle or
+refuses naming the command; `app.py` is the only module that imports a web
+framework at all; and `serve()` below composes the three.
 
 **Everything refusable is refused before a port is bound**, because the terminal
 is where the operator already is when they start this, and a `Refusal` there can
@@ -40,8 +40,11 @@ def serve(wired: Wiring, flow: str, identifiers: Sequence[str], *, port: int) ->
     """
     batch = establish(wired, flow, identifiers, bundle=ensure_built)
 
-    # Imported here, not at module scope: this is the only line that needs the
-    # `ui` extra, and the batch above is established without it.
+    # Imported here, not at module scope: this is the only line that needs a web
+    # framework, and the batch above is established without one. That keeps
+    # FastAPI off `python -m isekai`'s import graph even though it is a declared
+    # dependency and so resolvable -- which is the whole of what the `-S` guard
+    # in `tests/test_pipeline_cli.py` checks.
     from isekai.interface.ui.app import create_app, run
 
     print(

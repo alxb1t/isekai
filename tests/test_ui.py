@@ -2,7 +2,7 @@
 
 Every test here is stdlib-only and in the main suite, because `batch.py` imports
 no web framework -- which is the whole reason the startup refusal order lives
-there rather than in `app.py`. Nothing in this file needs the `ui` extra; the
+there rather than in `app.py`. Nothing in this file needs a web framework; the
 endpoints that do are in `tests/test_ui_api.py`.
 """
 
@@ -11,7 +11,6 @@ import io
 import os
 import random
 import subprocess
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -371,22 +370,14 @@ def test_the_gate_installs_the_web_framework_the_api_tests_need() -> None:
     assert importlib.util.find_spec("fastapi") is not None, (
         "FastAPI is absent, so tests/test_ui_api.py will skip and the four `ui` "
         "scenarios bound only there will be proved by nothing -- restore the "
-        "`fastapi` pin in pyproject.toml's `dev` dependency group"
+        "`fastapi` pin in pyproject.toml's `dependencies`"
     )
 
 
-@pytest.mark.spec_exempt("structural: it holds two pin lists equal, not a behaviour")
-def test_the_extra_and_the_dev_group_pin_the_server_identically() -> None:
-    # The `ui` extra is what an operator installs to serve the surface; the
-    # `dev` group is what the gate installs to test it. They name the same two
-    # packages, so a bump to one that missed the other would have the suite
-    # proving a version nobody runs.
-    root = Path(__file__).resolve().parent.parent
-    config = tomllib.loads((root / "pyproject.toml").read_text())
-    extra = set(config["project"]["optional-dependencies"]["ui"])
-    dev = set(config["dependency-groups"]["dev"])
-
-    assert extra <= dev, f"the `dev` group is missing {sorted(extra - dev)}"
+# The manifest's own invariants -- that the server is declared, and declared
+# once -- moved to `tests/test_packaging.py` in v0.22.3. They are not facts about
+# the review surface, and split across two feature files they carried two copies
+# of one requirement-name parser.
 
 
 # --- the bundle is rebuilt when the source moves under it ---------------------

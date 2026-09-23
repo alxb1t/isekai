@@ -34,40 +34,23 @@ from isekai.foundation.refusal import Refusal
 
 # The digest of every tracked flow's whole directory, committed here.
 #
-# **Changing a dial does not edit a flow; it creates a new one.** A tuned dial is
-# not a variant of a flow, it is an untested flow -- so editing a flow fails
-# this test naming it, exactly as changing one of the graph's committed prompts is
-# a deliberate test edit. Updating this constant to make a change pass is the
-# wrong move; adding a flow under a new identifier is the right one.
+# **The freeze's job is that nothing changes silently, not that nothing changes.**
+# Editing any file in a flow fails the test below naming it, so the move can only
+# happen in a change that says so and records what moved.
 #
-# **Re-pinned once, by 0016-flow-registry, under the exception that change's
-# design.md D2 records: the flow's configuration did not change; its manifest's
-# format did.** The schema and both briefings folded into the directory, so the
-# digest now covers five files rather than two, and `manifest_version: 2` is that
-# distinction in data. The failure message below gains no "unless" clause -- a
-# test message that explains how to evade itself is one that gets evaded.
-# **Rewritten whole by 0022-one-arm, and that is a flow-set replacement rather
-# than a re-pin.** The exception recorded below -- a flow still inside the change
-# that introduces it, never released -- is *not* what is being used here. The
-# three flows this list used to hold were deleted: two of them selected the
-# `claude` arm by declaring no `hosted` block and could not survive its removal,
-# and the third lost `sheet.briefing.md`, which moves a digest and so makes a new
-# flow rather than an edited one. Nothing was re-pinned; three identifiers went
-# and two arrived.
+# **A divergence costs a new identifier.** Two flows are only comparable over one
+# cohort if an identifier means one configuration, so a variant, another base or a
+# second generation is a new flow, not a re-pin. Re-pinning is for the other case,
+# where the old configuration is abandoned.
+#
+# The failure message below gains no "unless" clause -- a test message that
+# explains how to evade itself is one that gets evaded.
 PINNED: dict[str, str] = {
-    # `conjure-v1`'s graph and schema, byte for byte, including all 21 fields --
-    # `eyelashes` among them. Its caption briefing is a byte-identical copy of
-    # `summon-anime-wai`'s: both flows read the same model for the same purpose,
-    # and a second authored briefing would be a second untested artifact.
     "conjure-anime-wai": (
-        "1e991c2be7290a40dbe3301619c67b0bb9c5bb9914f22e6c54ce7078903c6615"
+        "5de6632e33a83377347f887663213eb69733636edb3a380372e00ab3a9171f61"
     ),
-    # `summon-open-v1`'s graph, schema and caption briefing, byte for byte. What
-    # moved is the manifest -- the identifier, `manifest_version` 3, and the
-    # `hosted` block flattened to one required top-level `model` -- and the
-    # deletion of `sheet.briefing.md`, which has had no reader since v0.21.
     "summon-anime-wai": (
-        "8ddd4016dadd16d2b8a740e420e9478ae37ef5b43959c4e86ec1974f5d0792fb"
+        "3ad0f323d0f4a826cd06a0c37b47fbcceceaa4e8c6074a1153529b5f2ee73e7f"
     ),
 }
 
@@ -560,6 +543,35 @@ def test_every_tracked_flow_matches_its_committed_digest(name: str) -> None:
     )
 
 
+@pytest.mark.spec("image-generation:immutability:a-re-pin-is-recorded")
+def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
+    """Every committed digest appears in the changelog that moved it there.
+
+    **Nothing on disk says which side of a re-pin a run falls on** -- a run's
+    provenance records the graph digest, not the flow directory's -- so the only
+    place a later reader learns that the bytes a run was produced from no longer
+    exist is the prose of the change that moved it. `CHANGELOG.md` is that prose's
+    permanent home: append-only, and cut per release.
+
+    **The digest is the witness, not the flow's name.** A name enters the
+    changelog when the flow is introduced and cannot leave an append-only file,
+    so asserting it would pass for every re-pin that ever forgot to record
+    itself. A digest is what a re-pin actually moves, so requiring each one to
+    appear fires exactly when a digest changes and no entry says so.
+
+    `CHANGELOG.md` is history and `PINNED` stays authoritative, so this makes no
+    second source of truth: nothing reads a digest back out of the changelog.
+    """
+    changelog = (Path(__file__).resolve().parent.parent / "CHANGELOG.md").read_text()
+
+    for name, digest in PINNED.items():
+        assert digest in changelog, (
+            f"flow {name} is pinned at {digest[:12]}... and no CHANGELOG.md entry "
+            "carries that digest. A re-pin owes a statement of what moved, and a "
+            "new flow a statement of what it is, in prose a later reader can find."
+        )
+
+
 @pytest.mark.spec("image-generation:immutability:flow-manifest-is-pinned-by-equality")
 def test_every_tracked_flow_is_pinned_at_all() -> None:
     assert sorted(PINNED) == tracked_flows()
@@ -644,20 +656,51 @@ def test_a_prompt_is_the_flows_fragments_and_the_sheets_fields_in_schema_order(
 
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
-def test_no_text_is_taken_from_the_graphs_own_committed_strings(flow: Flow) -> None:
+def test_no_text_is_taken_from_the_graphs_own_committed_strings(
+    tmp_path: Path,
+) -> None:
+    """Assembly ignores the graph's committed strings, proved against a witness.
+
+    **Run on a scratch flow whose graph carries a distinctive negative**, not on
+    the tracked one. The tell used to be `worst detail`, a tag the graph had and
+    no manifest did; `0025-running-the-flow` emptied that node, and asserting
+    that emptiness against the tracked flow would be asserting the fixture --
+    `negative != ""` holds for any non-empty prompt, so the leak this scenario
+    exists to catch would no longer have anything to fail on. Planting a string
+    the manifest cannot supply keeps a witness that can.
+    """
+    root = _scratch(tmp_path)
+    scratch = root / "summon-anime-wai"
+    flow = load_flow("summon-anime-wai", root)
     schema = flow.schema
-    graph = flow.graph()
-    committed = graph[flow.node("positive")]["inputs"]["text"]
-    committed_negative = graph[flow.node("negative")]["inputs"]["text"]
+
+    graph = json.loads((scratch / GRAPH_NAME).read_text())
+    graph[flow.node("negative")]["inputs"]["text"] = "a string no manifest carries"
+    (scratch / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+
+    flow = load_flow("summon-anime-wai", root)
+    committed = flow.graph()[flow.node("positive")]["inputs"]["text"]
+    committed_negative = flow.graph()[flow.node("negative")]["inputs"]["text"]
 
     positive, negative = assemble(
         {name: [] for name in schema.names}, schema.names, flow
     )
 
     assert committed not in positive
-    assert negative != committed_negative
-    assert "worst detail" in committed_negative
-    assert "worst detail" not in negative
+    assert committed_negative not in negative
+    assert negative == flow.prompt["negative"]
+
+
+@pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
+def test_every_tracked_flows_graph_carries_no_negative_of_its_own(flow: Flow) -> None:
+    # The other half, on the tracked flows: `flow.json`'s fragment is the only
+    # negative there is. `generate.py` patches this node on every render, so a
+    # string here would be dead data that reads like a second source of truth --
+    # which is exactly what it was until v0.22.3, drifted and unnoticed.
+    for name in tracked_flows():
+        tracked = load_flow(name)
+        node = tracked.graph()[tracked.node("negative")]["inputs"]["text"]
+        assert node == "", f"{name}'s graph carries a negative of its own: {node!r}"
 
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")

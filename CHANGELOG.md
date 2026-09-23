@@ -25,6 +25,200 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.3] - 2026-09-23
+
+### Changed
+
+- **The negative prompt is quality-only, and the graph no longer carries a second copy of it.**
+  `censor, nsfw` left both tracked flows' `flow.json` negative — a negative whose job, per the base
+  model's publisher, is quality, while the positive is what decides content. The operator measured
+  the difference by eye across real renders. `lens flare, light particles, dust` was already present
+  in both, so that half of the ask was a no-op.
+- **`graph.json`'s negative node is emptied rather than synchronised, in both flows.** It read
+  `bad quality, worst quality, worst detail, sketch, censor, nsfw`, and `worst detail` appeared
+  nowhere else — the two strings had already drifted, unnoticed, because nothing reads the second
+  one: `generate.py`'s `patch("negative", text=prompt["negative"])` overwrites that node on every
+  render from `flow.json`'s fragment, and `negative` is a required role so the patch is
+  unconditional. A shipped prompt artifact confirms it, carrying `flow.json`'s string and no
+  `worst detail`. Two strings that agree today are two strings that disagree later, so there is now
+  one source of truth; if a future path ever renders without patching, it renders with no negative,
+  which is visible in the output rather than silently wrong. Same class as the stale
+  `filename_prefix` recorded at `v0.22 review/R6`.
+- **Both flows are re-pinned, and that is the second exception ever taken to flow immutability.**
+  The comment above `tests/test_flow.py`'s `PINNED` now states the rule the repository actually
+  follows — the freeze exists so that nothing changes *silently*, not so that nothing changes — and
+  keeps the load-bearing half intact: a *divergence* still costs a new identifier, because two flows
+  are only comparable over one cohort if an identifier means one configuration. Only an abandoned
+  configuration may be re-pinned, and this one is: nothing compares against the old negative. The
+  failure message itself is unchanged and still gains no *"unless"* clause. **The comment states the
+  rule and no longer narrates the history behind it** — which release re-pinned what belongs in this
+  file, not in a test module — and a new test asserts the cheap, mechanical half of the obligation:
+  a flow pinned in `PINNED` and named in no `CHANGELOG.md` entry fails. Which digest moved in a given
+  release is left to review, because checking it would mean storing the previous digest and so making
+  a second source of truth out of the constant that exists to be the only one.
+- **`test_no_text_is_taken_from_the_graphs_own_committed_strings` asserts the emptiness instead of
+  its old tell.** It used `worst detail`, a tag in the graph and in no manifest, to prove the
+  assembly had not read the graph; the emptied node makes that claim structurally, and the assert
+  that the node is empty means a string reappearing in it fails rather than quietly becoming a
+  second source of truth.
+- **The gate was uninstalling the local tagger on every run, and the repair is that the tagger's stack
+  is a declared dependency.** `onnxruntime`, `numpy` and `Pillow` left the `tagging` extra and
+  `fastapi` and `uvicorn` left the `ui` extra; all five are now in `[project] dependencies`, pinned
+  exactly at what `uv.lock` resolved. The symptom was an operator re-running `uv sync --extra tagging`,
+  which is a once-per-checkout command — so the question was what removed the packages, and the
+  environment answered it: `fastapi` present, the other three absent. `uv sync` makes the environment
+  match exactly what it is told and removes extras it is not told about, and gate command one is
+  `uv sync --locked` with no `--extra`.
+- **`[tool.uv] default-extras` was refused as the fix.** It would have kept `dependencies = []`
+  literally true while every real checkout carried 2 GB of onnxruntime under a manifest claiming it
+  needed nothing. The local tagger runs on every `caption` for every flow, so *"optional"* was false in
+  the plainest sense; the review surface moves on the operator's reading that it is part of running a
+  flow rather than an add-on to it. **`eval` stays optional** — it is the scorer, and an evaluator is
+  not a way to render.
+- **`dependencies = []` is retired; the claim that replaces it is narrower and is what the architecture
+  actually rests on** — *the entry point imports no third-party package at module scope*. `wd14.py`'s
+  three imports are function-local and `interface/ui/__init__.py` keeps FastAPI off `python -m isekai`'s
+  import graph the same way, which is why `isekai show` works on a checkout that has provisioned
+  nothing.
+- **The `-S` guard is narrowed rather than deleted, and is now falsified against a declared
+  dependency.** With the packages installed by default it is the only thing that would catch a
+  module-scope import appearing in the entry point's graph — nothing else fails when one is added. Its
+  falsification imported `pytest`, a dev-only package; it imports `onnxruntime` now, so a guard that
+  stayed green while `-S` leaked the very wheels it excludes is no longer possible.
+- **The `dev` group's duplicate `fastapi` and `uvicorn` pins are gone, and a test keeps them gone.** The
+  duplication existed only because the `ui` extra was never installed by gate command one, which made
+  `tests/test_ui_api.py`'s `importorskip` fire and four `ui` scenarios bound only there prove nothing.
+  The test that held the two pin lists equal is replaced by one asserting there is only one list: a
+  `dev` entry re-pinning a declared dependency would reinstate the drift this removes. A second new
+  test asserts the tagger's three are declared and that `torch` did not follow them out of `eval`.
+- **The tagger's refusal names `uv sync` instead of a removed extra**, and the docstrings in
+  `interface/ui/app.py`, `batch.py` and `tests/test_ui.py` that described a `ui` extra now describe a
+  web framework, because the extra no longer exists to name.
+- **CI's resolution checked rather than assumed** — onnxruntime wheels are platform-specific, and
+  `1.29.0` publishes `cp312-manylinux_2_28_x86_64`, so `ubuntu-latest` resolves it and no floor is
+  needed in the manifest.
+- **`## Quickstart` is rewritten as `## Running a flow`, in place** — one guide, photograph to image,
+  pod included, rather than a second one beside the old. Commands read as a sequence with the
+  explanation under them; the boundary where it stops being free is drawn at the top and repeated at
+  the step that crosses it, because `CLAUDE.md`'s spend guardrail wants that visible and a guide that
+  hides it is worse than no guide. It now covers what the old one left implicit: where the photograph
+  goes (`.inputs/`, gitignored, because it holds a person's likeness), `uv sync` with no flag, the
+  tunnel in a second terminal, downloading renders before teardown, and the teardown itself.
+- **Every sentence phases 1 and 2 falsified is repaid, in the same version rather than two releases
+  later.** `README.md`, `isekai/README.md`, `isekai/boundary/README.md`, `CLAUDE.md` and
+  `docs/arc/modules.md` said *the runtime is stdlib-only* or named `dependencies = []`; they now state
+  the narrower claim that is true — the entry point imports no third-party package at module scope —
+  and say that the `-S` guard is the only thing holding it. `CLAUDE.md` and `README.md` also said *a
+  flow is immutable*, which phase 1 made false; both now say what the modified requirement says, that
+  a flow is pinned by equality and a divergence is what costs a new identifier. Docstrings in
+  `multipart.py`, `provision.py`, `ciede2000.py`, `eval_models.py`, `cli.py`, `evaluate.py` and
+  `tests/test_manifest.py` carried the retired claim too and are corrected.
+  **This is the third consecutive version whose prose was falsified by the next one** —
+  `docs/arc/modules.md`'s rule was written by `v0.22.2` three commits before this change retired it —
+  which is the cost of splitting prose from code, and cheaper than the alternative only if the
+  documentation version ships close behind the code version it describes.
+
+### Verified
+
+- **The re-pin, recorded: what moved, in both flows.** `design.md` D2 and the modified requirement
+  both oblige a re-pinning change to leave this behind in prose a later reader can find.
+
+  | flow | digest before | digest after |
+  |---|---|---|
+  | `conjure-anime-wai` | `1e991c2be7290a40dbe3301619c67b0bb9c5bb9914f22e6c54ce7078903c6615` | `5de6632e33a83377347f887663213eb69733636edb3a380372e00ab3a9171f61` |
+  | `summon-anime-wai` | `8ddd4016dadd16d2b8a740e420e9478ae37ef5b43959c4e86ec1974f5d0792fb` | `3ad0f323d0f4a826cd06a0c37b47fbcceceaa4e8c6074a1153529b5f2ee73e7f` |
+
+  Two strings moved in each flow, and nothing else did — `git diff --stat -- flows/` shows exactly
+  `flow.json` and `graph.json` in each of the two directories. In `flow.json`,
+  `"bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust"` became
+  `"bad quality, worst quality, sketch, lens flare, light particles, dust"`. In `graph.json`,
+  `"bad quality, worst quality, worst detail, sketch, censor, nsfw"` became `""`. **Neither flow
+  identifier changed**, because the old configuration is abandoned rather than still wanted; no run
+  is orphaned, since orphaning follows a changed id and `manifest_digest` has one consumer.
+- **Accepted on a pod, by eye, on the operator's own photographs.** Seven photographs, both flows,
+  fourteen renders in one pod session — 20m 07s on an RTX PRO 4500 Blackwell at $0.72/hr, ≈$0.24,
+  inside the 45-minute and ~$0.30 guardrail. The pod was torn down in the same session and its
+  absence confirmed against the provider's API, not against the teardown script's own output.
+  Assembly of all fourteen prompts was proved with `--server` omitted before the pod existed, and
+  every assembled negative read `bad quality, worst quality, sketch, lens flare, light particles,
+  dust` with none carrying `censor`, `nsfw` or `worst detail`. **The operator's verdict on the
+  images was that they are good, and the acceptance passed on that.**
+- **A clean checkout runs `caption` with no extra flag** — `rm -rf .venv && uv sync --locked`, then
+  `caption` wrote the prose, the local WD14 tag list and the hosted tag list. The middle one is the
+  artifact the gate used to make impossible.
+
+### Not verified
+
+- **No cohort was scored, and the claim is not that the images are measurably better.** Every render
+  made for this version is post-change: there is no before-image for any of these photographs at
+  these seeds, so nothing here is a controlled comparison against the old negative. The operator's
+  original finding came from their own earlier renders, and this version does not reproduce it — it
+  establishes that the new negative renders cleanly end to end on both flows, and rests the rest on
+  judgement by eye. **That is the posture this repository already takes toward diffusion quality**,
+  and the evaluation sub-system that would replace it is v0.23's; this version does not anticipate it.
+- **Nothing on disk says which side of the re-pin a run falls on.** A run's provenance records the
+  graph digest, not the flow directory's, so a cohort spanning the edit cannot be split by it after
+  the fact. Filed as a run-provenance change rather than fixed here.
+- **An intermittent native abort in the tagger, on macOS, seen and not diagnosed.** Three `caption`
+  invocations printed `libc++abi: terminating due to uncaught exception of type
+  std::__1::system_error: recursive_mutex lock failed` — an onnxruntime threadpool teardown race at
+  interpreter exit. It fired *after* every artifact was written, all runs are complete, and a
+  targeted re-run did not reproduce it. Exit codes were not captured on the invocations where it
+  fired, so whether it aborted those processes is unknown rather than benign.
+
+### Fixed
+
+- **The re-pin record test could not fail for a re-pin.** It asserted each pinned flow was *named*
+  in `CHANGELOG.md` — but a name enters when the flow is introduced and cannot leave an append-only
+  file, so it would have passed for every re-pin that ever forgot to record itself, while binding a
+  scenario whose THEN is *"records which flow moved and what changed in it"*. It asserts the
+  **digest** now, which is what a re-pin actually moves, and fires exactly when one changes with no
+  entry carrying it. The falsification that "proved" the original renamed a key to a flow the
+  changelog never mentions — the new-flow case, not the re-pin case.
+- **`test_no_text_is_taken_from_the_graphs_own_committed_strings` had degenerated into a
+  tautology.** With the graph's negative emptied, `committed_negative == ""` asserts the fixture and
+  `negative != committed_negative` holds for any non-empty negative, so the leak the scenario exists
+  to catch had nothing left to fail on. It now runs against a scratch flow whose graph carries a
+  string no manifest can supply — a witness that can fail — and a second test asserts the tracked
+  flows' negative nodes are empty, which is the structural half.
+- **The manifest's invariants moved into `tests/test_packaging.py`.** Two tests asserting the shape
+  of `pyproject.toml` had been split across `test_wd14.py` and `test_ui.py` by which feature
+  noticed them, carrying three copies of one requirement-name parser and two per-test reads of the
+  manifest. One module, one parser, one session-scoped fixture — the shape `conftest.py` already
+  uses for every tracked file the suite reads.
+- **A borrowed spec binding, removed.** The tagger-stack test carried
+  `tagging:pin:the-check-fires-at-first-use`, a scenario about no model file being opened when no
+  tagging is performed — nothing to do with where a wheel is declared. The replacements are
+  `spec_exempt` and say why.
+- **`eval` names only what it adds, and the non-overlap rule is stated over every list.** It still
+  floored `onnxruntime`, `numpy` and `Pillow` beside the pins `dependencies` now carries — the
+  same two-lists-one-package shape this version deleted between the `ui` extra and the `dev` group,
+  wearing the other hat. The narrow `dependencies`-vs-`dev` check is replaced by the general rule.
+- **A comment claimed a distinction that does not exist.** The `-S` falsification swap from
+  `import pytest` to `import onnxruntime` was justified as catching a leak a dev-only probe would
+  miss; both resolve from the same site-packages, so either goes red identically. The comment now
+  says it names a runtime dependency for readability, not for reach.
+- **Three more dead references to the deleted extras** — `interface/ui/__init__.py` twice and
+  `boundary/wd14.py` once — plus `tests/test_wd14.py`'s module docstring, which rested its
+  "nothing here imports a wheel" discipline on the `tagging` extra being absent from the gate's
+  environment. It is installed now, so that discipline is the suite's own and the docstring says so.
+- **The sweep for sentences phase 2 falsified is finished, and one of them was holding a
+  suppression open.** `boundary/wd14.py` still justified its `object` return type, its
+  `select`/`prepare` split and its function-local imports by a `tagging` extra absent from the gate
+  and a *stdlib-only* import graph; each now states the real reason — the value is opaque to every
+  caller, the split is kept wheel-free on purpose, and the rule is that the entry point imports no
+  third-party package at module scope. `interface/README.md` and `docs/arc/modules.md` named a
+  `[ui]` extra that no longer exists. `pyproject.toml`'s `unresolved-import` override still covered
+  `wd14.py` and `baseline/build_contact_sheets.py` on the ground that their packages are not
+  installed; they are, `ty` is green without the cover, and both leave it. The ANN401 waiver's
+  comment no longer claims `numpy` cannot be named — what it cannot name comes from `torch` and
+  `transformers`, which `[eval]` still carries.
+- **`CLAUDE.md` sent a re-pin's record to the place the implementation had stopped using.** It
+  said the statement of what moved is owed *"above `PINNED`"*; since `a5ef56a` it is owed in
+  `CHANGELOG.md`, carrying the new digest, and a test fails on any pinned digest no entry carries —
+  which, as the rule now says, also costs a newly added flow an entry. The test's failure message
+  names that case too. `tasks.md` 1.4 records the departure from its own instruction.
+
 ## [0.22.2] - 2026-09-22
 
 ### Changed

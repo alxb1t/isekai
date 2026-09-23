@@ -33,10 +33,10 @@ import time:
 ```
 
 **A lazy edge is not a weaker edge, it is a different one.** Neither `boundary`,
-nor `evaluation`, nor the `[ui]` extra may sit on `python -m isekai`'s import
-graph, and a `-S` subprocess guard in the suite is what proves it. Move any of
-those imports to module scope and that guard goes red — which is the designed
-outcome, not a nuisance.
+nor `evaluation`, nor the surface's `fastapi`/`uvicorn` may sit at module scope on
+`python -m isekai`'s import graph, and a `-S` subprocess guard in the suite is
+what proves it. Move any of those imports to module scope and that guard goes red
+— which is the designed outcome, not a nuisance.
 
 ## The cycles, and why each one exists
 
@@ -72,18 +72,32 @@ cannot answer that question and never could.
 
 Rules the graph is holding rather than describing:
 
-- **The runtime is stdlib-only.** Nothing on `python -m isekai`'s import graph may
-  need a wheel. Each optional extra is reached from a single named module —
-  `[ui]` from `interface/ui/app.py`, `[eval]` from `evaluation/eval_backends.py`,
-  `tagging` from `boundary/wd14.py` — but by two different mechanisms, and the
-  difference matters to anyone reading this as a rule to apply. `[eval]` and
-  `tagging` are reached by an `import_module` call **inside a function**, so the
-  module that reaches them imports cleanly without the wheel. `[ui]` is not:
-  `app.py` imports `uvicorn` and `fastapi` at module scope, and the laziness sits
-  one level up — `interface/ui/__init__.py`'s `serve()` imports `app.py` inside
-  the function, and nothing else imports `app.py` outside the suite. The rule the
-  two mechanisms share is the one that matters: no wheel is reached on the import
-  graph of `python -m isekai`, only on the path of the verb that needs it.
+- **The entry point imports no third-party package at module scope.** This rule
+  used to read *the runtime is stdlib-only*, backed by `dependencies = []`, and
+  v0.22.3 retired that: the local tagger runs on every `caption` for every flow,
+  so `uv sync` — which makes the environment match exactly what it is told and
+  removes extras it is not told about — was stripping it on every gate run.
+  `onnxruntime`, `numpy`, `Pillow`, `fastapi` and `uvicorn` are declared
+  dependencies now. **What survives is the claim the graph actually holds**, and
+  it is worth more than the one it replaces: no wheel is reached on the import
+  graph of `python -m isekai`, only on the path of the verb that needs it — which
+  is why `isekai show` works on a checkout that has provisioned nothing.
+
+  Each wheel-needing tree is still reached from a single named module —
+  `fastapi`/`uvicorn` from `interface/ui/app.py`, `[eval]` from
+  `evaluation/eval_backends.py`, the tagger's stack from `boundary/wd14.py` — but
+  by two different mechanisms, and the difference matters to anyone reading this
+  as a rule to apply. `eval_backends.py` and `wd14.py` reach theirs by an
+  `import_module` call **inside a function**, so the module that reaches them
+  imports cleanly without the wheel. `app.py` does not: it imports `uvicorn` and
+  `fastapi` at module scope, and the laziness sits one level up —
+  `interface/ui/__init__.py`'s `serve()` imports `app.py` inside the function,
+  and nothing else imports `app.py` outside the suite.
+
+  **The `-S` guard in `tests/test_pipeline_cli.py` is now the only thing holding
+  this.** While the packages were an extra CI never installed, a module-scope
+  import would have failed outright; installed by default, it resolves silently,
+  so the guard is the check rather than a belt over a brace.
 - **A group never becomes a place two modules reach each other through.** A
   group's `__init__.py` holds a docstring and no code, so a module is imported by
   its own path. `interface/ui/__init__.py` is the exception and is not a group: it

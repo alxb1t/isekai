@@ -1,28 +1,75 @@
 [project]
 name = "isekai"
-version = "0.22.2"
+version = "0.22.3"
 requires-python = ">=3.12"
-dependencies = []
+# **What running a flow needs, declared rather than optional.** This list was
+# empty until v0.22.3, held by the `-S` guard in `tests/test_pipeline_cli.py`,
+# and the claim it carried -- *the runtime is stdlib-only* -- was retired because
+# the environment kept disagreeing with it. `uv sync` makes the environment match
+# exactly what it is told and REMOVES extras it is not told about, and the gate's
+# first command is `uv sync --locked` with no `--extra`: the gate was uninstalling
+# the local tagger on every run, which is why `uv sync --extra tagging` kept
+# looking like a command an operator had to repeat.
+#
+# `[tool.uv] default-extras` would have silenced that and kept `dependencies = []`
+# literally true, but only inside a test -- every real checkout would carry 2 GB of
+# onnxruntime while the manifest said it needed nothing. The local tagger runs on
+# every `caption` for every flow, so *"optional"* was false in the plainest sense
+# (design.md D3).
+#
+# **The narrower claim survives, and it is the one the architecture rests on: the
+# entry point imports no third-party package at MODULE SCOPE.** `wd14.py`'s
+# onnxruntime, numpy and Pillow imports are function-local by design, and
+# `interface/ui/__init__.py` keeps FastAPI off `python -m isekai`'s import graph
+# the same way. That is why `isekai show` works on a checkout that has provisioned
+# nothing, and the `-S` guard now proves *it* -- a job that matters more, not less,
+# now that the packages are installed by default and nothing else would fail when
+# a module-scope import appears (design.md D4).
+#
+# **Pinned exactly, at what `uv.lock` resolved.** The lock pins this checkout; this
+# list is what a second machine resolves against, and the tagger's output feeds
+# every sheet while the surface is where a sheet is corrected.
+#
+#   onnxruntime -- the SwinV2 session `models/wd14/model.onnx` is loaded through.
+#   numpy       -- the prepared array in and the probability vector out.
+#   Pillow      -- open, composite onto white, pad to a square, resize.
+#   fastapi     -- the review surface's server, bound to 127.0.0.1.
+#   uvicorn     -- what runs it.
+#
+# `fastapi[standard]` is deliberately not used: it would pull a much wider tree --
+# an HTTP client, a CLI, email validation, templating -- for one loopback server
+# that serves six endpoints and a built bundle.
+dependencies = [
+    "onnxruntime==1.29.0",
+    "numpy==2.5.3",
+    "Pillow==12.3.0",
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+]
 
-# The evaluator's stack, and NOT the runtime's. `python -m isekai` keeps
-# `dependencies = []` above, held by a test that imports it with site-packages
-# off the path -- an evaluator is not a way to render at all, and the entry gate
-# is about what may be selected to render.
+# The evaluator's stack, and the only thing left that is genuinely optional. It is
+# the scorer, not a way to render: `eval` measures a cohort after the fact, so a
+# checkout that never scores anything should not carry `torch`.
 #
 # CI never installs this. The eval tests skip there and run on the operator's
 # machine, which is the same posture this repository already takes toward
 # diffusion quality: verified by eye on a pod, never in CI. This extra adds no
-# gate command -- the array is six, and none of them installs it.
+# gate command -- and none of the commands in the array installs it, which is
+# exactly the mechanism that used to strip the tagger and now cannot.
 #
-# Five packages, and each one is load-bearing:
-#   torch, transformers -- StyleID publishes only a CLIPModel safetensors, and
-#     the DWPose artifact `models.json` pins is a TorchScript `.pt`. There is no
-#     ONNX route to either, so this is not a convenience.
-#   onnxruntime -- MIT, and what the region parser and the anime-face detector
-#     are loaded through. Loading weights is not linking code, which is what
-#     keeps the detector's copyleft question closed (design.md D19).
-#   numpy, Pillow -- arrays, and the loader's orientation transpose. The header
-#     parser returns dimensions; the scorer has to transpose the pixels itself.
+# **It names only what it adds.** `torch` and `transformers` -- StyleID publishes
+# only a CLIPModel safetensors, and the DWPose artifact `models.json` pins is a
+# TorchScript `.pt`, so there is no ONNX route to either and this is not a
+# convenience. The scorer also reaches `onnxruntime` (the region parser and the
+# anime-face detector; loading weights is not linking code, which is what keeps
+# the detector's copyleft question closed -- design.md D19), `numpy` and `Pillow`
+# (arrays, and the loader's orientation transpose) -- and it no longer floors any
+# of those three, because `dependencies` above pins them for every checkout.
+#
+# **Re-floor them here and the drift is back.** Two lists naming one package is
+# the shape v0.22.3 deleted between the `ui` extra and the `dev` group; a floor
+# here beside a pin above would be the same defect wearing the other hat, and
+# `tests/test_packaging.py` fails on it rather than leaving it to review.
 #
 # Deliberately absent: `ultralytics`, asserted by a test rather than left to a
 # licence review nobody runs. `scipy`/`scikit-image` are absent too -- CIEDE2000
@@ -32,98 +79,27 @@ dependencies = []
 eval = [
     "torch>=2.6",
     "transformers>=4.49",
-    "onnxruntime>=1.20",
-    "numpy>=2.1",
-    "Pillow>=11.0",
-]
-
-# The local tagger's stack, and NOT the runtime's. `dependencies = []` above is
-# untouched and so is the `-S` guard: this extra is imported from exactly one
-# module, the tagger's own boundary, and function-locally there -- the same
-# shape the `ui` extra takes, which `cli.py` imports inside its handler.
-#
-# Three packages, and it is deliberately NOT the `eval` extra even though that
-# one already resolves all three. `eval` also carries `torch>=2.6` and
-# `transformers>=4.49` -- roughly 2 GB that this tagger never imports -- and
-# installing a measurement stack to read a 467 MB ONNX graph would make the
-# cheap half of stage ③ cost the expensive half's download (design.md D19). The
-# `ui` extra is the precedent: a narrow extra for one surface.
-#
-# Floored rather than pinned, matching `eval` and not `ui`: these are the floors
-# the tagger needs, and the pins the lockfile already carries were resolved for
-# `eval` from the same three names, so `uv sync --locked` -- gate command one --
-# stays green without a new resolution.
-#
-#   onnxruntime -- the SwinV2 session `models/wd14/model.onnx` is loaded through.
-#   numpy       -- the prepared array in and the probability vector out.
-#   Pillow      -- open, composite onto white, pad to a square, resize.
-tagging = [
-    "onnxruntime>=1.20",
-    "numpy>=2.1",
-    "Pillow>=11.0",
-]
-
-# The review surface's server, and NOT the runtime's. `dependencies = []` above
-# stays empty and stays held by the test that imports the package with
-# site-packages off the path: `python -m isekai` is stdlib-only, and the `ui`
-# handler in `cli.py` imports this tree INSIDE the function so the import-graph
-# guard never sees it.
-#
-# It is NOT how the gate gets FastAPI. The `dev` dependency group below pins the
-# same two packages, so `uv sync --locked` installs them and `tests/test_ui_api.py`
-# actually runs; the two pin lists are held equal by a test. That is also why
-# `isekai/interface/ui/app.py` needs no `[[tool.ty.overrides]]` block the way
-# `eval_backends.py` does -- the import resolves in the environment the gate runs
-# in, so there is nothing to ignore.
-#
-# Two packages, both explicit. `fastapi[standard]` would pull a much wider tree
-# -- an HTTP client, a CLI, email validation, templating -- for one server bound
-# to 127.0.0.1 that serves six endpoints and a built bundle.
-#
-# Pinned exactly rather than floored, unlike `eval` above. The difference is what
-# the two extras are for: `eval` is a measurement stack whose floors state what
-# the scorer needs, while this is a private localhost tool whose whole job is to
-# be the same surface every time the operator opens it -- an unannounced minor
-# that changes a response shape is a defect in the middle of a review session,
-# and there is no CI run that would catch it first.
-ui = [
-    "fastapi==0.141.1",
-    "uvicorn==0.53.0",
 ]
 
 # Test and gate tooling only, and NOT runtime: `uv sync --locked` installs this
 # group by default, so everything here is present for all six gate commands and
-# for none of `python -m isekai`. `dependencies = []` above is untouched, and the
-# stdlib-only runtime rule with it.
+# for none of `python -m isekai`.
 #
-# `httpx2` is here rather than in the `ui` extra above because it is a test
-# client, not a server dependency: it is what starlette's `TestClient` requires,
-# and shipping it to anyone who installs the extra to actually serve the surface
-# would be wrong about what it is for.
+# `httpx2` is what starlette's `TestClient` requires -- a test client, not a
+# server dependency, which is why it is here and not beside `fastapi` above.
 #
-# `fastapi` and `uvicorn` are here TOO, duplicating the extra's pins, and that
-# duplication is the point rather than an oversight. Four `ui` scenarios are
-# bound only inside `tests/test_ui_api.py`, which drives the real HTTP surface
-# and so cannot fake its boundary the way the eval tests fake theirs. While the
-# extra was the only place FastAPI lived, gate command one never installed it,
-# the module's `importorskip` fired, and those four scenarios were proved by a
+# **`fastapi` and `uvicorn` used to be duplicated here**, because they lived only
+# in a `ui` extra that gate command one never installed: `tests/test_ui_api.py`'s
+# `importorskip` fired, and four `ui` scenarios bound only there were proved by a
 # test that never ran -- a binding that looks exactly like a binding and binds
-# nothing, which is the failure the marker-registration rule exists to prevent.
-# A dev group entry makes the gate run them. The extra stays, because an
-# operator who only wants to serve the surface should not install a test client
-# and a test runner to do it; the two pins are held equal by a test.
-#
-# Every version here is pinned exactly, for the extra's own reason: the surface
-# must be the same every time the operator opens it, and an unannounced minor
-# that changes a response shape is a defect in the middle of a review session.
+# nothing. v0.22.3 made both required instead, so the duplication has nothing left
+# to repair and is gone; the gate installs them because the project declares them.
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.0",
     "ty>=0.0.64",
     "httpx2==2.13.0",
-    "fastapi==0.141.1",
-    "uvicorn==0.53.0",
 ]
 
 [tool.ruff.lint]
@@ -167,11 +143,13 @@ known-first-party = ["isekai"]
 
 # `eval_backends.py` is the ONLY module that touches numpy, torch, onnxruntime
 # and Pillow, and it exists to be that boundary -- everything the scorer decides
-# lives in `isekai/evaluation/evaluate.py`, which is stdlib-only and fully annotated. An
-# ndarray has no honest annotation available here: the extra is NOT installed in
-# the environment the gate runs in, by design, so `numpy.typing.NDArray` cannot
-# be resolved even behind `TYPE_CHECKING` -- the type checker would fail on the
-# import it cannot find.
+# lives in `isekai/evaluation/evaluate.py`, which is stdlib-only and fully annotated.
+# The values this file hands around come out of `torch` and `transformers` as
+# well as `numpy`, and the `[eval]` extra that carries those two is NOT installed
+# in the environment the gate runs in, by design, so their types cannot be named
+# even behind `TYPE_CHECKING` -- the type checker would fail on the import it
+# cannot find. (`numpy` itself resolves since v0.22.3 made it a declared
+# dependency; that alone does not name a tensor.)
 #
 # So ANN401 is waived HERE ONLY, and for that one rule. Every other ANN rule
 # still applies, so an unannotated argument in this file is still an error; what
@@ -182,13 +160,14 @@ known-first-party = ["isekai"]
 # installation. Declaring it a source root here lets the type checker and the
 # suite see `derive_manifest` the way a human running it does. It widens where
 # real code is looked for; it suppresses no check.
-# Three files bridge to packages the gate's environment deliberately does NOT
-# install, so `unresolved-import` in them is the configuration working, not a
-# defect: `eval_backends.py`, the scorer's model boundary; `wd14.py`, the local
-# tagger's, which is the ONLY file in the package that touches the `tagging`
-# extra and touches it function-locally; and `build_contact_sheets.py`, a
-# labelling aid that needs Pillow to paste three images side by side. Scoped to those files and to that one rule -- every other
-# check still applies, which is how the `invalid-return-type` on
+# One file bridges to packages the gate's environment deliberately does NOT
+# install, so `unresolved-import` in it is the configuration working, not a
+# defect: `eval_backends.py`, the scorer's model boundary, over the `[eval]`
+# extra. `wd14.py` and `build_contact_sheets.py` were listed here while the
+# tagger's stack and Pillow were optional; v0.22.3 made them declared
+# dependencies, so their imports resolve and they have no claim to this cover.
+# Scoped to that file and to that one rule -- every other check still applies,
+# which, while `wd14.py` was listed, is how the `invalid-return-type` on
 # `OnnxSession.run` was caught and fixed rather than suppressed.
 #
 # Scoped as an override rather than as per-line `ty: ignore` comments, because
@@ -198,11 +177,7 @@ known-first-party = ["isekai"]
 # installed, which is the property that matters -- `make gate` must not depend on
 # what the operator happens to have synced.
 [[tool.ty.overrides]]
-include = [
-    "isekai/evaluation/eval_backends.py",
-    "isekai/boundary/wd14.py",
-    "baseline/build_contact_sheets.py",
-]
+include = ["isekai/evaluation/eval_backends.py"]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

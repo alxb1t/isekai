@@ -1,11 +1,13 @@
 """The WD14 boundary, exercised with no model file and no wheel installed.
 
 **Nothing here imports `numpy`, `Pillow` or `onnxruntime`**, and that is the
-point rather than a limitation: the `tagging` extra is not installed in the
-environment the gate runs in, exactly as `eval` is not, so a suite that needed it
-would be a suite that silently stops covering this capability. Everything that can
-be decided without a wheel is decided in `select` and `read_labels`, and this file
-is what holds that split honest.
+point rather than a limitation. It used to hold because the `tagging` extra was
+absent from the environment the gate ran in; v0.22.3 made those three declared
+dependencies, so they are now installed and the discipline is the suite's own --
+everything that can be decided without a wheel is decided in `select` and
+`read_labels`, against `FakeSession`, and this file is what holds that split
+honest. A test here that reached for a real wheel would still pass, which is
+exactly why the split has to be kept deliberately rather than by absence.
 
 **The one silent failure mode is the label-index ordering.** Row N of
 `selected_tags.csv` names output neuron N, so a pair from two revisions mislabels
@@ -259,10 +261,12 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
 
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
-def test_no_wheel_the_tagging_extra_carries_is_imported_at_module_scope() -> None:
+def test_no_wheel_the_tagger_needs_is_imported_at_module_scope() -> None:
     # The rule the `-S` guard rests on: this file is the only one in the package
     # that touches `onnxruntime`, `numpy` or `Pillow`, and it reaches every one
-    # of them through `_require`, inside the function that needs it.
+    # of them through `_require`, inside the function that needs it. **Now that
+    # the three are installed by default, this is the only thing that would
+    # catch one moving to module scope** -- nothing else fails when it does.
     import isekai.boundary.wd14 as boundary
 
     source = Path(boundary.__file__ or "").read_text()
@@ -274,12 +278,13 @@ def test_no_wheel_the_tagging_extra_carries_is_imported_at_module_scope() -> Non
 
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
-def test_an_uninstalled_extra_refuses_by_name_rather_than_raising_importerror(
+def test_an_unsynced_environment_refuses_by_name_rather_than_raising_importerror(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Without this the ordinary case -- a machine that has not opted into the
-    # extra -- is a bare `ModuleNotFoundError` traceback, in a package whose
-    # rule is that every failure is a named `Refusal` naming its remedy.
+    # Without this an unsynced checkout gets a bare `ModuleNotFoundError`
+    # traceback, in a package whose rule is that every failure is a named
+    # `Refusal` naming its remedy. The remedy is now plain `uv sync`, because
+    # there is no extra to opt into any more.
     import isekai.boundary.wd14 as boundary
 
     def absent(module: str) -> object:
@@ -294,7 +299,8 @@ def test_an_uninstalled_extra_refuses_by_name_rather_than_raising_importerror(
     boundary._require.cache_clear()
     message = str(refused.value)
     assert "numpy" in message
-    assert "uv sync --extra tagging" in message
+    assert "uv sync" in message
+    assert "--extra" not in message
 
 
 @pytest.mark.spec_exempt("structural: the seam's shape, which the doubles satisfy")

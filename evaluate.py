@@ -2,9 +2,10 @@
 """Score a run's renders against the photograph that produced them.
 
 A separate entry point, and deliberately **not** a subcommand of the pipeline: a
-subcommand would put the `[eval]` extra one misplaced import away from breaking
-`dependencies = []`. The entry-gate rule is about what may be selected to
-*render*, and an evaluator is not a way to render at all.
+subcommand would put the `[eval]` extra one misplaced import away from `python -m
+isekai`'s import graph, and `[eval]` is the one extra a checkout may legitimately
+not have. The entry-gate rule is about what may be selected to *render*, and an
+evaluator is not a way to render at all.
 
     uv run --extra eval python evaluate.py <run-directory>/ --photo <photo>
 

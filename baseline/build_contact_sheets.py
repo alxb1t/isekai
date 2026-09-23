@@ -76,9 +76,9 @@ def _scaled(path: Path) -> Image.Image:
         width = round(image.width * PANEL_HEIGHT / image.height)
         # `Image.Resampling.LANCZOS`, not `Image.LANCZOS`: the flat alias was
         # removed in Pillow 10. It went unnoticed while nothing in the gate's
-        # environment had Pillow installed at all -- v0.20's `tagging` extra is
-        # the first that does, so the operator it now breaks for is the one
-        # following this version's own setup instructions.
+        # environment had Pillow installed at all -- v0.20's `tagging` extra was
+        # the first that did. v0.22.3 made Pillow a declared dependency, so the
+        # gate's type check now resolves this call against the real package.
         return image.resize((width, PANEL_HEIGHT), Image.Resampling.LANCZOS)
 
 

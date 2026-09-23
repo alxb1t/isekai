@@ -1,4 +1,4 @@
-"""A hand-rolled multipart/form-data encoder, so the runtime stays stdlib-only."""
+"""A hand-rolled multipart/form-data encoder, so no HTTP client reaches the graph."""
 
 
 def build_multipart(

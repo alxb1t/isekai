@@ -12,11 +12,13 @@ implementations resolve through different mechanisms is a shared name rather tha
 a seam (design.md D3).
 
 **The whole non-stdlib import of this package lives in this file and is
-function-local.** `onnxruntime`, `numpy` and `Pillow` arrive through the `tagging`
-extra and are imported inside the functions that need them, so
-`python -m isekai`'s import graph stays stdlib-only and the `-S` guard still
-passes. The arrangement is `ollama.py`'s: the transport here, the adapter in
-`pipeline/`. There is no adapter in this file.
+function-local.** `onnxruntime`, `numpy` and `Pillow` are declared dependencies
+as of v0.22.3 and are imported inside the functions that need them, so
+`python -m isekai`'s import graph reaches no wheel and the `-S` guard still
+passes. Being installed by default is what makes that guard the only check: an
+import moved to module scope here now resolves rather than failing. The
+arrangement is `ollama.py`'s: the transport here, the adapter in `pipeline/`.
+There is no adapter in this file.
 
 **Opening the session is the expensive act and it happens once, on first use.**
 The graph is 467 MB and takes ~0.9 s to open, against ~0.4 s a photograph. So
@@ -37,9 +39,10 @@ digests are verified before the first inference (design.md D17, D18).
 
 **Preparation sits behind the seam rather than in front of it**, so `Session`
 takes a photograph and not a prepared array. That is what makes the stage itself
-runnable in the suite: `prepare` needs `numpy` and `Pillow`, the gate installs
-neither, and a seam beginning after preparation would leave
-`tagging:seam:offline-double-satisfies-the-interface` unprovable.
+runnable in the suite without a wheel: `prepare` needs `numpy` and `Pillow`, the
+suite keeps the stage's tests off both deliberately, and a seam beginning after
+preparation would leave `tagging:seam:offline-double-satisfies-the-interface`
+provable only by reaching for them.
 
 **The one silent failure mode is the ordering**, which is exactly what the suite
 asserts against a fake session: a vector whose only high value sits at index 1
@@ -168,18 +171,24 @@ class Session(Protocol):
 
 @cache
 def _require(module: str) -> ModuleType:
-    """Import one module of the `tagging` extra, or refuse naming how to get it.
+    """Import one module of the tagger's stack, or refuse naming how to get it.
 
     `eval_backends._require`'s shape, for `eval_backends`' reason: without it a
-    machine that has not installed the extra gets a bare `ModuleNotFoundError`
-    traceback, in a package whose rule is that every failure is a named
-    `Refusal` naming its remedy. The extra is deliberately not installed in the
-    environment the gate runs in, so this path is the ordinary one for anyone
-    who has not opted in.
+    machine whose environment is missing the stack gets a bare
+    `ModuleNotFoundError` traceback, in a package whose rule is that every
+    failure is a named `Refusal` naming its remedy.
+
+    **The import is still function-local, and that is what this indirection is
+    for now.** v0.22.3 made these three declared dependencies rather than an
+    extra, so a synced checkout has them and this path is the unsynced case
+    rather than the ordinary one — but the entry point still reaches no
+    third-party package at module scope, which is why `isekai show` works on a
+    checkout that has provisioned nothing.
 
     Not shared with `eval_backends`' copy, and that is the whole content of the
-    difference: the two name **different extras**, so one function would have to
-    be told which — and the sentence it prints is the only thing either does.
+    difference: that one names an extra and this one no longer does, so one
+    function would have to be told which sentence to print — and the sentence it
+    prints is the only thing either does.
 
     Cached, so the import machinery is consulted once per module rather than
     once per photograph.
@@ -189,8 +198,9 @@ def _require(module: str) -> ModuleType:
     except ModuleNotFoundError as absent:  # pragma: no cover - environment
         raise Refusal(
             f"the local tagger's stack is not installed ({module} is missing); "
-            "run `uv sync --extra tagging`. It is deliberately not installed in "
-            "CI, and every test runs against a fake session instead."
+            "run `uv sync`. It is a declared dependency of this project as of "
+            "v0.22.3, so a synced checkout has it and every test runs against a "
+            "fake session regardless."
         ) from absent
 
 
@@ -270,14 +280,13 @@ def prepare(photo: Path, dimension: int) -> object:
     **The return type is `object` rather than `Any`**, and that is the honest one
     as well as the one that needs no suppression: the array is opaque to every
     caller here -- the only thing anything may do with it is hand it back to
-    `Session.run` -- and `numpy.typing.NDArray` cannot be named at all, because
-    the `tagging` extra is deliberately absent from the environment the gate runs
-    in, so even a `TYPE_CHECKING` import would not resolve. `eval_backends.py`
-    faced the same wall and waived ANN401; naming the value opaque says the same
-    thing without waiving a rule.
+    `Session.run`. `numpy.typing.NDArray` could be named now that `numpy` is a
+    declared dependency, and it would say more than any caller is allowed to
+    use; naming the value opaque says exactly what the seam permits, without
+    waiving a rule.
 
-    The non-stdlib imports are function-local, which is what keeps
-    `python -m isekai`'s import graph stdlib-only.
+    The third-party imports are function-local, which is what keeps them off
+    `python -m isekai`'s import graph at module scope.
     """
     numpy = _require("numpy")
     Image = _require("PIL.Image")
@@ -309,8 +318,10 @@ def select(
 
     **The pure half of this module, and the half that can go silently wrong**, so
     it is separated from `prepare` deliberately rather than as a convenience: the
-    ordering is what the suite asserts, and the suite has neither `numpy` nor
-    `Pillow` installed. Nothing here imports anything the `tagging` extra carries.
+    ordering is what the suite asserts, and it asserts it without a wheel on
+    purpose: `numpy` and `Pillow` are installed, so nothing but this split keeps
+    the ordering decidable against a hand-written vector rather than a real
+    graph. Nothing here imports any third-party package.
 
     **The vector is indexed before anything is filtered**, which is the whole
     ordering contract in one line: `labels[i]` names neuron `i`, so dropping the
@@ -360,7 +371,8 @@ class OnnxSession:
 
     Constructed once per flow, by `wiring`, on first use. `onnxruntime` is
     imported in `__init__` rather than at module scope for the rule this whole
-    file exists to keep: the entry point's import graph stays stdlib-only.
+    file exists to keep: the entry point imports no third-party package at
+    module scope.
     """
 
     def __init__(self, model: Path) -> None:

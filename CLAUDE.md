@@ -25,9 +25,14 @@ in particular.
 Hard constraints that shape the code here:
 
 - **Identity preservation is the product.** A beautiful anime image of someone else is a failed run.
-- **The runtime is stdlib-only** — the ComfyUI transport is `urllib`, and nothing in
-  `python -m isekai`'s import graph may need a wheel. Face detection runs *in the image*, never as a
-  runtime dep.
+- **The entry point imports no third-party package at module scope** — the ComfyUI transport is
+  `urllib`, and nothing on `python -m isekai`'s import graph may need a wheel. Face detection runs
+  *in the image*, never as a runtime dep. **This is narrower than the *"the runtime is stdlib-only"*
+  rule it replaces, and deliberately so**: `dependencies = []` was retired in v0.22.3 because the
+  local tagger runs on every `caption` and `uv sync` was stripping it, so the tagger's stack and the
+  review surface's server are declared dependencies now. What is forbidden is a wheel *on the import
+  graph* — reach one from inside the verb that needs it, and the `-S` guard in
+  `tests/test_pipeline_cli.py` is the only thing that catches a violation.
 - **A selectable implementation is a measured one.** Nothing enters the registry on the strength of
   being written; it enters on a measurement against the bar its capability states, and it leaves only
   by the version that retires it. **This replaces the older rule *"there is one path"*, and does not
@@ -198,9 +203,14 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   schema and the briefing outside the freeze with the gate green. **The rule does not tally them, and
   that is deliberate**: a numeral is the part of a rule that goes stale, and `tests/test_flow.py`
   asserts `len(SIBLINGS)` so a sibling cannot be added silently.
-  **A flow is immutable** — editing any of its files is not a variant of a flow, it is an untested
-  flow — and it shares nothing with another flow. Adding one costs a line in `tests/test_flow.py`'s
-  `PINNED`, which is the designed price of the freeze rather than a defect.
+  **A flow is pinned by equality, so nothing in one changes silently** — and it shares nothing with
+  another flow. Adding one costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry
+  carrying its digest, which is the designed price of the freeze rather than a defect. **The freeze forbids a silent change, not a change**: a
+  *divergence* still costs a new identifier, because two flows are only comparable over one cohort if
+  an identifier means one configuration, so a variant, another base or a second generation is a new
+  flow. Only an abandoned configuration may be re-pinned, and a re-pin owes a statement of what moved
+  in `CHANGELOG.md`, carrying the new digest — a test fails on any pinned digest no entry carries.
+  The comment above `PINNED` states the rule, never its history.
   **A flow's identifier is `<verb>-<style>-<base>`**, with `-v2` appended only for a second generation
   of the same triple. The base is in the name because other bases were candidates and `summon-anime`
   could not tell two of them apart; the rule exists because its absence produced `summon-open-v1`, a
@@ -272,9 +282,10 @@ and is not restated here.
   `ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile`. node is needed by
   `isekai ui` alone, to build the bundle. A missing one names what installs it; Ollama's refusal is
   applied to a **port and a model name** rather than to a `PATH` entry, which is the shape a hosted
-  model needs and a binary check cannot give. Neither is a Python dependency, and the optional extras
-  — `[ui]`, `[eval]`, `tagging` — are not installed by CI, so `dependencies = []` and the stdlib-only
-  runtime rule both hold.
+  model needs and a binary check cannot give. Neither is a Python dependency — `uv sync` cannot
+  install either, which is why each refusal names the command that does. **`[eval]` is the only
+  optional extra left**, and CI does not install it; everything a run needs is declared, so no verb
+  is behind an `--extra` flag and gate command one can no longer strip one.
 
 
 ---
@@ -288,8 +299,10 @@ and is not restated here.
   stops a fourth being added. `.env` is gitignored and holds all of it; `.env.example` declares shape
   only. A path a fixture *constructs* is not the target of this rule; a rendered one, carrying a real
   username, is.
-- **Deps minimal + human-gated.** The runtime is stdlib-only. Any new dependency — argue for it and **wait
-  for approval** before installing. pytest / ruff / ty stay dev-only.
+- **Deps minimal + human-gated.** The declared list is short and every entry is on the path of a verb
+  a run actually takes. Any new dependency — argue for it and **wait for approval** before installing.
+  pytest / ruff / ty stay dev-only. **A new one is an import-graph question as well as a supply-chain
+  one**: reach it from inside the verb that needs it, or the `-S` guard fails.
 - **Never weaken the gate to pass.** A deleted or skipped test, a blanket suppression, a loosened config —
   each is a *plan* problem, not a coding shortcut. **Halt and say so.**
 - **State lives on disk.** Reconstruct "where are we" from the active change's `tasks.md` + git — never

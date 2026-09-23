@@ -4,7 +4,7 @@
 and v0.14 deleted that one, discharging the suspension of the repository's own
 rule: there is one render path, and this is its entry point. Four separate scripts
 were rejected for the same reason one parser was chosen: it would multiply the
-stdlib-only guard by four and give argument parsing four places to drift.
+import guard by four and give argument parsing four places to drift.
 
 **Seven verbs, and schema migration is not one of them.** Only schema version 1
 exists, so an upgrade command would be a dispatch table with no entries and its
@@ -250,9 +250,9 @@ def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
 
     **The import is inside this function, and it is load-bearing.**
     `tests/test_pipeline_cli.py` imports the entry point with `-S`, site-packages
-    off the path, and walks this module's module-level imports: the runtime is
-    stdlib-only, and `isekai.interface.ui` reaches FastAPI. A top-level import
-    here would put the `ui` extra on `python -m isekai`'s import graph and turn
+    off the path, and walks this module's module-level imports: nothing there may
+    need a wheel, and `isekai.interface.ui` reaches FastAPI. A top-level import
+    here would put a web framework on `python -m isekai`'s import graph and turn
     that guard red for every verb, including the six that never serve anything.
     """
     from isekai.interface.ui import serve
