@@ -19,7 +19,7 @@ neither is privileged and neither goes through the other.
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
 | `ui/batch.py` | the batch and the whole startup refusal order. **Imports no web framework**, which is what keeps that order testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
-| `ui/app.py` | the endpoints — `GET /api/batch`, `/api/tags`, `/api/fields`, `/api/inputs/{id}`, `/api/inputs/{id}/photo`, `PUT /api/inputs/{id}/draft`, `POST /api/inputs/{id}/approve`, and the bundle mounted at `/` — and the only module in the package that imports the `[ui]` extra |
+| `ui/app.py` | the endpoints — `GET /api/batch`, `/api/tags`, `/api/fields`, `/api/inputs/{id}`, `/api/inputs/{id}/photo`, `PUT /api/inputs/{id}/draft`, `POST /api/inputs/{id}/approve`, and the bundle mounted at `/` — and the only module in the package that imports FastAPI or uvicorn |
 
 ## Imported by
 

@@ -204,12 +204,13 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   that is deliberate**: a numeral is the part of a rule that goes stale, and `tests/test_flow.py`
   asserts `len(SIBLINGS)` so a sibling cannot be added silently.
   **A flow is pinned by equality, so nothing in one changes silently** — and it shares nothing with
-  another flow. Adding one costs a line in `tests/test_flow.py`'s `PINNED`, which is the designed
-  price of the freeze rather than a defect. **The freeze forbids a silent change, not a change**: a
+  another flow. Adding one costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry
+  carrying its digest, which is the designed price of the freeze rather than a defect. **The freeze forbids a silent change, not a change**: a
   *divergence* still costs a new identifier, because two flows are only comparable over one cohort if
   an identifier means one configuration, so a variant, another base or a second generation is a new
-  flow. Only an abandoned configuration may be re-pinned, and a re-pin owes a statement of what moved,
-  above `PINNED`, where a test now requires the change that moved a digest to name itself.
+  flow. Only an abandoned configuration may be re-pinned, and a re-pin owes a statement of what moved
+  in `CHANGELOG.md`, carrying the new digest — a test fails on any pinned digest no entry carries.
+  The comment above `PINNED` states the rule, never its history.
   **A flow's identifier is `<verb>-<style>-<base>`**, with `-v2` appended only for a second generation
   of the same triple. The base is in the name because other bases were candidates and `summon-anime`
   could not tell two of them apart; the rule exists because its absence produced `summon-open-v1`, a

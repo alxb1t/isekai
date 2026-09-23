@@ -39,9 +39,10 @@ digests are verified before the first inference (design.md D17, D18).
 
 **Preparation sits behind the seam rather than in front of it**, so `Session`
 takes a photograph and not a prepared array. That is what makes the stage itself
-runnable in the suite: `prepare` needs `numpy` and `Pillow`, the gate installs
-neither, and a seam beginning after preparation would leave
-`tagging:seam:offline-double-satisfies-the-interface` unprovable.
+runnable in the suite without a wheel: `prepare` needs `numpy` and `Pillow`, the
+suite keeps the stage's tests off both deliberately, and a seam beginning after
+preparation would leave `tagging:seam:offline-double-satisfies-the-interface`
+provable only by reaching for them.
 
 **The one silent failure mode is the ordering**, which is exactly what the suite
 asserts against a fake session: a vector whose only high value sits at index 1
@@ -279,14 +280,13 @@ def prepare(photo: Path, dimension: int) -> object:
     **The return type is `object` rather than `Any`**, and that is the honest one
     as well as the one that needs no suppression: the array is opaque to every
     caller here -- the only thing anything may do with it is hand it back to
-    `Session.run` -- and `numpy.typing.NDArray` cannot be named at all, because
-    the `tagging` extra is deliberately absent from the environment the gate runs
-    in, so even a `TYPE_CHECKING` import would not resolve. `eval_backends.py`
-    faced the same wall and waived ANN401; naming the value opaque says the same
-    thing without waiving a rule.
+    `Session.run`. `numpy.typing.NDArray` could be named now that `numpy` is a
+    declared dependency, and it would say more than any caller is allowed to
+    use; naming the value opaque says exactly what the seam permits, without
+    waiving a rule.
 
-    The non-stdlib imports are function-local, which is what keeps
-    `python -m isekai`'s import graph stdlib-only.
+    The third-party imports are function-local, which is what keeps them off
+    `python -m isekai`'s import graph at module scope.
     """
     numpy = _require("numpy")
     Image = _require("PIL.Image")
@@ -318,8 +318,10 @@ def select(
 
     **The pure half of this module, and the half that can go silently wrong**, so
     it is separated from `prepare` deliberately rather than as a convenience: the
-    ordering is what the suite asserts, and the suite has neither `numpy` nor
-    `Pillow` installed. Nothing here imports anything the `tagging` extra carries.
+    ordering is what the suite asserts, and it asserts it without a wheel on
+    purpose: `numpy` and `Pillow` are installed, so nothing but this split keeps
+    the ordering decidable against a hand-written vector rather than a real
+    graph. Nothing here imports any third-party package.
 
     **The vector is indexed before anything is filtered**, which is the whole
     ordering contract in one line: `labels[i]` names neuron `i`, so dropping the
@@ -369,7 +371,8 @@ class OnnxSession:
 
     Constructed once per flow, by `wiring`, on first use. `onnxruntime` is
     imported in `__init__` rather than at module scope for the rule this whole
-    file exists to keep: the entry point's import graph stays stdlib-only.
+    file exists to keep: the entry point imports no third-party package at
+    module scope.
     """
 
     def __init__(self, model: Path) -> None:

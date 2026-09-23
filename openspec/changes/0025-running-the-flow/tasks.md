@@ -68,6 +68,14 @@ appear in it.
   the condition that survives: **a divergence still costs a new identifier; only an abandoned
   configuration may be re-pinned.** *Do not soften the failure message itself.*
 
+  > **Departed from, in `a5ef56a`.** The comment above `PINNED` does not name this as the second
+  > exception: it states the rule alone — the freeze forbids a silent change, and a divergence costs
+  > a new identifier — and the history of which change re-pinned what moved to `CHANGELOG.md`,
+  > because a test module that accumulates it grows a paragraph per version. The test binding
+  > `image-generation:immutability:a-re-pin-is-recorded` moved with the record and now requires every
+  > pinned digest to appear in `CHANGELOG.md`, which also obliges an entry for a newly added flow.
+  > `CLAUDE.md` says so. The failure message was extended to name that case, not softened.
+
 - [ ] 1.5 **Verify no other flow file moved** — `git diff --stat -- flows/` shows exactly two files,
   `flow.json` and `graph.json`, in each of two directories.
 

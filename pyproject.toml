@@ -143,11 +143,13 @@ known-first-party = ["isekai"]
 
 # `eval_backends.py` is the ONLY module that touches numpy, torch, onnxruntime
 # and Pillow, and it exists to be that boundary -- everything the scorer decides
-# lives in `isekai/evaluation/evaluate.py`, which is stdlib-only and fully annotated. An
-# ndarray has no honest annotation available here: the extra is NOT installed in
-# the environment the gate runs in, by design, so `numpy.typing.NDArray` cannot
-# be resolved even behind `TYPE_CHECKING` -- the type checker would fail on the
-# import it cannot find.
+# lives in `isekai/evaluation/evaluate.py`, which is stdlib-only and fully annotated.
+# The values this file hands around come out of `torch` and `transformers` as
+# well as `numpy`, and the `[eval]` extra that carries those two is NOT installed
+# in the environment the gate runs in, by design, so their types cannot be named
+# even behind `TYPE_CHECKING` -- the type checker would fail on the import it
+# cannot find. (`numpy` itself resolves since v0.22.3 made it a declared
+# dependency; that alone does not name a tensor.)
 #
 # So ANN401 is waived HERE ONLY, and for that one rule. Every other ANN rule
 # still applies, so an unannotated argument in this file is still an error; what
@@ -158,13 +160,14 @@ known-first-party = ["isekai"]
 # installation. Declaring it a source root here lets the type checker and the
 # suite see `derive_manifest` the way a human running it does. It widens where
 # real code is looked for; it suppresses no check.
-# Three files bridge to packages the gate's environment deliberately does NOT
-# install, so `unresolved-import` in them is the configuration working, not a
-# defect: `eval_backends.py`, the scorer's model boundary; `wd14.py`, the local
-# tagger's, which is the ONLY file in the package that touches the `tagging`
-# extra and touches it function-locally; and `build_contact_sheets.py`, a
-# labelling aid that needs Pillow to paste three images side by side. Scoped to those files and to that one rule -- every other
-# check still applies, which is how the `invalid-return-type` on
+# One file bridges to packages the gate's environment deliberately does NOT
+# install, so `unresolved-import` in it is the configuration working, not a
+# defect: `eval_backends.py`, the scorer's model boundary, over the `[eval]`
+# extra. `wd14.py` and `build_contact_sheets.py` were listed here while the
+# tagger's stack and Pillow were optional; v0.22.3 made them declared
+# dependencies, so their imports resolve and they have no claim to this cover.
+# Scoped to that file and to that one rule -- every other check still applies,
+# which, while `wd14.py` was listed, is how the `invalid-return-type` on
 # `OnnxSession.run` was caught and fixed rather than suppressed.
 #
 # Scoped as an override rather than as per-line `ty: ignore` comments, because
@@ -174,11 +177,7 @@ known-first-party = ["isekai"]
 # installed, which is the property that matters -- `make gate` must not depend on
 # what the operator happens to have synced.
 [[tool.ty.overrides]]
-include = [
-    "isekai/evaluation/eval_backends.py",
-    "isekai/boundary/wd14.py",
-    "baseline/build_contact_sheets.py",
-]
+include = ["isekai/evaluation/eval_backends.py"]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

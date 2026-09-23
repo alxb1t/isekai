@@ -567,8 +567,8 @@ def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
     for name, digest in PINNED.items():
         assert digest in changelog, (
             f"flow {name} is pinned at {digest[:12]}... and no CHANGELOG.md entry "
-            "carries that digest. A re-pin owes a statement of what moved, in "
-            "prose a later reader can find."
+            "carries that digest. A re-pin owes a statement of what moved, and a "
+            "new flow a statement of what it is, in prose a later reader can find."
         )
 
 

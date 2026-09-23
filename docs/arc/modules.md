@@ -33,10 +33,10 @@ import time:
 ```
 
 **A lazy edge is not a weaker edge, it is a different one.** Neither `boundary`,
-nor `evaluation`, nor the `[ui]` extra may sit on `python -m isekai`'s import
-graph, and a `-S` subprocess guard in the suite is what proves it. Move any of
-those imports to module scope and that guard goes red — which is the designed
-outcome, not a nuisance.
+nor `evaluation`, nor the surface's `fastapi`/`uvicorn` may sit at module scope on
+`python -m isekai`'s import graph, and a `-S` subprocess guard in the suite is
+what proves it. Move any of those imports to module scope and that guard goes red
+— which is the designed outcome, not a nuisance.
 
 ## The cycles, and why each one exists
 

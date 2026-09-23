@@ -200,6 +200,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `boundary/wd14.py` once — plus `tests/test_wd14.py`'s module docstring, which rested its
   "nothing here imports a wheel" discipline on the `tagging` extra being absent from the gate's
   environment. It is installed now, so that discipline is the suite's own and the docstring says so.
+- **The sweep for sentences phase 2 falsified is finished, and one of them was holding a
+  suppression open.** `boundary/wd14.py` still justified its `object` return type, its
+  `select`/`prepare` split and its function-local imports by a `tagging` extra absent from the gate
+  and a *stdlib-only* import graph; each now states the real reason — the value is opaque to every
+  caller, the split is kept wheel-free on purpose, and the rule is that the entry point imports no
+  third-party package at module scope. `interface/README.md` and `docs/arc/modules.md` named a
+  `[ui]` extra that no longer exists. `pyproject.toml`'s `unresolved-import` override still covered
+  `wd14.py` and `baseline/build_contact_sheets.py` on the ground that their packages are not
+  installed; they are, `ty` is green without the cover, and both leave it. The ANN401 waiver's
+  comment no longer claims `numpy` cannot be named — what it cannot name comes from `torch` and
+  `transformers`, which `[eval]` still carries.
+- **`CLAUDE.md` sent a re-pin's record to the place the implementation had stopped using.** It
+  said the statement of what moved is owed *"above `PINNED`"*; since `a5ef56a` it is owed in
+  `CHANGELOG.md`, carrying the new digest, and a test fails on any pinned digest no entry carries —
+  which, as the rule now says, also costs a newly added flow an entry. The test's failure message
+  names that case too. `tasks.md` 1.4 records the departure from its own instruction.
 
 ## [0.22.2] - 2026-09-22
 
