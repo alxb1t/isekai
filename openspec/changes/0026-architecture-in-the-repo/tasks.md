@@ -9,7 +9,7 @@ Tests read some files edited here, but no string a test asserts changes ([design
 - [x] 2 — `docs/` written from the payload
 - [x] 3 — `CLAUDE.md` keeps only process
 - [x] 4 — The group READMEs point at `docs/`
-- [ ] 5 — `README.md` stops restating the architecture
+- [x] 5 — `README.md` stops restating the architecture
 
 Each site `S<n>` is a row of [D1](design.md#d1): its file, its *before* text and its *after*. Find a site
 by its *before* text; line numbers are `2ccda2f`'s.
@@ -108,16 +108,16 @@ by its *before* text; line numbers are `2ccda2f`'s.
 
 ## 5 — `README.md` stops restating the architecture
 
-- [ ] 5.1 **HALT CHECK** — the section [D10](design.md#d10) removes is still there.
+- [x] 5.1 **HALT CHECK** — the section [D10](design.md#d10) removes is still there.
   Verify: `grep -n '^## The path' README.md` prints one line.
-- [ ] 5.2 Apply S43–S46 to `README.md`.
+- [x] 5.2 Apply S43–S46 to `README.md`.
   Verify: `grep -n -e 'sorts the prose' -e 'silently absent when Ollama' -e 'Neither tag list is narrowed —' -e 'change all four' README.md` prints nothing.
-- [ ] 5.3 Replace `## The path` with `## Architecture`, per [D10](design.md#d10).
+- [x] 5.3 Replace `## The path` with `## Architecture`, per [D10](design.md#d10).
   Verify: `grep -n -e '^## The path' -e 'short side at 1024' -e 'hires_denoise. 0.35' README.md` prints nothing, and `grep -n '^## Architecture' README.md` prints one line.
-- [ ] 5.4 Point *How it works* at `docs/`, and name the import rule by docs D20, per [D10](design.md#d10).
+- [x] 5.4 Point *How it works* at `docs/`, and name the import rule by docs D20, per [D10](design.md#d10).
   Verify: `grep -n -e 'one path (see below)' -e 'imports no third-party package at module scope' README.md` prints nothing.
-- [ ] 5.5 Name `docs/` in *Development*'s closing line.
+- [x] 5.5 Name `docs/` in *Development*'s closing line.
   Verify: `sed -n '/^## Development/,/^## Repository layout/p' README.md | grep -c 'docs/'` prints a number above `0`.
-- [ ] 5.6 Every `docs/` link in `README.md` resolves.
+- [x] 5.6 Every `docs/` link in `README.md` resolves.
   Verify: `grep -o '(docs/[a-z-]*\.md' README.md | tr -d '(' | sort -u | while read p; do test -f "$p" || echo "broken $p"; done` prints nothing.
   ⚠ Already passes at `2ccda2f`: a guard, not proof of the work.

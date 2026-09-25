@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   subject rules it did not carry (`0026` design D8).
 - **The group READMEs point at `docs/principles.md` and `docs/decisions.md`** instead of *"the design
   record"*, which named nothing in the repository (`0026` design D9).
+- **`README.md` stops restating the architecture.** `## The path` becomes `## Architecture`, a link to
+  `docs/`; the intro, the caption notes and the gate's mirrors say what the code does (S43–S46, D10).
 
 ## [0.22.3] - 2026-09-23
 
