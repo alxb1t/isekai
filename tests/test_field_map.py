@@ -31,8 +31,8 @@ DECLARED = {"summon-anime-wai": ("hair_colour", "hair_silhouette")}
 @pytest.fixture
 def provisioned() -> Vocabulary:
     """Return the provisioned vocabulary: the group sizes are its own."""
+    from isekai.interface.wiring import load_vocabulary
     from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
-    from isekai.shared.vocabulary import load as load_vocabulary
 
     require_vocabulary(DEFAULT_MODELS_DIR / VOCABULARY_DEST)
     return load_vocabulary()

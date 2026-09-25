@@ -8,7 +8,7 @@ before the moves they hold ([D13](design.md#d13)).
 - [x] 1 — Declare once: the gate and the encoder window
 - [x] 2 — The checks: layers, held-by names, the vocabulary
 - [x] 3 — `foundation` imports nothing above it
-- [ ] 4 — Pin verification moves into `boundary`
+- [x] 4 — Pin verification moves into `boundary`
 - [ ] 5 — The ComfyUI transport becomes `boundary/comfy/`
 - [ ] 6 — The approval state moves into `pipeline/review.py`
 - [ ] 7 — The docs follow the code
@@ -58,17 +58,17 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 4 — Pin verification moves into `boundary`
 
-- [ ] 4.1 **HALT CHECK** — `isekai/interface/wiring.py` is the only production caller of the vocabulary loader.
+- [x] 4.1 **HALT CHECK** — `isekai/interface/wiring.py` is the only production caller of the vocabulary loader.
   Verify: `git grep -n 'shared.vocabulary import load' -- isekai | cut -d: -f1,2` prints `isekai/interface/wiring.py:36`.
-- [ ] 4.2 Move `entry_for`, `resolve` and their exceptions into `isekai/boundary/provision.py`; pass the eval manifest at `isekai/evaluation/eval_backends.py:159`, `:374`, `:545`; update `tests/test_eval_manifest.py:17-27`. [D7](design.md#d7).
+- [x] 4.2 Move `entry_for`, `resolve` and their exceptions into `isekai/boundary/provision.py`; pass the eval manifest at `isekai/evaluation/eval_backends.py:159`, `:374`, `:545`; update `tests/test_eval_manifest.py:17-27`. [D7](design.md#d7).
   Verify: `grep -c -e '^def entry_for(' -e '^def resolve(' -e '^class UnknownArtifact' isekai/boundary/provision.py isekai/evaluation/eval_models.py | paste -sd' ' -` prints `isekai/boundary/provision.py:3 isekai/evaluation/eval_models.py:0`.
-- [ ] 4.3 Import `entry_for` and `resolve` from `provision` in `isekai/boundary/wd14.py`'s `verified_paths()`; patch `provision.resolve` at `tests/test_wd14.py:41`, `:255`; drop wd14.py's allowlist entry. [D7](design.md#d7).
+- [x] 4.3 Import `entry_for` and `resolve` from `provision` in `isekai/boundary/wd14.py`'s `verified_paths()`; patch `provision.resolve` at `tests/test_wd14.py:41`, `:255`; drop wd14.py's allowlist entry. [D7](design.md#d7).
   Verify: `grep -c eval_models isekai/boundary/wd14.py tests/test_wd14.py | paste -sd' ' -` prints `isekai/boundary/wd14.py:0 tests/test_wd14.py:0`.
-- [ ] 4.4 Make `vocabulary.load(path, entry)` and add `wiring.load_vocabulary`, per [D8](design.md#d8); drop vocabulary.py's allowlist entries, leaving it empty.
+- [x] 4.4 Make `vocabulary.load(path, entry)` and add `wiring.load_vocabulary`, per [D8](design.md#d8); drop vocabulary.py's allowlist entries, leaving it empty.
   Verify: `grep -c -e 'isekai.boundary' -e 'isekai.evaluation' isekai/shared/vocabulary.py` prints `0`, and `grep -c '^def load_vocabulary(' isekai/interface/wiring.py` prints `1`.
-- [ ] 4.5 Call `wiring.load_vocabulary` at `scripts/derive_field_map.py:625`, `tests/test_field_map.py:35-40`, `tests/test_vocabulary.py:83-87`, `tests/test_vocabulary_manifest.py:35` and `:290`. [D8](design.md#d8).
+- [x] 4.5 Call `wiring.load_vocabulary` at `scripts/derive_field_map.py:625`, `tests/test_field_map.py:35-40`, `tests/test_vocabulary.py:83-87`, `tests/test_vocabulary_manifest.py:35` and `:290`. [D8](design.md#d8).
   Verify: `git grep -l 'wiring import.*load_vocabulary' -- scripts tests | sort | tr '\n' ' '` prints `scripts/derive_field_map.py tests/test_field_map.py tests/test_vocabulary.py tests/test_vocabulary_manifest.py `.
-- [ ] 4.6 Update the rows for `provision.py`, `eval_models.py` and `wiring.py` in `isekai/boundary/README.md`, `isekai/evaluation/README.md` and `isekai/interface/README.md`, per [D12](design.md#d12).
+- [x] 4.6 Update the rows for `provision.py`, `eval_models.py` and `wiring.py` in `isekai/boundary/README.md`, `isekai/evaluation/README.md` and `isekai/interface/README.md`, per [D12](design.md#d12).
   Verify: `grep -c shared/vocabulary.py isekai/boundary/README.md isekai/evaluation/README.md | paste -sd' ' -` prints `isekai/boundary/README.md:0 isekai/evaluation/README.md:0`.
 
 ## 5 — The ComfyUI transport becomes `boundary/comfy/`

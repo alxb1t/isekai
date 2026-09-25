@@ -14,7 +14,7 @@ neither is privileged and neither goes through the other.
 | file | does |
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
-| `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
+| `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions and producers. Reads everything, decides nothing |
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
 | `ui/batch.py` | the batch and the whole startup refusal order. **Imports no web framework**, which is what keeps that order testable in the main suite |
@@ -29,7 +29,7 @@ at least once; a list of names cannot.
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py` |
-| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
+| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `scripts/derive_field_map.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
 | `run_view.py` | `cli.py` | `tests/test_run_view.py` |
 | `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py` |
 

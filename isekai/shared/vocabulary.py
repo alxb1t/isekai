@@ -5,9 +5,9 @@ manifest and is swappable by pointing that manifest somewhere else.
 
 This file holds `normalise()`, the one spelling every lookup reads;
 `Vocabulary`, the list with its counts and the one ranking rule; `read_tags()`,
-which parses the tagger's `selected_tags.csv`; `load()`, which reads the
-provisioned list against its manifest; and `identity()`, the record a sheet
-carries to say which list filled it.
+which parses the tagger's `selected_tags.csv`; `load()`, which reads a verified
+list with its manifest entry; and `identity()`, the record a sheet carries to say
+which list filled it.
 
 **No invented tag reaches a sheet, and that holds by construction elsewhere.**
 WD14's labels are the vocabulary, and `shared/field_map.py` is a table over it.
@@ -21,8 +21,7 @@ import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-
-from isekai.foundation.refusal import Refusal
+from typing import Any
 
 # The destination the vocabulary manifest declares, and the models root the
 # scorer already defaults to. One tree, two consumers, one provisioning rule.
@@ -30,10 +29,9 @@ VOCABULARY_DEST = "wd14/selected_tags.csv"
 DEFAULT_MODELS_DIR = Path("models")
 
 # The one command that provisions anything in this repository, pointed at the
-# manifest that declares this file. Named here because two modules refuse over
-# it -- this one and `boundary/wd14.py`, which loads the tagger the list is the
-# output layer of -- and two literals is two chances to name different commands
-# for one fix.
+# manifest that declares this file. Named here because `interface/wiring.py` and
+# `boundary/wd14.py`, which loads the tagger the list is the output layer of, both
+# refuse over it, and a literal in each could name different commands for one fix.
 VOCABULARY_REMEDY = "bash scripts/download_models.sh scripts/vocabulary.json"
 
 # The tagger's own category numbering. `0` is the general tags; `4` is character
@@ -107,31 +105,12 @@ def read_tags(body: str) -> dict[str, int]:
     }
 
 
-def load(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
-    """Read the provisioned vocabulary, verifying its bytes against the manifest.
+def load(path: Path, entry: Mapping[str, Any]) -> Vocabulary:
+    """Return the vocabulary at `path`, named by its manifest `entry`.
 
-    The digest check is the reason the pin is worth anything: the manifest is the
-    only evidence the file on disk is the list the sheets were written against.
-    Provisioning goes through the scorer's resolver rather than a second copy of
-    it -- the repository keeps one enforcement site for the containment and digest
-    rules, not one per consumer.
+    It only reads: the bytes are verified against `entry` before this is called,
+    by `interface/wiring.py`'s `load_vocabulary`, so `shared` reaches no boundary.
     """
-    from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH, load_manifest
-    from isekai.evaluation.eval_models import resolve
-
-    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
-    try:
-        path = resolve(VOCABULARY_DEST, models_dir, manifest)
-    except FileNotFoundError as absent:
-        # A `FileNotFoundError` is the one failure here that has a remedy this
-        # build can perform, and a traceback names a path instead of naming it.
-        raise Refusal(
-            f"{VOCABULARY_DEST} is not provisioned under {models_dir}/, and no "
-            f"sheet can be filled or approved without it; run `{VOCABULARY_REMEDY}` "
-            "from the repository root to fetch and verify it against its pinned "
-            "manifest"
-        ) from absent
-    entry = next(e for e in manifest["entries"] if e["dest"] == VOCABULARY_DEST)
     match = _REVISION.search(entry["sources"][0])
     return Vocabulary(
         name=VOCABULARY_DEST,

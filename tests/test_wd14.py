@@ -38,7 +38,6 @@ from isekai.boundary.wd14 import (
     select,
     verified_paths,
 )
-from isekai.evaluation import eval_models
 from isekai.foundation.refusal import Refusal
 from tests.conftest import require_vocabulary
 from tests.stages import INDEX, FakeSession
@@ -250,7 +249,7 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
         raise AssertionError("the boundary reached provisioning at import time")
 
     monkeypatch.setattr(provision, "load_manifest", refuse)
-    monkeypatch.setattr(eval_models, "resolve", refuse)
+    monkeypatch.setattr(provision, "resolve", refuse)
     monkeypatch.delitem(sys.modules, "isekai.boundary.wd14")
 
     boundary = importlib.import_module("isekai.boundary.wd14")

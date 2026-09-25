@@ -12,7 +12,7 @@ absent.
 | `evaluate.py` | what a score is and when one may not be claimed — the axes, the guards, the cohort question, the report. Stdlib only |
 | `eval_backends.py` | the real models behind the seams: detect, parse, encode, sample, read pose. The only importer of the optional extra |
 | `ciede2000.py` | one absolute colour distance — the only axis that means the same thing in a photograph and a drawing |
-| `eval_models.py` | proves the scorer's models are the bytes that were pinned, and that they have not drifted from the graph's manifest |
+| `eval_models.py` | reads the scorer's manifest, and proves it has not drifted from the graph's; `boundary/provision.py` verifies the bytes |
 | `labels.py` | collects the operator's blind judgement and correlates a metric against it |
 
 ## Imported by
@@ -25,7 +25,7 @@ at least once; a list of names cannot.
 | `evaluate.py` | `eval_backends.py` | `../../evaluate.py`, `tests/eval_fakes.py`, `tests/test_evaluate.py` |
 | `eval_backends.py` | — | `../../evaluate.py` |
 | `ciede2000.py` | `eval_backends.py`, `evaluate.py` | `tests/eval_fakes.py`, `tests/test_ciede2000.py` |
-| `eval_models.py` | `boundary/wd14.py`, `eval_backends.py`, `shared/vocabulary.py` | `scripts/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `eval_models.py` | `eval_backends.py` | `scripts/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
 | `labels.py` | — | `tests/test_labels.py` |
 
 > `eval_backends.py` has **no test importer** and `pyproject.toml`'s

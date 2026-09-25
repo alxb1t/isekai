@@ -83,10 +83,11 @@ def test_the_vocabularys_identity_is_its_name_revision_and_digest(
 
 @pytest.mark.spec_exempt("structural: the loader against the provisioned file")
 def test_the_provisioned_vocabulary_carries_its_pin(tmp_path: Path) -> None:
-    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
+    from isekai.interface.wiring import load_vocabulary
+    from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
 
     require_vocabulary(DEFAULT_MODELS_DIR / VOCABULARY_DEST)
-    provisioned = load()
+    provisioned = load_vocabulary()
 
     assert len(provisioned) == 8106
     assert len(provisioned.revision) == 40

@@ -20,18 +20,12 @@ LAYERS = ("foundation", "shared", "boundary", "pipeline", "interface")
 # Importers whose sub-package imports must go through the front door.
 FRONT_DOOR_SCOPE = ("isekai", "probe", "scripts", "evaluate.py")
 
+Edge = tuple[str, str]
+
 # The upward edges still to move, as (importer, imported module). Exact: an entry
 # whose import is gone fails `test_the_allowlist_names_only_imports_that_exist`.
 # Remove when the docs phase of `0027` deletes it.
-ALLOWLIST = frozenset(
-    {
-        ("isekai/shared/vocabulary.py", "isekai.boundary.provision"),
-        ("isekai/shared/vocabulary.py", "isekai.evaluation.eval_models"),
-        ("isekai/boundary/wd14.py", "isekai.evaluation.eval_models"),
-    }
-)
-
-Edge = tuple[str, str]
+ALLOWLIST: frozenset[Edge] = frozenset()
 
 
 def _module_name(root: Path, path: Path) -> str:

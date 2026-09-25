@@ -32,8 +32,13 @@ from isekai.pipeline.caption import OllamaReader, Reader
 from isekai.pipeline.tagging import OllamaTagger, Tagger
 from isekai.shared.field_map import FieldMap
 from isekai.shared.field_map import load as load_field_map
-from isekai.shared.vocabulary import Vocabulary
-from isekai.shared.vocabulary import load as load_vocabulary
+from isekai.shared.vocabulary import (
+    DEFAULT_MODELS_DIR,
+    VOCABULARY_DEST,
+    VOCABULARY_REMEDY,
+    Vocabulary,
+)
+from isekai.shared.vocabulary import load as read_vocabulary
 
 
 @dataclass
@@ -206,6 +211,36 @@ def _check_run_root(runs: Path) -> None:
             "add` from being published -- point it under .data/ or at a path "
             "outside the repository entirely"
         )
+
+
+def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
+    """Return the provisioned vocabulary, its bytes verified against the manifest.
+
+    The digest check is the reason the pin is worth anything: the manifest is the
+    only evidence the file on disk is the list the sheets were written against.
+    `provision` is imported here rather than at module scope, so it stays off
+    `python -m isekai`'s import graph. Why here: `0027` design D8.
+    """
+    from isekai.boundary.provision import (
+        VOCABULARY_MANIFEST_PATH,
+        load_manifest,
+        resolve,
+    )
+
+    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
+    try:
+        path = resolve(VOCABULARY_DEST, models_dir, manifest)
+    except FileNotFoundError as absent:
+        # A `FileNotFoundError` is the one failure here that has a remedy this
+        # build can perform, and a traceback names a path instead of naming it.
+        raise Refusal(
+            f"{VOCABULARY_DEST} is not provisioned under {models_dir}/, and no "
+            f"sheet can be filled or approved without it; run `{VOCABULARY_REMEDY}` "
+            "from the repository root to fetch and verify it against its pinned "
+            "manifest"
+        ) from absent
+    entry = next(e for e in manifest["entries"] if e["dest"] == VOCABULARY_DEST)
+    return read_vocabulary(path, entry)
 
 
 def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:

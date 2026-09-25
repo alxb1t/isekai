@@ -32,7 +32,7 @@ from isekai.boundary.provision import (
 )
 from isekai.evaluation.eval_models import load_eval_manifest
 from isekai.foundation.refusal import Refusal
-from isekai.shared.vocabulary import load as load_vocabulary
+from isekai.interface.wiring import load_vocabulary
 from tests.fakes import FakeFetcher
 
 VOCABULARY = "wd14/selected_tags.csv"
