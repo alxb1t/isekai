@@ -43,6 +43,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The ComfyUI transport is `boundary/comfy/`**, a package with a front door. The client turns a
   network error into `Unreachable` itself, word for word; the CLI's `_Reporting` wrapper is gone.
   `probe/loader_probe.py` now receives `Unreachable` rather than a raw `URLError` (`0027` design D9).
+- **The approval state is the pipeline's.** `Status` and `state(directory)` move, unchanged, from the
+  review UI's `Batch` into `pipeline/review.py`; `run_view.py` asks `run.is_approved`; the unused
+  `review.is_complete` is deleted (`0027` design D11).
 
 ## [0.22.4] - 2026-09-25
 

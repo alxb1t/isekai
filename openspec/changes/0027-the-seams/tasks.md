@@ -10,7 +10,7 @@ before the moves they hold ([D13](design.md#d13)).
 - [x] 3 — `foundation` imports nothing above it
 - [x] 4 — Pin verification moves into `boundary`
 - [x] 5 — The ComfyUI transport becomes `boundary/comfy/`
-- [ ] 6 — The approval state moves into `pipeline/review.py`
+- [x] 6 — The approval state moves into `pipeline/review.py`
 - [ ] 7 — The docs follow the code
 
 Line numbers are `9b3fca2`'s; find each site by the text it names.
@@ -90,13 +90,13 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 6 — The approval state moves into `pipeline/review.py`
 
-- [ ] 6.1 **HALT CHECK** — `review.is_complete` has no production caller.
+- [x] 6.1 **HALT CHECK** — `review.is_complete` has no production caller.
   Verify: `git grep -n 'is_complete' -- isekai | cut -d: -f1,2` prints `isekai/pipeline/review.py:78`.
-- [ ] 6.2 Move `Status` and `Batch.state`'s body into `isekai/pipeline/review.py` as `state(directory)`; `Batch.state` passes it the review directory. [D11](design.md#d11).
+- [x] 6.2 Move `Status` and `Batch.state`'s body into `isekai/pipeline/review.py` as `state(directory)`; `Batch.state` passes it the review directory. [D11](design.md#d11).
   Verify: `grep -c '^def state(' isekai/pipeline/review.py` prints `1`, and `grep -c -e 'Status = ' -e approved_versions isekai/interface/ui/batch.py` prints `0`.
-- [ ] 6.3 Call `run.is_approved` at `isekai/interface/run_view.py:101`, per [D11](design.md#d11).
+- [x] 6.3 Call `run.is_approved` at `isekai/interface/run_view.py:101`, per [D11](design.md#d11).
   Verify: `grep -c 'group("label") == APPROVED' isekai/interface/run_view.py` prints `0`.
-- [ ] 6.4 Delete `review.is_complete`; `tests/test_review.py:172` and `:202` assert `state(directory)`, names and bindings unchanged. [D11](design.md#d11).
+- [x] 6.4 Delete `review.is_complete`; `tests/test_review.py:172` and `:202` assert `state(directory)`, names and bindings unchanged. [D11](design.md#d11).
   Verify: `git grep -n is_complete -- isekai tests` prints nothing.
 
 ## 7 — The docs follow the code

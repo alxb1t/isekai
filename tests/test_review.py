@@ -24,9 +24,9 @@ from isekai.pipeline.review import (
     approve,
     draft_versions,
     estimate_tokens,
-    is_complete,
     review,
     save_draft,
+    state,
     token_budget,
 )
 from isekai.shared.vocabulary import Vocabulary
@@ -169,7 +169,7 @@ def test_a_draft_is_not_treated_as_complete(run: Run) -> None:
 
     assert draft_versions(directory) == [1]
     assert approved_versions(directory) == []
-    assert not is_complete(directory)
+    assert state(directory) == "draft"
 
 
 @pytest.mark.spec("review:approval:approve-validates-then-renames")
@@ -199,7 +199,7 @@ def test_approval_is_decidable_from_the_filename_alone(
 
     assert [p.name for p in directory.iterdir()] == ["001.approved.json"]
     assert approved_versions(directory) == [1]
-    assert is_complete(directory)
+    assert state(directory) == "approved"
 
 
 @pytest.mark.spec("review:approval:approved-is-not-overwritten")
