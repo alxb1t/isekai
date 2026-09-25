@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-import isekai.shared.atomic_write as atomic_write_module
+import isekai.foundation.atomic_write as atomic_write_module
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -211,7 +211,7 @@ def test_a_photograph_this_build_cannot_read_stops_the_run_naming_the_fix(
 
 # --- atomicity ----------------------------------------------------------------
 
-# `write_atomically` lives in `isekai.shared.atomic_write`; these patch that module
+# `write_atomically` lives in `isekai.foundation.atomic_write`; these patch that module
 # by name rather than `run`, which merely imports it. Patching through `run` would
 # have passed either way -- `run.os` IS the global `os` module object -- so naming
 # the real subject is what makes these break on a move rather than sleep through

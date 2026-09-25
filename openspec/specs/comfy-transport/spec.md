@@ -5,12 +5,12 @@
 Talking to a running ComfyUI over HTTP: uploading the photo, queueing the workflow, waiting for the render, and
 downloading the result.
 
-**Source:** `isekai/boundary/multipart.py`, `isekai/boundary/comfy_client.py`,
-`isekai/boundary/comfy_types.py`, `isekai/pipeline/generate.py` ·
+**Source:** `isekai/boundary/comfy/__init__.py`, `isekai/boundary/comfy/multipart.py`,
+`isekai/boundary/comfy/client.py`, `isekai/boundary/comfy/contract.py`, `isekai/pipeline/generate.py` ·
 **Tests:** `tests/test_multipart.py`, `tests/test_generate.py`
 
 The transport is an **injectable seam** behind a Protocol — `ComfyTransport`, declared in
-`isekai/boundary/comfy_types.py` with no network in it, which is what lets the whole suite run against
+`isekai/boundary/comfy/contract.py` with no network in it, which is what lets the whole suite run against
 `FakeComfyClient`. The transport is on `python -m isekai`'s import graph, which reaches no wheel, so the
 multipart body is built by hand rather than pulled from a dependency, which is why its wire format is
 specified here rather than delegated to a library's contract. **No test in this capability reaches a
@@ -51,7 +51,7 @@ matches the body it produced and encoding fields and files in the wire format th
 - **AND** no text encoding is applied to them, so a photo is not corrupted in transit
 
 > Polling and output selection live in `isekai/pipeline/generate.py`'s `render`;
-> `comfy_client.history()` is a single unconditional GET. The transport module supplies the calls, the
+> `ComfyClient.history()` is a single unconditional GET. The transport module supplies the calls, the
 > render stage supplies the loop.
 
 ### Requirement: Render completion polling

@@ -36,12 +36,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy_types import ComfyTransport, Unreachable, Workflow
+from isekai.boundary.comfy import ComfyTransport, Unreachable
+from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import (
     SAMPLER_DIALS,
     SECOND_PASS_DIALS,
     Flow,
     Schema,
+    Workflow,
     assemble,
 )
 from isekai.foundation.refusal import Refusal
@@ -60,7 +62,6 @@ from isekai.foundation.run import (
     record_failure,
     write_json,
 )
-from isekai.shared.atomic_write import write_atomically
 from isekai.shared.image import (
     MAX_TARGET_LONG_SIDE,
     dimensions_or_refuse,

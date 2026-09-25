@@ -286,30 +286,20 @@ detects it.
 
 ## Development
 
-**The gate is declared once**, as the `gate` array in `.minions/minions.toml`. The root
-`Makefile` and this file mirror it, and CI (`.github/workflows/ci.yml`) runs `make gate`; change
-the array and you change the `Makefile` and this file, in the same commit.
+Run the gate:
 
 ```sh
 make gate
 ```
 
-runs exactly these six, in this order:
+`make -n gate` prints its commands; the root `Makefile` declares them, and CI
+(`.github/workflows/ci.yml`) runs `make gate` too.
 
-```sh
-uv sync --locked            # environment, from the tracked lock
-uv run ruff format --check .  # format
-uv run ruff check .         # lint
-uv run ty check             # types
-bash scripts/typecheck_ui.sh  # types, in the browser
-uv run pytest               # tests
-```
+Its browser half, `scripts/typecheck_ui.sh`, runs `vue-tsc --noEmit` over `ui/` and needs
+`ui/node_modules/`. It is **not** restored for you — run `npm install` in `ui/` once, as the
+review surface already asks.
 
-The fifth is the browser half: `vue-tsc --noEmit` over `ui/`, wrapped so that a missing
-`ui/node_modules/` refuses by name instead of exiting 127. It is **not** restored for you —
-run `npm install` in `ui/` once, as the review surface already asks.
-
-All six green, or the work is not done. The suite is **fully offline and deterministic** —
+Every command green, or the work is not done. The suite is **fully offline and deterministic** —
 the ComfyUI transport is faked behind a Protocol and no test touches a GPU or the network.
 Image quality and identity fidelity are judged live on a pod, by eye.
 
@@ -349,7 +339,6 @@ isekai/
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
-├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)
 ├── Makefile                   # `make gate`
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing

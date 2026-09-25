@@ -25,6 +25,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.5] - 2026-09-25
+
+### Changed
+
+- **The gate and the encoder window are each declared once.** The `Makefile` is the gate's one
+  declaration; `.minions/minions.toml` is deleted and `.minions/` ignored whole. The review UI reads
+  the window from the token budget the server sends (`0027` design D1, D2).
+- **The layers, the principles' *held by* names and the vocabulary checks are held by tests.**
+  `tests/test_layers.py` scans every import, with an exact allowlist of the edges still to move;
+  `tests/test_principles.py` resolves each named test; a missing vocabulary fails the checks that
+  read it unless `ISEKAI_VOCABULARY=absent`, which CI sets (`0027` design D3–D5).
+- **`foundation` imports nothing above it.** `atomic_write.py` moves from `shared/` to `foundation/`,
+  and the `Workflow` graph type from `boundary/comfy_types.py` to `foundation/flow.py`, which owns
+  the graph (`0027` design D6).
+- **Pin verification is `boundary/provision.py`'s.** `resolve`, `entry_for` and their exceptions move
+  there from `evaluation/eval_models.py`, and `resolve` takes its manifest. `wiring.load_vocabulary`
+  verifies the vocabulary; `shared/vocabulary.py`'s `load` only reads it (`0027` design D7, D8).
+- **The ComfyUI transport is `boundary/comfy/`**, a package with a front door. The client turns a
+  network error into `Unreachable` itself, word for word; the CLI's `_Reporting` wrapper is gone.
+  `probe/loader_probe.py` now receives `Unreachable` rather than a raw `URLError` (`0027` design D9).
+- **The approval state is the pipeline's.** `Status` and `state(directory)` move, unchanged, from the
+  review UI's `Batch` into `pipeline/review.py`; `run_view.py` asks `run.is_approved`; the unused
+  `review.is_complete` is deleted (`0027` design D11).
+- **The docs follow the code.** `docs/modules.md` draws the new graph and `docs/principles.md` names
+  `tests/test_layers.py` where it held *not yet*; the `comfy-transport` and `run-directory` preambles
+  name the moved modules; the layer test's allowlist is deleted (`0027` design D10, D12).
+
 ## [0.22.4] - 2026-09-25
 
 ### Changed

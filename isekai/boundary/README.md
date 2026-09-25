@@ -13,11 +13,12 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 | file | does | reaches |
 |---|---|---|
-| `comfy_types.py` | the `ComfyTransport` Protocol and the workflow/image types — the network boundary's shape, with no network in it | nothing |
-| `comfy_client.py` | upload · submit · poll · retrieve, over `urllib` | the rented GPU |
-| `multipart.py` | builds one multipart body; internal to the transport | nothing |
+| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `Unreachable` | nothing |
+| `comfy/contract.py` | the `ComfyTransport` Protocol, the image type and `Unreachable` — the network boundary's shape, with no network in it | nothing |
+| `comfy/client.py` | upload · submit · poll · retrieve, over `urllib`; every network error it meets is raised as `Unreachable` | the rented GPU |
+| `comfy/multipart.py` | builds one multipart body; private to the package | nothing |
 | `ollama.py` | one POST to a local runtime, and the classification of what comes back | the hosted model, over HTTP to localhost |
-| `provision.py` | plan → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy | a download, on the pod |
+| `provision.py` | plan → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy, and `resolve`, which returns a pinned artifact's path only once its bytes are verified | a download, on the pod |
 | `wd14.py` | the local tagger: a digest-verified ONNX session, the label index whose file order names its neurons, and the scored list it emits | a 467 MB file on disk, and nothing else |
 
 ## Imported by
@@ -27,11 +28,10 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_generate.py`, `tests/test_image.py`, `tests/test_infra.py`, `tests/test_manifest_binding.py` |
-| `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
-| `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
+| `comfy/` | `interface/wiring.py`, `pipeline/generate.py` | `probe/loader_probe.py`, `tests/fakes.py`, `tests/test_generate.py`, `tests/test_resume.py` |
+| `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/test_ollama.py` |
-| `provision.py` | `wd14.py`, `evaluation/eval_models.py`, `shared/vocabulary.py` | `../../evaluate.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `provision.py` | `wd14.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `interface/wiring.py` | `../../evaluate.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
 | `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_wd14.py` |
 
 > `provision.py` is not on `python -m isekai`'s import graph, so the module-scope

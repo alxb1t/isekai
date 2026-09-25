@@ -227,9 +227,9 @@ def verified_paths(
     """Return both digest-verified paths and the pins they were verified against.
 
     **Both, before the first inference, and neither alone is worth anything.**
-    Verification goes through the scorer's resolver rather than a second copy of
+    Verification goes through `provision.resolve` rather than a second copy of
     it, which is the repository's single enforcement site for the containment and
-    digest rules -- the same route `shared/vocabulary.py` takes to the same
+    digest rules -- the same route `wiring.load_vocabulary` takes to the same
     manifest.
 
     An absent file is a `Refusal` naming the one command that fixes it, which is
@@ -238,8 +238,12 @@ def verified_paths(
     file, the digest expected and the digest computed -- all three, because that
     one is read by a human deciding whether a pin is stale or a file was swapped.
     """
-    from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH, load_manifest
-    from isekai.evaluation.eval_models import entry_for, resolve
+    from isekai.boundary.provision import (
+        VOCABULARY_MANIFEST_PATH,
+        entry_for,
+        load_manifest,
+        resolve,
+    )
 
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     resolved: list[Path] = []

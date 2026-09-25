@@ -58,8 +58,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from isekai.foundation.run import read_artifact  # noqa: E402
+from isekai.interface.wiring import load_vocabulary  # noqa: E402
 from isekai.shared.field_map import FIELD_MAP_PATH, declared_fields  # noqa: E402
-from isekai.shared.vocabulary import Vocabulary, load  # noqa: E402
+from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 
 # The table's own monotonic counter. There is no upstream revision to name --
 # the artifact is authored here -- so it is bumped by whoever edits this spec.
@@ -622,7 +623,7 @@ def main() -> None:
     )
     arguments = parser.parse_args()
 
-    vocabulary = load()
+    vocabulary = load_vocabulary()
     fields = sorted({name for names in declared_fields().values() for name in names})
     document, groups = build(vocabulary, fields)
 

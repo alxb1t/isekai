@@ -4,11 +4,10 @@
 #
 # `vue-tsc --noEmit` is declared in `ui/package.json` and was in no gate command,
 # so a phase whose whole product is browser code could end "green" while the
-# bundle did not compile (design.md D22). This script is what the `gate` array in
-# .minions/minions.toml names, because the array's entries run from the
-# repository root and `npm run` needs the package directory -- and because a
-# missing toolchain has to refuse by name rather than exit 127 with
-# `vue-tsc: command not found`.
+# bundle did not compile (design.md D22). This script is what the Makefile's
+# `gate` target runs, because the gate's commands run from the repository root
+# and `npm run` needs the package directory -- and because a missing toolchain
+# has to refuse by name rather than exit 127 with `vue-tsc: command not found`.
 #
 # The refusal copies `isekai/interface/ui/bundle.py`'s shape: say what is absent,
 # say what installs it, say which part of the system needs it. `npm install` is

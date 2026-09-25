@@ -11,12 +11,13 @@ import json
 import random
 import re
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
 
 import isekai.foundation.run as run_module
-from isekai.boundary.comfy_types import Workflow
+from isekai.boundary.comfy import ComfyClient
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -39,7 +40,6 @@ from isekai.foundation.run import (
     read_artifact,
     record_failure,
 )
-from isekai.interface.cli import _Reporting
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import (
     SEED_BITS,
@@ -59,7 +59,7 @@ from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FakeComfyClient
+from tests.fakes import FakeComfyClient, url_of
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
 
@@ -714,25 +714,26 @@ def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
 
 @pytest.mark.spec("image-generation:failure:an-unreachable-endpoint-is-transient")
 def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
-    run: Run, flow: Flow, schema: Schema
+    run: Run, flow: Flow, schema: Schema, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A closed tunnel says nothing about the graph, so it is not permanent.
 
-    Through `cli._Reporting`, the wrapper that actually ships, rather than by
-    raising `Unreachable` directly: what is under test is that a transport-level
-    `URLError` reaches the record as transient, and the classification happens in
-    that wrapper.
+    Through a real `ComfyClient`, rather than by raising `Unreachable` directly:
+    what is under test is that a transport-level `URLError` reaches the record as
+    transient, and the classification happens in the client.
     """
     prepare(run, {FLOW: flow})
 
-    class Closed(FakeComfyClient):
-        """The tunnel is down: every call fails the way a closed socket does."""
+    def closed_after_the_upload(req: urllib.request.Request | str) -> io.BytesIO:
+        # The upload lands and the tunnel then closes, so `submit` is what fails.
+        if url_of(req).endswith("/upload/image"):
+            return io.BytesIO(b'{"name": "photo.png"}')
+        raise urllib.error.URLError("Connection refused")
 
-        def submit(self, workflow: Workflow) -> str:
-            raise urllib.error.URLError("Connection refused")
+    monkeypatch.setattr(urllib.request, "urlopen", closed_after_the_upload)
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, _Reporting(Closed()), seeds=[42], poll=0)
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert "the rendering endpoint could not be reached" in str(refused.value)

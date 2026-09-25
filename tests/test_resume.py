@@ -17,11 +17,13 @@ import json
 import random
 import re
 import urllib.error
+import urllib.request
 from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
+from isekai.boundary.comfy import ComfyClient
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import BUDGETS
@@ -31,7 +33,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
-from tests.fakes import FakeComfyClient
+from tests.fakes import FakeComfyClient, url_of
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
 from tests.transports import FakeTransport
@@ -544,28 +546,17 @@ def test_the_server_flag_has_no_default_so_rendering_is_always_asked_for() -> No
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
-    wired: Wiring, tmp_path: Path
+    wired: Wiring, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import urllib.error
-
     run_id = _approved_run(wired, tmp_path, "one")
+    reached: list[str] = []
 
-    class Dead:
-        def upload_image(self, path: str) -> str:
-            raise urllib.error.URLError(
-                ConnectionRefusedError(61, "Connection refused")
-            )
+    def refused(req: urllib.request.Request | str) -> object:
+        reached.append(url_of(req))
+        raise urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
 
-        def submit(self, workflow: object) -> str:
-            raise AssertionError("nothing should be submitted")
-
-        def history(self, prompt_id: str) -> dict[str, object]:
-            raise AssertionError("nothing should be polled")
-
-        def view(self, image: object) -> bytes:
-            raise AssertionError("nothing should be downloaded")
-
-    wired.client = Dead()
+    monkeypatch.setattr(urllib.request, "urlopen", refused)
+    wired.client = ComfyClient("http://127.0.0.1:8188")
     assert isinstance(wired.err, io.StringIO)
 
     assert dispatch(_args("generate", run_id), wired) == 1
@@ -575,6 +566,8 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
     assert "infra/up.sh" in message
     assert "--server" in message
     assert "Traceback" not in message
+    # Nothing is submitted, polled or downloaded once the upload is refused.
+    assert reached == ["http://127.0.0.1:8188/upload/image"]
     # The assembly still happened before the endpoint was reached at all.
     assert (wired.runs_root / run_id / FLOW / "prompts" / "001.json").exists()
 

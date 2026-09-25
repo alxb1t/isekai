@@ -38,8 +38,10 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy_types import Workflow
 from isekai.foundation.refusal import Refusal
+
+# A ComfyUI graph in API format: node id to node.
+Workflow = dict[str, Any]
 
 FLOWS_DIR = Path(__file__).resolve().parent.parent.parent / "flows"
 

@@ -35,34 +35,23 @@ run. `conjure` takes no photograph and makes no identity claim
 
 ---
 
-## The quality gate — this repo's six commands
+## The quality gate
 
-**These** are the commands this repo declares, in `.minions/minions.toml`'s `gate` array, in order:
+**The gate is `make gate`**, run from the repository root; `make -n gate` prints what it runs. The
+`Makefile` is its one declaration, and the notes on each command are the `Makefile`'s. CI
+(`.github/workflows/ci.yml`) runs `make gate` too.
 
-- `uv sync --locked` — environment, from the tracked lock; not a quality axis, hence first
-- `uv run ruff format --check .` — format, in check mode (a rewrite is not the check)
-- `uv run ruff check .` — lint
-- `uv run ty check` — strict types
-- `bash scripts/typecheck_ui.sh` — strict types, in the browser: `vue-tsc --noEmit` over `ui/`,
-  wrapped so a missing `ui/node_modules/` refuses by name rather than exiting 127
-- `uv run pytest` — tests
+Every command green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
 
-**The array is the one that is run, and there are three copies of it, not four.** `Makefile`'s `gate`
-target mirrors it and `README.md` lists it; CI (`.github/workflows/ci.yml`) **invokes that mirror** —
-`run: make gate` — rather than keeping a third copy, because its own steps had already drifted.
-Change the array, change the other two in the same commit.
-
-All six green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
-
-Beyond the array, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
-That is a convention for those phases, not an entry in the array; adding it to one means adding it to the
-`Makefile` in the same commit.
+Beyond the gate, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
+That is a convention for those phases, not part of the gate; adding it to the gate means adding it to the
+`Makefile`.
 
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
 Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
-and seed drawing takes an injected `random.Random`. No test hits a GPU or the network — which is why every scenario declares `Layers: unit`
-and none declares `e2e`. Diffusion quality and identity fidelity are verified **live on a pod, by eye**,
-never mocked and never asserted.
+and seed drawing takes an injected `random.Random`. No test hits a GPU or the network — which is why
+every scenario declares `Layers: unit` and none declares `e2e`. Diffusion quality and identity fidelity
+are verified **live on a pod, by eye**, never mocked and never asserted.
 
 ---
 
@@ -99,8 +88,9 @@ plus the tracked `.openspec.yaml` where one is needed. A change may carry a fift
    to four — higher than every id under `openspec/changes/` and its `archive/`, for a minor and a
    patch alike. An id is never renamed once commits carry it as a trailer.
 3. **Author** each artifact against `openspec instructions <proposal|specs|design|tasks> --change
-   <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally opens with `version: vX.Y`
-   frontmatter — **the CLI neither emits nor checks that key; it is on the author.**
+   <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally
+   opens with `version: vX.Y` frontmatter — **the CLI neither emits nor checks that key; it is on the
+   author.**
 4. **A change that changes no requirement** declares the absence rather than inventing one: `skip_specs:
    true` in the change's tracked `.openspec.yaml`, **plus** `specs/.gitkeep`. Both, not either —
    `0023-backlog-paydown` carries the pair. Never write a requirement solely to satisfy the validator.
@@ -124,8 +114,8 @@ is folded in and the change moves to `openspec/changes/archive/`; archived chang
 **The version line is one line in four places** — `proposal.md`'s `version:`, `CHANGELOG.md`'s
 `## [X.Y.Z]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.Z`. A minor release spells that
 `vX.Y` / `## [X.Y.0]` / `vX.Y.0`; a patch release spells it `vX.Y.Z` throughout, as `0.22.1` did. All
-four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog + SemVer, with an entry appended
-**per phase** under `## [Unreleased]` and cut at release.
+four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog +
+SemVer, with an entry appended **per phase** under `## [Unreleased]` and cut at release.
 
 **A minor delivers one feature; a patch delivers none**, and meets every one of these — work that
 cannot is not a patch:
@@ -165,9 +155,7 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   read; a new artifact owes an entry.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
-- **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one
-  tracked file in it. `git check-ignore` reports the *directory* as not ignored precisely because of that
-  one file — always check a file path.
+- **`.minions/`** — MinionsFactory's run artefacts, gitignored whole.
 - **`.data/` holds everything a run produces or consumes, and is gitignored.** The reason is not
   tidiness. A run directory holds a *copy of the photograph* — that is what makes a run reconstructable
   from disk — so it contains personal photographs **by construction**. Under a top-level `runs/` the

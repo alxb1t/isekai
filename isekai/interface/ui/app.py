@@ -46,7 +46,13 @@ from fastapi.staticfiles import StaticFiles
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import read_artifact
 from isekai.interface.ui.batch import Batch, Input
-from isekai.pipeline.review import TokenBudget, approve, save_draft, token_budget
+from isekai.pipeline.review import (
+    ENCODER_WINDOW,
+    TokenBudget,
+    approve,
+    save_draft,
+    token_budget,
+)
 
 # The dropdown's `· rare` marker. This number exists nowhere else in the
 # repository: the vocabulary ranks by post count and never calls anything rare,
@@ -460,6 +466,7 @@ def _budget(budget: TokenBudget) -> dict[str, Any]:
         "total": budget.total,
         "per_field": dict(budget.per_field),
         "overhead": budget.overhead,
+        "window": ENCODER_WINDOW,
     }
 
 

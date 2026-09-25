@@ -63,8 +63,6 @@ classified or what state a sheet is in, belongs to the component that owns that 
 - **Why:** logic in the wiring runs only on the path one front end takes, and nothing else can test it
   or reuse it.
 - **Held by:** review.
-- **Known breaks:** the CLI decides which transport failures are transient, and the review UI owns the
-  approval states.
 
 ### The code is layered
 
@@ -87,9 +85,13 @@ separate sub-system beside the code it measures: it may import isekai, and iseka
 
 - **Why:** a layer can be read, tested and changed knowing only what is below it. A cycle means neither
   side can be understood alone.
-- **Held by:** not yet. A few imports still point up; a test that fails on any upward import, on any
-  module cycle, and on any import reaching past a package's front door lands with the change that
-  moves them.
+- **Held by:**
+  - `tests/test_layers.py::test_every_import_points_down`
+  - `tests/test_layers.py::test_nothing_in_the_package_imports_evaluation`
+  - `tests/test_layers.py::test_no_stage_imports_another`
+  - `tests/test_layers.py::test_no_import_cycle_inside_a_layer`
+  - `tests/test_layers.py::test_a_layer_init_holds_only_a_docstring`
+  - `tests/test_layers.py::test_a_subpackage_is_reached_only_through_its_front_door`
 
 ## Invocation
 
@@ -160,10 +162,9 @@ a test re-derives it and expects the same bytes.**
   `tests/test_flow.py::test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads`,
   `tests/test_flow.py::test_every_model_a_flow_declares_carries_the_manifests_digest_for_it`,
   `tests/test_field_map.py::test_the_committed_table_re_derives_without_reading_the_gitignored_runs`.
-- **Known breaks:** the gate's command list is written in more than one place with no test holding them equal;
-  the encoder window is declared twice, once in Python and once in the review UI; the sampling options
-  do not say they are not manifest keys. The field map's re-derivation skips where the vocabulary is
-  not provisioned, which includes CI, and the derivers that fetch from the network are never re-run.
+- **Known breaks:** the sampling options do not say they are not manifest keys. The field map's
+  re-derivation skips in CI, which declares the vocabulary absent, and the derivers that fetch from the
+  network are never re-run.
 
 ### Everything that shapes an output is pinned
 
@@ -220,9 +221,9 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   - `tests/test_run_directory.py::test_a_failed_rename_leaves_neither_the_artifact_nor_its_temporary`
   - `tests/test_review.py::test_an_approved_artifact_is_never_overwritten`
   - `tests/test_resume.py::test_without_the_flag_no_next_version_appears_for_any_stage`
-  - **not yet**, for the rest. No test forbids an import between stages until the layer test lands.
-    The shapes are not declared in one place: each writer spells its file, each reader re-spells it by
-    key, and one version covers every kind.
+  - `tests/test_layers.py::test_no_stage_imports_another`
+  - **not yet**, for the shapes. They are not declared in one place: each writer spells its file, each
+    reader re-spells it by key, and one version covers every kind.
 - **Known breaks:** `approve` re-approves a finished stage, and a failure record can be overwritten.
 
 ### Every artifact records what shaped it

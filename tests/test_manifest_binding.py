@@ -1,6 +1,5 @@
 import pytest
 
-from isekai.boundary.comfy_types import Workflow
 from isekai.boundary.provision import (
     Manifest,
     graph_model_files,
@@ -8,6 +7,7 @@ from isekai.boundary.provision import (
     unclassified_node_classes,
     undeclared_files,
 )
+from isekai.foundation.flow import Workflow
 
 
 @pytest.mark.spec(

@@ -48,7 +48,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 from isekai.interface.ui.batch import establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.review import approve, review  # noqa: E402
+from isekai.pipeline.review import ENCODER_WINDOW, approve, review  # noqa: E402
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
     caption_tags,
@@ -214,6 +214,16 @@ def test_an_input_carries_its_caption_its_fields_and_its_budget(
     # The shares and the overhead reconcile, because they come from one rule.
     budget = body["budget"]
     assert sum(budget["per_field"].values()) + budget["overhead"] == budget["total"]
+
+
+@pytest.mark.spec_exempt(
+    "structural: the encoder window is declared once, and the browser reads it "
+    "from the budget"
+)
+def test_the_budget_carries_the_encoder_window(client: TestClient, made: Run) -> None:
+    body = client.get(f"/api/inputs/{made.id}").json()
+
+    assert body["budget"]["window"] == ENCODER_WINDOW
 
 
 # --- the vocabulary, ranked where the pipeline ranks it -----------------------

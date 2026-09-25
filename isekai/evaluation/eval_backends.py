@@ -12,10 +12,10 @@ is not linking code, and that is what keeps an AGPL-3.0 detector out of an
 Apache-2.0 public repository (design.md D19, `scripts/eval_licences.md`). A test
 asserts the absence, because a licence review nobody runs is not a control.
 
-Every artifact is resolved through `isekai.evaluation.eval_models.resolve`,
-which verifies its digest against `scripts/eval_models.json` and refuses on a
-mismatch. A score
-produced by an unverified model is a number from an unknown thing.
+Every artifact is resolved through `isekai.boundary.provision.resolve`, which
+verifies its digest against `scripts/eval_models.json` and refuses on a
+mismatch. A score produced by an unverified model is a number from an unknown
+thing.
 
 **On the unresolved imports below.** The gate runs with the extra deliberately
 absent, so the type checker cannot resolve these five modules -- not because they
@@ -38,8 +38,9 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any
 
+from isekai.boundary.provision import resolve
 from isekai.evaluation.ciede2000 import Lab
-from isekai.evaluation.eval_models import RECOGNIZER, resolve
+from isekai.evaluation.eval_models import RECOGNIZER, load_eval_manifest
 from isekai.evaluation.evaluate import (
     Box,
     Canvas,
@@ -156,7 +157,7 @@ class OnnxSession:
         onnxruntime = _require("onnxruntime")
         # Verified before it is loaded, never after: the digest is the only
         # reason to believe these are the bytes the manifest names.
-        path = resolve(dest, models_dir)
+        path = resolve(dest, models_dir, load_eval_manifest())
         self.session = onnxruntime.InferenceSession(
             str(path), providers=["CPUExecutionProvider"]
         )
@@ -371,7 +372,7 @@ class StyleIdEncoder:
             "styleid/config.json",
             "styleid/preprocessor_config.json",
         ):
-            resolve(dest, models_dir)
+            resolve(dest, models_dir, load_eval_manifest())
         root = models_dir / "styleid"
         self.torch = torch
         self.model = CLIPModel.from_pretrained(root).eval()
@@ -542,7 +543,9 @@ class DwPoseReader:
             "dw-ll_ucoco_384_bs5.torchscript.pt"
         )
         self.torch = torch
-        self.model = torch.jit.load(str(resolve(dest, models_dir)))
+        self.model = torch.jit.load(
+            str(resolve(dest, models_dir, load_eval_manifest()))
+        )
         self.model.eval()
         self.detector = OnnxSession(
             "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx", models_dir

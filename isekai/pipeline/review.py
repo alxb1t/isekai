@@ -37,6 +37,7 @@ Stdlib only.
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 from isekai.foundation.flow import Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
@@ -66,6 +67,9 @@ DRAFT = "draft"
 # well past it and nothing said so, so every one was being silently averaged.
 ENCODER_WINDOW = 77
 
+# The three states stage ③ has, and the strings the review UI puts on the wire.
+Status = Literal["draft", "approved", "re-opened"]
+
 
 def draft_versions(directory: Path) -> list[int]:
     """Return the versions in `directory` whose filenames say they are drafts."""
@@ -75,14 +79,29 @@ def draft_versions(directory: Path) -> list[int]:
     return [version for version in versions(directory) if version not in approved]
 
 
-def is_complete(directory: Path) -> bool:
-    """Say whether this stage is finished, from filenames alone.
+def state(directory: Path) -> Status:
+    """Return where this input stands in stage ③, from filenames alone.
 
-    A draft is not complete. That is the point of approval being its own act:
-    downstream stages read this, and they must not proceed from something the
-    operator is still in the middle of.
+    **The one definition of the three states**, because the alternative is
+    what this replaced: `readonly`, the `PUT` gate and the rail's status
+    were three expressions over the same two predicates, true together only
+    because they happened to agree.
+
+    `re-opened` is an approved artifact with a **later** version beside it,
+    which is exactly what `review --flow F --new-version` writes and nothing
+    else does. Later rather than merely present, so a draft that predated
+    the approval could never re-open one -- and `approved_versions()[-1]` is
+    the number the approved artifact records as `approved_from`, because
+    `approve()` derives its filename and that field from one local.
+
+    Filenames only: no artifact is opened, and the common unapproved case
+    costs a single listing.
     """
-    return bool(approved_versions(directory))
+    approved = approved_versions(directory)
+    if not approved:
+        return "draft"
+    later = [version for version in versions(directory) if version > approved[-1]]
+    return "re-opened" if later else "approved"
 
 
 def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:

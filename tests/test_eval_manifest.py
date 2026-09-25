@@ -8,21 +8,21 @@ import pytest
 
 from isekai.boundary.provision import (
     DigestMismatch,
+    EscapingDestination,
     Manifest,
+    UnknownArtifact,
+    UnpinnedArtifact,
     entries_with_missing_keys,
     entries_without_a_digest,
+    entry_for,
     mirror_entries_without_an_alternate,
+    resolve,
     sources_on_a_mutable_ref,
 )
 from isekai.evaluation.eval_models import (
     RECOGNIZER,
     SHARED_WITH_THE_GRAPH,
-    EscapingDestination,
-    UnknownArtifact,
-    UnpinnedArtifact,
-    entry_for,
     load_eval_manifest,
-    resolve,
     shared_entries_that_differ,
 )
 

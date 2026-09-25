@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ENCODER_WINDOW, type ApprovedSheet } from '../types'
+import type { ApprovedSheet } from '../types'
 
 /* The closing screen. It states the artifact and gives no order: the operator
    wrote the CLI, and they do not need to be told to run `generate`.
@@ -15,7 +15,7 @@ const props = defineProps<{
 
 defineEmits<{ again: [] }>()
 
-const over = computed(() => props.sheets.filter((s) => s.tokens > ENCODER_WINDOW))
+const over = computed(() => props.sheets.filter((s) => s.tokens > s.window))
 </script>
 
 <template>
@@ -36,7 +36,7 @@ const over = computed(() => props.sheets.filter((s) => s.tokens > ENCODER_WINDOW
       <tbody>
         <tr v-for="sheet in sheets" :key="sheet.id">
           <td class="mono">{{ sheet.id }}/{{ sheet.name }}</td>
-          <td class="mono manifest__right" :class="{ 'manifest__over': sheet.tokens > ENCODER_WINDOW }">
+          <td class="mono manifest__right" :class="{ 'manifest__over': sheet.tokens > sheet.window }">
             {{ sheet.tokens }}
           </td>
           <td class="mono manifest__right">{{ sheet.at }}</td>
@@ -47,7 +47,7 @@ const over = computed(() => props.sheets.filter((s) => s.tokens > ENCODER_WINDOW
     <template v-if="over.length">
       <p class="manifest__note">
         {{ over.length === 1 ? 'One sheet is' : `${over.length} sheets are` }} over the
-        {{ ENCODER_WINDOW }}-token budget:
+        {{ over[0].window }}-token budget:
         <span class="mono">{{ over.map((s) => `${s.id} at ${s.tokens}`).join(', ') }}</span
         >.
       </p>

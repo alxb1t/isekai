@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary.comfy_types import Workflow
 from isekai.boundary.provision import (
     MODELS_NAMESPACE,
     MODELS_ROOT,
@@ -19,6 +18,7 @@ from isekai.boundary.provision import (
     annotator_files,
     manifest_dest,
 )
+from isekai.foundation.flow import Workflow
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"

@@ -2,10 +2,9 @@
 
 Offline by construction, like `test_vocabulary.py`: every refusal test writes a
 small table to `tmp_path` and holds it against the fixture vocabulary, so nothing
-here needs the provisioned 308 KB list. The two tests that *do* read the
-committed table skip when the vocabulary is absent -- that is the same dependency
-every existing vocabulary test already carries, and it is what makes the pin
-check worth having.
+here needs the provisioned 308 KB list. The tests that *do* read the committed
+table need the vocabulary, through `require_vocabulary`, and it is what makes the
+pin check worth having.
 """
 
 import json
@@ -21,7 +20,7 @@ from isekai.shared.field_map import (
     load,
 )
 from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV
+from tests.conftest import CSV, require_vocabulary
 
 # The fixture vocabulary's field names, as a table under test has to cover them.
 # Two criteria, because the coverage check is about a declared name being absent
@@ -31,12 +30,11 @@ DECLARED = {"summon-anime-wai": ("hair_colour", "hair_silhouette")}
 
 @pytest.fixture
 def provisioned() -> Vocabulary:
-    """Return the provisioned vocabulary, or skip: the group sizes are its own."""
+    """Return the provisioned vocabulary: the group sizes are its own."""
+    from isekai.interface.wiring import load_vocabulary
     from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST
-    from isekai.shared.vocabulary import load as load_vocabulary
 
-    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
-        pytest.skip("the vocabulary is not provisioned in this environment")
+    require_vocabulary(DEFAULT_MODELS_DIR / VOCABULARY_DEST)
     return load_vocabulary()
 
 

@@ -23,10 +23,13 @@ export interface BatchInfo {
   inputs: BatchInput[]
 }
 
+/* `window` is how many tokens SDXL's text encoders read at a time. It is declared
+   in `isekai/pipeline/review.py` and sent here, so the browser decides nothing. */
 export interface Budget {
   total: number
   per_field: Record<string, number>
   overhead: number
+  window: number
 }
 
 /* One scored tag from the local tagger. The confidence is shown on the chip
@@ -95,10 +98,6 @@ export interface ApprovedSheet {
   id: string
   name: string
   tokens: number
+  window: number
   at: string
 }
-
-/* SDXL's text encoders read 77 tokens at a time. The number is the pipeline's --
-   `review.ENCODER_WINDOW` -- and it is restated here only because the bar has to
-   draw it; nothing in the browser decides it. */
-export const ENCODER_WINDOW = 77

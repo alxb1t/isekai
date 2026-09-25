@@ -1,13 +1,13 @@
 import copy
 import json
+import os
 from pathlib import Path
 
 import pytest
 
-from isekai.boundary.comfy_types import Workflow
 from isekai.boundary.provision import Manifest, load_manifest
-from isekai.foundation.flow import Schema, load_flow
-from isekai.shared.vocabulary import Vocabulary, read_tags
+from isekai.foundation.flow import Schema, Workflow, load_flow
+from isekai.shared.vocabulary import VOCABULARY_REMEDY, Vocabulary, read_tags
 from tests.images import jpeg_bytes
 
 # A small stand-in for the provisioned tag list, with the same shape and the same
@@ -112,6 +112,23 @@ def vocabulary() -> Vocabulary:
     that needed it would not run in CI at all.
     """
     return Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
+
+
+def require_vocabulary(path: Path) -> None:
+    """Return if the vocabulary file at `path` exists; otherwise skip or fail.
+
+    It skips only where `ISEKAI_VOCABULARY=absent` declares the file missing, as
+    CI does; anywhere else a check that reads it fails rather than skip silently.
+    Why: `0027` design D5.
+    """
+    if path.exists():
+        return
+    if os.environ.get("ISEKAI_VOCABULARY") == "absent":
+        pytest.skip(f"{path} is declared absent: ISEKAI_VOCABULARY=absent")
+    pytest.fail(
+        f"{path} is not provisioned; run `{VOCABULARY_REMEDY}` from the repository "
+        "root, or set ISEKAI_VOCABULARY=absent where it cannot be fetched"
+    )
 
 
 def snapshot(directory: Path) -> dict[str, bytes]:

@@ -1,10 +1,10 @@
-"""The shared vocabulary: graph aliases, the transport seam, and how it fails."""
+"""The transport seam: its Protocol, the image it returns, and how it fails."""
 
 from typing import Any, Protocol
 
+from isekai.foundation.flow import Workflow
 from isekai.foundation.refusal import Refusal
 
-Workflow = dict[str, Any]
 Image = dict[str, str]
 
 

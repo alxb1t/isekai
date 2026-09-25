@@ -20,7 +20,6 @@ from typing import Any
 
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.run import (
-    APPROVED,
     ARTIFACT,
     CAPTIONS,
     OUTPUTS,
@@ -30,6 +29,7 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    is_approved,
 )
 from isekai.pipeline.generate import rendered_seeds
 
@@ -98,7 +98,7 @@ def _listing(stage: str, flow: str, directory: Path) -> Listing:
                 continue
             version = int(match.group("version"))
             names[version] = name
-            if match.group("label") == APPROVED:
+            if is_approved(name):
                 approved.append(version)
     present = sorted(names)
     # The active version is the highest *approved* one where approval applies,
