@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.5] - 2026-09-25
+
 ### Changed
 
 - **The gate and the encoder window are each declared once.** The `Makefile` is the gate's one

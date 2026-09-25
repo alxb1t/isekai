@@ -51,7 +51,7 @@ matches the body it produced and encoding fields and files in the wire format th
 - **AND** no text encoding is applied to them, so a photo is not corrupted in transit
 
 > Polling and output selection live in `isekai/pipeline/generate.py`'s `render`;
-> `comfy_client.history()` is a single unconditional GET. The transport module supplies the calls, the
+> `ComfyClient.history()` is a single unconditional GET. The transport module supplies the calls, the
 > render stage supplies the loop.
 
 ### Requirement: Render completion polling
