@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Pin verification is `boundary/provision.py`'s.** `resolve`, `entry_for` and their exceptions move
   there from `evaluation/eval_models.py`, and `resolve` takes its manifest. `wiring.load_vocabulary`
   verifies the vocabulary; `shared/vocabulary.py`'s `load` only reads it (`0027` design D7, D8).
+- **The ComfyUI transport is `boundary/comfy/`**, a package with a front door. The client turns a
+  network error into `Unreachable` itself, word for word; the CLI's `_Reporting` wrapper is gone.
+  `probe/loader_probe.py` now receives `Unreachable` rather than a raw `URLError` (`0027` design D9).
 
 ## [0.22.4] - 2026-09-25
 

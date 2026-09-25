@@ -9,7 +9,7 @@ before the moves they hold ([D13](design.md#d13)).
 - [x] 2 — The checks: layers, held-by names, the vocabulary
 - [x] 3 — `foundation` imports nothing above it
 - [x] 4 — Pin verification moves into `boundary`
-- [ ] 5 — The ComfyUI transport becomes `boundary/comfy/`
+- [x] 5 — The ComfyUI transport becomes `boundary/comfy/`
 - [ ] 6 — The approval state moves into `pipeline/review.py`
 - [ ] 7 — The docs follow the code
 
@@ -73,19 +73,19 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 5 — The ComfyUI transport becomes `boundary/comfy/`
 
-- [ ] 5.1 **HALT CHECK** — the CLI's wrapper is used only at `cli.py:522` and by one test.
+- [x] 5.1 **HALT CHECK** — the CLI's wrapper is used only at `cli.py:522` and by one test.
   Verify: `git grep -n '_Reporting(' -- isekai tests | cut -d: -f1,2 | tr '\n' ' '` prints `isekai/interface/cli.py:522 tests/test_generate.py:735 `.
-- [ ] 5.2 `git mv` the transport into `isekai/boundary/comfy/` as `contract.py`, `client.py` and `multipart.py`, and write its `__init__.py` front door, per [D9](design.md#d9)'s tree.
+- [x] 5.2 `git mv` the transport into `isekai/boundary/comfy/` as `contract.py`, `client.py` and `multipart.py`, and write its `__init__.py` front door, per [D9](design.md#d9)'s tree.
   Verify: `ls isekai/boundary/comfy | grep -v __pycache__ | tr '\n' ' '` prints `__init__.py client.py contract.py multipart.py `.
-- [ ] 5.3 Point every importer [D9](design.md#d9) lists at the front door; `tests/test_multipart.py` imports `isekai.boundary.comfy.multipart`.
+- [x] 5.3 Point every importer [D9](design.md#d9) lists at the front door; `tests/test_multipart.py` imports `isekai.boundary.comfy.multipart`.
   Verify: `git grep -n -e comfy_types -e comfy_client -e 'boundary.multipart' -- isekai tests probe` prints nothing.
-- [ ] 5.4 Move `_reported()` from `isekai/interface/cli.py:569-586` into `client.py` around every `ComfyClient` method; delete `_Reporting` and its use at `cli.py:522`. [D9](design.md#d9).
+- [x] 5.4 Move `_reported()` from `isekai/interface/cli.py:569-586` into `client.py` around every `ComfyClient` method; delete `_Reporting` and its use at `cli.py:522`. [D9](design.md#d9).
   Verify: `grep -c -e _Reporting -e _reported -e urllib.error isekai/interface/cli.py` prints `0`, and `grep -c 'with _reported():' isekai/boundary/comfy/client.py` prints `4`.
-- [ ] 5.5 Drive a real `ComfyClient` with `urlopen` patched at `tests/test_generate.py:715-740` and `tests/test_resume.py:545-578`, assertions and bindings unchanged. [D9](design.md#d9).
+- [x] 5.5 Drive a real `ComfyClient` with `urlopen` patched at `tests/test_generate.py:715-740` and `tests/test_resume.py:545-578`, assertions and bindings unchanged. [D9](design.md#d9).
   Verify: `grep -c -e _Reporting -e 'class Dead' tests/test_generate.py tests/test_resume.py | paste -sd' ' -` prints `tests/test_generate.py:0 tests/test_resume.py:0`.
-- [ ] 5.6 Pay `comfy-transport:boundary`: `test_multipart_content_type_declares_the_boundary` builds a body with parts, per [D9](design.md#d9).
+- [x] 5.6 Pay `comfy-transport:boundary`: `test_multipart_content_type_declares_the_boundary` builds a body with parts, per [D9](design.md#d9).
   Verify: `grep -c 'build_multipart(fields={}, files={})' tests/test_multipart.py` prints `0`.
-- [ ] 5.7 Update the transport's rows in `isekai/README.md`, `isekai/boundary/README.md` and `isekai/foundation/README.md`, per [D12](design.md#d12).
+- [x] 5.7 Update the transport's rows in `isekai/README.md`, `isekai/boundary/README.md` and `isekai/foundation/README.md`, per [D12](design.md#d12).
   Verify: `grep -c -e comfy_types -e comfy_client isekai/README.md isekai/boundary/README.md isekai/foundation/README.md | paste -sd' ' -` prints `isekai/README.md:0 isekai/boundary/README.md:0 isekai/foundation/README.md:0`.
 
 ## 6 — The approval state moves into `pipeline/review.py`

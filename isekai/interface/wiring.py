@@ -22,8 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-from isekai.boundary.comfy_client import ComfyClient
-from isekai.boundary.comfy_types import ComfyTransport
+from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.flow import FLOWS_DIR, Flow
 from isekai.foundation.refusal import Refusal

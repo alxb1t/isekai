@@ -9,7 +9,7 @@ what it is, not by what calls it.
 | [`foundation/`](foundation/README.md) | what a run, a flow and a refusal are | `refusal.py` · `run.py` · `flow.py` · `atomic_write.py` |
 | [`pipeline/`](pipeline/README.md) | the staged verbs, and `tagging.py`, which is not one | `caption.py` · `tagging.py` · `sheet.py` · `review.py` · `generate.py` |
 | [`shared/`](shared/README.md) | primitives with no domain of their own | `field_map.py` · `fields.py` · `image.py` · `vocabulary.py` |
-| [`boundary/`](boundary/README.md) | everything that leaves this process | `comfy_types.py` · `comfy_client.py` · `multipart.py` · `ollama.py` · `provision.py` · `wd14.py` |
+| [`boundary/`](boundary/README.md) | everything that leaves this process | `comfy/` (`__init__.py` · `contract.py` · `client.py` · `multipart.py`) · `ollama.py` · `provision.py` · `wd14.py` |
 | [`evaluation/`](evaluation/README.md) | scoring a render against its photograph | `evaluate.py` · `eval_backends.py` · `ciede2000.py` · `eval_models.py` · `labels.py` |
 | [`interface/`](interface/README.md) | what an operator touches | `cli.py` · `wiring.py` · `run_view.py` · `ui/` (`__init__.py` · `batch.py` · `bundle.py` · `app.py`) |
 
@@ -25,14 +25,13 @@ than a digit merely stale.
 
 **The groups do not re-export.** Every group's `__init__.py` holds a docstring and
 no code, so a module is imported by its own path and a group never becomes a place
-two modules can reach each other through. `interface/ui/__init__.py` is a
-subpackage's front door, not a group's, and holds `serve()`.
+two modules can reach each other through. `interface/ui/__init__.py` and
+`boundary/comfy/__init__.py` are sub-packages' front doors, not a group's.
 
 **The layers are the rule** ([principles](../docs/principles.md#the-code-is-layered)):
 each group but `evaluation` is a layer, imports point down, and nothing in the
-package imports `evaluation`. The module graph has no cycles. Today's upward
-imports, group cycles, and imports from `shared` and `boundary` into `evaluation`
-are known breaks, removed by the change that moves those imports.
+package imports `evaluation`. The module graph has no cycles.
+`tests/test_layers.py` holds each of these rules.
 
 **The graph itself is drawn in [`docs/modules.md`](../docs/modules.md)**,
 and only there — every cross-group edge, which of them are lazy, the subpackage

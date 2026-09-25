@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy_types import ComfyTransport, Unreachable
+from isekai.boundary.comfy import ComfyTransport, Unreachable
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import (
     SAMPLER_DIALS,

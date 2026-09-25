@@ -1,12 +1,21 @@
 import pytest
 
-from isekai.boundary.multipart import build_multipart
+from isekai.boundary.comfy.multipart import build_multipart
 
 
 @pytest.mark.spec("comfy-transport:multipart:content-type-declares-boundary")
 def test_multipart_content_type_declares_the_boundary() -> None:
-    _, content_type = build_multipart(fields={}, files={})
+    body, content_type = build_multipart(
+        fields={"overwrite": "true"},
+        files={"image": ("cat.png", b"\x89PNG", "application/octet-stream")},
+    )
+
     assert content_type.startswith("multipart/form-data; boundary=")
+    boundary = content_type.split("boundary=")[1].encode()
+    # The declared boundary opens each part, and closes the body.
+    assert body.count(b"--" + boundary + b"\r\n") == 2
+    assert body.startswith(b"--" + boundary + b"\r\n")
+    assert body.endswith(b"--" + boundary + b"--\r\n")
 
 
 @pytest.mark.spec("comfy-transport:multipart:encodes-fields-and-files")

@@ -39,21 +39,13 @@ with site-packages off the path.
 
 import argparse
 import sys
-import urllib.error
-from collections.abc import Callable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
 from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
-from isekai.boundary.comfy_types import (
-    ComfyTransport,
-    Image,
-    Unreachable,
-)
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.flow import Flow, Workflow, load_flow, tracked_flows
+from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.interface.run_view import report
@@ -515,10 +507,9 @@ def _generate(
             ready.append((run, flow))
 
     refused = across(list(targets), assemble_one) + broken
-    if wired.client is None:
+    client = wired.client
+    if client is None:
         return refused
-
-    client = _Reporting(wired.client)
 
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair
@@ -536,53 +527,6 @@ def _generate(
             print(f"{run.id}: {flow} is already rendered", file=wired.out)
 
     return refused + across(ready, render_one)
-
-
-@dataclass(frozen=True)
-class _Reporting:
-    """The transport, with every network error turned into a named refusal."""
-
-    inner: ComfyTransport
-
-    def upload_image(self, path: str) -> str:
-        """Upload a photograph, refusing legibly if the endpoint is unreachable."""
-        with _reported():
-            return self.inner.upload_image(path)
-
-    def submit(self, workflow: Workflow) -> str:
-        """Queue a graph, refusing legibly if the endpoint is unreachable."""
-        with _reported():
-            return self.inner.submit(workflow)
-
-    def history(self, prompt_id: str) -> dict[str, Any]:
-        """Poll a queued graph, refusing legibly if the endpoint is unreachable."""
-        with _reported():
-            return self.inner.history(prompt_id)
-
-    def view(self, image: Image) -> bytes:
-        """Download one render, refusing legibly if the endpoint is unreachable."""
-        with _reported():
-            return self.inner.view(image)
-
-
-@contextmanager
-def _reported() -> Iterator[None]:
-    """Turn a transport-level network error into a `Refusal` naming the remedy.
-
-    `Unreachable` rather than a bare `Refusal`, because nothing that reaches
-    here says anything about the graph: the pod went away, the tunnel closed, or
-    it was never opened. Every caller that only reports a refusal is unaffected;
-    the one that writes an error record records this as transient (v0.13 R7).
-    """
-    try:
-        yield
-    except (urllib.error.URLError, OSError) as unreachable:
-        raise Unreachable(
-            f"the rendering endpoint could not be reached ({unreachable}); "
-            "bring a pod up with `bash infra/up.sh`, open the tunnel, and pass "
-            "its address with `--server` -- or drop `--server` to assemble the "
-            "prompts and stop"
-        ) from unreachable
 
 
 def _say(wired: Wiring, run: Run, verb: str, written: Path | None) -> None:
