@@ -49,9 +49,9 @@ That is a convention for those phases, not part of the gate; adding it to the ga
 
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
 Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
-and seed drawing takes an injected `random.Random`. No test hits a GPU or the network — which is why every scenario declares `Layers: unit`
-and none declares `e2e`. Diffusion quality and identity fidelity are verified **live on a pod, by eye**,
-never mocked and never asserted.
+and seed drawing takes an injected `random.Random`. No test hits a GPU or the network — which is why
+every scenario declares `Layers: unit` and none declares `e2e`. Diffusion quality and identity fidelity
+are verified **live on a pod, by eye**, never mocked and never asserted.
 
 ---
 
@@ -88,8 +88,9 @@ plus the tracked `.openspec.yaml` where one is needed. A change may carry a fift
    to four — higher than every id under `openspec/changes/` and its `archive/`, for a minor and a
    patch alike. An id is never renamed once commits carry it as a trailer.
 3. **Author** each artifact against `openspec instructions <proposal|specs|design|tasks> --change
-   <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally opens with `version: vX.Y`
-   frontmatter — **the CLI neither emits nor checks that key; it is on the author.**
+   <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally
+   opens with `version: vX.Y` frontmatter — **the CLI neither emits nor checks that key; it is on the
+   author.**
 4. **A change that changes no requirement** declares the absence rather than inventing one: `skip_specs:
    true` in the change's tracked `.openspec.yaml`, **plus** `specs/.gitkeep`. Both, not either —
    `0023-backlog-paydown` carries the pair. Never write a requirement solely to satisfy the validator.
@@ -113,8 +114,8 @@ is folded in and the change moves to `openspec/changes/archive/`; archived chang
 **The version line is one line in four places** — `proposal.md`'s `version:`, `CHANGELOG.md`'s
 `## [X.Y.Z]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.Z`. A minor release spells that
 `vX.Y` / `## [X.Y.0]` / `vX.Y.0`; a patch release spells it `vX.Y.Z` throughout, as `0.22.1` did. All
-four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog + SemVer, with an entry appended
-**per phase** under `## [Unreleased]` and cut at release.
+four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog +
+SemVer, with an entry appended **per phase** under `## [Unreleased]` and cut at release.
 
 **A minor delivers one feature; a patch delivers none**, and meets every one of these — work that
 cannot is not a patch:

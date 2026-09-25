@@ -7,9 +7,7 @@ it is how the previous one acquired its errors.
 
 **The layers are the rule** ([principles](principles.md#the-code-is-layered)):
 imports point down, and nothing in the package imports `evaluation`. The module
-graph has no cycles. Today's upward imports, the group cycles below, and the lazy
-`shared → evaluation` and `boundary → evaluation` edges below are the rule's known
-breaks, removed by the change that moves those imports.
+graph has no cycles. `tests/test_layers.py` holds both, lazy imports included.
 
 ## The edges, by source
 
@@ -18,56 +16,44 @@ Module-level, cross-group:
   interface   ──▶ boundary · foundation · pipeline · shared
   pipeline    ──▶ boundary · foundation · shared
   evaluation  ──▶ boundary · foundation · shared
-  foundation  ──▶ boundary · shared
   boundary    ──▶ foundation · shared
   shared      ──▶ foundation
+  foundation  ──▶ nothing above it
 
 Lazy — the import sits inside a function, so the edge does not exist at
 import time:
-  shared    ──▶ boundary      vocabulary.py, inside load()
-  shared    ──▶ evaluation    vocabulary.py, inside load()
-  boundary  ──▶ evaluation    wd14.py, inside verified_paths()
+  interface ──▶ boundary      wiring.py, inside load_vocabulary(), which
+                              keeps provision.py off the entry point's graph
   interface ──▶ interface/ui  cli.py, inside the `ui` handler — within the
                               group, and listed because collapsing it away
                               is what hid it before
 ```
 
-**Review holds the lazy edges; the `-S` guard does not.** The guard goes red when
-a chain of module-scope imports from the entry point reaches a wheel. The lazy
-edges above are between this package's own modules and reach no wheel, so moving
-one to module scope leaves the guard green.
+Every lazy edge points down, as every module-level one does.
 
-## The cycles, and why each one exists
+**`tests/test_layers.py` holds where the lazy edges point; review holds that they
+stay lazy.** The `-S` guard goes red only when a chain of module-scope imports
+from the entry point reaches a wheel. The lazy edges above are between this
+package's own modules and reach no wheel, so moving one to module scope leaves
+both green.
 
-There are no module cycles. The subpackage cycles are module-level, and this is
-all of them — each named here with the reason it exists, because a cycle without
-a stated reason is indistinguishable from a mistake:
+## The cycles
 
-```
-  foundation ⇄ shared       run ──▶ atomic_write ;  fields ──▶ flow
-  foundation ⇄ boundary     flow ──▶ comfy_types ;  comfy_types ──▶ refusal
-```
+There are none. Every cross-group edge points down, so no two groups import each
+other; `tests/test_layers.py::test_no_import_cycle_inside_a_layer` holds the
+modules inside each group.
 
-**`foundation ⇄ shared`.** `atomic_write` is a primitive: it takes a path and
-bytes and writes both or neither, and it knows nothing about a run. `run →
-atomic_write` points up, from `foundation` into `shared`: a known break of the
-layers, removed by the change that moves those imports. `fields → flow` points
-down: `fields` answers *is this filled sheet exactly the schema's fields*, and a
-schema belongs to a flow. The cycle is between the *groups*; no module here
-imports a module that imports it back.
-
-**`foundation ⇄ boundary`.** `refusal` is what everything in this package raises,
-so every module that can fail imports it — including the ones at the boundary.
-`flow` reaches the other way because the flow manifest names the nodes of a
-ComfyUI graph, and `comfy_types` is what a graph *is*. Again: distinct modules,
-opposite directions, one group pair, no module cycle.
+`foundation` owns what the groups above share without knowing about them:
+`atomic_write` writes bytes to a path and knows nothing about a run, and
+`flow` defines `Workflow`, the ComfyUI graph a flow manifest names the nodes of.
+`boundary/comfy/` and `pipeline/generate.py` import them rather than define them.
 
 ## Reading this graph
 
 The layers are the rule: a group imports from itself and the layers below it
 ([principles](principles.md#the-code-is-layered)). An edge that points up, or into
-`evaluation`, is a known break. Go to the module graph when the question is
-whether something is acyclic; the group graph cannot answer that.
+`evaluation`, fails `tests/test_layers.py`. Go to the module graph when the
+question is whether something is acyclic; the group graph cannot answer that.
 
 Rules the graph is holding rather than describing:
 
@@ -100,8 +86,9 @@ Rules the graph is holding rather than describing:
   failed outright; installed by default, it resolves silently.
 - **A group never becomes a place two modules reach each other through.** A
   group's `__init__.py` holds a docstring and no code, so a module is imported by
-  its own path. `interface/ui/__init__.py` is the exception and is not a group: it
-  is a subpackage with a front door, and `serve()` is that door.
+  its own path. `interface/ui/` and `boundary/comfy/` are not groups: each is a
+  sub-package with a front door, its `__init__.py`, and nothing outside it imports
+  past that door. `tests/test_layers.py` holds both rules.
 
 ## How the components interact
 
@@ -131,7 +118,7 @@ what carries data at run time.
   there imports `cli.py`. Review holds both.
 - **Each front end calls the stage functions directly.**
 - **A stage reads and writes its run directory.** No stage imports another stage;
-  review holds this until the layer test lands.
+  `tests/test_layers.py::test_no_stage_imports_another` holds this.
 - **A stage reaches a model, the GPU or the network through `boundary/`.**
 - **`foundation`'s run, flow and refusal are what every layer uses.**
 - **`StageFailure` lives in `foundation/run.py`, not `refusal.py`.** `refusal.py`

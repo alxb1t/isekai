@@ -11,7 +11,7 @@ before the moves they hold ([D13](design.md#d13)).
 - [x] 4 — Pin verification moves into `boundary`
 - [x] 5 — The ComfyUI transport becomes `boundary/comfy/`
 - [x] 6 — The approval state moves into `pipeline/review.py`
-- [ ] 7 — The docs follow the code
+- [x] 7 — The docs follow the code
 
 Line numbers are `9b3fca2`'s; find each site by the text it names.
 
@@ -101,15 +101,15 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 7 — The docs follow the code
 
-- [ ] 7.1 Rewrite `docs/modules.md`'s edges, lazy edges, cycles and *Reading this graph* to the new graph, per [D12](design.md#d12).
+- [x] 7.1 Rewrite `docs/modules.md`'s edges, lazy edges, cycles and *Reading this graph* to the new graph, per [D12](design.md#d12).
   Verify: `grep -c -e comfy_types -e 'foundation ⇄' -e 'known break' docs/modules.md` prints `0`, and `grep -c test_layers docs/modules.md` prints a number above `0`.
-- [ ] 7.2 Apply [D12](design.md#d12)'s table to `docs/principles.md`.
+- [x] 7.2 Apply [D12](design.md#d12)'s table to `docs/principles.md`.
   Verify: `grep -c -e 'decides which transport failures' -e 'written in more than one place' -e 'declared twice' -e 'until the layer test lands' docs/principles.md` prints `0`, and `grep -c 'tests/test_layers.py::' docs/principles.md` prints `7`.
-- [ ] 7.3 Edit the preambles [D10](design.md#d10) names: `openspec/specs/comfy-transport/spec.md:8-10`, `:13`, and `openspec/specs/run-directory/spec.md:11`.
+- [x] 7.3 Edit the preambles [D10](design.md#d10) names: `openspec/specs/comfy-transport/spec.md:8-10`, `:13`, and `openspec/specs/run-directory/spec.md:11`.
   Verify: `grep -n -e comfy_types -e 'boundary/comfy_client' -e 'boundary/multipart' openspec/specs/comfy-transport/spec.md; grep -n shared/atomic_write openspec/specs/run-directory/spec.md` prints nothing.
-- [ ] 7.4 Delete the allowlist, `test_the_allowlist_names_only_imports_that_exist`, and every reference to them in `tests/test_layers.py`, per [D3](design.md#d3).
+- [x] 7.4 Delete the allowlist, `test_the_allowlist_names_only_imports_that_exist`, and every reference to them in `tests/test_layers.py`, per [D3](design.md#d3).
   Verify: `grep -c -i allowlist tests/test_layers.py` prints `0`.
-- [ ] 7.5 Re-flow `CLAUDE.md:63`, `:102` and `:127` to the file's wrap (`v0.22.3 review/R10`, residual), per [D12](design.md#d12).
+- [x] 7.5 Re-flow `CLAUDE.md:63`, `:102` and `:127` to the file's wrap (`v0.22.3 review/R10`, residual), per [D12](design.md#d12).
   Verify: `awk 'length > 110 && !/^ *\|/ {print NR}' CLAUDE.md` prints nothing.
-- [ ] 7.6 No live file names a moved module by its old path.
+- [x] 7.6 No live file names a moved module by its old path.
   Verify: `git grep -n -e comfy_types -e 'boundary.comfy_client' -e 'boundary/comfy_client' -e 'shared.atomic_write' -e 'shared/atomic_write' -e is_complete -e _Reporting -- ':!CHANGELOG.md' ':!openspec/changes' ':!openspec/specs/comfy-transport/spec.md' ':!pyproject.toml'` prints nothing.

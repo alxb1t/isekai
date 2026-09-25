@@ -46,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The approval state is the pipeline's.** `Status` and `state(directory)` move, unchanged, from the
   review UI's `Batch` into `pipeline/review.py`; `run_view.py` asks `run.is_approved`; the unused
   `review.is_complete` is deleted (`0027` design D11).
+- **The docs follow the code.** `docs/modules.md` draws the new graph and `docs/principles.md` names
+  `tests/test_layers.py` where it held *not yet*; the `comfy-transport` and `run-directory` preambles
+  name the moved modules; the layer test's allowlist is deleted (`0027` design D10, D12).
 
 ## [0.22.4] - 2026-09-25
 

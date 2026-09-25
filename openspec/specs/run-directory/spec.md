@@ -8,7 +8,7 @@ and never overwritten, how a filename carries everything resume decides on, and 
 recorded without becoming a completion.
 
 **Source:** `isekai/foundation/run.py`, `isekai/foundation/refusal.py`,
-`isekai/shared/atomic_write.py` ·
+`isekai/foundation/atomic_write.py` ·
 **Tests:** `tests/test_run_directory.py`, `tests/test_resume.py`, `tests/test_caption.py`,
 `tests/test_sheet_stage.py`, `tests/test_review.py`, `tests/test_generate.py`
 

@@ -22,11 +22,6 @@ FRONT_DOOR_SCOPE = ("isekai", "probe", "scripts", "evaluate.py")
 
 Edge = tuple[str, str]
 
-# The upward edges still to move, as (importer, imported module). Exact: an entry
-# whose import is gone fails `test_the_allowlist_names_only_imports_that_exist`.
-# Remove when the docs phase of `0027` deletes it.
-ALLOWLIST: frozenset[Edge] = frozenset()
-
 
 def _module_name(root: Path, path: Path) -> str:
     """Return the dotted name of a file under `root`.
@@ -188,14 +183,14 @@ def past_front_doors(root: Path) -> set[Edge]:
 
 @pytest.mark.spec_exempt("structural: imports point only down the layers")
 def test_every_import_points_down() -> None:
-    assert upward_imports(REPO_ROOT) - ALLOWLIST == set()
+    assert upward_imports(REPO_ROOT) == set()
 
 
 @pytest.mark.spec_exempt(
     "structural: evaluation measures isekai, and isekai never imports it"
 )
 def test_nothing_in_the_package_imports_evaluation() -> None:
-    assert evaluation_imports(REPO_ROOT) - ALLOWLIST == set()
+    assert evaluation_imports(REPO_ROOT) == set()
 
 
 @pytest.mark.spec_exempt("structural: a stage reads files, never another stage")
@@ -218,11 +213,6 @@ def test_a_layer_init_holds_only_a_docstring() -> None:
 @pytest.mark.spec_exempt("structural: a sub-package is reached through its front door")
 def test_a_subpackage_is_reached_only_through_its_front_door() -> None:
     assert past_front_doors(REPO_ROOT) == set()
-
-
-@pytest.mark.spec_exempt("structural: the allowlist of upward edges is exact")
-def test_the_allowlist_names_only_imports_that_exist() -> None:
-    assert ALLOWLIST - set(_edges(REPO_ROOT)) == set()
 
 
 # --- the twins: each rule, broken on purpose ----------------------------------
