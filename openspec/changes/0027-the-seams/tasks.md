@@ -6,7 +6,7 @@ before the moves they hold ([D13](design.md#d13)).
 ## Progress
 
 - [x] 1 — Declare once: the gate and the encoder window
-- [ ] 2 — The checks: layers, held-by names, the vocabulary
+- [x] 2 — The checks: layers, held-by names, the vocabulary
 - [ ] 3 — `foundation` imports nothing above it
 - [ ] 4 — Pin verification moves into `boundary`
 - [ ] 5 — The ComfyUI transport becomes `boundary/comfy/`
@@ -34,17 +34,17 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 2 — The checks: layers, held-by names, the vocabulary
 
-- [ ] 2.1 **HALT CHECK** — the allowlist's edges exist where [the design's Context](design.md#context) puts them.
+- [x] 2.1 **HALT CHECK** — the allowlist's edges exist where [the design's Context](design.md#context) puts them.
   Verify: `grep -n -e '^from isekai.boundary.comfy_types import Workflow$' -e '^from isekai.shared.atomic_write import' -e 'from isekai.evaluation.eval_models import' isekai/foundation/flow.py isekai/foundation/run.py isekai/shared/vocabulary.py isekai/boundary/wd14.py | cut -d: -f1,2 | tr '\n' ' '` prints `isekai/foundation/flow.py:41 isekai/foundation/run.py:42 isekai/shared/vocabulary.py:120 isekai/boundary/wd14.py:242 `.
-- [ ] 2.2 Write `tests/test_layers.py`: the AST checker, [D3](design.md#d3)'s rule tests by their names, the exact allowlist and its test, and a twin per rule named `test_the_check_catches_…`.
+- [x] 2.2 Write `tests/test_layers.py`: the AST checker, [D3](design.md#d3)'s rule tests by their names, the exact allowlist and its test, and a twin per rule named `test_the_check_catches_…`.
   Verify: `grep -c -e '^def test_every_import_points_down(' -e '^def test_nothing_in_the_package_imports_evaluation(' -e '^def test_no_stage_imports_another(' -e '^def test_no_import_cycle_inside_a_layer(' -e '^def test_a_layer_init_holds_only_a_docstring(' -e '^def test_a_subpackage_is_reached_only_through_its_front_door(' tests/test_layers.py` prints `6`.
-- [ ] 2.3 In `tests/test_layers.py`, give each rule test a twin and add `test_the_allowlist_names_only_imports_that_exist`, per [D3](design.md#d3).
+- [x] 2.3 In `tests/test_layers.py`, give each rule test a twin and add `test_the_allowlist_names_only_imports_that_exist`, per [D3](design.md#d3).
   Verify: `grep -c '^def test_the_check_catches_' tests/test_layers.py` prints `6`, and `grep -c '^def test_the_allowlist_names_only_imports_that_exist(' tests/test_layers.py` prints `1`.
-- [ ] 2.4 Write `tests/test_principles.py` per [D4](design.md#d4): every named test exists, one *Held by* per principle, and a twin for each.
+- [x] 2.4 Write `tests/test_principles.py` per [D4](design.md#d4): every named test exists, one *Held by* per principle, and a twin for each.
   Verify: `grep -c -e '^def test_every_test_a_principle_names_exists(' -e '^def test_every_principle_has_one_held_by_line(' tests/test_principles.py` prints `2`.
-- [ ] 2.5 Add `require_vocabulary` to `tests/conftest.py`, and use it at `tests/test_field_map.py:33-40`, `tests/test_vocabulary.py:85-86` and `tests/test_wd14.py:69-75`, comments included, per [D5](design.md#d5).
+- [x] 2.5 Add `require_vocabulary` to `tests/conftest.py`, and use it at `tests/test_field_map.py:33-40`, `tests/test_vocabulary.py:85-86` and `tests/test_wd14.py:69-75`, comments included, per [D5](design.md#d5).
   Verify: `grep -n -e 'is not provisioned in this environment' -e 'is not provisioned; run' tests/test_field_map.py tests/test_vocabulary.py tests/test_wd14.py` prints nothing.
-- [ ] 2.6 Add the twins for `require_vocabulary` to `tests/test_vocabulary.py`, and `ISEKAI_VOCABULARY: absent` to `.github/workflows/ci.yml`'s `Gate` step, per [D5](design.md#d5).
+- [x] 2.6 Add the twins for `require_vocabulary` to `tests/test_vocabulary.py`, and `ISEKAI_VOCABULARY: absent` to `.github/workflows/ci.yml`'s `Gate` step, per [D5](design.md#d5).
   Verify: `grep -c 'ISEKAI_VOCABULARY: absent' .github/workflows/ci.yml` prints `1`, and `grep -c 'ISEKAI_VOCABULARY' tests/conftest.py` prints a number above `0`.
 
 ## 3 — `foundation` imports nothing above it

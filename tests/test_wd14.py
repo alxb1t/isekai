@@ -40,6 +40,7 @@ from isekai.boundary.wd14 import (
 )
 from isekai.evaluation import eval_models
 from isekai.foundation.refusal import Refusal
+from tests.conftest import require_vocabulary
 from tests.stages import INDEX, FakeSession
 
 # --- the label index ----------------------------------------------------------
@@ -67,12 +68,9 @@ def test_an_empty_label_index_refuses_naming_what_would_provision_it() -> None:
 @pytest.mark.spec("tagging:pin:the-label-index-and-the-model-are-verified-together")
 def test_the_shipped_index_has_one_row_per_neuron_and_keeps_its_order() -> None:
     # The real file, read as bytes rather than through a fixture copy: a fixture
-    # would let the shipped artifact and the parser drift apart silently. Skipped
-    # rather than failed where it is not provisioned, because the file is 300 KB
-    # of gitignored download and a fresh clone has not fetched it.
+    # would let the shipped artifact and the parser drift apart silently.
     shipped = Path("models") / LABELS_DEST
-    if not shipped.is_file():
-        pytest.skip(f"{LABELS_DEST} is not provisioned; run `{REMEDY}`")
+    require_vocabulary(shipped)
 
     labels = read_labels(shipped.read_text())
 

@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The gate and the encoder window are each declared once.** The `Makefile` is the gate's one
   declaration; `.minions/minions.toml` is deleted and `.minions/` ignored whole. The review UI reads
   the window from the token budget the server sends (`0027` design D1, D2).
+- **The layers, the principles' *held by* names and the vocabulary checks are held by tests.**
+  `tests/test_layers.py` scans every import, with an exact allowlist of the edges still to move;
+  `tests/test_principles.py` resolves each named test; a missing vocabulary fails the checks that
+  read it unless `ISEKAI_VOCABULARY=absent`, which CI sets (`0027` design D3–D5).
 
 ## [0.22.4] - 2026-09-25
 

@@ -7,20 +7,23 @@ the only question left about one is whether the list contains it.
 
 Offline by construction: every test builds its vocabulary from a CSV written in
 `tests/conftest.py`, so nothing here needs the provisioned artifact or the
-network. The two that read the provisioned file skip when it is absent.
+network -- except the test that reads the provisioned file, through
+`require_vocabulary`, and that function's own twins.
 """
 
+import re
 from pathlib import Path
 
 import pytest
 
 from isekai.shared.vocabulary import (
+    VOCABULARY_REMEDY,
     Vocabulary,
     identity,
     normalise,
     read_tags,
 )
-from tests.conftest import CSV
+from tests.conftest import CSV, require_vocabulary
 
 
 @pytest.fixture
@@ -82,10 +85,32 @@ def test_the_vocabularys_identity_is_its_name_revision_and_digest(
 def test_the_provisioned_vocabulary_carries_its_pin(tmp_path: Path) -> None:
     from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, VOCABULARY_DEST, load
 
-    if not (DEFAULT_MODELS_DIR / VOCABULARY_DEST).exists():
-        pytest.skip("the vocabulary is not provisioned in this environment")
+    require_vocabulary(DEFAULT_MODELS_DIR / VOCABULARY_DEST)
     provisioned = load()
 
     assert len(provisioned) == 8106
     assert len(provisioned.revision) == 40
     assert len(provisioned.digest) == 64
+
+
+# --- require_vocabulary: strict unless the vocabulary is declared absent ------
+
+
+@pytest.mark.spec_exempt("structural: twin of require_vocabulary's failure")
+def test_a_missing_vocabulary_fails_where_it_is_not_declared_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("ISEKAI_VOCABULARY", raising=False)
+
+    with pytest.raises(pytest.fail.Exception, match=re.escape(VOCABULARY_REMEDY)):
+        require_vocabulary(tmp_path / "selected_tags.csv")
+
+
+@pytest.mark.spec_exempt("structural: twin of require_vocabulary's skip")
+def test_a_missing_vocabulary_skips_where_it_is_declared_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ISEKAI_VOCABULARY", "absent")
+
+    with pytest.raises(pytest.skip.Exception, match="declared absent"):
+        require_vocabulary(tmp_path / "selected_tags.csv")
