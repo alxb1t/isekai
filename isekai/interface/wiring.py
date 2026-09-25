@@ -222,6 +222,7 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
     """
     from isekai.boundary.provision import (
         VOCABULARY_MANIFEST_PATH,
+        entry_for,
         load_manifest,
         resolve,
     )
@@ -238,8 +239,7 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
             "from the repository root to fetch and verify it against its pinned "
             "manifest"
         ) from absent
-    entry = next(e for e in manifest["entries"] if e["dest"] == VOCABULARY_DEST)
-    return read_vocabulary(path, entry)
+    return read_vocabulary(path, entry_for(manifest, VOCABULARY_DEST))
 
 
 def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:

@@ -8,6 +8,8 @@ Why and how: `0027` design D3.
 
 import ast
 from collections.abc import Iterator
+from functools import cache
+from importlib.util import resolve_name
 from pathlib import Path
 
 import pytest
@@ -60,21 +62,21 @@ def _imports(root: Path, path: Path) -> set[str]:
         if isinstance(node, ast.Import):
             found.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
-            base = node.module or ""
-            if node.level:
-                anchor = package.split(".")[: len(package.split(".")) - node.level + 1]
-                base = ".".join([*anchor, base] if base else anchor)
+            base = resolve_name("." * node.level + (node.module or ""), package)
             for alias in node.names:
                 full = f"{base}.{alias.name}"
                 found.add(full if _is_module(root, full) else base)
     return {module for module in found if module.split(".")[0] == "isekai"}
 
 
-def _edges(root: Path, scope: tuple[str, ...] = ("isekai",)) -> Iterator[Edge]:
-    for path in _sources(root, scope):
-        importer = path.relative_to(root).as_posix()
-        for module in sorted(_imports(root, path)):
-            yield importer, module
+@cache
+def _edges(root: Path, scope: tuple[str, ...] = ("isekai",)) -> tuple[Edge, ...]:
+    """Return every (importer, imported) pair under `scope`, both as dotted names."""
+    return tuple(
+        (_module_name(root, path), module)
+        for path in _sources(root, scope)
+        for module in sorted(_imports(root, path))
+    )
 
 
 def _layer(dotted: str) -> str | None:
@@ -82,15 +84,15 @@ def _layer(dotted: str) -> str | None:
     return parts[1] if len(parts) > 1 and parts[1] in LAYERS else None
 
 
-def _dotted(importer: str) -> str:
-    return importer.removesuffix(".py").removesuffix("/__init__").replace("/", ".")
+def _within(module: str, package: str) -> bool:
+    return module == package or module.startswith(package + ".")
 
 
 def upward_imports(root: Path) -> set[Edge]:
     """Return every import that names a layer above its importer's."""
     found: set[Edge] = set()
     for importer, module in _edges(root):
-        low, high = _layer(_dotted(importer)), _layer(module)
+        low, high = _layer(importer), _layer(module)
         if low and high and LAYERS.index(high) > LAYERS.index(low):
             found.add((importer, module))
     return found
@@ -101,8 +103,8 @@ def evaluation_imports(root: Path) -> set[Edge]:
     return {
         (importer, module)
         for importer, module in _edges(root)
-        if not importer.startswith("isekai/evaluation/")
-        and (module + ".").startswith("isekai.evaluation.")
+        if not _within(importer, "isekai.evaluation")
+        and _within(module, "isekai.evaluation")
     }
 
 
@@ -111,9 +113,9 @@ def stage_imports(root: Path) -> set[Edge]:
     return {
         (importer, module)
         for importer, module in _edges(root)
-        if importer.startswith("isekai/pipeline/")
+        if importer.startswith("isekai.pipeline.")
         and module.startswith("isekai.pipeline.")
-        and module != _dotted(importer)
+        and module != importer
     }
 
 
@@ -121,9 +123,12 @@ def layer_cycles(root: Path) -> list[list[str]]:
     """Return one path per import cycle among the modules of a single layer."""
     graph: dict[str, set[str]] = {}
     for importer, module in _edges(root):
-        source = _dotted(importer)
-        if _layer(source) and _layer(source) == _layer(module) and source != module:
-            graph.setdefault(source, set()).add(module)
+        if (
+            _layer(importer)
+            and _layer(importer) == _layer(module)
+            and importer != module
+        ):
+            graph.setdefault(importer, set()).add(module)
     cycles: list[list[str]] = []
     done: set[str] = set()
 
@@ -148,8 +153,6 @@ def busy_inits(root: Path) -> list[str]:
     inits += [root / "isekai" / layer / "__init__.py" for layer in LAYERS]
     busy: list[str] = []
     for path in inits:
-        if not path.is_file():
-            continue
         body = ast.parse(path.read_text()).body
         docstring_only = (
             len(body) == 1
@@ -169,13 +172,12 @@ def past_front_doors(root: Path) -> set[Edge]:
         for layer in LAYERS
         for init in (root / "isekai" / layer).glob("*/__init__.py")
     }
-    found: set[Edge] = set()
-    for importer, module in _edges(root, FRONT_DOOR_SCOPE):
-        for door in doors:
-            inside = importer.startswith(door.replace(".", "/") + "/")
-            if module.startswith(door + ".") and not inside:
-                found.add((importer, module))
-    return found
+    return {
+        (importer, module)
+        for importer, module in _edges(root, FRONT_DOOR_SCOPE)
+        for door in doors
+        if module.startswith(door + ".") and not _within(importer, door)
+    }
 
 
 # --- the rules, on this repository -------------------------------------------
@@ -240,9 +242,7 @@ def test_the_check_catches_an_import_pointing_up(tmp_path: Path) -> None:
             "isekai/pipeline/sheet.py": "x = 1\n",
         },
     )
-    assert upward_imports(root) == {
-        ("isekai/foundation/run.py", "isekai.pipeline.sheet")
-    }
+    assert upward_imports(root) == {("isekai.foundation.run", "isekai.pipeline.sheet")}
 
 
 @pytest.mark.spec_exempt(
@@ -258,7 +258,7 @@ def test_the_check_catches_an_import_of_evaluation(tmp_path: Path) -> None:
         },
     )
     assert evaluation_imports(root) == {
-        ("isekai/shared/image.py", "isekai.evaluation.labels")
+        ("isekai.shared.image", "isekai.evaluation.labels")
     }
 
 
@@ -272,7 +272,7 @@ def test_the_check_catches_a_stage_importing_another(tmp_path: Path) -> None:
         },
     )
     assert stage_imports(root) == {
-        ("isekai/pipeline/generate.py", "isekai.pipeline.review")
+        ("isekai.pipeline.generate", "isekai.pipeline.review")
     }
 
 
@@ -321,6 +321,6 @@ def test_the_check_catches_an_import_past_a_front_door(tmp_path: Path) -> None:
         },
     )
     assert past_front_doors(root) == {
-        ("isekai/interface/cli.py", "isekai.interface.ui.app"),
-        ("probe/loader_probe.py", "isekai.interface.ui.app"),
+        ("isekai.interface.cli", "isekai.interface.ui.app"),
+        ("probe.loader_probe", "isekai.interface.ui.app"),
     }

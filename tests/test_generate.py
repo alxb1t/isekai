@@ -59,7 +59,7 @@ from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FakeComfyClient
+from tests.fakes import FakeComfyClient, url_of
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
 
@@ -726,8 +726,7 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
 
     def closed_after_the_upload(req: urllib.request.Request | str) -> io.BytesIO:
         # The upload lands and the tunnel then closes, so `submit` is what fails.
-        url = req.full_url if isinstance(req, urllib.request.Request) else req
-        if url.endswith("/upload/image"):
+        if url_of(req).endswith("/upload/image"):
             return io.BytesIO(b'{"name": "photo.png"}')
         raise urllib.error.URLError("Connection refused")
 

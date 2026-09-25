@@ -7,6 +7,7 @@ such as *review* is not. Why: `0027` design D4.
 
 import ast
 import re
+from functools import cache
 from pathlib import Path
 
 import pytest
@@ -14,34 +15,23 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PRINCIPLES = REPO_ROOT / "docs" / "principles.md"
 
-_HELD_BY = "- **Held by:**"
 _NAMED = re.compile(r"`(tests/[\w/]+\.py)::(\w+)`")
+_HEADING = re.compile(r"^(#+ .*)$", re.M)
+# A *Held by* bullet runs to the next top-level `- **` bullet, sub-bullets in.
+_HELD_BY = re.compile(r"^- \*\*Held by:\*\*.*?(?=^- \*\*|\Z)", re.M | re.S)
 
 
 def _principles(text: str) -> dict[str, list[str]]:
-    """Return each `### ` principle's title, mapped to its *Held by* bullets' text.
-
-    A bullet runs to the next top-level `- **` bullet or heading, sub-bullets in.
-    """
-    found: dict[str, list[str]] = {}
-    title: str | None = None
-    held = False
-    for line in text.splitlines():
-        if line.startswith(("#", "- **")):
-            held = False
-        if line.startswith("### "):
-            title = line.removeprefix("### ")
-            found[title] = []
-        elif line.startswith("#"):
-            title = None
-        if title is not None and line.startswith(_HELD_BY):
-            held = True
-            found[title].append("")
-        if held and title is not None:
-            found[title][-1] += line + "\n"
-    return found
+    """Return each `### ` principle's title, mapped to its *Held by* bullets' text."""
+    parts = _HEADING.split(text)
+    return {
+        heading.removeprefix("### "): _HELD_BY.findall(body)
+        for heading, body in zip(parts[1::2], parts[2::2], strict=True)
+        if heading.startswith("### ")
+    }
 
 
+@cache
 def _defined(path: Path) -> set[str]:
     return {
         node.name

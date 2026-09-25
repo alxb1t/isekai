@@ -1,7 +1,13 @@
 from typing import Any
+from urllib.request import Request
 
 from isekai.boundary.comfy import Image
 from isekai.foundation.flow import Workflow
+
+
+def url_of(request: Request | str) -> str:
+    """Return the URL a patched `urlopen` was handed, a `Request` or a string."""
+    return request.full_url if isinstance(request, Request) else request
 
 
 class FakeComfyClient:
