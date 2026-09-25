@@ -25,8 +25,6 @@ FRONT_DOOR_SCOPE = ("isekai", "probe", "scripts", "evaluate.py")
 # Remove when the docs phase of `0027` deletes it.
 ALLOWLIST = frozenset(
     {
-        ("isekai/foundation/flow.py", "isekai.boundary.comfy_types"),
-        ("isekai/foundation/run.py", "isekai.shared.atomic_write"),
         ("isekai/shared/vocabulary.py", "isekai.boundary.provision"),
         ("isekai/shared/vocabulary.py", "isekai.evaluation.eval_models"),
         ("isekai/boundary/wd14.py", "isekai.evaluation.eval_models"),

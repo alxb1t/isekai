@@ -51,10 +51,9 @@ from isekai.boundary.comfy_types import (
     ComfyTransport,
     Image,
     Unreachable,
-    Workflow,
 )
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.flow import Flow, load_flow, tracked_flows
+from isekai.foundation.flow import Flow, Workflow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.interface.run_view import report

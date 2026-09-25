@@ -13,7 +13,7 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 | file | does | reaches |
 |---|---|---|
-| `comfy_types.py` | the `ComfyTransport` Protocol and the workflow/image types — the network boundary's shape, with no network in it | nothing |
+| `comfy_types.py` | the `ComfyTransport` Protocol and the image type — the network boundary's shape, with no network in it | nothing |
 | `comfy_client.py` | upload · submit · poll · retrieve, over `urllib` | the rented GPU |
 | `multipart.py` | builds one multipart body; internal to the transport | nothing |
 | `ollama.py` | one POST to a local runtime, and the classification of what comes back | the hosted model, over HTTP to localhost |
@@ -27,7 +27,7 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy_types.py` | `comfy_client.py`, `foundation/flow.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_generate.py`, `tests/test_image.py`, `tests/test_infra.py`, `tests/test_manifest_binding.py` |
+| `comfy_types.py` | `comfy_client.py`, `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py` |
 | `comfy_client.py` | `interface/wiring.py` | `probe/loader_probe.py` |
 | `multipart.py` | `comfy_client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/test_ollama.py` |

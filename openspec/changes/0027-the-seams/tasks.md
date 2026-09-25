@@ -7,7 +7,7 @@ before the moves they hold ([D13](design.md#d13)).
 
 - [x] 1 — Declare once: the gate and the encoder window
 - [x] 2 — The checks: layers, held-by names, the vocabulary
-- [ ] 3 — `foundation` imports nothing above it
+- [x] 3 — `foundation` imports nothing above it
 - [ ] 4 — Pin verification moves into `boundary`
 - [ ] 5 — The ComfyUI transport becomes `boundary/comfy/`
 - [ ] 6 — The approval state moves into `pipeline/review.py`
@@ -49,11 +49,11 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 3 — `foundation` imports nothing above it
 
-- [ ] 3.1 `git mv isekai/shared/atomic_write.py isekai/foundation/atomic_write.py`; update `isekai/foundation/run.py`, `isekai/pipeline/generate.py` and `tests/test_run_directory.py:17`, `:214`; drop run.py's allowlist entry. [D6](design.md#d6).
+- [x] 3.1 `git mv isekai/shared/atomic_write.py isekai/foundation/atomic_write.py`; update `isekai/foundation/run.py`, `isekai/pipeline/generate.py` and `tests/test_run_directory.py:17`, `:214`; drop run.py's allowlist entry. [D6](design.md#d6).
   Verify: `test -f isekai/foundation/atomic_write.py && ! git grep -q 'shared.atomic_write' -- isekai tests scripts && echo ok` prints `ok`.
-- [ ] 3.2 Move `Workflow` into `isekai/foundation/flow.py` and update every importer [D6](design.md#d6) lists; drop flow.py's allowlist entry.
+- [x] 3.2 Move `Workflow` into `isekai/foundation/flow.py` and update every importer [D6](design.md#d6) lists; drop flow.py's allowlist entry.
   Verify: `grep -rn --include='*.py' '^Workflow = ' isekai | cut -d: -f1` prints `isekai/foundation/flow.py`, and `grep -c comfy_types isekai/foundation/flow.py` prints `0`.
-- [ ] 3.3 Update the `atomic_write.py` rows in `isekai/README.md`, `isekai/shared/README.md` and `isekai/foundation/README.md`, per [D12](design.md#d12).
+- [x] 3.3 Update the `atomic_write.py` rows in `isekai/README.md`, `isekai/shared/README.md` and `isekai/foundation/README.md`, per [D12](design.md#d12).
   Verify: `grep -c atomic_write isekai/shared/README.md` prints `0`, and `grep -c atomic_write isekai/foundation/README.md` prints a number above `0`.
 
 ## 4 — Pin verification moves into `boundary`

@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Any
 from urllib import parse, request
 
-from isekai.boundary.comfy_types import ComfyTransport, Image, Workflow
+from isekai.boundary.comfy_types import ComfyTransport, Image
 from isekai.boundary.multipart import build_multipart
+from isekai.foundation.flow import Workflow
 
 
 class ComfyClient(ComfyTransport):

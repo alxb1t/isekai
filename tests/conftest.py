@@ -5,9 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary.comfy_types import Workflow
 from isekai.boundary.provision import Manifest, load_manifest
-from isekai.foundation.flow import Schema, load_flow
+from isekai.foundation.flow import Schema, Workflow, load_flow
 from isekai.shared.vocabulary import VOCABULARY_REMEDY, Vocabulary, read_tags
 from tests.images import jpeg_bytes
 

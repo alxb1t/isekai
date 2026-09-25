@@ -38,8 +38,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
+from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
-from isekai.shared.atomic_write import write_atomically
 
 # Everything a run produces or consumes lives under one gitignored root. The run
 # directory holds a *copy of the photograph*, which is what makes a run

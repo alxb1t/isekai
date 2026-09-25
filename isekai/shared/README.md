@@ -12,7 +12,6 @@ a boundary or decide a stage's order.
 
 | file | does |
 |---|---|
-| `atomic_write.py` | writes bytes to a path, or writes nothing — temp-then-replace on one filesystem |
 | `field_map.py` | answers *which identity criterion does this tag belong to* — one authored table, read `tag → field` to route and `field → tags` to browse |
 | `fields.py` | answers *is this filled sheet exactly the schema's fields of canonical tags* |
 | `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply |
@@ -25,7 +24,6 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `atomic_write.py` | `foundation/run.py`, `pipeline/generate.py` | `tests/test_run_directory.py` |
 | `field_map.py` | `interface/cli.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/sheet.py` | `scripts/derive_field_map.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_ui_api.py` |
 | `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | `tests/test_sheet_schema.py` |
 | `image.py` | `evaluation/evaluate.py`, `interface/ui/batch.py`, `pipeline/generate.py` | `tests/test_evaluate.py`, `tests/test_generate.py`, `tests/test_image.py` |

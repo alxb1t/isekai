@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_layers.py` scans every import, with an exact allowlist of the edges still to move;
   `tests/test_principles.py` resolves each named test; a missing vocabulary fails the checks that
   read it unless `ISEKAI_VOCABULARY=absent`, which CI sets (`0027` design D3–D5).
+- **`foundation` imports nothing above it.** `atomic_write.py` moves from `shared/` to `foundation/`,
+  and the `Workflow` graph type from `boundary/comfy_types.py` to `foundation/flow.py`, which owns
+  the graph (`0027` design D6).
 
 ## [0.22.4] - 2026-09-25
 

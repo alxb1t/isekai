@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 
 import isekai.foundation.run as run_module
-from isekai.boundary.comfy_types import Workflow
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -25,6 +24,7 @@ from isekai.foundation.flow import (
     SCHEMA_NAME,
     Flow,
     Schema,
+    Workflow,
     load_flow,
 )
 from isekai.foundation.refusal import Refusal
