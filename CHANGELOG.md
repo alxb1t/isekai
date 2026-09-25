@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`docs/` holds the architecture.** `principles.md`, `decisions.md` (with D29 and D30, the product
   scope) and `README.md` are written from `0026`'s payload; `docs/arc/` is flattened into `docs/`, its
   false claims corrected, and `modules.md` gains how the components interact.
+- **`CLAUDE.md` keeps only process and imports `docs/principles.md`.** Its design rules move to `docs/`;
+  the change id is the next free number; it states what a patch may hold, and the notebook and demo
+  subject rules it did not carry (`0026` design D8).
 
 ## [0.22.3] - 2026-09-23
 

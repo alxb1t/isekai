@@ -7,7 +7,7 @@ Tests read some files edited here, but no string a test asserts changes ([design
 
 - [x] 1 — The sweep: code, tests and spec preambles
 - [x] 2 — `docs/` written from the payload
-- [ ] 3 — `CLAUDE.md` keeps only process
+- [x] 3 — `CLAUDE.md` keeps only process
 - [ ] 4 — The group READMEs point at `docs/`
 - [ ] 5 — `README.md` stops restating the architecture
 
@@ -77,23 +77,23 @@ by its *before* text; line numbers are `2ccda2f`'s.
 
 ## 3 — `CLAUDE.md` keeps only process
 
-- [ ] 3.1 **HALT CHECK** — `CLAUDE.md`'s sections are the ones [D8](design.md#d8) sorts.
+- [x] 3.1 **HALT CHECK** — `CLAUDE.md`'s sections are the ones [D8](design.md#d8) sorts.
   Verify: `grep '^## ' CLAUDE.md` prints *The quality gate*, *Engineering conventions*, *How a change is cut here*, *Layout*, *Rules the render path is under* and *Guardrails*, in that order.
-- [ ] 3.2 Add the import `@docs/principles.md` on its own line, above the first `---`.
+- [x] 3.2 Add the import `@docs/principles.md` on its own line, above the first `---`.
   Verify: `grep -n '^@docs/principles.md$' CLAUDE.md` prints one line.
-- [ ] 3.3 Move out every row [D8](design.md#d8) marks *moved out*, and replace *Rules the render path is under* with its pointer to `docs/principles.md` and `docs/decisions.md`.
+- [x] 3.3 Move out every row [D8](design.md#d8) marks *moved out*, and replace *Rules the render path is under* with its pointer to `docs/principles.md` and `docs/decisions.md`.
   Verify: `grep -n -e '^## Rules the render path is under' -e 'Option-modified keybinding' -e 'A parameter is a seam only if' CLAUDE.md` prints nothing.
-- [ ] 3.4 Delete the selectable-implementation constraint (S42) and rewrite the identity constraint (S37).
+- [x] 3.4 Delete the selectable-implementation constraint (S42) and rewrite the identity constraint (S37).
   Verify: `grep -n -e 'A selectable implementation is a measured one' -e 'Identity preservation is the product' CLAUDE.md` prints nothing.
-- [ ] 3.5 Rewrite the runs-root line (S40) and the *"design.md … nowhere else"* line, per [D8](design.md#d8).
+- [x] 3.5 Rewrite the runs-root line (S40) and the *"design.md … nowhere else"* line, per [D8](design.md#d8).
   Verify: `grep -n -e 'Everything a run reads or writes is inside the repository' -e 'and nowhere else' CLAUDE.md` prints nothing.
-- [ ] 3.6 Re-flow the flows paragraph (S39).
+- [x] 3.6 Re-flow the flows paragraph (S39).
   Verify: `grep 'freeze' CLAUDE.md | while IFS= read -r l; do [ "$(printf '%s' "$l" | wc -m)" -gt 105 ] && printf '%s\n' "$l"; done` prints nothing.
-- [ ] 3.7 Replace the `(major × 100) + minor` id rule with *the next free number*, per [D8](design.md#d8).
+- [x] 3.7 Replace the `(major × 100) + minor` id rule with *the next free number*, per [D8](design.md#d8).
   Verify: `grep -n 'major × 100' CLAUDE.md` prints nothing.
-- [ ] 3.8 Add what a patch may hold, per [D8](design.md#d8).
+- [x] 3.8 Add what a patch may hold, per [D8](design.md#d8).
   Verify: `grep -n 'MANIFEST_VERSION' CLAUDE.md | grep 'SCHEMA_VERSION'` prints one line.
-- [ ] 3.9 Add the notebook rows [D8](design.md#d8) marks *added*.
+- [x] 3.9 Add the notebook rows [D8](design.md#d8) marks *added*.
   Verify: `grep -c -i -e 'synthetic portrait' -e 'no pointer to the operator' CLAUDE.md` prints `2`.
 
 ## 4 — The group READMEs point at `docs/`
