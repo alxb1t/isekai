@@ -257,8 +257,8 @@ def _jpeg_dimensions(handle: BinaryIO) -> _Header | None:
 def image_dimensions(path: str) -> tuple[int, int]:
     """Return the pixel dimensions a JPEG or PNG will be loaded at.
 
-    Stdlib only, by parsing the header directly: the runtime carries no imaging
-    wheel and this is on `python -m isekai`'s import graph.
+    Stdlib only, by parsing the header directly: this is on `python -m isekai`'s
+    import graph, which reaches no wheel.
 
     An unreadable or truncated header stops the run naming the file. There is no
     default size, because a silently wrong resolution is a wrong render rather

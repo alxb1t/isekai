@@ -60,9 +60,9 @@ def test_a_tag_is_placed_in_its_primary_criterion_and_no_model_is_reached(
 ) -> None:
     """Non-vacuous: both transports are rigged to explode before the stage runs.
 
-    `tests/test_isolation.py`'s argument, applied to the stage that used to have
-    a seam. A router that reached a model would be caught here rather than being
-    trusted not to.
+    The isolation argument, applied to the stage that used to have a seam. A
+    router that reached a model would be caught here rather than being trusted
+    not to.
     """
 
     def unreachable(*args: object, **kwargs: object) -> object:

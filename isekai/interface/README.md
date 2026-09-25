@@ -41,5 +41,6 @@ at least once; a list of names cannot.
 > site-packages off the path: a top-level import here would put FastAPI on
 > `python -m isekai`'s import graph and turn that guard red for every verb.
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../../docs/decisions.md)'s; neither restates the other.

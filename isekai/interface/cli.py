@@ -11,8 +11,8 @@ exists, so an upgrade command would be a dispatch table with no entries and its
 refusal would be unreachable -- nothing can write a version 2 artifact
 (design.md D2).
 
-    caption   (1) a photograph in, descriptive prose out
-    sheet     (2) prose in, a sheet of canonical tags out
+    caption   (1) a photograph in; prose, the WD14 tags and the hosted tags out
+    sheet     (2) the WD14 tag list in, a sheet of canonical tags out
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
     generate  (4) assemble every prompt locally, then render
@@ -72,8 +72,8 @@ from isekai.shared.vocabulary import Vocabulary
 T = TypeVar("T")
 
 VERBS: tuple[tuple[str, str], ...] = (
-    ("caption", "read a photograph into descriptive prose"),
-    ("sheet", "sort a caption into a sheet of canonical tags"),
+    ("caption", "read a photograph into prose, the WD14 tags and the hosted tags"),
+    ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
     ("generate", "assemble the prompts for a run, then render them"),
@@ -143,7 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Return the pipeline's parser, with one subparser per verb."""
     parser = argparse.ArgumentParser(
         prog="python -m isekai",
-        description="The staged pipeline: photograph -> prose -> sheet -> render.",
+        description="The staged pipeline: photograph -> tags -> sheet -> render.",
     )
     verbs = parser.add_subparsers(dest="verb", metavar="verb", required=True)
     made = {
@@ -429,16 +429,16 @@ def _per_item(
                         new_version=new_version,
                     ),
                 )
-                # **The order is the failure isolation, not a habit.** `across()`
+                # **The order decides what a refusal abandons.** `across()`
                 # catches `Refusal` per *input* rather than per stage, so the
                 # first refusal on a photograph abandons the rest of that
-                # photograph's work. Prose first, because it is the only one of
-                # the three anything downstream reads. WD14 second: local and
-                # deterministic, it fails only on a missing or corrupt file,
-                # which is one operator fix and worth stopping on. The hosted
-                # tagger last, because it is the one with a port, a timeout and
-                # a retry budget -- so its refusal blocks nothing that would
-                # have succeeded (design.md D7).
+                # photograph's work. Prose first; the sheet reads the WD14 list,
+                # so a prose refusal abandons that list too -- a known cost. WD14
+                # second: local and deterministic, it fails only on a missing or
+                # corrupt file, which is one operator fix and worth stopping on.
+                # The hosted tagger last, because it is the tagger with a port, a
+                # timeout and a retry budget -- so its refusal blocks nothing
+                # that would have succeeded (design.md D7).
                 _say(
                     wired,
                     run,

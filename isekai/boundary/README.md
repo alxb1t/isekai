@@ -37,14 +37,13 @@ at least once; a list of names cannot.
 > `provision.py` is not on `python -m isekai`'s import graph, so the module-scope
 > import rule is untouched either way.
 >
-> **`wd14.py` is**, and it is the only module in the package that touches the
-> tagger's stack. Every one of those imports -- `onnxruntime`, `numpy`,
-> `Pillow` -- is **function-local**, which keeps the `-S` guard green; they are
-> declared dependencies as of v0.22.3, so that guard is the only thing that would
-> catch one moving to module scope;
-> `tests/test_wd14.py` asserts none of them sits at module scope. It reaches no
-> network at all, which makes it the one file here that is a boundary to a *file*
-> rather than to a host.
+> **`wd14.py` is**, and it touches the tagger's stack; `evaluation/eval_backends.py`
+> touches it too, off that graph. Every one of `wd14.py`'s imports of it --
+> `onnxruntime`, `numpy`, `Pillow` -- is **function-local**, which keeps the `-S`
+> guard green. They are declared dependencies as of v0.22.3, so one moved to
+> module scope resolves silently; that guard and `tests/test_wd14.py`'s source
+> scan catch it. `wd14.py` reaches no network at all, which makes it the one file
+> here that is a boundary to a *file* rather than to a host.
 >
 > **`ollama.py` is now the only way out of this process to a model.** There was a
 > second, `claude_cli.py`, and the isolation law that kept the two apart was the
@@ -53,5 +52,6 @@ at least once; a list of names cannot.
 > would catch one being reintroduced. What makes that visible is that there is no
 > registry to add an entry to: a second reader is a second adapter, in review.
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../../docs/decisions.md)'s; neither restates the other.

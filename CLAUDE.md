@@ -10,34 +10,24 @@ browser. Everything before `generate` is free and local; only the render costs m
 
 > **That paragraph is the ceiling, and the ceiling is the point.** A fuller account — the verbs, what
 > each stage reads and writes, the run layout, the identity mechanisms and their dials — belongs in
-> [`docs/arc/data-flow.md`](docs/arc/data-flow.md), and the module graph in
-> [`docs/arc/modules.md`](docs/arc/modules.md). **This file is instructions for an agent, not a
-> description of the system.** A document that does both grows forever, because every version adds to
-> the architecture: that is exactly how the `## The path` section this version deleted came to be a
-> quarter of the file. When a paragraph here starts explaining how something works rather than what to
-> do about it, it belongs in `docs/arc/`.
+> [`docs/data-flow.md`](docs/data-flow.md), and the module graph in [`docs/modules.md`](docs/modules.md).
+> **This file is instructions for an agent, not a description of the system.** A document that does
+> both grows forever, because every version adds to the architecture: that is exactly how the
+> `## The path` section a past version deleted came to be a quarter of the file. When a paragraph here
+> starts explaining how something works rather than what to do about it, it belongs in `docs/`.
 
 **The method this repo runs is OpenSpec SDD** — work is defined as a change before it is built, the
 living spec is test-backed, and a release folds one into the other. `## How a change is cut here`,
 below, is the in-tree statement of that contract; everything else here is a rule this repository holds
 in particular.
 
-Hard constraints that shape the code here:
+**Identity preservation is `summon`'s product.** An anime image of someone else is a failed `summon`
+run. `conjure` takes no photograph and makes no identity claim
+([docs D10](docs/decisions.md#d10--the-face-and-the-pose-are-carried-by-the-graph)).
 
-- **Identity preservation is the product.** A beautiful anime image of someone else is a failed run.
-- **The entry point imports no third-party package at module scope** — the ComfyUI transport is
-  `urllib`, and nothing on `python -m isekai`'s import graph may need a wheel. Face detection runs
-  *in the image*, never as a runtime dep. **This is narrower than the *"the runtime is stdlib-only"*
-  rule it replaces, and deliberately so**: `dependencies = []` was retired in v0.22.3 because the
-  local tagger runs on every `caption` and `uv sync` was stripping it, so the tagger's stack and the
-  review surface's server are declared dependencies now. What is forbidden is a wheel *on the import
-  graph* — reach one from inside the verb that needs it, and the `-S` guard in
-  `tests/test_pipeline_cli.py` is the only thing that catches a violation.
-- **A selectable implementation is a measured one.** Nothing enters the registry on the strength of
-  being written; it enters on a measurement against the bar its capability states, and it leaves only
-  by the version that retires it. **This replaces the older rule *"there is one path"*, and does not
-  restore it** — counting permits an unmeasured single path, which is the failure that rule was
-  written against. Measure it or do not offer it.
+**The principles are imported below, so every session has them.**
+
+@docs/principles.md
 
 > **These are standing instructions, not a workflow.** What you should *do on this task* comes from the
 > prompt you were given; if your prompt conflicts with this file, **the prompt wins.** Don't infer a
@@ -78,42 +68,9 @@ never mocked and never asserted.
 
 ## Engineering conventions
 
-The active change's **`design.md`** is authoritative, with this file behind it — read it. It *is* the
-decision record: the reasoning that settled a decision, and the measurement behind it, are written there
-and nowhere else. In brief, the load-bearing seams are:
-
-- **A parameter is a seam only if something else is actually passed through it.** That is why `client` is a
-  parameter of `generate.render` — `FakeComfyClient` is what makes the whole suite offline — and why `rng`
-  is one, while the reader is a seam because it has a real double. **Stage ② has no seam at all any
-  more**, and that is the rule read the other way: v0.21 replaced two sorter implementations behind a
-  Protocol with a dictionary lookup, so there was nothing left to pass through the parameter. A
-  one-entry registry is a dispatch mechanism with nothing to dispatch.
-- **The flow manifest declares; nothing computes.** `flows/<id>/flow.json` names every node the render
-  path edits, by role — `flow.node("sampler")`, `flow.node("photo")` — so no node is ever located by
-  class at runtime. That is what lets a broken flow be caught by the suite rather than by a boot, and
-  it is not optional: `summon-anime-wai` has two `KSampler` nodes and two `ImageScale` nodes, so a
-  class lookup is ambiguous against the graph that actually ships.
-- **A network boundary lives in `boundary/`, and nothing else opens one.** `ComfyTransport`
-  (`comfy_types.py`, implemented in `comfy_client.py`) reaches the rented GPU; `ollama.py` reaches the
-  local model and is the only way out of the *pipeline* to one. `HOST` there is a module constant with
-  no flag and no environment variable behind it. A second reader is a second adapter, in review — there
-  is no registry to add an entry to.
-  **The failure shape the stages share lives in `foundation/run.py`, not at a boundary** —
-  `StageFailure`, `refusal_for`, `instructions_record`, `constant_record`. It cannot live in
-  `refusal.py`: that module imports nothing by design, the class needs `Kind`, and `run.py` already
-  imports `refusal.py`, so the move would be a cycle.
-- **The run owns the layout, not the stages**, and **no stage imports another.** The stage directory
-  names live in `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`. The
-  layout is **input above, flow below**, so adding a flow adds one subtree and no flow can read
-  another's artifacts; the directories themselves are drawn in `docs/arc/data-flow.md`.
-- **An Option-modified keybinding matches `event.code` and calls `preventDefault()`, because Option
-  is a character-producing modifier on macOS.** Not a layout rule and not hygiene: on plain US ABC,
-  `Option+Space` emits U+00A0 and `Option+F` emits `ƒ`, so a handler matching `event.key` inserts an
-  invisible non-breaking space into a tag field — the silent dead end the cheatsheet exists to
-  remove. `preventDefault()` is load-bearing twice, because Space is also the **native activation
-  key** of a focused `<button>` and this app focuses one on mount (`ReviewApp.vue`'s
-  `.rail__card--current`). Every binding in the surface satisfies this today; a new one that matches
-  `event.key` alone is the regression to look for.
+The active change's **`design.md`** is authoritative for that change, with this file behind it — read
+it. **`docs/decisions.md` records the decisions in force; a change's `design.md` records why one was
+taken**, and is frozen when the change is archived.
 
 **Tests are bound to the spec.** Every test carries `@pytest.mark.spec("<key>")` naming the scenario it
 proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural. Both are registered in
@@ -138,12 +95,9 @@ plus the tracked `.openspec.yaml` where one is needed. A change may carry a fift
 2. **Scaffold by hand** — `openspec new change <name>` *does* exist in 1.11.0, and this repo does not
    use it: it writes into the root `openspec/config.yaml` declares, this repo keeps no such file, and
    the id rule below is not one the CLI knows. The directory is created directly.
-   The id is `<digits>-<lowercase-slug>`, and version → id is `(major × 100) + minor`,
-   zero-padded: `v0.7` → `0007`, `v0.10` → `0010`, which stays monotonic past 1.0. **The formula has
-   no patch case**, and a patch release still needs an id: `v0.22.1` shipped as `0023`, the next
-   free number rather than anything the formula produces. Take the next free number for a patch, and
-   keep it monotonic. (`0001-mf-standard` predates all of this and keeps its id — an id is never
-   renamed once commits carry it as a trailer.)
+   The id is `<digits>-<lowercase-slug>`, and the digits are **the next free number**, zero-padded
+   to four — higher than every id under `openspec/changes/` and its `archive/`, for a minor and a
+   patch alike. An id is never renamed once commits carry it as a trailer.
 3. **Author** each artifact against `openspec instructions <proposal|specs|design|tasks> --change
    <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally opens with `version: vX.Y`
    frontmatter — **the CLI neither emits nor checks that key; it is on the author.**
@@ -173,6 +127,16 @@ is folded in and the change moves to `openspec/changes/archive/`; archived chang
 four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog + SemVer, with an entry appended
 **per phase** under `## [Unreleased]` and cut at release.
 
+**A minor delivers one feature; a patch delivers none**, and meets every one of these — work that
+cannot is not a patch:
+
+- no format version moves — `MANIFEST_VERSION`, the artifact envelope's `SCHEMA_VERSION`;
+- every behaviour fix is required by an existing requirement: a scenario may be added under one, a
+  requirement may not;
+- nothing deprecates a verb or a flag;
+- nothing changes the product — a sheet's fields, the prompt, the image — for the same inputs and
+  configuration.
+
 Every commit is a Conventional Commit, **one phase = one commit**, staged **by name** and never with
 `git add -A`. Each carries a `Change: <change-id>` git trailer, in the trailer block at the end of the
 message and **contiguous** with any `Co-Authored-By:` line — a blank line between them silently breaks the
@@ -189,39 +153,16 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 **The file-by-file inventory is not here.** Each group directory carries its own `README.md` naming its
 files and who imports them, `isekai/README.md` sits over them, and the graph is drawn once in
-`docs/arc/modules.md`. Duplicating any of that here is how this section grew the last time.
+`docs/modules.md`. Duplicating any of that here is how this section grew the last time.
 
-- **`isekai/__main__.py`** is the only entry point — the path `runpy` resolves for
-  `python -m isekai <verb>`, and a shim over `interface/cli.py`. **A group's `__init__.py` holds a
-  docstring and no code**, so a group never becomes a place two modules reach each other through.
-  `interface/ui/__init__.py` is the one exception and is not a group: it is a subpackage with a front
-  door, and `serve()` is that door.
-- **`flows/<id>/` is frozen, flat, and its files are named rather than counted**: `flow.json`,
-  `graph.json`, `schema.json`, `caption.briefing.md`. The manifest names none of its siblings — a key
-  that can only ever hold one value is not a declaration — and they sit *directly* in the directory,
-  because the digest that freezes a flow covers regular files only, so a nested layout would leave the
-  schema and the briefing outside the freeze with the gate green. **The rule does not tally them, and
-  that is deliberate**: a numeral is the part of a rule that goes stale, and `tests/test_flow.py`
-  asserts `len(SIBLINGS)` so a sibling cannot be added silently.
-  **A flow is pinned by equality, so nothing in one changes silently** — and it shares nothing with
-  another flow. Adding one costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry
-  carrying its digest, which is the designed price of the freeze rather than a defect. **The freeze forbids a silent change, not a change**: a
-  *divergence* still costs a new identifier, because two flows are only comparable over one cohort if
-  an identifier means one configuration, so a variant, another base or a second generation is a new
-  flow. Only an abandoned configuration may be re-pinned, and a re-pin owes a statement of what moved
-  in `CHANGELOG.md`, carrying the new digest — a test fails on any pinned digest no entry carries.
-  The comment above `PINNED` states the rule, never its history.
-  **A flow's identifier is `<verb>-<style>-<base>`**, with `-v2` appended only for a second generation
-  of the same triple. The base is in the name because other bases were candidates and `summon-anime`
-  could not tell two of them apart; the rule exists because its absence produced `summon-open-v1`, a
-  name describing the *arm* rather than the flow.
-- **A derived file must be byte-identical on a re-run.** `scripts/models.json`, `eval_models.json` and
-  `field_map.json` are each some script's output, and re-running that script must leave the file
-  unchanged — which is what makes the checked-in copy evidence rather than decoration. For
-  `derive_field_map.py` that holds because every input it reads is tracked or pinned: the operator's
-  own filings live in a constant in the script, and the gitignored runs they came from are read by
-  `--refresh` alone, which prints a drift and writes nothing. `eval_licences.md` records each
-  evaluator artifact's licence with the URL and the date it was read; a new artifact owes an entry.
+- **`flows/<id>/`** — what a flow holds and how it is named are
+  [docs D14](docs/decisions.md#d14--a-flow-is-one-flat-directory) and
+  [docs D15](docs/decisions.md#d15--a-flow-is-named-for-what-it-is). **Adding or re-pinning a flow**
+  costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry carrying its digest —
+  the designed price of the freeze. A re-pin states what moved, and a test fails on any pinned digest
+  no entry carries. The comment above `PINNED` states the rule, never its history.
+- **`eval_licences.md`** records each evaluator artifact's licence with the URL and the date it was
+  read; a new artifact owes an entry.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one
@@ -250,43 +191,21 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   none of them lives under `.data/`: that root's failure mode is loss of work and `rm -rf .data` is
   an ordinary cleanup, so a rebuildable bundle in there would muddle the boundary this rule exists to
   keep sharp.
-- **Everything a run reads or writes is inside the repository.** No path outside the repo is resolved by
-  anything tracked here. Research notes and the running log live in the operator's own notebook; nothing
-  in this repo reaches into it, and its location is not recorded here.
+- **The repository-path anchors resolve inside the repository** — `tests/test_package_paths.py` pins
+  each one. A runs root defaults to `.data/runs` and may sit outside the repository; inside it, it
+  must sit under `.data/` ([docs D18](docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
+- **The repository holds no pointer to the operator's notebook** — no path, no variable naming it.
+  Research notes and the running log live there; the notebook reads the repository, never the
+  reverse. **Review holds this; no test does.**
+- **A demo subject is a synthetic portrait**, never a real person's photograph.
 
 ---
 
-## Rules the render path is under
+## The architecture — read before changing it
 
-**These are the ones an agent can break.** What the pipeline *is* — the verbs, what each stage reads
-and writes, the run layout, the identity mechanisms and their dials — is `docs/arc/data-flow.md`'s,
-and is not restated here.
-
-- **Only an approved artifact is ever rendered.** The prompts are assembled per run from a sheet a
-  human corrected, and that correction is the single largest measured gain in this pipeline. A render
-  from an unapproved sheet is not a shortcut, it is a different product.
-- **Nothing locates a node by class**, and the manifest is the only thing that names one — see the
-  seam under `## Engineering conventions`.
-- **Assembly happens before any endpoint is acquired**, for the whole batch, so a malformed sheet
-  costs nothing rather than a boot. Do not move work across that line.
-- **Refuse rather than default, and refuse the input rather than the batch.** A photograph whose
-  header cannot be read refuses *that photograph*; a dimension no node here can derive is computed in
-  `isekai/shared/image.py` and written into the node the manifest names, never guessed at by a node.
-- **Stage ① is one verb.** `caption` writes prose, the local tag list and the hosted tag list in a
-  single invocation, in that order, and there is no `isekai tags`. The ordering is the failure
-  isolation and is not free to change — `docs/arc/data-flow.md` says why.
-- **`review` and `approve` stay fully working verbs**, deprecated as *guidance* and never as code.
-  Deleting the hand path would make stage ③ a single point of failure for the whole pipeline.
-- **Ollama and node are system dependencies, and both refuse rather than assuming.** Ollama is needed
-  by stage ① of every flow — the operator installs it and creates the model by hand,
-  `ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile`. node is needed by
-  `isekai ui` alone, to build the bundle. A missing one names what installs it; Ollama's refusal is
-  applied to a **port and a model name** rather than to a `PATH` entry, which is the shape a hosted
-  model needs and a binary check cannot give. Neither is a Python dependency — `uv sync` cannot
-  install either, which is why each refusal names the command that does. **`[eval]` is the only
-  optional extra left**, and CI does not install it; everything a run needs is declared, so no verb
-  is behind an `--extra` flag and gate command one can no longer strip one.
-
+The rules every component follows are [`docs/principles.md`](docs/principles.md)'s, imported above; the
+choices in force are [`docs/decisions.md`](docs/decisions.md)'s. **Read both before changing anything
+they decide.**
 
 ---
 
@@ -302,7 +221,8 @@ and is not restated here.
 - **Deps minimal + human-gated.** The declared list is short and every entry is on the path of a verb
   a run actually takes. Any new dependency — argue for it and **wait for approval** before installing.
   pytest / ruff / ty stay dev-only. **A new one is an import-graph question as well as a supply-chain
-  one**: reach it from inside the verb that needs it, or the `-S` guard fails.
+  one**: reach it from inside the verb that needs it, or the `-S` guard in `tests/test_pipeline_cli.py`
+  fails.
 - **Never weaken the gate to pass.** A deleted or skipped test, a blanket suppression, a loosened config —
   each is a *plan* problem, not a coding shortcut. **Halt and say so.**
 - **State lives on disk.** Reconstruct "where are we" from the active change's `tasks.md` + git — never

@@ -1,25 +1,18 @@
-"""The canonical tag vocabulary, and the cascade that maps a phrase onto it.
+"""The canonical tag vocabulary: a pinned tag list and its post counts.
 
-**The artifact is a tag list; the cascade over it is ours.** The vocabulary --
-8,106 general Danbooru tags with their post counts -- is provisioned from a
-pinned, digested manifest and is swappable by pointing that manifest somewhere
-else. The four-pass mapping is code and stays here, because the two outlive each
-other in opposite directions: swap the sorting model and the mapper is still
-needed, swap the vocabulary and it is useless (design.md D9).
+The list -- general Danbooru tags -- is provisioned from a pinned, digested
+manifest and is swappable by pointing that manifest somewhere else.
 
-**On this arm the mapping pass buys nothing measurable, and it still ships.**
-Scoring the raw pre-mapping sheets gave the identical figure; it changed four
-tags out of 130, none of which appeared in any reference. It ships because those
-four were *outside the vocabulary* and it caught all four -- here it is a
-validator -- and because on the open model the same pass is worth 0.033 to 0.482.
-Stated so nobody later reads its presence as evidence it helped.
+This file holds `normalise()`, the one spelling every lookup reads;
+`Vocabulary`, the list with its counts and the one ranking rule; `read_tags()`,
+which parses the tagger's `selected_tags.csv`; `load()`, which reads the
+provisioned list against its manifest; and `identity()`, the record a sheet
+carries to say which list filled it.
 
-**No tag this module emits can be outside the vocabulary.** Every pass, the
-curated table included, looks its result up before returning it, so an invented
-tag that merely looks canonical -- the dangerous kind, because it passes every
-later check on its way into the prompt -- cannot be produced at all.
+**No invented tag reaches a sheet, and that holds by construction elsewhere.**
+WD14's labels are the vocabulary, and `shared/field_map.py` is a table over it.
 
-Stdlib only: `csv`, `re`, `pathlib`.
+Stdlib only.
 """
 
 import csv

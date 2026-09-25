@@ -6,9 +6,9 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
 > `python -m isekai caption | sheet | review | approve | generate | show | ui` — which reads a
-> photograph into prose, sorts the prose into a sheet of canonical tags, lets a human correct the
-> sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary — and renders from
-> it on a stack provisioned from a pinned, checksummed manifest.
+> photograph into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
+> human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
+> and renders from it on a stack provisioned from a pinned, checksummed manifest.
 > Development follows OpenSpec SDD, and **`openspec/` is authoritative** for what the code does and
 > for what is being built next — this banner deliberately names no version, because a forward
 > reference here is one reordering away from being wrong.
@@ -31,8 +31,8 @@ learning** are the point.
 
 ## How it works
 
-- **Model:** one path (see below), on open weights — WAI-illustrious-SDXL v17.0 with InstantID
-  and an SDXL ControlNet stack.
+- **Model:** open weights — WAI-illustrious-SDXL v17.0 with InstantID and an SDXL ControlNet
+  stack. How the render path uses them is [`docs/`](docs/README.md)'s.
 - **Runtime:** [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in a Docker container.
 - **Compute:** [RunPod](https://www.runpod.io/) GPU pod, **per-second** billing. The Docker
   image runs directly as the pod — no VM to provision.
@@ -41,9 +41,7 @@ learning** are the point.
   immutable revision and verified by SHA-256 before anything loads it. The volume is
   **namespaced per project**, so a volume shared with another project has no shared files.
 - **Interface:** a headless CLI (`python -m isekai`) that drives ComfyUI over its API. Its
-  **entry point imports no third-party package at module scope** — the ComfyUI transport is
-  `urllib`, and the wheels a run does need are reached from inside the verb that needs them, which
-  is why `isekai show` works on a checkout that has provisioned nothing.
+  import rule is [docs D20](docs/decisions.md#d20--the-entry-point-loads-no-third-party-package).
 
 ```
 Local (your machine)                          RunPod
@@ -64,35 +62,11 @@ Local (your machine)                          RunPod
 `python -m isekai generate --flow … --server …` → `down.sh` (remove pod, billing stops). Only the pod is
 ephemeral and metered.
 
-## The path
+## Architecture
 
-There are two flows, `flows/summon-anime-wai/` and `flows/conjure-anime-wai/`, and each is driven
-in staged verbs rather than typed as options. Identity is carried by mechanisms rather than by a sentence:
-
-| Axis | Carried by |
-|---|---|
-| Face | InstantID — face embedding + keypoints, on a WAI-illustrious-SDXL v17.0 base |
-| Composition | from noise: `EmptyLatentImage` at `denoise` 1.0 |
-| Pose | one ControlNet — OpenPose, off `DWPreprocessor` |
-| Detail | a hires pass — RealESRGAN upscale, then a second sampler at `hires_denoise` 0.35 |
-| Register | the prompts, **assembled per run** from a sheet of canonical tags a human approved |
-
-A flow is a directory of four tracked files: `flow.json`, which declares its inputs, its
-vocabulary, its models, its dials, its prompt fragments and the graph id of every node the render
-path edits; `graph.json`, the API graph; `schema.json`, the sheet's field list; and
-`caption.briefing.md`, the standing instructions a photograph is read under. **Nothing locates a node by class** — the manifest names them, which is what lets a broken
-flow be caught by the suite rather than by a boot. A flow is pinned by equality against a committed
-digest, so nothing in one changes silently: a *divergence* — a variant, another base, a second
-generation — costs a new flow identifier, because two flows are only comparable over one cohort if an
-identifier means one configuration. Re-pinning is for the other case, where the old configuration is
-simply abandoned, and it owes a statement of what moved.
-
-Before any node reads the photo, it is scaled to a working resolution derived from its own
-dimensions: aspect preserved, short side at 1024, both dimensions a multiple of 64, and refused past
-4:1 rather than clamped. One pixel grid feeds the whole graph, so every consumer is handed the same
-scaled image. That is a claim about which image each consumer *receives*, not about what it then does
-internally — a preprocessor's own working resolution is a separate dial on that node, and
-`DWPreprocessor` derives its pose hint at 512 today.
+How the system is built is [`docs/`](docs/README.md): the [principles](docs/principles.md), the
+[decisions](docs/decisions.md) in force, the [modules](docs/modules.md) and the
+[data flow](docs/data-flow.md).
 
 ## Running a flow
 
@@ -121,10 +95,12 @@ python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
 
 One verb, and it writes and reports each artifact in order: the prose, then a scored tag list from the
 local WD14 tagger, then a raw one from the hosted model. **The local list is what fills the sheet**, so it
-needs `bash scripts/download_models.sh scripts/vocabulary.json` to have been run; the hosted one is
-silently absent when Ollama is not running, which is never an error; the prose is a reading aid with
-no machine consumer. Neither tag list is narrowed — they are what the review surface shows beside the
-prose, so a human can see what the router dropped.
+needs `bash scripts/download_models.sh scripts/vocabulary.json` to have been run.
+
+If Ollama is not running, `caption` refuses the photograph at the prose, before either list; if only
+the hosted list is missing, its own call failed. The prose is a reading aid with no machine consumer.
+Neither list is narrowed on disk; the review surface shows the WD14 list, and the hosted list filtered
+to what the vocabulary carries.
 
 `--flow` is required on every stage verb. A stage cannot act without knowing which flow asked, because
 the flow supplies the briefing it reads and the schema it fills against.
@@ -311,8 +287,8 @@ detects it.
 ## Development
 
 **The gate is declared once**, as the `gate` array in `.minions/minions.toml`. The root
-`Makefile`, this file and CI (`.github/workflows/ci.yml`) mirror it; change one and you
-change all four, in the same commit.
+`Makefile` and this file mirror it, and CI (`.github/workflows/ci.yml`) runs `make gate`; change
+the array and you change the `Makefile` and this file, in the same commit.
 
 ```sh
 make gate
@@ -337,8 +313,8 @@ All six green, or the work is not done. The suite is **fully offline and determi
 the ComfyUI transport is faked behind a Protocol and no test touches a GPU or the network.
 Image quality and identity fidelity are judged live on a pod, by eye.
 
-`CLAUDE.md` carries the repo's facts and the change contract; `openspec/specs/` is the
-living, test-backed spec, and `openspec/changes/` is the work in flight.
+`CLAUDE.md` carries the process and the change contract; `docs/` is the architecture;
+`openspec/specs/` is the living, test-backed spec, and `openspec/changes/` is the work in flight.
 
 ## Repository layout
 
@@ -371,7 +347,7 @@ isekai/
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
-├── docs/arc/                  # the module graph and the stage data flow — drawn once, here
+├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── .minions/minions.toml      # the gate array (the rest of .minions/ is gitignored)
 ├── Makefile                   # `make gate`

@@ -36,31 +36,33 @@ nothing — it writes no file and reaches no model.
 
 Every stage verb takes `--flow`, required and repeatable, because the flow
 supplies the briefing a stage reads, the schema it fills against and the
-directory it writes into. The two verbs outside the stages each differ, and in
-different directions: `show` takes no `--flow` at all, because it reports every
-flow the run already holds and so names none by design; `ui`'s is required and
-exactly one, because the surface shows a single schema's fields in a fixed order
-and a second flow would be a second page.
+directory it writes into. `show` and `ui`, which are not stage verbs, each
+differ, and in different directions: `show` takes no `--flow` at all, because it
+reports every flow the run already holds and so names none by design; `ui`'s is
+required and exactly one, because the surface shows a single schema's fields in a
+fixed order and a second flow would be a second page.
 
 ## What a reader needs first
 
 **`caption` writes prose, the local tag list and the hosted tag list in one
-invocation, in that order — and the order is the failure isolation.** The batch
-loop catches a refusal per *input*, not per stage, so whatever fails takes the
-artifacts behind it in that input with it. Prose goes first because it is what a
-human reads before anything else. The local WD14 tagger goes second because it is
-deterministic and fails only on a missing or corrupt file. The hosted tagger goes
-last because it is the one with a port, a timeout and a retry budget. A failure
-in prose still costs the artifacts behind it — that is the trade this ordering
-was chosen for, not an oversight in it. It is still a single verb: there is no
+invocation, in that order.** The batch loop catches a refusal per *input*, not per
+stage, so whatever fails takes the artifacts behind it in that input with it.
+
+The order was chosen to isolate failures when the sheet was built from prose. The
+sheet reads the WD14 list now, so a prose refusal — Ollama unreachable — stops the
+sheet's input too ([D1](decisions.md#d1--stage--is-one-verb)).
+
+The local WD14 tagger goes second because it is deterministic and fails only on a
+missing or corrupt file. The hosted tagger goes last because it is the tagger with
+a port, a timeout and a retry budget. It is still a single verb: there is no
 `isekai tags`.
 
 **The sheet is built from the WD14 list, not from the prose.** The prose is a
 reading aid with no machine consumer downstream. Which is why a missing *hosted*
-tag list is an absent aid and never a refusal — the model may simply not be
-running — while a missing *local* tag list is a refusal naming `caption`. An
-all-empty sheet is legal and therefore silent, and that is the failure mode this
-arrangement keeps paying for.
+tag list is an absent aid and never a refusal — its own call failed after the
+prose and the WD14 list were written — while a missing *local* tag list is a
+refusal naming `caption`. An all-empty sheet is legal and therefore silent, and
+that is the failure mode this arrangement keeps paying for.
 
 Neither tag list is narrowed on the way out: no canonicalisation, no vocabulary
 filtering, no re-ordering but by confidence. Narrowing is stage ②'s job, and
@@ -124,9 +126,9 @@ a clip skip their prose never states.
 **`models/wd14/` is one artifact split in two**, and both halves are pinned in
 `scripts/vocabulary.json`. Row N of `selected_tags.csv` names output neuron N of `model.onnx`, so a
 pair from mismatched revisions mislabels every tag — silently, because the vector still has the right
-length and every name in it is still a real tag. Both digests are verified before the first inference,
-and a WD14 artifact is the only producer here that records `pinned: true`; `python -m isekai show`
-reports it without the word *unpinned* that every other artifact still carries.
+length and every name in it is still a real tag. Both digests are verified before the first inference.
+A WD14 artifact records `pinned: true`, and a sheet built from it carries that across; the reader and
+the hosted tagger record `false`, and `python -m isekai show` marks theirs *unpinned*.
 
 ## What costs money, and what does not
 

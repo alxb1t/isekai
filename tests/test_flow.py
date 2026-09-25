@@ -165,7 +165,7 @@ def test_a_flow_is_flat_and_holds_its_named_files_and_nothing_else() -> None:
     **`len(SIBLINGS)` is the assertion this rule has never had.** The set-equality
     below shrinks on both sides at once -- it stayed green through the removal of
     `sheet.briefing.md` and would stay green through the silent addition of a
-    sixth sibling, which is exactly the thing the freeze exists to make loud. The
+    sibling, which is exactly the thing the freeze exists to make loud. The
     count is pinned here, and only here, so the prose elsewhere can stop carrying
     a numeral (design.md D10).
     """

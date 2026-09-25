@@ -31,5 +31,6 @@ at least once; a list of names cannot.
 | `image.py` | `evaluation/evaluate.py`, `interface/ui/batch.py`, `pipeline/generate.py` | `tests/test_evaluate.py`, `tests/test_generate.py`, `tests/test_image.py` |
 | `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `scripts/derive_field_map.py`, `tests/conftest.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../../docs/decisions.md)'s; neither restates the other.

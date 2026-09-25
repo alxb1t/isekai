@@ -25,6 +25,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.4] - 2026-09-25
+
+### Changed
+
+- **The sweep: code, tests and spec preambles say what the code does.** Docstrings, comments,
+  the `caption` and `sheet` help text, the parser's description and `pyproject.toml` lose retired
+  mechanisms, *"the only"* claims and counts (`0026` design D1, S1–S30). No behaviour changes.
+- **`docs/` holds the architecture.** `principles.md`, `decisions.md` (with D29 and D30, the product
+  scope) and `README.md` are written from `0026`'s payload; `docs/arc/` is flattened into `docs/`, its
+  false claims corrected, and `modules.md` gains how the components interact.
+- **`CLAUDE.md` keeps only process and imports `docs/principles.md`.** Its design rules move to `docs/`;
+  the change id is the next free number; it gains what a patch may hold, and the notebook and
+  demo-subject rules (`0026` design D8).
+- **The group READMEs point at `docs/principles.md` and `docs/decisions.md`** instead of *"the design
+  record"*, which named nothing in the repository (`0026` design D9).
+- **`README.md` stops restating the architecture.** `## The path` becomes `## Architecture`, a link to
+  `docs/`; the intro, the caption notes and the gate's mirrors say what the code does (S43–S46, D10).
+
 ## [0.22.3] - 2026-09-23
 
 ### Changed

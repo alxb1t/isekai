@@ -262,11 +262,12 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
 
 @pytest.mark.spec("tagging:pin:the-check-fires-at-first-use")
 def test_no_wheel_the_tagger_needs_is_imported_at_module_scope() -> None:
-    # The rule the `-S` guard rests on: this file is the only one in the package
-    # that touches `onnxruntime`, `numpy` or `Pillow`, and it reaches every one
-    # of them through `_require`, inside the function that needs it. **Now that
-    # the three are installed by default, this is the only thing that would
-    # catch one moving to module scope** -- nothing else fails when it does.
+    # The rule the `-S` guard rests on: `boundary/wd14.py` reaches `onnxruntime`,
+    # `numpy` and `Pillow` through `_require`, inside the function that needs
+    # each -- and `evaluation/eval_backends.py` touches them too (`_numpy()`,
+    # `_pil()`, `OnnxSession.__init__`). This scan catches one moved to module
+    # scope, and so does the `-S` guard in `tests/test_pipeline_cli.py`, because
+    # `cli.py` imports `wd14.py` at module scope.
     import isekai.boundary.wd14 as boundary
 
     source = Path(boundary.__file__ or "").read_text()

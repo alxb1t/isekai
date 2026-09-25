@@ -23,15 +23,18 @@ someone expected it to. A list of names is self-counting and cannot rot the same
 way, because adding a file without touching the row leaves a name missing rather
 than a digit merely stale.
 
-**The groups do not re-export.** Every `__init__.py` here holds a docstring and no
-code, so a module is imported by its own path and a group never becomes a place
-two modules can reach each other through.
+**The groups do not re-export.** Every group's `__init__.py` holds a docstring and
+no code, so a module is imported by its own path and a group never becomes a place
+two modules can reach each other through. `interface/ui/__init__.py` is a
+subpackage's front door, not a group's, and holds `serve()`.
 
-**A group is a filing decision, not a layering rule.** The *module* graph has no
-cycles and never has; the *group* graph does, and drawing it as a stack would be a
-lie.
+**The layers are the rule** ([principles](../docs/principles.md#the-code-is-layered)):
+each group but `evaluation` is a layer, imports point down, and nothing in the
+package imports `evaluation`. The module graph has no cycles. Today's upward
+imports, group cycles, and imports from `shared` and `boundary` into `evaluation`
+are known breaks, removed by the change that moves those imports.
 
-**The graph itself is drawn in [`docs/arc/modules.md`](../docs/arc/modules.md)**,
+**The graph itself is drawn in [`docs/modules.md`](../docs/modules.md)**,
 and only there — every cross-group edge, which of them are lazy, the subpackage
 cycles and why each one exists. It is one drawing in one place because two
 drawings is how the one that used to sit here acquired its errors: a module-level
@@ -43,14 +46,15 @@ and a graph is not.
 third-party package at module scope: nothing in `python -m isekai`'s import graph
 may need a wheel, and a subprocess guard under `-S` proves it -- the wheels a run
 does need are declared dependencies as of v0.22.3, reached from inside the verb
-that needs them, so that guard is the only check on this. And a set of constants anchors a repository path on
-its own `__file__` -- `run.DATA_ROOT`, `run.REPOSITORY`, `flow.FLOWS_DIR`,
-`provision.MANIFEST_PATH`, `provision.VOCABULARY_MANIFEST_PATH` and
-`eval_models.EVAL_MANIFEST_PATH`; `tests/test_package_paths.py` pins every one of
-them to the directory holding `pyproject.toml`. The falsification twin is
-**one**, not one each: every anchor's suffix cancels against its own hops, so all
-of them reduce to the same wrong path and parametrizing would advertise
-per-anchor coverage that does not exist.
+that needs them, and that guard is what checks this. And a set of constants
+anchors a repository path on its own `__file__` -- `run.DATA_ROOT`,
+`run.REPOSITORY`, `flow.FLOWS_DIR`, `provision.MANIFEST_PATH`,
+`provision.VOCABULARY_MANIFEST_PATH` and `eval_models.EVAL_MANIFEST_PATH`;
+`tests/test_package_paths.py` pins every one of them to the directory holding
+`pyproject.toml`. The falsification twin is **one**, not one each: every anchor's
+suffix cancels against its own hops, so all of them reduce to the same wrong path
+and parametrizing would advertise per-anchor coverage that does not exist.
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../docs/decisions.md)'s; neither restates the other.

@@ -11,14 +11,13 @@ a pin in this build that no flow has an opinion about. A Protocol whose two
 implementations resolve through different mechanisms is a shared name rather than
 a seam (design.md D3).
 
-**The whole non-stdlib import of this package lives in this file and is
-function-local.** `onnxruntime`, `numpy` and `Pillow` are declared dependencies
-as of v0.22.3 and are imported inside the functions that need them, so
-`python -m isekai`'s import graph reaches no wheel and the `-S` guard still
-passes. Being installed by default is what makes that guard the only check: an
-import moved to module scope here now resolves rather than failing. The
-arrangement is `ollama.py`'s: the transport here, the adapter in `pipeline/`.
-There is no adapter in this file.
+**This file's non-stdlib imports are all function-local.** `onnxruntime`,
+`numpy` and `Pillow` are declared dependencies as of v0.22.3 and are imported
+inside the functions that need them, so `python -m isekai`'s import graph reaches
+no wheel and the `-S` guard still passes. Because they are installed by default,
+an import moved to module scope here resolves rather than failing; the `-S` guard
+and `tests/test_wd14.py`'s source scan catch it. The arrangement is `ollama.py`'s:
+the transport here, the adapter in `pipeline/`. There is no adapter in this file.
 
 **Opening the session is the expensive act and it happens once, on first use.**
 The graph is 467 MB and takes ~0.9 s to open, against ~0.4 s a photograph. So

@@ -14,14 +14,12 @@ list is filtered down to a sheet; seeing *behind* that filter is the whole reaso
 these two artifacts exist. So nothing here canonicalises, maps to the vocabulary,
 deduplicates or re-orders on anything but confidence. The hosted tagger's list is
 known to be roughly three-quarters unusable -- it is stock-photo keywording, and
-it contradicts its own prose on the same photograph -- and it ships anyway, marked
-for what is committable, because the panel is advisory and a wrong tag costs a
-glance (design.md D1, D15).
+it contradicts its own prose on the same photograph -- yet the artifact keeps every
+tag, and the review surface shows only the tags the vocabulary carries
+(`interface/ui/app.py`'s `_tags`).
 
-**`caption()` is not modified and is byte-identical in the diff.** It is the one
-function in this change whose behaviour has to be provably unchanged, and a
-function with no edit is provably unchanged by `git diff`. These two sit beside
-it and the CLI says three times.
+**`caption_wd14` and `caption_tags` sit beside `caption()`, not inside it**, and
+`cli.py` reports each artifact on its own.
 
 **The two artifacts resume independently**, which is why each has its own
 directory, its own `latest()` check and its own `BUDGETS` entry. WD14 is
@@ -242,10 +240,10 @@ def caption_wd14(
     catches is this *photograph* -- a header no decoder can read -- which is
     per-input, permanent, and exactly what a budget of one is for.
 
-    **This is the first producer in this repository that can honestly claim a
-    pin.** Every artifact in the tree records `pinned: false` and `show` prints
-    *"unpinned"* over all of them; a local file with a digest is not the hosted
-    service that field was written for, so it records `true` and carries **both**
+    **This producer can claim a pin.** The reader and the hosted tagger record
+    `pinned: false`, and a sheet built from this list carries the `true` across
+    (`pipeline/sheet.py`). A local file with a digest is not the hosted service
+    that field was written for, so it records `true` and carries **both**
     digests -- the ones the session was actually verified against, not the ones
     the manifest happens to hold at write time (design.md D17).
 
