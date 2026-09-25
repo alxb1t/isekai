@@ -28,9 +28,8 @@ is what lets the operator's pruning pass see the junk rather than inherit it.
    the suffix walk cannot reach. A seed is a **stem**, matched on word boundaries
    against its own inflections.
 3. **The dead briefing's own examples** — `flows/conjure-v1/sheet.briefing.md`
-   names 41 example tags across ten criteria, and it is the only authored group
-   content that exists anywhere in either tree. This version carries that file
-   dead (design.md D22), so it is harvested here before it stops being read.
+   named example tags by criterion. The briefing is deleted; its example tags
+   were transcribed before it went, and `BRIEFING` holds them.
 
 **One primary per tag, decided in three steps (design.md D30 ③).** The operator's
 own filings decide first, because a tag he approved and then rendered is
@@ -162,10 +161,9 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 # here yet, because the operator named one.
 EXCLUDED: tuple[str, ...] = ("photorealistic",)
 
-# The 41 example tags `flows/conjure-v1/sheet.briefing.md` names, by the field it
-# names them under. Transcribed rather than parsed: the briefing is prose with no
-# machine-readable structure, and this version is the last one that reads it at
-# all. Every one is held against the vocabulary before it is written.
+# The example tags `flows/conjure-v1/sheet.briefing.md` named, by the field it
+# named them under. The briefing is deleted; they were transcribed before it went.
+# Every one is held against the vocabulary before it is written.
 BRIEFING: Mapping[str, tuple[str, ...]] = {
     "count": ("1girl", "1boy", "2girls", "multiple girls"),
     "skin_ancestry": ("pale skin", "tan", "dark skin"),

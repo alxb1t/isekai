@@ -23,9 +23,10 @@ someone expected it to. A list of names is self-counting and cannot rot the same
 way, because adding a file without touching the row leaves a name missing rather
 than a digit merely stale.
 
-**The groups do not re-export.** Every `__init__.py` here holds a docstring and no
-code, so a module is imported by its own path and a group never becomes a place
-two modules can reach each other through.
+**The groups do not re-export.** Every group's `__init__.py` holds a docstring and
+no code, so a module is imported by its own path and a group never becomes a place
+two modules can reach each other through. `interface/ui/__init__.py` is a
+subpackage's front door, not a group's, and holds `serve()`.
 
 **A group is a filing decision, not a layering rule.** The *module* graph has no
 cycles and never has; the *group* graph does, and drawing it as a stack would be a
@@ -43,7 +44,7 @@ and a graph is not.
 third-party package at module scope: nothing in `python -m isekai`'s import graph
 may need a wheel, and a subprocess guard under `-S` proves it -- the wheels a run
 does need are declared dependencies as of v0.22.3, reached from inside the verb
-that needs them, so that guard is the only check on this. And a set of constants anchors a repository path on
+that needs them, and that guard is what checks this. And a set of constants anchors a repository path on
 its own `__file__` -- `run.DATA_ROOT`, `run.REPOSITORY`, `flow.FLOWS_DIR`,
 `provision.MANIFEST_PATH`, `provision.VOCABULARY_MANIFEST_PATH` and
 `eval_models.EVAL_MANIFEST_PATH`; `tests/test_package_paths.py` pins every one of

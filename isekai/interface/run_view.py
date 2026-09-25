@@ -2,9 +2,8 @@
 
 A filename carries only what resume decides on, which leaves a directory that is
 precise and unreadable. This is what a person reads instead -- and it is also the
-answer to "where is this run", which is why no progress file ships: nothing but a
-human is watching before a review UI exists, and the inspection command is what
-that human reads.
+answer to "where is this run", which is why no progress file ships: a person
+reads this command, and the review UI reads the run directory itself.
 
 **It reads; it never decides.** Every fact here comes out of a file, which is the
 opposite rule from the completion tests, and that is the point: control flow uses

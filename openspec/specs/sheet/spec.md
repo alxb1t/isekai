@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Stage ② of the pipeline: turning descriptive prose into a sheet of fields filled with canonical
-vocabulary tags, using the schema and the standing instructions inside the flow that asked, and knowing
-nothing about flows beyond the one directory it reads and writes.
+Stage ② of the pipeline: filling a sheet's fields with canonical vocabulary tags from the WD14 tag list,
+through the field map, against the schema inside the flow that asked, and knowing nothing about flows
+beyond the one directory it reads and writes.
 
 **Source:** `isekai/pipeline/sheet.py`, `isekai/shared/fields.py`, `isekai/shared/vocabulary.py`,
 `isekai/shared/field_map.py`, `isekai/foundation/flow.py`, `flows/summon-anime-wai/schema.json` ·

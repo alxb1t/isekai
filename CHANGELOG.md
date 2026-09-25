@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The sweep: code, tests and three spec preambles say what the code does.** Docstrings, comments,
+  the `caption` and `sheet` help text, the parser's description and `pyproject.toml` lose retired
+  mechanisms, *"the only"* claims and counts (`0026` design D1, S1–S30). No behaviour changes.
+
 ## [0.22.3] - 2026-09-23
 
 ### Changed

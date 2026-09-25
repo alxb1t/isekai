@@ -37,12 +37,12 @@ at least once; a list of names cannot.
 > `provision.py` is not on `python -m isekai`'s import graph, so the module-scope
 > import rule is untouched either way.
 >
-> **`wd14.py` is**, and it is the only module in the package that touches the
-> tagger's stack. Every one of those imports -- `onnxruntime`, `numpy`,
-> `Pillow` -- is **function-local**, which keeps the `-S` guard green; they are
-> declared dependencies as of v0.22.3, so that guard is the only thing that would
-> catch one moving to module scope;
-> `tests/test_wd14.py` asserts none of them sits at module scope. It reaches no
+> **`wd14.py` is**, and it touches the tagger's stack, as
+> `evaluation/eval_backends.py` does too. Every one of those imports --
+> `onnxruntime`, `numpy`, `Pillow` -- is **function-local**, which keeps the `-S`
+> guard green; they are declared dependencies as of v0.22.3, so one moved to
+> module scope resolves silently, and the `-S` guard and `tests/test_wd14.py`'s
+> source scan catch it. It reaches no
 > network at all, which makes it the one file here that is a boundary to a *file*
 > rather than to a host.
 >

@@ -38,7 +38,7 @@ requires-python = ">=3.12"
 #
 # `fastapi[standard]` is deliberately not used: it would pull a much wider tree --
 # an HTTP client, a CLI, email validation, templating -- for one loopback server
-# that serves six endpoints and a built bundle.
+# that serves a JSON API and a built bundle.
 dependencies = [
     "onnxruntime==1.29.0",
     "numpy==2.5.3",

@@ -12,8 +12,9 @@ about. What survives is the claim the architecture actually rests on: **the entr
 point imports no third-party package at module scope.** `wd14.py`'s three imports are
 function-local and `interface/ui/__init__.py` keeps FastAPI off the graph the same
 way, which is why `isekai show` works on a checkout that has provisioned nothing.
-With the packages now installed by default, this guard is the only thing that would
-catch a module-scope import appearing here -- nothing else fails when one is added.
+With the packages installed by default, a module-scope import resolves rather than
+failing, so this guard is what catches one appearing here; `tests/test_wd14.py`'s
+source scan also catches one in `boundary/wd14.py`.
 """
 
 import argparse

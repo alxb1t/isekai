@@ -232,8 +232,9 @@ def token_budget(
     and silently chunked (design.md D4).
 
     `estimate_tokens` is deliberately left alone. It is `approve()`'s, it is
-    passed a `Schema` and never a `Flow`, and changing its signature would move 26
-    call sites for a warning on a path this version deprecates as guidance.
+    passed a `Schema` and never a `Flow`, and changing its signature would move
+    every one of its call sites for a warning on a path this version deprecates
+    as guidance.
 
     A field absent from a mid-edit draft contributes nothing rather than raising,
     because the surface recomputes this on every keystroke.

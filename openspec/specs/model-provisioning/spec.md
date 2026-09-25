@@ -13,7 +13,7 @@ and the graph describing the same set of files.
 
 The manifest is the source of truth for what the stack *is*: every source pinned to an immutable
 revision, every artifact carrying a digest, and nothing trusted by name. `provision.py` is **not**
-in `python -m isekai`'s import graph, so this capability leaves the stdlib-only runtime rule
+in `python -m isekai`'s import graph, so this capability leaves the entry point's import rule
 untouched.
 Every scenario here is proven offline against a fake fetcher — no test reaches a network or a pod.
 

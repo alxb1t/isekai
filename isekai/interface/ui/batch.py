@@ -105,9 +105,9 @@ class Batch:
         """Return the local tagger's scored list for this input, or None.
 
         **`None` is never a refusal here**, and neither is it for `tags_path`
-        below. A run captioned before v0.20 has no such directory, a flow with no
-        `hosted` block never produces the sibling, and a failed tagger leaves
-        neither -- three legitimate absences, none of which may stop a review.
+        below. A run captioned before v0.20 has no such directory, and a failed
+        tagger leaves its own list absent and every list after it -- legitimate
+        absences, none of which may stop a review.
         The tag lists are an aid, and a surface that refused to open because a
         helper was missing would have confused an aid for an input
         (design.md D20).
@@ -124,7 +124,7 @@ class Batch:
         `approve()` unlinks the draft it approved, so an approved input usually
         has none -- but `review --new-version` writes a fresh one beside the
         approved artifact, and that draft is this one. *Approved* and *has a
-        draft* are therefore not opposites, which is what `reopened` below is
+        draft* are therefore not opposites, which is what `state()` below is
         for.
         """
         return latest_artifact(held.run.directory(self.flow.id, REVIEW), DRAFT)

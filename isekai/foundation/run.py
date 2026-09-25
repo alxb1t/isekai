@@ -557,7 +557,7 @@ def across(items: Sequence[T], work: Callable[[T], None]) -> list[str]:
 
 
 class StageFailure(Exception):
-    """The CLI did not return what a stage can use, and the kind says what next."""
+    """A model call did not return what a stage can use, and the kind says what next."""
 
     def __init__(self, kind: Kind, detail: str) -> None:
         """Carry the kind and the detail an error record is written from."""
@@ -630,7 +630,7 @@ def constant_record(text: str) -> dict[str, str]:
     So the key is simply absent rather than empty or placeheld. A consumer asking
     where the text came from gets no answer, which is the true one -- it came
     from this build, and the digest is what identifies which build. The
-    alternative considered and refused was a sixth file in the flow directory:
+    alternative considered and refused was another file in the flow directory:
     that is the trade v0.19 already priced when `joycaption.Modelfile` went to
     `scripts/` instead, and a tag prompt shapes the operator's reading rather
     than the render, so it makes no per-flow claim.

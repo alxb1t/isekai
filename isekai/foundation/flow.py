@@ -57,7 +57,7 @@ MANIFEST_VERSION = 3
 # **Named, not counted.** `sheet.briefing.md` was the fifth and has had no reader
 # since v0.21, so the rule's numeral has now been wrong once; a rule that tallies
 # is a rule that goes stale, and `tests/test_flow.py` asserts the length here so
-# a sixth sibling cannot be added silently (design.md D10).
+# a sibling cannot be added silently (design.md D10).
 MANIFEST_NAME = "flow.json"
 GRAPH_NAME = "graph.json"
 SCHEMA_NAME = "schema.json"

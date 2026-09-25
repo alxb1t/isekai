@@ -5,7 +5,7 @@ Tests read some files edited here, but no string a test asserts changes ([design
 
 ## Progress
 
-- [ ] 1 — The sweep: code, tests and spec preambles
+- [x] 1 — The sweep: code, tests and spec preambles
 - [ ] 2 — `docs/` written from the payload
 - [ ] 3 — `CLAUDE.md` keeps only process
 - [ ] 4 — The group READMEs point at `docs/`
@@ -16,33 +16,33 @@ by its *before* text; line numbers are `2ccda2f`'s.
 
 ## 1 — The sweep: code, tests and spec preambles
 
-- [ ] 1.1 **HALT CHECK** — `cli.py` imports `wd14.py` at module scope, which S14's *after* rests on.
+- [x] 1.1 **HALT CHECK** — `cli.py` imports `wd14.py` at module scope, which S14's *after* rests on.
   Verify: `grep -n '^from isekai.boundary.wd14 import' isekai/interface/cli.py` prints one line.
-- [ ] 1.2 **HALT CHECK** — no test names `README.md`, `CLAUDE.md`, `docs/` or `openspec/`.
+- [x] 1.2 **HALT CHECK** — no test names `README.md`, `CLAUDE.md`, `docs/` or `openspec/`.
   Verify: `git grep -n -e README -e CLAUDE.md -e openspec -e 'docs/' -- 'tests/*.py'` prints only `tests/test_evaluate.py:708`.
-- [ ] 1.3 Apply S1, S2 and S3 to `isekai/pipeline/tagging.py`.
+- [x] 1.3 Apply S1, S2 and S3 to `isekai/pipeline/tagging.py`.
   Verify: `grep -n -e 'ships anyway' -e 'is not modified and is byte-identical' -e 'first producer in this repository' isekai/pipeline/tagging.py` prints nothing.
-- [ ] 1.4 Apply S4 and S5 to `isekai/interface/ui/batch.py`.
+- [x] 1.4 Apply S4 and S5 to `isekai/interface/ui/batch.py`.
   Verify: `grep -n -e '.hosted. block never produces' -e '.reopened. below' isekai/interface/ui/batch.py` prints nothing.
-- [ ] 1.5 Apply S6 and S7 to `isekai/foundation/run.py`, S8 to `isekai/foundation/flow.py`, S9 to `tests/test_flow.py`.
+- [x] 1.5 Apply S6 and S7 to `isekai/foundation/run.py`, S8 to `isekai/foundation/flow.py`, S9 to `tests/test_flow.py`.
   Verify: `grep -n -e 'The CLI did not return' -e 'sixth' isekai/foundation/run.py isekai/foundation/flow.py tests/test_flow.py` prints nothing.
-- [ ] 1.6 Apply S10 to `scripts/derive_field_map.py` and S11 to `tests/test_sheet_stage.py`.
+- [x] 1.6 Apply S10 to `scripts/derive_field_map.py` and S11 to `tests/test_sheet_stage.py`.
   Verify: `grep -n -e 'last one that reads it' -e 'only authored group' -e 'carries that file' -e 'test_isolation' scripts/derive_field_map.py tests/test_sheet_stage.py` prints nothing.
-- [ ] 1.7 Apply S12 to `pyproject.toml`.
+- [x] 1.7 Apply S12 to `pyproject.toml`.
   Verify: `grep -n 'six endpoints' pyproject.toml` prints nothing.
-- [ ] 1.8 Apply S13–S17: `tests/test_pipeline_cli.py`, `tests/test_wd14.py`, `isekai/boundary/wd14.py`, `isekai/README.md`, `isekai/boundary/README.md`.
+- [x] 1.8 Apply S13–S17: `tests/test_pipeline_cli.py`, `tests/test_wd14.py`, `isekai/boundary/wd14.py`, `isekai/README.md`, `isekai/boundary/README.md`.
   Verify: `grep -n -e 'the only thing that would' -e 'the only check' -e 'the only module in the package' -e 'the only one in the package' tests/test_pipeline_cli.py tests/test_wd14.py isekai/boundary/wd14.py isekai/README.md isekai/boundary/README.md` prints nothing.
-- [ ] 1.9 Apply S18 to `isekai/README.md`.
+- [x] 1.9 Apply S18 to `isekai/README.md`.
   Verify: `grep -n 'Every .__init__.py. here holds' isekai/README.md` prints nothing.
-- [ ] 1.10 Apply S19 to `isekai/shared/vocabulary.py`'s module docstring.
+- [x] 1.10 Apply S19 to `isekai/shared/vocabulary.py`'s module docstring.
   Verify: `grep -n -i -e 'cascade' -e 'curated' -e 'four-pass' -e 'still ships' isekai/shared/vocabulary.py` prints nothing.
-- [ ] 1.11 Apply S20 to `isekai/shared/image.py`, S21 to `isekai/pipeline/generate.py`, S22 to `isekai/interface/run_view.py`, S23 to `isekai/pipeline/review.py`.
+- [x] 1.11 Apply S20 to `isekai/shared/image.py`, S21 to `isekai/pipeline/generate.py`, S22 to `isekai/interface/run_view.py`, S23 to `isekai/pipeline/review.py`.
   Verify: `grep -n -e 'carries no imaging' -e 'The four below' -e 'before a review UI exists' -e 'would move 26' isekai/shared/image.py isekai/pipeline/generate.py isekai/interface/run_view.py isekai/pipeline/review.py` prints nothing.
-- [ ] 1.12 Apply S24–S27 to `isekai/interface/cli.py`.
+- [x] 1.12 Apply S24–S27 to `isekai/interface/cli.py`.
   Verify: `grep -n -e 'prose in, a sheet' -e 'sort a caption' -e 'photograph -> prose' -e 'anything downstream reads' -e 'descriptive prose' isekai/interface/cli.py` prints nothing.
-- [ ] 1.13 Apply S28, S29 and S30 to the `## Purpose` preambles of `comfy-transport`, `model-provisioning` and `sheet` under `openspec/specs/`.
+- [x] 1.13 Apply S28, S29 and S30 to the `## Purpose` preambles of `comfy-transport`, `model-provisioning` and `sheet` under `openspec/specs/`.
   Verify: `grep -n -e 'stdlib-only' -e 'turning descriptive prose' openspec/specs/comfy-transport/spec.md openspec/specs/model-provisioning/spec.md openspec/specs/sheet/spec.md` prints nothing.
-- [ ] 1.14 Leave every requirement body to the delta, per [D2](design.md#d2).
+- [x] 1.14 Leave every requirement body to the delta, per [D2](design.md#d2).
   Verify: `git diff --name-only main -- openspec/specs/` prints `openspec/specs/comfy-transport/spec.md`, `openspec/specs/model-provisioning/spec.md` and `openspec/specs/sheet/spec.md`, and nothing else.
 
 ## 2 — `docs/` written from the payload
