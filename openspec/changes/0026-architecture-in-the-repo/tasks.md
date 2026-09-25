@@ -6,7 +6,7 @@ Tests read some files edited here, but no string a test asserts changes ([design
 ## Progress
 
 - [x] 1 — The sweep: code, tests and spec preambles
-- [ ] 2 — `docs/` written from the payload
+- [x] 2 — `docs/` written from the payload
 - [ ] 3 — `CLAUDE.md` keeps only process
 - [ ] 4 — The group READMEs point at `docs/`
 - [ ] 5 — `README.md` stops restating the architecture
@@ -47,31 +47,31 @@ by its *before* text; line numbers are `2ccda2f`'s.
 
 ## 2 — `docs/` written from the payload
 
-- [ ] 2.1 **HALT CHECK** — `docs/` holds only `docs/arc/`, and `docs/arc/` holds only `modules.md` and `data-flow.md`, which [D4](design.md#d4) moves.
+- [x] 2.1 **HALT CHECK** — `docs/` holds only `docs/arc/`, and `docs/arc/` holds only `modules.md` and `data-flow.md`, which [D4](design.md#d4) moves.
   Verify: `find docs -type f | sort` prints `docs/arc/data-flow.md` and `docs/arc/modules.md`, and nothing else.
-- [ ] 2.2 `git mv` `docs/arc/modules.md` and `docs/arc/data-flow.md` into `docs/`, and remove `docs/arc/`, per [D4](design.md#d4).
+- [x] 2.2 `git mv` `docs/arc/modules.md` and `docs/arc/data-flow.md` into `docs/`, and remove `docs/arc/`, per [D4](design.md#d4).
   Verify: `test ! -e docs/arc && test -f docs/modules.md && test -f docs/data-flow.md && echo ok` prints `ok`.
-- [ ] 2.3 Apply S31–S34 to `docs/data-flow.md`.
+- [x] 2.3 Apply S31–S34 to `docs/data-flow.md`.
   Verify: `grep -n -e 'verbs outside the stages' -e 'the order is the failure isolation' -e 'may simply not be' -e 'the only producer here' docs/data-flow.md` prints nothing.
-- [ ] 2.4 Apply S35, S36, S47, S49, S50 and S51 to `docs/modules.md`.
+- [x] 2.4 Apply S35, S36, S47, S49, S50 and S51 to `docs/modules.md`.
   Verify: `grep -n -e 'Move any of those imports' -e 'the only thing holding' -e 'would be a lie' -e 'and not a layer' -e 'single named module' -e 'reaches down into' -e 'allowed to know about' docs/modules.md` prints nothing.
-- [ ] 2.5 Add `## How the components interact` to `docs/modules.md`, stating the facts [D5](design.md#d5) lists.
+- [x] 2.5 Add `## How the components interact` to `docs/modules.md`, stating the facts [D5](design.md#d5) lists.
   Verify: `grep -c -e '^## How the components interact' -e 'wiring' -e 'StageFailure' docs/modules.md` prints a number above `2`.
-- [ ] 2.6 Write `docs/principles.md` from `payload/principles.md` under the prose rules, meaning unchanged, each principle keeping its title ([D3](design.md#d3)).
+- [x] 2.6 Write `docs/principles.md` from `payload/principles.md` under the prose rules, meaning unchanged, each principle keeping its title ([D3](design.md#d3)).
   Verify: `diff <(grep '^### ' docs/principles.md) <(grep '^### ' openspec/changes/0026-architecture-in-the-repo/payload/principles.md)` prints nothing.
-- [ ] 2.7 Apply S48 to `isekai/README.md`, so it no longer contradicts `docs/principles.md`.
+- [x] 2.7 Apply S48 to `isekai/README.md`, so it no longer contradicts `docs/principles.md`.
   Verify: `grep -n -e 'not a layering rule' -e 'as a stack would be' isekai/README.md` prints nothing.
-- [ ] 2.8 Write `docs/decisions.md` from `payload/decisions.md` the same way, each decision keeping its id and title.
+- [x] 2.8 Write `docs/decisions.md` from `payload/decisions.md` the same way, each decision keeping its id and title.
   Verify: `diff <(grep '^### D' docs/decisions.md | grep -v -e '^### D29' -e '^### D30') <(grep '^### D' openspec/changes/0026-architecture-in-the-repo/payload/decisions.md)` prints nothing.
-- [ ] 2.9 Add docs D29 and docs D30 to `docs/decisions.md` under *The product*, after docs D0, with the text [D7](design.md#d7) gives.
+- [x] 2.9 Add docs D29 and docs D30 to `docs/decisions.md` under *The product*, after docs D0, with the text [D7](design.md#d7) gives.
   Verify: `grep -c -e '^### D29 · What .summon. preserves' -e '^### D30 · A public repository, for learning' docs/decisions.md` prints `2`.
-- [ ] 2.10 Write `docs/README.md` from `payload/overview.md` the same way.
+- [x] 2.10 Write `docs/README.md` from `payload/overview.md` the same way.
   Verify: `grep -o -e '(principles.md)' -e '(decisions.md)' -e '(modules.md)' -e '(data-flow.md)' docs/README.md | sort -u` prints `(data-flow.md)`, `(decisions.md)`, `(modules.md)` and `(principles.md)`.
-- [ ] 2.11 Re-point every `docs/arc/` link: `CLAUDE.md`, `README.md:374`, `isekai/README.md:34`.
+- [x] 2.11 Re-point every `docs/arc/` link: `CLAUDE.md`, `README.md:374`, `isekai/README.md:34`.
   Verify: `git grep -n 'docs/arc' -- ':!CHANGELOG.md' ':!openspec/changes/archive' ':!openspec/changes/0026-architecture-in-the-repo'` prints nothing.
-- [ ] 2.12 Every relative link in `docs/` resolves.
+- [x] 2.12 Every relative link in `docs/` resolves.
   Verify: `cd docs && grep -oh '](\([a-z-]*\.md\)' *.md | sed 's/^](//' | sort -u | while read p; do test -f "$p" || echo "broken $p"; done` prints nothing.
-- [ ] 2.13 `docs/` names neither the operator's notebook nor a host path.
+- [x] 2.13 `docs/` names neither the operator's notebook nor a host path.
   Verify: `grep -rn -i -e 'vault' -e 'notebook' -e '/Users/' -e 'architecture-v' docs/` prints nothing.
   ⚠ Already passes at `2ccda2f`: a guard, not proof of the work.
 

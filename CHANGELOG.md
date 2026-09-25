@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The sweep: code, tests and three spec preambles say what the code does.** Docstrings, comments,
   the `caption` and `sheet` help text, the parser's description and `pyproject.toml` lose retired
   mechanisms, *"the only"* claims and counts (`0026` design D1, S1–S30). No behaviour changes.
+- **`docs/` holds the architecture.** `principles.md`, `decisions.md` (with D29 and D30, the product
+  scope) and `README.md` are written from `0026`'s payload; `docs/arc/` is flattened into `docs/`, its
+  false claims corrected, and `modules.md` gains how the components interact.
 
 ## [0.22.3] - 2026-09-23
 

@@ -10,12 +10,11 @@ browser. Everything before `generate` is free and local; only the render costs m
 
 > **That paragraph is the ceiling, and the ceiling is the point.** A fuller account — the verbs, what
 > each stage reads and writes, the run layout, the identity mechanisms and their dials — belongs in
-> [`docs/arc/data-flow.md`](docs/arc/data-flow.md), and the module graph in
-> [`docs/arc/modules.md`](docs/arc/modules.md). **This file is instructions for an agent, not a
-> description of the system.** A document that does both grows forever, because every version adds to
+> [`docs/data-flow.md`](docs/data-flow.md), and the module graph in [`docs/modules.md`](docs/modules.md).
+> **This file is instructions for an agent, not a description of the system.** A document that does both grows forever, because every version adds to
 > the architecture: that is exactly how the `## The path` section this version deleted came to be a
 > quarter of the file. When a paragraph here starts explaining how something works rather than what to
-> do about it, it belongs in `docs/arc/`.
+> do about it, it belongs in `docs/`.
 
 **The method this repo runs is OpenSpec SDD** — work is defined as a change before it is built, the
 living spec is test-backed, and a release folds one into the other. `## How a change is cut here`,
@@ -105,7 +104,7 @@ and nowhere else. In brief, the load-bearing seams are:
 - **The run owns the layout, not the stages**, and **no stage imports another.** The stage directory
   names live in `isekai/foundation/run.py` and the `Schema` type in `isekai/foundation/flow.py`. The
   layout is **input above, flow below**, so adding a flow adds one subtree and no flow can read
-  another's artifacts; the directories themselves are drawn in `docs/arc/data-flow.md`.
+  another's artifacts; the directories themselves are drawn in `docs/data-flow.md`.
 - **An Option-modified keybinding matches `event.code` and calls `preventDefault()`, because Option
   is a character-producing modifier on macOS.** Not a layout rule and not hygiene: on plain US ABC,
   `Option+Space` emits U+00A0 and `Option+F` emits `ƒ`, so a handler matching `event.key` inserts an
@@ -189,7 +188,7 @@ maintained by hand and reviewed, not enforced; that gap is known and open.
 
 **The file-by-file inventory is not here.** Each group directory carries its own `README.md` naming its
 files and who imports them, `isekai/README.md` sits over them, and the graph is drawn once in
-`docs/arc/modules.md`. Duplicating any of that here is how this section grew the last time.
+`docs/modules.md`. Duplicating any of that here is how this section grew the last time.
 
 - **`isekai/__main__.py`** is the only entry point — the path `runpy` resolves for
   `python -m isekai <verb>`, and a shim over `interface/cli.py`. **A group's `__init__.py` holds a
@@ -259,7 +258,7 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
 ## Rules the render path is under
 
 **These are the ones an agent can break.** What the pipeline *is* — the verbs, what each stage reads
-and writes, the run layout, the identity mechanisms and their dials — is `docs/arc/data-flow.md`'s,
+and writes, the run layout, the identity mechanisms and their dials — is `docs/data-flow.md`'s,
 and is not restated here.
 
 - **Only an approved artifact is ever rendered.** The prompts are assembled per run from a sheet a
@@ -274,7 +273,7 @@ and is not restated here.
   `isekai/shared/image.py` and written into the node the manifest names, never guessed at by a node.
 - **Stage ① is one verb.** `caption` writes prose, the local tag list and the hosted tag list in a
   single invocation, in that order, and there is no `isekai tags`. The ordering is the failure
-  isolation and is not free to change — `docs/arc/data-flow.md` says why.
+  isolation and is not free to change — `docs/data-flow.md` says why.
 - **`review` and `approve` stay fully working verbs**, deprecated as *guidance* and never as code.
   Deleting the hand path would make stage ③ a single point of failure for the whole pipeline.
 - **Ollama and node are system dependencies, and both refuse rather than assuming.** Ollama is needed

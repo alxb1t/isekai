@@ -28,11 +28,13 @@ no code, so a module is imported by its own path and a group never becomes a pla
 two modules can reach each other through. `interface/ui/__init__.py` is a
 subpackage's front door, not a group's, and holds `serve()`.
 
-**A group is a filing decision, not a layering rule.** The *module* graph has no
-cycles and never has; the *group* graph does, and drawing it as a stack would be a
-lie.
+**The layers are the rule** ([principles](../docs/principles.md#the-code-is-layered)):
+each group but `evaluation` is a layer, imports point down, and nothing in the
+package imports `evaluation`. The module graph has no cycles. Today's upward
+imports, group cycles, and imports from `shared` and `boundary` into `evaluation`
+are known breaks, removed by the change that moves those imports.
 
-**The graph itself is drawn in [`docs/arc/modules.md`](../docs/arc/modules.md)**,
+**The graph itself is drawn in [`docs/modules.md`](../docs/modules.md)**,
 and only there — every cross-group edge, which of them are lazy, the subpackage
 cycles and why each one exists. It is one drawing in one place because two
 drawings is how the one that used to sit here acquired its errors: a module-level
