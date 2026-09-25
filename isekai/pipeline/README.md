@@ -38,5 +38,6 @@ at least once; a list of names cannot.
 | `review.py` | `interface/cli.py`, `interface/ui/app.py`, `interface/ui/batch.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `generate.py` | `interface/cli.py`, `interface/run_view.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_run_view.py` |
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../../docs/decisions.md)'s; neither restates the other.

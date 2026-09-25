@@ -55,5 +55,6 @@ them to the directory holding `pyproject.toml`. The falsification twin is
 of them reduce to the same wrong path and parametrizing would advertise
 per-anchor coverage that does not exist.
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../docs/decisions.md)'s; neither restates the other.

@@ -36,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`CLAUDE.md` keeps only process and imports `docs/principles.md`.** Its design rules move to `docs/`;
   the change id is the next free number; it states what a patch may hold, and the notebook and demo
   subject rules it did not carry (`0026` design D8).
+- **The group READMEs point at `docs/principles.md` and `docs/decisions.md`** instead of *"the design
+  record"*, which named nothing in the repository (`0026` design D9).
 
 ## [0.22.3] - 2026-09-23
 

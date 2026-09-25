@@ -53,5 +53,6 @@ at least once; a list of names cannot.
 > would catch one being reintroduced. What makes that visible is that there is no
 > registry to add an entry to: a second reader is a second adapter, in review.
 
-> Files and importers only. What a seam *is*, and what could replace it, is the
-> design record's; neither restates the other.
+> Files and importers only. What a component *is* is
+> [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are
+> [`docs/decisions.md`](../../docs/decisions.md)'s; neither restates the other.

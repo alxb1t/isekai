@@ -8,7 +8,7 @@ Tests read some files edited here, but no string a test asserts changes ([design
 - [x] 1 — The sweep: code, tests and spec preambles
 - [x] 2 — `docs/` written from the payload
 - [x] 3 — `CLAUDE.md` keeps only process
-- [ ] 4 — The group READMEs point at `docs/`
+- [x] 4 — The group READMEs point at `docs/`
 - [ ] 5 — `README.md` stops restating the architecture
 
 Each site `S<n>` is a row of [D1](design.md#d1): its file, its *before* text and its *after*. Find a site
@@ -98,11 +98,11 @@ by its *before* text; line numbers are `2ccda2f`'s.
 
 ## 4 — The group READMEs point at `docs/`
 
-- [ ] 4.1 Replace the closing line of `isekai/README.md` and each group's `README.md` — `boundary`, `evaluation`, `foundation`, `interface`, `pipeline`, `shared` — per [D9](design.md#d9).
+- [x] 4.1 Replace the closing line of `isekai/README.md` and each group's `README.md` — `boundary`, `evaluation`, `foundation`, `interface`, `pipeline`, `shared` — per [D9](design.md#d9).
   Verify: `grep -rn "design record's" isekai/` prints nothing.
-- [ ] 4.2 Each of those READMEs links `docs/principles.md` and `docs/decisions.md`.
+- [x] 4.2 Each of those READMEs links `docs/principles.md` and `docs/decisions.md`.
   Verify: `grep -L -e 'docs/principles.md' isekai/README.md isekai/*/README.md; grep -L -e 'docs/decisions.md' isekai/README.md isekai/*/README.md` prints nothing.
-- [ ] 4.3 Every `docs/` link in those READMEs resolves.
+- [x] 4.3 Every `docs/` link in those READMEs resolves.
   Verify: `for f in isekai/README.md isekai/*/README.md; do d=$(dirname "$f"); grep -o '([./]*docs/[a-z-]*\.md' "$f" | tr -d '(' | while read p; do test -f "$d/$p" || echo "broken $f $p"; done; done` prints nothing.
   ⚠ Already passes at `2ccda2f`: a guard, not proof of the work.
 
