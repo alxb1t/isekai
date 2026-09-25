@@ -1,12 +1,8 @@
 # Local config & secrets — NEVER commit
 .env
 
-# MinionsFactory: run artifacts out, gate config in.
-# The glob must be `.minions/*`, not `.minions/` — git cannot re-include a
-# file whose parent directory is itself excluded, so the negation below
-# would never fire.
-.minions/*
-!.minions/minions.toml
+# MinionsFactory's run artefacts, all of them local.
+.minions/
 
 # Written per-machine by Claude Code; contains this operator's absolute paths.
 # CLAUDE.md makes "no absolute vault path in this public repo" an invariant, so

@@ -5,7 +5,7 @@ before the moves they hold ([D13](design.md#d13)).
 
 ## Progress
 
-- [ ] 1 — Declare once: the gate and the encoder window
+- [x] 1 — Declare once: the gate and the encoder window
 - [ ] 2 — The checks: layers, held-by names, the vocabulary
 - [ ] 3 — `foundation` imports nothing above it
 - [ ] 4 — Pin verification moves into `boundary`
@@ -17,19 +17,19 @@ Line numbers are `9b3fca2`'s; find each site by the text it names.
 
 ## 1 — Declare once: the gate and the encoder window
 
-- [ ] 1.1 **HALT CHECK** — `Makefile` already runs the gate's whole list.
+- [x] 1.1 **HALT CHECK** — `Makefile` already runs the gate's whole list.
   Verify: `make -n gate | wc -l | tr -d ' '` prints `6`.
-- [ ] 1.2 **HALT CHECK** — nothing reads `.minions/minions.toml`; only prose names it.
+- [x] 1.2 **HALT CHECK** — nothing reads `.minions/minions.toml`; only prose names it.
   Verify: `git grep -l 'minions.toml' -- ':!CHANGELOG.md' ':!openspec/changes' | sort | tr '\n' ' '` prints `.github/workflows/ci.yml .gitignore CLAUDE.md Makefile README.md scripts/typecheck_ui.sh `.
-- [ ] 1.3 `git rm .minions/minions.toml`; rewrite `.gitignore:4-9` to ignore `.minions/` whole, per [D1](design.md#d1).
+- [x] 1.3 `git rm .minions/minions.toml`; rewrite `.gitignore:4-9` to ignore `.minions/` whole, per [D1](design.md#d1).
   Verify: `test ! -e .minions/minions.toml && git check-ignore -q .minions/minions.toml && echo ok` prints `ok`.
-- [ ] 1.4 Move `CLAUDE.md:42-48`'s note on each command into `Makefile` as a comment above it, and rewrite `Makefile:1-6`'s header, per [D1](design.md#d1).
+- [x] 1.4 Move `CLAUDE.md:42-48`'s note on each command into `Makefile` as a comment above it, and rewrite `Makefile:1-6`'s header, per [D1](design.md#d1).
   Verify: `grep -c -e 'from the tracked lock' -e 'refuses by name' Makefile` prints `2`, and `grep -c minions Makefile` prints `0`.
-- [ ] 1.5 Rewrite the gate's other mentions per [D1](design.md#d1)'s table: `CLAUDE.md:38-59` and `:168-170`, `README.md:289-310` and `:352`, `.github/workflows/ci.yml:41-44`, `scripts/typecheck_ui.sh:7-11`, `pyproject.toml:57`.
+- [x] 1.5 Rewrite the gate's other mentions per [D1](design.md#d1)'s table: `CLAUDE.md:38-59` and `:168-170`, `README.md:289-310` and `:352`, `.github/workflows/ci.yml:41-44`, `scripts/typecheck_ui.sh:7-11`, `pyproject.toml:57`.
   Verify: `git grep -n -e 'minions.toml' -e 'gate. array' -e 'the array' -- ':!CHANGELOG.md' ':!openspec/changes' ':!isekai/boundary/wd14.py'` prints nothing.
-- [ ] 1.6 Add `"window": ENCODER_WINDOW` to `isekai/interface/ui/app.py`'s `_budget`, and `test_the_budget_carries_the_encoder_window` to `tests/test_ui_api.py`, per [D2](design.md#d2).
+- [x] 1.6 Add `"window": ENCODER_WINDOW` to `isekai/interface/ui/app.py`'s `_budget`, and `test_the_budget_carries_the_encoder_window` to `tests/test_ui_api.py`, per [D2](design.md#d2).
   Verify: `grep -c -e '"window": ENCODER_WINDOW' -e '^def test_the_budget_carries_the_encoder_window' isekai/interface/ui/app.py tests/test_ui_api.py | paste -sd' ' -` prints `isekai/interface/ui/app.py:1 tests/test_ui_api.py:1`.
-- [ ] 1.7 Read the window from the budget in `ui/src/types.ts`, `ui/src/components/TokenBudget.vue`, `ui/src/components/RunManifest.vue` and `ui/src/ReviewApp.vue`, per [D2](design.md#d2).
+- [x] 1.7 Read the window from the budget in `ui/src/types.ts`, `ui/src/components/TokenBudget.vue`, `ui/src/components/RunManifest.vue` and `ui/src/ReviewApp.vue`, per [D2](design.md#d2).
   Verify: `grep -rn ENCODER_WINDOW ui/src` prints nothing, and `grep -c 'window: number' ui/src/types.ts` prints `2`.
 
 ## 2 — The checks: layers, held-by names, the vocabulary

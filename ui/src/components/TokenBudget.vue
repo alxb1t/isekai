@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ENCODER_WINDOW, type Budget } from '../types'
+import type { Budget } from '../types'
 
 /* The total, the bar, and where the weight sits.
 
@@ -15,11 +15,11 @@ import { ENCODER_WINDOW, type Budget } from '../types'
    reconciles with the per-row column instead of disagreeing with it. */
 const props = defineProps<{ budget: Budget | null }>()
 
-const over = computed(() => (props.budget?.total ?? 0) > ENCODER_WINDOW)
+const over = computed(() => props.budget !== null && props.budget.total > props.budget.window)
 
 const width = computed(() => {
   if (!props.budget) return 0
-  return Math.min(100, (props.budget.total / ENCODER_WINDOW) * 100)
+  return Math.min(100, (props.budget.total / props.budget.window) * 100)
 })
 
 const heaviest = computed(() => {
@@ -38,7 +38,7 @@ const heaviest = computed(() => {
     <span class="budget__total mono" :class="{ 'budget__total--over': over }">
       {{ budget ? budget.total : '—' }}
     </span>
-    <span class="budget__window mono"> / {{ ENCODER_WINDOW }} tokens</span>
+    <span class="budget__window mono"> / {{ budget ? budget.window : '—' }} tokens</span>
     <div class="budget__bar">
       <div
         class="budget__fill"

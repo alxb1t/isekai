@@ -54,7 +54,7 @@ dependencies = [
 # CI never installs this. The eval tests skip there and run on the operator's
 # machine, which is the same posture this repository already takes toward
 # diffusion quality: verified by eye on a pod, never in CI. This extra adds no
-# gate command -- and none of the commands in the array installs it, which is
+# gate command -- and none of the gate's commands installs it, which is
 # exactly the mechanism that used to strip the tagger and now cannot.
 #
 # **It names only what it adds.** `torch` and `transformers` -- StyleID publishes

@@ -236,6 +236,7 @@ async function openManifest(): Promise<void> {
         id: input.id,
         name: body.approved ?? '',
         tokens: body.budget.total,
+        window: body.budget.window,
         at: clock(body.approved_at) ?? '',
       } satisfies ApprovedSheet
     }),

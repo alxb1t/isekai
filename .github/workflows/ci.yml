@@ -38,9 +38,7 @@ jobs:
         run: npm ci
         working-directory: ui
 
-      # The gate is declared once, as the `gate` array in .minions/minions.toml,
-      # and mirrored by the root Makefile. CI invokes that mirror rather than
-      # keeping a third copy: these steps had already drifted, running
-      # `ruff format --check` and `ruff check` without the `.` the array names.
+      # The gate is the Makefile's `gate` target. CI runs it rather than keeping
+      # its own copy of the commands, which would drift.
       - name: Gate
         run: make gate

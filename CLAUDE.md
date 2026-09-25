@@ -35,28 +35,17 @@ run. `conjure` takes no photograph and makes no identity claim
 
 ---
 
-## The quality gate — this repo's six commands
+## The quality gate
 
-**These** are the commands this repo declares, in `.minions/minions.toml`'s `gate` array, in order:
+**The gate is `make gate`**, run from the repository root; `make -n gate` prints what it runs. The
+`Makefile` is its one declaration, and the notes on each command are the `Makefile`'s. CI
+(`.github/workflows/ci.yml`) runs `make gate` too.
 
-- `uv sync --locked` — environment, from the tracked lock; not a quality axis, hence first
-- `uv run ruff format --check .` — format, in check mode (a rewrite is not the check)
-- `uv run ruff check .` — lint
-- `uv run ty check` — strict types
-- `bash scripts/typecheck_ui.sh` — strict types, in the browser: `vue-tsc --noEmit` over `ui/`,
-  wrapped so a missing `ui/node_modules/` refuses by name rather than exiting 127
-- `uv run pytest` — tests
+Every command green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
 
-**The array is the one that is run, and there are three copies of it, not four.** `Makefile`'s `gate`
-target mirrors it and `README.md` lists it; CI (`.github/workflows/ci.yml`) **invokes that mirror** —
-`run: make gate` — rather than keeping a third copy, because its own steps had already drifted.
-Change the array, change the other two in the same commit.
-
-All six green, or the phase is not done. **Never weaken the gate to pass** — see the guardrails.
-
-Beyond the array, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
-That is a convention for those phases, not an entry in the array; adding it to one means adding it to the
-`Makefile` in the same commit.
+Beyond the gate, **image-as-code phases also run `bash -n` on shell scripts and `docker build --check`**.
+That is a convention for those phases, not part of the gate; adding it to the gate means adding it to the
+`Makefile`.
 
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
 Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
@@ -165,9 +154,7 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   read; a new artifact owes an entry.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
-- **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one
-  tracked file in it. `git check-ignore` reports the *directory* as not ignored precisely because of that
-  one file — always check a file path.
+- **`.minions/`** — MinionsFactory's run artefacts, gitignored whole.
 - **`.data/` holds everything a run produces or consumes, and is gitignored.** The reason is not
   tidiness. A run directory holds a *copy of the photograph* — that is what makes a run reconstructable
   from disk — so it contains personal photographs **by construction**. Under a top-level `runs/` the
