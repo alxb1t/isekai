@@ -30,7 +30,7 @@ The graph the rule is stated over is the one the repository ships under `flows/<
 single path fixed here. A flow is the unit that owns a graph, so a rule naming one file by hand would
 go stale the moment a second flow is added — and it would go stale silently, because a manifest check
 against a graph that is no longer rendered still passes. Stating it over the tracked flows keeps the
-check binding on whatever is actually rendered; while `summon-v1` is the only flow, that is its graph.
+check binding on whatever is actually rendered.
 
 #### Scenario: a model filename named in the graph has a manifest entry
 - **Key:** `model-provisioning:manifest-completeness:graph-filename-has-an-entry`

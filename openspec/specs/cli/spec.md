@@ -31,8 +31,8 @@ A pipeline that stops for a human cannot have a one-command surface, so it needs
 beside the single-command render surface rather than into it, so that the path in use at the time was
 not disturbed while the new one was unproven; that surface is deleted in this version, and what was a
 second entry point is now the only one. Subcommands under one parser rather than several scripts keeps
-argument handling in one place and the stdlib-only guard to a single target — which is the reason the
-shape survives its original justification.
+argument handling in one place and the entry point's import guard to a single target — which is the
+reason the shape survives its original justification.
 
 #### Scenario: the pipeline verbs are reachable as subcommands
 - **Key:** `cli:pipeline-surface:verbs-are-subcommands`
@@ -60,10 +60,10 @@ The system SHALL accept several run identifiers in one rendering invocation, SHA
 count of renders per photograph or an explicit list of seeds but not both, and SHALL default to one
 render per photograph.
 
-Reading and sorting are cheap and per-photograph; rendering is where the money is, and a boot costs
-roughly eight renders — so a single-photograph invocation is mostly overhead. Taking many identifiers
-at once is what lets one boot serve a batch. The default is one because the cheap option should be what
-happens when nothing is asked for.
+Reading and filling a sheet are cheap and per-photograph; rendering is where the money is, and a boot
+costs roughly eight renders — so a single-photograph invocation is mostly overhead. Taking many
+identifiers at once is what lets one boot serve a batch. The default is one because the cheap option
+should be what happens when nothing is asked for.
 
 #### Scenario: several photographs render in one invocation
 - **Key:** `cli:generate-signature:accepts-many-identifiers`

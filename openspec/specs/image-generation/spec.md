@@ -546,10 +546,11 @@ The system SHALL record a failure to reach an endpoint as transient rather than 
 assemble each selected flow independently, so that one flow whose sheet cannot be assembled does not
 prevent another from being assembled or rendered.
 
-A permanent record is never retried, so classifying a closed tunnel as one turns a network blip into a
-stage that refuses forever and can only be cleared by deleting an error record by hand. The kinds exist
-to separate what will fail again from what might not, and a transport error is the clearest case of the
-second.
+The kinds separate what will fail again from what might not, and a transport error is the clearest case
+of the second: a transient record tells the operator that trying again may succeed. At the rendering
+stage the kind does not change what the next invocation does. That stage's budget is one attempt, so a
+record of either kind refuses the next render until the operator deletes it — a paid stage is never
+retried on its own.
 
 Assembling every selected flow in one expression makes the first failure the invocation's failure. The
 batch-over-photographs rule already collects one refusal per photograph and carries on; a flow is the
@@ -562,7 +563,7 @@ means repairing it is not enough.
 - **Layers:** unit
 - **WHEN** a render fails because the endpoint cannot be reached
 - **THEN** the failure record names the failure as transient
-- **AND** a later invocation of that stage attempts the work rather than refusing on the record
+- **AND** a later invocation of that stage refuses on the record, naming it, until the record is deleted
 
 #### Scenario: one flow's malformed sheet does not cost its siblings their assembly
 - **Key:** `image-generation:assembly:a-bad-sheet-is-per-flow`

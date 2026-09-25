@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.4] - 2026-09-25
+
 ### Changed
 
 - **The sweep: code, tests and spec preambles say what the code does.** Docstrings, comments,
