@@ -7,8 +7,8 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 > **Status: released.** One render path: a **staged pipeline** —
 > `python -m isekai caption | sheet | review | approve | generate | show | ui` — which reads a
 > photograph into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
-> human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary — and renders from
-> it on a stack provisioned from a pinned, checksummed manifest.
+> human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
+> and renders from it on a stack provisioned from a pinned, checksummed manifest.
 > Development follows OpenSpec SDD, and **`openspec/` is authoritative** for what the code does and
 > for what is being built next — this banner deliberately names no version, because a forward
 > reference here is one reordering away from being wrong.
@@ -41,8 +41,7 @@ learning** are the point.
   immutable revision and verified by SHA-256 before anything loads it. The volume is
   **namespaced per project**, so a volume shared with another project has no shared files.
 - **Interface:** a headless CLI (`python -m isekai`) that drives ComfyUI over its API. Its
-  import rule is [D20](docs/decisions.md#d20--the-entry-point-loads-no-third-party-package), which is why `isekai show` works on a checkout that has provisioned
-  nothing.
+  import rule is [docs D20](docs/decisions.md#d20--the-entry-point-loads-no-third-party-package).
 
 ```
 Local (your machine)                          RunPod
@@ -96,11 +95,12 @@ python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
 
 One verb, and it writes and reports each artifact in order: the prose, then a scored tag list from the
 local WD14 tagger, then a raw one from the hosted model. **The local list is what fills the sheet**, so it
-needs `bash scripts/download_models.sh scripts/vocabulary.json` to have been run. If Ollama is not
-running, `caption` refuses the photograph at the prose, before either list; the hosted list alone is
-absent only when its own call failed. The prose is a reading aid with no machine consumer. Neither
-list is narrowed on disk; the review surface shows the WD14 list, and the hosted list filtered to what
-the vocabulary carries.
+needs `bash scripts/download_models.sh scripts/vocabulary.json` to have been run.
+
+If Ollama is not running, `caption` refuses the photograph at the prose, before either list; if only
+the hosted list is missing, its own call failed. The prose is a reading aid with no machine consumer.
+Neither list is narrowed on disk; the review surface shows the WD14 list, and the hosted list filtered
+to what the vocabulary carries.
 
 `--flow` is required on every stage verb. A stage cannot act without knowing which flow asked, because
 the flow supplies the briefing it reads and the schema it fills against.

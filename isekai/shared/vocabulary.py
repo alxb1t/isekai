@@ -1,8 +1,7 @@
 """The canonical tag vocabulary: a pinned tag list and its post counts.
 
-**The artifact is a tag list.** The vocabulary -- general Danbooru tags with
-their post counts -- is provisioned from a pinned, digested manifest and is
-swappable by pointing that manifest somewhere else.
+The list -- general Danbooru tags -- is provisioned from a pinned, digested
+manifest and is swappable by pointing that manifest somewhere else.
 
 This file holds `normalise()`, the one spelling every lookup reads;
 `Vocabulary`, the list with its counts and the one ranking rule; `read_tags()`,

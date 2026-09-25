@@ -32,10 +32,10 @@ import time:
                               is what hid it before
 ```
 
-**A lazy edge is not a weaker edge, it is a different one.** The `-S` guard goes
-red when a chain of module-scope imports from the entry point reaches a wheel. The
-lazy edges above are between this package's own modules and reach no wheel, so
-moving one leaves the guard green; review holds them.
+**Review holds the lazy edges; the `-S` guard does not.** The guard goes red when
+a chain of module-scope imports from the entry point reaches a wheel. The lazy
+edges above are between this package's own modules and reach no wheel, so moving
+one to module scope leaves the guard green.
 
 ## The cycles, and why each one exists
 
@@ -87,10 +87,10 @@ Rules the graph is holding rather than describing:
   `evaluation/eval_backends.py`, which also reaches `numpy`, `Pillow` and
   `onnxruntime` (`_numpy()`, `_pil()`, `OnnxSession.__init__`); the tagger's stack
   from `boundary/wd14.py`. The mechanisms differ, and the difference matters to
-  anyone reading this as a rule to apply. `eval_backends.py` and `wd14.py` reach theirs by an
-  `import_module` call **inside a function**, so the module that reaches them
-  imports cleanly without the wheel. `app.py` does not: it imports `uvicorn` and
-  `fastapi` at module scope, and the laziness sits one level up —
+  anyone reading this as a rule to apply. `eval_backends.py` and `wd14.py` reach
+  theirs by an `import_module` call **inside a function**, so the module that
+  reaches them imports cleanly without the wheel. `app.py` does not: it imports
+  `uvicorn` and `fastapi` at module scope, and the laziness sits one level up —
   `interface/ui/__init__.py`'s `serve()` imports `app.py` inside the function,
   and nothing else imports `app.py` outside the suite.
 

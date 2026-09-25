@@ -77,8 +77,8 @@ field. No model decides a sheet.**
 
 **JoyCaption reads the photograph and WD14 tags it, both on this machine. No hosted provider.**
 
-- **Why:** [D0](#d0--self-hosted-open-source-open-models) — and the sheet needs nothing a closed model offered: the router places 73–77% of the
-  tags with the local tagger and the table alone.
+- **Why:** [D0](#d0--self-hosted-open-source-open-models) — and the sheet needs nothing a closed
+  model offered: the router places 73–77% of the tags with the local tagger and the table alone.
 - **Made by:** `0022`.
 
 ### D6 · Ollama at a fixed local address
@@ -209,8 +209,8 @@ root inside the repository must sit under `.data/`; one outside it may sit anywh
 
 **`wiring.py` builds the components, and the CLI and the review UI both use it.**
 
-- **Why:** the runs-root check ([D18](#d18--runs-stay-out-of-what-git-tracks)) and the choice of reader, tagger and transport happen in one place,
-  so neither front end can skip them.
+- **Why:** the runs-root check ([D18](#d18--runs-stay-out-of-what-git-tracks)) and the choice of
+  reader, tagger and transport happen in one place, so neither front end can skip them.
 - **Made by:** `0015`, `0018`.
 
 ### D20 · The entry point loads no third-party package

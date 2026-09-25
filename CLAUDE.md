@@ -13,7 +13,7 @@ browser. Everything before `generate` is free and local; only the render costs m
 > [`docs/data-flow.md`](docs/data-flow.md), and the module graph in [`docs/modules.md`](docs/modules.md).
 > **This file is instructions for an agent, not a description of the system.** A document that does
 > both grows forever, because every version adds to the architecture: that is exactly how the
-> `## The path` section this version deleted came to be a quarter of the file. When a paragraph here
+> `## The path` section a past version deleted came to be a quarter of the file. When a paragraph here
 > starts explaining how something works rather than what to do about it, it belongs in `docs/`.
 
 **The method this repo runs is OpenSpec SDD** — work is defined as a change before it is built, the
@@ -25,8 +25,7 @@ in particular.
 run. `conjure` takes no photograph and makes no identity claim
 ([docs D10](docs/decisions.md#d10--the-face-and-the-pose-are-carried-by-the-graph)).
 
-**The principles are imported below, so every session has them.** The choices in force are
-[`docs/decisions.md`](docs/decisions.md)'s — read it before changing anything it decides.
+**The principles are imported below, so every session has them.**
 
 @docs/principles.md
 
@@ -98,8 +97,7 @@ plus the tracked `.openspec.yaml` where one is needed. A change may carry a fift
    the id rule below is not one the CLI knows. The directory is created directly.
    The id is `<digits>-<lowercase-slug>`, and the digits are **the next free number**, zero-padded
    to four — higher than every id under `openspec/changes/` and its `archive/`, for a minor and a
-   patch alike. (`0001-mf-standard` predates all of this and keeps its id — an id is never renamed
-   once commits carry it as a trailer.)
+   patch alike. An id is never renamed once commits carry it as a trailer.
 3. **Author** each artifact against `openspec instructions <proposal|specs|design|tasks> --change
    <NNNN-slug>`, one at a time, fetching each immediately before writing it. `proposal.md` additionally opens with `version: vX.Y`
    frontmatter — **the CLI neither emits nor checks that key; it is on the author.**
@@ -159,13 +157,12 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
 
 - **`flows/<id>/`** — what a flow holds and how it is named are
   [docs D14](docs/decisions.md#d14--a-flow-is-one-flat-directory) and
-  [docs D15](docs/decisions.md#d15--a-flow-is-named-for-what-it-is); why it is frozen is the principle
-  *Everything that shapes an output is pinned*. **Adding or re-pinning a flow** costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md`
-  entry carrying its digest — the designed price of the freeze. A re-pin states what moved; a test
-  fails on any pinned digest no entry carries. The comment above `PINNED` states the rule, never its
-  history.
-- **A derived file** is the principle *Configuration is declared*'s. `eval_licences.md` records each
-  evaluator artifact's licence with the URL and the date it was read; a new artifact owes an entry.
+  [docs D15](docs/decisions.md#d15--a-flow-is-named-for-what-it-is). **Adding or re-pinning a flow**
+  costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry carrying its digest —
+  the designed price of the freeze. A re-pin states what moved, and a test fails on any pinned digest
+  no entry carries. The comment above `PINNED` states the rule, never its history.
+- **`eval_licences.md`** records each evaluator artifact's licence with the URL and the date it was
+  read; a new artifact owes an entry.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — run artefacts, **gitignored**; `minions.toml`, the gate command list, is the one
@@ -208,8 +205,7 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
 
 The rules every component follows are [`docs/principles.md`](docs/principles.md)'s, imported above; the
 choices in force are [`docs/decisions.md`](docs/decisions.md)'s. **Read both before changing anything
-they decide.** What the code is today — the module graph, the verbs, the run layout — is
-[`docs/modules.md`](docs/modules.md)'s and [`docs/data-flow.md`](docs/data-flow.md)'s.
+they decide.**
 
 ---
 
@@ -225,7 +221,8 @@ they decide.** What the code is today — the module graph, the verbs, the run l
 - **Deps minimal + human-gated.** The declared list is short and every entry is on the path of a verb
   a run actually takes. Any new dependency — argue for it and **wait for approval** before installing.
   pytest / ruff / ty stay dev-only. **A new one is an import-graph question as well as a supply-chain
-  one**: reach it from inside the verb that needs it, or the `-S` guard fails.
+  one**: reach it from inside the verb that needs it, or the `-S` guard in `tests/test_pipeline_cli.py`
+  fails.
 - **Never weaken the gate to pass.** A deleted or skipped test, a blanket suppression, a loosened config —
   each is a *plan* problem, not a coding shortcut. **Halt and say so.**
 - **State lives on disk.** Reconstruct "where are we" from the active change's `tasks.md` + git — never

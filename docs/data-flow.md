@@ -36,11 +36,11 @@ nothing — it writes no file and reaches no model.
 
 Every stage verb takes `--flow`, required and repeatable, because the flow
 supplies the briefing a stage reads, the schema it fills against and the
-directory it writes into. `show` and `ui`, which are not stage verbs, each differ,
-and in different directions: `show` takes no `--flow` at all, because it reports every
-flow the run already holds and so names none by design; `ui`'s is required and
-exactly one, because the surface shows a single schema's fields in a fixed order
-and a second flow would be a second page.
+directory it writes into. `show` and `ui`, which are not stage verbs, each
+differ, and in different directions: `show` takes no `--flow` at all, because it
+reports every flow the run already holds and so names none by design; `ui`'s is
+required and exactly one, because the surface shows a single schema's fields in a
+fixed order and a second flow would be a second page.
 
 ## What a reader needs first
 
@@ -53,17 +53,16 @@ sheet reads the WD14 list now, so a prose refusal — Ollama unreachable — sto
 sheet's input too ([D1](decisions.md#d1--stage--is-one-verb)).
 
 The local WD14 tagger goes second because it is deterministic and fails only on a
-missing or corrupt file. The hosted tagger goes last because it is the one with a
-port, a timeout and a retry budget. It is still a single verb: there is no
+missing or corrupt file. The hosted tagger goes last because it is the tagger with
+a port, a timeout and a retry budget. It is still a single verb: there is no
 `isekai tags`.
 
 **The sheet is built from the WD14 list, not from the prose.** The prose is a
 reading aid with no machine consumer downstream. Which is why a missing *hosted*
 tag list is an absent aid and never a refusal — its own call failed after the
 prose and the WD14 list were written — while a missing *local* tag list is a
-refusal naming `caption`. An
-all-empty sheet is legal and therefore silent, and that is the failure mode this
-arrangement keeps paying for.
+refusal naming `caption`. An all-empty sheet is legal and therefore silent, and
+that is the failure mode this arrangement keeps paying for.
 
 Neither tag list is narrowed on the way out: no canonicalisation, no vocabulary
 filtering, no re-ordering but by confidence. Narrowing is stage ②'s job, and

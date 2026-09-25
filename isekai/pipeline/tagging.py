@@ -14,7 +14,7 @@ list is filtered down to a sheet; seeing *behind* that filter is the whole reaso
 these two artifacts exist. So nothing here canonicalises, maps to the vocabulary,
 deduplicates or re-orders on anything but confidence. The hosted tagger's list is
 known to be roughly three-quarters unusable -- it is stock-photo keywording, and
-it contradicts its own prose on the same photograph -- so the artifact keeps every
+it contradicts its own prose on the same photograph -- yet the artifact keeps every
 tag, and the review surface shows only the tags the vocabulary carries
 (`interface/ui/app.py`'s `_tags`).
 

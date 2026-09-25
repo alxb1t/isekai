@@ -35,9 +35,9 @@ no person approved.
 **A component is a facade with a contract: what it takes, what it produces — returned or written — and
 how it fails. It has no effect outside that contract.**
 
-It earns its place if something else could use
-it or replace it; otherwise it is internal to another component. What it needs from outside — a model,
-the network, the GPU, randomness — is passed in, so a test can pass a fake.
+It earns its place if something else could use it or replace it; otherwise it is internal to another
+component. What it needs from outside — a model, the network, the GPU, randomness — is passed in, so
+a test can pass a fake.
 
 **In code, a component is one module, or one package whose `__init__.py` is its front door.** The front
 door is the contract: other components import only it, and it assembles the package's own modules.
@@ -57,8 +57,8 @@ the default; a package earns its place when the contract needs more than one fil
 directly. The CLI builds the components through `wiring.py` and hands them to the review UI when its
 `ui` verb starts it; the UI never calls the CLI.
 
-**Composing is all a front end does** — a rule about the work itself, such as how a failure is classified or what state a sheet is in, belongs to
-the component that owns that work.
+**Composing is all a front end does** — a rule about the work itself, such as how a failure is
+classified or what state a sheet is in, belongs to the component that owns that work.
 
 - **Why:** logic in the wiring runs only on the path one front end takes, and nothing else can test it
   or reuse it.
@@ -72,10 +72,6 @@ the component that owns that work.
 foundation`. A layer imports from itself and from the layers below it, never from above. Inside a
 layer, modules may import each other, but never in a cycle.
 
-A layer's `__init__.py` holds only a
-docstring: a layer is a folder, not a front door. Evaluation is a separate sub-system beside the code it
-measures: it may import isekai, and isekai never imports it.
-
 Each layer has one role:
 
 - **interface** — the front ends, the CLI and the review UI. They compose, and they serve and build
@@ -85,6 +81,9 @@ Each layer has one role:
   session, downloads.
 - **shared** — what the stages share: the vocabulary, the field map, image headers.
 - **foundation** — the run directory, the flow and the refusal.
+
+A layer's `__init__.py` holds only a docstring: a layer is a folder, not a front door. Evaluation is a
+separate sub-system beside the code it measures: it may import isekai, and isekai never imports it.
 
 - **Why:** a layer can be read, tested and changed knowing only what is below it. A cycle means neither
   side can be understood alone.
@@ -99,14 +98,14 @@ Each layer has one role:
 **A failure refuses one input, never the batch, and never silently.** Every failure an operator can
 cause is a named refusal; the batch collects them and reports them together at the end.
 
-Nothing is guessed to avoid a refusal — a value that cannot be read or derived refuses its input rather than
-defaulting. A traceback is a defect.
+Nothing is guessed to avoid a refusal — a value that cannot be read or derived refuses its input
+rather than defaulting. A traceback is a defect.
 
 **Every failure is recorded in the run, with its kind.** A permanent one is never retried — it would
-fail the same way.
+fail the same way. A transient one is retried up to the stage's budget, and a paid stage is never
+retried on its own.
 
-A transient one is retried up to the stage's budget, and a paid stage is never
-retried on its own. Deleting the record is how an operator tries again: no flag, no decay.
+Deleting the record is how an operator tries again: no flag, no decay.
 
 **Every refusal ends with a fix that works** — a command this build has, complete enough to paste, that
 succeeds in the state the refusal leaves behind; or the file to delete, by its full path.
@@ -150,9 +149,9 @@ costs nothing instead of a boot.
 that can differ between flows — nodes by role, dials, prompts, models — and the code finds nothing by
 searching or guessing.
 
-What cannot differ between flows is a constant in code that says it is not a
-manifest key. A fact written twice is written once, or a test holds the two copies equal. **A derived
-file is such a copy: a test re-derives it and expects the same bytes.**
+What cannot differ between flows is a constant in code that says it is not a manifest key. A fact
+written twice is written once, or a test holds the two copies equal. **A derived file is such a copy:
+a test re-derives it and expects the same bytes.**
 
 - **Why:** a manifest that computes nothing can be checked without running anything, so a broken flow
   fails the test suite instead of a paid boot. Two copies of one fact drift apart silently.
@@ -172,9 +171,9 @@ file is such a copy: a test re-derives it and expects the same bytes.**
 dependency by its exact version, an image by its digest, a flow by equality with its recorded digest. A
 moving tag is not a pin.
 
-A flow never changes silently: a variant gets a new identifier and the two are
-compared, never migrated; a replaced one is re-pinned with what moved recorded. Where a pin is not yet
-possible, the gap is recorded with its trigger, and every artifact it shapes says `pinned: false`.
+A flow never changes silently: a variant gets a new identifier and the two are compared, never
+migrated; a replaced one is re-pinned with what moved recorded. Where a pin is not yet possible, the
+gap is recorded with its trigger, and every artifact it shapes says `pinned: false`.
 
 - **Why:** an unpinned input can change between two runs of the same flow, and then no record can
   explain why their outputs differ.

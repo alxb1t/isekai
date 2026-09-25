@@ -37,14 +37,13 @@ at least once; a list of names cannot.
 > `provision.py` is not on `python -m isekai`'s import graph, so the module-scope
 > import rule is untouched either way.
 >
-> **`wd14.py` is**, and it touches the tagger's stack, as
-> `evaluation/eval_backends.py` does too. Every one of those imports --
+> **`wd14.py` is**, and it touches the tagger's stack; `evaluation/eval_backends.py`
+> touches it too, off that graph. Every one of `wd14.py`'s imports of it --
 > `onnxruntime`, `numpy`, `Pillow` -- is **function-local**, which keeps the `-S`
-> guard green; they are declared dependencies as of v0.22.3, so one moved to
-> module scope resolves silently, and the `-S` guard and `tests/test_wd14.py`'s
-> source scan catch it. It reaches no
-> network at all, which makes it the one file here that is a boundary to a *file*
-> rather than to a host.
+> guard green. They are declared dependencies as of v0.22.3, so one moved to
+> module scope resolves silently; that guard and `tests/test_wd14.py`'s source
+> scan catch it. `wd14.py` reaches no network at all, which makes it the one file
+> here that is a boundary to a *file* rather than to a host.
 >
 > **`ollama.py` is now the only way out of this process to a model.** There was a
 > second, `claude_cli.py`, and the isolation law that kept the two apart was the

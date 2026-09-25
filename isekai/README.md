@@ -46,14 +46,14 @@ and a graph is not.
 third-party package at module scope: nothing in `python -m isekai`'s import graph
 may need a wheel, and a subprocess guard under `-S` proves it -- the wheels a run
 does need are declared dependencies as of v0.22.3, reached from inside the verb
-that needs them, and that guard is what checks this. And a set of constants anchors a repository path on
-its own `__file__` -- `run.DATA_ROOT`, `run.REPOSITORY`, `flow.FLOWS_DIR`,
-`provision.MANIFEST_PATH`, `provision.VOCABULARY_MANIFEST_PATH` and
-`eval_models.EVAL_MANIFEST_PATH`; `tests/test_package_paths.py` pins every one of
-them to the directory holding `pyproject.toml`. The falsification twin is
-**one**, not one each: every anchor's suffix cancels against its own hops, so all
-of them reduce to the same wrong path and parametrizing would advertise
-per-anchor coverage that does not exist.
+that needs them, and that guard is what checks this. And a set of constants
+anchors a repository path on its own `__file__` -- `run.DATA_ROOT`,
+`run.REPOSITORY`, `flow.FLOWS_DIR`, `provision.MANIFEST_PATH`,
+`provision.VOCABULARY_MANIFEST_PATH` and `eval_models.EVAL_MANIFEST_PATH`;
+`tests/test_package_paths.py` pins every one of them to the directory holding
+`pyproject.toml`. The falsification twin is **one**, not one each: every anchor's
+suffix cancels against its own hops, so all of them reduce to the same wrong path
+and parametrizing would advertise per-anchor coverage that does not exist.
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../docs/principles.md)'s, and the choices in force are

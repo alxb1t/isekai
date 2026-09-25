@@ -338,10 +338,10 @@ def build_graph(
     patch("scale", width=width, height=height)
     patch("sampler", seed=seed, **{dial: dials[dial] for dial in SAMPLER_DIALS})
 
-    # The guards below read dials a flow without that role does not declare -- an
-    # identity adapter, a pose preprocessor, a clip skip, a hires pass -- so the
-    # role check has to happen *before* the lookup rather than inside `patch` --
-    # an argument is evaluated whether or not the call does anything with it.
+    # Each guard below reads a dial that only a flow with that role declares --
+    # an identity adapter, a pose preprocessor, a clip skip, a hires pass. So the
+    # role check happens *before* the lookup, not inside `patch`: an argument is
+    # evaluated whether or not the call does anything with it.
     if "identity" in flow.nodes:
         patch(
             "identity",

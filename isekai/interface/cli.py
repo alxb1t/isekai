@@ -429,14 +429,14 @@ def _per_item(
                         new_version=new_version,
                     ),
                 )
-                # **The order is the failure isolation, not a habit.** `across()`
+                # **The order decides what a refusal abandons.** `across()`
                 # catches `Refusal` per *input* rather than per stage, so the
                 # first refusal on a photograph abandons the rest of that
                 # photograph's work. Prose first; the sheet reads the WD14 list,
                 # so a prose refusal abandons that list too -- a known cost. WD14
                 # second: local and deterministic, it fails only on a missing or
                 # corrupt file, which is one operator fix and worth stopping on.
-                # The hosted tagger last, because it is the one with a port, a
+                # The hosted tagger last, because it is the tagger with a port, a
                 # timeout and a retry budget -- so its refusal blocks nothing
                 # that would have succeeded (design.md D7).
                 _say(

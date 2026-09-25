@@ -1,7 +1,8 @@
 # isekai — architecture
 
 A photograph of a person goes in, and an anime image of that same person comes out (`summon`); or a
-character is drawn from a corrected sheet alone (`conjure`). Self-hosted, on open models only ([D0](decisions.md#d0--self-hosted-open-source-open-models)).
+character is drawn from a corrected sheet alone (`conjure`). Self-hosted, on open models only
+([D0](decisions.md#d0--self-hosted-open-source-open-models)).
 
 ```
  operator — one verb at a time

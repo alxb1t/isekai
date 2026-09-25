@@ -13,8 +13,9 @@ The transport is an **injectable seam** behind a Protocol — `ComfyTransport`, 
 `isekai/boundary/comfy_types.py` with no network in it, which is what lets the whole suite run against
 `FakeComfyClient`. The transport is on `python -m isekai`'s import graph, which reaches no wheel, so the
 multipart body is built by hand rather than pulled from a dependency, which is why its wire format is
-specified here rather than delegated to a library's contract. **No test in this capability reaches a real GPU or the network**; the transport is fully
-mocked, and actual diffusion quality is judged by eye on a live pod.
+specified here rather than delegated to a library's contract. **No test in this capability reaches a
+real GPU or the network**; the transport is fully mocked, and actual diffusion quality is judged by
+eye on a live pod.
 
 **Where the polling loop lives.** Until v0.15 this preamble pointed at a module and a test file that
 were **deleted together in `8baf2b3` at v0.14**, with the old render path. The loop that submits a
