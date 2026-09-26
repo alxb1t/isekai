@@ -15,7 +15,7 @@ import { sentencesOf, wordsOf } from '../caption'
    type step (design.md D21). */
 const props = defineProps<{
   prose: string | null
-  command?: string | null
+  command: string | null
   loading?: boolean
 }>()
 
@@ -53,12 +53,7 @@ const missing = computed(() => !props.loading && props.prose === null)
           reading…
         </span>
       </template>
-      <template v-else-if="missing">
-        <p>no caption</p>
-        <p v-if="command" class="mono" style="font-size: 11px; color: var(--color-neutral-500)">
-          {{ command }}
-        </p>
-      </template>
+      <p v-else-if="missing && command" class="mono">{{ command }}</p>
       <p v-for="(sentence, index) in sentences" v-else :key="index">{{ sentence }}</p>
     </div>
   </section>

@@ -26,7 +26,7 @@ import pytest
 from isekai.boundary.comfy import ComfyClient
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import BUDGETS
+from isekai.foundation.run import BUDGETS, versions
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
@@ -223,13 +223,10 @@ def test_the_explicit_flag_writes_the_next_version_and_leaves_the_last_alone(
     assert _calls(wired)[0] == 2
 
 
-def _versions(wired: Wiring) -> dict[str, list[str]]:
-    """Return each stage-1 directory's numbered artifacts, by directory name."""
+def _versions(wired: Wiring) -> dict[str, list[int]]:
+    """Return each stage-1 directory's artifact versions, by directory name."""
     (run,) = wired.runs_root.iterdir()
-    return {
-        area: sorted(p.name for p in (run / FLOW / area).glob("[0-9][0-9][0-9].json"))
-        for area in ("captions", "wd14", "tags")
-    }
+    return {area: versions(run / FLOW / area) for area in ("captions", "wd14", "tags")}
 
 
 @pytest.mark.spec("cli:explicit-versions:the-caption-flag-writes-prose-only")
@@ -241,11 +238,7 @@ def test_the_caption_flag_writes_the_next_prose_and_no_tag_list(
 
     assert dispatch(_args("caption", str(photo), new_version=True), wired) == 0
 
-    assert _versions(wired) == {
-        "captions": ["001.json", "002.json"],
-        "wd14": ["001.json"],
-        "tags": ["001.json"],
-    }
+    assert _versions(wired) == {"captions": [1, 2], "wd14": [1], "tags": [1]}
     assert _calls(wired)[:3] == (2, 1, 1)
 
 
@@ -258,11 +251,7 @@ def test_the_tag_flag_writes_the_next_of_both_lists_and_no_prose(
 
     assert dispatch(_args("tag", str(photo), new_version=True), wired) == 0
 
-    assert _versions(wired) == {
-        "captions": ["001.json"],
-        "wd14": ["001.json", "002.json"],
-        "tags": ["001.json", "002.json"],
-    }
+    assert _versions(wired) == {"captions": [1], "wd14": [1, 2], "tags": [1, 2]}
     assert _calls(wired)[:3] == (1, 2, 2)
 
 

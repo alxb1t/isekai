@@ -43,6 +43,20 @@ def _body(path: Path | None) -> Sheet:
     return read(path, SHEET_FILE)
 
 
+def _trap_reads(
+    monkeypatch: pytest.MonkeyPatch, forbidden: Callable[[Path], bool], what: str
+) -> None:
+    """Make any `read_text` of a `forbidden` path fail the test, naming `what`."""
+    original = Path.read_text
+
+    def guarded(self: Path, *args: object, **kwargs: object) -> str:
+        if forbidden(self):
+            raise AssertionError(f"{what} was read")
+        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
+
+    monkeypatch.setattr(Path, "read_text", guarded)
+
+
 @pytest.fixture
 def run(tmp_path: Path) -> Run:
     """Return a run whose photograph has already been read into prose."""
@@ -322,14 +336,7 @@ def test_the_stage_reads_the_tag_list_and_never_opens_the_caption(
     """
     caption_path = run.directory(FLOW, CAPTIONS) / "001.json"
     assert caption_path.exists()
-    original = Path.read_text
-
-    def guarded(self: Path, *args: object, **kwargs: object) -> str:
-        if self == caption_path:
-            raise AssertionError("the caption was read")
-        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
-
-    monkeypatch.setattr(Path, "read_text", guarded)
+    _trap_reads(monkeypatch, lambda path: path == caption_path, "the caption")
 
     written = sheet(
         run, schema, vocabulary, tags=[DanbooruTag("brown_hair"), DanbooruTag("smile")]
@@ -358,14 +365,7 @@ def test_a_flow_without_a_tagger_gets_every_field_empty_and_no_list_is_read(
 ) -> None:
     """A tag list sits beside it and is booby-trapped, so reading it fails by name."""
     listed = write_wd14(run)
-    original = Path.read_text
-
-    def guarded(self: Path, *args: object, **kwargs: object) -> str:
-        if self.parent == listed.parent:
-            raise AssertionError("the tag list was read")
-        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
-
-    monkeypatch.setattr(Path, "read_text", guarded)
+    _trap_reads(monkeypatch, lambda path: path.parent == listed.parent, "the tag list")
 
     written = sheet(run, schema, vocabulary, tags=None, tagged=False)
 
@@ -385,14 +385,7 @@ def test_the_same_run_tagged_reads_the_list_the_twin_leaves_unread(
     run: Run, schema: Schema, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     listed = write_wd14(run)
-    original = Path.read_text
-
-    def guarded(self: Path, *args: object, **kwargs: object) -> str:
-        if self.parent == listed.parent:
-            raise AssertionError("the tag list was read")
-        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
-
-    monkeypatch.setattr(Path, "read_text", guarded)
+    _trap_reads(monkeypatch, lambda path: path.parent == listed.parent, "the tag list")
 
     with pytest.raises(AssertionError, match="the tag list was read"):
         sheet(run, schema, vocabulary, tags=None, tagged=True)

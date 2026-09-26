@@ -385,6 +385,7 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     opened: list[LocalTagger] = []
+    unopenable: list[Refusal] = []
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -424,8 +425,16 @@ def _per_item(
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
 
         def opening() -> LocalTagger:
+            # A refusal is kept as well as a success: it is the build's, not a
+            # photograph's, so the 467 MB hash is not re-run to meet it again.
+            if unopenable:
+                raise unopenable[0]
             if not opened:
-                opened.append(resolve(flow))
+                try:
+                    opened.append(resolve(flow))
+                except Refusal as refused:
+                    unopenable.append(refused)
+                    raise
             return opened[0]
 
         return opening
@@ -453,31 +462,28 @@ def _per_item(
                 )
         elif verb == "tag":
             for name, flow in flows.items():
+                opening = tagger(flow)
+                hosted = _seam(
+                    wired.hosted_tagger, "hosted tagger", "tags the photograph"
+                )(flow)
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
                 # reaches no network (0032 design D2).
-                opening = tagger(flow)
-                try:
-                    _say(
+                steps: tuple[Callable[[], None], ...] = (
+                    lambda: _say(
                         wired,
                         run,
                         "wd14",
                         tag_wd14(run, name, opening, new_version=new_version),
-                    )
-                except Refusal as refusal:
-                    collected.append(str(refusal))
-                hosted = _seam(
-                    wired.hosted_tagger, "hosted tagger", "tags the photograph"
-                )(flow)
-                try:
-                    _say(
+                    ),
+                    lambda: _say(
                         wired,
                         run,
                         "tags",
                         tag_hosted(run, name, hosted, new_version=new_version),
-                    )
-                except Refusal as refusal:
-                    collected.append(str(refusal))
+                    ),
+                )
+                collected.extend(across(steps, lambda step: step()))
         elif verb == "sheet":
             for name, flow in flows.items():
                 _say(

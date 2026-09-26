@@ -102,18 +102,17 @@ def sheet(
 
     **The fill is told nothing about flows beyond `tagged`, and reaches nothing
     at all.** It is handed a tag list, the schema, the vocabulary and the table,
-    so the same code
-    serves every flow without learning that flows exist; `flow` decides only which
-    directory is read and written. A flow shares nothing, so the tag list read
-    here is the one produced under this flow's own directory (design.md D5).
+    so the same code serves every flow without learning that flows exist; `flow`
+    decides only which directory is read and written. A flow shares nothing, so
+    the tag list read here is the one produced under this flow's own directory
+    (design.md D5).
 
-    **For a tagged flow, an absent tag list is a refusal, and that is the one
-    rule this version narrows.** A sheet with every field empty is legal and
-    therefore silent, so writing one when the tagger never ran would hide the
-    only thing the operator needs told. The rule that a missing tag artifact is
-    an absent aid still holds for the *hosted* tagger, which contributes nothing
-    to a sheet; it cannot hold for the local one the sheet is filled from
-    (design.md D21).
+    **For a tagged flow, an absent tag list is a refusal.** A sheet with every
+    field empty is legal and therefore silent, so writing one when the tagger
+    never ran would hide the only thing the operator needs told. The rule that a
+    missing tag artifact is an absent aid still holds for the *hosted* tagger,
+    which contributes nothing to a sheet; it cannot hold for the local one the
+    sheet is filled from (design.md D21).
 
     Returns the artifact's path, or None when this flow already had a sheet.
     """
@@ -156,8 +155,8 @@ def _from_tag_list(
     Refuses naming `tag` when the list is absent, and names the fix when it is
     malformed; the budget is checked between the two, as for any stage.
     """
-    tagged = run.directory(flow, WD14)
-    source = latest(tagged)
+    listed_dir = run.directory(flow, WD14)
+    source = latest(listed_dir)
     if source is None:
         raise Refusal(
             f"{run.id}: there is no tag list to fill a sheet for {flow} from; run "
@@ -167,7 +166,7 @@ def _from_tag_list(
 
     check_budget(STAGE, directory, next_version(directory), run)
 
-    listed_path = tagged / artifact_name(source)
+    listed_path = listed_dir / artifact_name(source)
     listed = read(listed_path, WD14_FILE)
     remedy = (
         f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "

@@ -15,7 +15,7 @@ const props = defineProps<{
   height: number
   photo: string
   caption: string | null
-  captionCommand?: string | null
+  captionCommand: string | null
   /* Both null where the artifact is absent, and an absent list draws nothing --
      no panel, no message. Three ways it is legitimately missing (a run
      captioned before v0.20, a flow that declares no tagger, a failed tagger) and

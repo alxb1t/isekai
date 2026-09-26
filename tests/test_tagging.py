@@ -489,7 +489,7 @@ def test_a_failing_hosted_tagger_leaves_the_wd14_list_on_disk(
     assert (run.directory(FLOW, TAGS) / "001.error.1.permanent.json").is_file()
 
 
-def _unreadable(flow: Flow) -> LocalTagger:
+def _unreadable() -> LocalTagger:
     """Return a local tagger whose session cannot decode this photograph."""
 
     class Broken:
@@ -507,7 +507,7 @@ def _unopenable(flow: Flow) -> LocalTagger:
 @pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
 @pytest.mark.parametrize(
     ("resolver", "names"),
-    [(_unreadable, "cannot identify image file"), (_unopenable, "is absent")],
+    [(Always(_unreadable()), "cannot identify image file"), (_unopenable, "is absent")],
     ids=["a-failing-photograph", "an-unopenable-tagger"],
 )
 def test_a_failing_local_tagger_leaves_the_hosted_list_written(
@@ -526,6 +526,37 @@ def test_a_failing_local_tagger_leaves_the_hosted_list_written(
     assert not (run.directory(FLOW, WD14) / "001.json").is_file()
     assert isinstance(wired.err, io.StringIO)
     assert names in wired.err.getvalue()
+
+
+@pytest.mark.spec("tagging:order:a-local-failure-leaves-the-hosted-list-written")
+def test_an_unopenable_tagger_is_tried_once_per_invocation(tmp_path: Path) -> None:
+    """Opening hashes 467 MB, and its refusal is the build's, so it is kept."""
+    attempts: list[Flow] = []
+
+    def unopenable(flow: Flow) -> LocalTagger:
+        attempts.append(flow)
+        return _unopenable(flow)
+
+    photos = [_photo(tmp_path)]
+    other = tmp_path / "other.jpg"
+    other.write_bytes(jpeg_bytes(1200, 904))
+    photos.append(other)
+    hosted = FakeTagger()
+    wired = _wired(tmp_path, tagger=unopenable, hosted=hosted)
+
+    status = _dispatch(
+        wired,
+        "tag",
+        "--flow",
+        FLOW,
+        "--flow",
+        "conjure-anime-wai",
+        *map(str, photos),
+    )
+
+    assert status == 1
+    assert len(attempts) == 1
+    assert len(hosted.calls) == 4
 
 
 @pytest.mark.spec("tagging:order:captioning-writes-no-tag-list")
@@ -652,17 +683,8 @@ def test_a_photograph_the_decoder_cannot_read_is_recorded_and_is_permanent(
     # is open is this photograph's own bytes, and that is permanent by
     # construction. Without a record, `show` and the run directory would carry
     # no trace of it while an identical `tags` failure leaves one.
-    def unreadable() -> LocalTagger:
-        tagger = fake_tagger()
-
-        class Broken:
-            def run(self, photo: Path) -> list[float]:
-                raise OSError("cannot identify image file")
-
-        return dataclasses.replace(tagger, session=Broken())
-
     with pytest.raises(Refusal) as refused:
-        tag_wd14(run, FLOW, unreadable)
+        tag_wd14(run, FLOW, _unreadable)
 
     assert "permanent" in str(refused.value)
     recorded = list(run.directory(FLOW, WD14).glob("*.error.*.json"))
@@ -670,5 +692,5 @@ def test_a_photograph_the_decoder_cannot_read_is_recorded_and_is_permanent(
 
     # And the budget of one is then spent: a second pass refuses without calling.
     with pytest.raises(Refusal) as again:
-        tag_wd14(run, FLOW, unreadable)
+        tag_wd14(run, FLOW, _unreadable)
     assert "failed permanently" in str(again.value)
