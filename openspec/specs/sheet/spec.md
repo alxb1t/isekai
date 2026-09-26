@@ -57,12 +57,31 @@ compared, and the vocabulary is provisioned like the models are.
 - **THEN** it declares no vocabulary
 - **AND** the vocabulary the fill is held against is the one the flow declares
 
-### Requirement: The stage takes a tag list, a schema, a vocabulary and a field map, and returns fields
+### Requirement: Every tag in a sheet is in the vocabulary
 
-The system SHALL fill a sheet from exactly four inputs — a tag list, a schema, a vocabulary and a field map
-— and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet, SHALL NOT be told which
-flow requested the work, SHALL NOT read prose, and SHALL refuse naming the verb that produces the tag list
-when that list is absent.
+The system SHALL emit no tag that is not in the vocabulary.
+
+An invented tag that merely looks canonical is worse than an obviously invalid one, because it passes every
+later check on its way into the prompt. **After this change the property holds by construction rather than
+by filtering**: the tagger's output layer is the vocabulary, and the router emits only tags it was given.
+The requirement stays because it is what a later reader checks a fill against, and because it is the
+invariant any future producer would have to satisfy to be allowed near a sheet.
+
+#### Scenario: every emitted tag is in the vocabulary
+- **Key:** `sheet:purity:no-tag-outside-the-vocabulary`
+- **Layers:** unit
+- **WHEN** a sheet is written
+- **THEN** every tag in every field is present in the vocabulary
+- **AND** a tag the field map does not place contributes nothing at all
+
+### Requirement: The stage fills fields from the tag list of a flow that declares the tagger, and leaves them empty for a flow that declares none
+
+The system SHALL fill a sheet from a schema, a vocabulary, a field map and — for a flow that declares the
+tagger — its local tag list, and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet,
+SHALL NOT be told which flow requested the work beyond whether a tag list is expected, and SHALL NOT read
+prose. For a flow that declares the tagger it SHALL refuse naming the verb that produces the tag list when
+that list is absent. For a flow that declares none it SHALL write every field empty, and the sheet's
+producer SHALL record that no tag list and no model filled it.
 
 Storing the assembled prompt in the sheet creates a footgun where a human edits the prompt block and a
 rebuild silently overwrites it. Keeping the stage ignorant of flows is what lets the same code serve every
@@ -78,10 +97,19 @@ the photograph, and that is the operator's to correct on the surface — which h
 regardless, so sheet fidelity was never the metric. Prose remains a reading aid for the operator and stops
 being a machine input, so a failed reader no longer blocks a sheet it does not feed.
 
-**The tag list is a prerequisite rather than an aid, and the refusal is what says so.** A sheet with every
+**For a flow that declares the tagger, the tag list is a prerequisite rather than an aid, and the refusal
+is what says so.** A sheet with every
 field empty is legal and therefore silent, so producing one when the tagger never ran would hide the one
 thing the operator needs told. The rule that an absent tag artifact is an absent aid holds for a tagger that
 contributes nothing to a sheet; it cannot hold for the one the sheet is filled from.
+
+**A flow that declares no tagger gets empty fields, and that is not the silence the refusal guards
+against.** The refusal exists because an empty sheet would hide a tagger that never ran; for a flow that
+declares none, no tagger was going to run, so there is nothing to hide. The person fills the sheet on the
+review surface and approves it, and approval still gates the render.
+
+The stage learns only whether a tag list is expected — a boolean the composition root reads from the
+manifest — so it stays ignorant of flows.
 
 #### Scenario: a sheet stores fields and no prompt
 - **Key:** `sheet:output:sheet-stores-fields-only`
@@ -121,23 +149,14 @@ contributes nothing to a sheet; it cannot hold for the one the sheet is filled f
 #### Scenario: an absent tag list is a refusal naming the verb that fills it
 - **Key:** `sheet:output:an-absent-tag-list-is-refused`
 - **Layers:** unit
-- **WHEN** a sheet is asked for an input whose local tagger's artifact is absent
+- **WHEN** a sheet is asked, for a flow that declares the tagger, for an input whose local tagger's artifact
+  is absent
 - **THEN** the stage refuses, naming the verb that would produce it
 - **AND** no sheet is written
 
-### Requirement: Every tag in a sheet is in the vocabulary
-
-The system SHALL emit no tag that is not in the vocabulary.
-
-An invented tag that merely looks canonical is worse than an obviously invalid one, because it passes every
-later check on its way into the prompt. **After this change the property holds by construction rather than
-by filtering**: the tagger's output layer is the vocabulary, and the router emits only tags it was given.
-The requirement stays because it is what a later reader checks a fill against, and because it is the
-invariant any future producer would have to satisfy to be allowed near a sheet.
-
-#### Scenario: every emitted tag is in the vocabulary
-- **Key:** `sheet:purity:no-tag-outside-the-vocabulary`
+#### Scenario: a flow that declares no tagger gets a sheet with every field empty
+- **Key:** `sheet:output:a-flow-without-a-tagger-gets-empty-fields`
 - **Layers:** unit
-- **WHEN** a sheet is written
-- **THEN** every tag in every field is present in the vocabulary
-- **AND** a tag the field map does not place contributes nothing at all
+- **WHEN** a sheet is asked for an input of a flow that declares no tagger
+- **THEN** a sheet is written with every schema field present and empty
+- **AND** its producer names no tag list and no model

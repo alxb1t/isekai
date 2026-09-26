@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-09-26
+
 ### Changed
 
 - **BREAKING — a flow's manifest declares `"tagger": true | false`** (`0032` design D1): a required
