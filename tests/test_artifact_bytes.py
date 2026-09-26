@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from isekai.foundation.artifacts import DRAFT_FILE, read
-from isekai.foundation.flow import Schema, load_flow
+from isekai.foundation.flow import Schema
 from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact, render
@@ -104,12 +104,12 @@ def _fields(path: Path) -> dict[str, list[str]]:
 
 def _prompt(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     _approved(run, schema, vocabulary)
-    return prompt_artifact(run, load_flow(FLOW.id), schema)
+    return prompt_artifact(run, FLOW, schema)
 
 
 def _render(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     _prompt(run, schema, vocabulary)
-    (made,) = render(run, load_flow(FLOW.id), FakeComfyClient(), seeds=[42], poll=0)
+    (made,) = render(run, FLOW, FakeComfyClient(), seeds=[42], poll=0)
     return made.provenance
 
 

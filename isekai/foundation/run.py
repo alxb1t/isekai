@@ -233,8 +233,7 @@ class Run:
     @property
     def frame(self) -> Frame:
         """Return the run's frame, parsed, with no version check."""
-        parsed: Frame = json.loads(self.frame_path.read_text())
-        return parsed
+        return json.loads(self.frame_path.read_text())
 
     @property
     def photo(self) -> Path:

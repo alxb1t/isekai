@@ -137,16 +137,12 @@ ChainProducer = TypedDict(
     {"implementation": str, "from": int, "source": str},
 )
 
-ApprovedProducer = TypedDict(
-    "ApprovedProducer",
-    {
-        "implementation": str,
-        "from": int,
-        "source": str,
-        "edited": bool,
-        "approved_from": int,
-    },
-)
+
+class ApprovedProducer(ChainProducer):
+    """The draft's producer, and what approving it recorded."""
+
+    edited: bool
+    approved_from: int
 
 
 # --- the kinds ----------------------------------------------------------------
@@ -168,16 +164,13 @@ class Failure(TypedDict):
     detail: str
 
 
-class ErrorRecord(TypedDict):
+class ErrorRecord(Failure):
     """One failed attempt, beside where its artifact would have gone."""
 
     schema: SchemaBlock
     version: int
     attempt: int
     kind: str
-    stage: str
-    seed: NotRequired[int]
-    detail: str
 
 
 class Caption(TypedDict):

@@ -102,12 +102,14 @@ FIELD_MAP = FieldMap(
 # What `write_wd14` offers when a caller does not care which tags it routes, in
 # WD14's own spelling. Three fields' worth, so a default sheet is neither empty
 # nor uniform.
-TAGS: tuple[str, ...] = ("long_hair", "brown_hair", "smile", "shirt")
+TAGS: tuple[DanbooruTag, ...] = tuple(
+    DanbooruTag(tag) for tag in ("long_hair", "brown_hair", "smile", "shirt")
+)
 
 
 def write_wd14(
     run: Run,
-    tags: Sequence[str] = TAGS,
+    tags: Sequence[DanbooruTag] = TAGS,
     *,
     flow: str = FLOW.id,
     version: int = 1,
@@ -129,7 +131,7 @@ def write_wd14(
             "artifacts": dict(FAKE_PINS),
         },
         "tags": [
-            {"tag": DanbooruTag(tag), "confidence": round(0.9 - index / 100, 4)}
+            {"tag": tag, "confidence": round(0.9 - index / 100, 4)}
             for index, tag in enumerate(tags)
         ],
     }
@@ -144,7 +146,7 @@ def sheet(
     *,
     flow: str = FLOW.id,
     field_map: FieldMap = FIELD_MAP,
-    tags: Sequence[str] | None = TAGS,
+    tags: Sequence[DanbooruTag] | None = TAGS,
     new_version: bool = False,
 ) -> Path | None:
     """Call the sheet stage under `summon-anime-wai`, writing the list it reads.

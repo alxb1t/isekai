@@ -141,8 +141,9 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
 
     approved = approved_versions(review_directory)
     if approved:
-        origin = review_directory / artifact_name(approved[-1], APPROVED)
-        carried = read(origin, APPROVED_FILE)
+        carried = read(
+            review_directory / artifact_name(approved[-1], APPROVED), APPROVED_FILE
+        )
         came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
     else:
         carried = read(sheets / artifact_name(source_sheet), SHEET_FILE)
