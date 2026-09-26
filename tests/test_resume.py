@@ -353,7 +353,7 @@ AVAILABLE: Sequence[str] = (
     "python -m isekai approve --flow ",
     "python -m isekai generate --flow ",
     "python -m isekai show",
-    "scripts/download_models.sh",
+    "tools/download_models.sh",
     # The two Ollama remedies, which replaced the `npm install -g` one that told
     # an operator to install a CLI this build no longer reaches.
     "ollama serve",

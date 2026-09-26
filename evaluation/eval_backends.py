@@ -1,19 +1,19 @@
-"""The real models behind `isekai.evaluation.evaluate`'s seams.
+"""The real models behind `evaluation.evaluate`'s seams.
 
 **This is the only module in the tree that imports the `[eval]` extra**, and it
-is imported lazily, from `evaluate.py`'s `main` and nowhere else. Everything the
-scorer actually *decides* lives in `isekai.evaluation.evaluate`, which is
+is imported lazily, from `__main__.py`'s `main` and nowhere else. Everything the
+scorer actually *decides* lives in `evaluation.evaluate`, which is
 stdlib-only and is therefore tested in CI with this stack absent -- the same
 division `ComfyTransport` and `FakeComfyClient` are under.
 
 `ultralytics` is not imported here and is not in the extra. The anime-face
 detector's weights are loaded through `onnxruntime`, which is MIT: loading weights
 is not linking code, and that is what keeps an AGPL-3.0 detector out of an
-Apache-2.0 public repository (design.md D19, `scripts/eval_licences.md`). A test
+Apache-2.0 public repository (design.md D19). A test
 asserts the absence, because a licence review nobody runs is not a control.
 
 Every artifact is resolved through `isekai.boundary.provision.resolve`, which
-verifies its digest against `scripts/eval_models.json` and refuses on a
+verifies its digest against `evaluation/eval_models.json` and refuses on a
 mismatch. A score produced by an unverified model is a number from an unknown
 thing.
 
@@ -38,10 +38,9 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.provision import resolve
-from isekai.evaluation.ciede2000 import Lab
-from isekai.evaluation.eval_models import RECOGNIZER, load_eval_manifest
-from isekai.evaluation.evaluate import (
+from evaluation.ciede2000 import Lab
+from evaluation.eval_models import RECOGNIZER, load_eval_manifest
+from evaluation.evaluate import (
     Box,
     Canvas,
     FaceReading,
@@ -49,6 +48,7 @@ from isekai.evaluation.evaluate import (
     Refusal,
     Region,
 )
+from isekai.boundary.provision import resolve
 
 # The SegFormer clothes parser's label ids. Only the ones this version measures
 # are named; the rest are parsed and ignored rather than deleted, because the
@@ -118,7 +118,8 @@ def load_canvas_pixels(image_path: str, canvas: Canvas) -> Any:
     **The transpose happens here and before anything else reads a pixel.**
     `image_dimensions` returns dimensions rather than pixels, and ComfyUI's
     `LoadImage` transposes both JPEG and PNG for a rotating EXIF tag -- measured
-    on the pinned build (`probe/README.md`). A photograph parsed upright while the
+    on the pinned build (`openspec/changes/archive/0011-converge-paydown/design.md`).
+    A photograph parsed upright while the
     render was produced from transposed pixels would place every region in the
     wrong place, silently, with every number still looking plausible.
     """
@@ -177,7 +178,7 @@ class AnimeFaceDetector:
 
     MIT, and an ONNX export, which is why it is here rather than the detector
     design.md D19 originally named -- that one publishes no ONNX at all and
-    declares `library_name: ultralytics`. See `scripts/eval_licences.md`.
+    declares `library_name: ultralytics`.
     """
 
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:

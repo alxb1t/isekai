@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Re-derive `scripts/field_map.json` from the authored spec below.
+"""Re-derive `config/field_map.json` from the authored spec below.
 
 **Stdlib, offline, no network.** The route the roadmap credited to Danbooru's
 `search[name_matches]` wildcard needs no Danbooru at all: a wildcard intersected
@@ -9,8 +8,8 @@ D15). If this script ever appears to need an HTTP call, that is a halt.
 
 Run it from the repository root:
 
-    uv run python scripts/derive_field_map.py            # rewrite the table
-    uv run python scripts/derive_field_map.py --report   # and print the expansion
+    uv run python -m tools.derive_field_map            # rewrite the table
+    uv run python -m tools.derive_field_map --report   # and print the expansion
 
 **The expansion is dirty by construction and the report is the point.** Seven
 seeds for *hair silhouette* reach 57 tags beyond the suffix group, and at least
@@ -48,19 +47,14 @@ which prints a diff and writes nothing.
 import argparse
 import json
 import re
-import sys
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
-# Run as a script from the repository root, `scripts/` is on the path and the
-# root is not -- the same hop `derive_eval_manifest.py` makes, for the same reason.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from isekai.foundation.artifacts import APPROVED_FILE, read  # noqa: E402
-from isekai.interface.wiring import load_vocabulary  # noqa: E402
-from isekai.shared.field_map import FIELD_MAP_PATH, declared_fields  # noqa: E402
-from isekai.shared.vocabulary import Vocabulary  # noqa: E402
+from isekai.foundation.artifacts import APPROVED_FILE, read
+from isekai.interface.wiring import load_vocabulary
+from isekai.shared.field_map import FIELD_MAP_PATH, declared_fields
+from isekai.shared.vocabulary import Vocabulary
 
 # The table's own monotonic counter. There is no upstream revision to name --
 # the artifact is authored here -- so it is bumped by whoever edits this spec.
@@ -630,7 +624,7 @@ def main() -> None:
     FIELD_MAP_PATH.write_text(
         json.dumps(
             {
-                "name": "scripts/field_map.json",
+                "name": "config/field_map.json",
                 "revision": REVISION,
                 "fields": document,
                 "excluded": list(vocabulary.rank(EXCLUDED)),

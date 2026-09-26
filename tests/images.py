@@ -42,13 +42,13 @@ def jpeg_bytes(width: int, height: int) -> bytes:
     return b"\xff\xd8" + app0 + sof0 + b"\xff\xd9"
 
 
-def exif_tiff(orientation: int) -> bytes:
+def _exif_tiff(orientation: int) -> bytes:
     r"""Return a big-endian TIFF block whose IFD0 declares this Orientation.
 
     The block itself, without a container: JPEG wraps it in an APP1 segment
-    behind an `Exif\x00\x00` marker, and PNG's `eXIf` chunk carries it raw. The
-    probe builds both from this one function, so a rotated JPEG and a rotated PNG
-    differ only in the container.
+    behind an `Exif\x00\x00` marker, and PNG's `eXIf` chunk carries it raw. Both
+    are built from this one function, so a rotated JPEG and a rotated PNG differ
+    only in the container.
     """
     # A single big-endian IFD entry: tag 0x0112, type 3 (SHORT), count 1. A SHORT
     # value is left-justified in the entry's four value bytes, which is why the
@@ -65,7 +65,7 @@ def exif_tiff(orientation: int) -> bytes:
 
 def _exif_app1(orientation: int) -> bytes:
     """Return an APP1 segment whose TIFF IFD0 declares this Orientation."""
-    payload = b"Exif\x00\x00" + exif_tiff(orientation)
+    payload = b"Exif\x00\x00" + _exif_tiff(orientation)
     return b"\xff\xe1" + struct.pack(">H", len(payload) + 2) + payload
 
 
@@ -122,23 +122,18 @@ def png_with_exif(
     # carrying orientation.
     ihdr_end = 8 + 4 + 4 + struct.unpack(">I", base[8:12])[0] + 4
     padding = b"".join(
-        png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
+        _png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
     )
     return (
         base[:ihdr_end]
         + padding
-        + png_chunk(b"eXIf", exif_tiff(orientation))
+        + _png_chunk(b"eXIf", _exif_tiff(orientation))
         + base[ihdr_end:]
     )
 
 
-def png_chunk(kind: bytes, payload: bytes) -> bytes:
-    """Return one length-prefixed, CRC-suffixed PNG chunk.
-
-    Public because `probe/build_inputs.py` splices an `eXIf` chunk into a real
-    photograph with it: the framing rule is the same one, and two spellings of it
-    would drift.
-    """
+def _png_chunk(kind: bytes, payload: bytes) -> bytes:
+    """Return one length-prefixed, CRC-suffixed PNG chunk."""
     return (
         struct.pack(">I", len(payload))
         + kind

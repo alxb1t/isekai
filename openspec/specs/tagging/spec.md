@@ -9,7 +9,7 @@ opens a pinned file on this machine. Neither writes prose, neither is a reader, 
 the other or the caption.
 
 **Source:** `isekai/pipeline/tagging.py`, `isekai/boundary/wd14.py`, `isekai/boundary/ollama.py`,
-`scripts/vocabulary.json` ·
+`config/vocabulary.json` ·
 **Tests:** `tests/test_tagging.py`, `tests/test_wd14.py`
 
 ## Requirements

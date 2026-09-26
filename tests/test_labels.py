@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.evaluation.labels import (
+from evaluation.labels import (
     CHOICES,
     SHEET_FIELDS,
     GitOrdering,
@@ -201,24 +201,37 @@ def test_the_ordering_check_refuses_a_file_git_has_never_seen(
     assert GitOrdering(tmp_path).labels_are_prior(sheet, []) is False
 
 
+def _git(repo: Path, *args: str, date: str | None = None) -> None:
+    """Run one git command in `repo`; a `date` pins the commit's own timestamp."""
+    env = (
+        None if date is None else {"GIT_COMMITTER_DATE": date, "PATH": "/usr/bin:/bin"}
+    )
+    dated = [] if date is None else ["--date", date]
+    subprocess.run(["git", *args, *dated], cwd=repo, check=True, env=env)
+
+
+def _repo(path: Path) -> Path:
+    """Return `path` as a git repository with an author configured."""
+    _git(path, "init", "-q")
+    _git(path, "config", "user.email", "t@t")
+    _git(path, "config", "user.name", "t")
+    return path
+
+
 @pytest.mark.spec("evaluation:labels:correlation-requires-prior-labels")
 def test_the_ordering_check_refuses_when_a_score_shares_the_labels_commit(
     tmp_path: Path,
 ) -> None:
     # Committed together is exactly the case the separate-commit rule forbids:
     # it cannot show the labels came first.
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
-    (tmp_path / "labels.csv").write_text("pair,subject,a,b,choice\n")
-    (tmp_path / "0.eval.json").write_text("{}")
-    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "commit", "-qm", "both at once"], cwd=tmp_path, check=True)
+    repo = _repo(tmp_path)
+    (repo / "labels.csv").write_text("pair,subject,a,b,choice\n")
+    (repo / "0.eval.json").write_text("{}")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "both at once")
 
     assert (
-        GitOrdering(tmp_path).labels_are_prior(
-            tmp_path / "labels.csv", [tmp_path / "0.eval.json"]
-        )
+        GitOrdering(repo).labels_are_prior(repo / "labels.csv", [repo / "0.eval.json"])
         is False
     )
 
@@ -227,24 +240,37 @@ def test_the_ordering_check_refuses_when_a_score_shares_the_labels_commit(
 def test_the_ordering_check_allows_labels_committed_in_an_earlier_commit(
     tmp_path: Path,
 ) -> None:
-    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
-    (tmp_path / "labels.csv").write_text("pair,subject,a,b,choice\n")
-    subprocess.run(["git", "add", "labels.csv"], cwd=tmp_path, check=True)
-    subprocess.run(
-        ["git", "commit", "-qm", "labels, alone", "--date", "2020-01-01T00:00:00"],
-        cwd=tmp_path,
-        check=True,
-        env={"GIT_COMMITTER_DATE": "2020-01-01T00:00:00", "PATH": "/usr/bin:/bin"},
-    )
-    (tmp_path / "0.eval.json").write_text("{}")
-    subprocess.run(["git", "add", "0.eval.json"], cwd=tmp_path, check=True)
-    subprocess.run(["git", "commit", "-qm", "scores, after"], cwd=tmp_path, check=True)
+    repo = _repo(tmp_path)
+    (repo / "labels.csv").write_text("pair,subject,a,b,choice\n")
+    _git(repo, "add", "labels.csv")
+    _git(repo, "commit", "-qm", "labels, alone", date="2020-01-01T00:00:00")
+    (repo / "0.eval.json").write_text("{}")
+    _git(repo, "add", "0.eval.json")
+    _git(repo, "commit", "-qm", "scores, after")
 
     assert (
-        GitOrdering(tmp_path).labels_are_prior(
-            tmp_path / "labels.csv", [tmp_path / "0.eval.json"]
+        GitOrdering(repo).labels_are_prior(repo / "labels.csv", [repo / "0.eval.json"])
+        is True
+    )
+
+
+@pytest.mark.spec("evaluation:labels:correlation-requires-prior-labels")
+def test_a_moved_file_keeps_its_first_added_time(tmp_path: Path) -> None:
+    # Moving the labels must not make them look newer than the scores after them.
+    repo = _repo(tmp_path)
+    (repo / "labels.csv").write_text("pair,subject,a,b,choice\n")
+    _git(repo, "add", "labels.csv")
+    _git(repo, "commit", "-qm", "labels, alone", date="2020-01-01T00:00:00")
+    (repo / "0.eval.json").write_text("{}")
+    _git(repo, "add", "0.eval.json")
+    _git(repo, "commit", "-qm", "scores, after", date="2021-01-01T00:00:00")
+    (repo / "moved").mkdir()
+    _git(repo, "mv", "labels.csv", "moved/")
+    _git(repo, "commit", "-qm", "labels, moved", date="2022-01-01T00:00:00")
+
+    assert (
+        GitOrdering(repo).labels_are_prior(
+            repo / "moved" / "labels.csv", [repo / "0.eval.json"]
         )
         is True
     )

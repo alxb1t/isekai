@@ -459,7 +459,7 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
 
     message = str(refused.value)
     assert "ollama create a-reader" in message
-    assert "scripts/joycaption.Modelfile" in message
+    assert "config/joycaption.Modelfile" in message
     directory = run.directory(FLOW.id, CAPTIONS)
     assert attempts(directory, 1) == []
 

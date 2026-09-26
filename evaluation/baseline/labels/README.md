@@ -25,8 +25,8 @@ revision away from carrying one.
 render **B**, captioned with nothing but the pair id and the two letters:
 
 ```
-uv run --extra eval python baseline/build_contact_sheets.py \
-    --sheet baseline/labels/sheet.csv --out .data/labels
+uv run --extra eval python -m evaluation.baseline.build_contact_sheets \
+    --sheet evaluation/baseline/labels/sheet.csv --out .data/labels
 ```
 
 Forty judgements made by opening eighty files by hand is forty chances to compare the wrong pair, so

@@ -19,7 +19,7 @@ jobs:
         with:
           enable-cache: true
 
-      # The gate's fifth command is `bash scripts/typecheck_ui.sh`, which runs
+      # The gate's fifth command is `bash tools/typecheck_ui.sh`, which runs
       # `vue-tsc --noEmit` and refuses by name without `ui/node_modules/`. On an
       # operator's machine that directory is restored by hand, deliberately --
       # `npm install` fetches third-party packages and nothing in this

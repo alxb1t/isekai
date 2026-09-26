@@ -10,7 +10,7 @@ threshold -- a threshold needs labels, and this version is what produces the
 first ones.
 
 **It imports nothing third-party.** The models live behind the Protocols below,
-which `isekai.evaluation.eval_backends` implements against torch, transformers and
+which `evaluation.eval_backends` implements against torch, transformers and
 onnxruntime; the whole of this module is stdlib, so every rule in it is testable
 in CI with the `[eval]` extra absent. That is the same seam discipline
 `ComfyTransport` is under, for the same reason: a fake is what keeps the suite
@@ -27,7 +27,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from typing import Literal, Protocol
 
-from isekai.evaluation.ciede2000 import Lab, delta_e_2000
+from evaluation.ciede2000 import Lab, delta_e_2000
 
 # Re-exported, not defined here. The redundant alias is the explicit-re-export
 # form: `Refusal` moved to its own module so the pipeline can raise it without

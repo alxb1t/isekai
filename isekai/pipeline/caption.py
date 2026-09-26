@@ -90,7 +90,7 @@ READER_OPTIONS: Mapping[str, Any] = {
 # adapter's rather than the boundary's: the alias is machine-local and built from
 # a committed recipe, so what fixes its absence is a property of this adapter
 # rather than of the HTTP boundary underneath it (design.md D3).
-READER_REMEDY = "ollama create {model} -f scripts/joycaption.Modelfile"
+READER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
 
 
 @dataclass(frozen=True)

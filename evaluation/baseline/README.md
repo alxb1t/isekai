@@ -9,12 +9,12 @@ committing derived faces into a project whose product is identity preservation i
 README would then have to disclaim (`design.md` D14, D15). What is here is the recipe —
 `build_subjects.py` — and the SHA-256 of every file it produces, so a re-run can be **checked** rather
 than trusted. One version does not silently reverse a convention the previous one wrote down; this is
-`probe/build_inputs.py`'s treatment, applied again.
+v0.11's loader probe's treatment, applied again.
 
 ## The recipe
 
 ```
-python baseline/build_subjects.py --sources <synthetic portraits> --out <dir>
+uv run --extra eval python -m evaluation.baseline.build_subjects --sources <synthetic portraits> --out <dir>
 ```
 
 The sources are nine synthetic portraits, all 832×1216. Synthetic on purpose: no real person's
@@ -193,7 +193,7 @@ So `design.md` D9's pre-committed fallback — *if neither holds, the region axe
 refusal is what v0.12 ships* — **did not fire**. Both methods locate the face in every render, with
 wide margins.
 
-**Box IoU ships as the authoritative guard**, pinned in `isekai/evaluate.py` as
+**Box IoU ships as the authoritative guard**, pinned in `evaluation/evaluate.py` as
 `AUTHORITATIVE_GUARD_METHOD` and held by a test. The reason is about the measurement, not the
 margins: **IoU constrains size as well as position, and the centroid method constrains only
 position.** A render that placed a correctly-centred face at three times the scale passes the

@@ -25,6 +25,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.7] - 2026-09-26
+
+### Changed
+
+- **A layer-test scope path that does not exist fails the scan** rather than narrowing it silently
+  (`0029` design D8).
+- **The image's paths are held statically.** `tests/test_infra.py` checks every `COPY` source exists,
+  the entrypoint runs a provisioner the image copies, and the manifest lands where `provision.py`'s
+  anchor looks (`0029` design D5).
+- **The files the pipeline reads live in `config/`**: `models.json`, `vocabulary.json`, `field_map.json`
+  and `joycaption.Modelfile`. The anchors, the image's manifest copy and the printed remedies follow;
+  `field_map.json` records `config/field_map.json`, so new sheets record a new name and digest for the
+  same fields (`0029` design D3, D4, D5).
+- **The derivers and the operator's scripts live in `tools/`, a package run from the root**:
+  `uv run python -m tools.derive_field_map`, `bash tools/download_models.sh`. The `sys.path` hops and
+  `extra-paths` go; the image and the remedies follow (`0029` design D1, D3, D5).
+- **`make derive` re-runs every deriver in dependency order**, beside `gate` and outside it
+  (`0029` design D6).
+- **The evaluator is a top-level `evaluation/` beside the package it measures.** `isekai/evaluation/`,
+  the root `evaluate.py` (now `evaluation/__main__.py`), `baseline/` and `eval_models.json` move into
+  it; it runs as `uv run --extra eval python -m evaluation` (`0029` design D1, D2).
+- **The label ordering follows a moved file**: `GitOrdering` runs `git log --follow`, so moving the
+  labels keeps their first-added time (`0029` design D7).
+- **The layer test keys its evaluation rule on the top-level `evaluation`**, and its cycle check covers
+  `evaluation/` (`0029` design D8, `v0.22.5 review/R3`).
+- **The docs follow the tree**: `README.md`'s commands and layout, `docs/`, the package and group
+  READMEs, `evaluation/`'s READMEs and usage lines, and the spec preambles name `config/`, `tools/` and
+  `evaluation/`. Two false claims are corrected: no eval test skips in CI, and the guard is pinned in
+  `evaluation/evaluate.py` (`0029` design D11, D12, `v0.22.5 review/R5`).
+
+### Removed
+
+- **The licence record `scripts/eval_licences.md`**, its tests and its `CLAUDE.md` rule; the
+  requirement leaves the `model-provisioning` spec. The AGPL guards stay (`0029` design D10).
+- **`probe/`**, v0.11's loader probe, with `tests/test_probe.py`; its measurement stays recorded in
+  the archived `0011-converge-paydown` design (`0029` design D9).
+
 ## [0.22.6] - 2026-09-26
 
 ### Changed

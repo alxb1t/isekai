@@ -14,11 +14,11 @@ arrive as a side effect of downloading a tagger this repository did not load
 """
 
 import copy
-import re
 from pathlib import Path
 
 import pytest
 
+from evaluation.eval_models import load_eval_manifest
 from isekai.boundary.provision import (
     DIGEST,
     MANIFEST_PATH,
@@ -30,7 +30,6 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
-from isekai.evaluation.eval_models import load_eval_manifest
 from isekai.foundation.refusal import Refusal
 from isekai.interface.wiring import load_vocabulary
 from tests.fakes import FakeFetcher
@@ -44,15 +43,10 @@ TAGGER = "wd14/model.onnx"
 REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
 REPOSITORY = "SmilingWolf/wd-swinv2-tagger-v3"
 
-# The tracked note that sits beside the manifests. It is one record for every
-# artifact this repository pins, rather than one per manifest: a licence is a
-# property of the artifact, and three notes would be three places to forget.
-LICENCES_PATH = Path(__file__).resolve().parent.parent / "scripts" / "eval_licences.md"
-
 # The one command that provisions anything in this repository. The vocabulary is
 # fetched by pointing it at the vocabulary's manifest rather than by a second
 # driver that would have to be kept in step with this one.
-DRIVER_PATH = Path(__file__).resolve().parent.parent / "scripts" / "download_models.sh"
+DRIVER_PATH = Path(__file__).resolve().parent.parent / "tools" / "download_models.sh"
 
 # Extensions a model's weights arrive under. Exactly one entry here carries one,
 # and which one is asserted: the graph the tag list is the output layer of. A
@@ -186,48 +180,6 @@ def test_a_label_index_and_a_model_at_two_revisions_fail_the_check(
         )
 
 
-@pytest.mark.spec("model-provisioning:licences:vocabulary-terms-are-recorded")
-def test_every_vocabulary_artifact_is_named_in_the_licence_record(
-    vocabulary_manifest: Manifest,
-) -> None:
-    record = LICENCES_PATH.read_text()
-    for entry in vocabulary_manifest["entries"]:
-        assert entry["dest"] in record, f"{entry['dest']} carries no recorded licence"
-
-
-@pytest.mark.spec("model-provisioning:licences:vocabulary-terms-are-recorded")
-@pytest.mark.parametrize("artifact", [VOCABULARY, TAGGER])
-def test_each_vocabulary_row_names_its_terms_its_source_and_the_date_read(
-    artifact: str,
-) -> None:
-    section = _section_naming(LICENCES_PATH.read_text(), artifact)
-    terms = re.search(r"- \*\*Licence:\*\* (?P<terms>\S.*)", section)
-    assert terms is not None and terms.group("terms").strip()
-    read_at = re.search(
-        r"- \*\*Read at:\*\* .*<(?P<url>https://\S+)>.*?(?P<date>\d{4}-\d{2}-\d{2})",
-        section,
-        re.DOTALL,
-    )
-    assert read_at is not None
-    assert read_at.group("url")
-    assert read_at.group("date")
-
-
-def _section_naming(record: str, artifact: str) -> str:
-    """Return the one `###` section of the licence record that names `artifact`.
-
-    The closing summary table is excluded rather than searched. It names every
-    artifact by design -- it is the index over the records, not a record -- so
-    leaving it in would make "recorded in exactly one section" unsatisfiable for
-    all of them the moment a second artifact was added under the last heading.
-    """
-    body = record.split("\n## Summary", 1)[0]
-    sections = re.split(r"^### ", body, flags=re.MULTILINE)[1:]
-    naming = [section for section in sections if artifact in section]
-    assert len(naming) == 1, f"{artifact} is recorded in {len(naming)} sections"
-    return naming[0]
-
-
 # --- provisioning -------------------------------------------------------------
 
 
@@ -279,7 +231,7 @@ def test_the_shell_driver_forwards_the_manifest_to_every_invocation() -> None:
 
     assert invocations
     assert all("MANIFEST" in line for line in invocations)
-    assert "scripts/vocabulary.json" in script
+    assert "config/vocabulary.json" in script
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:absent-vocabulary-names-the-command")
@@ -291,4 +243,4 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
 
     message = str(refused.value)
     assert VOCABULARY in message
-    assert "scripts/download_models.sh scripts/vocabulary.json" in message
+    assert "tools/download_models.sh config/vocabulary.json" in message

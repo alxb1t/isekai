@@ -118,7 +118,7 @@ provision() {
     echo "models namespace: $MODELS_ROOT -> $(readlink "$MODELS_ROOT")"
 
     # Downloads once, re-verified on later boots.
-    MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/scripts/download_models.sh || return 1
+    MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/tools/download_models.sh || return 1
 }
 
 # A provisioning abort must NOT take the container down. The abort policy leaves a

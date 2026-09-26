@@ -33,7 +33,7 @@ load-bearing in a way nothing else in this repository's use of it is --
 `shared/vocabulary.py` reads the same file and throws the order away, because for
 mapping a phrase the order means nothing. Here a pair from two revisions mislabels
 every tag silently: the vector has the right length and every name in it is a real
-tag. That is why both halves are pinned in `scripts/vocabulary.json` and why both
+tag. That is why both halves are pinned in `config/vocabulary.json` and why both
 digests are verified before the first inference (design.md D17, D18).
 
 **Preparation sits behind the seam rather than in front of it**, so `Session`

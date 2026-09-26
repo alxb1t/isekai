@@ -19,7 +19,7 @@ The consequence is accepted rather than hidden: **a single holistic label cannot
 attribute a disagreement to one axis.** If face and hair correlate differently
 against the same label, that difference is itself a finding.
 
-Stdlib only, like `isekai.evaluation.evaluate`, so all of it is testable in CI with the
+Stdlib only, like `evaluation.evaluate`, so all of it is testable in CI with the
 `[eval]` extra absent. The one impure thing -- asking git what was committed when
 -- is behind the `Ordering` seam.
 """
@@ -105,7 +105,15 @@ class GitOrdering:
         """Return the unix time of the commit that first added `path`, or None."""
         try:
             out = subprocess.run(
-                ["git", "log", "--diff-filter=A", "--format=%ct", "--", str(path)],
+                [
+                    "git",
+                    "log",
+                    "--follow",
+                    "--diff-filter=A",
+                    "--format=%ct",
+                    "--",
+                    str(path),
+                ],
                 capture_output=True,
                 text=True,
                 cwd=self.repo,

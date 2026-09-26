@@ -95,7 +95,7 @@ python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
 
 One verb, and it writes and reports each artifact in order: the prose, then a scored tag list from the
 local WD14 tagger, then a raw one from the hosted model. **The local list is what fills the sheet**, so it
-needs `bash scripts/download_models.sh scripts/vocabulary.json` to have been run.
+needs `bash tools/download_models.sh config/vocabulary.json` to have been run.
 
 If Ollama is not running, `caption` refuses the photograph at the prose, before either list; if only
 the hosted list is missing, its own call failed. The prose is a reading aid with no machine consumer.
@@ -269,13 +269,13 @@ why each refusal names the command that does.
 **To run stage ①**, install [Ollama](https://ollama.com), then, from the repository root:
 
 ```sh
-ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
+ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile
 ```
 
 **One command, because there is one model.** It builds the reader from a committed recipe, and the
 same alias answers the hosted tagger — which is exactly why the tag prompt is unframed: two calls to
 one model must not arrive framed differently.
-**`scripts/joycaption.Modelfile`'s header names the two GGUF files it needs,
+**`config/joycaption.Modelfile`'s header names the two GGUF files it needs,
 with their sha256, their byte counts and their pinned source revision** — they are not in this
 repository and `models/` is gitignored, so fetch them into `models/joycaption/` first.
 
@@ -295,7 +295,7 @@ make gate
 `make -n gate` prints its commands; the root `Makefile` declares them, and CI
 (`.github/workflows/ci.yml`) runs `make gate` too.
 
-Its browser half, `scripts/typecheck_ui.sh`, runs `vue-tsc --noEmit` over `ui/` and needs
+Its browser half, `tools/typecheck_ui.sh`, runs `vue-tsc --noEmit` over `ui/` and needs
 `ui/node_modules/`. It is **not** restored for you — run `npm install` in `ui/` once, as the
 review surface already asks.
 
@@ -310,15 +310,17 @@ Image quality and identity fidelity are judged live on a pod, by eye.
 
 ```
 isekai/
-├── isekai/                    # the package, filed into six groups; one README.md each
+├── isekai/                    # the package, filed into groups; one README.md each
 │   ├── __main__.py            # the path `python -m isekai` resolves — a shim over interface/cli.py
 │   ├── foundation/            # run directory & layout names, flow manifest & Schema, refusal
 │   ├── pipeline/              # the four staged verbs: caption · sheet · review · generate
 │   │                          #   + tagging.py, not a verb: the two tag artifacts caption writes
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
-│   ├── evaluation/            # the scorer, and the only importer of the [eval] extra
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
+├── evaluation/                # the scorer, beside the package it measures; the only importer
+│   │                          #   of the [eval] extra — `uv run --extra eval python -m evaluation`
+│   └── baseline/              # its calibration: the subjects' recipe, the labels, the agreement
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable
@@ -332,14 +334,19 @@ isekai/
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   └── down.sh                # remove pod, billing stops
-├── scripts/
-│   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
+├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
-│   └── derive_manifest.py     # re-derives every revision & digest; the manifest is its output
+│   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
+│   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
+├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
+│   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
+│   ├── derive_*.py            # re-derive the manifests and the field map: `make derive`
+│   ├── manifest.py            # what every manifest deriver is made of
+│   └── typecheck_ui.sh        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
-├── Makefile                   # `make gate`
+├── Makefile                   # `make gate`, and `make derive` to re-run the derivers
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── start.sh                   # baked into the image as its start command
@@ -382,7 +389,7 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │      • start sshd            (:22)
     │                                  │      • mount volume → /runpod-volume
     │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
-    │                                  │      • provision from scripts/models.json (verified)
+    │                                  │      • provision from config/models.json (verified)
     │                                  │      • exec ComfyUI          (:8188)
     │ 5  poll GET /v1/pods ───────────▶│
     │    ◀──── publicIp + port(22) ────┘

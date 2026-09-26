@@ -7,7 +7,7 @@ isekai`'s import graph, and `[eval]` is the one extra a checkout may legitimatel
 not have. The entry-gate rule is about what may be selected to *render*, and an
 evaluator is not a way to render at all.
 
-    uv run --extra eval python evaluate.py <run-directory>/ --photo <photo>
+    uv run --extra eval python -m evaluation <run-directory>/ --photo <photo>
 
 **It cannot read a run this pipeline produces today, and the path above no longer
 exists.** The reader below requires a `run.json` carrying `photo_sha256`, `base`
@@ -34,17 +34,17 @@ import json
 import sys
 from pathlib import Path
 
-from isekai.boundary.provision import digest_of
-from isekai.evaluation.evaluate import (
+from evaluation.evaluate import (
     AUTHORITATIVE_GUARD_METHOD,
     Refusal,
     pod_image_of,
     score_render,
     table,
 )
+from isekai.boundary.provision import digest_of
 
 # Where the scorer's own artifacts live, verified against
-# `scripts/eval_models.json` before any of them is loaded. Local to the
+# `evaluation/eval_models.json` before any of them is loaded. Local to the
 # operator's machine: these are not what the pod provisions (design.md D18).
 DEFAULT_MODELS_DIR = Path("models")
 
@@ -133,9 +133,9 @@ def main() -> None:
     base = manifest.get("base")
 
     # Imported here, not at module scope: this is the only import of the `[eval]`
-    # extra in the tree, and `isekai.evaluation.evaluate`'s rules are stdlib-only
+    # extra in the tree, and `evaluation.evaluate`'s rules are stdlib-only
     # so they stay testable in CI with the stack absent.
-    from isekai.evaluation.eval_backends import (
+    from evaluation.eval_backends import (
         AnimeFaceDetector,
         ArcFaceEncoder,
         DwPoseReader,
@@ -143,7 +143,7 @@ def main() -> None:
         SegformerParser,
         StyleIdEncoder,
     )
-    from isekai.evaluation.evaluate import canvas_for
+    from evaluation.evaluate import canvas_for
 
     canvas = canvas_for(photo)
     parser = SegformerParser(args.models)

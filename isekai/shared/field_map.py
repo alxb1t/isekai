@@ -1,6 +1,6 @@
 """The authored tag-to-criterion table, read in two directions.
 
-**One artifact, two indexes.** `scripts/field_map.json` assigns every tag it
+**One artifact, two indexes.** `config/field_map.json` assigns every tag it
 carries a *primary* criterion -- the one field a router writes it to -- and any
 further criteria it may be *browsed* under. The `tag -> field` direction fills a
 sheet from a tagger's list with no language model in the path; the
@@ -49,16 +49,16 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import digest_of
 from isekai.shared.vocabulary import Vocabulary, normalise
 
-# Beside `scripts/vocabulary.json`, which the runtime already verifies against.
+# Beside `config/vocabulary.json`, which the runtime already verifies against.
 # The table is authored in this repository rather than fetched, so it is tracked
 # and carries no digest of its own in a manifest -- its digest is of its bytes.
 FIELD_MAP_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "scripts" / "field_map.json"
+    Path(__file__).resolve().parent.parent.parent / "config" / "field_map.json"
 )
 
 # The one command that writes the file, named here because a refusal that says a
 # table is wrong without saying what regenerates it is half a refusal.
-FIELD_MAP_REMEDY = "uv run python scripts/derive_field_map.py"
+FIELD_MAP_REMEDY = "uv run python -m tools.derive_field_map"
 
 
 @dataclass(frozen=True)

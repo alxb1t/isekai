@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Re-derive `scripts/models.json` from the authored source spec below.
+"""Re-derive `config/models.json` from the authored source spec below.
 
 The manifest is *derived*, never transcribed, and that now holds for every entry
 without exception. Hugging Face publishes each LFS object's SHA-256 as its object
@@ -11,10 +10,10 @@ reason. An upgrade is a revision bump plus a re-run, not fifteen manual lookups.
 
 Run it from the repository root:
 
-    uv run python scripts/derive_manifest.py
+    uv run python -m tools.derive_manifest
 
-It rewrites `scripts/models.json` in place. Re-running without editing the spec
-must leave the file byte-identical -- `git diff --exit-code scripts/models.json`
+It rewrites `config/models.json` in place. Re-running without editing the spec
+must leave the file byte-identical -- `git diff --exit-code config/models.json`
 is the check, and it is why `PINNED` is a constant here rather than today's date.
 
 Revisions are data in this file, not resolved from a branch at run time. Resolving
@@ -23,17 +22,17 @@ property the pins exist to remove.
 
 What is left here is this manifest's *spec*: what to pin, and the one publisher
 record the mirrors are held against. The entry types, both digest strategies and
-the writer live in `scripts/manifest.py`, shared with the two sibling derivers
+the writer live in `tools/manifest.py`, shared with the two sibling derivers
 (design.md D10).
 """
 
 import json
 import re
 import urllib.request
-from pathlib import Path
 from typing import Any
 
-from manifest import (
+from isekai.boundary.provision import MANIFEST_PATH
+from tools.manifest import (
     USER_AGENT,
     Manifest,
     ManifestEntry,
@@ -43,8 +42,6 @@ from manifest import (
     entry_for,
     write,
 )
-
-MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
 PINNED = "2026-09-05"
@@ -315,7 +312,7 @@ def derive() -> Manifest:
 
 
 def main() -> None:
-    """Derive the manifest and write it to `scripts/models.json`."""
+    """Derive the manifest and write it to `config/models.json`."""
     write(derive(), MANIFEST_PATH)
 
 

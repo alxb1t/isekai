@@ -6,7 +6,14 @@ from typing import Any, cast
 
 import pytest
 
+from evaluation.eval_models import (
+    RECOGNIZER,
+    SHARED_WITH_THE_GRAPH,
+    load_eval_manifest,
+    shared_entries_that_differ,
+)
 from isekai.boundary.provision import (
+    MANIFEST_PATH,
     DigestMismatch,
     EscapingDestination,
     Manifest,
@@ -18,12 +25,6 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     resolve,
     sources_on_a_mutable_ref,
-)
-from isekai.evaluation.eval_models import (
-    RECOGNIZER,
-    SHARED_WITH_THE_GRAPH,
-    load_eval_manifest,
-    shared_entries_that_differ,
 )
 
 
@@ -184,9 +185,7 @@ def test_a_recognizer_that_drifted_from_the_graphs_pin_is_reported(
 def test_a_shared_entry_dropped_from_the_graphs_manifest_is_reported(
     eval_manifest: Manifest, tmp_path: Path
 ) -> None:
-    graph: dict[str, Any] = json.loads(
-        (Path(__file__).resolve().parent.parent / "scripts" / "models.json").read_text()
-    )
+    graph: dict[str, Any] = json.loads(MANIFEST_PATH.read_text())
     graph["entries"] = [
         entry for entry in graph["entries"] if entry["dest"] != RECOGNIZER
     ]

@@ -243,7 +243,7 @@ def load_schema(path: Path) -> Schema:
 class Model:
     """One model artifact a flow's render is pinned to: where it goes, and its bytes.
 
-    The digest is here as well as in `scripts/models.json` because a destination
+    The digest is here as well as in `config/models.json` because a destination
     path alone does not pin bytes: re-pinning a checkpoint would make an existing
     flow identifier render differently with the gate green. The duplication is
     only safe because a test holds the two equal, naming the flow (design.md D4).

@@ -3,11 +3,6 @@ from typing import Any, cast
 
 import pytest
 
-# `scripts/` is declared a source root in `pyproject.toml` -- operator tooling, not
-# a package. It is not on `python -m isekai`'s import graph, so the module-scope
-# import rule is untouched either way.
-from derive_manifest import civitai_file
-
 from isekai.boundary.provision import (
     SOURCE_ORG,
     Entry,
@@ -17,6 +12,7 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
+from tools.derive_manifest import civitai_file
 
 
 def _org_of(source: str) -> str | None:

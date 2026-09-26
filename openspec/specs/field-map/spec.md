@@ -12,7 +12,7 @@ It is keyed by the **vocabulary** and not by any flow: `twintails` answers *hair
 that declares that field, so the assignment is a property of the tag list rather than of a schema. A flow
 keeps saying which criteria *it* declares and in what order, and says nothing about which tags exist.
 
-**Source:** `isekai/shared/field_map.py`, `scripts/field_map.json`, `scripts/derive_field_map.py` ·
+**Source:** `isekai/shared/field_map.py`, `config/field_map.json`, `tools/derive_field_map.py` ·
 **Tests:** `tests/test_field_map.py`
 
 ## Requirements

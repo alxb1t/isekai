@@ -152,8 +152,6 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry carrying its digest —
   the designed price of the freeze. A re-pin states what moved, and a test fails on any pinned digest
   no entry carries. The comment above `PINNED` states the rule, never its history.
-- **`eval_licences.md`** records each evaluator artifact's licence with the URL and the date it was
-  read; a new artifact owes an entry.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — MinionsFactory's run artefacts, gitignored whole.

@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """What every manifest deriver is made of: entry types, digest strategies, writer.
 
-`scripts/models.json`, `scripts/eval_models.json` and `scripts/vocabulary.json`
+`config/models.json`, `evaluation/eval_models.json` and `config/vocabulary.json`
 are three manifests answering three questions -- what the graph needs on the pod,
 what the scorer loads on the operator's machine, what the pipeline fills sheets
 from -- and that separation is deliberate and stays (design.md D10). What they
@@ -26,11 +25,9 @@ failure, which is the byte-identical rule breaking in the one direction nothing
 notices -- a real SHA-256 over the wrong bytes, written to a tracked file, which
 becomes a refusal of the *correct* artifact at whatever verifies it later.
 
-Operator tooling, not a package: nothing installs it, nothing imports it at
-runtime, and nothing in `python -m isekai`'s import graph reaches it.
-`pyproject.toml` declares
-`scripts/` a source root so the type checker and the suite see it the way a human
-running it does.
+Operator tooling: nothing installs it and `python -m isekai` does not import it.
+The derivers run from the repository root as modules, `uv run python -m
+tools.derive_manifest`, so `isekai` and `tools` both import (`0029` design D1).
 
 **The refactor this module is verifiable for nothing.** Every deriver's output
 must still be byte-identical on a re-run, which is the rule they were already
