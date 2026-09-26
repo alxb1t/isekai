@@ -37,7 +37,15 @@ from pathlib import Path
 from typing import Any
 
 from isekai.boundary.comfy import ComfyTransport, Unreachable
-from isekai.foundation.artifacts import write_json
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    PROMPT_FILE,
+    RENDER_FILE,
+    Prompt,
+    read,
+    write,
+)
+from isekai.foundation.artifacts import Render as RenderSidecar
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import (
     SAMPLER_DIALS,
@@ -58,8 +66,6 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     check_budget,
-    envelope,
-    read_artifact,
     record_failure,
 )
 from isekai.shared.image import (
@@ -170,7 +176,7 @@ def prompt_artifact(
 
     check_budget(STAGE_ASSEMBLE, directory, version, run.id)
     try:
-        body = read_artifact(source)
+        body = read(source, APPROVED_FILE)
         positive, negative = assemble(body["fields"], schema.names, flow)
         # Read here and thrown away, for the reason the whole stage is here: the
         # render target comes from the photograph's own header, and a header
@@ -188,19 +194,19 @@ def prompt_artifact(
             f"{broken}; see {record.name} in {flow.id}/{PROMPTS}/"
         ) from broken
 
-    write_json(
-        path,
-        envelope(
-            "prompt",
-            {"implementation": STAGE_ASSEMBLE, "from": version, "source": REVIEW},
-            {
-                "flow": flow.id,
-                "positive": positive,
-                "negative": negative,
-                "edited": bool(body["producer"].get("edited")),
-            },
-        ),
-    )
+    prompt: Prompt = {
+        "schema": PROMPT_FILE.schema,
+        "producer": {
+            "implementation": STAGE_ASSEMBLE,
+            "from": version,
+            "source": REVIEW,
+        },
+        "flow": flow.id,
+        "positive": positive,
+        "negative": negative,
+        "edited": bool(body["producer"].get("edited")),
+    }
+    write(path, PROMPT_FILE, prompt)
     return path
 
 
@@ -407,7 +413,7 @@ def render(
     stage is held to.
     """
     version, _ = approved_artifact(run, flow.id)
-    prompt = read_artifact(run.directory(flow.id, PROMPTS) / artifact_name(version))
+    prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
     directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
     already = rendered_seeds(directory, flow.output_suffix)
     wanted = seeds_for(count, seeds, rng or random.Random(), already)
@@ -452,21 +458,21 @@ def render(
         # the one stage that costs money on every pass.
         write_atomically(image, body)
         provenance = directory / f"{seed}.json"
-        write_json(
-            provenance,
-            envelope(
-                STAGE_RENDER,
-                {"implementation": STAGE_RENDER, "from": version, "source": PROMPTS},
-                {
-                    "flow": flow.id,
-                    "seed": seed,
-                    "sheet_version": version,
-                    "graph_sha256": graph_digest(graph),
-                    "flow_graph_sha256": flow_graph,
-                    "edited": prompt["edited"],
-                },
-            ),
-        )
+        sidecar: RenderSidecar = {
+            "schema": RENDER_FILE.schema,
+            "producer": {
+                "implementation": STAGE_RENDER,
+                "from": version,
+                "source": PROMPTS,
+            },
+            "flow": flow.id,
+            "seed": seed,
+            "sheet_version": version,
+            "graph_sha256": graph_digest(graph),
+            "flow_graph_sha256": flow_graph,
+            "edited": prompt["edited"],
+        }
+        write(provenance, RENDER_FILE, sidecar)
         produced.append(Render(seed, image, provenance))
     return produced
 

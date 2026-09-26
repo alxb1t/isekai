@@ -10,7 +10,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 - [x] 3 — Run files: the frame and the error record
 - [x] 4 — Readings: the caption and both tag lists
 - [x] 5 — Sheets: the sheet, the draft and the approved sheet
-- [ ] 6 — Renders: the prompt and the render sidecar
+- [x] 6 — Renders: the prompt and the render sidecar
 - [ ] 7 — Readers, and the old names retire
 - [ ] 8 — The docs name the contract
 
@@ -65,9 +65,9 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 6 — Renders: the prompt and the render sidecar
 
-- [ ] 6.1 In `isekai/pipeline/generate.py`, read the approved sheet (`:173`) and the prompt (`:410`) with `read`, and write the prompt (`:191-203`) and the sidecar (`:454-469`) with `write`. [D5](design.md#d5).
+- [x] 6.1 In `isekai/pipeline/generate.py`, read the approved sheet (`:173`) and the prompt (`:410`) with `read`, and write the prompt (`:191-203`) and the sidecar (`:454-469`) with `write`. [D5](design.md#d5).
   Verify: `grep -c -e 'envelope(' -e 'write_json(' -e 'read_artifact(' isekai/pipeline/generate.py` prints `0`.
-- [ ] 6.2 Delete `isekai/pipeline/generate.py` from the tripwire's allowlist, leaving it empty.
+- [x] 6.2 Delete `isekai/pipeline/generate.py` from the tripwire's allowlist, leaving it empty.
   Verify: `grep -c '"isekai/pipeline/generate.py"' tests/test_artifact_bytes.py` prints `0`.
 
 ## 7 — Readers, and the old names retire

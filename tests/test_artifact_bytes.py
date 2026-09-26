@@ -33,9 +33,7 @@ CONTRACT = "isekai/foundation/artifacts.py"
 WRITERS = ("write_json", "envelope")
 
 # Today's writers, each deleted by the phase that converts it.
-ALLOWLIST = {
-    "isekai/pipeline/generate.py",
-}
+ALLOWLIST: set[str] = set()
 
 
 # --- the golden bytes ---------------------------------------------------------

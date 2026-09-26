@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The sheet, the review draft and the approved sheet are read and written through the contract.**
   `route` takes only `DanbooruTag`s; `review` reads its origin with one typed read per branch
   (`0028` design D5, D5a, D6).
+- **The prompt and the render sidecar are read and written through the contract**, so no module
+  outside `foundation/artifacts.py` writes a run file by hand (`0028` design D5, D9).
 
 ## [0.22.5] - 2026-09-25
 
