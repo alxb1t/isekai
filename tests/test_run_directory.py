@@ -717,8 +717,8 @@ REPO = Path(__file__).resolve().parent.parent
 # One path per directory a tracked producer names a photograph or a render under.
 # `.data/` is the single ignored root (design.md D14), and v0.14 made it the only
 # one that is generated into: the run directory holds a copy of the photograph,
-# and `baseline/build_contact_sheets.py` -- which pastes the reference photograph
-# beside the renders -- now defaults `--renders` to `.data/baseline` and is
+# and `evaluation/baseline/build_contact_sheets.py` -- which pastes the reference
+# photograph beside the renders -- now defaults `--renders` to `.data/baseline` and is
 # documented to write its sheets under `.data/labels`, where it used to use
 # `outputs/`. `.inputs/baseline` is the one exception and is not generated at
 # all: an operator puts source photographs there by hand. All four hold a

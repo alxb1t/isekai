@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `extra-paths` go; the image and the remedies follow (`0029` design D1, D3, D5).
 - **`make derive` re-runs every deriver in dependency order**, beside `gate` and outside it
   (`0029` design D6).
+- **The evaluator is a top-level `evaluation/` beside the package it measures.** `isekai/evaluation/`,
+  the root `evaluate.py` (now `evaluation/__main__.py`), `baseline/` and `eval_models.json` move into
+  it; it runs as `uv run --extra eval python -m evaluation` (`0029` design D1, D2).
+- **The label ordering follows a moved file**: `GitOrdering` runs `git log --follow`, so moving the
+  labels keeps their first-added time (`0029` design D7).
+- **The layer test keys its evaluation rule on the top-level `evaluation`**, and its cycle check covers
+  `evaluation/` (`0029` design D8, `v0.22.5 review/R3`).
 
 ## [0.22.6] - 2026-09-26
 

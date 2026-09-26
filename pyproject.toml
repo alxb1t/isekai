@@ -128,7 +128,7 @@ ignore = ["D203", "D213"]
 # either editing the archive -- which would falsify the record it exists to be --
 # or exempting a rule. Neither was needed.
 [tool.ruff.lint.isort]
-known-first-party = ["isekai", "tools"]
+known-first-party = ["isekai", "tools", "evaluation"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests are named as behavioural sentences and double as documentation -- that is
@@ -143,7 +143,7 @@ known-first-party = ["isekai", "tools"]
 
 # `eval_backends.py` is the ONLY module that touches numpy, torch, onnxruntime
 # and Pillow, and it exists to be that boundary -- everything the scorer decides
-# lives in `isekai/evaluation/evaluate.py`, which is stdlib-only and fully annotated.
+# lives in `evaluation/evaluate.py`, which is stdlib-only and fully annotated.
 # The values this file hands around come out of `torch` and `transformers` as
 # well as `numpy`, and the `[eval]` extra that carries those two is NOT installed
 # in the environment the gate runs in, by design, so their types cannot be named
@@ -154,7 +154,7 @@ known-first-party = ["isekai", "tools"]
 # So ANN401 is waived HERE ONLY, and for that one rule. Every other ANN rule
 # still applies, so an unannotated argument in this file is still an error; what
 # is waived is the demand for a more specific type than the environment can name.
-"isekai/evaluation/eval_backends.py" = ["ANN401"]
+"evaluation/eval_backends.py" = ["ANN401"]
 
 # One file bridges to packages the gate's environment deliberately does NOT
 # install, so `unresolved-import` in it is the configuration working, not a
@@ -173,7 +173,7 @@ known-first-party = ["isekai", "tools"]
 # installed, which is the property that matters -- `make gate` must not depend on
 # what the operator happens to have synced.
 [[tool.ty.overrides]]
-include = ["isekai/evaluation/eval_backends.py"]
+include = ["evaluation/eval_backends.py"]
 
 [tool.ty.overrides.rules]
 unresolved-import = "ignore"

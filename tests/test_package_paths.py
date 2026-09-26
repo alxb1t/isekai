@@ -27,8 +27,8 @@ from pathlib import Path
 
 import pytest
 
+from evaluation import eval_models
 from isekai.boundary import provision
-from isekai.evaluation import eval_models
 from isekai.foundation import flow, run
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -53,7 +53,7 @@ ANCHORS = (
     ),
     pytest.param(
         eval_models.EVAL_MANIFEST_PATH,
-        ("scripts", "eval_models.json"),
+        ("evaluation", "eval_models.json"),
         id="eval_models.EVAL_MANIFEST_PATH",
     ),
 )
@@ -89,11 +89,13 @@ def test_each_anchor_resolves_to_the_repository_root(
 @pytest.mark.spec_exempt(
     "structural: the assertion above proves nothing unless it can go red"
 )
-def test_the_assertion_fails_when_it_lands_on_the_package_instead() -> None:
-    # Where every one of these constants strips back to if its module moves into a
-    # group directory and its expression does not gain a `.parent`: the package,
-    # not the repository. One case, not six -- each anchor's suffix cancels
-    # against its own hops, so all six reduce to exactly this path, and
-    # parametrizing would advertise per-anchor coverage that does not exist.
+@pytest.mark.parametrize("package", ["isekai", "evaluation"])
+def test_the_assertion_fails_when_it_lands_on_the_package_instead(
+    package: str,
+) -> None:
+    # Where a constant strips back to if its module moves a directory deeper and
+    # its expression does not gain a `.parent`: the top-level package holding it,
+    # not the repository. Each anchor's suffix cancels against its own hops, so
+    # every one reduces to one of these paths.
     with pytest.raises(AssertionError):
-        _assert_anchors_the_repository_root(REPO_ROOT / "isekai", ())
+        _assert_anchors_the_repository_root(REPO_ROOT / package, ())

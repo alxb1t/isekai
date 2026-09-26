@@ -8,7 +8,7 @@ docs ([D13](design.md#d13)).
 - [x] 1 — Guards: a missing scope path fails, and the image's layout is tested
 - [x] 2 — `config/`: the files the pipeline reads
 - [x] 3 — `tools/`: the derivers and the operator's scripts, run as modules
-- [ ] 4 — `evaluation/`: the sub-system leaves the package
+- [x] 4 — `evaluation/`: the sub-system leaves the package
 - [ ] 5 — Removals: the licence record and `probe/`
 - [ ] 6 — The docs follow the tree
 
@@ -53,15 +53,15 @@ Line numbers are `c6d18a4`'s; find each site by the text it names.
 
 ## 4 — `evaluation/`: the sub-system leaves the package
 
-- [ ] 4.1 `git mv` `isekai/evaluation/` to `evaluation/`, `evaluate.py` to `evaluation/__main__.py`, `baseline/` to `evaluation/baseline/`, and `scripts/eval_models.json` to `evaluation/`; add `evaluation/baseline/__init__.py`. [D1](design.md#d1), [D2](design.md#d2).
+- [x] 4.1 `git mv` `isekai/evaluation/` to `evaluation/`, `evaluate.py` to `evaluation/__main__.py`, `baseline/` to `evaluation/baseline/`, and `scripts/eval_models.json` to `evaluation/`; add `evaluation/baseline/__init__.py`. [D1](design.md#d1), [D2](design.md#d2).
   Verify: `test ! -e isekai/evaluation/evaluate.py && test ! -e evaluate.py && test ! -e baseline/README.md && test -f evaluation/__main__.py && test -f evaluation/eval_models.json && test -f evaluation/baseline/__init__.py && echo ok` prints `ok`.
-- [ ] 4.2 Import `evaluation` where `isekai.evaluation` stood — in `evaluation/`, `tools/derive_eval_manifest.py`, `isekai/foundation/refusal.py`'s docstring and the tests [D8](design.md#d8) names; `EVAL_MANIFEST_PATH` becomes a sibling path.
+- [x] 4.2 Import `evaluation` where `isekai.evaluation` stood — in `evaluation/`, `tools/derive_eval_manifest.py`, `isekai/foundation/refusal.py`'s docstring and the tests [D8](design.md#d8) names; `EVAL_MANIFEST_PATH` becomes a sibling path.
   Verify: `git grep -n 'isekai.evaluation' -- '*.py'` prints nothing.
-- [ ] 4.3 Point `pyproject.toml`'s ruff per-file ignore, `ty` override and comments at `evaluation/`, and add `evaluation` to `known-first-party`.
+- [x] 4.3 Point `pyproject.toml`'s ruff per-file ignore, `ty` override and comments at `evaluation/`, and add `evaluation` to `known-first-party`.
   Verify: `grep -c 'isekai/evaluation' pyproject.toml` prints `0`.
-- [ ] 4.4 Add `--follow` to `GitOrdering._first_commit_time`, with `test_a_moved_file_keeps_its_first_added_time` in `tests/test_labels.py`, per [D7](design.md#d7).
+- [x] 4.4 Add `--follow` to `GitOrdering._first_commit_time`, with `test_a_moved_file_keeps_its_first_added_time` in `tests/test_labels.py`, per [D7](design.md#d7).
   Verify: `grep -c -e '"--follow"' evaluation/labels.py` prints `1`, and `grep -c '^def test_a_moved_file_keeps_its_first_added_time(' tests/test_labels.py` prints `1`.
-- [ ] 4.5 Key `tests/test_layers.py`'s evaluation rule on the top-level `evaluation`, keep it in `_imports`, extend the cycle check to `evaluation/`, and set the scope to `("isekai", "probe", "tools", "evaluation")`, per [D8](design.md#d8).
+- [x] 4.5 Key `tests/test_layers.py`'s evaluation rule on the top-level `evaluation`, keep it in `_imports`, extend the cycle check to `evaluation/`, and set the scope to `("isekai", "probe", "tools", "evaluation")`, per [D8](design.md#d8).
   Verify: `grep -c '"isekai.evaluation"' tests/test_layers.py` prints `0`, and `grep -c 'FRONT_DOOR_SCOPE = ("isekai", "probe", "tools", "evaluation")' tests/test_layers.py` prints `1`.
 
 ## 5 — Removals: the licence record and `probe/`

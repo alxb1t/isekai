@@ -1,6 +1,6 @@
 # The model licences — read, quoted, and what each one costs
 
-The tracked note that sits beside `scripts/eval_models.json`, the way that manifest sits beside
+The tracked note that sits beside `evaluation/eval_models.json`, the way that manifest sits beside
 `config/models.json`. Every artifact the scorer loads is listed here with the licence it ships
 under, the URL that licence was read at, and the date it was read.
 
@@ -158,7 +158,7 @@ that a branch name is not a pin); drop the detector and guard on landmark-centro
 (D19's own stated reserve, at the cost of collapsing D9's two-way comparison to one method); or find a
 published ONNX detector.
 
-**Resolved 2026-09-06 in favour of the third.** `scripts/eval_models.json` pins:
+**Resolved 2026-09-06 in favour of the third.** `evaluation/eval_models.json` pins:
 
 - **`deepghs/anime_face_detection`**, `face_detect_v1.4_s`, revision
   `784dc4c0bb692351ddcdbe6131a050b17d3025d5`.

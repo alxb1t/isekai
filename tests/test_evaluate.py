@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.evaluation.evaluate import (
+from evaluation.evaluate import (
     AUTHORITATIVE_GUARD_METHOD,
     CLAIMS,
     MIN_KEYPOINT_CONFIDENCE,
@@ -680,9 +680,9 @@ def test_ultralytics_is_absent_from_the_resolved_lockfile() -> None:
     "nobody runs is not a control"
 )
 def test_ultralytics_is_absent_from_the_scorers_import_graph() -> None:
-    import isekai.evaluation.evaluate
+    import evaluation.evaluate
 
-    source = Path(isekai.evaluation.evaluate.__file__).read_text()
+    source = Path(evaluation.evaluate.__file__).read_text()
 
     assert "import ultralytics" not in source
     assert "from ultralytics" not in source
@@ -705,7 +705,7 @@ def test_the_authoritative_guard_method_is_the_one_phase_eight_measured() -> Non
     # Pinned the way the graph's dials are pinned: both methods held on all
     # thirty baseline renders, IoU was chosen because it constrains size as well
     # as position, and changing that is a deliberate test edit rather than a
-    # quiet one. `baseline/README.md` records the measurement.
+    # quiet one. `evaluation/baseline/README.md` records the measurement.
     assert AUTHORITATIVE_GUARD_METHOD == "iou"
 
 

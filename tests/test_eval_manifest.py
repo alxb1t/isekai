@@ -6,6 +6,12 @@ from typing import Any, cast
 
 import pytest
 
+from evaluation.eval_models import (
+    RECOGNIZER,
+    SHARED_WITH_THE_GRAPH,
+    load_eval_manifest,
+    shared_entries_that_differ,
+)
 from isekai.boundary.provision import (
     DigestMismatch,
     EscapingDestination,
@@ -18,12 +24,6 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     resolve,
     sources_on_a_mutable_ref,
-)
-from isekai.evaluation.eval_models import (
-    RECOGNIZER,
-    SHARED_WITH_THE_GRAPH,
-    load_eval_manifest,
-    shared_entries_that_differ,
 )
 
 

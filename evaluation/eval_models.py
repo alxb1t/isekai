@@ -1,6 +1,6 @@
 """The scorer's pinned artifacts, and the checks that keep them honest.
 
-`scripts/eval_models.json` decides which bytes the evaluator scores with. It is a
+`evaluation/eval_models.json` decides which bytes the evaluator scores with. It is a
 **sibling** of `config/models.json`, never a section of it: that file is the
 manifest of what the graph needs provisioned onto the pod, and these run locally
 on the operator's machine (design.md D18).
@@ -26,11 +26,9 @@ from typing import Any
 
 from isekai.boundary.provision import MANIFEST_PATH, Manifest
 
-EVAL_MANIFEST_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "scripts" / "eval_models.json"
-)
+EVAL_MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
 
-# The destinations `config/models.json` and `scripts/eval_models.json` both
+# The destinations `config/models.json` and `evaluation/eval_models.json` both
 # carry, which must be byte-identical in the two files. `glintr100` is the
 # load-bearing one: design.md D8's claim is about the generator's *own*
 # recognizer, and a different build of ArcFace would make that claim describe two

@@ -20,7 +20,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 LAYERS = ("foundation", "shared", "boundary", "pipeline", "interface")
 
 # Importers whose sub-package imports must go through the front door.
-FRONT_DOOR_SCOPE = ("isekai", "probe", "tools", "evaluate.py")
+FRONT_DOOR_SCOPE = ("isekai", "probe", "tools", "evaluation")
+
+# The top-level packages whose imports the rules read.
+PACKAGES = ("isekai", "evaluation")
 
 Edge = tuple[str, str]
 
@@ -57,7 +60,7 @@ def _sources(root: Path, scope: tuple[str, ...]) -> Iterator[Path]:
 
 
 def _imports(root: Path, path: Path) -> set[str]:
-    """Return every `isekai` module a file imports, anywhere in its body.
+    """Return every `isekai` or `evaluation` module a file imports, anywhere in it.
 
     `from isekai.x import n` names `isekai.x.n` when that is a module, else `isekai.x`.
     """
@@ -72,7 +75,7 @@ def _imports(root: Path, path: Path) -> set[str]:
             for alias in node.names:
                 full = f"{base}.{alias.name}"
                 found.add(full if _is_module(root, full) else base)
-    return {module for module in found if module.split(".")[0] == "isekai"}
+    return {module for module in found if module.split(".")[0] in PACKAGES}
 
 
 @cache
@@ -87,7 +90,9 @@ def _edges(root: Path, scope: tuple[str, ...] = ("isekai",)) -> tuple[Edge, ...]
 
 def _layer(dotted: str) -> str | None:
     parts = dotted.split(".")
-    return parts[1] if len(parts) > 1 and parts[1] in LAYERS else None
+    if len(parts) > 1 and parts[0] == "isekai" and parts[1] in LAYERS:
+        return parts[1]
+    return None
 
 
 def _within(module: str, package: str) -> bool:
@@ -105,12 +110,11 @@ def upward_imports(root: Path) -> set[Edge]:
 
 
 def evaluation_imports(root: Path) -> set[Edge]:
-    """Return every import of `isekai.evaluation` from outside it."""
+    """Return every import of `evaluation` from inside `isekai`."""
     return {
         (importer, module)
         for importer, module in _edges(root)
-        if not _within(importer, "isekai.evaluation")
-        and _within(module, "isekai.evaluation")
+        if _within(module, "evaluation")
     }
 
 
@@ -125,13 +129,18 @@ def stage_imports(root: Path) -> set[Edge]:
     }
 
 
+def _group(dotted: str) -> str | None:
+    """Return a module's layer, or `evaluation` for the sub-system's own modules."""
+    return "evaluation" if _within(dotted, "evaluation") else _layer(dotted)
+
+
 def layer_cycles(root: Path) -> list[list[str]]:
-    """Return one path per import cycle among the modules of a single layer."""
+    """Return one path per import cycle inside a single layer or `evaluation`."""
     graph: dict[str, set[str]] = {}
-    for importer, module in _edges(root):
+    for importer, module in _edges(root, PACKAGES):
         if (
-            _layer(importer)
-            and _layer(importer) == _layer(module)
+            _group(importer)
+            and _group(importer) == _group(module)
             and importer != module
         ):
             graph.setdefault(importer, set()).add(module)
@@ -230,7 +239,10 @@ def test_a_subpackage_is_reached_only_through_its_front_door() -> None:
 
 def _package(root: Path, files: dict[str, str]) -> Path:
     """Write `files` under `root`, beside a docstring `__init__.py` for every layer."""
-    defaults = {"isekai/__init__.py": '"""Root."""\n'}
+    defaults = {
+        "isekai/__init__.py": '"""Root."""\n',
+        "evaluation/__init__.py": '"""Sub-system."""\n',
+    }
     defaults |= {f"isekai/{layer}/__init__.py": '"""Layer."""\n' for layer in LAYERS}
     for name, text in (defaults | files).items():
         path = root / name
@@ -260,14 +272,11 @@ def test_the_check_catches_an_import_of_evaluation(tmp_path: Path) -> None:
     root = _package(
         tmp_path,
         {
-            "isekai/shared/image.py": "from isekai.evaluation import labels\n",
-            "isekai/evaluation/__init__.py": "",
-            "isekai/evaluation/labels.py": "",
+            "isekai/shared/image.py": "from evaluation import labels\n",
+            "evaluation/labels.py": "",
         },
     )
-    assert evaluation_imports(root) == {
-        ("isekai.shared.image", "isekai.evaluation.labels")
-    }
+    assert evaluation_imports(root) == {("isekai.shared.image", "evaluation.labels")}
 
 
 @pytest.mark.spec_exempt("structural: twin of test_no_stage_imports_another")
@@ -298,6 +307,18 @@ def test_the_check_catches_a_cycle_inside_a_layer(tmp_path: Path) -> None:
     assert layer_cycles(root) == [
         ["isekai.shared.a", "isekai.shared.b", "isekai.shared.a"]
     ]
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_import_cycle_inside_a_layer")
+def test_the_check_catches_a_cycle_inside_evaluation(tmp_path: Path) -> None:
+    root = _package(
+        tmp_path,
+        {
+            "evaluation/a.py": "from evaluation.b import y\nx = 1\n",
+            "evaluation/b.py": "from evaluation.a import x\ny = 1\n",
+        },
+    )
+    assert layer_cycles(root) == [["evaluation.a", "evaluation.b", "evaluation.a"]]
 
 
 @pytest.mark.spec_exempt("structural: twin of test_a_layer_init_holds_only_a_docstring")

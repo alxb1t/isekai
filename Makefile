@@ -26,4 +26,4 @@ derive:
 	uv run python -m tools.derive_eval_manifest
 	uv run python -m tools.derive_vocabulary
 	uv run python -m tools.derive_field_map
-	git diff --stat -- config/ scripts/eval_models.json
+	git diff --stat -- config/ evaluation/eval_models.json

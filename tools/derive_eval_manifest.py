@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-derive `scripts/eval_models.json` from the authored source spec below.
+"""Re-derive `evaluation/eval_models.json` from the authored source spec below.
 
 The sibling of `derive_manifest.py`, and deliberately a sibling rather than a
 second half of it: `models.json` is the manifest of what **the graph** needs on
@@ -12,9 +12,9 @@ from the repository root:
 
     uv run python -m tools.derive_eval_manifest
 
-It rewrites `scripts/eval_models.json` in place, and re-running without editing
+It rewrites `evaluation/eval_models.json` in place, and re-running without editing
 the spec must leave the file byte-identical --
-`git diff --exit-code scripts/eval_models.json` is the check.
+`git diff --exit-code evaluation/eval_models.json` is the check.
 
 Two things it does that its sibling does not, each because the scorer's stack is
 shaped differently from the graph's:
@@ -38,10 +38,10 @@ shaped differently from the graph's:
 import json
 from pathlib import Path
 
-from isekai.evaluation.eval_models import SHARED_WITH_THE_GRAPH
+from evaluation.eval_models import EVAL_MANIFEST_PATH, SHARED_WITH_THE_GRAPH
 from tools.manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 
-MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
+MANIFEST_PATH = EVAL_MANIFEST_PATH
 GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
@@ -188,7 +188,7 @@ def derive() -> Manifest:
 
 
 def main() -> None:
-    """Derive the eval manifest and write it to `scripts/eval_models.json`."""
+    """Derive the eval manifest and write it to `evaluation/eval_models.json`."""
     write(derive(), MANIFEST_PATH)
 
 

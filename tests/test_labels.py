@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.evaluation.labels import (
+from evaluation.labels import (
     CHOICES,
     SHEET_FIELDS,
     GitOrdering,
@@ -245,6 +245,39 @@ def test_the_ordering_check_allows_labels_committed_in_an_earlier_commit(
     assert (
         GitOrdering(tmp_path).labels_are_prior(
             tmp_path / "labels.csv", [tmp_path / "0.eval.json"]
+        )
+        is True
+    )
+
+
+@pytest.mark.spec("evaluation:labels:correlation-requires-prior-labels")
+def test_a_moved_file_keeps_its_first_added_time(tmp_path: Path) -> None:
+    # Moving the labels must not make them look newer than the scores after them.
+    def commit(message: str, date: str) -> None:
+        env = {"GIT_COMMITTER_DATE": date, "PATH": "/usr/bin:/bin"}
+        subprocess.run(
+            ["git", "commit", "-qm", message, "--date", date],
+            cwd=tmp_path,
+            check=True,
+            env=env,
+        )
+
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp_path, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
+    (tmp_path / "labels.csv").write_text("pair,subject,a,b,choice\n")
+    subprocess.run(["git", "add", "labels.csv"], cwd=tmp_path, check=True)
+    commit("labels, alone", "2020-01-01T00:00:00")
+    (tmp_path / "0.eval.json").write_text("{}")
+    subprocess.run(["git", "add", "0.eval.json"], cwd=tmp_path, check=True)
+    commit("scores, after", "2021-01-01T00:00:00")
+    (tmp_path / "moved").mkdir()
+    subprocess.run(["git", "mv", "labels.csv", "moved/"], cwd=tmp_path, check=True)
+    commit("labels, moved", "2022-01-01T00:00:00")
+
+    assert (
+        GitOrdering(tmp_path).labels_are_prior(
+            tmp_path / "moved" / "labels.csv", [tmp_path / "0.eval.json"]
         )
         is True
     )

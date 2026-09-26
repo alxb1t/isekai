@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What every manifest deriver is made of: entry types, digest strategies, writer.
 
-`config/models.json`, `scripts/eval_models.json` and `config/vocabulary.json`
+`config/models.json`, `evaluation/eval_models.json` and `config/vocabulary.json`
 are three manifests answering three questions -- what the graph needs on the pod,
 what the scorer loads on the operator's machine, what the pipeline fills sheets
 from -- and that separation is deliberate and stays (design.md D10). What they

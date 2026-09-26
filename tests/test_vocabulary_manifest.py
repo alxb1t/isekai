@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 
+from evaluation.eval_models import load_eval_manifest
 from isekai.boundary.provision import (
     DIGEST,
     MANIFEST_PATH,
@@ -30,7 +31,6 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
-from isekai.evaluation.eval_models import load_eval_manifest
 from isekai.foundation.refusal import Refusal
 from isekai.interface.wiring import load_vocabulary
 from tests.fakes import FakeFetcher
