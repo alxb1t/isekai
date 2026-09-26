@@ -34,8 +34,6 @@ WRITERS = ("write_json", "envelope")
 
 # Today's writers, each deleted by the phase that converts it.
 ALLOWLIST = {
-    "isekai/pipeline/sheet.py",
-    "isekai/pipeline/review.py",
     "isekai/pipeline/generate.py",
 }
 
@@ -195,14 +193,14 @@ def test_the_allowlist_names_only_modules_that_still_write() -> None:
 def test_the_check_catches_a_module_writing_json(tmp_path: Path) -> None:
     for name, text in {
         CONTRACT: "def write(path, kind, artifact):\n    write_json(path, artifact)\n",
-        "isekai/pipeline/sheet.py": "def f(run):\n    run.write_json(p, {})\n",
-        "isekai/pipeline/review.py": "def g():\n    return envelope('x', {}, {})\n",
-        "isekai/pipeline/generate.py": "def h():\n    write(p, KIND, {})\n",
+        "isekai/pipeline/by_hand.py": "def f(run):\n    run.write_json(p, {})\n",
+        "isekai/shared/wrapped.py": "def g():\n    return envelope('x', {}, {})\n",
+        "isekai/pipeline/typed.py": "def h():\n    write(p, KIND, {})\n",
     }.items():
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
     assert json_writers(tmp_path) == {
-        "isekai/pipeline/sheet.py",
-        "isekai/pipeline/review.py",
+        "isekai/pipeline/by_hand.py",
+        "isekai/shared/wrapped.py",
     }

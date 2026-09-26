@@ -39,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `stage` and a `detail` (`0028` design D4, D11).
 - **The caption and both tag lists are written through the contract.** WD14's `Scored.tag` is a
   `DanbooruTag`, and the tagger's pins are typed `DigestRecord`s (`0028` design D5, D6).
+- **The sheet, the review draft and the approved sheet are read and written through the contract.**
+  `route` takes only `DanbooruTag`s; `review` reads its origin with one typed read per branch
+  (`0028` design D5, D5a, D6).
 
 ## [0.22.5] - 2026-09-25
 

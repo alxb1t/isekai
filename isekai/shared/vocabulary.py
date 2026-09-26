@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isekai.foundation.artifacts import VocabularyRecord
+
 # The destination the vocabulary manifest declares, and the models root the
 # scorer already defaults to. One tree, two consumers, one provisioning rule.
 VOCABULARY_DEST = "wd14/selected_tags.csv"
@@ -120,7 +122,7 @@ def load(path: Path, entry: Mapping[str, Any]) -> Vocabulary:
     )
 
 
-def identity(vocabulary: Vocabulary) -> dict[str, str]:
+def identity(vocabulary: Vocabulary) -> VocabularyRecord:
     """Return the record a sheet carries to say which vocabulary filled it."""
     return {
         "name": vocabulary.name,

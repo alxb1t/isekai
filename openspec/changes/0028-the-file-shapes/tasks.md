@@ -9,7 +9,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 - [x] 2 — The contract: `foundation/artifacts.py`
 - [x] 3 — Run files: the frame and the error record
 - [x] 4 — Readings: the caption and both tag lists
-- [ ] 5 — Sheets: the sheet, the draft and the approved sheet
+- [x] 5 — Sheets: the sheet, the draft and the approved sheet
 - [ ] 6 — Renders: the prompt and the render sidecar
 - [ ] 7 — Readers, and the old names retire
 - [ ] 8 — The docs name the contract
@@ -56,11 +56,11 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 5 — Sheets: the sheet, the draft and the approved sheet
 
-- [ ] 5.1 In `isekai/pipeline/sheet.py`, read the WD14 file with `read(…, WD14_FILE)` and write the sheet with `write(…, SHEET_FILE, …)`; `route` (`isekai/shared/field_map.py`) takes `Iterable[DanbooruTag]`. [D5](design.md#d5), [D6](design.md#d6).
+- [x] 5.1 In `isekai/pipeline/sheet.py`, read the WD14 file with `read(…, WD14_FILE)` and write the sheet with `write(…, SHEET_FILE, …)`; `route` (`isekai/shared/field_map.py`) takes `Iterable[DanbooruTag]`. [D5](design.md#d5), [D6](design.md#d6).
   Verify: `grep -c -e 'envelope(' -e 'write_json(' -e 'read_artifact(' isekai/pipeline/sheet.py` prints `0`, and `grep -A3 '^def route(' isekai/shared/field_map.py | grep -c DanbooruTag` prints a number above `0`.
-- [ ] 5.2 Convert every writer and reader in `isekai/pipeline/review.py` that [D5](design.md#d5) lists, with [D5a](design.md#d5a)'s typed read per branch.
+- [x] 5.2 Convert every writer and reader in `isekai/pipeline/review.py` that [D5](design.md#d5) lists, with [D5a](design.md#d5a)'s typed read per branch.
   Verify: `grep -c -e 'envelope(' -e 'write_json(' -e 'read_artifact(' -e 'carried.get(' isekai/pipeline/review.py` prints `0`.
-- [ ] 5.3 Delete `isekai/pipeline/sheet.py` and `isekai/pipeline/review.py` from the tripwire's allowlist.
+- [x] 5.3 Delete `isekai/pipeline/sheet.py` and `isekai/pipeline/review.py` from the tripwire's allowlist.
   Verify: `grep -c -e '"isekai/pipeline/sheet.py"' -e '"isekai/pipeline/review.py"' tests/test_artifact_bytes.py` prints `0`.
 
 ## 6 — Renders: the prompt and the render sidecar
