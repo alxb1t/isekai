@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from isekai.boundary.wd14 import LocalTagger, read_labels
-from isekai.foundation.artifacts import write_json
+from isekai.foundation.artifacts import DigestRecord, write_json
 from isekai.foundation.flow import Flow, Schema, load_flow
 from isekai.foundation.run import (
     WD14,
@@ -227,7 +227,7 @@ class FakeSession:
 # The digests a fake tagger claims it was verified against. Not the real ones:
 # an artifact written in a test must not be mistakable for one written against
 # the provisioned bytes, and every assertion about a pin names this dict.
-FAKE_PINS: dict[str, dict[str, str]] = {
+FAKE_PINS: dict[str, DigestRecord] = {
     "wd14/selected_tags.csv": {"sha256": "c" * 64},
     "wd14/model.onnx": {"sha256": "m" * 64},
 }

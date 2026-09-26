@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The frame and the error record are written through the contract.** `open_run` writes `RUN_FILE`;
   `record_failure` takes a typed `Failure` and writes `ERROR_FILE`, so every recorded failure carries a
   `stage` and a `detail` (`0028` design D4, D11).
+- **The caption and both tag lists are written through the contract.** WD14's `Scored.tag` is a
+  `DanbooruTag`, and the tagger's pins are typed `DigestRecord`s (`0028` design D5, D6).
 
 ## [0.22.5] - 2026-09-25
 

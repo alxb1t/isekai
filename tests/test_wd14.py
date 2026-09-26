@@ -38,6 +38,7 @@ from isekai.boundary.wd14 import (
     select,
     verified_paths,
 )
+from isekai.foundation.artifacts import DanbooruTag
 from isekai.foundation.refusal import Refusal
 from tests.conftest import require_vocabulary
 from tests.stages import INDEX, FakeSession
@@ -88,7 +89,9 @@ def test_the_tag_returned_is_the_one_on_that_row_of_the_index() -> None:
     # Row 1 is `1girl`. Rows 0 and 2 are below the floor, so a reading that was
     # off by one in either direction returns nothing at all rather than the
     # wrong tag -- which is the mislabelling this assertion exists to catch.
-    assert select([0.0, 0.99, 0.0], labels) == [Scored(tag="1girl", confidence=0.99)]
+    assert select([0.0, 0.99, 0.0], labels) == [
+        Scored(tag=DanbooruTag("1girl"), confidence=0.99)
+    ]
 
 
 @pytest.mark.spec("tagging:seam:offline-double-satisfies-the-interface")
@@ -96,7 +99,9 @@ def test_character_and_rating_rows_are_indexed_but_never_returned() -> None:
     labels = read_labels(INDEX)
 
     # Every neuron fires. Only the general row may come back.
-    assert select([1.0, 1.0, 1.0], labels) == [Scored(tag="1girl", confidence=1.0)]
+    assert select([1.0, 1.0, 1.0], labels) == [
+        Scored(tag=DanbooruTag("1girl"), confidence=1.0)
+    ]
 
 
 @pytest.mark.spec("tagging:seam:offline-double-satisfies-the-interface")

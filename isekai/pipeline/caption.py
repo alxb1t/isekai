@@ -37,14 +37,13 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama
-from isekai.foundation.artifacts import write_json
+from isekai.foundation.artifacts import CAPTION_FILE, Caption, write
 from isekai.foundation.run import (
     CAPTIONS,
     Run,
     StageFailure,
     artifact_name,
     check_budget,
-    envelope,
     instructions_record,
     latest,
     next_version,
@@ -246,19 +245,17 @@ def caption(
         ) from failed
 
     path = directory / artifact_name(version)
-    write_json(
-        path,
-        envelope(
-            STAGE,
-            {
-                "implementation": reading.implementation,
-                "models": list(reading.models),
-                "pinned": reading.pinned,
-                "briefing": instructions_record(briefing_path),
-            },
-            {"prose": reading.prose},
-        ),
-    )
+    artifact: Caption = {
+        "schema": CAPTION_FILE.schema,
+        "producer": {
+            "implementation": reading.implementation,
+            "models": list(reading.models),
+            "pinned": reading.pinned,
+            "briefing": instructions_record(briefing_path),
+        },
+        "prose": reading.prose,
+    }
+    write(path, CAPTION_FILE, artifact)
     return path
 
 

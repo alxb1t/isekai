@@ -8,7 +8,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 - [x] 1 — Guards: golden bytes and the tripwire
 - [x] 2 — The contract: `foundation/artifacts.py`
 - [x] 3 — Run files: the frame and the error record
-- [ ] 4 — Readings: the caption and both tag lists
+- [x] 4 — Readings: the caption and both tag lists
 - [ ] 5 — Sheets: the sheet, the draft and the approved sheet
 - [ ] 6 — Renders: the prompt and the render sidecar
 - [ ] 7 — Readers, and the old names retire
@@ -47,11 +47,11 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 4 — Readings: the caption and both tag lists
 
-- [ ] 4.1 Write the caption at `isekai/pipeline/caption.py:249-261` with `write(path, CAPTION_FILE, …)`.
+- [x] 4.1 Write the caption at `isekai/pipeline/caption.py:249-261` with `write(path, CAPTION_FILE, …)`.
   Verify: `grep -c -e 'envelope(' -e 'write_json(' isekai/pipeline/caption.py` prints `0`.
-- [ ] 4.2 Write the WD14 file (`isekai/pipeline/tagging.py:284-297`) and the hosted list (`:350-363`) with `write`; type `Scored.tag` (`isekai/boundary/wd14.py:123-127`) as `DanbooruTag`, and `tests/test_wd14.py:91`, `:99`, per [D6](design.md#d6).
+- [x] 4.2 Write the WD14 file (`isekai/pipeline/tagging.py:284-297`) and the hosted list (`:350-363`) with `write`; type `Scored.tag` (`isekai/boundary/wd14.py:123-127`) as `DanbooruTag`, and `tests/test_wd14.py:91`, `:99`, per [D6](design.md#d6).
   Verify: `grep -c -e 'envelope(' -e 'write_json(' isekai/pipeline/tagging.py` prints `0`, and `grep -c 'tag: DanbooruTag' isekai/boundary/wd14.py` prints `1`.
-- [ ] 4.3 Delete `isekai/pipeline/caption.py` and `isekai/pipeline/tagging.py` from the tripwire's allowlist.
+- [x] 4.3 Delete `isekai/pipeline/caption.py` and `isekai/pipeline/tagging.py` from the tripwire's allowlist.
   Verify: `grep -c -e '"isekai/pipeline/caption.py"' -e '"isekai/pipeline/tagging.py"' tests/test_artifact_bytes.py` prints `0`.
 
 ## 5 — Sheets: the sheet, the draft and the approved sheet
