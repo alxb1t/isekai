@@ -42,12 +42,18 @@ def _is_module(root: Path, name: str) -> bool:
 
 
 def _sources(root: Path, scope: tuple[str, ...]) -> Iterator[Path]:
+    """Yield every Python file under `scope`, failing on an entry that is not there.
+
+    A missing entry would narrow the check with no failure: `0029` design D8.
+    """
     for entry in scope:
         path = root / entry
         if path.is_file():
             yield path
         elif path.is_dir():
             yield from sorted(path.rglob("*.py"))
+        else:
+            raise FileNotFoundError(f"scope path {entry!r} does not exist under {root}")
 
 
 def _imports(root: Path, path: Path) -> set[str]:
@@ -165,7 +171,9 @@ def busy_inits(root: Path) -> list[str]:
     return busy
 
 
-def past_front_doors(root: Path) -> set[Edge]:
+def past_front_doors(
+    root: Path, scope: tuple[str, ...] = FRONT_DOOR_SCOPE
+) -> set[Edge]:
     """Return every import of a module inside a layer's sub-package from outside it."""
     doors = {
         _module_name(root, init)
@@ -174,7 +182,7 @@ def past_front_doors(root: Path) -> set[Edge]:
     }
     return {
         (importer, module)
-        for importer, module in _edges(root, FRONT_DOOR_SCOPE)
+        for importer, module in _edges(root, scope)
         for door in doors
         if module.startswith(door + ".") and not _within(importer, door)
     }
@@ -320,7 +328,14 @@ def test_the_check_catches_an_import_past_a_front_door(tmp_path: Path) -> None:
             "probe/loader_probe.py": "from isekai.interface.ui.app import serve\n",
         },
     )
-    assert past_front_doors(root) == {
+    assert past_front_doors(root, ("isekai", "probe")) == {
         ("isekai.interface.cli", "isekai.interface.ui.app"),
         ("probe.loader_probe", "isekai.interface.ui.app"),
     }
+
+
+@pytest.mark.spec_exempt("structural: twin of the scope every scan reads")
+def test_a_scope_path_that_does_not_exist_fails(tmp_path: Path) -> None:
+    root = _package(tmp_path, {})
+    with pytest.raises(FileNotFoundError, match="'gone'"):
+        _edges(root, ("isekai", "gone"))

@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A layer-test scope path that does not exist fails the scan** rather than narrowing it silently
+  (`0029` design D8).
+- **The image's paths are held statically.** `tests/test_infra.py` checks every `COPY` source exists,
+  the entrypoint runs a provisioner the image copies, and the manifest lands where `provision.py`'s
+  anchor looks (`0029` design D5).
+
 ## [0.22.6] - 2026-09-26
 
 ### Changed

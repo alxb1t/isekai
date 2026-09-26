@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary.provision import (
+    MANIFEST_PATH,
     MODELS_NAMESPACE,
     MODELS_ROOT,
     VOLUME_MOUNT,
@@ -416,3 +417,88 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
     # makes the disk look BIGGEST in KiB, so it is the one the floor must clear.
     largest_container_kib = int(container_disk.group(1)) * 1000**3 // 1024
     assert int(floor.group(1)) * 1024 * 1024 > largest_container_kib
+
+
+# The image mirrors the repository's layout, and no boot proves a rebuilt image
+# before a pod uses it, so these hold its paths statically: `0029` design D5.
+
+IMAGE_ROOT = "/opt/isekai"
+
+
+def image_copies(dockerfile: str) -> dict[str, str]:
+    """Return each destination a `COPY` from the build context names, to its source.
+
+    e.g. `COPY start.sh /start.sh` -> {"/start.sh": "start.sh"}
+    """
+    found = re.findall(r"^COPY\s+(?!--)(\S+)\s+(\S+)\s*$", dockerfile, re.M)
+    return {dest: source for source, dest in found}
+
+
+def missing_copy_sources(dockerfile: str) -> list[str]:
+    """Return each `COPY` source that is not a file in the repository."""
+    return [
+        source
+        for source in image_copies(dockerfile).values()
+        if not (REPO / source).is_file()
+    ]
+
+
+def uncopied_provisioner(dockerfile: str, start_sh: str) -> str | None:
+    """Return the provisioner the entrypoint runs, or None if the image copies it."""
+    found = re.search(rf"bash ({IMAGE_ROOT}/\S+/download_models\.sh)", start_sh)
+    assert found is not None
+    called = found.group(1)
+    return None if called in image_copies(dockerfile) else called
+
+
+def manifest_in_image() -> str:
+    """Return where `provision.py`'s anchor finds the manifest inside the image."""
+    return f"{IMAGE_ROOT}/{MANIFEST_PATH.relative_to(REPO).as_posix()}"
+
+
+@pytest.mark.spec_exempt("structural: the image copies files the repository holds")
+def test_every_file_the_image_copies_exists(dockerfile: str) -> None:
+    assert image_copies(dockerfile)
+    assert missing_copy_sources(dockerfile) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_file_the_image_copies_exists")
+def test_the_check_catches_a_copy_of_a_file_that_is_gone() -> None:
+    broken = "FROM scratch\nCOPY start.sh /start.sh\nCOPY gone/models.json /x\n"
+    assert missing_copy_sources(broken) == ["gone/models.json"]
+
+
+@pytest.mark.spec_exempt("structural: the entrypoint runs a script the image holds")
+def test_the_entrypoint_runs_the_provisioner_the_image_copies(
+    dockerfile: str, start_sh: str
+) -> None:
+    assert uncopied_provisioner(dockerfile, start_sh) is None
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_entrypoint_runs_the_provisioner_the_image_copies"
+)
+def test_the_check_catches_an_entrypoint_calling_a_path_not_copied() -> None:
+    broken = f"COPY x/download_models.sh {IMAGE_ROOT}/x/download_models.sh\n"
+    start_sh = f"bash {IMAGE_ROOT}/y/download_models.sh || return 1\n"
+    assert (
+        uncopied_provisioner(broken, start_sh) == f"{IMAGE_ROOT}/y/download_models.sh"
+    )
+
+
+@pytest.mark.spec_exempt(
+    "structural: the provisioner's anchor resolves to a file inside the image"
+)
+def test_the_manifest_the_provisioner_reads_is_copied_where_it_looks(
+    dockerfile: str,
+) -> None:
+    assert manifest_in_image() in image_copies(dockerfile)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_the_manifest_the_provisioner_reads_is_copied_where_it_looks"
+)
+def test_the_check_catches_a_manifest_copied_beside_where_it_looks() -> None:
+    broken = f"COPY models.json {IMAGE_ROOT}/elsewhere/models.json\n"
+    assert manifest_in_image() not in image_copies(broken)

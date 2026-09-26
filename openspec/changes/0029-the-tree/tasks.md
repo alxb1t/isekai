@@ -5,7 +5,7 @@ docs ([D13](design.md#d13)).
 
 ## Progress
 
-- [ ] 1 — Guards: a missing scope path fails, and the image's layout is tested
+- [x] 1 — Guards: a missing scope path fails, and the image's layout is tested
 - [ ] 2 — `config/`: the files the pipeline reads
 - [ ] 3 — `tools/`: the derivers and the operator's scripts, run as modules
 - [ ] 4 — `evaluation/`: the sub-system leaves the package
@@ -16,11 +16,11 @@ Line numbers are `c6d18a4`'s; find each site by the text it names.
 
 ## 1 — Guards: a missing scope path fails, and the image's layout is tested
 
-- [ ] 1.1 **HALT CHECK** — `scripts/` holds the files [D13](design.md#d13) distributes, and no others.
+- [x] 1.1 **HALT CHECK** — `scripts/` holds the files [D13](design.md#d13) distributes, and no others.
   Verify: `git ls-files scripts | sed 's#scripts/##' | tr '\n' ' '` prints `derive_eval_manifest.py derive_field_map.py derive_manifest.py derive_vocabulary.py download_models.sh eval_licences.md eval_models.json field_map.json joycaption.Modelfile manifest.py models.json typecheck_ui.sh vocabulary.json `.
-- [ ] 1.2 Make `tests/test_layers.py`'s `_sources` fail on a scope path that does not exist, with the twin `test_a_scope_path_that_does_not_exist_fails`, per [D8](design.md#d8).
+- [x] 1.2 Make `tests/test_layers.py`'s `_sources` fail on a scope path that does not exist, with the twin `test_a_scope_path_that_does_not_exist_fails`, per [D8](design.md#d8).
   Verify: `grep -c '^def test_a_scope_path_that_does_not_exist_fails(' tests/test_layers.py` prints `1`.
-- [ ] 1.3 Add [D5](design.md#d5)'s image tests, each with a twin over a broken `Dockerfile` text, to `tests/test_infra.py`, against today's layout.
+- [x] 1.3 Add [D5](design.md#d5)'s image tests, each with a twin over a broken `Dockerfile` text, to `tests/test_infra.py`, against today's layout.
   Verify: `grep -c -e '^def test_every_file_the_image_copies_exists(' -e '^def test_the_entrypoint_runs_the_provisioner_the_image_copies(' -e '^def test_the_manifest_the_provisioner_reads_is_copied_where_it_looks(' tests/test_infra.py` prints `3`.
 
 ## 2 — `config/`: the files the pipeline reads
