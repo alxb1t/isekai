@@ -481,12 +481,24 @@ def record_failure(
     return path
 
 
+def _spent(
+    stage: str, recorded: Sequence[Attempt]
+) -> Literal["permanent", "budget"] | None:
+    """Return why `recorded` bars `stage` another attempt, or None if it does not.
+
+    The one statement of the retry rule: a permanent record short-circuits the
+    count, and otherwise the stage may try until it is at its budget.
+    """
+    if not recorded:
+        return None
+    if recorded[-1].kind == "permanent":
+        return "permanent"
+    return "budget" if len(recorded) >= BUDGETS[stage] else None
+
+
 def exhausted(stage: str, directory: Path, version: int) -> bool:
     """Say whether `stage` may not attempt `version` again: permanent, or at budget."""
-    recorded = attempts(directory, version)
-    return bool(recorded) and (
-        recorded[-1].kind == "permanent" or len(recorded) >= BUDGETS[stage]
-    )
+    return _spent(stage, attempts(directory, version)) is not None
 
 
 def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
@@ -499,18 +511,17 @@ def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
     e.g. `see summon-anime-wai/wd14/001.error.1.permanent.json`
     """
     recorded = attempts(directory, version)
-    if not recorded:
+    why = _spent(stage, recorded)
+    if why is None:
         return
     where = recorded[-1].path.relative_to(run.path)
-    if recorded[-1].kind == "permanent":
+    if why == "permanent":
         raise Refusal(
             f"{run.id}: {stage} failed permanently -- see {where}; read the "
             "record, fix what it names, then delete it to let this stage attempt "
             "again"
         )
     budget = BUDGETS[stage]
-    if len(recorded) < budget:
-        return
     raise Refusal(
         f"{run.id}: {stage} has used its {budget} attempt"
         f"{'' if budget == 1 else 's'} -- see {where}; read the records, fix what "

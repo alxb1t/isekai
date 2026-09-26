@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that works, offering the photograph again by its path; approval takes the draft lock, so an autosave
   cannot write after it.
 
+### Changed
+
+- **The retry rule is stated once**, in `run._spent`, which `exhausted` and `check_budget` share; an AST
+  test holds that every `write(` passes an annotated artifact; a `draft-saved` golden pins `save_draft`'s
+  rewrite; a `ty: ignore` and an unused fixture go (`0031` design D2).
+
 ## [0.22.8] - 2026-09-26
 
 ### Fixed

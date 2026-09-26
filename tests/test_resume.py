@@ -18,7 +18,7 @@ import random
 import re
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import pytest
@@ -276,9 +276,9 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     assert resolve_reader is not None
     reader = resolve_reader(flow)
 
-    def collect(work: object) -> None:
+    def collect(work: Callable[[], object]) -> None:
         try:
-            work()  # ty: ignore[call-non-callable]
+            work()
         except Refusal as refused:
             messages.append(str(refused))
         else:

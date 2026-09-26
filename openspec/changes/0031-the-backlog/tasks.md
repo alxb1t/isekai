@@ -5,7 +5,7 @@ Behaviour first, then the guards, then the prose that describes the result ([D5]
 ## Progress
 
 - [x] 1 — Behaviour: v0.22.8's families finished
-- [ ] 2 — Structure: the retry rule once, the annotation guard, the saved-draft golden, test nits
+- [x] 2 — Structure: the retry rule once, the annotation guard, the saved-draft golden, test nits
 - [ ] 3 — Prose: the documentation that drifted
 
 Line numbers are `3278647`'s; find each site by the text it names.
@@ -25,13 +25,13 @@ Line numbers are `3278647`'s; find each site by the text it names.
 
 ## 2 — Structure: the retry rule once, the annotation guard, the saved-draft golden, test nits
 
-- [ ] 2.1 Give `exhausted` and `check_budget` one predicate in `isekai/foundation/run.py`, per [D2](design.md#d2).
+- [x] 2.1 Give `exhausted` and `check_budget` one predicate in `isekai/foundation/run.py`, per [D2](design.md#d2).
   Verify: `grep -c 'recorded\[-1\].kind == "permanent"' isekai/foundation/run.py` prints `1`.
-- [ ] 2.2 Add `test_every_write_gets_an_annotated_artifact` and its twin to `tests/test_artifact_bytes.py`, per [D2](design.md#d2).
+- [x] 2.2 Add `test_every_write_gets_an_annotated_artifact` and its twin to `tests/test_artifact_bytes.py`, per [D2](design.md#d2).
   Verify: `grep -c -e '^def test_every_write_gets_an_annotated_artifact' -e '^def test_the_check_catches_a_bare_literal' tests/test_artifact_bytes.py` prints `2`.
-- [ ] 2.3 Add the `draft-saved` kind and capture `tests/golden/draft-saved.json` from today's code; reword the comment at `tests/test_artifact_bytes.py:92`, per [D2](design.md#d2).
+- [x] 2.3 Add the `draft-saved` kind and capture `tests/golden/draft-saved.json` from today's code; reword the comment at `tests/test_artifact_bytes.py:92`, per [D2](design.md#d2).
   Verify: `test -f tests/golden/draft-saved.json && grep -c '"draft-saved"' tests/test_artifact_bytes.py` prints `1`.
-- [ ] 2.4 Type `collect`'s argument in `tests/test_resume.py:279-281`, and drop the unused `flow` parameter at `tests/test_flow.py:692`, per [D2](design.md#d2).
+- [x] 2.4 Type `collect`'s argument in `tests/test_resume.py:279-281`, and drop the unused `flow` parameter at `tests/test_flow.py:692`, per [D2](design.md#d2).
   Verify: `grep -c 'ty: ignore\[call-non-callable\]' tests/test_resume.py` prints `0`, and `grep -c '^def test_every_tracked_flows_graph_carries_no_negative_of_its_own() -> None' tests/test_flow.py` prints `1`.
 
 ## 3 — Prose: the documentation that drifted

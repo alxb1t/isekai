@@ -87,12 +87,18 @@ def _draft(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     return path
 
 
-def _approved(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+def _draft_saved(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     draft = _draft(run, schema, vocabulary)
-    # An edit, so `save_draft`'s rewrite and `edited: true` are both pinned.
     fields = {name: list(tags) for name, tags in _fields(draft).items()}
     fields["expression"] = []
     save_draft(run, FLOW.id, fields)
+    return draft
+
+
+def _approved(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    # From an edited draft, so this golden pins `edited: true`; the edit's own
+    # rewrite is `draft-saved`'s.
+    _draft_saved(run, schema, vocabulary)
     path, _ = approve(run, FLOW.id, schema, vocabulary)
     assert path is not None
     return path
@@ -122,6 +128,7 @@ KINDS: dict[str, Callable[[Run, Schema, Vocabulary], Path]] = {
     "tags": _tags,
     "sheet": _sheet,
     "draft": _draft,
+    "draft-saved": _draft_saved,
     "approved": _approved,
     "prompt": _prompt,
     "render": _render,
@@ -191,4 +198,70 @@ def test_the_check_catches_a_module_writing_json(tmp_path: Path) -> None:
     assert json_writers(tmp_path) == {
         "isekai/pipeline/by_hand.py",
         "isekai/shared/direct.py",
+    }
+
+
+# --- the annotation -----------------------------------------------------------
+
+# The contract's one writer. `ty` checks its artifact key by key only when the
+# caller annotated it, so the guard below makes the annotation a rule.
+TYPED_WRITER = "write"
+
+
+def unannotated_writes(root: Path) -> set[str]:
+    """Return each `write(` call under `root/isekai` whose artifact is not annotated.
+
+    Annotated means a name bound by an annotated assignment in the same function.
+    e.g. `write(p, KIND, {})` on line 3 of `isekai/x.py` -> `isekai/x.py:3`
+    """
+    found: set[str] = set()
+    for path in sorted((root / "isekai").rglob("*.py")):
+        name = path.relative_to(root).as_posix()
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for scope in ast.walk(tree):
+            if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            annotated = {
+                node.target.id
+                for node in ast.walk(scope)
+                if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+            }
+            for node in ast.walk(scope):
+                if not (
+                    isinstance(node, ast.Call)
+                    and _called(node.func) == TYPED_WRITER
+                    and len(node.args) == 3
+                ):
+                    continue
+                artifact = node.args[2]
+                if not (isinstance(artifact, ast.Name) and artifact.id in annotated):
+                    found.add(f"{name}:{node.lineno}")
+    return found
+
+
+@pytest.mark.spec_exempt("structural: every run file's writer annotates its artifact")
+def test_every_write_gets_an_annotated_artifact() -> None:
+    assert unannotated_writes(REPO_ROOT) == set()
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_write_gets_an_annotated_artifact"
+)
+def test_the_check_catches_a_bare_literal(tmp_path: Path) -> None:
+    for name, text in {
+        "isekai/pipeline/typed.py": (
+            "def f(p):\n    frame: Frame = {}\n    write(p, KIND, frame)\n"
+        ),
+        "isekai/pipeline/bare.py": "def g(p):\n    write(p, KIND, {})\n",
+        "isekai/pipeline/unannotated.py": (
+            "def h(p):\n    frame = {}\n    write(p, KIND, frame)\n"
+        ),
+        "isekai/foundation/stream.py": "def i(sink):\n    sink.write(b'')\n",
+    }.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    assert unannotated_writes(tmp_path) == {
+        "isekai/pipeline/bare.py:2",
+        "isekai/pipeline/unannotated.py:3",
     }
