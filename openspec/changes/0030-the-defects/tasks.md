@@ -6,7 +6,7 @@ The foundation's reads first, then each area's fixes together, then every printe
 ## Progress
 
 - [x] 1 — Reading: unreadable files refused by name, the frame checked, `show` marks
-- [ ] 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
+- [x] 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
 - [ ] 3 — Approval: one definition of a draft, the update lock, missing keys refused
 - [ ] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
 - [ ] 5 — Remedies: every printed command carries its run, and a guard holds it
@@ -27,13 +27,13 @@ Line numbers are `e6c4278`'s; find each site by the text it names.
 
 ## 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
 
-- [ ] 2.1 Number an attempt as the highest recorded plus one in `record_failure`, per [D3](design.md#d3), with `test_a_deleted_record_is_never_overwritten` in `tests/test_run_directory.py`.
+- [x] 2.1 Number an attempt as the highest recorded plus one in `record_failure`, per [D3](design.md#d3), with `test_a_deleted_record_is_never_overwritten` in `tests/test_run_directory.py`.
   Verify: `grep -c 'len(attempts(directory, version)) + 1' isekai/foundation/run.py` prints `0`, and `grep -c '^def test_a_deleted_record_is_never_overwritten' tests/test_run_directory.py` prints `1`.
-- [ ] 2.2 Write the error record's `stage`, `seed` and `detail` by name instead of spreading the failure, per [D3](design.md#d3).
+- [x] 2.2 Write the error record's `stage`, `seed` and `detail` by name instead of spreading the failure, per [D3](design.md#d3).
   Verify: `grep -c '\*\*failure' isekai/foundation/run.py` prints `0`.
-- [ ] 2.3 Make `check_budget` take the `Run` and name the record by its path in the run; follow every caller [D2](design.md#d2) lists.
+- [x] 2.3 Make `check_budget` take the `Run` and name the record by its path in the run; follow every caller [D2](design.md#d2) lists.
   Verify: `grep -c 'directory.name' isekai/foundation/run.py` prints `0`.
-- [ ] 2.4 Give `refusal_for` [D2](design.md#d2)'s remedy for a permanent or budget-filling record, with `test_a_record_that_refuses_the_next_run_names_its_deletion` in `tests/test_run_directory.py`.
+- [x] 2.4 Give `refusal_for` [D2](design.md#d2)'s remedy for a permanent or budget-filling record, with `test_a_record_that_refuses_the_next_run_names_its_deletion` in `tests/test_run_directory.py`.
   Verify: `grep -c '^def test_a_record_that_refuses_the_next_run_names_its_deletion' tests/test_run_directory.py` prints `1`.
 
 ## 3 — Approval: one definition of a draft, the update lock, missing keys refused

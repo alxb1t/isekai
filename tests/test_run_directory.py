@@ -32,6 +32,7 @@ from isekai.foundation.run import (
     DATA_ROOT,
     FRAME_NAME,
     RUNS_ROOT,
+    Kind,
     Run,
     across,
     approved_versions,
@@ -44,6 +45,7 @@ from isekai.foundation.run import (
     next_version,
     open_run,
     record_failure,
+    refusal_for,
     run_id,
     slug,
     versions,
@@ -600,11 +602,11 @@ def test_a_permanent_failure_is_refused_without_attempting_the_work(
     record_failure(directory, 1, "permanent", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
-        check_budget("caption", directory, 1, "aunt-ada.jpg")
+        check_budget("caption", directory, 1, Run("aunt-ada", tmp_path))
 
     message = str(refused.value)
-    assert "aunt-ada.jpg" in message
-    assert "001.error.1.permanent.json" in message
+    assert message.startswith("aunt-ada: ")
+    assert "see captions/001.error.1.permanent.json;" in message
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
@@ -617,11 +619,67 @@ def test_a_stage_at_its_budget_refuses_naming_the_photograph_and_the_record(
         record_failure(directory, 1, "transient", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
-        check_budget("caption", directory, 1, "aunt-ada.jpg")
+        check_budget("caption", directory, 1, Run("aunt-ada", tmp_path))
 
     message = str(refused.value)
-    assert "aunt-ada.jpg" in message
-    assert f"001.error.{BUDGETS['caption']}.transient.json" in message
+    assert message.startswith("aunt-ada: ")
+    assert f"see captions/001.error.{BUDGETS['caption']}.transient.json;" in message
+
+
+@pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
+def test_a_deleted_record_is_never_overwritten(tmp_path: Path) -> None:
+    directory = tmp_path / "captions"
+    directory.mkdir()
+    first = record_failure(directory, 1, "transient", _FAILURE)
+    second = record_failure(directory, 1, "transient", _FAILURE)
+    first.unlink()
+
+    third = record_failure(directory, 1, "transient", _FAILURE)
+
+    assert second.exists()
+    assert third.name == "001.error.3.transient.json"
+    assert [a.attempt for a in attempts(directory, 1)] == [2, 3]
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.parametrize(
+    ("kinds", "remedy"),
+    [
+        (["permanent"], "fix what it names and delete it, then run"),
+        (
+            ["transient"] * BUDGETS["caption"],
+            "fix what it names and delete it, then run",
+        ),
+        (["transient"], "again once what it names is fixed"),
+    ],
+)
+def test_a_record_that_refuses_the_next_run_names_its_deletion(
+    tmp_path: Path, kinds: list[Kind], remedy: str
+) -> None:
+    directory = tmp_path / "summon-anime-wai" / "captions"
+    directory.mkdir(parents=True)
+    for kind in kinds:
+        record = record_failure(directory, 1, kind, _FAILURE)
+
+    refusal = refusal_for(
+        "reader",
+        "aunt-ada",
+        kinds[-1],
+        "timed out",
+        record,
+        "captions",
+        "caption",
+        "summon-anime-wai",
+        "caption",
+    )
+
+    message = str(refusal)
+    assert f"see summon-anime-wai/captions/{record.name}," in message
+    assert remedy in message
+    assert message.endswith(
+        "`python -m isekai caption --flow summon-anime-wai aunt-ada`"
+        + ("" if "delete" in remedy else " again once what it names is fixed")
+    )
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
@@ -632,7 +690,7 @@ def test_a_stage_below_its_budget_is_allowed_to_attempt_again(
     directory.mkdir()
     record_failure(directory, 1, "transient", _FAILURE)
 
-    check_budget("caption", directory, 1, "aunt-ada.jpg")
+    check_budget("caption", directory, 1, Run("aunt-ada", tmp_path))
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
@@ -659,7 +717,7 @@ def test_each_tagger_refuses_by_name_at_its_own_budget(
         record_failure(directory, 1, "transient", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
-        check_budget(stage, directory, 1, "aunt-ada.jpg")
+        check_budget(stage, directory, 1, Run("aunt-ada", tmp_path))
 
     message = str(refused.value)
     assert stage in message
@@ -675,7 +733,7 @@ def test_a_tagger_below_its_budget_attempts_again_rather_than_raising_keyerror(
     directory = tmp_path / stage
     directory.mkdir()
 
-    check_budget(stage, directory, 1, "aunt-ada.jpg")
+    check_budget(stage, directory, 1, Run("aunt-ada", tmp_path))
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")

@@ -174,7 +174,7 @@ def prompt_artifact(
     if path.exists() and not new_version:
         return path
 
-    check_budget(STAGE_ASSEMBLE, directory, version, run.id)
+    check_budget(STAGE_ASSEMBLE, directory, version, run)
     try:
         body = read(source, APPROVED_FILE)
         positive, negative = assemble(body["fields"], schema.names, flow)
@@ -420,7 +420,7 @@ def render(
     if not wanted:
         return []
 
-    check_budget(STAGE_RENDER, directory, version, run.id)
+    check_budget(STAGE_RENDER, directory, version, run)
 
     # `flow.inputs` gates the transfer: a flow that does not declare a photograph
     # has nothing to upload, and uploading one anyway spends the endpoint's time

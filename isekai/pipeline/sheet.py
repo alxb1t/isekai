@@ -110,7 +110,7 @@ def sheet(
             f"which writes {flow}/{WD14}/ beside the prose"
         )
 
-    check_budget(STAGE, directory, next_version(directory), run.id)
+    check_budget(STAGE, directory, next_version(directory), run)
 
     listed = read(tagged / artifact_name(source), WD14_FILE)
     fields = route((one["tag"] for one in listed["tags"]), field_map, schema)

@@ -454,44 +454,72 @@ def record_failure(
     """Write an error record beside where `version`'s artifact would have gone.
 
     The failure does not consume the version number: a later successful attempt
-    writes `version` itself, and the error records stay beside it.
+    writes `version` itself, and the error records stay beside it. The attempt is
+    the highest recorded plus one, so deleting an earlier record never makes the
+    next one overwrite a later one.
     """
-    ordinal = len(attempts(directory, version)) + 1
+    recorded = attempts(directory, version)
+    ordinal = recorded[-1].attempt + 1 if recorded else 1
     path = directory / f"{version:03d}.error.{ordinal}.{kind}.json"
-    record: ErrorRecord = {
-        "schema": ERROR_FILE.schema,
-        "version": version,
-        "attempt": ordinal,
-        "kind": kind,
-        **failure,
-    }
+    # By name, never spread: a spread lets a caller's keys land among ours.
+    # The seed sits between stage and detail, as `tests/golden/error.json` holds.
+    record: ErrorRecord = (
+        {
+            "schema": ERROR_FILE.schema,
+            "version": version,
+            "attempt": ordinal,
+            "kind": kind,
+            "stage": failure["stage"],
+            "seed": failure["seed"],
+            "detail": failure["detail"],
+        }
+        if "seed" in failure
+        else {
+            "schema": ERROR_FILE.schema,
+            "version": version,
+            "attempt": ordinal,
+            "kind": kind,
+            "stage": failure["stage"],
+            "detail": failure["detail"],
+        }
+    )
     write(path, ERROR_FILE, record)
     return path
 
 
-def check_budget(stage: str, directory: Path, version: int, photo: str) -> None:
+def exhausted(stage: str, directory: Path, version: int) -> bool:
+    """Say whether `stage` may not attempt `version` again: permanent, or at budget."""
+    recorded = attempts(directory, version)
+    return bool(recorded) and (
+        recorded[-1].kind == "permanent" or len(recorded) >= BUDGETS[stage]
+    )
+
+
+def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
     """Refuse if `stage` may not attempt `version` again, naming why and where.
 
     A permanent failure short-circuits the count: it will fail the same way every
     time, so retrying it spends for nothing. A stage at its transient budget
     refuses too, because without one every resume retries every failure forever
     and at the rendering stage that costs money on every pass.
+    e.g. `see summon-anime-wai/wd14/001.error.1.permanent.json`
     """
+    if not exhausted(stage, directory, version):
+        return
     recorded = attempts(directory, version)
-    if recorded and recorded[-1].kind == "permanent":
+    where = recorded[-1].path.relative_to(run.path)
+    if recorded[-1].kind == "permanent":
         raise Refusal(
-            f"{photo}: {stage} failed permanently -- see "
-            f"{recorded[-1].path.name} in {directory.name}/; read the record, fix "
-            "what it names, then delete it to let this stage attempt again"
+            f"{run.id}: {stage} failed permanently -- see {where}; read the "
+            "record, fix what it names, then delete it to let this stage attempt "
+            "again"
         )
     budget = BUDGETS[stage]
-    if len(recorded) >= budget:
-        raise Refusal(
-            f"{photo}: {stage} has used its {budget} attempt"
-            f"{'' if budget == 1 else 's'} -- see {recorded[-1].path.name} in "
-            f"{directory.name}/; read the records, fix what they name, then "
-            "delete them to let this stage attempt again"
-        )
+    raise Refusal(
+        f"{run.id}: {stage} has used its {budget} attempt"
+        f"{'' if budget == 1 else 's'} -- see {where}; read the records, fix what "
+        "they name, then delete them to let this stage attempt again"
+    )
 
 
 def across(items: Sequence[T], work: Callable[[T], None]) -> list[str]:
@@ -529,6 +557,7 @@ def refusal_for(
     area: str,
     verb: str,
     flow: str,
+    budget: str,
 ) -> Refusal:
     """Build the refusal a stage raises after recording a failed attempt.
 
@@ -548,12 +577,22 @@ def refusal_for(
     agreement -- a refusal naming one flow's record and another flow's remedy is
     the exact class of defect this argument exists to close. `area` is the stage
     directory alone; this joins them.
+
+    `budget` is the `BUDGETS` key. When the record refuses the next run -- it is
+    permanent, or fills the budget -- the remedy deletes it first, since running
+    again would only be refused.
     """
+    command = f"`python -m isekai {verb} --flow {flow} {run_id}`"
+    where = f"{flow}/{area}/{record.name}"
+    # `record_failure` names every record `NNN.error.…`.
+    if exhausted(budget, record.parent, int(record.name[:3])):
+        return Refusal(
+            f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
+            f"what it names and delete it, then run {command}"
+        )
     return Refusal(
-        f"{run_id}: the {stage} failed ({kind}) -- {detail}; "
-        f"see {record.name} in {flow}/{area}/, and run "
-        f"`python -m isekai {verb} --flow {flow}` again "
-        "once what it names is fixed"
+        f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, and run "
+        f"{command} again once what it names is fixed"
     )
 
 

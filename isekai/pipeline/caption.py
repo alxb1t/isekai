@@ -221,7 +221,7 @@ def caption(
         return None
 
     version = next_version(directory)
-    check_budget(STAGE, directory, version, run.id)
+    check_budget(STAGE, directory, version, run)
 
     briefing = briefing_path.read_text()
     try:
@@ -242,6 +242,7 @@ def caption(
             CAPTIONS,
             STAGE,
             flow,
+            STAGE,
         ) from failed
 
     path = directory / artifact_name(version)
