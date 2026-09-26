@@ -104,7 +104,7 @@ def state(directory: Path) -> Status:
     because they happened to agree.
 
     `re-opened` is an approved artifact with a **later** version beside it,
-    which is exactly what `review --flow F --new-version` writes and nothing
+    which is exactly what `review --flow F --new-version <run>` writes and nothing
     else does. Later rather than merely present, so a draft that predated
     the approval could never re-open one -- and `approved_versions()[-1]` is
     the number the approved artifact records as `approved_from`, because
@@ -146,7 +146,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     if source_sheet is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to review; run "
-            f"`python -m isekai sheet --flow {flow}` for this photograph first"
+            f"`python -m isekai sheet --flow {flow} {run.id}` first"
         )
 
     approved = approved_versions(review_directory)
@@ -220,8 +220,8 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
     if path is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to update; a draft is opened by "
-            f"`python -m isekai review --flow {flow}`, and an approved flow has "
-            "none because approval is the end of it"
+            f"`python -m isekai review --flow {flow} {run.id}`, and an approved "
+            "flow has none because approval is the end of it"
         )
 
     body = read(path, DRAFT_FILE)
@@ -314,8 +314,8 @@ def approve(
             return None, []
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to approve; run "
-            f"`python -m isekai review --flow {flow}` to take a copy, edit it, "
-            "then approve it"
+            f"`python -m isekai review --flow {flow} {run.id}` to take a copy, "
+            "edit it, then approve it"
         )
 
     version = int(draft.name[:3])
@@ -360,7 +360,7 @@ def approve(
         raise Refusal(
             f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
             f"artifact is never replaced; run `python -m isekai review --flow "
-            f"{flow} --new-version` to correct it under the next number"
+            f"{flow} --new-version {run.id}` to correct it under the next number"
         )
     write(path, APPROVED_FILE, approved_body)
     draft.unlink()

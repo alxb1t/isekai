@@ -264,8 +264,8 @@ def _run_for(identifier: str, wired: Wiring) -> Run:
     if not photo.is_file():
         raise Refusal(
             f"{identifier!r} is neither a photograph on disk nor a run under "
-            f"{wired.runs_root.name}/; give the path to a JPEG or PNG, or the id "
-            "`python -m isekai show` prints"
+            f"{wired.runs_root}; give the path to a JPEG or PNG, or the name of "
+            f"a run directory under {wired.runs_root}"
         )
     return open_run(photo, wired.runs_root)
 

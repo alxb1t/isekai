@@ -277,7 +277,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             # read-only**, which is precisely `state() == "approved"`. Not the
             # absence of a draft, which the rail never keyed on; and not
             # approval alone, which `v0.22.1` used and which made
-            # `review --new-version` write a draft this page would not edit
+            # `review --new-version <run>` write a draft this page would not edit
             # (design.md D5).
             "readonly": state == "approved",
             "draft": draft.name if draft else None,
@@ -306,7 +306,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         **Two preconditions, and both answer `409`.** An input that is approved
         **and holds no later draft** refuses an update at all: an approved sheet
         is never edited in place, and approval is the end of a review. An input
-        re-opened with `review --new-version` is not that state and is accepted,
+        re-opened with `review --new-version <run>` is not that state and is accepted,
         which is what the verb writes the draft for. And an update whose `saved`
         does not match the draft on disk refuses, because the page autosaves on a
         debounce and two overlapping `PUT`s were free to commit in the order the
@@ -326,8 +326,8 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
                     f"{identifier} is approved, and an approved sheet is never "
                     "edited in place; approval is the end of a review -- correct "
                     f"it with `python -m isekai review --flow {batch.flow.id} "
-                    "--new-version`, which writes a fresh draft beside the "
-                    "approved artifact, and reload: the input comes back "
+                    f"--new-version {held.run.id}`, which writes a fresh draft "
+                    "beside the approved artifact, and reload: the input comes back "
                     "re-opened and editable, with its approved artifact still "
                     "named"
                 )
@@ -364,7 +364,7 @@ def _summary(batch: Batch, held: Input) -> dict[str, Any]:
 
     The state is `Batch.state`'s and is not recomputed here. `draft` holds no
     approved artifact; `approved` holds one and nothing newer; `re-opened` holds
-    one *and* a later draft, which is what `review --new-version` writes and the
+    one *and* a later draft, which is what `review --new-version <run>` writes and the
     only state in which the form is offered over an approved input.
     """
     return {

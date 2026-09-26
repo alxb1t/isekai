@@ -259,8 +259,8 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     from isekai.foundation.flow import load_flow
     from isekai.foundation.run import open_run, record_failure
     from isekai.pipeline.caption import OllamaReader
-    from isekai.pipeline.generate import photo_resolution, prompt_artifact
-    from isekai.pipeline.review import approve, review
+    from isekai.pipeline.generate import photo_resolution, prepare, prompt_artifact
+    from isekai.pipeline.review import approve, review, save_draft
     from tests.stages import CAPTION_BRIEFING, caption, sheet
 
     photo = tmp_path / "bare.jpg"
@@ -292,6 +292,8 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: review(bare, FLOW))
     collect(lambda: approve(bare, FLOW, schema, wired.vocabulary()))
     collect(lambda: prompt_artifact(bare, flow, schema))
+    collect(lambda: prepare(bare, {FLOW: flow}))
+    collect(lambda: save_draft(bare, FLOW, {}))
     collect(lambda: photo_resolution(_unreadable(tmp_path)))
     collect(lambda: load_flow("summon-v9"))
     collect(lambda: load_flow(FLOW, _incomplete_flow(tmp_path)))
@@ -341,18 +343,14 @@ def _incomplete_flow(tmp_path: Path) -> Path:
 # The verbs and paths a refusal is allowed to send an operator to. A remedy this
 # build cannot perform is worse than no remedy, because it sends somebody looking
 # for something that is not there.
-# **Every stage verb carries `--flow`**, because every stage verb has required it
-# since v0.16. The bare forms this list held until v0.22.1 were the only reason
-# `cli:refusals:refusal-names-the-remedy` passed while four refusals printed a
-# command argparse refuses -- the scenario text was stronger than the fixture
-# bound to it (design.md D10). `show` is the one verb with no `--flow` to carry.
+# **Every stage verb carries `--flow`**, which every stage verb requires; the
+# guard below parses each printed command and requires it to name a run.
 AVAILABLE: Sequence[str] = (
     "python -m isekai caption --flow ",
     "python -m isekai sheet --flow ",
     "python -m isekai review --flow ",
     "python -m isekai approve --flow ",
     "python -m isekai generate --flow ",
-    "python -m isekai show",
     "tools/download_models.sh",
     # The two Ollama remedies, which replaced the `npm install -g` one that told
     # an operator to install a CLI this build no longer reaches.
@@ -408,6 +406,28 @@ def test_no_refusal_offers_a_command_this_build_does_not_have(
         assert "isekai reset" not in message
 
 
+def _unrunnable(messages: Sequence[str]) -> list[str]:
+    """Return each printed command that does nothing as printed.
+
+    Parsed exactly as printed, with the parser that ships: a stage verb that
+    names no run parses, does nothing and exits 0, so it is no remedy.
+    e.g. "review --flow summon-anime-wai" -> listed
+    """
+    printed = [
+        command
+        for message in messages
+        for command in re.findall(r"`python -m isekai ([^`]+)`", message)
+    ]
+    # A positive count, so a refactor that stops printing commands at all does
+    # not turn the guard green by emptying it.
+    assert printed
+    return [
+        command
+        for command in printed
+        if not build_parser().parse_args(command.split()).photos
+    ]
+
+
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     wired: Wiring, tmp_path: Path
@@ -415,26 +435,17 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     """The remedy is copy-pasteable, which is the only thing that makes it one.
 
     Not *a command exists with that name* -- `AVAILABLE` above already says
-    that, and said it while four refusals printed a stage verb without the
-    `--flow` v0.16 made required. This parses what is printed, with the parser
-    that ships, so a remedy an operator pastes back cannot be a usage error
-    (v0.16 R5, design.md D10).
+    that. This parses what is printed, so a remedy an operator pastes back is
+    neither a usage error nor a command that does nothing (`0030` design D2).
     """
-    printed = [
-        command
-        for message in _every_refusal(wired, tmp_path)
-        for command in re.findall(r"`python -m isekai ([^`]+)`", message)
-    ]
-    # A positive count, so a refactor that stops printing commands at all does
-    # not turn this test green by emptying it.
-    assert printed
+    assert _unrunnable(_every_refusal(wired, tmp_path)) == []
 
-    for command in printed:
-        words = command.split()
-        # `show` reads a run directory and takes no flow; every other verb does,
-        # required, so a bare one would be refused by the parser below.
-        assert ("--flow" in words) == (words[0] != "show")
-        build_parser().parse_args([*words, "an-identifier"])
+
+@pytest.mark.spec_exempt("twin: the guard above catches a command naming no run")
+def test_the_command_guard_catches_a_command_that_names_no_run() -> None:
+    assert _unrunnable(
+        ["x; run `python -m isekai review --flow summon-anime-wai` again"]
+    ) == ["review --flow summon-anime-wai"]
 
 
 @pytest.mark.spec("cli:refusals:refusal-exits-non-zero")

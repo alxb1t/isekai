@@ -173,8 +173,9 @@ def establish(
         raise Refusal("; ".join(refused))
     if not resolved:
         raise Refusal(
-            "no inputs were named; give the run identifiers `python -m isekai "
-            "show` prints, and the surface will open a draft for each"
+            "no inputs were named; give the name of a run directory under "
+            f"{wired.runs_root} for each, and the surface will open a draft for "
+            "each"
         )
 
     vocabulary = wired.vocabulary()
@@ -188,9 +189,9 @@ def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:
     directory = wired.runs_root / identifier
     if not (directory / FRAME_NAME).is_file():
         raise Refusal(
-            f"{identifier} is not a run under {wired.runs_root.name}/; this "
-            "surface reviews work that already exists, so give the identifiers "
-            "`python -m isekai show` prints rather than a photograph"
+            f"{identifier} is not a run under {wired.runs_root}; this surface "
+            "reviews work that already exists, so give the name of a run "
+            f"directory under {wired.runs_root} rather than a photograph"
         )
     run = Run(identifier, directory)
     review(run, flow)

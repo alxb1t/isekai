@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The transport's failure carries its kind**: `Unreachable` becomes `TransportFailure`. A 4xx or an
   unreadable answer is recorded permanent, a 5xx or a closed tunnel transient; a failed upload is recorded,
   and a malformed history refused. The render's sidecar is written before its image (`0030` design D3, D6).
+- **Every printed stage command names its run**, so a pasted remedy acts rather than exiting 0 having done
+  nothing; the guard parses each as printed. A refusal that pointed at `show` for an id names the runs
+  root instead, and a non-string WD14 tag routes nowhere rather than raising (`0030` design D1, D2).
 
 ## [0.22.7] - 2026-09-26
 

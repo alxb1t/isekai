@@ -9,7 +9,7 @@ The foundation's reads first, then each area's fixes together, then every printe
 - [x] 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
 - [x] 3 — Approval: one definition of a draft, the update lock, missing keys refused
 - [x] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
-- [ ] 5 — Remedies: every printed command carries its run, and a guard holds it
+- [x] 5 — Remedies: every printed command carries its run, and a guard holds it
 - [ ] 6 — The docs drop the breaks that close
 
 Line numbers are `e6c4278`'s; find each site by the text it names.
@@ -64,13 +64,13 @@ Line numbers are `e6c4278`'s; find each site by the text it names.
 
 ## 5 — Remedies: every printed command carries its run, and a guard holds it
 
-- [ ] 5.1 Put the run id in every printed stage command [D2](design.md#d2) lists — `isekai/pipeline/review.py`, `generate.py`, `sheet.py`, `isekai/foundation/run.py`, `isekai/interface/ui/app.py` — keeping the substrings `tests/test_review.py:231` and `tests/test_ui.py:123` assert.
+- [x] 5.1 Put the run id in every printed stage command [D2](design.md#d2) lists — `isekai/pipeline/review.py`, `generate.py`, `sheet.py`, `isekai/foundation/run.py`, `isekai/interface/ui/app.py` — keeping the substrings `tests/test_review.py:231` and `tests/test_ui.py:123` assert.
   Verify: `` cat isekai/pipeline/review.py isekai/pipeline/generate.py isekai/pipeline/sheet.py isekai/foundation/run.py isekai/interface/ui/app.py | grep -c -e '{flow}`' -e '{naming}`' -e 'new-version`' `` prints `0`.
-- [ ] 5.2 Replace the `show` circle in `isekai/interface/cli.py` and `isekai/interface/ui/batch.py`, per [D2](design.md#d2).
+- [x] 5.2 Replace the `show` circle in `isekai/interface/cli.py` and `isekai/interface/ui/batch.py`, per [D2](design.md#d2).
   Verify: `` git grep -n 'show` prints' -- isekai `` prints nothing.
-- [ ] 5.3 Make `tests/test_resume.py`'s command guard parse each printed command as printed and require a stage verb to name a run; update `AVAILABLE` (`:355-362`), per [D2](design.md#d2).
+- [x] 5.3 Make `tests/test_resume.py`'s command guard parse each printed command as printed and require a stage verb to name a run; update `AVAILABLE` (`:355-362`), per [D2](design.md#d2).
   Verify: `grep -c '"an-identifier"' tests/test_resume.py` prints `0`.
-- [ ] 5.4 Coerce the WD14 tag in `isekai/pipeline/sheet.py:116`, per [D1](design.md#d1), with `test_a_non_string_tag_routes_nowhere` in `tests/test_sheet_stage.py`.
+- [x] 5.4 Coerce the WD14 tag in `isekai/pipeline/sheet.py:116`, per [D1](design.md#d1), with `test_a_non_string_tag_routes_nowhere` in `tests/test_sheet_stage.py`.
   Verify: `grep -c 'DanbooruTag(str(one\["tag"\]))' isekai/pipeline/sheet.py` prints `1`.
 
 ## 6 — The docs drop the breaks that close

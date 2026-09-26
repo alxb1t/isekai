@@ -138,8 +138,8 @@ def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
         raise Refusal(
             f"{run.id}: flow {flow} has no approved sheet, and only an approved "
             "sheet is rendered; run `python -m isekai review --flow "
-            f"{flow}`, edit the draft, then `python -m isekai approve --flow "
-            f"{flow}`"
+            f"{flow} {run.id}`, edit the draft, then `python -m isekai approve "
+            f"--flow {flow} {run.id}`"
         )
     return approved[-1], directory / artifact_name(approved[-1], APPROVED)
 
@@ -231,8 +231,8 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
         naming = " ".join(f"--flow {one}" for one in sorted(flows))
         raise Refusal(
             f"{run.id}: no approved sheet for {asked}, and only an approved sheet "
-            f"is rendered; run `python -m isekai review {naming}`, edit the "
-            f"draft, then `python -m isekai approve {naming}`"
+            f"is rendered; run `python -m isekai review {naming} {run.id}`, edit "
+            f"the draft, then `python -m isekai approve {naming} {run.id}`"
         )
     assembled: dict[str, Path] = {}
 

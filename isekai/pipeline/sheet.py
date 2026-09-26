@@ -40,7 +40,14 @@ Stdlib only.
 
 from pathlib import Path
 
-from isekai.foundation.artifacts import SHEET_FILE, WD14_FILE, Sheet, read, write
+from isekai.foundation.artifacts import (
+    SHEET_FILE,
+    WD14_FILE,
+    DanbooruTag,
+    Sheet,
+    read,
+    write,
+)
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -106,14 +113,17 @@ def sheet(
     if source is None:
         raise Refusal(
             f"{run.id}: there is no tag list to fill a sheet for {flow} from; run "
-            f"`python -m isekai caption --flow {flow}` for this photograph first, "
+            f"`python -m isekai caption --flow {flow} {run.id}` first, "
             f"which writes {flow}/{WD14}/ beside the prose"
         )
 
     check_budget(STAGE, directory, next_version(directory), run)
 
     listed = read(tagged / artifact_name(source), WD14_FILE)
-    fields = route((one["tag"] for one in listed["tags"]), field_map, schema)
+    # `str()`: a hand-edited list's non-string tag routes nowhere, never raises.
+    fields = route(
+        (DanbooruTag(str(one["tag"])) for one in listed["tags"]), field_map, schema
+    )
     validate(fields, schema, vocabulary)
 
     path = directory / artifact_name(next_version(directory))
