@@ -571,3 +571,24 @@ means repairing it is not enough.
 - **WHEN** an invocation selects more than one flow and one flow's approved sheet cannot be assembled
 - **THEN** the other selected flows are still assembled
 - **AND** the failure is reported naming the flow it belongs to
+
+#### Scenario: a graph the endpoint rejects is recorded permanent
+- **Key:** `image-generation:failure:a-rejected-graph-is-permanent`
+- **Layers:** unit
+- **WHEN** the endpoint answers a render's request with a client error
+- **THEN** the failure record names the failure as permanent
+- **AND** the refusal names the status and the endpoint's own error, and not the tunnel
+
+#### Scenario: an endpoint's server error is recorded transient
+- **Key:** `image-generation:failure:a-server-error-is-transient`
+- **Layers:** unit
+- **WHEN** the endpoint answers a render's request with a server error
+- **THEN** the failure record names the failure as transient
+- **AND** the refusal names the status and points at the endpoint's own log
+
+#### Scenario: a failed upload is recorded
+- **Key:** `image-generation:failure:a-failed-upload-is-recorded`
+- **Layers:** unit
+- **WHEN** the photograph's upload to the endpoint fails
+- **THEN** a failure record is written for that render
+- **AND** a later invocation of that stage refuses on the record, naming it, until the record is deleted

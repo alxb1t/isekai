@@ -162,6 +162,13 @@ retrying after a network blip and silently burning a call.
 - **THEN** each stage's numbers are assigned within its own directory
 - **AND** the link between them is the producer record, not a shared counter
 
+#### Scenario: approving an approved flow writes nothing
+- **Key:** `run-directory:idempotence:approving-an-approved-flow-writes-nothing`
+- **Layers:** unit
+- **WHEN** approval is asked for a flow that is already approved and still holds a draft numbered below its approval
+- **THEN** no file in the run directory changes
+- **AND** the command reports the stage as already complete
+
 ### Requirement: An artifact is written atomically or not at all
 
 The system SHALL write every artifact to a temporary file on the same filesystem and move it onto its
@@ -294,6 +301,14 @@ what would fix it.
 - **WHEN** an unknown schema version is refused
 - **THEN** the message tells the operator what action would resolve it
 - **AND** it does not suggest an action this build cannot perform
+
+#### Scenario: an unreadable artifact is refused by name
+- **Key:** `run-directory:schema:an-unreadable-artifact-is-refused-by-name`
+- **Layers:** unit
+- **WHEN** an artifact is not valid JSON, is not a JSON object, or carries a schema block that is not an object
+- **THEN** the read is refused naming the file
+- **AND** no field of the artifact is interpreted
+- **AND** the remedy names an action this build can perform
 
 ### Requirement: A run root is under the ignored root or outside the repository
 

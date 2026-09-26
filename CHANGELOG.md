@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.8] - 2026-09-26
+
 ### Fixed
 
 - **An unreadable run file is refused by name**: not valid JSON, not an object, or a `schema` that is not
