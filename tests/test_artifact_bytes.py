@@ -6,7 +6,7 @@ into one contract is proven to move no byte. The tripwire is an AST scan like
 """
 
 import ast
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -161,14 +161,20 @@ def json_writers(root: Path) -> set[str]:
     e.g. a module calling `write_json(...)` -> `isekai/pipeline/sheet.py`
     """
     found: set[str] = set()
-    for path in sorted((root / "isekai").rglob("*.py")):
-        name = path.relative_to(root).as_posix()
+    for name, tree in _modules(root):
         if name == CONTRACT:
             continue
-        for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
+        for node in ast.walk(tree):
             if isinstance(node, ast.Call) and _called(node.func) == WRITER:
                 found.add(name)
     return found
+
+
+def _modules(root: Path) -> Iterator[tuple[str, ast.Module]]:
+    """Yield each module under `root/isekai`, by its repository path, parsed."""
+    for path in sorted((root / "isekai").rglob("*.py")):
+        name = path.relative_to(root).as_posix()
+        yield name, ast.parse(path.read_text(), filename=str(path))
 
 
 def _called(func: ast.expr) -> str | None:
@@ -215,9 +221,7 @@ def unannotated_writes(root: Path) -> set[str]:
     e.g. `write(p, KIND, {})` on line 3 of `isekai/x.py` -> `isekai/x.py:3`
     """
     found: set[str] = set()
-    for path in sorted((root / "isekai").rglob("*.py")):
-        name = path.relative_to(root).as_posix()
-        tree = ast.parse(path.read_text(), filename=str(path))
+    for name, tree in _modules(root):
         for scope in ast.walk(tree):
             if not isinstance(scope, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 continue

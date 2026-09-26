@@ -148,7 +148,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
             f"`python -m isekai sheet --flow {flow} {run.id}` first"
         )
 
-    again = f"`python -m isekai review --flow {flow} --new-version {run.id}`"
+    again = _again(run, flow)
     approved = approved_versions(review_directory)
     if approved:
         copied = review_directory / artifact_name(approved[-1], APPROVED)
@@ -378,20 +378,22 @@ def approve(
     if path.exists():
         raise Refusal(
             f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
-            f"artifact is never replaced; run `python -m isekai review --flow "
-            f"{flow} --new-version {run.id}` to correct it under the next number"
+            f"artifact is never replaced; run {_again(run, flow)} to correct it "
+            "under the next number"
         )
     write(path, APPROVED_FILE, approved_body)
     draft.unlink()
     return path, warnings
 
 
+def _again(run: Run, flow: str) -> str:
+    """Return the command that copies `flow`'s draft afresh under the next number."""
+    return f"`python -m isekai review --flow {flow} --new-version {run.id}`"
+
+
 def _recopy(run: Run, flow: str, draft: Path) -> str:
     """Return the remedy for a draft that lost a key: a fresh copy, newly numbered."""
-    return (
-        f"delete {draft}, then run `python -m isekai review --flow {flow} "
-        f"--new-version {run.id}` to take a fresh copy"
-    )
+    return f"delete {draft}, then run {_again(run, flow)} to take a fresh copy"
 
 
 def _differs(fields: Mapping[str, Sequence[str]], source: Path, remedy: str) -> bool:

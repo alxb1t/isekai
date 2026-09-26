@@ -770,6 +770,8 @@ def _answering(monkeypatch: pytest.MonkeyPatch, code: int, body: bytes) -> None:
         url = url_of(req)
         if url.endswith("/upload/image"):
             return io.BytesIO(b'{"name": "photo.png"}')
+        if code == 200:
+            return io.BytesIO(body)
         raise urllib.error.HTTPError(url, code, "status", Message(), io.BytesIO(body))
 
     monkeypatch.setattr(urllib.request, "urlopen", answer)
@@ -864,13 +866,7 @@ def test_a_submission_answered_in_the_wrong_shape_is_refused_permanent(
     run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch, body: bytes
 ) -> None:
     prepare(run, {FLOW: flow})
-
-    def answer(req: urllib.request.Request | str) -> io.BytesIO:
-        if url_of(req).endswith("/upload/image"):
-            return io.BytesIO(b'{"name": "photo.png"}')
-        return io.BytesIO(body)
-
-    monkeypatch.setattr(urllib.request, "urlopen", answer)
+    _answering(monkeypatch, 200, body)
 
     with pytest.raises(Refusal) as refused:
         render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)

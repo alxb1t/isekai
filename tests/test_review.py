@@ -258,9 +258,7 @@ def test_an_approved_sheet_without_its_sheet_number_is_refused(
     review(run, FLOW)
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
-    body = json.loads(approved.read_text())
-    del body["sheet"]
-    approved.write_text(json.dumps(body))
+    _damage(approved, "sheet", None)
 
     with pytest.raises(Refusal) as refused:
         review(run, FLOW, new_version=True)
@@ -387,12 +385,7 @@ def test_a_draft_without_fields_is_refused_naming_them(
 ) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    body = json.loads(draft.read_text())
-    if held is None:
-        del body["fields"]
-    else:
-        body["fields"] = held
-    draft.write_text(json.dumps(body))
+    _damage(draft, "fields", held)
 
     with pytest.raises(Refusal) as refused:
         approve(run, FLOW, schema, vocabulary)

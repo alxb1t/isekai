@@ -36,7 +36,13 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import isekai.interface.ui.app as app_module  # noqa: E402
 import isekai.pipeline.review as review_module  # noqa: E402
-from isekai.foundation.artifacts import APPROVED_FILE, TAGS_FILE, Artifact, read
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    DRAFT_FILE,
+    TAGS_FILE,
+    Artifact,
+    read,
+)
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     REVIEW,
@@ -596,7 +602,7 @@ def test_an_update_overlapping_an_approval_is_refused(
     client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     directory = made.directory(FLOW, REVIEW)
-    fields = read(directory / "001.draft.json", APPROVED_FILE)["fields"]
+    fields = read(directory / "001.draft.json", DRAFT_FILE)["fields"]
 
     assert _update_during_approval(client, made, monkeypatch) == 409
     assert sorted(path.name for path in directory.iterdir()) == ["001.approved.json"]
