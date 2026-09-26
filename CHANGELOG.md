@@ -49,6 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flow declares whether it is tagged. The data flow, the READMEs and `CLAUDE.md` draw ① as `tag` and
   `caption` side by side; the manifest's key lists name `tagger`; `cli.py`'s docstring and the `cli` and
   `sheet` spec preambles name the verbs rather than count them.
+- **Accepted on one synthetic portrait** (`0032` phase 6, `acceptance.md`): both flows run `tag`, `caption`,
+  `sheet` and `ui`; with Ollama stopped, `tag` writes WD14 and refuses only the JoyCaption lists; `sheet`
+  before `tag` refuses naming `tag`. The known native abort at exit is confirmed to kill the process (exit
+  134, after every write); it is recorded, not fixed.
 
 ## [0.22.9] - 2026-09-26
 

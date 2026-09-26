@@ -10,7 +10,7 @@ the record; the acceptance last, on the operator's machine.
 - [x] 3 — The sheet: an empty fill for a flow that declares no tagger
 - [x] 4 — The review surface: a missing caption names its command
 - [x] 5 — The record: D1, D31, ① as two verbs
-- [ ] 6 — 🛑 **HUMAN · HALT** — the acceptance, on one synthetic portrait
+- [x] 6 — 🛑 **HUMAN · HALT** — the acceptance, on one synthetic portrait
 
 Line numbers are `50a6b17`'s; find each site by the text it names.
 
@@ -88,9 +88,9 @@ Line numbers are `50a6b17`'s; find each site by the text it names.
 Free and local: Ollama and WD14 on this machine, no pod. **A synthetic portrait, never a real person's
 photograph.**
 
-- [ ] 6.1 ⛔ **HALT.** Ask the operator for a synthetic portrait and the `--runs` root, and wait for an explicit go; record it as the first line of `openspec/changes/0032-the-tag-verb/acceptance.md`, `Go: <date>`.
+- [x] 6.1 ⛔ **HALT.** Ask the operator for a synthetic portrait and the `--runs` root, and wait for an explicit go; record it as the first line of `openspec/changes/0032-the-tag-verb/acceptance.md`, `Go: <date>`.
   Verify: `grep -c '^Go: ' openspec/changes/0032-the-tag-verb/acceptance.md` prints `1`.
-- [ ] 6.2 For both flows, run `tag`, `caption`, `sheet`, then `ui` on the run; record each command and what it printed in `openspec/changes/0032-the-tag-verb/acceptance.md`, with no absolute path.
+- [x] 6.2 For both flows, run `tag`, `caption`, `sheet`, then `ui` on the run; record each command and what it printed in `openspec/changes/0032-the-tag-verb/acceptance.md`, with no absolute path.
   Verify: `grep -c -e 'isekai tag --flow' -e 'isekai caption --flow' openspec/changes/0032-the-tag-verb/acceptance.md` prints a number above `1`.
-- [ ] 6.3 With Ollama stopped, `tag --new-version` writes WD14 and refuses only the JoyCaption list; on a fresh run, `sheet` before `tag` refuses naming `tag`. Record both.
+- [x] 6.3 With Ollama stopped, `tag --new-version` writes WD14 and refuses only the JoyCaption list; on a fresh run, `sheet` before `tag` refuses naming `tag`. Record both.
   Verify: `grep -c -e 'Ollama stopped' -e 'refused' openspec/changes/0032-the-tag-verb/acceptance.md` prints a number above `1`.
