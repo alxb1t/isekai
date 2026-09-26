@@ -29,22 +29,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **v0.22.8's families, finished** (`0031` design D1): an endpoint answer in the wrong shape is refused
   permanent, and a history that is not an object no longer polls forever; every missing or wrong-typed key
-  in a draft, an approval, a sheet or a tag list is refused by name; a damaged `run.json` names a remedy
-  that works, offering the photograph again by its path; approval takes the draft lock, so an autosave
-  cannot write after it.
+  the `review`, `approve` and `sheet` stages read from a draft, an approval, a sheet or a tag list is
+  refused by name, though the review surface's own reads of those files are not yet; a damaged `run.json`
+  names a remedy that works, offering the photograph again by its path; approval takes the draft lock, so
+  an autosave cannot write after it.
 - **Approval never guesses a draft unedited**: a source sheet that is gone is refused rather than read as
-  unedited, and a damaged one names a fix that keeps it — a new sheet and a fresh copy, or, for a
-  re-opened draft, deleting the draft to keep the approval — so no sheet number is freed for reuse.
+  unedited, and a damaged one (missing its `fields`, not valid JSON, or declaring another version) names a
+  fix that keeps it: a new sheet and a fresh copy, or, for a re-opened draft, deleting the draft to keep the
+  approval. No sheet number is freed for reuse.
 
 ### Changed
 
 - **The retry rule is stated once**, in `run._spent`, which `exhausted` and `check_budget` share; an AST
   test holds that every `write(` passes an annotated artifact; a `draft-saved` golden pins `save_draft`'s
-  rewrite; a `ty: ignore` and an unused fixture go (`0031` design D2).
+  rewrite; a `ty: ignore` and an unused fixture go (`0031` design D2). `require` refuses a key of a shape
+  its noun table lacks rather than raising; the approval-race twin no longer waits on a timing window; the
+  missing-key tests are bound to the scenarios they prove rather than the batch one.
 - **The drifted documentation, corrected** (`0031` design D3): the README names the vocabulary step the
   gate needs, the group READMEs name `artifacts.py` and its importers, `docs/modules.md` says only a run
-  file's JSON goes through `write`, the principle says *by its path in the run*, the tools' `--help` names
-  `python -m <module>`, and the sheet budget's comment says it does not bind.
+  file's JSON goes through `write`, the principle names a file to delete by its full path or by its path in
+  the run, the tools' `--help` names `python -m <module>`, and the sheet budget's comment says it does not
+  bind.
 
 ## [0.22.8] - 2026-09-26
 

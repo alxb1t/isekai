@@ -22,6 +22,7 @@ from isekai.foundation.artifacts import (
     Failure,
     Sheet,
     read,
+    require,
     write,
     write_json,
 )
@@ -498,6 +499,20 @@ def test_an_unreadable_artifact_is_refused_by_name(
     assert cause in message
     assert "uninterpreted" not in message
     assert f"delete {path}, then run the stage that wrote it again" in message
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_a_key_of_a_shape_with_no_noun_is_still_refused_by_name(
+    tmp_path: Path,
+) -> None:
+    # Every caller today checks a shape the noun table names; a new one must
+    # still get a refusal rather than a KeyError where the refusal was meant.
+    with pytest.raises(Refusal) as refused:
+        require(tmp_path / "001.json", {}, "name", str, "run the stage again")
+
+    assert str(refused.value) == (
+        "001.json: records no `name` value; run the stage again"
+    )
 
 
 # --- completion by listing ----------------------------------------------------

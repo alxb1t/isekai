@@ -544,12 +544,19 @@ def test_without_the_lock_overlapping_updates_both_commit(
 
 
 def _update_during_approval(
-    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    made: Run,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    unlocked: bool = False,
 ) -> int:
     """Approve while an update is in flight, and return the update's status.
 
     The update starts inside the approval and is given the chance to pass its
     check first; if it does, its write waits until the approval has written.
+    With the lock the check cannot run until the approval ends, so the chance is
+    a bounded wait; `unlocked`, the check always runs, so the approval waits for
+    it and nothing hangs on a timing window.
     """
     body = client.get(f"/api/inputs/{made.id}").json()
     checked, approved = threading.Event(), threading.Event()
@@ -574,15 +581,16 @@ def _update_during_approval(
         path: Path, kind: Artifact[T], artifact: T
     ) -> None:
         # By name: the endpoint runs on a worker thread, not on `update`.
+        # The approval always sets `approved`, so this wait always ends.
         if path.name.endswith(".draft.json"):
-            approved.wait(timeout=0.5)
+            approved.wait()
         write(path, kind, artifact)
 
     def approve_(
         run: Run, flow: str, schema: Schema, vocabulary: Vocabulary
     ) -> tuple[Path | None, list[str]]:
         update.start()
-        checked.wait(timeout=0.5)
+        checked.wait(timeout=None if unlocked else 0.5)
         try:
             return approving(run, flow, schema, vocabulary)
         finally:
@@ -615,7 +623,7 @@ def test_without_the_lock_an_update_writes_after_the_approval(
 ) -> None:
     monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
 
-    assert _update_during_approval(client, made, monkeypatch) == 200
+    assert _update_during_approval(client, made, monkeypatch, unlocked=True) == 200
     assert (made.directory(FLOW, REVIEW) / "001.draft.json").exists()
 
 

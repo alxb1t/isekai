@@ -251,7 +251,7 @@ def test_approving_an_approved_flow_writes_nothing(
     assert snapshot(run.path) == before
 
 
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_an_approved_sheet_without_its_sheet_number_is_refused(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
@@ -269,7 +269,7 @@ def test_an_approved_sheet_without_its_sheet_number_is_refused(
     assert current_draft(run.directory(FLOW, "review")) is None
 
 
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 @pytest.mark.parametrize(
     ("key", "value"),
     [("vocabulary", None), ("fields", None), ("fields", ["a list"]), ("sheet", "one")],
@@ -291,7 +291,7 @@ def test_an_approved_artifact_missing_a_key_is_refused_naming_it(
     assert current_draft(run.directory(FLOW, "review")) is None
 
 
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 @pytest.mark.parametrize(("key", "value"), [("vocabulary", None), ("fields", "x")])
 def test_a_sheet_missing_a_key_is_refused_before_it_is_copied(
     run: Run, key: str, value: object
@@ -307,7 +307,7 @@ def test_a_sheet_missing_a_key_is_refused_before_it_is_copied(
     assert versions(run.directory(FLOW, "review")) == []
 
 
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("review:draft-update:a-changed-field-set-is-refused")
 @pytest.mark.parametrize("value", [None, ["a list"]])
 def test_saving_a_draft_without_a_fields_object_is_refused(
     run: Run, schema: Schema, value: object
@@ -369,6 +369,35 @@ def test_a_source_sheet_without_fields_refuses_approval_naming_it(
 
     # The printed fix, followed: it keeps the damaged sheet, so no number is freed
     # for a later sheet to reuse, and the approval computes `edited` honestly.
+    _follow(str(refused.value), run, schema, vocabulary)
+    assert source.exists()
+    assert _approved_edited(run, schema, vocabulary) == (True, 2)
+
+
+@pytest.mark.spec("review:provenance:edited-copy-is-declared")
+@pytest.mark.parametrize("damage", ["not json", "not an object", "another version"])
+def test_a_source_sheet_that_does_not_parse_is_refused_keeping_the_sheet(
+    run: Run, schema: Schema, vocabulary: Vocabulary, damage: str
+) -> None:
+    assert review(run, FLOW) is not None
+    source = run.path / FLOW / "sheets" / "001.json"
+    if damage == "not json":
+        source.write_text("{ not json")
+    elif damage == "not an object":
+        source.write_text("[]")
+    else:
+        body = json.loads(source.read_text())
+        body["schema"]["version"] = SHEET_FILE.version + 1
+        source.write_text(json.dumps(body))
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    # `read`'s default fix deletes the file, which frees the sheet's number.
+    assert str(refused.value).startswith("001.json: ")
+    assert f"delete {source}" not in str(refused.value)
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
     _follow(str(refused.value), run, schema, vocabulary)
     assert source.exists()
     assert _approved_edited(run, schema, vocabulary) == (True, 2)

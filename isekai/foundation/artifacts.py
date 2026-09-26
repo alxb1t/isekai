@@ -361,4 +361,5 @@ def require(
     e.g. no `sheet` -> "001.draft.json: records no `sheet` number; <remedy>"
     """
     if not isinstance(body.get(key), shape):
-        raise Refusal(f"{path.name}: records no `{key}` {_NOUNS[shape]}; {remedy}")
+        noun = _NOUNS.get(shape, "value")
+        raise Refusal(f"{path.name}: records no `{key}` {noun}; {remedy}")

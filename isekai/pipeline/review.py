@@ -429,7 +429,7 @@ def _differs(
             f"{draft.name}: was copied from {source}, which is not there, so "
             f"whether it was edited cannot be computed; {remedy}"
         )
-    body = read(source, SHEET_FILE)
+    body = read(source, SHEET_FILE, remedy=remedy)
     require(source, body, "fields", dict, remedy)
     original = body["fields"]
     return {name: list(tags) for name, tags in original.items()} != {

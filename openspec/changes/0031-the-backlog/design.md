@@ -89,7 +89,7 @@ Tests: `tests/test_generate.py` (a list body and a numeric history), `tests/test
 | `v0.22.5 review/R4` | `README.md:296-300`: the `npm install` note alone | plus a sentence: the gate needs `bash tools/download_models.sh config/vocabulary.json`, or `ISEKAI_VOCABULARY=absent` |
 | `v0.22.6 review/R4` | `isekai/README.md:10`: *`refusal.py` · `run.py` · `flow.py` · `atomic_write.py`*; `isekai/shared/README.md:6-8`: *"Two of them do read `foundation`"* | `artifacts.py` in the row; the shared README names what each module imports from `foundation` |
 | `v0.22.6 review/R5` | `docs/modules.md:122-125`: *"Every run file is written through … `write`"* | *every run file's JSON*; the photograph copy and the render image are bytes |
-| `v0.22.8 review/R7` | `docs/principles.md:114`: *"by its full path"* | *"by its path in the run"* |
+| `v0.22.8 review/R7` | `docs/principles.md:114`: *"by its full path"* | *"by its full path or by its path in the run after the run's id"*, both styles the code prints |
 | `v0.22.8 review/R8` | `isekai/foundation/README.md:24-26`: the importer lists | `interface/run_view.py` on `artifacts.py`'s row, `boundary/comfy/contract.py` on `run.py`'s, `tests/test_artifact_bytes.py` on `flow.py`'s |
 | `v0.22.7 review/R2` | `usage: derive_field_map.py …` and the like | `prog="python -m <module>"` in `evaluation/__main__.py:54`, `tools/derive_field_map.py:609`, `evaluation/baseline/build_contact_sheets.py:112`, `evaluation/baseline/build_subjects.py:115` |
 | `v0.22.8 security/S3` | `openspec/specs/run-directory/spec.md:287`, `isekai/foundation/artifacts.py:321`: *"a format you do not know"* | *"a format this build does not know"* ([specs/](specs/run-directory/spec.md)) |

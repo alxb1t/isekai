@@ -121,7 +121,7 @@ def test_a_non_string_tag_routes_nowhere(
     assert all("42" not in tags for tags in fields.values())
 
 
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 @pytest.mark.parametrize(
     ("damage", "named"),
     [
