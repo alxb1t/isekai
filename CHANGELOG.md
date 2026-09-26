@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   each graph's `filename_prefix` becomes its flow's id, so the image is unchanged and `flow_graph_sha256`
   moves. `summon-anime-wai` → `039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b`;
   `conjure-anime-wai` → `f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f`.
+- **BREAKING — `caption` writes the prose only; a new `tag` verb writes both tag lists** (`0032` design
+  D2): WD14 first, then the JoyCaption tags, each refusal collected on its own, so neither tagger's failure
+  costs the other its list and the sheet's input no longer waits on Ollama. `tag` refuses a flow whose
+  manifest declares `"tagger": false`; `--new-version` re-produces only what its own verb writes; the
+  sheet's remedies name `tag`.
 
 ## [0.22.9] - 2026-09-26
 

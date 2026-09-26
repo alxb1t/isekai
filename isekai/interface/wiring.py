@@ -65,7 +65,7 @@ class Wiring:
     # provenance the artifacts record would be false for one of them.
     reader: Callable[[Flow], Reader] | None
     # The two tagging seams, and they are deliberately not one. `tagger` resolves
-    # for **every** flow because the local tagger reads no manifest key at all;
+    # for **every** tagged flow because no manifest key names its model;
     # `hosted_tagger` resolves on the one key the reader also reads, because which
     # model answers is a claim the flow makes about itself (design.md D3).
     #
@@ -130,15 +130,15 @@ def hosted_tagger_for(flow: Flow) -> Tagger:
 
 
 def tagger_for(flow: Flow) -> LocalTagger:
-    """Open the local tagger and read its label index, for any flow at all.
+    """Open the local tagger and read its label index, for any tagged flow.
 
     **It takes a `Flow` and reads nothing from it**, which is the whole point
-    rather than an oversight: the local tagger resolves through no manifest key,
-    because it is a file this build pins, it costs nothing, it reaches no network,
-    and there is no flow for which it would be wrong. Requiring a key would mean
-    re-pinning every existing flow directory to state an opinion none of them has
-    (design.md D3). The parameter stays so that both tagging seams have one shape
-    and `cli.py` resolves them the same way.
+    rather than an oversight. The manifest's `tagger` key decides *whether* a
+    flow is tagged, and `cli.py` reads it; nothing in the manifest says *which*
+    model tags, because the local tagger is a file this build pins, it costs
+    nothing, it reaches no network, and there is no tagged flow for which it
+    would be wrong (0032 design D2). The parameter stays so that both tagging
+    seams have one shape and `cli.py` resolves them the same way.
 
     **Both digests are verified and 467 MB is opened here**, so nothing calls this
     until a flow asks -- and `cli.py` calls it once per flow per invocation rather

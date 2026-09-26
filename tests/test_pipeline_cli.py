@@ -43,6 +43,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 EXPECTED_VERBS = (
     "caption",
+    "tag",
     "sheet",
     "review",
     "approve",
@@ -252,7 +253,7 @@ def test_parsing_a_verb_succeeds() -> None:
 
 # --- the flow selection --------------------------------------------------------
 
-STAGE_VERBS = ("caption", "sheet", "review", "approve", "generate")
+STAGE_VERBS = ("caption", "tag", "sheet", "review", "approve", "generate")
 
 
 @pytest.mark.spec("cli:flow-selection:a-stage-verb-requires-a-flow")

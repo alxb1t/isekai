@@ -43,7 +43,7 @@ FLOW = "summon-anime-wai"
 # Every verb, in the order a run passes through them. `approve` follows `review`
 # with no edit in between, which is a legitimate act: it renders the machine's
 # raw sheet as the control the correction is measured against.
-VERBS = ("caption", "sheet", "review", "approve", "generate", "show")
+VERBS = ("caption", "tag", "sheet", "review", "approve", "generate", "show")
 
 
 @pytest.fixture
@@ -99,11 +99,12 @@ def _flags(extra: dict[str, object]) -> list[str]:
 def _calls(wired: Wiring) -> tuple[int, int, int, int]:
     """Return how many times each external double has been reached.
 
-    Four now, not five. **The two taggers are counted separately and both are
-    counted**, because they fail differently and one of them is not a network
-    call at all: a second pass that re-opened the 467 MB graph would cost ~0.9 s
-    per photograph while making no request, so an assertion that only counted
-    requests would call that inert.
+    `caption` reaches the reader alone, and `tag` reaches both taggers. **The
+    two taggers are counted separately and both are counted**, because they
+    fail differently and one of them is not a network call at all: a second
+    pass that re-opened the 467 MB graph would cost ~0.9 s per photograph while
+    making no request, so an assertion that only counted requests would call
+    that inert.
 
     **The sorter is gone rather than uncounted.** Stage ② reaches nothing to
     count -- it reads one artifact and routes it through a committed table -- so
@@ -220,6 +221,49 @@ def test_the_explicit_flag_writes_the_next_version_and_leaves_the_last_alone(
     assert (wired.runs_root / run_id / FLOW / "captions" / "002.json").exists()
     assert first.read_bytes() == frozen
     assert _calls(wired)[0] == 2
+
+
+def _versions(wired: Wiring) -> dict[str, list[str]]:
+    """Return each stage-1 directory's numbered artifacts, by directory name."""
+    (run,) = wired.runs_root.iterdir()
+    return {
+        area: sorted(p.name for p in (run / FLOW / area).glob("[0-9][0-9][0-9].json"))
+        for area in ("captions", "wd14", "tags")
+    }
+
+
+@pytest.mark.spec("cli:explicit-versions:the-caption-flag-writes-prose-only")
+def test_the_caption_flag_writes_the_next_prose_and_no_tag_list(
+    photo: Path, wired: Wiring
+) -> None:
+    dispatch(_args("caption", str(photo)), wired)
+    dispatch(_args("tag", str(photo)), wired)
+
+    assert dispatch(_args("caption", str(photo), new_version=True), wired) == 0
+
+    assert _versions(wired) == {
+        "captions": ["001.json", "002.json"],
+        "wd14": ["001.json"],
+        "tags": ["001.json"],
+    }
+    assert _calls(wired)[:3] == (2, 1, 1)
+
+
+@pytest.mark.spec("cli:explicit-versions:the-tag-flag-writes-both-lists")
+def test_the_tag_flag_writes_the_next_of_both_lists_and_no_prose(
+    photo: Path, wired: Wiring
+) -> None:
+    dispatch(_args("caption", str(photo)), wired)
+    dispatch(_args("tag", str(photo)), wired)
+
+    assert dispatch(_args("tag", str(photo), new_version=True), wired) == 0
+
+    assert _versions(wired) == {
+        "captions": ["001.json"],
+        "wd14": ["001.json", "002.json"],
+        "tags": ["001.json", "002.json"],
+    }
+    assert _calls(wired)[:3] == (1, 2, 2)
 
 
 @pytest.mark.spec("run-directory:idempotence:new-version-must-be-asked-for")
@@ -347,6 +391,7 @@ def _incomplete_flow(tmp_path: Path) -> Path:
 # guard below parses each printed command and requires it to name a run.
 AVAILABLE: Sequence[str] = (
     "python -m isekai caption --flow ",
+    "python -m isekai tag --flow ",
     "python -m isekai sheet --flow ",
     "python -m isekai review --flow ",
     "python -m isekai approve --flow ",
@@ -496,7 +541,7 @@ def _approved_run(wired: Wiring, tmp_path: Path, name: str) -> str:
     photo = tmp_path / f"{name}.jpg"
     # Distinct bytes per name -- identical bytes are the same run, by design.
     photo.write_bytes(jpeg_bytes(1200, 904 + 8 * (sum(map(ord, name)) % 40)))
-    for verb in ("caption", "sheet", "review", "approve"):
+    for verb in ("caption", "tag", "sheet", "review", "approve"):
         assert dispatch(_args(verb, str(photo)), wired) == 0
     from isekai.foundation.run import open_run
 

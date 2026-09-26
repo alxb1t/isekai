@@ -114,8 +114,8 @@ def sheet(
     if source is None:
         raise Refusal(
             f"{run.id}: there is no tag list to fill a sheet for {flow} from; run "
-            f"`python -m isekai caption --flow {flow} {run.id}` first, "
-            f"which writes {flow}/{WD14}/ beside the prose"
+            f"`python -m isekai tag --flow {flow} {run.id}` first, "
+            f"which writes {flow}/{WD14}/"
         )
 
     check_budget(STAGE, directory, next_version(directory), run)
@@ -123,7 +123,7 @@ def sheet(
     listed_path = tagged / artifact_name(source)
     listed = read(listed_path, WD14_FILE)
     remedy = (
-        f"run `python -m isekai caption --flow {flow} --new-version {run.id}`, "
+        f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
         f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
     )
     for key, shape in (("tags", list), ("producer", dict)):

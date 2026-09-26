@@ -1,11 +1,12 @@
-"""Stage (1), twice more: a photograph in, a list of Danbooru tags out.
+"""The `tag` verb: a photograph in, a list of Danbooru tags out, from two taggers.
 
 **Two functions and two seams, deliberately not one Protocol with two
 implementations.** A Protocol earns its name when the thing behind it is
-interchangeable, and these are not. `caption_tags` reaches a model over HTTP, on
-the alias the flow's manifest names in its `model` key; `caption_wd14` opens a
-digest-verified file on disk and resolves through **nothing at all** -- there is
-no manifest key it reads and no flow for which it would be wrong. A Protocol
+interchangeable, and these are not. `tag_hosted` reaches a model over HTTP, on
+the alias the flow's manifest names in its `model` key; `tag_wd14` opens a
+digest-verified file on disk and resolves through **no key naming its model** --
+the manifest's `tagger` says whether a flow is tagged, never which model tags,
+and there is no tagged flow for which it would be wrong. A Protocol
 whose two implementations resolve through different mechanisms is a shared name
 rather than a seam (design.md D3).
 
@@ -18,8 +19,9 @@ it contradicts its own prose on the same photograph -- yet the artifact keeps ev
 tag, and the review surface shows only the tags the vocabulary carries
 (`interface/ui/app.py`'s `_tags`).
 
-**`caption_wd14` and `caption_tags` sit beside `caption()`, not inside it**, and
-`cli.py` reports each artifact on its own.
+**`tag_wd14` and `tag_hosted` are the `tag` verb, and `caption()` is not part of
+it**: `cli.py` runs WD14 first, then the hosted tagger, collects each one's refusal
+on its own, and reports each artifact on its own (0032 design D2).
 
 **The two artifacts resume independently**, which is why each has its own
 directory, its own `latest()` check and its own `BUDGETS` entry. WD14 is
@@ -54,11 +56,9 @@ from isekai.foundation.run import (
     refusal_for,
 )
 
-# The verb a refusal tells the operator to run again, and it is `caption` rather
-# than either stage name above: one verb produces all three artifacts, so there
-# is no `python -m isekai tags` to name (design.md D8). Written out rather than
-# imported from `caption.py` -- no stage imports another.
-VERB = "caption"
+# The verb a refusal tells the operator to run again: `tag` writes both lists, so
+# neither stage name above is a verb (0032 design D2).
+VERB = "tag"
 
 # The whole of what the hosted tagger is told. **"Long" is the lever**: it takes
 # the answer from 34-40 tags to 45-51, and in-vocabulary yield from 11-23% to
@@ -212,7 +212,7 @@ class OllamaTagger:
         return Tagging(tags, self.implementation, (self.model,))
 
 
-def caption_wd14(
+def tag_wd14(
     run: Run,
     flow: str,
     open_tagger: Callable[[], wd14.LocalTagger],
@@ -296,7 +296,7 @@ def caption_wd14(
     return path
 
 
-def caption_tags(
+def tag_hosted(
     run: Run,
     flow: str,
     tagger: Tagger,
@@ -306,9 +306,8 @@ def caption_tags(
     """Ask the hosted tagger for `run`'s photograph, or do nothing.
 
     The guard is `caption()`'s again, against this stage's **own** directory. The
-    three artifacts resume independently, so a complete caption and a complete
-    WD14 list beside a failed hosted one is an ordinary, resumable state rather
-    than a stuck one.
+    two lists resume independently, so a complete WD14 list beside a failed
+    hosted one is an ordinary, resumable state rather than a stuck one.
 
     **The list is stored exactly as it came**, minus the split and a strip. No
     canonicalisation, no vocabulary filtering, no re-ordering: narrowing is stage
@@ -370,6 +369,6 @@ __all__: Sequence[str] = (
     "OllamaTagger",
     "Tagger",
     "Tagging",
-    "caption_tags",
-    "caption_wd14",
+    "tag_hosted",
+    "tag_wd14",
 )

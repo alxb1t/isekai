@@ -114,7 +114,7 @@ def write_wd14(
     flow: str = FLOW.id,
     version: int = 1,
 ) -> Path:
-    """Write the tag artifact the sheet stage reads, in `caption_wd14`'s own shape.
+    """Write the tag artifact the sheet stage reads, in `tag_wd14`'s own shape.
 
     One helper rather than a fixture per module: `sheet()` below calls it for any
     test that has not written one, which is why forty-six call sites that used to

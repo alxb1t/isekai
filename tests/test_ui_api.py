@@ -63,8 +63,8 @@ from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.review import ENCODER_WINDOW, approve, review  # noqa: E402
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
-    caption_tags,
-    caption_wd14,
+    tag_hosted,
+    tag_wd14,
 )
 from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
@@ -672,8 +672,8 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     # disk; this test is about what the *real* local tagger writes, so it replaces
     # it rather than writing a second version beside it.
     _clear_wd14(made)
-    caption_wd14(made, FLOW, fake_tagger)
-    caption_tags(
+    tag_wd14(made, FLOW, fake_tagger)
+    tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
@@ -703,8 +703,8 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     (design.md D7).
     """
     _clear_wd14(made)
-    caption_wd14(made, FLOW, fake_tagger)
-    caption_tags(
+    tag_wd14(made, FLOW, fake_tagger)
+    tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
@@ -737,7 +737,7 @@ def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
     # Filtered on the way to the page, never on the way to disk. Narrowing the
     # record would make it disagree with what the model said, and looking behind
     # the router is the whole reason the artifact exists.
-    written = caption_tags(
+    written = tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
@@ -760,7 +760,7 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
 ) -> None:
     # Decided here, not in the browser: `/api/tags` answers a fragment query and
     # has no membership form, so asking per tag would be one round trip each.
-    caption_tags(
+    tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
@@ -805,7 +805,7 @@ def test_one_list_present_and_the_other_absent_is_also_silent(
     # The state a run is in when the hosted tagger has not been reached: a WD14
     # list and no hosted one. A missing hosted list is an absent aid, never a
     # blocked review (design.md D3).
-    caption_wd14(made, FLOW, fake_tagger)
+    tag_wd14(made, FLOW, fake_tagger)
 
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
 

@@ -17,7 +17,7 @@ from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact, render
 from isekai.pipeline.review import approve, review, save_draft
-from isekai.pipeline.tagging import FakeTagger, caption_tags, caption_wd14
+from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
@@ -63,13 +63,13 @@ def _caption(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
 
 
 def _wd14(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    path = caption_wd14(run, FLOW.id, fake_tagger)
+    path = tag_wd14(run, FLOW.id, fake_tagger)
     assert path is not None
     return path
 
 
 def _tags(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    path = caption_tags(run, FLOW.id, FakeTagger())
+    path = tag_hosted(run, FLOW.id, FakeTagger())
     assert path is not None
     return path
 

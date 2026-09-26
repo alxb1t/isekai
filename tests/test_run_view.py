@@ -15,7 +15,7 @@ from isekai.interface.run_view import listings, rendered, report
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
-from isekai.pipeline.tagging import FakeTagger, caption_tags, caption_wd14
+from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
@@ -168,8 +168,8 @@ def test_show_reports_both_tagging_stages_for_a_run_that_has_them(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    caption_wd14(made, FLOW, fake_tagger)
-    caption_tags(made, FLOW, FakeTagger())
+    tag_wd14(made, FLOW, fake_tagger)
+    tag_hosted(made, FLOW, FakeTagger())
 
     by_name = {(item.stage, item.flow): item for item in listings(made)}
 
@@ -218,8 +218,8 @@ def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
-    caption_wd14(made, FLOW, fake_tagger)
-    caption_tags(made, FLOW, FakeTagger())
+    tag_wd14(made, FLOW, fake_tagger)
+    tag_hosted(made, FLOW, FakeTagger())
 
     by_name = {(item.stage, item.flow): item for item in listings(made)}
 

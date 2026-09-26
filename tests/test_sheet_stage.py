@@ -152,7 +152,7 @@ def test_a_tag_list_missing_a_key_is_refused_naming_it(
 
     message = str(refused.value)
     assert message.startswith("001.json: ") and named in message
-    assert f"`python -m isekai caption --flow {FLOW} --new-version {run.id}`" in message
+    assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
     assert versions(run.directory(FLOW, "sheets")) == []
 
 
@@ -348,7 +348,7 @@ def test_an_absent_tag_list_is_refused_naming_the_verb_that_writes_it(
         sheet(run, schema, vocabulary, tags=None)
 
     message = str(refused.value)
-    assert "python -m isekai caption" in message
+    assert f"python -m isekai tag --flow {FLOW} {run.id}" in message
     assert versions(run.path / FLOW / "sheets") == []
 
 

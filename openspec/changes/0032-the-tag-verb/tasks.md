@@ -6,7 +6,7 @@ the record; the acceptance last, on the operator's machine.
 ## Progress
 
 - [x] 1 — The manifest: `tagger`, version 4, both flows re-pinned
-- [ ] 2 — The verbs: `tag` and `caption`, each tagger isolated
+- [x] 2 — The verbs: `tag` and `caption`, each tagger isolated
 - [ ] 3 — The sheet: an empty fill for a flow that declares no tagger
 - [ ] 4 — The review surface: a missing caption names its command
 - [ ] 5 — The record: D1, D31, ① as two verbs
@@ -31,23 +31,23 @@ Line numbers are `50a6b17`'s; find each site by the text it names.
 
 ## 2 — The verbs: `tag` and `caption`, each tagger isolated
 
-- [ ] 2.1 **HALT CHECK** — `caption` still runs both taggers, and the remedies name `caption`.
+- [x] 2.1 **HALT CHECK** — `caption` still runs both taggers, and the remedies name `caption`.
   Verify: `grep -c 'caption_wd14(run, name' isekai/interface/cli.py` prints `1`, and `grep -c '^VERB = "caption"$' isekai/pipeline/tagging.py` prints `1`.
-- [ ] 2.2 Rename `caption_wd14` to `tag_wd14` and `caption_tags` to `tag_hosted`, and set `VERB = "tag"` with its comment and the module docstring, in `isekai/pipeline/tagging.py`, `isekai/interface/cli.py`, `tests/stages.py`, `tests/test_tagging.py`, `tests/test_ui_api.py`, `tests/test_run_view.py` and `tests/test_artifact_bytes.py`, per [D2](design.md#d2).
+- [x] 2.2 Rename `caption_wd14` to `tag_wd14` and `caption_tags` to `tag_hosted`, and set `VERB = "tag"` with its comment and the module docstring, in `isekai/pipeline/tagging.py`, `isekai/interface/cli.py`, `tests/stages.py`, `tests/test_tagging.py`, `tests/test_ui_api.py`, `tests/test_run_view.py` and `tests/test_artifact_bytes.py`, per [D2](design.md#d2).
   Verify: `grep -rn -e caption_wd14 -e caption_tags isekai tests` prints nothing.
-- [ ] 2.3 In `isekai/interface/cli.py`, add `tag` to `VERBS` and to the `--flow` and `--new-version` loops; `caption` runs `caption()` alone; `tag` runs `tag_wd14`, then `tag_hosted`, each `Refusal` collected into the list `_per_item` is handed and `dispatch` reports, per [D2](design.md#d2).
+- [x] 2.3 In `isekai/interface/cli.py`, add `tag` to `VERBS` and to the `--flow` and `--new-version` loops; `caption` runs `caption()` alone; `tag` runs `tag_wd14`, then `tag_hosted`, each `Refusal` collected into the list `_per_item` is handed and `dispatch` reports, per [D2](design.md#d2).
   Verify: `grep -c '("tag", ' isekai/interface/cli.py` prints `1`, and `grep -c 'tag_wd14(run, name' isekai/interface/cli.py` prints `1`.
-- [ ] 2.4 In `tests/test_tagging.py`, run the ordering test through `tag`, and add `tagging:order:a-local-failure-leaves-the-hosted-list-written` (a failing photograph and an unopenable tagger) and `tagging:order:captioning-writes-no-tag-list`.
+- [x] 2.4 In `tests/test_tagging.py`, run the ordering test through `tag`, and add `tagging:order:a-local-failure-leaves-the-hosted-list-written` (a failing photograph and an unopenable tagger) and `tagging:order:captioning-writes-no-tag-list`.
   Verify: `grep -c 'tagging:order:' tests/test_tagging.py` prints a number above `2`.
-- [ ] 2.5 Give `tag` its place in `tests/test_pipeline_cli.py`'s `EXPECTED_VERBS` and `STAGE_VERBS` and in `tests/test_resume.py`'s `VERBS`, after `caption`; `_calls`' docstring says `caption` reaches the reader alone.
+- [x] 2.5 Give `tag` its place in `tests/test_pipeline_cli.py`'s `EXPECTED_VERBS` and `STAGE_VERBS` and in `tests/test_resume.py`'s `VERBS`, after `caption`; `_calls`' docstring says `caption` reaches the reader alone.
   Verify: `grep -c '"tag"' tests/test_pipeline_cli.py` prints a number above `1`, and `grep -c '^VERBS = ("caption", "tag", ' tests/test_resume.py` prints `1`.
-- [ ] 2.6 Refuse a flow that declares no tagger in `dispatch`, per [D2](design.md#d2), with `tagging:declaration:a-flow-without-a-tagger-is-refused` in `tests/test_tagging.py` on a fixture flow copied with `"tagger": false`.
+- [x] 2.6 Refuse a flow that declares no tagger in `dispatch`, per [D2](design.md#d2), with `tagging:declaration:a-flow-without-a-tagger-is-refused` in `tests/test_tagging.py` on a fixture flow copied with `"tagger": false`.
   Verify: `grep -c 'tagging:declaration:a-flow-without-a-tagger-is-refused' tests/test_tagging.py` prints `1`.
-- [ ] 2.7 Name `tag` in `isekai/pipeline/sheet.py`'s refusals (`:115-128`) and reword `isekai/boundary/ollama.py:199`, per [D2](design.md#d2); update `tests/test_sheet_stage.py:155`, `:351`, `tests/test_tagging.py:225` and `tests/test_resume.py`'s `AVAILABLE` (`:348`).
+- [x] 2.7 Name `tag` in `isekai/pipeline/sheet.py`'s refusals (`:115-128`) and reword `isekai/boundary/ollama.py:199`, per [D2](design.md#d2); update `tests/test_sheet_stage.py:155`, `:351`, `tests/test_tagging.py:225` and `tests/test_resume.py`'s `AVAILABLE` (`:348`).
   Verify: `cat isekai/pipeline/sheet.py isekai/pipeline/tagging.py | grep -c 'isekai caption'` prints `0`, and `grep -c 'stages 1 and 2' isekai/boundary/ollama.py` prints `0`.
-- [ ] 2.8 Test `cli:explicit-versions:the-caption-flag-writes-prose-only` and `cli:explicit-versions:the-tag-flag-writes-both-lists` in `tests/test_resume.py`.
+- [x] 2.8 Test `cli:explicit-versions:the-caption-flag-writes-prose-only` and `cli:explicit-versions:the-tag-flag-writes-both-lists` in `tests/test_resume.py`.
   Verify: `grep -c -e 'the-caption-flag-writes-prose-only' -e 'the-tag-flag-writes-both-lists' tests/test_resume.py` prints `2`.
-- [ ] 2.9 In `tests/test_tagging.py`, bind the local-tagger test to `tagging:independence:the-local-tagger-needs-no-model-key`, the hosted-model test to `tagging:independence:the-hosted-tagger-runs-the-flows-model`, and a `tag` run on a tracked flow to `cli:resolution:a-pinned-seam-resolves-for-every-flow-that-declares-it`; reword `wiring.tagger_for`'s docstring, per [D2](design.md#d2).
+- [x] 2.9 In `tests/test_tagging.py`, bind the local-tagger test to `tagging:independence:the-local-tagger-needs-no-model-key`, the hosted-model test to `tagging:independence:the-hosted-tagger-runs-the-flows-model`, and a `tag` run on a tracked flow to `cli:resolution:a-pinned-seam-resolves-for-every-flow-that-declares-it`; reword `wiring.tagger_for`'s docstring, per [D2](design.md#d2).
   Verify: `grep -c -e 'a-seam-without-a-manifest-key' -e 'the-local-tagger-needs-no-manifest-key' tests/test_tagging.py` prints `0`.
 
 ## 3 — The sheet: an empty fill for a flow that declares no tagger
