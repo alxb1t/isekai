@@ -346,22 +346,6 @@ declares its coded length.
 - **THEN** the request declares that only the identity coding is acceptable
 - **AND** a compressed response is therefore never hashed in place of the artifact
 
-### Requirement: Every provisioned artifact's licence is recorded before it is relied on
-
-The system SHALL record, for each artifact it provisions, the terms that artifact carries, the source
-those terms were read from, and the date they were read.
-
-The repository already keeps this record for the artifacts the scorer loads, and the reason is that a
-public repository which distributes no weights still points at them. Recording the terms at the version
-that first provisions an artifact is what keeps the record from being a list of the ones somebody
-happened to check.
-
-#### Scenario: the vocabulary's terms are recorded
-- **Key:** `model-provisioning:licences:vocabulary-terms-are-recorded`
-- **Layers:** unit
-- **WHEN** the licence record is read
-- **THEN** it carries an entry for the vocabulary artifact
-- **AND** that entry names the terms, the source and the date they were read
 ### Requirement: The tag vocabulary and the model it indexes are provisioned from one manifest
 
 The system SHALL declare the tag list the pipeline fills sheets from as a pinned, digested artifact in

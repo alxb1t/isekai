@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.7] - 2026-09-26
+
 ### Changed
 
 - **A layer-test scope path that does not exist fails the scan** rather than narrowing it silently
