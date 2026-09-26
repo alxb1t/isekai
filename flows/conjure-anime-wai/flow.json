@@ -1,6 +1,6 @@
 {
   "flow": "conjure-anime-wai",
-  "manifest_version": 3,
+  "manifest_version": 4,
   "inputs": [
     "sheet"
   ],
@@ -45,5 +45,6 @@
       "sha256": "f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da"
     }
   ],
-  "model": "joycaption-beta-one-q4k"
+  "model": "joycaption-beta-one-q4k",
+  "tagger": true
 }

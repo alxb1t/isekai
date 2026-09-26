@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING — a flow's manifest declares `"tagger": true | false`** (`0032` design D1): a required
+  boolean, refused naming the key when absent or not a boolean, and `MANIFEST_VERSION` moves 3 → 4.
+- **Both flows re-pinned in place, format only**: each manifest gains `"tagger": true` and version 4, and
+  each graph's `filename_prefix` becomes its flow's id, so the image is unchanged and `flow_graph_sha256`
+  moves. `summon-anime-wai` → `039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b`;
+  `conjure-anime-wai` → `f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f`.
+
 ## [0.22.9] - 2026-09-26
 
 ### Fixed

@@ -5,7 +5,7 @@ the record; the acceptance last, on the operator's machine.
 
 ## Progress
 
-- [ ] 1 — The manifest: `tagger`, version 4, both flows re-pinned
+- [x] 1 — The manifest: `tagger`, version 4, both flows re-pinned
 - [ ] 2 — The verbs: `tag` and `caption`, each tagger isolated
 - [ ] 3 — The sheet: an empty fill for a flow that declares no tagger
 - [ ] 4 — The review surface: a missing caption names its command
@@ -16,17 +16,17 @@ Line numbers are `50a6b17`'s; find each site by the text it names.
 
 ## 1 — The manifest: `tagger`, version 4, both flows re-pinned
 
-- [ ] 1.1 **HALT CHECK** — the manifest is at version 3 and no flow declares `tagger`.
+- [x] 1.1 **HALT CHECK** — the manifest is at version 3 and no flow declares `tagger`.
   Verify: `grep -c '^MANIFEST_VERSION = 3$' isekai/foundation/flow.py` prints `1`, and `cat flows/summon-anime-wai/flow.json flows/conjure-anime-wai/flow.json | grep -c '"tagger"'` prints `0`.
-- [ ] 1.2 In `isekai/foundation/flow.py`, add `"tagger"` to `REQUIRED` and `Flow`, its boolean check after `model`'s, and `MANIFEST_VERSION = 4`, per [D1](design.md#d1). In `tests/test_flow.py`, test `flow-declares-whether-it-is-tagged`, `an-absent-declaration-is-refused` and `a-non-boolean-declaration-is-refused`, and make `:865` assert version 4 and `"tagger"` in `REQUIRED`.
+- [x] 1.2 In `isekai/foundation/flow.py`, add `"tagger"` to `REQUIRED` and `Flow`, its boolean check after `model`'s, and `MANIFEST_VERSION = 4`, per [D1](design.md#d1). In `tests/test_flow.py`, test `flow-declares-whether-it-is-tagged`, `an-absent-declaration-is-refused` and `a-non-boolean-declaration-is-refused`, and make `:865` assert version 4 and `"tagger"` in `REQUIRED`.
   Verify: `grep -c '^MANIFEST_VERSION = 4$' isekai/foundation/flow.py` prints `1`, and `grep -c 'image-generation:tagger:' tests/test_flow.py` prints a number above `2`.
-- [ ] 1.3 Declare `"manifest_version": 4` and `"tagger": true` in both `flows/*/flow.json`; set each `graph.json`'s `filename_prefix` to its flow's id; add `"tagger": True` to the manifest `tests/test_generate.py:134-152` builds, per [D1](design.md#d1).
+- [x] 1.3 Declare `"manifest_version": 4` and `"tagger": true` in both `flows/*/flow.json`; set each `graph.json`'s `filename_prefix` to its flow's id; add `"tagger": True` to the manifest `tests/test_generate.py:134-152` builds, per [D1](design.md#d1).
   Verify: `cat flows/summon-anime-wai/flow.json flows/conjure-anime-wai/flow.json | grep -c '"tagger": true'` prints `2`, and `cat flows/summon-anime-wai/graph.json flows/conjure-anime-wai/graph.json | grep -c -e '"summon-v1"' -e '"conjure-v1"'` prints `0`.
-- [ ] 1.4 Re-capture `tests/golden/render.json`: its `graph_sha256` and `flow_graph_sha256` move with `filename_prefix`, and no other byte does, per [D1](design.md#d1).
+- [x] 1.4 Re-capture `tests/golden/render.json`: its `graph_sha256` and `flow_graph_sha256` move with `filename_prefix`, and no other byte does, per [D1](design.md#d1).
   Verify: `grep -c '23a67480b487' tests/golden/render.json` prints `0`.
-- [ ] 1.5 Re-pin both flows in `tests/test_flow.py`'s `PINNED`, per [D1](design.md#d1).
+- [x] 1.5 Re-pin both flows in `tests/test_flow.py`'s `PINNED`, per [D1](design.md#d1).
   Verify: `grep -c -e '5de6632e33a8' -e '3ad0f323d0f4' tests/test_flow.py` prints `0`.
-- [ ] 1.6 Reword `flow.py`'s module docstring (`:16-17`), the `model` refusal (`:420`) and the comment on `model` (`:94-99`), per [D1](design.md#d1).
+- [x] 1.6 Reword `flow.py`'s module docstring (`:16-17`), the `model` refusal (`:420`) and the comment on `model` (`:94-99`), per [D1](design.md#d1).
   Verify: `grep -c -e 'first two stages' -e 'it creates a new identifier' -e 'prompts stage (1) sends' isekai/foundation/flow.py` prints `0`.
 
 ## 2 — The verbs: `tag` and `caption`, each tagger isolated

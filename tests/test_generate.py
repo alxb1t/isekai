@@ -150,6 +150,7 @@ def _fewer_roles_flow(tmp_path: Path) -> Flow:
         # Required of every flow since manifest version 3, and this one never
         # reaches it: nothing in the render path resolves a reader.
         "model": source.model,
+        "tagger": True,
     }
     (root / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
     (root / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")

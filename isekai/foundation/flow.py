@@ -13,12 +13,14 @@ freezes a flow covers regular files only. The rule names its files rather than
 tallying them: the count has changed once already, and a rule carrying a numeral
 is a rule that goes stale (design.md D10).
 
-**A flow is immutable.** Changing a dial, a prompt fragment, the graph, the schema
-or the briefing does not edit this flow -- it creates a new identifier. A tuned
-dial is not a variant of a flow, it is an untested flow, and an output's path
-identifies a configuration only if a flow identifier never silently means
-something else. The suite holds each tracked directory against a committed digest,
-the same mechanism this repository already uses to pin its committed prompts.
+**A flow never changes silently.** A divergence -- a dial, a prompt fragment, the
+graph, the schema or the briefing, while the old configuration is still wanted --
+is a new identifier. A configuration that is abandoned is re-pinned in place, with
+what moved recorded. A tuned dial is not a variant of a flow, it is an untested
+flow, and an output's path identifies a configuration only if a flow identifier
+never silently means something else. The suite holds each tracked directory
+against a committed digest, the same mechanism this repository already uses to pin
+its committed prompts.
 
 **The dials are the measured ones, not the graph file's.** `summon-anime-wai`'s
 graph carries a guidance scale of 7 and an identity control strength of 0.5, and every
@@ -48,7 +50,7 @@ FLOWS_DIR = Path(__file__).resolve().parent.parent.parent / "flows"
 # The only version of `flow.json`'s own format this build reads. It is the
 # manifest's format, not the schema document's -- the schema carries no version
 # at all, because inside a frozen directory a version protects nothing.
-MANIFEST_VERSION = 3
+MANIFEST_VERSION = 4
 
 # The files a flow is, none of them named by the manifest: a key that can only
 # ever hold one value is not a declaration. They sit directly in the directory
@@ -78,6 +80,7 @@ REQUIRED = (
     "nodes",
     "models",
     "model",
+    "tagger",
 )
 REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 
@@ -91,11 +94,11 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # anything, holding a single key, is not a declaration (design.md D1).
 KNOWN = REQUIRED
 
-# What `model` names, and why it is not `reader`. **One alias answers both
-# prompts stage (1) sends**: `wiring.py` builds the reader and the hosted tagger
-# from this single key, and `TAG_PROMPT` is unframed for exactly that reason --
-# two calls to the same alias must not arrive framed differently. A key named
-# `reader` would name it after one of its two callers; `model` names what it is.
+# What `model` names, and why it is not `reader`. **One alias answers the reader
+# and the hosted tagger**: `wiring.py` builds both from this single key, and
+# `TAG_PROMPT` is unframed for exactly that reason -- two calls to the same alias
+# must not arrive framed differently. A key named `reader` would name it after
+# one of its callers; `model` names what it is.
 #
 # Deliberately not `models`, which is required, holds the render weights a rented
 # GPU loads and pins every one by digest: one names a file on disk, the other a
@@ -266,6 +269,7 @@ class Flow:
     nodes: Mapping[str, str]
     models: tuple[Model, ...]
     model: str
+    tagger: bool
 
     @property
     def graph_path(self) -> Path:
@@ -417,7 +421,16 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     if not isinstance(named, str) or not named.strip():
         raise Refusal(
             f"{flow}/{MANIFEST_NAME}: `model` declares {named!r}; a flow names "
-            "the one model its first two stages run, as a non-empty string"
+            "the one model its reader and its hosted tagger run, as a non-empty "
+            "string"
+        )
+    # A boolean, never coerced: `bool("false")` is true, and a flow that said it
+    # needs no tagger would be tagged (0032 design D1).
+    tagger = document["tagger"]
+    if not isinstance(tagger, bool):
+        raise Refusal(
+            f"{flow}/{MANIFEST_NAME}: `tagger` declares {tagger!r}; a flow declares "
+            "whether it needs the tagger as true or false"
         )
     if document["flow"] != flow:
         raise Refusal(
@@ -495,6 +508,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             for entry in document["models"]
         ),
         model=named,
+        tagger=tagger,
     )
 
 
