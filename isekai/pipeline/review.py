@@ -58,6 +58,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     latest,
+    latest_artifact,
     next_version,
     versions,
 )
@@ -85,14 +86,11 @@ def current_draft(directory: Path) -> Path | None:
     older than the approval -- so it neither re-opens the input nor is approved.
     e.g. `001.draft.json 002.approved.json` -> None
     """
+    draft = latest_artifact(directory, DRAFT)
     approved = approved_versions(directory)
-    floor = approved[-1] if approved else 0
-    drafts = [
-        version
-        for version in versions(directory)
-        if version > floor and (directory / artifact_name(version, DRAFT)).is_file()
-    ]
-    return directory / artifact_name(drafts[-1], DRAFT) if drafts else None
+    if draft is None or (approved and int(draft.name[:3]) <= approved[-1]):
+        return None
+    return draft
 
 
 def state(directory: Path) -> Status:

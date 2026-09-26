@@ -461,28 +461,17 @@ def record_failure(
     recorded = attempts(directory, version)
     ordinal = recorded[-1].attempt + 1 if recorded else 1
     path = directory / f"{version:03d}.error.{ordinal}.{kind}.json"
-    # By name, never spread: a spread lets a caller's keys land among ours.
-    # The seed sits between stage and detail, as `tests/golden/error.json` holds.
-    record: ErrorRecord = (
-        {
-            "schema": ERROR_FILE.schema,
-            "version": version,
-            "attempt": ordinal,
-            "kind": kind,
-            "stage": failure["stage"],
-            "seed": failure["seed"],
-            "detail": failure["detail"],
-        }
-        if "seed" in failure
-        else {
-            "schema": ERROR_FILE.schema,
-            "version": version,
-            "attempt": ordinal,
-            "kind": kind,
-            "stage": failure["stage"],
-            "detail": failure["detail"],
-        }
-    )
+    # By name, never the failure spread whole: its keys must not land among
+    # ours. The seed sits between stage and detail, as `tests/golden/error.json`.
+    record: ErrorRecord = {
+        "schema": ERROR_FILE.schema,
+        "version": version,
+        "attempt": ordinal,
+        "kind": kind,
+        "stage": failure["stage"],
+        **({"seed": failure["seed"]} if "seed" in failure else {}),
+        "detail": failure["detail"],
+    }
     write(path, ERROR_FILE, record)
     return path
 
@@ -504,9 +493,9 @@ def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
     and at the rendering stage that costs money on every pass.
     e.g. `see summon-anime-wai/wd14/001.error.1.permanent.json`
     """
-    if not exhausted(stage, directory, version):
-        return
     recorded = attempts(directory, version)
+    if not recorded:
+        return
     where = recorded[-1].path.relative_to(run.path)
     if recorded[-1].kind == "permanent":
         raise Refusal(
@@ -515,6 +504,8 @@ def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
             "again"
         )
     budget = BUDGETS[stage]
+    if len(recorded) < budget:
+        return
     raise Refusal(
         f"{run.id}: {stage} has used its {budget} attempt"
         f"{'' if budget == 1 else 's'} -- see {where}; read the records, fix what "

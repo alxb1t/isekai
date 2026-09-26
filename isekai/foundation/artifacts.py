@@ -289,20 +289,11 @@ RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 
 # The version this build reads of each kind, by name: for a reader that learns
 # the kind from the file rather than being told it, as `show` does.
+# Every descriptor above, so a new kind cannot be left out by hand.
 VERSIONS: Mapping[str, int] = {
     kind.name: kind.version
-    for kind in (
-        RUN_FILE,
-        ERROR_FILE,
-        CAPTION_FILE,
-        WD14_FILE,
-        TAGS_FILE,
-        SHEET_FILE,
-        DRAFT_FILE,
-        APPROVED_FILE,
-        PROMPT_FILE,
-        RENDER_FILE,
-    )
+    for kind in list(globals().values())
+    if isinstance(kind, Artifact)
 }
 
 
