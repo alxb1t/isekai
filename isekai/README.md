@@ -7,7 +7,7 @@ what it is, not by what calls it. The evaluator is not here: it is
 
 | directory | is | files |
 |---|---|---|
-| [`foundation/`](foundation/README.md) | what a run, a flow and a refusal are | `refusal.py` · `run.py` · `flow.py` · `atomic_write.py` |
+| [`foundation/`](foundation/README.md) | what a run, a flow and a refusal are | `refusal.py` · `artifacts.py` · `run.py` · `flow.py` · `atomic_write.py` |
 | [`pipeline/`](pipeline/README.md) | the staged verbs, and `tagging.py`, which is not one | `caption.py` · `tagging.py` · `sheet.py` · `review.py` · `generate.py` |
 | [`shared/`](shared/README.md) | primitives with no domain of their own | `field_map.py` · `fields.py` · `image.py` · `vocabulary.py` |
 | [`boundary/`](boundary/README.md) | everything that leaves this process | `comfy/` (`__init__.py` · `contract.py` · `client.py` · `multipart.py`) · `ollama.py` · `provision.py` · `wd14.py` |

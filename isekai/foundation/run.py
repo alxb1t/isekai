@@ -154,7 +154,9 @@ Kind = Literal["transient", "permanent"]
 # **`sheet` is one for `wd14`'s reason.** It reached a hosted model once and had
 # three; it is now a dictionary lookup over an artifact already on disk, so there
 # is no transient failure left for a second attempt to catch -- which is exactly
-# what `"wd14": 1` above already records for the other local producer.
+# what `"wd14": 1` above already records for the other local producer. The stage
+# records no failure, so this budget does not bind; it is declared because
+# `check_budget` reads every stage's.
 #
 # A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
 # below is a bare lookup, and `across()` and `main()` both catch only `Refusal`
@@ -233,7 +235,12 @@ class Run:
     @property
     def frame(self) -> Frame:
         """Return the run's frame, refusing a version this build does not read."""
-        return read(self.frame_path, RUN_FILE)
+        # A stage verb given the run id cannot reach a run with no frame, while
+        # `open_run` passes over one, so the path is what re-creates it.
+        fix = "offer the photograph again by its path"
+        return read(
+            self.frame_path, RUN_FILE, remedy=f"delete {self.frame_path}, then {fix}"
+        )
 
     @property
     def photo(self) -> Path:
@@ -476,12 +483,24 @@ def record_failure(
     return path
 
 
+def _spent(
+    stage: str, recorded: Sequence[Attempt]
+) -> Literal["permanent", "budget"] | None:
+    """Return why `recorded` bars `stage` another attempt, or None if it does not.
+
+    The one statement of the retry rule: a permanent record short-circuits the
+    count, and otherwise the stage may try until it is at its budget.
+    """
+    if not recorded:
+        return None
+    if recorded[-1].kind == "permanent":
+        return "permanent"
+    return "budget" if len(recorded) >= BUDGETS[stage] else None
+
+
 def exhausted(stage: str, directory: Path, version: int) -> bool:
     """Say whether `stage` may not attempt `version` again: permanent, or at budget."""
-    recorded = attempts(directory, version)
-    return bool(recorded) and (
-        recorded[-1].kind == "permanent" or len(recorded) >= BUDGETS[stage]
-    )
+    return _spent(stage, attempts(directory, version)) is not None
 
 
 def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
@@ -494,18 +513,17 @@ def check_budget(stage: str, directory: Path, version: int, run: Run) -> None:
     e.g. `see summon-anime-wai/wd14/001.error.1.permanent.json`
     """
     recorded = attempts(directory, version)
-    if not recorded:
+    why = _spent(stage, recorded)
+    if why is None:
         return
     where = recorded[-1].path.relative_to(run.path)
-    if recorded[-1].kind == "permanent":
+    if why == "permanent":
         raise Refusal(
             f"{run.id}: {stage} failed permanently -- see {where}; read the "
             "record, fix what it names, then delete it to let this stage attempt "
             "again"
         )
     budget = BUDGETS[stage]
-    if len(recorded) < budget:
-        return
     raise Refusal(
         f"{run.id}: {stage} has used its {budget} attempt"
         f"{'' if budget == 1 else 's'} -- see {where}; read the records, fix what "

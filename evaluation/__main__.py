@@ -51,7 +51,10 @@ DEFAULT_MODELS_DIR = Path("models")
 
 def parse_args() -> argparse.Namespace:
     """Parse the command line."""
-    p = argparse.ArgumentParser(description="Score a run's renders against its photo.")
+    p = argparse.ArgumentParser(
+        prog="python -m evaluation",
+        description="Score a run's renders against its photo.",
+    )
     p.add_argument("run_dir", type=Path, help="a run directory containing run.json")
     p.add_argument(
         "--photo",

@@ -501,7 +501,7 @@ def _recorded(
 def _submit(client: ComfyTransport, graph: Workflow, poll: float) -> bytes:
     """Queue one graph, wait for it, and return the image's bytes."""
     prompt_id = client.submit(graph)
-    while prompt_id not in (history := client.history(prompt_id)):
+    while prompt_id not in (history := _history(client, prompt_id)):
         time.sleep(poll)
     record = history[prompt_id]
     outputs = record.get("outputs") if isinstance(record, dict) else None
@@ -518,3 +518,17 @@ def _submit(client: ComfyTransport, graph: Workflow, poll: float) -> bytes:
         "the endpoint returned no image for a graph it accepted; check the pod's "
         "ComfyUI log"
     )
+
+
+def _history(client: ComfyTransport, prompt_id: str) -> dict[str, Any]:
+    """Return the endpoint's history, refusing one that is not a JSON object.
+
+    `in` on a list never matches, so without this a list would be polled forever.
+    """
+    history: object = client.history(prompt_id)
+    if not isinstance(history, dict):
+        raise Refusal(
+            "the endpoint's history is not a JSON object; check that `--server` "
+            "names a ComfyUI"
+        )
+    return history

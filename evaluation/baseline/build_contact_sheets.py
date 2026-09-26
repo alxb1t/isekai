@@ -109,7 +109,9 @@ def build_sheet(reference: Path, a: Path, b: Path, pair: str, out: Path) -> None
 
 def main() -> int:
     """Build a contact sheet for every row of the comparison sheet."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="python -m evaluation.baseline.build_contact_sheets", description=__doc__
+    )
     parser.add_argument("--sheet", required=True, type=Path)
     parser.add_argument("--renders", default=Path(".data/baseline"), type=Path)
     parser.add_argument("--sources", default=Path(".inputs/baseline"), type=Path)

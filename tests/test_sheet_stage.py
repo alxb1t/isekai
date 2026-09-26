@@ -8,8 +8,10 @@ stage refuses without, which is why a test says what it wants routed on one line
 """
 
 import json
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -117,6 +119,41 @@ def test_a_non_string_tag_routes_nowhere(
     fields = _body(written)["fields"]
     assert fields["hair_colour"] == ["brown hair"]
     assert all("42" not in tags for tags in fields.values())
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.parametrize(
+    ("damage", "named"),
+    [
+        (lambda body: body.pop("tags"), "records no `tags` list"),
+        (lambda body: body.update(tags={"a": 1}), "records no `tags` list"),
+        (lambda body: body.pop("producer"), "records no `producer` object"),
+        (lambda body: body["producer"].pop("models"), "records no `models` list"),
+        (lambda body: body["producer"].pop("pinned"), "records no `pinned` flag"),
+        (lambda body: body["producer"].pop("artifacts"), "records no `artifacts`"),
+        (lambda body: body["tags"].append("brown_hair"), "tag entry 1 records no"),
+        (lambda body: body["tags"].append({"confidence": 0.5}), "tag entry 1"),
+    ],
+)
+def test_a_tag_list_missing_a_key_is_refused_naming_it(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    damage: Callable[[dict[str, Any]], object],
+    named: str,
+) -> None:
+    listed = write_wd14(run, [DanbooruTag("brown_hair")])
+    body = json.loads(listed.read_text())
+    damage(body)
+    listed.write_text(json.dumps(body))
+
+    with pytest.raises(Refusal) as refused:
+        sheet(run, schema, vocabulary, tags=None)
+
+    message = str(refused.value)
+    assert message.startswith("001.json: ") and named in message
+    assert f"`python -m isekai caption --flow {FLOW} --new-version {run.id}`" in message
+    assert versions(run.directory(FLOW, "sheets")) == []
 
 
 @pytest.mark.spec("field-map:routing:an-undeclared-criterion-drops-its-tags")

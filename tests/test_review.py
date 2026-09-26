@@ -251,16 +251,14 @@ def test_approving_an_approved_flow_writes_nothing(
     assert snapshot(run.path) == before
 
 
-@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
 def test_an_approved_sheet_without_its_sheet_number_is_refused(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     review(run, FLOW)
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
-    body = json.loads(approved.read_text())
-    del body["sheet"]
-    approved.write_text(json.dumps(body))
+    _damage(approved, "sheet", None)
 
     with pytest.raises(Refusal) as refused:
         review(run, FLOW, new_version=True)
@@ -271,6 +269,220 @@ def test_an_approved_sheet_without_its_sheet_number_is_refused(
     assert current_draft(run.directory(FLOW, "review")) is None
 
 
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("vocabulary", None), ("fields", None), ("fields", ["a list"]), ("sheet", "one")],
+)
+def test_an_approved_artifact_missing_a_key_is_refused_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary, key: str, value: object
+) -> None:
+    review(run, FLOW)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    _damage(approved, key, value)
+
+    with pytest.raises(Refusal) as refused:
+        review(run, FLOW, new_version=True)
+
+    message = str(refused.value)
+    assert message.startswith(f"001.approved.json: records no `{key}`")
+    assert f"--new-version {run.id}`" in message
+    assert current_draft(run.directory(FLOW, "review")) is None
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.parametrize(("key", "value"), [("vocabulary", None), ("fields", "x")])
+def test_a_sheet_missing_a_key_is_refused_before_it_is_copied(
+    run: Run, key: str, value: object
+) -> None:
+    _damage(run.path / FLOW / "sheets" / "001.json", key, value)
+
+    with pytest.raises(Refusal) as refused:
+        review(run, FLOW)
+
+    message = str(refused.value)
+    assert message.startswith(f"001.json: records no `{key}` object")
+    assert f"`python -m isekai sheet --flow {FLOW} --new-version {run.id}`" in message
+    assert versions(run.directory(FLOW, "review")) == []
+
+
+@pytest.mark.spec("review:draft-update:a-changed-field-set-is-refused")
+@pytest.mark.parametrize("value", [None, ["a list"]])
+def test_saving_a_draft_without_a_fields_object_is_refused(
+    run: Run, schema: Schema, value: object
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _damage(draft, "fields", value)
+    before = draft.read_bytes()
+
+    with pytest.raises(Refusal) as refused:
+        save_draft(run, FLOW, {name: [] for name in schema.names})
+
+    assert str(refused.value).startswith("001.draft.json: records no `fields` object")
+    assert f"delete {draft}" in str(refused.value)
+    assert draft.read_bytes() == before
+
+
+@pytest.mark.spec("review:validation:missing-field-refuses-approval")
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("sheet", None),
+        ("sheet", "one"),
+        ("producer", None),
+        ("producer", ["a list"]),
+        ("vocabulary", None),
+    ],
+)
+def test_a_draft_missing_a_key_refuses_approval_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary, key: str, value: object
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _damage(draft, key, value)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    message = str(refused.value)
+    assert message.startswith(f"001.draft.json: records no `{key}`")
+    assert f"delete {draft}" in message and f"--new-version {run.id}`" in message
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
+
+@pytest.mark.spec("review:validation:missing-field-refuses-approval")
+def test_a_source_sheet_without_fields_refuses_approval_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    assert review(run, FLOW) is not None
+    source = run.path / FLOW / "sheets" / "001.json"
+    _damage(source, "fields", None)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert str(refused.value).startswith("001.json: records no `fields` object")
+    assert f"delete {source}" not in str(refused.value)
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
+    # The printed fix, followed: it keeps the damaged sheet, so no number is freed
+    # for a later sheet to reuse, and the approval computes `edited` honestly.
+    _follow(str(refused.value), run, schema, vocabulary)
+    assert source.exists()
+    assert _approved_edited(run, schema, vocabulary) == (True, 2)
+
+
+@pytest.mark.spec("review:provenance:edited-copy-is-declared")
+@pytest.mark.parametrize("damage", ["not json", "not an object", "another version"])
+def test_a_source_sheet_that_does_not_parse_is_refused_keeping_the_sheet(
+    run: Run, schema: Schema, vocabulary: Vocabulary, damage: str
+) -> None:
+    assert review(run, FLOW) is not None
+    source = run.path / FLOW / "sheets" / "001.json"
+    if damage == "not json":
+        source.write_text("{ not json")
+    elif damage == "not an object":
+        source.write_text("[]")
+    else:
+        body = json.loads(source.read_text())
+        body["schema"]["version"] = SHEET_FILE.version + 1
+        source.write_text(json.dumps(body))
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    # `read`'s default fix deletes the file, which frees the sheet's number.
+    assert str(refused.value).startswith("001.json: ")
+    assert f"delete {source}" not in str(refused.value)
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
+    _follow(str(refused.value), run, schema, vocabulary)
+    assert source.exists()
+    assert _approved_edited(run, schema, vocabulary) == (True, 2)
+
+
+@pytest.mark.spec("review:provenance:edited-copy-is-declared")
+def test_a_missing_source_sheet_refuses_approval_rather_than_guessing_unedited(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _edit(draft, clothes=["collared shirt"])
+    source = run.path / FLOW / "sheets" / "001.json"
+    source.unlink()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert str(refused.value).startswith(f"{draft.name}: was copied from {source}")
+    assert approved_versions(run.directory(FLOW, "review")) == []
+    assert draft.exists()
+
+    _follow(str(refused.value), run, schema, vocabulary)
+    assert _approved_edited(run, schema, vocabulary) == (True, 1)
+
+
+@pytest.mark.spec("review:provenance:edited-copy-is-declared")
+@pytest.mark.parametrize("damage", ["fields", "sheet"])
+def test_a_reopened_draft_whose_sheet_is_damaged_is_refused_keeping_the_approval(
+    run: Run, schema: Schema, vocabulary: Vocabulary, damage: str
+) -> None:
+    review(run, FLOW)
+    first, _ = approve(run, FLOW, schema, vocabulary)
+    assert first is not None
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    _edit(draft, clothes=["collared shirt"])
+    source = run.path / FLOW / "sheets" / "001.json"
+    if damage == "fields":
+        _damage(source, "fields", None)
+    else:
+        source.unlink()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    # A fresh copy would come from the approval, which names this same sheet, so
+    # the fix that works is to leave the flow approved as it was.
+    assert f"delete {draft}" in str(refused.value)
+    draft.unlink()
+    assert approve(run, FLOW, schema, vocabulary) == (None, [])
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
+def _follow(message: str, run: Run, schema: Schema, vocabulary: Vocabulary) -> None:
+    """Run the two commands a no-approval source-sheet refusal prints, in order."""
+    assert f"`python -m isekai sheet --flow {FLOW} --new-version {run.id}`" in message
+    assert f"`python -m isekai review --flow {FLOW} --new-version {run.id}`" in message
+    sheet(run, schema, vocabulary, new_version=True)
+    copied = review(run, FLOW, new_version=True)
+    assert copied is not None
+    # The operator carries the correction across into the fresh copy.
+    _edit(copied, clothes=["collared shirt"])
+
+
+def _approved_edited(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> tuple[bool, int]:
+    """Approve the current draft and return what it records: edited, and its sheet."""
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    body = read(approved, APPROVED_FILE)
+    return body["producer"]["edited"], body["sheet"]
+
+
+def _damage(path: Path, key: str, value: object) -> None:
+    """Hand-edit one key of a run file: drop it when `value` is None, else set it."""
+    body = json.loads(path.read_text())
+    if value is None:
+        del body[key]
+    else:
+        body[key] = value
+    path.write_text(json.dumps(body))
+
+
 @pytest.mark.spec("review:validation:missing-field-refuses-approval")
 @pytest.mark.parametrize("held", [None, ["a list"]])
 def test_a_draft_without_fields_is_refused_naming_them(
@@ -278,12 +490,7 @@ def test_a_draft_without_fields_is_refused_naming_them(
 ) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    body = json.loads(draft.read_text())
-    if held is None:
-        del body["fields"]
-    else:
-        body["fields"] = held
-    draft.write_text(json.dumps(body))
+    _damage(draft, "fields", held)
 
     with pytest.raises(Refusal) as refused:
         approve(run, FLOW, schema, vocabulary)

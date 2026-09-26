@@ -299,6 +299,10 @@ Its browser half, `tools/typecheck_ui.sh`, runs `vue-tsc --noEmit` over `ui/` an
 `ui/node_modules/`. It is **not** restored for you — run `npm install` in `ui/` once, as the
 review surface already asks.
 
+The suite reads the provisioned tag list, which is gitignored. Fetch it once with
+`bash tools/download_models.sh config/vocabulary.json`, or set `ISEKAI_VOCABULARY=absent` to
+skip the checks that read it, as CI does.
+
 Every command green, or the work is not done. The suite is **fully offline and deterministic** —
 the ComfyUI transport is faked behind a Protocol and no test touches a GPU or the network.
 Image quality and identity fidelity are judged live on a pod, by eye.

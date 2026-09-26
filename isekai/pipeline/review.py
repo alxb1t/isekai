@@ -46,6 +46,7 @@ from isekai.foundation.artifacts import (
     ReviewApproved,
     ReviewDraft,
     read,
+    require,
     write,
 )
 from isekai.foundation.flow import Flow, Schema, assemble
@@ -147,29 +148,40 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
             f"`python -m isekai sheet --flow {flow} {run.id}` first"
         )
 
+    again = _again(run, flow)
     approved = approved_versions(review_directory)
     if approved:
-        held = review_directory / artifact_name(approved[-1], APPROVED)
-        carried = read(held, APPROVED_FILE)
-        if "sheet" not in carried:
-            raise Refusal(
-                f"{held.name}: records no `sheet` number, so a draft copied from "
-                f"it cannot name its sheet; add the sheet version it was approved "
-                f"from as `sheet` in {held}, then run `python -m isekai review "
-                f"--flow {flow} --new-version {run.id}` again"
-            )
+        copied = review_directory / artifact_name(approved[-1], APPROVED)
+        carried = read(copied, APPROVED_FILE)
+        # An approved artifact is never replaced, so only a hand repairs it.
+        remedy = f"restore it in {copied}, then run {again} again"
+        require(
+            copied,
+            carried,
+            "sheet",
+            int,
+            f"a draft copied from it cannot name its sheet; add the sheet version "
+            f"it was approved from as `sheet` in {copied}, then run {again} again",
+        )
         came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
     else:
-        carried = read(sheets / artifact_name(source_sheet), SHEET_FILE)
+        copied = sheets / artifact_name(source_sheet)
+        carried = read(copied, SHEET_FILE)
+        remedy = (
+            f"run `python -m isekai sheet --flow {flow} --new-version {run.id}`, "
+            f"then {again}"
+        )
         came_from, source, sheet_version = source_sheet, SHEETS, source_sheet
 
+    require(copied, carried, "vocabulary", dict, remedy)
+    require(copied, carried, "fields", dict, remedy)
     version = next_version(review_directory)
     path = review_directory / artifact_name(version, DRAFT)
     draft: ReviewDraft = {
         "schema": DRAFT_FILE.schema,
         "producer": {"implementation": STAGE, "from": came_from, "source": source},
         "flow": flow,
-        "sheet": int(sheet_version),
+        "sheet": sheet_version,
         "vocabulary": carried["vocabulary"],
         "fields": carried["fields"],
     }
@@ -223,6 +235,7 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
         )
 
     body = read(path, DRAFT_FILE)
+    require(path, body, "fields", dict, _recopy(run, flow, path))
     existing = set(body["fields"])
     offered = set(fields)
     if offered != existing:
@@ -338,13 +351,16 @@ def approve(
             "for, so this is a warning and not a refusal"
         )
 
-    sheet_version = int(body["sheet"])
+    remedy = _recopy(run, flow, draft)
+    for key, shape in (("sheet", int), ("producer", dict), ("vocabulary", dict)):
+        require(draft, body, key, shape, remedy)
+    sheet_version, producer = body["sheet"], body["producer"]
     source = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body: ReviewApproved = {
         "schema": APPROVED_FILE.schema,
         "producer": {
-            **body["producer"],
-            "edited": _differs(fields, source),
+            **producer,
+            "edited": _differs(fields, draft, source, _resheet(run, flow, draft)),
             "approved_from": version,
         },
         "flow": flow,
@@ -357,24 +373,65 @@ def approve(
     if path.exists():
         raise Refusal(
             f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
-            f"artifact is never replaced; run `python -m isekai review --flow "
-            f"{flow} --new-version {run.id}` to correct it under the next number"
+            f"artifact is never replaced; run {_again(run, flow)} to correct it "
+            "under the next number"
         )
     write(path, APPROVED_FILE, approved_body)
     draft.unlink()
     return path, warnings
 
 
-def _differs(fields: Mapping[str, Sequence[str]], source: Path) -> bool:
+def _again(run: Run, flow: str) -> str:
+    """Return the command that copies `flow`'s draft afresh under the next number."""
+    return f"`python -m isekai review --flow {flow} --new-version {run.id}`"
+
+
+def _recopy(run: Run, flow: str, draft: Path) -> str:
+    """Return the remedy for a draft that lost a key: a fresh copy, newly numbered."""
+    return f"delete {draft}, then run {_again(run, flow)} to take a fresh copy"
+
+
+def _resheet(run: Run, flow: str, draft: Path) -> str:
+    """Return the remedy for a draft whose sheet cannot be compared against.
+
+    The sheet is kept rather than deleted: deleting it would free its number for
+    the next `sheet` run to reuse under different content. With no approval, a
+    new sheet and a fresh copy of it give `edited` something true to be computed
+    against, and the old draft stays to carry the correction across. A re-opened
+    draft is copied from the approval, which names this same sheet, so a fresh
+    copy would be refused again; there the fix is to keep the approval.
+    """
+    approved = approved_versions(draft.parent)
+    if approved:
+        return (
+            f"delete {draft} to leave {flow} approved as "
+            f"{artifact_name(approved[-1], APPROVED)} records it"
+        )
+    return (
+        f"run `python -m isekai sheet --flow {flow} --new-version {run.id}`, then "
+        f"{_again(run, flow)} to copy the new sheet; {draft.name} keeps your "
+        "edits to carry across"
+    )
+
+
+def _differs(
+    fields: Mapping[str, Sequence[str]], draft: Path, source: Path, remedy: str
+) -> bool:
     """Say whether `fields` differs from the sheet it was copied from.
 
     Computed rather than declared. Whether a sheet was actually corrected is the
     difference between the 0.568 route and the 0.917 one, and a flag the operator
-    sets is an assumption wearing a fact's clothes.
+    sets is an assumption wearing a fact's clothes. A missing sheet is refused
+    rather than read as unedited, which would be exactly such an assumption.
     """
     if not source.exists():
-        return False
-    original = read(source, SHEET_FILE)["fields"]
+        raise Refusal(
+            f"{draft.name}: was copied from {source}, which is not there, so "
+            f"whether it was edited cannot be computed; {remedy}"
+        )
+    body = read(source, SHEET_FILE, remedy=remedy)
+    require(source, body, "fields", dict, remedy)
+    original = body["fields"]
     return {name: list(tags) for name, tags in original.items()} != {
         name: list(tags) for name, tags in fields.items()
     }

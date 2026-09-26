@@ -22,6 +22,7 @@ from isekai.foundation.artifacts import (
     Failure,
     Sheet,
     read,
+    require,
     write,
     write_json,
 )
@@ -500,6 +501,20 @@ def test_an_unreadable_artifact_is_refused_by_name(
     assert f"delete {path}, then run the stage that wrote it again" in message
 
 
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_a_key_of_a_shape_with_no_noun_is_still_refused_by_name(
+    tmp_path: Path,
+) -> None:
+    # Every caller today checks a shape the noun table names; a new one must
+    # still get a refusal rather than a KeyError where the refusal was meant.
+    with pytest.raises(Refusal) as refused:
+        require(tmp_path / "001.json", {}, "name", str, "run the stage again")
+
+    assert str(refused.value) == (
+        "001.json: records no `name` value; run the stage again"
+    )
+
+
 # --- completion by listing ----------------------------------------------------
 
 
@@ -771,6 +786,26 @@ def test_the_frame_declares_its_own_schema(tmp_path: Path, runs: Path) -> None:
         "name": "run",
         "version": RUN_FILE.version,
     }
+
+
+@pytest.mark.spec("run-directory:schema:an-unreadable-artifact-is-refused-by-name")
+def test_a_damaged_frame_names_a_remedy_that_works(tmp_path: Path, runs: Path) -> None:
+    """A stage given the run id cannot reach a run with no frame; the path can."""
+    photo = _photo(tmp_path, "p.jpg", jpeg_bytes(800, 600))
+    run = open_run(photo, runs)
+    run.frame_path.write_text("{not json")
+
+    with pytest.raises(Refusal) as refused:
+        _ = run.frame
+
+    message = str(refused.value)
+    assert f"delete {run.frame_path}" in message
+    assert "offer the photograph again by its path" in message
+    assert "run the stage that wrote it again" not in message
+
+    run.frame_path.unlink()
+    again = open_run(photo, runs)
+    assert again == run and again.frame["photo"]["name"] == "photo.jpg"
 
 
 @pytest.mark.spec_exempt("structural: the id helper, exercised directly")

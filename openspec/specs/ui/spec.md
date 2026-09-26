@@ -186,6 +186,13 @@ something it is not.
 - **THEN** the sheet it shows is the approved artifact's
 - **AND** the input is presented as not editable, naming no draft
 
+#### Scenario: an update that overlaps an approval is refused
+- **Key:** `ui:approval:an-update-overlapping-an-approval-is-refused`
+- **Layers:** unit
+- **WHEN** a draft update is in flight while the same input is approved
+- **THEN** the update is refused once the approval has written
+- **AND** the approved artifact is the one the approval wrote
+
 ### Requirement: The browser bundle is generated, never committed, and its toolchain refuses by name
 
 The system SHALL build the surface's browser bundle from tracked source when it is absent, SHALL NOT

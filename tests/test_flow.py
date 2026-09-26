@@ -689,7 +689,7 @@ def test_no_text_is_taken_from_the_graphs_own_committed_strings(
 
 
 @pytest.mark.spec("image-generation:assembly:prompt-comes-from-sheet-and-dials")
-def test_every_tracked_flows_graph_carries_no_negative_of_its_own(flow: Flow) -> None:
+def test_every_tracked_flows_graph_carries_no_negative_of_its_own() -> None:
     # The other half, on the tracked flows: `flow.json`'s fragment is the only
     # negative there is. `generate.py` patches this node on every render, so a
     # string here would be dead data that reads like a second source of truth --

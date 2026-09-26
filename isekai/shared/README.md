@@ -3,10 +3,11 @@
 Used on both sides of the pipeline, and belonging to neither. Each one takes its
 inputs and returns an answer, and none of them reads a score.
 
-**Two of them do read `foundation`.** `field_map.py` imports both `run` and
-`flow`, and `fields.py` imports `flow` — a schema is a flow's, so validating a
-sheet against one means knowing what a flow is. What none of them does is reach
-a boundary or decide a stage's order.
+**Each reads `foundation`.** `field_map.py` imports `artifacts`, `flow`,
+`refusal` and `run`; `fields.py` imports `flow` and `refusal`; `image.py`
+imports `refusal`; `vocabulary.py` imports `artifacts`. A schema is a flow's, so
+validating a sheet against one means knowing what a flow is. What none of them
+does is reach a boundary or decide a stage's order.
 
 ## Files
 

@@ -770,6 +770,8 @@ def _answering(monkeypatch: pytest.MonkeyPatch, code: int, body: bytes) -> None:
         url = url_of(req)
         if url.endswith("/upload/image"):
             return io.BytesIO(b'{"name": "photo.png"}')
+        if code == 200:
+            return io.BytesIO(body)
         raise urllib.error.HTTPError(url, code, "status", Message(), io.BytesIO(body))
 
     monkeypatch.setattr(urllib.request, "urlopen", answer)
@@ -856,6 +858,48 @@ def test_a_history_without_an_image_is_refused_and_recorded(
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
     assert "ComfyUI log" in str(refused.value)
     assert "render again" not in str(refused.value)
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.parametrize("body", [b'["a list"]', b"null", b'"a string"'])
+def test_a_submission_answered_in_the_wrong_shape_is_refused_permanent(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    prepare(run, {FLOW: flow})
+    _answering(monkeypatch, 200, body)
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    assert "a shape this build does not read" in str(refused.value)
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.parametrize("body", [b"3", b'["a list"]', b"null"])
+def test_a_history_that_is_not_an_object_is_refused_permanent(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    """A list matters most: `in` on it never matches, so the poll never ends."""
+    prepare(run, {FLOW: flow})
+
+    def answer(req: urllib.request.Request | str) -> io.BytesIO:
+        url = url_of(req)
+        if url.endswith("/upload/image"):
+            return io.BytesIO(b'{"name": "photo.png"}')
+        if url.endswith("/prompt"):
+            return io.BytesIO(b'{"prompt_id": "pid-1"}')
+        return io.BytesIO(body)
+
+    monkeypatch.setattr(urllib.request, "urlopen", answer)
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    assert "history" in str(refused.value) and "--server" in str(refused.value)
 
 
 @pytest.mark.spec("image-generation:immutability:output-records-the-graph-digest")
