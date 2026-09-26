@@ -58,6 +58,7 @@ from isekai.foundation.run import (
     approved_versions,
     artifact_name,
     latest,
+    latest_artifact,
     next_version,
     versions,
 )
@@ -77,12 +78,19 @@ ENCODER_WINDOW = 77
 Status = Literal["draft", "approved", "re-opened"]
 
 
-def draft_versions(directory: Path) -> list[int]:
-    """Return the versions in `directory` whose filenames say they are drafts."""
-    if not directory.is_dir():
-        return []
-    approved = set(approved_versions(directory))
-    return [version for version in versions(directory) if version not in approved]
+def current_draft(directory: Path) -> Path | None:
+    """Return the highest draft numbered above the highest approval, or None.
+
+    **The one definition of the draft being worked on.** A draft at or below an
+    approval is stale -- left by a crash between approving and unlinking, or
+    older than the approval -- so it neither re-opens the input nor is approved.
+    e.g. `001.draft.json 002.approved.json` -> None
+    """
+    draft = latest_artifact(directory, DRAFT)
+    approved = approved_versions(directory)
+    if draft is None or (approved and int(draft.name[:3]) <= approved[-1]):
+        return None
+    return draft
 
 
 def state(directory: Path) -> Status:
@@ -94,7 +102,7 @@ def state(directory: Path) -> Status:
     because they happened to agree.
 
     `re-opened` is an approved artifact with a **later** version beside it,
-    which is exactly what `review --flow F --new-version` writes and nothing
+    which is exactly what `review --flow F --new-version <run>` writes and nothing
     else does. Later rather than merely present, so a draft that predated
     the approval could never re-open one -- and `approved_versions()[-1]` is
     the number the approved artifact records as `approved_from`, because
@@ -136,14 +144,20 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     if source_sheet is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to review; run "
-            f"`python -m isekai sheet --flow {flow}` for this photograph first"
+            f"`python -m isekai sheet --flow {flow} {run.id}` first"
         )
 
     approved = approved_versions(review_directory)
     if approved:
-        carried = read(
-            review_directory / artifact_name(approved[-1], APPROVED), APPROVED_FILE
-        )
+        held = review_directory / artifact_name(approved[-1], APPROVED)
+        carried = read(held, APPROVED_FILE)
+        if "sheet" not in carried:
+            raise Refusal(
+                f"{held.name}: records no `sheet` number, so a draft copied from "
+                f"it cannot name its sheet; add the sheet version it was approved "
+                f"from as `sheet` in {held}, then run `python -m isekai review "
+                f"--flow {flow} --new-version {run.id}` again"
+            )
         came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
     else:
         carried = read(sheets / artifact_name(source_sheet), SHEET_FILE)
@@ -179,7 +193,7 @@ def estimate_tokens(fields: Mapping[str, Sequence[str]], schema: Schema) -> int:
 
 
 def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
-    """Replace the highest draft's field values in place, and return its path.
+    """Replace the current draft's field values in place, and return its path.
 
     The one owner of a draft update. A draft was written once and then edited by
     hand until now, so nothing owned this and the draft's shape was only ever built
@@ -200,15 +214,14 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
     one comparison, without opening the validator (design.md D6).
     """
     directory = run.directory(flow, REVIEW)
-    drafts = draft_versions(directory)
-    if not drafts:
+    path = current_draft(directory)
+    if path is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to update; a draft is opened by "
-            f"`python -m isekai review --flow {flow}`, and an approved flow has "
-            "none because approval is the end of it"
+            f"`python -m isekai review --flow {flow} {run.id}`, and an approved "
+            "flow has none because approval is the end of it"
         )
 
-    path = directory / artifact_name(drafts[-1], DRAFT)
     body = read(path, DRAFT_FILE)
     existing = set(body["fields"])
     offered = set(fields)
@@ -281,7 +294,7 @@ def approve(
     schema: Schema,
     vocabulary: Vocabulary,
 ) -> tuple[Path | None, list[str]]:
-    """Validate `flow`'s highest draft and approve it, returning it and any warnings.
+    """Validate `flow`'s current draft and approve it, returning it and any warnings.
 
     Validation is the last place an invented tag can be caught: one that merely
     looks canonical passes every later check on its way into the prompt. The
@@ -290,8 +303,8 @@ def approve(
     absent tag unreal would overclaim.
     """
     directory = run.directory(flow, REVIEW)
-    drafts = draft_versions(directory)
-    if not drafts:
+    draft = current_draft(directory)
+    if draft is None:
         if approved_versions(directory):
             # Already approved, and approving again would have nothing to act on.
             # A no-op rather than a refusal, because re-running every command is
@@ -299,16 +312,20 @@ def approve(
             return None, []
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to approve; run "
-            f"`python -m isekai review --flow {flow}` to take a copy, edit it, "
-            "then approve it"
+            f"`python -m isekai review --flow {flow} {run.id}` to take a copy, "
+            "edit it, then approve it"
         )
 
-    version = drafts[-1]
-    draft = directory / artifact_name(version, DRAFT)
+    version = int(draft.name[:3])
     body = read(draft, DRAFT_FILE)
-    fields: dict[str, list[str]] = {
-        name: list(tags) for name, tags in body["fields"].items()
-    }
+    # A hand-edited draft without a `fields` object holds no fields, so
+    # validation refuses it naming every one it lacks.
+    held = body.get("fields")
+    fields: dict[str, list[str]] = (
+        {name: list(tags) for name, tags in held.items()}
+        if isinstance(held, dict)
+        else {}
+    )
     validate(fields, schema, vocabulary)
 
     warnings: list[str] = []
@@ -341,7 +358,7 @@ def approve(
         raise Refusal(
             f"{path.name} already exists in {flow}/{REVIEW}/ and an approved "
             f"artifact is never replaced; run `python -m isekai review --flow "
-            f"{flow} --new-version` to correct it under the next number"
+            f"{flow} --new-version {run.id}` to correct it under the next number"
         )
     write(path, APPROVED_FILE, approved_body)
     draft.unlink()

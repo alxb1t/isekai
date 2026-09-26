@@ -13,9 +13,9 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 | file | does | reaches |
 |---|---|---|
-| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `Unreachable` | nothing |
-| `comfy/contract.py` | the `ComfyTransport` Protocol, the image type and `Unreachable` — the network boundary's shape, with no network in it | nothing |
-| `comfy/client.py` | upload · submit · poll · retrieve, over `urllib`; every network error it meets is raised as `Unreachable` | the rented GPU |
+| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `TransportFailure` | nothing |
+| `comfy/contract.py` | the `ComfyTransport` Protocol, the image type and `TransportFailure`, which carries its kind — the network boundary's shape, with no network in it | nothing |
+| `comfy/client.py` | upload · submit · poll · retrieve, over `urllib`; every failure it meets is raised as a `TransportFailure`: a 4xx or an unreadable answer permanent, a 5xx or a closed tunnel transient | the rented GPU |
 | `comfy/multipart.py` | builds one multipart body; private to the package | nothing |
 | `ollama.py` | one POST to a local runtime, and the classification of what comes back | the hosted model, over HTTP to localhost |
 | `provision.py` | plan → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy, and `resolve`, which returns a pinned artifact's path only once its bytes are verified | a download, on the pod |
@@ -31,7 +31,7 @@ at least once; a list of names cannot.
 | `comfy/` | `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/test_generate.py`, `tests/test_resume.py` |
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/test_ollama.py` |
-| `provision.py` | `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `provision.py` | `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_eval_manifest.py`, `tools/derive_manifest.py`, `tools/derive_vocabulary.py` |
 | `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_wd14.py` |
 
 > `provision.py` is not on `python -m isekai`'s import graph, so the module-scope

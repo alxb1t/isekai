@@ -25,6 +25,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.8] - 2026-09-26
+
+### Fixed
+
+- **An unreadable run file is refused by name**: not valid JSON, not an object, or a `schema` that is not
+  an object. The remedy deletes the file before re-running its stage; the run's frame reads through the
+  same check, and `show` marks such a file instead of parsing it (`0030` design D1, D5).
+- **A failure record's attempt is the highest recorded plus one**, so a deleted record never lets the next
+  overwrite a later one. A budget refusal names the record by its path in the run, and a refusal after a
+  record that refuses the next run says to delete it, with the run id in the command (`0030` design D2, D3).
+- **One definition of the current draft**, `review.current_draft`: a draft below the approval is stale, so
+  it neither re-opens an input nor is approved, and `approve` on an approved flow writes nothing. A lock
+  orders overlapping draft updates; a draft without `fields` or an approval without `sheet` is refused
+  (`0030` design D1, D4).
+- **The transport's failure carries its kind**: `Unreachable` becomes `TransportFailure`. A 4xx or an
+  unreadable answer is recorded permanent, a 5xx or a closed tunnel transient; a failed upload is recorded,
+  and a malformed history refused. The render's sidecar is written before its image (`0030` design D3, D6).
+- **Every printed stage command names its run**, so a pasted remedy acts rather than exiting 0 having done
+  nothing; the guard parses each as printed. A refusal that pointed at `show` for an id names the runs
+  root instead, and a non-string WD14 tag routes nowhere rather than raising (`0030` design D1, D2).
+- **`docs/principles.md` drops the known breaks this release closes** and names the tests that now hold
+  them; *Only a front end composes* gains `load_vocabulary`'s break (`0030` design D7).
+
 ## [0.22.7] - 2026-09-26
 
 ### Changed

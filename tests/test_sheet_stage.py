@@ -7,6 +7,7 @@ than by counting a fake's calls. `tests/stages.sheet` writes the tag list the
 stage refuses without, which is why a test says what it wants routed on one line.
 """
 
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -27,7 +28,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.images import jpeg_bytes
-from tests.stages import FAKE_PINS, FIELD_MAP, caption, sheet
+from tests.stages import FAKE_PINS, FIELD_MAP, caption, sheet, write_wd14
 
 FLOW = "summon-anime-wai"
 
@@ -100,6 +101,22 @@ def test_the_taggers_own_underscore_spelling_routes(
     fields = _body(written)["fields"]
     assert fields["hair_colour"] == ["brown hair"]
     assert fields["eye_colour"] == ["blue eyes"]
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+def test_a_non_string_tag_routes_nowhere(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    listed = write_wd14(run, [DanbooruTag("brown_hair")])
+    body = json.loads(listed.read_text())
+    body["tags"].append({"tag": 42, "confidence": 0.5})
+    listed.write_text(json.dumps(body))
+
+    written = sheet(run, schema, vocabulary, tags=None)
+
+    fields = _body(written)["fields"]
+    assert fields["hair_colour"] == ["brown hair"]
+    assert all("42" not in tags for tags in fields.values())
 
 
 @pytest.mark.spec("field-map:routing:an-undeclared-criterion-drops-its-tags")

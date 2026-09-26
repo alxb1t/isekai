@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isekai.foundation.artifacts import VERSIONS
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.run import (
     ARTIFACT,
@@ -60,23 +61,45 @@ class Listing:
 
 
 def _producer_of(path: Path) -> str:
-    """Return a one-line description of what produced the artifact at `path`."""
+    """Return a one-line description of what produced the artifact at `path`.
+
+    A file this build would refuse to read is marked, never parsed: `show` reads
+    a run in any state, so it reports the refusal rather than raising it.
+    e.g. `declares version 2; this build reads 1`
+    """
     try:
         body: Any = json.loads(path.read_text())
     except (OSError, ValueError):
         return "unreadable"
+    schema = body.get("schema") if isinstance(body, dict) else None
+    if not isinstance(schema, dict):
+        return "unreadable"
+    kind, declared = schema.get("name"), schema.get("version")
+    if not isinstance(kind, str) or kind not in VERSIONS:
+        return f"declares kind {kind!r}, which this build does not read"
+    if declared != VERSIONS[kind]:
+        return f"declares version {declared!r}; this build reads {VERSIONS[kind]}"
     producer = body.get("producer", {})
+    if not isinstance(producer, dict):
+        return "unreadable"
     parts = [str(producer.get("implementation", "unknown"))]
     models = producer.get("models")
     if models:
+        if not isinstance(models, list):
+            return "unreadable"
         parts.append("+".join(str(model) for model in models))
     if producer.get("pinned") is False:
         parts.append("unpinned")
     briefing = producer.get("briefing")
     if briefing:
+        if not isinstance(briefing, dict):
+            return "unreadable"
         parts.append(f"briefing {str(briefing.get('sha256', ''))[:12]}")
-    if producer.get("from") is not None:
-        parts.append(f"from {producer['from']:03d}")
+    origin = producer.get("from")
+    if origin is not None:
+        if not isinstance(origin, int):
+            return "unreadable"
+        parts.append(f"from {origin:03d}")
     if producer.get("edited") is not None:
         parts.append("edited" if producer["edited"] else "unedited")
     return " · ".join(parts)

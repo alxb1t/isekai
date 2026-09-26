@@ -22,7 +22,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
-    draft_versions,
+    current_draft,
     estimate_tokens,
     review,
     save_draft,
@@ -167,7 +167,7 @@ def test_a_draft_is_not_treated_as_complete(run: Run) -> None:
     review(run, FLOW)
     directory = run.path / FLOW / "review"
 
-    assert draft_versions(directory) == [1]
+    assert current_draft(directory) == directory / "001.draft.json"
     assert approved_versions(directory) == []
     assert state(directory) == "draft"
 
@@ -229,6 +229,67 @@ def test_approving_with_no_draft_refuses_and_names_the_command(
         approve(run, FLOW, schema, vocabulary)
 
     assert f"python -m isekai review --flow {FLOW}" in str(refused.value)
+
+
+@pytest.mark.spec("run-directory:idempotence:approving-an-approved-flow-writes-nothing")
+def test_approving_an_approved_flow_writes_nothing(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    first = review(run, FLOW)
+    assert first is not None
+    stale = first.read_bytes()
+    approve(run, FLOW, schema, vocabulary)
+    review(run, FLOW, new_version=True)
+    approve(run, FLOW, schema, vocabulary)
+    # A draft numbered below the approval: left by a crash, or restored by hand.
+    first.write_bytes(stale)
+    before = snapshot(run.path)
+
+    written, warnings = approve(run, FLOW, schema, vocabulary)
+
+    assert (written, warnings) == (None, [])
+    assert snapshot(run.path) == before
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+def test_an_approved_sheet_without_its_sheet_number_is_refused(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    body = json.loads(approved.read_text())
+    del body["sheet"]
+    approved.write_text(json.dumps(body))
+
+    with pytest.raises(Refusal) as refused:
+        review(run, FLOW, new_version=True)
+
+    message = str(refused.value)
+    assert message.startswith("001.approved.json: records no `sheet` number")
+    assert f"--new-version {run.id}`" in message
+    assert current_draft(run.directory(FLOW, "review")) is None
+
+
+@pytest.mark.spec("review:validation:missing-field-refuses-approval")
+@pytest.mark.parametrize("held", [None, ["a list"]])
+def test_a_draft_without_fields_is_refused_naming_them(
+    run: Run, schema: Schema, vocabulary: Vocabulary, held: list[str] | None
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    body = json.loads(draft.read_text())
+    if held is None:
+        del body["fields"]
+    else:
+        body["fields"] = held
+    draft.write_text(json.dumps(body))
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert f"the sheet is missing {', '.join(schema.names)};" in str(refused.value)
+    assert approved_versions(run.directory(FLOW, "review")) == []
 
 
 # --- validation ---------------------------------------------------------------
@@ -458,7 +519,7 @@ def test_draft_update_replaces_the_values_and_keeps_the_version(run: Run) -> Non
     # update is not a new draft: `review()` is the only thing that opens one.
     assert after["sheet"] == before["sheet"]
     assert versions(run.directory(FLOW, "review")) == [1]
-    assert draft_versions(run.directory(FLOW, "review")) == [1]
+    assert path == current_draft(run.directory(FLOW, "review"))
 
 
 @pytest.mark.spec("review:draft-update:a-changed-field-set-is-refused")

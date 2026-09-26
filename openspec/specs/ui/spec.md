@@ -179,6 +179,13 @@ something it is not.
 - **THEN** that input's reported status is neither approved nor a plain draft
 - **AND** the batch's approved count agrees with what the run directories hold
 
+#### Scenario: a stale lower draft does not re-open an approved input
+- **Key:** `ui:approval:a-stale-lower-draft-does-not-reopen`
+- **Layers:** unit
+- **WHEN** the surface serves an input whose flow has an approved artifact and a draft numbered below it
+- **THEN** the sheet it shows is the approved artifact's
+- **AND** the input is presented as not editable, naming no draft
+
 ### Requirement: The browser bundle is generated, never committed, and its toolchain refuses by name
 
 The system SHALL build the surface's browser bundle from tracked source when it is absent, SHALL NOT
@@ -426,6 +433,13 @@ state, and a client that cannot read one must still be able to write.
 - **Layers:** unit
 - **WHEN** a draft update states no precondition
 - **THEN** it is accepted
+
+#### Scenario: overlapping updates cannot both commit
+- **Key:** `ui:draft-update:overlapping-updates-cannot-both-commit`
+- **Layers:** unit
+- **WHEN** two draft updates stating the same precondition are in flight at once
+- **THEN** one is accepted and the other is refused
+- **AND** the draft on disk is the accepted update's
 
 ### Requirement: The bundle is rebuilt when anything it is built from has moved
 

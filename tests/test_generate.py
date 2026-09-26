@@ -12,11 +12,13 @@ import random
 import re
 import urllib.error
 import urllib.request
+from email.message import Message
 from pathlib import Path
 
 import pytest
 
 import isekai.foundation.run as run_module
+import isekai.pipeline.generate as generate_module
 from isekai.boundary.comfy import ComfyClient
 from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, read
 from isekai.foundation.flow import (
@@ -695,6 +697,26 @@ def test_one_flows_malformed_sheet_does_not_cost_its_siblings_their_assembly(
     assert len(still) == 1 and "failed permanently" in still[0]
 
 
+@pytest.mark.spec("image-generation:assembly:a-bad-sheet-is-per-flow")
+@pytest.mark.parametrize("broken", [["a list"], None])
+def test_an_unassemblable_sheet_names_its_record_and_the_command(
+    run: Run, flow: Flow, broken: object
+) -> None:
+    _, source = approved_artifact(run, FLOW)
+    body = json.loads(source.read_text())
+    if broken is None:
+        body["producer"] = "not an object"
+    else:
+        body["fields"] = broken
+    source.write_text(json.dumps(body))
+
+    assembled, refused = prepare(run, {FLOW: flow})
+
+    assert assembled == {} and len(refused) == 1
+    assert f"delete {FLOW}/{PROMPTS}/001.error.1.permanent.json" in refused[0]
+    assert refused[0].endswith(f"`python -m isekai generate --flow {FLOW} {run.id}`")
+
+
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
 def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
     run: Run, flow: Flow, schema: Schema
@@ -718,7 +740,7 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
 ) -> None:
     """A closed tunnel says nothing about the graph, so it is not permanent.
 
-    Through a real `ComfyClient`, rather than by raising `Unreachable` directly:
+    Through a real `ComfyClient`, rather than by raising `TransportFailure` directly:
     what is under test is that a transport-level `URLError` reaches the record as
     transient, and the classification happens in the client.
     """
@@ -739,6 +761,121 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
     assert "the rendering endpoint could not be reached" in str(refused.value)
     assert [one.kind for one in attempts(directory, 1)] == ["transient"]
     assert not list(directory.glob("001.error.1.permanent.json"))
+
+
+def _answering(monkeypatch: pytest.MonkeyPatch, code: int, body: bytes) -> None:
+    """Patch `urlopen` so the upload lands and the submission gets `code`."""
+
+    def answer(req: urllib.request.Request | str) -> io.BytesIO:
+        url = url_of(req)
+        if url.endswith("/upload/image"):
+            return io.BytesIO(b'{"name": "photo.png"}')
+        raise urllib.error.HTTPError(url, code, "status", Message(), io.BytesIO(body))
+
+    monkeypatch.setattr(urllib.request, "urlopen", answer)
+
+
+@pytest.mark.spec("image-generation:failure:a-rejected-graph-is-permanent")
+def test_a_rejected_graph_is_recorded_permanent(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare(run, {FLOW: flow})
+    _answering(monkeypatch, 400, b'{"error": {"message": "Prompt outputs failed"}}')
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+
+    message = str(refused.value)
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    assert "HTTP 400" in message and "Prompt outputs failed" in message
+    assert "tunnel" not in message and "infra/up.sh" not in message
+
+
+@pytest.mark.spec("image-generation:failure:a-server-error-is-transient")
+def test_a_server_error_is_recorded_transient(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare(run, {FLOW: flow})
+    _answering(monkeypatch, 502, b"Bad Gateway")
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+
+    message = str(refused.value)
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["transient"]
+    assert "HTTP 502" in message and "ComfyUI log" in message
+
+
+@pytest.mark.spec("image-generation:failure:a-failed-upload-is-recorded")
+def test_a_failed_upload_is_recorded(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare(run, {FLOW: flow})
+
+    def closed(req: urllib.request.Request | str) -> io.BytesIO:
+        raise urllib.error.URLError("Connection refused")
+
+    monkeypatch.setattr(urllib.request, "urlopen", closed)
+    client = ComfyClient("http://127.0.0.1:8188")
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, client, seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    recorded = attempts(directory, 1)
+    assert [one.kind for one in recorded] == ["transient"]
+    assert "seed" not in json.loads(recorded[0].path.read_text())
+    assert f"{FLOW}/{OUTPUTS}/001/001.error.1.transient.json" in str(refused.value)
+    assert "delete it before rendering again" in str(refused.value)
+
+    with pytest.raises(Refusal) as again:
+        render(run, flow, client, seeds=[42], poll=0)
+    assert "001.error.1.transient.json" in str(again.value)
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.parametrize(
+    "record",
+    [{}, {"outputs": ["a list"]}, {"outputs": {"SaveImage": {"images": []}}}],
+)
+def test_a_history_without_an_image_is_refused_and_recorded(
+    run: Run, flow: Flow, record: dict[str, object]
+) -> None:
+    prepare(run, {FLOW: flow})
+
+    class Malformed(FakeComfyClient):
+        def history(self, prompt_id: str) -> dict[str, object]:
+            return {prompt_id: record}
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, Malformed(), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    assert "ComfyUI log" in str(refused.value)
+    assert "render again" not in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:immutability:output-records-the-graph-digest")
+def test_the_sidecar_is_written_before_its_image(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare(run, {FLOW: flow})
+
+    def crashed(path: Path, body: bytes) -> None:
+        raise OSError("the process died between the writes")
+
+    monkeypatch.setattr(generate_module, "write_atomically", crashed)
+
+    with pytest.raises(OSError):
+        render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert (directory / "42.json").is_file()
+    assert not (directory / f"42{flow.output_suffix}").exists()
+    assert rendered_seeds(directory, flow.output_suffix) == []
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")

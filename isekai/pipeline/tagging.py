@@ -254,7 +254,7 @@ def caption_wd14(
         return None
 
     version = next_version(directory)
-    check_budget(WD14, directory, version, run.id)
+    check_budget(WD14, directory, version, run)
 
     tagger = open_tagger()
     try:
@@ -278,6 +278,7 @@ def caption_wd14(
             WD14,
             VERB,
             flow,
+            WD14,
         ) from failed
 
     path = directory / artifact_name(version)
@@ -322,7 +323,7 @@ def caption_tags(
         return None
 
     version = next_version(directory)
-    check_budget(TAGS, directory, version, run.id)
+    check_budget(TAGS, directory, version, run)
 
     try:
         tagging = tagger.tag(run.photo)
@@ -342,6 +343,7 @@ def caption_tags(
             TAGS,
             VERB,
             flow,
+            TAGS,
         ) from failed
 
     path = directory / artifact_name(version)

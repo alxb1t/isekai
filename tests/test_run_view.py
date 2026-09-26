@@ -129,6 +129,35 @@ def test_renders_are_listed_under_the_sheet_version_they_came_from(
     assert any(line.strip() == f"{FLOW}/outputs/001" for line in report(run))
 
 
+@pytest.mark.spec("run-directory:provenance:artifact-declares-its-schema")
+@pytest.mark.parametrize(
+    ("body", "shown"),
+    [
+        ("{ not json", "unreadable"),
+        ('["a list"]', "unreadable"),
+        (
+            '{"schema": {"name": "caption", "version": 2}, "producer": {}}',
+            "declares version 2; this build reads 1",
+        ),
+        (
+            '{"schema": {"name": "novel", "version": 1}, "producer": {}}',
+            "declares kind 'novel', which this build does not read",
+        ),
+        (
+            '{"schema": {"name": "caption", "version": 1}, "producer": {"from": "x"}}',
+            "unreadable",
+        ),
+    ],
+)
+def test_show_marks_a_file_it_cannot_read(run: Run, body: str, shown: str) -> None:
+    (run.directory(FLOW, "captions") / "002.json").write_text(body)
+
+    captions = next(item for item in listings(run) if item.stage == "captions")
+
+    assert captions.producers[2] == shown
+    assert "fake-reader" in captions.producers[1]
+
+
 # --- the two stages v0.20 adds ------------------------------------------------
 
 
