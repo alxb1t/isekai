@@ -440,12 +440,12 @@ def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None
 
     **`st_mtime` is the precondition because nothing else exists.** The draft
     carries no timestamp, no revision counter and no digest; `schema.version` is
-    the constant `1`, an artifact *format* version, and `save_draft` never
-    advances the filename's `NNN` by design. A `revision` int in the body is the
-    correct answer and changes the artifact shape, which `read` refuses
-    for any unknown schema -- that touches every reader in the package and is
-    not a patch. A lock around `save_draft` fixes nothing: out-of-order *sends*
-    still commit out of order (design.md D6).
+    the draft kind's *format* version, and `save_draft` never advances the
+    filename's `NNN` by design. A `revision` int in the body is the correct
+    answer and changes the draft's shape, so its version moves and `read`
+    refuses every draft already on disk -- that is not a patch. A lock around
+    `save_draft` fixes nothing: out-of-order *sends* still commit out of order
+    (design.md D6).
 
     **A payload carrying no `saved` states no precondition**, and is allowed:
     the mtime is already on the wire as the field every response returns, so a

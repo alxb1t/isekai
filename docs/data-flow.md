@@ -93,6 +93,10 @@ a directory an artifact is `NNN.json`, with `NNN.draft.json` and
 `NNN.approved.json` where a stage has that concept — `approved` is a filename
 label, not a directory of its own.
 
+What a file holds is `artifacts.py`'s: each kind's shape is declared there once,
+with its own version, and every stage reads and writes through its `read` and
+`write`.
+
 ## How identity is carried
 
 Identity is carried by mechanisms, not by a sentence someone types into a prompt. Each axis is a leg

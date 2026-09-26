@@ -12,7 +12,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 - [x] 5 — Sheets: the sheet, the draft and the approved sheet
 - [x] 6 — Renders: the prompt and the render sidecar
 - [x] 7 — Readers, and the old names retire
-- [ ] 8 — The docs name the contract
+- [x] 8 — The docs name the contract
 
 Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
@@ -87,13 +87,13 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 8 — The docs name the contract
 
-- [ ] 8.1 In `docs/principles.md`'s *The run directory is the only channel*, replace the *not yet, for the shapes* sub-bullet with the golden test and the tripwire, per [D12](design.md#d12).
+- [x] 8.1 In `docs/principles.md`'s *The run directory is the only channel*, replace the *not yet, for the shapes* sub-bullet with the golden test and the tripwire, per [D12](design.md#d12).
   Verify: `grep -c 'for the shapes' docs/principles.md` prints `0`, and `grep -c 'tests/test_artifact_bytes.py::' docs/principles.md` prints `2`.
-- [ ] 8.2 Name `artifacts.py` in `docs/modules.md`, `docs/data-flow.md` and `isekai/foundation/README.md`, per [D12](design.md#d12).
+- [x] 8.2 Name `artifacts.py` in `docs/modules.md`, `docs/data-flow.md` and `isekai/foundation/README.md`, per [D12](design.md#d12).
   Verify: `grep -L 'artifacts.py' docs/modules.md docs/data-flow.md isekai/foundation/README.md` prints nothing.
-- [ ] 8.3 Correct the docstrings at `isekai/interface/cli.py:9-12` and `isekai/interface/ui/app.py:435-443`, per [D12](design.md#d12).
+- [x] 8.3 Correct the docstrings at `isekai/interface/cli.py:9-12` and `isekai/interface/ui/app.py:435-443`, per [D12](design.md#d12).
   Verify: `grep -c -e 'Only schema version 1' -e 'read_artifact' isekai/interface/cli.py isekai/interface/ui/app.py | paste -sd' ' -` prints `isekai/interface/cli.py:0 isekai/interface/ui/app.py:0`.
-- [ ] 8.4 Delete the empty allowlist and `test_the_allowlist_names_only_modules_that_still_write` from `tests/test_artifact_bytes.py`.
+- [x] 8.4 Delete the empty allowlist and `test_the_allowlist_names_only_modules_that_still_write` from `tests/test_artifact_bytes.py`.
   Verify: `grep -c -i allowlist tests/test_artifact_bytes.py` prints `0`.
-- [ ] 8.5 No live file names a retired name.
+- [x] 8.5 No live file names a retired name.
   Verify: `git grep -n -e SCHEMA_VERSION -e read_artifact -e 'envelope(' -- ':!CHANGELOG.md' ':!openspec/changes'` prints nothing.

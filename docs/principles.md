@@ -222,8 +222,8 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   - `tests/test_review.py::test_an_approved_artifact_is_never_overwritten`
   - `tests/test_resume.py::test_without_the_flag_no_next_version_appears_for_any_stage`
   - `tests/test_layers.py::test_no_stage_imports_another`
-  - **not yet**, for the shapes. They are not declared in one place: each writer spells its file, each
-    reader re-spells it by key, and one version covers every kind.
+  - `tests/test_artifact_bytes.py::test_each_kind_is_written_byte_for_byte`
+  - `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file`
 - **Known breaks:** `approve` re-approves a finished stage, and a failure record can be overwritten.
 
 ### Every artifact records what shaped it

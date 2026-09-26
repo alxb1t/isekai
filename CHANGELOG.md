@@ -47,6 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`SCHEMA_VERSION`, `envelope` and `read_artifact` are retired.** The review UI and
   `scripts/derive_field_map.py` read through `read`; the tests read and write valid files through the
   contract, and `tests/stages.py` writes WD14 tags in production's spelling (`0028` design D7, D10).
+- **The docs name the contract.** `docs/principles.md` holds the shapes with the golden test and the
+  tripwire where it said *not yet*; `docs/modules.md`, `docs/data-flow.md` and the foundation README
+  name `artifacts.py`; the tripwire's empty allowlist is deleted (`0028` design D12).
 
 ## [0.22.5] - 2026-09-25
 

@@ -6,9 +6,9 @@ rule: there is one render path, and this is its entry point. Four separate scrip
 were rejected for the same reason one parser was chosen: it would multiply the
 import guard by four and give argument parsing four places to drift.
 
-**Seven verbs, and schema migration is not one of them.** Only schema version 1
-exists, so an upgrade command would be a dispatch table with no entries and its
-refusal would be unreachable -- nothing can write a version 2 artifact
+**Seven verbs, and schema migration is not one of them.** Every run file kind is
+at its first version, so an upgrade command would be a dispatch table with no
+entries and its refusal would be unreachable -- nothing writes a later one
 (design.md D2).
 
     caption   (1) a photograph in; prose, the WD14 tags and the hosted tags out

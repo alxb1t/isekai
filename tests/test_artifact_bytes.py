@@ -32,9 +32,6 @@ CONTRACT = "isekai/foundation/artifacts.py"
 # The call that writes a run file by hand.
 WRITER = "write_json"
 
-# Today's writers, each deleted by the phase that converts it.
-ALLOWLIST: set[str] = set()
-
 
 # --- the golden bytes ---------------------------------------------------------
 
@@ -177,14 +174,7 @@ def _called(func: ast.expr) -> str | None:
 
 @pytest.mark.spec_exempt("structural: only the contract writes a run file")
 def test_only_the_contract_writes_a_run_file() -> None:
-    assert json_writers(REPO_ROOT) - ALLOWLIST == set()
-
-
-@pytest.mark.spec_exempt(
-    "structural: a converted module leaves the tripwire's allowlist"
-)
-def test_the_allowlist_names_only_modules_that_still_write() -> None:
-    assert ALLOWLIST - json_writers(REPO_ROOT) == set()
+    assert json_writers(REPO_ROOT) == set()
 
 
 @pytest.mark.spec_exempt("structural: twin of test_only_the_contract_writes_a_run_file")

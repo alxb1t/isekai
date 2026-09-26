@@ -44,8 +44,9 @@ other; `tests/test_layers.py::test_no_import_cycle_inside_a_layer` holds the
 modules inside each group.
 
 `foundation` owns what the groups above share without knowing about them:
-`atomic_write` writes bytes to a path and knows nothing about a run, and
-`flow` defines `Workflow`, the ComfyUI graph a flow manifest names the nodes of.
+`atomic_write` writes bytes to a path and knows nothing about a run, `artifacts`
+declares what every run file holds, and `flow` defines `Workflow`, the ComfyUI
+graph a flow manifest names the nodes of.
 `boundary/comfy/` and `pipeline/generate.py` import them rather than define them.
 
 ## Reading this graph
@@ -118,9 +119,12 @@ what carries data at run time.
   there imports `cli.py`. Review holds both.
 - **Each front end calls the stage functions directly.**
 - **A stage reads and writes its run directory.** No stage imports another stage;
-  `tests/test_layers.py::test_no_stage_imports_another` holds this.
+  `tests/test_layers.py::test_no_stage_imports_another` holds this. Every run
+  file is written through `foundation/artifacts.py`'s `write`;
+  `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file` holds
+  that.
 - **A stage reaches a model, the GPU or the network through `boundary/`.**
-- **`foundation`'s run, flow and refusal are what every layer uses.**
+- **`foundation`'s run, artifacts, flow and refusal are what every layer uses.**
 - **`StageFailure` lives in `foundation/run.py`, not `refusal.py`.** `refusal.py`
   imports nothing, the class needs `Kind`, and `run.py` already imports
   `refusal.py`, so the move would be a cycle.
