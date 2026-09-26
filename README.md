@@ -5,7 +5,7 @@ using **open models** on a **rented GPU, on demand**. A reproducible, provider-a
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
-> `python -m isekai caption | sheet | review | approve | generate | show | ui` — which reads a
+> `python -m isekai tag | caption | sheet | review | approve | generate | show | ui` — which reads a
 > photograph into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
 > human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
 > and renders from it on a stack provisioned from a pinned, checksummed manifest.
@@ -78,7 +78,7 @@ run.
 
 ```
    free, on your machine                     │  metered, on a rented GPU
-   ① caption   ② sheet   ③ review/approve    │  ④ up.sh → tunnel → generate → down.sh
+   ① tag · caption ② sheet  ③ review/approve │  ④ up.sh → tunnel → generate → down.sh
                                              ▲
                                    the line where it starts costing
 ```
@@ -90,17 +90,18 @@ operator supplies is an input rather than something a run generated, and it hold
 Then:
 
 ```sh
+python -m isekai tag --flow summon-anime-wai .inputs/me.jpg
 python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
 ```
 
-One verb, and it writes and reports each artifact in order: the prose, then a scored tag list from the
-local WD14 tagger, then a raw one from the hosted model. **The local list is what fills the sheet**, so it
-needs `bash tools/download_models.sh config/vocabulary.json` to have been run.
+Two independent verbs. `tag` writes a scored tag list from the local WD14 tagger, then a raw one from
+the hosted model. **The local list is what fills the sheet**, so it needs
+`bash tools/download_models.sh config/vocabulary.json` to have been run. `caption` writes the prose, a
+reading aid with no machine consumer; skip it and the review surface shows *no caption* and this command.
 
-If Ollama is not running, `caption` refuses the photograph at the prose, before either list; if only
-the hosted list is missing, its own call failed. The prose is a reading aid with no machine consumer.
-Neither list is narrowed on disk; the review surface shows the WD14 list, and the hosted list filtered
-to what the vocabulary carries.
+If Ollama is not running, `tag` still writes the WD14 list and refuses only the hosted one, and
+`caption` refuses. Neither list is narrowed on disk; the review surface shows the WD14 list, and the
+hosted list filtered to what the vocabulary carries.
 
 `--flow` is required on every stage verb. A stage cannot act without knowing which flow asked, because
 the flow supplies the briefing it reads and the schema it fills against.
@@ -206,7 +207,7 @@ reaches a model or a GPU** — its scope is stage ③ alone.
 - `review` and `approve` keep working exactly as before. They are deprecated as *guidance*, never as
   code — deleting the hand path would make ③ a single point of failure for the whole pipeline.
 - **The source pane shows the caption one sentence to a block**, and under it the two tag lists
-  `caption` produced: the scored WD14 list **whole**, with its confidences, then the hosted model's
+  `tag` produced: the scored WD14 list **whole**, with its confidences, then the hosted model's
   list **filtered to what the flow's vocabulary carries**, every chip with its post count. The
   asymmetry is the point — WD14 is scored against the vocabulary it emits, so every tag it returns is
   committable by construction, while the hosted model's is not. **The filter is on the way to the
@@ -231,8 +232,8 @@ reaches a model or a GPU** — its scope is stage ③ alone.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.
-- `--new-version` — on `caption`, `sheet` and `review`, write the next numbered artifact instead of
-  doing nothing. Every stage decides whether it is done by a directory listing, so re-running one is
+- `--new-version` — on `caption`, `tag`, `sheet` and `review`, write the next numbered version of
+  what that verb writes, and nothing another verb writes, instead of doing nothing. Every stage decides whether it is done by a directory listing, so re-running one is
   free.
 
 ## Setup
@@ -317,8 +318,8 @@ isekai/
 ├── isekai/                    # the package, filed into groups; one README.md each
 │   ├── __main__.py            # the path `python -m isekai` resolves — a shim over interface/cli.py
 │   ├── foundation/            # run directory & layout names, flow manifest & Schema, refusal
-│   ├── pipeline/              # the four staged verbs: caption · sheet · review · generate
-│   │                          #   + tagging.py, not a verb: the two tag artifacts caption writes
+│   ├── pipeline/              # the staged verbs: caption · tag · sheet · review · generate
+│   │                          #   tagging.py is `tag`: the two tag lists
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
@@ -328,7 +329,7 @@ isekai/
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable
-│   ├── flow.json              # the manifest: inputs, vocabulary, model, models, dials, prompt, nodes
+│   ├── flow.json              # the manifest: inputs, vocabulary, model, tagger, models, dials, prompt, nodes
 │   ├── graph.json             # the API graph
 │   ├── schema.json            # the sheet's field list, in prompt order
 │   └── caption.briefing.md    # the standing instructions the photograph is read under

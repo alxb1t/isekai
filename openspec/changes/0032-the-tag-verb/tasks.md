@@ -9,7 +9,7 @@ the record; the acceptance last, on the operator's machine.
 - [x] 2 — The verbs: `tag` and `caption`, each tagger isolated
 - [x] 3 — The sheet: an empty fill for a flow that declares no tagger
 - [x] 4 — The review surface: a missing caption names its command
-- [ ] 5 — The record: D1, D31, ① as two verbs
+- [x] 5 — The record: D1, D31, ① as two verbs
 - [ ] 6 — 🛑 **HUMAN · HALT** — the acceptance, on one synthetic portrait
 
 Line numbers are `50a6b17`'s; find each site by the text it names.
@@ -74,13 +74,13 @@ Line numbers are `50a6b17`'s; find each site by the text it names.
 
 ## 5 — The record: D1, D31, ① as two verbs
 
-- [ ] 5.1 In `docs/decisions.md`, rewrite D1 as *Stage ① is two independent verbs* and add D31 under *Flows*, per [D5](design.md#d5).
+- [x] 5.1 In `docs/decisions.md`, rewrite D1 as *Stage ① is two independent verbs* and add D31 under *Flows*, per [D5](design.md#d5).
   Verify: `grep -c '^### D1 · Stage ① is two independent verbs' docs/decisions.md` prints `1`, and `grep -c '^### D31 · ' docs/decisions.md` prints `1`.
-- [ ] 5.2 Draw ① as `tag` and `caption` side by side, and walk through `tag`, `caption`, `sheet`, `ui`, in `docs/data-flow.md`, `docs/README.md`, `README.md` and `CLAUDE.md:7-8`, per [D5](design.md#d5).
+- [x] 5.2 Draw ① as `tag` and `caption` side by side, and walk through `tag`, `caption`, `sheet`, `ui`, in `docs/data-flow.md`, `docs/README.md`, `README.md` and `CLAUDE.md:7-8`, per [D5](design.md#d5).
   Verify: `grep -c 'isekai tags' docs/data-flow.md` prints `0`, and `grep -c 'python -m isekai tag --flow' README.md` prints a number above `0`.
-- [ ] 5.3 Name `tagger` in the manifest's key lists — `docs/principles.md:147-148` (*"… prompts, models"* → *"… prompts, models, whether it is tagged"*) and `README.md:331` — and correct `docs/modules.md:62-63`, `isekai/README.md:11` and `isekai/pipeline/README.md:10-23`, per [D5](design.md#d5).
+- [x] 5.3 Name `tagger` in the manifest's key lists — `docs/principles.md:147-148` (*"… prompts, models"* → *"… prompts, models, whether it is tagged"*) and `README.md:331` — and correct `docs/modules.md:62-63`, `isekai/README.md:11` and `isekai/pipeline/README.md:10-23`, per [D5](design.md#d5).
   Verify: `grep -c 'whether it is tagged' docs/principles.md` prints `1`, and ``grep -c 'on every `caption`' docs/modules.md`` prints `0`.
-- [ ] 5.4 Rewrite `isekai/interface/cli.py`'s module docstring (`:9-24`), the `cli` spec's preamble (`openspec/specs/cli/spec.md:5-7`) and the `sheet` spec's (`openspec/specs/sheet/spec.md:5-7`), naming the verbs rather than counting them, per [D5](design.md#d5).
+- [x] 5.4 Rewrite `isekai/interface/cli.py`'s module docstring (`:9-24`), the `cli` spec's preamble (`openspec/specs/cli/spec.md:5-7`) and the `sheet` spec's (`openspec/specs/sheet/spec.md:5-7`), naming the verbs rather than counting them, per [D5](design.md#d5).
   Verify: `grep -c 'Seven verbs' isekai/interface/cli.py` prints `0`, and `grep -c 'seven verbs' openspec/specs/cli/spec.md` prints `0`.
 
 ## 6 — 🛑 **HUMAN · HALT** — the acceptance, on one synthetic portrait

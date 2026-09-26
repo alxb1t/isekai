@@ -3,8 +3,9 @@
 ## Purpose
 
 Stage ② of the pipeline: filling a sheet's fields with canonical vocabulary tags from the WD14 tag list,
-through the field map, against the schema inside the flow that asked, and knowing nothing about flows
-beyond the one directory it reads and writes.
+through the field map, against the schema inside the flow that asked — or leaving them empty for a flow
+that declares no tagger — and knowing nothing about flows beyond the one directory it reads and writes
+and whether a tag list is expected.
 
 **Source:** `isekai/pipeline/sheet.py`, `isekai/shared/fields.py`, `isekai/shared/vocabulary.py`,
 `isekai/shared/field_map.py`, `isekai/foundation/flow.py`, `flows/summon-anime-wai/schema.json` ·

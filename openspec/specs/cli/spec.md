@@ -2,9 +2,9 @@
 
 ## Purpose
 
-The command-line surface: one entry point, seven verbs — five that run a stage, one that inspects a run
-and one that serves the review surface — and every refusal a batch produced reported together rather
-than one at a time.
+The command-line surface: one entry point; the stage verbs `caption`, `tag`, `sheet`, `review`, `approve`
+and `generate`, the inspection verb `show` and the serving verb `ui`; and every refusal a batch produced
+reported together rather than one at a time.
 
 **Source:** `isekai/__main__.py`, `isekai/interface/cli.py`, `isekai/interface/wiring.py`,
 `isekai/interface/run_view.py`, `flows/` ·

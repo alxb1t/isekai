@@ -13,7 +13,7 @@ character is drawn from a corrected sheet alone (`conjure`). Self-hosted, on ope
  └───┬────────────────────────────────┬─────────────────┘
      ▼                                ▼ stage ③ only
  ┌─ pipeline ───────────────────────────────────────────┐
- │  ① caption   ② sheet   ③ review · approve  ④ generate │
+ │ ① tag · caption ② sheet ③ review · approve ④ generate │
  └───┬──────────────────────────────────────────────┬───┘
      │ each stage reads and writes only              │
      ▼                                               │

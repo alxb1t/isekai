@@ -45,6 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   input payload carries `caption_command`, built by the server, and the caption panel shows *no caption*
   and the command. The approval-race test's waits are bounded and asserted, so a regression fails rather
   than hangs.
+- **The record** (`0032` design D5): D1 is now *Stage ① is two independent verbs*, and D31 records that a
+  flow declares whether it is tagged. The data flow, the READMEs and `CLAUDE.md` draw ① as `tag` and
+  `caption` side by side; the manifest's key lists name `tagger`; `cli.py`'s docstring and the `cli` and
+  `sheet` spec preambles name the verbs rather than count them.
 
 ## [0.22.9] - 2026-09-26
 

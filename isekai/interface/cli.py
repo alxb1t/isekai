@@ -6,12 +6,12 @@ rule: there is one render path, and this is its entry point. Four separate scrip
 were rejected for the same reason one parser was chosen: it would multiply the
 import guard by four and give argument parsing four places to drift.
 
-**Seven verbs, and schema migration is not one of them.** Every run file kind is
-at its first version, so an upgrade command would be a dispatch table with no
-entries and its refusal would be unreachable -- nothing writes a later one
-(design.md D2).
+**Schema migration is not a verb.** Every run file kind is at its first version,
+so an upgrade command would be a dispatch table with no entries and its refusal
+would be unreachable -- nothing writes a later one (design.md D2).
 
-    caption   (1) a photograph in; prose, the WD14 tags and the hosted tags out
+    caption   (1) a photograph in, prose out
+    tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
@@ -19,10 +19,10 @@ entries and its refusal would be unreachable -- nothing writes a later one
     show          print a run's artifacts and what produced each one
     ui        (3) serve the review surface for a batch of inputs
 
-**Five of them run a stage, one inspects a run and one serves a surface.** The
-five that run a stage take `--flow` repeatably; `ui` takes exactly one, because
-the surface is one schema's fields in one order; `show` takes none, because it
-reports every flow the run already holds. `show` reads a run and decides
+**`show` inspects a run, `ui` serves a surface, and every other verb runs a
+stage.** The stage verbs take `--flow` repeatably; `ui` takes exactly one,
+because the surface is one schema's fields in one order; `show` takes none,
+because it reports every flow the run already holds. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
 so neither surface is privileged and neither goes through the other
@@ -245,7 +245,7 @@ def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
     off the path, and walks this module's module-level imports: nothing there may
     need a wheel, and `isekai.interface.ui` reaches FastAPI. A top-level import
     here would put a web framework on `python -m isekai`'s import graph and turn
-    that guard red for every verb, including the six that never serve anything.
+    that guard red for every verb, including each one that never serves anything.
     """
     from isekai.interface.ui import serve
 

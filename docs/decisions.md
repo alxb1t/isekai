@@ -37,15 +37,15 @@ portfolio piece, not product polish.**
 
 ## Stages and verbs
 
-### D1 · Stage ① is one verb
+### D1 · Stage ① is two independent verbs
 
-**`caption` writes the prose, then the WD14 tags, then the hosted tags, for each flow named.**
+**`tag` writes the WD14 tags, then the JoyCaption tags; `caption` writes the prose. Each writes only its
+own artifacts, and each tagger's refusal is collected on its own.**
 
-- **Why:** one command for everything the photograph is read into. The order was chosen to isolate
-  failures when the sheet was built from prose.
-- **Known consequence:** the sheet now reads WD14's tags, so an unreachable Ollama stops the sheet's
-  input too. The caption/tag split separates them.
-- **Made by:** `0020`.
+- **Why:** the sheet reads WD14's tags, so its input must not wait on Ollama. `tag` is the sheet's input
+  and `caption` is the reviewer's aid, and neither needs the other.
+- **`--new-version`** re-produces only what its own verb writes.
+- **Made by:** `0020`, `0032`.
 
 ### D2 · A table fills the sheet
 
@@ -175,6 +175,15 @@ same combination.**
   implementation behind a flow, rather than the flow, stops meaning anything when that implementation
   changes.
 - **Made by:** `0022`.
+
+### D31 · A flow declares whether it is tagged
+
+**`flow.json` declares `"tagger": true | false`, and the sheet reads the declaration.** `tag` refuses a
+flow that declares `false`; `sheet` fills such a flow's sheet with every field empty, for a person to fill.
+
+- **Why:** flows that need no tag list are coming. A boolean, not a list of taggers: `tag` runs both
+  together, so a list would declare a choice no flow makes.
+- **Made by:** `0032`.
 
 ## Runs
 
