@@ -24,9 +24,8 @@ no person approved.
 - **Why:** the review step is where output quality is decided. A render from an unapproved sheet is a
   different product, not a shortcut.
 - **Held by:** `tests/test_review.py::test_a_draft_is_not_treated_as_complete`,
-  `tests/test_generate.py::test_a_flow_with_no_approved_sheet_is_refused_naming_the_commands`.
-- **Known breaks:** the review UI can show an abandoned draft for an approved input, and `approve` can
-  approve an abandoned draft.
+  `tests/test_generate.py::test_a_flow_with_no_approved_sheet_is_refused_naming_the_commands`,
+  `tests/test_ui_api.py::test_a_stale_lower_draft_does_not_reopen_an_approved_input`.
 
 ## Composition
 
@@ -63,6 +62,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
 - **Why:** logic in the wiring runs only on the path one front end takes, and nothing else can test it
   or reuse it.
 - **Held by:** review.
+- **Known break:** `interface/wiring.py`'s `load_vocabulary` classifies a failure — it turns a missing
+  vocabulary into a refusal — which is the provisioning component's work.
 
 ### The code is layered
 
@@ -121,15 +122,11 @@ succeeds in the state the refusal leaves behind; or the file to delete, by its f
   `tests/test_run_directory.py::test_a_permanent_failure_is_refused_without_attempting_the_work`,
   `tests/test_run_directory.py::test_a_stage_at_its_budget_refuses_naming_the_photograph_and_the_record`,
   `tests/test_run_directory.py::test_a_stage_below_its_budget_is_allowed_to_attempt_again`,
+  `tests/test_run_directory.py::test_a_deleted_record_is_never_overwritten`,
+  `tests/test_run_directory.py::test_a_record_that_refuses_the_next_run_names_its_deletion`,
   `tests/test_resume.py::test_no_refusal_offers_a_command_this_build_does_not_have`,
   `tests/test_resume.py::test_every_command_a_refusal_prints_is_one_this_build_accepts` — these last
-  check that a printed command parses, not that it works.
-- **Known breaks:** errors escape as tracebacks — a hand-edited draft that is not valid JSON, a
-  draft missing its fields, a malformed producer block, a damaged run frame. The attempt number is
-  counted rather than taken as the highest, so deleting an earlier record lets the next failure
-  overwrite a later one. Several fixes parse and do not work: commands printed without the run's id,
-  *"render again"* after a record that refuses the retry, a remedy that points at the id a command with
-  no id never prints.
+  check that a printed stage command parses and names a run, not that it succeeds.
 
 ### Free work first
 
@@ -141,7 +138,6 @@ costs nothing instead of a boot.
   already been paid for.
 - **Held by:** `tests/test_generate.py::test_a_malformed_approved_sheet_is_caught_before_anything_is_rented`,
   `tests/test_generate.py::test_assembly_contacts_no_endpoint_and_writes_an_artifact`.
-- **Known break:** a malformed producer block stops the batch before later inputs are assembled.
 
 ## Configuration
 
@@ -224,7 +220,7 @@ place. A stage whose file already exists does nothing unless asked for a new ver
   - `tests/test_layers.py::test_no_stage_imports_another`
   - `tests/test_artifact_bytes.py::test_each_kind_is_written_byte_for_byte`
   - `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file`
-- **Known breaks:** `approve` re-approves a finished stage, and a failure record can be overwritten.
+  - `tests/test_review.py::test_approving_an_approved_flow_writes_nothing`
 
 ### Every artifact records what shaped it
 

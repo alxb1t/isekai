@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Every printed stage command names its run**, so a pasted remedy acts rather than exiting 0 having done
   nothing; the guard parses each as printed. A refusal that pointed at `show` for an id names the runs
   root instead, and a non-string WD14 tag routes nowhere rather than raising (`0030` design D1, D2).
+- **`docs/principles.md` drops the known breaks this release closes** and names the tests that now hold
+  them; *Only a front end composes* gains `load_vocabulary`'s break (`0030` design D7).
 
 ## [0.22.7] - 2026-09-26
 

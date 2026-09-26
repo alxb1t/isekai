@@ -10,7 +10,7 @@ The foundation's reads first, then each area's fixes together, then every printe
 - [x] 3 — Approval: one definition of a draft, the update lock, missing keys refused
 - [x] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
 - [x] 5 — Remedies: every printed command carries its run, and a guard holds it
-- [ ] 6 — The docs drop the breaks that close
+- [x] 6 — The docs drop the breaks that close
 
 Line numbers are `e6c4278`'s; find each site by the text it names.
 
@@ -75,7 +75,7 @@ Line numbers are `e6c4278`'s; find each site by the text it names.
 
 ## 6 — The docs drop the breaks that close
 
-- [ ] 6.1 Delete the known breaks this change closes from `docs/principles.md` (`:28-29`, `:127-131`, `:227`), and add *Only a front end composes*'s line for `load_vocabulary`, per [D7](design.md#d7).
+- [x] 6.1 Delete the known breaks this change closes from `docs/principles.md` (`:28-29`, `:127-131`, `:227`), and add *Only a front end composes*'s line for `load_vocabulary`, per [D7](design.md#d7).
   Verify: `grep -c -e 'can show an abandoned draft' -e 'errors escape as tracebacks' -e 're-approves a finished stage' docs/principles.md` prints `0`, and `grep -c load_vocabulary docs/principles.md` prints a number above `0`.
-- [ ] 6.2 No live file names a retired name.
+- [x] 6.2 No live file names a retired name.
   Verify: `git grep -n -e Unreachable -e draft_versions -- ':!CHANGELOG.md' ':!openspec/changes'` prints nothing.
