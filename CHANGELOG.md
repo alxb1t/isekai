@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.9] - 2026-09-26
+
 ### Fixed
 
 - **v0.22.8's families, finished** (`0031` design D1): an endpoint answer in the wrong shape is refused

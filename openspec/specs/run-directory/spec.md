@@ -284,7 +284,7 @@ attempt, which is why that stage's budget is one.
 The system SHALL refuse to read an artifact whose schema version it does not know, and SHALL name what
 the operator can do about it rather than parsing the artifact as best it can.
 
-A best-effort parse of a format you do not know produces numbers that look fine and mean nothing. This
+A best-effort parse of a format this build does not know produces numbers that look fine and mean nothing. This
 is the same posture the evaluator already takes when an optional dependency is absent: refuse, and say
 what would fix it.
 
