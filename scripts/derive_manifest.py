@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-derive `scripts/models.json` from the authored source spec below.
+"""Re-derive `config/models.json` from the authored source spec below.
 
 The manifest is *derived*, never transcribed, and that now holds for every entry
 without exception. Hugging Face publishes each LFS object's SHA-256 as its object
@@ -13,8 +13,8 @@ Run it from the repository root:
 
     uv run python scripts/derive_manifest.py
 
-It rewrites `scripts/models.json` in place. Re-running without editing the spec
-must leave the file byte-identical -- `git diff --exit-code scripts/models.json`
+It rewrites `config/models.json` in place. Re-running without editing the spec
+must leave the file byte-identical -- `git diff --exit-code config/models.json`
 is the check, and it is why `PINNED` is a constant here rather than today's date.
 
 Revisions are data in this file, not resolved from a branch at run time. Resolving
@@ -44,7 +44,7 @@ from manifest import (
     write,
 )
 
-MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
+MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
 PINNED = "2026-09-05"
@@ -315,7 +315,7 @@ def derive() -> Manifest:
 
 
 def main() -> None:
-    """Derive the manifest and write it to `scripts/models.json`."""
+    """Derive the manifest and write it to `config/models.json`."""
     write(derive(), MANIFEST_PATH)
 
 

@@ -6,7 +6,7 @@ docs ([D13](design.md#d13)).
 ## Progress
 
 - [x] 1 — Guards: a missing scope path fails, and the image's layout is tested
-- [ ] 2 — `config/`: the files the pipeline reads
+- [x] 2 — `config/`: the files the pipeline reads
 - [ ] 3 — `tools/`: the derivers and the operator's scripts, run as modules
 - [ ] 4 — `evaluation/`: the sub-system leaves the package
 - [ ] 5 — Removals: the licence record and `probe/`
@@ -25,15 +25,15 @@ Line numbers are `c6d18a4`'s; find each site by the text it names.
 
 ## 2 — `config/`: the files the pipeline reads
 
-- [ ] 2.1 `git mv` `scripts/models.json`, `scripts/vocabulary.json`, `scripts/field_map.json` and `scripts/joycaption.Modelfile` into `config/`.
+- [x] 2.1 `git mv` `scripts/models.json`, `scripts/vocabulary.json`, `scripts/field_map.json` and `scripts/joycaption.Modelfile` into `config/`.
   Verify: `ls config | tr '\n' ' '` prints `field_map.json joycaption.Modelfile models.json vocabulary.json `.
-- [ ] 2.2 Re-anchor `provision.MANIFEST_PATH`, `VOCABULARY_MANIFEST_PATH`, `field_map.FIELD_MAP_PATH` and the derivers' manifest paths to `config/`, and re-pin `tests/test_package_paths.py`, per [D8](design.md#d8).
+- [x] 2.2 Re-anchor `provision.MANIFEST_PATH`, `VOCABULARY_MANIFEST_PATH`, `field_map.FIELD_MAP_PATH` and the derivers' manifest paths to `config/`, and re-pin `tests/test_package_paths.py`, per [D8](design.md#d8).
   Verify: `git grep -n -e '"scripts" / "models.json"' -e '"scripts" / "vocabulary.json"' -e '"scripts" / "field_map.json"' -e '("scripts", "models.json")' -e '("scripts", "vocabulary.json")' -e 'parent / "models.json"' -e 'parent / "vocabulary.json"' -- isekai scripts tests` prints nothing.
-- [ ] 2.3 Record `config/field_map.json` as the table's name and re-derive it; follow it in `tests/test_field_map.py:63`, `:103`, `:130`, `:134`, per [D4](design.md#d4).
+- [x] 2.3 Record `config/field_map.json` as the table's name and re-derive it; follow it in `tests/test_field_map.py:63`, `:103`, `:130`, `:134`, per [D4](design.md#d4).
   Verify: `grep -c '"name": "config/field_map.json"' config/field_map.json scripts/derive_field_map.py | paste -sd' ' -` prints `config/field_map.json:1 scripts/derive_field_map.py:1`.
-- [ ] 2.4 Copy `config/models.json` to `/opt/isekai/config/models.json` in the `Dockerfile`, and run `docker build --check .`, per [D5](design.md#d5).
+- [x] 2.4 Copy `config/models.json` to `/opt/isekai/config/models.json` in the `Dockerfile`, and run `docker build --check .`, per [D5](design.md#d5).
   Verify: `grep -c 'COPY config/models.json /opt/isekai/config/models.json' Dockerfile` prints `1`.
-- [ ] 2.5 Point every remaining path to a moved file at `config/` — the Modelfile remedies, `VOCABULARY_REMEDY`'s manifest argument, the tests [D3](design.md#d3) and [D8](design.md#d8) name, and the comments.
+- [x] 2.5 Point every remaining path to a moved file at `config/` — the Modelfile remedies, `VOCABULARY_REMEDY`'s manifest argument, the tests [D3](design.md#d3) and [D8](design.md#d8) name, and the comments.
   Verify: `git grep -n -e 'scripts/joycaption' -e 'scripts/vocabulary.json' -e 'scripts/models.json' -e 'scripts/field_map.json' -- isekai tests scripts Dockerfile start.sh` prints nothing.
 
 ## 3 — `tools/`: the derivers and the operator's scripts, run as modules

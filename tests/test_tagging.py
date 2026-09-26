@@ -312,7 +312,7 @@ def test_the_local_producer_claims_a_pin_and_names_both_digests(
     # **The digests the session was verified against**, carried through from
     # `verified_paths`, not re-read from the manifest at write time. They are the
     # fake's, which is what proves they came from the tagger rather than from
-    # `scripts/vocabulary.json` -- a re-read would have recorded the real ones.
+    # `config/vocabulary.json` -- a re-read would have recorded the real ones.
     assert producer["artifacts"] == FAKE_PINS
 
 

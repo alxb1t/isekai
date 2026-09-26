@@ -279,7 +279,7 @@ def test_the_shell_driver_forwards_the_manifest_to_every_invocation() -> None:
 
     assert invocations
     assert all("MANIFEST" in line for line in invocations)
-    assert "scripts/vocabulary.json" in script
+    assert "config/vocabulary.json" in script
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:absent-vocabulary-names-the-command")
@@ -291,4 +291,4 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
 
     message = str(refused.value)
     assert VOCABULARY in message
-    assert "scripts/download_models.sh scripts/vocabulary.json" in message
+    assert "scripts/download_models.sh config/vocabulary.json" in message

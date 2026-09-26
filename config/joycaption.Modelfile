@@ -31,7 +31,7 @@
 #
 # ── the one command, from the repository root ─────────────────────────────────
 #
-#   ollama create joycaption-beta-one-q4k -f scripts/joycaption.Modelfile
+#   ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile
 #
 # It builds the reader, stage ①, and the same alias answers the hosted tagger —
 # which is why TEMPLATE below matters: two calls to one model must not arrive

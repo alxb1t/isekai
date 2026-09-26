@@ -34,7 +34,7 @@ DEFAULT_MODELS_DIR = Path("models")
 # manifest that declares this file. Named here because `interface/wiring.py` and
 # `boundary/wd14.py`, which loads the tagger the list is the output layer of, both
 # refuse over it, and a literal in each could name different commands for one fix.
-VOCABULARY_REMEDY = "bash scripts/download_models.sh scripts/vocabulary.json"
+VOCABULARY_REMEDY = "bash scripts/download_models.sh config/vocabulary.json"
 
 # The tagger's own category numbering. `0` is the general tags; `4` is character
 # names and `9` is the rating meta-tags, and neither describes a person's

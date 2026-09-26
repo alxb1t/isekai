@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-derive `scripts/vocabulary.json` -- the tag list the pipeline fills sheets from.
+"""Re-derive `config/vocabulary.json` -- the tag list the pipeline fills sheets from.
 
 The third manifest, and a sibling of the other two rather than a section of
 either. `models.json` answers what **the graph** needs on the pod and
@@ -11,9 +11,9 @@ Run it from the repository root:
 
     uv run python scripts/derive_vocabulary.py
 
-It rewrites `scripts/vocabulary.json` in place, and re-running without editing the
+It rewrites `config/vocabulary.json` in place, and re-running without editing the
 spec below must leave the file byte-identical --
-`git diff --exit-code scripts/vocabulary.json` is the check.
+`git diff --exit-code config/vocabulary.json` is the check.
 
 **Two entries, and they are one artifact split in two.** This file carried one
 entry until v0.20, on the argument that `selected_tags.csv` is published
@@ -50,7 +50,7 @@ from pathlib import Path
 
 from manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 
-MANIFEST_PATH = Path(__file__).resolve().parent / "vocabulary.json"
+MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
 
 # The date the revision below was taken. Bumping the revision means bumping this.
 PINNED = "2026-09-14"
@@ -105,7 +105,7 @@ def derive() -> Manifest:
 
 
 def main() -> None:
-    """Derive the vocabulary manifest and write it to `scripts/vocabulary.json`."""
+    """Derive the vocabulary manifest and write it to `config/vocabulary.json`."""
     write(derive(), MANIFEST_PATH)
 
 

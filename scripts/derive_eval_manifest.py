@@ -19,7 +19,7 @@ the spec must leave the file byte-identical --
 Two things it does that its sibling does not, each because the scorer's stack is
 shaped differently from the graph's:
 
-- **Three entries are copied out of `scripts/models.json`, byte for byte.** The
+- **Three entries are copied out of `config/models.json`, byte for byte.** The
   scorer's ArcFace must be the artifact the generator injects identity *with*, or
   design.md D8's claim about self-grading describes two different models. Copying
   rather than re-deriving is what makes the two files unable to drift apart:
@@ -48,7 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from isekai.evaluation.eval_models import SHARED_WITH_THE_GRAPH  # noqa: E402
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
-GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent / "models.json"
+GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
 PINNED = "2026-09-06"
@@ -85,7 +85,7 @@ SEGFORMER = "584abc1e1d260e23c0fc627c5217a09b2b461046"
 # routing around it. The `_s` variant is the larger of the two the repo ships.
 ANIMEFACE = "784dc4c0bb692351ddcdbe6131a050b17d3025d5"
 
-# The destinations copied out of `scripts/models.json` byte for byte, in the order
+# The destinations copied out of `config/models.json` byte for byte, in the order
 # they are emitted. `glintr100` is the load-bearing one (design.md D8); the two
 # DWPose artifacts are convenience, and are copied for the same reason anyway.
 #
@@ -166,7 +166,7 @@ SPECS: tuple[Spec, ...] = (
 
 
 def copied_entries() -> list[ManifestEntry]:
-    """Return the entries `scripts/models.json` already carries, byte for byte.
+    """Return the entries `config/models.json` already carries, byte for byte.
 
     Read rather than re-derived, so the two manifests have one derivation between
     them and the recognizer the scorer loads cannot become a different build of

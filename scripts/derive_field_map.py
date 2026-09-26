@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Re-derive `scripts/field_map.json` from the authored spec below.
+"""Re-derive `config/field_map.json` from the authored spec below.
 
 **Stdlib, offline, no network.** The route the roadmap credited to Danbooru's
 `search[name_matches]` wildcard needs no Danbooru at all: a wildcard intersected
@@ -630,7 +630,7 @@ def main() -> None:
     FIELD_MAP_PATH.write_text(
         json.dumps(
             {
-                "name": "scripts/field_map.json",
+                "name": "config/field_map.json",
                 "revision": REVISION,
                 "fields": document,
                 "excluded": list(vocabulary.rank(EXCLUDED)),

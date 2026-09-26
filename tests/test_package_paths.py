@@ -43,12 +43,12 @@ ANCHORS = (
     pytest.param(flow.FLOWS_DIR, ("flows",), id="flow.FLOWS_DIR"),
     pytest.param(
         provision.MANIFEST_PATH,
-        ("scripts", "models.json"),
+        ("config", "models.json"),
         id="provision.MANIFEST_PATH",
     ),
     pytest.param(
         provision.VOCABULARY_MANIFEST_PATH,
-        ("scripts", "vocabulary.json"),
+        ("config", "vocabulary.json"),
         id="provision.VOCABULARY_MANIFEST_PATH",
     ),
     pytest.param(

@@ -148,7 +148,7 @@ def test_the_schema_document_declares_no_vocabulary_and_no_version() -> None:
 def test_the_vocabulary_a_fill_is_held_against_is_the_flows() -> None:
     manifest = json.loads(
         (
-            Path(__file__).resolve().parent.parent / "scripts" / "vocabulary.json"
+            Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
         ).read_text()
     )
     entry = manifest["entries"][0]

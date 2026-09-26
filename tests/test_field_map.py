@@ -60,7 +60,7 @@ def table(
     path.write_text(
         json.dumps(
             {
-                "name": "scripts/field_map.json",
+                "name": "config/field_map.json",
                 "revision": revision,
                 "fields": fields,
                 "excluded": excluded or [],
@@ -100,7 +100,7 @@ def test_the_table_lives_outside_every_flow_directory() -> None:
     )
 
     assert FLOWS_DIR not in FIELD_MAP_PATH.parents
-    assert FIELD_MAP_PATH.parent.name == "scripts"
+    assert FIELD_MAP_PATH.parent.name == "config"
 
     # And no flow's schema document says which tags exist: a field entry carries
     # a name, a scored flag and a suffix, and never a tag list.
@@ -127,11 +127,11 @@ def test_the_table_reports_a_name_a_revision_and_a_digest_of_its_bytes(
 
     field_map = load(vocabulary, path, DECLARED)
 
-    assert field_map.name == "scripts/field_map.json"
+    assert field_map.name == "config/field_map.json"
     assert field_map.revision == 7
     assert field_map.digest == hashlib.sha256(path.read_bytes()).hexdigest()
     assert identity(field_map) == {
-        "name": "scripts/field_map.json",
+        "name": "config/field_map.json",
         "revision": 7,
         "sha256": field_map.digest,
     }

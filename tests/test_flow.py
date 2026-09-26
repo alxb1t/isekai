@@ -139,7 +139,7 @@ def test_every_tracked_flow_parses(tmp_path: Path) -> None:
 def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -> None:
     vocabulary = json.loads(
         (
-            Path(__file__).resolve().parent.parent / "scripts" / "vocabulary.json"
+            Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
         ).read_text()
     )["entries"][0]
 

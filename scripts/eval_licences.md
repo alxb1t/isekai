@@ -1,11 +1,11 @@
 # The model licences — read, quoted, and what each one costs
 
 The tracked note that sits beside `scripts/eval_models.json`, the way that manifest sits beside
-`scripts/models.json`. Every artifact the scorer loads is listed here with the licence it ships
+`config/models.json`. Every artifact the scorer loads is listed here with the licence it ships
 under, the URL that licence was read at, and the date it was read.
 
 **It is one record, not one per manifest.** A licence is a property of an artifact rather than of
-the file that pins it, so both artifacts `scripts/vocabulary.json` declares are recorded here too,
+the file that pins it, so both artifacts `config/vocabulary.json` declares are recorded here too,
 each under its own heading and with its own read date — three notes would be three places to
 forget, and one read date shared across two artifacts is one artifact nobody checked.
 The filename is the evaluator's for historical reasons only; the record is the repository's.
@@ -99,7 +99,7 @@ first. Its README also, as of 2025-11-24, directs licensing enquiries for its op
 models to `recognition-oss-pack@insightface.ai` — noted because it is the route that exists if this
 project's use ever stops being non-commercial research.
 
-**This one is not new.** It is the same artifact `scripts/models.json` has pinned and this project has
+**This one is not new.** It is the same artifact `config/models.json` has pinned and this project has
 been shipping since v0.9, because it is the encoder the generator itself injects identity with. The
 restriction was already being carried; recording it here is what makes that deliberate rather than
 inherited by accident.
@@ -114,7 +114,7 @@ Version 2.0, verbatim from its first line. The pose axis is therefore unthreaten
 contingency — the pose axis reporting its own absence rather than a zero — is not needed on licence
 grounds.
 
-Like `glintr100`, both DWPose artifacts are already pinned in `scripts/models.json` and are reused
+Like `glintr100`, both DWPose artifacts are already pinned in `config/models.json` and are reused
 here byte for byte.
 
 ---
@@ -192,7 +192,7 @@ model page asks for: *"Upscale with R-ESRGAN 4x+ Anime6B, 20 steps, and a Denois
 0.35~0.5"*.
 
 **It is pinned like the base checkpoint, and for the same reason.** Its publisher hosts no Hugging
-Face repository, so every source in `scripts/models.json` is a mirror. It is worse off than the base
+Face repository, so every source in `config/models.json` is a mirror. It is worse off than the base
 checkpoint, which at least has a published digest on Civitai: this release predates GitHub's
 asset-digest field, so there is no published record to read at all. `scripts/derive_manifest.py`
 therefore fetches the publisher's own **bytes** and hashes them, and holds all four mirrors against
@@ -210,7 +210,7 @@ checkable.
   card's frontmatter declares `license: apache-2.0`.
 
 The file the sorting stage fills a sheet from: 10,861 rows, of which 8,106 are general Danbooru
-tags with their post counts. It is pinned in `scripts/vocabulary.json` at revision
+tags with their post counts. It is pinned in `config/vocabulary.json` at revision
 `627aef95638667ddcaa3ac8ae625e88ea5b02f51`, and its digest is obtained by fetching and hashing
 rather than read from a published record — at roughly 300 KB it is not stored as a large file, so
 Hugging Face publishes no SHA-256 for it.
@@ -238,7 +238,7 @@ booru's data. This project distributes neither.
   weights eleven months later — even where, as here, it is the same repository and the same
   statement.
 
-A SwinV2 vision transformer, 467,460,978 bytes, pinned in `scripts/vocabulary.json` at revision
+A SwinV2 vision transformer, 467,460,978 bytes, pinned in `config/vocabulary.json` at revision
 `627aef95638667ddcaa3ac8ae625e88ea5b02f51` — **the same revision as the CSV above, which is a
 contract and not a coincidence**: `selected_tags.csv` is this graph's output layer, row N naming
 neuron N, so a pair from two revisions mislabels every tag and nothing downstream could notice. Its

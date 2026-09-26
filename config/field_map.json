@@ -1,5 +1,5 @@
 {
-  "name": "scripts/field_map.json",
+  "name": "config/field_map.json",
   "revision": 3,
   "fields": {
     "accessories": {

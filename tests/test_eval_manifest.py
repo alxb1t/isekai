@@ -185,7 +185,7 @@ def test_a_shared_entry_dropped_from_the_graphs_manifest_is_reported(
     eval_manifest: Manifest, tmp_path: Path
 ) -> None:
     graph: dict[str, Any] = json.loads(
-        (Path(__file__).resolve().parent.parent / "scripts" / "models.json").read_text()
+        (Path(__file__).resolve().parent.parent / "config" / "models.json").read_text()
     )
     graph["entries"] = [
         entry for entry in graph["entries"] if entry["dest"] != RECOGNIZER

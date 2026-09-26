@@ -1,6 +1,6 @@
 """The manifest of model artifacts, and the checks that keep it honest.
 
-`scripts/models.json` decides which bytes this repository renders with, and this
+`config/models.json` decides which bytes this repository renders with, and this
 module owns every *decision* taken about it: whether the manifest says what a pin
 is supposed to say, and, for each entry, whether to skip it, abort the run or
 fetch it. The bytes move through `wget` on the pod (design.md D3, D14); the only
@@ -23,9 +23,7 @@ from http.client import HTTPMessage
 from pathlib import Path, PurePosixPath
 from typing import IO, Any, Literal, Protocol, TypedDict
 
-MANIFEST_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "scripts" / "models.json"
-)
+MANIFEST_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "models.json"
 
 # The third manifest: the tag list the sorting stage fills a sheet from. A sibling
 # of the other two rather than a section of either -- one file per question, and
@@ -33,7 +31,7 @@ MANIFEST_PATH = (
 # declared here, beside the graph's, because the checks that keep a manifest
 # honest are this module's and all three are held to them.
 VOCABULARY_MANIFEST_PATH = (
-    Path(__file__).resolve().parent.parent.parent / "scripts" / "vocabulary.json"
+    Path(__file__).resolve().parent.parent.parent / "config" / "vocabulary.json"
 )
 
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.
@@ -477,7 +475,7 @@ def manifest_argument(given: str | None) -> Path:
     provisioner takes the file as an argument rather than growing a verb per
     consumer. It is what makes the vocabulary a *provisioned* artifact rather than
     one that is merely verified: `bash scripts/download_models.sh
-    scripts/vocabulary.json` fetches it through this exact path (design.md D9).
+    config/vocabulary.json` fetches it through this exact path (design.md D9).
     """
     return MANIFEST_PATH if given is None else Path(given)
 

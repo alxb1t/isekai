@@ -99,7 +99,7 @@ TAGGER_OPTIONS: Mapping[str, Any] = {
 # alias the reader uses, built from the same committed recipe -- one model answers
 # both prompts, which is exactly why `TAG_PROMPT` above must not be framed
 # differently from the briefing.
-TAGGER_REMEDY = "ollama create {model} -f scripts/joycaption.Modelfile"
+TAGGER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
 
 # What separates *wrong* from *not a list at all*. The operator asked for the raw
 # list knowing it is wrong, so wrongness is not the failure being guarded here. A

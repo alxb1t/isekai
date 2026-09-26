@@ -32,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The image's paths are held statically.** `tests/test_infra.py` checks every `COPY` source exists,
   the entrypoint runs a provisioner the image copies, and the manifest lands where `provision.py`'s
   anchor looks (`0029` design D5).
+- **The files the pipeline reads live in `config/`**: `models.json`, `vocabulary.json`, `field_map.json`
+  and `joycaption.Modelfile`. The anchors, the image's manifest copy and the printed remedies follow;
+  `field_map.json` records `config/field_map.json`, so new sheets record a new name and digest for the
+  same fields (`0029` design D3, D4, D5).
 
 ## [0.22.6] - 2026-09-26
 
