@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   kind, written by today's writers; `tests/test_artifact_bytes.py` compares them byte for byte, and
   its tripwire lets no module outside `foundation/artifacts.py` call `write_json` or `envelope`
   beyond an exact allowlist of today's writers (`0028` design D8, D9).
+- **`isekai/foundation/artifacts.py` is the run directory's contract.** It declares each kind's shape
+  and its producer's as a `TypedDict`, each kind's name and version as an `Artifact` descriptor, one
+  typed `read` and `write`, and `DanbooruTag`; `write_json` moves into it (`0028` design D1-D4).
 
 ## [0.22.5] - 2026-09-25
 

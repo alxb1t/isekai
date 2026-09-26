@@ -19,13 +19,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from isekai.boundary.wd14 import LocalTagger, read_labels
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import Flow, Schema, load_flow
 from isekai.foundation.run import (
     WD14,
     Run,
     artifact_name,
     envelope,
-    write_json,
 )
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import sheet as sheet_stage

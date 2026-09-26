@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama, wd14
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
@@ -52,7 +53,6 @@ from isekai.foundation.run import (
     next_version,
     record_failure,
     refusal_for,
-    write_json,
 )
 
 # The verb a refusal tells the operator to run again, and it is `caption` rather

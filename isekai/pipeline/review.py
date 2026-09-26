@@ -39,6 +39,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -53,7 +54,6 @@ from isekai.foundation.run import (
     next_version,
     read_artifact,
     versions,
-    write_json,
 )
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary

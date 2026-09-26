@@ -6,9 +6,9 @@ by name: the run directory writes every artifact through it, and `generate.py`
 writes the rendered PNG through it, a file that is not JSON and is not numbered by
 the run's artifact convention.
 
-**The run's JSON convention stayed behind.** `run.write_json` encodes `indent=2`
-and a trailing newline -- a run's artifact format, not a write primitive -- and a
-module that imports nothing first-party cannot carry it.
+**The run's JSON convention is not here.** `artifacts.write_json` encodes
+`indent=2` and a trailing newline -- a run's artifact format, not a write
+primitive -- and a module that imports nothing first-party cannot carry it.
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """

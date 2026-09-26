@@ -6,7 +6,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 ## Progress
 
 - [x] 1 — Guards: golden bytes and the tripwire
-- [ ] 2 — The contract: `foundation/artifacts.py`
+- [x] 2 — The contract: `foundation/artifacts.py`
 - [ ] 3 — Run files: the frame and the error record
 - [ ] 4 — Readings: the caption and both tag lists
 - [ ] 5 — Sheets: the sheet, the draft and the approved sheet
@@ -27,13 +27,13 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 2 — The contract: `foundation/artifacts.py`
 
-- [ ] 2.1 Write `isekai/foundation/artifacts.py`: [D2](design.md#d2)'s shapes, [D3](design.md#d3)'s descriptors, [D4](design.md#d4)'s `read` and `write`, `DanbooruTag` and `Failure`.
+- [x] 2.1 Write `isekai/foundation/artifacts.py`: [D2](design.md#d2)'s shapes, [D3](design.md#d3)'s descriptors, [D4](design.md#d4)'s `read` and `write`, `DanbooruTag` and `Failure`.
   Verify: `grep -c -e '^class Artifact' -e '^def read(' -e '^def write(' -e '^DanbooruTag = NewType' isekai/foundation/artifacts.py` prints `4`, and `grep -c '_FILE: Artifact\[' isekai/foundation/artifacts.py` prints `10`.
-- [ ] 2.2 Move `write_json` from `isekai/foundation/run.py` into `isekai/foundation/artifacts.py`, and point every importer [D1](design.md#d1) lists at it.
+- [x] 2.2 Move `write_json` from `isekai/foundation/run.py` into `isekai/foundation/artifacts.py`, and point every importer [D1](design.md#d1) lists at it.
   Verify: `grep -c '^def write_json' isekai/foundation/artifacts.py isekai/foundation/run.py | paste -sd' ' -` prints `isekai/foundation/artifacts.py:1 isekai/foundation/run.py:0`.
-- [ ] 2.3 Type `instructions_record` and `constant_record` in `isekai/foundation/run.py` with the record shapes, per [D1](design.md#d1).
+- [x] 2.3 Type `instructions_record` and `constant_record` in `isekai/foundation/run.py` with the record shapes, per [D1](design.md#d1).
   Verify: `grep -c -e '-> InstructionsRecord' -e '-> DigestRecord' isekai/foundation/run.py` prints `2`.
-- [ ] 2.4 Add `test_a_typed_read_refuses_an_unknown_version` to `tests/test_run_directory.py`, bound to `run-directory:schema:unknown-version-is-refused`: `read(path, CAPTION_FILE)` refuses version `2` with [D4](design.md#d4)'s text.
+- [x] 2.4 Add `test_a_typed_read_refuses_an_unknown_version` to `tests/test_run_directory.py`, bound to `run-directory:schema:unknown-version-is-refused`: `read(path, CAPTION_FILE)` refuses version `2` with [D4](design.md#d4)'s text.
   Verify: `grep -c '^def test_a_typed_read_refuses_an_unknown_version(' tests/test_run_directory.py` prints `1`.
 
 ## 3 — Run files: the frame and the error record

@@ -38,6 +38,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
+from isekai.foundation.artifacts import (
+    DigestRecord,
+    InstructionsRecord,
+    write_json,
+)
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 
@@ -210,14 +215,6 @@ def media_type(body: bytes) -> tuple[str, str]:
         "this build reads JPEG and PNG photographs, and these bytes are neither; "
         "convert the photograph to JPEG or PNG and offer it again"
     )
-
-
-# --- the run's JSON form ------------------------------------------------------
-
-
-def write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    """Write `payload` as the one JSON form every artifact in a run is written in."""
-    write_atomically(path, (json.dumps(payload, indent=2) + "\n").encode())
 
 
 # --- the run and its frame ----------------------------------------------------
@@ -603,7 +600,7 @@ def refusal_for(
     )
 
 
-def instructions_record(path: Path) -> dict[str, str]:
+def instructions_record(path: Path) -> InstructionsRecord:
     """Return the path and digest of an instruction text, for a producer record.
 
     This is the variable the evidence says matters most: one change to a reader's
@@ -619,7 +616,7 @@ def instructions_record(path: Path) -> dict[str, str]:
     }
 
 
-def constant_record(text: str) -> dict[str, str]:
+def constant_record(text: str) -> DigestRecord:
     """Return the digest of an instruction text this build holds, with no path.
 
     `instructions_record` above takes a `Path` and hashes the file behind it,

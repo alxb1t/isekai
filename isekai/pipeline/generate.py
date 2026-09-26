@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any
 
 from isekai.boundary.comfy import ComfyTransport, Unreachable
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import (
     SAMPLER_DIALS,
@@ -60,7 +61,6 @@ from isekai.foundation.run import (
     envelope,
     read_artifact,
     record_failure,
-    write_json,
 )
 from isekai.shared.image import (
     MAX_TARGET_LONG_SIDE,

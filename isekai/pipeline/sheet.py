@@ -41,6 +41,7 @@ Stdlib only.
 from pathlib import Path
 from typing import Any
 
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -53,7 +54,6 @@ from isekai.foundation.run import (
     latest,
     next_version,
     read_artifact,
-    write_json,
 )
 from isekai.shared.field_map import FieldMap, route
 from isekai.shared.field_map import identity as field_map_identity

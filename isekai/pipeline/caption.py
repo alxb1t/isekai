@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.run import (
     CAPTIONS,
     Run,
@@ -49,7 +50,6 @@ from isekai.foundation.run import (
     next_version,
     record_failure,
     refusal_for,
-    write_json,
 )
 
 # The name this stage's budget is keyed by. Its directory inside a run is the

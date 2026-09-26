@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 import isekai.foundation.atomic_write as atomic_write_module
+from isekai.foundation.artifacts import CAPTION_FILE, read, write_json
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -41,7 +42,6 @@ from isekai.foundation.run import (
     slug,
     versions,
     write_atomically,
-    write_json,
 )
 from isekai.interface.cli import build_parser
 from isekai.interface.wiring import Wiring, wiring, wiring_from
@@ -412,6 +412,21 @@ def test_the_schema_refusal_states_a_remedy_this_build_can_point_at(
     assert "re-run the stage" in message
     # No migration command is offered, because this build ships none.
     assert "migrate" not in message
+
+
+@pytest.mark.spec("run-directory:schema:unknown-version-is-refused")
+def test_a_typed_read_refuses_an_unknown_version(tmp_path: Path) -> None:
+    path = tmp_path / "001.json"
+    write_json(path, {"schema": {"name": "caption", "version": 2}, "prose": "unread"})
+
+    with pytest.raises(Refusal) as refused:
+        read(path, CAPTION_FILE)
+
+    assert str(refused.value) == (
+        "001.json: declares schema version 2 and this build reads version 1; "
+        "upgrade isekai to a build that declares version 2, or re-run the stage "
+        "that wrote it to produce an artifact this build can read"
+    )
 
 
 # --- completion by listing ----------------------------------------------------
