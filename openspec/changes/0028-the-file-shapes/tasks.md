@@ -11,7 +11,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 - [x] 4 — Readings: the caption and both tag lists
 - [x] 5 — Sheets: the sheet, the draft and the approved sheet
 - [x] 6 — Renders: the prompt and the render sidecar
-- [ ] 7 — Readers, and the old names retire
+- [x] 7 — Readers, and the old names retire
 - [ ] 8 — The docs name the contract
 
 Line numbers are `a3d0ca3`'s; find each site by the text it names.
@@ -72,17 +72,17 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 7 — Readers, and the old names retire
 
-- [ ] 7.1 Read with `read(path, KIND)` at `isekai/interface/ui/app.py:250`, `:261`, `:376`, `:411` and `scripts/derive_field_map.py:465`, per [D5](design.md#d5).
+- [x] 7.1 Read with `read(path, KIND)` at `isekai/interface/ui/app.py:250`, `:261`, `:376`, `:411` and `scripts/derive_field_map.py:465`, per [D5](design.md#d5).
   Verify: `git grep -n 'read_artifact' -- isekai/interface scripts` prints nothing.
-- [ ] 7.2 Delete `SCHEMA_VERSION`, `envelope` and `read_artifact` from `isekai/foundation/run.py`, per [D7](design.md#d7).
+- [x] 7.2 Delete `SCHEMA_VERSION`, `envelope` and `read_artifact` from `isekai/foundation/run.py`, per [D7](design.md#d7).
   Verify: `grep -c -e SCHEMA_VERSION -e '^def envelope' -e '^def read_artifact' isekai/foundation/run.py` prints `0`.
-- [ ] 7.3 Convert the tests [D7](design.md#d7) lists: `read(path, KIND)` for a read, `write` for a valid file, `write_json` for a broken one.
+- [x] 7.3 Convert the tests [D7](design.md#d7) lists: `read(path, KIND)` for a read, `write` for a valid file, `write_json` for a broken one.
   Verify: `git grep -n -e read_artifact -e 'envelope(' -e SCHEMA_VERSION -- tests ':!tests/test_ui.py' ':!tests/stages.py'` prints nothing.
-- [ ] 7.4 Set `tests/test_ui.py:281`'s forbidden strings to `("artifact_name(", "write_json(", "write(")`, per [D9](design.md#d9).
+- [x] 7.4 Set `tests/test_ui.py:281`'s forbidden strings to `("artifact_name(", "write_json(", "write(")`, per [D9](design.md#d9).
   Verify: `grep -c 'forbidden = ("artifact_name(", "write_json(", "write(")' tests/test_ui.py` prints `1`.
-- [ ] 7.5 Write `tests/stages.py`'s WD14 file with `write(…, WD14_FILE, …)`, its default tags in production spelling, and the WD14 literals in `tests/test_sheet_stage.py` likewise, per [D10](design.md#d10).
+- [x] 7.5 Write `tests/stages.py`'s WD14 file with `write(…, WD14_FILE, …)`, its default tags in production spelling, and the WD14 literals in `tests/test_sheet_stage.py` likewise, per [D10](design.md#d10).
   Verify: `grep -c '"long_hair", "brown_hair", "smile", "shirt"' tests/stages.py` prints `1`, and `grep -c -E 'tags=\[.*"[a-z]+ [a-z]+"' tests/test_sheet_stage.py` prints `0`.
-- [ ] 7.6 Reword `CLAUDE.md:123` and `:136`, per [D7](design.md#d7).
+- [x] 7.6 Reword `CLAUDE.md:123` and `:136`, per [D7](design.md#d7).
   Verify: `grep -c -e SCHEMA_VERSION -e 'gate array' CLAUDE.md` prints `0`.
 
 ## 8 — The docs name the contract

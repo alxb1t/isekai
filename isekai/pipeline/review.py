@@ -181,9 +181,9 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
     """Replace the highest draft's field values in place, and return its path.
 
     The one owner of a draft update. A draft was written once and then edited by
-    hand until now, so nothing owned this and the envelope was only ever built at
-    creation; a second writer arriving without a single owner is how two envelopes
-    in one directory drift apart.
+    hand until now, so nothing owned this and the draft's shape was only ever built
+    at creation; a second writer arriving without a single owner is how two shapes
+    of one file drift apart.
 
     **It does not create.** `review()` owns that, and teaching this to create too
     would spend a version number on a stray keypress -- there is no Save control

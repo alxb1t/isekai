@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from isekai.foundation.artifacts import CAPTION_FILE, read
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     BUDGETS,
@@ -22,7 +23,6 @@ from isekai.foundation.run import (
     attempts,
     instructions_record,
     open_run,
-    read_artifact,
     versions,
 )
 from isekai.pipeline.caption import FakeReader, OllamaReader
@@ -50,7 +50,7 @@ def test_the_stage_writes_a_caption_with_no_network(run: Run) -> None:
     path = caption(run, reader)
 
     assert path is not None
-    assert read_artifact(path)["prose"] == "She is wearing a grey coat."
+    assert read(path, CAPTION_FILE)["prose"] == "She is wearing a grey coat."
     assert len(reader.calls) == 1
 
 
@@ -61,7 +61,7 @@ def test_the_producer_names_the_implementation_and_the_models_that_ran(
     path = caption(run, FakeReader(implementation="fake-reader", models=("a", "b")))
 
     assert path is not None
-    producer = read_artifact(path)["producer"]
+    producer = read(path, CAPTION_FILE)["producer"]
     assert producer["implementation"] == "fake-reader"
     assert producer["models"] == ["a", "b"]
 
@@ -74,8 +74,8 @@ def test_two_readers_are_distinguishable_from_the_record_alone(
     second = caption(run, FakeReader(implementation="other-reader"), new_version=True)
 
     assert first is not None and second is not None
-    assert read_artifact(first)["producer"]["implementation"] == "fake-reader"
-    assert read_artifact(second)["producer"]["implementation"] == "other-reader"
+    assert read(first, CAPTION_FILE)["producer"]["implementation"] == "fake-reader"
+    assert read(second, CAPTION_FILE)["producer"]["implementation"] == "other-reader"
 
 
 @pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
@@ -83,7 +83,7 @@ def test_the_hosted_reader_declares_that_it_is_not_pinned(run: Run) -> None:
     path = caption(run, FakeReader())
 
     assert path is not None
-    producer = read_artifact(path)["producer"]
+    producer = read(path, CAPTION_FILE)["producer"]
     assert producer["pinned"] is False
     assert "revision" not in producer
 
@@ -132,7 +132,7 @@ def test_the_artifact_is_one_block_of_prose_and_carries_no_structure(
     path = caption(run, FakeReader(prose="Two sentences. Like this."))
 
     assert path is not None
-    artifact = read_artifact(path)
+    artifact = read(path, CAPTION_FILE)
     assert artifact["prose"] == "Two sentences. Like this."
     assert set(artifact) == {"schema", "producer", "prose"}
 
@@ -176,7 +176,7 @@ def test_the_standing_instructions_come_from_the_flows_own_directory(
     assert path is not None
     assert BRIEFING_PATH.parent == FLOW.path
     assert reader.calls[0][1] == BRIEFING_PATH.read_text()
-    recorded = read_artifact(path)["producer"]["briefing"]
+    recorded = read(path, CAPTION_FILE)["producer"]["briefing"]
     assert recorded == instructions_record(BRIEFING_PATH)
 
 
@@ -187,7 +187,7 @@ def test_an_absence_statement_survives_into_the_artifact(run: Run) -> None:
     path = caption(run, FakeReader(prose=prose))
 
     assert path is not None
-    assert read_artifact(path)["prose"] == prose
+    assert read(path, CAPTION_FILE)["prose"] == prose
 
 
 @pytest.mark.spec("caption:absence:absence-is-permitted-here")
@@ -208,8 +208,8 @@ def test_the_producer_records_the_briefings_path_and_digest(
     second = caption(run, FakeReader(), new_version=True, briefing_path=other)
 
     assert first is not None and second is not None
-    one = read_artifact(first)["producer"]["briefing"]
-    two = read_artifact(second)["producer"]["briefing"]
+    one = read(first, CAPTION_FILE)["producer"]["briefing"]
+    two = read(second, CAPTION_FILE)["producer"]["briefing"]
     assert one["path"] == "flows/summon-anime-wai/caption.briefing.md"
     assert one["sha256"] != two["sha256"]
     assert instructions_record(BRIEFING_PATH)["sha256"] == one["sha256"]
@@ -410,7 +410,7 @@ def test_the_readers_artifact_names_ollama_and_the_model_that_ran(
     path = caption(run, reader)
 
     assert path is not None
-    producer = read_artifact(path)["producer"]
+    producer = read(path, CAPTION_FILE)["producer"]
     assert producer["implementation"] == "ollama"
     assert producer["models"] == ["a-reader"]
     assert producer["pinned"] is False

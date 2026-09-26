@@ -19,13 +19,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from isekai.boundary.wd14 import LocalTagger, read_labels
-from isekai.foundation.artifacts import DigestRecord, write_json
+from isekai.foundation.artifacts import (
+    WD14_FILE,
+    DanbooruTag,
+    DigestRecord,
+    Wd14,
+    write,
+)
 from isekai.foundation.flow import Flow, Schema, load_flow
 from isekai.foundation.run import (
     WD14,
     Run,
     artifact_name,
-    envelope,
 )
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import sheet as sheet_stage
@@ -94,9 +99,10 @@ FIELD_MAP = FieldMap(
     excluded=frozenset(),
 )
 
-# What `write_wd14` offers when a caller does not care which tags it routes.
-# Three fields' worth, so a default sheet is neither empty nor uniform.
-TAGS: tuple[str, ...] = ("long hair", "brown hair", "smile", "shirt")
+# What `write_wd14` offers when a caller does not care which tags it routes, in
+# WD14's own spelling. Three fields' worth, so a default sheet is neither empty
+# nor uniform.
+TAGS: tuple[str, ...] = ("long_hair", "brown_hair", "smile", "shirt")
 
 
 def write_wd14(
@@ -114,24 +120,20 @@ def write_wd14(
     """
     directory = run.directory(flow, WD14)
     path = directory / artifact_name(version)
-    write_json(
-        path,
-        envelope(
-            WD14,
-            {
-                "implementation": "wd14",
-                "models": ["wd14/model.onnx"],
-                "pinned": True,
-                "artifacts": dict(FAKE_PINS),
-            },
-            {
-                "tags": [
-                    {"tag": tag, "confidence": round(0.9 - index / 100, 4)}
-                    for index, tag in enumerate(tags)
-                ]
-            },
-        ),
-    )
+    listed: Wd14 = {
+        "schema": WD14_FILE.schema,
+        "producer": {
+            "implementation": "wd14",
+            "models": ["wd14/model.onnx"],
+            "pinned": True,
+            "artifacts": dict(FAKE_PINS),
+        },
+        "tags": [
+            {"tag": DanbooruTag(tag), "confidence": round(0.9 - index / 100, 4)}
+            for index, tag in enumerate(tags)
+        ],
+    }
+    write(path, WD14_FILE, listed)
     return path
 
 

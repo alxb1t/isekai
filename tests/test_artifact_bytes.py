@@ -6,12 +6,12 @@ into one contract is proven to move no byte. The tripwire is an AST scan like
 """
 
 import ast
-import json
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
+from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
 from isekai.pipeline.caption import FakeReader
@@ -29,8 +29,8 @@ GOLDEN = Path(__file__).resolve().parent / "golden"
 # The module that owns every run file's shape, and so the one that writes them.
 CONTRACT = "isekai/foundation/artifacts.py"
 
-# The calls that write a run file by hand.
-WRITERS = ("write_json", "envelope")
+# The call that writes a run file by hand.
+WRITER = "write_json"
 
 # Today's writers, each deleted by the phase that converts it.
 ALLOWLIST: set[str] = set()
@@ -102,7 +102,7 @@ def _approved(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
 
 
 def _fields(path: Path) -> dict[str, list[str]]:
-    return json.loads(path.read_text())["fields"]
+    return read(path, DRAFT_FILE)["fields"]
 
 
 def _prompt(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
@@ -162,7 +162,7 @@ def json_writers(root: Path) -> set[str]:
         if name == CONTRACT:
             continue
         for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
-            if isinstance(node, ast.Call) and _called(node.func) in WRITERS:
+            if isinstance(node, ast.Call) and _called(node.func) == WRITER:
                 found.add(name)
     return found
 
@@ -192,7 +192,7 @@ def test_the_check_catches_a_module_writing_json(tmp_path: Path) -> None:
     for name, text in {
         CONTRACT: "def write(path, kind, artifact):\n    write_json(path, artifact)\n",
         "isekai/pipeline/by_hand.py": "def f(run):\n    run.write_json(p, {})\n",
-        "isekai/shared/wrapped.py": "def g():\n    return envelope('x', {}, {})\n",
+        "isekai/shared/direct.py": "def g():\n    write_json(p, {})\n",
         "isekai/pipeline/typed.py": "def h():\n    write(p, KIND, {})\n",
     }.items():
         path = tmp_path / name
@@ -200,5 +200,5 @@ def test_the_check_catches_a_module_writing_json(tmp_path: Path) -> None:
         path.write_text(text)
     assert json_writers(tmp_path) == {
         "isekai/pipeline/by_hand.py",
-        "isekai/shared/wrapped.py",
+        "isekai/shared/direct.py",
     }

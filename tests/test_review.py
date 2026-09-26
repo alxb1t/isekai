@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 
+from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, read
 from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     Run,
     approved_versions,
     open_run,
-    read_artifact,
     versions,
 )
 from isekai.pipeline.caption import FakeReader
@@ -89,7 +89,7 @@ def test_editing_the_draft_leaves_the_sheet_untouched(run: Run) -> None:
     _edit(draft, hair_colour=["black hair"])
 
     assert snapshot(run.path / FLOW / "sheets") == before
-    assert read_artifact(run.path / FLOW / "sheets" / "001.json")["fields"][
+    assert read(run.path / FLOW / "sheets" / "001.json", SHEET_FILE)["fields"][
         "hair_colour"
     ] == ["brown hair"]
 
@@ -109,7 +109,7 @@ def test_the_highest_sheet_is_copied_and_its_version_recorded(
     draft = review(run, FLOW)
 
     assert draft is not None
-    body = read_artifact(draft)
+    body = read(draft, DRAFT_FILE)
     assert body["sheet"] == 2
     assert body["producer"]["from"] == 2
     assert body["producer"]["source"] == "sheets"
@@ -132,8 +132,8 @@ def test_reviewing_again_appends_from_the_approved_copy(
     assert second.name == "002.draft.json"
     assert approved.read_bytes() == frozen
     # The correction starts from the last thing the operator agreed with.
-    assert read_artifact(second)["fields"]["hair_silhouette"] == ["long hair"]
-    assert read_artifact(second)["producer"]["source"] == "review"
+    assert read(second, DRAFT_FILE)["fields"]["hair_silhouette"] == ["long hair"]
+    assert read(second, DRAFT_FILE)["producer"]["source"] == "review"
 
 
 @pytest.mark.spec("review:copy:second-review-appends")
@@ -185,7 +185,7 @@ def test_approval_carries_the_operators_content_across_unchanged(
     assert approved is not None
 
     assert approved.name == "001.approved.json"
-    assert read_artifact(approved)["fields"] == before
+    assert read(approved, APPROVED_FILE)["fields"] == before
     assert not draft.exists()
 
 
@@ -294,7 +294,7 @@ def test_an_empty_field_is_not_treated_as_missing(
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
 
-    assert read_artifact(approved)["fields"]["pose"] == []
+    assert read(approved, APPROVED_FILE)["fields"]["pose"] == []
 
 
 # --- the token window ---------------------------------------------------------
@@ -352,7 +352,7 @@ def test_an_untouched_copy_is_recorded_as_unedited(
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
 
-    body = read_artifact(approved)
+    body = read(approved, APPROVED_FILE)
     assert body["producer"]["edited"] is False
     assert body["sheet"] == 1
 
@@ -368,7 +368,7 @@ def test_a_changed_copy_is_recorded_as_edited_without_being_told(
     approved, _ = approve(run, FLOW, schema, vocabulary)
     assert approved is not None
 
-    body = read_artifact(approved)
+    body = read(approved, APPROVED_FILE)
     assert body["producer"]["edited"] is True
     assert body["sheet"] == 1
     # Nothing the operator wrote says so; it is computed against the sheet.
@@ -445,14 +445,14 @@ def test_the_explicit_flag_opens_the_next_draft_and_leaves_the_last_alone(
 def test_draft_update_replaces_the_values_and_keeps_the_version(run: Run) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    before = read_artifact(draft)
+    before = read(draft, DRAFT_FILE)
     corrected = {name: list(tags) for name, tags in before["fields"].items()}
     corrected["hair_colour"] = ["blonde"]
 
     path = save_draft(run, FLOW, corrected)
 
     assert path == draft
-    after = read_artifact(path)
+    after = read(path, DRAFT_FILE)
     assert after["fields"]["hair_colour"] == ["blonde"]
     # The version and the sheet it came from are the draft's identity, and an
     # update is not a new draft: `review()` is the only thing that opens one.
@@ -468,7 +468,7 @@ def test_draft_update_refuses_a_changed_field_set(run: Run) -> None:
     frozen = draft.read_bytes()
     dropped = {
         name: list(tags)
-        for name, tags in read_artifact(draft)["fields"].items()
+        for name, tags in read(draft, DRAFT_FILE)["fields"].items()
         if name != "eye_colour"
     }
 
@@ -479,7 +479,7 @@ def test_draft_update_refuses_a_changed_field_set(run: Run) -> None:
     assert draft.read_bytes() == frozen
 
     invented = {
-        name: list(tags) for name, tags in read_artifact(draft)["fields"].items()
+        name: list(tags) for name, tags in read(draft, DRAFT_FILE)["fields"].items()
     }
     invented["favourite_biscuit"] = ["hobnob"]
 
@@ -523,7 +523,7 @@ def test_the_budget_counts_the_assembled_prompt_not_the_tags_alone(
 ) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    fields = read_artifact(draft)["fields"]
+    fields = read(draft, DRAFT_FILE)["fields"]
 
     budget = token_budget(fields, schema, flow)
 
@@ -543,7 +543,9 @@ def test_the_budget_shares_and_overhead_sum_to_the_total(
 ) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    fields = {name: list(tags) for name, tags in read_artifact(draft)["fields"].items()}
+    fields = {
+        name: list(tags) for name, tags in read(draft, DRAFT_FILE)["fields"].items()
+    }
 
     budget = token_budget(fields, schema, flow)
 
@@ -560,7 +562,9 @@ def test_the_budget_counts_an_absent_field_as_empty(
 ) -> None:
     draft = review(run, FLOW)
     assert draft is not None
-    fields = {name: list(tags) for name, tags in read_artifact(draft)["fields"].items()}
+    fields = {
+        name: list(tags) for name, tags in read(draft, DRAFT_FILE)["fields"].items()
+    }
     absent = {name: tags for name, tags in fields.items() if name != "eye_colour"}
 
     # A mid-edit draft is what the surface recomputes this over per keystroke, so

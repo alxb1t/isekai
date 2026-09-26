@@ -36,7 +36,7 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Literal, TypeVar
 
 from isekai.foundation.artifacts import (
     ERROR_FILE,
@@ -68,13 +68,6 @@ RUNS_ROOT = DATA_ROOT / "runs"
 # expression until v0.22 rehomed `instructions_record`, which needs it too, and
 # a second derivation is a second thing to keep true.
 REPOSITORY = DATA_ROOT.parent
-
-# The only schema version this build reads. There is no migration ladder because
-# there is nothing to migrate: version 2 does not exist, so a command to upgrade
-# to it would be a dispatch table with no entries (design.md D2). What does ship
-# is the declaration on every artifact and the refusal on anything else, because
-# deciding those later would mean running a migration to enable migrations.
-SCHEMA_VERSION = 1
 
 # Enough of the digest to separate two photographs and few enough characters to
 # leave the slug legible in a listing. The whole digest is in the frame.
@@ -342,7 +335,7 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     return run
 
 
-# --- numbering, envelopes and completion --------------------------------------
+# --- numbering and completion -------------------------------------------------
 
 
 def versions(directory: Path) -> list[int]:
@@ -409,42 +402,6 @@ def approved_versions(directory: Path) -> list[int]:
         for name in os.listdir(directory)
         if is_approved(name) and (match := ARTIFACT.match(name))
     )
-
-
-def envelope(
-    schema: str,
-    producer: Mapping[str, Any],
-    body: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Return one artifact: its schema, what produced it, and what it says.
-
-    `producer` is merged rather than nested further, so a reader looking for the
-    model, the instructions or the upstream version finds all three in one place.
-    """
-    return {
-        "schema": {"name": schema, "version": SCHEMA_VERSION},
-        "producer": dict(producer),
-        **body,
-    }
-
-
-def read_artifact(path: Path) -> dict[str, Any]:
-    """Parse an artifact, refusing any schema version this build does not know.
-
-    A best-effort parse of a format you do not know produces fields that look
-    fine and mean nothing, so nothing is interpreted: the declared version is
-    checked before any other key is touched.
-    """
-    parsed: Any = json.loads(path.read_text())
-    declared = parsed.get("schema", {}).get("version")
-    if declared != SCHEMA_VERSION:
-        raise Refusal(
-            f"{path.name}: declares schema version {declared!r} and this build "
-            f"reads version {SCHEMA_VERSION}; upgrade isekai to a build that "
-            f"declares version {declared!r}, or re-run the stage that wrote it "
-            "to produce an artifact this build can read"
-        )
-    return parsed
 
 
 # --- failures and budgets -----------------------------------------------------

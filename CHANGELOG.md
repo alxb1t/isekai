@@ -44,6 +44,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`0028` design D5, D5a, D6).
 - **The prompt and the render sidecar are read and written through the contract**, so no module
   outside `foundation/artifacts.py` writes a run file by hand (`0028` design D5, D9).
+- **`SCHEMA_VERSION`, `envelope` and `read_artifact` are retired.** The review UI and
+  `scripts/derive_field_map.py` read through `read`; the tests read and write valid files through the
+  contract, and `tests/stages.py` writes WD14 tags in production's spelling (`0028` design D7, D10).
 
 ## [0.22.5] - 2026-09-25
 

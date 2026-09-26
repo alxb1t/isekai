@@ -255,8 +255,9 @@ def test_no_external_call_is_made_on_a_pass_that_changes_nothing(
 
 def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     """Provoke one refusal from each stage that has one, and return the messages."""
+    from isekai.foundation.artifacts import CAPTION_FILE, read
     from isekai.foundation.flow import load_flow
-    from isekai.foundation.run import open_run, read_artifact, record_failure
+    from isekai.foundation.run import open_run, record_failure
     from isekai.pipeline.caption import OllamaReader
     from isekai.pipeline.generate import photo_resolution, prompt_artifact
     from isekai.pipeline.review import approve, review
@@ -285,7 +286,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
 
     collect(lambda: open_run(tmp_path / "missing.jpg", wired.runs_root))
     collect(lambda: open_run(_unreadable(tmp_path), wired.runs_root))
-    collect(lambda: read_artifact(_future_artifact(tmp_path)))
+    collect(lambda: read(_future_artifact(tmp_path), CAPTION_FILE))
     schema = flow.schema
     collect(lambda: sheet(bare, schema, wired.vocabulary(), tags=None))
     collect(lambda: review(bare, FLOW))
