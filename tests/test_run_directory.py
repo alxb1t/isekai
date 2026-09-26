@@ -10,11 +10,21 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 import isekai.foundation.atomic_write as atomic_write_module
+from isekai.foundation.artifacts import (
+    CAPTION_FILE,
+    RUN_FILE,
+    SHEET_FILE,
+    Caption,
+    Failure,
+    Sheet,
+    read,
+    write,
+    write_json,
+)
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -22,26 +32,22 @@ from isekai.foundation.run import (
     DATA_ROOT,
     FRAME_NAME,
     RUNS_ROOT,
-    SCHEMA_VERSION,
     Run,
     across,
     approved_versions,
     artifact_name,
     attempts,
     check_budget,
-    envelope,
     instructions_record,
     is_approved,
     latest,
     next_version,
     open_run,
-    read_artifact,
     record_failure,
     run_id,
     slug,
     versions,
     write_atomically,
-    write_json,
 )
 from isekai.interface.cli import build_parser
 from isekai.interface.wiring import Wiring, wiring, wiring_from
@@ -53,9 +59,12 @@ from tests.conftest import snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, png_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
-from tests.stages import caption, sheet
+from tests.stages import caption, sheet, write_wd14
 
 FLOW = "summon-anime-wai"
+
+# Only a record's filename is read, so one failure serves every budget test.
+_FAILURE: Failure = {"stage": "caption", "detail": "the reader timed out"}
 
 
 @pytest.fixture
@@ -286,7 +295,7 @@ def test_the_temporary_file_shares_the_artifacts_filesystem(
 @pytest.mark.spec("run-directory:atomicity:final-move-is-atomic")
 def test_the_artifact_appears_at_its_final_path_in_one_step(tmp_path: Path) -> None:
     target = tmp_path / "captions" / "001.json"
-    write_json(target, {"schema": {"name": "caption", "version": SCHEMA_VERSION}})
+    write_json(target, {"schema": CAPTION_FILE.schema})
 
     assert json.loads(target.read_text())["schema"]["name"] == "caption"
     assert [p.name for p in target.parent.iterdir()] == ["001.json"]
@@ -310,17 +319,37 @@ def test_each_stage_numbers_within_its_own_directory(
     assert versions(sheets) == [1]
 
 
-@pytest.mark.spec("run-directory:numbering:each-directory-counts-its-own")
-def test_the_link_between_stages_is_the_producer_record(tmp_path: Path) -> None:
-    sheet = envelope("sheet", {"implementation": "ollama", "from": 2}, {"f": []})
+def _sheet_from_wd14(
+    run: Run, version: int, schema: Schema, vocabulary: Vocabulary
+) -> Sheet:
+    """Fill a sheet from WD14 list `version`, and return what was written."""
+    write_wd14(run, version=version)
+    path = sheet(run, schema, vocabulary, tags=None)
+    assert path is not None
+    return read(path, SHEET_FILE)
 
-    assert sheet["producer"]["from"] == 2
-    assert "counter" not in sheet
+
+@pytest.mark.spec("run-directory:numbering:each-directory-counts-its-own")
+def test_the_link_between_stages_is_the_producer_record(
+    tmp_path: Path, runs: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+
+    written = _sheet_from_wd14(run, 2, schema, vocabulary)
+
+    assert written["producer"]["from"] == 2
+    assert "counter" not in written
 
 
 @pytest.mark.spec("run-directory:provenance:artifact-declares-its-schema")
-def test_every_artifact_carries_a_schema_name_and_an_integer_version() -> None:
-    artifact = envelope("caption", {"implementation": "ollama"}, {"prose": "x"})
+def test_every_artifact_carries_a_schema_name_and_an_integer_version(
+    tmp_path: Path, runs: Path
+) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+    path = caption(run, FakeReader())
+    assert path is not None
+
+    artifact = read(path, CAPTION_FILE)
 
     assert artifact["schema"]["name"] == "caption"
     assert isinstance(artifact["schema"]["version"], int)
@@ -334,18 +363,21 @@ def test_a_producer_records_the_briefings_path_and_digest(
     # `instructions_record` off the briefing the stage actually reads, never
     # constructed here. A record this test builds itself pins a literal the code
     # is free to stop writing.
-    def written(briefing_path: Path) -> dict[str, Any]:
+    def written(briefing_path: Path) -> Caption:
         record = instructions_record(briefing_path)
         path = tmp_path / f"{record['sha256']}.json"
-        write_json(
-            path,
-            envelope(
-                "caption",
-                {"implementation": "ollama", "briefing": record},
-                {"prose": "the same prose either way"},
-            ),
-        )
-        return read_artifact(path)
+        artifact: Caption = {
+            "schema": CAPTION_FILE.schema,
+            "producer": {
+                "implementation": "ollama",
+                "models": [],
+                "pinned": False,
+                "briefing": record,
+            },
+            "prose": "the same prose either way",
+        }
+        write(path, CAPTION_FILE, artifact)
+        return read(path, CAPTION_FILE)
 
     elsewhere = tmp_path / "other.md"
     elsewhere.write_text("Different standing instructions entirely.")
@@ -362,18 +394,27 @@ def test_a_producer_records_the_briefings_path_and_digest(
 
 
 @pytest.mark.spec("run-directory:provenance:producer-records-its-source")
-def test_a_producer_names_the_upstream_version_it_came_from() -> None:
-    assert envelope("sheet", {"from": 3}, {})["producer"]["from"] == 3
+def test_a_producer_names_the_upstream_version_it_came_from(
+    tmp_path: Path, runs: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+
+    assert _sheet_from_wd14(run, 3, schema, vocabulary)["producer"]["from"] == 3
 
 
 @pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
-def test_an_unpinnable_producer_says_so_rather_than_claiming_a_pin() -> None:
-    producer = {"implementation": "ollama", "models": ["x"], "pinned": False}
-    artifact = envelope("caption", producer, {})
+def test_an_unpinnable_producer_says_so_rather_than_claiming_a_pin(
+    tmp_path: Path, runs: Path
+) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+    path = caption(run, FakeReader(models=("x",)))
+    assert path is not None
 
-    assert artifact["producer"]["pinned"] is False
-    assert "revision" not in artifact["producer"]
-    assert "sha256" not in artifact["producer"]
+    producer = read(path, CAPTION_FILE)["producer"]
+
+    assert producer["pinned"] is False
+    assert "revision" not in producer
+    assert "sha256" not in producer
 
 
 # --- schema refusal -----------------------------------------------------------
@@ -389,11 +430,11 @@ def test_an_artifact_from_a_newer_version_is_refused_without_being_parsed(
     )
 
     with pytest.raises(Refusal) as refused:
-        read_artifact(path)
+        read(path, CAPTION_FILE)
 
     message = str(refused.value)
     assert "001.json" in message
-    assert "2" in message and str(SCHEMA_VERSION) in message
+    assert "2" in message and str(CAPTION_FILE.version) in message
     assert "unread" not in message
 
 
@@ -405,13 +446,28 @@ def test_the_schema_refusal_states_a_remedy_this_build_can_point_at(
     path.write_text(json.dumps({"schema": {"name": "caption", "version": 99}}))
 
     with pytest.raises(Refusal) as refused:
-        read_artifact(path)
+        read(path, CAPTION_FILE)
 
     message = str(refused.value)
     assert "upgrade isekai" in message
     assert "re-run the stage" in message
     # No migration command is offered, because this build ships none.
     assert "migrate" not in message
+
+
+@pytest.mark.spec("run-directory:schema:unknown-version-is-refused")
+def test_a_typed_read_refuses_an_unknown_version(tmp_path: Path) -> None:
+    path = tmp_path / "001.json"
+    write_json(path, {"schema": {"name": "caption", "version": 2}, "prose": "unread"})
+
+    with pytest.raises(Refusal) as refused:
+        read(path, CAPTION_FILE)
+
+    assert str(refused.value) == (
+        "001.json: declares schema version 2 and this build reads version 1; "
+        "upgrade isekai to a build that declares version 2, or re-run the stage "
+        "that wrote it to produce an artifact this build can read"
+    )
 
 
 # --- completion by listing ----------------------------------------------------
@@ -448,19 +504,14 @@ def test_a_filename_carries_its_version_and_its_approval_and_nothing_else() -> N
 
 @pytest.mark.spec("run-directory:readdir:filename-carries-only-decidable-facts")
 def test_the_producing_model_appears_only_inside_the_artifact(
-    tmp_path: Path,
+    tmp_path: Path, runs: Path
 ) -> None:
-    directory = tmp_path / "captions"
-    name = artifact_name(1)
-    write_json(
-        directory / name,
-        envelope(
-            "caption", {"models": ["joycaption-beta-one-q4k"], "pinned": False}, {}
-        ),
-    )
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+    path = caption(run, FakeReader(models=("joycaption-beta-one-q4k",)))
+    assert path is not None
 
-    assert "joycaption" not in name
-    assert "joycaption-beta-one-q4k" in (directory / name).read_text()
+    assert "joycaption" not in path.name
+    assert "joycaption-beta-one-q4k" in path.read_text()
 
 
 # --- failures and budgets -----------------------------------------------------
@@ -473,7 +524,9 @@ def test_an_error_record_sits_beside_where_its_artifact_would_have_gone(
     directory = tmp_path / "captions"
     directory.mkdir()
 
-    record_failure(directory, 1, "transient", {"detail": "rate limited"})
+    record_failure(
+        directory, 1, "transient", {"stage": "caption", "detail": "rate limited"}
+    )
 
     assert versions(directory) == []
     assert next_version(directory) == 1
@@ -484,8 +537,8 @@ def test_the_attempts_ordinal_and_kind_are_in_the_filename(tmp_path: Path) -> No
     directory = tmp_path / "captions"
     directory.mkdir()
 
-    first = record_failure(directory, 1, "transient", {})
-    second = record_failure(directory, 1, "permanent", {})
+    first = record_failure(directory, 1, "transient", _FAILURE)
+    second = record_failure(directory, 1, "permanent", _FAILURE)
 
     assert first.name == "001.error.1.transient.json"
     assert second.name == "001.error.2.permanent.json"
@@ -499,10 +552,11 @@ def test_the_attempts_ordinal_and_kind_are_in_the_filename(tmp_path: Path) -> No
 def test_a_failed_attempt_is_kept_when_a_later_one_succeeds(tmp_path: Path) -> None:
     directory = tmp_path / "captions"
     directory.mkdir()
-    failure = record_failure(directory, 1, "transient", {})
+    failure = record_failure(directory, 1, "transient", _FAILURE)
 
     write_json(
-        directory / artifact_name(next_version(directory)), envelope("c", {}, {})
+        directory / artifact_name(next_version(directory)),
+        {"schema": {"name": "c", "version": 1}, "producer": {}},
     )
 
     assert failure.exists()
@@ -515,7 +569,7 @@ def test_a_permanent_failure_is_refused_without_attempting_the_work(
 ) -> None:
     directory = tmp_path / "captions"
     directory.mkdir()
-    record_failure(directory, 1, "permanent", {})
+    record_failure(directory, 1, "permanent", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
         check_budget("caption", directory, 1, "aunt-ada.jpg")
@@ -532,7 +586,7 @@ def test_a_stage_at_its_budget_refuses_naming_the_photograph_and_the_record(
     directory = tmp_path / "captions"
     directory.mkdir()
     for _ in range(BUDGETS["caption"]):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
         check_budget("caption", directory, 1, "aunt-ada.jpg")
@@ -548,7 +602,7 @@ def test_a_stage_below_its_budget_is_allowed_to_attempt_again(
 ) -> None:
     directory = tmp_path / "captions"
     directory.mkdir()
-    record_failure(directory, 1, "transient", {})
+    record_failure(directory, 1, "transient", _FAILURE)
 
     check_budget("caption", directory, 1, "aunt-ada.jpg")
 
@@ -574,7 +628,7 @@ def test_each_tagger_refuses_by_name_at_its_own_budget(
     directory = tmp_path / stage
     directory.mkdir()
     for _ in range(spend):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
         check_budget(stage, directory, 1, "aunt-ada.jpg")
@@ -627,9 +681,9 @@ def test_the_frame_declares_its_own_schema(tmp_path: Path, runs: Path) -> None:
     run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
 
     assert run.frame_path.name == FRAME_NAME
-    assert read_artifact(run.frame_path)["schema"] == {
+    assert read(run.frame_path, RUN_FILE)["schema"] == {
         "name": "run",
-        "version": SCHEMA_VERSION,
+        "version": RUN_FILE.version,
     }
 
 

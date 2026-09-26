@@ -36,8 +36,18 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Literal, TypeVar
 
+from isekai.foundation.artifacts import (
+    ERROR_FILE,
+    RUN_FILE,
+    DigestRecord,
+    ErrorRecord,
+    Failure,
+    Frame,
+    InstructionsRecord,
+    write,
+)
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 
@@ -58,13 +68,6 @@ RUNS_ROOT = DATA_ROOT / "runs"
 # expression until v0.22 rehomed `instructions_record`, which needs it too, and
 # a second derivation is a second thing to keep true.
 REPOSITORY = DATA_ROOT.parent
-
-# The only schema version this build reads. There is no migration ladder because
-# there is nothing to migrate: version 2 does not exist, so a command to upgrade
-# to it would be a dispatch table with no entries (design.md D2). What does ship
-# is the declaration on every artifact and the refusal on anything else, because
-# deciding those later would mean running a migration to enable migrations.
-SCHEMA_VERSION = 1
 
 # Enough of the digest to separate two photographs and few enough characters to
 # leave the slug legible in a listing. The whole digest is in the frame.
@@ -212,14 +215,6 @@ def media_type(body: bytes) -> tuple[str, str]:
     )
 
 
-# --- the run's JSON form ------------------------------------------------------
-
-
-def write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    """Write `payload` as the one JSON form every artifact in a run is written in."""
-    write_atomically(path, (json.dumps(payload, indent=2) + "\n").encode())
-
-
 # --- the run and its frame ----------------------------------------------------
 
 
@@ -236,10 +231,9 @@ class Run:
         return self.path / FRAME_NAME
 
     @property
-    def frame(self) -> dict[str, Any]:
-        """Return the run's frame, parsed."""
-        parsed: Any = json.loads(self.frame_path.read_text())
-        return parsed
+    def frame(self) -> Frame:
+        """Return the run's frame, parsed, with no version check."""
+        return json.loads(self.frame_path.read_text())
 
     @property
     def photo(self) -> Path:
@@ -326,23 +320,21 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     # The frame records what the photograph *is* and never where it came from: a
     # run that points at a file somebody later moved is not reconstructable, and
     # being reconstructable from disk is the frame's whole job.
-    write_json(
-        run.frame_path,
-        {
-            "schema": {"name": "run", "version": SCHEMA_VERSION},
-            "id": identifier,
-            "photo": {
-                "name": name,
-                "sha256": digest,
-                "bytes": len(body),
-                "media_type": kind,
-            },
+    frame: Frame = {
+        "schema": RUN_FILE.schema,
+        "id": identifier,
+        "photo": {
+            "name": name,
+            "sha256": digest,
+            "bytes": len(body),
+            "media_type": kind,
         },
-    )
+    }
+    write(run.frame_path, RUN_FILE, frame)
     return run
 
 
-# --- numbering, envelopes and completion --------------------------------------
+# --- numbering and completion -------------------------------------------------
 
 
 def versions(directory: Path) -> list[int]:
@@ -411,42 +403,6 @@ def approved_versions(directory: Path) -> list[int]:
     )
 
 
-def envelope(
-    schema: str,
-    producer: Mapping[str, Any],
-    body: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Return one artifact: its schema, what produced it, and what it says.
-
-    `producer` is merged rather than nested further, so a reader looking for the
-    model, the instructions or the upstream version finds all three in one place.
-    """
-    return {
-        "schema": {"name": schema, "version": SCHEMA_VERSION},
-        "producer": dict(producer),
-        **body,
-    }
-
-
-def read_artifact(path: Path) -> dict[str, Any]:
-    """Parse an artifact, refusing any schema version this build does not know.
-
-    A best-effort parse of a format you do not know produces fields that look
-    fine and mean nothing, so nothing is interpreted: the declared version is
-    checked before any other key is touched.
-    """
-    parsed: Any = json.loads(path.read_text())
-    declared = parsed.get("schema", {}).get("version")
-    if declared != SCHEMA_VERSION:
-        raise Refusal(
-            f"{path.name}: declares schema version {declared!r} and this build "
-            f"reads version {SCHEMA_VERSION}; upgrade isekai to a build that "
-            f"declares version {declared!r}, or re-run the stage that wrote it "
-            "to produce an artifact this build can read"
-        )
-    return parsed
-
-
 # --- failures and budgets -----------------------------------------------------
 
 
@@ -493,7 +449,7 @@ def record_failure(
     directory: Path,
     version: int,
     kind: Kind,
-    detail: Mapping[str, Any],
+    failure: Failure,
 ) -> Path:
     """Write an error record beside where `version`'s artifact would have gone.
 
@@ -502,16 +458,14 @@ def record_failure(
     """
     ordinal = len(attempts(directory, version)) + 1
     path = directory / f"{version:03d}.error.{ordinal}.{kind}.json"
-    write_json(
-        path,
-        {
-            "schema": {"name": "error", "version": SCHEMA_VERSION},
-            "version": version,
-            "attempt": ordinal,
-            "kind": kind,
-            **dict(detail),
-        },
-    )
+    record: ErrorRecord = {
+        "schema": ERROR_FILE.schema,
+        "version": version,
+        "attempt": ordinal,
+        "kind": kind,
+        **failure,
+    }
+    write(path, ERROR_FILE, record)
     return path
 
 
@@ -603,7 +557,7 @@ def refusal_for(
     )
 
 
-def instructions_record(path: Path) -> dict[str, str]:
+def instructions_record(path: Path) -> InstructionsRecord:
     """Return the path and digest of an instruction text, for a producer record.
 
     This is the variable the evidence says matters most: one change to a reader's
@@ -619,7 +573,7 @@ def instructions_record(path: Path) -> dict[str, str]:
     }
 
 
-def constant_record(text: str) -> dict[str, str]:
+def constant_record(text: str) -> DigestRecord:
     """Return the digest of an instruction text this build holds, with no path.
 
     `instructions_record` above takes a `Path` and hashes the file behind it,

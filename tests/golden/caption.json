@@ -1,0 +1,18 @@
+{
+  "schema": {
+    "name": "caption",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "fake-reader",
+    "models": [
+      "fake-model"
+    ],
+    "pinned": false,
+    "briefing": {
+      "path": "flows/summon-anime-wai/caption.briefing.md",
+      "sha256": "033bd182cbb5bf1ef627310c7fc07e386335c0274aef49f4536d6f6c778ca134"
+    }
+  },
+  "prose": "Brown hair, brown eyes."
+}

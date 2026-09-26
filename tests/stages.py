@@ -19,13 +19,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from isekai.boundary.wd14 import LocalTagger, read_labels
+from isekai.foundation.artifacts import (
+    WD14_FILE,
+    DanbooruTag,
+    DigestRecord,
+    Wd14,
+    write,
+)
 from isekai.foundation.flow import Flow, Schema, load_flow
 from isekai.foundation.run import (
     WD14,
     Run,
     artifact_name,
-    envelope,
-    write_json,
 )
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import sheet as sheet_stage
@@ -94,14 +99,17 @@ FIELD_MAP = FieldMap(
     excluded=frozenset(),
 )
 
-# What `write_wd14` offers when a caller does not care which tags it routes.
-# Three fields' worth, so a default sheet is neither empty nor uniform.
-TAGS: tuple[str, ...] = ("long hair", "brown hair", "smile", "shirt")
+# What `write_wd14` offers when a caller does not care which tags it routes, in
+# WD14's own spelling. Three fields' worth, so a default sheet is neither empty
+# nor uniform.
+TAGS: tuple[DanbooruTag, ...] = tuple(
+    DanbooruTag(tag) for tag in ("long_hair", "brown_hair", "smile", "shirt")
+)
 
 
 def write_wd14(
     run: Run,
-    tags: Sequence[str] = TAGS,
+    tags: Sequence[DanbooruTag] = TAGS,
     *,
     flow: str = FLOW.id,
     version: int = 1,
@@ -114,24 +122,20 @@ def write_wd14(
     """
     directory = run.directory(flow, WD14)
     path = directory / artifact_name(version)
-    write_json(
-        path,
-        envelope(
-            WD14,
-            {
-                "implementation": "wd14",
-                "models": ["wd14/model.onnx"],
-                "pinned": True,
-                "artifacts": dict(FAKE_PINS),
-            },
-            {
-                "tags": [
-                    {"tag": tag, "confidence": round(0.9 - index / 100, 4)}
-                    for index, tag in enumerate(tags)
-                ]
-            },
-        ),
-    )
+    listed: Wd14 = {
+        "schema": WD14_FILE.schema,
+        "producer": {
+            "implementation": "wd14",
+            "models": ["wd14/model.onnx"],
+            "pinned": True,
+            "artifacts": dict(FAKE_PINS),
+        },
+        "tags": [
+            {"tag": tag, "confidence": round(0.9 - index / 100, 4)}
+            for index, tag in enumerate(tags)
+        ],
+    }
+    write(path, WD14_FILE, listed)
     return path
 
 
@@ -142,7 +146,7 @@ def sheet(
     *,
     flow: str = FLOW.id,
     field_map: FieldMap = FIELD_MAP,
-    tags: Sequence[str] | None = TAGS,
+    tags: Sequence[DanbooruTag] | None = TAGS,
     new_version: bool = False,
 ) -> Path | None:
     """Call the sheet stage under `summon-anime-wai`, writing the list it reads.
@@ -227,7 +231,7 @@ class FakeSession:
 # The digests a fake tagger claims it was verified against. Not the real ones:
 # an artifact written in a test must not be mistakable for one written against
 # the provisioned bytes, and every assertion about a pin names this dict.
-FAKE_PINS: dict[str, dict[str, str]] = {
+FAKE_PINS: dict[str, DigestRecord] = {
     "wd14/selected_tags.csv": {"sha256": "c" * 64},
     "wd14/model.onnx": {"sha256": "m" * 64},
 }

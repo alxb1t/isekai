@@ -39,6 +39,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    DRAFT_FILE,
+    SHEET_FILE,
+    ReviewApproved,
+    ReviewDraft,
+    read,
+    write,
+)
 from isekai.foundation.flow import Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -48,12 +57,9 @@ from isekai.foundation.run import (
     Run,
     approved_versions,
     artifact_name,
-    envelope,
     latest,
     next_version,
-    read_artifact,
     versions,
-    write_json,
 )
 from isekai.shared.fields import validate
 from isekai.shared.vocabulary import Vocabulary
@@ -135,28 +141,25 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
 
     approved = approved_versions(review_directory)
     if approved:
-        origin = review_directory / artifact_name(approved[-1], APPROVED)
-        came_from, source = approved[-1], REVIEW
+        carried = read(
+            review_directory / artifact_name(approved[-1], APPROVED), APPROVED_FILE
+        )
+        came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
     else:
-        origin = sheets / artifact_name(source_sheet)
-        came_from, source = source_sheet, SHEETS
+        carried = read(sheets / artifact_name(source_sheet), SHEET_FILE)
+        came_from, source, sheet_version = source_sheet, SHEETS, source_sheet
 
-    carried = read_artifact(origin)
     version = next_version(review_directory)
     path = review_directory / artifact_name(version, DRAFT)
-    write_json(
-        path,
-        envelope(
-            STAGE,
-            {"implementation": STAGE, "from": came_from, "source": source},
-            {
-                "flow": flow,
-                "sheet": int(carried.get("sheet", source_sheet)),
-                "vocabulary": carried["vocabulary"],
-                "fields": carried["fields"],
-            },
-        ),
-    )
+    draft: ReviewDraft = {
+        "schema": DRAFT_FILE.schema,
+        "producer": {"implementation": STAGE, "from": came_from, "source": source},
+        "flow": flow,
+        "sheet": int(sheet_version),
+        "vocabulary": carried["vocabulary"],
+        "fields": carried["fields"],
+    }
+    write(path, DRAFT_FILE, draft)
     return path
 
 
@@ -179,9 +182,9 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
     """Replace the highest draft's field values in place, and return its path.
 
     The one owner of a draft update. A draft was written once and then edited by
-    hand until now, so nothing owned this and the envelope was only ever built at
-    creation; a second writer arriving without a single owner is how two envelopes
-    in one directory drift apart.
+    hand until now, so nothing owned this and the draft's shape was only ever built
+    at creation; a second writer arriving without a single owner is how two shapes
+    of one file drift apart.
 
     **It does not create.** `review()` owns that, and teaching this to create too
     would spend a version number on a stray keypress -- there is no Save control
@@ -206,7 +209,7 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
         )
 
     path = directory / artifact_name(drafts[-1], DRAFT)
-    body = read_artifact(path)
+    body = read(path, DRAFT_FILE)
     existing = set(body["fields"])
     offered = set(fields)
     if offered != existing:
@@ -217,9 +220,11 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
             f"field set; missing {missing}, unknown {unknown}"
         )
 
-    write_json(
-        path, {**body, "fields": {name: list(fields[name]) for name in body["fields"]}}
-    )
+    updated: ReviewDraft = {
+        **body,
+        "fields": {name: list(fields[name]) for name in body["fields"]},
+    }
+    write(path, DRAFT_FILE, updated)
     return path
 
 
@@ -300,7 +305,7 @@ def approve(
 
     version = drafts[-1]
     draft = directory / artifact_name(version, DRAFT)
-    body = read_artifact(draft)
+    body = read(draft, DRAFT_FILE)
     fields: dict[str, list[str]] = {
         name: list(tags) for name, tags in body["fields"].items()
     }
@@ -318,20 +323,18 @@ def approve(
 
     sheet_version = int(body["sheet"])
     source = run.directory(flow, SHEETS) / artifact_name(sheet_version)
-    approved_body = envelope(
-        STAGE,
-        {
+    approved_body: ReviewApproved = {
+        "schema": APPROVED_FILE.schema,
+        "producer": {
             **body["producer"],
             "edited": _differs(fields, source),
             "approved_from": version,
         },
-        {
-            "flow": flow,
-            "sheet": sheet_version,
-            "vocabulary": body["vocabulary"],
-            "fields": fields,
-        },
-    )
+        "flow": flow,
+        "sheet": sheet_version,
+        "vocabulary": body["vocabulary"],
+        "fields": fields,
+    }
 
     path = directory / artifact_name(version, APPROVED)
     if path.exists():
@@ -340,7 +343,7 @@ def approve(
             f"artifact is never replaced; run `python -m isekai review --flow "
             f"{flow} --new-version` to correct it under the next number"
         )
-    write_json(path, approved_body)
+    write(path, APPROVED_FILE, approved_body)
     draft.unlink()
     return path, warnings
 
@@ -354,7 +357,7 @@ def _differs(fields: Mapping[str, Sequence[str]], source: Path) -> bool:
     """
     if not source.exists():
         return False
-    original = read_artifact(source)["fields"]
+    original = read(source, SHEET_FILE)["fields"]
     return {name: list(tags) for name, tags in original.items()} != {
         name: list(tags) for name, tags in fields.items()
     }

@@ -39,8 +39,8 @@ Stdlib only.
 """
 
 from pathlib import Path
-from typing import Any
 
+from isekai.foundation.artifacts import SHEET_FILE, WD14_FILE, Sheet, read, write
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -49,11 +49,8 @@ from isekai.foundation.run import (
     Run,
     artifact_name,
     check_budget,
-    envelope,
     latest,
     next_version,
-    read_artifact,
-    write_json,
 )
 from isekai.shared.field_map import FieldMap, route
 from isekai.shared.field_map import identity as field_map_identity
@@ -115,34 +112,27 @@ def sheet(
 
     check_budget(STAGE, directory, next_version(directory), run.id)
 
-    artifact = read_artifact(tagged / artifact_name(source))
-    listed: Any = artifact["tags"]
-    tags = [str(one["tag"]) for one in listed]
-
-    fields = route(tags, field_map, schema)
+    listed = read(tagged / artifact_name(source), WD14_FILE)
+    fields = route((one["tag"] for one in listed["tags"]), field_map, schema)
     validate(fields, schema, vocabulary)
 
     path = directory / artifact_name(next_version(directory))
-    write_json(
-        path,
-        envelope(
-            STAGE,
-            {
-                # The producer of the *tags* is the producer of the sheet now, so
-                # the pin it was verified against travels across rather than being
-                # re-derived: these are the digests that session actually opened.
-                "implementation": TAGGER,
-                "models": list(artifact["producer"]["models"]),
-                "pinned": bool(artifact["producer"]["pinned"]),
-                "artifacts": dict(artifact["producer"]["artifacts"]),
-                "from": source,
-            },
-            {
-                "schema_document": {"name": schema.name},
-                "vocabulary": vocabulary_identity(vocabulary),
-                "field_map": field_map_identity(field_map),
-                "fields": fields,
-            },
-        ),
-    )
+    artifact: Sheet = {
+        "schema": SHEET_FILE.schema,
+        "producer": {
+            # The producer of the *tags* is the producer of the sheet now, so
+            # the pin it was verified against travels across rather than being
+            # re-derived: these are the digests that session actually opened.
+            "implementation": TAGGER,
+            "models": list(listed["producer"]["models"]),
+            "pinned": bool(listed["producer"]["pinned"]),
+            "artifacts": dict(listed["producer"]["artifacts"]),
+            "from": source,
+        },
+        "schema_document": {"name": schema.name},
+        "vocabulary": vocabulary_identity(vocabulary),
+        "field_map": field_map_identity(field_map),
+        "fields": fields,
+    }
+    write(path, SHEET_FILE, artifact)
     return path

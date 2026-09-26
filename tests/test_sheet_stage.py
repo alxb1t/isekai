@@ -9,10 +9,10 @@ stage refuses without, which is why a test says what it wants routed on one line
 
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
 import pytest
 
+from isekai.foundation.artifacts import SHEET_FILE, DanbooruTag, Sheet, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -20,7 +20,6 @@ from isekai.foundation.run import (
     CAPTIONS,
     Run,
     open_run,
-    read_artifact,
     record_failure,
     versions,
 )
@@ -35,10 +34,10 @@ FLOW = "summon-anime-wai"
 PROSE = "Dark brown hair past the shoulders, brown eyes, a white collared shirt."
 
 
-def _body(path: Path | None) -> dict[str, Any]:
+def _body(path: Path | None) -> Sheet:
     """Read the sheet the stage says it wrote, refusing to read None."""
     assert path is not None
-    return read_artifact(path)
+    return read(path, SHEET_FILE)
 
 
 @pytest.fixture
@@ -71,7 +70,7 @@ def test_a_tag_is_placed_in_its_primary_criterion_and_no_model_is_reached(
     monkeypatch.setattr("subprocess.Popen", unreachable)
     monkeypatch.setattr("urllib.request.urlopen", unreachable)
 
-    written = sheet(run, schema, vocabulary, tags=["brown hair"])
+    written = sheet(run, schema, vocabulary, tags=[DanbooruTag("brown_hair")])
 
     assert written is not None and written.name == "001.json"
     fields = _body(written)["fields"]
@@ -91,7 +90,12 @@ def test_the_taggers_own_underscore_spelling_routes(
     this repository keeps paying for -- so the fixture writes the underscore
     rather than the spelling that would make the test pass either way.
     """
-    written = sheet(run, schema, vocabulary, tags=["brown_hair", "blue_eyes"])
+    written = sheet(
+        run,
+        schema,
+        vocabulary,
+        tags=[DanbooruTag("brown_hair"), DanbooruTag("blue_eyes")],
+    )
 
     fields = _body(written)["fields"]
     assert fields["hair_colour"] == ["brown hair"]
@@ -107,7 +111,12 @@ def test_a_tag_whose_criterion_the_flow_does_not_declare_is_dropped(
     # declared would take its tags nowhere -- proven by narrowing the schema.
     narrowed = Schema(name=schema.name, fields=tuple(schema.fields[:1]))
 
-    written = sheet(run, narrowed, vocabulary, tags=["brown hair", "thick eyebrows"])
+    written = sheet(
+        run,
+        narrowed,
+        vocabulary,
+        tags=[DanbooruTag("brown_hair"), DanbooruTag("thick_eyebrows")],
+    )
 
     fields = _body(written)["fields"]
     assert tuple(fields) == narrowed.names
@@ -119,7 +128,14 @@ def test_the_taggers_order_survives_inside_each_criterion(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     written = sheet(
-        run, schema, vocabulary, tags=["short hair", "long hair", "wavy hair"]
+        run,
+        schema,
+        vocabulary,
+        tags=[
+            DanbooruTag("short_hair"),
+            DanbooruTag("long_hair"),
+            DanbooruTag("wavy_hair"),
+        ],
     )
 
     assert _body(written)["fields"]["hair_silhouette"] == [
@@ -133,12 +149,12 @@ def test_the_taggers_order_survives_inside_each_criterion(
 def test_nothing_the_tagger_did_not_return_reaches_the_sheet(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    offered = ["brown hair", "smile"]
-
-    written = sheet(run, schema, vocabulary, tags=offered)
+    written = sheet(
+        run, schema, vocabulary, tags=[DanbooruTag("brown_hair"), DanbooruTag("smile")]
+    )
 
     fields = _body(written)["fields"]
-    assert [tag for tags in fields.values() for tag in tags] == offered
+    assert [tag for tags in fields.values() for tag in tags] == ["brown hair", "smile"]
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
@@ -153,7 +169,7 @@ def test_the_stage_refuses_once_its_budget_of_one_is_spent(
     """
     directory = run.path / FLOW / "sheets"
     assert BUDGETS["sheet"] == 1
-    record_failure(directory, 1, "transient", {"stage": "sheet"})
+    record_failure(directory, 1, "transient", {"stage": "sheet", "detail": "x"})
 
     with pytest.raises(Refusal) as refused:
         sheet(run, schema, vocabulary)
@@ -181,7 +197,7 @@ def test_the_sheet_carries_one_entry_per_field_and_no_prompt(
 def test_a_field_the_tag_list_carried_nothing_for_is_present_and_empty(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    written = sheet(run, schema, vocabulary, tags=["brown hair"])
+    written = sheet(run, schema, vocabulary, tags=[DanbooruTag("brown_hair")])
 
     fields = _body(written)["fields"]
     assert fields["marks"] == []
@@ -261,7 +277,9 @@ def test_the_stage_reads_the_tag_list_and_never_opens_the_caption(
 
     monkeypatch.setattr(Path, "read_text", guarded)
 
-    written = sheet(run, schema, vocabulary, tags=["brown hair", "smile"])
+    written = sheet(
+        run, schema, vocabulary, tags=[DanbooruTag("brown_hair"), DanbooruTag("smile")]
+    )
 
     fields = _body(written)["fields"]
     assert fields["hair_colour"] == ["brown hair"]
@@ -302,7 +320,12 @@ def test_every_tag_in_a_written_sheet_is_in_the_vocabulary(
     # `hair` is in the vocabulary and in the table; `jeans` is in both as well.
     # Nothing here can be outside it, which is the property's new form: the
     # tagger's output layer *is* the vocabulary and the router invents nothing.
-    written = sheet(run, schema, vocabulary, tags=["brown hair", "jeans", "hair"])
+    written = sheet(
+        run,
+        schema,
+        vocabulary,
+        tags=[DanbooruTag("brown_hair"), DanbooruTag("jeans"), DanbooruTag("hair")],
+    )
 
     fields = _body(written)["fields"]
     for tags in fields.values():
@@ -331,9 +354,11 @@ def test_a_second_flow_gets_its_own_fill_and_leaves_the_first_alone(
     # Sharing is gone: two flows over one input are two independent tag lists,
     # so the class of error where a flow inherits another's answer cannot occur
     # rather than being checked for (design.md D5).
-    first = sheet(run, schema, vocabulary, tags=["brown hair"])
+    first = sheet(run, schema, vocabulary, tags=[DanbooruTag("brown_hair")])
 
-    second = sheet(run, schema, vocabulary, flow="summon-v2", tags=["long hair"])
+    second = sheet(
+        run, schema, vocabulary, flow="summon-v2", tags=[DanbooruTag("long_hair")]
+    )
 
     assert first is not None and second is not None
     assert first.parent == run.path / FLOW / "sheets"

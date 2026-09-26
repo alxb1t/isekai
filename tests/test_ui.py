@@ -278,7 +278,7 @@ def test_the_invariant_holds_no_module_of_the_surface_names_an_artifact() -> Non
     repository was false six times before two releases closed it.
     """
     surface = Path(__file__).resolve().parent.parent / "isekai" / "interface" / "ui"
-    forbidden = ("envelope(", "artifact_name(", "write_json(")
+    forbidden = ("artifact_name(", "write_json(", "write(")
 
     named = {
         f"{path.name}: {name}"
@@ -289,7 +289,7 @@ def test_the_invariant_holds_no_module_of_the_surface_names_an_artifact() -> Non
 
     assert named == set(), (
         "the surface passes field values to pipeline functions, and they own the "
-        "envelope and the filename"
+        "file's shape and its name"
     )
 
 

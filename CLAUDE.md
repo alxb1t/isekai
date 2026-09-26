@@ -120,7 +120,8 @@ SemVer, with an entry appended **per phase** under `## [Unreleased]` and cut at 
 **A minor delivers one feature; a patch delivers none**, and meets every one of these — work that
 cannot is not a patch:
 
-- no format version moves — `MANIFEST_VERSION`, the artifact envelope's `SCHEMA_VERSION`;
+- no format version moves — `MANIFEST_VERSION`, any run file kind's version, which
+  `isekai/foundation/artifacts.py` declares;
 - every behaviour fix is required by an existing requirement: a scenario may be added under one, a
   requirement may not;
 - nothing deprecates a verb or a flag;
@@ -133,7 +134,7 @@ message and **contiguous** with any `Co-Authored-By:` line — a blank line betw
 block.
 
 The tooling is **operator tooling, recorded and not pinned**: `@fission-ai/openspec@1.11.0`, resolved on
-`PATH`. It is deliberately **not** in the gate array — nothing in CI runs it, so a moving version can never
+`PATH`. It is deliberately **not** in the gate — nothing in CI runs it, so a moving version can never
 turn CI red. There is **no spec↔test binding checker in this repo**, so `spec` / `spec_exempt` bindings are
 maintained by hand and reviewed, not enforced; that gap is known and open.
 

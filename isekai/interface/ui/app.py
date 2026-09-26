@@ -9,7 +9,7 @@ and `tests/test_ui_api.py` opens with an `importorskip` for it.
 codes, the join of caption, sheet, draft, approved and budget into one payload,
 serving photograph bytes and the built bundle, the `rare` threshold -- which
 exists nowhere else in this repository -- and turning a `Refusal` into a
-response. The pipeline owns what a valid sheet is, the artifact envelope and its
+response. The pipeline owns what a valid sheet is, each run file's shape and its
 filename, when approval is legal, and what a token costs.
 
 **Three write functions reach a run directory, all of stage ③'s**: `review()` at
@@ -43,8 +43,15 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    CAPTION_FILE,
+    DRAFT_FILE,
+    TAGS_FILE,
+    WD14_FILE,
+    read,
+)
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import read_artifact
 from isekai.interface.ui.batch import Batch, Input
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -243,22 +250,19 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         # The draft while one exists, the approved artifact once it does not.
         # That is what makes an input approved in an earlier sitting open with
         # its sheet rather than empty (design.md D5).
-        holding = draft if draft is not None else approved
-        fields: dict[str, list[str]] = (
-            {
-                name: list(tags)
-                for name, tags in read_artifact(holding)["fields"].items()
-            }
-            if holding is not None
-            else {}
-        )
+        held_fields: Mapping[str, list[str]] = {}
+        if draft is not None:
+            held_fields = read(draft, DRAFT_FILE)["fields"]
+        elif approved is not None:
+            held_fields = read(approved, APPROVED_FILE)["fields"]
+        fields = {name: list(tags) for name, tags in held_fields.items()}
         budget = token_budget(fields, batch.flow.schema, batch.flow)
         caption = batch.caption_path(held)
         return {
             "id": held.id,
             "width": held.width,
             "height": held.height,
-            "caption": str(read_artifact(caption)["prose"]) if caption else None,
+            "caption": str(read(caption, CAPTION_FILE)["prose"]) if caption else None,
             # Both lists ride on this payload rather than on endpoints of their
             # own, and both are `null` where the artifact is absent -- which is
             # three legitimate states, none of them a failure (design.md D20).
@@ -373,7 +377,7 @@ def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     path = batch.wd14_path(held)
     if path is None:
         return None
-    found: Any = read_artifact(path)["tags"]
+    found = read(path, WD14_FILE)["tags"]
     return [
         {"tag": str(one["tag"]), "confidence": float(one["confidence"])}
         for one in found
@@ -408,7 +412,7 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     path = batch.tags_path(held)
     if path is None:
         return None
-    listed: Any = read_artifact(path)["tags"]
+    listed = read(path, TAGS_FILE)["tags"]
     # One `str()` and one lookup per tag. `count()` normalises the spelling and
     # hits the same mapping `__contains__` does, so asking both questions
     # separately would normalise a forty-tag list eighty times for one answer --
@@ -436,12 +440,12 @@ def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None
 
     **`st_mtime` is the precondition because nothing else exists.** The draft
     carries no timestamp, no revision counter and no digest; `schema.version` is
-    the constant `1`, an artifact *format* version, and `save_draft` never
-    advances the filename's `NNN` by design. A `revision` int in the body is the
-    correct answer and changes the artifact shape, which `read_artifact` refuses
-    for any unknown schema -- that touches every reader in the package and is
-    not a patch. A lock around `save_draft` fixes nothing: out-of-order *sends*
-    still commit out of order (design.md D6).
+    the draft kind's *format* version, and `save_draft` never advances the
+    filename's `NNN` by design. A `revision` int in the body is the correct
+    answer and changes the draft's shape, so its version moves and `read`
+    refuses every draft already on disk -- that is not a patch. A lock around
+    `save_draft` fixes nothing: out-of-order *sends* still commit out of order
+    (design.md D6).
 
     **A payload carrying no `saved` states no precondition**, and is allowed:
     the mtime is already on the wire as the field every response returns, so a

@@ -1,0 +1,61 @@
+{
+  "schema": {
+    "name": "sheet",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "wd14",
+    "models": [
+      "wd14/model.onnx"
+    ],
+    "pinned": true,
+    "artifacts": {
+      "wd14/selected_tags.csv": {
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "wd14/model.onnx": {
+        "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+      }
+    },
+    "from": 1
+  },
+  "schema_document": {
+    "name": "identity"
+  },
+  "vocabulary": {
+    "name": "wd14/selected_tags.csv",
+    "revision": "ffffffffffffffffffffffffffffffffffffffff",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "field_map": {
+    "name": "tests/stages.py",
+    "revision": 1,
+    "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "fields": {
+    "count": [],
+    "age_band": [],
+    "skin_ancestry": [],
+    "hair_colour": [
+      "brown hair"
+    ],
+    "hair_silhouette": [
+      "long hair"
+    ],
+    "eye_colour": [],
+    "eyebrows": [],
+    "marks": [],
+    "clothes": [
+      "shirt"
+    ],
+    "accessories": [],
+    "expression": [
+      "smile"
+    ],
+    "gaze": [],
+    "pose": [],
+    "framing": [],
+    "body_shape": [],
+    "background": []
+  }
+}

@@ -18,6 +18,7 @@ import pytest
 
 import isekai.foundation.run as run_module
 from isekai.boundary.comfy import ComfyClient
+from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, read
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -37,7 +38,6 @@ from isekai.foundation.run import (
     artifact_name,
     attempts,
     open_run,
-    read_artifact,
     record_failure,
 )
 from isekai.pipeline.caption import FakeReader
@@ -189,7 +189,7 @@ def test_assembly_contacts_no_endpoint_and_writes_an_artifact(
     written, refused = prepare(run, {FLOW: flow})
 
     assert list(written) == [FLOW] and refused == []
-    body = read_artifact(written[FLOW])
+    body = read(written[FLOW], PROMPT_FILE)
     assert body["positive"].startswith("masterpiece, best quality")
     assert body["negative"] == flow.prompt["negative"]
     assert client.submissions == [] and client.uploaded is None
@@ -203,7 +203,7 @@ def test_the_prompt_artifact_takes_the_approved_sheets_number(
 
     assert path.name == artifact_name(1)
     assert path.parent == run.path / FLOW / PROMPTS
-    assert read_artifact(path)["producer"]["from"] == 1
+    assert read(path, PROMPT_FILE)["producer"]["from"] == 1
 
 
 @pytest.mark.spec("image-generation:assembly:bad-sheet-fails-before-the-session")
@@ -426,7 +426,7 @@ def test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph(
 
     produced = render(run, flow, client, seeds=[42], poll=0)
 
-    body = read_artifact(produced[0].provenance)
+    body = read(produced[0].provenance, RENDER_FILE)
     assert body["flow"] == FLOW
     assert body["seed"] == 42
     assert body["sheet_version"] == 1
@@ -439,12 +439,12 @@ def test_two_renders_from_one_flow_with_different_graphs_are_distinguishable(
     run: Run, flow: Flow, schema: Schema
 ) -> None:
     prompt = (
-        read_artifact(run.directory(FLOW, PROMPTS) / artifact_name(1))
+        read(run.directory(FLOW, PROMPTS) / artifact_name(1), PROMPT_FILE)
         if (run.directory(FLOW, PROMPTS) / artifact_name(1)).exists()
         else None
     )
     prepare(run, {FLOW: flow})
-    prompt = read_artifact(run.directory(FLOW, PROMPTS) / artifact_name(1))
+    prompt = read(run.directory(FLOW, PROMPTS) / artifact_name(1), PROMPT_FILE)
 
     one = build_graph(flow, run.photo, "up.png", prompt, 42)
     other = build_graph(flow, run.photo, "up.png", prompt, 43)
@@ -557,7 +557,7 @@ def test_each_render_is_named_by_the_seed_that_produced_it(
 
     for made in produced:
         assert made.image.stem == str(made.seed)
-        assert read_artifact(made.provenance)["seed"] == made.seed
+        assert read(made.provenance, RENDER_FILE)["seed"] == made.seed
 
 
 # --- the unapproved run, the unreadable header, the interrupted write ----------
@@ -761,7 +761,12 @@ def test_a_transient_render_record_still_refuses_the_next_attempt_on_the_count(
     prepare(run, {FLOW: flow})
     directory = run.path / FLOW / OUTPUTS / "001"
     directory.mkdir(parents=True)
-    record_failure(directory, 1, "transient", {"stage": "render", "seed": 42})
+    record_failure(
+        directory,
+        1,
+        "transient",
+        {"stage": "render", "seed": 42, "detail": "the endpoint did not answer"},
+    )
 
     client = FakeComfyClient()
     with pytest.raises(Refusal) as refused:

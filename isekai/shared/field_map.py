@@ -30,12 +30,13 @@ Stdlib only: `hashlib`, `json`, `pathlib`.
 """
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any
 
+from isekai.foundation.artifacts import DanbooruTag, FieldMapRecord
 from isekai.foundation.flow import (
     FLOWS_DIR,
     SCHEMA_NAME,
@@ -117,7 +118,7 @@ class FieldMap:
         return self.fields[field].tags
 
 
-def identity(field_map: FieldMap) -> dict[str, Any]:
+def identity(field_map: FieldMap) -> FieldMapRecord:
     """Return the record a sheet carries to say which table routed it."""
     return {
         "name": field_map.name,
@@ -246,7 +247,7 @@ def load(
 
 
 def route(
-    tags: Sequence[str], field_map: FieldMap, schema: Schema
+    tags: Iterable[DanbooruTag], field_map: FieldMap, schema: Schema
 ) -> dict[str, list[str]]:
     """Place each tag in its primary criterion, dropping what the flow does not ask.
 

@@ -30,6 +30,7 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from isekai.foundation.artifacts import APPROVED_FILE, TAGS_FILE, read
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     REVIEW,
@@ -37,7 +38,6 @@ from isekai.foundation.run import (  # noqa: E402
     WD14,
     Run,
     open_run,
-    read_artifact,
 )
 from isekai.interface.ui import HOST  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
@@ -355,7 +355,9 @@ def test_an_input_re_opened_with_a_new_version_is_editable_again(
     assert response.json()["draft"] == "002.draft.json"
     # The approved artifact is never edited in place, in either state.
     assert (
-        read_artifact(made.directory(FLOW, REVIEW) / "001.approved.json")["fields"]
+        read(made.directory(FLOW, REVIEW) / "001.approved.json", APPROVED_FILE)[
+            "fields"
+        ]
         == fields
     )
 
@@ -452,7 +454,8 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     approved, _ = approve(made, FLOW, schema, vocabulary)
     assert approved is not None
     expected = {
-        name: list(tags) for name, tags in read_artifact(approved)["fields"].items()
+        name: list(tags)
+        for name, tags in read(approved, APPROVED_FILE)["fields"].items()
     }
 
     dist = tmp_path / "dist"
@@ -563,7 +566,7 @@ def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
 
     assert "fashion photography" not in [one["tag"] for one in body["tags"]]
     assert written is not None
-    assert read_artifact(written)["tags"] == [
+    assert read(written, TAGS_FILE)["tags"] == [
         "brown hair",
         "fashion photography",
         "blue eyes",

@@ -57,7 +57,7 @@ from pathlib import Path
 # root is not -- the same hop `derive_eval_manifest.py` makes, for the same reason.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from isekai.foundation.run import read_artifact  # noqa: E402
+from isekai.foundation.artifacts import APPROVED_FILE, read  # noqa: E402
 from isekai.interface.wiring import load_vocabulary  # noqa: E402
 from isekai.shared.field_map import FIELD_MAP_PATH, declared_fields  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
@@ -462,7 +462,7 @@ def filings(root: Path = Path(".")) -> dict[str, Counter[str]]:
         # Through the pipeline's own reader, which refuses an artifact written
         # to a schema version this build does not know -- the table is committed,
         # so a silently mis-parsed sheet would be committed with it.
-        document = read_artifact(path)
+        document = read(path, APPROVED_FILE)
         for field, tags in document["fields"].items():
             for tag in tags:
                 filed[tag][field] += 1

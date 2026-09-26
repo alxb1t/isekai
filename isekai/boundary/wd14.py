@@ -59,6 +59,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Protocol
 
+from isekai.foundation.artifacts import DanbooruTag, DigestRecord
 from isekai.foundation.refusal import Refusal
 from isekai.shared.vocabulary import (
     DEFAULT_MODELS_DIR,
@@ -123,7 +124,7 @@ class Label:
 class Scored:
     """One tag the session was confident enough about, and how confident."""
 
-    tag: str
+    tag: DanbooruTag
     confidence: float
 
 
@@ -143,7 +144,7 @@ class LocalTagger:
 
     session: "Session"
     labels: tuple[Label, ...]
-    pins: Mapping[str, Mapping[str, str]]
+    pins: Mapping[str, DigestRecord]
 
 
 class Session(Protocol):
@@ -223,7 +224,7 @@ def read_labels(body: str) -> list[Label]:
 
 def verified_paths(
     models_dir: Path = DEFAULT_MODELS_DIR,
-) -> tuple[Path, Path, dict[str, dict[str, str]]]:
+) -> tuple[Path, Path, dict[str, DigestRecord]]:
     """Return both digest-verified paths and the pins they were verified against.
 
     **Both, before the first inference, and neither alone is worth anything.**
@@ -247,7 +248,7 @@ def verified_paths(
 
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     resolved: list[Path] = []
-    pins: dict[str, dict[str, str]] = {}
+    pins: dict[str, DigestRecord] = {}
     for dest in (LABELS_DEST, MODEL_DEST):
         try:
             resolved.append(resolve(dest, models_dir, manifest))
@@ -344,7 +345,7 @@ def select(
             f"graph are not from one revision -- re-provision both (`{REMEDY}`)"
         )
     above = [
-        Scored(tag=label.name, confidence=float(probability))
+        Scored(tag=DanbooruTag(label.name), confidence=float(probability))
         for label, probability in zip(labels, probabilities, strict=True)
         if label.category == GENERAL_CATEGORY and probability >= floor
     ]

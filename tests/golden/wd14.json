@@ -1,0 +1,27 @@
+{
+  "schema": {
+    "name": "wd14",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "wd14",
+    "models": [
+      "wd14/model.onnx"
+    ],
+    "pinned": true,
+    "artifacts": {
+      "wd14/selected_tags.csv": {
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "wd14/model.onnx": {
+        "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+      }
+    }
+  },
+  "tags": [
+    {
+      "tag": "1girl",
+      "confidence": 0.9
+    }
+  ]
+}

@@ -17,7 +17,7 @@ name a command and a path. The browser has no designed home for one until a
 refusal surface exists, so it gets a single header line and nothing more.
 
 **The server never constructs an artifact.** It passes field values to `review`'s
-own functions and they own the envelope and the filename -- held by one grep in
+own functions and they own the file's shape and its name -- held by one grep in
 `tests/test_ui.py`, which replaces the structural guarantee a subprocess gave for
 free.
 """

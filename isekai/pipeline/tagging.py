@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama, wd14
+from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, Tags, Wd14, write
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
@@ -47,12 +48,10 @@ from isekai.foundation.run import (
     artifact_name,
     check_budget,
     constant_record,
-    envelope,
     latest,
     next_version,
     record_failure,
     refusal_for,
-    write_json,
 )
 
 # The verb a refusal tells the operator to run again, and it is `caption` rather
@@ -282,19 +281,17 @@ def caption_wd14(
         ) from failed
 
     path = directory / artifact_name(version)
-    write_json(
-        path,
-        envelope(
-            WD14,
-            {
-                "implementation": "wd14",
-                "models": [wd14.MODEL_DEST],
-                "pinned": True,
-                "artifacts": dict(tagger.pins),
-            },
-            {"tags": [{"tag": one.tag, "confidence": one.confidence} for one in found]},
-        ),
-    )
+    listed: Wd14 = {
+        "schema": WD14_FILE.schema,
+        "producer": {
+            "implementation": "wd14",
+            "models": [wd14.MODEL_DEST],
+            "pinned": True,
+            "artifacts": dict(tagger.pins),
+        },
+        "tags": [{"tag": one.tag, "confidence": one.confidence} for one in found],
+    }
+    write(path, WD14_FILE, listed)
     return path
 
 
@@ -348,19 +345,17 @@ def caption_tags(
         ) from failed
 
     path = directory / artifact_name(version)
-    write_json(
-        path,
-        envelope(
-            TAGS,
-            {
-                "implementation": tagging.implementation,
-                "models": list(tagging.models),
-                "pinned": tagging.pinned,
-                "prompt": constant_record(TAG_PROMPT),
-            },
-            {"tags": list(tagging.tags)},
-        ),
-    )
+    listed: Tags = {
+        "schema": TAGS_FILE.schema,
+        "producer": {
+            "implementation": tagging.implementation,
+            "models": list(tagging.models),
+            "pinned": tagging.pinned,
+            "prompt": constant_record(TAG_PROMPT),
+        },
+        "tags": list(tagging.tags),
+    }
+    write(path, TAGS_FILE, listed)
     return path
 
 

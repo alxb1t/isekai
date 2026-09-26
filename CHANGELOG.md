@@ -25,6 +25,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.6] - 2026-09-26
+
+### Changed
+
+- **Every run file kind's bytes are pinned before the shapes move.** `tests/golden/` holds one file per
+  kind, written by today's writers; `tests/test_artifact_bytes.py` compares them byte for byte, and
+  its tripwire lets no module outside `foundation/artifacts.py` call `write_json` or `envelope`
+  beyond an exact allowlist of today's writers (`0028` design D8, D9).
+- **`isekai/foundation/artifacts.py` is the run directory's contract.** It declares each kind's shape
+  and its producer's as a `TypedDict`, each kind's name and version as an `Artifact` descriptor, one
+  typed `read` and `write`, and `DanbooruTag`; `write_json` moves into it (`0028` design D1-D4).
+- **The frame and the error record are written through the contract.** `open_run` writes `RUN_FILE`;
+  `record_failure` takes a typed `Failure` and writes `ERROR_FILE`, so every recorded failure carries a
+  `stage` and a `detail` (`0028` design D4, D11).
+- **The caption and both tag lists are written through the contract.** WD14's `Scored.tag` is a
+  `DanbooruTag`, and the tagger's pins are typed `DigestRecord`s (`0028` design D5, D6).
+- **The sheet, the review draft and the approved sheet are read and written through the contract.**
+  `route` takes only `DanbooruTag`s; `review` reads its origin with one typed read per branch
+  (`0028` design D5, D5a, D6).
+- **The prompt and the render sidecar are read and written through the contract**, so no module
+  outside `foundation/artifacts.py` writes a run file by hand (`0028` design D5, D9).
+- **`SCHEMA_VERSION`, `envelope` and `read_artifact` are retired.** The review UI and
+  `scripts/derive_field_map.py` read through `read`; the tests read and write valid files through the
+  contract, and `tests/stages.py` writes WD14 tags in production's spelling (`0028` design D7, D10).
+- **The docs name the contract.** `docs/principles.md` holds the shapes with the golden test and the
+  tripwire where it said *not yet*; `docs/modules.md`, `docs/data-flow.md` and the foundation README
+  name `artifacts.py`; the tripwire's empty allowlist is deleted (`0028` design D12).
+
 ## [0.22.5] - 2026-09-25
 
 ### Changed

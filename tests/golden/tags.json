@@ -1,0 +1,21 @@
+{
+  "schema": {
+    "name": "tags",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "fake-tagger",
+    "models": [
+      "fake-model"
+    ],
+    "pinned": false,
+    "prompt": {
+      "sha256": "3ce90e9fcf084c092d5086b50a78f9c8b12096a1ef4bbae63e963d88b50dad49"
+    }
+  },
+  "tags": [
+    "1girl",
+    "solo",
+    "looking at viewer"
+  ]
+}

@@ -1,0 +1,8 @@
+# This change carries no spec delta: it declares the shapes the run files already
+# have, and no requirement changes. Why is in design.md's D14 -- NOT in
+# specs/README.md: the validator counts every file under specs/ as a delta.
+#
+# `skip_specs` is only honoured when this file is valid change metadata, which
+# requires `schema` naming a resolvable schema.
+schema: spec-driven
+skip_specs: true

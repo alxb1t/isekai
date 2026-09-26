@@ -15,12 +15,12 @@ import base64
 import dataclasses
 import io
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from isekai.boundary import provision
 from isekai.boundary.wd14 import LocalTagger
+from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
 from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -30,7 +30,6 @@ from isekai.foundation.run import (
     StageFailure,
     constant_record,
     open_run,
-    read_artifact,
     record_failure,
 )
 from isekai.interface import wiring
@@ -68,12 +67,6 @@ def run(tmp_path: Path) -> Run:
     photo = tmp_path / "aunt-ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     return open_run(photo, tmp_path / "runs")
-
-
-def _producer(path: Path) -> dict[str, Any]:
-    """Return one written artifact's producer record."""
-    producer: Any = read_artifact(path)["producer"]
-    return producer
 
 
 @pytest.fixture
@@ -152,7 +145,7 @@ def test_the_hosted_artifact_is_a_list_of_tags_under_the_flow(run: Run) -> None:
 
     assert path is not None
     assert path.parent == run.directory(FLOW, TAGS)
-    assert read_artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
+    assert read(path, TAGS_FILE)["tags"] == ["1girl", "solo", "looking at viewer"]
 
 
 @pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
@@ -169,7 +162,7 @@ def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
     path = caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
 
     assert path is not None
-    assert read_artifact(path)["tags"] == answered.split(", ")
+    assert read(path, TAGS_FILE)["tags"] == answered.split(", ")
 
 
 @pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
@@ -181,7 +174,7 @@ def test_whitespace_is_stripped_and_nothing_else_is(run: Run) -> None:
     assert path is not None
     # Empty elements go, because an empty chip is not a tag anyone offered. The
     # order is the model's and no tag is rewritten.
-    assert read_artifact(path)["tags"] == ["1girl", "solo", "looking at viewer"]
+    assert read(path, TAGS_FILE)["tags"] == ["1girl", "solo", "looking at viewer"]
 
 
 @pytest.mark.spec("tagging:output:artifact-is-a-list-of-tags")
@@ -192,7 +185,7 @@ def test_the_local_artifact_is_scored_and_sorted_under_its_own_directory(
 
     assert path is not None
     assert path.parent == run.directory(FLOW, WD14)
-    assert read_artifact(path)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
+    assert read(path, WD14_FILE)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
 
 
 # --- failure ------------------------------------------------------------------
@@ -217,7 +210,7 @@ def test_a_single_comma_is_enough_and_content_is_never_judged(run: Run) -> None:
     path = caption_tags(run, FLOW, OllamaTagger("m", _answer("nonsense, drivel")))
 
     assert path is not None
-    assert read_artifact(path)["tags"] == ["nonsense", "drivel"]
+    assert read(path, TAGS_FILE)["tags"] == ["nonsense", "drivel"]
 
 
 @pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
@@ -238,7 +231,7 @@ def test_the_hosted_tagger_stops_after_its_own_three_attempts(run: Run) -> None:
     directory = run.directory(FLOW, TAGS)
     directory.mkdir(parents=True, exist_ok=True)
     for _ in range(3):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", {"stage": TAGS, "detail": "x"})
     tagger = FakeTagger()
 
     with pytest.raises(Refusal) as refused:
@@ -283,7 +276,7 @@ def test_a_failed_hosted_tagger_leaves_the_local_artifact_complete(
         caption_tags(run, FLOW, OllamaTagger("m", _answer("prose, ".replace(", ", ""))))
 
     assert written is not None and written.is_file()
-    assert read_artifact(written)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
+    assert read(written, WD14_FILE)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
     # And the complete one is not re-run to repair the failed one.
     assert caption_wd14(run, FLOW, lambda: fake_tagger([1.0, 1.0, 1.0])) is None
 
@@ -310,7 +303,7 @@ def test_the_local_producer_claims_a_pin_and_names_both_digests(
     path = caption_wd14(run, FLOW, lambda: local)
 
     assert path is not None
-    producer = _producer(path)
+    producer = read(path, WD14_FILE)["producer"]
     # The first producer in this repository that can honestly claim one: a local
     # file with a digest is not the hosted service `pinned` was written for
     # (design.md D17).
@@ -338,7 +331,7 @@ def test_the_hosted_producer_records_the_prompt_digest_and_no_path(run: Run) -> 
     path = caption_tags(run, FLOW, FakeTagger())
 
     assert path is not None
-    producer = _producer(path)
+    producer = read(path, TAGS_FILE)["producer"]
     assert producer["pinned"] is False
     # Digest only. A module constant has no file, and a record that invented a
     # path would assert a location that does not exist (design.md D16).
@@ -361,7 +354,7 @@ def test_the_producer_names_the_model_that_actually_answered(run: Run) -> None:
     path = caption_tags(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
 
     assert path is not None
-    producer = _producer(path)
+    producer = read(path, TAGS_FILE)["producer"]
     assert producer["implementation"] == "ollama"
     assert producer["models"] == ["joycaption-beta-one-q4k"]
 
