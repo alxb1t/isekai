@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.6] - 2026-09-26
+
 ### Changed
 
 - **Every run file kind's bytes are pinned before the shapes move.** `tests/golden/` holds one file per
