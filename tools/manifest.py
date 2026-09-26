@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """What every manifest deriver is made of: entry types, digest strategies, writer.
 
 `config/models.json`, `evaluation/eval_models.json` and `config/vocabulary.json`

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Re-derive `config/vocabulary.json` -- the tag list the pipeline fills sheets from.
 
 The third manifest, and a sibling of the other two rather than a section of
@@ -46,11 +45,8 @@ strategy `tools/manifest.py` gives every deriver. The graph beside it takes the
 other route, and its entry's `lfs` says so.
 """
 
-from pathlib import Path
-
+from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH as MANIFEST_PATH
 from tools.manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
-
-MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
 
 # The date the revision below was taken. Bumping the revision means bumping this.
 PINNED = "2026-09-14"

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH
 from isekai.foundation.flow import (
     IDENTIFIER_SAFE,
     SCHEMA_NAME,
@@ -146,11 +147,7 @@ def test_the_schema_document_declares_no_vocabulary_and_no_version() -> None:
 
 @pytest.mark.spec("sheet:schema:vocabulary-is-declared-by-the-flow")
 def test_the_vocabulary_a_fill_is_held_against_is_the_flows() -> None:
-    manifest = json.loads(
-        (
-            Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
-        ).read_text()
-    )
+    manifest = json.loads(VOCABULARY_MANIFEST_PATH.read_text())
     entry = manifest["entries"][0]
     flow = load_flow("summon-anime-wai")
 

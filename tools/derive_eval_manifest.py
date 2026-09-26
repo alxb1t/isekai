@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Re-derive `evaluation/eval_models.json` from the authored source spec below.
 
 The sibling of `derive_manifest.py`, and deliberately a sibling rather than a
@@ -36,13 +35,11 @@ shaped differently from the graph's:
 """
 
 import json
-from pathlib import Path
 
-from evaluation.eval_models import EVAL_MANIFEST_PATH, SHARED_WITH_THE_GRAPH
+from evaluation.eval_models import EVAL_MANIFEST_PATH as MANIFEST_PATH
+from evaluation.eval_models import SHARED_WITH_THE_GRAPH
+from isekai.boundary.provision import MANIFEST_PATH as GRAPH_MANIFEST_PATH
 from tools.manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
-
-MANIFEST_PATH = EVAL_MANIFEST_PATH
-GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
 PINNED = "2026-09-06"

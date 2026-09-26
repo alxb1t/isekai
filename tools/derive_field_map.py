@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Re-derive `config/field_map.json` from the authored spec below.
 
 **Stdlib, offline, no network.** The route the roadmap credited to Danbooru's

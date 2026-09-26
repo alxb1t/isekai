@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from isekai.boundary.provision import VOCABULARY_MANIFEST_PATH
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -137,11 +138,7 @@ def test_every_tracked_flow_parses(tmp_path: Path) -> None:
 
 @pytest.mark.spec("image-generation:manifest:tracked-flows-are-gate-checked")
 def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -> None:
-    vocabulary = json.loads(
-        (
-            Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
-        ).read_text()
-    )["entries"][0]
+    vocabulary = json.loads(VOCABULARY_MANIFEST_PATH.read_text())["entries"][0]
 
     for name in tracked_flows():
         flow = load_flow(name)

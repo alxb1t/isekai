@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Re-derive `config/models.json` from the authored source spec below.
 
 The manifest is *derived*, never transcribed, and that now holds for every entry
@@ -30,9 +29,9 @@ the writer live in `tools/manifest.py`, shared with the two sibling derivers
 import json
 import re
 import urllib.request
-from pathlib import Path
 from typing import Any
 
+from isekai.boundary.provision import MANIFEST_PATH
 from tools.manifest import (
     USER_AGENT,
     Manifest,
@@ -43,8 +42,6 @@ from tools.manifest import (
     entry_for,
     write,
 )
-
-MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "models.json"
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
 PINNED = "2026-09-05"

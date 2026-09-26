@@ -19,11 +19,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Lowest first: a layer may import itself and the layers before it.
 LAYERS = ("foundation", "shared", "boundary", "pipeline", "interface")
 
-# Importers whose sub-package imports must go through the front door.
-FRONT_DOOR_SCOPE = ("isekai", "tools", "evaluation")
-
 # The top-level packages whose imports the rules read.
 PACKAGES = ("isekai", "evaluation")
+
+# Importers whose sub-package imports must go through the front door.
+FRONT_DOOR_SCOPE = (*PACKAGES, "tools")
 
 Edge = tuple[str, str]
 
@@ -130,8 +130,9 @@ def stage_imports(root: Path) -> set[Edge]:
 
 
 def _group(dotted: str) -> str | None:
-    """Return a module's layer, or `evaluation` for the sub-system's own modules."""
-    return "evaluation" if _within(dotted, "evaluation") else _layer(dotted)
+    """Return a module's layer inside `isekai`, else its top-level package."""
+    top = dotted.split(".")[0]
+    return _layer(dotted) if top == "isekai" else top
 
 
 def layer_cycles(root: Path) -> list[list[str]]:
