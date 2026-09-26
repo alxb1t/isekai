@@ -25,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Every run file kind's bytes are pinned before the shapes move.** `tests/golden/` holds one file per
+  kind, written by today's writers; `tests/test_artifact_bytes.py` compares them byte for byte, and
+  its tripwire lets no module outside `foundation/artifacts.py` call `write_json` or `envelope`
+  beyond an exact allowlist of today's writers (`0028` design D8, D9).
+
 ## [0.22.5] - 2026-09-25
 
 ### Changed

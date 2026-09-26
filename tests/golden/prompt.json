@@ -1,0 +1,15 @@
+{
+  "schema": {
+    "name": "prompt",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "assemble",
+    "from": 1,
+    "source": "review"
+  },
+  "flow": "summon-anime-wai",
+  "positive": "masterpiece, best quality, amazing quality, newest, brown hair, long hair, shirt, anime screencap, detailed eyes, soft lighting",
+  "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
+  "edited": true
+}

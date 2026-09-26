@@ -1,0 +1,44 @@
+{
+  "schema": {
+    "name": "review",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "review",
+    "from": 1,
+    "source": "sheets",
+    "edited": true,
+    "approved_from": 1
+  },
+  "flow": "summon-anime-wai",
+  "sheet": 1,
+  "vocabulary": {
+    "name": "wd14/selected_tags.csv",
+    "revision": "ffffffffffffffffffffffffffffffffffffffff",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "fields": {
+    "count": [],
+    "age_band": [],
+    "skin_ancestry": [],
+    "hair_colour": [
+      "brown hair"
+    ],
+    "hair_silhouette": [
+      "long hair"
+    ],
+    "eye_colour": [],
+    "eyebrows": [],
+    "marks": [],
+    "clothes": [
+      "shirt"
+    ],
+    "accessories": [],
+    "expression": [],
+    "gaze": [],
+    "pose": [],
+    "framing": [],
+    "body_shape": [],
+    "background": []
+  }
+}

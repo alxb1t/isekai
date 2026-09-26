@@ -5,7 +5,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 
 ## Progress
 
-- [ ] 1 — Guards: golden bytes and the tripwire
+- [x] 1 — Guards: golden bytes and the tripwire
 - [ ] 2 — The contract: `foundation/artifacts.py`
 - [ ] 3 — Run files: the frame and the error record
 - [ ] 4 — Readings: the caption and both tag lists
@@ -18,11 +18,11 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 1 — Guards: golden bytes and the tripwire
 
-- [ ] 1.1 **HALT CHECK** — today's writers of run JSON in `isekai/` are exactly [D9](design.md#d9)'s allowlist.
+- [x] 1.1 **HALT CHECK** — today's writers of run JSON in `isekai/` are exactly [D9](design.md#d9)'s allowlist.
   Verify: `git grep -l -e 'write_json(' -e 'envelope(' -- isekai | sort | tr '\n' ' '` prints `isekai/foundation/run.py isekai/pipeline/caption.py isekai/pipeline/generate.py isekai/pipeline/review.py isekai/pipeline/sheet.py isekai/pipeline/tagging.py `.
-- [ ] 1.2 Write `tests/test_artifact_bytes.py`'s golden test and capture `tests/golden/`, one file per kind, from today's production writers, per [D8](design.md#d8).
+- [x] 1.2 Write `tests/test_artifact_bytes.py`'s golden test and capture `tests/golden/`, one file per kind, from today's production writers, per [D8](design.md#d8).
   Verify: `ls tests/golden | tr '\n' ' '` prints `approved.json caption.json draft.json error.json prompt.json render.json run.json sheet.json tags.json wd14.json `, and `grep -c '^def test_each_kind_is_written_byte_for_byte(' tests/test_artifact_bytes.py` prints `1`.
-- [ ] 1.3 Add the tripwire, its exact allowlist and its twin to `tests/test_artifact_bytes.py`, per [D9](design.md#d9).
+- [x] 1.3 Add the tripwire, its exact allowlist and its twin to `tests/test_artifact_bytes.py`, per [D9](design.md#d9).
   Verify: `grep -c -e '^def test_only_the_contract_writes_a_run_file(' -e '^def test_the_allowlist_names_only_modules_that_still_write(' -e '^def test_the_check_catches_a_module_writing_json(' tests/test_artifact_bytes.py` prints `3`.
 
 ## 2 — The contract: `foundation/artifacts.py`

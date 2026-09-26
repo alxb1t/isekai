@@ -1,0 +1,13 @@
+{
+  "schema": {
+    "name": "run",
+    "version": 1
+  },
+  "id": "ed706d21a2c3_ada",
+  "photo": {
+    "name": "photo.jpg",
+    "sha256": "ed706d21a2c3268978800efbca3f9c3ac0ce18ebf139999fd68cf50a39750c01",
+    "bytes": 41,
+    "media_type": "image/jpeg"
+  }
+}
