@@ -146,8 +146,8 @@ def test_the_pod_startup_touches_nothing_outside_the_project_namespace(
 
 @pytest.fixture(scope="session")
 def download_models_sh() -> str:
-    """Read the shipped `scripts/download_models.sh` once for the whole session."""
-    return (REPO / "scripts" / "download_models.sh").read_text()
+    """Read the shipped `tools/download_models.sh` once for the whole session."""
+    return (REPO / "tools" / "download_models.sh").read_text()
 
 
 @pytest.mark.spec(

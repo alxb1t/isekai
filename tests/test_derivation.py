@@ -1,22 +1,21 @@
 """The shared derivation module, and what each deriver takes from it.
 
-`scripts/` is declared a source root in `pyproject.toml` -- operator tooling, not
-a package, and not on `python -m isekai`'s import graph. Nothing here reaches the
-network: the two digest strategies are checked for *which one a spec routes to*,
-which is the decision, and the fetch itself is the derivers' own business and is
-verified by re-running them.
+`tools/` is operator tooling, imported from the repository root the way
+`python -m tools.<name>` runs it. Nothing here reaches the network: the two digest
+strategies are checked for *which one a spec routes to*, which is the decision,
+and the fetch itself is the derivers' own business and is verified by re-running
+them.
 """
 
 import hashlib
 import json
 from pathlib import Path
 
-import derive_eval_manifest
-import derive_manifest
-import derive_vocabulary
-import manifest as shared
 import pytest
-from manifest import Manifest, Source
+
+from tools import derive_eval_manifest, derive_manifest, derive_vocabulary
+from tools import manifest as shared
+from tools.manifest import Manifest, Source
 
 DERIVERS = (derive_manifest, derive_eval_manifest, derive_vocabulary)
 

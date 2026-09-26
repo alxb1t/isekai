@@ -7,7 +7,7 @@ docs ([D13](design.md#d13)).
 
 - [x] 1 — Guards: a missing scope path fails, and the image's layout is tested
 - [x] 2 — `config/`: the files the pipeline reads
-- [ ] 3 — `tools/`: the derivers and the operator's scripts, run as modules
+- [x] 3 — `tools/`: the derivers and the operator's scripts, run as modules
 - [ ] 4 — `evaluation/`: the sub-system leaves the package
 - [ ] 5 — Removals: the licence record and `probe/`
 - [ ] 6 — The docs follow the tree
@@ -38,17 +38,17 @@ Line numbers are `c6d18a4`'s; find each site by the text it names.
 
 ## 3 — `tools/`: the derivers and the operator's scripts, run as modules
 
-- [ ] 3.1 `git mv` the derivers, `manifest.py`, `download_models.sh` and `typecheck_ui.sh` from `scripts/` into `tools/`, and add `tools/__init__.py`, per [D1](design.md#d1).
+- [x] 3.1 `git mv` the derivers, `manifest.py`, `download_models.sh` and `typecheck_ui.sh` from `scripts/` into `tools/`, and add `tools/__init__.py`, per [D1](design.md#d1).
   Verify: `ls tools | grep -v __pycache__ | tr '\n' ' '` prints `__init__.py derive_eval_manifest.py derive_field_map.py derive_manifest.py derive_vocabulary.py download_models.sh manifest.py typecheck_ui.sh `.
-- [ ] 3.2 Make every import in `tools/` absolute, delete the `sys.path` inserts, and re-flow `manifest.py:31` (`v0.22.2 review/R12`), per [D1](design.md#d1), [D11](design.md#d11).
+- [x] 3.2 Make every import in `tools/` absolute, delete the `sys.path` inserts, and re-flow `manifest.py:31` (`v0.22.2 review/R12`), per [D1](design.md#d1), [D11](design.md#d11).
   Verify: `grep -l -e '^from manifest import' -e 'sys.path.insert' tools/*.py` prints nothing.
-- [ ] 3.3 Set `pyproject.toml`'s `pythonpath`, `extra-paths` and `known-first-party` per [D1](design.md#d1), and follow the moved modules in the tests [D8](design.md#d8) names.
+- [x] 3.3 Set `pyproject.toml`'s `pythonpath`, `extra-paths` and `known-first-party` per [D1](design.md#d1), and follow the moved modules in the tests [D8](design.md#d8) names.
   Verify: `grep -c '"scripts"' pyproject.toml tests/test_layers.py | paste -sd' ' -` prints `pyproject.toml:0 tests/test_layers.py:0`.
-- [ ] 3.4 Run the browser typecheck from `tools/` in the `Makefile`, and add [D6](design.md#d6)'s `derive` target; follow the path in `.github/workflows/ci.yml:22`.
+- [x] 3.4 Run the browser typecheck from `tools/` in the `Makefile`, and add [D6](design.md#d6)'s `derive` target; follow the path in `.github/workflows/ci.yml:22`.
   Verify: `make -n gate | grep -c 'bash tools/typecheck_ui.sh'` prints `1`, and `make -n derive | grep -c 'python -m tools.derive_'` prints `4`.
-- [ ] 3.5 Copy `tools/download_models.sh` to `/opt/isekai/tools/` in the `Dockerfile`, call it there from `start.sh:121`, and run `docker build --check .`, per [D5](design.md#d5).
+- [x] 3.5 Copy `tools/download_models.sh` to `/opt/isekai/tools/` in the `Dockerfile`, call it there from `start.sh:121`, and run `docker build --check .`, per [D5](design.md#d5).
   Verify: `grep -c '/opt/isekai/scripts' Dockerfile start.sh | paste -sd' ' -` prints `Dockerfile:0 start.sh:0`.
-- [ ] 3.6 Give `VOCABULARY_REMEDY` and `FIELD_MAP_REMEDY` [D3](design.md#d3)'s commands, with every deriver's usage line and the tests that assert them.
+- [x] 3.6 Give `VOCABULARY_REMEDY` and `FIELD_MAP_REMEDY` [D3](design.md#d3)'s commands, with every deriver's usage line and the tests that assert them.
   Verify: `git grep -n -e 'scripts/download_models' -e 'scripts/derive_' -e 'scripts/manifest' -e 'scripts/typecheck' -- isekai tests tools Dockerfile start.sh Makefile .github` prints nothing.
 
 ## 4 — `evaluation/`: the sub-system leaves the package

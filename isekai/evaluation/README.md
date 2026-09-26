@@ -25,7 +25,7 @@ at least once; a list of names cannot.
 | `evaluate.py` | `eval_backends.py` | `../../evaluate.py`, `tests/eval_fakes.py`, `tests/test_evaluate.py` |
 | `eval_backends.py` | — | `../../evaluate.py` |
 | `ciede2000.py` | `eval_backends.py`, `evaluate.py` | `tests/eval_fakes.py`, `tests/test_ciede2000.py` |
-| `eval_models.py` | `eval_backends.py` | `scripts/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
+| `eval_models.py` | `eval_backends.py` | `tools/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
 | `labels.py` | — | `tests/test_labels.py` |
 
 > `eval_backends.py` has **no test importer** and `pyproject.toml`'s

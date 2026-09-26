@@ -11,7 +11,7 @@ reason. An upgrade is a revision bump plus a re-run, not fifteen manual lookups.
 
 Run it from the repository root:
 
-    uv run python scripts/derive_manifest.py
+    uv run python -m tools.derive_manifest
 
 It rewrites `config/models.json` in place. Re-running without editing the spec
 must leave the file byte-identical -- `git diff --exit-code config/models.json`
@@ -23,7 +23,7 @@ property the pins exist to remove.
 
 What is left here is this manifest's *spec*: what to pin, and the one publisher
 record the mirrors are held against. The entry types, both digest strategies and
-the writer live in `scripts/manifest.py`, shared with the two sibling derivers
+the writer live in `tools/manifest.py`, shared with the two sibling derivers
 (design.md D10).
 """
 
@@ -33,7 +33,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from manifest import (
+from tools.manifest import (
     USER_AGENT,
     Manifest,
     ManifestEntry,

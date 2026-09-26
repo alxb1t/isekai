@@ -52,7 +52,7 @@ LICENCES_PATH = Path(__file__).resolve().parent.parent / "scripts" / "eval_licen
 # The one command that provisions anything in this repository. The vocabulary is
 # fetched by pointing it at the vocabulary's manifest rather than by a second
 # driver that would have to be kept in step with this one.
-DRIVER_PATH = Path(__file__).resolve().parent.parent / "scripts" / "download_models.sh"
+DRIVER_PATH = Path(__file__).resolve().parent.parent / "tools" / "download_models.sh"
 
 # Extensions a model's weights arrive under. Exactly one entry here carries one,
 # and which one is asserted: the graph the tag list is the output layer of. A
@@ -291,4 +291,4 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
 
     message = str(refused.value)
     assert VOCABULARY in message
-    assert "scripts/download_models.sh config/vocabulary.json" in message
+    assert "tools/download_models.sh config/vocabulary.json" in message

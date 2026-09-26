@@ -9,7 +9,7 @@ three files (design.md D9, D10).
 
 Run it from the repository root:
 
-    uv run python scripts/derive_vocabulary.py
+    uv run python -m tools.derive_vocabulary
 
 It rewrites `config/vocabulary.json` in place, and re-running without editing the
 spec below must leave the file byte-identical --
@@ -42,13 +42,13 @@ tagger, on a mutable reference, which the repository's own pinning rule forbids
 -- so it is pinned to an immutable revision here. And at roughly 300 KB it is not
 stored as a large file, so Hugging Face publishes no digest to read and there is
 nothing to look up: its bytes are fetched and hashed, through the `blob_digest`
-strategy `scripts/manifest.py` gives every deriver. The graph beside it takes the
+strategy `tools/manifest.py` gives every deriver. The graph beside it takes the
 other route, and its entry's `lfs` says so.
 """
 
 from pathlib import Path
 
-from manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
+from tools.manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 
 MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
 

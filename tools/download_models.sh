@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Provision a pinned manifest's artifacts, verifying every byte before it lands.
 #
-#     bash scripts/download_models.sh                          # the graph's stack, on the pod
-#     bash scripts/download_models.sh config/vocabulary.json  # the tag list, on a fresh clone
+#     bash tools/download_models.sh                          # the graph's stack, on the pod
+#     bash tools/download_models.sh config/vocabulary.json  # the tag list, on a fresh clone
 #
 # One driver, one manifest per invocation. The graph's stack is the default because the
 # pod is where this runs most; the vocabulary is a sibling manifest held to the same pins,

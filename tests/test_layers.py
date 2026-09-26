@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 LAYERS = ("foundation", "shared", "boundary", "pipeline", "interface")
 
 # Importers whose sub-package imports must go through the front door.
-FRONT_DOOR_SCOPE = ("isekai", "probe", "scripts", "evaluate.py")
+FRONT_DOOR_SCOPE = ("isekai", "probe", "tools", "evaluate.py")
 
 Edge = tuple[str, str]
 

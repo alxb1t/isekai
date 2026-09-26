@@ -311,7 +311,7 @@ BUNNIES = (
 def test_the_seven_recorded_seeds_reach_fifty_seven_beyond_the_suffix_group(
     provisioned: Vocabulary,
 ) -> None:
-    from derive_field_map import by_suffix, expand
+    from tools.derive_field_map import by_suffix, expand
 
     hair = by_suffix("hair", provisioned)
     reached = expand(SEVEN, provisioned)
@@ -336,7 +336,7 @@ def test_a_bare_word_boundary_loses_the_plurals_the_inflections_keep(
 ) -> None:
     import re
 
-    from derive_field_map import expand
+    from tools.derive_field_map import expand
 
     bare = {
         tag
@@ -364,7 +364,7 @@ def test_every_approved_tag_is_reachable_in_the_field_it_was_approved_in(
 ) -> None:
     from collections import defaultdict
 
-    from derive_field_map import APPROVED
+    from tools.derive_field_map import APPROVED
 
     approved = sorted(Path().glob(APPROVED))
     if not approved:
@@ -405,7 +405,7 @@ def test_the_committed_table_re_derives_without_reading_the_gitignored_runs(
     """
     import sys
 
-    import derive_field_map
+    from tools import derive_field_map
 
     def refuse(root: Path = Path(".")) -> dict[str, object]:
         raise AssertionError("the derivation read the gitignored approved runs")
@@ -432,7 +432,7 @@ def test_the_transcribed_filings_match_the_operator_s_approved_sheets(
     are gitignored. The point of the transcription is that the *derivation* no
     longer needs them -- checking it does, where they happen to be present.
     """
-    from derive_field_map import FILED, filings
+    from tools.derive_field_map import FILED, filings
 
     on_disk = filings()
     if not on_disk:

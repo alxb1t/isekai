@@ -10,7 +10,7 @@ two questions.
 Same rule as its sibling: the manifest is *derived*, never transcribed. Run it
 from the repository root:
 
-    uv run python scripts/derive_eval_manifest.py
+    uv run python -m tools.derive_eval_manifest
 
 It rewrites `scripts/eval_models.json` in place, and re-running without editing
 the spec must leave the file byte-identical --
@@ -31,21 +31,15 @@ shaped differently from the graph's:
   weights and not the model. The URL already addresses an immutable revision, so
   the bytes are fixed; this records what they are. The size cap is what stops
   that path from ever quietly downloading a checkpoint. That strategy is no
-  longer this file's: it lives in `scripts/manifest.py` alongside the LFS one,
+  longer this file's: it lives in `tools/manifest.py` alongside the LFS one,
   where every deriver reaches for whichever an artifact needs (design.md D10).
 """
 
 import json
-import sys
 from pathlib import Path
 
-from manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
-
-# Run as a script from the repository root, `scripts/` is on the path and the
-# root is not -- the same hop `probe/build_inputs.py` makes, for the same reason.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from isekai.evaluation.eval_models import SHARED_WITH_THE_GRAPH  # noqa: E402
+from isekai.evaluation.eval_models import SHARED_WITH_THE_GRAPH
+from tools.manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 
 MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
 GRAPH_MANIFEST_PATH = Path(__file__).resolve().parent.parent / "config" / "models.json"

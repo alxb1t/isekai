@@ -474,7 +474,7 @@ def manifest_argument(given: str | None) -> Path:
     held to the same pins, the same digests and the same containment rule, so the
     provisioner takes the file as an argument rather than growing a verb per
     consumer. It is what makes the vocabulary a *provisioned* artifact rather than
-    one that is merely verified: `bash scripts/download_models.sh
+    one that is merely verified: `bash tools/download_models.sh
     config/vocabulary.json` fetches it through this exact path (design.md D9).
     """
     return MANIFEST_PATH if given is None else Path(given)

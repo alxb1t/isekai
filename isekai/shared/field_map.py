@@ -58,7 +58,7 @@ FIELD_MAP_PATH = (
 
 # The one command that writes the file, named here because a refusal that says a
 # table is wrong without saying what regenerates it is half a refusal.
-FIELD_MAP_REMEDY = "uv run python scripts/derive_field_map.py"
+FIELD_MAP_REMEDY = "uv run python -m tools.derive_field_map"
 
 
 @dataclass(frozen=True)

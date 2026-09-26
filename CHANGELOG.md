@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `joycaption.Modelfile`. The anchors, the image's manifest copy and the printed remedies follow;
   `field_map.json` records `config/field_map.json`, so new sheets record a new name and digest for the
   same fields (`0029` design D3, D4, D5).
+- **The derivers and the operator's scripts live in `tools/`, a package run from the root**:
+  `uv run python -m tools.derive_field_map`, `bash tools/download_models.sh`. The `sys.path` hops and
+  `extra-paths` go; the image and the remedies follow (`0029` design D1, D3, D5).
+- **`make derive` re-runs every deriver in dependency order**, beside `gate` and outside it
+  (`0029` design D6).
 
 ## [0.22.6] - 2026-09-26
 
