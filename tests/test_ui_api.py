@@ -45,12 +45,14 @@ from isekai.foundation.artifacts import (
 )
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
+    CAPTIONS,
     REVIEW,
     TAGS,
     WD14,
     Run,
     open_run,
 )
+from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.ui import HOST  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
     RARE_BELOW,
@@ -63,8 +65,8 @@ from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.review import ENCODER_WINDOW, approve, review  # noqa: E402
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
-    caption_tags,
-    caption_wd14,
+    tag_hosted,
+    tag_wd14,
 )
 from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
@@ -208,6 +210,27 @@ def test_the_batch_endpoint_names_the_flow_the_schema_and_the_vocabulary(
     assert body["approved"] == 0
     assert [held["id"] for held in body["inputs"]] == [made.id]
     assert body["inputs"][0]["width"] == 1200
+
+
+@pytest.mark.spec("ui:source:a-missing-caption-names-its-command")
+def test_a_missing_caption_is_served_with_the_command_that_writes_it(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    beside = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    assert beside["caption"] == "Dark brown hair, brown eyes."
+    assert beside["caption_command"] is None
+
+    for path in made.directory(FLOW, CAPTIONS).iterdir():
+        path.unlink()
+    response = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["caption"] is None
+    command = body["caption_command"]
+    assert command == f"python -m isekai caption --flow {FLOW} {made.id}"
+    parsed = build_parser().parse_args(command.split()[3:])
+    assert (parsed.verb, parsed.flows, parsed.photos) == ("caption", [FLOW], [made.id])
 
 
 @pytest.mark.spec_exempt("structural: the join the page reads per input")
@@ -555,8 +578,8 @@ def _update_during_approval(
     The update starts inside the approval and is given the chance to pass its
     check first; if it does, its write waits until the approval has written.
     With the lock the check cannot run until the approval ends, so the chance is
-    a bounded wait; `unlocked`, the check always runs, so the approval waits for
-    it and nothing hangs on a timing window.
+    a bounded wait that times out; `unlocked`, the check always runs. Both waits
+    are bounded and asserted, so a regression fails rather than hangs.
     """
     body = client.get(f"/api/inputs/{made.id}").json()
     checked, approved = threading.Event(), threading.Event()
@@ -581,16 +604,19 @@ def _update_during_approval(
         path: Path, kind: Artifact[T], artifact: T
     ) -> None:
         # By name: the endpoint runs on a worker thread, not on `update`.
-        # The approval always sets `approved`, so this wait always ends.
         if path.name.endswith(".draft.json"):
-            approved.wait()
+            assert approved.wait(timeout=5), "the approval never finished"
         write(path, kind, artifact)
 
     def approve_(
         run: Run, flow: str, schema: Schema, vocabulary: Vocabulary
     ) -> tuple[Path | None, list[str]]:
         update.start()
-        checked.wait(timeout=None if unlocked else 0.5)
+        assert checked.wait(timeout=5 if unlocked else 0.5) is unlocked, (
+            "the update's check ran inside the approval"
+            if not unlocked
+            else "the update's check never ran"
+        )
         try:
             return approving(run, flow, schema, vocabulary)
         finally:
@@ -672,8 +698,8 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     # disk; this test is about what the *real* local tagger writes, so it replaces
     # it rather than writing a second version beside it.
     _clear_wd14(made)
-    caption_wd14(made, FLOW, fake_tagger)
-    caption_tags(
+    tag_wd14(made, FLOW, fake_tagger)
+    tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
@@ -703,8 +729,8 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     (design.md D7).
     """
     _clear_wd14(made)
-    caption_wd14(made, FLOW, fake_tagger)
-    caption_tags(
+    tag_wd14(made, FLOW, fake_tagger)
+    tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
@@ -737,7 +763,7 @@ def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
     # Filtered on the way to the page, never on the way to disk. Narrowing the
     # record would make it disagree with what the model said, and looking behind
     # the router is the whole reason the artifact exists.
-    written = caption_tags(
+    written = tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
@@ -760,7 +786,7 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
 ) -> None:
     # Decided here, not in the browser: `/api/tags` answers a fragment query and
     # has no membership form, so asking per tag would be one round trip each.
-    caption_tags(
+    tag_hosted(
         made,
         FLOW,
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
@@ -805,7 +831,7 @@ def test_one_list_present_and_the_other_absent_is_also_silent(
     # The state a run is in when the hosted tagger has not been reached: a WD14
     # list and no hosted one. A missing hosted list is an absent aid, never a
     # blocked review (design.md D3).
-    caption_wd14(made, FLOW, fake_tagger)
+    tag_wd14(made, FLOW, fake_tagger)
 
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
 

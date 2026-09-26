@@ -1,90 +1,4 @@
-# Capability: `cli`
-
-## Purpose
-
-The command-line surface: one entry point; the stage verbs `caption`, `tag`, `sheet`, `review`, `approve`
-and `generate`, the inspection verb `show` and the serving verb `ui`; and every refusal a batch produced
-reported together rather than one at a time.
-
-**Source:** `isekai/__main__.py`, `isekai/interface/cli.py`, `isekai/interface/wiring.py`,
-`isekai/interface/run_view.py`, `flows/` ·
-**Tests:** `tests/test_pipeline_cli.py`, `tests/test_generate.py`, `tests/test_resume.py`,
-`tests/test_run_view.py`
-
-The CLI is where a bad value is cheapest to catch — `--seed` and `--count` are range-checked **at parse
-time**, so a bad one fails before a pod is touched rather than after a paid render. **There are no dial
-flags.** A flow's dials are declared in its own `flows/<id>/flow.json` and are not reachable from the
-command line, because a tuned dial is not a variant of a flow — it is an untested flow.
-
-`isekai/__main__.py` is the path `runpy` resolves and is a shim; the parser, the verb table and the
-dispatch functions are `isekai/interface/cli.py`, the composition is `isekai/interface/wiring.py`, and
-the `show` verb's reader is `isekai/interface/run_view.py`. The verb is `show`; the file is not.
-
-## Requirements
-
-### Requirement: The pipeline surface is the only entry point, and its verbs are subcommands
-
-The system SHALL expose the staged pipeline as subcommands of a module entry point, and that entry
-point SHALL be the only command-line surface the system offers.
-
-A pipeline that stops for a human cannot have a one-command surface, so it needs verbs. They were added
-beside the single-command render surface rather than into it, so that the path in use at the time was
-not disturbed while the new one was unproven; that surface is deleted in this version, and what was a
-second entry point is now the only one. Subcommands under one parser rather than several scripts keeps
-argument handling in one place and the entry point's import guard to a single target — which is the
-reason the shape survives its original justification.
-
-#### Scenario: the pipeline verbs are reachable as subcommands
-- **Key:** `cli:pipeline-surface:verbs-are-subcommands`
-- **Layers:** unit
-- **WHEN** the pipeline entry point is invoked with a subcommand
-- **THEN** that stage runs
-
-#### Scenario: the pipeline entry point needs no third-party import
-- **Key:** `cli:pipeline-surface:entry-point-is-stdlib-only`
-- **Layers:** unit
-- **WHEN** the pipeline entry point is imported with third-party packages unavailable
-- **THEN** the import succeeds
-- **AND** the guard proving that condition is genuinely unavailable still holds
-
-#### Scenario: an unknown subcommand is refused at parse time
-- **Key:** `cli:pipeline-surface:unknown-verb-is-refused`
-- **Layers:** unit
-- **WHEN** an unrecognised subcommand is given
-- **THEN** the invocation is refused before any work begins
-- **AND** the available subcommands are listed
-
-### Requirement: The rendering verb takes many photographs and either a count or explicit seeds
-
-The system SHALL accept several run identifiers in one rendering invocation, SHALL accept either a
-count of renders per photograph or an explicit list of seeds but not both, and SHALL default to one
-render per photograph.
-
-Reading and filling a sheet are cheap and per-photograph; rendering is where the money is, and a boot
-costs roughly eight renders — so a single-photograph invocation is mostly overhead. Taking many
-identifiers at once is what lets one boot serve a batch. The default is one because the cheap option
-should be what happens when nothing is asked for.
-
-#### Scenario: several photographs render in one invocation
-- **Key:** `cli:generate-signature:accepts-many-identifiers`
-- **Layers:** unit
-- **WHEN** several run identifiers are given
-- **THEN** all of them are prepared and rendered in one invocation
-- **AND** the endpoint is acquired once
-
-#### Scenario: the count defaults to one
-- **Key:** `cli:generate-signature:count-defaults-to-one`
-- **Layers:** unit
-- **WHEN** no count and no seed is given
-- **THEN** one render is produced per photograph per approved flow
-- **AND** its seed is drawn rather than fixed
-
-#### Scenario: a count and explicit seeds cannot be combined
-- **Key:** `cli:generate-signature:count-and-seed-are-exclusive`
-- **Layers:** unit
-- **WHEN** both a count and one or more seeds are given
-- **THEN** the invocation is refused at parse time
-- **AND** the message states that the two are alternatives
+## MODIFIED Requirements
 
 ### Requirement: A new artifact version is requested explicitly
 
@@ -128,69 +42,6 @@ prose and no tag list, and `tag`'s writes the next version of both tag lists and
 - **WHEN** `tag` is given the flag for a run that holds prose and both tag lists
 - **THEN** the next version of each tag list is written
 - **AND** the prose gains no version
-
-### Requirement: Re-running every command is the whole of resume
-
-The system SHALL make running the pipeline's commands a second time, with the same arguments, change
-no byte of the run directory and make no external call.
-
-There is no state machine, so there is nothing to corrupt and nothing to repair. A crashed process, a
-closed laptop and a week-long pause are the same event, and the answer to all three is the same
-invocation. This is also the only assertion that can prove the state model works, and it needs no GPU
-and no network.
-
-#### Scenario: a second full pass changes nothing and calls nothing
-- **Key:** `cli:resume:second-pass-is-inert`
-- **Layers:** unit
-- **WHEN** every pipeline command is run against a complete run, and then run again
-- **THEN** not one byte of the run directory differs
-- **AND** not one external call is made
-
-### Requirement: Inspection prints the run directory with its provenance
-
-The system SHALL provide a command that prints a run's artifacts, which version is active for each
-stage, and what produced each one.
-
-A filename carries only what resume decides on, which leaves a directory that is precise and unreadable.
-This command is what a person reads instead — and it is also the answer to "where is this run", which is
-why no progress file is needed before something other than a human is watching.
-
-#### Scenario: inspection names the active version for each stage
-- **Key:** `cli:show:active-version-is-marked`
-- **Layers:** unit
-- **WHEN** a run is inspected
-- **THEN** each stage's versions are listed and the active one is marked
-- **AND** approval is shown where the concept applies
-
-#### Scenario: inspection reports what produced each artifact
-- **Key:** `cli:show:producers-are-reported`
-- **Layers:** unit
-- **WHEN** a run is inspected
-- **THEN** each artifact's producer is shown
-- **AND** artifacts produced by different implementations are distinguishable in the output
-
-### Requirement: Every refusal names the action that would resolve it
-
-The system SHALL end every refusal with the action the operator can take, and SHALL NOT name an action
-this build cannot perform.
-
-This generalises the posture the evaluator already takes for a missing optional dependency: the failure
-states the command that fixes it. A refusal that names a remedy the build does not have is worse than
-one that names none, because it sends the operator looking for something that is not there.
-
-#### Scenario: a refusal states a remedy
-- **Key:** `cli:refusals:refusal-names-the-remedy`
-- **Layers:** unit
-- **WHEN** any pipeline command refuses
-- **THEN** the message names the action that would resolve it
-- **AND** that action is available in this build
-
-#### Scenario: a refusal exits with a failure status
-- **Key:** `cli:refusals:refusal-exits-non-zero`
-- **Layers:** unit
-- **WHEN** any pipeline command refuses
-- **THEN** the process exits with a failure status
-- **AND** the reason is written to the error stream
 
 ### Requirement: Every stage verb requires the flows it acts on, and takes more than one
 
@@ -251,40 +102,17 @@ typed, rather than at a screen that half-works.
 - **THEN** the invocation is refused
 - **AND** the message states that the surface serves one flow at a time
 
-### Requirement: A flow manifest is refused at load when its declarations do not resolve
+## REMOVED Requirements
 
-The system SHALL refuse a flow manifest that names a node role whose id is absent from that flow's own
-graph, and SHALL refuse one that omits a dial the roles it declares require. Both refusals SHALL happen
-at load, before any endpoint is contacted and before any input is transferred.
+### Requirement: Every per-flow seam is resolved per flow, on the model that flow names
 
-A manifest is validated at load or it is validated by a render. The second costs a rented GPU and an
-uploaded photograph to discover a typo, and it fails as a bare lookup error rather than a refusal — so
-nothing collects it, no failure record is written, and the rest of the batch dies with it. Refusing at
-load moves the same discovery into a test run.
+**Reason**: Its scenario said a seam this build pins resolves for every flow; a flow now declares whether
+it needs the tagger, and the local tagger resolves only for a flow that does. The requirement that replaces
+it keeps the per-flow resolution, the uncomposed wiring's refusal and the two-models rule unchanged.
 
-**The dial check is conditional on the roles a flow declares, not on a fixed list.** Flows differ in what
-they render: one that declares no identity leg legitimately declares none of that leg's dials, and a flat
-list would refuse it for being what it is. What must hold is narrower and true of every flow — that every
-dial the declared roles read is present.
+**Migration**: None for either tracked flow — both declare the tagger.
 
-#### Scenario: a role naming a node the graph does not carry is refused
-- **Key:** `cli:manifest:a-dangling-node-id-is-refused-at-load`
-- **Layers:** unit
-- **WHEN** a flow manifest names a node role whose id is absent from that flow's graph
-- **THEN** loading it is refused naming the role and the id
-- **AND** no endpoint is contacted and no input is transferred
-
-#### Scenario: every role a tracked flow names resolves in its own graph
-- **Key:** `cli:manifest:every-tracked-role-resolves`
-- **Layers:** unit
-- **WHEN** each tracked flow is loaded
-- **THEN** every node id its roles name is present in that flow's graph
-
-#### Scenario: every dial a tracked flow declares is one its roles read
-- **Key:** `cli:manifest:every-tracked-dial-is-read`
-- **Layers:** unit
-- **WHEN** each tracked flow is loaded
-- **THEN** every dial the roles it declares require is present in its manifest
+## ADDED Requirements
 
 ### Requirement: Every per-flow seam is resolved per flow, on the model that flow names, for a flow that declares its stage
 

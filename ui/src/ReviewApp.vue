@@ -454,6 +454,7 @@ watch(batch.current, (id) => {
         :height="showing.height"
         :photo="photoUrl(showing.id)"
         :caption="sheet.detail.value?.caption ?? null"
+        :caption-command="sheet.detail.value?.caption_command ?? null"
         :wd14="sheet.detail.value?.wd14 ?? null"
         :tags="sheet.detail.value?.tags ?? null"
         :loading="sheet.loading.value"

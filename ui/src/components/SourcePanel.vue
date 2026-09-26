@@ -15,9 +15,10 @@ const props = defineProps<{
   height: number
   photo: string
   caption: string | null
+  captionCommand: string | null
   /* Both null where the artifact is absent, and an absent list draws nothing --
      no panel, no message. Three ways it is legitimately missing (a run
-     captioned before v0.20, a flow with no hosted block, a failed tagger) and
+     captioned before v0.20, a flow that declares no tagger, a failed tagger) and
      none of them may interrupt a review; a line explaining an absence the
      operator caused is chrome on the busiest pane in the surface
      (design.md D20). */
@@ -76,7 +77,7 @@ defineExpose({
       :ratio="`${width} / ${height}`"
       @open="$emit('open')"
     />
-    <CaptionPanel :prose="caption" :loading="loading" />
+    <CaptionPanel :prose="caption" :command="captionCommand" :loading="loading" />
     <section v-if="scored.length" class="caption">
       <div class="source__head">
         <span class="kicker">scored tags</span>

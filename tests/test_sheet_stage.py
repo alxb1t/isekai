@@ -43,6 +43,20 @@ def _body(path: Path | None) -> Sheet:
     return read(path, SHEET_FILE)
 
 
+def _trap_reads(
+    monkeypatch: pytest.MonkeyPatch, forbidden: Callable[[Path], bool], what: str
+) -> None:
+    """Make any `read_text` of a `forbidden` path fail the test, naming `what`."""
+    original = Path.read_text
+
+    def guarded(self: Path, *args: object, **kwargs: object) -> str:
+        if forbidden(self):
+            raise AssertionError(f"{what} was read")
+        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
+
+    monkeypatch.setattr(Path, "read_text", guarded)
+
+
 @pytest.fixture
 def run(tmp_path: Path) -> Run:
     """Return a run whose photograph has already been read into prose."""
@@ -152,7 +166,7 @@ def test_a_tag_list_missing_a_key_is_refused_naming_it(
 
     message = str(refused.value)
     assert message.startswith("001.json: ") and named in message
-    assert f"`python -m isekai caption --flow {FLOW} --new-version {run.id}`" in message
+    assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
     assert versions(run.directory(FLOW, "sheets")) == []
 
 
@@ -322,14 +336,7 @@ def test_the_stage_reads_the_tag_list_and_never_opens_the_caption(
     """
     caption_path = run.directory(FLOW, CAPTIONS) / "001.json"
     assert caption_path.exists()
-    original = Path.read_text
-
-    def guarded(self: Path, *args: object, **kwargs: object) -> str:
-        if self == caption_path:
-            raise AssertionError("the caption was read")
-        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
-
-    monkeypatch.setattr(Path, "read_text", guarded)
+    _trap_reads(monkeypatch, lambda path: path == caption_path, "the caption")
 
     written = sheet(
         run, schema, vocabulary, tags=[DanbooruTag("brown_hair"), DanbooruTag("smile")]
@@ -348,8 +355,40 @@ def test_an_absent_tag_list_is_refused_naming_the_verb_that_writes_it(
         sheet(run, schema, vocabulary, tags=None)
 
     message = str(refused.value)
-    assert "python -m isekai caption" in message
+    assert f"python -m isekai tag --flow {FLOW} {run.id}" in message
     assert versions(run.path / FLOW / "sheets") == []
+
+
+@pytest.mark.spec("sheet:output:a-flow-without-a-tagger-gets-empty-fields")
+def test_a_flow_without_a_tagger_gets_every_field_empty_and_no_list_is_read(
+    run: Run, schema: Schema, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tag list sits beside it and is booby-trapped, so reading it fails by name."""
+    listed = write_wd14(run)
+    _trap_reads(monkeypatch, lambda path: path.parent == listed.parent, "the tag list")
+
+    written = sheet(run, schema, vocabulary, tags=None, tagged=False)
+
+    body = _body(written)
+    assert body["fields"] == {name: [] for name in schema.names}
+    assert body["producer"] == {
+        "implementation": "empty",
+        "models": [],
+        "pinned": True,
+        "artifacts": {},
+    }
+    assert "from" not in body["producer"]
+
+
+@pytest.mark.spec_exempt("twin: the same run, tagged, reads the trapped list")
+def test_the_same_run_tagged_reads_the_list_the_twin_leaves_unread(
+    run: Run, schema: Schema, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listed = write_wd14(run)
+    _trap_reads(monkeypatch, lambda path: path.parent == listed.parent, "the tag list")
+
+    with pytest.raises(AssertionError, match="the tag list was read"):
+        sheet(run, schema, vocabulary, tags=None, tagged=True)
 
 
 @pytest.mark.spec("run-directory:provenance:producer-records-its-source")

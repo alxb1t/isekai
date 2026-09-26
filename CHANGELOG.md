@@ -25,6 +25,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-09-26
+
+### Changed
+
+- **BREAKING — a flow's manifest declares `"tagger": true | false`** (`0032` design D1): a required
+  boolean, refused naming the key when absent or not a boolean, and `MANIFEST_VERSION` moves 3 → 4.
+- **Both flows re-pinned in place, format only**: each manifest gains `"tagger": true` and version 4, and
+  each graph's `filename_prefix` becomes its flow's id, so the image is unchanged and `flow_graph_sha256`
+  moves. `summon-anime-wai` → `039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b`;
+  `conjure-anime-wai` → `f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f`.
+- **BREAKING — `caption` writes the prose only; a new `tag` verb writes both tag lists** (`0032` design
+  D2): WD14 first, then the JoyCaption tags, each refusal collected on its own, so neither tagger's failure
+  costs the other its list and the sheet's input no longer waits on Ollama. `tag` refuses a flow whose
+  manifest declares `"tagger": false`; `--new-version` re-produces only what its own verb writes; the
+  sheet's remedies name `tag`.
+- **A flow that declares no tagger gets a sheet with every field empty** (`0032` design D3): `sheet()` takes
+  a required `tagged` keyword from the composition root, reads no list when it is false, and records an
+  `empty` producer with no model and no `from`. A `sheet-empty` golden pins its bytes.
+- **The review surface shows a missing caption with the command that writes it** (`0032` design D4): the
+  input payload carries `caption_command`, built by the server, and the caption panel shows *no caption*
+  and the command. The approval-race test's waits are bounded and asserted, so a regression fails rather
+  than hangs.
+- **The record** (`0032` design D5): D1 is now *Stage ① is two independent verbs*, and D31 records that a
+  flow declares whether it is tagged. The data flow, the READMEs and `CLAUDE.md` draw ① as `tag` and
+  `caption` side by side; the manifest's key lists name `tagger`; `cli.py`'s docstring and the `cli` and
+  `sheet` spec preambles name the verbs rather than count them.
+- **Accepted on one synthetic portrait** (`0032` phase 6, `acceptance.md`): both flows run `tag`, `caption`,
+  `sheet` and `ui`; with Ollama stopped, `tag` writes WD14 and refuses only the JoyCaption lists; `sheet`
+  before `tag` refuses naming `tag`. The known native abort at exit is confirmed to kill the process (exit
+  134, after every write); it is recorded, not fixed.
+
 ## [0.22.9] - 2026-09-26
 
 ### Fixed

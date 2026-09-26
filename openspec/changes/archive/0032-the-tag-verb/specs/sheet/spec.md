@@ -1,78 +1,15 @@
-# Capability: `sheet`
+## REMOVED Requirements
 
-## Purpose
+### Requirement: The stage takes a tag list, a schema, a vocabulary and a field map, and returns fields
 
-Stage ② of the pipeline: filling a sheet's fields with canonical vocabulary tags from the WD14 tag list,
-through the field map, against the schema inside the flow that asked — or leaving them empty for a flow
-that declares no tagger — and knowing nothing about flows beyond the one directory it reads and writes
-and whether a tag list is expected.
+**Reason**: A flow may now declare that it needs no tagger, and such a flow has no tag list; the title said
+every sheet takes one. The requirement that replaces it keeps every rule this one held for a flow that
+declares the tagger, and adds the empty fill for a flow that declares none.
 
-**Source:** `isekai/pipeline/sheet.py`, `isekai/shared/fields.py`, `isekai/shared/vocabulary.py`,
-`isekai/shared/field_map.py`, `isekai/foundation/flow.py`, `flows/summon-anime-wai/schema.json` ·
-**Tests:** `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`,
-`tests/test_vocabulary.py`
+**Migration**: None for either tracked flow — both declare the tagger, so their fill is unchanged. The
+refusal for an absent tag list names `tag` rather than `caption`.
 
-## Requirements
-
-### Requirement: A schema is a declared field list inside its flow
-
-The system SHALL read the field list from a schema document inside the flow's own directory that
-declares, in order, each field's name, whether it is scored, and the vocabulary suffix convention that
-applies to it. The schema SHALL NOT declare a version and SHALL NOT declare a vocabulary.
-
-The schema is data rather than code so that it can be checked without executing anything, and so that a
-second schema — a photoreal flow's, say — is a file rather than a branch. It carries no version because
-inside a frozen flow directory a version protects nothing: the flow's digest already proves the field
-list byte for byte, and a changed field list is a new flow rather than a new schema version. That is
-also what makes a schema change measurable, because the old flow and the new one can be rendered over
-one cohort and compared. It declares no vocabulary because the flow does: where two things could own a
-declaration the flow owns it, since the flow is the unit that is frozen, selected, rendered and
-compared, and the vocabulary is provisioned like the models are.
-
-#### Scenario: field order in the schema is the order in the prompt
-- **Key:** `sheet:schema:field-order-is-declared-once`
-- **Layers:** unit
-- **WHEN** a prompt is assembled from a sheet
-- **THEN** the fields appear in the order the schema declares
-- **AND** no second ordering is defined anywhere else
-
-#### Scenario: field names are usable as structured-output keys
-- **Key:** `sheet:schema:field-names-are-identifier-safe`
-- **Layers:** unit
-- **WHEN** a schema is loaded
-- **THEN** every field name is accepted as a JSON schema property key without transformation
-- **AND** the name the instructions use is the same name the structure enforces
-
-#### Scenario: the schema is read from the flow's own directory
-- **Key:** `sheet:schema:schema-is-read-from-the-flow`
-- **Layers:** unit
-- **WHEN** a flow's schema is loaded
-- **THEN** it is read from that flow's directory
-- **AND** no schema is read from outside a flow directory
-
-#### Scenario: the vocabulary is declared once, by the flow
-- **Key:** `sheet:schema:vocabulary-is-declared-by-the-flow`
-- **Layers:** unit
-- **WHEN** a schema document is loaded
-- **THEN** it declares no vocabulary
-- **AND** the vocabulary the fill is held against is the one the flow declares
-
-### Requirement: Every tag in a sheet is in the vocabulary
-
-The system SHALL emit no tag that is not in the vocabulary.
-
-An invented tag that merely looks canonical is worse than an obviously invalid one, because it passes every
-later check on its way into the prompt. **After this change the property holds by construction rather than
-by filtering**: the tagger's output layer is the vocabulary, and the router emits only tags it was given.
-The requirement stays because it is what a later reader checks a fill against, and because it is the
-invariant any future producer would have to satisfy to be allowed near a sheet.
-
-#### Scenario: every emitted tag is in the vocabulary
-- **Key:** `sheet:purity:no-tag-outside-the-vocabulary`
-- **Layers:** unit
-- **WHEN** a sheet is written
-- **THEN** every tag in every field is present in the vocabulary
-- **AND** a tag the field map does not place contributes nothing at all
+## ADDED Requirements
 
 ### Requirement: The stage fills fields from the tag list of a flow that declares the tagger, and leaves them empty for a flow that declares none
 

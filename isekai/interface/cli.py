@@ -6,12 +6,12 @@ rule: there is one render path, and this is its entry point. Four separate scrip
 were rejected for the same reason one parser was chosen: it would multiply the
 import guard by four and give argument parsing four places to drift.
 
-**Seven verbs, and schema migration is not one of them.** Every run file kind is
-at its first version, so an upgrade command would be a dispatch table with no
-entries and its refusal would be unreachable -- nothing writes a later one
-(design.md D2).
+**Schema migration is not a verb.** Every run file kind is at its first version,
+so an upgrade command would be a dispatch table with no entries and its refusal
+would be unreachable -- nothing writes a later one (design.md D2).
 
-    caption   (1) a photograph in; prose, the WD14 tags and the hosted tags out
+    caption   (1) a photograph in, prose out
+    tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
@@ -19,10 +19,10 @@ entries and its refusal would be unreachable -- nothing writes a later one
     show          print a run's artifacts and what produced each one
     ui        (3) serve the review surface for a batch of inputs
 
-**Five of them run a stage, one inspects a run and one serves a surface.** The
-five that run a stage take `--flow` repeatably; `ui` takes exactly one, because
-the surface is one schema's fields in one order; `show` takes none, because it
-reports every flow the run already holds. `show` reads a run and decides
+**`show` inspects a run, `ui` serves a surface, and every other verb runs a
+stage.** The stage verbs take `--flow` repeatably; `ui` takes exactly one,
+because the surface is one schema's fields in one order; `show` takes none,
+because it reports every flow the run already holds. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
 so neither surface is privileged and neither goes through the other
@@ -54,7 +54,7 @@ from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import prepare, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
-from isekai.pipeline.tagging import caption_tags, caption_wd14
+from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
 from isekai.shared.vocabulary import Vocabulary
 
@@ -63,7 +63,8 @@ from isekai.shared.vocabulary import Vocabulary
 T = TypeVar("T")
 
 VERBS: tuple[tuple[str, str], ...] = (
-    ("caption", "read a photograph into prose, the WD14 tags and the hosted tags"),
+    ("caption", "read a photograph into prose"),
+    ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
@@ -168,7 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     # its briefing, its schema, its graph and its dials. "Every tracked flow" is
     # not a selection, it is the absence of one -- and at the last verb it spends
     # money, at the first it burns a paid model call.
-    for name in ("caption", "sheet", "review", "approve", "generate"):
+    for name in ("caption", "tag", "sheet", "review", "approve", "generate"):
         made[name].add_argument(
             "--flow",
             action="append",
@@ -177,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
             metavar="FLOW",
             help="a flow to act on; repeatable, and required",
         )
-    for name in ("caption", "sheet", "review"):
+    for name in ("caption", "tag", "sheet", "review"):
         made[name].add_argument(
             "--new-version",
             action="store_true",
@@ -244,7 +245,7 @@ def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
     off the path, and walks this module's module-level imports: nothing there may
     need a wheel, and `isekai.interface.ui` reaches FastAPI. A top-level import
     here would put a web framework on `python -m isekai`'s import graph and turn
-    that guard red for every verb, including the six that never serve anything.
+    that guard red for every verb, including each one that never serves anything.
     """
     from isekai.interface.ui import serve
 
@@ -311,16 +312,39 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
         if verb == "ui":
             return _ui(args, wired, targets)
         flows = _flows_for(args, wired)
+        if verb == "tag":
+            _require_tagged(flows)
     except Refusal as unselectable:
         print(f"refused: {unselectable}", file=wired.err)
         return 1
     if verb == "generate":
         refused = _generate(args, wired, targets, flows)
     else:
-        refused = across(targets, _per_item(verb, args, wired, flows))
+        # Refusals a verb collects without abandoning the photograph, reported
+        # after `across`'s the way `_generate` reports `broken`.
+        collected: list[str] = []
+        work = _per_item(verb, args, wired, flows, collected)
+        refused = across(targets, work) + collected
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
+
+
+def _require_tagged(flows: Mapping[str, Flow]) -> None:
+    """Refuse a `tag` invocation naming any flow that declares no tagger.
+
+    Before any identifier, so no flow named with it is tagged: a skip would report
+    success for a flow that wrote nothing (0032 design D2).
+    """
+    untagged = [name for name, flow in flows.items() if not flow.tagger]
+    if untagged:
+        raise Refusal(
+            "; ".join(
+                f'{name}\'s manifest declares `"tagger": false`, so `tag` has '
+                f"nothing to do for it; drop `--flow {name}` from the command"
+                for name in untagged
+            )
+        )
 
 
 def _seam(value: T | None, name: str, does: str) -> T:
@@ -340,9 +364,16 @@ def _seam(value: T | None, name: str, does: str) -> T:
 
 
 def _per_item(
-    verb: str, args: argparse.Namespace, wired: Wiring, flows: Mapping[str, Flow]
+    verb: str,
+    args: argparse.Namespace,
+    wired: Wiring,
+    flows: Mapping[str, Flow],
+    collected: list[str],
 ) -> Callable[[str], None]:
     """Return the work one identifier gets, with everything run-independent done.
+
+    `collected` takes the refusals that must not abandon the rest of a
+    photograph's work: `tag`'s, one per tagger.
 
     The flows a verb acts on are a property of the invocation, not of the
     photograph, so they are resolved once by the caller rather than re-read from
@@ -354,6 +385,7 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     opened: list[LocalTagger] = []
+    unopenable: list[Refusal] = []
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -383,8 +415,8 @@ def _per_item(
         reason and says so.
 
         One slot, because `wiring.tagger_for` takes a `Flow` and reads nothing
-        from it -- the local tagger resolves through no manifest key at all
-        (design.md D3). Keying the memo by flow would open the same graph once
+        from it -- no manifest key names the local tagger's model (design.md
+        D3). Keying the memo by flow would open the same graph once
         per flow named on one command line and hold every copy for the rest of
         the invocation. The parameter stays because the seam's shape is per flow
         and the day one of them selects a different tagger is the day this needs
@@ -393,8 +425,16 @@ def _per_item(
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
 
         def opening() -> LocalTagger:
+            # A refusal is kept as well as a success: it is the build's, not a
+            # photograph's, so the 467 MB hash is not re-run to meet it again.
+            if unopenable:
+                raise unopenable[0]
             if not opened:
-                opened.append(resolve(flow))
+                try:
+                    opened.append(resolve(flow))
+                except Refusal as refused:
+                    unopenable.append(refused)
+                    raise
             return opened[0]
 
         return opening
@@ -420,31 +460,30 @@ def _per_item(
                         new_version=new_version,
                     ),
                 )
-                # **The order decides what a refusal abandons.** `across()`
-                # catches `Refusal` per *input* rather than per stage, so the
-                # first refusal on a photograph abandons the rest of that
-                # photograph's work. Prose first; the sheet reads the WD14 list,
-                # so a prose refusal abandons that list too -- a known cost. WD14
-                # second: local and deterministic, it fails only on a missing or
-                # corrupt file, which is one operator fix and worth stopping on.
-                # The hosted tagger last, because it is the tagger with a port, a
-                # timeout and a retry budget -- so its refusal blocks nothing
-                # that would have succeeded (design.md D7).
-                _say(
-                    wired,
-                    run,
-                    "wd14",
-                    caption_wd14(run, name, tagger(flow), new_version=new_version),
-                )
+        elif verb == "tag":
+            for name, flow in flows.items():
+                opening = tagger(flow)
                 hosted = _seam(
                     wired.hosted_tagger, "hosted tagger", "tags the photograph"
                 )(flow)
-                _say(
-                    wired,
-                    run,
-                    "tags",
-                    caption_tags(run, name, hosted, new_version=new_version),
+                # Each tagger's refusal is collected on its own, so neither costs
+                # the other its list. WD14 first: it is the sheet's input and
+                # reaches no network (0032 design D2).
+                steps: tuple[Callable[[], None], ...] = (
+                    lambda: _say(
+                        wired,
+                        run,
+                        "wd14",
+                        tag_wd14(run, name, opening, new_version=new_version),
+                    ),
+                    lambda: _say(
+                        wired,
+                        run,
+                        "tags",
+                        tag_hosted(run, name, hosted, new_version=new_version),
+                    ),
                 )
+                collected.extend(across(steps, lambda step: step()))
         elif verb == "sheet":
             for name, flow in flows.items():
                 _say(
@@ -457,6 +496,7 @@ def _per_item(
                         flow.schema,
                         vocabulary(),
                         field_map(),
+                        tagged=flow.tagger,
                         new_version=new_version,
                     ),
                 )

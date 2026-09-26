@@ -398,7 +398,8 @@ somebody else is refused before anything runs rather than inspected afterwards.
 The system SHALL define a flow as a directory containing exactly the manifest and its named siblings — a
 graph, a schema and a caption briefing — all of them directly in that directory, with no sub-directory
 and no other file. The manifest SHALL declare its required inputs, the vocabulary and the models its
-render is pinned to, the model its hosted stages run, its node roles, its prompt fragments and its dials.
+render is pinned to, the model its hosted stages run, whether it needs the tagger, its node roles, its
+prompt fragments and its dials.
 The manifest SHALL NOT name any of its sibling files, SHALL declare the version of its own format, and
 SHALL contain no computed or conditional value.
 
@@ -406,7 +407,8 @@ A manifest that computes nothing is fully checkable without executing anything, 
 broken flow be caught by the test suite rather than after a pod boot and several minutes. Holding the
 schema and the briefing inside the directory is what makes a flow the complete specification of how an
 input becomes an image: the briefing decides what enters the caption and the sheet decides the render, so
-a changed briefing is a changed image and must be a new flow. The files sit directly in the directory
+a changed briefing is a changed image, which the freeze surfaces: a new flow when the old one is still
+wanted, a recorded re-pin when it is abandoned. The files sit directly in the directory
 rather than in sub-directories because the digest that freezes a flow covers regular files only; a nested
 layout would leave the schema and the briefing outside the freeze while the gate stayed green. A key that
 can only ever hold one value is not a declaration, which is why the manifest names no filenames.
@@ -437,8 +439,8 @@ the two are recorded together here so a later reader does not mistake one for a 
 - **Key:** `image-generation:manifest:flow-declares-its-inputs`
 - **Layers:** unit
 - **WHEN** a flow manifest is loaded
-- **THEN** it names its required inputs, its vocabulary, its models, its node roles and every dial the
-  render uses
+- **THEN** it names its required inputs, its vocabulary, its models, whether it needs the tagger, its node
+  roles and every dial the render uses
 - **AND** no value in it is derived at load time
 
 #### Scenario: the manifest declares the version of its own format
@@ -592,3 +594,43 @@ means repairing it is not enough.
 - **WHEN** the photograph's upload to the endpoint fails
 - **THEN** a failure record is written for that render
 - **AND** a later invocation of that stage refuses on the record, naming it, until the record is deleted
+
+### Requirement: Every flow declares whether it needs the tagger
+
+The system SHALL require every flow manifest to declare, in one top-level key, whether the flow needs the
+tagger, as a boolean. It SHALL refuse a manifest that declares none, and SHALL refuse one whose value is
+not a boolean, naming the key in both cases. It SHALL derive no part of that value at load time.
+
+**Flows that need no tag list are coming, and whether a flow is tagged is a thing flows now differ in** —
+which is what the manifest declares. The tag verb reads it to refuse a flow that declares no tagger, and
+the sheet stage is told it to fill such a flow's sheet empty rather than refuse.
+
+**A boolean and not a list of taggers.** The tag verb runs both taggers together, so a list would declare a
+choice no flow makes. **A value that is not a boolean is refused rather than coerced**: a manifest whose
+`"false"` read as true would tag a flow that said it needs none.
+
+**Adding the key moves the manifest's format version**, because every key is required and the loader
+reads one version. Both tracked flows declare that they need the tagger and are re-pinned in place: their
+configuration did not change, only the format that states it, and a new identifier would claim a variant
+that does not exist.
+
+#### Scenario: a flow declares whether it needs the tagger
+- **Key:** `image-generation:tagger:flow-declares-whether-it-is-tagged`
+- **Layers:** unit
+- **WHEN** a flow manifest is loaded
+- **THEN** the loaded flow carries the value its manifest declares
+- **AND** no part of that value is derived at load time
+
+#### Scenario: a manifest declaring nothing about the tagger is refused
+- **Key:** `image-generation:tagger:an-absent-declaration-is-refused`
+- **Layers:** unit
+- **WHEN** a flow manifest does not declare whether it needs the tagger
+- **THEN** loading it is refused naming the key
+- **AND** the refusal does not require the flow to be executed
+
+#### Scenario: a declaration that is not a boolean is refused
+- **Key:** `image-generation:tagger:a-non-boolean-declaration-is-refused`
+- **Layers:** unit
+- **WHEN** a flow manifest declares the tagger with a string, a number or a null
+- **THEN** loading it is refused naming the key
+- **AND** the value is not coerced into a boolean

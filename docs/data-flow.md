@@ -14,10 +14,10 @@ its neighbours.
 ```
   photograph
       │
-      ▼
-  ① caption ──▶ captions/  prose, for a human to read
-              ──▶ wd14/      scored tags, from a local ONNX session
-              ──▶ tags/      raw tags, from the hosted model
+      ├──▶ ① tag ──────▶ wd14/      scored tags, from a local ONNX session
+      │               ──▶ tags/      raw tags, from the hosted model
+      │
+      ├──▶ ① caption ──▶ captions/  prose, for a human to read
       │
       ▼
   ② sheet  ── reads wd14/ ──▶ sheets/   the flow's fields, filled
@@ -44,25 +44,27 @@ fixed order and a second flow would be a second page.
 
 ## What a reader needs first
 
-**`caption` writes prose, the local tag list and the hosted tag list in one
-invocation, in that order.** The batch loop catches a refusal per *input*, not per
-stage, so whatever fails takes the artifacts behind it in that input with it.
+**① is two independent verbs.** `tag` writes the local tag list, then the hosted
+one; `caption` writes the prose. Neither reads the other's output, and each
+writes only its own artifacts, so `--new-version` on one re-produces nothing the
+other wrote ([D1](decisions.md#d1--stage--is-two-independent-verbs)).
 
-The order was chosen to isolate failures when the sheet was built from prose. The
-sheet reads the WD14 list now, so a prose refusal — Ollama unreachable — stops the
-sheet's input too ([D1](decisions.md#d1--stage--is-one-verb)).
-
-The local WD14 tagger goes second because it is deterministic and fails only on a
-missing or corrupt file. The hosted tagger goes last because it is the tagger with
-a port, a timeout and a retry budget. It is still a single verb: there is no
-`isekai tags`.
+Inside `tag`, each tagger's refusal is collected on its own: a hosted failure
+leaves the WD14 list written, and a local failure leaves the hosted list written.
+WD14 goes first because it is the sheet's input and reaches no network. An
+unreachable Ollama costs the prose and the hosted list, never the sheet's input.
 
 **The sheet is built from the WD14 list, not from the prose.** The prose is a
 reading aid with no machine consumer downstream. Which is why a missing *hosted*
-tag list is an absent aid and never a refusal — its own call failed after the
-prose and the WD14 list were written — while a missing *local* tag list is a
-refusal naming `caption`. An all-empty sheet is legal and therefore silent, and
-that is the failure mode this arrangement keeps paying for.
+tag list is an absent aid and never a refusal, while a missing *local* tag list is
+a refusal naming `tag`. An all-empty sheet is legal and therefore silent, which is
+why that refusal exists.
+
+**A flow that declares `"tagger": false` is the exception.** `tag` refuses it,
+and `sheet` writes its sheet with every field empty, for a person to fill on the
+review surface ([D31](decisions.md#d31--a-flow-declares-whether-it-is-tagged)).
+A caption skipped altogether reaches review as *no caption*, with the `caption`
+command that writes it.
 
 Neither tag list is narrowed on the way out: no canonicalisation, no vocabulary
 filtering, no re-ordering but by confidence. Narrowing is stage ②'s job, and
@@ -140,5 +142,5 @@ Everything before `generate` is free and local. Prompt assembly happens for the
 whole batch *before* an endpoint is acquired, so a malformed sheet costs nothing
 rather than a boot. Only the render reaches the rented GPU.
 
-`caption` reaches a model too, but a local one: Ollama over HTTP to this machine.
-It costs a warm model and no money.
+`caption` and `tag` reach a model too, but a local one: Ollama over HTTP to this
+machine. It costs a warm model and no money.

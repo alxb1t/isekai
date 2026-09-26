@@ -13,7 +13,11 @@ import { sentencesOf, wordsOf } from '../caption'
    v0.20 delta: the block boundary moves from the paragraph to the sentence, and
    nothing else about this panel changes. No new component, colour, spacing or
    type step (design.md D21). */
-const props = defineProps<{ prose: string | null; loading?: boolean }>()
+const props = defineProps<{
+  prose: string | null
+  command: string | null
+  loading?: boolean
+}>()
 
 /* One sentence to a block, not one paragraph. Reading a caption to correct a
    sheet is not reading it for sense: the operator looks for one attribute at a
@@ -24,13 +28,19 @@ const props = defineProps<{ prose: string | null; loading?: boolean }>()
 const sentences = computed(() => sentencesOf(props.prose))
 
 const words = computed(() => wordsOf(props.prose))
+
+/* A missing caption is the one absence a skipped verb brings to review, so it
+   says so and names the command that writes it (0032 design D4). */
+const missing = computed(() => !props.loading && props.prose === null)
 </script>
 
 <template>
   <section class="caption">
     <div class="source__head">
       <span class="kicker">② caption</span>
-      <span class="source__meta mono">{{ loading ? 'reading…' : `${words} words` }}</span>
+      <span class="source__meta mono">
+        {{ loading ? 'reading…' : missing ? 'no caption' : `${words} words` }}
+      </span>
     </div>
     <div class="caption__body">
       <template v-if="loading">
@@ -43,6 +53,7 @@ const words = computed(() => wordsOf(props.prose))
           reading…
         </span>
       </template>
+      <p v-else-if="missing && command" class="mono">{{ command }}</p>
       <p v-for="(sentence, index) in sentences" v-else :key="index">{{ sentence }}</p>
     </div>
   </section>

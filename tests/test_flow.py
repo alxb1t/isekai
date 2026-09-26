@@ -48,10 +48,10 @@ from isekai.foundation.refusal import Refusal
 # explains how to evade itself is one that gets evaded.
 PINNED: dict[str, str] = {
     "conjure-anime-wai": (
-        "5de6632e33a83377347f887663213eb69733636edb3a380372e00ab3a9171f61"
+        "f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f"
     ),
     "summon-anime-wai": (
-        "3ad0f323d0f4a826cd06a0c37b47fbcceceaa4e8c6074a1153529b5f2ee73e7f"
+        "039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b"
     ),
 }
 
@@ -862,6 +862,60 @@ def test_every_key_this_build_reads_is_required() -> None:
     tuple -- so a misspelling can no longer be indistinguishable from a
     deliberate omission, because there are no deliberate omissions.
     """
-    assert MANIFEST_VERSION == 3
+    assert MANIFEST_VERSION == 4
     assert KNOWN == REQUIRED
     assert "model" in REQUIRED
+    assert "tagger" in REQUIRED
+
+
+# --- the tagger key -----------------------------------------------------------
+
+
+@pytest.mark.spec("image-generation:tagger:flow-declares-whether-it-is-tagged")
+@pytest.mark.parametrize("value", [True, False])
+def test_a_flow_is_loaded_with_the_tagger_value_it_declares(
+    tmp_path: Path, value: bool
+) -> None:
+    root = _scratch(tmp_path, tagger=value)
+
+    assert load_flow("summon-anime-wai", root).tagger is value
+
+
+@pytest.mark.spec("image-generation:tagger:flow-declares-whether-it-is-tagged")
+def test_the_tracked_flows_each_declare_the_tagger() -> None:
+    for name in tracked_flows():
+        document = json.loads((load_flow(name).path / MANIFEST_NAME).read_text())
+        assert document["tagger"] is True
+        assert load_flow(name).tagger is True
+
+
+@pytest.mark.spec("image-generation:tagger:an-absent-declaration-is-refused")
+def test_a_manifest_declaring_nothing_about_the_tagger_is_refused_naming_the_key(
+    tmp_path: Path,
+) -> None:
+    root = _scratch(tmp_path)
+    manifest = root / "summon-anime-wai" / MANIFEST_NAME
+    document = json.loads(manifest.read_text())
+    del document["tagger"]
+    manifest.write_text(json.dumps(document))
+    # Gone, so nothing past the manifest can have been read.
+    (root / "summon-anime-wai" / GRAPH_NAME).unlink()
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+
+    assert "tagger" in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:tagger:a-non-boolean-declaration-is-refused")
+@pytest.mark.parametrize("value", ["false", "true", 0, 1, None])
+def test_a_tagger_that_is_not_a_boolean_is_refused_naming_the_key(
+    tmp_path: Path, value: object
+) -> None:
+    root = _scratch(tmp_path, tagger=value)
+
+    with pytest.raises(Refusal) as refused:
+        load_flow("summon-anime-wai", root)
+
+    assert "`tagger`" in str(refused.value)
+    assert repr(value) in str(refused.value)

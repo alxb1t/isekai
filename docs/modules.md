@@ -60,7 +60,7 @@ Rules the graph is holding rather than describing:
 
 - **The entry point imports no third-party package at module scope.** This rule
   used to read *the runtime is stdlib-only*, backed by `dependencies = []`, and
-  v0.22.3 retired that: the local tagger runs on every `caption` for every flow,
+  v0.22.3 retired that: the local tagger runs on every `tag` for every tagged flow,
   so `uv sync` — which makes the environment match exactly what it is told and
   removes extras it is not told about — was stripping it on every gate run.
   `onnxruntime`, `numpy`, `Pillow`, `fastapi` and `uvicorn` are declared

@@ -196,8 +196,8 @@ def ask(
             # urllib wraps what the *send* raised, so this is a connection that
             # was never made: no host, refused port, unresolvable name.
             raise Refusal(
-                f"nothing is listening at {HOST}, and stages 1 and 2 of this flow "
-                "are the two that need it; start the runtime (`ollama serve`), "
+                f"nothing is listening at {HOST}, and the reader and the "
+                "JoyCaption tagger need it; start the runtime (`ollama serve`), "
                 "then run this command again"
             ) from failed
         # Everything left reached a host and lost it. Transient rather than a

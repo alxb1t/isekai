@@ -268,6 +268,12 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "width": held.width,
             "height": held.height,
             "caption": str(read(caption, CAPTION_FILE)["prose"]) if caption else None,
+            # The one artifact a skipped verb leaves missing on a page under
+            # review, so the page names what writes it. Built here: the browser
+            # never spells a command (0032 design D4).
+            "caption_command": None
+            if caption
+            else f"python -m isekai caption --flow {batch.flow.id} {held.run.id}",
             # Both lists ride on this payload rather than on endpoints of their
             # own, and both are `null` where the artifact is absent -- which is
             # three legitimate states, none of them a failure (design.md D20).

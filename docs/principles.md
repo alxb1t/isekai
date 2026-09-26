@@ -145,8 +145,8 @@ costs nothing instead of a boot.
 ### Configuration is declared, never computed, and declared once
 
 **Configuration is declared, never computed, and declared once.** A flow's manifest declares everything
-that can differ between flows — nodes by role, dials, prompts, models — and the code finds nothing by
-searching or guessing.
+that can differ between flows — nodes by role, dials, prompts, models, whether it is tagged — and the
+code finds nothing by searching or guessing.
 
 What cannot differ between flows is a constant in code that says it is not a manifest key. A fact
 written twice is written once, or a test holds the two copies equal. **A derived file is such a copy:
