@@ -490,6 +490,7 @@ def _per_item(
                         flow.schema,
                         vocabulary(),
                         field_map(),
+                        tagged=flow.tagger,
                         new_version=new_version,
                     ),
                 )

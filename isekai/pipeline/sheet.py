@@ -2,10 +2,10 @@
 
 A sheet is fields and nothing else. It carries no assembled prompt -- storing one
 creates a footgun where a human edits the prompt block and a rebuild silently
-overwrites it. **The fill itself is told nothing about flows**: it is handed the
-tag list, the schema, the vocabulary and the table, so the same code serves every
-flow without learning that flows exist, and the flow decides only which directory
-is read and written.
+overwrites it. **The fill itself is told nothing about flows** but whether a tag
+list is expected: it is handed the tag list, the schema, the vocabulary and the
+table, so the same code serves every flow without learning that flows exist, and
+the flow decides only which directory is read and written.
 
 **Nothing here is a model and nothing here is a seam.** Two sorter
 implementations used to live in this file behind a Protocol, and the argument for
@@ -45,6 +45,7 @@ from isekai.foundation.artifacts import (
     WD14_FILE,
     DanbooruTag,
     Sheet,
+    SheetProducer,
     read,
     require,
     write,
@@ -78,6 +79,10 @@ STAGE = "sheet"
 # another.
 TAGGER = "wd14"
 
+# What the sheet records as having filled it when the flow declares no tagger:
+# no tag list and no model, so nothing unpinned shaped it (0032 design D3).
+EMPTY = "empty"
+
 
 def sheet(
     run: Run,
@@ -86,22 +91,29 @@ def sheet(
     vocabulary: Vocabulary,
     field_map: FieldMap,
     *,
+    tagged: bool,
     new_version: bool = False,
 ) -> Path | None:
     """Route this flow's tag list into a sheet, under that flow.
 
-    **The fill is told nothing about flows and reaches nothing at all.** It is
-    handed a tag list, the schema, the vocabulary and the table, so the same code
+    `tagged` says whether the flow declares the tagger, and has no default
+    because a default decides silently. Untagged, no list is read and every
+    field is written empty for the person to fill (0032 design D3).
+
+    **The fill is told nothing about flows beyond `tagged`, and reaches nothing
+    at all.** It is handed a tag list, the schema, the vocabulary and the table,
+    so the same code
     serves every flow without learning that flows exist; `flow` decides only which
     directory is read and written. A flow shares nothing, so the tag list read
     here is the one produced under this flow's own directory (design.md D5).
 
-    **An absent tag list is a refusal, and that is the one rule this version
-    narrows.** A sheet with every field empty is legal and therefore silent, so
-    writing one when the tagger never ran would hide the only thing the operator
-    needs told. The rule that a missing tag artifact is an absent aid still holds
-    for the *hosted* tagger, which contributes nothing to a sheet; it cannot hold
-    for the local one the sheet is filled from (design.md D21).
+    **For a tagged flow, an absent tag list is a refusal, and that is the one
+    rule this version narrows.** A sheet with every field empty is legal and
+    therefore silent, so writing one when the tagger never ran would hide the
+    only thing the operator needs told. The rule that a missing tag artifact is
+    an absent aid still holds for the *hosted* tagger, which contributes nothing
+    to a sheet; it cannot hold for the local one the sheet is filled from
+    (design.md D21).
 
     Returns the artifact's path, or None when this flow already had a sheet.
     """
@@ -109,6 +121,41 @@ def sheet(
     if latest(directory) is not None and not new_version:
         return None
 
+    if not tagged:
+        # No tagger was going to run, so an empty sheet hides nothing.
+        check_budget(STAGE, directory, next_version(directory), run)
+        fields = route((), field_map, schema)
+        made_by: SheetProducer = {
+            "implementation": EMPTY,
+            "models": [],
+            "pinned": True,
+            "artifacts": {},
+        }
+    else:
+        fields, made_by = _from_tag_list(run, flow, directory, schema, field_map)
+    validate(fields, schema, vocabulary)
+
+    path = directory / artifact_name(next_version(directory))
+    artifact: Sheet = {
+        "schema": SHEET_FILE.schema,
+        "producer": made_by,
+        "schema_document": {"name": schema.name},
+        "vocabulary": vocabulary_identity(vocabulary),
+        "field_map": field_map_identity(field_map),
+        "fields": fields,
+    }
+    write(path, SHEET_FILE, artifact)
+    return path
+
+
+def _from_tag_list(
+    run: Run, flow: str, directory: Path, schema: Schema, field_map: FieldMap
+) -> tuple[dict[str, list[str]], SheetProducer]:
+    """Return the fields routed from this flow's tag list, and who filled them.
+
+    Refuses naming `tag` when the list is absent, and names the fix when it is
+    malformed; the budget is checked between the two, as for any stage.
+    """
     tagged = run.directory(flow, WD14)
     source = latest(tagged)
     if source is None:
@@ -138,25 +185,13 @@ def sheet(
             )
     # `str()`: a hand-edited list's non-string tag routes nowhere, never raises.
     fields = route((DanbooruTag(str(one["tag"])) for one in tags), field_map, schema)
-    validate(fields, schema, vocabulary)
-
-    path = directory / artifact_name(next_version(directory))
-    artifact: Sheet = {
-        "schema": SHEET_FILE.schema,
-        "producer": {
-            # The producer of the *tags* is the producer of the sheet now, so
-            # the pin it was verified against travels across rather than being
-            # re-derived: these are the digests that session actually opened.
-            "implementation": TAGGER,
-            "models": list(producer["models"]),
-            "pinned": producer["pinned"],
-            "artifacts": dict(producer["artifacts"]),
-            "from": source,
-        },
-        "schema_document": {"name": schema.name},
-        "vocabulary": vocabulary_identity(vocabulary),
-        "field_map": field_map_identity(field_map),
-        "fields": fields,
+    return fields, {
+        # The producer of the *tags* is the producer of the sheet now, so the
+        # pin it was verified against travels across rather than being
+        # re-derived: these are the digests that session actually opened.
+        "implementation": TAGGER,
+        "models": list(producer["models"]),
+        "pinned": producer["pinned"],
+        "artifacts": dict(producer["artifacts"]),
+        "from": source,
     }
-    write(path, SHEET_FILE, artifact)
-    return path

@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   costs the other its list and the sheet's input no longer waits on Ollama. `tag` refuses a flow whose
   manifest declares `"tagger": false`; `--new-version` re-produces only what its own verb writes; the
   sheet's remedies name `tag`.
+- **A flow that declares no tagger gets a sheet with every field empty** (`0032` design D3): `sheet()` takes
+  a required `tagged` keyword from the composition root, reads no list when it is false, and records an
+  `empty` producer with no model and no `from`. A `sheet-empty` golden pins its bytes.
 
 ## [0.22.9] - 2026-09-26
 

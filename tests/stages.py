@@ -147,6 +147,7 @@ def sheet(
     flow: str = FLOW.id,
     field_map: FieldMap = FIELD_MAP,
     tags: Sequence[DanbooruTag] | None = TAGS,
+    tagged: bool = True,
     new_version: bool = False,
 ) -> Path | None:
     """Call the sheet stage under `summon-anime-wai`, writing the list it reads.
@@ -163,7 +164,13 @@ def sheet(
     if tags is not None:
         write_wd14(run, tags, flow=flow)
     return sheet_stage.sheet(
-        run, flow, schema, vocabulary, field_map, new_version=new_version
+        run,
+        flow,
+        schema,
+        vocabulary,
+        field_map,
+        tagged=tagged,
+        new_version=new_version,
     )
 
 

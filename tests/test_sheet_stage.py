@@ -352,6 +352,52 @@ def test_an_absent_tag_list_is_refused_naming_the_verb_that_writes_it(
     assert versions(run.path / FLOW / "sheets") == []
 
 
+@pytest.mark.spec("sheet:output:a-flow-without-a-tagger-gets-empty-fields")
+def test_a_flow_without_a_tagger_gets_every_field_empty_and_no_list_is_read(
+    run: Run, schema: Schema, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A tag list sits beside it and is booby-trapped, so reading it fails by name."""
+    listed = write_wd14(run)
+    original = Path.read_text
+
+    def guarded(self: Path, *args: object, **kwargs: object) -> str:
+        if self.parent == listed.parent:
+            raise AssertionError("the tag list was read")
+        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
+
+    monkeypatch.setattr(Path, "read_text", guarded)
+
+    written = sheet(run, schema, vocabulary, tags=None, tagged=False)
+
+    body = _body(written)
+    assert body["fields"] == {name: [] for name in schema.names}
+    assert body["producer"] == {
+        "implementation": "empty",
+        "models": [],
+        "pinned": True,
+        "artifacts": {},
+    }
+    assert "from" not in body["producer"]
+
+
+@pytest.mark.spec_exempt("twin: the same run, tagged, reads the trapped list")
+def test_the_same_run_tagged_reads_the_list_the_twin_leaves_unread(
+    run: Run, schema: Schema, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    listed = write_wd14(run)
+    original = Path.read_text
+
+    def guarded(self: Path, *args: object, **kwargs: object) -> str:
+        if self.parent == listed.parent:
+            raise AssertionError("the tag list was read")
+        return original(self, *args, **kwargs)  # ty: ignore[invalid-argument-type]
+
+    monkeypatch.setattr(Path, "read_text", guarded)
+
+    with pytest.raises(AssertionError, match="the tag list was read"):
+        sheet(run, schema, vocabulary, tags=None, tagged=True)
+
+
 @pytest.mark.spec("run-directory:provenance:producer-records-its-source")
 def test_the_producer_names_the_tag_list_version_it_routed(
     run: Run, schema: Schema, vocabulary: Vocabulary

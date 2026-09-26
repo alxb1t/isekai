@@ -7,7 +7,7 @@ the record; the acceptance last, on the operator's machine.
 
 - [x] 1 — The manifest: `tagger`, version 4, both flows re-pinned
 - [x] 2 — The verbs: `tag` and `caption`, each tagger isolated
-- [ ] 3 — The sheet: an empty fill for a flow that declares no tagger
+- [x] 3 — The sheet: an empty fill for a flow that declares no tagger
 - [ ] 4 — The review surface: a missing caption names its command
 - [ ] 5 — The record: D1, D31, ① as two verbs
 - [ ] 6 — 🛑 **HUMAN · HALT** — the acceptance, on one synthetic portrait
@@ -52,13 +52,13 @@ Line numbers are `50a6b17`'s; find each site by the text it names.
 
 ## 3 — The sheet: an empty fill for a flow that declares no tagger
 
-- [ ] 3.1 **HALT CHECK** — `sheet()` takes no `tagged`, and every producer's `from` is required.
+- [x] 3.1 **HALT CHECK** — `sheet()` takes no `tagged`, and every producer's `from` is required.
   Verify: `grep -c 'tagged: bool' isekai/pipeline/sheet.py` prints `0`, and `grep -c '"from": int,' isekai/foundation/artifacts.py` prints `2`.
-- [ ] 3.2 Add the required keyword `tagged` and the empty fill to `sheet()` in `isekai/pipeline/sheet.py`, per [D3](design.md#d3); make `SheetProducer`'s `from` `NotRequired[int]` in `isekai/foundation/artifacts.py`; pass `flow.tagger` from `isekai/interface/cli.py`, and `tagged` from `tests/stages.py`'s helper.
+- [x] 3.2 Add the required keyword `tagged` and the empty fill to `sheet()` in `isekai/pipeline/sheet.py`, per [D3](design.md#d3); make `SheetProducer`'s `from` `NotRequired[int]` in `isekai/foundation/artifacts.py`; pass `flow.tagger` from `isekai/interface/cli.py`, and `tagged` from `tests/stages.py`'s helper.
   Verify: `grep -c 'tagged=flow.tagger' isekai/interface/cli.py` prints `1`, and `grep -c '"from": NotRequired\[int\]' isekai/foundation/artifacts.py` prints `1`.
-- [ ] 3.3 In `tests/test_sheet_stage.py`, test `sheet:output:a-flow-without-a-tagger-gets-empty-fields`: every field empty, no `from`, `models` empty, and a `wd14/` list beside it left unread.
+- [x] 3.3 In `tests/test_sheet_stage.py`, test `sheet:output:a-flow-without-a-tagger-gets-empty-fields`: every field empty, no `from`, `models` empty, and a `wd14/` list beside it left unread.
   Verify: `grep -c 'sheet:output:a-flow-without-a-tagger-gets-empty-fields' tests/test_sheet_stage.py` prints `1`.
-- [ ] 3.4 Add a `sheet-empty` kind to `KINDS` in `tests/test_artifact_bytes.py` and capture `tests/golden/sheet-empty.json` from the writer, per [D3](design.md#d3).
+- [x] 3.4 Add a `sheet-empty` kind to `KINDS` in `tests/test_artifact_bytes.py` and capture `tests/golden/sheet-empty.json` from the writer, per [D3](design.md#d3).
   Verify: `test -f tests/golden/sheet-empty.json && grep -c '"sheet-empty"' tests/test_artifact_bytes.py` prints `1`.
 
 ## 4 — The review surface: a missing caption names its command

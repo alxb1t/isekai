@@ -80,6 +80,12 @@ def _sheet(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     return path
 
 
+def _sheet_empty(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    path = sheet(run, schema, vocabulary, tags=None, tagged=False)
+    assert path is not None
+    return path
+
+
 def _draft(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     _sheet(run, schema, vocabulary)
     path = review(run, FLOW.id)
@@ -127,6 +133,7 @@ KINDS: dict[str, Callable[[Run, Schema, Vocabulary], Path]] = {
     "wd14": _wd14,
     "tags": _tags,
     "sheet": _sheet,
+    "sheet-empty": _sheet_empty,
     "draft": _draft,
     "draft-saved": _draft_saved,
     "approved": _approved,

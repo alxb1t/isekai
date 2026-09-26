@@ -120,7 +120,8 @@ class TagsProducer(TypedDict):
     prompt: DigestRecord
 
 
-# The functional form below, because `from` is a Python keyword.
+# The functional form below, because `from` is a Python keyword. `from` is
+# absent from a sheet no tag list filled (0032 design D3).
 SheetProducer = TypedDict(
     "SheetProducer",
     {
@@ -128,7 +129,7 @@ SheetProducer = TypedDict(
         "models": list[str],
         "pinned": bool,
         "artifacts": dict[str, DigestRecord],
-        "from": int,
+        "from": NotRequired[int],
     },
 )
 

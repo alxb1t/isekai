@@ -1,0 +1,43 @@
+{
+  "schema": {
+    "name": "sheet",
+    "version": 1
+  },
+  "producer": {
+    "implementation": "empty",
+    "models": [],
+    "pinned": true,
+    "artifacts": {}
+  },
+  "schema_document": {
+    "name": "identity"
+  },
+  "vocabulary": {
+    "name": "wd14/selected_tags.csv",
+    "revision": "ffffffffffffffffffffffffffffffffffffffff",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "field_map": {
+    "name": "tests/stages.py",
+    "revision": 1,
+    "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "fields": {
+    "count": [],
+    "age_band": [],
+    "skin_ancestry": [],
+    "hair_colour": [],
+    "hair_silhouette": [],
+    "eye_colour": [],
+    "eyebrows": [],
+    "marks": [],
+    "clothes": [],
+    "accessories": [],
+    "expression": [],
+    "gaze": [],
+    "pose": [],
+    "framing": [],
+    "body_shape": [],
+    "background": []
+  }
+}
