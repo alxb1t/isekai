@@ -46,6 +46,7 @@ from isekai.foundation.artifacts import (
     DanbooruTag,
     Sheet,
     read,
+    require,
     write,
 )
 from isekai.foundation.flow import Schema
@@ -119,11 +120,24 @@ def sheet(
 
     check_budget(STAGE, directory, next_version(directory), run)
 
-    listed = read(tagged / artifact_name(source), WD14_FILE)
-    # `str()`: a hand-edited list's non-string tag routes nowhere, never raises.
-    fields = route(
-        (DanbooruTag(str(one["tag"])) for one in listed["tags"]), field_map, schema
+    listed_path = tagged / artifact_name(source)
+    listed = read(listed_path, WD14_FILE)
+    remedy = (
+        f"run `python -m isekai caption --flow {flow} --new-version {run.id}`, "
+        f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
     )
+    for key, shape in (("tags", list), ("producer", dict)):
+        require(listed_path, listed, key, shape, remedy)
+    tags, producer = listed["tags"], listed["producer"]
+    for key, shape in (("models", list), ("pinned", bool), ("artifacts", dict)):
+        require(listed_path, producer, key, shape, remedy)
+    for index, one in enumerate(tags):
+        if not isinstance(one, dict) or "tag" not in one:
+            raise Refusal(
+                f"{listed_path.name}: its tag entry {index} records no `tag`; {remedy}"
+            )
+    # `str()`: a hand-edited list's non-string tag routes nowhere, never raises.
+    fields = route((DanbooruTag(str(one["tag"])) for one in tags), field_map, schema)
     validate(fields, schema, vocabulary)
 
     path = directory / artifact_name(next_version(directory))
@@ -134,9 +148,9 @@ def sheet(
             # the pin it was verified against travels across rather than being
             # re-derived: these are the digests that session actually opened.
             "implementation": TAGGER,
-            "models": list(listed["producer"]["models"]),
-            "pinned": bool(listed["producer"]["pinned"]),
-            "artifacts": dict(listed["producer"]["artifacts"]),
+            "models": list(producer["models"]),
+            "pinned": producer["pinned"],
+            "artifacts": dict(producer["artifacts"]),
             "from": source,
         },
         "schema_document": {"name": schema.name},

@@ -46,6 +46,7 @@ from isekai.foundation.artifacts import (
     ReviewApproved,
     ReviewDraft,
     read,
+    require,
     write,
 )
 from isekai.foundation.flow import Flow, Schema, assemble
@@ -147,29 +148,40 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
             f"`python -m isekai sheet --flow {flow} {run.id}` first"
         )
 
+    again = f"`python -m isekai review --flow {flow} --new-version {run.id}`"
     approved = approved_versions(review_directory)
     if approved:
-        held = review_directory / artifact_name(approved[-1], APPROVED)
-        carried = read(held, APPROVED_FILE)
-        if "sheet" not in carried:
-            raise Refusal(
-                f"{held.name}: records no `sheet` number, so a draft copied from "
-                f"it cannot name its sheet; add the sheet version it was approved "
-                f"from as `sheet` in {held}, then run `python -m isekai review "
-                f"--flow {flow} --new-version {run.id}` again"
-            )
+        copied = review_directory / artifact_name(approved[-1], APPROVED)
+        carried = read(copied, APPROVED_FILE)
+        # An approved artifact is never replaced, so only a hand repairs it.
+        remedy = f"restore it in {copied}, then run {again} again"
+        require(
+            copied,
+            carried,
+            "sheet",
+            int,
+            f"a draft copied from it cannot name its sheet; add the sheet version "
+            f"it was approved from as `sheet` in {copied}, then run {again} again",
+        )
         came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
     else:
-        carried = read(sheets / artifact_name(source_sheet), SHEET_FILE)
+        copied = sheets / artifact_name(source_sheet)
+        carried = read(copied, SHEET_FILE)
+        remedy = (
+            f"run `python -m isekai sheet --flow {flow} --new-version {run.id}`, "
+            f"then {again}"
+        )
         came_from, source, sheet_version = source_sheet, SHEETS, source_sheet
 
+    require(copied, carried, "vocabulary", dict, remedy)
+    require(copied, carried, "fields", dict, remedy)
     version = next_version(review_directory)
     path = review_directory / artifact_name(version, DRAFT)
     draft: ReviewDraft = {
         "schema": DRAFT_FILE.schema,
         "producer": {"implementation": STAGE, "from": came_from, "source": source},
         "flow": flow,
-        "sheet": int(sheet_version),
+        "sheet": sheet_version,
         "vocabulary": carried["vocabulary"],
         "fields": carried["fields"],
     }
@@ -223,6 +235,7 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
         )
 
     body = read(path, DRAFT_FILE)
+    require(path, body, "fields", dict, _recopy(run, flow, path))
     existing = set(body["fields"])
     offered = set(fields)
     if offered != existing:
@@ -338,13 +351,21 @@ def approve(
             "for, so this is a warning and not a refusal"
         )
 
-    sheet_version = int(body["sheet"])
+    remedy = _recopy(run, flow, draft)
+    for key, shape in (("sheet", int), ("producer", dict), ("vocabulary", dict)):
+        require(draft, body, key, shape, remedy)
+    sheet_version, producer = body["sheet"], body["producer"]
     source = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body: ReviewApproved = {
         "schema": APPROVED_FILE.schema,
         "producer": {
-            **body["producer"],
-            "edited": _differs(fields, source),
+            **producer,
+            "edited": _differs(
+                fields,
+                source,
+                f"delete {source}, then run `python -m isekai approve --flow "
+                f"{flow} {run.id}` again",
+            ),
             "approved_from": version,
         },
         "flow": flow,
@@ -365,7 +386,15 @@ def approve(
     return path, warnings
 
 
-def _differs(fields: Mapping[str, Sequence[str]], source: Path) -> bool:
+def _recopy(run: Run, flow: str, draft: Path) -> str:
+    """Return the remedy for a draft that lost a key: a fresh copy, newly numbered."""
+    return (
+        f"delete {draft}, then run `python -m isekai review --flow {flow} "
+        f"--new-version {run.id}` to take a fresh copy"
+    )
+
+
+def _differs(fields: Mapping[str, Sequence[str]], source: Path, remedy: str) -> bool:
     """Say whether `fields` differs from the sheet it was copied from.
 
     Computed rather than declared. Whether a sheet was actually corrected is the
@@ -374,7 +403,9 @@ def _differs(fields: Mapping[str, Sequence[str]], source: Path) -> bool:
     """
     if not source.exists():
         return False
-    original = read(source, SHEET_FILE)["fields"]
+    body = read(source, SHEET_FILE)
+    require(source, body, "fields", dict, remedy)
+    original = body["fields"]
     return {name: list(tags) for name, tags in original.items()} != {
         name: list(tags) for name, tags in fields.items()
     }

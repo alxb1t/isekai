@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **v0.22.8's families, finished** (`0031` design D1): an endpoint answer in the wrong shape is refused
+  permanent, and a history that is not an object no longer polls forever; every missing or wrong-typed key
+  in a draft, an approval, a sheet or a tag list is refused by name; a damaged `run.json` names a remedy
+  that works, offering the photograph again by its path; approval takes the draft lock, so an autosave
+  cannot write after it.
+
 ## [0.22.8] - 2026-09-26
 
 ### Fixed

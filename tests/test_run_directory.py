@@ -773,6 +773,26 @@ def test_the_frame_declares_its_own_schema(tmp_path: Path, runs: Path) -> None:
     }
 
 
+@pytest.mark.spec("run-directory:schema:an-unreadable-artifact-is-refused-by-name")
+def test_a_damaged_frame_names_a_remedy_that_works(tmp_path: Path, runs: Path) -> None:
+    """A stage given the run id cannot reach a run with no frame; the path can."""
+    photo = _photo(tmp_path, "p.jpg", jpeg_bytes(800, 600))
+    run = open_run(photo, runs)
+    run.frame_path.write_text("{not json")
+
+    with pytest.raises(Refusal) as refused:
+        _ = run.frame
+
+    message = str(refused.value)
+    assert f"delete {run.frame_path}" in message
+    assert "offer the photograph again by its path" in message
+    assert "run the stage that wrote it again" not in message
+
+    run.frame_path.unlink()
+    again = open_run(photo, runs)
+    assert again == run and again.frame["photo"]["name"] == "photo.jpg"
+
+
 @pytest.mark.spec_exempt("structural: the id helper, exercised directly")
 def test_the_run_id_is_the_digest_prefix_and_the_slug() -> None:
     assert run_id("f" * 64, "Holiday Snap") == f"{'f' * 12}_holiday-snap"

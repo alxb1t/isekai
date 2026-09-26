@@ -271,6 +271,115 @@ def test_an_approved_sheet_without_its_sheet_number_is_refused(
     assert current_draft(run.directory(FLOW, "review")) is None
 
 
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [("vocabulary", None), ("fields", None), ("fields", ["a list"]), ("sheet", "one")],
+)
+def test_an_approved_artifact_missing_a_key_is_refused_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary, key: str, value: object
+) -> None:
+    review(run, FLOW)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    _damage(approved, key, value)
+
+    with pytest.raises(Refusal) as refused:
+        review(run, FLOW, new_version=True)
+
+    message = str(refused.value)
+    assert message.startswith(f"001.approved.json: records no `{key}`")
+    assert f"--new-version {run.id}`" in message
+    assert current_draft(run.directory(FLOW, "review")) is None
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.parametrize(("key", "value"), [("vocabulary", None), ("fields", "x")])
+def test_a_sheet_missing_a_key_is_refused_before_it_is_copied(
+    run: Run, key: str, value: object
+) -> None:
+    _damage(run.path / FLOW / "sheets" / "001.json", key, value)
+
+    with pytest.raises(Refusal) as refused:
+        review(run, FLOW)
+
+    message = str(refused.value)
+    assert message.startswith(f"001.json: records no `{key}` object")
+    assert f"`python -m isekai sheet --flow {FLOW} --new-version {run.id}`" in message
+    assert versions(run.directory(FLOW, "review")) == []
+
+
+@pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
+@pytest.mark.parametrize("value", [None, ["a list"]])
+def test_saving_a_draft_without_a_fields_object_is_refused(
+    run: Run, schema: Schema, value: object
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _damage(draft, "fields", value)
+    before = draft.read_bytes()
+
+    with pytest.raises(Refusal) as refused:
+        save_draft(run, FLOW, {name: [] for name in schema.names})
+
+    assert str(refused.value).startswith("001.draft.json: records no `fields` object")
+    assert f"delete {draft}" in str(refused.value)
+    assert draft.read_bytes() == before
+
+
+@pytest.mark.spec("review:validation:missing-field-refuses-approval")
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("sheet", None),
+        ("sheet", "one"),
+        ("producer", None),
+        ("producer", ["a list"]),
+        ("vocabulary", None),
+    ],
+)
+def test_a_draft_missing_a_key_refuses_approval_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary, key: str, value: object
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _damage(draft, key, value)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    message = str(refused.value)
+    assert message.startswith(f"001.draft.json: records no `{key}`")
+    assert f"delete {draft}" in message and f"--new-version {run.id}`" in message
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
+
+@pytest.mark.spec("review:validation:missing-field-refuses-approval")
+def test_a_source_sheet_without_fields_refuses_approval_naming_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    assert review(run, FLOW) is not None
+    source = run.path / FLOW / "sheets" / "001.json"
+    _damage(source, "fields", None)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert str(refused.value).startswith("001.json: records no `fields` object")
+    assert f"delete {source}" in str(refused.value)
+    assert approved_versions(run.directory(FLOW, "review")) == []
+
+
+def _damage(path: Path, key: str, value: object) -> None:
+    """Hand-edit one key of a run file: drop it when `value` is None, else set it."""
+    body = json.loads(path.read_text())
+    if value is None:
+        del body[key]
+    else:
+        body[key] = value
+    path.write_text(json.dumps(body))
+
+
 @pytest.mark.spec("review:validation:missing-field-refuses-approval")
 @pytest.mark.parametrize("held", [None, ["a list"]])
 def test_a_draft_without_fields_is_refused_naming_them(

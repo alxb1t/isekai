@@ -233,7 +233,12 @@ class Run:
     @property
     def frame(self) -> Frame:
         """Return the run's frame, refusing a version this build does not read."""
-        return read(self.frame_path, RUN_FILE)
+        # A stage verb given the run id cannot reach a run with no frame, while
+        # `open_run` passes over one, so the path is what re-creates it.
+        fix = "offer the photograph again by its path"
+        return read(
+            self.frame_path, RUN_FILE, remedy=f"delete {self.frame_path}, then {fix}"
+        )
 
     @property
     def photo(self) -> Path:

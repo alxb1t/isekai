@@ -69,7 +69,8 @@ from isekai.pipeline.review import (
 RARE_BELOW = 2000
 
 # Held across a draft update's precondition and its write, so two updates that
-# state one precondition cannot both pass it (`0030` design D4).
+# state one precondition cannot both pass it (`0030` design D4); and across an
+# approval, so no update writes after it (`0031` design D1).
 _DRAFT_UPDATE = threading.Lock()
 
 # Enough rows to choose from without the dropdown becoming a list to read. The
@@ -342,11 +343,16 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
 
     @app.post("/api/inputs/{identifier}/approve")
     def post_approve(identifier: str) -> dict[str, Any]:
-        """Validate and approve the draft, through the only writer of an approval."""
+        """Validate and approve the draft, through the only writer of an approval.
+
+        Under the draft lock, so an update in flight either lands before the
+        approval reads the draft or finds the input approved and is refused.
+        """
         held = batch.find(identifier)
-        written, warnings = approve(
-            held.run, batch.flow.id, batch.flow.schema, batch.vocabulary
-        )
+        with _DRAFT_UPDATE:
+            written, warnings = approve(
+                held.run, batch.flow.id, batch.flow.schema, batch.vocabulary
+            )
         return {
             "approved": written.name if written else None,
             "warnings": warnings,

@@ -4,7 +4,7 @@ Behaviour first, then the guards, then the prose that describes the result ([D5]
 
 ## Progress
 
-- [ ] 1 — Behaviour: v0.22.8's families finished
+- [x] 1 — Behaviour: v0.22.8's families finished
 - [ ] 2 — Structure: the retry rule once, the annotation guard, the saved-draft golden, test nits
 - [ ] 3 — Prose: the documentation that drifted
 
@@ -12,15 +12,15 @@ Line numbers are `3278647`'s; find each site by the text it names.
 
 ## 1 — Behaviour: v0.22.8's families finished
 
-- [ ] 1.1 **HALT CHECK** — `post_approve` calls `approve` outside the draft lock, and the client does not catch `TypeError`.
+- [x] 1.1 **HALT CHECK** — `post_approve` calls `approve` outside the draft lock, and the client does not catch `TypeError`.
   Verify: `grep -c 'with _DRAFT_UPDATE' isekai/interface/ui/app.py` prints `1`, and `grep -c 'except (ValueError, KeyError)' isekai/boundary/comfy/client.py` prints `1`.
-- [ ] 1.2 Refuse a wrong-shaped answer in `isekai/boundary/comfy/client.py` and `_submit` (`isekai/pipeline/generate.py:500-506`), per [D1](design.md#d1), with tests in `tests/test_generate.py`.
+- [x] 1.2 Refuse a wrong-shaped answer in `isekai/boundary/comfy/client.py` and `_submit` (`isekai/pipeline/generate.py:500-506`), per [D1](design.md#d1), with tests in `tests/test_generate.py`.
   Verify: `grep -c 'TypeError' isekai/boundary/comfy/client.py` prints a number above `0`.
-- [ ] 1.3 Refuse every missing key [D1](design.md#d1) lists by name in `isekai/pipeline/review.py` and `isekai/pipeline/sheet.py`, with tests in `tests/test_review.py` and `tests/test_sheet_stage.py`.
+- [x] 1.3 Refuse every missing key [D1](design.md#d1) lists by name in `isekai/pipeline/review.py` and `isekai/pipeline/sheet.py`, with tests in `tests/test_review.py` and `tests/test_sheet_stage.py`.
   Verify: `cat isekai/pipeline/review.py isekai/pipeline/sheet.py | grep -c -e 'int(body\["sheet"\])' -e '\*\*body\["producer"\]' -e 'listed\["producer"\]\["models"\]'` prints `0`.
-- [ ] 1.4 Give `Run.frame`'s refusal its own remedy in `isekai/foundation/run.py`, per [D1](design.md#d1), with a test in `tests/test_run_directory.py`.
+- [x] 1.4 Give `Run.frame`'s refusal its own remedy in `isekai/foundation/run.py`, per [D1](design.md#d1), with a test in `tests/test_run_directory.py`.
   Verify: `grep -c 'offer the photograph again by its path' isekai/foundation/run.py` prints `1`.
-- [ ] 1.5 Hold `_DRAFT_UPDATE` around `approve` in `post_approve`, per [D1](design.md#d1), with `test_an_update_overlapping_an_approval_is_refused` in `tests/test_ui_api.py`.
+- [x] 1.5 Hold `_DRAFT_UPDATE` around `approve` in `post_approve`, per [D1](design.md#d1), with `test_an_update_overlapping_an_approval_is_refused` in `tests/test_ui_api.py`.
   Verify: `grep -c 'with _DRAFT_UPDATE' isekai/interface/ui/app.py` prints `2`, and `grep -c '^def test_an_update_overlapping_an_approval_is_refused' tests/test_ui_api.py` prints `1`.
 
 ## 2 — Structure: the retry rule once, the annotation guard, the saved-draft golden, test nits

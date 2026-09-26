@@ -315,16 +315,17 @@ def write(path: Path, kind: Artifact[T], artifact: T) -> None:
     write_json(path, artifact)
 
 
-def read(path: Path, kind: Artifact[T]) -> T:
+def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
     """Parse a file of `kind`, refusing a version of its shape this build lacks.
 
     A best-effort parse of a format you do not know produces fields that look
     fine and mean nothing, so the declared version is checked before any other
     key is touched. The name is not checked. A file that is not a JSON object
-    with an object `schema` is refused by name, never raised.
+    with an object `schema` is refused by name, never raised. `remedy` replaces
+    the default for a file no stage writes.
     """
     # A rerun is a no-op while the file exists, so the remedy deletes it first.
-    remedy = f"delete {path}, then run the stage that wrote it again"
+    remedy = remedy or f"delete {path}, then run the stage that wrote it again"
     try:
         parsed: Any = json.loads(path.read_text())
     except ValueError as unreadable:
@@ -344,3 +345,22 @@ def read(path: Path, kind: Artifact[T]) -> T:
             f"declares version {declared!r}, or {remedy}"
         )
     return parsed
+
+
+# What a refusal calls a value of each shape `require` checks.
+_NOUNS: Mapping[type, str] = {int: "number", bool: "flag", dict: "object", list: "list"}
+
+
+def require(
+    path: Path, body: Mapping[str, object], key: str, shape: type, remedy: str
+) -> None:
+    """Refuse by name when `body[key]` is missing or not a `shape`.
+
+    A hand-edited file can lose any key, and `read` checks only the version. Only
+    the outer shape is checked; what is inside is the file's word, as in `read`.
+    e.g. no `sheet` -> "001.draft.json: records no `sheet` number; <remedy>"
+    """
+    if not isinstance(body.get(key), shape):
+        raise Refusal(
+            f"{path.name}: records no `{key}` {_NOUNS.get(shape, 'value')}; {remedy}"
+        )

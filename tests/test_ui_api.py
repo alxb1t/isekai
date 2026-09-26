@@ -35,7 +35,8 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 import isekai.interface.ui.app as app_module  # noqa: E402
-from isekai.foundation.artifacts import APPROVED_FILE, TAGS_FILE, read
+import isekai.pipeline.review as review_module  # noqa: E402
+from isekai.foundation.artifacts import APPROVED_FILE, TAGS_FILE, Artifact, read
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     REVIEW,
@@ -534,6 +535,82 @@ def test_without_the_lock_overlapping_updates_both_commit(
     monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
 
     assert _overlap(client, made, monkeypatch) == {"first": 200, "second": 200}
+
+
+def _update_during_approval(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> int:
+    """Approve while an update is in flight, and return the update's status.
+
+    The update starts inside the approval and is given the chance to pass its
+    check first; if it does, its write waits until the approval has written.
+    """
+    body = client.get(f"/api/inputs/{made.id}").json()
+    checked, approved = threading.Event(), threading.Event()
+    answers: list[int] = []
+    precondition, approving = app_module._precondition, app_module.approve
+    write = review_module.write
+
+    def check(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+        checked.set()
+        precondition(batch, held, payload)
+
+    def put() -> None:
+        fields = {**body["fields"], "hair_colour": ["blonde"]}
+        answers.append(
+            client.put(
+                f"/api/inputs/{made.id}/draft",
+                json={"fields": fields, "saved": body["saved"]},
+            ).status_code
+        )
+
+    def late[T: Mapping[str, object]](
+        path: Path, kind: Artifact[T], artifact: T
+    ) -> None:
+        # By name: the endpoint runs on a worker thread, not on `update`.
+        if path.name.endswith(".draft.json"):
+            approved.wait(timeout=0.5)
+        write(path, kind, artifact)
+
+    def approve_(
+        run: Run, flow: str, schema: Schema, vocabulary: Vocabulary
+    ) -> tuple[Path | None, list[str]]:
+        update.start()
+        checked.wait(timeout=0.5)
+        try:
+            return approving(run, flow, schema, vocabulary)
+        finally:
+            approved.set()
+
+    update = threading.Thread(target=put)
+    monkeypatch.setattr(app_module, "_precondition", check)
+    monkeypatch.setattr(app_module, "approve", approve_)
+    monkeypatch.setattr(review_module, "write", late)
+    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    update.join()
+    return answers[0]
+
+
+@pytest.mark.spec("ui:approval:an-update-overlapping-an-approval-is-refused")
+def test_an_update_overlapping_an_approval_is_refused(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = made.directory(FLOW, REVIEW)
+    fields = read(directory / "001.draft.json", APPROVED_FILE)["fields"]
+
+    assert _update_during_approval(client, made, monkeypatch) == 409
+    assert sorted(path.name for path in directory.iterdir()) == ["001.approved.json"]
+    assert read(directory / "001.approved.json", APPROVED_FILE)["fields"] == fields
+
+
+@pytest.mark.spec_exempt("twin: the approval test fails once approval takes no lock")
+def test_without_the_lock_an_update_writes_after_the_approval(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
+
+    assert _update_during_approval(client, made, monkeypatch) == 200
+    assert (made.directory(FLOW, REVIEW) / "001.draft.json").exists()
 
 
 @pytest.mark.spec("ui:approval:approved-input-opens-read-only")

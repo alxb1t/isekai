@@ -91,7 +91,8 @@ def _reported() -> Iterator[None]:
     """Turn a failed request into a `TransportFailure` of the kind it was.
 
     e.g. HTTP 400 -> permanent, HTTP 502 -> transient, a refused connection ->
-    transient, a body that is not JSON -> permanent (`0030` design D3).
+    transient, a body that is not JSON or not the object asked for -> permanent
+    (`0030` design D3).
     """
     try:
         yield
@@ -121,7 +122,7 @@ def _reported() -> Iterator[None]:
             "its address with `--server` -- or drop `--server` to assemble the "
             "prompts and stop",
         ) from unreachable
-    except (ValueError, KeyError) as unread:
+    except (ValueError, KeyError, TypeError) as unread:
         raise TransportFailure(
             "permanent",
             "the endpoint answered in a shape this build does not read "
