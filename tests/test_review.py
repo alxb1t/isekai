@@ -364,8 +364,84 @@ def test_a_source_sheet_without_fields_refuses_approval_naming_it(
         approve(run, FLOW, schema, vocabulary)
 
     assert str(refused.value).startswith("001.json: records no `fields` object")
-    assert f"delete {source}" in str(refused.value)
+    assert f"delete {source}" not in str(refused.value)
     assert approved_versions(run.directory(FLOW, "review")) == []
+
+    # The printed fix, followed: it keeps the damaged sheet, so no number is freed
+    # for a later sheet to reuse, and the approval computes `edited` honestly.
+    _follow(str(refused.value), run, schema, vocabulary)
+    assert source.exists()
+    assert _approved_edited(run, schema, vocabulary) == (True, 2)
+
+
+@pytest.mark.spec("review:provenance:edited-copy-is-declared")
+def test_a_missing_source_sheet_refuses_approval_rather_than_guessing_unedited(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    _edit(draft, clothes=["collared shirt"])
+    source = run.path / FLOW / "sheets" / "001.json"
+    source.unlink()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert str(refused.value).startswith(f"{draft.name}: was copied from {source}")
+    assert approved_versions(run.directory(FLOW, "review")) == []
+    assert draft.exists()
+
+    _follow(str(refused.value), run, schema, vocabulary)
+    assert _approved_edited(run, schema, vocabulary) == (True, 1)
+
+
+@pytest.mark.spec("review:provenance:edited-copy-is-declared")
+@pytest.mark.parametrize("damage", ["fields", "sheet"])
+def test_a_reopened_draft_whose_sheet_is_damaged_is_refused_keeping_the_approval(
+    run: Run, schema: Schema, vocabulary: Vocabulary, damage: str
+) -> None:
+    review(run, FLOW)
+    first, _ = approve(run, FLOW, schema, vocabulary)
+    assert first is not None
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    _edit(draft, clothes=["collared shirt"])
+    source = run.path / FLOW / "sheets" / "001.json"
+    if damage == "fields":
+        _damage(source, "fields", None)
+    else:
+        source.unlink()
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    # A fresh copy would come from the approval, which names this same sheet, so
+    # the fix that works is to leave the flow approved as it was.
+    assert f"delete {draft}" in str(refused.value)
+    draft.unlink()
+    assert approve(run, FLOW, schema, vocabulary) == (None, [])
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
+def _follow(message: str, run: Run, schema: Schema, vocabulary: Vocabulary) -> None:
+    """Run the two commands a no-approval source-sheet refusal prints, in order."""
+    assert f"`python -m isekai sheet --flow {FLOW} --new-version {run.id}`" in message
+    assert f"`python -m isekai review --flow {FLOW} --new-version {run.id}`" in message
+    sheet(run, schema, vocabulary, new_version=True)
+    copied = review(run, FLOW, new_version=True)
+    assert copied is not None
+    # The operator carries the correction across into the fresh copy.
+    _edit(copied, clothes=["collared shirt"])
+
+
+def _approved_edited(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> tuple[bool, int]:
+    """Approve the current draft and return what it records: edited, and its sheet."""
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    body = read(approved, APPROVED_FILE)
+    return body["producer"]["edited"], body["sheet"]
 
 
 def _damage(path: Path, key: str, value: object) -> None:

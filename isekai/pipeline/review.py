@@ -360,12 +360,7 @@ def approve(
         "schema": APPROVED_FILE.schema,
         "producer": {
             **producer,
-            "edited": _differs(
-                fields,
-                source,
-                f"delete {source}, then run `python -m isekai approve --flow "
-                f"{flow} {run.id}` again",
-            ),
+            "edited": _differs(fields, draft, source, _resheet(run, flow, draft)),
             "approved_from": version,
         },
         "flow": flow,
@@ -396,15 +391,44 @@ def _recopy(run: Run, flow: str, draft: Path) -> str:
     return f"delete {draft}, then run {_again(run, flow)} to take a fresh copy"
 
 
-def _differs(fields: Mapping[str, Sequence[str]], source: Path, remedy: str) -> bool:
+def _resheet(run: Run, flow: str, draft: Path) -> str:
+    """Return the remedy for a draft whose sheet cannot be compared against.
+
+    The sheet is kept rather than deleted: deleting it would free its number for
+    the next `sheet` run to reuse under different content. With no approval, a
+    new sheet and a fresh copy of it give `edited` something true to be computed
+    against, and the old draft stays to carry the correction across. A re-opened
+    draft is copied from the approval, which names this same sheet, so a fresh
+    copy would be refused again; there the fix is to keep the approval.
+    """
+    approved = approved_versions(draft.parent)
+    if approved:
+        return (
+            f"delete {draft} to leave {flow} approved as "
+            f"{artifact_name(approved[-1], APPROVED)} records it"
+        )
+    return (
+        f"run `python -m isekai sheet --flow {flow} --new-version {run.id}`, then "
+        f"{_again(run, flow)} to copy the new sheet; {draft.name} keeps your "
+        "edits to carry across"
+    )
+
+
+def _differs(
+    fields: Mapping[str, Sequence[str]], draft: Path, source: Path, remedy: str
+) -> bool:
     """Say whether `fields` differs from the sheet it was copied from.
 
     Computed rather than declared. Whether a sheet was actually corrected is the
     difference between the 0.568 route and the 0.917 one, and a flag the operator
-    sets is an assumption wearing a fact's clothes.
+    sets is an assumption wearing a fact's clothes. A missing sheet is refused
+    rather than read as unedited, which would be exactly such an assumption.
     """
     if not source.exists():
-        return False
+        raise Refusal(
+            f"{draft.name}: was copied from {source}, which is not there, so "
+            f"whether it was edited cannot be computed; {remedy}"
+        )
     body = read(source, SHEET_FILE)
     require(source, body, "fields", dict, remedy)
     original = body["fields"]

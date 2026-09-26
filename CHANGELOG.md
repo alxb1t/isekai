@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in a draft, an approval, a sheet or a tag list is refused by name; a damaged `run.json` names a remedy
   that works, offering the photograph again by its path; approval takes the draft lock, so an autosave
   cannot write after it.
+- **Approval never guesses a draft unedited**: a source sheet that is gone is refused rather than read as
+  unedited, and a damaged one names a fix that keeps it — a new sheet and a fresh copy, or, for a
+  re-opened draft, deleting the draft to keep the approval — so no sheet number is freed for reuse.
 
 ### Changed
 
