@@ -238,7 +238,7 @@ def test_the_hosted_tagger_stops_after_its_own_three_attempts(run: Run) -> None:
     directory = run.directory(FLOW, TAGS)
     directory.mkdir(parents=True, exist_ok=True)
     for _ in range(3):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", {"stage": TAGS, "detail": "x"})
     tagger = FakeTagger()
 
     with pytest.raises(Refusal) as refused:

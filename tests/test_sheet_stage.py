@@ -153,7 +153,7 @@ def test_the_stage_refuses_once_its_budget_of_one_is_spent(
     """
     directory = run.path / FLOW / "sheets"
     assert BUDGETS["sheet"] == 1
-    record_failure(directory, 1, "transient", {"stage": "sheet"})
+    record_failure(directory, 1, "transient", {"stage": "sheet", "detail": "x"})
 
     with pytest.raises(Refusal) as refused:
         sheet(run, schema, vocabulary)

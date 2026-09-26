@@ -39,9 +39,14 @@ from pathlib import Path
 from typing import Any, Literal, TypeVar
 
 from isekai.foundation.artifacts import (
+    ERROR_FILE,
+    RUN_FILE,
     DigestRecord,
+    ErrorRecord,
+    Failure,
+    Frame,
     InstructionsRecord,
-    write_json,
+    write,
 )
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
@@ -233,9 +238,9 @@ class Run:
         return self.path / FRAME_NAME
 
     @property
-    def frame(self) -> dict[str, Any]:
-        """Return the run's frame, parsed."""
-        parsed: Any = json.loads(self.frame_path.read_text())
+    def frame(self) -> Frame:
+        """Return the run's frame, parsed, with no version check."""
+        parsed: Frame = json.loads(self.frame_path.read_text())
         return parsed
 
     @property
@@ -323,19 +328,17 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     # The frame records what the photograph *is* and never where it came from: a
     # run that points at a file somebody later moved is not reconstructable, and
     # being reconstructable from disk is the frame's whole job.
-    write_json(
-        run.frame_path,
-        {
-            "schema": {"name": "run", "version": SCHEMA_VERSION},
-            "id": identifier,
-            "photo": {
-                "name": name,
-                "sha256": digest,
-                "bytes": len(body),
-                "media_type": kind,
-            },
+    frame: Frame = {
+        "schema": RUN_FILE.schema,
+        "id": identifier,
+        "photo": {
+            "name": name,
+            "sha256": digest,
+            "bytes": len(body),
+            "media_type": kind,
         },
-    )
+    }
+    write(run.frame_path, RUN_FILE, frame)
     return run
 
 
@@ -490,7 +493,7 @@ def record_failure(
     directory: Path,
     version: int,
     kind: Kind,
-    detail: Mapping[str, Any],
+    failure: Failure,
 ) -> Path:
     """Write an error record beside where `version`'s artifact would have gone.
 
@@ -499,16 +502,14 @@ def record_failure(
     """
     ordinal = len(attempts(directory, version)) + 1
     path = directory / f"{version:03d}.error.{ordinal}.{kind}.json"
-    write_json(
-        path,
-        {
-            "schema": {"name": "error", "version": SCHEMA_VERSION},
-            "version": version,
-            "attempt": ordinal,
-            "kind": kind,
-            **dict(detail),
-        },
-    )
+    record: ErrorRecord = {
+        "schema": ERROR_FILE.schema,
+        "version": version,
+        "attempt": ordinal,
+        "kind": kind,
+        **failure,
+    }
+    write(path, ERROR_FILE, record)
     return path
 
 

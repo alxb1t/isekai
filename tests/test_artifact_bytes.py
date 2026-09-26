@@ -34,7 +34,6 @@ WRITERS = ("write_json", "envelope")
 
 # Today's writers, each deleted by the phase that converts it.
 ALLOWLIST = {
-    "isekai/foundation/run.py",
     "isekai/pipeline/caption.py",
     "isekai/pipeline/tagging.py",
     "isekai/pipeline/sheet.py",

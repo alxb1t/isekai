@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 
 import isekai.foundation.atomic_write as atomic_write_module
-from isekai.foundation.artifacts import CAPTION_FILE, read, write_json
+from isekai.foundation.artifacts import CAPTION_FILE, Failure, read, write_json
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -56,6 +56,9 @@ from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
 from tests.stages import caption, sheet
 
 FLOW = "summon-anime-wai"
+
+# Only a record's filename is read, so one failure serves every budget test.
+_FAILURE: Failure = {"stage": "caption", "detail": "the reader timed out"}
 
 
 @pytest.fixture
@@ -488,7 +491,9 @@ def test_an_error_record_sits_beside_where_its_artifact_would_have_gone(
     directory = tmp_path / "captions"
     directory.mkdir()
 
-    record_failure(directory, 1, "transient", {"detail": "rate limited"})
+    record_failure(
+        directory, 1, "transient", {"stage": "caption", "detail": "rate limited"}
+    )
 
     assert versions(directory) == []
     assert next_version(directory) == 1
@@ -499,8 +504,8 @@ def test_the_attempts_ordinal_and_kind_are_in_the_filename(tmp_path: Path) -> No
     directory = tmp_path / "captions"
     directory.mkdir()
 
-    first = record_failure(directory, 1, "transient", {})
-    second = record_failure(directory, 1, "permanent", {})
+    first = record_failure(directory, 1, "transient", _FAILURE)
+    second = record_failure(directory, 1, "permanent", _FAILURE)
 
     assert first.name == "001.error.1.transient.json"
     assert second.name == "001.error.2.permanent.json"
@@ -514,7 +519,7 @@ def test_the_attempts_ordinal_and_kind_are_in_the_filename(tmp_path: Path) -> No
 def test_a_failed_attempt_is_kept_when_a_later_one_succeeds(tmp_path: Path) -> None:
     directory = tmp_path / "captions"
     directory.mkdir()
-    failure = record_failure(directory, 1, "transient", {})
+    failure = record_failure(directory, 1, "transient", _FAILURE)
 
     write_json(
         directory / artifact_name(next_version(directory)), envelope("c", {}, {})
@@ -530,7 +535,7 @@ def test_a_permanent_failure_is_refused_without_attempting_the_work(
 ) -> None:
     directory = tmp_path / "captions"
     directory.mkdir()
-    record_failure(directory, 1, "permanent", {})
+    record_failure(directory, 1, "permanent", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
         check_budget("caption", directory, 1, "aunt-ada.jpg")
@@ -547,7 +552,7 @@ def test_a_stage_at_its_budget_refuses_naming_the_photograph_and_the_record(
     directory = tmp_path / "captions"
     directory.mkdir()
     for _ in range(BUDGETS["caption"]):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
         check_budget("caption", directory, 1, "aunt-ada.jpg")
@@ -563,7 +568,7 @@ def test_a_stage_below_its_budget_is_allowed_to_attempt_again(
 ) -> None:
     directory = tmp_path / "captions"
     directory.mkdir()
-    record_failure(directory, 1, "transient", {})
+    record_failure(directory, 1, "transient", _FAILURE)
 
     check_budget("caption", directory, 1, "aunt-ada.jpg")
 
@@ -589,7 +594,7 @@ def test_each_tagger_refuses_by_name_at_its_own_budget(
     directory = tmp_path / stage
     directory.mkdir()
     for _ in range(spend):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", _FAILURE)
 
     with pytest.raises(Refusal) as refused:
         check_budget(stage, directory, 1, "aunt-ada.jpg")

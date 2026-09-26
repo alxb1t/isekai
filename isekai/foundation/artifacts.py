@@ -304,7 +304,12 @@ def write_json(path: Path, payload: Mapping[str, Any]) -> None:
 
 
 def write(path: Path, kind: Artifact[T], artifact: T) -> None:
-    """Write one whole file of `kind`; the literal's key order is the file's."""
+    """Write one whole file of `kind`; the dict's key order is the file's.
+
+    The caller annotates the dict with the kind's shape, `frame: Frame = {...}`.
+    `ty` solves `T` from a bare literal as well as from `kind`, and then checks
+    nothing; an annotated one is checked key by key.
+    """
     write_json(path, artifact)
 
 

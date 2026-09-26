@@ -7,7 +7,7 @@ docs follow. Each phase converts only what it names ([D13](design.md#d13)).
 
 - [x] 1 — Guards: golden bytes and the tripwire
 - [x] 2 — The contract: `foundation/artifacts.py`
-- [ ] 3 — Run files: the frame and the error record
+- [x] 3 — Run files: the frame and the error record
 - [ ] 4 — Readings: the caption and both tag lists
 - [ ] 5 — Sheets: the sheet, the draft and the approved sheet
 - [ ] 6 — Renders: the prompt and the render sidecar
@@ -38,11 +38,11 @@ Line numbers are `a3d0ca3`'s; find each site by the text it names.
 
 ## 3 — Run files: the frame and the error record
 
-- [ ] 3.1 Write the frame in `open_run` with `write(path, RUN_FILE, …)`, and type `Run.frame` as `Frame`, unchecked, per [D4](design.md#d4).
+- [x] 3.1 Write the frame in `open_run` with `write(path, RUN_FILE, …)`, and type `Run.frame` as `Frame`, unchecked, per [D4](design.md#d4).
   Verify: `grep -c '"schema": {"name": "run"' isekai/foundation/run.py` prints `0`, and `grep -c 'RUN_FILE' isekai/foundation/run.py` prints a number above `0`.
-- [ ] 3.2 Make `record_failure` take a `Failure` and write with `write(path, ERROR_FILE, …)`; pass a `stage` and a `detail` at every test call [D11](design.md#d11) lists, and in the golden test.
+- [x] 3.2 Make `record_failure` take a `Failure` and write with `write(path, ERROR_FILE, …)`; pass a `stage` and a `detail` at every test call [D11](design.md#d11) lists, and in the golden test.
   Verify: `grep -c 'write_json(' isekai/foundation/run.py` prints `0`, and `git grep -n 'record_failure(.*, {})' -- tests` prints nothing.
-- [ ] 3.3 Delete `isekai/foundation/run.py` from the tripwire's allowlist.
+- [x] 3.3 Delete `isekai/foundation/run.py` from the tripwire's allowlist.
   Verify: `grep -c '"isekai/foundation/run.py"' tests/test_artifact_bytes.py` prints `0`.
 
 ## 4 — Readings: the caption and both tag lists

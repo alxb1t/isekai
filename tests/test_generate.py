@@ -761,7 +761,12 @@ def test_a_transient_render_record_still_refuses_the_next_attempt_on_the_count(
     prepare(run, {FLOW: flow})
     directory = run.path / FLOW / OUTPUTS / "001"
     directory.mkdir(parents=True)
-    record_failure(directory, 1, "transient", {"stage": "render", "seed": 42})
+    record_failure(
+        directory,
+        1,
+        "transient",
+        {"stage": "render", "seed": 42, "detail": "the endpoint did not answer"},
+    )
 
     client = FakeComfyClient()
     with pytest.raises(Refusal) as refused:

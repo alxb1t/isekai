@@ -305,7 +305,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
 
     directory = bare.directory(FLOW, "captions")
     for _ in range(BUDGETS["caption"]):
-        record_failure(directory, 1, "transient", {})
+        record_failure(directory, 1, "transient", {"stage": "caption", "detail": "x"})
     collect(lambda: caption(bare, reader, briefing_path=CAPTION_BRIEFING))
     return messages
 
