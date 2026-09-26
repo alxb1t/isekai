@@ -6,8 +6,8 @@ by hand is forty chances to compare the wrong pair. Each output is a single imag
 carrying the reference photograph beside the two renders, captioned **only** with
 the pair id and the letters `A` and `B`.
 
-    uv run --extra eval python baseline/build_contact_sheets.py \
-        --sheet baseline/labels/sheet.csv --out .data/labels
+    uv run --extra eval python -m evaluation.baseline.build_contact_sheets \
+        --sheet evaluation/baseline/labels/sheet.csv --out .data/labels
 
 **It carries no score, and it cannot.** It reads `sheet.csv`, which has no metric
 value in it, and it never opens a scorer record -- so it cannot leak one even by

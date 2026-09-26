@@ -10,7 +10,7 @@ docs ([D13](design.md#d13)).
 - [x] 3 — `tools/`: the derivers and the operator's scripts, run as modules
 - [x] 4 — `evaluation/`: the sub-system leaves the package
 - [x] 5 — Removals: the licence record and `probe/`
-- [ ] 6 — The docs follow the tree
+- [x] 6 — The docs follow the tree
 
 Line numbers are `c6d18a4`'s; find each site by the text it names.
 
@@ -73,13 +73,13 @@ Line numbers are `c6d18a4`'s; find each site by the text it names.
 
 ## 6 — The docs follow the tree
 
-- [ ] 6.1 Rewrite `README.md`'s commands and layout per [D12](design.md#d12).
+- [x] 6.1 Rewrite `README.md`'s commands and layout per [D12](design.md#d12).
   Verify: `grep -c -e 'scripts/' -e 'python evaluate.py' README.md` prints `0`.
-- [ ] 6.2 Follow the tree in `docs/data-flow.md`, `docs/decisions.md`, `docs/modules.md`, `isekai/README.md` (with `v0.22.5 review/R3`'s promise), the group READMEs and `evaluation/README.md`'s links, per [D11](design.md#d11), [D12](design.md#d12).
+- [x] 6.2 Follow the tree in `docs/data-flow.md`, `docs/decisions.md`, `docs/modules.md`, `isekai/README.md` (with `v0.22.5 review/R3`'s promise), the group READMEs and `evaluation/README.md`'s links, per [D11](design.md#d11), [D12](design.md#d12).
   Verify: `git grep -n -e 'scripts/' -e 'isekai/evaluation' -e '\.\./\.\./evaluate\.py' -- docs isekai/README.md 'isekai/*/README.md' evaluation/README.md` prints nothing.
-- [ ] 6.3 Edit the preambles of `evaluation`, `field-map`, `model-provisioning` and `tagging` under `openspec/specs/`; the evaluation *Source* names `isekai/boundary/provision.py` (`v0.22.5 review/R5`).
+- [x] 6.3 Edit the preambles of `evaluation`, `field-map`, `model-provisioning` and `tagging` under `openspec/specs/`; the evaluation *Source* names `isekai/boundary/provision.py` (`v0.22.5 review/R5`).
   Verify: `grep -c -e 'scripts/' -e 'isekai/evaluation' openspec/specs/evaluation/spec.md openspec/specs/field-map/spec.md openspec/specs/model-provisioning/spec.md openspec/specs/tagging/spec.md | paste -sd' ' -` prints `openspec/specs/evaluation/spec.md:0 openspec/specs/field-map/spec.md:0 openspec/specs/model-provisioning/spec.md:0 openspec/specs/tagging/spec.md:0`.
-- [ ] 6.4 Correct `pyproject.toml:54` and `evaluation/baseline/README.md:196`, and give `evaluation/baseline/`'s usage lines and `.gitignore:19` the new paths, per [D11](design.md#d11).
+- [x] 6.4 Correct `pyproject.toml:54` and `evaluation/baseline/README.md:196`, and give `evaluation/baseline/`'s usage lines and `.gitignore:19` the new paths, per [D11](design.md#d11).
   Verify: `grep -c 'The eval tests skip there' pyproject.toml` prints `0`, and `grep -c 'isekai/evaluate.py' evaluation/baseline/README.md` prints `0`.
-- [ ] 6.5 No live file names `scripts/` but the history [D12](design.md#d12) keeps.
+- [x] 6.5 No live file names `scripts/` but the history [D12](design.md#d12) keeps.
   Verify: `git grep -n 'scripts/' -- ':!CHANGELOG.md' ':!openspec/changes' ':!openspec/specs/image-generation/spec.md' ':!isekai/foundation/run.py'` prints nothing.

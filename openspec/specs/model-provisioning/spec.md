@@ -6,8 +6,8 @@ Which model artifacts the shipped graph requires, where each one comes from, how
 proven to be the intended ones before anything loads them, and the binding that keeps the manifest
 and the graph describing the same set of files.
 
-**Source:** `scripts/models.json`, `isekai/boundary/provision.py`, `scripts/download_models.sh`,
-`scripts/derive_manifest.py`, `start.sh` ·
+**Source:** `config/models.json`, `isekai/boundary/provision.py`, `tools/download_models.sh`,
+`tools/derive_manifest.py`, `start.sh` ·
 **Tests:** `tests/test_provision.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`,
 `tests/test_infra.py`, `tests/test_derivation.py`, `tests/test_vocabulary_manifest.py`
 

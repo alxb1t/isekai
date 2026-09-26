@@ -51,9 +51,9 @@ dependencies = [
 # the scorer, not a way to render: `eval` measures a cohort after the fact, so a
 # checkout that never scores anything should not carry `torch`.
 #
-# CI never installs this. The eval tests skip there and run on the operator's
-# machine, which is the same posture this repository already takes toward
-# diffusion quality: verified by eye on a pod, never in CI. This extra adds no
+# CI never installs this. The eval tests run there without it, because they
+# import the stdlib-only rules and fakes and never `eval_backends.py`; the models
+# themselves are judged by eye, as diffusion quality is. This extra adds no
 # gate command -- and none of the gate's commands installs it, which is
 # exactly the mechanism that used to strip the tagger and now cannot.
 #

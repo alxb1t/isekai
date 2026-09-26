@@ -128,7 +128,7 @@ rather than committed to the graph file, because the published samples for this 
 a clip skip their prose never states.
 
 **`models/wd14/` is one artifact split in two**, and both halves are pinned in
-`scripts/vocabulary.json`. Row N of `selected_tags.csv` names output neuron N of `model.onnx`, so a
+`config/vocabulary.json`. Row N of `selected_tags.csv` names output neuron N of `model.onnx`, so a
 pair from mismatched revisions mislabels every tag — silently, because the vector still has the right
 length and every name in it is still a real tag. Both digests are verified before the first inference.
 A WD14 artifact records `pinned: true`, and a sheet built from it carries that across; the reader and

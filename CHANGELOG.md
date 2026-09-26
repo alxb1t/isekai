@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   labels keeps their first-added time (`0029` design D7).
 - **The layer test keys its evaluation rule on the top-level `evaluation`**, and its cycle check covers
   `evaluation/` (`0029` design D8, `v0.22.5 review/R3`).
+- **The docs follow the tree**: `README.md`'s commands and layout, `docs/`, the package and group
+  READMEs, `evaluation/`'s READMEs and usage lines, and the spec preambles name `config/`, `tools/` and
+  `evaluation/`. Two false claims are corrected: no eval test skips in CI, and the guard is pinned in
+  `evaluation/evaluate.py` (`0029` design D11, D12, `v0.22.5 review/R5`).
 
 ### Removed
 

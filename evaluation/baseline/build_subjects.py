@@ -6,7 +6,8 @@ reverse a convention the previous one wrote down (design.md D15): the pixels are
 a re-run can be checked rather than trusted. Sources and destination are
 arguments, so no path outside this repository is tracked.
 
-    python baseline/build_subjects.py --sources <dir> --out <dir>
+    uv run --extra eval python -m evaluation.baseline.build_subjects \
+        --sources <dir> --out <dir>
 
 **Six subjects, each earning its slot adversarially** (design.md D11). They are
 chosen to break the metrics, not to cover humanity:

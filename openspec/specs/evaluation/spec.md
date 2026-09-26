@@ -6,9 +6,9 @@ Scoring one render against the photograph that produced it: the shared canvas th
 pixel, the guard that refuses rather than scores the wrong region, four axes and the claim each is allowed
 to make, and the blind human labelling that is what any of those numbers are checked against.
 
-**Source:** `evaluate.py`, `isekai/evaluation/evaluate.py`, `isekai/evaluation/eval_backends.py`,
-`isekai/evaluation/eval_models.py`, `isekai/evaluation/ciede2000.py`, `isekai/evaluation/labels.py`,
-`scripts/eval_models.json` ·
+**Source:** `evaluation/__main__.py`, `evaluation/evaluate.py`, `evaluation/eval_backends.py`,
+`evaluation/eval_models.py`, `evaluation/ciede2000.py`, `evaluation/labels.py`,
+`evaluation/eval_models.json`, `isekai/boundary/provision.py` ·
 **Tests:** `tests/test_evaluate.py`, `tests/test_labels.py`, `tests/test_ciede2000.py`,
 `tests/test_eval_manifest.py`
 

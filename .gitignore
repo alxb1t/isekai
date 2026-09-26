@@ -16,7 +16,7 @@ models/
 .data
 
 # `outputs/` is gone. It had two producers: the render path v0.14 deletes, and
-# `baseline/build_contact_sheets.py`, which v0.14 repoints under `.data/` — so
+# `evaluation/baseline/build_contact_sheets.py`, which v0.14 repoints under `.data/` — so
 # D14's "nothing generated is outside the one ignored root" is now literally
 # true, rather than true of the pipeline and not of the labelling aid beside it.
 #

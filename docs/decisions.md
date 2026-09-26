@@ -49,7 +49,7 @@ portfolio piece, not product polish.**
 
 ### D2 · A table fills the sheet
 
-**The sheet is filled from WD14's tags by one authored table, `scripts/field_map.json`, read from tag to
+**The sheet is filled from WD14's tags by one authored table, `config/field_map.json`, read from tag to
 field. No model decides a sheet.**
 
 - **Why:** WD14's tags are all in the vocabulary, because its label file *is* the vocabulary, and a table
@@ -94,7 +94,7 @@ carries the sampling options the OpenAI-compatible endpoint cannot.
 ### D7 · WD14 is one artifact in two files
 
 **WD14's model and its label file are pinned to one revision and verified together before the first
-inference** — `scripts/vocabulary.json`.
+inference** — `config/vocabulary.json`.
 
 - **Why:** row N of the label file names output N of the model. A pair from two revisions mislabels
   every tag, silently.

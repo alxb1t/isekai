@@ -1,9 +1,9 @@
 # The module graph
 
-What imports what inside `isekai/`, and why the shape is what it is. This is the
-one drawing of this graph in the repository. The group READMEs keep their file
-tables, which are local facts; the graph is not a local fact, and two drawings of
-it is how the previous one acquired its errors.
+What imports what inside `isekai/` and from `evaluation/` beside it, and why the
+shape is what it is. This is the one drawing of this graph in the repository. The
+group READMEs keep their file tables, which are local facts; the graph is not a
+local fact, and two drawings of it is how the previous one acquired its errors.
 
 **The layers are the rule** ([principles](principles.md#the-code-is-layered)):
 imports point down, and nothing in the package imports `evaluation`. The module
@@ -15,7 +15,7 @@ graph has no cycles. `tests/test_layers.py` holds both, lazy imports included.
 Module-level, cross-group:
   interface   ──▶ boundary · foundation · pipeline · shared
   pipeline    ──▶ boundary · foundation · shared
-  evaluation  ──▶ boundary · foundation · shared
+  evaluation  ──▶ boundary · foundation · shared    (evaluation/, beside the package)
   boundary    ──▶ foundation · shared
   shared      ──▶ foundation
   foundation  ──▶ nothing above it
@@ -41,7 +41,7 @@ both green.
 
 There are none. Every cross-group edge points down, so no two groups import each
 other; `tests/test_layers.py::test_no_import_cycle_inside_a_layer` holds the
-modules inside each group.
+modules inside each group and inside `evaluation/`.
 
 `foundation` owns what the groups above share without knowing about them:
 `atomic_write` writes bytes to a path and knows nothing about a run, `artifacts`

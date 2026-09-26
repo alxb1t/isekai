@@ -1,8 +1,9 @@
 # `isekai/` — the package
 
-Six groups and one file. `__main__.py` is the entry point `python -m isekai`
+The groups below and one file. `__main__.py` is the entry point `python -m isekai`
 resolves to and is a shim over `interface/cli.py`; everything else is filed by
-what it is, not by what calls it.
+what it is, not by what calls it. The evaluator is not here: it is
+[`evaluation/`](../evaluation/README.md), beside the package it measures.
 
 | directory | is | files |
 |---|---|---|
@@ -10,7 +11,6 @@ what it is, not by what calls it.
 | [`pipeline/`](pipeline/README.md) | the staged verbs, and `tagging.py`, which is not one | `caption.py` · `tagging.py` · `sheet.py` · `review.py` · `generate.py` |
 | [`shared/`](shared/README.md) | primitives with no domain of their own | `field_map.py` · `fields.py` · `image.py` · `vocabulary.py` |
 | [`boundary/`](boundary/README.md) | everything that leaves this process | `comfy/` (`__init__.py` · `contract.py` · `client.py` · `multipart.py`) · `ollama.py` · `provision.py` · `wd14.py` |
-| [`evaluation/`](evaluation/README.md) | scoring a render against its photograph | `evaluate.py` · `eval_backends.py` · `ciede2000.py` · `eval_models.py` · `labels.py` |
 | [`interface/`](interface/README.md) | what an operator touches | `cli.py` · `wiring.py` · `run_view.py` · `ui/` (`__init__.py` · `batch.py` · `bundle.py` · `app.py`) |
 
 **The column names the files rather than counting them, and that is the fix for a
@@ -29,17 +29,16 @@ two modules can reach each other through. `interface/ui/__init__.py` and
 `boundary/comfy/__init__.py` are sub-packages' front doors, not a group's.
 
 **The layers are the rule** ([principles](../docs/principles.md#the-code-is-layered)):
-each group but `evaluation` is a layer, imports point down, and nothing in the
-package imports `evaluation`. The module graph has no cycles.
+each group is a layer, imports point down, and nothing in the package imports
+`evaluation`. The module graph has no cycles.
 `tests/test_layers.py` holds each of these rules.
 
 **The graph itself is drawn in [`docs/modules.md`](../docs/modules.md)**,
-and only there — every cross-group edge, which of them are lazy, the subpackage
-cycles and why each one exists. It is one drawing in one place because two
-drawings is how the one that used to sit here acquired its errors: a module-level
-edge missing outright, a laziness annotated backwards, and `interface/ui`
-collapsed away. The file tables below stay, because a file table is a local fact
-and a graph is not.
+and only there — every cross-group edge, and which of them are lazy. It is one
+drawing in one place because two drawings is how the one that used to sit here
+acquired its errors: a module-level edge missing outright, a laziness annotated
+backwards, and `interface/ui` collapsed away. The file tables below stay, because a
+file table is a local fact and a graph is not.
 
 **Two rules the layout is holding, not describing.** The entry point imports no
 third-party package at module scope: nothing in `python -m isekai`'s import graph
@@ -48,11 +47,11 @@ does need are declared dependencies as of v0.22.3, reached from inside the verb
 that needs them, and that guard is what checks this. And a set of constants
 anchors a repository path on its own `__file__` -- `run.DATA_ROOT`,
 `run.REPOSITORY`, `flow.FLOWS_DIR`, `provision.MANIFEST_PATH`,
-`provision.VOCABULARY_MANIFEST_PATH` and `eval_models.EVAL_MANIFEST_PATH`;
-`tests/test_package_paths.py` pins every one of them to the directory holding
-`pyproject.toml`. The falsification twin is **one**, not one each: every anchor's
-suffix cancels against its own hops, so all of them reduce to the same wrong path
-and parametrizing would advertise per-anchor coverage that does not exist.
+`provision.VOCABULARY_MANIFEST_PATH`, and `evaluation/`'s
+`eval_models.EVAL_MANIFEST_PATH`; `tests/test_package_paths.py` pins every one of
+them to the directory holding `pyproject.toml`. The falsification twin is **one
+per top-level package**, not one per anchor: every anchor's suffix cancels against
+its own hops, so each reduces to the package that holds it.
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../docs/principles.md)'s, and the choices in force are
