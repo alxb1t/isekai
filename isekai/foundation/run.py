@@ -154,7 +154,9 @@ Kind = Literal["transient", "permanent"]
 # **`sheet` is one for `wd14`'s reason.** It reached a hosted model once and had
 # three; it is now a dictionary lookup over an artifact already on disk, so there
 # is no transient failure left for a second attempt to catch -- which is exactly
-# what `"wd14": 1` above already records for the other local producer.
+# what `"wd14": 1` above already records for the other local producer. The stage
+# records no failure, so this budget does not bind; it is declared because
+# `check_budget` reads every stage's.
 #
 # A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
 # below is a bare lookup, and `across()` and `main()` both catch only `Refusal`

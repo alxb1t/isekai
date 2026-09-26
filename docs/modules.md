@@ -120,9 +120,10 @@ what carries data at run time.
 - **Each front end calls the stage functions directly.**
 - **A stage reads and writes its run directory.** No stage imports another stage;
   `tests/test_layers.py::test_no_stage_imports_another` holds this. Every run
-  file is written through `foundation/artifacts.py`'s `write`;
+  file's JSON is written through `foundation/artifacts.py`'s `write`;
   `tests/test_artifact_bytes.py::test_only_the_contract_writes_a_run_file` holds
-  that.
+  that. The photograph's copy and a render's image are bytes, written by
+  `foundation/atomic_write.py`.
 - **A stage reaches a model, the GPU or the network through `boundary/`.**
 - **`foundation`'s run, artifacts, flow and refusal are what every layer uses.**
 - **`StageFailure` lives in `foundation/run.py`, not `refusal.py`.** `refusal.py`

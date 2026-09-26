@@ -606,7 +606,9 @@ def refresh(root: Path = Path(".")) -> None:
 
 def main() -> None:
     """Rewrite the table, and print the expansion when asked for it."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="python -m tools.derive_field_map", description=__doc__
+    )
     parser.add_argument(
         "--report", action="store_true", help="print the expansion and the collisions"
     )

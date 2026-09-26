@@ -318,11 +318,11 @@ def write(path: Path, kind: Artifact[T], artifact: T) -> None:
 def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
     """Parse a file of `kind`, refusing a version of its shape this build lacks.
 
-    A best-effort parse of a format you do not know produces fields that look
-    fine and mean nothing, so the declared version is checked before any other
-    key is touched. The name is not checked. A file that is not a JSON object
-    with an object `schema` is refused by name, never raised. `remedy` replaces
-    the default for a file no stage writes.
+    A best-effort parse of a format this build does not know produces fields
+    that look fine and mean nothing, so the declared version is checked before
+    any other key is touched. The name is not checked. A file that is not a JSON
+    object with an object `schema` is refused by name, never raised. `remedy`
+    replaces the default for a file no stage writes.
     """
     # A rerun is a no-op while the file exists, so the remedy deletes it first.
     remedy = remedy or f"delete {path}, then run the stage that wrote it again"

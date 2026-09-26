@@ -6,7 +6,7 @@ Behaviour first, then the guards, then the prose that describes the result ([D5]
 
 - [x] 1 — Behaviour: v0.22.8's families finished
 - [x] 2 — Structure: the retry rule once, the annotation guard, the saved-draft golden, test nits
-- [ ] 3 — Prose: the documentation that drifted
+- [x] 3 — Prose: the documentation that drifted
 
 Line numbers are `3278647`'s; find each site by the text it names.
 
@@ -36,9 +36,9 @@ Line numbers are `3278647`'s; find each site by the text it names.
 
 ## 3 — Prose: the documentation that drifted
 
-- [ ] 3.1 Apply [D3](design.md#d3)'s rows to `README.md`, `isekai/README.md`, `isekai/shared/README.md`, `isekai/foundation/README.md`, `docs/modules.md` and `docs/principles.md`.
+- [x] 3.1 Apply [D3](design.md#d3)'s rows to `README.md`, `isekai/README.md`, `isekai/shared/README.md`, `isekai/foundation/README.md`, `docs/modules.md` and `docs/principles.md`.
   Verify: `grep -c 'ISEKAI_VOCABULARY' README.md` prints a number above `0`, `grep -c 'by its full path' docs/principles.md` prints `0`, and `grep -c 'Two of them do read' isekai/shared/README.md` prints `0`.
-- [ ] 3.2 Pass `prog="python -m <module>"` to the parsers [D3](design.md#d3) names.
+- [x] 3.2 Pass `prog="python -m <module>"` to the parsers [D3](design.md#d3) names.
   Verify: `grep -l 'prog="python -m ' evaluation/__main__.py tools/derive_field_map.py evaluation/baseline/build_contact_sheets.py evaluation/baseline/build_subjects.py | wc -l | tr -d ' '` prints `4`.
-- [ ] 3.3 Reword *"a format you do not know"* in `isekai/foundation/artifacts.py:321`, and the sheet budget's comment at `isekai/foundation/run.py:154-157`, per [D3](design.md#d3).
+- [x] 3.3 Reword *"a format you do not know"* in `isekai/foundation/artifacts.py:321`, and the sheet budget's comment at `isekai/foundation/run.py:154-157`, per [D3](design.md#d3).
   Verify: `grep -c 'format you do not know' isekai/foundation/artifacts.py` prints `0`, and `grep -c 'records no failure' isekai/foundation/run.py` prints `1`.

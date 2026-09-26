@@ -112,7 +112,9 @@ def png_dimensions(data: bytes) -> tuple[int, int]:
 
 def main() -> int:
     """Build all six subjects and print the table `baseline/README.md` records."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="python -m evaluation.baseline.build_subjects", description=__doc__
+    )
     parser.add_argument(
         "--sources", required=True, help="directory holding the synthetic portraits"
     )

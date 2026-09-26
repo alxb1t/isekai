@@ -111,7 +111,7 @@ retried on its own.
 Deleting the record is how an operator tries again: no flag, no decay.
 
 **Every refusal ends with a fix that works** — a command this build has, complete enough to paste, that
-succeeds in the state the refusal leaves behind; or the file to delete, by its full path.
+succeeds in the state the refusal leaves behind; or the file to delete, by its path in the run.
 
 - **Why:** one bad photograph must not cost the others their session, and on the metered stage that
   costs money. A failure reported mid-batch scrolls away before the batch ends. A default hides the
