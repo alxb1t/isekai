@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A flow that declares no tagger gets a sheet with every field empty** (`0032` design D3): `sheet()` takes
   a required `tagged` keyword from the composition root, reads no list when it is false, and records an
   `empty` producer with no model and no `from`. A `sheet-empty` golden pins its bytes.
+- **The review surface shows a missing caption with the command that writes it** (`0032` design D4): the
+  input payload carries `caption_command`, built by the server, and the caption panel shows *no caption*
+  and the command. The approval-race test's waits are bounded and asserted, so a regression fails rather
+  than hangs.
 
 ## [0.22.9] - 2026-09-26
 

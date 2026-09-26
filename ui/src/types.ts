@@ -68,8 +68,11 @@ export interface InputDetail {
   width: number
   height: number
   caption: string | null
+  /* The command that writes a missing caption, built by the server; null
+     beside a caption. The browser never spells a command. */
+  caption_command: string | null
   /* Null where the artifact is absent, which is never a failure: a run
-     captioned before v0.20, a flow with no hosted block, or a tagger that
+     captioned before v0.20, a flow that declares no tagger, or a tagger that
      failed. The panel simply is not drawn. */
   wd14: ScoredTag[] | null
   tags: OfferedTag[] | null

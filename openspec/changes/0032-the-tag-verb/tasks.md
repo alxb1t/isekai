@@ -8,7 +8,7 @@ the record; the acceptance last, on the operator's machine.
 - [x] 1 — The manifest: `tagger`, version 4, both flows re-pinned
 - [x] 2 — The verbs: `tag` and `caption`, each tagger isolated
 - [x] 3 — The sheet: an empty fill for a flow that declares no tagger
-- [ ] 4 — The review surface: a missing caption names its command
+- [x] 4 — The review surface: a missing caption names its command
 - [ ] 5 — The record: D1, D31, ① as two verbs
 - [ ] 6 — 🛑 **HUMAN · HALT** — the acceptance, on one synthetic portrait
 
@@ -63,13 +63,13 @@ Line numbers are `50a6b17`'s; find each site by the text it names.
 
 ## 4 — The review surface: a missing caption names its command
 
-- [ ] 4.1 **HALT CHECK** — the payload carries no command for a missing caption.
+- [x] 4.1 **HALT CHECK** — the payload carries no command for a missing caption.
   Verify: `grep -c 'caption_command' isekai/interface/ui/app.py` prints `0`.
-- [ ] 4.2 Add `caption_command` to `read_input`'s payload in `isekai/interface/ui/app.py`, per [D4](design.md#d4), with `ui:source:a-missing-caption-names-its-command` in `tests/test_ui_api.py`: `null` beside a caption; otherwise a command naming the run that `build_parser` parses.
+- [x] 4.2 Add `caption_command` to `read_input`'s payload in `isekai/interface/ui/app.py`, per [D4](design.md#d4), with `ui:source:a-missing-caption-names-its-command` in `tests/test_ui_api.py`: `null` beside a caption; otherwise a command naming the run that `build_parser` parses.
   Verify: `grep -c 'ui:source:a-missing-caption-names-its-command' tests/test_ui_api.py` prints `1`.
-- [ ] 4.3 Carry `caption_command` from `ui/src/types.ts` through `ui/src/ReviewApp.vue` and `ui/src/components/SourcePanel.vue` to `ui/src/components/CaptionPanel.vue`, which shows *no caption* and the command when the prose is `null`; reword the *"no hosted block"* comments, per [D4](design.md#d4).
+- [x] 4.3 Carry `caption_command` from `ui/src/types.ts` through `ui/src/ReviewApp.vue` and `ui/src/components/SourcePanel.vue` to `ui/src/components/CaptionPanel.vue`, which shows *no caption* and the command when the prose is `null`; reword the *"no hosted block"* comments, per [D4](design.md#d4).
   Verify: `grep -c 'caption_command' ui/src/types.ts` prints `1`, and `cat ui/src/types.ts ui/src/components/SourcePanel.vue | grep -c 'hosted block'` prints `0`.
-- [ ] 4.4 Bound and assert both waits in `_update_during_approval` (`tests/test_ui_api.py:586`, `:593`), per [D4](design.md#d4).
+- [x] 4.4 Bound and assert both waits in `_update_during_approval` (`tests/test_ui_api.py:586`, `:593`), per [D4](design.md#d4).
   Verify: `grep -c -e 'approved.wait()' -e 'timeout=None if unlocked' tests/test_ui_api.py` prints `0`.
 
 ## 5 — The record: D1, D31, ① as two verbs
