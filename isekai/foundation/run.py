@@ -30,7 +30,6 @@ Stdlib only, and on `python -m isekai`'s import graph.
 """
 
 import hashlib
-import json
 import os
 import re
 from collections.abc import Callable, Mapping, Sequence
@@ -46,6 +45,7 @@ from isekai.foundation.artifacts import (
     Failure,
     Frame,
     InstructionsRecord,
+    read,
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
@@ -232,8 +232,8 @@ class Run:
 
     @property
     def frame(self) -> Frame:
-        """Return the run's frame, parsed, with no version check."""
-        return json.loads(self.frame_path.read_text())
+        """Return the run's frame, refusing a version this build does not read."""
+        return read(self.frame_path, RUN_FILE)
 
     @property
     def photo(self) -> Path:

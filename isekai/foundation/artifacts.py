@@ -287,6 +287,24 @@ APPROVED_FILE: Artifact[ReviewApproved] = Artifact("review", DRAFT_FILE.version)
 PROMPT_FILE: Artifact[Prompt] = Artifact("prompt", 1)
 RENDER_FILE: Artifact[Render] = Artifact("render", 1)
 
+# The version this build reads of each kind, by name: for a reader that learns
+# the kind from the file rather than being told it, as `show` does.
+VERSIONS: Mapping[str, int] = {
+    kind.name: kind.version
+    for kind in (
+        RUN_FILE,
+        ERROR_FILE,
+        CAPTION_FILE,
+        WD14_FILE,
+        TAGS_FILE,
+        SHEET_FILE,
+        DRAFT_FILE,
+        APPROVED_FILE,
+        PROMPT_FILE,
+        RENDER_FILE,
+    )
+}
+
 
 # --- reading and writing ------------------------------------------------------
 
@@ -311,15 +329,27 @@ def read(path: Path, kind: Artifact[T]) -> T:
 
     A best-effort parse of a format you do not know produces fields that look
     fine and mean nothing, so the declared version is checked before any other
-    key is touched. The name is not checked.
+    key is touched. The name is not checked. A file that is not a JSON object
+    with an object `schema` is refused by name, never raised.
     """
-    parsed: Any = json.loads(path.read_text())
-    declared = parsed.get("schema", {}).get("version")
+    # A rerun is a no-op while the file exists, so the remedy deletes it first.
+    remedy = f"delete {path}, then run the stage that wrote it again"
+    try:
+        parsed: Any = json.loads(path.read_text())
+    except ValueError as unreadable:
+        raise Refusal(
+            f"{path.name}: is not valid JSON ({unreadable}); {remedy}"
+        ) from unreadable
+    if not isinstance(parsed, dict):
+        raise Refusal(f"{path.name}: is not a JSON object; {remedy}")
+    schema = parsed.get("schema", {})
+    if not isinstance(schema, dict):
+        raise Refusal(f"{path.name}: its schema block is not an object; {remedy}")
+    declared = schema.get("version")
     if declared != kind.version:
         raise Refusal(
             f"{path.name}: declares schema version {declared!r} and this build "
             f"reads version {kind.version}; upgrade isekai to a build that "
-            f"declares version {declared!r}, or re-run the stage that wrote it "
-            "to produce an artifact this build can read"
+            f"declares version {declared!r}, or {remedy}"
         )
     return parsed

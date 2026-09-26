@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An unreadable run file is refused by name**: not valid JSON, not an object, or a `schema` that is not
+  an object. The remedy deletes the file before re-running its stage; the run's frame reads through the
+  same check, and `show` marks such a file instead of parsing it (`0030` design D1, D5).
+
 ## [0.22.7] - 2026-09-26
 
 ### Changed

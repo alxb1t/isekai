@@ -5,7 +5,7 @@ The foundation's reads first, then each area's fixes together, then every printe
 
 ## Progress
 
-- [ ] 1 — Reading: unreadable files refused by name, the frame checked, `show` marks
+- [x] 1 — Reading: unreadable files refused by name, the frame checked, `show` marks
 - [ ] 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
 - [ ] 3 — Approval: one definition of a draft, the update lock, missing keys refused
 - [ ] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
@@ -16,13 +16,13 @@ Line numbers are `e6c4278`'s; find each site by the text it names.
 
 ## 1 — Reading: unreadable files refused by name, the frame checked, `show` marks
 
-- [ ] 1.1 **HALT CHECK** — `Run.frame` parses with a bare `json.loads`, and `read` does not guard its parse.
+- [x] 1.1 **HALT CHECK** — `Run.frame` parses with a bare `json.loads`, and `read` does not guard its parse.
   Verify: `grep -c 'json.loads(self.frame_path.read_text())' isekai/foundation/run.py` prints `1`, and `grep -c 'isinstance(parsed, dict)' isekai/foundation/artifacts.py` prints `0`.
-- [ ] 1.2 Make `read` refuse an unreadable file by name, with [D1](design.md#d1)'s remedy in place of *"re-run the stage that wrote it"*; follow the text in `tests/test_run_directory.py:452-453`, `:467-468`; add [D8](design.md#d8)'s test.
+- [x] 1.2 Make `read` refuse an unreadable file by name, with [D1](design.md#d1)'s remedy in place of *"re-run the stage that wrote it"*; follow the text in `tests/test_run_directory.py:452-453`, `:467-468`; add [D8](design.md#d8)'s test.
   Verify: `grep -c 're-run the stage that wrote it' isekai/foundation/artifacts.py` prints `0`, and `grep -c '^def test_an_unreadable_artifact_is_refused_by_name' tests/test_run_directory.py` prints `1`.
-- [ ] 1.3 Read `Run.frame` through `read(…, RUN_FILE)`, per [D5](design.md#d5).
+- [x] 1.3 Read `Run.frame` through `read(…, RUN_FILE)`, per [D5](design.md#d5).
   Verify: `grep -c 'json.loads' isekai/foundation/run.py` prints `0`.
-- [ ] 1.4 Make `run_view._producer_of` mark a file it cannot read, per [D5](design.md#d5), with `test_show_marks_a_file_it_cannot_read` in `tests/test_run_view.py`.
+- [x] 1.4 Make `run_view._producer_of` mark a file it cannot read, per [D5](design.md#d5), with `test_show_marks_a_file_it_cannot_read` in `tests/test_run_view.py`.
   Verify: `grep -c '^def test_show_marks_a_file_it_cannot_read' tests/test_run_view.py` prints `1`.
 
 ## 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages

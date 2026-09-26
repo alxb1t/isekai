@@ -450,7 +450,7 @@ def test_the_schema_refusal_states_a_remedy_this_build_can_point_at(
 
     message = str(refused.value)
     assert "upgrade isekai" in message
-    assert "re-run the stage" in message
+    assert f"delete {path}, then run the stage that wrote it again" in message
     # No migration command is offered, because this build ships none.
     assert "migrate" not in message
 
@@ -465,9 +465,37 @@ def test_a_typed_read_refuses_an_unknown_version(tmp_path: Path) -> None:
 
     assert str(refused.value) == (
         "001.json: declares schema version 2 and this build reads version 1; "
-        "upgrade isekai to a build that declares version 2, or re-run the stage "
-        "that wrote it to produce an artifact this build can read"
+        f"upgrade isekai to a build that declares version 2, or delete {path}, "
+        "then run the stage that wrote it again"
     )
+
+
+@pytest.mark.spec("run-directory:schema:an-unreadable-artifact-is-refused-by-name")
+@pytest.mark.parametrize(
+    ("body", "cause"),
+    [
+        ('{"schema": {"name": "caption", "vers', "is not valid JSON"),
+        ('[{"prose": "uninterpreted"}]', "is not a JSON object"),
+        (
+            '{"schema": ["uninterpreted"], "prose": "uninterpreted"}',
+            "schema block is not an object",
+        ),
+    ],
+)
+def test_an_unreadable_artifact_is_refused_by_name(
+    tmp_path: Path, body: str, cause: str
+) -> None:
+    path = tmp_path / "001.json"
+    path.write_text(body)
+
+    with pytest.raises(Refusal) as refused:
+        read(path, CAPTION_FILE)
+
+    message = str(refused.value)
+    assert message.startswith("001.json: ")
+    assert cause in message
+    assert "uninterpreted" not in message
+    assert f"delete {path}, then run the stage that wrote it again" in message
 
 
 # --- completion by listing ----------------------------------------------------
