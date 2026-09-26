@@ -8,7 +8,7 @@ The foundation's reads first, then each area's fixes together, then every printe
 - [x] 1 — Reading: unreadable files refused by name, the frame checked, `show` marks
 - [x] 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
 - [x] 3 — Approval: one definition of a draft, the update lock, missing keys refused
-- [ ] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
+- [x] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
 - [ ] 5 — Remedies: every printed command carries its run, and a guard holds it
 - [ ] 6 — The docs drop the breaks that close
 
@@ -51,15 +51,15 @@ Line numbers are `e6c4278`'s; find each site by the text it names.
 
 ## 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
 
-- [ ] 4.1 Replace `Unreachable` with `TransportFailure` and its `kind` in `isekai/boundary/comfy/`, `isekai/pipeline/generate.py`, `tests/test_generate.py:721` and `isekai/boundary/README.md` (with `provision.py`'s importers), per [D3](design.md#d3), [D7](design.md#d7).
+- [x] 4.1 Replace `Unreachable` with `TransportFailure` and its `kind` in `isekai/boundary/comfy/`, `isekai/pipeline/generate.py`, `tests/test_generate.py:721` and `isekai/boundary/README.md` (with `provision.py`'s importers), per [D3](design.md#d3), [D7](design.md#d7).
   Verify: `git grep -n Unreachable -- isekai tests` prints nothing.
-- [ ] 4.2 Classify in `_reported` per [D3](design.md#d3)'s table and [D1](design.md#d1)'s client row, with [D8](design.md#d8)'s status tests.
+- [x] 4.2 Classify in `_reported` per [D3](design.md#d3)'s table and [D1](design.md#d1)'s client row, with [D8](design.md#d8)'s status tests.
   Verify: `grep -c -e '^def test_a_rejected_graph_is_recorded_permanent' -e '^def test_a_server_error_is_recorded_transient' tests/test_generate.py` prints `2`.
-- [ ] 4.3 Run the upload inside the render's guard, per [D3](design.md#d3), with [D8](design.md#d8)'s upload test.
+- [x] 4.3 Run the upload inside the render's guard, per [D3](design.md#d3), with [D8](design.md#d8)'s upload test.
   Verify: `grep -c '^def test_a_failed_upload_is_recorded' tests/test_generate.py` prints `1`.
-- [ ] 4.4 Refuse `_submit`'s malformed history per [D1](design.md#d1), and give the render and assembly refusals [D2](design.md#d2)'s actions, the producer read inside the guard.
+- [x] 4.4 Refuse `_submit`'s malformed history per [D1](design.md#d1), and give the render and assembly refusals [D2](design.md#d2)'s actions, the producer read inside the guard.
   Verify: `grep -c 'render again' isekai/pipeline/generate.py` prints `0`.
-- [ ] 4.5 Write the sidecar before its image, and delete `prompt_artifact`'s `new_version`, per [D6](design.md#d6).
+- [x] 4.5 Write the sidecar before its image, and delete `prompt_artifact`'s `new_version`, per [D6](design.md#d6).
   Verify: `grep -c new_version isekai/pipeline/generate.py` prints `0`, and `grep -n -e 'write(provenance, RENDER_FILE' -e 'write_atomically(image' isekai/pipeline/generate.py | head -1 | grep -c provenance` prints `1`.
 
 ## 5 — Remedies: every printed command carries its run, and a guard holds it

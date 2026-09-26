@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it neither re-opens an input nor is approved, and `approve` on an approved flow writes nothing. A lock
   orders overlapping draft updates; a draft without `fields` or an approval without `sheet` is refused
   (`0030` design D1, D4).
+- **The transport's failure carries its kind**: `Unreachable` becomes `TransportFailure`. A 4xx or an
+  unreadable answer is recorded permanent, a 5xx or a closed tunnel transient; a failed upload is recorded,
+  and a malformed history refused. The render's sidecar is written before its image (`0030` design D3, D6).
 
 ## [0.22.7] - 2026-09-26
 

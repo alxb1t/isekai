@@ -36,11 +36,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy import ComfyTransport, Unreachable
+from isekai.boundary.comfy import ComfyTransport, TransportFailure
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     PROMPT_FILE,
     RENDER_FILE,
+    Failure,
     Prompt,
     read,
     write,
@@ -155,13 +156,7 @@ def approved_flows(run: Run) -> list[str]:
     ]
 
 
-def prompt_artifact(
-    run: Run,
-    flow: Flow,
-    schema: Schema,
-    *,
-    new_version: bool = False,
-) -> Path:
+def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
     """Assemble `flow`'s prompt for this run and write it, without touching a network.
 
     The artifact takes the approved sheet's number rather than counting its own,
@@ -171,18 +166,19 @@ def prompt_artifact(
     version, source = approved_artifact(run, flow.id)
     directory = run.directory(flow.id, PROMPTS)
     path = directory / artifact_name(version)
-    if path.exists() and not new_version:
+    if path.exists():
         return path
 
     check_budget(STAGE_ASSEMBLE, directory, version, run)
     try:
         body = read(source, APPROVED_FILE)
         positive, negative = assemble(body["fields"], schema.names, flow)
+        edited = bool(body["producer"].get("edited"))
         # Read here and thrown away, for the reason the whole stage is here: the
         # render target comes from the photograph's own header, and a header
         # nothing can read must cost an assembly rather than a boot.
         photo_resolution(run.photo)
-    except (Refusal, KeyError, TypeError) as broken:
+    except (Refusal, KeyError, TypeError, AttributeError) as broken:
         record = record_failure(
             directory,
             version,
@@ -191,7 +187,8 @@ def prompt_artifact(
         )
         raise Refusal(
             f"{run.id}: flow {flow.id}'s approved sheet cannot be assembled -- "
-            f"{broken}; see {record.name} in {flow.id}/{PROMPTS}/"
+            f"{broken}; fix it, delete {flow.id}/{PROMPTS}/{record.name}, then "
+            f"run `python -m isekai generate --flow {flow.id} {run.id}`"
         ) from broken
 
     prompt: Prompt = {
@@ -204,7 +201,7 @@ def prompt_artifact(
         "flow": flow.id,
         "positive": positive,
         "negative": negative,
-        "edited": bool(body["producer"].get("edited")),
+        "edited": edited,
     }
     write(path, PROMPT_FILE, prompt)
     return path
@@ -428,7 +425,12 @@ def render(
     # instead, and `load_flow` is what holds the two halves in agreement -- a
     # manifest declaring the photograph on one side alone never loads, so this
     # gate and that one cannot disagree about the same run.
-    image_name = client.upload_image(str(run.photo)) if "photo" in flow.inputs else None
+    try:
+        image_name = (
+            client.upload_image(str(run.photo)) if "photo" in flow.inputs else None
+        )
+    except Refusal as failed:
+        raise _recorded(run, flow, directory, version, failed, None) from failed
     # Constant across seeds: the flow's graph on disk does not change mid-render.
     flow_graph = flow.graph_digest()
     produced: list[Render] = []
@@ -441,22 +443,10 @@ def render(
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
             body = _submit(client, graph, poll)
         except Refusal as failed:
-            # A closed tunnel says nothing about this graph, and `check_budget`
-            # short-circuits a `permanent` record for good -- so recording one
-            # here made the operator's remedy deleting a file by hand, on the
-            # one failure that is over the moment the pod comes back (v0.13 R7).
-            record_failure(
-                directory,
-                version,
-                "transient" if isinstance(failed, Unreachable) else "permanent",
-                {"stage": STAGE_RENDER, "seed": seed, "detail": str(failed)},
-            )
-            raise
-        # Atomically, like every other artifact in a run, and for a sharper
-        # reason: `rendered_seeds` treats the presence of the render as proof the
-        # seed is done, so a truncated file is a seed resume skips forever -- on
-        # the one stage that costs money on every pass.
-        write_atomically(image, body)
+            raise _recorded(run, flow, directory, version, failed, seed) from failed
+        # The sidecar first, so an image always has its provenance: a crash
+        # between the writes leaves a sidecar with no image, and that seed
+        # renders again (`0030` design D6).
         provenance = directory / f"{seed}.json"
         sidecar: RenderSidecar = {
             "schema": RENDER_FILE.schema,
@@ -473,8 +463,39 @@ def render(
             "edited": prompt["edited"],
         }
         write(provenance, RENDER_FILE, sidecar)
+        # Atomically, like every other artifact in a run, and for a sharper
+        # reason: `rendered_seeds` treats the presence of the render as proof the
+        # seed is done, so a truncated file is a seed resume skips forever -- on
+        # the one stage that costs money on every pass.
+        write_atomically(image, body)
         produced.append(Render(seed, image, provenance))
     return produced
+
+
+def _recorded(
+    run: Run,
+    flow: Flow,
+    directory: Path,
+    version: int,
+    failed: Refusal,
+    seed: int | None,
+) -> Refusal:
+    """Record a failed render as the kind it was, and return the refusal naming it.
+
+    The transport says the kind: a rejected graph is permanent, a closed tunnel
+    or a server error transient. Any other refusal -- a header nothing can read,
+    an answer with no image -- is permanent. An upload serves every seed, so its
+    record carries none.
+    """
+    kind = failed.kind if isinstance(failed, TransportFailure) else "permanent"
+    failure: Failure = {"stage": STAGE_RENDER, "detail": str(failed)}
+    if seed is not None:
+        failure["seed"] = seed
+    record = record_failure(directory, version, kind, failure)
+    return Refusal(
+        f"{run.id}: flow {flow.id}'s render failed ({kind}) -- {failed}; see "
+        f"{record.relative_to(run.path)}, and delete it before rendering again"
+    )
 
 
 def _submit(client: ComfyTransport, graph: Workflow, poll: float) -> bytes:
@@ -482,10 +503,18 @@ def _submit(client: ComfyTransport, graph: Workflow, poll: float) -> bytes:
     prompt_id = client.submit(graph)
     while prompt_id not in (history := client.history(prompt_id)):
         time.sleep(poll)
-    for output in history[prompt_id]["outputs"].values():
-        if "images" in output:
-            return client.view(output["images"][0])
+    record = history[prompt_id]
+    outputs = record.get("outputs") if isinstance(record, dict) else None
+    if not isinstance(outputs, dict):
+        raise Refusal(
+            "the endpoint's history for a graph it accepted carries no outputs; "
+            "check the pod's ComfyUI log"
+        )
+    for output in outputs.values():
+        images = output.get("images") if isinstance(output, dict) else None
+        if isinstance(images, list) and images:
+            return client.view(images[0])
     raise Refusal(
         "the endpoint returned no image for a graph it accepted; check the pod's "
-        "ComfyUI log, then render again"
+        "ComfyUI log"
     )

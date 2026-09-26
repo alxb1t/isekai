@@ -1,5 +1,6 @@
 """The ComfyUI HTTP transport -- the one place this package touches the network."""
 
+import http.client
 import json
 import urllib.error
 from collections.abc import Iterator
@@ -8,13 +9,13 @@ from pathlib import Path
 from typing import Any
 from urllib import parse, request
 
-from isekai.boundary.comfy.contract import ComfyTransport, Image, Unreachable
+from isekai.boundary.comfy.contract import ComfyTransport, Image, TransportFailure
 from isekai.boundary.comfy.multipart import build_multipart
 from isekai.foundation.flow import Workflow
 
 
 class ComfyClient(ComfyTransport):
-    """Thin HTTP transport to a running ComfyUI; a network error is `Unreachable`."""
+    """Thin HTTP transport to a running ComfyUI; a failure is a `TransportFailure`."""
 
     def __init__(self, server: str) -> None:
         """Point the client at a ComfyUI base URL, trailing slash optional."""
@@ -80,21 +81,57 @@ class ComfyClient(ComfyTransport):
                 return resp.read()
 
 
+# How much of an error body a refusal quotes: ComfyUI's names the node and the
+# input, and a proxy's HTML page is noise past its first lines.
+ERROR_BODY_CHARS = 500
+
+
 @contextmanager
 def _reported() -> Iterator[None]:
-    """Turn a transport-level network error into a `Refusal` naming the remedy.
+    """Turn a failed request into a `TransportFailure` of the kind it was.
 
-    `Unreachable` rather than a bare `Refusal`, because nothing that reaches
-    here says anything about the graph: the pod went away, the tunnel closed, or
-    it was never opened. Every caller that only reports a refusal is unaffected;
-    the one that writes an error record records this as transient (v0.13 R7).
+    e.g. HTTP 400 -> permanent, HTTP 502 -> transient, a refused connection ->
+    transient, a body that is not JSON -> permanent (`0030` design D3).
     """
     try:
         yield
+    # Before `URLError`, which `HTTPError` subclasses: an answer is not a tunnel.
+    except urllib.error.HTTPError as answered:
+        body = _error_body(answered)
+        if answered.code < 500:
+            raise TransportFailure(
+                "permanent",
+                f"the endpoint rejected the request with HTTP {answered.code}: {body}",
+            ) from answered
+        raise TransportFailure(
+            "transient",
+            f"the endpoint failed with HTTP {answered.code} ({body}); check the "
+            "pod's ComfyUI log",
+        ) from answered
+    except http.client.HTTPException as cut:
+        raise TransportFailure(
+            "transient",
+            f"the endpoint's answer was cut off ({cut!r}); check the pod's ComfyUI log",
+        ) from cut
     except (urllib.error.URLError, OSError) as unreachable:
-        raise Unreachable(
+        raise TransportFailure(
+            "transient",
             f"the rendering endpoint could not be reached ({unreachable}); "
             "bring a pod up with `bash infra/up.sh`, open the tunnel, and pass "
             "its address with `--server` -- or drop `--server` to assemble the "
-            "prompts and stop"
+            "prompts and stop",
         ) from unreachable
+    except (ValueError, KeyError) as unread:
+        raise TransportFailure(
+            "permanent",
+            "the endpoint answered in a shape this build does not read "
+            f"({unread!r}); check that `--server` names a ComfyUI",
+        ) from unread
+
+
+def _error_body(answered: urllib.error.HTTPError) -> str:
+    """Return the start of an error response's body, or say it could not be read."""
+    try:
+        return answered.read().decode(errors="replace").strip()[:ERROR_BODY_CHARS]
+    except (OSError, http.client.HTTPException):
+        return "no body could be read"
