@@ -37,7 +37,7 @@ from isekai.foundation.run import (
     latest_artifact,
 )
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.review import DRAFT, Status, review
+from isekai.pipeline.review import Status, current_draft, review
 from isekai.pipeline.review import state as review_state
 from isekai.shared.field_map import FieldMap
 from isekai.shared.image import dimensions_or_refuse
@@ -112,15 +112,14 @@ class Batch:
         return latest_artifact(held.run.directory(self.flow.id, TAGS))
 
     def draft_path(self, held: Input) -> Path | None:
-        """Return the highest draft waiting for this input, or None if there is none.
+        """Return this input's current draft, or None; `current_draft` decides.
 
-        `approve()` unlinks the draft it approved, so an approved input usually
-        has none -- but `review --new-version` writes a fresh one beside the
-        approved artifact, and that draft is this one. *Approved* and *has a
-        draft* are therefore not opposites, which is what `state()` below is
-        for.
+        `review --new-version` writes a fresh draft above the approved artifact,
+        and that draft is this one. A draft below the approval is stale and is
+        not. *Approved* and *has a draft* are therefore not opposites, which is
+        what `state()` below is for.
         """
-        return latest_artifact(held.run.directory(self.flow.id, REVIEW), DRAFT)
+        return current_draft(held.run.directory(self.flow.id, REVIEW))
 
     def approved_path(self, held: Input) -> Path | None:
         """Return this input's approved artifact, or None while it is still a draft."""

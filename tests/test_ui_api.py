@@ -18,11 +18,15 @@ that would leave anything worth asserting.
 Everything that can be asserted without a server is in `tests/test_ui.py`.
 """
 
+import contextlib
 import io
 import json
 import random
+import threading
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -30,6 +34,7 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+import isekai.interface.ui.app as app_module  # noqa: E402
 from isekai.foundation.artifacts import APPROVED_FILE, TAGS_FILE, read
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
@@ -45,7 +50,7 @@ from isekai.interface.ui.app import (  # noqa: E402
     authorities,
     create_app,
 )
-from isekai.interface.ui.batch import establish  # noqa: E402
+from isekai.interface.ui.batch import Batch, Input, establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.review import ENCODER_WINDOW, approve, review  # noqa: E402
@@ -444,6 +449,91 @@ def test_an_update_stating_no_precondition_is_still_accepted(
         client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields}).status_code
         == 200
     )
+
+
+@pytest.mark.spec("ui:approval:a-stale-lower-draft-does-not-reopen")
+def test_a_stale_lower_draft_does_not_reopen_an_approved_input(
+    client: TestClient, made: Run
+) -> None:
+    directory = made.directory(FLOW, REVIEW)
+    stale = (directory / "001.draft.json").read_bytes()
+    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    review(made, FLOW, new_version=True)
+    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    # Below the approval: left by a crash, or restored by hand.
+    (directory / "001.draft.json").write_bytes(stale)
+    expected = read(directory / "002.approved.json", APPROVED_FILE)["fields"]
+
+    body = client.get(f"/api/inputs/{made.id}").json()
+
+    assert body["readonly"] is True
+    assert body["draft"] is None
+    assert body["approved"] == "002.approved.json"
+    assert body["fields"] == expected
+
+
+def _overlap(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, int]:
+    """Send two updates stating one precondition, the second inside the first.
+
+    The second starts while the first is between its check and its write, and
+    is given the chance to pass the check before the first writes.
+    """
+    body = client.get(f"/api/inputs/{made.id}").json()
+    saved = body["saved"]
+    checked = threading.Event()
+    answers: dict[str, int] = {}
+    threads: list[threading.Thread] = []
+    precondition, save = app_module._precondition, app_module.save_draft
+
+    def check(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+        if threading.current_thread().name == "second":
+            checked.set()
+        precondition(batch, held, payload)
+
+    def put(name: str, hair: str) -> None:
+        fields = {**body["fields"], "hair_colour": [hair]}
+        answers[name] = client.put(
+            f"/api/inputs/{made.id}/draft", json={"fields": fields, "saved": saved}
+        ).status_code
+
+    def write(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
+        if not threads:
+            second = threading.Thread(
+                target=put, args=("second", "black hair"), name="second"
+            )
+            threads.append(second)
+            second.start()
+            checked.wait(timeout=0.5)
+        return save(run, flow, fields)
+
+    monkeypatch.setattr(app_module, "_precondition", check)
+    monkeypatch.setattr(app_module, "save_draft", write)
+    put("first", "blonde")
+    for thread in threads:
+        thread.join()
+    return answers
+
+
+@pytest.mark.spec("ui:draft-update:overlapping-updates-cannot-both-commit")
+def test_overlapping_draft_updates_cannot_both_commit(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    answers = _overlap(client, made, monkeypatch)
+
+    assert answers == {"first": 200, "second": 409}
+    on_disk = json.loads((made.directory(FLOW, REVIEW) / "001.draft.json").read_text())
+    assert on_disk["fields"]["hair_colour"] == ["blonde"]
+
+
+@pytest.mark.spec_exempt("twin: the overlap test fails once the lock is gone")
+def test_without_the_lock_overlapping_updates_both_commit(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app_module, "_DRAFT_UPDATE", contextlib.nullcontext())
+
+    assert _overlap(client, made, monkeypatch) == {"first": 200, "second": 200}
 
 
 @pytest.mark.spec("ui:approval:approved-input-opens-read-only")

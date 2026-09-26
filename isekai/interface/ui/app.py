@@ -34,6 +34,7 @@ the same repository, so widening it later is a find-and-replace. The paths are
 `POST /api/inputs/{identifier}/approve`, with the built bundle mounted at `/`.
 """
 
+import threading
 from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -66,6 +67,10 @@ from isekai.pipeline.review import (
 # so the threshold is the surface's own judgement about what an operator should
 # hesitate over, and it is stated here rather than duplicated in TypeScript.
 RARE_BELOW = 2000
+
+# Held across a draft update's precondition and its write, so two updates that
+# state one precondition cannot both pass it (`0030` design D4).
+_DRAFT_UPDATE = threading.Lock()
 
 # Enough rows to choose from without the dropdown becoming a list to read. The
 # footer states the true match count, so narrowing the fragment stays the way to
@@ -239,22 +244,21 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
     def read_input(identifier: str) -> dict[str, Any]:
         """Return everything the page shows for one input, joined into one payload.
 
-        The fields come from the draft while one exists and from the approved
-        artifact once it does not, which is what makes an input approved in an
-        earlier sitting open read-only rather than empty.
+        The fields come from the approved artifact while the input is approved and
+        from the current draft otherwise, which is what makes an input approved in
+        an earlier sitting open read-only rather than empty.
         """
         held = batch.find(identifier)
         draft = batch.draft_path(held)
         approved = batch.approved_path(held)
         state = batch.state(held)
-        # The draft while one exists, the approved artifact once it does not.
-        # That is what makes an input approved in an earlier sitting open with
-        # its sheet rather than empty (design.md D5).
+        # By state, never by which file happens to exist: a stale draft below
+        # the approval must not stand in for it (`0030` design D4).
         held_fields: Mapping[str, list[str]] = {}
-        if draft is not None:
-            held_fields = read(draft, DRAFT_FILE)["fields"]
-        elif approved is not None:
+        if state == "approved" and approved is not None:
             held_fields = read(approved, APPROVED_FILE)["fields"]
+        elif draft is not None:
+            held_fields = read(draft, DRAFT_FILE)["fields"]
         fields = {name: list(tags) for name, tags in held_fields.items()}
         budget = token_budget(fields, batch.flow.schema, batch.flow)
         caption = batch.caption_path(held)
@@ -307,24 +311,28 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         does not match the draft on disk refuses, because the page autosaves on a
         debounce and two overlapping `PUT`s were free to commit in the order the
         server happened to finish them -- last write wins, where "last" is not
-        the operator's last keystroke (design.md D6).
+        the operator's last keystroke (design.md D6). The check and the write
+        hold one lock, so of two updates stating one precondition, the later
+        fails it.
         """
         held = batch.find(identifier)
-        if batch.state(held) == "approved":
-            raise Refusal(
-                f"{identifier} is approved, and an approved sheet is never "
-                "edited in place; approval is the end of a review -- correct it "
-                f"with `python -m isekai review --flow {batch.flow.id} "
-                "--new-version`, which writes a fresh draft beside the approved "
-                "artifact, and reload: the input comes back re-opened and "
-                "editable, with its approved artifact still named"
-            )
-        _precondition(batch, held, payload)
         fields = {
             name: [str(tag) for tag in tags]
             for name, tags in dict(payload.get("fields", {})).items()
         }
-        written = save_draft(held.run, batch.flow.id, fields)
+        with _DRAFT_UPDATE:
+            if batch.state(held) == "approved":
+                raise Refusal(
+                    f"{identifier} is approved, and an approved sheet is never "
+                    "edited in place; approval is the end of a review -- correct "
+                    f"it with `python -m isekai review --flow {batch.flow.id} "
+                    "--new-version`, which writes a fresh draft beside the "
+                    "approved artifact, and reload: the input comes back "
+                    "re-opened and editable, with its approved artifact still "
+                    "named"
+                )
+            _precondition(batch, held, payload)
+            written = save_draft(held.run, batch.flow.id, fields)
         budget = token_budget(fields, batch.flow.schema, batch.flow)
         return {
             "draft": written.name,
@@ -443,8 +451,8 @@ def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None
     the draft kind's *format* version, and `save_draft` never advances the
     filename's `NNN` by design. A `revision` int in the body is the correct
     answer and changes the draft's shape, so its version moves and `read`
-    refuses every draft already on disk -- that is not a patch. A lock around
-    `save_draft` fixes nothing: out-of-order *sends* still commit out of order
+    refuses every draft already on disk -- that is not a patch. `put_draft`'s
+    lock orders the check and the write; this is what orders the sends
     (design.md D6).
 
     **A payload carrying no `saved` states no precondition**, and is allowed:

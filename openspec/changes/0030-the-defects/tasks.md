@@ -7,7 +7,7 @@ The foundation's reads first, then each area's fixes together, then every printe
 
 - [x] 1 — Reading: unreadable files refused by name, the frame checked, `show` marks
 - [x] 2 — Records: the attempt number, the error record's keys, the budget and `refusal_for` messages
-- [ ] 3 — Approval: one definition of a draft, the update lock, missing keys refused
+- [x] 3 — Approval: one definition of a draft, the update lock, missing keys refused
 - [ ] 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first
 - [ ] 5 — Remedies: every printed command carries its run, and a guard holds it
 - [ ] 6 — The docs drop the breaks that close
@@ -38,15 +38,15 @@ Line numbers are `e6c4278`'s; find each site by the text it names.
 
 ## 3 — Approval: one definition of a draft, the update lock, missing keys refused
 
-- [ ] 3.1 **HALT CHECK** — the definitions [D4](design.md#d4) replaces exist.
+- [x] 3.1 **HALT CHECK** — the definitions [D4](design.md#d4) replaces exist.
   Verify: `grep -c '^def draft_versions' isekai/pipeline/review.py` prints `1`, and `grep -c 'latest_artifact(held.run.directory(self.flow.id, REVIEW), DRAFT)' isekai/interface/ui/batch.py` prints `1`.
-- [ ] 3.2 Add `current_draft` to `isekai/pipeline/review.py` and use it in `save_draft`, `approve` and `Batch.draft_path`, per [D4](design.md#d4), with [D8](design.md#d8)'s approval test.
+- [x] 3.2 Add `current_draft` to `isekai/pipeline/review.py` and use it in `save_draft`, `approve` and `Batch.draft_path`, per [D4](design.md#d4), with [D8](design.md#d8)'s approval test.
   Verify: `grep -c '^def draft_versions' isekai/pipeline/review.py` prints `0`, `grep -c '^def current_draft' isekai/pipeline/review.py` prints `1`, and `grep -c '^def test_approving_an_approved_flow_writes_nothing' tests/test_review.py` prints `1`.
-- [ ] 3.3 Serve `read_input` by state in `isekai/interface/ui/app.py`, per [D4](design.md#d4), with [D8](design.md#d8)'s stale-draft test.
+- [x] 3.3 Serve `read_input` by state in `isekai/interface/ui/app.py`, per [D4](design.md#d4), with [D8](design.md#d8)'s stale-draft test.
   Verify: `grep -c '^def test_a_stale_lower_draft_does_not_reopen_an_approved_input' tests/test_ui_api.py` prints `1`.
-- [ ] 3.4 Hold one lock across `_precondition` and `save_draft` in `put_draft`, per [D4](design.md#d4), with [D8](design.md#d8)'s overlap test.
+- [x] 3.4 Hold one lock across `_precondition` and `save_draft` in `put_draft`, per [D4](design.md#d4), with [D8](design.md#d8)'s overlap test.
   Verify: `grep -c 'threading.Lock()' isekai/interface/ui/app.py` prints `1`, and `grep -c '^def test_overlapping_draft_updates_cannot_both_commit' tests/test_ui_api.py` prints `1`.
-- [ ] 3.5 Refuse an approved sheet without `sheet`, and read a draft without `fields` as holding none, in `isekai/pipeline/review.py`, per [D1](design.md#d1), each with a test in `tests/test_review.py`.
+- [x] 3.5 Refuse an approved sheet without `sheet`, and read a draft without `fields` as holding none, in `isekai/pipeline/review.py`, per [D1](design.md#d1), each with a test in `tests/test_review.py`.
   Verify: `grep -c -e '^def test_an_approved_sheet_without_its_sheet_number_is_refused' -e '^def test_a_draft_without_fields_is_refused_naming_them' tests/test_review.py` prints `2`.
 
 ## 4 — Render: the transport's kinds, the upload, the assembly and render refusals, the sidecar first

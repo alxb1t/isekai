@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A failure record's attempt is the highest recorded plus one**, so a deleted record never lets the next
   overwrite a later one. A budget refusal names the record by its path in the run, and a refusal after a
   record that refuses the next run says to delete it, with the run id in the command (`0030` design D2, D3).
+- **One definition of the current draft**, `review.current_draft`: a draft below the approval is stale, so
+  it neither re-opens an input nor is approved, and `approve` on an approved flow writes nothing. A lock
+  orders overlapping draft updates; a draft without `fields` or an approval without `sheet` is refused
+  (`0030` design D1, D4).
 
 ## [0.22.7] - 2026-09-26
 
