@@ -28,7 +28,7 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy/` | `interface/wiring.py`, `pipeline/generate.py` | `probe/loader_probe.py`, `tests/fakes.py`, `tests/test_generate.py`, `tests/test_resume.py` |
+| `comfy/` | `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/test_generate.py`, `tests/test_resume.py` |
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/test_ollama.py` |
 | `provision.py` | `wd14.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `interface/wiring.py` | `../../evaluate.py`, `tests/conftest.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |

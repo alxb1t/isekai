@@ -1,6 +1,6 @@
 r"""Build the six baseline subjects for v0.12's metered session.
 
-`probe/build_inputs.py`'s treatment, because one version does not silently
+v0.11's loader probe's treatment, because one version does not silently
 reverse a convention the previous one wrote down (design.md D15): the pixels are
 **not committed**, the recipe is, and every output's SHA-256 is recorded so that
 a re-run can be checked rather than trusted. Sources and destination are

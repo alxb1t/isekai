@@ -9,7 +9,7 @@ docs ([D13](design.md#d13)).
 - [x] 2 — `config/`: the files the pipeline reads
 - [x] 3 — `tools/`: the derivers and the operator's scripts, run as modules
 - [x] 4 — `evaluation/`: the sub-system leaves the package
-- [ ] 5 — Removals: the licence record and `probe/`
+- [x] 5 — Removals: the licence record and `probe/`
 - [ ] 6 — The docs follow the tree
 
 Line numbers are `c6d18a4`'s; find each site by the text it names.
@@ -66,9 +66,9 @@ Line numbers are `c6d18a4`'s; find each site by the text it names.
 
 ## 5 — Removals: the licence record and `probe/`
 
-- [ ] 5.1 Delete `scripts/eval_licences.md`, the licence tests, `LICENCES_PATH` and `_section_naming` in `tests/test_vocabulary_manifest.py`, `CLAUDE.md:155-156`, and the comments naming it, per [D10](design.md#d10).
+- [x] 5.1 Delete `scripts/eval_licences.md`, the licence tests, `LICENCES_PATH` and `_section_naming` in `tests/test_vocabulary_manifest.py`, `CLAUDE.md:155-156`, and the comments naming it, per [D10](design.md#d10).
   Verify: `git ls-files scripts | wc -l | tr -d ' '` prints `0`, and `git grep -n -e eval_licences -e LICENCES_PATH -- ':!CHANGELOG.md' ':!openspec'` prints nothing.
-- [ ] 5.2 Delete `probe/` and `tests/test_probe.py`; re-point `evaluation/eval_backends.py`'s citation, `isekai/boundary/README.md:31`, the layer scope and its front-door twin, and `tests/images.py`'s helpers, per [D9](design.md#d9).
+- [x] 5.2 Delete `probe/` and `tests/test_probe.py`; re-point `evaluation/eval_backends.py`'s citation, `isekai/boundary/README.md:31`, the layer scope and its front-door twin, and `tests/images.py`'s helpers, per [D9](design.md#d9).
   Verify: `git ls-files probe tests/test_probe.py | wc -l | tr -d ' '` prints `0`, and `git grep -n 'probe/' -- isekai evaluation/eval_backends.py tests tools` prints nothing.
 
 ## 6 — The docs follow the tree

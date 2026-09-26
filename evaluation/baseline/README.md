@@ -9,7 +9,7 @@ committing derived faces into a project whose product is identity preservation i
 README would then have to disclaim (`design.md` D14, D15). What is here is the recipe —
 `build_subjects.py` — and the SHA-256 of every file it produces, so a re-run can be **checked** rather
 than trusted. One version does not silently reverse a convention the previous one wrote down; this is
-`probe/build_inputs.py`'s treatment, applied again.
+v0.11's loader probe's treatment, applied again.
 
 ## The recipe
 

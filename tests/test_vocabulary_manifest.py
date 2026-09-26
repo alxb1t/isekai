@@ -14,7 +14,6 @@ arrive as a side effect of downloading a tagger this repository did not load
 """
 
 import copy
-import re
 from pathlib import Path
 
 import pytest
@@ -43,11 +42,6 @@ TAGGER = "wd14/model.onnx"
 # against a value a human pinned and not against whatever the file happens to say.
 REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
 REPOSITORY = "SmilingWolf/wd-swinv2-tagger-v3"
-
-# The tracked note that sits beside the manifests. It is one record for every
-# artifact this repository pins, rather than one per manifest: a licence is a
-# property of the artifact, and three notes would be three places to forget.
-LICENCES_PATH = Path(__file__).resolve().parent.parent / "scripts" / "eval_licences.md"
 
 # The one command that provisions anything in this repository. The vocabulary is
 # fetched by pointing it at the vocabulary's manifest rather than by a second
@@ -184,48 +178,6 @@ def test_a_label_index_and_a_model_at_two_revisions_fail_the_check(
         test_every_vocabulary_source_resolves_one_revision_of_one_repository(
             vocabulary_manifest
         )
-
-
-@pytest.mark.spec("model-provisioning:licences:vocabulary-terms-are-recorded")
-def test_every_vocabulary_artifact_is_named_in_the_licence_record(
-    vocabulary_manifest: Manifest,
-) -> None:
-    record = LICENCES_PATH.read_text()
-    for entry in vocabulary_manifest["entries"]:
-        assert entry["dest"] in record, f"{entry['dest']} carries no recorded licence"
-
-
-@pytest.mark.spec("model-provisioning:licences:vocabulary-terms-are-recorded")
-@pytest.mark.parametrize("artifact", [VOCABULARY, TAGGER])
-def test_each_vocabulary_row_names_its_terms_its_source_and_the_date_read(
-    artifact: str,
-) -> None:
-    section = _section_naming(LICENCES_PATH.read_text(), artifact)
-    terms = re.search(r"- \*\*Licence:\*\* (?P<terms>\S.*)", section)
-    assert terms is not None and terms.group("terms").strip()
-    read_at = re.search(
-        r"- \*\*Read at:\*\* .*<(?P<url>https://\S+)>.*?(?P<date>\d{4}-\d{2}-\d{2})",
-        section,
-        re.DOTALL,
-    )
-    assert read_at is not None
-    assert read_at.group("url")
-    assert read_at.group("date")
-
-
-def _section_naming(record: str, artifact: str) -> str:
-    """Return the one `###` section of the licence record that names `artifact`.
-
-    The closing summary table is excluded rather than searched. It names every
-    artifact by design -- it is the index over the records, not a record -- so
-    leaving it in would make "recorded in exactly one section" unsatisfiable for
-    all of them the moment a second artifact was added under the last heading.
-    """
-    body = record.split("\n## Summary", 1)[0]
-    sections = re.split(r"^### ", body, flags=re.MULTILINE)[1:]
-    naming = [section for section in sections if artifact in section]
-    assert len(naming) == 1, f"{artifact} is recorded in {len(naming)} sections"
-    return naming[0]
 
 
 # --- provisioning -------------------------------------------------------------

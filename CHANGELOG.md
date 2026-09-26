@@ -49,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The layer test keys its evaluation rule on the top-level `evaluation`**, and its cycle check covers
   `evaluation/` (`0029` design D8, `v0.22.5 review/R3`).
 
+### Removed
+
+- **The licence record `scripts/eval_licences.md`**, its tests and its `CLAUDE.md` rule; the
+  requirement leaves the `model-provisioning` spec. The AGPL guards stay (`0029` design D10).
+- **`probe/`**, v0.11's loader probe, with `tests/test_probe.py`; its measurement stays recorded in
+  the archived `0011-converge-paydown` design (`0029` design D9).
+
 ## [0.22.6] - 2026-09-26
 
 ### Changed

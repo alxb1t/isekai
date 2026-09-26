@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 LAYERS = ("foundation", "shared", "boundary", "pipeline", "interface")
 
 # Importers whose sub-package imports must go through the front door.
-FRONT_DOOR_SCOPE = ("isekai", "probe", "tools", "evaluation")
+FRONT_DOOR_SCOPE = ("isekai", "tools", "evaluation")
 
 # The top-level packages whose imports the rules read.
 PACKAGES = ("isekai", "evaluation")
@@ -180,9 +180,7 @@ def busy_inits(root: Path) -> list[str]:
     return busy
 
 
-def past_front_doors(
-    root: Path, scope: tuple[str, ...] = FRONT_DOOR_SCOPE
-) -> set[Edge]:
+def past_front_doors(root: Path) -> set[Edge]:
     """Return every import of a module inside a layer's sub-package from outside it."""
     doors = {
         _module_name(root, init)
@@ -191,7 +189,7 @@ def past_front_doors(
     }
     return {
         (importer, module)
-        for importer, module in _edges(root, scope)
+        for importer, module in _edges(root, FRONT_DOOR_SCOPE)
         for door in doors
         if module.startswith(door + ".") and not _within(importer, door)
     }
@@ -346,12 +344,12 @@ def test_the_check_catches_an_import_past_a_front_door(tmp_path: Path) -> None:
             ),
             "isekai/interface/ui/app.py": "serve = 1\n",
             "isekai/interface/cli.py": "from isekai.interface.ui import app\n",
-            "probe/loader_probe.py": "from isekai.interface.ui.app import serve\n",
+            "tools/derive.py": "from isekai.interface.ui.app import serve\n",
         },
     )
-    assert past_front_doors(root, ("isekai", "probe")) == {
+    assert past_front_doors(root) == {
         ("isekai.interface.cli", "isekai.interface.ui.app"),
-        ("probe.loader_probe", "isekai.interface.ui.app"),
+        ("tools.derive", "isekai.interface.ui.app"),
     }
 
 

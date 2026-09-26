@@ -59,7 +59,7 @@ PUBLISHERS = (
 # StyleID, the primary face axis: a CLIP image encoder with LoRA adapters merged.
 # `kwanyun/StyleID`, SIGGRAPH 2026. Non-commercial research use -- a recorded
 # deviation, and the reason it may not be the sole carrier of the face axis
-# (design.md D16, and `scripts/eval_licences.md`).
+# (design.md D16).
 STYLEID = "1967c354f339a636e5b3e16ecab3d0075aa27ab1"
 
 # The human parser the region masks come from (design.md D7). NVIDIA Source Code

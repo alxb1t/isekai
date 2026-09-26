@@ -9,7 +9,7 @@ division `ComfyTransport` and `FakeComfyClient` are under.
 `ultralytics` is not imported here and is not in the extra. The anime-face
 detector's weights are loaded through `onnxruntime`, which is MIT: loading weights
 is not linking code, and that is what keeps an AGPL-3.0 detector out of an
-Apache-2.0 public repository (design.md D19, `scripts/eval_licences.md`). A test
+Apache-2.0 public repository (design.md D19). A test
 asserts the absence, because a licence review nobody runs is not a control.
 
 Every artifact is resolved through `isekai.boundary.provision.resolve`, which
@@ -118,7 +118,8 @@ def load_canvas_pixels(image_path: str, canvas: Canvas) -> Any:
     **The transpose happens here and before anything else reads a pixel.**
     `image_dimensions` returns dimensions rather than pixels, and ComfyUI's
     `LoadImage` transposes both JPEG and PNG for a rotating EXIF tag -- measured
-    on the pinned build (`probe/README.md`). A photograph parsed upright while the
+    on the pinned build (`openspec/changes/archive/0011-converge-paydown/design.md`).
+    A photograph parsed upright while the
     render was produced from transposed pixels would place every region in the
     wrong place, silently, with every number still looking plausible.
     """
@@ -177,7 +178,7 @@ class AnimeFaceDetector:
 
     MIT, and an ONNX export, which is why it is here rather than the detector
     design.md D19 originally named -- that one publishes no ONNX at all and
-    declares `library_name: ultralytics`. See `scripts/eval_licences.md`.
+    declares `library_name: ultralytics`.
     """
 
     def __init__(self, models_dir: Path, canvas: Canvas) -> None:
