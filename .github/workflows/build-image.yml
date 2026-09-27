@@ -58,4 +58,5 @@ jobs:
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           DIGEST: ${{ steps.build.outputs.digest }}
-        run: echo "Image: ghcr.io/alxb1t/isekai:${TAG}@${DIGEST}" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "Image: ghcr.io/alxb1t/isekai:${TAG}@${DIGEST}" >> "$GITHUB_STEP_SUMMARY"

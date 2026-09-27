@@ -638,3 +638,35 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
     assert unstamped_steps(
         stamped.replace('echo "$(date -u +%FT%TZ)"\nexec', "exec")
     ) == ["exec python main.py"]
+
+
+WORKFLOWS = sorted((REPO / ".github" / "workflows").glob("*.yml"))
+
+
+def unparseable_run_lines(workflow: str) -> list[str]:
+    """Return each one-line `run:` whose value holds `: `, which YAML rejects.
+
+    GitHub then refuses the whole workflow, so a dispatch-only build cannot start.
+    """
+    found = (
+        re.match(r"^\s*(?:- )?run: (?![|>])(.*)$", line)
+        for line in workflow.splitlines()
+    )
+    return [
+        match.group(0).strip() for match in found if match and ": " in match.group(1)
+    ]
+
+
+@pytest.mark.spec("pod-image:build:only-a-request-builds")
+def test_every_workflow_run_line_is_one_yaml_accepts() -> None:
+    assert WORKFLOWS
+    for workflow in WORKFLOWS:
+        assert unparseable_run_lines(workflow.read_text()) == [], workflow.name
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_workflow_run_line_is_one_yaml_accepts"
+)
+def test_the_check_catches_a_plain_run_line_holding_a_colon() -> None:
+    broken = '      - run: echo "a: b"\n        run: |\n          echo "a: b"\n'
+    assert unparseable_run_lines(broken) == ['- run: echo "a: b"']
