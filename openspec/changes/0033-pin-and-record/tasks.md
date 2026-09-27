@@ -11,7 +11,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 - [x] 4 — The pin: `config/image.json`, `up.sh` boots it
 - [x] 5 — The reader: `config/reader.json`, the model checked before its first call
 - [x] 6 — The records
-- [ ] 7 — The record in `docs/`
+- [x] 7 — The record in `docs/`
 - [ ] 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place
 
 Line numbers are `801ffec`'s; find each site by the text it names.
@@ -94,9 +94,9 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 7 — The record in `docs/`
 
-- [ ] 7.1 In `docs/decisions.md`, rewrite D6 and D28 and add D32, per [D7](design.md#d7).
+- [x] 7.1 In `docs/decisions.md`, rewrite D6 and D28 and add D32, per [D7](design.md#d7).
   Verify: `grep -c '^### D32 · ' docs/decisions.md` prints `1`, and `grep -c 'config/image.json' docs/decisions.md` prints a number above `0`.
-- [ ] 7.2 Shrink `docs/principles.md`'s pinning list (`:184-187`) to the apt gap and empty its records line (`:237-239`); in `README.md`, replace the by-hand GGUF fetch (`:279-281`) with the provisioning command and name `config/image.json`; name `.runpod_pod_image` in `CLAUDE.md`; add `config/reader.json` and `tools/derive_reader.py` to the `model-provisioning` spec's Source line, per [D7](design.md#d7).
+- [x] 7.2 Shrink `docs/principles.md`'s pinning list (`:184-187`) to the apt gap and empty its records line (`:237-239`); in `README.md`, replace the by-hand GGUF fetch (`:279-281`) with the provisioning command and name `config/image.json`; name `.runpod_pod_image` in `CLAUDE.md`; add `config/reader.json` and `tools/derive_reader.py` to the `model-provisioning` spec's Source line, per [D7](design.md#d7).
   Verify: ``grep -c 'its moving `latest` tag' docs/principles.md`` prints `0`, and `grep -c 'download_models.sh config/reader.json' README.md` prints a number above `0`.
 
 ## 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place

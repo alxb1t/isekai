@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sheet` on the prompt and render in place of the render's `sheet_version`, the booted `image`, `pinned`
   and the endpoint's `runtime` on the render, and the sheet's `schema_document` and `field_map` on the
   draft and approval. Every new key is optional under version 1, so existing runs still read.
+- **The record in `docs/`** (`0033` design D7): D6 checks the reader's model, D28 pins the image by digest in
+  `config/image.json`, and D32 states when a run file's version moves; the principles' pinning gap shrinks
+  to `apt`, and the README provisions the reader with `download_models.sh config/reader.json`.
 
 ## [0.23.0] - 2026-09-26
 

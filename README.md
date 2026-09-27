@@ -58,7 +58,7 @@ Local (your machine)                          RunPod
                                                      │  down.sh → remove pod; volume persists
 ```
 
-**Lifecycle:** `up.sh` (create pod from the image + attach volume) →
+**Lifecycle:** `up.sh` (create pod from the image `config/image.json` pins by digest + attach volume) →
 `python -m isekai generate --flow … --server …` → `down.sh` (remove pod, billing stops). Only the pod is
 ephemeral and metered.
 
@@ -270,20 +270,19 @@ why each refusal names the command that does.
 **To run stage ①**, install [Ollama](https://ollama.com), then, from the repository root:
 
 ```sh
+bash tools/download_models.sh config/reader.json
 ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile
 ```
 
-**One command, because there is one model.** It builds the reader from a committed recipe, and the
-same alias answers the hosted tagger — which is exactly why the tag prompt is unframed: two calls to
-one model must not arrive framed differently.
-**`config/joycaption.Modelfile`'s header names the two GGUF files it needs,
-with their sha256, their byte counts and their pinned source revision** — they are not in this
-repository and `models/` is gitignored, so fetch them into `models/joycaption/` first.
+**The first fetches, the second builds.** `config/reader.json` pins the GGUF model and its vision
+projector by digest; the driver lands both in `models/joycaption/` and verifies them. `ollama create`
+builds the reader from the committed recipe, and the same alias answers the hosted tagger — which is
+exactly why the tag prompt is unframed: two calls to one model must not arrive framed differently.
 
-**After creating the reader, check that it can see.** `ollama show joycaption-beta-one-q4k` must
-list `vision` under Capabilities **and** print a Projector block. A model whose vision projector is
-missing loads, answers fluently, and describes nothing — the failure is silent, and no code here
-detects it.
+**Before its first call, `caption` and `tag` check the model.** Ollama's own record of it must name
+the model and projector files `config/reader.json` pins, or the verb refuses and spends no attempt. A
+model whose vision projector is missing loads, answers fluently and describes nothing; its record
+names no projector, so it is refused rather than run.
 
 ## Development
 
@@ -341,6 +340,8 @@ isekai/
 │   └── down.sh                # remove pod, billing stops
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
+│   ├── image.json             # the pod image, pinned by digest — what up.sh boots
+│   ├── reader.json            # the reader's model and projector, by digest, per alias
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
@@ -376,7 +377,7 @@ what boots SSH + ComfyUI *inside* the container.
 
 ```
 BUILD TIME (once, or when the image changes)
-  Dockerfile + start.sh  ──▶  CI builds image  ──▶  GHCR (ghcr.io/alxb1t/isekai)
+  Dockerfile + start.sh  ──▶  CI builds on request  ──▶  GHCR (ghcr.io/alxb1t/isekai)
   (start.sh is baked INTO the image as its start command)
 
 PROVISION TIME (every session — this is up.sh / down.sh)
@@ -385,7 +386,7 @@ PROVISION TIME (every session — this is up.sh / down.sh)
   ────────────                     ──────                              ────
   ./infra/up.sh
     │ 1  POST /v1/pods ──────────▶ control plane
-    │    (image, GPU, volume,           │ 2  place pod on a GPU host
+    │    (image@digest, GPU, volume,    │ 2  place pod on a GPU host
     │     PUBLIC_KEY, port 22)          ▼
     │                             GPU host (driver + toolkit ready)
     │                                  │ 3  pull image ───────────────▶ ghcr image

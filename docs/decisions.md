@@ -81,15 +81,18 @@ field. No model decides a sheet.**
   model offered: the router places 73–77% of the tags with the local tagger and the table alone.
 - **Made by:** `0022`.
 
-### D6 · Ollama at a fixed local address
+### D6 · Ollama at a fixed local address, on a checked model
 
-**Ollama is reached over plain HTTP at a fixed local address, never through a proxy.** The address is a
-constant, with no flag and no environment variable. The call uses Ollama's own `/api/generate`, which
-carries the sampling options the OpenAI-compatible endpoint cannot.
+**Ollama is reached over plain HTTP at a fixed local address, never through a proxy, and the model a flow
+names is checked against `config/reader.json` before its first call.** The address is a constant, with no
+flag and no environment variable. The call uses Ollama's own `/api/generate`, which carries the sampling
+options the OpenAI-compatible endpoint cannot. Ollama's own record of the model must name the model and
+projector files the manifest pins, or the call is refused and spends no attempt.
 
 - **Why:** a photograph's destination must not be changeable by accident — an exported `http_proxy`
-  once sent every photograph off the machine.
-- **Made by:** `0019`.
+  once sent every photograph off the machine. An alias is a name the runtime resolves, and the files
+  behind it shape the prose, so a caption can claim a pin only once those files are checked.
+- **Made by:** `0019`, `0033`.
 
 ### D7 · WD14 is one artifact in two files
 
@@ -212,6 +215,17 @@ root inside the repository must sit under `.data/`; one outside it may sit anywh
   Anywhere else inside the repository, those files would be one `git add` from being published.
 - **Made by:** `0014`, `0018`.
 
+### D32 · A run file's version moves only when an old file could be misread
+
+**A key that only records is added under the kind's current version, as optional. A key whose meaning
+changes is a new key.** A version moves only when a file written before the change could be misread by a
+reader after it.
+
+- **Why:** moving a version makes every existing file of that kind unreadable, so a run in progress could
+  not resume. A record key cannot be misread by its absence; a changed meaning can, which is why the
+  render's `sheet` replaced `sheet_version` rather than redefining it.
+- **Made by:** `0033`.
+
 ## Code and environment
 
 ### D19 · One place builds the components
@@ -297,10 +311,11 @@ the floor is `start.sh`'s.
 
 ### D28 · The image carries code, the volume carries weights
 
-**The image lives on GHCR with no weights baked in, and `up.sh` alone creates pods. Metered work runs on
-a release-candidate tag.**
+**The image lives on GHCR with no weights baked in, is built only on request, and is pinned by digest in
+`config/image.json`. `up.sh` alone creates pods, and boots that digest and nothing else.** Its base and
+uv are named by digest, and its Python environment is the locked uv project under `image/`.
 
 - **Why:** only `up.sh` knows the image, the volume mount and the SSH key, so a pod made any other way has
-  no models and no way in. A release-candidate tag stops a pre-release build from replacing the image a
-  rollback depends on.
-- **Made by:** `0010`, `0011`.
+  no models and no way in. A moving tag is not a pin: every build under one name was a different image,
+  and nothing recorded which one a render ran on. Moving the pin is a commit.
+- **Made by:** `0010`, `0011`, `0033`.

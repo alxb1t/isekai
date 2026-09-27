@@ -200,11 +200,11 @@ they decide.**
 
 - **Never commit a secret, or a *real* absolute path from the machine the run is on** — the RunPod API key,
   the volume id, **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
-  artefact or a tool's output into tracked prose. `.runpod_pod_id` is gitignored for that reason; the three
-  pod ids already in `CHANGELOG.md` stay, because that file is append-only history and this rule is what
-  stops a fourth being added. `.env` is gitignored and holds all of it; `.env.example` declares shape
-  only. A path a fixture *constructs* is not the target of this rule; a rendered one, carrying a real
-  username, is.
+  artefact or a tool's output into tracked prose. `.runpod_pod_id` is gitignored for that reason, and
+  `.runpod_pod_image`, the image `up.sh` booted, beside it; the three pod ids already in `CHANGELOG.md`
+  stay, because that file is append-only history and this rule is what stops a fourth being added.
+  `.env` is gitignored and holds all of it; `.env.example` declares shape only. A path a fixture
+  *constructs* is not the target of this rule; a rendered one, carrying a real username, is.
 - **Deps minimal + human-gated.** The declared list is short and every entry is on the path of a verb
   a run actually takes. Any new dependency — argue for it and **wait for approval** before installing.
   pytest / ruff / ty stay dev-only. **A new one is an import-graph question as well as a supply-chain
