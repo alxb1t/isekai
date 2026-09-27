@@ -299,15 +299,15 @@ request.** A request with no `Origin` header is let through — a known, low ris
 
 ### D27 · The models live on a network volume
 
-**The volume holds exactly the manifest. A pod refuses to start on a volume below the capacity floor** —
-the floor is `start.sh`'s.
+**The volume holds exactly the manifest. A pod refuses to start when what is mounted is below the
+capacity floor** — the floor is `start.sh`'s. A network volume reports its storage cluster's capacity,
+far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
+quota, and a 20 GB volume passes.
 
 - **Why:** re-downloading every session costs more than the idle rent, and a volume filled only from the
   manifest is clean by construction. A missing mount would fall through to the container disk: it would
   render, bill, and lose everything at teardown.
-- **Known break:** the floor `start.sh` declares is larger than the real volume, so a boot on it holds and
-  bills without rendering.
-- **Made by:** `0009`, `0011`.
+- **Made by:** `0009`, `0011`, `0033`.
 
 ### D28 · The image carries code, the volume carries weights
 

@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The record in `docs/`** (`0033` design D7): D6 checks the reader's model, D28 pins the image by digest in
   `config/image.json`, and D32 states when a run file's version moves; the principles' pinning gap shrinks
   to `apt`, and the README provisions the reader with `download_models.sh config/reader.json`.
+- **Accepted on one metered pod session** (`0033` design D8): six photographs through both flows, twelve
+  renders on `v0.24-rc1` by digest, 17 m 58 s at $0.72/hr ≈ $0.22, teardown confirmed through the RunPod
+  MCP. Every record present on every artifact; the renders judged a success by eye.
+- **D27 corrected**: a network volume reports its storage cluster's capacity (≈ 2.2 PiB), so the 20 GB
+  `isekai-models` passes `start.sh`'s 40 GiB floor. The known break it recorded was never true.
 
 ## [0.23.0] - 2026-09-26
 

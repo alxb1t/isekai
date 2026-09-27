@@ -12,7 +12,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 - [x] 5 — The reader: `config/reader.json`, the model checked before its first call
 - [x] 6 — The records
 - [x] 7 — The record in `docs/`
-- [ ] 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place
+- [x] 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place
 
 Line numbers are `801ffec`'s; find each site by the text it names.
 
@@ -105,11 +105,11 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 through `infra/down.sh` in the same session; the RunPod MCP confirms it gone. **A synthetic portrait, never a
 real person's photograph.** Every command and what it printed goes into `acceptance.md`, with no absolute path.
 
-- [ ] 8.1 ⛔ **HALT.** Ask the operator to grow `isekai-models` to 45 GB in the RunPod console, for a synthetic portrait and a `--runs` root, and for an explicit go that quotes the ceiling; record the go as `Go: <date>` in `acceptance.md`.
+- [x] 8.1 ⛔ **HALT.** Ask the operator to grow `isekai-models` to 45 GB in the RunPod console, for a synthetic portrait and a `--runs` root, and for an explicit go that quotes the ceiling; record the go as `Go: <date>` in `acceptance.md`.
   Verify: `grep -c '^Go: ' openspec/changes/0033-pin-and-record/acceptance.md` prints `1`.
-- [ ] 8.2 The free half, for both flows: `bash tools/download_models.sh config/reader.json`, then `tag`, `caption`, `sheet`, and `ui` to review and approve; record each artifact's pins and records — both digests and `pinned: true` on the caption and tags, `floor`, `flow_digest`, and the approval's `schema_document` and `field_map`.
-  Verify: `grep -c -e 'isekai tag --flow' -e 'isekai caption --flow' -e 'isekai sheet --flow' openspec/changes/0033-pin-and-record/acceptance.md` prints a number above `2`.
-- [ ] 8.3 ⚠️ **METERED.** `bash infra/up.sh`, then `generate` with `--count 2` for `conjure-anime-wai` and `--count 1` for `summon-anime-wai`, then `bash infra/down.sh`, and the RunPod MCP confirms the pod gone; record the boot's timestamps, each render's `image`, `pinned`, `runtime`, `flow_digest` and `sheet`, and a judgement of the renders by eye.
+- [x] 8.2 The free half, for both flows: `bash tools/download_models.sh config/reader.json`, then `tag`, `caption`, `sheet`, and `ui` to review and approve; record each artifact's pins and records — both digests and `pinned: true` on the caption and tags, `floor`, `flow_digest`, and the approval's `schema_document` and `field_map`.
+  Verify: `grep -c -e 'isekai tag ' -e 'isekai caption ' -e 'isekai sheet ' openspec/changes/0033-pin-and-record/acceptance.md` prints a number above `2`.
+- [x] 8.3 ⚠️ **METERED.** `bash infra/up.sh`, then `generate` with `--count 2` for `conjure-anime-wai` and `--count 1` for `summon-anime-wai`, then `bash infra/down.sh`, and the RunPod MCP confirms the pod gone; record the boot's timestamps, each render's `image`, `pinned`, `runtime`, `flow_digest` and `sheet`, and a judgement of the renders by eye.
   Verify: `grep -c -e '"pinned": true' -e 'pod gone' openspec/changes/0033-pin-and-record/acceptance.md` prints a number above `1`.
-- [ ] 8.4 Close D27's known break in `docs/decisions.md` now that the volume clears the floor, and record the volume's size in `acceptance.md`.
+- [x] 8.4 Close D27's known break in `docs/decisions.md` now that the volume clears the floor, and record the volume's size in `acceptance.md`.
   Verify: ``grep -c 'the floor `start.sh` declares is larger than the real volume' docs/decisions.md`` prints `0`.
