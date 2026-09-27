@@ -5,7 +5,7 @@ using **open models** on a **rented GPU, on demand**. A reproducible, provider-a
 pipeline: build once, spin up a GPU for minutes, convert, tear down.
 
 > **Status: released.** One render path: a **staged pipeline** —
-> `python -m isekai tag | caption | sheet | review | approve | generate | show | ui` — which reads a
+> `python -m isekai tag | caption | sheet | review | approve | generate | show | ui | compare` — which reads a
 > photograph into prose and tags, fills a sheet of canonical tags from the tags by a table, lets a
 > human correct the sheet — at `$EDITOR` or on a local browser surface that knows the vocabulary —
 > and renders from it on a stack provisioned from a pinned, checksummed manifest.
@@ -220,6 +220,25 @@ uv run python -m isekai generate --runs $R --flow summon-anime-wai  --count 1 $P
   flow named in one call. With one count, name both flows in one call.
 - **`show` takes no `--flow`**: it reports every flow a run holds.
 
+### The batch, run by an agent
+
+Two skills in `.claude/skills/` let an agent run the batch above for you, from exact commands, without reading
+the source or the runs ([0035 design D1](openspec/changes/0035-the-flow-skills/design.md#d1)):
+
+- **`run-flows`** takes `.data/<batch>/photos/` — synthetic portraits only — through ① ②, starts both `ui`
+  pages and stops until you say "approved", counts the approvals, stops for your go, renders, and ends with the
+  comparison page. `tests/test_agent_skills.py` fails when a command it names stops parsing.
+- **`compare-renders`** is its last step alone: `uv run python -m isekai compare .data/<batch>` writes
+  `.data/<batch>/compare.html` and prints only its path.
+
+④ – ⑦ are one script, **`bash infra/render.sh <runs> <flow>=<count> …`**: it assembles every prompt before
+renting, runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI, renders each flow, and tears the pod
+down on every exit — an error or a Ctrl-C included. The RunPod MCP still confirms the pod is gone.
+
+```sh
+bash infra/render.sh .data/batch/runs conjure-anime-wai=2 summon-anime-wai=1
+```
+
 ### Correcting the sheets in a browser
 
 Step ③ by hand edits a JSON file in a text editor. `isekai ui` does the same work on a surface that
@@ -372,7 +391,8 @@ isekai/
 │   └── design/                # the imported design handoff — read-only, never edited
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
-│   └── down.sh                # remove pod, billing stops
+│   ├── down.sh                # remove pod, billing stops
+│   └── render.sh              # a whole render session: up, tunnel, render, down on every exit
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
 │   ├── image.json             # the pod image, pinned by digest — what up.sh boots
@@ -393,6 +413,7 @@ isekai/
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── start.sh                   # baked into the image as its start command
 ├── .github/workflows/         # CI: run the gate; build & push the image to GHCR on request
+├── .claude/skills/            # run-flows, compare-renders: the flows, for an agent
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```

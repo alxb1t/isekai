@@ -8,7 +8,7 @@ The verb and the script first, then the abort, then the skills that name them; t
 - [x] 1 — `compare`: the comparison page
 - [x] 2 — `infra/render.sh`: a render session that always tears down
 - [x] 3 — the tagger's native abort
-- [ ] 4 — the skills, their check, the pod rule and the docs
+- [x] 4 — the skills, their check, the pod rule and the docs
 - [ ] 5 — 🛑 **HUMAN · METERED · HALT** — the operator runs `run-flows` end to end
 
 Line numbers are `866c346`'s; find each site by the text it names.
@@ -42,13 +42,13 @@ Line numbers are `866c346`'s; find each site by the text it names.
 
 ## 4 — the skills, their check, the pod rule and the docs
 
-- [ ] 4.1 Write `.claude/skills/run-flows/SKILL.md` and `.claude/skills/compare-renders/SKILL.md` per [D1](design.md#d1): exact commands, the stops for "approved" and for the go, and what never to read.
+- [x] 4.1 Write `.claude/skills/run-flows/SKILL.md` and `.claude/skills/compare-renders/SKILL.md` per [D1](design.md#d1): exact commands, the stops for "approved" and for the go, and what never to read.
   Verify: `ls .claude/skills/run-flows/SKILL.md .claude/skills/compare-renders/SKILL.md | wc -l` prints `2`.
-- [ ] 4.2 In a new `tests/test_agent_skills.py`, test `agent-skills:commands:every-command-parses` and `agent-skills:commands:a-stale-command-fails`, per [D6](design.md#d6).
+- [x] 4.2 In a new `tests/test_agent_skills.py`, test `agent-skills:commands:every-command-parses` and `agent-skills:commands:a-stale-command-fails`, per [D6](design.md#d6).
   Verify: `grep -c 'agent-skills:commands:' tests/test_agent_skills.py` prints `2`.
-- [ ] 4.3 Amend `CLAUDE.md`'s pod rule (`:229-232`) and add the record files' removal under *Who confirms*, per [D4](design.md#d4).
+- [x] 4.3 Amend `CLAUDE.md`'s pod rule (`:229-232`) and add the record files' removal under *Who confirms*, per [D4](design.md#d4).
   Verify: `grep -c 'explicit go in the session' CLAUDE.md` prints `1`, and `grep -c 'marks metered\.\*\*' CLAUDE.md` prints `0`.
-- [ ] 4.4 Name `compare` in the `cli` spec's preamble (`openspec/specs/cli/spec.md:5-7`), in `README.md`'s verb list (`:8`) and in `docs/data-flow.md` beside `show`; add a `README.md` section naming both skills and `infra/render.sh`.
+- [x] 4.4 Name `compare` in the `cli` spec's preamble (`openspec/specs/cli/spec.md:5-7`), in `README.md`'s verb list (`:8`) and in `docs/data-flow.md` beside `show`; add a `README.md` section naming both skills and `infra/render.sh`.
   Verify: `grep -c 'compare' openspec/specs/cli/spec.md` prints a number above `0`, and `grep -c 'run-flows' README.md` prints a number above `0`.
 
 ## 5 — 🛑 **HUMAN · METERED · HALT** — the operator runs `run-flows` end to end

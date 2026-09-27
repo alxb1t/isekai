@@ -32,13 +32,16 @@ its neighbours.
 ```
 
 Beside them, `show` reads a run's artifacts, versions and producers and decides
-nothing — it writes no file and reaches no model.
+nothing — it writes no file and reaches no model. `compare` reads a batch's runs the
+same way and writes one page into the batch directory, `compare.html`: each run's
+photograph beside each flow's renders, linked and never embedded.
 
 Every stage verb takes `--flow`, required and repeatable, because the flow
 supplies the briefing a stage reads, the schema it fills against and the
-directory it writes into. `show` and `ui`, which are not stage verbs, each
-differ, and in different directions: `show` takes no `--flow` at all, because it
-reports every flow the run already holds and so names none by design; `ui`'s is
+directory it writes into. `show`, `compare` and `ui`, which are not stage verbs,
+differ, and in different directions: `show` and `compare` take no `--flow` at
+all, because they report every flow the runs already hold and so name none by
+design — `compare` takes the batch directory instead of `--runs`; `ui`'s is
 required and exactly one, because the surface shows a single schema's fields in a
 fixed order and a second flow would be a second page.
 

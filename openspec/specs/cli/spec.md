@@ -3,13 +3,13 @@
 ## Purpose
 
 The command-line surface: one entry point; the stage verbs `caption`, `tag`, `sheet`, `review`, `approve`
-and `generate`, the inspection verb `show` and the serving verb `ui`; and every refusal a batch produced
-reported together rather than one at a time.
+and `generate`, the inspection verb `show`, the serving verb `ui` and the page verb `compare`; and every
+refusal a batch produced reported together rather than one at a time.
 
 **Source:** `isekai/__main__.py`, `isekai/interface/cli.py`, `isekai/interface/wiring.py`,
-`isekai/interface/run_view.py`, `flows/` ·
+`isekai/interface/run_view.py`, `isekai/interface/compare_view.py`, `flows/` ·
 **Tests:** `tests/test_pipeline_cli.py`, `tests/test_generate.py`, `tests/test_resume.py`,
-`tests/test_run_view.py`
+`tests/test_run_view.py`, `tests/test_compare.py`
 
 The CLI is where a bad value is cheapest to catch — `--seed` and `--count` are range-checked **at parse
 time**, so a bad one fails before a pod is touched rather than after a paid render. **There are no dial
