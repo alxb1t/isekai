@@ -1,0 +1,8 @@
+# This change carries no spec delta: no requirement names RunPod's API version, and the
+# requirements the scripts hold — the pinned digest, the boot record, the timestamps, the
+# volume refused before a pod is created — stay true word for word. See design.md D6.
+#
+# `skip_specs` is only honoured when this file is valid change metadata, which requires
+# `schema` naming a resolvable schema.
+schema: spec-driven
+skip_specs: true

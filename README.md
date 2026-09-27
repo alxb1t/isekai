@@ -420,10 +420,10 @@ PROVISION TIME (every session — this is up.sh / down.sh)
   YOUR MACHINE                     RUNPOD                              GHCR
   ────────────                     ──────                              ────
   ./infra/up.sh
-    │ 1  POST /v1/pods ──────────▶ control plane
-    │    (image@digest, GPU, volume,    │ 2  place pod on a GPU host
-    │     PUBLIC_KEY, port 22)          ▼
-    │                             GPU host (driver + toolkit ready)
+    │ 1  POST /v2/pods ──────────▶ control plane
+    │    (image@digest, GPU type,       │ 2  place pod on a GPU host
+    │     volume, PUBLIC_KEY, port 22)  ▼
+    │    400 → next GPU type      GPU host (driver + toolkit ready)
     │                                  │ 3  pull image ───────────────▶ ghcr image
     │                                  │ ◀──────────── ~14 GB ──────────┘
     │                                  │ 4  run container → CMD = /start.sh:
@@ -433,8 +433,8 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
     │                                  │      • provision from config/models.json (verified)
     │                                  │      • exec ComfyUI          (:8188)
-    │ 5  poll GET /v1/pods ───────────▶│
-    │    ◀──── publicIp + port(22) ────┘
+    │ 5  poll GET /v2/pods/{id} ──────▶│
+    │    ◀──── ssh.direct host:port ───┘
     ▼
   prints:  ssh ...   and   ssh -N -L 8188:localhost:8188 ...
 
@@ -444,7 +444,7 @@ USE IT
                        ──▶ localhost:8188 ──tunnel──▶ ComfyUI ──▶ GPU ──▶ anime.png
 
 TEAR DOWN
-  ./infra/down.sh  ──▶  DELETE /v1/pods/{id}  ──▶  pod removed, billing stops
+  ./infra/down.sh  ──▶  DELETE /v2/pods/{id}  ──▶  pod removed, billing stops
                                                    (volume + GHCR image persist)
 ```
 

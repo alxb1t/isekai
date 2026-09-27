@@ -8,6 +8,29 @@ cd "$(dirname "$0")/.."          # run from repo root no matter where invoked
 set -a; source ./.env; set +a    # load RUNPOD_* config
 
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
+API="https://api.runpod.io/v2"
+
+# Every call to RunPod: the key reaches curl on a file descriptor, never on its
+# argv, where any process listing could read it; and the call is bounded, so a
+# stalled read cannot hold the poll past its 420 s teardown (0034 design D2).
+api() {
+  curl -s --max-time 30 -H @<(printf 'Authorization: Bearer %s\n' "$RUNPOD_API_KEY") "$@"
+}
+
+report() {  # report <call> <status> <body>, per 0034 design D4
+  echo "$1 returned HTTP $2:" >&2
+  echo "$3" \
+    | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
+      >&2 2>/dev/null \
+    || echo "  $3" >&2
+}
+
+lost() {  # a create whose outcome is unknown may have placed a pod no file records
+  echo "The create's outcome is unknown: a pod named 'isekai' may exist and bill," >&2
+  echo "with no .runpod_pod_id to record it. Check the RunPod MCP's" >&2
+  echo "list-pods, delete any 'isekai' pod there with delete-pod, then re-run" >&2
+  echo "bash infra/up.sh." >&2
+}
 
 # The pod boots the digest config/image.json pins, never a tag, and nothing in the
 # environment overrides it: moving the pin is a commit (0033 design D3).
@@ -20,7 +43,7 @@ fi
 
 # The client half of the volume guard, and the half that is certain. The pod-side
 # check cannot see whether a network volume was ever requested: RunPod defaults
-# `volumeInGb` to 20 and mounts the pod's OWN volume disk at volumeMountPath when
+# `volumeInGb` to 20 and mounts the pod's OWN volume disk at the mount path when
 # none is attached, so the mount point exists either way (design.md D5). Here the
 # question is answerable and tripping it costs nothing, because no pod exists yet.
 if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
@@ -31,51 +54,66 @@ if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
   exit 1
 fi
 
-echo "Creating pod in $RUNPOD_DATACENTER on '$RUNPOD_GPU_TYPE' ..."
+echo "Creating pod in $RUNPOD_DATACENTER ..."
 echo "  image: $image_ref"
-# `RUNPOD_GPU_TYPE` is a comma-separated preference order, not one name: the API
-# takes a list and picks the first with capacity, which is what stops a session
-# dying at creation because one model is sold out in one datacenter. It is split
-# here rather than in `.env` because the API wants an array of exact enum values,
-# and a single string carrying a comma is not one of them -- it is rejected at
-# creation with the whole enum echoed back, which is how this was found.
-body=$(jq -n \
-  --arg image  "$image_ref" \
-  --arg gpu    "$RUNPOD_GPU_TYPE" \
-  --arg vol    "$RUNPOD_VOLUME_ID" \
-  --arg dc     "$RUNPOD_DATACENTER" \
-  --arg pubkey "$PUBKEY" \
-  '{ name: "isekai",
-     imageName: $image,
-     gpuTypeIds: ($gpu | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))),
-     gpuCount: 1,
-     networkVolumeId: $vol,
-     volumeMountPath: "/runpod-volume",
-     ports: ["22/tcp"],
-     containerDiskInGb: 30,
-     dataCenterIds: [$dc],
-     cloudType: "SECURE",
-     env: { PUBLIC_KEY: $pubkey,
-            RUNPOD_VOLUME_ID: $vol } }')
-
-resp=$(curl -s -X POST https://rest.runpod.io/v1/pods \
-  -H "Authorization: Bearer $RUNPOD_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d "$body")
-
-pod_id=$(echo "$resp" | jq -r '(if type=="array" then .[0] else . end).id // empty')
+# `RUNPOD_GPU_TYPE` is a preference order, so one sold-out model does not end the
+# session. v2 places one type per call, so the list is walked here: a 400 (no
+# capacity, or a rule broken) tries the next type, anything else stops.
+gpus=$(jq -rn --arg gpu "$RUNPOD_GPU_TYPE" \
+  '$gpu | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)) | .[]')
+if [ -z "$gpus" ]; then
+  echo "ERROR: RUNPOD_GPU_TYPE names no GPU type in .env — refusing to create a pod." >&2
+  exit 1
+fi
+pod_id=""
+while IFS= read -r gpu; do
+  echo "Trying '$gpu' ..."
+  body=$(jq -n \
+    --arg image  "$image_ref" \
+    --arg gpu    "$gpu" \
+    --arg vol    "$RUNPOD_VOLUME_ID" \
+    --arg dc     "$RUNPOD_DATACENTER" \
+    --arg pubkey "$PUBKEY" \
+    '{ name: "isekai",
+       image: $image,
+       gpu: { id: $gpu, count: 1 },
+       mounts: { network: [{ volumeId: $vol, path: "/runpod-volume" }] },
+       ports: ["22/tcp"],
+       disk: 30,
+       dataCenterIds: [$dc],
+       cloud: "SECURE",
+       env: { PUBLIC_KEY: $pubkey,
+              RUNPOD_VOLUME_ID: $vol } }')
+  # A transport failure is code 000, reported like any status, never a silent exit.
+  out=$(api -S -w '\n%{http_code}' -X POST "$API/pods" \
+    -H "Content-Type: application/json" \
+    -d "$body") || true
+  code=${out##*$'\n'}
+  resp=${out%$'\n'*}
+  if [ "$code" = "201" ]; then
+    pod_id=$(echo "$resp" | jq -r '.id // empty' 2>/dev/null) || true
+    [ -n "$pod_id" ] && break
+  fi
+  report "Create on '$gpu'" "$code" "$resp"
+  [ "$code" = "400" ] && continue
+  # RunPod may have placed the pod and the answer been lost on the way back.
+  case "$code" in
+    201|5??|000|"") lost ;;
+  esac
+  exit 1
+done <<< "$gpus"
 
 if [ -z "$pod_id" ]; then
-  echo "Pod creation failed:"; echo "$resp" | jq . 2>/dev/null || echo "$resp"; exit 1
+  echo "Pod creation failed: no type in RUNPOD_GPU_TYPE was placed." >&2; exit 1
 fi
 echo "$pod_id" > .runpod_pod_id
 # What `generate` records as the image a render ran on; down.sh removes it.
 echo "$image_ref" > .runpod_pod_image
 echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 
-# Poll until the pod has a public IP and a mapped :22 -- and give up if one never
-# arrives. Some SECURE-cloud machines come up `RUNNING` with `runtime: null` and
-# only RunPod's own SSH proxy, which is a restricted shell and will not carry the
+# Poll until `ssh.direct` -- a public IP and a mapped :22 -- appears, and give up
+# if it never does. Some SECURE-cloud machines come up `RUNNING` with `runtime:
+# null` and only RunPod's SSH proxy, a restricted shell that will not carry the
 # port forward this pipeline needs. The pod is then useless and bills anyway.
 #
 # This poll was unbounded, which made it the one thing in this repository that
@@ -100,11 +138,13 @@ echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 # entirely -- including out of the comment that says why.
 deadline=$((SECONDS + 420))
 while true; do
-  pod=$(curl -s "https://rest.runpod.io/v1/pods?id=$pod_id" \
-        -H "Authorization: Bearer $RUNPOD_API_KEY")
-  ip=$(echo   "$pod" | jq -r '(if type=="array" then .[0] else . end).publicIp // empty')
-  port=$(echo "$pod" | jq -r '(if type=="array" then .[0] else . end).portMappings."22" // empty')
-  [ -n "$ip" ] && [ -n "$port" ] && break
+  # A failed read -- transport, status or body -- is "not yet", never an abort:
+  # under `set -e` an abort here skips the teardown below (0034 design D2).
+  read -r host port < <(
+    api -f "$API/pods/$pod_id" \
+      | jq -r '.ssh.direct | "\(.host // "") \(.port // "")"' 2>/dev/null
+  ) || true
+  [ -n "$host" ] && [ -n "$port" ] && break
   if [ "$SECONDS" -ge "$deadline" ]; then
     echo >&2
     echo "ERROR: pod $pod_id got no public IP and no mapped :22 within 420s." >&2
@@ -125,5 +165,5 @@ echo "Port 22 mapped at $(date -u +%FT%TZ)."
 
 echo
 echo "Pod is up."
-echo "  SSH:    ssh -i ~/.ssh/id_ed25519_runpod root@$ip -p $port"
-echo "  Tunnel: ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@$ip -p $port"
+echo "  SSH:    ssh -i ~/.ssh/id_ed25519_runpod root@$host -p $port"
+echo "  Tunnel: ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@$host -p $port"

@@ -25,6 +25,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-09-27
+
+### Changed
+
+- **`up.sh` creates on RunPod's REST v2** (`0034` design D1, D2, D4): v1 retires on 2026-11-15. Each type in
+  `RUNPOD_GPU_TYPE` is tried in order, since v2 places one per call; the poll waits for `ssh.direct`, and a
+  failed read is *not yet*, so the 420 s teardown always runs. A failed call prints its `problem+json`.
+- **`down.sh` deletes on REST v2** (`0034` design D3, D5): only a 204 tears down; a 404 keeps the record files
+  and asks for the RunPod MCP's confirmation, since a wrong key gets one too. A test fails if any script under
+  `infra/` names the retired v1 host; the README's pod diagram names v2's calls.
+- **Proved on one metered boot** (`0034` design D7): `up.sh` created and polled on v2, one `conjure` render,
+  `down.sh` tore down on 204, and the RunPod MCP found the pod gone — 6 min 46 s, about $0.08. Evidence in
+  the change's `acceptance.md`.
+- **The poll is one guarded read, and an empty GPU list is refused** (`0034` design D2): after the metered
+  boot, the simplify pass folded the poll's three reads into one `read … < <(curl | jq) || true`, checked
+  offline against the `ssh.direct` shapes on bash 3.2 and 5.2 and not re-booted; `up.sh` refuses a
+  `RUNPOD_GPU_TYPE` naming no type before any create.
+- **Every RunPod call is bounded and keeps the key off `argv`**: `up.sh` and `down.sh` call curl through one
+  `api` helper, `--max-time 30`, with the bearer header read from a file descriptor, so a stalled read cannot
+  hold the poll past its 420 s teardown and no process listing shows the key.
+- **A create whose outcome is unknown says a pod may exist** (`0034` design D4): a transport failure is
+  reported as HTTP 000 rather than a silent exit, and on 000, a 5xx or a 201 with no `.id`, `up.sh` exits 1
+  telling the operator to check the RunPod MCP's `list-pods` before re-running. A 400 still tries the next
+  type. `down.sh`'s 404 refusal names the `rm` of both record files once the pod is confirmed gone.
+
 ## [0.24.0] - 2026-09-27
 
 ### Changed
