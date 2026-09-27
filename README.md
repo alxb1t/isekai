@@ -161,8 +161,8 @@ python -m isekai generate --flow summon-anime-wai .inputs/me.jpg --server http:/
 
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
 artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
-submitted, the image the pod booted and the runtime it reported. **Download anything you want to keep before the next step** — renders live on the pod's
-ephemeral disk, and only the models volume persists.
+submitted, the image the pod booted and the runtime it reported. **Download anything you want to keep
+before the next step** — renders live on the pod's ephemeral disk, and only the models volume persists.
 
 Omit `--server` to assemble every prompt and stop without rendering, which is how a whole batch is
 checked before anything is rented. Assembly happens before any endpoint is acquired either way, so a
@@ -184,6 +184,41 @@ python -m isekai show .inputs/me.jpg
 
 Prints a run's artifacts, versions and what produced each one. It reaches no model and no GPU, and it
 works on a checkout that has provisioned nothing.
+
+### A batch of photographs, through both flows
+
+The same steps for a directory of photographs and both tracked flows, one command per step. Written
+for zsh, where `P=(…)` is an array of every file in the directory; in bash, use `"${P[@]}"` for `$P`.
+
+```sh
+P=(.inputs/batch/*)     # every photograph in the batch
+R=.data/batch/runs      # this batch's runs, apart from any other
+
+# ① ② free: the stage verbs take every photograph and both flows at once
+bash tools/download_models.sh config/reader.json   # once; it skips files already verified
+uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+
+# ③ free: one page per flow, over every run in the batch
+uv run python -m isekai ui --runs $R --flow summon-anime-wai  $(ls $R)
+uv run python -m isekai ui --runs $R --flow conjure-anime-wai $(ls $R)
+uv run python -m isekai show --runs $R $P
+
+# ④ – ⑦ metered: one pod renders both flows
+./infra/up.sh
+# second terminal: the tunnel command up.sh printed
+uv run python -m isekai generate --runs $R --flow conjure-anime-wai --count 2 $P --server http://127.0.0.1:8188
+uv run python -m isekai generate --runs $R --flow summon-anime-wai  --count 1 $P --server http://127.0.0.1:8188
+./infra/down.sh
+```
+
+- **`ui` takes run ids, not photographs.** It reviews work that already exists, and `$(ls $R)` is every
+  run this batch made — which is why the batch has a runs root of its own. `--flow` is given exactly
+  once, so each flow is its own page: approve every sheet, stop it with Ctrl-C, run the next.
+- **`generate` runs once per flow here** only because the counts differ: `--count` applies to every
+  flow named in one call. With one count, name both flows in one call.
+- **`show` takes no `--flow`**: it reports every flow a run holds.
 
 ### Correcting the sheets in a browser
 
