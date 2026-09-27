@@ -80,8 +80,9 @@ How an agent runs the flows for the operator with little context: skills that ch
 
 **`compare`.** `python -m isekai compare <batch>` — a positional batch directory, no `--flow`, no photographs, no
 `--runs`: the runs root is `<batch>/runs`. The page's shape is the operator's example: one entry per run, the run's
-photograph copy, then each flow's renders under its latest approval, labelled `<flow> · seed <seed>`; each flow's
-latest caption beside the photograph; *no render yet* where a flow has none. Images are linked relative to the page,
+photograph copy, then each flow's renders under its latest approval, labelled `<flow> · seed <seed>`, each with the
+positive prompt it came from beneath it; each flow's latest caption in a full-width row below the images (amended
+during the build, on the operator's decision); *no render yet* where a flow has none. Images are linked relative to the page,
 with `loading=lazy`, and none is embedded. The page is written to `<batch>/compare.html` through
 `foundation/atomic_write.py`, and the verb prints its path alone. A new `isekai/interface/compare_view.py` builds it
 with `html.escape` and `run_view.rendered`; the entry point stays stdlib-only.

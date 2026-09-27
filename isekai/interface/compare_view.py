@@ -14,7 +14,7 @@ import html
 from pathlib import Path
 from urllib.parse import quote
 
-from isekai.foundation.artifacts import CAPTION_FILE, read
+from isekai.foundation.artifacts import CAPTION_FILE, PROMPT_FILE, read
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
@@ -22,9 +22,11 @@ from isekai.foundation.run import (
     CAPTIONS,
     FRAME_NAME,
     OUTPUTS,
+    PROMPTS,
     REVIEW,
     Run,
     approved_versions,
+    artifact_name,
     latest_artifact,
 )
 from isekai.interface.run_view import rendered
@@ -50,8 +52,11 @@ figcaption { padding: 0 0 8px; font-size: 11px; letter-spacing: .06em;
              text-transform: uppercase; color: #8b8f9a; }
 img { width: 100%; height: 80vh; object-fit: contain; object-position: top;
       display: block; background: #0a0b0e; border-radius: 6px; }
-.caption { margin: 10px 0 0; color: #9aa0ad; font-size: 12px; }
-.caption b { color: #8b8f9a; }
+.captions { padding: 0 20px 16px; }
+.caption, .prompt { margin: 10px 0 0; color: #9aa0ad; font-size: 12px; }
+.prompt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+          font-size: 11.5px; word-break: break-word; }
+.caption b, .prompt b { color: #8b8f9a; }
 .none { color: #6f7481; font-style: italic; }
 """
 
@@ -77,8 +82,21 @@ def _runs(batch: Path) -> list[Run]:
     ]
 
 
+def _prompt(run: Run, flow: str, version: int) -> str:
+    """Return the positive prompt assembled from `version`, as a block, or nothing."""
+    path = run.directory(flow, PROMPTS) / artifact_name(version)
+    if not path.is_file():
+        return ""
+    positive = read(path, PROMPT_FILE)["positive"]
+    return f'<p class="prompt"><b>positive</b> {html.escape(positive)}</p>'
+
+
 def _entry(run: Run, flows: list[str], batch: Path, flows_dir: Path) -> str:
-    """Return one run's section: photograph and captions, then each flow's renders."""
+    """Return one run's section: the photograph and each flow's renders, then captions.
+
+    Each render carries the positive prompt it came from; the captions span the
+    row, because a column is too narrow for prose.
+    """
     captions = []
     for flow in flows:
         path = latest_artifact(run.directory(flow, CAPTIONS))
@@ -90,8 +108,7 @@ def _entry(run: Run, flows: list[str], batch: Path, flows_dir: Path) -> str:
             )
     figures = [
         f"<figure><figcaption>photograph</figcaption>"
-        f'<img loading=lazy src="{_link(run.photo, batch)}" alt="">'
-        f"{''.join(captions)}</figure>"
+        f'<img loading=lazy src="{_link(run.photo, batch)}" alt=""></figure>'
     ]
     seeds_of = {
         (flow, version): seeds for flow, version, seeds in rendered(run, flows_dir)
@@ -99,8 +116,8 @@ def _entry(run: Run, flows: list[str], batch: Path, flows_dir: Path) -> str:
     for flow in flows:
         approved = approved_versions(run.directory(flow, REVIEW))
         version = approved[-1] if approved else None
-        seeds = seeds_of.get((flow, version), []) if version is not None else []
-        if not seeds:
+        seeds = seeds_of.get((flow, version), [])
+        if version is None or not seeds:
             figures.append(
                 f"<figure><figcaption>{html.escape(flow)}</figcaption>"
                 f'<p class="none">no render yet</p></figure>'
@@ -108,15 +125,18 @@ def _entry(run: Run, flows: list[str], batch: Path, flows_dir: Path) -> str:
             continue
         suffix = load_flow(flow, flows_dir).output_suffix
         directory = run.directory(flow, OUTPUTS, f"{version:03d}")
+        prompt = _prompt(run, flow, version)
         for seed in seeds:
             figures.append(
                 f"<figure><figcaption>{html.escape(flow)} &middot; seed {seed}"
                 f"</figcaption><img loading=lazy "
-                f'src="{_link(directory / f"{seed}{suffix}", batch)}" alt=""></figure>'
+                f'src="{_link(directory / f"{seed}{suffix}", batch)}" alt="">'
+                f"{prompt}</figure>"
             )
     return (
         f'<section><div class="id">{html.escape(run.id)}</div>'
-        f'<div class="grid">{"".join(figures)}</div></section>'
+        f'<div class="grid">{"".join(figures)}</div>'
+        f'<div class="captions">{"".join(captions)}</div></section>'
     )
 
 

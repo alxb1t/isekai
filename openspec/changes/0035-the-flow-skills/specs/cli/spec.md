@@ -4,8 +4,8 @@
 
 The system SHALL offer a verb that, given a batch directory holding a `runs/` directory, writes one HTML page into
 that batch directory showing, for each run, the run's photograph and every render of each flow's latest approval,
-each render labelled by its flow and seed, with each flow's caption beside the photograph and a run without a render
-marked. The page SHALL link every image by a path relative to itself and SHALL embed none. The verb SHALL print
+each render labelled by its flow and seed and carrying the positive prompt it came from, with each flow's caption
+and a run without a render marked. The page SHALL link every image by a path relative to itself and SHALL embed none. The verb SHALL print
 only the page's path, and SHALL refuse, naming the directory, a batch directory that holds no `runs/`.
 
 A batch of photographs ends in a question a person answers by eye: which flow kept whom. The answer used to be a

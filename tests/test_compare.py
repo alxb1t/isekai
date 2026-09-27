@@ -5,13 +5,21 @@ so what is held here is its shape and that the verb prints the path alone.
 """
 
 import io
+import json
 import re
 from pathlib import Path
 
 import pytest
 
 from isekai.foundation.flow import load_flow
-from isekai.foundation.run import OUTPUTS, REVIEW, Run, artifact_name, open_run
+from isekai.foundation.run import (
+    OUTPUTS,
+    PROMPTS,
+    REVIEW,
+    Run,
+    artifact_name,
+    open_run,
+)
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.compare_view import PAGE_NAME
 from isekai.interface.wiring import Wiring
@@ -66,6 +74,14 @@ def _approve(run: Run, flow: str, version: int) -> None:
     path = run.directory(flow, REVIEW) / artifact_name(version, "approved")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{}\n")
+
+
+def _prompt(run: Run, flow: str, version: int, positive: str) -> None:
+    """Write the prompt assembled from `version`, holding what `compare` reads."""
+    path = run.directory(flow, PROMPTS) / artifact_name(version)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = {"schema": {"name": "prompt", "version": 1}, "positive": positive}
+    path.write_text(json.dumps(body))
 
 
 def _render(run: Run, flow: str, version: int, *seeds: int) -> None:
@@ -160,3 +176,26 @@ def test_a_directory_without_runs_is_refused_naming_it(tmp_path: Path) -> None:
     assert err.startswith("refused: ")
     assert str(batch) in err
     assert list(batch.iterdir()) == []
+
+
+@pytest.mark.spec("cli:compare:the-page-links-photographs-to-renders")
+def test_captions_span_the_row_and_each_prompt_sits_under_its_render(
+    tmp_path: Path,
+) -> None:
+    batch = tmp_path / "batch"
+    run = _run(batch, "ada", "Ada")
+    for flow, seed in ((SUMMON, 11), (CONJURE, 21)):
+        _approve(run, flow, 1)
+        _prompt(run, flow, 1, f"masterpiece, {flow} <positive>")
+        _render(run, flow, 1, seed)
+
+    assert _compare(batch)[0] == 0
+
+    body = (batch / PAGE_NAME).read_text()
+    grid, captions = body.split('<div class="grid">')[1].split('<div class="captions">')
+    assert f"Ada for {SUMMON}" in captions and f"Ada for {CONJURE}" in captions
+    assert "Ada for" not in grid
+    figures = grid.split("<figure>")
+    for flow in (SUMMON, CONJURE):
+        [figure] = [f for f in figures if f"{flow} &middot; seed" in f]
+        assert f"masterpiece, {flow} &lt;positive&gt;" in figure
