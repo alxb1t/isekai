@@ -7,7 +7,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 
 - [x] 1 — CI and the toolchain
 - [x] 2 — The image: inputs by digest, a locked environment, built on request
-- [ ] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
+- [x] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
 - [ ] 4 — The pin: `config/image.json`, `up.sh` boots it
 - [ ] 5 — The reader: `config/reader.json`, the model checked before its first call
 - [ ] 6 — The records
@@ -42,7 +42,7 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
 
-- [ ] 3.1 ⛔ **HALT.** Ask the operator to push `v0.24_pin_and_record`, run `gh workflow run build-image.yml --ref v0.24_pin_and_record -f tag=v0.24-rc1`, and give the digest from the job summary. Record it as the first line of `openspec/changes/0033-pin-and-record/acceptance.md`: `Image: ghcr.io/alxb1t/isekai:v0.24-rc1@sha256:<digest>`.
+- [x] 3.1 ⛔ **HALT.** Ask the operator to push `v0.24_pin_and_record`, run `gh workflow run build-image.yml --ref v0.24_pin_and_record -f tag=v0.24-rc1`, and give the digest from the job summary. Record it as the first line of `openspec/changes/0033-pin-and-record/acceptance.md`: `Image: ghcr.io/alxb1t/isekai:v0.24-rc1@sha256:<digest>`.
   Verify: `grep -c '^Image: ghcr.io/alxb1t/isekai:v0.24-rc1@sha256:[0-9a-f]\{64\}$' openspec/changes/0033-pin-and-record/acceptance.md` prints `1`.
 
 ## 4 — The pin: `config/image.json`, `up.sh` boots it

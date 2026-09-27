@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `uv sync --locked`, with `onnxruntime-gpu` alone; `build-image.yml` dispatch-only, reporting its digest.
 - **A boot prints when each step begins**: `start.sh` stamps each step in UTC, `up.sh` the pod's creation and
   its mapped :22.
+- **The first image built on request**: `ghcr.io/alxb1t/isekai:v0.24-rc1`, digest
+  `sha256:d6f12d02b1fb6b0d2c4c6d0505c70193202c647d57c27b7e1235845427dbb500`, recorded in the change's
+  `acceptance.md`; `build-image.yml`'s digest step is a block scalar, so the workflow parses.
 
 ## [0.23.0] - 2026-09-26
 
