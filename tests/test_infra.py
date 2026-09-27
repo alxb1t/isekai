@@ -966,7 +966,7 @@ def untrapped_teardown(script: str) -> list[str]:
     if not traps:
         return ["a trap"]
     trap = lines[traps[0]]
-    missing = [f"on {sig}" for sig in ("EXIT", "INT", "TERM") if sig not in trap]
+    missing = [f"on {sig}" for sig in ("EXIT", "INT", "TERM", "HUP") if sig not in trap]
     handler = re.search(r"trap '?(\w+)", trap)
     name = f"{handler[1]}()" if handler else None
     start = next(
@@ -980,6 +980,9 @@ def untrapped_teardown(script: str) -> list[str]:
         missing.append("runs down.sh")
     if "kill " not in body:
         missing.append("closes the tunnel")
+    # Ignored, not reset: a second Ctrl-C would otherwise kill down.sh mid-DELETE.
+    if "trap '' INT TERM HUP" not in body:
+        missing.append("ignores a second signal")
     up = next(i for i, ln in enumerate(lines) if "infra/up.sh" in ln)
     if traps[0] > up:
         missing.append("set before the pod")
@@ -1003,8 +1006,58 @@ def test_the_teardown_check_catches_a_late_trap_that_leaves_the_tunnel() -> None
     assert untrapped_teardown(script) == [
         "on INT",
         "on TERM",
+        "on HUP",
         "closes the tunnel",
+        "ignores a second signal",
         "set before the pod",
+    ]
+
+
+def unbounded_session(script: str) -> list[str]:
+    """Return what a render session misses of halting at the pod ceiling.
+
+    `CLAUDE.md` makes 45 minutes a halt, so a watchdog started before the pod
+    signals the script, whose trap tears the pod down, and stops the command in
+    flight, which would otherwise hold the trap until it ended.
+    e.g. a script with no watchdog -> ["a stated ceiling", ...]
+    """
+    lines = _code(script)
+    missing = []
+    ceiling = re.search(r"^CEILING=(\d+)", script, re.M)
+    if ceiling is None or not 0 < int(ceiling[1]) <= 45 * 60:
+        missing.append("a stated ceiling")
+    started = [i for i, ln in enumerate(lines) if 'sleep "$CEILING"' in ln]
+    trap = next((i for i, ln in enumerate(lines) if ln.startswith("trap ")), None)
+    up = next(i for i, ln in enumerate(lines) if "infra/up.sh" in ln)
+    if not started or trap is None or not trap < started[0] < up:
+        missing.append("started after the trap, before the pod")
+    if not any("kill -TERM $$" in ln for ln in lines):
+        missing.append("ends through the trap")
+    if not any("pkill -TERM -P $$" in ln for ln in lines):
+        missing.append("stops the command in flight")
+    if not any('kill "$watchdog"' in ln for ln in lines):
+        missing.append("stopped at teardown")
+    return missing
+
+
+@pytest.mark.spec_exempt(
+    "structural: CLAUDE.md's 45-minute pod ceiling, which no requirement names"
+)
+def test_a_render_session_halts_at_the_pod_ceiling(render_sh: str) -> None:
+    assert unbounded_session(render_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_render_session_halts_at_the_pod_ceiling"
+)
+def test_the_ceiling_check_catches_a_session_with_no_watchdog() -> None:
+    script = 'trap teardown EXIT\nbash ./infra/up.sh\ngenerate --server "$SERVER"\n'
+    assert unbounded_session(script) == [
+        "a stated ceiling",
+        "started after the trap, before the pod",
+        "ends through the trap",
+        "stops the command in flight",
+        "stopped at teardown",
     ]
 
 

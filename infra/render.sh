@@ -13,6 +13,7 @@ cd "$(dirname "$0")/.."          # run from repo root no matter where invoked
 
 SERVER="http://127.0.0.1:8188"
 WAIT=300                          # seconds ComfyUI gets to answer through the tunnel
+CEILING=2640                      # seconds to the halt: CLAUDE.md's 45 minutes, less one for down.sh
 
 # A refusal goes to the batch's log too: run-flows reads the log, not this output.
 # Until the runs root is checked there is no batch, so no log to write it to.
@@ -22,9 +23,11 @@ refuse() { echo "refused: $*" | tee -a "${log:-/dev/null}" >&2; exit 1; }
 runs=$1; shift
 [ -d "$runs" ] || refuse "$runs is not a directory; give the batch's runs/"
 log="$(dirname "$runs")/log.txt"
+flows=()
 for spec in "$@"; do
   [[ "$spec" =~ ^[a-z0-9-]+=[1-9][0-9]*$ ]] \
     || refuse "'$spec' is not <flow>=<count>, e.g. summon-anime-wai=1"
+  flows+=(--flow "${spec%%=*}")
 done
 
 # Every run under the root, by id. bash 3.2 (macOS) has no mapfile.
@@ -32,29 +35,33 @@ ids=()
 for dir in "$runs"/*/; do
   if [ -f "$dir/run.json" ]; then ids+=("$(basename "$dir")"); fi
 done
-[ "${#ids[@]}" -gt 0 ] || refuse "$runs holds no run; run the stages first"
+[ "${#ids[@]}" -gt 0 ] || refuse "$runs holds no run; open them from the batch's \
+photographs with: uv run python -m isekai tag ${flows[*]} --runs $runs $(dirname "$runs")/photos/*"
 
 # A recorded pod is another session's: the trap below would tear it down.
 [ ! -f .runpod_pod_id ] \
   || refuse "a pod is already recorded in .runpod_pod_id; run bash infra/down.sh first"
 # Something already answering on the port would be rendered against instead.
 if curl -sf --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; then
-  refuse "$SERVER already answers; stop whatever holds port 8188 first"
+  refuse "$SERVER already answers; stop what holds the port, likely an earlier \
+tunnel: kill \$(lsof -t -iTCP:8188 -sTCP:LISTEN)"
 fi
 
 # Free work first: every prompt is assembled before anything is rented, so a
 # missing approval refuses here rather than on a billing pod.
-flows=()
-for spec in "$@"; do flows+=(--flow "${spec%%=*}"); done
 uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
 
 tunnel=""
+watchdog=""
 up_out=$(mktemp)
 teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   local status=${1:-$?}
-  # Nothing in here may end the handler before down.sh runs.
+  # Nothing in here may end the handler before down.sh runs: a second Ctrl-C is
+  # ignored, not defaulted, and down.sh inherits the ignore.
   set +e
-  trap - EXIT INT TERM
+  trap - EXIT
+  trap '' INT TERM HUP
+  if [ -n "$watchdog" ]; then kill "$watchdog" 2>/dev/null; fi
   if [ -n "$tunnel" ]; then kill "$tunnel" 2>/dev/null; fi
   rm -f "$up_out"
   if [ -f .runpod_pod_id ]; then
@@ -64,7 +71,20 @@ teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   exit "$status"
 }
 # Set before the pod exists, so no step after it can leave the pod billing.
-trap teardown EXIT; trap 'teardown 130' INT; trap 'teardown 143' TERM
+trap teardown EXIT; trap 'teardown 130' INT; trap 'teardown 143' TERM; trap 'teardown 129' HUP
+
+# The ceiling is a halt (CLAUDE.md). A TERM to this shell waits for the command
+# in flight, so the watchdog stops that too; the pending TERM then runs the trap.
+# Renders already written are kept, and the same command renders only the rest.
+(
+  sleep "$CEILING" </dev/null >/dev/null 2>&1
+  echo "refused: the session reached its ${CEILING}s ceiling; renders so far are \
+kept, and in a new session bash infra/render.sh $runs $* renders only the rest" \
+    | tee -a "$log" >&2
+  kill -TERM $$
+  pkill -TERM -P $$
+) &
+watchdog=$!
 
 bash ./infra/up.sh 2>&1 | tee -a "$log" "$up_out"
 

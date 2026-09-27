@@ -54,6 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `run-flows` step 4 discards before reading `log.txt`, so a wait past 300 s, a recorded pod or a taken port
   showed the agent an exit 1 with no reason. `refuse()` now appends its line to the log as well, once the runs
   root is checked; a text check in `tests/test_infra.py` holds it.
+- **A render session halts at the pod ceiling, and a second interrupt no longer cuts its teardown short**
+  (`0035` design D3): nothing stopped a session at `CLAUDE.md`'s 45 minutes, and the teardown reset `INT` and `TERM`
+  to their defaults, so a second Ctrl-C killed `down.sh` mid-DELETE and left the pod billing. A watchdog started
+  before `up.sh` now refuses at 44 minutes, stops the command in flight and exits through the trap, keeping the
+  renders written; the teardown ignores `INT`, `TERM` and `HUP`, and the trap covers `HUP`. `render.sh`'s refusals
+  for an empty runs root and a taken port name a command to paste. Text checks in `tests/test_infra.py` hold both.
 
 ## [0.24.1] - 2026-09-27
 
