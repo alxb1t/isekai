@@ -60,6 +60,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before `up.sh` now refuses at 44 minutes, stops the command in flight and exits through the trap, keeping the
   renders written; the teardown ignores `INT`, `TERM` and `HUP`, and the trap covers `HUP`. `render.sh`'s refusals
   for an empty runs root and a taken port name a command to paste. Text checks in `tests/test_infra.py` hold both.
+- **`run-flows` renders in the background, counts approved runs, and never reports a pod id** (`0035` design D1):
+  step 4 was a foreground call longer than an agent's command limit, so a timeout could cut the teardown short; it
+  now runs in the shell tool's background mode and waits for the exit. Step 3 counted approval files, so a run
+  approved twice hid one approved never; it counts runs. A failed render's log tail drops the lines naming the pod
+  or its address, and the skill's Never list forbids reporting them.
 
 ## [0.24.1] - 2026-09-27
 

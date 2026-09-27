@@ -22,6 +22,8 @@ is shaped this way: [0035 design D1](../../../openspec/changes/0035-the-flow-ski
 - **Never read** a photograph, anything under `runs/`, `compare.html`, or `log.txt` beyond the lines the steps
   below grep. Your context is for counts and statuses.
 - **Never start step 4 without the operator's go** in this session. It rents a GPU.
+- **Never report or write down** a pod id or a pod's host and port — `log.txt` holds them, and step 4's filter
+  drops them.
 
 ## 0 — Check
 
@@ -37,7 +39,9 @@ No photographs, or no `ollama up`: stop and tell the operator which.
 
 ## 1 — Tag, caption, sheet
 
-Run each block, in order. After each, report its exit status and the refusal count, which is cumulative.
+Run each block, in order. After each, report its exit status and the refusal count, which is cumulative. On more
+than a few photographs a block outlasts a foreground command: run it in your shell tool's background mode and wait
+for its exit.
 
 ```bash
 BATCH=.data/<batch>
@@ -96,11 +100,12 @@ Both up: give the operator the two addresses and **stop until the operator says 
 BATCH=.data/<batch>
 ls "$BATCH/runs" | wc -l
 for flow in summon-anime-wai conjure-anime-wai; do
-  echo "$flow: $(find "$BATCH/runs" -path "*/$flow/review/*.approved.json" | wc -l) approvals"
+  approved=$(find "$BATCH/runs" -path "*/$flow/review/*.approved.json" | sed "s#/$flow/review/.*##" | sort -u | wc -l)
+  echo "$flow: $((approved)) runs approved"
 done
 ```
 
-Report the run count and each flow's approvals. Then stop both servers:
+Report the run count and each flow's approved runs — a run approved twice counts once. Then stop both servers:
 
 ```bash
 pkill -f -- '-m isekai ui --flow .* --port 851[78]'; echo "exit $?"
@@ -114,7 +119,9 @@ operator which flow and ask whether to go back to step 2.
 **Stop and ask for the go.** Quote the ceiling: *one pod session, at most 45 minutes and about $0.30*. Only the
 operator's explicit go in this session authorises the spend.
 
-On the go:
+On the go, run this block **in your shell tool's background mode**, not in the foreground, and wait for it to
+exit — do not poll the log. The session outlasts a foreground command, about 13 minutes for five photographs, and a
+command killed mid-render can cut the teardown short. `render.sh` halts itself at the ceiling.
 
 ```bash
 BATCH=.data/<batch>
@@ -127,8 +134,9 @@ echo "refusals: $(grep -c '^refused' "$BATCH/log.txt")"
 pod named `isekai`. Report what it returned.
 
 - **Exit 0**: report the render count.
-- **Non-zero**: read `grep '^refused' .data/<batch>/log.txt` and `tail -15 .data/<batch>/log.txt`, and report
-  them.
+- **Non-zero**: read `grep '^refused' .data/<batch>/log.txt` and
+  `tail -15 .data/<batch>/log.txt | grep -v -e 'root@' -e '[Pp]od [a-z0-9]\{12,\}'`, and report them. A
+  `ceiling` refusal keeps the renders so far; step 4 again renders only the rest, and needs a new go.
 - **`down.sh` could not confirm** (its message names the RunPod MCP): once `list-pods` shows the pod gone, run
   `rm .runpod_pod_id .runpod_pod_image`. A pod still listed: tell the operator at once — it is billing.
 
