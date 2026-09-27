@@ -385,7 +385,10 @@ def test_every_onnx_session_switches_telemetry_off_before_the_import(
     from evaluation import eval_backends
 
     ort = _RecordingOrt()
-    monkeypatch.delenv(TELEMETRY_SWITCH, raising=False)
+    # Set first, so the undo is recorded even when the switch starts unset: the
+    # opening below writes it, and the rest of the suite must not inherit that.
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
     monkeypatch.setattr(wd14, "_require", ort.imported)
     monkeypatch.setattr(eval_backends, "_require", ort.imported)
     monkeypatch.setattr(eval_backends, "resolve", lambda *_args: tmp_path / "m.onnx")
