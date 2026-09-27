@@ -6,11 +6,11 @@ client records every call it is given, so "no endpoint was contacted" is a count
 rather than a hope.
 """
 
+import dataclasses
 import io
 import json
 import random
 import re
-import shutil
 import urllib.error
 import urllib.request
 from email.message import Message
@@ -498,21 +498,19 @@ def test_the_submitted_graph_is_sized_from_the_photographs_own_header(
 
 def _placeholder_pair(
     run: Run, flow: Flow, tmp_path: Path, image_name: str | None
-) -> tuple[bytes, bytes]:
-    """Return the graph built from `flow` and from a copy with another placeholder."""
-    root = tmp_path / "scratch-flows" / FLOW
-    shutil.copytree(flow.path, root)
-    graph = json.loads((root / GRAPH_NAME).read_text())
+) -> tuple[str, str]:
+    """Return the built graph's digest for `flow` and for another placeholder."""
+    graph = flow.graph()
     graph[flow.node("photo")]["inputs"]["image"] = "another.jpeg"
-    (root / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+    (tmp_path / GRAPH_NAME).write_text(json.dumps(graph))
+    renamed = dataclasses.replace(flow, path=tmp_path)
     prepare(run, {FLOW: flow})
     prompt = read(run.directory(FLOW, PROMPTS) / artifact_name(1), PROMPT_FILE)
 
-    def submitted(source: Flow) -> bytes:
-        graph = build_graph(source, run.photo, image_name, prompt, 42)
-        return json.dumps(graph, sort_keys=True).encode()
+    def submitted(source: Flow) -> str:
+        return graph_digest(build_graph(source, run.photo, image_name, prompt, 42))
 
-    return submitted(flow), submitted(load_flow(FLOW, root.parent))
+    return submitted(flow), submitted(renamed)
 
 
 @pytest.mark.spec_exempt(
