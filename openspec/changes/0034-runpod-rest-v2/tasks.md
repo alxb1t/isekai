@@ -4,7 +4,7 @@
 
 ## Progress
 
-- [ ] 1 — `infra/up.sh` on v2
+- [x] 1 — `infra/up.sh` on v2
 - [ ] 2 — `infra/down.sh` on v2, and the docs
 - [ ] 3 — 🛑 **HUMAN · METERED · HALT** — one boot on v2, one render, teardown confirmed
 
@@ -12,15 +12,15 @@ Line numbers are `6e2475d`'s; find each site by the text it names.
 
 ## 1 — `infra/up.sh` on v2
 
-- [ ] 1.1 **HALT CHECK** — both scripts still call RunPod's REST v1.
+- [x] 1.1 **HALT CHECK** — both scripts still call RunPod's REST v1.
   Verify: `cat infra/up.sh infra/down.sh | grep -c 'rest.runpod.io/v1'` prints `3`.
-- [ ] 1.2 In `infra/up.sh`, set `API` once, build the v2 body [D1](design.md#d1) maps, and post it once per type in `RUNPOD_GPU_TYPE`, in order: 201 is the pod, 400 moves to the next type, any other status stops and reports per [D4](design.md#d4).
+- [x] 1.2 In `infra/up.sh`, set `API` once, build the v2 body [D1](design.md#d1) maps, and post it once per type in `RUNPOD_GPU_TYPE`, in order: 201 is the pod, 400 moves to the next type, any other status stops and reports per [D4](design.md#d4).
   Verify: `grep -c 'rest.runpod.io' infra/up.sh` prints `0`, and `grep -c 'gpu: {' infra/up.sh` prints `1`.
-- [ ] 1.3 Rewrite `infra/up.sh`'s poll per [D2](design.md#d2): `GET "$API/pods/$pod_id"`, ready when `.ssh.direct.host` and `.ssh.direct.port` are set, and a failed read counted as not yet, so the 420 s teardown always runs.
+- [x] 1.3 Rewrite `infra/up.sh`'s poll per [D2](design.md#d2): `GET "$API/pods/$pod_id"`, ready when `.ssh.direct.host` and `.ssh.direct.port` are set, and a failed read counted as not yet, so the 420 s teardown always runs.
   Verify: `grep -c 'ssh.direct' infra/up.sh` prints a number above `0`, and `grep -c -e 'publicIp' -e 'portMappings' infra/up.sh` prints `0`.
-- [ ] 1.4 Move `tests/test_infra.py`'s v1 names to v2 — `:108` and `:117` (the mount's `path`), `:306` (the line posting to `$API/pods`), `:413` (`disk:`), `:747` (`image: $image`) — and add `test_the_pod_is_asked_for_secure_cloud`, per [D5](design.md#d5).
+- [x] 1.4 Move `tests/test_infra.py`'s v1 names to v2 — `:108` and `:117` (the mount's `path`), `:306` (the line posting to `$API/pods`), `:413` (`disk:`), `:747` (`image: $image`) — and add `test_the_pod_is_asked_for_secure_cloud`, per [D5](design.md#d5).
   Verify: `grep -c -e 'volumeMountPath' -e 'containerDiskInGb' -e 'imageName' tests/test_infra.py` prints `0`, and `grep -c '^def test_the_pod_is_asked_for_secure_cloud' tests/test_infra.py` prints `1`.
-- [ ] 1.5 Name `disk: 30` in `start.sh`'s comment (`:46`), and say in `.env.example`'s comment that `RUNPOD_GPU_TYPE` is a comma list tried in order.
+- [x] 1.5 Name `disk: 30` in `start.sh`'s comment (`:46`), and say in `.env.example`'s comment that `RUNPOD_GPU_TYPE` is a comma list tried in order.
   Verify: `grep -c 'containerDiskInGb' start.sh` prints `0`, and `grep -c 'tried in order' .env.example` prints `1`.
 
 ## 2 — `infra/down.sh` on v2, and the docs

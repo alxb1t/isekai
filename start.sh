@@ -37,13 +37,13 @@ HOLD_SECONDS=900
 FAILURE_MARKER=/opt/isekai/provisioning-failed
 
 # `mountpoint -q` does NOT discriminate here. RunPod mounts the pod's own 20 GB
-# volume disk at volumeMountPath when no network volume is attached, so the path
+# volume disk at the mount path when no network volume is attached, so the path
 # exists and IS a mountpoint — the wrong one (design.md D5). Capacity does
 # discriminate, and capacity is what is measured. There are exactly two wrong
 # disks this path can resolve to, and the floor clears BOTH:
 #
 #   * the pod's own volume disk, `volumeInGb: 20`  →  20e9 B  ≈ 18.6 GiB
-#   * the container overlay, `containerDiskInGb: 30` (infra/up.sh) → ≈ 27.9 GiB
+#   * the container overlay, `disk: 30` (infra/up.sh) → ≈ 27.9 GiB
 #
 # The second is the case this pod-side check exists for at all — id set, mount
 # silently failed, so the path falls through to the overlay — and a floor sized

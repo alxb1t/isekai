@@ -105,7 +105,7 @@ def start_sh() -> str:
     "structural: the mount is a precondition of the namespace, not a scenario"
 )
 def test_the_pod_mounts_the_volume_at_its_own_root(up_sh: str) -> None:
-    assert f'volumeMountPath: "{VOLUME_MOUNT}"' in up_sh
+    assert f'path: "{VOLUME_MOUNT}"' in up_sh
 
 
 @pytest.mark.spec_exempt(
@@ -114,7 +114,14 @@ def test_the_pod_mounts_the_volume_at_its_own_root(up_sh: str) -> None:
 def test_the_pod_no_longer_mounts_the_volume_over_the_models_directory(
     up_sh: str,
 ) -> None:
-    assert f'volumeMountPath: "{MODELS_ROOT}"' not in up_sh
+    assert f'path: "{MODELS_ROOT}"' not in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: v2 defaults to Secure Cloud, and the pod asks for it by name anyway"
+)
+def test_the_pod_is_asked_for_secure_cloud(up_sh: str) -> None:
+    assert 'cloud: "SECURE",' in up_sh
 
 
 @pytest.mark.spec(
@@ -302,9 +309,7 @@ def test_the_client_refuses_to_create_a_pod_without_a_named_volume(
 ) -> None:
     lines = up_sh.splitlines()
     guard = next(i for i, line in enumerate(lines) if 'RUNPOD_VOLUME_ID:-}" ]' in line)
-    creates = next(
-        i for i, line in enumerate(lines) if "POST https://rest.runpod.io" in line
-    )
+    creates = next(i for i, line in enumerate(lines) if 'POST "$API/pods"' in line)
     assert guard < creates
     assert "exit 1" in "\n".join(lines[guard : guard + 6])
 
@@ -403,14 +408,14 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
     # The one case this pod-side guard still exists for is the one `up.sh` cannot
     # see: the id is set and the mount silently failed, so `/runpod-volume`
     # resolves to the container overlay rather than to the volume (design.md D5).
-    # That overlay's backing disk is `containerDiskInGb`, which is LARGER than the
+    # That overlay's backing disk is the container `disk`, LARGER than the
     # pod's own volume disk, so a floor that only clears the volume disk lets the
     # overlay through and 16.5 GiB lands on storage that dies at teardown.
     floor = re.search(
         r"^VOLUME_SIZE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)", start_sh, re.M
     )
     assert floor is not None
-    container_disk = re.search(r"containerDiskInGb:\s*(\d+)", up_sh)
+    container_disk = re.search(r"\bdisk:\s*(\d+)", up_sh)
     assert container_disk is not None
     # RunPod states those sizes in decimal GB, and decimal is the reading that
     # makes the disk look BIGGEST in KiB, so it is the one the floor must clear.
@@ -744,7 +749,7 @@ def test_the_pod_is_created_from_the_pinned_digest(up_sh: str) -> None:
     assert pinned_reference(json.loads(IMAGE_CONFIG.read_text())) is not None
     assert IMAGE_REFERENCE in up_sh
     assert '--arg image  "$image_ref"' in up_sh
-    assert "imageName: $image," in up_sh
+    assert "image: $image," in up_sh
     assert ":latest" not in up_sh
 
 
