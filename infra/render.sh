@@ -14,7 +14,9 @@ cd "$(dirname "$0")/.."          # run from repo root no matter where invoked
 SERVER="http://127.0.0.1:8188"
 WAIT=300                          # seconds ComfyUI gets to answer through the tunnel
 
-refuse() { echo "refused: $*" >&2; exit 1; }
+# A refusal goes to the batch's log too: run-flows reads the log, not this output.
+# Until the runs root is checked there is no batch, so no log to write it to.
+refuse() { echo "refused: $*" | tee -a "${log:-/dev/null}" >&2; exit 1; }
 
 [ "$#" -ge 2 ] || refuse "usage: bash infra/render.sh <runs> <flow>=<count> ..."
 runs=$1; shift

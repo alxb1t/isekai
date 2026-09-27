@@ -50,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **onnxruntime no longer connects to Microsoft, and `tag` no longer exits 134** (`0035` design D5): loading it
   opened an HTTPS connection for its telemetry, whose teardown at exit could abort a `tag` that had written
   everything. `ORT_DISABLE_TELEMETRY=1` is set before every import of it; 0 of 40 runs aborted or left loopback.
+- **`render.sh`'s own refusals reach the batch's log** (`0035` design D3): they went to stderr alone, which
+  `run-flows` step 4 discards before reading `log.txt`, so a wait past 300 s, a recorded pod or a taken port
+  showed the agent an exit 1 with no reason. `refuse()` now appends its line to the log as well, once the runs
+  root is checked; a text check in `tests/test_infra.py` holds it.
 
 ## [0.24.1] - 2026-09-27
 

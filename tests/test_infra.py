@@ -1008,6 +1008,36 @@ def test_the_teardown_check_catches_a_late_trap_that_leaves_the_tunnel() -> None
     ]
 
 
+def unlogged_refusal(script: str) -> list[str]:
+    """Return what a render session's `refuse()` misses of reaching the batch's log.
+
+    The run-flows skill discards render.sh's own output and reads the log, so a
+    refusal only on stderr reaches no one. e.g. `echo ... >&2` -> ["the log"]
+    """
+    body = next((ln for ln in _code(script) if ln.startswith("refuse()")), "")
+    missing = []
+    if 'tee -a "${log:-' not in body:
+        missing.append("the log")
+    if ">&2" not in body:
+        missing.append("stderr")
+    return missing
+
+
+@pytest.mark.spec_exempt(
+    "structural: a refusal is never silent, per docs/principles.md"
+)
+def test_a_render_sessions_refusal_reaches_the_batchs_log(render_sh: str) -> None:
+    assert unlogged_refusal(render_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_render_sessions_refusal_reaches_the_batchs_log"
+)
+def test_the_refusal_check_catches_one_only_on_stderr() -> None:
+    script = 'refuse() { echo "refused: $*" >&2; exit 1; }\n'
+    assert unlogged_refusal(script) == ["the log"]
+
+
 def unawaited_endpoint(script: str) -> list[str]:
     """Return what a render session misses of waiting, boundedly, for the endpoint."""
     lines = _code(script)
