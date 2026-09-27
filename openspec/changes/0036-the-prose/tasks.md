@@ -7,7 +7,7 @@ inert value, per [design](design.md).
 
 - [x] 1 — The sweep
 - [x] 2 — The docs
-- [ ] 3 — The scripts' messages
+- [x] 3 — The scripts' messages
 - [ ] 4 — The graph's placeholder
 
 Line numbers are `7aa23d3`'s; find each site by the text [design](design.md) names. `.minions/prose-terms.txt` is
@@ -39,15 +39,15 @@ the term list per [D3](design.md#d3).
 
 ## 3 — The scripts' messages
 
-- [ ] 3.1 **HALT CHECK** — `lost()` still sends teardown to the MCP.
+- [x] 3.1 **HALT CHECK** — `lost()` still sends teardown to the MCP.
   Verify: `grep -c 'delete-pod' infra/up.sh` prints `1`.
-- [ ] 3.2 Rewrite `infra/up.sh`'s `lost()` and `infra/down.sh:16` per [D6](design.md#d6).
+- [x] 3.2 Rewrite `infra/up.sh`'s `lost()` and `infra/down.sh:16` per [D6](design.md#d6).
   Verify: `grep -c 'delete-pod' infra/up.sh` prints `0`, `grep -c 'list-pods' infra/up.sh` prints `1`, and `cat infra/up.sh infra/down.sh | grep -c 'write its id to .runpod_pod_id'` prints `2`.
-- [ ] 3.3 In `tests/test_infra.py`'s `test_the_timeout_teardown_resolves_from_the_root_the_script_moved_to`, make the teardown line's filter `not line.lstrip().startswith(("#", "echo"))`, per [D6](design.md#d6).
+- [x] 3.3 In `tests/test_infra.py`'s `test_the_timeout_teardown_resolves_from_the_root_the_script_moved_to`, make the teardown line's filter `not line.lstrip().startswith(("#", "echo"))`, per [D6](design.md#d6).
   Verify: `grep -cF 'startswith(("#", "echo"))' tests/test_infra.py` prints `1`.
-- [ ] 3.4 Add the `rm` line to `infra/down.sh`'s other-status branch, before its `exit 1`, per [D6](design.md#d6).
+- [x] 3.4 Add the `rm` line to `infra/down.sh`'s other-status branch, before its `exit 1`, per [D6](design.md#d6).
   Verify: `grep -c 'Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image' infra/down.sh` prints `1`.
-- [ ] 3.5 Rewrite `infra/render.sh`'s port refusal at `:46-47` per [D6](design.md#d6).
+- [x] 3.5 Rewrite `infra/render.sh`'s port refusal at `:46-47` per [D6](design.md#d6).
   Verify: `grep -c 'lsof -t' infra/render.sh` prints `0`, and `grep -cF "pkill -f -- '-L 8188:localhost:8188'" infra/render.sh` prints `1`.
 
 ## 4 — The graph's placeholder

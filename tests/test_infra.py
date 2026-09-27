@@ -332,7 +332,7 @@ def test_the_timeout_teardown_resolves_from_the_root_the_script_moved_to(
     teardown = next(
         i
         for i, line in enumerate(lines)
-        if "down.sh" in line and not line.lstrip().startswith("#")
+        if "down.sh" in line and not line.lstrip().startswith(("#", "echo"))
     )
 
     # The script has already moved to the repository root, so the teardown is
