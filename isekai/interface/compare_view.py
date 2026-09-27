@@ -124,10 +124,14 @@ def page(batch: Path, flows_dir: Path = FLOWS_DIR) -> str:
     """Return the comparison page for `batch`, or refuse a directory with no `runs/`.
 
     Every run shows every flow any run in the batch holds, so each row has the same
-    columns and a flow a run never reached reads *no render yet*.
+    columns and a flow a run never reached reads *no render yet*. A flow that reads
+    the photograph sits beside it, then the rest, each group by name.
     """
     runs = _runs(batch)
-    flows = sorted({flow for run in runs for flow in run.flows})
+    flows = sorted(
+        {flow for run in runs for flow in run.flows},
+        key=lambda flow: ("photo" not in load_flow(flow, flows_dir).inputs, flow),
+    )
     title = f"isekai &mdash; {html.escape(batch.name)}"
     entries = "".join(_entry(run, flows, batch, flows_dir) for run in runs)
     return (

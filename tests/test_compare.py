@@ -115,6 +115,9 @@ def test_each_run_shows_its_photograph_and_each_flows_renders(tmp_path: Path) ->
     assert f"{SUMMON} &middot; seed 11" not in _section(body, ada)
     assert f"{SUMMON} &middot; seed 11" in _section(body, bea)
     assert f'src="runs/{ada.id}/{CONJURE}/outputs/001/21.png"' in body
+    # The flow that reads the photograph sits beside it; the one that does not, after.
+    section = _section(body, bea)
+    assert section.index(f"{SUMMON} &middot;") < section.index(f"{CONJURE} &middot;")
     assert f"Ada for {SUMMON}" in _section(body, ada)
     sources = re.findall(r'src="([^"]+)"', body)
     assert sources
