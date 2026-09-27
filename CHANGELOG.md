@@ -36,6 +36,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Proved on one metered boot** (`0034` design D7): `up.sh` created and polled on v2, one `conjure` render,
   `down.sh` tore down on 204, and the RunPod MCP found the pod gone — 6 min 46 s, about $0.08. Evidence in
   the change's `acceptance.md`.
+- **The poll is one guarded read, and an empty GPU list is refused** (`0034` design D2): after the metered
+  boot, the simplify pass folded the poll's three reads into one `read … < <(curl | jq) || true`, checked
+  offline against the `ssh.direct` shapes on bash 3.2 and 5.2 and not re-booted; `up.sh` refuses a
+  `RUNPOD_GPU_TYPE` naming no type before any create.
+- **Every RunPod call is bounded and keeps the key off `argv`**: `up.sh` and `down.sh` call curl through one
+  `api` helper, `--max-time 30`, with the bearer header read from a file descriptor, so a stalled read cannot
+  hold the poll past its 420 s teardown and no process listing shows the key.
+- **A create whose outcome is unknown says a pod may exist** (`0034` design D4): a transport failure is
+  reported as HTTP 000 rather than a silent exit, and on 000, a 5xx or a 201 with no `.id`, `up.sh` exits 1
+  telling the operator to check the RunPod MCP's `list-pods` before re-running. A 400 still tries the next
+  type. `down.sh`'s 404 refusal names the `rm` of both record files once the pod is confirmed gone.
 
 ## [0.24.0] - 2026-09-27
 

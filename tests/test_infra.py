@@ -845,3 +845,101 @@ def test_the_retired_api_check_catches_a_v1_call() -> None:
         "down.sh": 'curl -s -X DELETE "https://rest.runpod.io/v1/pods/$pod_id"\n',
     }
     assert retired_api_calls(scripts) == ["down.sh"]
+
+
+# Every call to RunPod goes through one helper: the key reaches curl on a file
+# descriptor rather than its argv, where any process listing reads it, and every
+# call is bounded, so a stalled read cannot hold the poll past its teardown.
+def unsafe_api_calls(scripts: dict[str, str]) -> list[str]:
+    """Return each script whose curl puts the key on argv or has no time bound."""
+    found = []
+    for name, text in sorted(scripts.items()):
+        code = [ln for ln in text.splitlines() if not ln.lstrip().startswith("#")]
+        if any("Bearer" in ln and "@<(printf" not in ln for ln in code):
+            found.append(f"{name}: key on argv")
+        if any("curl " in ln and "--max-time" not in ln for ln in code):
+            found.append(f"{name}: unbounded curl")
+    return found
+
+
+@pytest.mark.spec_exempt("structural: how the scripts hand curl the key and a bound")
+def test_every_api_call_is_bounded_and_keeps_the_key_off_argv() -> None:
+    scripts = {p.name: p.read_text() for p in (REPO / "infra").iterdir() if p.is_file()}
+    assert "curl " in scripts["up.sh"] and "curl " in scripts["down.sh"]
+    assert unsafe_api_calls(scripts) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_api_call_is_bounded_and_keeps_the_key_off_argv"
+)
+def test_the_api_call_check_catches_a_key_on_argv_and_an_unbounded_read() -> None:
+    scripts = {
+        "down.sh": 'curl -s -X DELETE "$u" -H "Authorization: Bearer $KEY"\n',
+        "up.sh": "curl -s --max-time 30 -H @<(printf 'Authorization: Bearer %s' $k)\n",
+    }
+    assert unsafe_api_calls(scripts) == [
+        "down.sh: key on argv",
+        "down.sh: unbounded curl",
+    ]
+
+
+def unwarned_lost_create(up_sh: str) -> list[str]:
+    """Return what `up.sh` omits when a create's outcome is unknown."""
+    missing = []
+    lines = up_sh.splitlines()
+    post = next(i for i, line in enumerate(lines) if 'POST "$API/pods"' in line)
+    statement = next(i for i in range(post, len(lines)) if not lines[i].endswith("\\"))
+    if not lines[statement].endswith("|| true"):
+        missing.append("a transport failure is reported")
+    unknown = [ln for ln in lines if ln.lstrip().startswith("201|5??|000|")]
+    if not unknown:
+        missing.append("201 without an id, 5xx and no answer are unknown")
+    if "list-pods" not in up_sh:
+        missing.append("names the MCP's list-pods")
+    return missing
+
+
+@pytest.mark.spec_exempt(
+    "structural: a lost create answer is announced, not a scenario about the product"
+)
+def test_a_create_whose_outcome_is_unknown_says_a_pod_may_exist(up_sh: str) -> None:
+    assert unwarned_lost_create(up_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_create_whose_outcome_is_unknown_says_a_pod_may_exist"
+)
+def test_the_lost_create_check_catches_a_silent_create() -> None:
+    up_sh = 'out=$(curl -s -X POST "$API/pods" \\\n  -d "$body")\n'
+    assert unwarned_lost_create(up_sh) == [
+        "a transport failure is reported",
+        "201 without an id, 5xx and no answer are unknown",
+        "names the MCP's list-pods",
+    ]
+
+
+def unnamed_record_removal(down_sh: str) -> bool:
+    """Whether `down.sh`'s 404 refusal omits the files to delete once confirmed."""
+    lines = down_sh.splitlines()
+    start = next(i for i, line in enumerate(lines) if '"$code" = "404"' in line)
+    end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith("el"))
+    return "rm .runpod_pod_id .runpod_pod_image" not in "\n".join(lines[start:end])
+
+
+@pytest.mark.spec_exempt("structural: a refusal names its fix, per docs/principles.md")
+def test_a_404_teardown_names_the_record_files_to_remove() -> None:
+    down_sh = (REPO / "infra" / "down.sh").read_text()
+    assert not unnamed_record_removal(down_sh)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_404_teardown_names_the_record_files_to_remove"
+)
+def test_the_record_removal_check_catches_a_404_naming_no_file() -> None:
+    down_sh = (
+        'elif [ "$code" = "404" ]; then\n'
+        '  echo "Confirm it is gone with the RunPod MCP." >&2\n'
+        "  exit 1\n"
+        "else\n"
+    )
+    assert unnamed_record_removal(down_sh)

@@ -10,12 +10,26 @@ set -a; source ./.env; set +a    # load RUNPOD_* config
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 API="https://api.runpod.io/v2"
 
+# Every call to RunPod: the key reaches curl on a file descriptor, never on its
+# argv, where any process listing could read it; and the call is bounded, so a
+# stalled read cannot hold the poll past its 420 s teardown (0034 design D2).
+api() {
+  curl -s --max-time 30 -H @<(printf 'Authorization: Bearer %s\n' "$RUNPOD_API_KEY") "$@"
+}
+
 report() {  # report <call> <status> <body>, per 0034 design D4
   echo "$1 returned HTTP $2:" >&2
   echo "$3" \
     | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
       >&2 2>/dev/null \
     || echo "  $3" >&2
+}
+
+lost() {  # a create whose outcome is unknown may have placed a pod no file records
+  echo "The create's outcome is unknown: a pod named 'isekai' may exist and bill," >&2
+  echo "with no .runpod_pod_id to record it. Check the RunPod MCP's" >&2
+  echo "list-pods, delete any 'isekai' pod there with delete-pod, then re-run" >&2
+  echo "bash infra/up.sh." >&2
 }
 
 # The pod boots the digest config/image.json pins, never a tag, and nothing in the
@@ -70,18 +84,23 @@ while IFS= read -r gpu; do
        cloud: "SECURE",
        env: { PUBLIC_KEY: $pubkey,
               RUNPOD_VOLUME_ID: $vol } }')
-  out=$(curl -s -w '\n%{http_code}' -X POST "$API/pods" \
-    -H "Authorization: Bearer $RUNPOD_API_KEY" \
+  # A transport failure is code 000, reported like any status, never a silent exit.
+  out=$(api -S -w '\n%{http_code}' -X POST "$API/pods" \
     -H "Content-Type: application/json" \
-    -d "$body")
+    -d "$body") || true
   code=${out##*$'\n'}
   resp=${out%$'\n'*}
   if [ "$code" = "201" ]; then
-    pod_id=$(echo "$resp" | jq -r '.id // empty')
-    break
+    pod_id=$(echo "$resp" | jq -r '.id // empty' 2>/dev/null) || true
+    [ -n "$pod_id" ] && break
   fi
   report "Create on '$gpu'" "$code" "$resp"
-  [ "$code" = "400" ] || exit 1
+  [ "$code" = "400" ] && continue
+  # RunPod may have placed the pod and the answer been lost on the way back.
+  case "$code" in
+    201|5??|000|"") lost ;;
+  esac
+  exit 1
 done <<< "$gpus"
 
 if [ -z "$pod_id" ]; then
@@ -122,7 +141,7 @@ while true; do
   # A failed read -- transport, status or body -- is "not yet", never an abort:
   # under `set -e` an abort here skips the teardown below (0034 design D2).
   read -r host port < <(
-    curl -s -f "$API/pods/$pod_id" -H "Authorization: Bearer $RUNPOD_API_KEY" \
+    api -f "$API/pods/$pod_id" \
       | jq -r '.ssh.direct | "\(.host // "") \(.port // "")"' 2>/dev/null
   ) || true
   [ -n "$host" ] && [ -n "$port" ] && break
