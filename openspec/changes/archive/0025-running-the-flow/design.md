@@ -17,12 +17,12 @@ None of the three is what it first looked like.
 ## D1 — The negative prompt: one file is read, the other never was
 
 > **Overturned premise ①.** The ask was *"add `lens flare, light particles, dust` and remove
-> `censor, nsfw`, in `graph.json` and `flow.json`."* Measured at `7fb3d0b`:
+> the content-rating tags, in `graph.json` and `flow.json`."* Measured at `7fb3d0b`:
 >
 > ```
-> flow.json     "bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust"
+> flow.json     "bad quality, worst quality, sketch, <rating tags>, lens flare, light particles, dust"
 >                                             ▲ remove        ▲ already present, both flows
-> graph.json    "bad quality, worst quality, worst detail, sketch, censor, nsfw"
+> graph.json    "bad quality, worst quality, worst detail, sketch, <rating tags>"
 >                                            ▲ only here            ▲ never reaches a render
 > ```
 >

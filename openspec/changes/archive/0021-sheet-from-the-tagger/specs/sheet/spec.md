@@ -108,8 +108,8 @@ stage's input is a list of canonical tags, so there is no free text for a clause
 
 **Migration**: None for a caller, and deleting the guard is a **repair** rather than only a retirement.
 `asserts_absence` in `isekai/shared/vocabulary.py` fires before any mapping runs, and swept over the whole
-provisioned vocabulary it drops **37 of 8,106 canonical tags** — including `no bra` (93,761 posts) and
-`no panties` (87,258), **both of which appear in the operator's own approved sheets**. A prompt still
+provisioned vocabulary it drops **37 of 8,106 canonical tags** — including the undergarment absence tags,
+each above 85,000 posts, **both of which appear in the operator's own approved sheets**. A prompt still
 carries no negation; what enforced it was a text rule on prose, and prose is no longer an input.
 
 ### Requirement: The mapping from phrase to canonical tag is deterministic and ordered

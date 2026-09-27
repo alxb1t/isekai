@@ -570,7 +570,7 @@ Deferred, each with what it blocks:
 - **A per-field tag cheatsheet**, asked for during the build and deferred on **data rather than on
   effort**: the overlay is small, and nothing in this repository is a machine-readable list of the tags
   that suit a field. Measured while building the autocomplete — the schema's `suffix` covers 6 fields
-  of 16; the field name is noise (`age` reaches `cleavage` and `bandages`, `gaze` and `framing` reach
+  of 16; the field name is noise (`age` reaches a body tag and `bandages`, `gaze` and `framing` reach
   nothing); and `sheet.briefing.md` does name good tags per field but as prose written for a model to
   read. So the change is a **new tracked artifact per flow**, and `flows/<id>/` is five flat files and
   immutable with a digest covering every regular file in it, committed at `tests/test_flow.py:30` — a

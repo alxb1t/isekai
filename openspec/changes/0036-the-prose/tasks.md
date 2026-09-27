@@ -5,7 +5,7 @@ inert value, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The sweep
+- [x] 1 — The sweep
 - [ ] 2 — The docs
 - [ ] 3 — The scripts' messages
 - [ ] 4 — The graph's placeholder
@@ -15,19 +15,19 @@ the term list per [D3](design.md#d3).
 
 ## 1 — The sweep
 
-- [ ] 1.1 **HALT CHECK** — the term list hits the archived changes and the changelog, and `FILED`, `SEEDS` and
+- [x] 1.1 **HALT CHECK** — the term list hits the archived changes and the changelog, and `FILED`, `SEEDS` and
   `PRECEDENCE` hold what they held at the cut.
   Verify: `git ls-files '*.md' | xargs grep -wiIl -F -f .minions/prose-terms.txt | grep -c .` prints `11`, and
   `uv run python -c "import json,hashlib; from tools import derive_field_map as m; print(hashlib.sha256(json.dumps([m.FILED, m.SEEDS, m.PRECEDENCE], sort_keys=True, default=sorted).encode()).hexdigest()[:16])"` prints `b8f6544393739af5`.
-- [ ] 1.2 Rewrite archived `0018`'s `design.md:573` and `tasks.md:281`, and `0020`'s `design.md:86`, per [D1](design.md#d1).
+- [x] 1.2 Rewrite archived `0018`'s `design.md:573` and `tasks.md:281`, and `0020`'s `design.md:86`, per [D1](design.md#d1).
   Verify: `cat openspec/changes/archive/0018-review-ui/design.md openspec/changes/archive/0018-review-ui/tasks.md openspec/changes/archive/0020-readable-caption/design.md | grep -wicF -f .minions/prose-terms.txt` prints `0`.
-- [ ] 1.3 Rewrite archived `0021`'s lines [D1](design.md#d1) lists, in `design.md`, `proposal.md`, `specs/sheet/spec.md` and `tasks.md`, the per-tag counts included.
+- [x] 1.3 Rewrite archived `0021`'s lines [D1](design.md#d1) lists, in `design.md`, `proposal.md`, `specs/sheet/spec.md` and `tasks.md`, the per-tag counts included.
   Verify: `cat openspec/changes/archive/0021-sheet-from-the-tagger/*.md openspec/changes/archive/0021-sheet-from-the-tagger/specs/sheet/spec.md | grep -wicF -f .minions/prose-terms.txt` prints `0`, and `cat openspec/changes/archive/0021-sheet-from-the-tagger/*.md | grep -c -e 'hair ×' -e 'realistic ×'` prints `0`.
-- [ ] 1.4 Rewrite archived `0025`'s `design.md:20, 23, 25`, `proposal.md:11, 35` and `tasks.md:46, 49, 56`, per [D1](design.md#d1).
+- [x] 1.4 Rewrite archived `0025`'s `design.md:20, 23, 25`, `proposal.md:11, 35` and `tasks.md:46, 49, 56`, per [D1](design.md#d1).
   Verify: `cat openspec/changes/archive/0025-running-the-flow/*.md | grep -wicF -f .minions/prose-terms.txt` prints `0`.
-- [ ] 1.5 Rewrite `CHANGELOG.md`'s lines [D1](design.md#d1) lists, the per-tag counts included.
+- [x] 1.5 Rewrite `CHANGELOG.md`'s lines [D1](design.md#d1) lists, the per-tag counts included.
   Verify: `grep -wicF -f .minions/prose-terms.txt CHANGELOG.md` prints `0`, `grep -c -e 'hair ×' -e 'lips. twice' CHANGELOG.md` prints `0`, and `git ls-files '*.md' | xargs grep -wiIl -F -f .minions/prose-terms.txt` prints nothing.
-- [ ] 1.6 Rewrite `tools/derive_field_map.py`'s comments at `:70-75` and `:207-211` and the `inflect()` docstring at `:369-375`, per [D2](design.md#d2); no other line changes.
+- [x] 1.6 Rewrite `tools/derive_field_map.py`'s comments at `:70-75` and `:207-211` and the `inflect()` docstring at `:369-375`, per [D2](design.md#d2); no other line changes.
   Verify: `grep -c -e 'load-bearing' -e 'brown hair. x5' tools/derive_field_map.py` prints `0`; `uv run python -c "import ast,tokenize as k,pathlib as l;F=[*l.Path('tools').rglob('*.py'),*l.Path('isekai').rglob('*.py')];[print(t.string) for p in F for t in k.generate_tokens(open(p).readline) if t.type==k.COMMENT];[print(ast.get_docstring(n)) for p in F for n in ast.walk(ast.parse(open(p).read())) if isinstance(n,(ast.Module,ast.ClassDef,ast.FunctionDef,ast.AsyncFunctionDef)) and ast.get_docstring(n)]" | grep -wiF -f .minions/prose-terms.txt` prints nothing; and 1.1's digest command still prints `b8f6544393739af5`.
 
 ## 2 — The docs

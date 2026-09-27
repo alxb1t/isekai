@@ -43,17 +43,17 @@ metered phase in this entire stabilization** — `v0.22.1` and `v0.22.2` both co
 *improvements to the negative prompt*.** The dependency work and the guide are phases 2 and 3 and must not
 appear in it.
 
-- [ ] 1.1 **Remove `censor, nsfw` from both flows' `flow.json` negative.** The fragment is at
+- [ ] 1.1 **Remove the content-rating tags from both flows' `flow.json` negative.** The fragment is at
   `flows/summon-anime-wai/flow.json:16` and `flows/conjure-anime-wai/flow.json:15`, both reading:
   ```
-  "bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust"
+  "bad quality, worst quality, sketch, <rating tags>, lens flare, light particles, dust"
   ```
   ✅ `lens flare, light particles, dust` is **already present in both** — the ask was half done.
   **Change nothing else in the string.**
 
 - [ ] 1.2 **Set `graph.json`'s negative node text to an empty string** in both flows —
   `flows/summon-anime-wai/graph.json:35`, `flows/conjure-anime-wai/graph.json:26`, both currently
-  `"bad quality, worst quality, worst detail, sketch, censor, nsfw"`.
+  `"bad quality, worst quality, worst detail, sketch, <rating tags>"`.
   **A deletion, not a sync** (`design.md` D1). That string is overwritten on every render by
   `generate.py:336`'s `patch("negative", …)`, and it has already drifted from `flow.json`'s — `worst
   detail` appears only here. **Verify the overwrite before editing**: read `generate.py:336` and the

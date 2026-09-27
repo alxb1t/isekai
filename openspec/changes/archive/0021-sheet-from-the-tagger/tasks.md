@@ -145,16 +145,16 @@ pruning sees the junk rather than inheriting it.
 
   **The matcher needs `-s/-es/-ing/-ed`, not only plurals.** `design.md` D18 already showed `\bbraid\b`
   losing `twin braids`; measured again here, plurals alone leave **12 of 113 approved tags unreachable** —
-  `pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift`. Handle the drop-`e` and
+  `pulling` from `pull`, `licking` from `lick`, a phrase with `lifted` from `lift`. Handle the drop-`e` and
   final-consonant-doubling cases (`expose` → `exposing`, `stop` → `stopping`). **Seeds are therefore
   written as stems** — `stand`, `expose`, `look` — not as inflected words.
 
   **`clothes`** — `shirt blouse dress skirt shorts pants trousers jeans sweater cardigan jacket coat
-  hoodie vest robe kimono uniform swimsuit bikini leotard bodysuit lingerie bra panties underwear thong
-  pantyhose thighhighs stockings socks garter footwear shoes boots heels sandals gloves sleeves collar
-  belt apron cape corset camisole top tank crop fishnet lace strap hem` · and the exposure and
-  state-of-dress half, which a garment-only list misses entirely: `bare cleavage midriff navel expose
-  lift pull open unbutton unzip see-through sheer torn wet shoulder` *(singular `shoulder`, so
+  hoodie vest robe kimono uniform swimsuit bikini leotard bodysuit pantyhose thighhighs stockings socks
+  footwear shoes boots heels sandals gloves sleeves collar belt apron cape corset camisole top tank crop
+  fishnet lace strap hem` · the undergarment stems · and the exposure and state-of-dress half, which a
+  garment-only list misses entirely: `bare midriff navel expose lift pull open unbutton unzip sheer torn
+  wet shoulder` · a body-exposure stem · a transparency stem *(singular `shoulder`, so
   `off shoulder` is reached as well as `bare shoulders`)*
 
   **`pose`** — `stand sit kneel lie lying squat crouch lean walk run jump stretch arm hand leg knee foot
@@ -162,8 +162,8 @@ pruning sees the junk rather than inheriting it.
   pull` · plus the explicit tags no safe seed reaches: `from behind`, `from side`, `from above`,
   `from below`
 
-  **`body_shape`** — `breasts hips waist thighs stomach abs shoulder collarbone navel nipples ass butt
-  muscular slim curvy plump petite build body`
+  **`body_shape`** — `hips waist thighs stomach abs shoulder collarbone navel butt muscular slim curvy
+  plump petite build body` · the intimate body-part stems
 
   **`expression`** — `smile grin smirk frown pout blush laugh cry tears sad angry surprised embarrass
   serious expressionless mouth lips tongue teeth lick wink sweat sigh yawn closed`
@@ -214,14 +214,14 @@ pruning sees the junk rather than inheriting it.
 
   **Do not try to find an order that matches the ground truth — there isn't one.** Measured: he files
   `bare shoulders` under `clothes` (4×) while the seeds say `body_shape` or `clothes`; `open mouth` under
-  `expression` while the seeds say `clothes` or `expression`; `clothes lift` under `clothes` while the
+  `expression` while the seeds say `clothes` or `expression`; a garment-lift tag under `clothes` while the
   seeds say `clothes` or `pose`; and `navel` under all three of `pose`, `clothes` and `body_shape`. **That
   is why step 1 exists and why it comes first.**
 
   **Every tag that loses a collision goes into the winning criterion's `primary` and the losing ones'
   `also`** — so `navel` still appears under `clothes`, `pose` and `body_shape` in the cheatsheet, and
   routes to exactly one. This is also why eight of the twelve originally-unreachable approved tags needed
-  no seed of their own: `collarbone`, `thighs`, `ass` and `breasts out` reach `pose` through `also`, and
+  no seed of their own: `collarbone`, `thighs` and intimate body tags reach `pose` through `also`, and
   `standing` reaches `framing` the same way.
 
 - [ ] 2.5 **Harvest `flows/*/sheet.briefing.md`.** It names roughly **40 example tags across 10 of the 21
@@ -254,7 +254,7 @@ CLI, and the suite is green without a `FakeSorter` being passed anywhere.
   result is `None` **or if the acting flow's schema does not declare that field**; preserve the tagger's
   order inside each field. **It is a dictionary lookup and it does not call `map_phrase`** — `design.md` D24:
   `map_phrase`'s first act is an absence guard that drops **37 of 8,106 canonical tags before any pass
-  runs**, including `no bra` and `no panties`, **both of which are in the operator's own approved sheets**.
+  runs**, including the undergarment absence tags, **both of which are in the operator's own approved sheets**.
 - [ ] 3.2 `sheet.py:355` — `run.directory(flow, CAPTIONS)` becomes `WD14`. **One line, plus the refusal text
   at `:358-361`**, which must name `caption` as the verb that produces it. `design.md` D21.
 - [ ] 3.3 `sheet()`'s signature: `sorter` and `briefing_path` both go. That removes the only consumer of
@@ -493,8 +493,8 @@ keystroke is proven by it**.
   `thick eyelashes` 1,268.
 - [ ] 8.3 Prune the excluded list. The candidate set is the **43** tags WD14 offered across the eight-photograph
   batch that never reached an approved field — but **`design.md` D8: it conflates two kinds.**
-  `realistic ×8`, `photorealistic ×8`, `artist name`, `photo background`, `foreshortening` and `holding` are
-  *never a criterion*; **`bra ×3`, `dress ×2`, `high heels ×2`, `thighhighs`, `sweater`, `shorts`,
+  `realistic`, `photorealistic`, `artist name`, `photo background`, `foreshortening` and `holding` are
+  *never a criterion*; **an undergarment, `dress`, `high heels`, `thighhighs`, `sweater`, `shorts`,
   `leotard`, `pantyhose`, `fishnets`, `lace`, `lace trim` are ordinary garments WD14 was wrong about on those
   photographs.** Excluding the second group would silently shrink `clothes`. The list's definition is
   semantic: **no criterion can hold this.**
