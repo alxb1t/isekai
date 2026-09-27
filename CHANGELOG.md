@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The first image built on request**: `ghcr.io/alxb1t/isekai:v0.24-rc1`, digest
   `sha256:d6f12d02b1fb6b0d2c4c6d0505c70193202c647d57c27b7e1235845427dbb500`, recorded in the change's
   `acceptance.md`; `build-image.yml`'s digest step is a block scalar, so the workflow parses.
+- **BREAKING — a pod boots only the digest `config/image.json` pins** (`0033` design D3): `RUNPOD_IMAGE` and
+  its `:latest` default are gone; `up.sh` writes the booted reference to `.runpod_pod_image`, which
+  `down.sh` removes on 204. Local compose builds are tagged `isekai:local`.
 
 ## [0.23.0] - 2026-09-26
 

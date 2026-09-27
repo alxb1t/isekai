@@ -1,7 +1,7 @@
 services:
   comfyui:
     build: .
-    image: ghcr.io/alxb1t/isekai:latest
+    image: isekai:local
     ports:
       - "127.0.0.1:8188:8188"
     volumes:

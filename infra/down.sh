@@ -16,7 +16,7 @@ code=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
   -H "Authorization: Bearer $RUNPOD_API_KEY")
 
 if [ "$code" = "204" ]; then
-  rm -f .runpod_pod_id
+  rm -f .runpod_pod_id .runpod_pod_image
   echo "Pod terminated. Billing stopped. (Network volume kept.)"
 else
   echo "Delete returned HTTP $code — check the console to be sure the pod is gone."

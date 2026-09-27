@@ -8,7 +8,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 - [x] 1 — CI and the toolchain
 - [x] 2 — The image: inputs by digest, a locked environment, built on request
 - [x] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
-- [ ] 4 — The pin: `config/image.json`, `up.sh` boots it
+- [x] 4 — The pin: `config/image.json`, `up.sh` boots it
 - [ ] 5 — The reader: `config/reader.json`, the model checked before its first call
 - [ ] 6 — The records
 - [ ] 7 — The record in `docs/`
@@ -47,11 +47,11 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 4 — The pin: `config/image.json`, `up.sh` boots it
 
-- [ ] 4.1 **HALT CHECK** — `up.sh` boots an image the environment can override.
+- [x] 4.1 **HALT CHECK** — `up.sh` boots an image the environment can override.
   Verify: `grep -c 'RUNPOD_IMAGE' infra/up.sh` prints a number above `0`.
-- [ ] 4.2 Write `config/image.json` with phase 3's digest; `infra/up.sh` boots `<image>@<digest>` and writes `.runpod_pod_image`; `infra/down.sh` removes it on 204; drop `RUNPOD_IMAGE` and `.env.example:15-18`; add `.runpod_pod_image` to `.gitignore`; tag compose builds `isekai:local`, per [D3](design.md#d3).
+- [x] 4.2 Write `config/image.json` with phase 3's digest; `infra/up.sh` boots `<image>@<digest>` and writes `.runpod_pod_image`; `infra/down.sh` removes it on 204; drop `RUNPOD_IMAGE` and `.env.example:15-18`; add `.runpod_pod_image` to `.gitignore`; tag compose builds `isekai:local`, per [D3](design.md#d3).
   Verify: `cat infra/up.sh .env.example docker-compose.yml | grep -c -e 'RUNPOD_IMAGE' -e ':latest'` prints `0`, and `grep -c '^.runpod_pod_image$' .gitignore` prints `1`.
-- [ ] 4.3 In `tests/test_infra.py`, test `pod-image:boot:the-pinned-digest-is-booted`, `pod-image:boot:no-override` and `pod-image:boot:the-booted-image-is-recorded`; keep `up.sh`'s checks (`:105`, `:112`, `:298`, `:313`, `:320`, `:401`) green.
+- [x] 4.3 In `tests/test_infra.py`, test `pod-image:boot:the-pinned-digest-is-booted`, `pod-image:boot:no-override` and `pod-image:boot:the-booted-image-is-recorded`; keep `up.sh`'s checks (`:105`, `:112`, `:298`, `:313`, `:320`, `:401`) green.
   Verify: `grep -c 'pod-image:boot:' tests/test_infra.py` prints `4`.
 
 ## 5 — The reader: `config/reader.json`, the model checked before its first call

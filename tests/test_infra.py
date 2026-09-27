@@ -5,6 +5,7 @@ reason the suite reads the shipped graph: a byte-identical copy with no drift
 check is a second thing to rename and a silent divergence waiting to happen.
 """
 
+import json
 import re
 from pathlib import Path
 
@@ -670,3 +671,96 @@ def test_every_workflow_run_line_is_one_yaml_accepts() -> None:
 def test_the_check_catches_a_plain_run_line_holding_a_colon() -> None:
     broken = '      - run: echo "a: b"\n        run: |\n          echo "a: b"\n'
     assert unparseable_run_lines(broken) == ['- run: echo "a: b"']
+
+
+# A pod boots the digest `config/image.json` pins, and nothing else: 0033 design D3.
+
+IMAGE_CONFIG = REPO / "config" / "image.json"
+IMAGE_REFERENCE = (
+    """image_ref="$(jq -r '"\\(.image)@\\(.digest)"' config/image.json)\""""
+)
+
+
+def pinned_reference(config: dict[str, str]) -> str | None:
+    """Return `<image>@<digest>` for an image config, or None if it pins no digest."""
+    digest = config.get("digest", "")
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+        return None
+    return f"{config['image']}@{digest}"
+
+
+@pytest.mark.spec("pod-image:boot:the-pinned-digest-is-booted")
+def test_the_pod_is_created_from_the_pinned_digest(up_sh: str) -> None:
+    assert pinned_reference(json.loads(IMAGE_CONFIG.read_text())) is not None
+    assert IMAGE_REFERENCE in up_sh
+    assert '--arg image  "$image_ref"' in up_sh
+    assert "imageName: $image," in up_sh
+    assert ":latest" not in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pod_is_created_from_the_pinned_digest"
+)
+def test_the_check_catches_an_image_config_naming_only_a_tag() -> None:
+    assert pinned_reference({"image": "ghcr.io/a/b", "tag": "latest"}) is None
+    assert pinned_reference({"image": "ghcr.io/a/b", "digest": "latest"}) is None
+
+
+def image_overrides(up_sh: str) -> list[str]:
+    """Return each line that sets the booted image from anything but the pin."""
+    return [
+        line.strip()
+        for line in up_sh.splitlines()
+        if re.search(r"^\s*(image_ref|\w*IMAGE\w*)=", line)
+        and line.strip() != IMAGE_REFERENCE
+    ]
+
+
+@pytest.mark.spec("pod-image:boot:no-override")
+def test_nothing_in_the_environment_overrides_the_image(up_sh: str) -> None:
+    assert image_overrides(up_sh) == []
+    assert "RUNPOD_IMAGE" not in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_nothing_in_the_environment_overrides_the_image"
+)
+def test_the_check_catches_an_image_the_environment_can_set() -> None:
+    broken = 'RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/a/b:latest}"\n' + IMAGE_REFERENCE
+    assert image_overrides(broken) == [
+        'RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/a/b:latest}"'
+    ]
+
+
+def unrecorded_boot(up_sh: str, down_sh: str) -> list[str]:
+    """Return what is missing of the boot record's write and its removal on 204."""
+    missing = []
+    up = up_sh.splitlines()
+    pod_id = next(
+        i for i, line in enumerate(up) if line == 'echo "$pod_id" > .runpod_pod_id'
+    )
+    if 'echo "$image_ref" > .runpod_pod_image' not in up[pod_id:]:
+        missing.append("written beside the pod id")
+    down = down_sh.splitlines()
+    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
+    if ".runpod_pod_image" not in down[deleted + 1]:
+        missing.append("removed on 204")
+    return missing
+
+
+@pytest.mark.spec("pod-image:boot:the-booted-image-is-recorded")
+def test_the_booted_reference_is_recorded_and_removed_with_the_pod(up_sh: str) -> None:
+    down_sh = (REPO / "infra" / "down.sh").read_text()
+    assert unrecorded_boot(up_sh, down_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_booted_reference_is_recorded_and_removed_with_the_pod"
+)
+def test_the_check_catches_a_boot_record_left_behind() -> None:
+    up_sh = 'echo "$pod_id" > .runpod_pod_id\n'
+    down_sh = 'if [ "$code" = "204" ]; then\n  rm -f .runpod_pod_id\n'
+    assert unrecorded_boot(up_sh, down_sh) == [
+        "written beside the pod id",
+        "removed on 204",
+    ]

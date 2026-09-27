@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Bring up a RunPod GPU pod from our GHCR image with the models attached,
-# then print the SSH + tunnel commands. Config comes from .env.
+# Bring up a RunPod GPU pod from the image config/image.json pins, with the models
+# attached, then print the SSH + tunnel commands. Config comes from .env.
 
 set -euo pipefail
 
@@ -9,11 +9,14 @@ set -a; source ./.env; set +a    # load RUNPOD_* config
 
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 
-# `:latest` is the released image and the default. A metered phase that has to
-# boot a branch's image before the branch is merged sets RUNPOD_IMAGE in .env
-# instead — untracked, so the tag a pod runs is never a commit away from the tag
-# a release means.
-RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/alxb1t/isekai:latest}"
+# The pod boots the digest config/image.json pins, never a tag, and nothing in the
+# environment overrides it: moving the pin is a commit (0033 design D3).
+image_ref="$(jq -r '"\(.image)@\(.digest)"' config/image.json)"
+if ! [[ "$image_ref" =~ @sha256:[0-9a-f]{64}$ ]]; then
+  echo "ERROR: config/image.json names no sha256 digest ($image_ref)." >&2
+  echo "Refusing to create a pod from an image that is not pinned." >&2
+  exit 1
+fi
 
 # The client half of the volume guard, and the half that is certain. The pod-side
 # check cannot see whether a network volume was ever requested: RunPod defaults
@@ -29,7 +32,7 @@ if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
 fi
 
 echo "Creating pod in $RUNPOD_DATACENTER on '$RUNPOD_GPU_TYPE' ..."
-echo "  image: $RUNPOD_IMAGE"
+echo "  image: $image_ref"
 # `RUNPOD_GPU_TYPE` is a comma-separated preference order, not one name: the API
 # takes a list and picks the first with capacity, which is what stops a session
 # dying at creation because one model is sold out in one datacenter. It is split
@@ -37,7 +40,7 @@ echo "  image: $RUNPOD_IMAGE"
 # and a single string carrying a comma is not one of them -- it is rejected at
 # creation with the whole enum echoed back, which is how this was found.
 body=$(jq -n \
-  --arg image  "$RUNPOD_IMAGE" \
+  --arg image  "$image_ref" \
   --arg gpu    "$RUNPOD_GPU_TYPE" \
   --arg vol    "$RUNPOD_VOLUME_ID" \
   --arg dc     "$RUNPOD_DATACENTER" \
@@ -66,6 +69,8 @@ if [ -z "$pod_id" ]; then
   echo "Pod creation failed:"; echo "$resp" | jq . 2>/dev/null || echo "$resp"; exit 1
 fi
 echo "$pod_id" > .runpod_pod_id
+# What `generate` records as the image a render ran on; down.sh removes it.
+echo "$image_ref" > .runpod_pod_image
 echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 
 # Poll until the pod has a public IP and a mapped :22 -- and give up if one never
