@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`up.sh` creates on RunPod's REST v2** (`0034` design D1, D2, D4): v1 retires on 2026-11-15. Each type in
   `RUNPOD_GPU_TYPE` is tried in order, since v2 places one per call; the poll waits for `ssh.direct`, and a
   failed read is *not yet*, so the 420 s teardown always runs. A failed call prints its `problem+json`.
+- **`down.sh` deletes on REST v2** (`0034` design D3, D5): only a 204 tears down; a 404 keeps the record files
+  and asks for the RunPod MCP's confirmation, since a wrong key gets one too. A test fails if any script under
+  `infra/` names the retired v1 host; the README's pod diagram names v2's calls.
 
 ## [0.24.0] - 2026-09-27
 

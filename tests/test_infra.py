@@ -819,3 +819,29 @@ def test_the_check_catches_a_boot_record_left_behind() -> None:
         "written beside the pod id",
         "removed on 204",
     ]
+
+
+# RunPod retires REST v1 on 2026-11-15, after which no pod can be torn down
+# through it: 0034 design D5.
+RETIRED_API = "rest.runpod.io"
+
+
+def retired_api_calls(scripts: dict[str, str]) -> list[str]:
+    """Return each script that names RunPod's retired REST v1 host, by name."""
+    return sorted(name for name, text in scripts.items() if RETIRED_API in text)
+
+
+@pytest.mark.spec_exempt("structural: no requirement names RunPod's API version")
+def test_no_script_calls_the_retired_api() -> None:
+    scripts = {p.name: p.read_text() for p in (REPO / "infra").iterdir() if p.is_file()}
+    assert "up.sh" in scripts and "down.sh" in scripts
+    assert retired_api_calls(scripts) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_script_calls_the_retired_api")
+def test_the_retired_api_check_catches_a_v1_call() -> None:
+    scripts = {
+        "up.sh": 'curl -s "https://api.runpod.io/v2/pods"\n',
+        "down.sh": 'curl -s -X DELETE "https://rest.runpod.io/v1/pods/$pod_id"\n',
+    }
+    assert retired_api_calls(scripts) == ["down.sh"]

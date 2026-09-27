@@ -5,7 +5,7 @@
 ## Progress
 
 - [x] 1 — `infra/up.sh` on v2
-- [ ] 2 — `infra/down.sh` on v2, and the docs
+- [x] 2 — `infra/down.sh` on v2, and the docs
 - [ ] 3 — 🛑 **HUMAN · METERED · HALT** — one boot on v2, one render, teardown confirmed
 
 Line numbers are `6e2475d`'s; find each site by the text it names.
@@ -25,11 +25,11 @@ Line numbers are `6e2475d`'s; find each site by the text it names.
 
 ## 2 — `infra/down.sh` on v2, and the docs
 
-- [ ] 2.1 In `infra/down.sh`, set `API` and delete on `"$API/pods/$pod_id"`; keep the `"$code" = "204"` branch; a 404 asks for the RunPod MCP's confirmation and keeps the record files per [D3](design.md#d3); any other status prints its `problem+json` per [D4](design.md#d4).
+- [x] 2.1 In `infra/down.sh`, set `API` and delete on `"$API/pods/$pod_id"`; keep the `"$code" = "204"` branch; a 404 asks for the RunPod MCP's confirmation and keeps the record files per [D3](design.md#d3); any other status prints its `problem+json` per [D4](design.md#d4).
   Verify: `grep -c 'rest.runpod.io' infra/down.sh` prints `0`, and `grep -c '"$code" = "404"' infra/down.sh` prints `1`.
-- [ ] 2.2 Add `test_no_script_calls_the_retired_api` and its twin `test_the_retired_api_check_catches_a_v1_call` to `tests/test_infra.py`, `spec_exempt`, per [D5](design.md#d5).
+- [x] 2.2 Add `test_no_script_calls_the_retired_api` and its twin `test_the_retired_api_check_catches_a_v1_call` to `tests/test_infra.py`, `spec_exempt`, per [D5](design.md#d5).
   Verify: `grep -c -e '^def test_no_script_calls_the_retired_api' -e '^def test_the_retired_api_check_catches_a_v1_call' tests/test_infra.py` prints `2`.
-- [ ] 2.3 Name v2's calls in `README.md`'s pod diagram (`:423`, `:436`, `:447`).
+- [x] 2.3 Name v2's calls in `README.md`'s pod diagram (`:423`, `:436`, `:447`).
   Verify: `grep -c '/v1/pods' README.md` prints `0`.
 
 ## 3 — 🛑 **HUMAN · METERED · HALT** — one boot on v2, one render, teardown confirmed

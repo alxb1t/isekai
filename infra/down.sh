@@ -4,6 +4,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 set -a; source ./.env; set +a
+API="https://api.runpod.io/v2"
 
 if [ ! -f .runpod_pod_id ]; then
   echo "No .runpod_pod_id — nothing to tear down (already down?)."; exit 0
@@ -11,14 +12,26 @@ fi
 pod_id=$(cat .runpod_pod_id)
 
 echo "Terminating pod $pod_id ..."
-code=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-  "https://rest.runpod.io/v1/pods/$pod_id" \
-  -H "Authorization: Bearer $RUNPOD_API_KEY")
+out=$(curl -s -w '\n%{http_code}' -X DELETE \
+  "$API/pods/$pod_id" \
+  -H "Authorization: Bearer $RUNPOD_API_KEY") || true
+code=${out##*$'\n'}
+resp=${out%$'\n'*}
 
 if [ "$code" = "204" ]; then
   rm -f .runpod_pod_id .runpod_pod_image
   echo "Pod terminated. Billing stopped. (Network volume kept.)"
+elif [ "$code" = "404" ]; then
+  # A 404 is also what a wrong key gets, so it is never read as gone: a false
+  # "gone" leaves a pod billing (0034 design D3).
+  echo "The API does not know pod $pod_id: it may be gone, or the key may be wrong." >&2
+  echo "Confirm it is gone with the RunPod MCP; the record files are kept until then." >&2
+  exit 1
 else
-  echo "Delete returned HTTP $code — check the console to be sure the pod is gone."
+  echo "Delete returned HTTP $code — check the console to be sure the pod is gone." >&2
+  echo "$resp" \
+    | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
+      >&2 2>/dev/null \
+    || echo "  $resp" >&2
   exit 1
 fi
