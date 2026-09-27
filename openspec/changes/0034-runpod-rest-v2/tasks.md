@@ -6,7 +6,7 @@
 
 - [x] 1 — `infra/up.sh` on v2
 - [x] 2 — `infra/down.sh` on v2, and the docs
-- [ ] 3 — 🛑 **HUMAN · METERED · HALT** — one boot on v2, one render, teardown confirmed
+- [x] 3 — 🛑 **HUMAN · METERED · HALT** — one boot on v2, one render, teardown confirmed
 
 Line numbers are `6e2475d`'s; find each site by the text it names.
 
@@ -38,7 +38,7 @@ Line numbers are `6e2475d`'s; find each site by the text it names.
 `infra/up.sh` and down through `infra/down.sh`, in the same session; the RunPod MCP confirms it gone. No
 photograph: `conjure` only.
 
-- [ ] 3.1 ⛔ **HALT.** Ask the operator for an explicit go that quotes the ceiling, and for an approved `conjure-anime-wai` run and its `--runs` root; record the go as the first line of `openspec/changes/0034-runpod-rest-v2/acceptance.md`, `Go: <date>`.
+- [x] 3.1 ⛔ **HALT.** Ask the operator for an explicit go that quotes the ceiling, and for an approved `conjure-anime-wai` run and its `--runs` root; record the go as the first line of `openspec/changes/0034-runpod-rest-v2/acceptance.md`, `Go: <date>`.
   Verify: `grep -c '^Go: ' openspec/changes/0034-runpod-rest-v2/acceptance.md` prints `1`.
-- [ ] 3.2 ⚠️ **METERED.** `bash infra/up.sh`, the tunnel, `python -m isekai generate --flow conjure-anime-wai --count 1 --server http://127.0.0.1:8188 --runs <root> <run>`, then `bash infra/down.sh`, and the RunPod MCP confirms the pod gone. Record each command's output in `acceptance.md`, with no absolute path.
+- [x] 3.2 ⚠️ **METERED.** `bash infra/up.sh`, the tunnel, `python -m isekai generate --flow conjure-anime-wai --count 1 --server http://127.0.0.1:8188 --runs <root> <run>`, then `bash infra/down.sh`, and the RunPod MCP confirms the pod gone. Record each command's output in `acceptance.md`, with no absolute path.
   Verify: `grep -c -e 'Port 22 mapped at' -e 'pod gone' openspec/changes/0034-runpod-rest-v2/acceptance.md` prints a number above `1`.

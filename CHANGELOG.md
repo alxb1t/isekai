@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`down.sh` deletes on REST v2** (`0034` design D3, D5): only a 204 tears down; a 404 keeps the record files
   and asks for the RunPod MCP's confirmation, since a wrong key gets one too. A test fails if any script under
   `infra/` names the retired v1 host; the README's pod diagram names v2's calls.
+- **Proved on one metered boot** (`0034` design D7): `up.sh` created and polled on v2, one `conjure` render,
+  `down.sh` tore down on 204, and the RunPod MCP found the pod gone — 6 min 46 s, about $0.08. Evidence in
+  the change's `acceptance.md`.
 
 ## [0.24.0] - 2026-09-27
 
