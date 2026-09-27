@@ -19,12 +19,14 @@ must yield the tag on row 1 and no other.
 
 import hashlib
 import importlib
+import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
-from isekai.boundary import provision
+from isekai.boundary import provision, wd14
 from isekai.boundary.provision import Manifest
 from isekai.boundary.wd14 import (
     FLOOR,
@@ -332,3 +334,76 @@ def test_the_session_is_handed_the_photograph_and_nothing_else(
     scored(photo, session, read_labels(INDEX))
 
     assert session.seen == [photo]
+
+
+# The variable onnxruntime reads, once, when it loads: 0035 design D5.
+TELEMETRY_SWITCH = "ORT_DISABLE_TELEMETRY"
+
+
+class _RecordingOrt:
+    """A stand-in `onnxruntime`, recording the telemetry switch as it is imported."""
+
+    class _Input:
+        name = "input"
+        shape = ("batch", 448, 448, 3)
+
+    def __init__(self) -> None:
+        self.switch_at_import: list[str | None] = []
+
+    def imported(self, _module: str) -> "_RecordingOrt":
+        self.switch_at_import.append(os.environ.get(TELEMETRY_SWITCH))
+        return self
+
+    def InferenceSession(self, *_args: object, **_kwargs: object) -> object:  # noqa: N802
+        return type("Session", (), {"get_inputs": lambda _self: [self._Input()]})()
+
+
+def telemetry_left_on(switch_at_import: list[str | None]) -> bool:
+    """Whether onnxruntime was imported without its telemetry switched off."""
+    return not switch_at_import or any(value != "1" for value in switch_at_import)
+
+
+# Loading onnxruntime opens an HTTPS connection to Microsoft unless the switch is
+# set first, and the client's teardown at exit aborted `tag`: 0035 design D5.
+def _open_wd14(_tmp_path: Path) -> None:
+    wd14.OnnxSession(Path("model.onnx"))
+
+
+def _open_evaluation(tmp_path: Path) -> None:
+    from evaluation import eval_backends
+
+    eval_backends.OnnxSession("m.onnx", tmp_path)
+
+
+@pytest.mark.spec_exempt(
+    "structural: no requirement names the runtime's telemetry; 0035 design D5"
+)
+@pytest.mark.parametrize("opening", [_open_wd14, _open_evaluation])
+def test_every_onnx_session_switches_telemetry_off_before_the_import(
+    opening: Callable[[Path], None], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from evaluation import eval_backends
+
+    ort = _RecordingOrt()
+    # Set first, so the undo is recorded even when the switch starts unset: the
+    # opening below writes it, and the rest of the suite must not inherit that.
+    monkeypatch.setenv(TELEMETRY_SWITCH, "0")
+    monkeypatch.delenv(TELEMETRY_SWITCH)
+    monkeypatch.setattr(wd14, "_require", ort.imported)
+    monkeypatch.setattr(eval_backends, "_require", ort.imported)
+    monkeypatch.setattr(eval_backends, "resolve", lambda *_args: tmp_path / "m.onnx")
+    monkeypatch.setattr(eval_backends, "load_eval_manifest", lambda: {})
+
+    opening(tmp_path)
+
+    assert not telemetry_left_on(ort.switch_at_import)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of "
+    "test_every_onnx_session_switches_telemetry_off_before_the_import"
+)
+def test_the_telemetry_check_catches_an_import_with_it_on() -> None:
+    assert telemetry_left_on([None])
+    assert telemetry_left_on(["1", None])
+    assert telemetry_left_on([])

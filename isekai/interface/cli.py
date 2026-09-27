@@ -18,11 +18,13 @@ would be unreachable -- nothing writes a later one (design.md D2).
     generate  (4) assemble every prompt locally, then render
     show          print a run's artifacts and what produced each one
     ui        (3) serve the review surface for a batch of inputs
+    compare       write a page of every run's photograph beside its renders
 
-**`show` inspects a run, `ui` serves a surface, and every other verb runs a
-stage.** The stage verbs take `--flow` repeatably; `ui` takes exactly one,
-because the surface is one schema's fields in one order; `show` takes none,
-because it reports every flow the run already holds. `show` reads a run and decides
+**`show` inspects a run, `ui` serves a surface, `compare` writes a page, and
+every other verb runs a stage.** The stage verbs take `--flow` repeatably; `ui`
+takes exactly one, because the surface is one schema's fields in one order;
+`show` and `compare` take none, because they report every flow the runs already
+hold. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
 so neither surface is privileged and neither goes through the other
@@ -48,6 +50,7 @@ from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.interface.compare_view import write_page
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, booted_image, wiring
 from isekai.pipeline.caption import caption
@@ -71,6 +74,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("generate", "assemble the prompts for a run, then render them"),
     ("show", "print a run's artifacts, versions and producers"),
     ("ui", "serve the review surface for a batch of inputs"),
+    ("compare", "write a page of each run's photograph beside its renders"),
 )
 
 # The review surface's loopback port. Declared here rather than in the package it
@@ -143,7 +147,9 @@ def build_parser() -> argparse.ArgumentParser:
         for name, summary in VERBS
     }
 
-    for name in made:
+    # `compare` takes a batch directory instead: its runs root is the batch's
+    # `runs/`, so a second way to name it could only disagree (0035 design D2).
+    for name in (name for name in made if name != "compare"):
         made[name].add_argument(
             "photos",
             nargs="*",
@@ -203,6 +209,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_PORT,
         help=f"the loopback port to serve on (default {DEFAULT_PORT})",
     )
+
+    made["compare"].add_argument(
+        "batch",
+        type=Path,
+        help="the batch directory: the one holding runs/, where the page is written",
+    )
+    # Every namespace keeps one shape; `compare` reads its runs from the batch.
+    made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -311,6 +325,9 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     try:
         if verb == "ui":
             return _ui(args, wired, targets)
+        if verb == "compare":
+            print(write_page(args.batch, wired.flows_dir), file=wired.out)
+            return 0
         flows = _flows_for(args, wired)
         if verb == "tag":
             _require_tagged(flows)

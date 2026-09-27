@@ -51,6 +51,7 @@ wrong without saying so.
 
 import csv
 import io
+import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from functools import cache
@@ -167,6 +168,16 @@ class Session(Protocol):
     def run(self, photo: Path) -> Sequence[float]:
         """Return one probability per output neuron, in the index's own order."""
         ...
+
+
+def silence_onnxruntime() -> None:
+    """Turn onnxruntime's telemetry off; call before it is first imported.
+
+    Loading it opens an HTTPS connection to Microsoft, and the client's teardown
+    at exit aborted `tag` with 134. The switch is read at load, so the
+    `disable_telemetry_events()` API is too late for both: 0035 design D5.
+    """
+    os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 
 
 @cache
@@ -381,6 +392,7 @@ class OnnxSession:
 
     def __init__(self, model: Path) -> None:
         """Open `model` for inference on the CPU."""
+        silence_onnxruntime()
         onnxruntime = _require("onnxruntime")
 
         self._session = onnxruntime.InferenceSession(
@@ -449,5 +461,6 @@ __all__: Sequence[str] = (
     "read_labels",
     "scored",
     "select",
+    "silence_onnxruntime",
     "verified_paths",
 )

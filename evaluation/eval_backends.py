@@ -49,6 +49,7 @@ from evaluation.evaluate import (
     Region,
 )
 from isekai.boundary.provision import resolve
+from isekai.boundary.wd14 import silence_onnxruntime
 
 # The SegFormer clothes parser's label ids. Only the ones this version measures
 # are named; the rest are parsed and ignored rather than deleted, because the
@@ -155,6 +156,7 @@ class OnnxSession:
 
     def __init__(self, dest: str, models_dir: Path) -> None:
         """Verify the pinned artifact's digest, then load it onto the CPU."""
+        silence_onnxruntime()
         onnxruntime = _require("onnxruntime")
         # Verified before it is loaded, never after: the digest is the only
         # reason to believe these are the bytes the manifest names.

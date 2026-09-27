@@ -25,6 +25,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-09-27
+
+### Added
+
+- **`compare`, a new verb** (`0035` design D2): `python -m isekai compare <batch>` writes `compare.html` into
+  the batch directory — each run's photograph beside each flow's renders under its latest approval, each render
+  with its positive prompt and the captions in a row below, linked relative and never embedded — and prints only
+  its path, so an agent hands it over unread. A flow that reads the photograph sits beside it: `summon`, then
+  `conjure`.
+- **`infra/render.sh`, one whole render session** (`0035` design D3): it assembles every prompt before renting,
+  then runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI and renders each `<flow>=<count>`. A
+  trap set before `up.sh` tears the pod down and closes the tunnel on every exit, error and signal.
+- **The flow skills, `run-flows` and `compare-renders`** (`0035` design D1, D4, D6): an agent runs a batch of
+  photographs to the comparison page from exact commands, stopping for "approved" and for the go, and
+  reads counts rather than runs. A test fails when a command a skill names stops parsing. `CLAUDE.md`'s pod rule
+  now also accepts the operator's explicit go, and names the record files to delete after a confirmed teardown.
+
+- **Proved by the operator using `run-flows`** (`0035` design D7): 5 photographs through both flows to
+  `compare.html` — 10 of each stage's files, 5 approvals and 5 renders per flow, 0 refusals, one pod session of
+  about 13 minutes torn down by `render.sh`, and the RunPod MCP found no pod left. Evidence in the change's
+  `acceptance.md`.
+
+### Fixed
+
+- **onnxruntime no longer connects to Microsoft, and `tag` no longer exits 134** (`0035` design D5): loading it
+  opened an HTTPS connection for its telemetry, whose teardown at exit could abort a `tag` that had written
+  everything. `ORT_DISABLE_TELEMETRY=1` is set before every import of it; 0 of 40 runs aborted or left loopback.
+- **`render.sh`'s own refusals reach the batch's log** (`0035` design D3): they went to stderr alone, which
+  `run-flows` step 4 discards before reading `log.txt`, so a wait past 300 s, a recorded pod or a taken port
+  showed the agent an exit 1 with no reason. `refuse()` now appends its line to the log as well, once the runs
+  root is checked; a text check in `tests/test_infra.py` holds it.
+- **A render session halts at the pod ceiling, and a second interrupt no longer cuts its teardown short**
+  (`0035` design D3): nothing stopped a session at `CLAUDE.md`'s 45 minutes, and the teardown reset `INT` and `TERM`
+  to their defaults, so a second Ctrl-C killed `down.sh` mid-DELETE and left the pod billing. A watchdog started
+  before `up.sh` now refuses at 44 minutes, stops the command in flight and exits through the trap, keeping the
+  renders written; the teardown ignores `INT`, `TERM` and `HUP`, and the trap covers `HUP`. `render.sh`'s refusals
+  for an empty runs root and a taken port name a command to paste. Text checks in `tests/test_infra.py` hold both.
+- **`run-flows` renders in the background, counts approved runs, and never reports a pod id** (`0035` design D1):
+  step 4 was a foreground call longer than an agent's command limit, so a timeout could cut the teardown short; it
+  now runs in the shell tool's background mode and waits for the exit. Step 3 counted approval files, so a run
+  approved twice hid one approved never; it counts runs. A failed render's log tail drops the lines naming the pod
+  or its address, and the skill's Never list forbids reporting them.
+- **`compare` marks a directory no tracked flow names instead of refusing the page** (`0035` design D2): one run
+  holding work from a flow since renamed failed the whole batch's page; that column now reads *not a tracked flow*.
+  Its refusal of a directory with no `runs/` names a `python -m isekai tag` command to paste, and joins the suite's
+  check that every printed command parses.
+
 ## [0.24.1] - 2026-09-27
 
 ### Changed
