@@ -199,3 +199,19 @@ def test_captions_span_the_row_and_each_prompt_sits_under_its_render(
     for flow in (SUMMON, CONJURE):
         [figure] = [f for f in figures if f"{flow} &middot; seed" in f]
         assert f"masterpiece, {flow} &lt;positive&gt;" in figure
+
+
+@pytest.mark.spec("cli:compare:the-page-links-photographs-to-renders")
+def test_a_clicked_image_opens_in_an_overlay_the_page_carries_itself(
+    tmp_path: Path,
+) -> None:
+    batch = tmp_path / "batch"
+    _run(batch, "ada", "Ada")
+
+    assert _compare(batch)[0] == 0
+
+    body = (batch / PAGE_NAME).read_text()
+    assert 'id="overlay"' in body
+    assert '"Escape"' in body
+    # Inline, so the page loads nothing beyond the images it links.
+    assert "<script src" not in body and "<link " not in body
