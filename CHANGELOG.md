@@ -65,6 +65,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   now runs in the shell tool's background mode and waits for the exit. Step 3 counted approval files, so a run
   approved twice hid one approved never; it counts runs. A failed render's log tail drops the lines naming the pod
   or its address, and the skill's Never list forbids reporting them.
+- **`compare` marks a directory no tracked flow names instead of refusing the page** (`0035` design D2): one run
+  holding work from a flow since renamed failed the whole batch's page; that column now reads *not a tracked flow*.
+  Its refusal of a directory with no `runs/` names a `python -m isekai tag` command to paste, and joins the suite's
+  check that every printed command parses.
 
 ## [0.24.1] - 2026-09-27
 

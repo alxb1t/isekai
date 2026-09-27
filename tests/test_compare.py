@@ -159,6 +159,23 @@ def test_a_flow_with_no_render_says_so_and_the_page_is_written(tmp_path: Path) -
     assert f"{SUMMON} &middot; seed 11" in body
 
 
+@pytest.mark.spec("cli:compare:a-run-without-a-render-is-marked")
+def test_a_directory_no_tracked_flow_names_is_marked_and_the_page_is_written(
+    tmp_path: Path,
+) -> None:
+    batch = tmp_path / "batch"
+    run = _run(batch, "ada", "Ada")
+    _approve(run, SUMMON, 1)
+    _render(run, SUMMON, 1, 11)
+    # Work left by a flow since renamed: this build carries no manifest for it.
+    run.directory("summon-v9", REVIEW).mkdir(parents=True)
+
+    body = _page(batch)
+    assert "<figcaption>summon-v9</figcaption>" in body
+    assert "not a tracked flow" in body
+    assert f"{SUMMON} &middot; seed 11" in body
+
+
 @pytest.mark.spec("cli:compare:only-the-path-is-printed")
 def test_the_verb_prints_the_pages_path_and_nothing_else(tmp_path: Path) -> None:
     batch = tmp_path / "batch"
@@ -177,6 +194,9 @@ def test_a_directory_without_runs_is_refused_naming_it(tmp_path: Path) -> None:
     assert (status, out) == (1, "")
     assert err.startswith("refused: ")
     assert str(batch) in err
+    # The fix is a command to paste, naming where the stages put the runs.
+    assert f"`python -m isekai tag --flow {CONJURE} --flow {SUMMON} " in err
+    assert f"--runs {batch / 'runs'} " in err
     assert list(batch.iterdir()) == []
 
 

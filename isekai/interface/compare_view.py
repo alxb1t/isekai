@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 from isekai.foundation.artifacts import CAPTION_FILE, PROMPT_FILE, read
 from isekai.foundation.atomic_write import write_atomically
-from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow
+from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -34,6 +34,8 @@ from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
 BATCH_RUNS = "runs"
+# Where the run-flows skill keeps a batch's photographs; named only in a refusal.
+BATCH_PHOTOS = "photos"
 
 _STYLE = """
 :root { color-scheme: dark; }
@@ -98,14 +100,16 @@ def _link(path: Path, batch: Path) -> str:
     return html.escape(quote(path.relative_to(batch).as_posix()), quote=True)
 
 
-def _runs(batch: Path) -> list[Run]:
+def _runs(batch: Path, flows_dir: Path) -> list[Run]:
     """Return every run under the batch's `runs/`, by id, or refuse naming the batch."""
     root = batch / BATCH_RUNS
     if not root.is_dir():
+        flows = " ".join(f"--flow {flow}" for flow in tracked_flows(flows_dir))
         raise Refusal(
-            f"{batch} holds no {BATCH_RUNS}/ directory, so it is not a batch; run "
-            f"the stages with `--runs {root}` first, or give the batch directory "
-            f"that holds {BATCH_RUNS}/"
+            f"{batch} holds no {BATCH_RUNS}/ directory, so it is not a batch; give "
+            f"the path of the batch directory that holds {BATCH_RUNS}/, or open its "
+            f"runs with `python -m isekai tag {flows} --runs {root} "
+            f"{batch / BATCH_PHOTOS}/*`"
         )
     return [
         Run(path.name, path)
@@ -123,8 +127,17 @@ def _prompt(run: Run, flow: str, version: int) -> str:
     return f'<p class="prompt"><b>positive</b> {html.escape(positive)}</p>'
 
 
-def _renders(run: Run, name: str, flow: Flow, batch: Path) -> list[str]:
-    """Return a figure per render of the flow's latest approval, or *no render yet*."""
+def _renders(run: Run, name: str, flow: Flow | None, batch: Path) -> list[str]:
+    """Return a figure per render of the flow's latest approval, or say why none.
+
+    `flow` is None for a directory this build carries no flow for -- work left by
+    a flow since renamed -- whose renders cannot be found without its manifest.
+    """
+    if flow is None:
+        return [
+            f"<figure><figcaption>{html.escape(name)}</figcaption>"
+            f'<p class="none">not a tracked flow</p></figure>'
+        ]
     approved = approved_versions(run.directory(name, REVIEW))
     if approved:
         directory = run.directory(name, OUTPUTS, f"{approved[-1]:03d}")
@@ -143,7 +156,7 @@ def _renders(run: Run, name: str, flow: Flow, batch: Path) -> list[str]:
     ]
 
 
-def _entry(run: Run, flows: Mapping[str, Flow], batch: Path) -> str:
+def _entry(run: Run, flows: Mapping[str, Flow | None], batch: Path) -> str:
     """Return one run's section: the photograph and each flow's renders, then captions.
 
     Each render carries the positive prompt it came from; the captions span the
@@ -170,23 +183,29 @@ def _entry(run: Run, flows: Mapping[str, Flow], batch: Path) -> str:
     )
 
 
+def _column(item: tuple[str, Flow | None]) -> tuple[int, str]:
+    """Order a flow's column: reads the photograph, then tracked, then untracked."""
+    name, flow = item
+    if flow is None:
+        return 2, name
+    return int("photo" not in flow.inputs), name
+
+
 def page(batch: Path, flows_dir: Path = FLOWS_DIR) -> str:
     """Return the comparison page for `batch`, or refuse a directory with no `runs/`.
 
     Every run shows every flow any run in the batch holds, so each row has the same
     columns and a flow a run never reached reads *no render yet*. A flow that reads
-    the photograph sits beside it, then the rest, each group by name.
+    the photograph sits beside it, then the rest, then any directory this build
+    carries no flow for, marked so rather than failing the page: each group by name.
     """
-    runs = _runs(batch)
+    runs = _runs(batch, flows_dir)
+    tracked = set(tracked_flows(flows_dir))
     loaded = {
-        name: load_flow(name, flows_dir)
+        name: load_flow(name, flows_dir) if name in tracked else None
         for name in {name for run in runs for name in run.flows}
     }
-    flows = dict(
-        sorted(
-            loaded.items(), key=lambda item: ("photo" not in item[1].inputs, item[0])
-        )
-    )
+    flows = dict(sorted(loaded.items(), key=_column))
     title = f"isekai &mdash; {html.escape(batch.name)}"
     entries = "".join(_entry(run, flows, batch) for run in runs)
     return (

@@ -295,6 +295,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     from isekai.foundation.artifacts import CAPTION_FILE, read
     from isekai.foundation.flow import load_flow
     from isekai.foundation.run import open_run, record_failure
+    from isekai.interface.compare_view import page
     from isekai.pipeline.caption import OllamaReader
     from isekai.pipeline.generate import photo_resolution, prepare, prompt_artifact
     from isekai.pipeline.review import approve, review, save_draft
@@ -334,6 +335,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: photo_resolution(_unreadable(tmp_path)))
     collect(lambda: load_flow("summon-v9"))
     collect(lambda: load_flow(FLOW, _incomplete_flow(tmp_path)))
+    collect(lambda: page(tmp_path / "not-a-batch"))
     # An unreachable host rather than an absent binary: the surviving arm is
     # HTTP to a local port, so there is nothing on PATH to be missing.
     collect(
