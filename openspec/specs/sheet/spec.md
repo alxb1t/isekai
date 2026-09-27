@@ -78,10 +78,12 @@ invariant any future producer would have to satisfy to be allowed near a sheet.
 
 The system SHALL fill a sheet from a schema, a vocabulary, a field map and — for a flow that declares the
 tagger — its local tag list, and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet,
-SHALL NOT be told which flow requested the work beyond whether a tag list is expected, and SHALL NOT read
-prose. For a flow that declares the tagger it SHALL refuse naming the verb that produces the tag list when
+SHALL NOT be told which flow requested the work beyond whether a tag list is expected and the flow's digest
+it records, and SHALL NOT read prose. For a flow that declares the tagger it SHALL refuse naming the verb that produces the tag list when
 that list is absent. For a flow that declares none it SHALL write every field empty, and the sheet's
-producer SHALL record that no tag list and no model filled it.
+producer SHALL record that no tag list and no model filled it. Every sheet SHALL record the digest of the
+flow it was filled for, and SHALL carry the tag list's confidence floor into its producer where the list
+records one.
 
 Storing the assembled prompt in the sheet creates a footgun where a human edits the prompt block and a
 rebuild silently overwrites it. Keeping the stage ignorant of flows is what lets the same code serve every
@@ -109,7 +111,8 @@ declares none, no tagger was going to run, so there is nothing to hide. The pers
 review surface and approves it, and approval still gates the render.
 
 The stage learns only whether a tag list is expected — a boolean the composition root reads from the
-manifest — so it stays ignorant of flows.
+manifest — and the flow's digest, a string it records and never reads, so it stays ignorant of flows. The
+digest is what ties a sheet to the schema and field names it was filled against, when a flow is re-pinned.
 
 #### Scenario: a sheet stores fields and no prompt
 - **Key:** `sheet:output:sheet-stores-fields-only`
@@ -160,3 +163,17 @@ manifest — so it stays ignorant of flows.
 - **WHEN** a sheet is asked for an input of a flow that declares no tagger
 - **THEN** a sheet is written with every schema field present and empty
 - **AND** its producer names no tag list and no model
+
+#### Scenario: a sheet records the digest of the flow it was filled for
+- **Key:** `sheet:output:sheet-names-its-flow-digest`
+- **Layers:** unit
+- **WHEN** a sheet is written, from a tag list or empty
+- **THEN** it records the digest of the flow's directory
+- **AND** two sheets filled for a flow before and after a re-pin are distinguishable from the record alone
+
+#### Scenario: a sheet carries the tag list's floor
+- **Key:** `sheet:output:sheet-carries-the-floor`
+- **Layers:** unit
+- **WHEN** a sheet is filled from a tag list whose producer records a confidence floor
+- **THEN** the sheet's producer records the same floor
+- **AND** a tag list that records none yields a sheet that records none

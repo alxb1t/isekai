@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-09-27
+
 ### Changed
 
 - **CI and the toolchain pinned** (`0033` design D1): every workflow action by commit SHA, the runner
