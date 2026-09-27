@@ -6,7 +6,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 ## Progress
 
 - [x] 1 — CI and the toolchain
-- [ ] 2 — The image: inputs by digest, a locked environment, built on request
+- [x] 2 — The image: inputs by digest, a locked environment, built on request
 - [ ] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
 - [ ] 4 — The pin: `config/image.json`, `up.sh` boots it
 - [ ] 5 — The reader: `config/reader.json`, the model checked before its first call
@@ -27,17 +27,17 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 2 — The image: inputs by digest, a locked environment, built on request
 
-- [ ] 2.1 **HALT CHECK** — the image installs from requirement files, with CPU `onnxruntime` beside them.
+- [x] 2.1 **HALT CHECK** — the image installs from requirement files, with CPU `onnxruntime` beside them.
   Verify: `grep -c 'uv pip install -r' Dockerfile` prints `2`, and `grep -c 'onnxruntime==1.20.1' Dockerfile` prints `1`.
-- [ ] 2.2 Write `tools/derive_image_project.py`, add it to the `Makefile`'s `derive` with `image/` in its closing `git diff --stat`, and run it to write `image/pyproject.toml`, `image/uv.lock` and `image/.python-version`, per [D2](design.md#d2).
+- [x] 2.2 Write `tools/derive_image_project.py`, add it to the `Makefile`'s `derive` with `image/` in its closing `git diff --stat`, and run it to write `image/pyproject.toml`, `image/uv.lock` and `image/.python-version`, per [D2](design.md#d2).
   Verify: `test -f image/uv.lock && grep -c '"onnxruntime' image/pyproject.toml` prints `1`, and `grep -c 'derive_image_project' Makefile` prints `1`.
-- [ ] 2.3 In the `Dockerfile`, name the base and uv by digest, copy `image/pyproject.toml`, `image/uv.lock` and `image/.python-version` one by one, set `UV_PROJECT_ENVIRONMENT`, and run `uv sync --locked` in place of `uv venv` and every `uv pip install`, per [D2](design.md#d2); `docker build --check .` passes.
+- [x] 2.3 In the `Dockerfile`, name the base and uv by digest, copy `image/pyproject.toml`, `image/uv.lock` and `image/.python-version` one by one, set `UV_PROJECT_ENVIRONMENT`, and run `uv sync --locked` in place of `uv venv` and every `uv pip install`, per [D2](design.md#d2); `docker build --check .` passes.
   Verify: `grep -c -e 'uv pip install' -e 'uv venv' Dockerfile` prints `0`, and `grep -c '@sha256:' Dockerfile` prints `2`.
-- [ ] 2.4 Make `.github/workflows/build-image.yml` dispatch-only with a required tag that is not `latest`, give the build step an `id`, and write its digest to the job summary, per [D2](design.md#d2).
-  Verify: `grep -c -e 'push:' -e 'branches:' .github/workflows/build-image.yml` prints `0`, and `grep -c 'outputs.digest' .github/workflows/build-image.yml` prints `1`.
-- [ ] 2.5 Print `date -u` before each step of `start.sh`, and the UTC times `infra/up.sh` created the pod and saw port 22 mapped, per [D2](design.md#d2); keep `tests/test_infra.py`'s `start.sh` checks (`:184`, `:252`) green.
+- [x] 2.4 Make `.github/workflows/build-image.yml` dispatch-only with a required tag that is not `latest`, give the build step an `id`, and write its digest to the job summary, per [D2](design.md#d2).
+  Verify: `grep -c -e '^  push:' -e 'branches:' .github/workflows/build-image.yml` prints `0`, and `grep -c 'outputs.digest' .github/workflows/build-image.yml` prints `1`.
+- [x] 2.5 Print `date -u` before each step of `start.sh`, and the UTC times `infra/up.sh` created the pod and saw port 22 mapped, per [D2](design.md#d2); keep `tests/test_infra.py`'s `start.sh` checks (`:184`, `:252`) green.
   Verify: `grep -c 'date -u' start.sh` prints a number above `4`.
-- [ ] 2.6 In `tests/test_infra.py`, test `pod-image:build:only-a-request-builds`, `pod-image:build:inputs-are-named-by-digest`, `pod-image:build:the-environment-is-locked` and `pod-image:boot:each-step-is-timestamped`.
+- [x] 2.6 In `tests/test_infra.py`, test `pod-image:build:only-a-request-builds`, `pod-image:build:inputs-are-named-by-digest`, `pod-image:build:the-environment-is-locked` and `pod-image:boot:each-step-is-timestamped`.
   Verify: `grep -c -e 'pod-image:build:' -e 'pod-image:boot:each-step-is-timestamped' tests/test_infra.py` prints `4`.
 
 ## 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build

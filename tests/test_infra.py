@@ -502,3 +502,139 @@ def test_the_manifest_the_provisioner_reads_is_copied_where_it_looks(
 def test_the_check_catches_a_manifest_copied_beside_where_it_looks() -> None:
     broken = f"COPY models.json {IMAGE_ROOT}/elsewhere/models.json\n"
     assert manifest_in_image() not in image_copies(broken)
+
+
+# The image is built on request, from inputs named by digest, into a locked
+# environment: 0033 design D2.
+
+BUILD_WORKFLOW = REPO / ".github" / "workflows" / "build-image.yml"
+
+
+def workflow_triggers(workflow: str) -> list[str]:
+    """Return the event names under a workflow's top-level `on:` key.
+
+    e.g. `on:` over `push:` and `workflow_dispatch:` -> ["push", "workflow_dispatch"]
+    """
+    lines = workflow.splitlines()
+    opens = lines.index("on:")
+    triggers = []
+    for line in lines[opens + 1 :]:
+        if line and not line.startswith(" "):
+            break
+        found = re.match(r"^  ([a-z_]+):", line)
+        if found:
+            triggers.append(found.group(1))
+    return triggers
+
+
+@pytest.mark.spec("pod-image:build:only-a-request-builds")
+def test_the_image_workflow_builds_only_on_a_manual_request() -> None:
+    workflow = BUILD_WORKFLOW.read_text()
+    assert workflow_triggers(workflow) == ["workflow_dispatch"]
+    assert "${{ steps.build.outputs.digest }}" in workflow
+    assert "$GITHUB_STEP_SUMMARY" in workflow
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_image_workflow_builds_only_on_a_manual_request"
+)
+def test_the_check_catches_a_workflow_that_builds_on_a_push() -> None:
+    workflow = "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\njobs:\n"
+    assert workflow_triggers(workflow) == ["push", "workflow_dispatch"]
+
+
+def undigested_images(dockerfile: str) -> list[str]:
+    """Return each image the build starts from or copies from without a digest."""
+    named = re.findall(r"^FROM\s+(\S+)", dockerfile, re.M)
+    named += re.findall(r"^COPY\s+--from=(\S+)", dockerfile, re.M)
+    return [image for image in named if not re.search(r"@sha256:[0-9a-f]{64}$", image)]
+
+
+@pytest.mark.spec("pod-image:build:inputs-are-named-by-digest")
+def test_the_base_and_the_build_tool_are_named_by_digest(dockerfile: str) -> None:
+    assert re.search(r"^FROM\s", dockerfile, re.M)
+    assert re.search(r"^COPY\s+--from=", dockerfile, re.M)
+    assert undigested_images(dockerfile) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_base_and_the_build_tool_are_named_by_digest"
+)
+def test_the_check_catches_an_image_named_by_tag() -> None:
+    broken = "FROM ubuntu:22.04\nCOPY --from=ghcr.io/astral-sh/uv:latest /uv /\n"
+    assert undigested_images(broken) == [
+        "ubuntu:22.04",
+        "ghcr.io/astral-sh/uv:latest",
+    ]
+
+
+def unlocked_installs(dockerfile: str) -> list[str]:
+    """Return each build line that resolves packages instead of syncing the lock."""
+    return [
+        line.strip()
+        for line in dockerfile.splitlines()
+        if re.search(r"\bpip install\b|\buv venv\b|\s-r\s", line)
+        or ("uv sync" in line and "--locked" not in line)
+    ]
+
+
+@pytest.mark.spec("pod-image:build:the-environment-is-locked")
+def test_the_environment_is_installed_from_the_committed_lock(
+    dockerfile: str,
+) -> None:
+    assert "uv sync --locked" in dockerfile
+    assert "image/uv.lock" in image_copies(dockerfile).values()
+    assert unlocked_installs(dockerfile) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_environment_is_installed_from_the_committed_lock"
+)
+def test_the_check_catches_a_resolving_install() -> None:
+    broken = "RUN uv pip install -r requirements.txt\nRUN uv sync\n"
+    assert unlocked_installs(broken) == [
+        "RUN uv pip install -r requirements.txt",
+        "RUN uv sync",
+    ]
+
+
+# The line each step of `start.sh` begins with: the SSH key, sshd, provisioning,
+# the download inside it, and ComfyUI.
+BOOT_STEPS = (
+    "mkdir -p ~/.ssh",
+    "mkdir -p /run/sshd",
+    "if ! provision; then",
+    'MODELS_DIR="$MODELS_ROOT" bash',
+    "exec python main.py",
+)
+
+
+def unstamped_steps(start_sh: str) -> list[str]:
+    """Return each boot step whose line is not preceded by a UTC timestamp."""
+    lines = [line.strip() for line in start_sh.splitlines()]
+    unstamped = []
+    for step in BOOT_STEPS:
+        at = next(i for i, line in enumerate(lines) if line.startswith(step))
+        if "date -u" not in lines[at - 1]:
+            unstamped.append(step)
+    return unstamped
+
+
+@pytest.mark.spec("pod-image:boot:each-step-is-timestamped")
+def test_each_boot_step_prints_a_utc_time_before_it_begins(
+    start_sh: str, up_sh: str
+) -> None:
+    assert unstamped_steps(start_sh) == []
+    assert "created at $(date -u" in up_sh
+    assert "Port 22 mapped at $(date -u" in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_each_boot_step_prints_a_utc_time_before_it_begins"
+)
+def test_the_check_catches_a_step_with_no_timestamp() -> None:
+    stamped = "\n".join(f'echo "$(date -u +%FT%TZ)"\n{step}' for step in BOOT_STEPS)
+    assert unstamped_steps(stamped) == []
+    assert unstamped_steps(
+        stamped.replace('echo "$(date -u +%FT%TZ)"\nexec', "exec")
+    ) == ["exec python main.py"]

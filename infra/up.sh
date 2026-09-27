@@ -66,7 +66,7 @@ if [ -z "$pod_id" ]; then
   echo "Pod creation failed:"; echo "$resp" | jq . 2>/dev/null || echo "$resp"; exit 1
 fi
 echo "$pod_id" > .runpod_pod_id
-echo "Pod $pod_id created. Waiting for SSH ..."
+echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 
 # Poll until the pod has a public IP and a mapped :22 -- and give up if one never
 # arrives. Some SECURE-cloud machines come up `RUNNING` with `runtime: null` and
@@ -115,6 +115,8 @@ while true; do
   fi
   sleep 5
 done
+# The API's mapping of :22 is the event timed: nothing here contacts SSH itself.
+echo "Port 22 mapped at $(date -u +%FT%TZ)."
 
 echo
 echo "Pod is up."

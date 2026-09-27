@@ -3,13 +3,18 @@
 
 set -euo pipefail
 
+# Each step prints the UTC time it begins, so the pod log says where a boot's
+# minutes go (0033 design D2).
+
 # 1. Install the SSH public key so we can log in with our private key.
+echo "$(date -u +%FT%TZ) step: the SSH key"
 mkdir -p ~/.ssh
 echo "${PUBLIC_KEY:-${SSH_PUBLIC_KEY:-}}" > ~/.ssh/authorized_keys
 chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 
 # 2. Start the SSH daemon.
+echo "$(date -u +%FT%TZ) step: sshd"
 mkdir -p /run/sshd
 ssh-keygen -A
 /usr/sbin/sshd
@@ -118,6 +123,7 @@ provision() {
     echo "models namespace: $MODELS_ROOT -> $(readlink "$MODELS_ROOT")"
 
     # Downloads once, re-verified on later boots.
+    echo "$(date -u +%FT%TZ) step: the download"
     MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/tools/download_models.sh || return 1
 }
 
@@ -131,6 +137,7 @@ provision() {
 # Bounded, and marked. A pod holding open reports as running and healthy while it
 # bills, so the failure that outlasts a session's spending ceiling is the one
 # nobody is watching.
+echo "$(date -u +%FT%TZ) step: provisioning"
 if ! provision; then
     echo "ERROR: provisioning failed — holding the pod open for inspection." >&2
     echo "Nothing was deleted. SSH in and look under $MODELS_NAMESPACE." >&2
@@ -141,4 +148,5 @@ if ! provision; then
 fi
 
 # 5. ComfyUI in the foreground — the main process. If it exits, the pod stops.
+echo "$(date -u +%FT%TZ) step: ComfyUI"
 exec python main.py --listen 0.0.0.0 --port 8188

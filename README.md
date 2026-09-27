@@ -346,16 +346,17 @@ isekai/
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
-│   ├── derive_*.py            # re-derive the manifests and the field map: `make derive`
+│   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   └── typecheck_ui.sh        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── Makefile                   # `make gate`, and `make derive` to re-run the derivers
+├── image/                     # the pod's Python environment: a locked uv project, derived
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── start.sh                   # baked into the image as its start command
-├── .github/workflows/         # CI: run the gate; build & push the image to GHCR
+├── .github/workflows/         # CI: run the gate; build & push the image to GHCR on request
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```
