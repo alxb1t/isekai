@@ -10,13 +10,14 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
         with:
+          version: "0.12.19"
           enable-cache: true
 
       # The gate's fifth command is `bash tools/typecheck_ui.sh`, which runs
@@ -28,9 +29,9 @@ jobs:
       # the deterministic way to do it: it installs exactly the pinned tree and
       # fails rather than resolving a new one.
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version: '22.23.3'
           cache: npm
           cache-dependency-path: ui/package-lock.json
 

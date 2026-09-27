@@ -102,6 +102,11 @@ dev = [
     "httpx2==2.13.0",
 ]
 
+# The same uv here, in CI and in the image, so a lock one of them writes is a lock
+# the others read the same way (0033 design D1).
+[tool.uv]
+required-version = "==0.12.19"
+
 [tool.ruff.lint]
 # Explicit, because ruff's default set covers E and F but not I, D or ANN.
 # Import ordering, docstrings and annotations were each previously unenforced.

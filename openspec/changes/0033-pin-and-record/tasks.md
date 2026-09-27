@@ -5,7 +5,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 
 ## Progress
 
-- [ ] 1 — CI and the toolchain
+- [x] 1 — CI and the toolchain
 - [ ] 2 — The image: inputs by digest, a locked environment, built on request
 - [ ] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
 - [ ] 4 — The pin: `config/image.json`, `up.sh` boots it
@@ -18,11 +18,11 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 1 — CI and the toolchain
 
-- [ ] 1.1 **HALT CHECK** — the workflows use major tags, and no uv version is pinned.
+- [x] 1.1 **HALT CHECK** — the workflows use major tags, and no uv version is pinned.
   Verify: `cat .github/workflows/ci.yml .github/workflows/build-image.yml | grep -c -E 'uses: [^@]+@v[0-9]+$'` prints a number above `0`, and `grep -c 'required-version' pyproject.toml` prints `0`.
-- [ ] 1.2 ⛔ Ask the operator to upgrade this machine's uv to 0.12.19, then add `[tool.uv] required-version = "==0.12.19"` to `pyproject.toml`; re-lock `uv.lock` only if `uv lock --check` fails, per [D1](design.md#d1).
+- [x] 1.2 ⛔ Ask the operator to upgrade this machine's uv to 0.12.19, then add `[tool.uv] required-version = "==0.12.19"` to `pyproject.toml`; re-lock `uv.lock` only if `uv lock --check` fails, per [D1](design.md#d1).
   Verify: `uv --version | cut -d' ' -f2` prints `0.12.19`, and `grep -c 'required-version = "==0.12.19"' pyproject.toml` prints `1`.
-- [ ] 1.3 In both workflows, pin every `uses:` to its commit SHA with the release in a comment, set `runs-on: ubuntu-24.04`, give `astral-sh/setup-uv` `version: "0.12.19"` and Node an exact `22.x.y`, per [D1](design.md#d1).
+- [x] 1.3 In both workflows, pin every `uses:` to its commit SHA with the release in a comment, set `runs-on: ubuntu-24.04`, give `astral-sh/setup-uv` `version: "0.12.19"` and Node an exact `22.x.y`, per [D1](design.md#d1).
   Verify: `cat .github/workflows/ci.yml .github/workflows/build-image.yml | grep -c -e 'ubuntu-latest' -e "node-version: '22'"` prints `0`, and `cat .github/workflows/ci.yml .github/workflows/build-image.yml | grep -c -E 'uses: [^@]+@v[0-9]+$'` prints `0`.
 
 ## 2 — The image: inputs by digest, a locked environment, built on request

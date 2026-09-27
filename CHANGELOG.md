@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CI and the toolchain pinned** (`0033` design D1): every workflow action by commit SHA, the runner
+  `ubuntu-24.04`, Node `22.23.3`, and uv `0.12.19` in CI and in `pyproject.toml`'s `required-version`.
+
 ## [0.23.0] - 2026-09-26
 
 ### Changed
