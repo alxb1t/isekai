@@ -5,7 +5,7 @@ The verb and the script first, then the abort, then the skills that name them; t
 
 ## Progress
 
-- [ ] 1 — `compare`: the comparison page
+- [x] 1 — `compare`: the comparison page
 - [ ] 2 — `infra/render.sh`: a render session that always tears down
 - [ ] 3 — the tagger's native abort
 - [ ] 4 — the skills, their check, the pod rule and the docs
@@ -15,11 +15,11 @@ Line numbers are `866c346`'s; find each site by the text it names.
 
 ## 1 — `compare`: the comparison page
 
-- [ ] 1.1 **HALT CHECK** — there is no `compare` verb.
+- [x] 1.1 **HALT CHECK** — there is no `compare` verb.
   Verify: `grep -c '("compare", ' isekai/interface/cli.py` prints `0`.
-- [ ] 1.2 Add `compare` to `VERBS` in `isekai/interface/cli.py`, with a positional batch directory and without the photographs, `--runs` and `--flow` arguments; build the page in a new `isekai/interface/compare_view.py`, per [D2](design.md#d2).
+- [x] 1.2 Add `compare` to `VERBS` in `isekai/interface/cli.py`, with a positional batch directory and without the photographs, `--runs` and `--flow` arguments; build the page in a new `isekai/interface/compare_view.py`, per [D2](design.md#d2).
   Verify: `grep -c '("compare", ' isekai/interface/cli.py` prints `1`, and `test -f isekai/interface/compare_view.py; echo $?` prints `0`.
-- [ ] 1.3 In a new `tests/test_compare.py`, test `the-page-links-photographs-to-renders`, `a-run-without-a-render-is-marked`, `only-the-path-is-printed` and `a-batch-without-runs-is-refused` under `cli:compare:`; add `compare` to `tests/test_pipeline_cli.py`'s `EXPECTED_VERBS` and give it a batch argument in `test_each_verb_is_reachable_as_a_subcommand` (`:173-179`).
+- [x] 1.3 In a new `tests/test_compare.py`, test `the-page-links-photographs-to-renders`, `a-run-without-a-render-is-marked`, `only-the-path-is-printed` and `a-batch-without-runs-is-refused` under `cli:compare:`; add `compare` to `tests/test_pipeline_cli.py`'s `EXPECTED_VERBS` and give it a batch argument in `test_each_verb_is_reachable_as_a_subcommand` (`:173-179`).
   Verify: `grep -c 'cli:compare:' tests/test_compare.py` prints `4`, and `grep -c '"compare"' tests/test_pipeline_cli.py` prints a number above `0`.
 
 ## 2 — `infra/render.sh`: a render session that always tears down

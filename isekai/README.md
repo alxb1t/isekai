@@ -11,7 +11,7 @@ what it is, not by what calls it. The evaluator is not here: it is
 | [`pipeline/`](pipeline/README.md) | the staged verbs | `caption.py` · `tagging.py` · `sheet.py` · `review.py` · `generate.py` |
 | [`shared/`](shared/README.md) | primitives with no domain of their own | `field_map.py` · `fields.py` · `image.py` · `vocabulary.py` |
 | [`boundary/`](boundary/README.md) | everything that leaves this process | `comfy/` (`__init__.py` · `contract.py` · `client.py` · `multipart.py`) · `ollama.py` · `provision.py` · `wd14.py` |
-| [`interface/`](interface/README.md) | what an operator touches | `cli.py` · `wiring.py` · `run_view.py` · `ui/` (`__init__.py` · `batch.py` · `bundle.py` · `app.py`) |
+| [`interface/`](interface/README.md) | what an operator touches | `cli.py` · `wiring.py` · `run_view.py` · `compare_view.py` · `ui/` (`__init__.py` · `batch.py` · `bundle.py` · `app.py`) |
 
 **The column names the files rather than counting them, and that is the fix for a
 rot this repository has now watched twice.** It used to hold a number under a

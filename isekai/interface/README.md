@@ -1,7 +1,8 @@
 # `interface/` — what an operator touches
 
 The two front ends. The verb line, the composition behind them both, the
-read-only account of a run, and the browser surface for stage ③.
+read-only account of a run, the comparison page of a batch, and the browser
+surface for stage ③.
 `isekai/__main__.py` stays at the package root because `runpy` pins that path; it
 is a shim over `cli.py` and holds nothing else.
 
@@ -16,6 +17,7 @@ neither is privileged and neither goes through the other.
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions and producers. Reads everything, decides nothing |
+| `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the batch directory. Reads, decides nothing |
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
 | `ui/batch.py` | the batch and the whole startup refusal order. **Imports no web framework**, which is what keeps that order testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
@@ -28,9 +30,10 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `cli.py` | `__main__.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
-| `run_view.py` | `cli.py` | `tests/test_run_view.py` |
+| `cli.py` | `__main__.py` | `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
+| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_compare.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
+| `run_view.py` | `cli.py`, `compare_view.py` | `tests/test_run_view.py` |
+| `compare_view.py` | `cli.py` | `tests/test_compare.py` |
 | `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py` |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
