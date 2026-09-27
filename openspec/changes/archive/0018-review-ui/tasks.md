@@ -278,7 +278,7 @@ build order, the three things that are easy to get wrong and the keyboard model.
 - [x] 7.3 Render ` · rare` in `accent-300` for `posts < 2000`. **This threshold exists nowhere in the
       repo** — the design is its only authority.
 - [x] 7.4 Verify the real data, not the design's: `curl -s 'localhost:8517/api/tags?q=blonde' | head` —
-      **two matches, `blonde hair` and `blonde pubic hair`.** `platinum blonde hair` is absent from the
+      **two matches, `blonde hair` and an intimate body-hair tag.** `platinum blonde hair` is absent from the
       prediction set (delta 10), so 2b is a layout reference only.
 - [x] 7.5 Verify by eye against `ui/design/screens/02-editing-autocomplete.png` and
       `ui/design/screens/03-autocomplete-blonde-detail.png` for **layout and behaviour**, not content.

@@ -41,7 +41,7 @@ the reason in the record changes.**
 
 **And the free-text cascade cannot be reused by the router, which the roadmap assumed it could.**
 `map_phrase`'s first act is not a pass — it is an absence guard (`vocabulary.py:309`) that **drops 37 of
-the 8,106 canonical tags before pass 1 runs**, including `no bra` 94k and `no panties` 87k, **both of
+the 8,106 canonical tags before pass 1 runs**, including the undergarment absence tags, each above 85k, **both of
 which appear in the operator's own approved sheets**. A router built on `map_phrase` would silently
 discard tags from the ground truth it is measured against. The router is a dict lookup.
 
@@ -62,8 +62,8 @@ discard tags from the ground truth it is measured against. The router is a dict 
   *absent aid, never a refusal* rule to the hosted tagger.
 - **The sheet stays a bare `{field: [tag]}`, ordered by the tagger's confidence descending.** Schema
   version unchanged; the review surface, the prompt assembly and `review.py` are untouched. **The
-  ordering is the deletion aid** — no implication collapse, so `underwear · panties · black panties` all
-  land in `clothes` and the general forms sort above the specific ones.
+  ordering is the deletion aid** — no implication collapse, so an undergarment's class, garment and
+  coloured tags all land in `clothes` and the general forms sort above the specific ones.
 - **Both sorters retire, and the free-text cascade with them** — in **two** phases, because they share
   only one file and orphan different tests. `OllamaSorter`, `ClaudeSorter`, `Sorter`, `Sorting`,
   `FakeSorter`, `output_shape`, `answers_from`, `sorter_prompt`, `SORTER_OPTIONS`, `SORTER_REMEDY`; then
@@ -107,7 +107,7 @@ discard tags from the ground truth it is measured against. The router is a dict 
 
 - `sheet`: **22 scenarios today, not 21.** Fourteen are REMOVED — five `sheet:mapping:*` with the cascade,
   five `sheet:selection:*` with the sorters, the three-scenario seam-and-structure requirement, and
-  `sheet:purity:absence-clause-is-dropped`, which is implemented wholly by the guard that eats `no bra`.
+  `sheet:purity:absence-clause-is-dropped`, which is implemented wholly by the guard that eats an undergarment absence tag.
   **Eight survive**; the stage's input requirement is restated for a tag list, and gains a refusal on an
   absent tag artifact and a `field_map` provenance record. **The 14 lost keys carry 31 test bindings, and
   `CLAUDE.md:158` states there is no binding checker** — so the 31 are listed in `tasks.md` by name.

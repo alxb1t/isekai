@@ -9,11 +9,11 @@
     "source": "prompts"
   },
   "flow": "summon-anime-wai",
-  "flow_digest": "039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b",
+  "flow_digest": "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698",
   "seed": 42,
   "sheet": 1,
   "graph_sha256": "26e998ba41aea44f6a62c193c2c00976be702e11b4f84221f6ca8068644f347c",
-  "flow_graph_sha256": "ed7f29827fff16126fca87e5cc0afe545a879adbc6d74abc9ad88bcbc4a8ed10",
+  "flow_graph_sha256": "3484f852557c497c2f4ef65c7d1694555e4fb2051d1df66183ef1ac256c86bdb",
   "edited": true,
   "image": "ghcr.io/alxb1t/isekai@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "pinned": true,

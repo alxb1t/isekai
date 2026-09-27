@@ -13,7 +13,8 @@ api() {
 
 if [ ! -f .runpod_pod_id ]; then
   echo "No .runpod_pod_id — nothing to tear down (already down?)."
-  echo "If infra/up.sh said a create's outcome is unknown, check the RunPod MCP's list-pods."
+  echo "If infra/up.sh said a create's outcome is unknown, find the pod with the RunPod MCP's"
+  echo "list-pods, write its id to .runpod_pod_id and run bash infra/down.sh again."
   exit 0
 fi
 pod_id=$(cat .runpod_pod_id)
@@ -39,5 +40,6 @@ else
     | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
       >&2 2>/dev/null \
     || echo "  $resp" >&2
+  echo "Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image" >&2
   exit 1
 fi

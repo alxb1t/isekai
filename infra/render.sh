@@ -43,8 +43,8 @@ photographs with: uv run python -m isekai tag ${flows[*]} --runs $runs $(dirname
   || refuse "a pod is already recorded in .runpod_pod_id; run bash infra/down.sh first"
 # Something already answering on the port would be rendered against instead.
 if curl -sf --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; then
-  refuse "$SERVER already answers; stop what holds the port, likely an earlier \
-tunnel: kill \$(lsof -t -iTCP:8188 -sTCP:LISTEN)"
+  refuse "$SERVER already answers. An earlier session's tunnel stops with \
+pkill -f -- '-L 8188:localhost:8188'; lsof -iTCP:8188 -sTCP:LISTEN shows anything else"
 fi
 
 # Free work first: every prompt is assembled before anything is rented, so a

@@ -70,9 +70,7 @@ APPROVED = ".data/v0.20/runs/*/summon-open-v1/review/*.approved.json"
 # A `hair` tag whose non-suffix words carry one of these takes `hair_colour`;
 # every other takes `hair_silhouette`. Both list all 103, so nothing is hidden
 # from browsing -- the split is the router's, not the cheatsheet's (design.md
-# D16). The operator's own sheets prove it separates cleanly: `brown hair` x5,
-# `blonde hair` x2, `black hair` against `long hair` x7, `wavy hair` x6,
-# `straight hair` x2, `medium hair`.
+# D16). The operator's own sheets show the split separates cleanly.
 COLOUR_WORDS = frozenset(
     """aqua black blond blonde blue brown colored gradient gray green grey
     multicolored orange pink purple rainbow red silver split-color streaked
@@ -205,9 +203,8 @@ BRIEFING: Mapping[str, tuple[str, ...]] = {
 # drift rather than as an input.
 #
 # 113 tags over the ten approved sheets of the v0.20 batch, as
-# `tag -> criterion -> how often`. The counts are load-bearing and not decoration:
-# they are what puts `collarbone` in `pose` (3 against `body_shape` 1), `navel` in
-# `clothes` (2 against one each) and `standing` in `pose` (7 against `framing` 1).
+# `tag -> criterion -> how often`. The keys decide: for each tag filed under more
+# than one criterion, `PRECEDENCE` picks the same winner the counts do.
 # Refresh it with `--refresh` after a batch, never by hand.
 FILED: Mapping[str, Mapping[str, int]] = {
     "1girl": {"count": 10},
@@ -369,9 +366,9 @@ def inflect(word: str) -> set[str]:
     """Return `word` with the endings an English stem takes in a tag.
 
     `-s/-es/-ing/-ed`, not only the plural. Plurals alone leave twelve of the
-    operator's 113 approved tags unreachable -- `pulling` from `pull`, `licking`
-    from `lick`, `lifted by self` from `lift` -- so the drop-`e` and
-    consonant-doubling cases are handled too (design.md D30 (1)).
+    operator's 113 approved tags unreachable -- an `-ing` form, or a phrase with
+    an `-ed` word -- so the drop-`e` and consonant-doubling cases are handled too
+    (design.md D30 (1)).
     """
     forms = {word}
     forms.add(word + "es" if word.endswith(("s", "x", "z", "ch", "sh")) else word + "s")

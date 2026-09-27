@@ -83,7 +83,7 @@ JoyCaption's booru mode was run on three real photographs across four prompt var
 | **`"Write a long list of Booru tags for this image."` raw** | 45–51 | **36 / 145 = 24%** |
 | the same, framed | 48–54 | 41 / 155 = 26% |
 
-The out-of-vocabulary remainder is stock-photo keywording — `attractive`, `sexy`, `natural beauty`,
+The out-of-vocabulary remainder is stock-photo keywording — `attractive`, an appeal adjective, `natural beauty`,
 `fashion photography`, `everyday life`, `high resolution` — and it **contradicts its own prose on the
 same photograph**: `blue eyes` against a caption reading *light brown eyes* and a sheet reading
 `brown eyes`; `tan skin` against *light brown skin*; `full body` against *the lower half of her body is

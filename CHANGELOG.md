@@ -25,6 +25,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-09-27
+
+### Changed
+
+- **No intimate tag, rating term or per-tag count from the operator's sheets stays in tracked prose.** Archived
+  `0018`, `0020`, `0021` and `0025` and earlier entries here are edited to describe what they quoted — a stated
+  exception to the archive's freeze and this file's append-only rule (0036 design D1).
+- **`tools/derive_field_map.py`'s comments follow, and no code moves.** The false "load-bearing" comment now says
+  `PRECEDENCE` picks the winner the counts do (0036 design D2).
+- **D33 records that isekai restricts no content; the operator answers for what renders** (0036 design D4).
+- **`docs/pins.md` stops overstating the reader's and the image's pins.** The reader alias's template and
+  the image's build tools join *Not pinned*, and a leftover pod-image record's borrowed pin joins *where it
+  stops* (0036 design D5).
+- **The teardown and port messages name the right fix.** A lost create and a failed teardown route through
+  `.runpod_pod_id` and `infra/down.sh`; the port refusal stops only an earlier session's tunnel. The
+  teardown test skips `echo` lines, so it still reads the call (0036 design D6).
+- **`summon-anime-wai`'s graph placeholder is `photo.jpeg`, re-pinned in place.** The `LoadImage` `image` held
+  a real photograph's filename, which `build_graph` overwrites before any submission, so no submitted graph
+  moves; a new test holds that. `summon-anime-wai` →
+  `96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698` (0036 design D7).
+
 ## [0.25.0] - 2026-09-27
 
 ### Added
@@ -333,12 +354,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **The negative prompt is quality-only, and the graph no longer carries a second copy of it.**
-  `censor, nsfw` left both tracked flows' `flow.json` negative — a negative whose job, per the base
+  The content-rating tags left both tracked flows' `flow.json` negative — a negative whose job, per the base
   model's publisher, is quality, while the positive is what decides content. The operator measured
   the difference by eye across real renders. `lens flare, light particles, dust` was already present
   in both, so that half of the ask was a no-op.
 - **`graph.json`'s negative node is emptied rather than synchronised, in both flows.** It read
-  `bad quality, worst quality, worst detail, sketch, censor, nsfw`, and `worst detail` appeared
+  `bad quality, worst quality, worst detail, sketch` and the content-rating tags, and `worst detail` appeared
   nowhere else — the two strings had already drifted, unnoticed, because nothing reads the second
   one: `generate.py`'s `patch("negative", text=prompt["negative"])` overwrites that node on every
   render from `flow.json`'s fragment, and `negative` is a required role so the patch is
@@ -433,9 +454,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Two strings moved in each flow, and nothing else did — `git diff --stat -- flows/` shows exactly
   `flow.json` and `graph.json` in each of the two directories. In `flow.json`,
-  `"bad quality, worst quality, sketch, censor, nsfw, lens flare, light particles, dust"` became
+  `"bad quality, worst quality, sketch, <rating tags>, lens flare, light particles, dust"` became
   `"bad quality, worst quality, sketch, lens flare, light particles, dust"`. In `graph.json`,
-  `"bad quality, worst quality, worst detail, sketch, censor, nsfw"` became `""`. **Neither flow
+  `"bad quality, worst quality, worst detail, sketch, <rating tags>"` became `""`. **Neither flow
   identifier changed**, because the old configuration is abandoned rather than still wanted; no run
   is orphaned, since orphaning follows a changed id and `manifest_digest` has one consumer.
 - **Accepted on a pod, by eye, on the operator's own photographs.** Seven photographs, both flows,
@@ -444,7 +465,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   absence confirmed against the provider's API, not against the teardown script's own output.
   Assembly of all fourteen prompts was proved with `--server` omitted before the pod existed, and
   every assembled negative read `bad quality, worst quality, sketch, lens flare, light particles,
-  dust` with none carrying `censor`, `nsfw` or `worst detail`. **The operator's verdict on the
+  dust` with none carrying a content-rating tag or `worst detail`. **The operator's verdict on the
   images was that they are good, and the acceptance passed on that.**
 - **A clean checkout runs `caption` with no extra flag** — `rm -rf .venv && uv sync --locked`, then
   `caption` wrote the prose, the local WD14 tag list and the hosted tag list. The middle one is the
@@ -1174,8 +1195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cheatsheet and impossible for the router, since `long hair` must have one primary. A `hair` tag whose
   non-suffix words contain a colour word takes `hair_colour` (**26**), every other takes
   `hair_silhouette` (**77**), and **both fields list all 103** so nothing is hidden from browsing. The
-  operator's own sheets prove the split separates cleanly — `brown hair ×5`, `blonde hair ×2`,
-  `black hair` against `long hair ×7`, `wavy hair ×6`, `straight hair ×2`, `medium hair` (design.md D16).
+  operator's own sheets prove the split separates cleanly — `brown hair`, `blonde hair`, `black hair`
+  against `long hair`, `wavy hair`, `straight hair`, `medium hair` (design.md D16).
 
 - **`scripts/derive_field_map.py` — the authoring aid, stdlib and offline.** The route the roadmap
   credited to Danbooru's `search[name_matches]` wildcard needs no Danbooru at all: **a wildcard
@@ -1194,7 +1215,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Substring is the defect the roadmap flagged — `scar` matches `scarf`, and `\bscar\b` takes 44 matches
   to 15. But the roadmap's own remedy introduces a second one: `\bbraid\b` alone loses `twin braids`
   153,036 and seven more. And plurals alone leave **12 of the operator's 113 approved tags unreachable**
-  — `pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift` — so `-s/-es/-ing/-ed`,
+  — `pulling` from `pull`, `licking` from `lick`, a phrase with `lifted` from `lift` — so `-s/-es/-ing/-ed`,
   the drop-`e` case and consonant doubling are all handled and **seeds are written as stems**.
 - **The record's one verifiable number reproduces, and it is 57 rather than 63.** The seven seeds at
   `notes/v0.19_improvements/ui.md:575` reach **59** tags, **57** of them beyond the 103-tag suffix
@@ -1286,7 +1307,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   request.** `tasks.md` marks no phase ⚠️ GPU and phase 9 requires no render; this was an operator
   session, recorded here so *"money: zero, every phase"* stays true of the **phases**. 21m36s on an
   RTX PRO 4500 Blackwell, ≈$0.30, all eight downloaded before teardown, `infra/down.sh` run and the
-  RunPod MCP confirming `pods: []`. **`no bra` and `no pants` rendered as intended** — the failure
+  RunPod MCP confirming `pods: []`. **The approved clothing-absence tags rendered as intended** — the failure
   `CLAUDE.md` records for absence clauses did not reproduce, which is the first live evidence for
   design.md D24's claim that deleting the guard was a repair.
 
@@ -1302,7 +1323,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not feed.
 - **The router is a dictionary lookup and it does not call `map_phrase`.** The cascade's first act is
   not a pass — it is an absence guard, and swept over the whole provisioned vocabulary it drops **37
-  of 8,106 canonical tags before pass 1 runs**, including `no bra` 93,761 and `no panties` 87,258,
+  of 8,106 canonical tags before pass 1 runs**, including the undergarment absence tags, each above 85,000 posts,
   **both of which are in the operator's own approved sheets**. A router built on it would silently
   discard tags from the ground truth it is measured against (design.md D24).
 - **An absent `wd14/` is a refusal naming `caption`.** A sheet with every field empty is legal and
@@ -1347,8 +1368,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a hand-edit to it would be erased by the next run. `realistic` 19,111 is the same kind of tag and
   appeared on all eight v0.20 photographs; it is deliberately **not** here, because one was named.
 - **`lips` ships with zero primaries, knowingly.** All thirteen of its tags lose to `expression`'s
-  `lips` stem, which is what the operator's own sheets say — he filed `lips` twice and `parted lips`
-  four times under `expression`. The criterion browses all thirteen through `also` and routes none, and
+  `lips` stem, which is what the operator's own sheets say — the operator filed `lips` and `parted lips`
+  under `expression`. The criterion browses all thirteen through `also` and routes none, and
   on `conjure-v1`, which declares `lips` as a field of its own, nothing will route to it. One
   vocabulary-keyed assignment cannot serve both flows (design.md D4); this is which way it was pointed.
 
@@ -1378,7 +1399,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the first pass and the other three would never run.
 - **Deleting the absence guard is a repair as much as a retirement.** `asserts_absence` fired *before*
   any pass and, swept over the whole provisioned vocabulary, dropped **37 of 8,106 canonical tags**,
-  `no bra` and `no panties` among them — both in the operator's own approved sheets. A prompt still
+  the undergarment absence tags among them — both in the operator's own approved sheets. A prompt still
   carries no negation; what enforced it was a text rule on prose, and prose is no longer an input.
 - **`normalise()` stays, and it is not a near miss.** It is called by `Vocabulary.__contains__`,
   `count`, `search` — the UI autocomplete, pinned by `ui:vocabulary:matches-are-ranked-by-post-count` —
@@ -1387,7 +1408,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unchanged by this version.
 - **Six more scenarios, with 16 test functions (21 collected) and four more in `test_sheet_schema.py`.**
   Five `sheet:mapping:*` describe the cascade's passes; `sheet:purity:absence-clause-is-dropped` is
-  implemented wholly by the guard that eats `no bra`, and after this change a canonical tag stream
+  implemented wholly by the guard that eats an undergarment absence tag, and after this change a canonical tag stream
   cannot contain a clause — so the scenario would be **unreachable** rather than merely unneeded.
 - **Four of the five `sheet.briefing.md` tests.** One called `map_phrase`; three asserted sentences in
   instructions nothing follows. The fifth is kept: *every field name the briefing mentions exists in the
@@ -2278,7 +2299,7 @@ through `caption` → `sheet` → `ui`/`approve` → `generate` on `summon-open-
   count is one ⏎ away and a rare tag takes a deliberate ↓; counts are right-aligned mono `tabular-nums`,
   because a post count is read by digit count and that only works if the digits align; ` · rare` in
   `accent-300` below 2,000 posts. **Measured against the real prediction set, not the design's:**
-  `blonde` returns `blonde hair` (1,311,581) and `blonde pubic hair` (1,634 · rare) — two tags, not the
+  `blonde` returns `blonde hair` (1,311,581) and an intimate body-hair tag (1,634 · rare) — two tags, not the
   frames' four, since `platinum blonde hair` is absent. A fragment matching nothing shows no rows and
   cannot be committed.
 - **A click anywhere in a row focuses that field.** The fragment input is sized to its content, because
@@ -4018,7 +4039,7 @@ Drafted in `tasks.md` before any number existed, and reproduced here unchanged n
 
 ### Notes
 
-- The negative carries one tag beyond the publisher's quoted short form: `nsfw`, which the same
+- The negative carries one tag beyond the publisher's quoted short form: a rating tag, which the same
   model page instructs users to add to filter its four safety-rating tags. On a product that
   converts photographs of real people, omitting an instruction the publisher gives by name would
   be a defect rather than fidelity to the quote.

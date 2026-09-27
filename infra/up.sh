@@ -27,9 +27,9 @@ report() {  # report <call> <status> <body>, per 0034 design D4
 
 lost() {  # a create whose outcome is unknown may have placed a pod no file records
   echo "The create's outcome is unknown: a pod named 'isekai' may exist and bill," >&2
-  echo "with no .runpod_pod_id to record it. Check the RunPod MCP's" >&2
-  echo "list-pods, delete any 'isekai' pod there with delete-pod, then re-run" >&2
-  echo "bash infra/up.sh." >&2
+  echo "with no .runpod_pod_id to record it. Check the RunPod MCP's list-pods;" >&2
+  echo "for an 'isekai' pod there, write its id to .runpod_pod_id and run" >&2
+  echo "bash infra/down.sh, then re-run bash infra/up.sh." >&2
 }
 
 # The pod boots the digest config/image.json pins, never a tag, and nothing in the

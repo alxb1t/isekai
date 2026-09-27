@@ -8,7 +8,7 @@ version: v0.22.3
 first version in this stabilization whose scope came from use rather than from a backlog, and each item
 turned out to be something other than what it first looked like.
 
-**① The negative prompt carries two tags that fight the product.** `censor, nsfw` sit in a negative whose
+**① The negative prompt carries two tags that fight the product.** The content-rating tags sit in a negative whose
 job — per the base model's publisher — is quality. The operator measured the difference by eye across real
 renders: removing them produces better images. The positive prompt is what decides content; the negative
 should say nothing about it.
@@ -32,7 +32,7 @@ every `caption` for every flow, which makes *"optional"* false in the plainest s
 third are one act split in two: moving the dependencies makes five sentences false, and the file they are
 densest in is also the file that should teach someone how to run this.
 
-1. **The negative prompt becomes quality-only.** `censor, nsfw` leaves both flows' `flow.json`.
+1. **The negative prompt becomes quality-only.** The content-rating tags leave both flows' `flow.json`.
    `graph.json`'s negative becomes an empty string — **a deletion rather than a sync**, so there is one
    source of truth instead of two that happen to agree today. Two `PINNED` digests are recomputed.
 

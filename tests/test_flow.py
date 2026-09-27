@@ -51,7 +51,7 @@ PINNED: dict[str, str] = {
         "f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f"
     ),
     "summon-anime-wai": (
-        "039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b"
+        "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
     ),
 }
 

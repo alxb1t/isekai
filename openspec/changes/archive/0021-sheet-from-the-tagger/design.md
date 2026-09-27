@@ -169,9 +169,9 @@ for a reason no manifest states.
 ### D6 · The sheet stays `{field: [tag]}`, ordered by the tagger's confidence descending
 
 **No implication collapse** — WD14 emits Danbooru's hierarchy, so one garment arrives four times
-(`underwear 0.94 · panties 0.91 · highleg panties 0.80 · white panties 0.64`), all correct, all in the
-vocabulary. This is carried deliberately: the operator's approved sheets contain `underwear`, `panties`
-**and** `black panties` on the same photograph, so collapsing would delete tags he keeps.
+(an undergarment's general class, the garment, a cut of it and a colour of it, from 0.94 down to 0.64), all
+correct, all in the vocabulary. This is carried deliberately: the operator's approved sheets contain the
+class, the garment **and** a coloured form of it on the same photograph, so collapsing would delete kept tags.
 
 **The ordering is therefore the deletion aid, and it is free.** Confidence descending puts the general
 forms above the specific ones in the field, which is the order he deletes in. **A per-tag
@@ -207,9 +207,9 @@ tag above the floor that never reached an approved field — was measured and **
 exist over the eight, and they conflate two kinds.
 
 ```
-  never a criterion    realistic ×8 · photorealistic ×8 · artist name · photo background
+  never a criterion    realistic · photorealistic · artist name · photo background
                        · foreshortening · holding
-  wrong about THIS     bra ×3 · dress ×2 · high heels ×2 · thighhighs · sweater · shorts
+  wrong about THIS     an undergarment · dress · high heels · thighhighs · sweater · shorts
   photograph           · leotard · pantyhose · fishnets · lace · lace trim
 ```
 
@@ -343,7 +343,7 @@ committed sha256. A CI check over the authored table needs the same fetch every 
 already needs, and it is free.*
 
 **Danbooru's `tag_implications` endpoint is deferred.** It would sub-group `clothes` mechanically —
-`white panties` → `panties` → `underwear` → `clothes` — and it is the one thing Danbooru knows that the pin
+a coloured undergarment → the garment → its class → `clothes` — and it is the one thing Danbooru knows that the pin
 does not. It is refused here because D7 chose the filter, which makes 800 rows navigable without a
 hierarchy, and because a build-time HTTP dependency for a display nicety is not worth it in a version this
 size. *Trigger: if the filter proves to be the slow part in use.*
@@ -358,8 +358,8 @@ primary.
 **The split is mechanical, and the operator's own sheets prove it separates cleanly:**
 
 ```
-  hair_colour      brown hair ×5 · blonde hair ×2 · black hair
-  hair_silhouette  long hair ×7 · wavy hair ×6 · straight hair ×2 · medium hair
+  hair_colour      brown hair · blonde hair · black hair
+  hair_silhouette  long hair · wavy hair · straight hair · medium hair
 ```
 
 **A `hair` tag whose non-suffix words contain a colour word gets `hair_colour` as its primary; every other
@@ -505,8 +505,8 @@ the other three"* mis-describes the body twice:
 - **The first thing in `map_phrase` is not a pass.** `vocabulary.py:308-310` runs `normalise()` then
   `asserts_absence()`, and returns `[]` on a hit. Sweeping the whole provisioned vocabulary through it
   measures **37 of the 8,106 canonical tags dropped before pass 1 ever runs** — including `no humans`
-  113,058 · **`no bra` 93,761** · **`no panties` 87,258** · `no shoes` 77,591 · `otoko no ko` 48,688.
-  **`no bra` and `no panties` are both in the operator's own approved sheets.**
+  113,058 · **the undergarment absence tags, each above 85,000** · `no shoes` 77,591 · `otoko no ko` 48,688.
+  **Both undergarment absence tags are in the operator's own approved sheets.**
 - **Passes 3 and 4 are not alternatives** — `_curated_pass` runs whenever 1 and 2 miss, and containment
   then runs on whatever words survive it.
 
@@ -613,7 +613,7 @@ lists were authored and then measured. Three findings came out of measuring them
 
 **① Plurals are not enough — the matcher needs `-s/-es/-ing/-ed`.** D18 showed `\bbraid\b` losing
 `twin braids`; with plural handling alone, **12 of the operator's 113 approved tags are unreachable** —
-`pulling` from `pull`, `licking` from `lick`, `lifted by self` from `lift`. With stem morphology and the
+`pulling` from `pull`, `licking` from `lick`, a phrase with `lifted` from `lift`. With stem morphology and the
 `also`-group rule below, it is **0 of 113**. Seeds are therefore written as **stems**.
 
 **② The seven groups are 2,829 tags and `clothes` alone is 1,411.** The brief said *"`clothes` is 900 tags
@@ -628,13 +628,13 @@ of the 113 tags he approved.
 sheets decide first** — 17 of the 265 — then a declared precedence order settles the remaining 248, then
 phase 8 overrides individual tags. **Step 1 leads because no ordering reproduces his filing:** he puts
 `bare shoulders` in `clothes` (4×) where the seeds offer `body_shape` or `clothes`, `open mouth` in
-`expression` where they offer `clothes` or `expression`, `clothes lift` in `clothes` where they offer
+`expression` where they offer `clothes` or `expression`, a garment-lift tag in `clothes` where they offer
 `clothes` or `pose`, and `navel` in **all three** of `pose`, `clothes` and `body_shape`. A tag he approved
 and then rendered is render-tested, which is the argument `ui.md` § ⑥ already makes for mining his
 corrections — applied here to the one decision the table cannot derive.
 
 **The losing criteria keep the tag in `also`**, which is also why eight of the twelve originally-unreachable
-approved tags need no seed: `collarbone`, `thighs`, `ass` and `breasts out` reach `pose` through `also`,
+approved tags need no seed: `collarbone`, `thighs` and intimate body tags reach `pose` through `also`,
 and `standing` reaches `framing` the same way.
 
 **Two further defects in the cut's own `tasks.md`, found in the same pass and fixed:** 6.4 said to correct

@@ -23,7 +23,7 @@ Each gain, and where it stops.
 | **integrity** | a file whose bytes differ from its pinned digest is refused | a digest proves the bytes are the pinned ones, not that they are benign; GGUF, safetensors and ONNX carry no code, which is what keeps a model inert |
 | **supply chain** | a new or re-published release never arrives unasked; a moved action tag cannot run new code | a release compromised before it was pinned stays pinned |
 | **comparable figures** | a figure names the configuration that produced it, and a later run can use the same one | only for runs recorded after the pins |
-| **attribution** | each artifact records the files, options, floor, flow and image that shaped it | what is not pinned is recorded, not held |
+| **attribution** | each artifact records the files, options, floor, flow and image that shaped it | what is not pinned is recorded, not held; a render on another server, after a teardown that did not answer 204, borrows .runpod_pod_image's pin |
 | **no silent drift** | every move is a commit — a new digest, a re-lock, a re-pin — so `git log` and `git bisect` find when an output changed | |
 | **rollback** | an old image digest boots again | while the registry keeps it |
 | **fail before paying** | a wrong or missing model is refused before a call or a paid render | |
@@ -39,7 +39,7 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 |---|---|---|---|
 | the pod image | digest | `config/image.json` | `infra/up.sh` boots only that digest and writes it to `.runpod_pod_image` |
 | the image's base and uv | digest | `Dockerfile` | at build |
-| the image's Python environment | a lock with every hash; Python by patch | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
+| the image's Python environment | a lock with every installed package's hash; Python by patch; the sdist builds' tools by version | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
 | ComfyUI and its custom nodes | git commit | `Dockerfile` | at build; `tests/test_infra.py` holds each clone to a commit |
 | isekai's Python dependencies | a lock with every hash | `pyproject.toml`, `uv.lock` | `uv sync --locked`, the gate's first command |
 | uv | exact version | `pyproject.toml`, `image/pyproject.toml`, `.github/workflows/ci.yml`, `Dockerfile` | every `uv` command |
@@ -85,9 +85,11 @@ What stays open, and what stands in for it.
 | input | why not | what stands in |
 |---|---|---|
 | apt packages in the image | versions leave the Ubuntu archive, so a pinned version breaks a later build | the image digest freezes them inside each image |
-| the Ollama runtime | the operator installs it, outside the repository | the alias's layers are checked, and the caption and the hosted tags record both file digests |
+| the Ollama runtime | the operator installs it, outside the repository | the alias's model and projector layers are checked, and the caption and the hosted tags record both file digests |
 | the pod's GPU, driver and host | RunPod assigns them | each render records the ComfyUI, Python and PyTorch versions the pod reports |
 | macOS and Metal on the operator's machine | outside the repository | nothing yet |
+| the reader alias's template, system prompt and parameters | the check compares the model and projector layers alone, and changing the rest needs write access to the operator's Ollama store | `config/joycaption.Modelfile`, from which the alias is built |
+| the build tools of the image's sdist-only packages | `image/pyproject.toml`'s build constraints fetch them by version into an isolated build, with no hash checked | the image digest freezes what they built; PyPI never re-serves a released file under new bytes |
 
 **A rebuild is not byte-identical**: apt is open, and insightface compiles from source. What reproduces exactly
 is booting the same digest.
