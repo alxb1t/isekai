@@ -10,9 +10,7 @@ set -a; source ./.env; set +a    # load RUNPOD_* config
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 API="https://api.runpod.io/v2"
 
-# Print a failed call's status, and RunPod's problem+json `title` and `detail`
-# when the body is one -- the raw body otherwise.
-report() {  # report <call> <status> <body>
+report() {  # report <call> <status> <body>, per 0034 design D4
   echo "$1 returned HTTP $2:" >&2
   echo "$3" \
     | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
@@ -44,15 +42,17 @@ fi
 
 echo "Creating pod in $RUNPOD_DATACENTER ..."
 echo "  image: $image_ref"
-# `RUNPOD_GPU_TYPE` is a comma-separated preference order, not one name: it is
-# what stops a session dying at creation because one model is sold out in one
-# datacenter. v2 places one type per call, so the list is walked here: a 400
-# (no capacity, or a rule broken) moves to the next type, anything else stops.
+# `RUNPOD_GPU_TYPE` is a preference order, so one sold-out model does not end the
+# session. v2 places one type per call, so the list is walked here: a 400 (no
+# capacity, or a rule broken) tries the next type, anything else stops.
 gpus=$(jq -rn --arg gpu "$RUNPOD_GPU_TYPE" \
   '$gpu | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)) | .[]')
+if [ -z "$gpus" ]; then
+  echo "ERROR: RUNPOD_GPU_TYPE names no GPU type in .env — refusing to create a pod." >&2
+  exit 1
+fi
 pod_id=""
 while IFS= read -r gpu; do
-  [ -n "$gpu" ] || continue
   echo "Trying '$gpu' ..."
   body=$(jq -n \
     --arg image  "$image_ref" \
@@ -92,11 +92,10 @@ echo "$pod_id" > .runpod_pod_id
 echo "$image_ref" > .runpod_pod_image
 echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 
-# Poll until v2 reports `ssh.direct` -- a public IP and a mapped :22 -- and give
-# up if one never arrives. Some SECURE-cloud machines come up `RUNNING` with
-# `runtime: null` and only RunPod's own SSH proxy, which is a restricted shell and
-# will not carry the port forward this pipeline needs. The pod is then useless and
-# bills anyway.
+# Poll until `ssh.direct` -- a public IP and a mapped :22 -- appears, and give up
+# if it never does. Some SECURE-cloud machines come up `RUNNING` with `runtime:
+# null` and only RunPod's SSH proxy, a restricted shell that will not carry the
+# port forward this pipeline needs. The pod is then useless and bills anyway.
 #
 # This poll was unbounded, which made it the one thing in this repository that
 # could bill indefinitely while looking like it was working. It cost two sessions
@@ -122,10 +121,10 @@ deadline=$((SECONDS + 420))
 while true; do
   # A failed read -- transport, status or body -- is "not yet", never an abort:
   # under `set -e` an abort here skips the teardown below (0034 design D2).
-  pod=$(curl -s -f "$API/pods/$pod_id" \
-        -H "Authorization: Bearer $RUNPOD_API_KEY") || pod=""
-  host=$(echo "$pod" | jq -r '.ssh.direct.host // empty' 2>/dev/null) || host=""
-  port=$(echo "$pod" | jq -r '.ssh.direct.port // empty' 2>/dev/null) || port=""
+  read -r host port < <(
+    curl -s -f "$API/pods/$pod_id" -H "Authorization: Bearer $RUNPOD_API_KEY" \
+      | jq -r '.ssh.direct | "\(.host // "") \(.port // "")"' 2>/dev/null
+  ) || true
   [ -n "$host" ] && [ -n "$port" ] && break
   if [ "$SECONDS" -ge "$deadline" ]; then
     echo >&2
