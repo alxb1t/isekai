@@ -213,5 +213,7 @@ def test_a_clicked_image_opens_in_an_overlay_the_page_carries_itself(
     body = (batch / PAGE_NAME).read_text()
     assert 'id="overlay"' in body
     assert '"Escape"' in body
+    # A click on the shown image switches between fitted and its full size.
+    assert 'classList.toggle("full")' in body
     # Inline, so the page loads nothing beyond the images it links.
     assert "<script src" not in body and "<link " not in body

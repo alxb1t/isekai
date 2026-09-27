@@ -52,10 +52,13 @@ figcaption { padding: 0 0 8px; font-size: 11px; letter-spacing: .06em;
              text-transform: uppercase; color: #8b8f9a; }
 img { display: block; width: auto; height: auto; max-width: 100%; max-height: 80vh;
       border-radius: 6px; cursor: zoom-in; }
-#overlay { position: fixed; inset: 0; z-index: 10; display: none; align-items: center;
-           justify-content: center; background: #000000e6; cursor: zoom-out; }
+#overlay { position: fixed; inset: 0; z-index: 10; display: none; overflow: auto;
+           background: #000000e6; cursor: zoom-out; }
 #overlay.open { display: flex; }
-#overlay img { max-width: 96vw; max-height: 96vh; cursor: default; }
+/* margin: auto centres an image that fits and starts one that overflows at the
+   top left, so a full-size image scrolls from its edge rather than being cut. */
+#overlay img { margin: auto; max-width: 96vw; max-height: 96vh; cursor: zoom-in; }
+#overlay.full img { max-width: none; max-height: none; cursor: zoom-out; }
 .captions { padding: 0 20px 16px; }
 .caption, .prompt { margin: 10px 0 0; color: #9aa0ad; font-size: 12px; }
 .prompt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -64,20 +67,22 @@ img { display: block; width: auto; height: auto; max-width: 100%; max-height: 80
 .none { color: #6f7481; font-style: italic; }
 """
 
-# Click an image to see it as large as the screen allows; Esc or a click beside it
-# closes. Inline, so the page loads nothing but the images it links.
+# Click an image to see it fitted to the screen, click it again for its full size;
+# Esc or a click beside it closes. Inline: the page loads nothing but its images.
 _OVERLAY = """<div id="overlay"><img alt=""></div><script>
 const overlay = document.getElementById("overlay");
 const shown = overlay.querySelector("img");
 const close = () => {
-  overlay.classList.remove("open");
+  overlay.classList.remove("open", "full");
   shown.removeAttribute("src");
 };
 document.querySelector("main").addEventListener("click", (event) => {
   if (event.target.tagName !== "IMG") return;
   shown.src = event.target.src;
   overlay.classList.add("open");
+  overlay.scrollTo(0, 0);
 });
+shown.addEventListener("click", () => overlay.classList.toggle("full"));
 overlay.addEventListener("click", (event) => {
   if (event.target === overlay) close();
 });
