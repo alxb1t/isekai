@@ -10,7 +10,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 - [x] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
 - [x] 4 — The pin: `config/image.json`, `up.sh` boots it
 - [x] 5 — The reader: `config/reader.json`, the model checked before its first call
-- [ ] 6 — The records
+- [x] 6 — The records
 - [ ] 7 — The record in `docs/`
 - [ ] 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place
 
@@ -73,23 +73,23 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 6 — The records
 
-- [ ] 6.1 **HALT CHECK** — no pipeline stage records a floor or a flow digest.
+- [x] 6.1 **HALT CHECK** — no pipeline stage records a floor or a flow digest.
   Verify: `cat isekai/pipeline/sheet.py isekai/pipeline/generate.py isekai/pipeline/tagging.py | grep -c -e 'flow_digest' -e '"floor"'` prints `0`.
-- [ ] 6.2 In `isekai/foundation/artifacts.py`, add every key [D5](design.md#d5) names as `NotRequired`, and make `Render`'s `sheet_version` `NotRequired`, per [D6](design.md#d6); test `run-directory:schema:an-added-record-key-is-optional` in `tests/test_run_directory.py`.
+- [x] 6.2 In `isekai/foundation/artifacts.py`, add every key [D5](design.md#d5) names as `NotRequired`, and make `Render`'s `sheet_version` `NotRequired`, per [D6](design.md#d6); test `run-directory:schema:an-added-record-key-is-optional` in `tests/test_run_directory.py`.
   Verify: `grep -c 'flow_digest: NotRequired' isekai/foundation/artifacts.py` prints `3`.
-- [ ] 6.3 Record `options` in the caption and tags producers and `floor` in the wd14 producer, and carry `floor` into the sheet's producer when the list records one, per [D5](design.md#d5); test `caption:provenance:the-options-are-recorded`, `tagging:provenance:options-and-floor-are-recorded` and `sheet:output:sheet-carries-the-floor`.
+- [x] 6.3 Record `options` in the caption and tags producers and `floor` in the wd14 producer, and carry `floor` into the sheet's producer when the list records one, per [D5](design.md#d5); test `caption:provenance:the-options-are-recorded`, `tagging:provenance:options-and-floor-are-recorded` and `sheet:output:sheet-carries-the-floor`.
   Verify: `grep -c 'sheet:output:sheet-carries-the-floor' tests/test_sheet_stage.py` prints `1`.
-- [ ] 6.4 Give `sheet()` a required `flow_digest` keyword, passed by `isekai/interface/cli.py` and `tests/stages.py`, and record it in the sheet; test `sheet:output:sheet-names-its-flow-digest`, per [D5](design.md#d5).
+- [x] 6.4 Give `sheet()` a required `flow_digest` keyword, passed by `isekai/interface/cli.py` and `tests/stages.py`, and record it in the sheet; test `sheet:output:sheet-names-its-flow-digest`, per [D5](design.md#d5).
   Verify: `grep -c 'sheet:output:sheet-names-its-flow-digest' tests/test_sheet_stage.py` prints `1`.
-- [ ] 6.5 Record `flow_digest` and `sheet` in the prompt and the render, stop writing the render's `sheet_version`, and say *by approval* in `run_view.rendered`'s docstring, per [D5](design.md#d5); in `tests/test_generate.py`, test `image-generation:provenance:the-flow-digest-and-the-sheet-are-recorded` with differing numbers, and rebind `:423-437` and `:531` to the renamed scenarios.
+- [x] 6.5 Record `flow_digest` and `sheet` in the prompt and the render, stop writing the render's `sheet_version`, and say *by approval* in `run_view.rendered`'s docstring, per [D5](design.md#d5); in `tests/test_generate.py`, test `image-generation:provenance:the-flow-digest-and-the-sheet-are-recorded` with differing numbers, and rebind `:423-437` and `:531` to the renamed scenarios.
   Verify: `grep -c 'outputs-carry-the-approval' tests/test_generate.py` prints `1`, and `grep -c '"sheet_version":' isekai/pipeline/generate.py` prints `0`.
-- [ ] 6.6 Add `system_stats()` to `ComfyTransport`, `ComfyClient` (a `GET` under `_reported`) and `tests/fakes.py`'s `FakeComfyClient`, with `comfy-transport:runtime:the-report-is-read-through-the-seam` in `tests/test_generate.py`, per [D5](design.md#d5).
+- [x] 6.6 Add `system_stats()` to `ComfyTransport`, `ComfyClient` (a `GET` under `_reported`) and `tests/fakes.py`'s `FakeComfyClient`, with `comfy-transport:runtime:the-report-is-read-through-the-seam` in `tests/test_generate.py`, per [D5](design.md#d5).
   Verify: `cat isekai/boundary/comfy/contract.py isekai/boundary/comfy/client.py tests/fakes.py | grep -c 'def system_stats'` prints `3`.
-- [ ] 6.7 Give `render()` required `image` and `runtime` keywords, called after `if not wanted`; `cli._generate` reads `.runpod_pod_image` (an anchor in `tests/test_package_paths.py`) and passes a thunk memoised per session; test `a-pinned-pod-is-recorded`, `an-unrecorded-endpoint-is-unpinned` and `a-complete-batch-reads-no-report` under `image-generation:runtime:`, and adapt `tests/test_generate.py:740-903`, per [D5](design.md#d5).
+- [x] 6.7 Give `render()` required `image` and `runtime` keywords, called after `if not wanted`; `cli._generate` reads `.runpod_pod_image` (an anchor in `tests/test_package_paths.py`) and passes a thunk memoised per session; test `a-pinned-pod-is-recorded`, `an-unrecorded-endpoint-is-unpinned` and `a-complete-batch-reads-no-report` under `image-generation:runtime:`, and adapt `tests/test_generate.py:740-903`, per [D5](design.md#d5).
   Verify: `grep -c 'image-generation:runtime:' tests/test_generate.py` prints `3`.
-- [ ] 6.8 Carry `schema_document` and `field_map` from the sheet into the draft and from the draft into the approval in `isekai/pipeline/review.py`, with `review:copy:the-sheet-records-are-carried` in `tests/test_review.py`, per [D5](design.md#d5).
+- [x] 6.8 Carry `schema_document` and `field_map` from the sheet into the draft and from the draft into the approval in `isekai/pipeline/review.py`, with `review:copy:the-sheet-records-are-carried` in `tests/test_review.py`, per [D5](design.md#d5).
   Verify: `grep -c 'review:copy:the-sheet-records-are-carried' tests/test_review.py` prints `1`.
-- [ ] 6.9 Re-capture the goldens each added key moves — `caption`, `tags`, `wd14`, `sheet`, `sheet-empty`, `draft`, `draft-saved`, `approved`, `prompt` and `render` under `tests/golden/` — and no byte beyond those keys.
+- [x] 6.9 Re-capture the goldens each added key moves — `caption`, `tags`, `wd14`, `sheet`, `sheet-empty`, `draft`, `draft-saved`, `approved`, `prompt` and `render` under `tests/golden/` — and no byte beyond those keys.
   Verify: `cat tests/golden/sheet.json tests/golden/prompt.json tests/golden/render.json | grep -c '"flow_digest"'` prints `3`.
 
 ## 7 — The record in `docs/`

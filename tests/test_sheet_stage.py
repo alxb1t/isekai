@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 
+from isekai.boundary.wd14 import FLOOR
 from isekai.foundation.artifacts import SHEET_FILE, DanbooruTag, Sheet, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
@@ -476,3 +477,44 @@ def test_a_repeat_invocation_writes_nothing(
 
 # --- the briefing, which nothing reads any more --------------------------------
 #
+
+
+# --- what a sheet records -----------------------------------------------------
+
+
+@pytest.mark.spec("sheet:output:sheet-carries-the-floor")
+def test_a_sheet_carries_its_tag_lists_floor_and_none_when_the_list_has_none(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    floored = sheet(run, schema, vocabulary)
+    listed = write_wd14(run, [DanbooruTag("brown_hair")])
+    body = json.loads(listed.read_text())
+    del body["producer"]["floor"]
+    listed.write_text(json.dumps(body))
+    unfloored = sheet(run, schema, vocabulary, tags=None, new_version=True)
+
+    assert floored is not None and unfloored is not None
+    assert read(floored, SHEET_FILE)["producer"].get("floor") == FLOOR
+    assert "floor" not in read(unfloored, SHEET_FILE)["producer"]
+
+
+@pytest.mark.spec("sheet:output:sheet-names-its-flow-digest")
+def test_a_sheet_records_the_digest_it_is_handed_tagged_or_empty(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    before = sheet(run, schema, vocabulary, flow_digest="a" * 64)
+    after = sheet(run, schema, vocabulary, flow_digest="b" * 64, new_version=True)
+    empty = sheet(
+        run,
+        schema,
+        vocabulary,
+        tags=None,
+        tagged=False,
+        flow_digest="c" * 64,
+        new_version=True,
+    )
+
+    assert before is not None and after is not None and empty is not None
+    assert read(before, SHEET_FILE).get("flow_digest") == "a" * 64
+    assert read(after, SHEET_FILE).get("flow_digest") == "b" * 64
+    assert read(empty, SHEET_FILE).get("flow_digest") == "c" * 64

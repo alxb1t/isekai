@@ -31,7 +31,7 @@ class TransportFailure(Refusal):
 class ComfyTransport(Protocol):
     """The transport seam as a type.
 
-    Anything with these four methods can drive `generate.render` -- which is how
+    Anything with these methods can drive `generate.render` -- which is how
     the suite substitutes an in-memory fake for the network.
     """
 
@@ -49,4 +49,8 @@ class ComfyTransport(Protocol):
 
     def view(self, image: Image) -> bytes:
         """Download one generated image, given its {filename, subfolder, type} dict."""
+        ...
+
+    def system_stats(self) -> dict[str, Any]:
+        """Return the server's /system_stats report, its versions under `system`."""
         ...

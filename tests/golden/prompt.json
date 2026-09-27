@@ -9,6 +9,8 @@
     "source": "review"
   },
   "flow": "summon-anime-wai",
+  "flow_digest": "039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b",
+  "sheet": 1,
   "positive": "masterpiece, best quality, amazing quality, newest, brown hair, long hair, shirt, anime screencap, detailed eyes, soft lighting",
   "negative": "bad quality, worst quality, sketch, lens flare, light particles, dust",
   "edited": true

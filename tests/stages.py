@@ -18,15 +18,16 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from isekai.boundary.wd14 import LocalTagger, read_labels
+from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
     WD14_FILE,
     DanbooruTag,
     DigestRecord,
+    Runtime,
     Wd14,
     write,
 )
-from isekai.foundation.flow import Flow, Schema, load_flow
+from isekai.foundation.flow import Flow, Schema, load_flow, manifest_digest
 from isekai.foundation.run import (
     WD14,
     Run,
@@ -38,6 +39,7 @@ from isekai.shared.field_map import FieldMap, Group
 from isekai.shared.vocabulary import Vocabulary
 
 FLOW = load_flow("summon-anime-wai")
+FLOW_DIGEST = manifest_digest(FLOW.id)
 CAPTION_BRIEFING = FLOW.caption_briefing_path
 
 
@@ -129,6 +131,7 @@ def write_wd14(
             "models": ["wd14/model.onnx"],
             "pinned": True,
             "artifacts": dict(FAKE_PINS),
+            "floor": FLOOR,
         },
         "tags": [
             {"tag": tag, "confidence": round(0.9 - index / 100, 4)}
@@ -148,6 +151,7 @@ def sheet(
     field_map: FieldMap = FIELD_MAP,
     tags: Sequence[DanbooruTag] | None = TAGS,
     tagged: bool = True,
+    flow_digest: str = FLOW_DIGEST,
     new_version: bool = False,
 ) -> Path | None:
     """Call the sheet stage under `summon-anime-wai`, writing the list it reads.
@@ -170,6 +174,7 @@ def sheet(
         vocabulary,
         field_map,
         tagged=tagged,
+        flow_digest=flow_digest,
         new_version=new_version,
     )
 
@@ -261,3 +266,16 @@ def fake_wd14(vector: list[float] | None = None) -> Always[LocalTagger]:
     verb that never tags still has to say what it *would* have tagged with.
     """
     return Always(fake_tagger(vector))
+
+
+# What a render is told it ran on, where a test is not about the runtime.
+RUNTIME: Runtime = {
+    "comfyui_version": "0.3.60",
+    "python_version": "3.12.14",
+    "pytorch_version": "2.8.0+cu128",
+}
+
+
+def on_runtime() -> Runtime:
+    """Return `RUNTIME`: the runtime thunk for a render not about the runtime."""
+    return RUNTIME

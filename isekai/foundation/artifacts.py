@@ -83,6 +83,14 @@ class SchemaDocument(TypedDict):
     name: str
 
 
+class Runtime(TypedDict):
+    """The versions a ComfyUI endpoint reports about itself."""
+
+    comfyui_version: str
+    python_version: str
+    pytorch_version: str
+
+
 class ScoredTag(TypedDict):
     """One tag WD14 emitted, and its confidence."""
 
@@ -104,6 +112,7 @@ class CaptionProducer(TypedDict):
     pinned: bool
     briefing: InstructionsRecord
     artifacts: NotRequired[dict[str, DigestRecord]]
+    options: NotRequired[dict[str, Any]]
 
 
 class Wd14Producer(TypedDict):
@@ -113,6 +122,7 @@ class Wd14Producer(TypedDict):
     models: list[str]
     pinned: bool
     artifacts: dict[str, DigestRecord]
+    floor: NotRequired[float]
 
 
 class TagsProducer(TypedDict):
@@ -126,6 +136,7 @@ class TagsProducer(TypedDict):
     pinned: bool
     prompt: DigestRecord
     artifacts: NotRequired[dict[str, DigestRecord]]
+    options: NotRequired[dict[str, Any]]
 
 
 # The functional form below, because `from` is a Python keyword. `from` is
@@ -138,6 +149,7 @@ SheetProducer = TypedDict(
         "pinned": bool,
         "artifacts": dict[str, DigestRecord],
         "from": NotRequired[int],
+        "floor": NotRequired[float],
     },
 )
 
@@ -208,6 +220,8 @@ class Tags(TypedDict):
 
 # Today's shape. Runs written before v0.21 hold earlier sheet shapes under the
 # same version; readers use only `vocabulary` and `fields`, which every one has.
+# A key that only records is `NotRequired` under its kind's version, so a file
+# written before it existed still reads (0033 design D6).
 class Sheet(TypedDict):
     """A tag list, routed into a flow's fields."""
 
@@ -217,6 +231,7 @@ class Sheet(TypedDict):
     vocabulary: VocabularyRecord
     field_map: FieldMapRecord
     fields: dict[str, list[str]]
+    flow_digest: NotRequired[str]
 
 
 class ReviewDraft(TypedDict):
@@ -228,6 +243,8 @@ class ReviewDraft(TypedDict):
     sheet: int
     vocabulary: VocabularyRecord
     fields: dict[str, list[str]]
+    schema_document: NotRequired[SchemaDocument]
+    field_map: NotRequired[FieldMapRecord]
 
 
 class ReviewApproved(TypedDict):
@@ -239,6 +256,8 @@ class ReviewApproved(TypedDict):
     sheet: int
     vocabulary: VocabularyRecord
     fields: dict[str, list[str]]
+    schema_document: NotRequired[SchemaDocument]
+    field_map: NotRequired[FieldMapRecord]
 
 
 class Prompt(TypedDict):
@@ -250,19 +269,31 @@ class Prompt(TypedDict):
     positive: str
     negative: str
     edited: bool
+    flow_digest: NotRequired[str]
+    sheet: NotRequired[int]
 
 
 class Render(TypedDict):
-    """The sidecar beside one rendered image."""
+    """The sidecar beside one rendered image.
+
+    `sheet` is the sheet the approval was made from; an older sidecar carries
+    `sheet_version`, the approval's number, instead. `image` is absent when no
+    pod-boot record named one.
+    """
 
     schema: SchemaBlock
     producer: ChainProducer
     flow: str
     seed: int
-    sheet_version: int
+    sheet_version: NotRequired[int]
     graph_sha256: str
     flow_graph_sha256: str
     edited: bool
+    flow_digest: NotRequired[str]
+    sheet: NotRequired[int]
+    image: NotRequired[str]
+    pinned: NotRequired[bool]
+    runtime: NotRequired[Runtime]
 
 
 # --- the descriptors ----------------------------------------------------------

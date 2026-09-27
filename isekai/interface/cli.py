@@ -40,18 +40,18 @@ with site-packages off the path.
 import argparse
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from functools import cache
+from functools import cache, partial
 from pathlib import Path
 from typing import Any, TypeVar
 
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.flow import Flow, load_flow, tracked_flows
+from isekai.foundation.flow import Flow, load_flow, manifest_digest, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.interface.run_view import report
-from isekai.interface.wiring import Wiring, wiring
+from isekai.interface.wiring import Wiring, booted_image, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.generate import prepare, render
+from isekai.pipeline.generate import prepare, read_runtime, render
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
@@ -497,6 +497,7 @@ def _per_item(
                         vocabulary(),
                         field_map(),
                         tagged=flow.tagger,
+                        flow_digest=manifest_digest(name, flow.path.parent),
                         new_version=new_version,
                     ),
                 )
@@ -550,6 +551,9 @@ def _generate(
     client = wired.client
     if client is None:
         return refused
+    image = booted_image()
+    # One report per session, read only once a render has run.
+    ran_on = cache(partial(read_runtime, client))
 
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair
@@ -557,6 +561,8 @@ def _generate(
             run,
             flows[flow],
             client,
+            image=image,
+            runtime=ran_on,
             count=args.count,
             seeds=args.seeds,
             rng=wired.rng,

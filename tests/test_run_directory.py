@@ -62,7 +62,7 @@ from tests.conftest import snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, png_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
-from tests.stages import caption, sheet, write_wd14
+from tests.stages import caption, on_runtime, sheet, write_wd14
 
 FLOW = "summon-anime-wai"
 
@@ -1016,7 +1016,15 @@ def _carry(
     review(run, flow)
     approve(run, flow, schema, vocabulary)
     prompt_artifact(run, loaded, schema)
-    render(run, loaded, FakeComfyClient(), seeds=[seed], poll=0)
+    render(
+        run,
+        loaded,
+        FakeComfyClient(),
+        image=None,
+        runtime=on_runtime,
+        seeds=[seed],
+        poll=0,
+    )
 
 
 @pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
@@ -1102,3 +1110,34 @@ def test_the_layout_survives_one_flows_directory_being_removed(
     assert snapshot(run.path / FLOW) == kept
     assert run.photo.is_file()
     assert (run.path / FRAME_NAME).is_file()
+
+
+@pytest.mark.spec("run-directory:schema:an-added-record-key-is-optional")
+def test_files_written_before_a_record_key_existed_still_read_and_proceed(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    flow = load_flow("summon-anime-wai")
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    run = open_run(photo, tmp_path / "runs")
+    written = sheet(run, schema, vocabulary)
+    assert written is not None
+    older = json.loads(written.read_text())
+    del older["flow_digest"]
+    del older["producer"]["floor"]
+    written.write_text(json.dumps(older))
+
+    assert review(run, flow.id) is not None
+    approved, _ = approve(run, flow.id, schema, vocabulary)
+    assert approved is not None
+    prompt = prompt_artifact(run, flow, schema)
+    body = json.loads(prompt.read_text())
+    for key in ("flow_digest", "sheet"):
+        del body[key]
+    prompt.write_text(json.dumps(body))
+
+    made = render(
+        run, flow, FakeComfyClient(), image=None, runtime=on_runtime, seeds=[42], poll=0
+    )
+
+    assert [one.seed for one in made] == [42]

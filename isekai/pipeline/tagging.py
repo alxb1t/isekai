@@ -122,7 +122,8 @@ SEPARATOR = ","
 class Tagging:
     """What a hosted tagger returned: the tags, and what actually produced them.
 
-    `artifacts` are the files the model was verified to be built from, by `dest`.
+    `artifacts` are the files the model was verified to be built from, by `dest`;
+    `options` what it was sampled at, as sent.
     """
 
     tags: tuple[str, ...]
@@ -130,6 +131,7 @@ class Tagging:
     models: tuple[str, ...] = ()
     pinned: bool = False
     artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
 
 
 class Tagger(Protocol):
@@ -225,7 +227,9 @@ class OllamaTagger:
         tags = tuple(
             stripped for part in answer.split(SEPARATOR) if (stripped := part.strip())
         )
-        return Tagging(tags, self.implementation, (self.model,), True, artifacts)
+        return Tagging(
+            tags, self.implementation, (self.model,), True, artifacts, TAGGER_OPTIONS
+        )
 
 
 def tag_wd14(
@@ -304,6 +308,7 @@ def tag_wd14(
             "models": [wd14.MODEL_DEST],
             "pinned": True,
             "artifacts": dict(tagger.pins),
+            "floor": wd14.FLOOR,
         },
         "tags": [{"tag": one.tag, "confidence": one.confidence} for one in found],
     }
@@ -370,6 +375,8 @@ def tag_hosted(
     }
     if tagging.artifacts:
         producer["artifacts"] = dict(tagging.artifacts)
+    if tagging.options:
+        producer["options"] = dict(tagging.options)
     listed: Tags = {
         "schema": TAGS_FILE.schema,
         "producer": producer,

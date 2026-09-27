@@ -31,7 +31,7 @@ import hashlib
 import json
 import random
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,7 @@ from isekai.foundation.artifacts import (
     RENDER_FILE,
     Failure,
     Prompt,
+    Runtime,
     read,
     write,
 )
@@ -55,6 +56,7 @@ from isekai.foundation.flow import (
     Schema,
     Workflow,
     assemble,
+    manifest_digest,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -174,6 +176,7 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
         body = read(source, APPROVED_FILE)
         positive, negative = assemble(body["fields"], schema.names, flow)
         edited = bool(body["producer"].get("edited"))
+        sheet = body["sheet"]
         # Read here and thrown away, for the reason the whole stage is here: the
         # render target comes from the photograph's own header, and a header
         # nothing can read must cost an assembly rather than a boot.
@@ -199,6 +202,8 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
             "source": REVIEW,
         },
         "flow": flow.id,
+        "flow_digest": manifest_digest(flow.id, flow.path.parent),
+        "sheet": sheet,
         "positive": positive,
         "negative": negative,
         "edited": edited,
@@ -391,11 +396,33 @@ def graph_digest(graph: Workflow) -> str:
     ).hexdigest()
 
 
+def read_runtime(client: ComfyTransport) -> Runtime:
+    """Return the ComfyUI, Python and PyTorch versions the endpoint reports.
+
+    A report without them refuses, and `render` records that as a permanent
+    failure rather than writing a sidecar that claims a runtime it never read.
+    """
+    try:
+        system = client.system_stats()["system"]
+        return {
+            "comfyui_version": str(system["comfyui_version"]),
+            "python_version": str(system["python_version"]),
+            "pytorch_version": str(system["pytorch_version"]),
+        }
+    except (KeyError, TypeError) as missing:
+        raise Refusal(
+            f"the endpoint's /system_stats report carries no {missing}, so the "
+            "runtime a render ran on cannot be recorded"
+        ) from missing
+
+
 def render(
     run: Run,
     flow: Flow,
     client: ComfyTransport,
     *,
+    image: str | None,
+    runtime: Callable[[], Runtime],
     count: int | None = None,
     seeds: Sequence[int] | None = None,
     rng: random.Random | None = None,
@@ -408,8 +435,12 @@ def render(
     step that costs money on every pass, so it is where idempotence is worth the
     most -- and the decision is a directory listing, the same rule every other
     stage is held to.
+
+    `image` is the reference the pod booted, or None for an endpoint no pod-boot
+    record names, which the sidecar declares unpinned. `runtime` is called only
+    once a render has run, so a complete batch reads no report (0033 design D5).
     """
-    version, _ = approved_artifact(run, flow.id)
+    version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
     directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
     already = rendered_seeds(directory, flow.output_suffix)
@@ -431,17 +462,20 @@ def render(
         )
     except Refusal as failed:
         raise _recorded(run, flow, directory, version, failed, None) from failed
-    # Constant across seeds: the flow's graph on disk does not change mid-render.
+    # Constant across seeds: the flow's files on disk do not change mid-render.
     flow_graph = flow.graph_digest()
+    flow_digest = manifest_digest(flow.id, flow.path.parent)
+    sheet = read(approval, APPROVED_FILE)["sheet"]
     produced: list[Render] = []
     for seed in wanted:
-        image = directory / f"{seed}{flow.output_suffix}"
+        output = directory / f"{seed}{flow.output_suffix}"
         # `build_graph` is inside the guard and not before it: it refuses on an
         # unreadable photograph header, and a refusal this stage does not record
         # leaves resume nothing on disk to reason about.
         try:
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
             body = _submit(client, graph, poll)
+            ran_on = runtime()
         except Refusal as failed:
             raise _recorded(run, flow, directory, version, failed, seed) from failed
         # The sidecar first, so an image always has its provenance: a crash
@@ -456,19 +490,24 @@ def render(
                 "source": PROMPTS,
             },
             "flow": flow.id,
+            "flow_digest": flow_digest,
             "seed": seed,
-            "sheet_version": version,
+            "sheet": sheet,
             "graph_sha256": graph_digest(graph),
             "flow_graph_sha256": flow_graph,
             "edited": prompt["edited"],
         }
+        if image is not None:
+            sidecar["image"] = image
+        sidecar["pinned"] = image is not None
+        sidecar["runtime"] = ran_on
         write(provenance, RENDER_FILE, sidecar)
         # Atomically, like every other artifact in a run, and for a sharper
         # reason: `rendered_seeds` treats the presence of the render as proof the
         # seed is done, so a truncated file is a seed resume skips forever -- on
         # the one stage that costs money on every pass.
-        write_atomically(image, body)
-        produced.append(Render(seed, image, provenance))
+        write_atomically(output, body)
+        produced.append(Render(seed, output, provenance))
     return produced
 
 

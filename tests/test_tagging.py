@@ -22,7 +22,7 @@ import pytest
 
 from isekai.boundary import provision
 from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
-from isekai.boundary.wd14 import MODEL_DEST, LocalTagger
+from isekai.boundary.wd14 import FLOOR, MODEL_DEST, LocalTagger
 from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
 from isekai.foundation.flow import (
     FLOWS_DIR,
@@ -766,3 +766,19 @@ def test_a_photograph_the_decoder_cannot_read_is_recorded_and_is_permanent(
     with pytest.raises(Refusal) as again:
         tag_wd14(run, FLOW, _unreadable)
     assert "failed permanently" in str(again.value)
+
+
+@pytest.mark.spec("tagging:provenance:options-and-floor-are-recorded")
+def test_the_hosted_tagger_records_its_options_and_the_local_its_floor(
+    run: Run, hosted: Hosted
+) -> None:
+    transport = _answer("1girl, solo")
+
+    tags = tag_hosted(run, FLOW, hosted(transport))
+    scored = tag_wd14(run, FLOW, fake_tagger)
+
+    assert tags is not None and scored is not None
+    (sent,) = transport.bodies()
+    assert read(tags, TAGS_FILE)["producer"].get("options") == sent["options"]
+    assert sent["options"] == dict(TAGGER_OPTIONS)
+    assert read(scored, WD14_FILE)["producer"].get("floor") == FLOOR

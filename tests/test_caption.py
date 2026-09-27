@@ -29,7 +29,7 @@ from isekai.foundation.run import (
     open_run,
     versions,
 )
-from isekai.pipeline.caption import FakeReader, OllamaReader
+from isekai.pipeline.caption import READER_OPTIONS, FakeReader, OllamaReader
 from tests.fakes import READER, ollama_records
 from tests.images import jpeg_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
@@ -665,3 +665,20 @@ def test_a_models_record_is_read_once_per_root(run: Run, tmp_path: Path) -> None
 def test_no_test_reads_the_operators_own_model_records() -> None:
     home = Path(pwd.getpwuid(os.getuid()).pw_dir)
     assert not ollama.MODEL_RECORDS.is_relative_to(home / ".ollama")
+
+
+@pytest.mark.spec("caption:provenance:the-options-are-recorded")
+def test_the_caption_records_the_options_the_reader_sent(
+    run: Run, tmp_path: Path
+) -> None:
+    transport = FakeTransport(payload={"response": "A person."})
+    reader = OllamaReader(
+        model=READER, transport=transport, records=ollama_records(tmp_path)
+    )
+
+    path = caption(run, reader)
+
+    assert path is not None
+    (sent,) = transport.bodies()
+    assert read(path, CAPTION_FILE)["producer"].get("options") == sent["options"]
+    assert sent["options"] == dict(READER_OPTIONS)

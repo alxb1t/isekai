@@ -15,7 +15,7 @@ from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.generate import prompt_artifact, render
+from isekai.pipeline.generate import prompt_artifact, read_runtime, render
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
@@ -25,6 +25,9 @@ from tests.stages import FLOW, caption, fake_tagger, sheet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = Path(__file__).resolve().parent / "golden"
+
+# The reference a pinned pod boots, as `infra/up.sh` records it.
+POD_IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "d" * 64
 
 # The module that owns every run file's shape, and so the one that writes them.
 CONTRACT = "isekai/foundation/artifacts.py"
@@ -121,7 +124,16 @@ def _prompt(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
 
 def _render(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     _prompt(run, schema, vocabulary)
-    (made,) = render(run, FLOW, FakeComfyClient(), seeds=[42], poll=0)
+    client = FakeComfyClient()
+    (made,) = render(
+        run,
+        FLOW,
+        client,
+        image=POD_IMAGE,
+        runtime=lambda: read_runtime(client),
+        seeds=[42],
+        poll=0,
+    )
     return made.provenance
 
 

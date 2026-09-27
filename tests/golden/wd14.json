@@ -16,7 +16,8 @@
       "wd14/model.onnx": {
         "sha256": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
       }
-    }
+    },
+    "floor": 0.15
   },
   "tags": [
     {

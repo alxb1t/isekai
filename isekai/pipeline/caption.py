@@ -103,7 +103,8 @@ READER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
 class Reading:
     """What a reader returned: the prose, and what actually produced it.
 
-    `artifacts` are the files the model was verified to be built from, by `dest`.
+    `artifacts` are the files the model was verified to be built from, by `dest`;
+    `options` what it was sampled at, as sent.
     """
 
     prose: str
@@ -111,6 +112,7 @@ class Reading:
     models: tuple[str, ...] = ()
     pinned: bool = False
     artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
 
 
 class Reader(Protocol):
@@ -208,7 +210,11 @@ class OllamaReader:
             )
         except ollama.OllamaFailure as failed:
             raise StageFailure(failed.kind, failed.detail) from failed
-        return Reading(prose, self.implementation, (self.model,), True, artifacts)
+        # `body()` sends `READER_OPTIONS`; the body itself is not kept, since it
+        # carries the photograph and `ask` drops it for that reason.
+        return Reading(
+            prose, self.implementation, (self.model,), True, artifacts, READER_OPTIONS
+        )
 
 
 def caption(
@@ -270,6 +276,8 @@ def caption(
     }
     if reading.artifacts:
         producer["artifacts"] = dict(reading.artifacts)
+    if reading.options:
+        producer["options"] = dict(reading.options)
     artifact: Caption = {
         "schema": CAPTION_FILE.schema,
         "producer": producer,

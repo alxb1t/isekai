@@ -843,3 +843,32 @@ def test_the_budget_counts_an_absent_field_as_empty(
     assert budget.per_field["eye_colour"] == 0
     assert budget.total == whole.total
     assert sum(budget.per_field.values()) + budget.overhead == budget.total
+
+
+@pytest.mark.spec("review:copy:the-sheet-records-are-carried")
+def test_the_draft_and_the_approval_carry_the_sheets_schema_and_field_map(
+    run: Run, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    recorded = read(run.path / FLOW / "sheets" / "001.json", SHEET_FILE)
+    draft = review(run, FLOW)
+    assert draft is not None
+    drafted = read(draft, DRAFT_FILE)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    for body in (drafted, read(approved, APPROVED_FILE)):
+        assert body.get("schema_document") == recorded["schema_document"]
+        assert body.get("field_map") == recorded["field_map"]
+
+    # A sheet that records no field map yields a draft and approval with none.
+    photo = tmp_path / "bea.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 908))
+    bare = open_run(photo, tmp_path / "runs")
+    written = sheet(bare, schema, vocabulary)
+    assert written is not None
+    body = json.loads(written.read_text())
+    del body["field_map"]
+    written.write_text(json.dumps(body))
+    review(bare, FLOW)
+    approved, _ = approve(bare, FLOW, schema, vocabulary)
+    assert approved is not None
+    assert "field_map" not in read(approved, APPROVED_FILE)

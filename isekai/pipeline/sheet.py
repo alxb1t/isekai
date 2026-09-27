@@ -92,6 +92,7 @@ def sheet(
     field_map: FieldMap,
     *,
     tagged: bool,
+    flow_digest: str,
     new_version: bool = False,
 ) -> Path | None:
     """Route this flow's tag list into a sheet, under that flow.
@@ -99,6 +100,7 @@ def sheet(
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
     field is written empty for the person to fill (0032 design D3).
+    `flow_digest` is recorded and never read (0033 design D5).
 
     **The fill is told nothing about flows beyond `tagged`, and reaches nothing
     at all.** It is handed a tag list, the schema, the vocabulary and the table,
@@ -141,6 +143,7 @@ def sheet(
         "schema_document": {"name": schema.name},
         "vocabulary": vocabulary_identity(vocabulary),
         "field_map": field_map_identity(field_map),
+        "flow_digest": flow_digest,
         "fields": fields,
     }
     write(path, SHEET_FILE, artifact)
@@ -184,7 +187,7 @@ def _from_tag_list(
             )
     # `str()`: a hand-edited list's non-string tag routes nowhere, never raises.
     fields = route((DanbooruTag(str(one["tag"])) for one in tags), field_map, schema)
-    return fields, {
+    made_by: SheetProducer = {
         # The producer of the *tags* is the producer of the sheet now, so the
         # pin it was verified against travels across rather than being
         # re-derived: these are the digests that session actually opened.
@@ -194,3 +197,6 @@ def _from_tag_list(
         "artifacts": dict(producer["artifacts"]),
         "from": source,
     }
+    if "floor" in producer:
+        made_by["floor"] = producer["floor"]
+    return fields, made_by

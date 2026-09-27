@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tools/derive_reader.py`, pins the JoyCaption model and projector per alias; `caption` and `tag` refuse,
   spending no attempt, a model no entry pins or one Ollama built from other files. The caption's and hosted
   tags' producers now record `pinned: true` and both files' digests.
+- **Every artifact records what shaped it** (`0033` design D5, D6): the sampling `options` on the caption and
+  hosted tags, the wd14 `floor` (carried into the sheet), `flow_digest` on the sheet, prompt and render,
+  `sheet` on the prompt and render in place of the render's `sheet_version`, the booted `image`, `pinned`
+  and the endpoint's `runtime` on the render, and the sheet's `schema_document` and `field_map` on the
+  draft and approval. Every new key is optional under version 1, so existing runs still read.
 
 ## [0.23.0] - 2026-09-26
 

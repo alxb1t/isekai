@@ -185,6 +185,12 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
         "vocabulary": carried["vocabulary"],
         "fields": carried["fields"],
     }
+    # Carried where the source records them, so the approval can name the
+    # schema and table its fields came through (0033 design D5).
+    if "schema_document" in carried:
+        draft["schema_document"] = carried["schema_document"]
+    if "field_map" in carried:
+        draft["field_map"] = carried["field_map"]
     write(path, DRAFT_FILE, draft)
     return path
 
@@ -368,6 +374,10 @@ def approve(
         "vocabulary": body["vocabulary"],
         "fields": fields,
     }
+    if "schema_document" in body:
+        approved_body["schema_document"] = body["schema_document"]
+    if "field_map" in body:
+        approved_body["field_map"] = body["field_map"]
 
     path = directory / artifact_name(version, APPROVED)
     if path.exists():

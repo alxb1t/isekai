@@ -14,6 +14,15 @@ def url_of(request: Request | str) -> str:
     return request.full_url if isinstance(request, Request) else request
 
 
+# What `FakeComfyClient` reports about itself, in ComfyUI's own shape.
+FAKE_SYSTEM = {
+    "os": "posix",
+    "comfyui_version": "0.3.60",
+    "python_version": "3.12.14 (main, Oct 1 2025, 00:00:00) [GCC 13.3.0]",
+    "pytorch_version": "2.8.0+cu128",
+}
+
+
 class FakeComfyClient:
     """In-memory stand-in for ComfyClient: records calls, replays canned responses.
 
@@ -43,6 +52,7 @@ class FakeComfyClient:
         self.submissions: list[Workflow] = []
         self.history_calls = 0
         self.viewed: Image | None = None
+        self.stats_calls = 0
 
     def upload_image(self, path: str) -> str:
         self.uploaded = path
@@ -62,6 +72,10 @@ class FakeComfyClient:
     def view(self, image: Image) -> bytes:
         self.viewed = image
         return self.view_bytes
+
+    def system_stats(self) -> dict[str, Any]:
+        self.stats_calls += 1
+        return {"system": dict(FAKE_SYSTEM), "devices": []}
 
 
 class FakeFetcher:

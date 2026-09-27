@@ -19,7 +19,7 @@ from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, fake_tagger, sheet
+from tests.stages import caption, fake_tagger, on_runtime, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -117,12 +117,14 @@ def test_a_stage_with_nothing_in_it_says_so(
 
 
 @pytest.mark.spec("cli:show:producers-are-reported")
-def test_renders_are_listed_under_the_sheet_version_they_came_from(
+def test_renders_are_listed_under_the_approval_they_came_from(
     run: Run, schema: Schema
 ) -> None:
     flow = load_flow(FLOW)
     prepare(run, {FLOW: flow})
-    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+    render(
+        run, flow, FakeComfyClient(), image=None, runtime=on_runtime, seeds=[42], poll=0
+    )
 
     assert rendered(run) == [(FLOW, 1, [42])]
     assert any(line.strip() == "42" for line in report(run))
