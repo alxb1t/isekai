@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The teardown and port messages name the right fix.** A lost create and a failed teardown route through
   `.runpod_pod_id` and `infra/down.sh`; the port refusal stops only an earlier session's tunnel. The
   teardown test skips `echo` lines, so it still reads the call (0036 design D6).
+- **`summon-anime-wai`'s graph placeholder is `photo.jpeg`, re-pinned in place.** The `LoadImage` `image` held
+  a real photograph's filename, which `build_graph` overwrites before any submission, so no submitted graph
+  moves; a new test holds that. `summon-anime-wai` →
+  `96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698` (0036 design D7).
 
 ## [0.25.0] - 2026-09-27
 

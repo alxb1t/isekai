@@ -8,7 +8,7 @@ inert value, per [design](design.md).
 - [x] 1 — The sweep
 - [x] 2 — The docs
 - [x] 3 — The scripts' messages
-- [ ] 4 — The graph's placeholder
+- [x] 4 — The graph's placeholder
 
 Line numbers are `7aa23d3`'s; find each site by the text [design](design.md) names. `.minions/prose-terms.txt` is
 the term list per [D3](design.md#d3).
@@ -52,11 +52,11 @@ the term list per [D3](design.md#d3).
 
 ## 4 — The graph's placeholder
 
-- [ ] 4.1 **HALT CHECK** — the summon flow still holds its timestamped placeholder, pinned at the cut's digest.
+- [x] 4.1 **HALT CHECK** — the summon flow still holds its timestamped placeholder, pinned at the cut's digest.
   Verify: `grep -c '"image": "photo_' flows/summon-anime-wai/graph.json` prints `1`, and `grep -c 039a1a80f2b43069e8e1bffcc4e1665417c4aa73e1c2f40fca783379c351669b tests/test_flow.py` prints `1`.
-- [ ] 4.2 Set `flows/summon-anime-wai/graph.json:13`'s `LoadImage` `image` to `photo.jpeg`, per [D7](design.md#d7).
+- [x] 4.2 Set `flows/summon-anime-wai/graph.json:13`'s `LoadImage` `image` to `photo.jpeg`, per [D7](design.md#d7).
   Verify: `grep -c '"image": "photo_' flows/summon-anime-wai/graph.json` prints `0`, and `grep -c '"image": "photo.jpeg"' flows/summon-anime-wai/graph.json` prints `1`.
-- [ ] 4.3 Re-pin per [D7](design.md#d7): `PINNED`'s `summon-anime-wai` digest in `tests/test_flow.py`, the `flow_digest` in `tests/golden/{sheet,sheet-empty,prompt,render}.json`, and `render.json`'s `flow_graph_sha256`.
+- [x] 4.3 Re-pin per [D7](design.md#d7): `PINNED`'s `summon-anime-wai` digest in `tests/test_flow.py`, the `flow_digest` in `tests/golden/{sheet,sheet-empty,prompt,render}.json`, and `render.json`'s `flow_graph_sha256`.
   Verify: `cat tests/test_flow.py tests/golden/sheet.json tests/golden/sheet-empty.json tests/golden/prompt.json tests/golden/render.json | grep -c -e 039a1a80f2b43069 -e ed7f29827fff1612` prints `0`.
-- [ ] 4.4 Add `test_the_graph_placeholder_never_reaches_a_submitted_graph` to `tests/test_generate.py`, `spec_exempt`, per [D7](design.md#d7).
+- [x] 4.4 Add `test_the_graph_placeholder_never_reaches_a_submitted_graph` to `tests/test_generate.py`, `spec_exempt`, per [D7](design.md#d7).
   Verify: `grep -c '^def test_the_graph_placeholder_never_reaches_a_submitted_graph' tests/test_generate.py` prints `1`.

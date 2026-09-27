@@ -10,6 +10,7 @@ import io
 import json
 import random
 import re
+import shutil
 import urllib.error
 import urllib.request
 from email.message import Message
@@ -493,6 +494,48 @@ def test_the_submitted_graph_is_sized_from_the_photographs_own_header(
     assert (latent["width"], latent["height"]) == (1344, 1024)
     hires = graph[flow.node("hires_resize")]["inputs"]
     assert (hires["width"], hires["height"]) == (2016, 1536)
+
+
+def _placeholder_pair(
+    run: Run, flow: Flow, tmp_path: Path, image_name: str | None
+) -> tuple[bytes, bytes]:
+    """Return the graph built from `flow` and from a copy with another placeholder."""
+    root = tmp_path / "scratch-flows" / FLOW
+    shutil.copytree(flow.path, root)
+    graph = json.loads((root / GRAPH_NAME).read_text())
+    graph[flow.node("photo")]["inputs"]["image"] = "another.jpeg"
+    (root / GRAPH_NAME).write_text(json.dumps(graph, indent=2) + "\n")
+    prepare(run, {FLOW: flow})
+    prompt = read(run.directory(FLOW, PROMPTS) / artifact_name(1), PROMPT_FILE)
+
+    def submitted(source: Flow) -> bytes:
+        graph = build_graph(source, run.photo, image_name, prompt, 42)
+        return json.dumps(graph, sort_keys=True).encode()
+
+    return submitted(flow), submitted(load_flow(FLOW, root.parent))
+
+
+@pytest.mark.spec_exempt(
+    "structural: the graph file's placeholder is inert, so a re-pin of it moves "
+    "no output"
+)
+def test_the_graph_placeholder_never_reaches_a_submitted_graph(
+    run: Run, flow: Flow, tmp_path: Path
+) -> None:
+    tracked, renamed = _placeholder_pair(run, flow, tmp_path, "up.png")
+
+    assert tracked == renamed
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_graph_placeholder_never_reaches_a_submitted_graph"
+)
+def test_the_placeholder_check_catches_a_graph_built_without_an_upload(
+    run: Run, flow: Flow, tmp_path: Path
+) -> None:
+    tracked, renamed = _placeholder_pair(run, flow, tmp_path, None)
+
+    assert tracked != renamed
 
 
 # --- idempotence --------------------------------------------------------------
