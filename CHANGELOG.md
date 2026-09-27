@@ -58,6 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **D27 corrected**: a network volume reports its storage cluster's capacity (≈ 2.2 PiB), so the 20 GB
   `isekai-models` passes `start.sh`'s 40 GiB floor. The known break it recorded was never true.
 
+- **`docs/pins.md`, the operating guide to the pins** (`0033` design D10): what each pin buys and where it
+  stops, where each is declared and checked, how each is moved, and what stays open. `tests/test_docs.py`
+  holds every repository path it names to exist.
+
 ## [0.23.0] - 2026-09-26
 
 ### Changed

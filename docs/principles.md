@@ -188,6 +188,7 @@ gap is recorded with its trigger, and every artifact it shapes says `pinned: fal
   actions, pinned by commit.
 - **Not yet held** for the image's system packages, which `apt-get` installs at build time with no
   version named.
+- **How:** [pins](pins.md) — where each pin is declared, when it is checked, and how it is moved.
 
 ### Hold a guarantee by construction, not by a filter
 
