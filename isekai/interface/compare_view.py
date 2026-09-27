@@ -46,12 +46,12 @@ section { border: 1px solid #23252d; border-radius: 10px; background: #14161c; }
 .id { padding: 12px 16px; border-bottom: 1px solid #23252d;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 20px; padding: 20px; }
+        gap: 20px; padding: 20px; align-items: start; }
 figure { margin: 0; min-width: 0; }
 figcaption { padding: 0 0 8px; font-size: 11px; letter-spacing: .06em;
              text-transform: uppercase; color: #8b8f9a; }
-img { width: 100%; height: 80vh; object-fit: contain; object-position: top;
-      display: block; background: #0a0b0e; border-radius: 6px; }
+img { display: block; width: auto; height: auto; max-width: 100%; max-height: 80vh;
+      border-radius: 6px; }
 .captions { padding: 0 20px 16px; }
 .caption, .prompt { margin: 10px 0 0; color: #9aa0ad; font-size: 12px; }
 .prompt { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
