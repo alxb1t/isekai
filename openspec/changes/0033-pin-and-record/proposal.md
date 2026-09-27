@@ -43,6 +43,7 @@ produced it is known.
 - **A boot prints when each step begins** ([D2](design.md#d2)).
 - **An acceptance runs the whole flow, both flows, with every pin in place**, on a pod booted by digest
   ([D8](design.md#d8)).
+- **`docs/pins.md`**: what the pins buy, what each costs, and how each is moved ([D10](design.md#d10)).
 
 ## Capabilities
 

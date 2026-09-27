@@ -13,6 +13,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 - [x] 6 — The records
 - [x] 7 — The record in `docs/`
 - [x] 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place
+- [ ] 9 — `docs/pins.md`: why we pin, and how each pin is moved
 
 Line numbers are `801ffec`'s; find each site by the text it names.
 
@@ -113,3 +114,16 @@ real person's photograph.** Every command and what it printed goes into `accepta
   Verify: `grep -c -e '"pinned": true' -e 'pod gone' openspec/changes/0033-pin-and-record/acceptance.md` prints a number above `1`.
 - [x] 8.4 Close D27's known break in `docs/decisions.md` now that the volume clears the floor, and record the volume's size in `acceptance.md`.
   Verify: ``grep -c 'the floor `start.sh` declares is larger than the real volume' docs/decisions.md`` prints `0`.
+
+## 9 — `docs/pins.md`: why we pin, and how each pin is moved
+
+Added after the acceptance, at the operator's request ([D10](design.md#d10)).
+
+- [ ] 9.1 **HALT CHECK** — no pins guide exists.
+  Verify: `test -f docs/pins.md; echo $?` prints `1`.
+- [ ] 9.2 Write `docs/pins.md` with the sections [D10](design.md#d10) lists — *what pins buy*, *the inventory*, *re-pinning*, *not pinned*, *when to re-pin* — from the state the acceptance proved, linking the principle rather than restating it.
+  Verify: `grep -c '^## ' docs/pins.md` prints `5`.
+- [ ] 9.3 In a new `tests/test_docs.py`, test that every repository path `docs/pins.md` names in backticks exists, with a twin showing the check fails on a missing path, per [D10](design.md#d10).
+  Verify: `grep -c '^def test_' tests/test_docs.py` prints `2`.
+- [ ] 9.4 Link `docs/pins.md` from `docs/README.md`'s table and from the pinning principle's section in `docs/principles.md`.
+  Verify: `cat docs/README.md docs/principles.md | grep -c 'pins.md'` prints `2`.

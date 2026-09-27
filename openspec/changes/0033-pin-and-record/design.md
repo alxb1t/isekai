@@ -54,6 +54,7 @@ the renders by eye ([D8](#d8)). Every file, symbol and line below was re-checked
 | [D7](#d7) | D6, D28, D32 and the principles updated | `docs/` records what is in force | |
 | [D8](#d8) | one metered acceptance: the whole flow, both flows, every pin in place | the operator's ask | a render-only proof |
 | [D9](#d9) | a minor, one feature | the record half adds run-file keys | a patch |
+| [D10](#d10) | `docs/pins.md` — what pins buy and how each is moved, written after the acceptance | the principle says *why*; nothing says *how* | restating the principle; a docs patch after release |
 
 ### D1
 
@@ -191,6 +192,26 @@ the last accepted ones. D27's known break closes once the volume is grown.
 
 **A minor.** It adds run-file keys, a provisioning manifest and a capability, and changes how a pod boots.
 One feature: the pin and its record.
+
+### D10
+
+**`docs/pins.md`, the operating guide to the pins.** Added after the acceptance, at the operator's request, so it
+is written from what the acceptance proved. It links to the principle *Everything that shapes an output is pinned*
+for the reason and never restates it.
+
+```
+what pins buy     identity, not pixels · integrity, not cleanliness · comparable figures ·
+                  attribution · no silent drift · rollback · fail before paying — and the price
+the inventory     thing · pinned by · declared in · checked when
+re-pinning        one recipe per inventory row
+not pinned        apt, the Ollama runtime, the GPU and its driver, macOS — and the records that
+                  stand in for them
+when to re-pin    an advisory, or a deliberate upgrade — with a render comparison
+```
+
+- **The inventory names files, and a test holds it:** every repository path the guide names in backticks exists
+  (`tests/test_docs.py`), so a moved file fails the gate instead of leaving the guide wrong.
+- It is linked from `docs/README.md`'s table and from the principle's section in `docs/principles.md`.
 
 ## Settled at the cut
 
