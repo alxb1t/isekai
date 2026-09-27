@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exception to the archive's freeze and this file's append-only rule (0036 design D1).
 - **`tools/derive_field_map.py`'s comments follow, and no code moves.** The false "load-bearing" comment now says
   `PRECEDENCE` picks the winner the counts do (0036 design D2).
+- **D33 records that isekai restricts no content; the operator answers for what renders** (0036 design D4).
+- **`docs/pins.md` stops overstating the reader's and the image's pins.** The reader alias's template and the image's build tools join
+  *Not pinned*, and a leftover pod-image record's borrowed pin joins *where it stops* (0036 design D5).
 
 ## [0.25.0] - 2026-09-27
 

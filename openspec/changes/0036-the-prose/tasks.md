@@ -6,7 +6,7 @@ inert value, per [design](design.md).
 ## Progress
 
 - [x] 1 — The sweep
-- [ ] 2 — The docs
+- [x] 2 — The docs
 - [ ] 3 — The scripts' messages
 - [ ] 4 — The graph's placeholder
 
@@ -32,9 +32,9 @@ the term list per [D3](design.md#d3).
 
 ## 2 — The docs
 
-- [ ] 2.1 Add D33 to `docs/decisions.md` under `## The product`, after D30, with the text [D4](design.md#d4) gives verbatim.
+- [x] 2.1 Add D33 to `docs/decisions.md` under `## The product`, after D30, with the text [D4](design.md#d4) gives verbatim.
   Verify: `grep -c '^### D33 · The operator decides what is rendered' docs/decisions.md` prints `1`.
-- [ ] 2.2 Edit `docs/pins.md` per [D5](design.md#d5): `:42`'s *pinned by*, `:88`'s *what stands in*, the *Not pinned* rows after `:90`, and `:26`'s *where it stops*.
+- [x] 2.2 Edit `docs/pins.md` per [D5](design.md#d5): `:42`'s *pinned by*, `:88`'s *what stands in*, the *Not pinned* rows after `:90`, and `:26`'s *where it stops*.
   Verify: `grep -c -e "the reader alias's template" -e "the build tools of the image's sdist-only packages" -e 'borrows .runpod_pod_image' -e "the alias's model and projector layers are checked" docs/pins.md` prints `4`, and `grep -c 'a lock with every hash; Python by patch' docs/pins.md` prints `0`.
 
 ## 3 — The scripts' messages

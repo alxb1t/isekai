@@ -35,6 +35,16 @@ portfolio piece, not product polish.**
   end to end.
 - **Made by:** the project's founding decision.
 
+### D33 · The operator decides what is rendered
+
+**isekai places no restriction on content: no filter, no rating tag, no safety terms in the negative.** The operator
+writes the positive prompt by approving the sheet, and answers for what renders — as JoyCaption reads without
+restriction.
+
+- **Why:** self-hosted, private by default, open models on the operator's own machine and pod
+  ([D0](#d0--self-hosted-open-source-open-models)).
+- **Made by:** `0036`.
+
 ## Stages and verbs
 
 ### D1 · Stage ① is two independent verbs
