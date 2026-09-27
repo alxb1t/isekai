@@ -30,3 +30,5 @@ on a 204 — the log's last write at 14:48:50Z. About 13 minutes, inside the 45-
 **The comparison page** was then refined with the operator, on this batch, before the phase closed: `summon` beside
 the photograph, each render's positive prompt beneath it, captions in a full-width row, images at their own
 proportions, and an overlay that fits a clicked image and toggles its full size.
+Each refinement is its own commit beside phase 5's, at the operator's direction, rather than one phase, one commit:
+`5f681b9`, `c2b0619`, `1ccb9af`, `0cc79ca`, `d6c954e` and `0bd8d1d`.

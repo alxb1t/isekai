@@ -85,7 +85,9 @@ positive prompt it came from beneath it; each flow's latest caption in a full-wi
 during the build, on the operator's decision); *no render yet* where a flow has none. Images are linked relative to the page,
 with `loading=lazy`, and none is embedded. The page is written to `<batch>/compare.html` through
 `foundation/atomic_write.py`, and the verb prints its path alone. A new `isekai/interface/compare_view.py` builds it
-with `html.escape` and `run_view.rendered`; the entry point stays stdlib-only.
+with `html.escape` and `pipeline.generate.rendered_seeds` — the rule `generate` itself decides a render by (amended
+in the build's simplify pass; it was `run_view.rendered`); the entry point stays stdlib-only. A run directory this
+build carries no flow for reads *not a tracked flow* rather than refusing the page (amended in converge).
 
 ### D3
 
@@ -103,6 +105,10 @@ up.sh ──▶ host, port from its "Tunnel:" line ──▶ ssh -N -L 8188 … 
   the batch's log and shown.
 - A flow's `generate` failing does not stop the next flow; the script exits 1 when any failed. A wait past 300 s
   exits through the trap.
+- *Amended in converge:* the trap is on `HUP` too, and the teardown ignores `INT`, `TERM` and `HUP` rather than
+  resetting them, so a second Ctrl-C cannot kill `down.sh` mid-DELETE. A watchdog started after the trap and before
+  `up.sh` refuses at 44 minutes — `CLAUDE.md`'s 45-minute ceiling, less one for `down.sh` — stops the command in
+  flight and exits through the trap; the renders written are kept, and the same command renders only the rest.
 
 ### D4
 
