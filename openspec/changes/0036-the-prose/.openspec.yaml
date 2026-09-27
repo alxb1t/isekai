@@ -1,0 +1,7 @@
+# This change carries no spec delta: it rewrites prose, comments, three script messages and a
+# placeholder no render reads, and no requirement changes. See design.md D8.
+#
+# `skip_specs` is only honoured when this file is valid change metadata, which requires
+# `schema` naming a resolvable schema.
+schema: spec-driven
+skip_specs: true
