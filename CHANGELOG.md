@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-09-27
+
 ### Changed
 
 - **`up.sh` creates on RunPod's REST v2** (`0034` design D1, D2, D4): v1 retires on 2026-11-15. Each type in
