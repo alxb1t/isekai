@@ -310,6 +310,11 @@ class Flow:
         """Return the digest of the graph as it sits on disk, before injection."""
         return hashlib.sha256(self.graph_path.read_bytes()).hexdigest()
 
+    @cached_property
+    def digest(self) -> str:
+        """Return `manifest_digest` for this flow, read once per loaded flow."""
+        return manifest_digest(self.id, self.path.parent)
+
     def node(self, role: str) -> str:
         """Return the graph id the manifest gives a role, or refuse naming the role."""
         if role not in self.nodes:

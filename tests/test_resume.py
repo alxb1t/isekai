@@ -33,7 +33,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
-from tests.fakes import FakeComfyClient, url_of
+from tests.fakes import READER, FakeComfyClient, url_of
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
 from tests.transports import FakeTransport
@@ -287,7 +287,11 @@ def test_no_external_call_is_made_on_a_pass_that_changes_nothing(
 
 
 def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
-    """Provoke one refusal from each stage that has one, and return the messages."""
+    """Provoke one refusal from each stage that has one, and return the messages.
+
+    The caller holds the `model_records` fixture, so the reader passes its model
+    check and reaches the host that refuses.
+    """
     from isekai.foundation.artifacts import CAPTION_FILE, read
     from isekai.foundation.flow import load_flow
     from isekai.foundation.run import open_run, record_failure
@@ -334,7 +338,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     # HTTP to a local port, so there is nothing on PATH to be missing.
     collect(
         lambda: OllamaReader(
-            model="a-reader",
+            model=READER,
             transport=FakeTransport(error=urllib.error.URLError("Connection refused")),
         ).read(photo, "b", tmp_path)
     )
@@ -416,6 +420,7 @@ AVAILABLE: Sequence[str] = (
 
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.usefixtures("model_records")
 def test_every_refusal_names_an_action_this_build_can_perform(
     wired: Wiring, tmp_path: Path
 ) -> None:
@@ -428,6 +433,7 @@ def test_every_refusal_names_an_action_this_build_can_perform(
 
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.usefixtures("model_records")
 def test_no_refusal_offers_a_command_this_build_does_not_have(
     wired: Wiring, tmp_path: Path
 ) -> None:
@@ -463,6 +469,7 @@ def _unrunnable(messages: Sequence[str]) -> list[str]:
 
 
 @pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+@pytest.mark.usefixtures("model_records")
 def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     wired: Wiring, tmp_path: Path
 ) -> None:

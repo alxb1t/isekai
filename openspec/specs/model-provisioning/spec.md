@@ -6,8 +6,8 @@ Which model artifacts the shipped graph requires, where each one comes from, how
 proven to be the intended ones before anything loads them, and the binding that keeps the manifest
 and the graph describing the same set of files.
 
-**Source:** `config/models.json`, `isekai/boundary/provision.py`, `tools/download_models.sh`,
-`tools/derive_manifest.py`, `start.sh` ·
+**Source:** `config/models.json`, `config/reader.json`, `isekai/boundary/provision.py`,
+`tools/download_models.sh`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `start.sh` ·
 **Tests:** `tests/test_provision.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`,
 `tests/test_infra.py`, `tests/test_derivation.py`, `tests/test_vocabulary_manifest.py`
 
@@ -300,7 +300,7 @@ declares, and SHALL require the identity content coding.
 Two derivers already share these names by import, which makes that structure load-bearing the moment a
 third arrives; the entry type is currently declared twice under one name with two different shapes, and
 a third shape is how that becomes a defect rather than an oddity. The byte-identical rule is what makes
-the extraction verifiable for nothing: re-run all three, and any difference is the refactor's fault.
+the extraction verifiable for nothing: re-run every deriver, and any difference is the refactor's fault.
 
 **A digest of whatever arrived is not a digest of the artifact**, and the byte-identical rule fails
 here in the one direction nothing would notice: the wrong digest is a real SHA-256 with a plausible
@@ -378,8 +378,8 @@ one would have made swapping the list a decision about a model nobody opened.
 #### Scenario: the vocabulary manifest is separate from the graph's and the scorer's
 - **Key:** `model-provisioning:vocabulary:manifest-is-its-own-file`
 - **Layers:** unit
-- **WHEN** the three manifests are read
-- **THEN** no destination the vocabulary manifest declares appears in either of the other two
+- **WHEN** every provisioning manifest is read
+- **THEN** no destination the vocabulary manifest declares appears in any other
 - **AND** each manifest continues to answer one question about one consumer
 
 #### Scenario: the label index and the model it indexes are pinned to one revision
@@ -402,3 +402,34 @@ one would have made swapping the list a decision about a model nobody opened.
 - **WHEN** a stage reads the vocabulary and the artifact has not been provisioned
 - **THEN** the read is refused rather than raising a file error
 - **AND** the message names the command that would provision it
+
+### Requirement: The reader's files are provisioned from their own manifest, keyed by the model they build
+
+The system SHALL declare the reader's model and projector files as pinned, digested entries in a manifest
+of their own, derived like every other manifest, and SHALL name, for each model a flow may declare, which
+entry is its model file and which its projector. The provisioning driver SHALL fetch and verify that
+manifest's entries exactly as it does every other's.
+
+The files were fetched by hand and their digests lived in a comment, so a clone could not provision the
+reader and nothing could check what the local runtime was built from. A manifest makes the files
+fetchable by the same command as every other artifact, and gives the pre-call check one place to read the
+pins from.
+
+#### Scenario: the reader's manifest pins both files of each model
+- **Key:** `model-provisioning:reader:each-model-names-its-model-and-projector`
+- **Layers:** unit
+- **WHEN** the reader's manifest is read
+- **THEN** every entry carries a destination, a digest, a byte count and a source at an immutable revision
+- **AND** every model it names points at exactly one model file and one projector file among its entries
+
+#### Scenario: every model a tracked flow declares is pinned
+- **Key:** `model-provisioning:reader:every-flow-model-is-pinned`
+- **Layers:** unit
+- **WHEN** the suite runs
+- **THEN** the model every tracked flow declares has an entry in the reader's manifest
+
+#### Scenario: the shipped driver provisions the reader's manifest
+- **Key:** `model-provisioning:reader:driver-provisions-the-manifest`
+- **Layers:** unit
+- **WHEN** the provisioning driver is pointed at the reader's manifest
+- **THEN** it plans and lands every entry that manifest declares, verified by digest

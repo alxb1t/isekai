@@ -1,6 +1,6 @@
 [project]
 name = "isekai"
-version = "0.23.0"
+version = "0.24.0"
 requires-python = ">=3.12"
 # **What running a flow needs, declared rather than optional.** This list was
 # empty until v0.22.3, held by the `-S` guard in `tests/test_pipeline_cli.py`,
@@ -101,6 +101,11 @@ dev = [
     "ty>=0.0.64",
     "httpx2==2.13.0",
 ]
+
+# The same uv here, in CI and in the image, so a lock one of them writes is a lock
+# the others read the same way (0033 design D1).
+[tool.uv]
+required-version = "==0.12.19"
 
 [tool.ruff.lint]
 # Explicit, because ruff's default set covers E and F but not I, D or ANN.

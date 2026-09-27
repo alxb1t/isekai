@@ -1,0 +1,81 @@
+# Derived by `tools/derive_image_project.py`; edit that, not this.
+[project]
+name = "isekai-image"
+version = "0"
+requires-python = "==3.12.*"
+dependencies = [
+    "torch==2.8.0",
+    "torchvision==0.23.0",
+    "torchaudio==2.8.0",
+    "insightface==0.7.3",
+    "comfyui-frontend-package==1.51.9",
+    "comfyui-workflow-templates==0.11.55",
+    "comfyui-embedded-docs==0.5.10",
+    "torchsde",
+    "numpy>=1.25.0",
+    "einops",
+    "transformers>=4.50.3",
+    "tokenizers>=0.13.3",
+    "sentencepiece",
+    "safetensors>=0.4.2",
+    "aiohttp>=3.11.8",
+    "yarl>=1.18.0",
+    "pyyaml",
+    "Pillow",
+    "scipy",
+    "tqdm",
+    "psutil",
+    "alembic",
+    "SQLAlchemy>=2.0.0",
+    "filelock",
+    "av>=17.0.0",
+    "comfy-kitchen==0.2.31",
+    "comfy-aimdo==0.5.2",
+    "requests",
+    "simpleeval>=1.0.0",
+    "blake3",
+    "kornia>=0.7.1",
+    "spandrel",
+    "pydantic~=2.0",
+    "pydantic-settings~=2.0",
+    "PyOpenGL>=3.1.8",
+    "comfy-angle",
+    "importlib_metadata",
+    "huggingface_hub",
+    "opencv-python",
+    "numpy",
+    "scikit-image",
+    "python-dateutil",
+    "mediapipe>=0.8.0",
+    "fvcore",
+    "yapf",
+    "omegaconf",
+    "ftfy",
+    "addict",
+    "yacs",
+    "trimesh[easy]",
+    "albumentations",
+    "scikit-learn",
+    "matplotlib",
+    "onnxruntime-gpu",
+]
+
+[tool.uv]
+package = false
+required-version = "==0.12.19"
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+build-constraint-dependencies = [
+    "setuptools==84.0.0",
+    "numpy==2.5.3",
+    "cython==3.3.0",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }

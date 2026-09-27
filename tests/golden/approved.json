@@ -40,5 +40,13 @@
     "framing": [],
     "body_shape": [],
     "background": []
+  },
+  "schema_document": {
+    "name": "identity"
+  },
+  "field_map": {
+    "name": "tests/stages.py",
+    "revision": 1,
+    "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
   }
 }

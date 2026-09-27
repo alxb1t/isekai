@@ -80,6 +80,12 @@ class ComfyClient(ComfyTransport):
             with request.urlopen(f"{self.server}/view?{query}") as resp:
                 return resp.read()
 
+    def system_stats(self) -> dict[str, Any]:
+        """Return the server's /system_stats report, its versions under `system`."""
+        with _reported():
+            with request.urlopen(f"{self.server}/system_stats") as resp:
+                return json.loads(resp.read())
+
 
 # How much of an error body a refusal quotes: ComfyUI's names the node and the
 # input, and a proxy's HTML page is noise past its first lines.

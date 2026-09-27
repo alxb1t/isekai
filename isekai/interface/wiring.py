@@ -39,6 +39,20 @@ from isekai.shared.vocabulary import (
 )
 from isekai.shared.vocabulary import load as read_vocabulary
 
+# Where `infra/up.sh` records the image reference it booted, removed by
+# `infra/down.sh`; a render records it as the image it ran on (0033 design D3).
+POD_IMAGE = REPOSITORY / ".runpod_pod_image"
+
+
+def booted_image() -> str | None:
+    """Return the image reference the pod was booted from, or None with no pod record.
+
+    Reads `POD_IMAGE` at the call, so the suite can point it at a fixture.
+    """
+    if not POD_IMAGE.is_file():
+        return None
+    return POD_IMAGE.read_text().strip() or None
+
 
 @dataclass
 class Wiring:

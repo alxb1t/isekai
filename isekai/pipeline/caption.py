@@ -37,7 +37,13 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama
-from isekai.foundation.artifacts import CAPTION_FILE, Caption, write
+from isekai.foundation.artifacts import (
+    CAPTION_FILE,
+    Caption,
+    CaptionProducer,
+    DigestRecord,
+    write,
+)
 from isekai.foundation.run import (
     CAPTIONS,
     Run,
@@ -86,21 +92,29 @@ READER_OPTIONS: Mapping[str, Any] = {
     "num_ctx": 4096,
 }
 
-# The one command that turns an absent reader into a present one. It is the
-# adapter's rather than the boundary's: the alias is machine-local and built from
-# a committed recipe, so what fixes its absence is a property of this adapter
-# rather than of the HTTP boundary underneath it (design.md D3).
-READER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
+# The one command that turns an absent reader into a present one: the alias is
+# machine-local and built from a committed recipe (design.md D3).
+READER_REMEDY = ollama.BUILD
 
 
 @dataclass(frozen=True)
 class Reading:
-    """What a reader returned: the prose, and what actually produced it."""
+    """What a reader returned: the prose, and what actually produced it.
+
+    `artifacts` are the files the model was verified to be built from, by `dest`;
+    `options` what it was sampled at, as sent.
+    """
 
     prose: str
     implementation: str
     models: tuple[str, ...] = ()
-    pinned: bool = False
+    artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def pinned(self) -> bool:
+        """Return whether the model was verified against the files it is pinned to."""
+        return bool(self.artifacts)
 
 
 class Reader(Protocol):
@@ -130,7 +144,9 @@ class FakeReader:
         self.calls.append((photo, briefing))
         if self.failure is not None:
             raise self.failure
-        return Reading(self.prose, self.implementation, self.models)
+        return Reading(
+            prose=self.prose, implementation=self.implementation, models=self.models
+        )
 
 
 @dataclass(frozen=True)
@@ -183,7 +199,11 @@ class OllamaReader:
         `workspace` is accepted and unused: it is a directory a reader may need
         to be granted, and this one reads the file's bytes itself. Keeping it in
         the signature is what keeps one `Reader` Protocol rather than two.
+
+        The model is checked against `config/reader.json` first, so a model built
+        from other files refuses before the host is asked anything.
         """
+        artifacts = ollama.verified_build(self.model)
         try:
             prose = ollama.ask(
                 self.body(photo, briefing),
@@ -192,7 +212,15 @@ class OllamaReader:
             )
         except ollama.OllamaFailure as failed:
             raise StageFailure(failed.kind, failed.detail) from failed
-        return Reading(prose, self.implementation, (self.model,))
+        # `body()` sends `READER_OPTIONS`; the body itself is not kept, since it
+        # carries the photograph and `ask` drops it for that reason.
+        return Reading(
+            prose=prose,
+            implementation=self.implementation,
+            models=(self.model,),
+            artifacts=artifacts,
+            options=READER_OPTIONS,
+        )
 
 
 def caption(
@@ -246,14 +274,19 @@ def caption(
         ) from failed
 
     path = directory / artifact_name(version)
+    producer: CaptionProducer = {
+        "implementation": reading.implementation,
+        "models": list(reading.models),
+        "pinned": reading.pinned,
+        "briefing": instructions_record(briefing_path),
+    }
+    if reading.artifacts:
+        producer["artifacts"] = dict(reading.artifacts)
+    if reading.options:
+        producer["options"] = dict(reading.options)
     artifact: Caption = {
         "schema": CAPTION_FILE.schema,
-        "producer": {
-            "implementation": reading.implementation,
-            "models": list(reading.models),
-            "pinned": reading.pinned,
-            "briefing": instructions_record(briefing_path),
-        },
+        "producer": producer,
         "prose": reading.prose,
     }
     write(path, CAPTION_FILE, artifact)

@@ -1,13 +1,17 @@
 import copy
 import json
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
+from isekai.boundary import ollama
 from isekai.boundary.provision import Manifest, load_manifest
 from isekai.foundation.flow import Schema, Workflow, load_flow
+from isekai.interface import wiring
 from isekai.shared.vocabulary import VOCABULARY_REMEDY, Vocabulary, read_tags
+from tests.fakes import ollama_records
 from tests.images import jpeg_bytes
 
 # A small stand-in for the provisioned tag list, with the same shape and the same
@@ -36,6 +40,28 @@ CSV = """tag_id,name,category,count
 18,hair,0,50000
 19,hatsune_miku,4,500000
 """
+
+
+@pytest.fixture(autouse=True)
+def _no_machine_records(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Point Ollama's model records and the pod-boot record at nothing, per test.
+
+    The suite never reads the operator's own records or a live pod's; a test
+    that needs one writes it and points the constant there itself.
+    """
+    empty = tmp_path_factory.mktemp("machine")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(ollama, "MODEL_RECORDS", empty / "ollama")
+        patch.setattr(wiring, "POD_IMAGE", empty / ".runpod_pod_image")
+        yield
+
+
+@pytest.fixture
+def model_records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point Ollama's model records at a fixture recording `READER`'s pinned build."""
+    root = ollama_records(tmp_path / "records")
+    monkeypatch.setattr(ollama, "MODEL_RECORDS", root)
+    return root
 
 
 @pytest.fixture(scope="session")

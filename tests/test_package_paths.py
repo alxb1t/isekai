@@ -1,6 +1,6 @@
 """The repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
-Six constants across four files anchor a repository path on their own `__file__`
+Each constant in `ANCHORS` anchors a repository path on its own `__file__`
 -- v0.16's fold took `SCHEMAS_DIR` and `BRIEFINGS_DIR` with it, because a schema
 and a briefing are a flow's now and a flow is reached through `FLOWS_DIR`, and
 v0.22 replaced `claude_cli.ROOT` with `run.REPOSITORY` when the file it lived in
@@ -10,7 +10,7 @@ the directory holding `pyproject.toml`. None of them is compared against another
 constant, because two constants that move together prove nothing about where
 either one landed.
 
-The absolute form is the point. Five of the six break loudly when a file moves a
+The absolute form is the point. All but one break loudly when a file moves a
 directory deeper without its expression following -- a missing `flows/`, a flow's
 own directory or the manifest takes dozens of tests down at collection.
 `DATA_ROOT` is the one that would relocate to `isekai/.data` with `RUNS_ROOT`
@@ -30,6 +30,7 @@ import pytest
 from evaluation import eval_models
 from isekai.boundary import provision
 from isekai.foundation import flow, run
+from isekai.interface import wiring
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -51,6 +52,12 @@ ANCHORS = (
         ("config", "vocabulary.json"),
         id="provision.VOCABULARY_MANIFEST_PATH",
     ),
+    pytest.param(
+        provision.READER_MANIFEST_PATH,
+        ("config", "reader.json"),
+        id="provision.READER_MANIFEST_PATH",
+    ),
+    pytest.param(wiring.POD_IMAGE, (".runpod_pod_image",), id="wiring.POD_IMAGE"),
     pytest.param(
         eval_models.EVAL_MANIFEST_PATH,
         ("evaluation", "eval_models.json"),

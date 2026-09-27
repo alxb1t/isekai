@@ -1,10 +1,11 @@
 """What every manifest deriver is made of: entry types, digest strategies, writer.
 
-`config/models.json`, `evaluation/eval_models.json` and `config/vocabulary.json`
-are three manifests answering three questions -- what the graph needs on the pod,
+`config/models.json`, `evaluation/eval_models.json`, `config/vocabulary.json` and
+`config/reader.json` each answer one question -- what the graph needs on the pod,
 what the scorer loads on the operator's machine, what the pipeline fills sheets
-from -- and that separation is deliberate and stays (design.md D10). What they
-share is *how* a manifest is derived, and that lives here.
+from, what the local reader is built from -- and that separation is deliberate
+and stays (design.md D10). What they share is *how* a manifest is derived, and
+that lives here.
 
 Two derivers already shared these names by import, which makes an accidental
 structure load-bearing the moment a third one arrives. Worse, the entry spec was
@@ -38,7 +39,9 @@ import hashlib
 import json
 import urllib.request
 from pathlib import Path
-from typing import NamedTuple, TypedDict
+from typing import NamedTuple, NotRequired, TypedDict
+
+from isekai.boundary.provision import ReaderModel
 
 # The agent string every derivation reaches upstream with. One value, so a
 # publisher reading its logs sees one client rather than three.
@@ -73,11 +76,12 @@ class ManifestEntry(TypedDict):
 
 
 class Manifest(TypedDict):
-    """The emitted manifest."""
+    """The emitted manifest; `aliases` is the reader's alone."""
 
     pinned: str
     publishers: list[str]
     entries: list[ManifestEntry]
+    aliases: NotRequired[dict[str, ReaderModel]]
 
 
 class Source(NamedTuple):

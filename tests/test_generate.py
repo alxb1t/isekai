@@ -20,7 +20,7 @@ import pytest
 import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
 from isekai.boundary.comfy import ComfyClient
-from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, read
+from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, Runtime, read
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -30,6 +30,7 @@ from isekai.foundation.flow import (
     Flow,
     Schema,
     load_flow,
+    manifest_digest,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -53,7 +54,7 @@ from isekai.pipeline.generate import (
     photo_resolution,
     prepare,
     prompt_artifact,
-    render,
+    read_runtime,
     rendered_seeds,
     seeds_for,
 )
@@ -61,9 +62,9 @@ from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FakeComfyClient, url_of
+from tests.fakes import FAKE_SYSTEM, POD_IMAGE, FakeComfyClient, url_of
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
+from tests.stages import FIELD_MAP, Always, caption, fake_wd14, render, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -432,7 +433,9 @@ def test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph(
     body = read(produced[0].provenance, RENDER_FILE)
     assert body["flow"] == FLOW
     assert body["seed"] == 42
-    assert body["sheet_version"] == 1
+    assert body.get("flow_digest") == manifest_digest(FLOW)
+    assert body.get("sheet") == 1
+    assert "sheet_version" not in body
     assert body["graph_sha256"] == graph_digest(client.submissions[0])
     assert body["flow_graph_sha256"] == flow.graph_digest()
 
@@ -514,12 +517,26 @@ def test_raising_the_count_renders_only_the_difference(
 ) -> None:
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
-    render(run, flow, client, count=2, rng=random.Random(7), poll=0)
+    render(
+        run,
+        flow,
+        client,
+        count=2,
+        rng=random.Random(7),
+        poll=0,
+    )
     directory = run.path / FLOW / OUTPUTS / "001"
     first = rendered_seeds(directory, flow.output_suffix)
     stamps = {p.name: p.read_bytes() for p in directory.iterdir()}
 
-    produced = render(run, flow, client, count=3, rng=random.Random(9), poll=0)
+    produced = render(
+        run,
+        flow,
+        client,
+        count=3,
+        rng=random.Random(9),
+        poll=0,
+    )
 
     assert len(first) == 2
     assert len(produced) == 1
@@ -528,7 +545,7 @@ def test_raising_the_count_renders_only_the_difference(
         assert (directory / name).read_bytes() == body
 
 
-@pytest.mark.spec("image-generation:seeds:outputs-carry-the-sheet-version")
+@pytest.mark.spec("image-generation:seeds:outputs-carry-the-approval")
 def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
@@ -556,7 +573,14 @@ def test_each_render_is_named_by_the_seed_that_produced_it(
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
 
-    produced = render(run, flow, client, count=3, rng=random.Random(7), poll=0)
+    produced = render(
+        run,
+        flow,
+        client,
+        count=3,
+        rng=random.Random(7),
+        poll=0,
+    )
 
     for made in produced:
         assert made.image.stem == str(made.seed)
@@ -756,7 +780,13 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
     monkeypatch.setattr(urllib.request, "urlopen", closed_after_the_upload)
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            ComfyClient("http://127.0.0.1:8188"),
+            seeds=[42],
+            poll=0,
+        )
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert "the rendering endpoint could not be reached" in str(refused.value)
@@ -786,7 +816,13 @@ def test_a_rejected_graph_is_recorded_permanent(
     _answering(monkeypatch, 400, b'{"error": {"message": "Prompt outputs failed"}}')
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            ComfyClient("http://127.0.0.1:8188"),
+            seeds=[42],
+            poll=0,
+        )
 
     message = str(refused.value)
     directory = run.path / FLOW / OUTPUTS / "001"
@@ -803,7 +839,13 @@ def test_a_server_error_is_recorded_transient(
     _answering(monkeypatch, 502, b"Bad Gateway")
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            ComfyClient("http://127.0.0.1:8188"),
+            seeds=[42],
+            poll=0,
+        )
 
     message = str(refused.value)
     directory = run.path / FLOW / OUTPUTS / "001"
@@ -870,7 +912,13 @@ def test_a_submission_answered_in_the_wrong_shape_is_refused_permanent(
     _answering(monkeypatch, 200, body)
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            ComfyClient("http://127.0.0.1:8188"),
+            seeds=[42],
+            poll=0,
+        )
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
@@ -896,7 +944,13 @@ def test_a_history_that_is_not_an_object_is_refused_permanent(
     monkeypatch.setattr(urllib.request, "urlopen", answer)
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            ComfyClient("http://127.0.0.1:8188"),
+            seeds=[42],
+            poll=0,
+        )
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
@@ -915,7 +969,13 @@ def test_the_sidecar_is_written_before_its_image(
     monkeypatch.setattr(generate_module, "write_atomically", crashed)
 
     with pytest.raises(OSError):
-        render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            FakeComfyClient(),
+            seeds=[42],
+            poll=0,
+        )
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert (directory / "42.json").is_file()
@@ -975,7 +1035,13 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
     monkeypatch.setattr(run_module.os, "fsync", interrupted)
 
     with pytest.raises(OSError):
-        render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+        render(
+            run,
+            flow,
+            FakeComfyClient(),
+            seeds=[42],
+            poll=0,
+        )
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert not (directory / f"42{flow.output_suffix}").exists()
@@ -1115,7 +1181,13 @@ def test_a_flow_declaring_fewer_roles_renders(
     made, flow = _run_for_fewer(tmp_path, schema, vocabulary)
     client = FakeComfyClient()
 
-    produced = render(made, flow, client, seeds=[11], rng=random.Random(0))
+    produced = render(
+        made,
+        flow,
+        client,
+        seeds=[11],
+        rng=random.Random(0),
+    )
 
     assert [render_.seed for render_ in produced] == [11]
     assert produced[0].image.is_file()
@@ -1130,7 +1202,142 @@ def test_a_flow_that_declares_no_photograph_uploads_nothing(
 
     assert "photo" not in flow.inputs
 
-    render(made, flow, client, seeds=[11], rng=random.Random(0))
+    render(
+        made,
+        flow,
+        client,
+        seeds=[11],
+        rng=random.Random(0),
+    )
 
     assert client.uploaded is None
     assert client.submissions
+
+
+# --- what a prompt and a render record (0033 design D5) -----------------------
+
+
+@pytest.mark.spec(
+    "image-generation:provenance:the-flow-digest-and-the-sheet-are-recorded"
+)
+def test_a_prompt_and_a_render_record_the_flow_digest_and_the_sheet(
+    tmp_path: Path, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    made = open_run(photo, tmp_path / "runs")
+    sheet(made, schema, vocabulary)
+    sheet(made, schema, vocabulary, new_version=True)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+
+    (one,) = render(
+        made,
+        flow,
+        FakeComfyClient(),
+        seeds=[42],
+        poll=0,
+    )
+
+    prompt = read(made.directory(FLOW, PROMPTS) / artifact_name(1), PROMPT_FILE)
+    sidecar = read(one.provenance, RENDER_FILE)
+    for record in (prompt, sidecar):
+        assert record.get("flow_digest") == manifest_digest(FLOW)
+        assert record.get("sheet") == 2
+        assert record["producer"]["from"] == 1
+
+
+@pytest.mark.spec("comfy-transport:runtime:the-report-is-read-through-the-seam")
+def test_the_runtime_is_read_from_the_endpoints_own_report() -> None:
+    client = FakeComfyClient()
+
+    assert read_runtime(client) == {
+        "comfyui_version": FAKE_SYSTEM["comfyui_version"],
+        "python_version": FAKE_SYSTEM["python_version"],
+        "pytorch_version": FAKE_SYSTEM["pytorch_version"],
+    }
+    assert client.stats_calls == 1
+
+
+@pytest.mark.spec("comfy-transport:runtime:the-report-is-read-through-the-seam")
+def test_the_client_reads_the_report_over_the_transport(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    asked: list[str] = []
+
+    def urlopen(
+        request: urllib.request.Request | str, *args: object, **kwargs: object
+    ) -> io.BytesIO:
+        asked.append(url_of(request))
+        return io.BytesIO(json.dumps({"system": dict(FAKE_SYSTEM)}).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+
+    report = ComfyClient("http://127.0.0.1:8188").system_stats()
+
+    assert asked == ["http://127.0.0.1:8188/system_stats"]
+    assert report["system"]["comfyui_version"] == FAKE_SYSTEM["comfyui_version"]
+
+
+@pytest.mark.spec("image-generation:runtime:a-pinned-pod-is-recorded")
+def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from isekai.interface import wiring
+    from isekai.interface.cli import build_parser, dispatch
+
+    record = tmp_path / ".runpod_pod_image"
+    record.write_text(f"{POD_IMAGE}\n")
+    monkeypatch.setattr(wiring, "POD_IMAGE", record)
+    runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "bea")]
+    client = FakeComfyClient()
+    wired = wiring.Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=client,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=io.StringIO(),
+    )
+    argv = ["generate", "--flow", FLOW, "--seed", "42", *(run.id for run in runs)]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 0
+
+    for run in runs:
+        sidecar = read(run.path / FLOW / OUTPUTS / "001" / "42.json", RENDER_FILE)
+        assert sidecar.get("image") == POD_IMAGE
+        assert sidecar.get("pinned") is True
+        assert sidecar.get("runtime") == read_runtime(FakeComfyClient())
+    # One report for the session, however many renders it served.
+    assert client.stats_calls == 1
+
+
+@pytest.mark.spec("image-generation:runtime:an-unrecorded-endpoint-is-unpinned")
+def test_a_render_with_no_pod_boot_record_is_unpinned(run: Run, flow: Flow) -> None:
+    prepare(run, {FLOW: flow})
+
+    (one,) = render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+
+    sidecar = read(one.provenance, RENDER_FILE)
+    assert "image" not in sidecar
+    assert sidecar.get("pinned") is False
+
+
+@pytest.mark.spec("image-generation:runtime:a-complete-batch-reads-no-report")
+def test_a_complete_batch_asks_the_endpoint_nothing(run: Run, flow: Flow) -> None:
+    prepare(run, {FLOW: flow})
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+
+    def unread() -> Runtime:
+        raise AssertionError("the report was read for a complete batch")
+
+    assert (
+        render(run, flow, FakeComfyClient(), runtime=unread, seeds=[42], poll=0) == []
+    )

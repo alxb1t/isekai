@@ -32,6 +32,11 @@ read from the environment, and urllib bypasses loopback for no address it was no
 explicitly told to -- so `http_proxy` alone would have made the photograph's
 destination configurable after all, by a variable nobody chose.
 
+**The files behind an alias are checked before it answers.** `verified_build`
+compares Ollama's own record of a model with the digests `config/reader.json`
+pins, once per model, and refuses a model built from anything else (0033 design
+D4).
+
 **There is no adapter in this file.** `OllamaReader` and `OllamaTagger` live
 beside their twins in `pipeline/`, because two implementations of one Protocol in
 two different layers is the thing that arrangement avoids.
@@ -41,11 +46,18 @@ Stdlib only.
 
 import http.client
 import json
+import os
+import pwd
 import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
-from typing import Any, Protocol
+from functools import cache
+from pathlib import Path
+from types import MappingProxyType
+from typing import Any, Literal, Protocol
 
+from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
+from isekai.foundation.artifacts import DigestRecord
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import Kind
 
@@ -74,6 +86,26 @@ OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 # every transition evicts the other and the next call is cold either way. Two
 # numbers would be a knob with no measurement behind it (design.md D10).
 TIMEOUT = 900
+
+# Where Ollama records the layers each local model is built from; None means the
+# operator's own, under the home directory `_home_records` finds. The suite points
+# it at a fixture.
+MODEL_RECORDS: Path | None = None
+
+# A role `config/reader.json` names a file for, as `provision.ReaderModel` keys it.
+Role = Literal["model", "projector"]
+
+# Each role, to the media type of its layer in a record.
+LAYERS: Mapping[Role, str] = {
+    "model": "application/vnd.ollama.image.model",
+    "projector": "application/vnd.ollama.image.projector",
+}
+
+# The command that fetches and verifies the pinned files a model is built from.
+PROVISION = "bash tools/download_models.sh config/reader.json"
+
+# The command that builds a model from those files, as `ollama` names it.
+BUILD = "ollama create {model} -f config/joycaption.Modelfile"
 
 # The host's own answer to "truncated or malformed". Without it the two are
 # indistinguishable and only one of them is fixed by raising the output budget.
@@ -142,11 +174,9 @@ def ask(
     """Return the model's own answer to `body`, or refuse, or raise.
 
     `remedy` is the one command that fixes an absent model, and the caller supplies
-    it rather than this module holding one: which command fixes an absent model
-    depends on how that model was named, and a boundary that knew that would know
-    the flow. Both callers here build a machine-local alias with `ollama create`;
-    a registry tag fetched by `ollama pull` is the other shape, and the manifest
-    still names one.
+    it: which command fixes an absent model depends on how that model was named.
+    Both callers here build a machine-local alias, with `BUILD`; a registry tag
+    fetched by `ollama pull` is the other shape, and the manifest still names one.
 
     **A missing model and a missing host refuse rather than spending an attempt.**
     A retry budget counts models tried and failed, and neither of those is that;
@@ -246,13 +276,104 @@ def ask(
     return answer
 
 
+def _layer_digests(record: Path, remedy: str) -> dict[Role, str]:
+    """Return each role's `sha256` hex from an Ollama model record, or refuse.
+
+    e.g. a record whose `layers` hold the model and projector -> {"model": hex, ...}
+    """
+    try:
+        layers = json.loads(record.read_text())["layers"]
+        found = {
+            role: layer["digest"].removeprefix("sha256:")
+            for layer in layers
+            for role, media in LAYERS.items()
+            if layer["mediaType"] == media
+        }
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as unread:
+        raise Refusal(
+            f"Ollama's record at {record} does not read as a model record, so the "
+            f"model cannot be checked; rebuild it (`{remedy}`), then run this "
+            "command again"
+        ) from unread
+    return found
+
+
+@cache
+def _home_records() -> Path:
+    """Return where Ollama records the operator's models, under their home.
+
+    The home directory comes from the password database rather than `$HOME`, so
+    this module still reads no environment.
+    """
+    home = Path(pwd.getpwuid(os.getuid()).pw_dir)
+    return home / ".ollama/models/manifests/registry.ollama.ai/library"
+
+
+def verified_build(model: str) -> Mapping[str, DigestRecord]:
+    """Return the pinned files `model` is built from, keyed by `dest`, or refuse.
+
+    `MODEL_RECORDS` is looked up at the call, so the suite can point every call
+    at a fixture. Every refusal costs no attempt.
+    """
+    return _verified_build(model, MODEL_RECORDS or _home_records())
+
+
+@cache
+def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
+    """Check `model` once per root; a refusal raises and so is never cached."""
+    remedy = BUILD.format(model=model)
+    manifest = load_manifest(READER_MANIFEST_PATH)
+    built = manifest.get("aliases", {}).get(model)
+    if built is None:
+        raise Refusal(
+            f"the model {model!r} this flow declares is pinned by no entry in "
+            "config/reader.json; add it to `tools/derive_reader.py`, run "
+            "`uv run python -m tools.derive_reader`, then run this command again"
+        )
+    pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
+    unpinned = [built[role] for role in LAYERS if built[role] not in pins]
+    if unpinned:
+        raise Refusal(
+            f"config/reader.json builds {model!r} from {', '.join(unpinned)}, "
+            "which no entry pins; fix `tools/derive_reader.py`, run "
+            "`uv run python -m tools.derive_reader`, then run this command again"
+        )
+    name, _, tag = model.partition(":")
+    record = root / name / (tag or "latest")
+    if not record.is_file():
+        raise Refusal(
+            f"Ollama has no record of {model!r} at {record}; build it "
+            f"(`{remedy}`), then run this command again"
+        )
+    found = _layer_digests(record, remedy)
+    differ = [
+        f"its {role} is {found.get(role, 'absent')}, and config/reader.json pins "
+        f"{pins[built[role]]}"
+        for role in LAYERS
+        if found.get(role) != pins[built[role]]
+    ]
+    if differ:
+        raise Refusal(
+            f"{model!r} is built from files config/reader.json does not pin: "
+            f"{'; '.join(differ)}; fetch the pinned files (`{PROVISION}`), rebuild "
+            f"the model (`{remedy}`), then run this command again"
+        )
+    return MappingProxyType(
+        {built[role]: {"sha256": pins[built[role]]} for role in LAYERS}
+    )
+
+
 __all__: Sequence[str] = (
+    "BUILD",
     "GENERATE",
     "HOST",
+    "LAYERS",
+    "MODEL_RECORDS",
     "OPENER",
     "TIMEOUT",
     "OllamaFailure",
     "Transport",
     "ask",
     "post",
+    "verified_build",
 )

@@ -58,7 +58,7 @@ Local (your machine)                          RunPod
                                                      │  down.sh → remove pod; volume persists
 ```
 
-**Lifecycle:** `up.sh` (create pod from the image + attach volume) →
+**Lifecycle:** `up.sh` (create pod from the image `config/image.json` pins by digest + attach volume) →
 `python -m isekai generate --flow … --server …` → `down.sh` (remove pod, billing stops). Only the pod is
 ephemeral and metered.
 
@@ -160,9 +160,9 @@ python -m isekai generate --flow summon-anime-wai .inputs/me.jpg --server http:/
 ```
 
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
-artifact recording the flow, the seed, the sheet version and the digest of the graph actually
-submitted. **Download anything you want to keep before the next step** — renders live on the pod's
-ephemeral disk, and only the models volume persists.
+artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
+submitted, the image the pod booted and the runtime it reported. **Download anything you want to keep
+before the next step** — renders live on the pod's ephemeral disk, and only the models volume persists.
 
 Omit `--server` to assemble every prompt and stop without rendering, which is how a whole batch is
 checked before anything is rented. Assembly happens before any endpoint is acquired either way, so a
@@ -184,6 +184,41 @@ python -m isekai show .inputs/me.jpg
 
 Prints a run's artifacts, versions and what produced each one. It reaches no model and no GPU, and it
 works on a checkout that has provisioned nothing.
+
+### A batch of photographs, through both flows
+
+The same steps for a directory of photographs and both tracked flows, one command per step. Written
+for zsh, where `P=(…)` is an array of every file in the directory; in bash, use `"${P[@]}"` for `$P`.
+
+```sh
+P=(.inputs/batch/*)     # every photograph in the batch
+R=.data/batch/runs      # this batch's runs, apart from any other
+
+# ① ② free: the stage verbs take every photograph and both flows at once
+bash tools/download_models.sh config/reader.json   # once; it skips files already verified
+uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
+
+# ③ free: one page per flow, over every run in the batch
+uv run python -m isekai ui --runs $R --flow summon-anime-wai  $(ls $R)
+uv run python -m isekai ui --runs $R --flow conjure-anime-wai $(ls $R)
+uv run python -m isekai show --runs $R $P
+
+# ④ – ⑦ metered: one pod renders both flows
+./infra/up.sh
+# second terminal: the tunnel command up.sh printed
+uv run python -m isekai generate --runs $R --flow conjure-anime-wai --count 2 $P --server http://127.0.0.1:8188
+uv run python -m isekai generate --runs $R --flow summon-anime-wai  --count 1 $P --server http://127.0.0.1:8188
+./infra/down.sh
+```
+
+- **`ui` takes run ids, not photographs.** It reviews work that already exists, and `$(ls $R)` is every
+  run this batch made — which is why the batch has a runs root of its own. `--flow` is given exactly
+  once, so each flow is its own page: approve every sheet, stop it with Ctrl-C, run the next.
+- **`generate` runs once per flow here** only because the counts differ: `--count` applies to every
+  flow named in one call. With one count, name both flows in one call.
+- **`show` takes no `--flow`**: it reports every flow a run holds.
 
 ### Correcting the sheets in a browser
 
@@ -270,20 +305,19 @@ why each refusal names the command that does.
 **To run stage ①**, install [Ollama](https://ollama.com), then, from the repository root:
 
 ```sh
+bash tools/download_models.sh config/reader.json
 ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile
 ```
 
-**One command, because there is one model.** It builds the reader from a committed recipe, and the
-same alias answers the hosted tagger — which is exactly why the tag prompt is unframed: two calls to
-one model must not arrive framed differently.
-**`config/joycaption.Modelfile`'s header names the two GGUF files it needs,
-with their sha256, their byte counts and their pinned source revision** — they are not in this
-repository and `models/` is gitignored, so fetch them into `models/joycaption/` first.
+**The first fetches, the second builds.** `config/reader.json` pins the GGUF model and its vision
+projector by digest; the driver lands both in `models/joycaption/` and verifies them. `ollama create`
+builds the reader from the committed recipe, and the same alias answers the hosted tagger — which is
+exactly why the tag prompt is unframed: two calls to one model must not arrive framed differently.
 
-**After creating the reader, check that it can see.** `ollama show joycaption-beta-one-q4k` must
-list `vision` under Capabilities **and** print a Projector block. A model whose vision projector is
-missing loads, answers fluently, and describes nothing — the failure is silent, and no code here
-detects it.
+**Before its first call, `caption` and `tag` check the model.** Ollama's own record of it must name
+the model and projector files `config/reader.json` pins, or the verb refuses and spends no attempt. A
+model whose vision projector is missing loads, answers fluently and describes nothing; its record
+names no projector, so it is refused rather than run.
 
 ## Development
 
@@ -341,21 +375,24 @@ isekai/
 │   └── down.sh                # remove pod, billing stops
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
+│   ├── image.json             # the pod image, pinned by digest — what up.sh boots
+│   ├── reader.json            # the reader's model and projector, by digest, per alias
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
-│   ├── derive_*.py            # re-derive the manifests and the field map: `make derive`
+│   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   └── typecheck_ui.sh        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── Makefile                   # `make gate`, and `make derive` to re-run the derivers
+├── image/                     # the pod's Python environment: a locked uv project, derived
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── start.sh                   # baked into the image as its start command
-├── .github/workflows/         # CI: run the gate; build & push the image to GHCR
+├── .github/workflows/         # CI: run the gate; build & push the image to GHCR on request
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```
@@ -375,7 +412,7 @@ what boots SSH + ComfyUI *inside* the container.
 
 ```
 BUILD TIME (once, or when the image changes)
-  Dockerfile + start.sh  ──▶  CI builds image  ──▶  GHCR (ghcr.io/alxb1t/isekai)
+  Dockerfile + start.sh  ──▶  CI builds on request  ──▶  GHCR (ghcr.io/alxb1t/isekai)
   (start.sh is baked INTO the image as its start command)
 
 PROVISION TIME (every session — this is up.sh / down.sh)
@@ -384,7 +421,7 @@ PROVISION TIME (every session — this is up.sh / down.sh)
   ────────────                     ──────                              ────
   ./infra/up.sh
     │ 1  POST /v1/pods ──────────▶ control plane
-    │    (image, GPU, volume,           │ 2  place pod on a GPU host
+    │    (image@digest, GPU, volume,    │ 2  place pod on a GPU host
     │     PUBLIC_KEY, port 22)          ▼
     │                             GPU host (driver + toolkit ready)
     │                                  │ 3  pull image ───────────────▶ ghcr image

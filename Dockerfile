@@ -1,5 +1,6 @@
-# CUDA runtime
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+# CUDA runtime. The base and uv are named by digest, the tag kept for a reader;
+# `docker buildx imagetools inspect <tag>` resolves one (0033 design D2).
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04@sha256:da6791294b0b04d7e65d87b7451d6f2390b4d36225ab0701ee7dfec5769829f5
 
 ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 
@@ -10,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.12.19@sha256:04d046b13e60d6bcec73cbc5e1cad25d680dea90c8573340950a0ac2d1aef424 /uv /uvx /usr/local/bin/
 
 # ComfyUI source — pinned to the commit `:v0.10-rc` was built from, recovered from
 # the image itself (`git -C /opt/ComfyUI rev-parse HEAD`). The pin is a record of
@@ -23,26 +24,11 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI \
     && git checkout 250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a
 WORKDIR /opt/ComfyUI
 
-# Isolated venv
-ENV VIRTUAL_ENV=/opt/ComfyUI/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN uv venv --python 3.12 "$VIRTUAL_ENV"
-
-# CUDA-matched PyTorch — cu128 build ships sm_120 kernels for the Blackwell GPU
-RUN uv pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
-    --index-url https://download.pytorch.org/whl/cu128
-
-# ComfyUI python deps
-RUN uv pip install -r requirements.txt
-
 # InstantID custom nodes — pinned (pack is maintenance-only since Apr 2025)
 RUN git clone https://github.com/cubiq/ComfyUI_InstantID.git \
         /opt/ComfyUI/custom_nodes/ComfyUI_InstantID \
     && cd /opt/ComfyUI/custom_nodes/ComfyUI_InstantID \
     && git checkout 72495e806bc2ab9c41581e15ccaa1bcf83c477e8
-
-# InstantID's runtime deps — CPU onnxruntime only (never -gpu; face pass is a tiny CPU op)
-RUN uv pip install insightface==0.7.3 onnxruntime==1.20.1
 
 # ControlNet preprocessors — pinned (repos drift; v1.1.5)
 RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
@@ -50,9 +36,17 @@ RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
     && cd /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux \
     && git checkout e8b689a513c3e6b63edc44066560ca5919c0576e
 
-# Preprocessor runtime deps (DWPose, lineart, depth, tile)
-RUN uv pip install -r \
-    /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux/requirements.txt
+# The Python environment: `image/` is a uv project whose lock carries every hash
+# of ComfyUI's, the preprocessors' and InstantID's packages, and the cu128 torch
+# stack with the Blackwell (sm_120) kernels. `--locked` refuses a stale lock, so
+# nothing resolves at build time. `tools/derive_image_project.py` writes it.
+COPY image/pyproject.toml /opt/isekai/image/pyproject.toml
+COPY image/uv.lock /opt/isekai/image/uv.lock
+COPY image/.python-version /opt/isekai/image/.python-version
+ENV VIRTUAL_ENV=/opt/ComfyUI/.venv
+ENV UV_PROJECT_ENVIRONMENT=$VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN uv sync --locked --project /opt/isekai/image
 
 # Provisioning is three tracked files, not one: the driver, the pinned manifest it
 # reads, and the module that owns every decision taken about it. Copying only the

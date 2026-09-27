@@ -121,16 +121,20 @@ invocation produces exactly what is missing.
 ### Requirement: A tagger's producer names what made the artifact, and claims a pin only when it has one
 
 The system SHALL record in each tag artifact's producer the implementation and the model that ran, SHALL
-record the digest of the prompt where the tagger was given one, and SHALL declare the artifact pinned
+record the digest of the prompt where the tagger was given one, SHALL record the sampling options where
+the tagger was sampled and the confidence floor where it filtered, and SHALL declare the artifact pinned
 only where every artifact the tagger read is verified against a committed digest.
 
 A producer that names only a model cannot explain its own result, and the instruction text is the
 variable with the largest measured effect on what comes back. But a prompt held as a module constant has
 no path, so the record carries its digest without claiming a location it does not have. The pin claim is
-the sharper half: every producer in this build so far has been a hosted model exposing no immutable
-revision, so every artifact has declared itself unpinned. A tagger reading a file whose bytes this
-repository has committed a digest for is the first that can say otherwise, and a pin claimed where the
-bytes were not checked would be worse than no claim at all.
+the sharper half: a pin claimed where the bytes were not checked would be worse than no claim at all. The
+local tagger reads a file whose bytes this repository has committed a digest for; the hosted tagger's model
+is checked against its pinned files before its first call, so it names those files and claims its pin too.
+
+**The options and the floor are recorded because they are constants, not keys.** Neither is declared by a
+flow, and both shape what the list holds: the options what the model answers, the floor which scored tags
+are kept at all.
 
 #### Scenario: the local tagger declares its pin and names both digests
 - **Key:** `tagging:provenance:the-local-tagger-declares-its-pin`
@@ -146,6 +150,20 @@ bytes were not checked would be worse than no claim at all.
 - **THEN** its producer records that prompt's digest
 - **AND** it records no path for it, and two artifacts produced under different prompts are
   distinguishable from the record alone
+
+#### Scenario: the hosted tagger declares its pin and names both files
+- **Key:** `tagging:provenance:the-hosted-tagger-declares-its-pin`
+- **Layers:** unit
+- **WHEN** a hosted tagger whose model was verified against the reader's manifest writes an artifact
+- **THEN** its producer declares the artifact pinned
+- **AND** it names the digest of the model file and of the projector file
+
+#### Scenario: the hosted tagger records its options, and the local tagger its floor
+- **Key:** `tagging:provenance:options-and-floor-are-recorded`
+- **Layers:** unit
+- **WHEN** each tagger writes an artifact
+- **THEN** the hosted tagger's producer records the sampling options it sent, key for key
+- **AND** the local tagger's producer records the confidence floor its list was filtered at
 
 ### Requirement: The model and its label index are verified together or not used
 
@@ -235,8 +253,8 @@ The system SHALL run both taggers for a flow whose manifest declares the tagger,
 tagger through no key that names its model, and SHALL resolve the hosted tagger on the model that flow's
 manifest names. The tag verb SHALL refuse, before any artifact is written, an invocation naming a flow
 whose manifest declares no tagger, naming the flow and the key. A hosted tagger that cannot reach its
-model SHALL refuse without spending an attempt, and that refusal SHALL NOT prevent the local tag list from
-being written.
+model, or whose model is not built from the files the reader's manifest pins, SHALL refuse without
+spending an attempt, and that refusal SHALL NOT prevent the local tag list from being written.
 
 The two are not implementations of one thing and must not be made to look like one. The hosted tagger is
 selected by a string in a frozen manifest, because which model answers is a claim the flow makes about
@@ -275,3 +293,10 @@ flow to drop from the command.
 - **WHEN** the tag verb names a flow whose manifest declares no tagger
 - **THEN** the invocation is refused before any artifact is written, naming the flow and the key
 - **AND** no other flow named with it is tagged
+
+#### Scenario: a hosted tagger on an unpinned build refuses and the local list is written
+- **Key:** `tagging:independence:an-unpinned-hosted-model-costs-no-local-list`
+- **Layers:** unit
+- **WHEN** the hosted tagger's model is built from files the reader's manifest does not pin
+- **THEN** the tag verb refuses the hosted list, naming both digests, and spends no attempt
+- **AND** the local tag list is written

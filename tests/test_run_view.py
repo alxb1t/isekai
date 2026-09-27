@@ -13,13 +13,13 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import WD14, Run, open_run
 from isekai.interface.run_view import listings, rendered, report
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.generate import prepare, render
+from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, fake_tagger, sheet
+from tests.stages import caption, fake_tagger, render, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -117,7 +117,7 @@ def test_a_stage_with_nothing_in_it_says_so(
 
 
 @pytest.mark.spec("cli:show:producers-are-reported")
-def test_renders_are_listed_under_the_sheet_version_they_came_from(
+def test_renders_are_listed_under_the_approval_they_came_from(
     run: Run, schema: Schema
 ) -> None:
     flow = load_flow(FLOW)

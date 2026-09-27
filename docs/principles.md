@@ -179,12 +179,16 @@ gap is recorded with its trigger, and every artifact it shapes says `pinned: fal
   `tests/test_vocabulary_manifest.py::test_a_label_index_and_a_model_at_two_revisions_fail_the_check`,
   `tests/test_flow.py::test_every_tracked_flow_matches_its_committed_digest`,
   `tests/test_flow.py::test_a_re_pin_leaves_a_record_a_later_reader_can_find`,
-  `tests/test_infra.py::test_every_git_clone_in_the_image_is_pinned_to_a_commit`, and the gate's
-  first command, which installs the Python dependencies from the lock file.
-- **Not yet held** for the local caption model, which is named by an alias whose bytes nothing checks;
-  the pod image, run by its moving `latest` tag; the image's base, build tool and system packages; the
-  requirement files the image installs without a lock; and the CI actions, pinned only to a major
-  version.
+  `tests/test_infra.py::test_every_git_clone_in_the_image_is_pinned_to_a_commit`,
+  `tests/test_infra.py::test_the_base_and_the_build_tool_are_named_by_digest`,
+  `tests/test_infra.py::test_the_environment_is_installed_from_the_committed_lock`,
+  `tests/test_infra.py::test_the_pod_is_created_from_the_pinned_digest`,
+  `tests/test_caption.py::test_a_model_built_from_other_files_refuses_naming_both_digests`, and the
+  gate's first command, which installs the Python dependencies from the lock file. Review holds the CI
+  actions, pinned by commit.
+- **Not yet held** for the image's system packages, which `apt-get` installs at build time with no
+  version named.
+- **How:** [pins](pins.md) — where each pin is declared, when it is checked, and how it is moved.
 
 ### Hold a guarantee by construction, not by a filter
 
@@ -233,7 +237,8 @@ walked back to its photograph. What is not pinned says so, and nothing unpinned 
 - **Held by:** `tests/test_run_directory.py::test_the_link_between_stages_is_the_producer_record`,
   `tests/test_run_directory.py::test_an_unpinnable_producer_says_so_rather_than_claiming_a_pin`,
   `tests/test_run_directory.py::test_a_producer_names_the_upstream_version_it_came_from`,
-  `tests/test_generate.py::test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph`.
-- **Not yet held** for the sampling options, the tagger's floor, the flow's own digest and the pod
-  image. A render records its flow's id but not its digest, so a re-pinned flow is two configurations
-  under one name.
+  `tests/test_generate.py::test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph`,
+  `tests/test_generate.py::test_a_prompt_and_a_render_record_the_flow_digest_and_the_sheet`,
+  `tests/test_generate.py::test_a_render_on_a_pinned_pod_records_its_image_and_runtime`,
+  `tests/test_caption.py::test_the_caption_records_the_options_the_reader_sent`,
+  `tests/test_tagging.py::test_the_hosted_tagger_records_its_options_and_the_local_its_floor`.

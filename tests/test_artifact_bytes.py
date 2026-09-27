@@ -15,11 +15,11 @@ from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.generate import prompt_artifact, render
+from isekai.pipeline.generate import prompt_artifact, read_runtime, render
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FakeComfyClient
+from tests.fakes import POD_IMAGE, FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FLOW, caption, fake_tagger, sheet
 
@@ -121,7 +121,16 @@ def _prompt(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
 
 def _render(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     _prompt(run, schema, vocabulary)
-    (made,) = render(run, FLOW, FakeComfyClient(), seeds=[42], poll=0)
+    client = FakeComfyClient()
+    (made,) = render(
+        run,
+        FLOW,
+        client,
+        image=POD_IMAGE,
+        runtime=lambda: read_runtime(client),
+        seeds=[42],
+        poll=0,
+    )
     return made.provenance
 
 

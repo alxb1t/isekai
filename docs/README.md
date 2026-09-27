@@ -31,5 +31,6 @@ character is drawn from a corrected sheet alone (`conjure`). Self-hosted, on ope
 | [decisions](decisions.md) | the choices in force, and why |
 | [modules](modules.md) | the layers, and which module imports which |
 | [data-flow](data-flow.md) | the verbs, the stages, the run directory |
+| [pins](pins.md) | what each pin buys, where it is declared, and how it is moved |
 
 Evaluation, a separate sub-system, is not covered here yet.

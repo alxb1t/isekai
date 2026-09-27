@@ -25,6 +25,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-09-27
+
+### Changed
+
+- **CI and the toolchain pinned** (`0033` design D1): every workflow action by commit SHA, the runner
+  `ubuntu-24.04`, Node `22.23.3`, and uv `0.12.19` in CI and in `pyproject.toml`'s `required-version`.
+- **The image is built on request, from pinned inputs, into a locked environment** (`0033` design D2): the
+  base and uv by digest; `image/` a uv project `tools/derive_image_project.py` derives, installed by
+  `uv sync --locked`, with `onnxruntime-gpu` alone; `build-image.yml` dispatch-only, reporting its digest.
+- **A boot prints when each step begins**: `start.sh` stamps each step in UTC, `up.sh` the pod's creation and
+  its mapped :22.
+- **The first image built on request**: `ghcr.io/alxb1t/isekai:v0.24-rc1`, digest
+  `sha256:d6f12d02b1fb6b0d2c4c6d0505c70193202c647d57c27b7e1235845427dbb500`, recorded in the change's
+  `acceptance.md`; `build-image.yml`'s digest step is a block scalar, so the workflow parses.
+- **BREAKING — a pod boots only the digest `config/image.json` pins** (`0033` design D3): `RUNPOD_IMAGE` and
+  its `:latest` default are gone; `up.sh` writes the booted reference to `.runpod_pod_image`, which
+  `down.sh` removes on 204. Local compose builds are tagged `isekai:local`.
+- **The reader's model is checked before its first call** (`0033` design D4): `config/reader.json`, derived by
+  `tools/derive_reader.py`, pins the JoyCaption model and projector per alias; `caption` and `tag` refuse,
+  spending no attempt, a model no entry pins or one Ollama built from other files. The caption's and hosted
+  tags' producers now record `pinned: true` and both files' digests.
+- **Every artifact records what shaped it** (`0033` design D5, D6): the sampling `options` on the caption and
+  hosted tags, the wd14 `floor` (carried into the sheet), `flow_digest` on the sheet, prompt and render,
+  `sheet` on the prompt and render in place of the render's `sheet_version`, the booted `image`, `pinned`
+  and the endpoint's `runtime` on the render, and the sheet's `schema_document` and `field_map` on the
+  draft and approval. Every new key is optional under version 1, so existing runs still read.
+- **The record in `docs/`** (`0033` design D7): D6 checks the reader's model, D28 pins the image by digest in
+  `config/image.json`, and D32 states when a run file's version moves; the principles' pinning gap shrinks
+  to `apt`, and the README provisions the reader with `download_models.sh config/reader.json`.
+- **Accepted on one metered pod session** (`0033` design D8): six photographs through both flows, twelve
+  renders on `v0.24-rc1` by digest, 17 m 58 s at $0.72/hr ≈ $0.22, teardown confirmed through the RunPod
+  MCP. Every record present on every artifact; the renders judged a success by eye.
+- **D27 corrected**: a network volume reports its storage cluster's capacity (≈ 2.2 PiB), so the 20 GB
+  `isekai-models` passes `start.sh`'s 40 GiB floor. The known break it recorded was never true.
+
+- **`docs/pins.md`, the operating guide to the pins** (`0033` design D10): what each pin buys and where it
+  stops, where each is declared and checked, how each is moved, and what stays open. `tests/test_docs.py`
+  holds every repository path it names to exist.
+
 ## [0.23.0] - 2026-09-26
 
 ### Changed

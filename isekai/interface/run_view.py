@@ -145,9 +145,10 @@ def listings(run: Run) -> list[Listing]:
 
 
 def rendered(run: Run, flows_dir: Path = FLOWS_DIR) -> list[tuple[str, int, list[int]]]:
-    """Return each flow's rendered seeds, by sheet version, from filenames alone.
+    """Return each flow's rendered seeds, by approval, from filenames alone.
 
-    The flow is loaded once, not once per sheet version, and it is loaded at all
+    The outputs directory is the approval's number, not the sheet's. The flow
+    is loaded once, not once per approval, and it is loaded at all
     because what counts as a produced output is the flow's answer rather than an
     extension written in here.
 

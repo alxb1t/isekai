@@ -27,6 +27,7 @@ from pathlib import Path
 
 import pytest
 
+from isekai.boundary import ollama
 from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
@@ -35,6 +36,7 @@ from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
+from tests.fakes import READER
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, fake_wd14
 from tests.transports import FakeTransport
@@ -373,6 +375,7 @@ def test_an_untracked_flow_is_refused_before_any_run_is_opened(tmp_path: Path) -
 
 
 @pytest.mark.spec("caption:selection:an-unreachable-model-is-refused")
+@pytest.mark.usefixtures("model_records")
 def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
     tmp_path: Path,
 ) -> None:
@@ -384,7 +387,7 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
     is named where it is discovered: at the call, by `ollama.py`, with the one
     command that fixes it (design.md D22).
     """
-    flow = _flow_declaring(tmp_path, model="not-a-created-alias")
+    flow = _flow_declaring(tmp_path, model=READER)
     reader = reader_for(flow)
     assert isinstance(reader, OllamaReader)
     photo = tmp_path / "ada.jpg"
@@ -397,8 +400,8 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
         ).read(photo, "brief", tmp_path)
 
     message = str(refused.value)
-    assert "not-a-created-alias" in message
-    assert "ollama create not-a-created-alias" in message
+    assert repr(READER) in message
+    assert f"ollama create {READER}" in message
 
 
 @pytest.mark.spec("caption:selection:the-flow-names-the-model")
@@ -440,6 +443,7 @@ def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
 
     monkeypatch.setattr("shutil.which", unreachable)
     monkeypatch.setattr("urllib.request.urlopen", unreachable)
+    monkeypatch.setattr(ollama, "_verified_build", unreachable)
 
     wired = wiring_from(runs=tmp_path / "runs")
 

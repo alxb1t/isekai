@@ -5,6 +5,7 @@ reason the suite reads the shipped graph: a byte-identical copy with no drift
 check is a second thing to rename and a silent divergence waiting to happen.
 """
 
+import json
 import re
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from isekai.boundary.provision import (
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
+from tools.derive_image_project import pinned_commits, uv_required
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -380,11 +382,8 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
     "structural: a clone with no checkout is not a pin, and this holds all three"
 )
 def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> None:
-    clones = re.findall(r"git clone \S+ \\?\s*(\S+)", dockerfile)
-    checkouts = re.findall(r"git checkout ([0-9a-f]{40})\b", dockerfile)
     # ComfyUI's core and the two custom-node packs, each on a full commit sha
-    assert len(clones) == 3
-    assert len(checkouts) == 3
+    assert len(pinned_commits(dockerfile)) == 3
 
 
 @pytest.mark.spec(
@@ -502,3 +501,316 @@ def test_the_manifest_the_provisioner_reads_is_copied_where_it_looks(
 def test_the_check_catches_a_manifest_copied_beside_where_it_looks() -> None:
     broken = f"COPY models.json {IMAGE_ROOT}/elsewhere/models.json\n"
     assert manifest_in_image() not in image_copies(broken)
+
+
+# The image is built on request, from inputs named by digest, into a locked
+# environment: 0033 design D2.
+
+BUILD_WORKFLOW = REPO / ".github" / "workflows" / "build-image.yml"
+
+
+def workflow_triggers(workflow: str) -> list[str]:
+    """Return the event names under a workflow's top-level `on:` key.
+
+    e.g. `on:` over `push:` and `workflow_dispatch:` -> ["push", "workflow_dispatch"]
+    """
+    lines = workflow.splitlines()
+    opens = lines.index("on:")
+    triggers = []
+    for line in lines[opens + 1 :]:
+        if line and not line.startswith(" "):
+            break
+        found = re.match(r"^  ([a-z_]+):", line)
+        if found:
+            triggers.append(found.group(1))
+    return triggers
+
+
+@pytest.mark.spec("pod-image:build:only-a-request-builds")
+def test_the_image_workflow_builds_only_on_a_manual_request() -> None:
+    workflow = BUILD_WORKFLOW.read_text()
+    assert workflow_triggers(workflow) == ["workflow_dispatch"]
+    assert "${{ steps.build.outputs.digest }}" in workflow
+    assert "$GITHUB_STEP_SUMMARY" in workflow
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_image_workflow_builds_only_on_a_manual_request"
+)
+def test_the_check_catches_a_workflow_that_builds_on_a_push() -> None:
+    workflow = "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\njobs:\n"
+    assert workflow_triggers(workflow) == ["push", "workflow_dispatch"]
+
+
+def undigested_images(dockerfile: str) -> list[str]:
+    """Return each image the build starts from or copies from without a digest."""
+    named = re.findall(r"^FROM\s+(\S+)", dockerfile, re.M)
+    named += re.findall(r"^COPY\s+--from=(\S+)", dockerfile, re.M)
+    return [image for image in named if not re.search(r"@sha256:[0-9a-f]{64}$", image)]
+
+
+@pytest.mark.spec("pod-image:build:inputs-are-named-by-digest")
+def test_the_base_and_the_build_tool_are_named_by_digest(dockerfile: str) -> None:
+    assert re.search(r"^FROM\s", dockerfile, re.M)
+    assert re.search(r"^COPY\s+--from=", dockerfile, re.M)
+    assert undigested_images(dockerfile) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_base_and_the_build_tool_are_named_by_digest"
+)
+def test_the_check_catches_an_image_named_by_tag() -> None:
+    broken = "FROM ubuntu:22.04\nCOPY --from=ghcr.io/astral-sh/uv:latest /uv /\n"
+    assert undigested_images(broken) == [
+        "ubuntu:22.04",
+        "ghcr.io/astral-sh/uv:latest",
+    ]
+
+
+def uv_versions_apart(root: str, ci: str, dockerfile: str, image: str) -> list[str]:
+    """Return each place naming a uv version other than the root project's.
+
+    e.g. a `Dockerfile` copying `uv:0.8.24` under `==0.12.19` -> ["Dockerfile"]
+    """
+    setup = re.search(r"astral-sh/setup-uv@.*\n(?:.*\n)*?\s+version:\s*\"?([\w.]+)", ci)
+    copied = re.search(
+        r"^COPY\s+--from=ghcr\.io/astral-sh/uv:([\w.]+)@", dockerfile, re.M
+    )
+    named = {
+        "ci.yml": f"=={setup.group(1)}" if setup else None,
+        "Dockerfile": f"=={copied.group(1)}" if copied else None,
+        "image/pyproject.toml": uv_required(image),
+    }
+    return [where for where, version in named.items() if version != uv_required(root)]
+
+
+@pytest.mark.spec_exempt(
+    "structural: one uv version, in CI, the image and both projects"
+)
+def test_every_uv_version_the_build_names_is_the_root_projects(
+    dockerfile: str,
+) -> None:
+    apart = uv_versions_apart(
+        (REPO / "pyproject.toml").read_text(),
+        (REPO / ".github" / "workflows" / "ci.yml").read_text(),
+        dockerfile,
+        (REPO / "image" / "pyproject.toml").read_text(),
+    )
+    assert apart == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_uv_version_the_build_names_is_the_root_projects"
+)
+def test_the_check_catches_a_uv_version_that_drifted() -> None:
+    root = '[tool.uv]\nrequired-version = "==0.12.19"\n'
+    ci = (
+        "      - uses: astral-sh/setup-uv@abc # v6\n"
+        "        with:\n"
+        '          version: "0.12.19"\n'
+    )
+    dockerfile = (
+        "COPY --from=ghcr.io/astral-sh/uv:0.8.24@sha256:abc /uv /usr/local/bin/\n"
+    )
+    image = '[tool.uv]\nrequired-version = "==0.8.24"\n'
+    assert uv_versions_apart(root, ci, dockerfile, image) == [
+        "Dockerfile",
+        "image/pyproject.toml",
+    ]
+
+
+def unlocked_installs(dockerfile: str) -> list[str]:
+    """Return each build line that resolves packages instead of syncing the lock."""
+    return [
+        line.strip()
+        for line in dockerfile.splitlines()
+        if re.search(r"\bpip install\b|\buv venv\b|\s-r\s", line)
+        or ("uv sync" in line and "--locked" not in line)
+    ]
+
+
+@pytest.mark.spec("pod-image:build:the-environment-is-locked")
+def test_the_environment_is_installed_from_the_committed_lock(
+    dockerfile: str,
+) -> None:
+    assert "uv sync --locked" in dockerfile
+    assert "image/uv.lock" in image_copies(dockerfile).values()
+    assert unlocked_installs(dockerfile) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_environment_is_installed_from_the_committed_lock"
+)
+def test_the_check_catches_a_resolving_install() -> None:
+    broken = "RUN uv pip install -r requirements.txt\nRUN uv sync\n"
+    assert unlocked_installs(broken) == [
+        "RUN uv pip install -r requirements.txt",
+        "RUN uv sync",
+    ]
+
+
+# The line each step of `start.sh` begins with: the SSH key, sshd, provisioning,
+# the download inside it, and ComfyUI.
+BOOT_STEPS = (
+    "mkdir -p ~/.ssh",
+    "mkdir -p /run/sshd",
+    "if ! provision; then",
+    'MODELS_DIR="$MODELS_ROOT" bash',
+    "exec python main.py",
+)
+
+
+def unstamped_steps(start_sh: str) -> list[str]:
+    """Return each boot step whose line is not preceded by a UTC timestamp."""
+    lines = [line.strip() for line in start_sh.splitlines()]
+    unstamped = []
+    for step in BOOT_STEPS:
+        at = next(i for i, line in enumerate(lines) if line.startswith(step))
+        if "date -u" not in lines[at - 1]:
+            unstamped.append(step)
+    return unstamped
+
+
+@pytest.mark.spec("pod-image:boot:each-step-is-timestamped")
+def test_each_boot_step_prints_a_utc_time_before_it_begins(
+    start_sh: str, up_sh: str
+) -> None:
+    assert unstamped_steps(start_sh) == []
+    assert "created at $(date -u" in up_sh
+    assert "Port 22 mapped at $(date -u" in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_each_boot_step_prints_a_utc_time_before_it_begins"
+)
+def test_the_check_catches_a_step_with_no_timestamp() -> None:
+    stamped = "\n".join(f'echo "$(date -u +%FT%TZ)"\n{step}' for step in BOOT_STEPS)
+    assert unstamped_steps(stamped) == []
+    assert unstamped_steps(
+        stamped.replace('echo "$(date -u +%FT%TZ)"\nexec', "exec")
+    ) == ["exec python main.py"]
+
+
+WORKFLOWS = sorted((REPO / ".github" / "workflows").glob("*.yml"))
+
+
+def unparseable_run_lines(workflow: str) -> list[str]:
+    """Return each one-line `run:` whose value holds `: `, which YAML rejects.
+
+    GitHub then refuses the whole workflow, so a dispatch-only build cannot start.
+    """
+    found = (
+        re.match(r"^\s*(?:- )?run: (?![|>])(.*)$", line)
+        for line in workflow.splitlines()
+    )
+    return [
+        match.group(0).strip() for match in found if match and ": " in match.group(1)
+    ]
+
+
+@pytest.mark.spec("pod-image:build:only-a-request-builds")
+def test_every_workflow_run_line_is_one_yaml_accepts() -> None:
+    assert WORKFLOWS
+    for workflow in WORKFLOWS:
+        assert unparseable_run_lines(workflow.read_text()) == [], workflow.name
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_workflow_run_line_is_one_yaml_accepts"
+)
+def test_the_check_catches_a_plain_run_line_holding_a_colon() -> None:
+    broken = '      - run: echo "a: b"\n        run: |\n          echo "a: b"\n'
+    assert unparseable_run_lines(broken) == ['- run: echo "a: b"']
+
+
+# A pod boots the digest `config/image.json` pins, and nothing else: 0033 design D3.
+
+IMAGE_CONFIG = REPO / "config" / "image.json"
+IMAGE_REFERENCE = (
+    """image_ref="$(jq -r '"\\(.image)@\\(.digest)"' config/image.json)\""""
+)
+
+
+def pinned_reference(config: dict[str, str]) -> str | None:
+    """Return `<image>@<digest>` for an image config, or None if it pins no digest."""
+    digest = config.get("digest", "")
+    if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+        return None
+    return f"{config['image']}@{digest}"
+
+
+@pytest.mark.spec("pod-image:boot:the-pinned-digest-is-booted")
+def test_the_pod_is_created_from_the_pinned_digest(up_sh: str) -> None:
+    assert pinned_reference(json.loads(IMAGE_CONFIG.read_text())) is not None
+    assert IMAGE_REFERENCE in up_sh
+    assert '--arg image  "$image_ref"' in up_sh
+    assert "imageName: $image," in up_sh
+    assert ":latest" not in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pod_is_created_from_the_pinned_digest"
+)
+def test_the_check_catches_an_image_config_naming_only_a_tag() -> None:
+    assert pinned_reference({"image": "ghcr.io/a/b", "tag": "latest"}) is None
+    assert pinned_reference({"image": "ghcr.io/a/b", "digest": "latest"}) is None
+
+
+def image_overrides(up_sh: str) -> list[str]:
+    """Return each line that sets the booted image from anything but the pin."""
+    return [
+        line.strip()
+        for line in up_sh.splitlines()
+        if re.search(r"^\s*(image_ref|\w*IMAGE\w*)=", line)
+        and line.strip() != IMAGE_REFERENCE
+    ]
+
+
+@pytest.mark.spec("pod-image:boot:no-override")
+def test_nothing_in_the_environment_overrides_the_image(up_sh: str) -> None:
+    assert image_overrides(up_sh) == []
+    assert "RUNPOD_IMAGE" not in up_sh
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_nothing_in_the_environment_overrides_the_image"
+)
+def test_the_check_catches_an_image_the_environment_can_set() -> None:
+    broken = 'RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/a/b:latest}"\n' + IMAGE_REFERENCE
+    assert image_overrides(broken) == [
+        'RUNPOD_IMAGE="${RUNPOD_IMAGE:-ghcr.io/a/b:latest}"'
+    ]
+
+
+def unrecorded_boot(up_sh: str, down_sh: str) -> list[str]:
+    """Return what is missing of the boot record's write and its removal on 204."""
+    missing = []
+    up = up_sh.splitlines()
+    pod_id = next(
+        i for i, line in enumerate(up) if line == 'echo "$pod_id" > .runpod_pod_id'
+    )
+    if 'echo "$image_ref" > .runpod_pod_image' not in up[pod_id:]:
+        missing.append("written beside the pod id")
+    down = down_sh.splitlines()
+    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
+    if ".runpod_pod_image" not in down[deleted + 1]:
+        missing.append("removed on 204")
+    return missing
+
+
+@pytest.mark.spec("pod-image:boot:the-booted-image-is-recorded")
+def test_the_booted_reference_is_recorded_and_removed_with_the_pod(up_sh: str) -> None:
+    down_sh = (REPO / "infra" / "down.sh").read_text()
+    assert unrecorded_boot(up_sh, down_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_booted_reference_is_recorded_and_removed_with_the_pod"
+)
+def test_the_check_catches_a_boot_record_left_behind() -> None:
+    up_sh = 'echo "$pod_id" > .runpod_pod_id\n'
+    down_sh = 'if [ "$code" = "204" ]; then\n  rm -f .runpod_pod_id\n'
+    assert unrecorded_boot(up_sh, down_sh) == [
+        "written beside the pod id",
+        "removed on 204",
+    ]

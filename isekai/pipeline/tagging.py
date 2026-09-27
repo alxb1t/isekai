@@ -40,7 +40,15 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama, wd14
-from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, Tags, Wd14, write
+from isekai.foundation.artifacts import (
+    TAGS_FILE,
+    WD14_FILE,
+    DigestRecord,
+    Tags,
+    TagsProducer,
+    Wd14,
+    write,
+)
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     TAGS,
@@ -99,7 +107,7 @@ TAGGER_OPTIONS: Mapping[str, Any] = {
 # alias the reader uses, built from the same committed recipe -- one model answers
 # both prompts, which is exactly why `TAG_PROMPT` above must not be framed
 # differently from the briefing.
-TAGGER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
+TAGGER_REMEDY = ollama.BUILD
 
 # What separates *wrong* from *not a list at all*. The operator asked for the raw
 # list knowing it is wrong, so wrongness is not the failure being guarded here. A
@@ -112,12 +120,22 @@ SEPARATOR = ","
 
 @dataclass(frozen=True)
 class Tagging:
-    """What a hosted tagger returned: the tags, and what actually produced them."""
+    """What a hosted tagger returned: the tags, and what actually produced them.
+
+    `artifacts` are the files the model was verified to be built from, by `dest`;
+    `options` what it was sampled at, as sent.
+    """
 
     tags: tuple[str, ...]
     implementation: str
     models: tuple[str, ...] = ()
-    pinned: bool = False
+    artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def pinned(self) -> bool:
+        """Return whether the model was verified against the files it is pinned to."""
+        return bool(self.artifacts)
 
 
 class Tagger(Protocol):
@@ -145,7 +163,9 @@ class FakeTagger:
     def tag(self, photo: Path) -> Tagging:
         """Record the call and return the fixed tags."""
         self.calls.append(photo)
-        return Tagging(self.tags, self.implementation, self.models)
+        return Tagging(
+            tags=self.tags, implementation=self.implementation, models=self.models
+        )
 
 
 @dataclass(frozen=True)
@@ -187,8 +207,10 @@ class OllamaTagger:
         than in the stage because it is this implementation's business that the
         answer arrives as one comma-separated string; a different hosted tagger
         might answer in another shape. Nothing beyond the split and a strip
-        happens to any element.
+        happens to any element. The model is checked against
+        `config/reader.json` before the host is asked anything.
         """
+        artifacts = ollama.verified_build(self.model)
         try:
             answer = ollama.ask(
                 self.body(photo),
@@ -209,7 +231,13 @@ class OllamaTagger:
         tags = tuple(
             stripped for part in answer.split(SEPARATOR) if (stripped := part.strip())
         )
-        return Tagging(tags, self.implementation, (self.model,))
+        return Tagging(
+            tags=tags,
+            implementation=self.implementation,
+            models=(self.model,),
+            artifacts=artifacts,
+            options=TAGGER_OPTIONS,
+        )
 
 
 def tag_wd14(
@@ -239,12 +267,11 @@ def tag_wd14(
     catches is this *photograph* -- a header no decoder can read -- which is
     per-input, permanent, and exactly what a budget of one is for.
 
-    **This producer can claim a pin.** The reader and the hosted tagger record
-    `pinned: false`, and a sheet built from this list carries the `true` across
-    (`pipeline/sheet.py`). A local file with a digest is not the hosted service
-    that field was written for, so it records `true` and carries **both**
-    digests -- the ones the session was actually verified against, not the ones
-    the manifest happens to hold at write time (design.md D17).
+    **This producer claims a pin**, and a sheet built from this list carries the
+    `true` across (`pipeline/sheet.py`). It carries **both** digests -- the ones
+    the session was actually verified against, not the ones the manifest happens
+    to hold at write time (design.md D17). The hosted tagger claims its pin the
+    same way, from `ollama.verified_build`.
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete.
@@ -289,6 +316,7 @@ def tag_wd14(
             "models": [wd14.MODEL_DEST],
             "pinned": True,
             "artifacts": dict(tagger.pins),
+            "floor": wd14.FLOOR,
         },
         "tags": [{"tag": one.tag, "confidence": one.confidence} for one in found],
     }
@@ -313,9 +341,10 @@ def tag_hosted(
     canonicalisation, no vocabulary filtering, no re-ordering: narrowing is stage
     (2)'s job and seeing behind it is why this artifact exists.
 
-    `pinned` is `false` and the prompt's digest is recorded with no path, because
-    the prompt is a module constant and a record that invented a path would
-    assert a location that does not exist.
+    `pinned` and `artifacts` are what the tagger verified its model against
+    (0033 design D4). The prompt's digest is recorded with no path, because the
+    prompt is a module constant and a record that invented a path would assert a
+    location that does not exist.
     """
     directory = run.directory(flow, TAGS)
     if latest(directory) is not None and not new_version:
@@ -346,14 +375,19 @@ def tag_hosted(
         ) from failed
 
     path = directory / artifact_name(version)
+    producer: TagsProducer = {
+        "implementation": tagging.implementation,
+        "models": list(tagging.models),
+        "pinned": tagging.pinned,
+        "prompt": constant_record(TAG_PROMPT),
+    }
+    if tagging.artifacts:
+        producer["artifacts"] = dict(tagging.artifacts)
+    if tagging.options:
+        producer["options"] = dict(tagging.options)
     listed: Tags = {
         "schema": TAGS_FILE.schema,
-        "producer": {
-            "implementation": tagging.implementation,
-            "models": list(tagging.models),
-            "pinned": tagging.pinned,
-            "prompt": constant_record(TAG_PROMPT),
-        },
+        "producer": producer,
         "tags": list(tagging.tags),
     }
     write(path, TAGS_FILE, listed)

@@ -20,8 +20,8 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary import provision
-from isekai.boundary.wd14 import MODEL_DEST, LocalTagger
+from isekai.boundary import ollama, provision
+from isekai.boundary.wd14 import FLOOR, MODEL_DEST, LocalTagger
 from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
 from isekai.foundation.flow import (
     FLOWS_DIR,
@@ -57,6 +57,7 @@ from isekai.pipeline.tagging import (
     tag_wd14,
 )
 from isekai.shared.vocabulary import Vocabulary
+from tests.fakes import READER, READER_ARTIFACTS, ollama_records
 from tests.images import jpeg_bytes
 from tests.stages import (
     FAKE_PINS,
@@ -94,16 +95,27 @@ def _answer(text: str) -> FakeTransport:
     return FakeTransport(payload={"response": text, "done_reason": "stop"})
 
 
+# Builds the hosted tagger on `READER`, over a transport, with a record of it.
+Hosted = Callable[[FakeTransport], OllamaTagger]
+
+
+@pytest.fixture
+def hosted(model_records: Path) -> Hosted:
+    """Return a hosted tagger factory whose model record matches the manifest."""
+    return lambda transport: OllamaTagger(READER, transport)
+
+
 # --- what the hosted tagger is given -----------------------------------------
 
 
 @pytest.mark.spec("tagging:inputs:only-the-photograph-is-passed")
 def test_the_hosted_tagger_is_sent_the_photograph_and_one_fixed_prompt(
     run: Run,
+    hosted: Hosted,
 ) -> None:
     transport = _answer("1girl, solo, brown hair")
 
-    tag_hosted(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+    tag_hosted(run, FLOW, hosted(transport))
 
     (body,) = transport.bodies()
     assert body["prompt"] == TAG_PROMPT
@@ -161,6 +173,7 @@ def test_the_hosted_artifact_is_a_list_of_tags_under_the_flow(run: Run) -> None:
 @pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
 def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
     run: Run,
+    hosted: Hosted,
 ) -> None:
     # `fashion photography` and `high resolution` are out of the vocabulary and
     # `blue eyes` contradicts what the reader wrote about the same photograph.
@@ -169,17 +182,17 @@ def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
     answered = "1girl, fashion photography, blue eyes, high resolution, solo"
     transport = _answer(answered)
 
-    path = tag_hosted(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+    path = tag_hosted(run, FLOW, hosted(transport))
 
     assert path is not None
     assert read(path, TAGS_FILE)["tags"] == answered.split(", ")
 
 
 @pytest.mark.spec("tagging:output:the-list-is-stored-unnarrowed")
-def test_whitespace_is_stripped_and_nothing_else_is(run: Run) -> None:
+def test_whitespace_is_stripped_and_nothing_else_is(run: Run, hosted: Hosted) -> None:
     transport = _answer("  1girl ,solo,   looking at viewer  ,, ")
 
-    path = tag_hosted(run, FLOW, OllamaTagger("m", transport))
+    path = tag_hosted(run, FLOW, hosted(transport))
 
     assert path is not None
     # Empty elements go, because an empty chip is not a tag anyone offered. The
@@ -202,11 +215,13 @@ def test_the_local_artifact_is_scored_and_sorted_under_its_own_directory(
 
 
 @pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
-def test_a_response_with_no_comma_is_a_permanent_failure(run: Run) -> None:
+def test_a_response_with_no_comma_is_a_permanent_failure(
+    run: Run, hosted: Hosted
+) -> None:
     transport = _answer("The photograph shows a person standing in a garden.")
 
     with pytest.raises(Refusal) as refused:
-        tag_hosted(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+        tag_hosted(run, FLOW, hosted(transport))
 
     assert "permanent" in str(refused.value)
     recorded = list(run.directory(FLOW, TAGS).glob("*.error.*.json"))
@@ -214,22 +229,26 @@ def test_a_response_with_no_comma_is_a_permanent_failure(run: Run) -> None:
 
 
 @pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
-def test_a_single_comma_is_enough_and_content_is_never_judged(run: Run) -> None:
+def test_a_single_comma_is_enough_and_content_is_never_judged(
+    run: Run, hosted: Hosted
+) -> None:
     # One comma separates "not a list at all" from "wrong", and only the first is
     # a failure here. Anything richer starts filtering (design.md D15).
-    path = tag_hosted(run, FLOW, OllamaTagger("m", _answer("nonsense, drivel")))
+    path = tag_hosted(run, FLOW, hosted(_answer("nonsense, drivel")))
 
     assert path is not None
     assert read(path, TAGS_FILE)["tags"] == ["nonsense", "drivel"]
 
 
 @pytest.mark.spec("tagging:failure:a-response-with-no-comma-is-permanent")
-def test_the_refusal_names_the_verb_the_operator_would_actually_run(run: Run) -> None:
+def test_the_refusal_names_the_verb_the_operator_would_actually_run(
+    run: Run, hosted: Hosted
+) -> None:
     # `python -m isekai tags` does not exist: one verb writes both lists (0032
     # design D2), so naming the stage here would name a command that refuses
     # with "unknown verb".
     with pytest.raises(Refusal) as refused:
-        tag_hosted(run, FLOW, OllamaTagger("m", _answer("prose with no separator")))
+        tag_hosted(run, FLOW, hosted(_answer("prose with no separator")))
 
     message = str(refused.value)
     assert f"python -m isekai tag --flow {FLOW} {run.id}" in message
@@ -278,12 +297,12 @@ def test_a_second_pass_over_a_complete_local_artifact_opens_no_session(
 
 @pytest.mark.spec("tagging:independence:each-tagger-resumes-on-its-own")
 def test_a_failed_hosted_tagger_leaves_the_local_artifact_complete(
-    run: Run, local: LocalTagger
+    run: Run, hosted: Hosted, local: LocalTagger
 ) -> None:
     written = tag_wd14(run, FLOW, lambda: local)
 
     with pytest.raises(Refusal):
-        tag_hosted(run, FLOW, OllamaTagger("m", _answer("prose, ".replace(", ", ""))))
+        tag_hosted(run, FLOW, hosted(_answer("prose, ".replace(", ", ""))))
 
     assert written is not None and written.is_file()
     assert read(written, WD14_FILE)["tags"] == [{"tag": "1girl", "confidence": 0.9}]
@@ -358,15 +377,39 @@ def test_constant_record_carries_a_digest_and_nothing_else() -> None:
 
 
 @pytest.mark.spec("tagging:provenance:the-hosted-tagger-records-its-prompt-digest")
-def test_the_producer_names_the_model_that_actually_answered(run: Run) -> None:
+def test_the_producer_names_the_model_that_actually_answered(
+    run: Run, hosted: Hosted
+) -> None:
     transport = _answer("1girl, solo")
 
-    path = tag_hosted(run, FLOW, OllamaTagger("joycaption-beta-one-q4k", transport))
+    path = tag_hosted(run, FLOW, hosted(transport))
 
     assert path is not None
     producer = read(path, TAGS_FILE)["producer"]
     assert producer["implementation"] == "ollama"
     assert producer["models"] == ["joycaption-beta-one-q4k"]
+
+
+@pytest.mark.spec("tagging:provenance:the-hosted-tagger-declares-its-pin")
+def test_the_hosted_tagger_declares_its_pin_and_names_both_files(
+    run: Run, hosted: Hosted
+) -> None:
+    path = tag_hosted(run, FLOW, hosted(_answer("1girl, solo")))
+
+    assert path is not None
+    producer = read(path, TAGS_FILE)["producer"]
+    assert producer["pinned"] is True
+    assert producer.get("artifacts") == READER_ARTIFACTS
+
+
+@pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
+def test_a_hosted_tagger_that_verified_nothing_claims_no_pin(run: Run) -> None:
+    path = tag_hosted(run, FLOW, FakeTagger())
+
+    assert path is not None
+    producer = read(path, TAGS_FILE)["producer"]
+    assert producer["pinned"] is False
+    assert "artifacts" not in producer
 
 
 @pytest.mark.spec_exempt("structural: the separator this stage splits on")
@@ -487,6 +530,28 @@ def test_a_failing_hosted_tagger_leaves_the_wd14_list_on_disk(
     assert (run.directory(FLOW, WD14) / "001.json").is_file()
     assert not list(run.directory(FLOW, TAGS).glob("001.json"))
     assert (run.directory(FLOW, TAGS) / "001.error.1.permanent.json").is_file()
+
+
+@pytest.mark.spec("tagging:independence:an-unpinned-hosted-model-costs-no-local-list")
+def test_an_unpinned_hosted_model_refuses_and_the_local_list_is_written(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    other = "0" * 64
+    transport = _answer("1girl, solo")
+    records = ollama_records(tmp_path / "records", model_digest=other)
+    monkeypatch.setattr(ollama, "MODEL_RECORDS", records)
+    photo = _photo(tmp_path)
+    wired = _wired(tmp_path, hosted=OllamaTagger(READER, transport))
+
+    status = _dispatch(wired, "tag", "--flow", FLOW, str(photo))
+
+    assert status == 1
+    run = open_run(photo, wired.runs_root)
+    assert (run.directory(FLOW, WD14) / "001.json").is_file()
+    assert transport.sent == []
+    assert not list(run.directory(FLOW, TAGS).glob("*.json"))
+    assert isinstance(wired.err, io.StringIO)
+    assert other in wired.err.getvalue()
 
 
 def _unreadable() -> LocalTagger:
@@ -694,3 +759,19 @@ def test_a_photograph_the_decoder_cannot_read_is_recorded_and_is_permanent(
     with pytest.raises(Refusal) as again:
         tag_wd14(run, FLOW, _unreadable)
     assert "failed permanently" in str(again.value)
+
+
+@pytest.mark.spec("tagging:provenance:options-and-floor-are-recorded")
+def test_the_hosted_tagger_records_its_options_and_the_local_its_floor(
+    run: Run, hosted: Hosted
+) -> None:
+    transport = _answer("1girl, solo")
+
+    tags = tag_hosted(run, FLOW, hosted(transport))
+    scored = tag_wd14(run, FLOW, fake_tagger)
+
+    assert tags is not None and scored is not None
+    (sent,) = transport.bodies()
+    assert read(tags, TAGS_FILE)["producer"].get("options") == sent["options"]
+    assert sent["options"] == dict(TAGGER_OPTIONS)
+    assert read(scored, WD14_FILE)["producer"].get("floor") == FLOOR
