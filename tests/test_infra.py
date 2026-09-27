@@ -943,3 +943,112 @@ def test_the_record_removal_check_catches_a_404_naming_no_file() -> None:
         "else\n"
     )
     assert unnamed_record_removal(down_sh)
+
+
+@pytest.fixture(scope="session")
+def render_sh() -> str:
+    """Read the shipped `infra/render.sh` once for the whole session."""
+    return (REPO / "infra" / "render.sh").read_text()
+
+
+def _code(script: str) -> list[str]:
+    """Return the script's lines with comment lines blanked, so indices hold."""
+    return ["" if ln.lstrip().startswith("#") else ln for ln in script.splitlines()]
+
+
+def untrapped_teardown(script: str) -> list[str]:
+    """Return what a render session's trap misses of tearing the pod down.
+
+    e.g. a script whose trap is set after `up.sh` -> ["set before the pod"]
+    """
+    lines = _code(script)
+    traps = [i for i, ln in enumerate(lines) if ln.startswith("trap ")]
+    if not traps:
+        return ["a trap"]
+    trap = lines[traps[0]]
+    missing = [f"on {sig}" for sig in ("EXIT", "INT", "TERM") if sig not in trap]
+    handler = re.search(r"trap '?(\w+)", trap)
+    start = next(
+        (
+            i
+            for i, ln in enumerate(lines)
+            if handler and ln.startswith(handler[1] + "()")
+        ),
+        None,
+    )
+    body = ""
+    if start is not None:
+        end = next(i for i in range(start, len(lines)) if lines[i] == "}")
+        body = "\n".join(lines[start:end])
+    if "./infra/down.sh" not in body:
+        missing.append("runs down.sh")
+    if "kill " not in body:
+        missing.append("closes the tunnel")
+    up = next(i for i, ln in enumerate(lines) if "infra/up.sh" in ln)
+    if traps[0] > up:
+        missing.append("set before the pod")
+    return missing
+
+
+@pytest.mark.spec("pod-image:session:every-exit-tears-down")
+def test_every_way_out_of_a_render_session_tears_the_pod_down(render_sh: str) -> None:
+    assert untrapped_teardown(render_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_way_out_of_a_render_session_tears_the_pod_down"
+)
+def test_the_teardown_check_catches_a_late_trap_that_leaves_the_tunnel() -> None:
+    script = (
+        "bash ./infra/up.sh\n"
+        "teardown() {\n  bash ./infra/down.sh\n}\n"
+        "trap teardown EXIT\n"
+    )
+    assert untrapped_teardown(script) == [
+        "on INT",
+        "on TERM",
+        "closes the tunnel",
+        "set before the pod",
+    ]
+
+
+def unawaited_endpoint(script: str) -> list[str]:
+    """Return what a render session misses of waiting, boundedly, for the endpoint."""
+    lines = _code(script)
+    missing = []
+    asked = [
+        i for i, ln in enumerate(lines) if "/system_stats" in ln and "until " in ln
+    ]
+    render = next(i for i, ln in enumerate(lines) if "--server" in ln)
+    if not asked or asked[0] > render:
+        missing.append("asked before any render")
+    bound = re.search(r"^WAIT=(\d+)", script, re.M)
+    if bound is None or not 0 < int(bound[1]) <= 600:
+        missing.append("a stated bound")
+    if not any("$deadline" in ln for ln in lines) or not any(
+        "within ${WAIT}s" in ln for ln in lines
+    ):
+        missing.append("gives up past it")
+    return missing
+
+
+@pytest.mark.spec("pod-image:session:the-endpoint-is-awaited")
+def test_a_render_session_waits_for_the_endpoint_within_a_bound(
+    render_sh: str,
+) -> None:
+    assert unawaited_endpoint(render_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_render_session_waits_for_the_endpoint_within_a_bound"
+)
+def test_the_wait_check_catches_a_render_before_an_unbounded_wait() -> None:
+    script = (
+        'generate --server "$SERVER"\n'
+        'until curl -sf --max-time 5 "$SERVER/system_stats"; do sleep 5; done\n'
+    )
+    assert unawaited_endpoint(script) == [
+        "asked before any render",
+        "a stated bound",
+        "gives up past it",
+    ]

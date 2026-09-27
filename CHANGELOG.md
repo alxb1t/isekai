@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`compare`, a new verb** (`0035` design D2): `python -m isekai compare <batch>` writes `compare.html` into
   the batch directory — each run's photograph and captions beside each flow's renders under its latest
   approval, linked relative and never embedded — and prints only its path, so an agent hands it over unread.
+- **`infra/render.sh`, one whole render session** (`0035` design D3): it assembles every prompt before renting,
+  then runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI and renders each `<flow>=<count>`. A
+  trap set before `up.sh` tears the pod down and closes the tunnel on every exit, error and signal.
 
 ## [0.24.1] - 2026-09-27
 

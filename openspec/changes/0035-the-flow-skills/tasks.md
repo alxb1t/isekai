@@ -6,7 +6,7 @@ The verb and the script first, then the abort, then the skills that name them; t
 ## Progress
 
 - [x] 1 — `compare`: the comparison page
-- [ ] 2 — `infra/render.sh`: a render session that always tears down
+- [x] 2 — `infra/render.sh`: a render session that always tears down
 - [ ] 3 — the tagger's native abort
 - [ ] 4 — the skills, their check, the pod rule and the docs
 - [ ] 5 — 🛑 **HUMAN · METERED · HALT** — the operator runs `run-flows` end to end
@@ -24,11 +24,11 @@ Line numbers are `866c346`'s; find each site by the text it names.
 
 ## 2 — `infra/render.sh`: a render session that always tears down
 
-- [ ] 2.1 **HALT CHECK** — no script joins `up.sh` and `down.sh`.
+- [x] 2.1 **HALT CHECK** — no script joins `up.sh` and `down.sh`.
   Verify: `test -f infra/render.sh; echo $?` prints `1`.
-- [ ] 2.2 Write `infra/render.sh` per [D3](design.md#d3): the trap on `EXIT`, `INT` and `TERM` before `up.sh`, the tunnel from `up.sh`'s "Tunnel:" line, the bounded wait for `/system_stats`, and `generate` per flow; `bash -n infra/render.sh` passes.
+- [x] 2.2 Write `infra/render.sh` per [D3](design.md#d3): the trap on `EXIT`, `INT` and `TERM` before `up.sh`, the tunnel from `up.sh`'s "Tunnel:" line, the bounded wait for `/system_stats`, and `generate` per flow; `bash -n infra/render.sh` passes.
   Verify: `grep -c '^trap ' infra/render.sh` prints `1`, and `bash -n infra/render.sh; echo $?` prints `0`.
-- [ ] 2.3 In `tests/test_infra.py`, test `pod-image:session:every-exit-tears-down` and `pod-image:session:the-endpoint-is-awaited` against the script's text.
+- [x] 2.3 In `tests/test_infra.py`, test `pod-image:session:every-exit-tears-down` and `pod-image:session:the-endpoint-is-awaited` against the script's text.
   Verify: `grep -c 'pod-image:session:' tests/test_infra.py` prints `2`.
 
 ## 3 — the tagger's native abort
