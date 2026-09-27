@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads counts rather than runs. A test fails when a command a skill names stops parsing. `CLAUDE.md`'s pod rule
   now also accepts the operator's explicit go, and names the record files to delete after a confirmed teardown.
 
+- **Proved by the operator using `run-flows`** (`0035` design D7): 5 photographs through both flows to
+  `compare.html` — 10 of each stage's files, 5 approvals and 5 renders per flow, 0 refusals, one pod session of
+  about 13 minutes torn down by `render.sh`, and the RunPod MCP found no pod left. Evidence in the change's
+  `acceptance.md`.
+
 ### Fixed
 
 - **onnxruntime no longer connects to Microsoft, and `tag` no longer exits 134** (`0035` design D5): loading it

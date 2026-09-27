@@ -9,7 +9,7 @@ The verb and the script first, then the abort, then the skills that name them; t
 - [x] 2 — `infra/render.sh`: a render session that always tears down
 - [x] 3 — the tagger's native abort
 - [x] 4 — the skills, their check, the pod rule and the docs
-- [ ] 5 — 🛑 **HUMAN · METERED · HALT** — the operator runs `run-flows` end to end
+- [x] 5 — 🛑 **HUMAN · METERED · HALT** — the operator runs `run-flows` end to end
 
 Line numbers are `866c346`'s; find each site by the text it names.
 
@@ -56,7 +56,7 @@ Line numbers are `866c346`'s; find each site by the text it names.
 **Ceiling: 45 minutes and ~$0.30.** The operator's go authorises the spend ([D4](design.md#d4)); `render.sh` tears
 down, and the RunPod MCP confirms. Synthetic portraits only.
 
-- [ ] 5.1 ⛔ **HALT.** The operator puts synthetic portraits in `.data/<batch>/photos/` and runs `run-flows` on it; record the go as the first line of `openspec/changes/0035-the-flow-skills/acceptance.md`, `Go: <date>`.
+- [x] 5.1 ⛔ **HALT.** The operator puts synthetic portraits in `.data/<batch>/photos/` and runs `run-flows` on it; record the go as the first line of `openspec/changes/0035-the-flow-skills/acceptance.md`, `Go: <date>`.
   Verify: `grep -c '^Go: ' openspec/changes/0035-the-flow-skills/acceptance.md` prints `1`.
-- [ ] 5.2 Record each command `run-flows` ran and its one-line result, the MCP's confirmation that the pod is gone, and the path `compare` printed, in `acceptance.md`, with no absolute path.
+- [x] 5.2 Record each command `run-flows` ran and its one-line result, the MCP's confirmation that the pod is gone, and the path `compare` printed, in `acceptance.md`, with no absolute path.
   Verify: `grep -c -e 'compare.html' -e 'pod gone' openspec/changes/0035-the-flow-skills/acceptance.md` prints a number above `1`.
