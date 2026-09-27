@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING — a pod boots only the digest `config/image.json` pins** (`0033` design D3): `RUNPOD_IMAGE` and
   its `:latest` default are gone; `up.sh` writes the booted reference to `.runpod_pod_image`, which
   `down.sh` removes on 204. Local compose builds are tagged `isekai:local`.
+- **The reader's model is checked before its first call** (`0033` design D4): `config/reader.json`, derived by
+  `tools/derive_reader.py`, pins the JoyCaption model and projector per alias; `caption` and `tag` refuse,
+  spending no attempt, a model no entry pins or one Ollama built from other files. The caption's and hosted
+  tags' producers now record `pinned: true` and both files' digests.
 
 ## [0.23.0] - 2026-09-26
 

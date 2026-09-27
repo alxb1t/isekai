@@ -22,6 +22,7 @@ from evaluation.eval_models import load_eval_manifest
 from isekai.boundary.provision import (
     DIGEST,
     MANIFEST_PATH,
+    READER_MANIFEST_PATH,
     VOCABULARY_MANIFEST_PATH,
     Manifest,
     entries_with_missing_keys,
@@ -124,9 +125,11 @@ def test_the_vocabulary_appears_only_in_its_own_manifest() -> None:
     vocabulary = {e["dest"] for e in load_manifest(VOCABULARY_MANIFEST_PATH)["entries"]}
     graph = {e["dest"] for e in load_manifest()["entries"]}
     scorer = {e["dest"] for e in load_eval_manifest()["entries"]}
+    reader = {e["dest"] for e in load_manifest(READER_MANIFEST_PATH)["entries"]}
     assert VOCABULARY in vocabulary
     assert vocabulary & graph == set()
     assert vocabulary & scorer == set()
+    assert vocabulary & reader == set()
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:manifest-is-its-own-file")

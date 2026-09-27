@@ -37,7 +37,13 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from isekai.boundary import ollama
-from isekai.foundation.artifacts import CAPTION_FILE, Caption, write
+from isekai.foundation.artifacts import (
+    CAPTION_FILE,
+    Caption,
+    CaptionProducer,
+    DigestRecord,
+    write,
+)
 from isekai.foundation.run import (
     CAPTIONS,
     Run,
@@ -95,12 +101,16 @@ READER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
 
 @dataclass(frozen=True)
 class Reading:
-    """What a reader returned: the prose, and what actually produced it."""
+    """What a reader returned: the prose, and what actually produced it.
+
+    `artifacts` are the files the model was verified to be built from, by `dest`.
+    """
 
     prose: str
     implementation: str
     models: tuple[str, ...] = ()
     pinned: bool = False
+    artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
 
 
 class Reader(Protocol):
@@ -153,6 +163,7 @@ class OllamaReader:
     model: str
     transport: ollama.Transport = ollama.post
     implementation: str = "ollama"
+    records: Path | None = None
 
     def prompt(self, briefing: str) -> str:
         """Return the whole of what the reader is told.
@@ -183,16 +194,21 @@ class OllamaReader:
         `workspace` is accepted and unused: it is a directory a reader may need
         to be granted, and this one reads the file's bytes itself. Keeping it in
         the signature is what keeps one `Reader` Protocol rather than two.
+
+        The model is checked against `config/reader.json` first, so a model built
+        from other files refuses before the host is asked anything.
         """
+        remedy = READER_REMEDY.format(model=self.model)
+        artifacts = ollama.verified_build(
+            self.model, remedy=remedy, records=self.records
+        )
         try:
             prose = ollama.ask(
-                self.body(photo, briefing),
-                remedy=READER_REMEDY.format(model=self.model),
-                transport=self.transport,
+                self.body(photo, briefing), remedy=remedy, transport=self.transport
             )
         except ollama.OllamaFailure as failed:
             raise StageFailure(failed.kind, failed.detail) from failed
-        return Reading(prose, self.implementation, (self.model,))
+        return Reading(prose, self.implementation, (self.model,), True, artifacts)
 
 
 def caption(
@@ -246,14 +262,17 @@ def caption(
         ) from failed
 
     path = directory / artifact_name(version)
+    producer: CaptionProducer = {
+        "implementation": reading.implementation,
+        "models": list(reading.models),
+        "pinned": reading.pinned,
+        "briefing": instructions_record(briefing_path),
+    }
+    if reading.artifacts:
+        producer["artifacts"] = dict(reading.artifacts)
     artifact: Caption = {
         "schema": CAPTION_FILE.schema,
-        "producer": {
-            "implementation": reading.implementation,
-            "models": list(reading.models),
-            "pinned": reading.pinned,
-            "briefing": instructions_record(briefing_path),
-        },
+        "producer": producer,
         "prose": reading.prose,
     }
     write(path, CAPTION_FILE, artifact)

@@ -94,12 +94,16 @@ class ScoredTag(TypedDict):
 
 
 class CaptionProducer(TypedDict):
-    """What read a photograph into prose, and the briefing it read."""
+    """What read a photograph into prose, and the briefing it read.
+
+    `artifacts` is present when the model was verified against its pinned files.
+    """
 
     implementation: str
     models: list[str]
     pinned: bool
     briefing: InstructionsRecord
+    artifacts: NotRequired[dict[str, DigestRecord]]
 
 
 class Wd14Producer(TypedDict):
@@ -112,12 +116,16 @@ class Wd14Producer(TypedDict):
 
 
 class TagsProducer(TypedDict):
-    """The hosted tagger, and the digest of the prompt it was sent."""
+    """The hosted tagger, and the digest of the prompt it was sent.
+
+    `artifacts` is present when the model was verified against its pinned files.
+    """
 
     implementation: str
     models: list[str]
     pinned: bool
     prompt: DigestRecord
+    artifacts: NotRequired[dict[str, DigestRecord]]
 
 
 # The functional form below, because `from` is a Python keyword. `from` is

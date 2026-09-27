@@ -1,7 +1,11 @@
+import json
+from pathlib import Path
 from typing import Any
 from urllib.request import Request
 
 from isekai.boundary.comfy import Image
+from isekai.boundary.ollama import LAYERS
+from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
 from isekai.foundation.flow import Workflow
 
 
@@ -79,3 +83,34 @@ class FakeFetcher:
     def published_digest(self, url: str) -> str | None:
         self.asked.append(url)
         return self.published.get(url)
+
+
+# The alias every tracked flow names, and so the one a real adapter is tested on.
+READER = "joycaption-beta-one-q4k"
+
+
+def ollama_records(
+    root: Path, model: str = READER, *, model_digest: str | None = None
+) -> Path:
+    """Write Ollama's record of `model` under `root`, and return `root`.
+
+    The record names the files `config/reader.json` pins for `READER`, unless
+    `model_digest` names another model file.
+    """
+    manifest = load_manifest(READER_MANIFEST_PATH)
+    built = manifest.get("aliases", {})[READER]
+    pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
+    layers = [
+        {
+            "mediaType": LAYERS["model"],
+            "digest": f"sha256:{model_digest or pins[built['model']]}",
+        },
+        {
+            "mediaType": LAYERS["projector"],
+            "digest": f"sha256:{pins[built['projector']]}",
+        },
+    ]
+    record = root / model / "latest"
+    record.parent.mkdir(parents=True, exist_ok=True)
+    record.write_text(json.dumps({"layers": layers}))
+    return root

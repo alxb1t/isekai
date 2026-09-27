@@ -13,11 +13,16 @@ from pathlib import Path
 
 import pytest
 
-from tools import derive_eval_manifest, derive_manifest, derive_vocabulary
+from tools import (
+    derive_eval_manifest,
+    derive_manifest,
+    derive_reader,
+    derive_vocabulary,
+)
 from tools import manifest as shared
 from tools.manifest import Manifest, Source
 
-DERIVERS = (derive_manifest, derive_eval_manifest, derive_vocabulary)
+DERIVERS = (derive_manifest, derive_eval_manifest, derive_vocabulary, derive_reader)
 
 SHARED_NAMES = ("Manifest", "ManifestEntry", "Source", "Spec")
 

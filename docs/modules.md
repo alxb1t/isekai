@@ -22,8 +22,8 @@ Module-level, cross-group:
 
 Lazy — the import sits inside a function, so the edge does not exist at
 import time:
-  interface ──▶ boundary      wiring.py, inside load_vocabulary(), which
-                              keeps provision.py off the entry point's graph
+  interface ──▶ boundary      wiring.py, inside load_vocabulary(); provision.py
+                              is on the entry point's graph through ollama.py
   interface ──▶ interface/ui  cli.py, inside the `ui` handler — within the
                               group, and listed because collapsing it away
                               is what hid it before

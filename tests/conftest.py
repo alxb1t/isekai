@@ -1,10 +1,12 @@
 import copy
 import json
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
+from isekai.boundary import ollama
 from isekai.boundary.provision import Manifest, load_manifest
 from isekai.foundation.flow import Schema, Workflow, load_flow
 from isekai.shared.vocabulary import VOCABULARY_REMEDY, Vocabulary, read_tags
@@ -36,6 +38,18 @@ CSV = """tag_id,name,category,count
 18,hair,0,50000
 19,hatsune_miku,4,500000
 """
+
+
+@pytest.fixture(autouse=True)
+def _no_ollama_records(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Point Ollama's model records at an empty directory for every test.
+
+    The suite never reads the operator's own records; a test that needs one
+    writes it with `tests.fakes.ollama_records`.
+    """
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(ollama, "MODEL_RECORDS", tmp_path_factory.mktemp("ollama"))
+        yield
 
 
 @pytest.fixture(scope="session")

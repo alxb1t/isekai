@@ -9,7 +9,7 @@ the whole flow last, with every pin in place ([D8](design.md#d8)).
 - [x] 2 — The image: inputs by digest, a locked environment, built on request
 - [x] 3 — 🛑 **HUMAN** — push the branch and dispatch the rc build
 - [x] 4 — The pin: `config/image.json`, `up.sh` boots it
-- [ ] 5 — The reader: `config/reader.json`, the model checked before its first call
+- [x] 5 — The reader: `config/reader.json`, the model checked before its first call
 - [ ] 6 — The records
 - [ ] 7 — The record in `docs/`
 - [ ] 8 — 🛑 **HUMAN · METERED · HALT** — the acceptance: the whole flow, both flows, every pin in place
@@ -56,19 +56,19 @@ Line numbers are `801ffec`'s; find each site by the text it names.
 
 ## 5 — The reader: `config/reader.json`, the model checked before its first call
 
-- [ ] 5.1 **HALT CHECK** — no reader manifest exists, and nothing reads Ollama's record of a model.
+- [x] 5.1 **HALT CHECK** — no reader manifest exists, and nothing reads Ollama's record of a model.
   Verify: `test -f config/reader.json; echo $?` prints `1`, and `grep -c -F '.ollama/' isekai/boundary/ollama.py` prints `0`.
-- [ ] 5.2 Write `tools/derive_reader.py` through `tools/manifest.py` and run it to write `config/reader.json`, with `aliases` and `concedo` as its publisher; add it to the `Makefile`'s `derive` and `tests/test_derivation.py`'s `DERIVERS`, per [D4](design.md#d4).
+- [x] 5.2 Write `tools/derive_reader.py` through `tools/manifest.py` and run it to write `config/reader.json`, with `aliases` and `concedo` as its publisher; add it to the `Makefile`'s `derive` and `tests/test_derivation.py`'s `DERIVERS`, per [D4](design.md#d4).
   Verify: `grep -c '"joycaption-beta-one-q4k"' config/reader.json` prints `1`, and `grep -c 'derive_reader' Makefile` prints `1`.
-- [ ] 5.3 Add `provision.READER_MANIFEST_PATH` and `Manifest`'s `NotRequired` `aliases` to `isekai/boundary/provision.py`, the anchor to `tests/test_package_paths.py`, and point `config/joycaption.Modelfile`'s comment at the manifest, per [D4](design.md#d4).
+- [x] 5.3 Add `provision.READER_MANIFEST_PATH` and `Manifest`'s `NotRequired` `aliases` to `isekai/boundary/provision.py`, the anchor to `tests/test_package_paths.py`, and point `config/joycaption.Modelfile`'s comment at the manifest, per [D4](design.md#d4).
   Verify: `grep -c 'READER_MANIFEST_PATH' tests/test_package_paths.py` prints a number above `0`, and `grep -c 'e8ae55dd07e61d541ab741d6ed63e7810192cea65d7ef8cda69b2a99fb06dc15' config/joycaption.Modelfile` prints `0`.
-- [ ] 5.4 In a new `tests/test_reader_manifest.py`, test `each-model-names-its-model-and-projector`, `every-flow-model-is-pinned` and `driver-provisions-the-manifest` under `model-provisioning:reader:`, and extend `test_the_vocabulary_appears_only_in_its_own_manifest` (`tests/test_vocabulary_manifest.py:122`) to the reader's manifest.
+- [x] 5.4 In a new `tests/test_reader_manifest.py`, test `each-model-names-its-model-and-projector`, `every-flow-model-is-pinned` and `driver-provisions-the-manifest` under `model-provisioning:reader:`, and extend `test_the_vocabulary_appears_only_in_its_own_manifest` (`tests/test_vocabulary_manifest.py:122`) to the reader's manifest.
   Verify: `grep -c 'model-provisioning:reader:' tests/test_reader_manifest.py` prints `3`.
-- [ ] 5.5 In `isekai/boundary/ollama.py`, add the check [D4](design.md#d4) describes — a constant root, injectable, memoised per model — and call it in `OllamaReader.read` and `OllamaTagger.tag` before `ask`; `Reading` and `Tagging` carry the verified `artifacts` and `pinned=True`.
+- [x] 5.5 In `isekai/boundary/ollama.py`, add the check [D4](design.md#d4) describes — a constant root, injectable, memoised per model — and call it in `OllamaReader.read` and `OllamaTagger.tag` before `ask`; `Reading` and `Tagging` carry the verified `artifacts` and `pinned=True`.
   Verify: `grep -c 'registry.ollama.ai' isekai/boundary/ollama.py` prints `1`.
-- [ ] 5.6 Test `caption:reachability:an-unpinned-build-is-refused`, `caption:reachability:an-unpinned-model-is-refused` and the first-call scenario's *no record read* in `tests/test_caption.py`, and `tagging:independence:an-unpinned-hosted-model-costs-no-local-list` in `tests/test_tagging.py`; point `tests/test_caption.py:402-416` and `tests/test_pipeline_cli.py`'s real-reader tests (`:375`, `:404`, `:416`, `:427`) at a fixture root.
+- [x] 5.6 Test `caption:reachability:an-unpinned-build-is-refused`, `caption:reachability:an-unpinned-model-is-refused` and the first-call scenario's *no record read* in `tests/test_caption.py`, and `tagging:independence:an-unpinned-hosted-model-costs-no-local-list` in `tests/test_tagging.py`; point `tests/test_caption.py:402-416` and `tests/test_pipeline_cli.py`'s real-reader tests (`:375`, `:404`, `:416`, `:427`) at a fixture root.
   Verify: `grep -c -e 'an-unpinned-build-is-refused' -e 'an-unpinned-model-is-refused' tests/test_caption.py` prints `2`.
-- [ ] 5.7 Record `artifacts` and `pinned` in the caption's and hosted tags' producers (`isekai/pipeline/caption.py:249-259`, `isekai/pipeline/tagging.py:349-359`), with `caption:provenance:a-verified-model-is-pinned` and `tagging:provenance:the-hosted-tagger-declares-its-pin`; reword `tagging.py:242-247` and `:316-318`, per [D4](design.md#d4).
+- [x] 5.7 Record `artifacts` and `pinned` in the caption's and hosted tags' producers (`isekai/pipeline/caption.py:249-259`, `isekai/pipeline/tagging.py:349-359`), with `caption:provenance:a-verified-model-is-pinned` and `tagging:provenance:the-hosted-tagger-declares-its-pin`; reword `tagging.py:242-247` and `:316-318`, per [D4](design.md#d4).
   Verify: `grep -c 'caption:provenance:a-verified-model-is-pinned' tests/test_caption.py` prints `1`, and ``grep -c 'record `pinned: false`' isekai/pipeline/tagging.py`` prints `0`.
 
 ## 6 — The records

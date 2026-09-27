@@ -133,8 +133,9 @@ a clip skip their prose never states.
 `config/vocabulary.json`. Row N of `selected_tags.csv` names output neuron N of `model.onnx`, so a
 pair from mismatched revisions mislabels every tag — silently, because the vector still has the right
 length and every name in it is still a real tag. Both digests are verified before the first inference.
-A WD14 artifact records `pinned: true`, and a sheet built from it carries that across; the reader and
-the hosted tagger record `false`, and `python -m isekai show` marks theirs *unpinned*.
+A WD14 artifact records `pinned: true`, and a sheet built from it carries that across. The reader and
+the hosted tagger record `true` too: before its first call, the alias is checked against the model and
+projector digests `config/reader.json` pins, and a model built from other files is refused.
 
 ## What costs money, and what does not
 

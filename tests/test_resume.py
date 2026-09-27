@@ -33,7 +33,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
-from tests.fakes import FakeComfyClient, url_of
+from tests.fakes import READER, FakeComfyClient, ollama_records, url_of
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
 from tests.transports import FakeTransport
@@ -334,8 +334,9 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     # HTTP to a local port, so there is nothing on PATH to be missing.
     collect(
         lambda: OllamaReader(
-            model="a-reader",
+            model=READER,
             transport=FakeTransport(error=urllib.error.URLError("Connection refused")),
+            records=ollama_records(tmp_path / "records"),
         ).read(photo, "b", tmp_path)
     )
 

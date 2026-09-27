@@ -7,8 +7,8 @@ fetch it. The bytes move through `wget` on the pod (design.md D3, D14); the only
 network call here is the cheap pre-flight HEAD behind the `Fetcher` seam, which a
 fake replaces so the whole suite stays offline.
 
-Not on `python -m isekai`'s import graph. It would break no rule if it were --
-this module is `json`, `re` and `pathlib` -- but the graph stays narrow too.
+On `python -m isekai`'s import graph through `ollama.py`, which reads the
+reader's manifest; it imports only the standard library.
 """
 
 import hashlib
@@ -21,7 +21,7 @@ import urllib.request
 from dataclasses import dataclass
 from http.client import HTTPMessage
 from pathlib import Path, PurePosixPath
-from typing import IO, Any, Literal, Protocol, TypedDict
+from typing import IO, Any, Literal, NotRequired, Protocol, TypedDict
 
 MANIFEST_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "models.json"
 
@@ -32,6 +32,13 @@ MANIFEST_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "mode
 # honest are this module's and all three are held to them.
 VOCABULARY_MANIFEST_PATH = (
     Path(__file__).resolve().parent.parent.parent / "config" / "vocabulary.json"
+)
+
+# The fourth: the reader's model and projector files, keyed by the alias a flow
+# names, so the files behind an alias can be checked before it answers (0033
+# design D4).
+READER_MANIFEST_PATH = (
+    Path(__file__).resolve().parent.parent.parent / "config" / "reader.json"
 )
 
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.
@@ -63,12 +70,20 @@ class Entry(TypedDict):
     sources: list[str]
 
 
+class ReaderModel(TypedDict):
+    """Which entries a local model is built from, each by its `dest`."""
+
+    model: str
+    projector: str
+
+
 class Manifest(TypedDict):
-    """The whole tracked manifest."""
+    """The whole tracked manifest; `aliases` is the reader's alone."""
 
     pinned: str
     publishers: list[str]
     entries: list[Entry]
+    aliases: NotRequired[dict[str, ReaderModel]]
 
 
 # Derived from the type rather than restated, so a field added to `Entry` is
