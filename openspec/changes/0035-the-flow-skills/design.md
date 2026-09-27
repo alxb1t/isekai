@@ -52,7 +52,7 @@ How an agent runs the flows for the operator with little context: skills that ch
 
 ```
 .data/<batch>/
-  photos/        the operator's synthetic portraits
+  photos/        the operator's photographs
   runs/          --runs for every verb
   log.txt        every command's output, appended
   compare.html   written by `compare`
@@ -71,7 +71,8 @@ How an agent runs the flows for the operator with little context: skills that ch
   5. `python -m isekai compare "$BATCH"` ([D2](#d2)), and hands the operator the path it prints.
 - **`compare-renders`** is step 5 alone.
 - **Both skills forbid** reading a photograph, anything under `runs/`, `log.txt` beyond the counted lines, and the
-  page; they name synthetic portraits as the only photographs to use.
+  page. They say nothing of what the photographs are: that is the operator's to know, and an agent could only
+  check it by reading one (amended during the build, on the operator's decision).
 - An exit status of 134 with no `refused` line is the tagger's native abort; the agent reports it and goes on
   ([D5](#d5) removes it).
 

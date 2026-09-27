@@ -1,6 +1,6 @@
 ---
 name: run-flows
-description: Run a directory of synthetic portraits through both flows — tag, caption, sheet, review in the browser, render on a rented GPU — and hand the operator a comparison page. Use when the operator asks to run the flows, make a dataset, or render a batch in .data/<batch>/photos.
+description: Run a directory of photographs through both flows — tag, caption, sheet, review in the browser, render on a rented GPU — and hand the operator a comparison page. Use when the operator asks to run the flows, make a dataset, or render a batch in .data/<batch>/photos.
 ---
 
 # run-flows — a batch of photographs to a comparison page
@@ -11,7 +11,7 @@ is shaped this way: [0035 design D1](../../../openspec/changes/0035-the-flow-ski
 
 ```
 .data/<batch>/
-  photos/        the operator's synthetic portraits, JPEG or PNG
+  photos/        the operator's photographs, JPEG or PNG
   runs/          every verb's --runs
   log.txt        every command's output, appended
   compare.html   written by step 5
@@ -21,7 +21,6 @@ is shaped this way: [0035 design D1](../../../openspec/changes/0035-the-flow-ski
 
 - **Never read** a photograph, anything under `runs/`, `compare.html`, or `log.txt` beyond the lines the steps
   below grep. Your context is for counts and statuses.
-- **Never use a real person's photograph.** Synthetic portraits only; if you cannot tell, stop and ask.
 - **Never start step 4 without the operator's go** in this session. It rents a GPU.
 
 ## 0 — Check

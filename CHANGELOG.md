@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   then runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI and renders each `<flow>=<count>`. A
   trap set before `up.sh` tears the pod down and closes the tunnel on every exit, error and signal.
 - **The flow skills, `run-flows` and `compare-renders`** (`0035` design D1, D4, D6): an agent runs a batch of
-  synthetic portraits to the comparison page from exact commands, stopping for "approved" and for the go, and
+  photographs to the comparison page from exact commands, stopping for "approved" and for the go, and
   reads counts rather than runs. A test fails when a command a skill names stops parsing. `CLAUDE.md`'s pod rule
   now also accepts the operator's explicit go, and names the record files to delete after a confirmed teardown.
 
