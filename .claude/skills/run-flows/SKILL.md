@@ -7,7 +7,7 @@ description: Run a directory of photographs through both flows — tag, caption,
 
 Runs `summon-anime-wai` and `conjure-anime-wai` over `.data/<batch>/photos/` and ends with
 `.data/<batch>/compare.html`. The commands are exact: run them as written, with `<batch>` replaced. Why each step
-is shaped this way: [0035 design D1](../../../openspec/changes/0035-the-flow-skills/design.md#d1).
+is shaped this way: [0035 design D1](../../../openspec/changes/archive/0035-the-flow-skills/design.md#d1).
 
 ```
 .data/<batch>/

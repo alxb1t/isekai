@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-09-27
+
 ### Added
 
 - **`compare`, a new verb** (`0035` design D2): `python -m isekai compare <batch>` writes `compare.html` into

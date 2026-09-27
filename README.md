@@ -223,7 +223,7 @@ uv run python -m isekai generate --runs $R --flow summon-anime-wai  --count 1 $P
 ### The batch, run by an agent
 
 Two skills in `.claude/skills/` let an agent run the batch above for you, from exact commands, without reading
-the source or the runs ([0035 design D1](openspec/changes/0035-the-flow-skills/design.md#d1)):
+the source or the runs ([0035 design D1](openspec/changes/archive/0035-the-flow-skills/design.md#d1)):
 
 - **`run-flows`** takes `.data/<batch>/photos/` through ① ②, starts both `ui`
   pages and stops until you say "approved", counts the approvals, stops for your go, renders, and ends with the

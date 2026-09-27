@@ -7,7 +7,7 @@ description: Build the comparison page for a batch that is already rendered — 
 
 Writes `.data/<batch>/compare.html`: every run's photograph beside each flow's renders under its latest approval,
 each render with its positive prompt, and the captions in a row below. The page links the images and embeds none.
-Why: [0035 design D2](../../../openspec/changes/0035-the-flow-skills/design.md#d2).
+Why: [0035 design D2](../../../openspec/changes/archive/0035-the-flow-skills/design.md#d2).
 
 ## Never
 
