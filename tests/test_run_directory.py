@@ -55,14 +55,14 @@ from isekai.foundation.run import (
 from isekai.interface.cli import build_parser
 from isekai.interface.wiring import Wiring, wiring, wiring_from
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.generate import prompt_artifact, render
+from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import approve, review
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, png_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
-from tests.stages import caption, on_runtime, sheet, write_wd14
+from tests.stages import caption, render, sheet, write_wd14
 
 FLOW = "summon-anime-wai"
 
@@ -1020,8 +1020,6 @@ def _carry(
         run,
         loaded,
         FakeComfyClient(),
-        image=None,
-        runtime=on_runtime,
         seeds=[seed],
         poll=0,
     )
@@ -1136,8 +1134,6 @@ def test_files_written_before_a_record_key_existed_still_read_and_proceed(
         del body[key]
     prompt.write_text(json.dumps(body))
 
-    made = render(
-        run, flow, FakeComfyClient(), image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    made = render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert [one.seed for one in made] == [42]

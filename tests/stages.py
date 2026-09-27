@@ -14,10 +14,12 @@ ordering *and* by the modules that compose a `Wiring`, and a double defined in
 one test module and reached from three is the coupling this file exists to avoid.
 """
 
-from collections.abc import Sequence
+import random
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from isekai.boundary.comfy import ComfyTransport
 from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
     WD14_FILE,
@@ -34,9 +36,11 @@ from isekai.foundation.run import (
     artifact_name,
 )
 from isekai.pipeline import caption as caption_stage
+from isekai.pipeline import generate as generate_stage
 from isekai.pipeline import sheet as sheet_stage
 from isekai.shared.field_map import FieldMap, Group
 from isekai.shared.vocabulary import Vocabulary
+from tests.fakes import FakeComfyClient
 
 FLOW = load_flow("summon-anime-wai")
 FLOW_DIGEST = manifest_digest(FLOW.id)
@@ -268,14 +272,40 @@ def fake_wd14(vector: list[float] | None = None) -> Always[LocalTagger]:
     return Always(fake_tagger(vector))
 
 
-# What a render is told it ran on, where a test is not about the runtime.
-RUNTIME: Runtime = {
-    "comfyui_version": "0.3.60",
-    "python_version": "3.12.14",
-    "pytorch_version": "2.8.0+cu128",
-}
+# What a render is told it ran on, where a test is not about the runtime: what
+# `FakeComfyClient` reports, so the suite has one fake runtime.
+RUNTIME: Runtime = generate_stage.read_runtime(FakeComfyClient())
 
 
 def on_runtime() -> Runtime:
     """Return `RUNTIME`: the runtime thunk for a render not about the runtime."""
     return RUNTIME
+
+
+def render(
+    run: Run,
+    flow: Flow,
+    client: ComfyTransport,
+    *,
+    image: str | None = None,
+    runtime: Callable[[], Runtime] = on_runtime,
+    count: int | None = None,
+    seeds: Sequence[int] | None = None,
+    rng: random.Random | None = None,
+    poll: float = 1.0,
+) -> list[generate_stage.Render]:
+    """Call the render stage on an endpoint no pod-boot record names, at `RUNTIME`.
+
+    A test about the image or the runtime passes its own.
+    """
+    return generate_stage.render(
+        run,
+        flow,
+        client,
+        image=image,
+        runtime=runtime,
+        count=count,
+        seeds=seeds,
+        rng=rng,
+        poll=poll,
+    )

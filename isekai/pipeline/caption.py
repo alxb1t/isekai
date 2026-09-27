@@ -92,11 +92,9 @@ READER_OPTIONS: Mapping[str, Any] = {
     "num_ctx": 4096,
 }
 
-# The one command that turns an absent reader into a present one. It is the
-# adapter's rather than the boundary's: the alias is machine-local and built from
-# a committed recipe, so what fixes its absence is a property of this adapter
-# rather than of the HTTP boundary underneath it (design.md D3).
-READER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
+# The one command that turns an absent reader into a present one: the alias is
+# machine-local and built from a committed recipe (design.md D3).
+READER_REMEDY = ollama.BUILD
 
 
 @dataclass(frozen=True)
@@ -110,9 +108,13 @@ class Reading:
     prose: str
     implementation: str
     models: tuple[str, ...] = ()
-    pinned: bool = False
     artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
     options: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def pinned(self) -> bool:
+        """Return whether the model was verified against the files it is pinned to."""
+        return bool(self.artifacts)
 
 
 class Reader(Protocol):
@@ -142,7 +144,9 @@ class FakeReader:
         self.calls.append((photo, briefing))
         if self.failure is not None:
             raise self.failure
-        return Reading(self.prose, self.implementation, self.models)
+        return Reading(
+            prose=self.prose, implementation=self.implementation, models=self.models
+        )
 
 
 @dataclass(frozen=True)
@@ -165,7 +169,6 @@ class OllamaReader:
     model: str
     transport: ollama.Transport = ollama.post
     implementation: str = "ollama"
-    records: Path | None = None
 
     def prompt(self, briefing: str) -> str:
         """Return the whole of what the reader is told.
@@ -200,20 +203,23 @@ class OllamaReader:
         The model is checked against `config/reader.json` first, so a model built
         from other files refuses before the host is asked anything.
         """
-        remedy = READER_REMEDY.format(model=self.model)
-        artifacts = ollama.verified_build(
-            self.model, remedy=remedy, records=self.records
-        )
+        artifacts = ollama.verified_build(self.model)
         try:
             prose = ollama.ask(
-                self.body(photo, briefing), remedy=remedy, transport=self.transport
+                self.body(photo, briefing),
+                remedy=READER_REMEDY.format(model=self.model),
+                transport=self.transport,
             )
         except ollama.OllamaFailure as failed:
             raise StageFailure(failed.kind, failed.detail) from failed
         # `body()` sends `READER_OPTIONS`; the body itself is not kept, since it
         # carries the photograph and `ask` drops it for that reason.
         return Reading(
-            prose, self.implementation, (self.model,), True, artifacts, READER_OPTIONS
+            prose=prose,
+            implementation=self.implementation,
+            models=(self.model,),
+            artifacts=artifacts,
+            options=READER_OPTIONS,
         )
 
 

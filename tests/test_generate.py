@@ -55,7 +55,6 @@ from isekai.pipeline.generate import (
     prepare,
     prompt_artifact,
     read_runtime,
-    render,
     rendered_seeds,
     seeds_for,
 )
@@ -63,9 +62,9 @@ from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FAKE_SYSTEM, FakeComfyClient, url_of
+from tests.fakes import FAKE_SYSTEM, POD_IMAGE, FakeComfyClient, url_of
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, caption, fake_wd14, on_runtime, sheet
+from tests.stages import FIELD_MAP, Always, caption, fake_wd14, render, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -377,9 +376,7 @@ def test_the_stage_renders_through_the_double_with_no_gpu(
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
 
-    produced = render(
-        run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    produced = render(run, flow, client, seeds=[42], poll=0)
 
     assert len(produced) == 1
     assert produced[0].image.name == "42.png"
@@ -401,9 +398,7 @@ def test_the_stage_polls_history_until_the_prompt_completes(
     prepare(run, {FLOW: flow})
     client = FakeComfyClient(pending_polls=2)
 
-    produced = render(
-        run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    produced = render(run, flow, client, seeds=[42], poll=0)
 
     # Two empty answers, then the real one: the loop waits rather than reading
     # the first reply as the render.
@@ -419,7 +414,7 @@ def test_the_stage_downloads_the_image_named_in_the_history(
     image = {"filename": "anime_00001.png", "subfolder": "sub", "type": "output"}
     client = FakeComfyClient(image=image)
 
-    render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     # The whole dict, not just the filename: `subfolder` and `type` are what the
     # endpoint needs to find the file again, and dropping either fetches nothing.
@@ -433,9 +428,7 @@ def test_the_provenance_records_the_flow_the_seed_the_version_and_the_graph(
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
 
-    produced = render(
-        run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    produced = render(run, flow, client, seeds=[42], poll=0)
 
     body = read(produced[0].provenance, RENDER_FILE)
     assert body["flow"] == FLOW
@@ -475,7 +468,7 @@ def test_the_submitted_graph_carries_the_manifests_dials_not_the_files(
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
 
-    render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     graph = client.submissions[0]
     assert graph[flow.node("sampler")]["inputs"]["cfg"] == 5
@@ -493,7 +486,7 @@ def test_the_submitted_graph_is_sized_from_the_photographs_own_header(
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
 
-    render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     graph = client.submissions[0]
     latent = graph[flow.node("latent")]["inputs"]
@@ -511,13 +504,10 @@ def test_a_named_seed_already_rendered_is_skipped(
 ) -> None:
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
-    render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
     before = len(client.submissions)
 
-    assert (
-        render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
-        == []
-    )
+    assert render(run, flow, client, seeds=[42], poll=0) == []
     assert len(client.submissions) == before
 
 
@@ -531,8 +521,6 @@ def test_raising_the_count_renders_only_the_difference(
         run,
         flow,
         client,
-        image=None,
-        runtime=on_runtime,
         count=2,
         rng=random.Random(7),
         poll=0,
@@ -545,8 +533,6 @@ def test_raising_the_count_renders_only_the_difference(
         run,
         flow,
         client,
-        image=None,
-        runtime=on_runtime,
         count=3,
         rng=random.Random(9),
         poll=0,
@@ -565,7 +551,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
 ) -> None:
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
-    render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     second = review(run, FLOW, new_version=True)
     assert second is not None
@@ -574,7 +560,7 @@ def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     second.write_text(json.dumps(body))
     approve(run, FLOW, schema, vocabulary)
     prepare(run, {FLOW: flow})
-    render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+    render(run, flow, client, seeds=[42], poll=0)
 
     assert (run.path / FLOW / OUTPUTS / "001" / "42.png").exists()
     assert (run.path / FLOW / OUTPUTS / "002" / "42.png").exists()
@@ -591,8 +577,6 @@ def test_each_render_is_named_by_the_seed_that_produced_it(
         run,
         flow,
         client,
-        image=None,
-        runtime=on_runtime,
         count=3,
         rng=random.Random(7),
         poll=0,
@@ -767,7 +751,7 @@ def test_an_unreadable_header_inside_the_render_loop_is_recorded_not_fatal(
     client = FakeComfyClient()
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+        render(run, flow, client, seeds=[42], poll=0)
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert "re-export the photograph" in str(refused.value)
@@ -800,8 +784,6 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
             run,
             flow,
             ComfyClient("http://127.0.0.1:8188"),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -838,8 +820,6 @@ def test_a_rejected_graph_is_recorded_permanent(
             run,
             flow,
             ComfyClient("http://127.0.0.1:8188"),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -863,8 +843,6 @@ def test_a_server_error_is_recorded_transient(
             run,
             flow,
             ComfyClient("http://127.0.0.1:8188"),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -888,7 +866,7 @@ def test_a_failed_upload_is_recorded(
     client = ComfyClient("http://127.0.0.1:8188")
 
     with pytest.raises(Refusal) as refused:
-        render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+        render(run, flow, client, seeds=[42], poll=0)
 
     directory = run.path / FLOW / OUTPUTS / "001"
     recorded = attempts(directory, 1)
@@ -898,7 +876,7 @@ def test_a_failed_upload_is_recorded(
     assert "delete it before rendering again" in str(refused.value)
 
     with pytest.raises(Refusal) as again:
-        render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+        render(run, flow, client, seeds=[42], poll=0)
     assert "001.error.1.transient.json" in str(again.value)
 
 
@@ -917,9 +895,7 @@ def test_a_history_without_an_image_is_refused_and_recorded(
             return {prompt_id: record}
 
     with pytest.raises(Refusal) as refused:
-        render(
-            run, flow, Malformed(), image=None, runtime=on_runtime, seeds=[42], poll=0
-        )
+        render(run, flow, Malformed(), seeds=[42], poll=0)
 
     directory = run.path / FLOW / OUTPUTS / "001"
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
@@ -940,8 +916,6 @@ def test_a_submission_answered_in_the_wrong_shape_is_refused_permanent(
             run,
             flow,
             ComfyClient("http://127.0.0.1:8188"),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -974,8 +948,6 @@ def test_a_history_that_is_not_an_object_is_refused_permanent(
             run,
             flow,
             ComfyClient("http://127.0.0.1:8188"),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -1001,8 +973,6 @@ def test_the_sidecar_is_written_before_its_image(
             run,
             flow,
             FakeComfyClient(),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -1042,7 +1012,7 @@ def test_a_transient_render_record_still_refuses_the_next_attempt_on_the_count(
 
     client = FakeComfyClient()
     with pytest.raises(Refusal) as refused:
-        render(run, flow, client, image=None, runtime=on_runtime, seeds=[42], poll=0)
+        render(run, flow, client, seeds=[42], poll=0)
 
     message = str(refused.value)
     assert "used its 1 attempt" in message
@@ -1069,8 +1039,6 @@ def test_an_interrupted_render_leaves_no_png_for_resume_to_skip(
             run,
             flow,
             FakeComfyClient(),
-            image=None,
-            runtime=on_runtime,
             seeds=[42],
             poll=0,
         )
@@ -1217,8 +1185,6 @@ def test_a_flow_declaring_fewer_roles_renders(
         made,
         flow,
         client,
-        image=None,
-        runtime=on_runtime,
         seeds=[11],
         rng=random.Random(0),
     )
@@ -1240,8 +1206,6 @@ def test_a_flow_that_declares_no_photograph_uploads_nothing(
         made,
         flow,
         client,
-        image=None,
-        runtime=on_runtime,
         seeds=[11],
         rng=random.Random(0),
     )
@@ -1272,8 +1236,6 @@ def test_a_prompt_and_a_render_record_the_flow_digest_and_the_sheet(
         made,
         flow,
         FakeComfyClient(),
-        image=None,
-        runtime=on_runtime,
         seeds=[42],
         poll=0,
     )
@@ -1328,9 +1290,8 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
     from isekai.interface import wiring
     from isekai.interface.cli import build_parser, dispatch
 
-    booted = "ghcr.io/alxb1t/isekai@sha256:" + "d" * 64
     record = tmp_path / ".runpod_pod_image"
-    record.write_text(f"{booted}\n")
+    record.write_text(f"{POD_IMAGE}\n")
     monkeypatch.setattr(wiring, "POD_IMAGE", record)
     runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "bea")]
     client = FakeComfyClient()
@@ -1351,7 +1312,7 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
 
     for run in runs:
         sidecar = read(run.path / FLOW / OUTPUTS / "001" / "42.json", RENDER_FILE)
-        assert sidecar.get("image") == booted
+        assert sidecar.get("image") == POD_IMAGE
         assert sidecar.get("pinned") is True
         assert sidecar.get("runtime") == read_runtime(FakeComfyClient())
     # One report for the session, however many renders it served.
@@ -1362,9 +1323,7 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
 def test_a_render_with_no_pod_boot_record_is_unpinned(run: Run, flow: Flow) -> None:
     prepare(run, {FLOW: flow})
 
-    (one,) = render(
-        run, flow, FakeComfyClient(), image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    (one,) = render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     sidecar = read(one.provenance, RENDER_FILE)
     assert "image" not in sidecar
@@ -1374,16 +1333,11 @@ def test_a_render_with_no_pod_boot_record_is_unpinned(run: Run, flow: Flow) -> N
 @pytest.mark.spec("image-generation:runtime:a-complete-batch-reads-no-report")
 def test_a_complete_batch_asks_the_endpoint_nothing(run: Run, flow: Flow) -> None:
     prepare(run, {FLOW: flow})
-    render(
-        run, flow, FakeComfyClient(), image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     def unread() -> Runtime:
         raise AssertionError("the report was read for a complete batch")
 
     assert (
-        render(
-            run, flow, FakeComfyClient(), image=None, runtime=unread, seeds=[42], poll=0
-        )
-        == []
+        render(run, flow, FakeComfyClient(), runtime=unread, seeds=[42], poll=0) == []
     )

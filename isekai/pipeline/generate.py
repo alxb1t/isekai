@@ -56,7 +56,6 @@ from isekai.foundation.flow import (
     Schema,
     Workflow,
     assemble,
-    manifest_digest,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -202,7 +201,7 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
             "source": REVIEW,
         },
         "flow": flow.id,
-        "flow_digest": manifest_digest(flow.id, flow.path.parent),
+        "flow_digest": flow.digest,
         "sheet": sheet,
         "positive": positive,
         "negative": negative,
@@ -438,7 +437,7 @@ def render(
 
     `image` is the reference the pod booted, or None for an endpoint no pod-boot
     record names, which the sidecar declares unpinned. `runtime` is called only
-    once a render has run, so a complete batch reads no report (0033 design D5).
+    when a seed will render, so a complete batch reads no report (0033 design D5).
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
@@ -460,12 +459,16 @@ def render(
         image_name = (
             client.upload_image(str(run.photo)) if "photo" in flow.inputs else None
         )
+        # Before any seed is submitted, so a report that fails costs no render.
+        ran_on = runtime()
     except Refusal as failed:
         raise _recorded(run, flow, directory, version, failed, None) from failed
     # Constant across seeds: the flow's files on disk do not change mid-render.
     flow_graph = flow.graph_digest()
-    flow_digest = manifest_digest(flow.id, flow.path.parent)
-    sheet = read(approval, APPROVED_FILE)["sheet"]
+    sheet = prompt.get("sheet")
+    if sheet is None:
+        # An older prompt carries no `sheet`; the approval it came from does.
+        sheet = read(approval, APPROVED_FILE)["sheet"]
     produced: list[Render] = []
     for seed in wanted:
         output = directory / f"{seed}{flow.output_suffix}"
@@ -475,7 +478,6 @@ def render(
         try:
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
             body = _submit(client, graph, poll)
-            ran_on = runtime()
         except Refusal as failed:
             raise _recorded(run, flow, directory, version, failed, seed) from failed
         # The sidecar first, so an image always has its provenance: a crash
@@ -490,17 +492,16 @@ def render(
                 "source": PROMPTS,
             },
             "flow": flow.id,
-            "flow_digest": flow_digest,
+            "flow_digest": flow.digest,
             "seed": seed,
             "sheet": sheet,
             "graph_sha256": graph_digest(graph),
             "flow_graph_sha256": flow_graph,
             "edited": prompt["edited"],
+            **({"image": image} if image is not None else {}),
+            "pinned": image is not None,
+            "runtime": ran_on,
         }
-        if image is not None:
-            sidecar["image"] = image
-        sidecar["pinned"] = image is not None
-        sidecar["runtime"] = ran_on
         write(provenance, RENDER_FILE, sidecar)
         # Atomically, like every other artifact in a run, and for a sharper
         # reason: `rendered_seeds` treats the presence of the render as proof the
@@ -523,8 +524,8 @@ def _recorded(
 
     The transport says the kind: a rejected graph is permanent, a closed tunnel
     or a server error transient. Any other refusal -- a header nothing can read,
-    an answer with no image -- is permanent. An upload serves every seed, so its
-    record carries none.
+    an answer with no image -- is permanent. An upload or a runtime report serves
+    every seed, so its record carries none.
     """
     kind = failed.kind if isinstance(failed, TransportFailure) else "permanent"
     failure: Failure = {"stage": STAGE_RENDER, "detail": str(failed)}

@@ -65,8 +65,9 @@ One recipe per pin. Each is a commit inside a change, and each change says what 
 - **ComfyUI or a custom node.** Move its commit in the `Dockerfile`, then `make derive` and rebuild. A new core
   changes output, so the change carries a render comparison.
 - **isekai's dependencies.** `uv lock --upgrade-package <name>`, and review the diff of `uv.lock`.
-- **uv.** Move `required-version` in `pyproject.toml` and `image/pyproject.toml`, `version:` in
-  `.github/workflows/ci.yml`, and the `COPY --from` reference with its digest in the `Dockerfile`.
+- **uv.** Move `required-version` in `pyproject.toml`, `version:` in `.github/workflows/ci.yml`, and the
+  `COPY --from` reference with its digest in the `Dockerfile`, then `make derive` carries it into
+  `image/pyproject.toml`. `tests/test_infra.py` fails while any of them disagrees.
 - **An action.** Replace its SHA and the release in its comment; `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
   resolves one.
 - **A model manifest.** Move the revision constant in its deriver — `tools/derive_manifest.py`,

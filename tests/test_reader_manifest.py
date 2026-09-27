@@ -12,10 +12,10 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary.provision import (
-    DIGEST,
     READER_MANIFEST_PATH,
     Manifest,
     entries_with_missing_keys,
+    entries_without_a_digest,
     load_manifest,
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
@@ -49,9 +49,8 @@ def test_each_alias_names_a_pinned_model_and_projector(
     assert entries_with_missing_keys(reader_manifest) == []
     assert sources_on_a_mutable_ref(reader_manifest) == []
     assert mirror_entries_without_an_alternate(reader_manifest) == []
-    for entry in reader_manifest["entries"]:
-        assert DIGEST.match(entry["sha256"])
-        assert entry["bytes"] > 0
+    assert entries_without_a_digest(reader_manifest) == []
+    assert all(entry["bytes"] > 0 for entry in reader_manifest["entries"])
     assert aliases_off_the_entries(reader_manifest) == []
 
 

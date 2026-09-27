@@ -20,8 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.boundary import provision
-from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
+from isekai.boundary import ollama, provision
 from isekai.boundary.wd14 import FLOOR, MODEL_DEST, LocalTagger
 from isekai.foundation.artifacts import TAGS_FILE, WD14_FILE, read
 from isekai.foundation.flow import (
@@ -58,7 +57,7 @@ from isekai.pipeline.tagging import (
     tag_wd14,
 )
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import READER, ollama_records
+from tests.fakes import READER, READER_ARTIFACTS, ollama_records
 from tests.images import jpeg_bytes
 from tests.stages import (
     FAKE_PINS,
@@ -101,10 +100,9 @@ Hosted = Callable[[FakeTransport], OllamaTagger]
 
 
 @pytest.fixture
-def hosted(tmp_path: Path) -> Hosted:
+def hosted(model_records: Path) -> Hosted:
     """Return a hosted tagger factory whose model record matches the manifest."""
-    records = ollama_records(tmp_path / "records")
-    return lambda transport: OllamaTagger(READER, transport, records=records)
+    return lambda transport: OllamaTagger(READER, transport)
 
 
 # --- what the hosted tagger is given -----------------------------------------
@@ -400,14 +398,8 @@ def test_the_hosted_tagger_declares_its_pin_and_names_both_files(
 
     assert path is not None
     producer = read(path, TAGS_FILE)["producer"]
-    manifest = load_manifest(READER_MANIFEST_PATH)
-    built = manifest.get("aliases", {})[READER]
-    pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
     assert producer["pinned"] is True
-    assert producer.get("artifacts") == {
-        built["model"]: {"sha256": pins[built["model"]]},
-        built["projector"]: {"sha256": pins[built["projector"]]},
-    }
+    assert producer.get("artifacts") == READER_ARTIFACTS
 
 
 @pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
@@ -542,13 +534,14 @@ def test_a_failing_hosted_tagger_leaves_the_wd14_list_on_disk(
 
 @pytest.mark.spec("tagging:independence:an-unpinned-hosted-model-costs-no-local-list")
 def test_an_unpinned_hosted_model_refuses_and_the_local_list_is_written(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     other = "0" * 64
     transport = _answer("1girl, solo")
     records = ollama_records(tmp_path / "records", model_digest=other)
+    monkeypatch.setattr(ollama, "MODEL_RECORDS", records)
     photo = _photo(tmp_path)
-    wired = _wired(tmp_path, hosted=OllamaTagger(READER, transport, records=records))
+    wired = _wired(tmp_path, hosted=OllamaTagger(READER, transport))
 
     status = _dispatch(wired, "tag", "--flow", FLOW, str(photo))
 

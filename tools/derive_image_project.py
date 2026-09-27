@@ -15,8 +15,11 @@ It writes no provisioning manifest, so `tests/test_derivation.py` does not list 
 
 import re
 import subprocess
+import tomllib
 import urllib.request
 from pathlib import Path
+
+from tools.manifest import USER_AGENT
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -45,7 +48,6 @@ DROPPED = ("onnxruntime",)
 # insightface 0.7.3 is an sdist; its `build-system.requires` names these unpinned.
 BUILD_CONSTRAINTS = ("setuptools==84.0.0", "numpy==2.5.3", "cython==3.3.0")
 
-UV_VERSION = "0.12.19"
 PYTHON = "3.12.14"
 
 
@@ -88,12 +90,18 @@ def dependencies(upstream_lists: list[str]) -> list[str]:
 
 def fetch(url: str) -> str:
     """Return the text `url` serves."""
-    with urllib.request.urlopen(url, timeout=60) as response:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(request, timeout=60) as response:
         return response.read().decode()
 
 
-def render(deps: list[str]) -> str:
-    """Return `image/pyproject.toml`'s text for `deps`."""
+def uv_required(pyproject: str) -> str:
+    """Return a project's `[tool.uv] required-version`, e.g. "==0.12.19"."""
+    return tomllib.loads(pyproject)["tool"]["uv"]["required-version"]
+
+
+def render(deps: list[str], uv: str) -> str:
+    """Return `image/pyproject.toml`'s text for `deps`, requiring uv as `uv` says."""
 
     def array(items: tuple[str, ...] | list[str]) -> str:
         return "[\n" + "".join(f'    "{item}",\n' for item in items) + "]"
@@ -111,7 +119,7 @@ def render(deps: list[str]) -> str:
         "\n"
         "[tool.uv]\n"
         "package = false\n"
-        f'required-version = "=={UV_VERSION}"\n'
+        f'required-version = "{uv}"\n'
         "environments = "
         "[\"sys_platform == 'linux' and platform_machine == 'x86_64'\"]\n"
         f"build-constraint-dependencies = {array(BUILD_CONSTRAINTS)}\n"
@@ -135,8 +143,9 @@ def main() -> None:
         )
         for repo in UPSTREAMS
     ]
+    uv = uv_required((REPO / "pyproject.toml").read_text())
     PROJECT.mkdir(exist_ok=True)
-    (PROJECT / "pyproject.toml").write_text(render(dependencies(lists)))
+    (PROJECT / "pyproject.toml").write_text(render(dependencies(lists), uv))
     (PROJECT / ".python-version").write_text(f"{PYTHON}\n")
     subprocess.run(["uv", "lock", "--project", str(PROJECT)], check=True)
 

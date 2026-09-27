@@ -11,6 +11,7 @@ from isekai.boundary.provision import Manifest, load_manifest
 from isekai.foundation.flow import Schema, Workflow, load_flow
 from isekai.interface import wiring
 from isekai.shared.vocabulary import VOCABULARY_REMEDY, Vocabulary, read_tags
+from tests.fakes import ollama_records
 from tests.images import jpeg_bytes
 
 # A small stand-in for the provisioned tag list, with the same shape and the same
@@ -53,6 +54,14 @@ def _no_machine_records(tmp_path_factory: pytest.TempPathFactory) -> Iterator[No
         patch.setattr(ollama, "MODEL_RECORDS", empty / "ollama")
         patch.setattr(wiring, "POD_IMAGE", empty / ".runpod_pod_image")
         yield
+
+
+@pytest.fixture
+def model_records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point Ollama's model records at a fixture recording `READER`'s pinned build."""
+    root = ollama_records(tmp_path / "records")
+    monkeypatch.setattr(ollama, "MODEL_RECORDS", root)
+    return root
 
 
 @pytest.fixture(scope="session")

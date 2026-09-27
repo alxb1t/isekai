@@ -6,6 +6,7 @@ from urllib.request import Request
 from isekai.boundary.comfy import Image
 from isekai.boundary.ollama import LAYERS
 from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
+from isekai.foundation.artifacts import DigestRecord
 from isekai.foundation.flow import Workflow
 
 
@@ -102,6 +103,21 @@ class FakeFetcher:
 # The alias every tracked flow names, and so the one a real adapter is tested on.
 READER = "joycaption-beta-one-q4k"
 
+# The reference a pinned pod boots, as `infra/up.sh` records it.
+POD_IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "d" * 64
+
+
+def _reader_artifacts() -> dict[str, DigestRecord]:
+    """Return the files `config/reader.json` builds `READER` from, keyed by `dest`."""
+    manifest = load_manifest(READER_MANIFEST_PATH)
+    built = manifest.get("aliases", {})[READER]
+    pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
+    return {built[role]: {"sha256": pins[built[role]]} for role in LAYERS}
+
+
+# What a verified `READER` records as its `artifacts`, in `LAYERS` order.
+READER_ARTIFACTS = _reader_artifacts()
+
 
 def ollama_records(
     root: Path, model: str = READER, *, model_digest: str | None = None
@@ -111,18 +127,13 @@ def ollama_records(
     The record names the files `config/reader.json` pins for `READER`, unless
     `model_digest` names another model file.
     """
-    manifest = load_manifest(READER_MANIFEST_PATH)
-    built = manifest.get("aliases", {})[READER]
-    pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
+    pinned = (record["sha256"] for record in READER_ARTIFACTS.values())
+    digests = dict(zip(LAYERS, pinned, strict=True))
+    if model_digest is not None:
+        digests["model"] = model_digest
     layers = [
-        {
-            "mediaType": LAYERS["model"],
-            "digest": f"sha256:{model_digest or pins[built['model']]}",
-        },
-        {
-            "mediaType": LAYERS["projector"],
-            "digest": f"sha256:{pins[built['projector']]}",
-        },
+        {"mediaType": LAYERS[role], "digest": f"sha256:{digest}"}
+        for role, digest in digests.items()
     ]
     record = root / model / "latest"
     record.parent.mkdir(parents=True, exist_ok=True)

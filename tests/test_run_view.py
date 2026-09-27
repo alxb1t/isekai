@@ -13,13 +13,13 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import WD14, Run, open_run
 from isekai.interface.run_view import listings, rendered, report
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.generate import prepare, render
+from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import caption, fake_tagger, on_runtime, sheet
+from tests.stages import caption, fake_tagger, render, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -122,9 +122,7 @@ def test_renders_are_listed_under_the_approval_they_came_from(
 ) -> None:
     flow = load_flow(FLOW)
     prepare(run, {FLOW: flow})
-    render(
-        run, flow, FakeComfyClient(), image=None, runtime=on_runtime, seeds=[42], poll=0
-    )
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
 
     assert rendered(run) == [(FLOW, 1, [42])]
     assert any(line.strip() == "42" for line in report(run))

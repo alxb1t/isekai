@@ -36,7 +36,7 @@ from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
-from tests.fakes import READER, ollama_records
+from tests.fakes import READER
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, fake_wd14
 from tests.transports import FakeTransport
@@ -375,6 +375,7 @@ def test_an_untracked_flow_is_refused_before_any_run_is_opened(tmp_path: Path) -
 
 
 @pytest.mark.spec("caption:selection:an-unreachable-model-is-refused")
+@pytest.mark.usefixtures("model_records")
 def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
     tmp_path: Path,
 ) -> None:
@@ -396,7 +397,6 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
         OllamaReader(
             model=flow.model,
             transport=FakeTransport(payload={"error": "not found"}, status=404),
-            records=ollama_records(tmp_path / "records"),
         ).read(photo, "brief", tmp_path)
 
     message = str(refused.value)

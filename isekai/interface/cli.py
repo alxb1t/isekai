@@ -45,7 +45,7 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.flow import Flow, load_flow, manifest_digest, tracked_flows
+from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.interface.run_view import report
@@ -497,7 +497,7 @@ def _per_item(
                         vocabulary(),
                         field_map(),
                         tagged=flow.tagger,
-                        flow_digest=manifest_digest(name, flow.path.parent),
+                        flow_digest=flow.digest,
                         new_version=new_version,
                     ),
                 )
@@ -552,7 +552,7 @@ def _generate(
     if client is None:
         return refused
     image = booted_image()
-    # One report per session, read only once a render has run.
+    # One report per session, read only when a render will run.
     ran_on = cache(partial(read_runtime, client))
 
     def render_one(pair: tuple[Run, str]) -> None:

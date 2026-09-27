@@ -19,15 +19,12 @@ from isekai.pipeline.generate import prompt_artifact, read_runtime, render
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FakeComfyClient
+from tests.fakes import POD_IMAGE, FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FLOW, caption, fake_tagger, sheet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = Path(__file__).resolve().parent / "golden"
-
-# The reference a pinned pod boots, as `infra/up.sh` records it.
-POD_IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "d" * 64
 
 # The module that owns every run file's shape, and so the one that writes them.
 CONTRACT = "isekai/foundation/artifacts.py"

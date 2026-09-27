@@ -21,6 +21,7 @@ from isekai.boundary.provision import (
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
+from tools.derive_image_project import pinned_commits, uv_required
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -381,11 +382,8 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
     "structural: a clone with no checkout is not a pin, and this holds all three"
 )
 def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> None:
-    clones = re.findall(r"git clone \S+ \\?\s*(\S+)", dockerfile)
-    checkouts = re.findall(r"git checkout ([0-9a-f]{40})\b", dockerfile)
     # ComfyUI's core and the two custom-node packs, each on a full commit sha
-    assert len(clones) == 3
-    assert len(checkouts) == 3
+    assert len(pinned_commits(dockerfile)) == 3
 
 
 @pytest.mark.spec(
@@ -566,6 +564,58 @@ def test_the_check_catches_an_image_named_by_tag() -> None:
     assert undigested_images(broken) == [
         "ubuntu:22.04",
         "ghcr.io/astral-sh/uv:latest",
+    ]
+
+
+def uv_versions_apart(root: str, ci: str, dockerfile: str, image: str) -> list[str]:
+    """Return each place naming a uv version other than the root project's.
+
+    e.g. a `Dockerfile` copying `uv:0.8.24` under `==0.12.19` -> ["Dockerfile"]
+    """
+    setup = re.search(r"astral-sh/setup-uv@.*\n(?:.*\n)*?\s+version:\s*\"?([\w.]+)", ci)
+    copied = re.search(
+        r"^COPY\s+--from=ghcr\.io/astral-sh/uv:([\w.]+)@", dockerfile, re.M
+    )
+    named = {
+        "ci.yml": f"=={setup.group(1)}" if setup else None,
+        "Dockerfile": f"=={copied.group(1)}" if copied else None,
+        "image/pyproject.toml": uv_required(image),
+    }
+    return [where for where, version in named.items() if version != uv_required(root)]
+
+
+@pytest.mark.spec_exempt(
+    "structural: one uv version, in CI, the image and both projects"
+)
+def test_every_uv_version_the_build_names_is_the_root_projects(
+    dockerfile: str,
+) -> None:
+    apart = uv_versions_apart(
+        (REPO / "pyproject.toml").read_text(),
+        (REPO / ".github" / "workflows" / "ci.yml").read_text(),
+        dockerfile,
+        (REPO / "image" / "pyproject.toml").read_text(),
+    )
+    assert apart == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_uv_version_the_build_names_is_the_root_projects"
+)
+def test_the_check_catches_a_uv_version_that_drifted() -> None:
+    root = '[tool.uv]\nrequired-version = "==0.12.19"\n'
+    ci = (
+        "      - uses: astral-sh/setup-uv@abc # v6\n"
+        "        with:\n"
+        '          version: "0.12.19"\n'
+    )
+    dockerfile = (
+        "COPY --from=ghcr.io/astral-sh/uv:0.8.24@sha256:abc /uv /usr/local/bin/\n"
+    )
+    image = '[tool.uv]\nrequired-version = "==0.8.24"\n'
+    assert uv_versions_apart(root, ci, dockerfile, image) == [
+        "Dockerfile",
+        "image/pyproject.toml",
     ]
 
 

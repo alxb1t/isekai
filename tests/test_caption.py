@@ -16,7 +16,6 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
-from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
 from isekai.foundation.artifacts import CAPTION_FILE, read
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -30,7 +29,7 @@ from isekai.foundation.run import (
     versions,
 )
 from isekai.pipeline.caption import READER_OPTIONS, FakeReader, OllamaReader
-from tests.fakes import READER, ollama_records
+from tests.fakes import READER, READER_ARTIFACTS, ollama_records
 from tests.images import jpeg_bytes
 from tests.stages import CAPTION_BRIEFING as BRIEFING_PATH
 from tests.stages import FLOW, caption
@@ -271,6 +270,7 @@ def test_a_decline_names_the_photograph_and_writes_no_artifact(run: Run) -> None
 
 
 @pytest.mark.spec("caption:failure:unusable-response-is-permanent")
+@pytest.mark.usefixtures("model_records")
 def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
     tmp_path: Path,
 ) -> None:
@@ -285,7 +285,6 @@ def test_a_response_the_stage_cannot_read_as_prose_is_permanent(
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"response": ""}),
-        records=ollama_records(tmp_path),
     )
 
     with pytest.raises(StageFailure) as failed:
@@ -366,6 +365,7 @@ def test_the_photograph_is_sent_as_its_own_bytes_unresized(tmp_path: Path) -> No
 
 
 @pytest.mark.spec("caption:inputs:only-the-photograph-is-passed")
+@pytest.mark.usefixtures("model_records")
 def test_the_open_reader_ignores_the_workspace_and_reads_the_file_itself(
     tmp_path: Path,
 ) -> None:
@@ -382,7 +382,6 @@ def test_the_open_reader_ignores_the_workspace_and_reads_the_file_itself(
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"response": "A person."}),
-        records=ollama_records(tmp_path),
     )
 
     reading = reader.read(photo, "Describe.", tmp_path / "not-the-photos-home")
@@ -409,13 +408,11 @@ def test_the_open_readers_prompt_carries_no_path_from_this_machine(
 
 
 @pytest.mark.spec("caption:selection:the-flow-names-the-model")
-def test_the_readers_artifact_names_ollama_and_the_model_that_ran(
-    run: Run, tmp_path: Path
-) -> None:
+@pytest.mark.usefixtures("model_records")
+def test_the_readers_artifact_names_ollama_and_the_model_that_ran(run: Run) -> None:
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"response": "A person."}),
-        records=ollama_records(tmp_path),
     )
 
     path = caption(run, reader)
@@ -427,27 +424,21 @@ def test_the_readers_artifact_names_ollama_and_the_model_that_ran(
 
 
 @pytest.mark.spec("caption:provenance:a-verified-model-is-pinned")
+@pytest.mark.usefixtures("model_records")
 def test_a_verified_models_caption_declares_its_pin_and_names_both_files(
-    run: Run, tmp_path: Path
+    run: Run,
 ) -> None:
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"response": "A person."}),
-        records=ollama_records(tmp_path),
     )
 
     path = caption(run, reader)
 
     assert path is not None
     producer = read(path, CAPTION_FILE)["producer"]
-    manifest = load_manifest(READER_MANIFEST_PATH)
-    built = manifest.get("aliases", {})[READER]
-    pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
     assert producer["pinned"] is True
-    assert producer.get("artifacts") == {
-        built["model"]: {"sha256": pins[built["model"]]},
-        built["projector"]: {"sha256": pins[built["projector"]]},
-    }
+    assert producer.get("artifacts") == READER_ARTIFACTS
 
 
 @pytest.mark.spec("run-directory:provenance:unpinned-producer-is-declared")
@@ -461,9 +452,8 @@ def test_a_reader_that_verified_nothing_claims_no_pin(run: Run) -> None:
 
 
 @pytest.mark.spec("caption:reachability:unreachable-host-refuses-without-an-attempt")
-def test_an_unreachable_host_refuses_and_records_no_attempt(
-    run: Run, tmp_path: Path
-) -> None:
+@pytest.mark.usefixtures("model_records")
+def test_an_unreachable_host_refuses_and_records_no_attempt(run: Run) -> None:
     """The refusal names what to start, and the error-record directory stays empty.
 
     Asserting the directory rather than merely that a refusal was raised is the
@@ -474,7 +464,6 @@ def test_an_unreachable_host_refuses_and_records_no_attempt(
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(error=urllib.error.URLError("Connection refused")),
-        records=ollama_records(tmp_path),
     )
 
     with pytest.raises(Refusal) as refused:
@@ -487,8 +476,9 @@ def test_an_unreachable_host_refuses_and_records_no_attempt(
 
 
 @pytest.mark.spec("caption:reachability:absent-model-names-how-to-create-it")
+@pytest.mark.usefixtures("model_records")
 def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
-    run: Run, tmp_path: Path
+    run: Run,
 ) -> None:
     """The reader's remedy is `ollama create`, not `ollama pull`.
 
@@ -499,7 +489,6 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"error": "not found"}, status=404),
-        records=ollama_records(tmp_path),
     )
 
     with pytest.raises(Refusal) as refused:
@@ -513,9 +502,8 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
 
 
 @pytest.mark.spec("caption:failure:rate-limit-is-transient")
-def test_an_open_reader_failure_is_recorded_with_its_kind(
-    run: Run, tmp_path: Path
-) -> None:
+@pytest.mark.usefixtures("model_records")
+def test_an_open_reader_failure_is_recorded_with_its_kind(run: Run) -> None:
     """A real failure does spend an attempt, which is what makes the two distinct.
 
     Without this the "records no attempt" assertions above would pass for a stage
@@ -524,7 +512,6 @@ def test_an_open_reader_failure_is_recorded_with_its_kind(
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"error": "busy"}, status=503),
-        records=ollama_records(tmp_path),
     )
 
     with pytest.raises(Refusal):
@@ -535,8 +522,9 @@ def test_an_open_reader_failure_is_recorded_with_its_kind(
 
 
 @pytest.mark.spec("caption:failure:decline-is-permanent")
+@pytest.mark.usefixtures("model_records")
 def test_a_truncated_response_is_recorded_permanent_and_written_nowhere(
-    run: Run, tmp_path: Path
+    run: Run,
 ) -> None:
     """The truncation row: a permanent failure is recorded and surfaced.
 
@@ -547,7 +535,6 @@ def test_a_truncated_response_is_recorded_permanent_and_written_nowhere(
     reader = OllamaReader(
         model=READER,
         transport=FakeTransport(payload={"response": "A per", "done_reason": "length"}),
-        records=ollama_records(tmp_path),
     )
 
     with pytest.raises(Refusal):
@@ -565,24 +552,21 @@ def test_a_truncated_response_is_recorded_permanent_and_written_nowhere(
 
 @pytest.mark.spec("caption:reachability:an-unpinned-build-is-refused")
 def test_a_model_built_from_other_files_refuses_naming_both_digests(
-    run: Run, tmp_path: Path
+    run: Run, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     other = "0" * 64
+    root = ollama_records(tmp_path, model_digest=other)
+    monkeypatch.setattr(ollama, "MODEL_RECORDS", root)
     transport = FakeTransport(payload={"response": "A person."})
-    reader = OllamaReader(
-        model=READER,
-        transport=transport,
-        records=ollama_records(tmp_path, model_digest=other),
-    )
+    reader = OllamaReader(model=READER, transport=transport)
 
     with pytest.raises(Refusal) as refused:
         caption(run, reader)
 
     message = str(refused.value)
-    manifest = load_manifest(READER_MANIFEST_PATH)
-    pinned = next(e for e in manifest["entries"] if e["dest"].endswith("Q4_K.gguf"))
+    model, _projector = READER_ARTIFACTS.values()
     assert other in message
-    assert pinned["sha256"] in message
+    assert model["sha256"] in message
     assert "bash tools/download_models.sh config/reader.json" in message
     assert f"ollama create {READER} -f config/joycaption.Modelfile" in message
     assert transport.sent == []
@@ -592,14 +576,11 @@ def test_a_model_built_from_other_files_refuses_naming_both_digests(
 
 @pytest.mark.spec("caption:reachability:an-unpinned-model-is-refused")
 def test_a_model_no_manifest_entry_pins_refuses_and_contacts_no_host(
-    run: Run, tmp_path: Path
+    run: Run, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(ollama, "MODEL_RECORDS", ollama_records(tmp_path, "a-reader"))
     transport = FakeTransport(payload={"response": "A person."})
-    reader = OllamaReader(
-        model="a-reader",
-        transport=transport,
-        records=ollama_records(tmp_path, "a-reader"),
-    )
+    reader = OllamaReader(model="a-reader", transport=transport)
 
     with pytest.raises(Refusal) as refused:
         caption(run, reader)
@@ -613,12 +594,11 @@ def test_a_model_no_manifest_entry_pins_refuses_and_contacts_no_host(
 
 @pytest.mark.spec("caption:reachability:absent-model-names-how-to-create-it")
 def test_a_model_with_no_record_refuses_naming_the_command_that_builds_it(
-    run: Run, tmp_path: Path
+    run: Run,
 ) -> None:
+    # The suite's own root, which records nothing: tests/conftest.py.
     reader = OllamaReader(
-        model=READER,
-        transport=FakeTransport(payload={"response": "A person."}),
-        records=tmp_path / "empty",
+        model=READER, transport=FakeTransport(payload={"response": "A person."})
     )
 
     with pytest.raises(Refusal) as refused:
@@ -646,15 +626,16 @@ def test_a_completed_caption_reads_no_model_record(
 
 
 @pytest.mark.spec_exempt("structural: the check is memoised per model, 0033 design D4")
-def test_a_models_record_is_read_once_per_root(run: Run, tmp_path: Path) -> None:
-    root = ollama_records(tmp_path / "records")
+def test_a_models_record_is_read_once_per_root(
+    run: Run, tmp_path: Path, model_records: Path
+) -> None:
     reader = OllamaReader(
-        model=READER, transport=FakeTransport(payload={"response": "A."}), records=root
+        model=READER, transport=FakeTransport(payload={"response": "A."})
     )
     photo = run.photo
 
     reader.read(photo, "b", tmp_path)
-    (root / READER / "latest").unlink()
+    (model_records / READER / "latest").unlink()
 
     assert reader.read(photo, "b", tmp_path).pinned is True
 
@@ -664,17 +645,16 @@ def test_a_models_record_is_read_once_per_root(run: Run, tmp_path: Path) -> None
 )
 def test_no_test_reads_the_operators_own_model_records() -> None:
     home = Path(pwd.getpwuid(os.getuid()).pw_dir)
-    assert not ollama.MODEL_RECORDS.is_relative_to(home / ".ollama")
+    records = ollama.MODEL_RECORDS
+    assert records is not None
+    assert not records.is_relative_to(home / ".ollama")
 
 
 @pytest.mark.spec("caption:provenance:the-options-are-recorded")
-def test_the_caption_records_the_options_the_reader_sent(
-    run: Run, tmp_path: Path
-) -> None:
+@pytest.mark.usefixtures("model_records")
+def test_the_caption_records_the_options_the_reader_sent(run: Run) -> None:
     transport = FakeTransport(payload={"response": "A person."})
-    reader = OllamaReader(
-        model=READER, transport=transport, records=ollama_records(tmp_path)
-    )
+    reader = OllamaReader(model=READER, transport=transport)
 
     path = caption(run, reader)
 

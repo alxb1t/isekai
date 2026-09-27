@@ -107,7 +107,7 @@ TAGGER_OPTIONS: Mapping[str, Any] = {
 # alias the reader uses, built from the same committed recipe -- one model answers
 # both prompts, which is exactly why `TAG_PROMPT` above must not be framed
 # differently from the briefing.
-TAGGER_REMEDY = "ollama create {model} -f config/joycaption.Modelfile"
+TAGGER_REMEDY = ollama.BUILD
 
 # What separates *wrong* from *not a list at all*. The operator asked for the raw
 # list knowing it is wrong, so wrongness is not the failure being guarded here. A
@@ -129,9 +129,13 @@ class Tagging:
     tags: tuple[str, ...]
     implementation: str
     models: tuple[str, ...] = ()
-    pinned: bool = False
     artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
     options: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def pinned(self) -> bool:
+        """Return whether the model was verified against the files it is pinned to."""
+        return bool(self.artifacts)
 
 
 class Tagger(Protocol):
@@ -159,7 +163,9 @@ class FakeTagger:
     def tag(self, photo: Path) -> Tagging:
         """Record the call and return the fixed tags."""
         self.calls.append(photo)
-        return Tagging(self.tags, self.implementation, self.models)
+        return Tagging(
+            tags=self.tags, implementation=self.implementation, models=self.models
+        )
 
 
 @dataclass(frozen=True)
@@ -179,7 +185,6 @@ class OllamaTagger:
     model: str
     transport: ollama.Transport = ollama.post
     implementation: str = "ollama"
-    records: Path | None = None
 
     def body(self, photo: Path) -> dict[str, Any]:
         """Return the exact request this tagger is invoked with.
@@ -205,13 +210,12 @@ class OllamaTagger:
         happens to any element. The model is checked against
         `config/reader.json` before the host is asked anything.
         """
-        remedy = TAGGER_REMEDY.format(model=self.model)
-        artifacts = ollama.verified_build(
-            self.model, remedy=remedy, records=self.records
-        )
+        artifacts = ollama.verified_build(self.model)
         try:
             answer = ollama.ask(
-                self.body(photo), remedy=remedy, transport=self.transport
+                self.body(photo),
+                remedy=TAGGER_REMEDY.format(model=self.model),
+                transport=self.transport,
             )
         except ollama.OllamaFailure as failed:
             raise StageFailure(failed.kind, failed.detail) from failed
@@ -228,7 +232,11 @@ class OllamaTagger:
             stripped for part in answer.split(SEPARATOR) if (stripped := part.strip())
         )
         return Tagging(
-            tags, self.implementation, (self.model,), True, artifacts, TAGGER_OPTIONS
+            tags=tags,
+            implementation=self.implementation,
+            models=(self.model,),
+            artifacts=artifacts,
+            options=TAGGER_OPTIONS,
         )
 
 
