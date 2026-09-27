@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-09-27
+
 ### Changed
 
 - **No intimate tag, rating term or per-tag count from the operator's sheets stays in tracked prose.** Archived
