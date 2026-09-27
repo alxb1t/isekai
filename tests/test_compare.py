@@ -89,7 +89,7 @@ def _render(run: Run, flow: str, version: int, *seeds: int) -> None:
     directory = run.directory(flow, OUTPUTS, f"{version:03d}")
     directory.mkdir(parents=True, exist_ok=True)
     for seed in seeds:
-        (directory / f"{seed}.png").write_bytes(b"png")
+        (directory / f"{seed}{load_flow(flow).output_suffix}").write_bytes(b"image")
 
 
 def _compare(batch: Path) -> tuple[int, str, str]:
@@ -99,6 +99,12 @@ def _compare(batch: Path) -> tuple[int, str, str]:
         build_parser().parse_args(["compare", str(batch)]), _wiring(out, err)
     )
     return status, out.getvalue(), err.getvalue()
+
+
+def _page(batch: Path) -> str:
+    """Run the verb, require it succeeded, and return the page it wrote."""
+    assert _compare(batch)[0] == 0
+    return (batch / PAGE_NAME).read_text()
 
 
 def _section(body: str, run: Run) -> str:
@@ -120,9 +126,7 @@ def test_each_run_shows_its_photograph_and_each_flows_renders(tmp_path: Path) ->
     _approve(ada, SUMMON, 2)
     _render(ada, SUMMON, 2, 12)
 
-    assert _compare(batch)[0] == 0
-
-    body = (batch / PAGE_NAME).read_text()
+    body = _page(batch)
     assert body.count("<section>") == 2
     for run in (ada, bea):
         assert f'src="runs/{run.id}/{run.photo.name}"' in _section(body, run)
@@ -149,9 +153,7 @@ def test_a_flow_with_no_render_says_so_and_the_page_is_written(tmp_path: Path) -
     _approve(run, SUMMON, 1)
     _render(run, SUMMON, 1, 11)
 
-    assert _compare(batch)[0] == 0
-
-    body = (batch / PAGE_NAME).read_text()
+    body = _page(batch)
     assert f"<figcaption>{CONJURE}</figcaption>" in body
     assert "no render yet" in body
     assert f"{SUMMON} &middot; seed 11" in body
@@ -189,9 +191,7 @@ def test_captions_span_the_row_and_each_prompt_sits_under_its_render(
         _prompt(run, flow, 1, f"masterpiece, {flow} <positive>")
         _render(run, flow, 1, seed)
 
-    assert _compare(batch)[0] == 0
-
-    body = (batch / PAGE_NAME).read_text()
+    body = _page(batch)
     grid, captions = body.split('<div class="grid">')[1].split('<div class="captions">')
     assert f"Ada for {SUMMON}" in captions and f"Ada for {CONJURE}" in captions
     assert "Ada for" not in grid
@@ -208,9 +208,7 @@ def test_a_clicked_image_opens_in_an_overlay_the_page_carries_itself(
     batch = tmp_path / "batch"
     _run(batch, "ada", "Ada")
 
-    assert _compare(batch)[0] == 0
-
-    body = (batch / PAGE_NAME).read_text()
+    body = _page(batch)
     assert 'id="overlay"' in body
     assert '"Escape"' in body
     # A click on the shown image switches between fitted and its full size.

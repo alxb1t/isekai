@@ -42,10 +42,9 @@ fi
 
 # Free work first: every prompt is assembled before anything is rented, so a
 # missing approval refuses here rather than on a billing pod.
-for spec in "$@"; do
-  uv run python -m isekai generate --flow "${spec%%=*}" --runs "$runs" "${ids[@]}" \
-    2>&1 | tee -a "$log"
-done
+flows=()
+for spec in "$@"; do flows+=(--flow "${spec%%=*}"); done
+uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
 
 tunnel=""
 up_out=$(mktemp)

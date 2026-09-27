@@ -215,6 +215,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="the batch directory: the one holding runs/, where the page is written",
     )
+    # Every namespace keeps one shape; `compare` reads its runs from the batch.
+    made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -315,7 +317,7 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     collected and printed at the end, and the exit status says whether any fired.
     """
     verb = str(args.verb)
-    targets = list(getattr(args, "photos", []))
+    targets = list(args.photos)
     # Resolved before the first identifier is looked at, so an untracked flow or
     # a broken manifest refuses without opening a run -- and on `generate`,
     # without renting anything. The serving verb resolves its own single flow

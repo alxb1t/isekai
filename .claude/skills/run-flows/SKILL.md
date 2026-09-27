@@ -74,8 +74,12 @@ Wait until both answer, up to a minute:
 
 ```bash
 for port in 8517 8518; do
-  for i in $(seq 30); do curl -sf --max-time 2 -o /dev/null "http://127.0.0.1:$port/api/batch" && break; sleep 2; done
-  curl -sf --max-time 2 -o /dev/null "http://127.0.0.1:$port/api/batch" && echo "$port up" || echo "$port DOWN"
+  state=DOWN
+  for i in $(seq 30); do
+    curl -sf --max-time 2 -o /dev/null "http://127.0.0.1:$port/api/batch" && { state=up; break; }
+    sleep 2
+  done
+  echo "$port $state"
 done
 ```
 

@@ -287,9 +287,6 @@ def wiring(args: argparse.Namespace) -> Wiring:
     """Build the real wiring from a parsed command line.
 
     `getattr` rather than `args.server`: only `generate` declares the flag, so the
-    attribute is genuinely absent on every other verb's namespace. `compare`
-    declares no `--runs`, because its batch names them, and writes no run.
+    attribute is genuinely absent on every other verb's namespace.
     """
-    return wiring_from(
-        runs=getattr(args, "runs", RUNS_ROOT), server=getattr(args, "server", None)
-    )
+    return wiring_from(runs=args.runs, server=getattr(args, "server", None))

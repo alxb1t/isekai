@@ -11,12 +11,13 @@ small, and every image stays where the run put it. Stdlib only.
 """
 
 import html
+from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import quote
 
 from isekai.foundation.artifacts import CAPTION_FILE, PROMPT_FILE, read
 from isekai.foundation.atomic_write import write_atomically
-from isekai.foundation.flow import FLOWS_DIR, load_flow
+from isekai.foundation.flow import FLOWS_DIR, Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     CAPTIONS,
@@ -29,7 +30,7 @@ from isekai.foundation.run import (
     artifact_name,
     latest_artifact,
 )
-from isekai.interface.run_view import rendered
+from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
 BATCH_RUNS = "runs"
@@ -122,48 +123,46 @@ def _prompt(run: Run, flow: str, version: int) -> str:
     return f'<p class="prompt"><b>positive</b> {html.escape(positive)}</p>'
 
 
-def _entry(run: Run, flows: list[str], batch: Path, flows_dir: Path) -> str:
+def _renders(run: Run, name: str, flow: Flow, batch: Path) -> list[str]:
+    """Return a figure per render of the flow's latest approval, or *no render yet*."""
+    approved = approved_versions(run.directory(name, REVIEW))
+    if approved:
+        directory = run.directory(name, OUTPUTS, f"{approved[-1]:03d}")
+        if seeds := rendered_seeds(directory, flow.output_suffix):
+            prompt = _prompt(run, name, approved[-1])
+            return [
+                f"<figure><figcaption>{html.escape(name)} &middot; seed {seed}"
+                f"</figcaption><img loading=lazy "
+                f'src="{_link(directory / f"{seed}{flow.output_suffix}", batch)}" '
+                f'alt="">{prompt}</figure>'
+                for seed in seeds
+            ]
+    return [
+        f"<figure><figcaption>{html.escape(name)}</figcaption>"
+        f'<p class="none">no render yet</p></figure>'
+    ]
+
+
+def _entry(run: Run, flows: Mapping[str, Flow], batch: Path) -> str:
     """Return one run's section: the photograph and each flow's renders, then captions.
 
     Each render carries the positive prompt it came from; the captions span the
     row, because a column is too narrow for prose.
     """
-    captions = []
-    for flow in flows:
-        path = latest_artifact(run.directory(flow, CAPTIONS))
-        if path is not None:
-            prose = read(path, CAPTION_FILE)["prose"]
-            captions.append(
-                f'<p class="caption"><b>{html.escape(flow)}</b> '
-                f"{html.escape(prose)}</p>"
-            )
     figures = [
         f"<figure><figcaption>photograph</figcaption>"
         f'<img loading=lazy src="{_link(run.photo, batch)}" alt=""></figure>'
     ]
-    seeds_of = {
-        (flow, version): seeds for flow, version, seeds in rendered(run, flows_dir)
-    }
-    for flow in flows:
-        approved = approved_versions(run.directory(flow, REVIEW))
-        version = approved[-1] if approved else None
-        seeds = seeds_of.get((flow, version), [])
-        if version is None or not seeds:
-            figures.append(
-                f"<figure><figcaption>{html.escape(flow)}</figcaption>"
-                f'<p class="none">no render yet</p></figure>'
+    captions = []
+    for name, flow in flows.items():
+        path = latest_artifact(run.directory(name, CAPTIONS))
+        if path is not None:
+            prose = read(path, CAPTION_FILE)["prose"]
+            captions.append(
+                f'<p class="caption"><b>{html.escape(name)}</b> '
+                f"{html.escape(prose)}</p>"
             )
-            continue
-        suffix = load_flow(flow, flows_dir).output_suffix
-        directory = run.directory(flow, OUTPUTS, f"{version:03d}")
-        prompt = _prompt(run, flow, version)
-        for seed in seeds:
-            figures.append(
-                f"<figure><figcaption>{html.escape(flow)} &middot; seed {seed}"
-                f"</figcaption><img loading=lazy "
-                f'src="{_link(directory / f"{seed}{suffix}", batch)}" alt="">'
-                f"{prompt}</figure>"
-            )
+        figures.extend(_renders(run, name, flow, batch))
     return (
         f'<section><div class="id">{html.escape(run.id)}</div>'
         f'<div class="grid">{"".join(figures)}</div>'
@@ -179,12 +178,17 @@ def page(batch: Path, flows_dir: Path = FLOWS_DIR) -> str:
     the photograph sits beside it, then the rest, each group by name.
     """
     runs = _runs(batch)
-    flows = sorted(
-        {flow for run in runs for flow in run.flows},
-        key=lambda flow: ("photo" not in load_flow(flow, flows_dir).inputs, flow),
+    loaded = {
+        name: load_flow(name, flows_dir)
+        for name in {name for run in runs for name in run.flows}
+    }
+    flows = dict(
+        sorted(
+            loaded.items(), key=lambda item: ("photo" not in item[1].inputs, item[0])
+        )
     )
     title = f"isekai &mdash; {html.escape(batch.name)}"
-    entries = "".join(_entry(run, flows, batch, flows_dir) for run in runs)
+    entries = "".join(_entry(run, flows, batch) for run in runs)
     return (
         "<!doctype html><html lang=en><meta charset=utf-8>"
         f"<title>{title}</title><style>{_STYLE}</style>"

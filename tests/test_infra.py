@@ -968,13 +968,9 @@ def untrapped_teardown(script: str) -> list[str]:
     trap = lines[traps[0]]
     missing = [f"on {sig}" for sig in ("EXIT", "INT", "TERM") if sig not in trap]
     handler = re.search(r"trap '?(\w+)", trap)
+    name = f"{handler[1]}()" if handler else None
     start = next(
-        (
-            i
-            for i, ln in enumerate(lines)
-            if handler and ln.startswith(handler[1] + "()")
-        ),
-        None,
+        (i for i, ln in enumerate(lines) if name and ln.startswith(name)), None
     )
     body = ""
     if start is not None:
