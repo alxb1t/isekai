@@ -17,7 +17,7 @@ How an agent runs the flows for the operator with little context: skills that ch
   joins them, and none sets a trap.
 - **`CLAUDE.md:217-232`**: a pod goes up only for a phase `tasks.md` marks metered.
 - **`tag` sometimes exits 134 after writing everything** — `libc++abi: … recursive_mutex lock failed` at interpreter
-  exit, the WD14 ONNX session torn down after the runtime's threads.
+  exit. The throwing thread is onnxruntime's telemetry client, not the session: see [D5](#d5).
 - **The operator's example page**, `.data/v0.24/compare.html`, sits beside `photos/` and `runs/`, links each image by
   a relative path with `loading=lazy`, and embeds nothing.
 - `run_view.rendered` (`isekai/interface/run_view.py:147`) lists each flow's rendered seeds from filenames.
@@ -41,7 +41,7 @@ How an agent runs the flows for the operator with little context: skills that ch
 | [D2](#d2) | a `compare` verb writes the page and prints its path | the page cannot be written without reading the runs | a page written by the agent |
 | [D3](#d3) | `infra/render.sh`, with a trap on exit | only a trap tears down whichever step fails | teardown as a skill step |
 | [D4](#d4) | the pod rule gains the operator's go, and the record files' removal after a confirmed teardown | a skill spends outside any change; `0033 security/S1`'s documentation half | leaving the rule to be broken |
-| [D5](#d5) | the WD14 session is released before the interpreter exits | the abort turns a success into a failed status | ending the process abruptly |
+| [D5](#d5) | `ORT_DISABLE_TELEMETRY=1` is set before onnxruntime is imported, on every path that imports it | the abort turns a success into a failed status; loading onnxruntime connects to Microsoft, and no local tool makes an outbound call | releasing the session earlier; `disable_telemetry_events()`; ending the process abruptly |
 | [D6](#d6) | a test parses every command a skill names | the skills are only worth their accuracy | review alone |
 | [D7](#d7) | the operator runs `run-flows` end to end as the acceptance | the skills are proved by being used | |
 | [D8](#d8) | a minor, one feature | a new verb and a new capability | a patch |
@@ -115,10 +115,24 @@ up.sh ──▶ host, port from its "Tunnel:" line ──▶ ssh -N -L 8188 … 
 
 ### D5
 
-**The native abort.** The ONNX session `cli.py`'s `tagger()` slot holds lives until interpreter shutdown, when the
-runtime's threads are already gone. The fix releases it when the verb's work is done — the slot emptied and the
-session dropped before `dispatch` returns — so nothing of ONNX's is destroyed at exit. The repair is proved by the
-loop that reproduced it.
+**The native abort is onnxruntime's telemetry.** Amended during the build, on the operator's decision after a spike.
+
+- **The cause**, from an `lldb` backtrace of an aborted `tag`: at exit, `PosixEnv::~PosixEnv` →
+  `PosixTelemetry::Shutdown` tears down the telemetry client (`Microsoft::Applications::Events`) while its worker
+  thread handles an upload's HTTP response, and that thread locks a destroyed `recursive_mutex`.
+- **The session is not the cause.** No `OnnxSession` or `InferenceSession` is alive when `main` returns, so the
+  first reading of this decision — release the session before `dispatch` returns — was already the code's behaviour.
+- **It needs the Ollama call.** The upload is in flight at exit only when the process runs long enough; WD14 alone,
+  or with a fake hosted tagger, gave no abort in 60 runs each.
+- **Loading onnxruntime connects to Microsoft.** `import onnxruntime` alone opened an HTTPS connection to a
+  Microsoft Corporation address (whois), sampled with `lsof` on 3 of 3 runs; numpy and Pillow alone opened none.
+- **`disable_telemetry_events()` fixes neither.** Called after the import, the connection was already open; with it,
+  the real `tag` loop still aborted on 5 of 40 runs.
+- **The fix:** `ORT_DISABLE_TELEMETRY=1` in the environment before the import — a switch the binary reads at load.
+  With it set, the import opened no connection on 4 of 4 runs. `silence_onnxruntime()` in `boundary/wd14.py` sets
+  it, and both `OnnxSession`s call it before `_require("onnxruntime")`: WD14's and `evaluation/eval_backends.py`'s,
+  so no local tool makes an outbound call. The repair is proved by the loop that reproduced it, with every run's
+  sockets sampled.
 
 ### D6
 

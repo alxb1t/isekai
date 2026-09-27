@@ -7,7 +7,7 @@ The verb and the script first, then the abort, then the skills that name them; t
 
 - [x] 1 — `compare`: the comparison page
 - [x] 2 — `infra/render.sh`: a render session that always tears down
-- [ ] 3 — the tagger's native abort
+- [x] 3 — the tagger's native abort
 - [ ] 4 — the skills, their check, the pod rule and the docs
 - [ ] 5 — 🛑 **HUMAN · METERED · HALT** — the operator runs `run-flows` end to end
 
@@ -33,11 +33,11 @@ Line numbers are `866c346`'s; find each site by the text it names.
 
 ## 3 — the tagger's native abort
 
-- [ ] 3.1 Run `python -m isekai tag --new-version --flow summon-anime-wai --runs <root> <run>` on a synthetic portrait until it exits 134, up to twenty times, and record the runs and exits as the line `Before: <runs> runs, <n> exited 134` in `openspec/changes/0035-the-flow-skills/native-abort.md`.
+- [x] 3.1 Run `python -m isekai tag --new-version --flow summon-anime-wai --runs <root> <run>` on a synthetic portrait until it exits 134, up to twenty times, and record the runs and exits as the line `Before: <runs> runs, <n> exited 134` in `openspec/changes/0035-the-flow-skills/native-abort.md`.
   Verify: `grep -c '^Before: ' openspec/changes/0035-the-flow-skills/native-abort.md` prints `1`.
-- [ ] 3.2 **HALT CHECK** — the abort reproduced.
+- [x] 3.2 **HALT CHECK** — the abort reproduced.
   Verify: `grep -c '^Before: .*, [1-9][0-9]* exited 134' openspec/changes/0035-the-flow-skills/native-abort.md` prints `1`.
-- [ ] 3.3 Release the WD14 session when the verb's work is done, per [D5](design.md#d5); re-run the same loop and record `After: <runs> runs, 0 exited 134`.
+- [x] 3.3 Set `ORT_DISABLE_TELEMETRY=1` before onnxruntime is imported, in `isekai/boundary/wd14.py` and `evaluation/eval_backends.py`, per [D5](design.md#d5); re-run the same loop and record `After: <runs> runs, 0 exited 134`.
   Verify: `grep -c '^After: .*, 0 exited 134' openspec/changes/0035-the-flow-skills/native-abort.md` prints `1`.
 
 ## 4 — the skills, their check, the pod rule and the docs

@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   then runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI and renders each `<flow>=<count>`. A
   trap set before `up.sh` tears the pod down and closes the tunnel on every exit, error and signal.
 
+### Fixed
+
+- **onnxruntime no longer connects to Microsoft, and `tag` no longer exits 134** (`0035` design D5): loading it
+  opened an HTTPS connection for its telemetry, whose teardown at exit could abort a `tag` that had written
+  everything. `ORT_DISABLE_TELEMETRY=1` is set before every import of it; 0 of 40 runs aborted or left loopback.
+
 ## [0.24.1] - 2026-09-27
 
 ### Changed

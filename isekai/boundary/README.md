@@ -32,7 +32,7 @@ at least once; a list of names cannot.
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py` |
 | `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_eval_manifest.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
-| `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_wd14.py` |
+| `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/eval_backends.py`, `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_wd14.py` |
 
 > `provision.py` is on `python -m isekai`'s import graph, through `ollama.py`'s
 > check of the reader's manifest. It imports only the standard library, so the
@@ -44,7 +44,9 @@ at least once; a list of names cannot.
 > guard green. They are declared dependencies as of v0.22.3, so one moved to
 > module scope resolves silently; that guard and `tests/test_wd14.py`'s source
 > scan catch it. `wd14.py` reaches no network at all, which makes it the one file
-> here that is a boundary to a *file* rather than to a host.
+> here that is a boundary to a *file* rather than to a host. `onnxruntime` itself
+> connects to Microsoft when it loads, so `silence_onnxruntime()` sets its switch
+> first, for both sessions (0035 design D5).
 >
 > **`ollama.py` is now the only way out of this process to a model.** There was a
 > second, `claude_cli.py`, and the isolation law that kept the two apart was the
