@@ -7,7 +7,7 @@ The image and the start script with their tests; then the operator's rc build; t
 
 - [x] 1 — The image and the start script
 - [x] 2 — 🛑 **HUMAN** — the rc build
-- [ ] 3 — 🛑 **HUMAN · METERED** — one render session on the new image
+- [x] 3 — 🛑 **HUMAN · METERED** — one render session on the new image
 
 Line numbers are `6a93516`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
 
@@ -36,7 +36,7 @@ Line numbers are `6a93516`'s. Every new test carries `@pytest.mark.spec` with th
 **Ceiling: 45 minutes and ~$0.30; planned at about 10 minutes and ~$0.10.** The pod goes up and down only through
 `infra/render.sh`; the RunPod MCP confirms it gone. Synthetic portraits only, per [D6](design.md#d6).
 
-- [ ] 3.1 On the operator's go, run the session [D6](design.md#d6) describes, and read the pod's log through the RunPod MCP while it runs.
-  Verify: `ls .data/v0.28/runs/*/summon-anime-wai/outputs/*.png .data/v0.28/runs/*/conjure-anime-wai/outputs/*.png` lists the renders, and `grep -c '^refused' .data/v0.28/log.txt` prints `0`.
-- [ ] 3.2 Record the evidence in `openspec/changes/0040-the-pod-image/acceptance.md`, one line each, with no pod id, address or fingerprint value.
+- [x] 3.1 On the operator's go, run the session [D6](design.md#d6) describes, and read the pod's log through the RunPod MCP while it runs.
+  Verify: `ls .data/v0.28/runs/*/summon-anime-wai/outputs/*/*.png .data/v0.28/runs/*/conjure-anime-wai/outputs/*/*.png` lists the renders, and `grep -c '^refused' .data/v0.28/log.txt` prints `0`.
+- [x] 3.2 Record the evidence in `openspec/changes/0040-the-pod-image/acceptance.md`, one line each, with no pod id, address or fingerprint value.
   Verify: `grep -c -e '^host key: generated at boot' -e '^fingerprint line: present' -e '^comfyui directories: /dev/shm/comfyui' -e '^rotated render: upright' -e '^png text chunks: 0' -e 'pods: \[\]' openspec/changes/0040-the-pod-image/acceptance.md` prints `6`.
