@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-09-28 · 0038-the-changelog
+
 ### Changed
 
 - Every version rewritten terse: Keep a Changelog sections only, each heading from `0.7.0` naming its change, and
