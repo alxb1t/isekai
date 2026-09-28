@@ -1,5 +1,9 @@
+import io
+import struct
+import warnings
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -10,9 +14,19 @@ from isekai.shared.image import (
     MAX_HEADER_DIMENSION,
     WORKING_SCALE,
     image_dimensions,
+    strip_metadata,
     working_resolution,
 )
-from tests.images import jpeg_bytes, jpeg_with_header, png_bytes, png_with_exif
+from tests.images import (
+    jpeg_bytes,
+    jpeg_segment,
+    jpeg_with_header,
+    png_bytes,
+    png_with_exif,
+)
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 
 @pytest.mark.spec("image-generation:working-resolution:scale-precedes-every-consumer")
@@ -288,3 +302,190 @@ def test_a_png_declaring_an_unbounded_exif_chunk_is_refused(tmp_path: Path) -> N
     # lacks a structure PNG does not have.
     assert "PNG" in message
     assert "frame header" not in message
+
+
+# The stripper (0039 design D1, D2, D6). Its photographs are made by Pillow, a
+# runtime dependency imported inside the helpers, so each one really decodes.
+_ORIENTATION = 0x0112
+
+# One needle per block a camera or an editor writes; none may survive the strip.
+_NEEDLES = {
+    "jpeg": (
+        b"exif-needle",
+        b"xmp-needle",
+        b"iptc-needle",
+        b"mpf-needle",
+        b"jfxx-needle",
+        b"comment-needle",
+        b"trailer-needle",
+    ),
+    "png": (b"exif-needle", b"xmp-needle", b"text-needle", b"trailer-needle"),
+}
+
+
+def _pillow_photo(kind: str, *, orientation: int = 1) -> bytes:
+    """Return a decodable photograph carrying every block the strip must drop.
+
+    `kind` is `jpeg`, `progressive` or `png`. The colour profile rides along too,
+    because it is one of the blocks the strip must keep.
+    """
+    from PIL import Image, ImageCms, PngImagePlugin
+
+    ramp = Image.linear_gradient("L").resize((48, 32))
+    image = Image.merge("RGB", (ramp, ramp.transpose(Image.Transpose.ROTATE_180), ramp))
+    exif = Image.Exif()
+    exif[_ORIENTATION] = orientation
+    exif[0x010F] = "exif-needle"  # Make
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    out = io.BytesIO()
+    if kind == "png":
+        text = PngImagePlugin.PngInfo()
+        text.add_text("Comment", "text-needle")
+        text.add_itxt("XML:com.adobe.xmp", "xmp-needle")
+        text.add_text("Compressed", "ztxt", zip=True)
+        text.add(b"tIME", bytes(7))
+        image.save(out, "PNG", pnginfo=text, exif=exif, icc_profile=icc)
+        return out.getvalue() + b"trailer-needle"
+    image.save(
+        out,
+        "JPEG",
+        exif=exif,
+        xmp=b"<x:xmpmeta>xmp-needle</x:xmpmeta>",
+        comment=b"comment-needle",
+        icc_profile=icc,
+        progressive=kind == "progressive",
+    )
+    data = out.getvalue()
+    # The blocks Pillow does not write: IPTC, a multi-picture index, a JFIF
+    # thumbnail extension -- spliced in ahead of the quantisation tables.
+    extra = (
+        jpeg_segment(0xED, b"Photoshop 3.0\x00iptc-needle")
+        + jpeg_segment(0xE2, b"MPF\x00mpf-needle")
+        + jpeg_segment(0xE0, b"JFXX\x00jfxx-needle")
+    )
+    at = data.index(b"\xff\xdb")
+    return data[:at] + extra + data[at:] + b"trailer-needle"
+
+
+def _stripped(tmp_path: Path, name: str, data: bytes) -> bytes:
+    """Write a photograph and return what the strip makes of it."""
+    return strip_metadata(Path(_write(tmp_path, name, data)))
+
+
+def _png_chunks(data: bytes) -> list[bytes]:
+    """Return a PNG's chunk types, in order."""
+    kinds, at = [], 8
+    while at < len(data):
+        length, kind = struct.unpack(">I4s", data[at : at + 8])
+        kinds.append(kind)
+        at += 12 + length
+    return kinds
+
+
+def _decoded(data: bytes) -> "Image.Image":
+    """Return a photograph decoded by Pillow, its pixels loaded."""
+    from PIL import Image
+
+    with warnings.catch_warnings():
+        # The spliced multi-picture index points at no second picture.
+        warnings.filterwarnings("ignore", "Image appears to be a malformed MPO")
+        image = Image.open(io.BytesIO(data))
+        image.load()
+    return image
+
+
+def _jpeg_apps(image: "Image.Image") -> list[tuple[str, bytes]]:
+    """Return a decoded JPEG's APPn segments as Pillow read them: name, payload."""
+    from PIL.JpegImagePlugin import JpegImageFile
+
+    assert isinstance(image, JpegImageFile)
+    return image.applist
+
+
+@pytest.mark.spec("image-generation:photo-metadata:the-orientation-survives")
+@pytest.mark.parametrize("kind", ["jpeg", "png"])
+def test_the_orientation_survives_the_strip(kind: str, tmp_path: Path) -> None:
+    rotated = _stripped(tmp_path, "rotated", _pillow_photo(kind, orientation=6))
+    # The orientation, and nothing else the original's EXIF held.
+    assert dict(_decoded(rotated).getexif()) == {_ORIENTATION: 6}
+    assert image_dimensions(_write(tmp_path, "r", rotated)) == (32, 48)
+
+    upright = _stripped(tmp_path, "upright", _pillow_photo(kind, orientation=1))
+    assert not _decoded(upright).getexif()
+    if kind == "png":
+        assert b"eXIf" not in _png_chunks(upright)
+    else:
+        assert "APP1" not in [marker for marker, _ in _jpeg_apps(_decoded(upright))]
+
+
+@pytest.mark.spec("image-generation:photo-metadata:the-pixels-are-unchanged")
+@pytest.mark.parametrize("kind", ["jpeg", "progressive", "png"])
+def test_the_pixels_are_unchanged_by_the_strip(kind: str, tmp_path: Path) -> None:
+    original = _pillow_photo(kind, orientation=6)
+    stripped = _stripped(tmp_path, "photo", original)
+
+    # The premise: the strip dropped something, so the equality below is news.
+    assert len(stripped) < len(original)
+    assert _decoded(stripped).tobytes() == _decoded(original).tobytes()
+
+
+@pytest.mark.spec_exempt("structural: the allowlist of 0039 design D1, block by block")
+@pytest.mark.parametrize("kind", ["jpeg", "progressive", "png"])
+def test_no_block_outside_the_allowlist_survives(kind: str, tmp_path: Path) -> None:
+    original = _pillow_photo(kind)
+    stripped = _stripped(tmp_path, "photo", original)
+
+    for needle in _NEEDLES["png" if kind == "png" else "jpeg"]:
+        # In the original and gone from the upload: the twin of the guard.
+        assert needle in original, needle
+        assert needle not in stripped, needle
+    decoded = _decoded(stripped)
+    # The colour profile is one of the blocks decoding keeps.
+    assert decoded.info["icc_profile"] == _decoded(original).info["icc_profile"]
+    if kind == "png":
+        assert set(_png_chunks(stripped)) == {b"IHDR", b"iCCP", b"IDAT", b"IEND"}
+        assert stripped.endswith(b"IEND\xaeB`\x82")
+    else:
+        kept = [(marker, payload[:4]) for marker, payload in _jpeg_apps(decoded)]
+        assert kept == [("APP0", b"JFIF"), ("APP2", b"ICC_")]
+        assert "comment" not in decoded.info
+        assert stripped.endswith(b"\xff\xd9")
+
+
+@pytest.mark.spec("image-generation:photo-metadata:no-metadata-leaves-the-machine")
+def test_a_kept_header_keeps_its_fixed_fields_alone(tmp_path: Path) -> None:
+    # A JFIF header whose thumbnail is 4x1 RGB, and an Adobe header with bytes
+    # after its fixed fields: both segments are kept, and neither tail may be.
+    data = _pillow_photo("jpeg")
+    jfif = data.index(b"\xff\xe0")
+    fields = data[jfif + 4 : jfif + 16]  # JFIF\0 to the thumbnail's size
+    thumbnailed = jpeg_segment(0xE0, fields + b"\x04\x01" + b"thumb-needle")
+    adobe = jpeg_segment(0xEE, b"Adobe\x00\x64\x00\x00\x00\x00\x01adobe-needle")
+    original = data[:jfif] + thumbnailed + adobe + data[jfif + 18 :]
+    stripped = _stripped(tmp_path, "photo", original)
+
+    for needle in (b"thumb-needle", b"adobe-needle"):
+        assert needle in original, needle
+        assert needle not in stripped, needle
+    apps = dict(_jpeg_apps(_decoded(stripped)))
+    assert apps["APP0"] == fields + b"\x00\x00"
+    assert apps["APP14"] == b"Adobe\x00\x64\x00\x00\x00\x00\x01"
+    assert _decoded(stripped).tobytes() == _decoded(original).tobytes()
+
+
+@pytest.mark.spec_exempt("structural: the hand-built photographs end without a scan")
+@pytest.mark.parametrize(
+    "data",
+    [
+        jpeg_bytes(1600, 1200),
+        png_bytes(1600, 1200),
+        jpeg_with_header(4032, 3024, orientation=6, header_padding=70_000),
+        png_with_exif(4032, 3024, 6, chunks_before=3),
+    ],
+)
+def test_the_hand_built_photographs_still_walk(data: bytes, tmp_path: Path) -> None:
+    stripped = _stripped(tmp_path, "photo", data)
+
+    assert image_dimensions(_write(tmp_path, "stripped", stripped)) == image_dimensions(
+        _write(tmp_path, "original", data)
+    )

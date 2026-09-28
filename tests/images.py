@@ -63,10 +63,14 @@ def _exif_tiff(orientation: int) -> bytes:
     )
 
 
+def jpeg_segment(marker: int, payload: bytes) -> bytes:
+    """Return one JPEG segment: the marker, its length word, the payload."""
+    return bytes([0xFF, marker]) + struct.pack(">H", len(payload) + 2) + payload
+
+
 def _exif_app1(orientation: int) -> bytes:
     """Return an APP1 segment whose TIFF IFD0 declares this Orientation."""
-    payload = b"Exif\x00\x00" + _exif_tiff(orientation)
-    return b"\xff\xe1" + struct.pack(">H", len(payload) + 2) + payload
+    return jpeg_segment(0xE1, b"Exif\x00\x00" + _exif_tiff(orientation))
 
 
 def _filler_app2(size: int) -> bytes:
@@ -79,7 +83,7 @@ def _filler_app2(size: int) -> bytes:
     segments = []
     while size > 0:
         chunk = min(size, 65533 - 2)
-        segments.append(b"\xff\xe2" + struct.pack(">H", chunk + 2) + b"\x00" * chunk)
+        segments.append(jpeg_segment(0xE2, b"\x00" * chunk))
         size -= chunk
     return b"".join(segments)
 

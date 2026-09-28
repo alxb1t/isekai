@@ -35,8 +35,8 @@ class ComfyTransport(Protocol):
     the suite substitutes an in-memory fake for the network.
     """
 
-    def upload_image(self, path: str) -> str:
-        """Upload a local image and return the name ComfyUI stored it under."""
+    def upload_image(self, name: str, data: bytes) -> str:
+        """Upload an image's bytes under `name`; return the name ComfyUI stored."""
         ...
 
     def submit(self, workflow: Workflow) -> str:

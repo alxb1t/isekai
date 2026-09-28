@@ -5,7 +5,6 @@ import json
 import urllib.error
 from collections.abc import Iterator
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any
 from urllib import parse, request
 
@@ -29,21 +28,15 @@ class ComfyClient(ComfyTransport):
         """Point the client at a ComfyUI base URL, trailing slash optional."""
         self.server = server.rstrip("/")
 
-    def upload_image(self, path: str) -> str:
-        """Upload a local image into ComfyUI's input/ folder.
+    def upload_image(self, name: str, data: bytes) -> str:
+        """Upload an image's bytes into ComfyUI's input/ folder under `name`.
 
         Returns the stored filename.
         """
         with _reported():
             body, content_type = build_multipart(
                 fields={"overwrite": "true"},
-                files={
-                    "image": (
-                        Path(path).name,
-                        Path(path).read_bytes(),
-                        "application/octet-stream",
-                    )
-                },
+                files={"image": (name, data, "application/octet-stream")},
             )
 
             req = request.Request(

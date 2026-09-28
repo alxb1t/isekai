@@ -61,7 +61,7 @@ class FakeComfyClient:
         self.view_bytes = view_bytes
         self.prompt_id = "pid-123"
         # recorded calls, for assertions
-        self.uploaded: str | None = None
+        self.uploaded: tuple[str, bytes] | None = None
         self.submitted_workflow: Workflow | None = None
         # every submission, in order — `submitted_workflow` keeps only the last,
         # which cannot see a multi-variation run's earlier workflows.
@@ -70,8 +70,8 @@ class FakeComfyClient:
         self.viewed: Image | None = None
         self.stats_calls = 0
 
-    def upload_image(self, path: str) -> str:
-        self.uploaded = path
+    def upload_image(self, name: str, data: bytes) -> str:
+        self.uploaded = (name, data)
         return "uploaded.png"
 
     def submit(self, workflow: Workflow) -> str:

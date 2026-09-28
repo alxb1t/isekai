@@ -559,9 +559,9 @@ def test_every_prompt_is_assembled_before_the_first_render_is_submitted(
     seen: list[str] = []
     real_upload = wired.client.upload_image
 
-    def watched(path: str) -> str:
+    def watched(name: str, data: bytes) -> str:
         seen.append("upload")
-        return real_upload(path)
+        return real_upload(name, data)
 
     wired.client.upload_image = watched  # ty: ignore[invalid-assignment]
     assert isinstance(wired.out, io.StringIO)
