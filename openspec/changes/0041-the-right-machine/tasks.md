@@ -6,7 +6,7 @@ metered boot, per [design](design.md).
 ## Progress
 
 - [x] 1 — The volume and the telemetry switches
-- [ ] 2 — The host-key check and the strict tunnel
+- [x] 2 — The host-key check and the strict tunnel
 - [ ] 3 — The privacy rules in `docs/`
 - [ ] 4 — 🛑 **HUMAN · METERED** — one boot, checked
 
@@ -23,11 +23,11 @@ Line numbers are `88cac24`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The host-key check and the strict tunnel
 
-- [ ] 2.1 In `infra/up.sh`, read the printed fingerprint, scan and compare, keep the key in `.runpod_known_hosts`, refuse and tear down per [D1](design.md#d1) and [D2](design.md#d2), and name the file in the printed lines.
+- [x] 2.1 In `infra/up.sh`, read the printed fingerprint, scan and compare, keep the key in `.runpod_known_hosts`, refuse and tear down per [D1](design.md#d1) and [D2](design.md#d2), and name the file in the printed lines.
   Verify: `grep -c 'ssh-keyscan' infra/up.sh` prints `1`, `grep -c 'Host key verified' infra/up.sh` prints `1`, and `grep -c 'UserKnownHostsFile=.runpod_known_hosts' infra/up.sh` prints `2`.
-- [ ] 2.2 In `infra/render.sh`, drop `known_hosts=$(mktemp)` and tunnel with strict checking against `.runpod_known_hosts`; in `infra/down.sh`, `.gitignore` and `CLAUDE.md`'s pod rule, add `.runpod_known_hosts` beside the other record files, per [D1](design.md#d1).
+- [x] 2.2 In `infra/render.sh`, drop `known_hosts=$(mktemp)` and tunnel with strict checking against `.runpod_known_hosts`; in `infra/down.sh`, `.gitignore` and `CLAUDE.md`'s pod rule, add `.runpod_known_hosts` beside the other record files, per [D1](design.md#d1).
   Verify: `grep -cF 'known_hosts=$(mktemp)' infra/render.sh` prints `0`, `grep -c 'StrictHostKeyChecking=yes' infra/render.sh` prints `1`, and `test "$(cat infra/down.sh .gitignore CLAUDE.md | grep -c 'runpod_known_hosts')" -ge 5 && echo ok` prints `ok`.
-- [ ] 2.3 Rewrite `tests/test_infra.py`'s `test_a_sessions_host_keys_are_its_own` and its helper `shared_host_keys` for the per-pod checked file, and add `test_a_matching_key_is_kept` (`pod-image:host-key:a-matching-key-is-kept`), `test_a_mismatch_is_refused` (`pod-image:host-key:a-mismatch-is-refused`) and `test_no_fingerprint_is_refused` (`pod-image:host-key:no-fingerprint-is-refused`), the refusals against stubbed answers.
+- [x] 2.3 Rewrite `tests/test_infra.py`'s `test_a_sessions_host_keys_are_its_own` and its helper `shared_host_keys` for the per-pod checked file, and add `test_a_matching_key_is_kept` (`pod-image:host-key:a-matching-key-is-kept`), `test_a_mismatch_is_refused` (`pod-image:host-key:a-mismatch-is-refused`) and `test_no_fingerprint_is_refused` (`pod-image:host-key:no-fingerprint-is-refused`), the refusals against stubbed answers.
   Verify: `grep -cF 'known_hosts=$(mktemp)' tests/test_infra.py` prints `0`, and `grep -c -e '^def test_a_matching_key_is_kept' -e '^def test_a_mismatch_is_refused' -e '^def test_no_fingerprint_is_refused' tests/test_infra.py` prints `3`.
 
 ## 3 — The privacy rules in `docs/`

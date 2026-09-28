@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Bring up a RunPod GPU pod from the image config/image.json pins, with the models
-# attached, then print the SSH + tunnel commands. Config comes from .env.
+# attached, check its host key, then print the SSH + tunnel commands. Config
+# comes from .env.
 
 set -euo pipefail
 
@@ -50,6 +51,42 @@ check_volume() {
     || refuse "the models volume holds $size GB, but config/models.json needs $need bytes; grow it to $(( (need + 999999999) / 1000000000 )) GB with the RunPod MCP's update-network-volume"
 }
 
+refuse_and_tear_down() { echo "refused: $*" >&2; bash ./infra/down.sh >&2; exit 1; }
+
+# The log stays open, so each read is cut at 10 s; what it held by then is read.
+printed_fingerprint() {
+  api -N --max-time 10 "$API/pods/$pod_id/logs?since=$since" \
+    | sed -n 's/^data: //p' \
+    | jq -rR 'fromjson? | .line // empty' \
+    | sed -nE 's|.*isekai host key: (SHA256:[A-Za-z0-9+/]+).*|\1|p' \
+    | head -n 1
+}
+
+scanned_key() {  # the pod's Ed25519 host key, as a known-hosts line
+  ssh-keyscan -T 10 -t ed25519 -p "$port" "$host" 2>/dev/null | grep -v '^#' | head -n 1
+}
+
+# The fingerprint comes over the authenticated API, not over the connection it
+# vouches for; nothing reaches the pod until the two agree (0041 design D1, D2).
+verify_host_key() {
+  local printed="" key="" scanned="" deadline=$((SECONDS + 60))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    [ -n "$printed" ] || printed=$(printed_fingerprint) || true
+    if [ -n "$printed" ]; then
+      key=$(scanned_key) || true
+      [ -n "$key" ] && break
+    fi
+    sleep 5
+  done
+  [ -n "$printed" ] \
+    || refuse_and_tear_down "the pod printed no host-key fingerprint within 60 s; read its log with the RunPod MCP's stream-pod-logs"
+  scanned=$(echo "$key" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}') || true
+  [ "$scanned" = "$printed" ] \
+    || refuse_and_tear_down "the pod's host key ${scanned:-(none answered)} does not match the fingerprint it printed, $printed"
+  echo "$key" > .runpod_known_hosts
+  echo "Host key verified: $printed"
+}
+
 # The pod boots the digest config/image.json pins, never a tag, and nothing in the
 # environment overrides it: moving the pin is a commit (0033 design D3).
 image_ref="$(jq -r '"\(.image)@\(.digest)"' config/image.json)"
@@ -86,6 +123,7 @@ if [ -z "$gpus" ]; then
   exit 1
 fi
 pod_id=""
+since=$(date -u +%FT%TZ)          # the pod's log is read from here on
 while IFS= read -r gpu; do
   echo "Trying '$gpu' ..."
   # The pod renders a likeness; its libraries are told to report nothing (0041 design D4).
@@ -184,10 +222,11 @@ while true; do
   fi
   sleep 5
 done
-# The API's mapping of :22 is the event timed: nothing here contacts SSH itself.
+# The API's mapping of :22 is the event timed; the host-key scan comes after it.
 echo "Port 22 mapped at $(date -u +%FT%TZ)."
+verify_host_key
 
 echo
 echo "Pod is up."
-echo "  SSH:    ssh -i ~/.ssh/id_ed25519_runpod root@$host -p $port"
-echo "  Tunnel: ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@$host -p $port"
+echo "  SSH:    ssh -i ~/.ssh/id_ed25519_runpod -o UserKnownHostsFile=.runpod_known_hosts -o StrictHostKeyChecking=yes root@$host -p $port"
+echo "  Tunnel: ssh -i ~/.ssh/id_ed25519_runpod -o UserKnownHostsFile=.runpod_known_hosts -o StrictHostKeyChecking=yes -N -L 8188:localhost:8188 root@$host -p $port"

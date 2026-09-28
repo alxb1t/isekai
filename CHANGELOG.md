@@ -13,6 +13,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - A pod is created with onnxruntime's and the Hugging Face hub's telemetry off and `DO_NOT_TRACK` set, so the
   machine rendering a likeness reports to no one (0041 D4).
+- `up.sh` checks a pod's host key against the fingerprint the pod printed, and keeps it for the strict tunnel; a
+  mismatch, or no fingerprint in time, refuses and tears the pod down, so only the pod gets a photograph
+  (0041 D1, D2).
 
 ### Changed
 

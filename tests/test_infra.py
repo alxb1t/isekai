@@ -1413,40 +1413,42 @@ def test_the_watchdog_check_catches_one_that_sleeps_the_ceiling() -> None:
     ]
 
 
-def shared_host_keys(script: str) -> list[str]:
-    """Return what a render session misses of keeping its host keys to itself.
+def shared_host_keys(render_sh: str, down_sh: str) -> list[str]:
+    """Return what a render session misses of tunnelling with the pod's checked key.
 
-    e.g. an ssh line with no `UserKnownHostsFile` -> ["the tunnel names it", ...]
+    e.g. a tunnel with `StrictHostKeyChecking=accept-new` -> ["strict checking", ...]
     """
-    lines = _code(script.replace("\\\n", " "))
+    lines = _code(render_sh.replace("\\\n", " "))
     missing = []
-    if not any(ln.strip() == "known_hosts=$(mktemp)" for ln in lines):
-        missing.append("a file of its own")
     tunnel = [ln for ln in lines if ln.strip().startswith("ssh ") and "-L " in ln]
-    if not tunnel or 'UserKnownHostsFile="$known_hosts"' not in tunnel[0]:
-        missing.append("the tunnel names it")
-    removed = [ln for ln in lines if ln.strip().startswith("rm -f ")]
-    if not any('"$known_hosts"' in ln for ln in removed):
+    if not tunnel or "UserKnownHostsFile=.runpod_known_hosts" not in tunnel[0]:
+        missing.append("the tunnel names the pod's file")
+    if not tunnel or "StrictHostKeyChecking=yes" not in tunnel[0]:
+        missing.append("strict checking")
+    down = down_sh.splitlines()
+    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
+    if ".runpod_known_hosts" not in down[deleted + 1]:
         missing.append("removed at teardown")
     return missing
 
 
 @pytest.mark.spec("pod-image:session:host-keys-are-the-sessions-own")
 def test_a_sessions_host_keys_are_its_own(render_sh: str) -> None:
-    assert shared_host_keys(render_sh) == []
+    down_sh = (REPO / "infra" / "down.sh").read_text()
+    assert shared_host_keys(render_sh, down_sh) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_a_sessions_host_keys_are_its_own")
-def test_the_host_key_check_catches_the_operators_own_file() -> None:
-    script = (
-        "up_out=$(mktemp)\n"
-        'rm -f "$up_out"\n'
+def test_the_host_key_check_catches_a_key_trusted_on_first_sight() -> None:
+    render_sh = (
         "ssh -o StrictHostKeyChecking=accept-new \\\n"
+        '  -o UserKnownHostsFile="$known_hosts" \\\n'
         '  -N -L 8188:localhost:8188 "root@$host" &\n'
     )
-    assert shared_host_keys(script) == [
-        "a file of its own",
-        "the tunnel names it",
+    down_sh = 'if [ "$code" = "204" ]; then\n  rm -f .runpod_pod_id .runpod_pod_image\n'
+    assert shared_host_keys(render_sh, down_sh) == [
+        "the tunnel names the pod's file",
+        "strict checking",
         "removed at teardown",
     ]
 
@@ -1594,3 +1596,138 @@ def test_the_pod_is_created_with_telemetry_off(up_sh: str) -> None:
 def test_the_telemetry_check_catches_a_switch_left_out() -> None:
     body = 'env: { PUBLIC_KEY: $pubkey,\n  ORT_DISABLE_TELEMETRY: "1" } }\n'
     assert telemetry_left_on(body) == ["HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK"]
+
+
+# A throwaway Ed25519 key made for these tests, and its fingerprint and another's.
+HOST_KEY = (
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0fZgRnEY7GjNNDufoBjTKT9gPx9sN+vZmUWHVzN/Gn"
+)
+HOST_KEY_FINGERPRINT = "SHA256:rtGEsOEKPlWyEuNlB72E8dAPjGTYjbj3Dkf/rRhsz0U"
+OTHER_FINGERPRINT = "SHA256:NNz7DVAOPM3aU8pc65cmp696rualwnvB7DaCYclXg64"
+HOST_KEY_FUNCTIONS = (
+    "refuse_and_tear_down",
+    "printed_fingerprint",
+    "scanned_key",
+    "verify_host_key",
+)
+TORN_DOWN = "torn down: ./infra/down.sh"
+
+
+def check_host_key(
+    up_sh: str, printed: str | None, cwd: Path
+) -> tuple[subprocess.CompletedProcess[str], str | None]:
+    """Run `verify_host_key` against a pod log and a scan that answers `HOST_KEY`.
+
+    Return the run and the known-hosts file it left, if any. `printed` is the
+    fingerprint the log carries; None is a log that never prints one.
+    """
+    lines = ["step: sshd"] + ([f"isekai host key: {printed}"] if printed else [])
+    events = "".join(
+        f"data: {json.dumps({'ts': '', 'source': 'container', 'line': ln})}\n"
+        for ln in lines
+    )
+    stubs = "\n".join(
+        [
+            "API=https://api.test pod_id=pod-test since=2026-09-28T00:00:00Z",
+            "host=203.0.113.7 port=40022",
+            f"api() {{ printf '%s' {shlex.quote(events)}; }}",
+            f'ssh-keyscan() {{ echo "[$host]:$port {HOST_KEY}"; }}',
+            "sleep() { SECONDS=$((SECONDS + $1)); }",
+            'bash() { echo "torn down: $*"; }',
+        ]
+    )
+    done = run_functions(up_sh, HOST_KEY_FUNCTIONS, stubs, "verify_host_key", cwd)
+    kept = cwd / ".runpod_known_hosts"
+    return done, kept.read_text() if kept.exists() else None
+
+
+def unchecked_connections(up_sh: str) -> list[str]:
+    """Return each connection line `up.sh` prints that does not use the checked key."""
+    lines = up_sh.splitlines()
+    checked = next((i for i, ln in enumerate(lines) if ln == "verify_host_key"), None)
+    return [
+        ln.strip()
+        for i, ln in enumerate(lines)
+        if ln.startswith(('echo "  SSH:', 'echo "  Tunnel:'))
+        and (
+            checked is None
+            or i < checked
+            or "-o UserKnownHostsFile=.runpod_known_hosts" not in ln
+            or "-o StrictHostKeyChecking=yes" not in ln
+        )
+    ]
+
+
+BROKEN_HOST_KEY_CHECK = (
+    "refuse_and_tear_down() { exit 1; }\n"
+    "verify_host_key() {\n"
+    '  echo "[$host]:$port $(ssh-keyscan)" > .runpod_known_hosts\n'
+    "}\n"
+)
+
+
+@pytest.mark.spec("pod-image:host-key:a-matching-key-is-kept")
+def test_a_matching_key_is_kept(up_sh: str, render_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path)
+    assert done.returncode == 0, done.stderr
+    assert kept == f"[203.0.113.7]:40022 {HOST_KEY}\n"
+    assert f"Host key verified: {HOST_KEY_FINGERPRINT}" in done.stdout
+    assert unchecked_connections(up_sh) == []
+    assert "Tunnel:" in up_sh and "SSH:" in up_sh
+    down_sh = (REPO / "infra" / "down.sh").read_text()
+    assert shared_host_keys(render_sh, down_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_matching_key_is_kept")
+def test_the_kept_key_check_catches_a_connection_before_the_check() -> None:
+    up_sh = (
+        'echo "  SSH:    ssh root@$host -p $port"\n'
+        "verify_host_key\n"
+        'echo "  Tunnel: ssh -o UserKnownHostsFile=.runpod_known_hosts'
+        ' -o StrictHostKeyChecking=yes -N root@$host -p $port"\n'
+    )
+    assert unchecked_connections(up_sh) == ['echo "  SSH:    ssh root@$host -p $port"']
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+def test_a_mismatch_is_refused(up_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, OTHER_FINGERPRINT, tmp_path)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.startswith(
+        f"refused: the pod's host key {HOST_KEY_FINGERPRINT} does not match"
+        f" the fingerprint it printed, {OTHER_FINGERPRINT}"
+    )
+    assert TORN_DOWN in done.stderr
+    assert "pod-test" not in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_mismatch_is_refused")
+def test_the_mismatch_check_catches_a_key_kept_unchecked(tmp_path: Path) -> None:
+    done, kept = check_host_key(BROKEN_HOST_KEY_CHECK, OTHER_FINGERPRINT, tmp_path)
+    assert done.returncode == 0
+    assert kept is not None
+    assert TORN_DOWN not in done.stderr
+
+
+@pytest.mark.spec("pod-image:host-key:no-fingerprint-is-refused")
+def test_no_fingerprint_is_refused(up_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, None, tmp_path)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.startswith(
+        "refused: the pod printed no host-key fingerprint within 60 s;"
+    )
+    assert "stream-pod-logs" in done.stderr
+    assert TORN_DOWN in done.stderr
+    assert "pod-test" not in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_fingerprint_is_refused")
+def test_the_fingerprint_check_catches_a_key_kept_with_none_printed(
+    tmp_path: Path,
+) -> None:
+    done, kept = check_host_key(BROKEN_HOST_KEY_CHECK, None, tmp_path)
+    assert done.returncode == 0
+    assert kept is not None
+    assert TORN_DOWN not in done.stderr

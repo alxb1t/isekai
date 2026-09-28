@@ -55,7 +55,6 @@ uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 |
 tunnel=""
 watchdog=""
 up_out=$(mktemp)
-known_hosts=$(mktemp)
 teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   local status=${1:-$?}
   # Nothing in here may end the handler before down.sh runs: a second Ctrl-C is
@@ -65,7 +64,7 @@ teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   trap '' INT TERM HUP
   if [ -n "$watchdog" ]; then kill "$watchdog" 2>/dev/null; fi
   if [ -n "$tunnel" ]; then kill "$tunnel" 2>/dev/null; fi
-  rm -f "$up_out" "$known_hosts"
+  rm -f "$up_out"
   if [ -f .runpod_pod_id ]; then
     bash ./infra/down.sh 2>&1 | tee -a "$log"
     [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
@@ -103,10 +102,10 @@ read -r host port < <(
   || refuse "up.sh printed no Tunnel: line with a host and a port"
 
 open_tunnel() {
-  # accept-new: each pod is a fresh host whose key no one has seen yet. Its key is
-  # trusted for this session alone, so a later pod on the same address is not refused.
-  ssh -i ~/.ssh/id_ed25519_runpod -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
-    -o UserKnownHostsFile="$known_hosts" -o ExitOnForwardFailure=yes \
+  # up.sh kept the pod's key only once it matched the fingerprint the pod printed;
+  # down.sh removes it with the pod (0041 design D1).
+  ssh -i ~/.ssh/id_ed25519_runpod -o BatchMode=yes -o StrictHostKeyChecking=yes \
+    -o UserKnownHostsFile=.runpod_known_hosts -o ExitOnForwardFailure=yes \
     -N -L 8188:localhost:8188 "root@$host" -p "$port" &
   tunnel=$!
 }
