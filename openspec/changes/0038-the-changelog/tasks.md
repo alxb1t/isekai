@@ -8,7 +8,7 @@ each phase ends green, per [design](design.md).
 - [x] 1 — v0.1 to v0.13, rewritten
 - [x] 2 — v0.14 to v0.22.3, rewritten
 - [x] 3 — v0.22.4 to v0.26.0 and the preamble, rewritten
-- [ ] 4 — The rules and their tests
+- [x] 4 — The rules and their tests
 
 Line numbers are `9dc8240`'s. Each rewrite follows [D1](design.md#d1) and [D3](design.md#d3), and each heading from
 `0.7.0` takes its change id per [D2](design.md#d2).
@@ -42,11 +42,11 @@ Line numbers are `9dc8240`'s. Each rewrite follows [D1](design.md#d1) and [D3](d
 
 ## 4 — The rules and their tests
 
-- [ ] 4.1 **HALT CHECK** — the evaluation baseline still cites the changelog.
+- [x] 4.1 **HALT CHECK** — the evaluation baseline still cites the changelog.
   Verify: `git grep -l CHANGELOG -- evaluation | grep -c .` prints `2`.
-- [ ] 4.2 Rewrite `CLAUDE.md:117-118` and `:204-205` per [D6](design.md#d6).
+- [x] 4.2 Rewrite `CLAUDE.md:117-118` and `:204-205` per [D6](design.md#d6).
   Verify: `grep -c 'the three pod ids already in' CLAUDE.md` prints `0`, and `grep -cF 'No code, doc or README' CLAUDE.md` prints `1`.
-- [ ] 4.3 Remove the citations in `evaluation/baseline/README.md` and `evaluation/baseline/build_subjects.py` per [D7](design.md#d7).
+- [x] 4.3 Remove the citations in `evaluation/baseline/README.md` and `evaluation/baseline/build_subjects.py` per [D7](design.md#d7).
   Verify: `git grep -l CHANGELOG -- evaluation | grep -c .` prints `0`.
-- [ ] 4.4 Add `tests/test_changelog.py` per [D8](design.md#d8): `test_the_changelog_keeps_its_format` and `test_nothing_cites_the_changelog`, each with its twin.
+- [x] 4.4 Add `tests/test_changelog.py` per [D8](design.md#d8): `test_the_changelog_keeps_its_format` and `test_nothing_cites_the_changelog`, each with its twin.
   Verify: `grep -c -e '^def test_the_changelog_keeps_its_format' -e '^def test_nothing_cites_the_changelog' tests/test_changelog.py` prints `2`, and `grep -c '^def test_' tests/test_changelog.py` prints `4`.

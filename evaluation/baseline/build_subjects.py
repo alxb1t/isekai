@@ -27,8 +27,8 @@ chosen to break the metrics, not to cover humanity:
                                   of the frame. Exercises the guard's refusal
                                   path and the absent-face field
   s6_landscape          832x554   the only landscape input this project has ever
-                                  rendered on a GPU -- a gap v0.11's CHANGELOG
-                                  names explicitly
+                                  rendered on a GPU, closing the gap of no
+                                  landscape input ever rendered
 
 **Four are labelled in phase 9 and two are not.** `s1`-`s4` are the labelled set:
 40 judgements is 4 subjects x 10 within-subject pairs. `s5` and `s6` are the

@@ -548,13 +548,13 @@ def test_a_re_pin_leaves_a_record_a_later_reader_can_find() -> None:
     provenance records the graph digest, not the flow directory's -- so the only
     place a later reader learns that the bytes a run was produced from no longer
     exist is the prose of the change that moved it. `CHANGELOG.md` is that prose's
-    permanent home: append-only, and cut per release.
+    home: a re-pinned flow's bullet names its new digest.
 
     **The digest is the witness, not the flow's name.** A name enters the
-    changelog when the flow is introduced and cannot leave an append-only file,
-    so asserting it would pass for every re-pin that ever forgot to record
-    itself. A digest is what a re-pin actually moves, so requiring each one to
-    appear fires exactly when a digest changes and no entry says so.
+    changelog when the flow is introduced and stays there, so asserting it would
+    pass for every re-pin that ever forgot to record itself. A digest is what a
+    re-pin actually moves, so requiring each one to appear fires exactly when a
+    digest changes and no entry says so.
 
     `CHANGELOG.md` is history and `PINNED` stays authoritative, so this makes no
     second source of truth: nothing reads a digest back out of the changelog.

@@ -115,7 +115,9 @@ is folded in and the change moves to `openspec/changes/archive/`; archived chang
 `## [X.Y.Z]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.Z`. A minor release spells that
 `vX.Y` / `## [X.Y.0]` / `vX.Y.0`; a patch release spells it `vX.Y.Z` throughout, as `0.22.1` did. All
 four agree or the release halts. One branch per version. `CHANGELOG.md` follows Keep a Changelog +
-SemVer, with an entry appended **per phase** under `## [Unreleased]` and cut at release.
+SemVer and its preamble's rules: each phase appends one bullet under `## [Unreleased]` — 1–3 short lines,
+what changed and why, ending with its design id — and the release cuts the heading as
+`## [X.Y.Z] - <date> · <change-id>`. No code, doc or README cites it: it is a release record, not a source.
 
 **A minor delivers one feature; a patch delivers none**, and meets every one of these — work that
 cannot is not a patch:
@@ -201,8 +203,8 @@ they decide.**
 - **Never commit a secret, or a *real* absolute path from the machine the run is on** — the RunPod API key,
   the volume id, **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
   artefact or a tool's output into tracked prose. `.runpod_pod_id` is gitignored for that reason, and
-  `.runpod_pod_image`, the image `up.sh` booted, beside it; the three pod ids already in `CHANGELOG.md`
-  stay, because that file is append-only history and this rule is what stops a fourth being added.
+  `.runpod_pod_image`, the image `up.sh` booted, beside it; no pod id is in `CHANGELOG.md`, and this rule
+  keeps it so.
   `.env` is gitignored and holds all of it; `.env.example` declares shape only. A path a fixture
   *constructs* is not the target of this rule; a rendered one, carrying a real username, is.
 - **Deps minimal + human-gated.** The declared list is short and every entry is on the path of a verb

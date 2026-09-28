@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `0.14.0` to `0.22.3` rewritten the same way; the `0.22.3` re-pin table goes (0038 D1, D2, D3).
 - `0.22.4` to `0.26.0` rewritten the same way, and the preamble holds the rules only; this rewrite is the one
   exception to append-only (0038 D3, D4, D5, D6).
+- `CLAUDE.md` states the changelog's rules, no code, doc or README cites it, and `tests/test_changelog.py` holds
+  both (0038 D6, D7, D8).
 
 ## [0.26.0] - 2026-09-28 · 0037-the-boundaries
 
