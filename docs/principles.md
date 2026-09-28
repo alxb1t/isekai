@@ -244,3 +244,44 @@ walked back to its photograph. What is not pinned says so, and nothing unpinned 
   `tests/test_generate.py::test_a_render_on_a_pinned_pod_records_its_image_and_runtime`,
   `tests/test_caption.py::test_the_caption_records_the_options_the_reader_sent`,
   `tests/test_tagging.py::test_the_hosted_tagger_records_its_options_and_the_local_its_floor`.
+
+## Privacy
+
+### Privacy wins a trade
+
+**Privacy is ensured as far as is in our hands.** Where a choice trades privacy against cost or convenience,
+privacy wins. Where privacy depends on a party we cannot control, that dependency is named rather than
+assumed away.
+
+- **Why:** the product works on a person's likeness. A dependency assumed away is one nobody checks.
+- **Held by:** the tests the two principles below name, and
+  [D35](decisions.md#d35--the-pods-operator-is-a-trust-boundary-accepted-knowingly) naming the boundary.
+
+### A photograph leaves only to be rendered
+
+**A photograph leaves this machine only to be rendered, and carries only its pixels.** Tagging and
+captioning run here; the upload carries what decodes the image and its orientation, nothing more.
+
+- **Why:** a photograph's metadata can say where, when and on what it was taken, and the render needs
+  none of it.
+- **Held by:** `tests/test_generate.py::test_the_endpoint_receives_no_metadata`,
+  `tests/test_image.py::test_a_kept_header_keeps_its_fixed_fields_alone`,
+  `tests/test_image.py::test_the_orientation_survives_the_strip`,
+  `tests/test_image.py::test_the_pixels_are_unchanged_by_the_strip`.
+
+### The rented machine is proved, and forgets
+
+**The rented machine keeps nothing, and proves who it is before it receives anything.** The photograph and
+the render live in its memory, and its host key is checked against the fingerprint it printed.
+
+- **Why:** a disk outlives the pod that wrote it, and a tunnel that trusts the first key it sees trusts
+  whatever machine answers.
+- **Held by:**
+  - `tests/test_infra.py::test_comfyui_writes_to_memory`
+  - `tests/test_infra.py::test_too_little_memory_holds_the_pod`
+  - `tests/test_infra.py::test_the_image_carries_no_host_key`
+  - `tests/test_infra.py::test_each_boot_makes_and_prints_its_own_key`
+  - `tests/test_infra.py::test_a_matching_key_is_kept`
+  - `tests/test_infra.py::test_a_mismatch_is_refused`
+  - `tests/test_infra.py::test_no_fingerprint_is_refused`
+  - `tests/test_infra.py::test_the_pod_is_created_with_telemetry_off`

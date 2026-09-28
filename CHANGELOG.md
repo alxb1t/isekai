@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `up.sh` checks a pod's host key against the fingerprint the pod printed, and keeps it for the strict tunnel; a
   mismatch, or no fingerprint in time, refuses and tears the pod down, so only the pod gets a photograph
   (0041 D1, D2).
+- The privacy principles enter `docs/principles.md`, and `docs/decisions.md` records that renders stay on a pod
+  and that the pod's operator is a trust boundary, accepted knowingly (0041 D5).
 
 ### Changed
 

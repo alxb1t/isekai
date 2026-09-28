@@ -7,7 +7,7 @@ metered boot, per [design](design.md).
 
 - [x] 1 — The volume and the telemetry switches
 - [x] 2 — The host-key check and the strict tunnel
-- [ ] 3 — The privacy rules in `docs/`
+- [x] 3 — The privacy rules in `docs/`
 - [ ] 4 — 🛑 **HUMAN · METERED** — one boot, checked
 
 Line numbers are `88cac24`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
@@ -32,9 +32,9 @@ Line numbers are `88cac24`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 3 — The privacy rules in `docs/`
 
-- [ ] 3.1 Add `## Privacy` with its principles to `docs/principles.md`, per [D5](design.md#d5).
+- [x] 3.1 Add `## Privacy` with its principles to `docs/principles.md`, per [D5](design.md#d5).
   Verify: `grep -c '^## Privacy' docs/principles.md` prints `1`, and `grep -c -e 'Privacy is ensured as far as is in our hands' -e 'carries only its pixels' -e 'proves who it is before it receives anything' docs/principles.md` prints `3`.
-- [ ] 3.2 Add D34 and D35 to `docs/decisions.md`, extend D27, and remove the serverless preamble line, per [D5](design.md#d5).
+- [x] 3.2 Add D34 and D35 to `docs/decisions.md`, extend D27, and remove the serverless preamble line, per [D5](design.md#d5).
   Verify: `grep -c -e '^### D34 · Renders stay on a pod' -e '^### D35 · ' docs/decisions.md` prints `2`, and `grep -c 'serverless rendering, which is being researched' docs/decisions.md` prints `0`.
 
 ## 4 — 🛑 **HUMAN · METERED** — one boot, checked
