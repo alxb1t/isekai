@@ -52,3 +52,31 @@ def test_multipart_preserves_binary_file_data_verbatim() -> None:
     )
 
     assert raw in body
+
+
+@pytest.mark.spec("comfy-transport:multipart:the-boundary-appears-in-no-part")
+def test_the_boundary_appears_in_no_part() -> None:
+    drawn = iter(["inside", "outside"])
+    body, content_type = build_multipart(
+        fields={},
+        files={"image": ("a.png", b"bytes inside", "application/octet-stream")},
+        draw=lambda: next(drawn),
+    )
+
+    assert content_type.endswith("boundary=outside")
+    assert body.count(b"outside") == 2
+    assert b"bytes inside\r\n--outside--\r\n" in body
+
+
+@pytest.mark.spec("comfy-transport:multipart:names-are-escaped")
+def test_names_are_escaped() -> None:
+    body, _ = build_multipart(
+        fields={},
+        files={"image": ('a"b\r\nX: y.png', b"", "application/octet-stream")},
+    )
+
+    head = body.split(b"\r\n\r\n", 1)[0]
+    assert b'filename="a%22b%0D%0AX: y.png"' in head
+    # The encoder's own line breaks are the only ones: the boundary line, the
+    # disposition and the content type.
+    assert head.count(b"\r\n") == 2

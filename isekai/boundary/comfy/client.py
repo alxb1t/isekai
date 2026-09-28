@@ -13,6 +13,14 @@ from isekai.boundary.comfy.contract import ComfyTransport, Image, TransportFailu
 from isekai.boundary.comfy.multipart import build_multipart
 from isekai.foundation.flow import Workflow
 
+# The opener every request goes through. `ProxyHandler({})` reads no environment,
+# so an exported `http_proxy` never receives the photograph (docs D6).
+OPENER = request.build_opener(request.ProxyHandler({}))
+
+# Seconds a socket operation may wait: a stopped pod must not hold a request open
+# while it bills (`0037` design D2).
+TIMEOUT = 60
+
 
 class ComfyClient(ComfyTransport):
     """Thin HTTP transport to a running ComfyUI; a failure is a `TransportFailure`."""
@@ -45,7 +53,7 @@ class ComfyClient(ComfyTransport):
                 method="POST",
             )
 
-            with request.urlopen(req) as resp:
+            with OPENER.open(req, timeout=TIMEOUT) as resp:
                 return json.loads(resp.read())["name"]
 
     def submit(self, workflow: Workflow) -> str:
@@ -58,13 +66,17 @@ class ComfyClient(ComfyTransport):
                 method="POST",
             )
 
-            with request.urlopen(req) as resp:
-                return json.loads(resp.read())["prompt_id"]
+            with OPENER.open(req, timeout=TIMEOUT) as resp:
+                prompt_id = json.loads(resp.read())["prompt_id"]
+            if not isinstance(prompt_id, str) or not prompt_id:
+                raise ValueError(f"prompt_id {prompt_id!r} is not a non-empty string")
+            return prompt_id
 
     def history(self, prompt_id: str) -> dict[str, Any]:
         """Return the /history record for prompt_id."""
         with _reported():
-            with request.urlopen(f"{self.server}/history/{prompt_id}") as resp:
+            url = f"{self.server}/history/{parse.quote(prompt_id, safe='')}"
+            with OPENER.open(url, timeout=TIMEOUT) as resp:
                 return json.loads(resp.read())
 
     def view(self, image: Image) -> bytes:
@@ -77,13 +89,14 @@ class ComfyClient(ComfyTransport):
                     "type": image["type"],
                 }
             )
-            with request.urlopen(f"{self.server}/view?{query}") as resp:
+            with OPENER.open(f"{self.server}/view?{query}", timeout=TIMEOUT) as resp:
                 return resp.read()
 
     def system_stats(self) -> dict[str, Any]:
         """Return the server's /system_stats report, its versions under `system`."""
         with _reported():
-            with request.urlopen(f"{self.server}/system_stats") as resp:
+            url = f"{self.server}/system_stats"
+            with OPENER.open(url, timeout=TIMEOUT) as resp:
                 return json.loads(resp.read())
 
 
@@ -121,6 +134,14 @@ def _reported() -> Iterator[None]:
             f"the endpoint's answer was cut off ({cut!r}); check the pod's ComfyUI log",
         ) from cut
     except (urllib.error.URLError, OSError) as unreachable:
+        # A timeout arrives raw or wrapped in a `URLError`; read as its parent
+        # class it would send the operator to bring up a pod that is up.
+        if isinstance(getattr(unreachable, "reason", unreachable), TimeoutError):
+            raise TransportFailure(
+                "transient",
+                f"the endpoint did not answer within {TIMEOUT} s; check the pod's "
+                "ComfyUI log",
+            ) from unreachable
         raise TransportFailure(
             "transient",
             f"the rendering endpoint could not be reached ({unreachable}); "
@@ -137,8 +158,13 @@ def _reported() -> Iterator[None]:
 
 
 def _error_body(answered: urllib.error.HTTPError) -> str:
-    """Return the start of an error response's body, or say it could not be read."""
+    """Return the start of an error response's body, or say it could not be read.
+
+    Printable characters only: the refusal reaches a terminal and an agent.
+    """
     try:
-        return answered.read().decode(errors="replace").strip()[:ERROR_BODY_CHARS]
+        text = answered.read().decode(errors="replace")
+        printable = "".join(c for c in text if c.isprintable())
+        return printable.strip()[:ERROR_BODY_CHARS]
     except (OSError, http.client.HTTPException):
         return "no body could be read"

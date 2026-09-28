@@ -7,6 +7,7 @@ rather than a hope.
 """
 
 import dataclasses
+import http.client
 import io
 import json
 import random
@@ -20,7 +21,8 @@ import pytest
 
 import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
-from isekai.boundary.comfy import ComfyClient
+from isekai.boundary.comfy import ComfyClient, TransportFailure
+from isekai.boundary.comfy.client import TIMEOUT
 from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, Runtime, read
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
@@ -63,9 +65,16 @@ from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import FAKE_SYSTEM, POD_IMAGE, FakeComfyClient, url_of
+from tests.fakes import (
+    FAKE_SYSTEM,
+    POD_IMAGE,
+    FakeComfyClient,
+    stub_comfy,
+    url_of,
+)
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, caption, fake_wd14, render, sheet
+from tests.transports import RefusingConnection
 
 FLOW = "summon-anime-wai"
 
@@ -818,7 +827,7 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
             return io.BytesIO(b'{"name": "photo.png"}')
         raise urllib.error.URLError("Connection refused")
 
-    monkeypatch.setattr(urllib.request, "urlopen", closed_after_the_upload)
+    stub_comfy(monkeypatch, closed_after_the_upload)
 
     with pytest.raises(Refusal) as refused:
         render(
@@ -836,7 +845,7 @@ def test_an_unreachable_endpoint_is_recorded_transient_not_permanent(
 
 
 def _answering(monkeypatch: pytest.MonkeyPatch, code: int, body: bytes) -> None:
-    """Patch `urlopen` so the upload lands and the submission gets `code`."""
+    """Stub the client so the upload lands and the submission gets `code`."""
 
     def answer(req: urllib.request.Request | str) -> io.BytesIO:
         url = url_of(req)
@@ -846,7 +855,7 @@ def _answering(monkeypatch: pytest.MonkeyPatch, code: int, body: bytes) -> None:
             return io.BytesIO(body)
         raise urllib.error.HTTPError(url, code, "status", Message(), io.BytesIO(body))
 
-    monkeypatch.setattr(urllib.request, "urlopen", answer)
+    stub_comfy(monkeypatch, answer)
 
 
 @pytest.mark.spec("image-generation:failure:a-rejected-graph-is-permanent")
@@ -903,7 +912,7 @@ def test_a_failed_upload_is_recorded(
     def closed(req: urllib.request.Request | str) -> io.BytesIO:
         raise urllib.error.URLError("Connection refused")
 
-    monkeypatch.setattr(urllib.request, "urlopen", closed)
+    stub_comfy(monkeypatch, closed)
     client = ComfyClient("http://127.0.0.1:8188")
 
     with pytest.raises(Refusal) as refused:
@@ -982,7 +991,7 @@ def test_a_history_that_is_not_an_object_is_refused_permanent(
             return io.BytesIO(b'{"prompt_id": "pid-1"}')
         return io.BytesIO(body)
 
-    monkeypatch.setattr(urllib.request, "urlopen", answer)
+    stub_comfy(monkeypatch, answer)
 
     with pytest.raises(Refusal) as refused:
         render(
@@ -996,6 +1005,120 @@ def test_a_history_that_is_not_an_object_is_refused_permanent(
     directory = run.path / FLOW / OUTPUTS / "001"
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
     assert "history" in str(refused.value) and "--server" in str(refused.value)
+
+
+@pytest.mark.spec("comfy-transport:proxy:an-exported-proxy-is-ignored")
+def test_no_proxy_in_the_environment_reaches_the_rendering_endpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The upload carries the photograph, so a proxy must not stand in its way.
+
+    The second half is the falsification: a default opener, on the same
+    environment, dials the proxy.
+    """
+    photo = tmp_path / "photo.png"
+    photo.write_bytes(b"a photograph")
+    monkeypatch.setenv("http_proxy", "http://proxy.invalid:8080")
+    # Deleted, not set: a `no_proxy` naming loopback would let the twin bypass it.
+    monkeypatch.delenv("no_proxy", raising=False)
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.setattr(http.client, "HTTPConnection", RefusingConnection)
+
+    with pytest.raises(TransportFailure) as refused:
+        ComfyClient("http://127.0.0.1:8188").upload_image(str(photo))
+
+    assert "asked for 127.0.0.1:8188" in str(refused.value)
+
+    with pytest.raises(urllib.error.URLError) as captured:
+        urllib.request.build_opener().open(
+            "http://127.0.0.1:8188/upload/image", timeout=TIMEOUT
+        )
+
+    assert str(captured.value.reason) == "asked for proxy.invalid:8080"
+
+
+@pytest.mark.spec("comfy-transport:timeout:an-unanswered-request-is-transient")
+@pytest.mark.parametrize(
+    "expired",
+    [TimeoutError("timed out"), urllib.error.URLError(TimeoutError("timed out"))],
+)
+def test_an_unanswered_request_is_refused_transient(
+    monkeypatch: pytest.MonkeyPatch, expired: OSError
+) -> None:
+    """Raw or wrapped, a timeout names the time rather than an absent pod."""
+
+    def silent(req: urllib.request.Request | str) -> io.BytesIO:
+        raise expired
+
+    stub_comfy(monkeypatch, silent)
+
+    with pytest.raises(TransportFailure) as refused:
+        ComfyClient("http://127.0.0.1:8188").system_stats()
+
+    assert refused.value.kind == "transient"
+    assert f"did not answer within {TIMEOUT} s" in str(refused.value)
+    assert "ComfyUI log" in str(refused.value)
+    assert "infra/up.sh" not in str(refused.value)
+
+
+@pytest.mark.spec(
+    "comfy-transport:polling:an-unfinished-prompt-is-refused-at-the-deadline"
+)
+def test_an_unfinished_prompt_is_refused_at_the_deadline(run: Run, flow: Flow) -> None:
+    prepare(run, {FLOW: flow})
+    client = FakeComfyClient(pending_polls=1_000)
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, client, seeds=[42], poll=0, deadline=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["transient"]
+    assert f"prompt {client.prompt_id} did not finish within 0 s" in str(refused.value)
+    assert "ComfyUI log" in str(refused.value)
+    assert client.history_calls == 1
+
+
+@pytest.mark.spec("comfy-transport:polling:a-prompt-id-that-is-not-a-string-is-refused")
+@pytest.mark.parametrize("prompt_id", [3, "", None, ["pid"]])
+def test_a_prompt_id_that_is_not_a_string_is_refused(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch, prompt_id: object
+) -> None:
+    prepare(run, {FLOW: flow})
+    asked: list[str] = []
+
+    def answer(req: urllib.request.Request | str) -> io.BytesIO:
+        url = url_of(req)
+        asked.append(url)
+        if url.endswith("/upload/image"):
+            return io.BytesIO(b'{"name": "photo.png"}')
+        return io.BytesIO(json.dumps({"prompt_id": prompt_id}).encode())
+
+    stub_comfy(monkeypatch, answer)
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    assert "a shape this build does not read" in str(refused.value)
+    assert not [url for url in asked if "/history/" in url]
+
+
+@pytest.mark.spec("comfy-transport:error-text:control-characters-are-dropped")
+def test_an_error_body_loses_its_control_characters(
+    run: Run, flow: Flow, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare(run, {FLOW: flow})
+    _answering(monkeypatch, 400, b"\x1b[31mnode 3 rejected\x07 its input\x1b[0m")
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, ComfyClient("http://127.0.0.1:8188"), seeds=[42], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    detail = json.loads(attempts(directory, 1)[0].path.read_text())["detail"]
+    for quoted in (str(refused.value), detail):
+        assert "\x1b" not in quoted and "\x07" not in quoted
+        assert "[31mnode 3 rejected its input[0m" in quoted
 
 
 @pytest.mark.spec("image-generation:immutability:output-records-the-graph-digest")
@@ -1307,13 +1430,11 @@ def test_the_client_reads_the_report_over_the_transport(
 ) -> None:
     asked: list[str] = []
 
-    def urlopen(
-        request: urllib.request.Request | str, *args: object, **kwargs: object
-    ) -> io.BytesIO:
+    def answer(request: urllib.request.Request | str) -> io.BytesIO:
         asked.append(url_of(request))
         return io.BytesIO(json.dumps({"system": dict(FAKE_SYSTEM)}).encode())
 
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    stub_comfy(monkeypatch, answer)
 
     report = ComfyClient("http://127.0.0.1:8188").system_stats()
 

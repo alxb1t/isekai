@@ -9,7 +9,9 @@ import json
 import os
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -806,6 +808,75 @@ def test_a_damaged_frame_names_a_remedy_that_works(tmp_path: Path, runs: Path) -
     run.frame_path.unlink()
     again = open_run(photo, runs)
     assert again == run and again.frame["photo"]["name"] == "photo.jpg"
+
+
+@pytest.mark.spec("run-directory:frame:a-name-that-leaves-the-run-is-refused")
+@pytest.mark.parametrize(
+    "name", ["../outside.jpg", "/tmp/outside.jpg", "..", ".", "", "a/b.jpg", "a\\b.jpg"]
+)
+def test_a_name_that_leaves_the_run_is_refused(
+    tmp_path: Path, runs: Path, name: str
+) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+    frame = run.frame
+    frame["photo"]["name"] = name
+    write_json(run.frame_path, frame)
+
+    with pytest.raises(Refusal) as refused:
+        _ = run.photo
+
+    message = str(refused.value)
+    assert FRAME_NAME in message and repr(name) in message
+    assert f"delete {run.frame_path}" in message
+
+
+@pytest.mark.spec("run-directory:frame:a-photograph-that-is-a-link-is-refused")
+def test_a_photograph_that_is_a_link_is_refused(tmp_path: Path, runs: Path) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+    outside = _photo(tmp_path / "elsewhere", "private.jpg", jpeg_bytes(640, 480))
+    run.photo.unlink()
+    run.photo.symlink_to(outside)
+
+    with pytest.raises(Refusal) as refused:
+        _ = run.photo
+
+    message = str(refused.value)
+    assert FRAME_NAME in message and "link" in message
+    assert f"delete {run.frame_path}" in message
+
+
+@pytest.mark.spec("run-directory:frame:a-frame-without-its-photograph-is-refused")
+@pytest.mark.parametrize(
+    ("change", "key"),
+    [
+        (lambda frame: frame.pop("photo"), "photo"),
+        (lambda frame: frame.__setitem__("photo", "photo.jpg"), "photo"),
+        (lambda frame: frame["photo"].pop("name"), "name"),
+        (lambda frame: frame["photo"].pop("sha256"), "sha256"),
+        (lambda frame: frame["photo"].__setitem__("sha256", 3), "sha256"),
+    ],
+    ids=["no-photo", "photo-not-an-object", "no-name", "no-digest", "digest-a-number"],
+)
+def test_a_frame_without_its_photograph_is_refused(
+    tmp_path: Path, runs: Path, change: Callable[[dict[str, Any]], object], key: str
+) -> None:
+    damaged = _photo(tmp_path / "a", "p.jpg", jpeg_bytes(800, 600))
+    other = _photo(tmp_path / "b", "q.jpg", jpeg_bytes(640, 480))
+    run = open_run(damaged, runs)
+    frame = json.loads(run.frame_path.read_text())
+    change(frame)
+    run.frame_path.write_text(json.dumps(frame))
+    reached: list[Path] = []
+
+    # As a stage does: find the run by the photograph's bytes, then read its copy.
+    refused = across(
+        [damaged, other], lambda photo: reached.append(open_run(photo, runs).photo)
+    )
+
+    assert [str(one) for one in reached] == [str(open_run(other, runs).photo)]
+    [message] = refused
+    assert FRAME_NAME in message and f"`{key}`" in message
+    assert f"delete {run.frame_path}" in message
 
 
 @pytest.mark.spec_exempt("structural: the id helper, exercised directly")

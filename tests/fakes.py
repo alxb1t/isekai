@@ -1,9 +1,13 @@
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from urllib.request import Request
 
+import pytest
+
 from isekai.boundary.comfy import Image
+from isekai.boundary.comfy import client as comfy_client
 from isekai.boundary.ollama import LAYERS
 from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
 from isekai.foundation.artifacts import DigestRecord
@@ -11,8 +15,19 @@ from isekai.foundation.flow import Workflow
 
 
 def url_of(request: Request | str) -> str:
-    """Return the URL a patched `urlopen` was handed, a `Request` or a string."""
+    """Return the URL a patched opener was handed, a `Request` or a string."""
     return request.full_url if isinstance(request, Request) else request
+
+
+def stub_comfy(
+    monkeypatch: pytest.MonkeyPatch, answer: Callable[[Request | str], object]
+) -> None:
+    """Send every request `ComfyClient` makes to `answer`, in place of its opener."""
+
+    def open_(request: Request | str, *args: object, **kwargs: object) -> object:
+        return answer(request)
+
+    monkeypatch.setattr(comfy_client.OPENER, "open", open_)
 
 
 # What `FakeComfyClient` reports about itself, in ComfyUI's own shape.

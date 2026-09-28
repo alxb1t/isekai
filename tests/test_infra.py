@@ -1026,7 +1026,7 @@ def unbounded_session(script: str) -> list[str]:
     ceiling = re.search(r"^CEILING=(\d+)", script, re.M)
     if ceiling is None or not 0 < int(ceiling[1]) <= 45 * 60:
         missing.append("a stated ceiling")
-    started = [i for i, ln in enumerate(lines) if 'sleep "$CEILING"' in ln]
+    started = [i for i, ln in enumerate(lines) if "end=$((SECONDS + CEILING))" in ln]
     trap = next((i for i, ln in enumerate(lines) if ln.startswith("trap ")), None)
     up = next(i for i, ln in enumerate(lines) if "infra/up.sh" in ln)
     if not started or trap is None or not trap < started[0] < up:
@@ -1131,3 +1131,107 @@ def test_the_wait_check_catches_a_render_before_an_unbounded_wait() -> None:
         "a stated bound",
         "gives up past it",
     ]
+
+
+# The watchdog's check that its session still runs, and its exit once it does not.
+ALIVE = "kill -0 $$ 2>/dev/null || exit 0"
+
+
+def outliving_watchdog(script: str) -> list[str]:
+    """Return what a render session's watchdog misses of ending with its session.
+
+    e.g. a watchdog that sleeps the whole ceiling once -> ["polls its session", ...]
+    """
+    lines = _code(script)
+    end = len(lines)
+    loop = next(
+        (i for i, ln in enumerate(lines) if ln.strip().startswith("while ")), end
+    )
+    done = next((i for i in range(loop, end) if lines[i].strip() == "done"), end)
+    body = lines[loop:done]
+    missing = []
+    if not (any(ALIVE in ln for ln in body) and any("sleep 5" in ln for ln in body)):
+        missing.append("polls its session")
+    signal = next((i for i, ln in enumerate(lines) if "kill -TERM $$" in ln), None)
+    checked = [i for i in range(done, end) if ALIVE in lines[i]]
+    if signal is None or not checked or checked[0] > signal:
+        missing.append("checks before it signals")
+    return missing
+
+
+@pytest.mark.spec("pod-image:session:the-watchdog-ends-with-its-session")
+def test_the_watchdog_ends_with_its_session(render_sh: str) -> None:
+    assert outliving_watchdog(render_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_watchdog_ends_with_its_session")
+def test_the_watchdog_check_catches_one_that_sleeps_the_ceiling() -> None:
+    script = '(\n  sleep "$CEILING"\n  kill -TERM $$\n) &\n'
+    assert outliving_watchdog(script) == [
+        "polls its session",
+        "checks before it signals",
+    ]
+
+
+def shared_host_keys(script: str) -> list[str]:
+    """Return what a render session misses of keeping its host keys to itself.
+
+    e.g. an ssh line with no `UserKnownHostsFile` -> ["the tunnel names it", ...]
+    """
+    lines = _code(script.replace("\\\n", " "))
+    missing = []
+    if not any(ln.strip() == "known_hosts=$(mktemp)" for ln in lines):
+        missing.append("a file of its own")
+    tunnel = [ln for ln in lines if ln.strip().startswith("ssh ") and "-L " in ln]
+    if not tunnel or 'UserKnownHostsFile="$known_hosts"' not in tunnel[0]:
+        missing.append("the tunnel names it")
+    removed = [ln for ln in lines if ln.strip().startswith("rm -f ")]
+    if not any('"$known_hosts"' in ln for ln in removed):
+        missing.append("removed at teardown")
+    return missing
+
+
+@pytest.mark.spec("pod-image:session:host-keys-are-the-sessions-own")
+def test_a_sessions_host_keys_are_its_own(render_sh: str) -> None:
+    assert shared_host_keys(render_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_sessions_host_keys_are_its_own")
+def test_the_host_key_check_catches_the_operators_own_file() -> None:
+    script = (
+        "up_out=$(mktemp)\n"
+        'rm -f "$up_out"\n'
+        "ssh -o StrictHostKeyChecking=accept-new \\\n"
+        '  -N -L 8188:localhost:8188 "root@$host" &\n'
+    )
+    assert shared_host_keys(script) == [
+        "a file of its own",
+        "the tunnel names it",
+        "removed at teardown",
+    ]
+
+
+def proxied_requests(script: str) -> list[str]:
+    """Return every `curl` to the endpoint's address that would follow a proxy.
+
+    e.g. `curl -sf "$SERVER/system_stats"` -> that line
+    """
+    return [
+        ln.strip()
+        for ln in _code(script)
+        if "curl " in ln and '"$SERVER' in ln and "--noproxy '*'" not in ln
+    ]
+
+
+@pytest.mark.spec("pod-image:session:the-tunnel-is-reached-directly")
+def test_the_session_reaches_its_tunnel_without_a_proxy(render_sh: str) -> None:
+    assert any("curl " in ln and '"$SERVER' in ln for ln in _code(render_sh))
+    assert proxied_requests(render_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_session_reaches_its_tunnel_without_a_proxy"
+)
+def test_the_proxy_check_catches_a_curl_that_follows_one() -> None:
+    script = 'until curl -sf --max-time 5 "$SERVER/system_stats"; do sleep 5; done\n'
+    assert proxied_requests(script) == [script.strip()]

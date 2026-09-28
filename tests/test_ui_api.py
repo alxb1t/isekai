@@ -22,8 +22,10 @@ import contextlib
 import io
 import json
 import random
+import shlex
+import shutil
 import threading
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -45,11 +47,13 @@ from isekai.foundation.artifacts import (
 )
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
+    APPROVED,
     CAPTIONS,
     REVIEW,
     TAGS,
     WD14,
     Run,
+    latest_artifact,
     open_run,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
@@ -62,7 +66,12 @@ from isekai.interface.ui.app import (  # noqa: E402
 from isekai.interface.ui.batch import Batch, Input, establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.review import ENCODER_WINDOW, approve, review  # noqa: E402
+from isekai.pipeline.review import (  # noqa: E402
+    DRAFT,
+    ENCODER_WINDOW,
+    approve,
+    review,
+)
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
     tag_hosted,
@@ -911,3 +920,166 @@ def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
 
     assert set(body) == {"fields"}
     assert "glasses" not in json.dumps(body)
+
+
+# --- damage is refused by name ------------------------------------------------
+
+
+def _latest(stage: str, label: str | None = None) -> Callable[[TestClient, Run], Path]:
+    """Return a finder for the highest `label` artifact in `stage`."""
+
+    def find(_client: TestClient, run: Run) -> Path:
+        path = latest_artifact(run.directory(FLOW, stage), label)
+        assert path is not None
+        return path
+
+    return find
+
+
+def _damage(path: Path, change: Callable[[dict[str, Any]], None]) -> None:
+    """Rewrite the JSON file at `path` with `change` applied."""
+    body = json.loads(path.read_text())
+    change(body)
+    path.write_text(json.dumps(body))
+
+
+def _approved(client: TestClient, run: Run) -> Path:
+    assert client.post(f"/api/inputs/{run.id}/approve").status_code == 200
+    return _latest(REVIEW, APPROVED)(client, run)
+
+
+def _hosted(client: TestClient, run: Run) -> Path:
+    tag_hosted(run, FLOW, FakeTagger(tags=("brown hair",)))
+    return _latest(TAGS)(client, run)
+
+
+def _set(key: str, value: object) -> Callable[[dict[str, Any]], None]:
+    return lambda body: body.__setitem__(key, value)
+
+
+def _drop(key: str) -> Callable[[dict[str, Any]], None]:
+    return lambda body: body.pop(key)
+
+
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
+@pytest.mark.parametrize(
+    ("find", "change", "named", "verb"),
+    [
+        (_latest(REVIEW, DRAFT), _drop("fields"), "`fields`", "review"),
+        (
+            _latest(REVIEW, DRAFT),
+            lambda body: body["fields"].__setitem__("hair_colour", "brown hair"),
+            "`hair_colour`",
+            "review",
+        ),
+        # No command rewrites an approved sheet -- `review` copies it and
+        # refuses the same damage -- so the fix is the file to restore.
+        (_approved, _set("fields", ["brown hair"]), "`fields`", None),
+        (_latest(CAPTIONS), _drop("prose"), "`prose`", "caption"),
+        (
+            _latest(WD14),
+            _set("tags", [{"tag": "1girl"}]),
+            "tag entry 0",
+            "tag",
+        ),
+        (_hosted, _set("tags", "brown hair"), "`tags`", "tag"),
+        (_hosted, _set("tags", ["brown hair", 3]), "`tags`", "tag"),
+    ],
+    ids=[
+        "draft",
+        "draft-field",
+        "approved",
+        "caption",
+        "wd14",
+        "hosted-string",
+        "hosted-entry",
+    ],
+)
+def test_a_damaged_file_is_refused_by_name(
+    client: TestClient,
+    made: Run,
+    find: Callable[[TestClient, Run], Path],
+    change: Callable[[dict[str, Any]], None],
+    named: str,
+    verb: str | None,
+) -> None:
+    damaged = find(client, made)
+    _damage(damaged, change)
+
+    response = client.get(f"/api/inputs/{made.id}")
+
+    assert response.status_code == 409
+    refusal = response.json()["refusal"]
+    assert damaged.name in refusal and named in refusal
+    if verb is None:
+        assert f"restore it in {damaged}" in refusal
+        assert "python -m isekai" not in refusal
+    else:
+        # Parsed, not matched: the fixture's runs root is not the default, so
+        # the command works when pasted only if it names that root.
+        command = refusal.split("`python -m isekai ")[1].split("`")[0]
+        parsed = build_parser().parse_args(shlex.split(command))
+        assert (parsed.verb, parsed.flows, parsed.new_version, parsed.photos) == (
+            verb,
+            [FLOW],
+            True,
+            [made.id],
+        )
+        assert parsed.runs == made.path.parent
+    assert client.get("/api/batch").status_code == 200
+
+
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
+def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app_module, "RUNS_ROOT", made.path.parent)
+    _damage(_latest(CAPTIONS)(client, made), _drop("prose"))
+
+    refusal = client.get(f"/api/inputs/{made.id}").json()["refusal"]
+
+    assert f"`python -m isekai caption --flow {FLOW} --new-version {made.id}`" in (
+        refusal
+    )
+
+
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
+def test_a_damage_remedy_under_a_root_holding_a_space_pastes_as_one_argument(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    root = tmp_path / "my runs"
+    root.mkdir()
+    shutil.move(made.path, root / made.id)
+    moved = Run(made.id, root / made.id)
+    client = _client(replace(wired, runs_root=root), moved, tmp_path)
+    _damage(_latest(CAPTIONS)(client, moved), _drop("prose"))
+
+    refusal = client.get(f"/api/inputs/{moved.id}").json()["refusal"]
+
+    # Split as the shell splits it: an unquoted root would come apart at the space.
+    command = refusal.split("`python -m isekai ")[1].split("`")[0]
+    parsed = build_parser().parse_args(shlex.split(command))
+    assert (parsed.verb, parsed.runs, parsed.photos) == ("caption", root, [moved.id])
+
+
+@pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
+@pytest.mark.parametrize(
+    ("fields", "named"),
+    [
+        ({"hair_colour": "brown hair"}, "hair_colour"),
+        ({"hair_colour": ["brown hair", 3]}, "hair_colour"),
+        ({"hair_colour": None}, "hair_colour"),
+        ("brown hair", "`fields`"),
+    ],
+    ids=["a-string", "a-number-inside", "null", "not-an-object"],
+)
+def test_a_malformed_update_is_refused_naming_the_field(
+    client: TestClient, made: Run, fields: object, named: str
+) -> None:
+    before = snapshot(made.path)
+
+    response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
+
+    assert response.status_code == 409
+    assert named in response.json()["refusal"]
+    assert snapshot(made.path) == before

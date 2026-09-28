@@ -25,6 +25,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-28
+
+### Security
+
+- **The ComfyUI transport ignores an exported proxy and bounds every wait.** Requests go through the client's own
+  `OPENER` at a 60 s timeout and a render gives up at 600 s, each refused transient; a prompt id that is not a
+  string is refused permanent (0037 design D1–D3).
+- **An upload's boundary is random and in no part, its names are escaped, and an endpoint's error text keeps
+  printable characters only** (0037 design D4, D5).
+- **The review surface refuses a damaged draft, approved sheet, caption or tag list by name**, with the command
+  that rewrites it, rather than failing with a server error; a draft update whose fields are not lists of strings
+  is refused naming the field, and nothing is saved (0037 design D6).
+- **A run's frame must name its photograph with one plain filename, and carry its name and digest**, or the run
+  is refused naming `run.json`; a frame can no longer point a run at another file on the machine (0037 design D7).
+- **A render session's watchdog polls its session and ends with it, its tunnel keeps host keys in a file of its
+  own, removed at teardown, and its checks reach the tunnel with `--noproxy '*'`** (0037 design D8, D9, D11).
+- **One metered session proved the boundaries end to end**: with a dead `http_proxy` exported, both flows rendered
+  on a real pod with no refusal, and the RunPod MCP confirmed no pod left (0037 design D10).
+
+### Fixed
+
+- **The review surface's damage refusals name a fix that works.** A damaged approved sheet names the file to
+  restore, since no command rewrites one and `review` refuses the same damage; every other command names
+  `--runs <root>` when the surface serves a runs root that is not the default (0037 design D6).
+- **A pasted remedy survives a runs root holding a space.** The review surface's damage commands and `compare`'s
+  not-a-batch refusal shell-quote the root they name (0037 design D6).
+- **A run whose photograph is a symbolic link is refused** naming `run.json` and its remedy, so a planted run can
+  no longer serve or upload a file outside itself under a plain name (0037 design D7).
+
 ## [0.25.1] - 2026-09-27
 
 ### Changed
