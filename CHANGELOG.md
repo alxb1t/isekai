@@ -15,6 +15,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   ComfyUI writes only to memory and saves no metadata, and holds on too little memory; the environment now installs
   before the node clones (0040 D1, D2, D3, D4).
 
+### Changed
+
+- A pod boots image `v0.28-rc1`, built on request from this version's tree, so it carries the key and memory
+  changes (0040 D5).
+
 ## [0.27.0] - 2026-09-28 · 0039-the-photo-metadata
 
 ### Security
