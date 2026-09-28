@@ -5,7 +5,7 @@ each phase ends green, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — v0.1 to v0.13, rewritten
+- [x] 1 — v0.1 to v0.13, rewritten
 - [ ] 2 — v0.14 to v0.22.3, rewritten
 - [ ] 3 — v0.22.4 to v0.26.0 and the preamble, rewritten
 - [ ] 4 — The rules and their tests
@@ -15,13 +15,13 @@ Line numbers are `9dc8240`'s. Each rewrite follows [D1](design.md#d1) and [D3](d
 
 ## 1 — v0.1 to v0.13, rewritten
 
-- [ ] 1.1 **HALT CHECK** — both current flow digests are in the changelog, and `0.5.0` still has its heading.
+- [x] 1.1 **HALT CHECK** — both current flow digests are in the changelog, and `0.5.0` still has its heading.
   Verify: `grep -c -e f2bd3202079b1288 -e 96c605821e68a8ac CHANGELOG.md` prints `2`, and `grep -c '^## \[0.5.0\]' CHANGELOG.md` prints `1`.
-- [ ] 1.2 Rewrite `0.7.0` to `0.13.0` in `CHANGELOG.md`, each heading with its change id.
+- [x] 1.2 Rewrite `0.7.0` to `0.13.0` in `CHANGELOG.md`, each heading with its change id.
   Verify: `test "$(sed -n '/^## \[0.13.0\]/,/^## \[0.6.0\]/p' CHANGELOG.md | wc -l)" -lt 150 && echo ok` prints `ok`, and `sed -n '/^## \[0.13.0\]/,/^## \[0.7.0\]/p' CHANGELOG.md | grep '^## \[' | grep -vc ' · 00'` prints `0`.
-- [ ] 1.3 Rewrite `0.1.0` to `0.6.0`, and drop the `## [0.5.0]` heading and the link-reference block, per [D3](design.md#d3).
+- [x] 1.3 Rewrite `0.1.0` to `0.6.0`, and drop the `## [0.5.0]` heading and the link-reference block, per [D3](design.md#d3).
   Verify: `grep -c -e '^## \[0.5.0\]' -e '^\[Unreleased\]:' CHANGELOG.md` prints `0`, and `test "$(sed -n '/^## \[0.6.0\]/,$p' CHANGELOG.md | wc -l)" -lt 40 && echo ok` prints `ok`.
-- [ ] 1.4 Keep only the Keep a Changelog sections from `0.13.0` down.
+- [x] 1.4 Keep only the Keep a Changelog sections from `0.13.0` down.
   Verify: `sed -n '/^## \[0.13.0\]/,$p' CHANGELOG.md | grep '^### ' | grep -vcE '^### (Added|Changed|Deprecated|Removed|Fixed|Security)$'` prints `0`.
 
 ## 2 — v0.14 to v0.22.3, rewritten
