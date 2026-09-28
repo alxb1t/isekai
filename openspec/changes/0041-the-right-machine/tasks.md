@@ -5,7 +5,7 @@ metered boot, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The volume and the telemetry switches
+- [x] 1 — The volume and the telemetry switches
 - [ ] 2 — The host-key check and the strict tunnel
 - [ ] 3 — The privacy rules in `docs/`
 - [ ] 4 — 🛑 **HUMAN · METERED** — one boot, checked
@@ -14,11 +14,11 @@ Line numbers are `88cac24`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 1 — The volume and the telemetry switches
 
-- [ ] 1.1 **HALT CHECK** — `up.sh` reads no volume, checks no host key and sets no telemetry switch, and v0.28's pod prints its fingerprint.
+- [x] 1.1 **HALT CHECK** — `up.sh` reads no volume, checks no host key and sets no telemetry switch, and v0.28's pod prints its fingerprint.
   Verify: `grep -c -e 'network-volumes' -e 'ssh-keyscan' -e 'ORT_DISABLE_TELEMETRY' infra/up.sh` prints `0`, and `grep -c 'isekai host key: ' start.sh` prints `1`.
-- [ ] 1.2 In `infra/up.sh`, read the volume before the create and refuse per [D3](design.md#d3); add `test_another_data_centre_is_refused` (`pod-image:volume:another-data-centre-is-refused`) and `test_a_volume_too_small_is_refused` (`pod-image:volume:a-volume-too-small-is-refused`) to `tests/test_infra.py`.
+- [x] 1.2 In `infra/up.sh`, read the volume before the create and refuse per [D3](design.md#d3); add `test_another_data_centre_is_refused` (`pod-image:volume:another-data-centre-is-refused`) and `test_a_volume_too_small_is_refused` (`pod-image:volume:a-volume-too-small-is-refused`) to `tests/test_infra.py`.
   Verify: `grep -c 'network-volumes/' infra/up.sh` prints `1`, and `grep -c -e '^def test_another_data_centre_is_refused' -e '^def test_a_volume_too_small_is_refused' tests/test_infra.py` prints `2`.
-- [ ] 1.3 Add the telemetry switches to the create body's `env` per [D4](design.md#d4); add `test_the_pod_is_created_with_telemetry_off` (`pod-image:telemetry:the-switches-are-off`).
+- [x] 1.3 Add the telemetry switches to the create body's `env` per [D4](design.md#d4); add `test_the_pod_is_created_with_telemetry_off` (`pod-image:telemetry:the-switches-are-off`).
   Verify: `grep -c -e 'ORT_DISABLE_TELEMETRY: "1"' -e 'HF_HUB_DISABLE_TELEMETRY: "1"' -e 'DO_NOT_TRACK: "1"' infra/up.sh` prints `3`, and `grep -c '^def test_the_pod_is_created_with_telemetry_off' tests/test_infra.py` prints `1`.
 
 ## 2 — The host-key check and the strict tunnel

@@ -9,6 +9,16 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Security
+
+- A pod is created with onnxruntime's and the Hugging Face hub's telemetry off and `DO_NOT_TRACK` set, so the
+  machine rendering a likeness reports to no one (0041 D4).
+
+### Changed
+
+- `up.sh` reads the models volume before the create, and refuses a data centre other than the volume's or a volume
+  smaller than the model manifest, before a pod bills (0041 D3).
+
 ## [0.28.0] - 2026-09-28 · 0040-the-pod-image
 
 ### Security

@@ -32,6 +32,24 @@ lost() {  # a create whose outcome is unknown may have placed a pod no file reco
   echo "bash infra/down.sh, then re-run bash infra/up.sh." >&2
 }
 
+refuse() { echo "refused: $*" >&2; exit 1; }
+
+# A pod outside its volume's data centre boots without its models, and a volume
+# smaller than the manifest fails its download after billing starts (0041 design D3).
+check_volume() {
+  local volume dc size need
+  volume=$(api -f "$API/network-volumes/$RUNPOD_VOLUME_ID") \
+    || refuse "the models volume RUNPOD_VOLUME_ID names could not be read; check it with the RunPod MCP's get-network-volume"
+  read -r dc size < <(echo "$volume" | jq -r '"\(.dataCenter // "") \(.size // "")"' 2>/dev/null) || true
+  [ -n "${dc:-}" ] && [[ "${size:-}" =~ ^[0-9]+$ ]] \
+    || refuse "the models volume's answer names no data centre and size; check it with the RunPod MCP's get-network-volume"
+  [ "$RUNPOD_DATACENTER" = "$dc" ] \
+    || refuse "RUNPOD_DATACENTER is $RUNPOD_DATACENTER, but the models volume is in $dc; set RUNPOD_DATACENTER=$dc in .env"
+  need=$(jq '[.entries[].bytes] | add' config/models.json)
+  [ "$((size * 1000 * 1000 * 1000))" -ge "$need" ] \
+    || refuse "the models volume holds $size GB, but config/models.json needs $need bytes; grow it to $(( (need + 999999999) / 1000000000 )) GB with the RunPod MCP's update-network-volume"
+}
+
 # The pod boots the digest config/image.json pins, never a tag, and nothing in the
 # environment overrides it: moving the pin is a commit (0033 design D3).
 image_ref="$(jq -r '"\(.image)@\(.digest)"' config/image.json)"
@@ -54,6 +72,8 @@ if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
   exit 1
 fi
 
+check_volume
+
 echo "Creating pod in $RUNPOD_DATACENTER ..."
 echo "  image: $image_ref"
 # `RUNPOD_GPU_TYPE` is a preference order, so one sold-out model does not end the
@@ -68,6 +88,7 @@ fi
 pod_id=""
 while IFS= read -r gpu; do
   echo "Trying '$gpu' ..."
+  # The pod renders a likeness; its libraries are told to report nothing (0041 design D4).
   body=$(jq -n \
     --arg image  "$image_ref" \
     --arg gpu    "$gpu" \
@@ -83,7 +104,10 @@ while IFS= read -r gpu; do
        dataCenterIds: [$dc],
        cloud: "SECURE",
        env: { PUBLIC_KEY: $pubkey,
-              RUNPOD_VOLUME_ID: $vol } }')
+              RUNPOD_VOLUME_ID: $vol,
+              ORT_DISABLE_TELEMETRY: "1",
+              HF_HUB_DISABLE_TELEMETRY: "1",
+              DO_NOT_TRACK: "1" } }')
   # A transport failure is code 000, reported like any status, never a silent exit.
   out=$(api -S -w '\n%{http_code}' -X POST "$API/pods" \
     -H "Content-Type: application/json" \

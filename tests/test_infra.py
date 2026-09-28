@@ -6,7 +6,10 @@ check is a second thing to rename and a silent divergence waiting to happen.
 """
 
 import json
+import os
 import re
+import shlex
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -1472,3 +1475,122 @@ def test_the_session_reaches_its_tunnel_without_a_proxy(render_sh: str) -> None:
 def test_the_proxy_check_catches_a_curl_that_follows_one() -> None:
     script = 'until curl -sf --max-time 5 "$SERVER/system_stats"; do sleep 5; done\n'
     assert proxied_requests(script) == [script.strip()]
+
+
+def shell_function(script: str, name: str) -> str:
+    """Return the definition of `name` as the script writes it, or "" if absent.
+
+    e.g. `g` in a script holding `g() { :; }` -> "g() { :; }"
+    """
+    lines = script.splitlines()
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.startswith(f"{name}() {{")), None
+    )
+    if start is None:
+        return ""
+    if lines[start].rstrip().endswith("}"):
+        return lines[start]
+    end = next(i for i in range(start, len(lines)) if lines[i] == "}")
+    return "\n".join(lines[start : end + 1])
+
+
+def run_functions(
+    script: str, names: tuple[str, ...], stubs: str, call: str, cwd: Path
+) -> subprocess.CompletedProcess[str]:
+    """Run `call` in strict bash, with the named functions and the stubs."""
+    program = "\n".join(
+        ["set -euo pipefail", stubs, *(shell_function(script, n) for n in names), call]
+    )
+    return subprocess.run(
+        ["bash", "-c", program],
+        cwd=cwd,
+        env={"PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+def volume_refusal(up_sh: str, answer: dict[str, object]) -> str:
+    """Return what `check_volume` refuses with for this answer, or "" if it passes."""
+    stubs = (
+        "API=https://api.test\nRUNPOD_VOLUME_ID=vol-test\nRUNPOD_DATACENTER=EU-RO-1\n"
+        f"api() {{ printf '%s\\n' {shlex.quote(json.dumps(answer))}; }}"
+    )
+    done = run_functions(up_sh, ("refuse", "check_volume"), stubs, "check_volume", REPO)
+    return done.stderr.strip() if done.returncode else ""
+
+
+MANIFEST_BYTES = sum(
+    e["bytes"] for e in json.loads(MANIFEST_PATH.read_text())["entries"]
+)
+BROKEN_VOLUME_CHECK = "refuse() { exit 1; }\ncheck_volume() {\n  :\n}\n"
+
+
+def checked_before_create(up_sh: str) -> bool:
+    """Whether `up.sh` checks the volume before its create call."""
+    lines = up_sh.splitlines()
+    checks = [i for i, ln in enumerate(lines) if ln.strip() == "check_volume"]
+    creates = next(i for i, line in enumerate(lines) if 'POST "$API/pods"' in line)
+    return bool(checks) and checks[0] < creates
+
+
+@pytest.mark.spec("pod-image:volume:another-data-centre-is-refused")
+def test_another_data_centre_is_refused(up_sh: str) -> None:
+    refusal = volume_refusal(up_sh, {"dataCenter": "US-KS-2", "size": 100})
+    assert refusal.startswith("refused: ")
+    assert "EU-RO-1" in refusal and "US-KS-2" in refusal
+    assert volume_refusal(up_sh, {"dataCenter": "EU-RO-1", "size": 100}) == ""
+    assert checked_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_another_data_centre_is_refused")
+def test_the_data_centre_check_catches_a_volume_never_read() -> None:
+    assert (
+        volume_refusal(BROKEN_VOLUME_CHECK, {"dataCenter": "US-KS-2", "size": 100})
+        == ""
+    )
+    assert not checked_before_create('out=$(api -X POST "$API/pods")\ncheck_volume\n')
+
+
+@pytest.mark.spec("pod-image:volume:a-volume-too-small-is-refused")
+def test_a_volume_too_small_is_refused(up_sh: str) -> None:
+    refusal = volume_refusal(up_sh, {"dataCenter": "EU-RO-1", "size": 10})
+    assert refusal.startswith("refused: ")
+    assert "10 GB" in refusal and f"{MANIFEST_BYTES} bytes" in refusal
+    assert checked_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_volume_too_small_is_refused")
+def test_the_size_check_catches_a_volume_never_read() -> None:
+    assert (
+        volume_refusal(BROKEN_VOLUME_CHECK, {"dataCenter": "EU-RO-1", "size": 10}) == ""
+    )
+
+
+TELEMETRY_SWITCHES = (
+    "ORT_DISABLE_TELEMETRY",
+    "HF_HUB_DISABLE_TELEMETRY",
+    "DO_NOT_TRACK",
+)
+
+
+def telemetry_left_on(up_sh: str) -> list[str]:
+    """Return each telemetry switch the create body's `env` does not set to "1"."""
+    env = re.search(r"env: \{(.*?)\}", up_sh, re.S)
+    block = env.group(1) if env else ""
+    return [s for s in TELEMETRY_SWITCHES if f'{s}: "1"' not in block]
+
+
+@pytest.mark.spec("pod-image:telemetry:the-switches-are-off")
+def test_the_pod_is_created_with_telemetry_off(up_sh: str) -> None:
+    assert telemetry_left_on(up_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pod_is_created_with_telemetry_off"
+)
+def test_the_telemetry_check_catches_a_switch_left_out() -> None:
+    body = 'env: { PUBLIC_KEY: $pubkey,\n  ORT_DISABLE_TELEMETRY: "1" } }\n'
+    assert telemetry_left_on(body) == ["HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK"]
