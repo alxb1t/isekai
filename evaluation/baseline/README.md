@@ -46,9 +46,8 @@ of a standing figure is a crop of its chest, and a subject with no face in it me
 while proving nothing about the rest of the graph.
 
 What the landscape case is *for* is the injector's short-side rounding on the **height** axis:
-832×554 resolves to a 1536×1024 target, an aspect ratio this pipeline has never rendered: until
-now, no landscape input had been through a GPU. A crop exercises that identically to a
-natively-framed wide shot.
+832×554 resolves to a 1536×1024 target, an aspect ratio this pipeline has never rendered. A crop
+exercises that identically to a natively-framed wide shot.
 
 ### Sources deliberately unused
 
@@ -156,8 +155,7 @@ and every `run.json`'s `photo_sha256` matches the digest the builder recorded �
 provably the subject it claims to be.
 
 **The landscape rendered.** `s6` is the first landscape input this project has ever put through a GPU,
-at an aspect ratio — 1536×1024 — the pipeline had never produced. That closes the landscape gap: no
-landscape input had been rendered on a GPU before it.
+at an aspect ratio — 1536×1024 — the pipeline had never produced. That closes the landscape gap.
 
 **The dials were held, and identically across all six subjects:**
 

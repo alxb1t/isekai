@@ -11,19 +11,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Changed
 
-- `0.1.0` to `0.13.0` rewritten terse: Keep a Changelog sections only, and each heading from `0.7.0` names its
-  change (0038 D1, D2, D3).
-- `0.14.0` to `0.22.3` rewritten the same way; the `0.22.3` re-pin table goes (0038 D1, D2, D3).
-- `0.22.4` to `0.26.0` rewritten the same way, and the preamble holds the rules only; this rewrite is the one
-  exception to append-only (0038 D3, D4, D5, D6).
+- Every version rewritten terse: Keep a Changelog sections only, each heading from `0.7.0` naming its change, and
+  the preamble holding the rules only (0038 D1, D2, D3, D5).
 - `CLAUDE.md` states the changelog's rules, no code, doc or README cites it, and `tests/test_changelog.py` holds
   both (0038 D6, D7, D8).
 
 ## [0.26.0] - 2026-09-28 · 0037-the-boundaries
-
-### Fixed
-
-- The review surface's damage refusals name a fix that works under any runs root, shell-quoted (0037 D6).
 
 ### Security
 
@@ -31,8 +24,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   (0037 D1, D2, D3).
 - An upload's boundary is random and its names escaped, and an endpoint's error text keeps printable characters
   only (0037 D4, D5).
-- The review surface refuses a damaged draft, sheet, caption or tag list by name, and a malformed draft update
-  (0037 D6).
+- The review surface refuses a damaged draft, sheet, caption or tag list by name, with a shell-quoted fix that
+  works under any runs root, and refuses a malformed draft update (0037 D6).
 - A run's frame names its photograph by one plain filename and carries its digest, and the photograph may not be
   a symbolic link (0037 D7).
 - A render session's watchdog ends with it, its tunnel keeps its own host keys, and its checks bypass any proxy
@@ -56,18 +49,14 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 ### Added
 
 - `compare` verb: writes `compare.html`, each photograph beside its flows' renders, and prints its path (0035 D2).
-- `infra/render.sh`: one render session that assembles first, rents, renders each flow, and tears down on every
-  exit (0035 D3).
+- `infra/render.sh`: one render session that assembles first, rents, renders each flow, halts at the pod ceiling,
+  and tears down on every exit (0035 D3).
 - The `run-flows` and `compare-renders` skills: an agent runs a batch to the comparison page, stopping for the
-  approval and the go (0035 D1, D4, D6).
+  approval and the go, and never reports a pod id (0035 D1, D4, D6).
 
 ### Fixed
 
 - onnxruntime's telemetry is disabled, so `tag` no longer connects out or aborts at exit (0035 D5).
-- A render session halts at the pod ceiling, a second interrupt no longer cuts its teardown short, and its
-  refusals reach the log (0035 D3).
-- `compare` marks a directory no tracked flow names instead of refusing the page (0035 D2).
-- `run-flows` renders in the background, counts approved runs, and never reports a pod id (0035 D1).
 
 ## [0.24.1] - 2026-09-27 · 0034-runpod-rest-v2
 
@@ -293,16 +282,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Added
 
-- `isekai/boundary/ollama.py`: open models behind a local Ollama read and sort, with no `claude` needed
-  (0019 D1, D5).
+- `isekai/boundary/ollama.py`: open models behind a local Ollama read and sort, with no `claude` needed and no
+  proxy in between (0019 D1, D4, D5).
 - A flow may declare the models its first two stages call, and `flows/summon-open-v1/` does (0019 D2, D3).
 - An unreachable host or an absent model refuses without spending an attempt (0019 D9).
 - A manifest key this build does not read is refused by name (0019 D12).
-
-### Fixed
-
-- The photograph is never sent through the environment's `http_proxy` (0019 D4).
-- A connection dropped mid-answer is classified rather than ending the batch (0019 D9).
 
 ## [0.18.0] - 2026-09-19 · 0018-review-ui
 
@@ -320,7 +304,6 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 ### Fixed
 
 - The run-root containment guard compares directories, not path text (0018 D10).
-- An autosave racing an approve no longer loses the last correction (0018 D13).
 
 ## [0.17.0] - 2026-09-18 · 0017-conjure
 
@@ -328,10 +311,6 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `flows/conjure-v1/`: a render from the sheet alone, no photograph, added without code (0017 D1, D2, D3).
 - Its schema is chosen by vocabulary depth, and its dials are `summon`'s less the identity ones (0017 D4, D6).
-
-### Fixed
-
-- Both `conjure-v1` briefings stop eliciting attributes the vocabulary cannot hold (0017 D5).
 
 ## [0.16.0] - 2026-09-17 · 0016-flow-registry
 
@@ -355,15 +334,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Changed
 
-- The package becomes group directories, each with a `README.md`; the CLI moves to `interface/cli.py`
-  (0015 D2, D3, D11).
+- The package becomes group directories, each with a `README.md`; the CLI moves to `interface/cli.py`, and
+  `provision.py`, which the image follows, to `boundary/` (0015 D2, D3, D11).
 - `show.py` becomes `run_view.py`, `photo.py` becomes `image.py`, and `write_atomically` is its own module
   (0015 D4, D6).
 - The repository-root anchors are pinned by a test before anything moves (0015 D7).
-
-### Fixed
-
-- The image and the provisioning driver follow `provision.py` into `boundary/` (0015).
 
 ## [0.14.0] - 2026-09-15 · 0014-delete-the-old-path
 
@@ -418,8 +393,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `evaluate.py`, a second entry point off `convert.py`'s import graph: face, pose and hair-colour axes and a
   face-location guard, which rank and never grade (0012 D1, D5, D12).
-- `run.json` records the photograph's digest, the base, the working resolution, and each variation's seed, graph
-  digest and dials (0012 D4).
+- `run.json` records the photograph's digest, the base, the working resolution, the pod image, the ComfyUI
+  commit, and each variation's seed, graph digest and dials (0012 D4, D14).
 - `--fixed-dials` renders at the graph's own dials, and `--cn-strength` sets the identity node's keypoint dial
   (0012 D3, D6).
 - The evaluator's models are pinned in `scripts/eval_models.json`, a sibling of the graph's manifest, with every
@@ -429,12 +404,6 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 ### Changed
 
 - The anime-face detector is `deepghs/anime_face_detection`, MIT: the AGPL one named publishes no ONNX (0012 D19).
-
-### Fixed
-
-- `run.json` records the pod image and the ComfyUI commit, bounded to printable ASCII, and the report reads them
-  (0012 D14).
-- The pose reader's crop, normalisation and channel order match its published reference pipeline (0012).
 
 ## [0.11.0] - 2026-09-06 · 0011-converge-paydown
 
