@@ -56,9 +56,8 @@ refuse_and_tear_down() { echo "refused: $*" >&2; bash ./infra/down.sh >&2; exit 
 # The log stays open, so each read is cut at 10 s; what it held by then is read.
 printed_fingerprint() {
   api -N --max-time 10 "$API/pods/$pod_id/logs?since=$since" \
-    | sed -n 's/^data: //p' \
-    | jq -rR 'fromjson? | .line // empty' \
-    | sed -nE 's|.*isekai host key: (SHA256:[A-Za-z0-9+/]+).*|\1|p' \
+    | jq -rR 'select(startswith("data: ")) | .[6:] | fromjson? | .line // empty
+              | capture("isekai host key: (?<f>SHA256:[A-Za-z0-9+/]+)").f' 2>/dev/null \
     | head -n 1
 }
 
@@ -69,7 +68,7 @@ scanned_key() {  # the pod's Ed25519 host key, as a known-hosts line
 # The fingerprint comes over the authenticated API, not over the connection it
 # vouches for; nothing reaches the pod until the two agree (0041 design D1, D2).
 verify_host_key() {
-  local printed="" key="" scanned="" deadline=$((SECONDS + 60))
+  local printed="" key="" scanned deadline=$((SECONDS + 60))
   while [ "$SECONDS" -lt "$deadline" ]; do
     [ -n "$printed" ] || printed=$(printed_fingerprint) || true
     if [ -n "$printed" ]; then

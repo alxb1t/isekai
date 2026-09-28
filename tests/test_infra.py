@@ -235,16 +235,30 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
 SESSION_CEILING_SECONDS = 45 * 60
 
 
+def shell_function(script: str, name: str) -> str:
+    """Return the definition of `name` as the script writes it, or "" if absent.
+
+    e.g. `g` in a script holding `g() { :; }` -> "g() { :; }"
+    """
+    lines = script.splitlines()
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.startswith(f"{name}() {{")), None
+    )
+    if start is None:
+        return ""
+    if lines[start].rstrip().endswith("}"):
+        return lines[start]
+    end = next(i for i in range(start, len(lines)) if lines[i] == "}")
+    return "\n".join(lines[start : end + 1])
+
+
 def provision_body(start_sh: str) -> str:
     """Return the body of `start.sh`'s `provision` function.
 
     The scenario is about provisioning as a whole rather than about one of its
     steps, so what the test needs is which lines are *inside* the guarded unit.
     """
-    lines = start_sh.splitlines()
-    opens = next(i for i, line in enumerate(lines) if line.startswith("provision()"))
-    closes = next(i for i, line in enumerate(lines[opens:], opens) if line == "}")
-    return "\n".join(lines[opens : closes + 1])
+    return shell_function(start_sh, "provision")
 
 
 @pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
@@ -1027,6 +1041,13 @@ def test_the_check_catches_an_image_the_environment_can_set() -> None:
     ]
 
 
+def removed_on_204(down_sh: str) -> str:
+    """Return the line `down.sh` runs right after a 204, the record files' removal."""
+    down = down_sh.splitlines()
+    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
+    return down[deleted + 1]
+
+
 def unrecorded_boot(up_sh: str, down_sh: str) -> list[str]:
     """Return what is missing of the boot record's write and its removal on 204."""
     missing = []
@@ -1036,16 +1057,15 @@ def unrecorded_boot(up_sh: str, down_sh: str) -> list[str]:
     )
     if 'echo "$image_ref" > .runpod_pod_image' not in up[pod_id:]:
         missing.append("written beside the pod id")
-    down = down_sh.splitlines()
-    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
-    if ".runpod_pod_image" not in down[deleted + 1]:
+    if ".runpod_pod_image" not in removed_on_204(down_sh):
         missing.append("removed on 204")
     return missing
 
 
 @pytest.mark.spec("pod-image:boot:the-booted-image-is-recorded")
-def test_the_booted_reference_is_recorded_and_removed_with_the_pod(up_sh: str) -> None:
-    down_sh = (REPO / "infra" / "down.sh").read_text()
+def test_the_booted_reference_is_recorded_and_removed_with_the_pod(
+    up_sh: str, down_sh: str
+) -> None:
     assert unrecorded_boot(up_sh, down_sh) == []
 
 
@@ -1163,12 +1183,12 @@ def unnamed_record_removal(down_sh: str) -> bool:
     lines = down_sh.splitlines()
     start = next(i for i, line in enumerate(lines) if '"$code" = "404"' in line)
     end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith("el"))
-    return "rm .runpod_pod_id .runpod_pod_image" not in "\n".join(lines[start:end])
+    fix = "rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts"
+    return fix not in "\n".join(lines[start:end])
 
 
 @pytest.mark.spec_exempt("structural: a refusal names its fix, per docs/principles.md")
-def test_a_404_teardown_names_the_record_files_to_remove() -> None:
-    down_sh = (REPO / "infra" / "down.sh").read_text()
+def test_a_404_teardown_names_the_record_files_to_remove(down_sh: str) -> None:
     assert not unnamed_record_removal(down_sh)
 
 
@@ -1189,6 +1209,12 @@ def test_the_record_removal_check_catches_a_404_naming_no_file() -> None:
 def render_sh() -> str:
     """Read the shipped `infra/render.sh` once for the whole session."""
     return (REPO / "infra" / "render.sh").read_text()
+
+
+@pytest.fixture(scope="session")
+def down_sh() -> str:
+    """Read the shipped `infra/down.sh` once for the whole session."""
+    return (REPO / "infra" / "down.sh").read_text()
 
 
 def _code(script: str) -> list[str]:
@@ -1425,16 +1451,13 @@ def shared_host_keys(render_sh: str, down_sh: str) -> list[str]:
         missing.append("the tunnel names the pod's file")
     if not tunnel or "StrictHostKeyChecking=yes" not in tunnel[0]:
         missing.append("strict checking")
-    down = down_sh.splitlines()
-    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
-    if ".runpod_known_hosts" not in down[deleted + 1]:
+    if ".runpod_known_hosts" not in removed_on_204(down_sh):
         missing.append("removed at teardown")
     return missing
 
 
 @pytest.mark.spec("pod-image:session:host-keys-are-the-sessions-own")
-def test_a_sessions_host_keys_are_its_own(render_sh: str) -> None:
-    down_sh = (REPO / "infra" / "down.sh").read_text()
+def test_a_sessions_host_keys_are_its_own(render_sh: str, down_sh: str) -> None:
     assert shared_host_keys(render_sh, down_sh) == []
 
 
@@ -1479,29 +1502,17 @@ def test_the_proxy_check_catches_a_curl_that_follows_one() -> None:
     assert proxied_requests(script) == [script.strip()]
 
 
-def shell_function(script: str, name: str) -> str:
-    """Return the definition of `name` as the script writes it, or "" if absent.
-
-    e.g. `g` in a script holding `g() { :; }` -> "g() { :; }"
-    """
-    lines = script.splitlines()
-    start = next(
-        (i for i, ln in enumerate(lines) if ln.startswith(f"{name}() {{")), None
-    )
-    if start is None:
-        return ""
-    if lines[start].rstrip().endswith("}"):
-        return lines[start]
-    end = next(i for i in range(start, len(lines)) if lines[i] == "}")
-    return "\n".join(lines[start : end + 1])
-
-
 def run_functions(
-    script: str, names: tuple[str, ...], stubs: str, call: str, cwd: Path
+    script: str, names: tuple[str, ...], stubs: str, cwd: Path
 ) -> subprocess.CompletedProcess[str]:
-    """Run `call` in strict bash, with the named functions and the stubs."""
+    """Run the last named function in strict bash, beside the others and the stubs."""
     program = "\n".join(
-        ["set -euo pipefail", stubs, *(shell_function(script, n) for n in names), call]
+        [
+            "set -euo pipefail",
+            stubs,
+            *(shell_function(script, n) for n in names),
+            names[-1],
+        ]
     )
     return subprocess.run(
         ["bash", "-c", program],
@@ -1520,13 +1531,10 @@ def volume_refusal(up_sh: str, answer: dict[str, object]) -> str:
         "API=https://api.test\nRUNPOD_VOLUME_ID=vol-test\nRUNPOD_DATACENTER=EU-RO-1\n"
         f"api() {{ printf '%s\\n' {shlex.quote(json.dumps(answer))}; }}"
     )
-    done = run_functions(up_sh, ("refuse", "check_volume"), stubs, "check_volume", REPO)
+    done = run_functions(up_sh, ("refuse", "check_volume"), stubs, REPO)
     return done.stderr.strip() if done.returncode else ""
 
 
-MANIFEST_BYTES = sum(
-    e["bytes"] for e in json.loads(MANIFEST_PATH.read_text())["entries"]
-)
 BROKEN_VOLUME_CHECK = "refuse() { exit 1; }\ncheck_volume() {\n  :\n}\n"
 
 
@@ -1557,10 +1565,11 @@ def test_the_data_centre_check_catches_a_volume_never_read() -> None:
 
 
 @pytest.mark.spec("pod-image:volume:a-volume-too-small-is-refused")
-def test_a_volume_too_small_is_refused(up_sh: str) -> None:
+def test_a_volume_too_small_is_refused(up_sh: str, manifest: Manifest) -> None:
+    need = sum(entry["bytes"] for entry in manifest["entries"])
     refusal = volume_refusal(up_sh, {"dataCenter": "EU-RO-1", "size": 10})
     assert refusal.startswith("refused: ")
-    assert "10 GB" in refusal and f"{MANIFEST_BYTES} bytes" in refusal
+    assert "10 GB" in refusal and f"{need} bytes" in refusal
     assert checked_before_create(up_sh)
 
 
@@ -1636,7 +1645,7 @@ def check_host_key(
             'bash() { echo "torn down: $*"; }',
         ]
     )
-    done = run_functions(up_sh, HOST_KEY_FUNCTIONS, stubs, "verify_host_key", cwd)
+    done = run_functions(up_sh, HOST_KEY_FUNCTIONS, stubs, cwd)
     kept = cwd / ".runpod_known_hosts"
     return done, kept.read_text() if kept.exists() else None
 
@@ -1667,14 +1676,15 @@ BROKEN_HOST_KEY_CHECK = (
 
 
 @pytest.mark.spec("pod-image:host-key:a-matching-key-is-kept")
-def test_a_matching_key_is_kept(up_sh: str, render_sh: str, tmp_path: Path) -> None:
+def test_a_matching_key_is_kept(
+    up_sh: str, render_sh: str, down_sh: str, tmp_path: Path
+) -> None:
     done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path)
     assert done.returncode == 0, done.stderr
     assert kept == f"[203.0.113.7]:40022 {HOST_KEY}\n"
     assert f"Host key verified: {HOST_KEY_FINGERPRINT}" in done.stdout
     assert unchecked_connections(up_sh) == []
     assert "Tunnel:" in up_sh and "SSH:" in up_sh
-    down_sh = (REPO / "infra" / "down.sh").read_text()
     assert shared_host_keys(render_sh, down_sh) == []
 
 
