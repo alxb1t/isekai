@@ -6,7 +6,10 @@ check is a second thing to rename and a silent divergence waiting to happen.
 """
 
 import json
+import os
 import re
+import shlex
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -232,16 +235,30 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
 SESSION_CEILING_SECONDS = 45 * 60
 
 
+def shell_function(script: str, name: str) -> str:
+    """Return the definition of `name` as the script writes it, or "" if absent.
+
+    e.g. `g` in a script holding `g() { :; }` -> "g() { :; }"
+    """
+    lines = script.splitlines()
+    start = next(
+        (i for i, ln in enumerate(lines) if ln.startswith(f"{name}() {{")), None
+    )
+    if start is None:
+        return ""
+    if lines[start].rstrip().endswith("}"):
+        return lines[start]
+    end = next(i for i in range(start, len(lines)) if lines[i] == "}")
+    return "\n".join(lines[start : end + 1])
+
+
 def provision_body(start_sh: str) -> str:
     """Return the body of `start.sh`'s `provision` function.
 
     The scenario is about provisioning as a whole rather than about one of its
     steps, so what the test needs is which lines are *inside* the guarded unit.
     """
-    lines = start_sh.splitlines()
-    opens = next(i for i, line in enumerate(lines) if line.startswith("provision()"))
-    closes = next(i for i, line in enumerate(lines[opens:], opens) if line == "}")
-    return "\n".join(lines[opens : closes + 1])
+    return shell_function(start_sh, "provision")
 
 
 @pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
@@ -1024,6 +1041,13 @@ def test_the_check_catches_an_image_the_environment_can_set() -> None:
     ]
 
 
+def removed_on_204(down_sh: str) -> str:
+    """Return the line `down.sh` runs right after a 204, the record files' removal."""
+    down = down_sh.splitlines()
+    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
+    return down[deleted + 1]
+
+
 def unrecorded_boot(up_sh: str, down_sh: str) -> list[str]:
     """Return what is missing of the boot record's write and its removal on 204."""
     missing = []
@@ -1033,16 +1057,15 @@ def unrecorded_boot(up_sh: str, down_sh: str) -> list[str]:
     )
     if 'echo "$image_ref" > .runpod_pod_image' not in up[pod_id:]:
         missing.append("written beside the pod id")
-    down = down_sh.splitlines()
-    deleted = next(i for i, line in enumerate(down) if '"$code" = "204"' in line)
-    if ".runpod_pod_image" not in down[deleted + 1]:
+    if ".runpod_pod_image" not in removed_on_204(down_sh):
         missing.append("removed on 204")
     return missing
 
 
 @pytest.mark.spec("pod-image:boot:the-booted-image-is-recorded")
-def test_the_booted_reference_is_recorded_and_removed_with_the_pod(up_sh: str) -> None:
-    down_sh = (REPO / "infra" / "down.sh").read_text()
+def test_the_booted_reference_is_recorded_and_removed_with_the_pod(
+    up_sh: str, down_sh: str
+) -> None:
     assert unrecorded_boot(up_sh, down_sh) == []
 
 
@@ -1160,12 +1183,12 @@ def unnamed_record_removal(down_sh: str) -> bool:
     lines = down_sh.splitlines()
     start = next(i for i, line in enumerate(lines) if '"$code" = "404"' in line)
     end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith("el"))
-    return "rm .runpod_pod_id .runpod_pod_image" not in "\n".join(lines[start:end])
+    fix = "rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts"
+    return fix not in "\n".join(lines[start:end])
 
 
 @pytest.mark.spec_exempt("structural: a refusal names its fix, per docs/principles.md")
-def test_a_404_teardown_names_the_record_files_to_remove() -> None:
-    down_sh = (REPO / "infra" / "down.sh").read_text()
+def test_a_404_teardown_names_the_record_files_to_remove(down_sh: str) -> None:
     assert not unnamed_record_removal(down_sh)
 
 
@@ -1186,6 +1209,12 @@ def test_the_record_removal_check_catches_a_404_naming_no_file() -> None:
 def render_sh() -> str:
     """Read the shipped `infra/render.sh` once for the whole session."""
     return (REPO / "infra" / "render.sh").read_text()
+
+
+@pytest.fixture(scope="session")
+def down_sh() -> str:
+    """Read the shipped `infra/down.sh` once for the whole session."""
+    return (REPO / "infra" / "down.sh").read_text()
 
 
 def _code(script: str) -> list[str]:
@@ -1410,40 +1439,39 @@ def test_the_watchdog_check_catches_one_that_sleeps_the_ceiling() -> None:
     ]
 
 
-def shared_host_keys(script: str) -> list[str]:
-    """Return what a render session misses of keeping its host keys to itself.
+def shared_host_keys(render_sh: str, down_sh: str) -> list[str]:
+    """Return what a render session misses of tunnelling with the pod's checked key.
 
-    e.g. an ssh line with no `UserKnownHostsFile` -> ["the tunnel names it", ...]
+    e.g. a tunnel with `StrictHostKeyChecking=accept-new` -> ["strict checking", ...]
     """
-    lines = _code(script.replace("\\\n", " "))
+    lines = _code(render_sh.replace("\\\n", " "))
     missing = []
-    if not any(ln.strip() == "known_hosts=$(mktemp)" for ln in lines):
-        missing.append("a file of its own")
     tunnel = [ln for ln in lines if ln.strip().startswith("ssh ") and "-L " in ln]
-    if not tunnel or 'UserKnownHostsFile="$known_hosts"' not in tunnel[0]:
-        missing.append("the tunnel names it")
-    removed = [ln for ln in lines if ln.strip().startswith("rm -f ")]
-    if not any('"$known_hosts"' in ln for ln in removed):
+    if not tunnel or "UserKnownHostsFile=.runpod_known_hosts" not in tunnel[0]:
+        missing.append("the tunnel names the pod's file")
+    if not tunnel or "StrictHostKeyChecking=yes" not in tunnel[0]:
+        missing.append("strict checking")
+    if ".runpod_known_hosts" not in removed_on_204(down_sh):
         missing.append("removed at teardown")
     return missing
 
 
 @pytest.mark.spec("pod-image:session:host-keys-are-the-sessions-own")
-def test_a_sessions_host_keys_are_its_own(render_sh: str) -> None:
-    assert shared_host_keys(render_sh) == []
+def test_a_sessions_host_keys_are_its_own(render_sh: str, down_sh: str) -> None:
+    assert shared_host_keys(render_sh, down_sh) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_a_sessions_host_keys_are_its_own")
-def test_the_host_key_check_catches_the_operators_own_file() -> None:
-    script = (
-        "up_out=$(mktemp)\n"
-        'rm -f "$up_out"\n'
+def test_the_host_key_check_catches_a_key_trusted_on_first_sight() -> None:
+    render_sh = (
         "ssh -o StrictHostKeyChecking=accept-new \\\n"
+        '  -o UserKnownHostsFile="$known_hosts" \\\n'
         '  -N -L 8188:localhost:8188 "root@$host" &\n'
     )
-    assert shared_host_keys(script) == [
-        "a file of its own",
-        "the tunnel names it",
+    down_sh = 'if [ "$code" = "204" ]; then\n  rm -f .runpod_pod_id .runpod_pod_image\n'
+    assert shared_host_keys(render_sh, down_sh) == [
+        "the tunnel names the pod's file",
+        "strict checking",
         "removed at teardown",
     ]
 
@@ -1472,3 +1500,300 @@ def test_the_session_reaches_its_tunnel_without_a_proxy(render_sh: str) -> None:
 def test_the_proxy_check_catches_a_curl_that_follows_one() -> None:
     script = 'until curl -sf --max-time 5 "$SERVER/system_stats"; do sleep 5; done\n'
     assert proxied_requests(script) == [script.strip()]
+
+
+def run_functions(
+    script: str, names: tuple[str, ...], stubs: str, cwd: Path
+) -> subprocess.CompletedProcess[str]:
+    """Run the last named function in strict bash, beside the others and the stubs."""
+    program = "\n".join(
+        [
+            "set -euo pipefail",
+            stubs,
+            *(shell_function(script, n) for n in names),
+            names[-1],
+        ]
+    )
+    return subprocess.run(
+        ["bash", "-c", program],
+        cwd=cwd,
+        env={"PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+def volume_refusal(up_sh: str, answer: dict[str, object]) -> str:
+    """Return what `check_volume` refuses with for this answer, or "" if it passes."""
+    stubs = (
+        "API=https://api.test\nRUNPOD_VOLUME_ID=vol-test\nRUNPOD_DATACENTER=EU-RO-1\n"
+        f"api() {{ printf '%s\\n' {shlex.quote(json.dumps(answer))}; }}"
+    )
+    done = run_functions(up_sh, ("refuse", "check_volume"), stubs, REPO)
+    return done.stderr.strip() if done.returncode else ""
+
+
+BROKEN_VOLUME_CHECK = "refuse() { exit 1; }\ncheck_volume() {\n  :\n}\n"
+
+
+def checked_before_create(up_sh: str) -> bool:
+    """Whether `up.sh` checks the volume before its create call."""
+    lines = up_sh.splitlines()
+    checks = [i for i, ln in enumerate(lines) if ln.strip() == "check_volume"]
+    creates = next(i for i, line in enumerate(lines) if 'POST "$API/pods"' in line)
+    return bool(checks) and checks[0] < creates
+
+
+@pytest.mark.spec("pod-image:volume:another-data-centre-is-refused")
+def test_another_data_centre_is_refused(up_sh: str) -> None:
+    refusal = volume_refusal(up_sh, {"dataCenter": "US-KS-2", "size": 100})
+    assert refusal.startswith("refused: ")
+    assert "EU-RO-1" in refusal and "US-KS-2" in refusal
+    assert volume_refusal(up_sh, {"dataCenter": "EU-RO-1", "size": 100}) == ""
+    assert checked_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_another_data_centre_is_refused")
+def test_the_data_centre_check_catches_a_volume_never_read() -> None:
+    assert (
+        volume_refusal(BROKEN_VOLUME_CHECK, {"dataCenter": "US-KS-2", "size": 100})
+        == ""
+    )
+    assert not checked_before_create('out=$(api -X POST "$API/pods")\ncheck_volume\n')
+
+
+@pytest.mark.spec("pod-image:volume:a-volume-too-small-is-refused")
+def test_a_volume_too_small_is_refused(up_sh: str, manifest: Manifest) -> None:
+    need = sum(entry["bytes"] for entry in manifest["entries"])
+    refusal = volume_refusal(up_sh, {"dataCenter": "EU-RO-1", "size": 10})
+    assert refusal.startswith("refused: ")
+    assert "10 GB" in refusal and f"{need} bytes" in refusal
+    assert checked_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_volume_too_small_is_refused")
+def test_the_size_check_catches_a_volume_never_read() -> None:
+    assert (
+        volume_refusal(BROKEN_VOLUME_CHECK, {"dataCenter": "EU-RO-1", "size": 10}) == ""
+    )
+
+
+TELEMETRY_SWITCHES = (
+    "ORT_DISABLE_TELEMETRY",
+    "HF_HUB_DISABLE_TELEMETRY",
+    "DO_NOT_TRACK",
+    "NO_ALBUMENTATIONS_UPDATE",
+)
+
+
+def telemetry_left_on(up_sh: str) -> list[str]:
+    """Return each telemetry switch the create body's `env` does not set to "1"."""
+    env = re.search(r"env: \{(.*?)\}", up_sh, re.S)
+    block = env.group(1) if env else ""
+    return [s for s in TELEMETRY_SWITCHES if f'{s}: "1"' not in block]
+
+
+@pytest.mark.spec("pod-image:telemetry:the-switches-are-off")
+def test_the_pod_is_created_with_telemetry_off(up_sh: str) -> None:
+    assert telemetry_left_on(up_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pod_is_created_with_telemetry_off"
+)
+def test_the_telemetry_check_catches_a_switch_left_out() -> None:
+    body = 'env: { PUBLIC_KEY: $pubkey,\n  ORT_DISABLE_TELEMETRY: "1" } }\n'
+    assert telemetry_left_on(body) == [
+        "HF_HUB_DISABLE_TELEMETRY",
+        "DO_NOT_TRACK",
+        "NO_ALBUMENTATIONS_UPDATE",
+    ]
+
+
+# A throwaway Ed25519 key made for these tests, and its fingerprint and another's.
+HOST_KEY = (
+    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0fZgRnEY7GjNNDufoBjTKT9gPx9sN+vZmUWHVzN/Gn"
+)
+HOST_KEY_FINGERPRINT = "SHA256:rtGEsOEKPlWyEuNlB72E8dAPjGTYjbj3Dkf/rRhsz0U"
+OTHER_FINGERPRINT = "SHA256:NNz7DVAOPM3aU8pc65cmp696rualwnvB7DaCYclXg64"
+HOST_KEY_FUNCTIONS = (
+    "refuse_and_tear_down",
+    "printed_fingerprint",
+    "scanned_key",
+    "verify_host_key",
+)
+TORN_DOWN = "torn down: ./infra/down.sh"
+RE_RUN = "the pod is torn down, and bash infra/up.sh boots a fresh one\n"
+
+
+def check_host_key(
+    up_sh: str,
+    printed: str | None,
+    cwd: Path,
+    *,
+    answers: bool = True,
+    torn: bool = True,
+) -> tuple[subprocess.CompletedProcess[str], str | None]:
+    """Run `verify_host_key` against a pod log and a scan that answers `HOST_KEY`.
+
+    Return the run and the known-hosts file it left, if any. `printed` is the
+    fingerprint the log carries; None is a log that never prints one. With
+    `answers` False, the scan never answers; with `torn` False, `down.sh` fails.
+    """
+    scan = f'echo "[$host]:$port {HOST_KEY}"' if answers else ":"
+    lines = ["step: sshd"] + ([f"isekai host key: {printed}"] if printed else [])
+    events = "".join(
+        f"data: {json.dumps({'ts': '', 'source': 'container', 'line': ln})}\n"
+        for ln in lines
+    )
+    stubs = "\n".join(
+        [
+            "API=https://api.test pod_id=pod-test since=2026-09-28T00:00:00Z",
+            "host=203.0.113.7 port=40022",
+            f"api() {{ printf '%s' {shlex.quote(events)}; }}",
+            f"ssh-keyscan() {{ {scan}; }}",
+            "sleep() { SECONDS=$((SECONDS + $1)); }",
+            'bash() { echo "torn down: $*"; }'
+            if torn
+            else 'bash() { echo "delete failed: $*"; return 1; }',
+        ]
+    )
+    done = run_functions(up_sh, HOST_KEY_FUNCTIONS, stubs, cwd)
+    kept = cwd / ".runpod_known_hosts"
+    return done, kept.read_text() if kept.exists() else None
+
+
+def unchecked_connections(up_sh: str) -> list[str]:
+    """Return each connection line `up.sh` prints that does not use the checked key."""
+    lines = up_sh.splitlines()
+    checked = next((i for i, ln in enumerate(lines) if ln == "verify_host_key"), None)
+    return [
+        ln.strip()
+        for i, ln in enumerate(lines)
+        if ln.startswith(('echo "  SSH:', 'echo "  Tunnel:'))
+        and (
+            checked is None
+            or i < checked
+            or "-o UserKnownHostsFile=.runpod_known_hosts" not in ln
+            or "-o StrictHostKeyChecking=yes" not in ln
+        )
+    ]
+
+
+BROKEN_HOST_KEY_CHECK = (
+    "refuse_and_tear_down() { exit 1; }\n"
+    "verify_host_key() {\n"
+    '  echo "[$host]:$port $(ssh-keyscan)" > .runpod_known_hosts\n'
+    "}\n"
+)
+
+
+@pytest.mark.spec("pod-image:host-key:a-matching-key-is-kept")
+def test_a_matching_key_is_kept(
+    up_sh: str, render_sh: str, down_sh: str, tmp_path: Path
+) -> None:
+    done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path)
+    assert done.returncode == 0, done.stderr
+    assert kept == f"[203.0.113.7]:40022 {HOST_KEY}\n"
+    assert f"Host key verified: {HOST_KEY_FINGERPRINT}" in done.stdout
+    assert unchecked_connections(up_sh) == []
+    assert "Tunnel:" in up_sh and "SSH:" in up_sh
+    assert shared_host_keys(render_sh, down_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_matching_key_is_kept")
+def test_the_kept_key_check_catches_a_connection_before_the_check() -> None:
+    up_sh = (
+        'echo "  SSH:    ssh root@$host -p $port"\n'
+        "verify_host_key\n"
+        'echo "  Tunnel: ssh -o UserKnownHostsFile=.runpod_known_hosts'
+        ' -o StrictHostKeyChecking=yes -N root@$host -p $port"\n'
+    )
+    assert unchecked_connections(up_sh) == ['echo "  SSH:    ssh root@$host -p $port"']
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+def test_a_mismatch_is_refused(up_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, OTHER_FINGERPRINT, tmp_path)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.startswith(
+        f"refused: the pod's host key {HOST_KEY_FINGERPRINT} does not match"
+        f" the fingerprint it printed, {OTHER_FINGERPRINT}\n{TORN_DOWN}\n"
+    )
+    assert done.stderr.endswith(RE_RUN)
+    assert "pod-test" not in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_mismatch_is_refused")
+def test_the_mismatch_check_catches_a_key_kept_unchecked(tmp_path: Path) -> None:
+    done, kept = check_host_key(BROKEN_HOST_KEY_CHECK, OTHER_FINGERPRINT, tmp_path)
+    assert done.returncode == 0
+    assert kept is not None
+    assert TORN_DOWN not in done.stderr
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+def test_a_scan_no_one_answers_is_refused_as_such(up_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path, answers=False)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.startswith(
+        f"refused: the pod's SSH answered no host-key scan within 180 s\n{TORN_DOWN}\n"
+    )
+    assert "does not match" not in done.stderr
+    assert done.stderr.endswith(RE_RUN)
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+@pytest.mark.parametrize(
+    ("printed", "answers"),
+    [(OTHER_FINGERPRINT, True), (HOST_KEY_FINGERPRINT, False)],
+    ids=["mismatch", "no-scan"],
+)
+def test_a_failed_teardown_claims_none_and_names_no_re_run(
+    up_sh: str, tmp_path: Path, printed: str, answers: bool
+) -> None:
+    done, kept = check_host_key(up_sh, printed, tmp_path, answers=answers, torn=False)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.endswith("delete failed: ./infra/down.sh\n")
+    assert "torn down" not in done.stderr
+    assert "bash infra/up.sh" not in done.stderr
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_scan_no_one_answers_is_refused_as_such"
+)
+def test_the_scan_check_catches_a_key_kept_with_none_scanned(tmp_path: Path) -> None:
+    done, kept = check_host_key(
+        BROKEN_HOST_KEY_CHECK, HOST_KEY_FINGERPRINT, tmp_path, answers=False
+    )
+    assert done.returncode == 0
+    assert kept is not None
+    assert TORN_DOWN not in done.stderr
+
+
+@pytest.mark.spec("pod-image:host-key:no-fingerprint-is-refused")
+def test_no_fingerprint_is_refused(up_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, None, tmp_path)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.startswith(
+        "refused: the pod printed no host-key fingerprint within 60 s;"
+    )
+    assert "stream-pod-logs" in done.stderr
+    assert TORN_DOWN in done.stderr
+    assert "pod-test" not in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_fingerprint_is_refused")
+def test_the_fingerprint_check_catches_a_key_kept_with_none_printed(
+    tmp_path: Path,
+) -> None:
+    done, kept = check_host_key(BROKEN_HOST_KEY_CHECK, None, tmp_path)
+    assert done.returncode == 0
+    assert kept is not None
+    assert TORN_DOWN not in done.stderr

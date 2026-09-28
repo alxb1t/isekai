@@ -298,8 +298,6 @@ request.** A request with no `Origin` header is let through — a known, low ris
 
 ## Infrastructure
 
-*May change with the move to serverless rendering, which is being researched.*
-
 ### D26 · Renders run on a rented GPU
 
 **A RunPod pod runs this project's own ComfyUI image, with PyTorch built for CUDA 12.8.**
@@ -313,12 +311,14 @@ request.** A request with no `Origin` header is let through — a known, low ris
 **The volume holds exactly the manifest. A pod refuses to start when what is mounted is below the
 capacity floor** — the floor is `start.sh`'s. A network volume reports its storage cluster's capacity,
 far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
-quota, and a 20 GB volume passes.
+quota, and a 20 GB volume passes. **A pod runs in its volume's data centre**, and `up.sh` checks that, and
+that the volume is at least the manifest's size, before the create.
 
 - **Why:** re-downloading every session costs more than the idle rent, and a volume filled only from the
   manifest is clean by construction. A missing mount would fall through to the container disk: it would
-  render, bill, and lose everything at teardown.
-- **Made by:** `0009`, `0011`, `0033`.
+  render, bill, and lose everything at teardown. A volume cannot move between data centres, so a pod
+  elsewhere boots without its models.
+- **Made by:** `0009`, `0011`, `0033`, `0041`.
 
 ### D28 · The image carries code, the volume carries weights
 
@@ -330,3 +330,21 @@ uv are named by digest, and its Python environment is the locked uv project unde
   no models and no way in. A moving tag is not a pin: every build under one name was a different image,
   and nothing recorded which one a render ran on. Moving the pin is a commit.
 - **Made by:** `0010`, `0011`, `0033`.
+
+### D34 · Renders stay on a pod
+
+**A rented pod renders, reached through an SSH tunnel; serverless endpoints are declined.**
+
+- **Why:** serverless adds places a photograph can linger — the provider's job store, boot snapshots whose
+  contents are undocumented, a gateway that decrypts in transit. The pod has one tunnel and nothing
+  between.
+- **Made by:** `0041`.
+
+### D35 · The pod's operator is a trust boundary, accepted knowingly
+
+**Whoever runs the machine can read its memory while a render runs, so the photograph is not encrypted:
+the key would sit in the same memory.**
+
+- **Why:** no program can hide memory from its host, and the provider offers no confidential computing.
+  Only rendering locally removes the boundary.
+- **Made by:** `0041`.

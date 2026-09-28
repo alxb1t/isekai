@@ -138,7 +138,8 @@ pod named `isekai`. Report what it returned.
   `tail -15 .data/<batch>/log.txt | grep -v -e 'root@' -e '[Pp]od [a-z0-9]\{12,\}'`, and report them. A
   `ceiling` refusal keeps the renders so far; step 4 again renders only the rest, and needs a new go.
 - **`down.sh` could not confirm** (its message names the RunPod MCP): once `list-pods` shows the pod gone, run
-  `rm .runpod_pod_id .runpod_pod_image`. A pod still listed: tell the operator at once — it is billing.
+  `rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts`. A pod still listed: tell the operator at once — it
+  is billing.
 
 ## 5 — The comparison page
 

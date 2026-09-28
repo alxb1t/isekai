@@ -25,14 +25,14 @@ code=${out##*$'\n'}
 resp=${out%$'\n'*}
 
 if [ "$code" = "204" ]; then
-  rm -f .runpod_pod_id .runpod_pod_image
+  rm -f .runpod_pod_id .runpod_pod_image .runpod_known_hosts
   echo "Pod terminated. Billing stopped. (Network volume kept.)"
 elif [ "$code" = "404" ]; then
   # A 404 is also what a wrong key gets, so it is never read as gone: a false
   # "gone" leaves a pod billing (0034 design D3).
   echo "The API does not know pod $pod_id: it may be gone, or the key may be wrong." >&2
   echo "Confirm it is gone with the RunPod MCP's get-pod; the record files are kept" >&2
-  echo "until then. Once it is gone: rm .runpod_pod_id .runpod_pod_image" >&2
+  echo "until then. Once it is gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
   exit 1
 else
   echo "Delete returned HTTP $code — check the console to be sure the pod is gone." >&2
@@ -40,6 +40,6 @@ else
     | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
       >&2 2>/dev/null \
     || echo "  $resp" >&2
-  echo "Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image" >&2
+  echo "Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
   exit 1
 fi

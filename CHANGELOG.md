@@ -9,6 +9,20 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-28 · 0041-the-right-machine
+
+### Security
+
+- A pod is created only beside a models volume large enough for the manifest, and with its libraries' telemetry
+  and update checks off, so the machine rendering a likeness reports to no one (0041 D3, D4).
+- `up.sh` checks a pod's host key against the fingerprint the pod printed, and keeps it for the strict tunnel; a
+  mismatch, or no fingerprint in time, refuses and tears the pod down, so only the pod gets a photograph
+  (0041 D1, D2).
+- The privacy principles enter `docs/principles.md`, and `docs/decisions.md` records that renders stay on a pod
+  and that the pod's operator is a trust boundary, accepted knowingly (0041 D5).
+- One session rendered both flows through the checked host key and the strict tunnel, on a pod created with
+  its telemetry switches set (0041 D6).
+
 ## [0.28.0] - 2026-09-28 · 0040-the-pod-image
 
 ### Security
