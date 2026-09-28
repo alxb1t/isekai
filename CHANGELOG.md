@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **One metered session proved the boundaries end to end**: with a dead `http_proxy` exported, both flows rendered
   on a real pod with no refusal, and the RunPod MCP confirmed no pod left (0037 design D10).
 
+### Fixed
+
+- **The review surface's damage refusals name a fix that works.** A damaged approved sheet names the file to
+  restore, since no command rewrites one and `review` refuses the same damage; every other command names
+  `--runs <root>` when the surface serves a runs root that is not the default (0037 design D6).
+
 ## [0.25.1] - 2026-09-27
 
 ### Changed

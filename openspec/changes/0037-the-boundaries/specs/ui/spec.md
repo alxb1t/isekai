@@ -3,9 +3,10 @@
 ### Requirement: A damaged run file or a malformed draft update is refused, never failed
 
 The system SHALL answer a request that reads a run file lacking a key it needs, or holding one in the wrong shape,
-with a refusal naming the file and the command that rewrites it. It SHALL refuse a draft update whose fields are not
-an object of lists of strings, naming the field, and SHALL NOT store a value it did not accept. It SHALL NOT answer
-either with a server error.
+with a refusal naming the file and its fix: the command that rewrites it, naming the runs root the surface serves
+when that is not the default, or -- for an approved sheet, which no command rewrites -- the file to restore. It SHALL
+refuse a draft update whose fields are not an object of lists of strings, naming the field, and SHALL NOT store a value
+it did not accept. It SHALL NOT answer either with a server error.
 
 The stages already refuse the same damage by name. A server error names nothing and offers no remedy, and a string
 saved as its letters corrupts a draft without a word.
@@ -15,7 +16,8 @@ saved as its letters corrupts a draft without a word.
 - **Layers:** unit
 - **WHEN** a draft, an approved sheet, a caption or a tag list the surface reads lacks a key it needs or holds it in
   the wrong shape
-- **THEN** the request is refused naming the file and the command that rewrites it
+- **THEN** the request is refused naming the file and the command that rewrites it under the surface's runs root, or
+  for an approved sheet the file to restore
 - **AND** the surface keeps serving
 
 #### Scenario: a malformed draft update is refused naming the field

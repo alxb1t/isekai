@@ -54,6 +54,7 @@ from isekai.foundation.artifacts import (
     require,
 )
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import RUNS_ROOT
 from isekai.interface.ui.batch import Batch, Input
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -256,11 +257,14 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         state = batch.state(held)
         # By state, never by which file happens to exist: a stale draft below
         # the approval must not stand in for it (`0030` design D4).
-        remedy = _remedy(batch, held, "review")
         fields: dict[str, list[str]] = {}
         if state == "approved" and approved is not None:
+            # No command rewrites an approved sheet: `review` copies it and
+            # refuses the same damage, so only a hand repairs it.
+            remedy = f"restore it in {approved} by hand, then reload the page"
             fields = _fields(approved, read(approved, APPROVED_FILE), remedy)
         elif draft is not None:
+            remedy = _remedy(batch, held, "review")
             fields = _fields(draft, read(draft, DRAFT_FILE), remedy)
         budget = token_budget(fields, batch.flow.schema, batch.flow)
         caption = batch.caption_path(held)
@@ -477,9 +481,14 @@ def _remedy(batch: Batch, held: Input, verb: str) -> str:
     """Return the remedy naming the command that rewrites `verb`'s file for `held`.
 
     e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
+
+    The run's own root is named whenever it is not the default, or the pasted
+    command would look under `.data/runs` for a run served from another root.
     """
+    root = held.run.path.parent
+    runs = "" if root.resolve() == RUNS_ROOT.resolve() else f" --runs {root}"
     return (
-        f"rewrite it with `python -m isekai {verb} --flow {batch.flow.id} "
+        f"rewrite it with `python -m isekai {verb} --flow {batch.flow.id}{runs} "
         f"--new-version {held.run.id}`"
     )
 

@@ -970,7 +970,9 @@ def _drop(key: str) -> Callable[[dict[str, Any]], None]:
             "`hair_colour`",
             "review",
         ),
-        (_approved, _set("fields", ["brown hair"]), "`fields`", "review"),
+        # No command rewrites an approved sheet -- `review` copies it and
+        # refuses the same damage -- so the fix is the file to restore.
+        (_approved, _set("fields", ["brown hair"]), "`fields`", None),
         (_latest(CAPTIONS), _drop("prose"), "`prose`", "caption"),
         (
             _latest(WD14),
@@ -997,7 +999,7 @@ def test_a_damaged_file_is_refused_by_name(
     find: Callable[[TestClient, Run], Path],
     change: Callable[[dict[str, Any]], None],
     named: str,
-    verb: str,
+    verb: str | None,
 ) -> None:
     damaged = find(client, made)
     _damage(damaged, change)
@@ -1007,8 +1009,36 @@ def test_a_damaged_file_is_refused_by_name(
     assert response.status_code == 409
     refusal = response.json()["refusal"]
     assert damaged.name in refusal and named in refusal
-    assert f"python -m isekai {verb} --flow {FLOW} --new-version {made.id}" in refusal
+    if verb is None:
+        assert f"restore it in {damaged}" in refusal
+        assert "python -m isekai" not in refusal
+    else:
+        # Parsed, not matched: the fixture's runs root is not the default, so
+        # the command works when pasted only if it names that root.
+        command = refusal.split("`python -m isekai ")[1].split("`")[0]
+        parsed = build_parser().parse_args(command.split())
+        assert (parsed.verb, parsed.flows, parsed.new_version, parsed.photos) == (
+            verb,
+            [FLOW],
+            True,
+            [made.id],
+        )
+        assert parsed.runs == made.path.parent
     assert client.get("/api/batch").status_code == 200
+
+
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
+def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app_module, "RUNS_ROOT", made.path.parent)
+    _damage(_latest(CAPTIONS)(client, made), _drop("prose"))
+
+    refusal = client.get(f"/api/inputs/{made.id}").json()["refusal"]
+
+    assert f"`python -m isekai caption --flow {FLOW} --new-version {made.id}`" in (
+        refusal
+    )
 
 
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
