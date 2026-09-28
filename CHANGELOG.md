@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-28 · 0040-the-pod-image
+
 ### Security
 
 - The image ships no SSH host key: each boot makes an Ed25519 key, serves with it alone and prints its fingerprint.
