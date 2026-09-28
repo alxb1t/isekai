@@ -23,7 +23,7 @@ import io
 import json
 import random
 import threading
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -911,3 +911,111 @@ def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
 
     assert set(body) == {"fields"}
     assert "glasses" not in json.dumps(body)
+
+
+# --- damage is refused by name ------------------------------------------------
+
+
+def _latest(run: Run, stage: str, pattern: str = "*.json") -> Path:
+    """Return the highest file matching `pattern` in `stage`'s directory."""
+    return sorted(run.directory(FLOW, stage).glob(pattern))[-1]
+
+
+def _damage(path: Path, change: Callable[[dict[str, Any]], None]) -> None:
+    """Rewrite the JSON file at `path` with `change` applied."""
+    body = json.loads(path.read_text())
+    change(body)
+    path.write_text(json.dumps(body))
+
+
+def _approved(client: TestClient, run: Run) -> Path:
+    assert client.post(f"/api/inputs/{run.id}/approve").status_code == 200
+    return _latest(run, REVIEW, "*.approved.json")
+
+
+def _hosted(client: TestClient, run: Run) -> Path:
+    tag_hosted(run, FLOW, FakeTagger(tags=("brown hair",)))
+    return _latest(run, TAGS)
+
+
+def _set(key: str, value: object) -> Callable[[dict[str, Any]], None]:
+    return lambda body: body.__setitem__(key, value)
+
+
+def _drop(key: str) -> Callable[[dict[str, Any]], None]:
+    return lambda body: body.pop(key)
+
+
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
+@pytest.mark.parametrize(
+    ("find", "change", "named", "verb"),
+    [
+        (lambda _, run: _latest(run, REVIEW), _drop("fields"), "`fields`", "review"),
+        (
+            lambda _, run: _latest(run, REVIEW),
+            lambda body: body["fields"].__setitem__("hair_colour", "brown hair"),
+            "`hair_colour`",
+            "review",
+        ),
+        (_approved, _set("fields", ["brown hair"]), "`fields`", "review"),
+        (lambda _, run: _latest(run, CAPTIONS), _drop("prose"), "`prose`", "caption"),
+        (
+            lambda _, run: _latest(run, WD14),
+            _set("tags", [{"tag": "1girl"}]),
+            "tag entry 0",
+            "tag",
+        ),
+        (_hosted, _set("tags", "brown hair"), "`tags`", "tag"),
+        (_hosted, _set("tags", ["brown hair", 3]), "`tags`", "tag"),
+    ],
+    ids=[
+        "draft",
+        "draft-field",
+        "approved",
+        "caption",
+        "wd14",
+        "hosted-string",
+        "hosted-entry",
+    ],
+)
+def test_a_damaged_file_is_refused_by_name(
+    client: TestClient,
+    made: Run,
+    find: Callable[[TestClient, Run], Path],
+    change: Callable[[dict[str, Any]], None],
+    named: str,
+    verb: str,
+) -> None:
+    damaged = find(client, made)
+    _damage(damaged, change)
+
+    response = client.get(f"/api/inputs/{made.id}")
+
+    assert response.status_code == 409
+    refusal = response.json()["refusal"]
+    assert damaged.name in refusal and named in refusal
+    assert f"python -m isekai {verb} --flow {FLOW} --new-version {made.id}" in refusal
+    assert client.get("/api/batch").status_code == 200
+
+
+@pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
+@pytest.mark.parametrize(
+    ("fields", "named"),
+    [
+        ({"hair_colour": "brown hair"}, "hair_colour"),
+        ({"hair_colour": ["brown hair", 3]}, "hair_colour"),
+        ({"hair_colour": None}, "hair_colour"),
+        ("brown hair", "`fields`"),
+    ],
+    ids=["a-string", "a-number-inside", "null", "not-an-object"],
+)
+def test_a_malformed_update_is_refused_naming_the_field(
+    client: TestClient, made: Run, fields: object, named: str
+) -> None:
+    before = snapshot(made.path)
+
+    response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
+
+    assert response.status_code == 409
+    assert named in response.json()["refusal"]
+    assert snapshot(made.path) == before

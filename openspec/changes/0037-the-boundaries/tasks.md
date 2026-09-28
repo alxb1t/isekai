@@ -6,7 +6,7 @@ metered session proves them together, per [design](design.md).
 ## Progress
 
 - [x] 1 — The transport
-- [ ] 2 — The review surface
+- [x] 2 — The review surface
 - [ ] 3 — The run frame
 - [ ] 4 — The render session
 - [ ] 5 — 🛑 **HUMAN · METERED** — one render session with a dead `http_proxy` exported
@@ -35,9 +35,9 @@ Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) nam
 
 ## 2 — The review surface
 
-- [ ] 2.1 Check every read in `read_input`, `_wd14` and `_tags` in `isekai/interface/ui/app.py` and refuse with the remedies [D6](design.md#d6) lists; add `test_a_damaged_file_is_refused_by_name` (`ui:damage:a-damaged-file-is-refused-by-name`) to `tests/test_ui_api.py`, over the draft, the approved sheet, the caption and both tag lists.
+- [x] 2.1 Check every read in `read_input`, `_wd14` and `_tags` in `isekai/interface/ui/app.py` and refuse with the remedies [D6](design.md#d6) lists; add `test_a_damaged_file_is_refused_by_name` (`ui:damage:a-damaged-file-is-refused-by-name`) to `tests/test_ui_api.py`, over the draft, the approved sheet, the caption and both tag lists.
   Verify: `grep -cF 'read(approved, APPROVED_FILE)["fields"]' isekai/interface/ui/app.py` prints `0`, and `grep -c '^def test_a_damaged_file_is_refused_by_name' tests/test_ui_api.py` prints `1`.
-- [ ] 2.2 Check `put_draft`'s body before the lock, per [D6](design.md#d6); add `test_a_malformed_update_is_refused_naming_the_field` (`ui:damage:a-malformed-update-is-refused-naming-the-field`) to `tests/test_ui_api.py`, with a tag list sent as a string among its cases.
+- [x] 2.2 Check `put_draft`'s body before the lock, per [D6](design.md#d6); add `test_a_malformed_update_is_refused_naming_the_field` (`ui:damage:a-malformed-update-is-refused-naming-the-field`) to `tests/test_ui_api.py`, with a tag list sent as a string among its cases.
   Verify: `grep -cF '[str(tag) for tag in tags]' isekai/interface/ui/app.py` prints `0`, and `grep -c '^def test_a_malformed_update_is_refused_naming_the_field' tests/test_ui_api.py` prints `1`.
 
 ## 3 — The run frame

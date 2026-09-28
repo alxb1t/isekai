@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   string is refused permanent (0037 design D1–D3).
 - **An upload's boundary is random and in no part, its names are escaped, and an endpoint's error text keeps
   printable characters only** (0037 design D4, D5).
+- **The review surface refuses a damaged draft, approved sheet, caption or tag list by name**, with the command
+  that rewrites it, rather than failing with a server error; a draft update whose fields are not lists of strings
+  is refused naming the field, and nothing is saved (0037 design D6).
 
 ## [0.25.1] - 2026-09-27
 

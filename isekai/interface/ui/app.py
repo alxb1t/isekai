@@ -37,7 +37,7 @@ the same repository, so widening it later is a find-and-replace. The paths are
 import threading
 from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
@@ -51,6 +51,7 @@ from isekai.foundation.artifacts import (
     TAGS_FILE,
     WD14_FILE,
     read,
+    require,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.interface.ui.batch import Batch, Input
@@ -255,19 +256,19 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         state = batch.state(held)
         # By state, never by which file happens to exist: a stale draft below
         # the approval must not stand in for it (`0030` design D4).
-        held_fields: Mapping[str, list[str]] = {}
+        remedy = _remedy(batch, held, "review")
+        fields: dict[str, list[str]] = {}
         if state == "approved" and approved is not None:
-            held_fields = read(approved, APPROVED_FILE)["fields"]
+            fields = _fields(approved, read(approved, APPROVED_FILE), remedy)
         elif draft is not None:
-            held_fields = read(draft, DRAFT_FILE)["fields"]
-        fields = {name: list(tags) for name, tags in held_fields.items()}
+            fields = _fields(draft, read(draft, DRAFT_FILE), remedy)
         budget = token_budget(fields, batch.flow.schema, batch.flow)
         caption = batch.caption_path(held)
         return {
             "id": held.id,
             "width": held.width,
             "height": held.height,
-            "caption": str(read(caption, CAPTION_FILE)["prose"]) if caption else None,
+            "caption": _prose(batch, held, caption) if caption else None,
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
             # never spells a command (0032 design D4).
@@ -323,10 +324,8 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         fails it.
         """
         held = batch.find(identifier)
-        fields = {
-            name: [str(tag) for tag in tags]
-            for name, tags in dict(payload.get("fields", {})).items()
-        }
+        # Before the lock: a malformed body refuses without waiting on a write.
+        fields = _update(payload)
         with _DRAFT_UPDATE:
             if batch.state(held) == "approved":
                 raise Refusal(
@@ -397,11 +396,25 @@ def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     path = batch.wd14_path(held)
     if path is None:
         return None
-    found = read(path, WD14_FILE)["tags"]
-    return [
-        {"tag": str(one["tag"]), "confidence": float(one["confidence"])}
-        for one in found
-    ]
+    found = read(path, WD14_FILE)
+    remedy = _remedy(batch, held, "tag")
+    require(path, found, "tags", list, remedy)
+    scored: list[dict[str, Any]] = []
+    for index, one in enumerate(found["tags"]):
+        tag = one.get("tag") if isinstance(one, dict) else None
+        confidence = one.get("confidence") if isinstance(one, dict) else None
+        # `bool` is an `int`, and a flag is no confidence.
+        if (
+            not isinstance(tag, str)
+            or isinstance(confidence, bool)
+            or not isinstance(confidence, int | float)
+        ):
+            raise Refusal(
+                f"{path.name}: its tag entry {index} is not a tag and a confidence; "
+                f"{remedy}"
+            )
+        scored.append({"tag": tag, "confidence": float(confidence)})
+    return scored
 
 
 def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
@@ -432,8 +445,13 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     path = batch.tags_path(held)
     if path is None:
         return None
-    listed = read(path, TAGS_FILE)["tags"]
-    # One `str()` and one lookup per tag. `count()` normalises the spelling and
+    found = read(path, TAGS_FILE)
+    remedy = _remedy(batch, held, "tag")
+    require(path, found, "tags", list, remedy)
+    listed = found["tags"]
+    if not _is_tag_list(listed):
+        raise Refusal(f"{path.name}: its `tags` are not all strings; {remedy}")
+    # One lookup per tag. `count()` normalises the spelling and
     # hits the same mapping `__contains__` does, so asking both questions
     # separately would normalise a forty-tag list eighty times for one answer --
     # and they are not the same question: a tag the vocabulary carries with a
@@ -450,9 +468,60 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     # rather than spread across a parallel set and a two-clause condition.
     return [
         {"tag": name, "posts": batch.vocabulary.count(name)}
-        for name in dict.fromkeys(str(tag) for tag in listed)
+        for name in dict.fromkeys(listed)
         if name in batch.vocabulary
     ]
+
+
+def _remedy(batch: Batch, held: Input, verb: str) -> str:
+    """Return the remedy naming the command that rewrites `verb`'s file for `held`.
+
+    e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
+    """
+    return (
+        f"rewrite it with `python -m isekai {verb} --flow {batch.flow.id} "
+        f"--new-version {held.run.id}`"
+    )
+
+
+def _is_tag_list(value: object) -> TypeGuard[list[str]]:
+    """Return whether `value` is a list of tag strings."""
+    return isinstance(value, list) and all(isinstance(tag, str) for tag in value)
+
+
+def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[str]]:
+    """Return a sheet's fields, refusing by name one that is not a list of tags."""
+    require(path, body, "fields", dict, remedy)
+    fields: dict[str, list[str]] = {}
+    for name, tags in body["fields"].items():
+        if not _is_tag_list(tags):
+            raise Refusal(f"{path.name}: its `{name}` is not a list of tags; {remedy}")
+        fields[name] = list(tags)
+    return fields
+
+
+def _prose(batch: Batch, held: Input, path: Path) -> str:
+    """Return a caption's prose, refusing by name a caption that has none."""
+    body = read(path, CAPTION_FILE)
+    require(path, body, "prose", str, _remedy(batch, held, "caption"))
+    return body["prose"]
+
+
+def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
+    """Return an update's fields, refusing one that is not an object of tag lists."""
+    fields = payload.get("fields", {})
+    if not isinstance(fields, dict):
+        raise Refusal(
+            "the update's `fields` is not an object of tag lists; send each field "
+            "as a list of strings -- nothing was saved"
+        )
+    for name, tags in fields.items():
+        if not _is_tag_list(tags):
+            raise Refusal(
+                f"the update's {name} is not a list of tags; send each field as a "
+                "list of strings -- nothing was saved"
+            )
+    return {name: list(tags) for name, tags in fields.items()}
 
 
 def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
