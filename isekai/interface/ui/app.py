@@ -401,8 +401,8 @@ def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     require(path, found, "tags", list, remedy)
     scored: list[dict[str, Any]] = []
     for index, one in enumerate(found["tags"]):
-        tag = one.get("tag") if isinstance(one, dict) else None
-        confidence = one.get("confidence") if isinstance(one, dict) else None
+        entry = one if isinstance(one, dict) else {}
+        tag, confidence = entry.get("tag"), entry.get("confidence")
         # `bool` is an `int`, and a flag is no confidence.
         if (
             not isinstance(tag, str)
@@ -445,12 +445,12 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     path = batch.tags_path(held)
     if path is None:
         return None
-    found = read(path, TAGS_FILE)
-    remedy = _remedy(batch, held, "tag")
-    require(path, found, "tags", list, remedy)
-    listed = found["tags"]
+    listed = read(path, TAGS_FILE).get("tags")
     if not _is_tag_list(listed):
-        raise Refusal(f"{path.name}: its `tags` are not all strings; {remedy}")
+        raise Refusal(
+            f"{path.name}: its `tags` is not a list of strings; "
+            f"{_remedy(batch, held, 'tag')}"
+        )
     # One lookup per tag. `count()` normalises the spelling and
     # hits the same mapping `__contains__` does, so asking both questions
     # separately would normalise a forty-tag list eighty times for one answer --
@@ -489,15 +489,17 @@ def _is_tag_list(value: object) -> TypeGuard[list[str]]:
     return isinstance(value, list) and all(isinstance(tag, str) for tag in value)
 
 
+def _untagged(fields: Mapping[str, object]) -> str | None:
+    """Return the first field whose value is not a list of tags, or None."""
+    return next((name for name, tags in fields.items() if not _is_tag_list(tags)), None)
+
+
 def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[str]]:
     """Return a sheet's fields, refusing by name one that is not a list of tags."""
     require(path, body, "fields", dict, remedy)
-    fields: dict[str, list[str]] = {}
-    for name, tags in body["fields"].items():
-        if not _is_tag_list(tags):
-            raise Refusal(f"{path.name}: its `{name}` is not a list of tags; {remedy}")
-        fields[name] = list(tags)
-    return fields
+    if (name := _untagged(body["fields"])) is not None:
+        raise Refusal(f"{path.name}: its `{name}` is not a list of tags; {remedy}")
+    return dict(body["fields"])
 
 
 def _prose(batch: Batch, held: Input, path: Path) -> str:
@@ -510,18 +512,12 @@ def _prose(batch: Batch, held: Input, path: Path) -> str:
 def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
     """Return an update's fields, refusing one that is not an object of tag lists."""
     fields = payload.get("fields", {})
+    fix = "send each field as a list of strings -- nothing was saved"
     if not isinstance(fields, dict):
-        raise Refusal(
-            "the update's `fields` is not an object of tag lists; send each field "
-            "as a list of strings -- nothing was saved"
-        )
-    for name, tags in fields.items():
-        if not _is_tag_list(tags):
-            raise Refusal(
-                f"the update's {name} is not a list of tags; send each field as a "
-                "list of strings -- nothing was saved"
-            )
-    return {name: list(tags) for name, tags in fields.items()}
+        raise Refusal(f"the update's `fields` is not an object of tag lists; {fix}")
+    if (name := _untagged(fields)) is not None:
+        raise Refusal(f"the update's {name} is not a list of tags; {fix}")
+    return fields
 
 
 def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:

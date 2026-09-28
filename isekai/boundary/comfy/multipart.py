@@ -25,28 +25,36 @@ def build_multipart(
     """Build a multipart/form-data body by hand. Returns (body_bytes, content_type)."""
     parts = [
         (
-            f'Content-Disposition: form-data; name="{_escaped(name)}"\r\n\r\n',
+            f'Content-Disposition: form-data; name="{_escaped(name)}"\r\n\r\n'.encode(),
             value.encode(),
         )
         for name, value in fields.items()
     ] + [
         (
-            f'Content-Disposition: form-data; name="{_escaped(name)}"; '
-            f'filename="{_escaped(filename)}"\r\n'
-            f"Content-Type: {ctype}\r\n\r\n",
+            (
+                f'Content-Disposition: form-data; name="{_escaped(name)}"; '
+                f'filename="{_escaped(filename)}"\r\n'
+                f"Content-Type: {ctype}\r\n\r\n"
+            ).encode(),
             data,
         )
         for name, (filename, data, ctype) in files.items()
     ]
 
-    # A boundary inside a part would end that part early.
+    # A boundary inside a part would end that part early. A head ends in CRLF,
+    # which `_draw`'s never holds, so none can straddle a head and its data.
     boundary = draw()
-    while any(boundary.encode() in head.encode() + data for head, data in parts):
+    while any(
+        boundary.encode() in head or boundary.encode() in data for head, data in parts
+    ):
         boundary = draw()
 
     body = bytearray()
     for head, data in parts:
-        body += f"--{boundary}\r\n{head}".encode() + data + b"\r\n"
+        body += f"--{boundary}\r\n".encode()
+        body += head
+        body += data
+        body += b"\r\n"
     body += f"--{boundary}--\r\n".encode()
 
     return bytes(body), f"multipart/form-data; boundary={boundary}"

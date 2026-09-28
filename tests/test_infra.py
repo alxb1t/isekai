@@ -1143,23 +1143,17 @@ def outliving_watchdog(script: str) -> list[str]:
     e.g. a watchdog that sleeps the whole ceiling once -> ["polls its session", ...]
     """
     lines = _code(script)
-    missing = []
+    end = len(lines)
     loop = next(
-        (i for i, ln in enumerate(lines) if ln.strip().startswith("while ")), None
+        (i for i, ln in enumerate(lines) if ln.strip().startswith("while ")), end
     )
-    done = next(
-        (i for i in range(loop or 0, len(lines)) if lines[i].strip() == "done"), None
-    )
-    if loop is None or done is None:
+    done = next((i for i in range(loop, end) if lines[i].strip() == "done"), end)
+    body = lines[loop:done]
+    missing = []
+    if not (any(ALIVE in ln for ln in body) and any("sleep 5" in ln for ln in body)):
         missing.append("polls its session")
-    else:
-        body = lines[loop:done]
-        if not any(ALIVE in ln for ln in body) or not any(
-            "sleep 5" in ln for ln in body
-        ):
-            missing.append("polls its session")
     signal = next((i for i, ln in enumerate(lines) if "kill -TERM $$" in ln), None)
-    checked = [i for i, ln in enumerate(lines) if ALIVE in ln and i > (done or 0)]
+    checked = [i for i in range(done, end) if ALIVE in lines[i]]
     if signal is None or not checked or checked[0] > signal:
         missing.append("checks before it signals")
     return missing

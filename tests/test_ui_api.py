@@ -45,11 +45,13 @@ from isekai.foundation.artifacts import (
 )
 from isekai.foundation.flow import Schema  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
+    APPROVED,
     CAPTIONS,
     REVIEW,
     TAGS,
     WD14,
     Run,
+    latest_artifact,
     open_run,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
@@ -62,7 +64,12 @@ from isekai.interface.ui.app import (  # noqa: E402
 from isekai.interface.ui.batch import Batch, Input, establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.review import ENCODER_WINDOW, approve, review  # noqa: E402
+from isekai.pipeline.review import (  # noqa: E402
+    DRAFT,
+    ENCODER_WINDOW,
+    approve,
+    review,
+)
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
     tag_hosted,
@@ -916,9 +923,15 @@ def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
 # --- damage is refused by name ------------------------------------------------
 
 
-def _latest(run: Run, stage: str, pattern: str = "*.json") -> Path:
-    """Return the highest file matching `pattern` in `stage`'s directory."""
-    return sorted(run.directory(FLOW, stage).glob(pattern))[-1]
+def _latest(stage: str, label: str | None = None) -> Callable[[TestClient, Run], Path]:
+    """Return a finder for the highest `label` artifact in `stage`."""
+
+    def find(_client: TestClient, run: Run) -> Path:
+        path = latest_artifact(run.directory(FLOW, stage), label)
+        assert path is not None
+        return path
+
+    return find
 
 
 def _damage(path: Path, change: Callable[[dict[str, Any]], None]) -> None:
@@ -930,12 +943,12 @@ def _damage(path: Path, change: Callable[[dict[str, Any]], None]) -> None:
 
 def _approved(client: TestClient, run: Run) -> Path:
     assert client.post(f"/api/inputs/{run.id}/approve").status_code == 200
-    return _latest(run, REVIEW, "*.approved.json")
+    return _latest(REVIEW, APPROVED)(client, run)
 
 
 def _hosted(client: TestClient, run: Run) -> Path:
     tag_hosted(run, FLOW, FakeTagger(tags=("brown hair",)))
-    return _latest(run, TAGS)
+    return _latest(TAGS)(client, run)
 
 
 def _set(key: str, value: object) -> Callable[[dict[str, Any]], None]:
@@ -950,17 +963,17 @@ def _drop(key: str) -> Callable[[dict[str, Any]], None]:
 @pytest.mark.parametrize(
     ("find", "change", "named", "verb"),
     [
-        (lambda _, run: _latest(run, REVIEW), _drop("fields"), "`fields`", "review"),
+        (_latest(REVIEW, DRAFT), _drop("fields"), "`fields`", "review"),
         (
-            lambda _, run: _latest(run, REVIEW),
+            _latest(REVIEW, DRAFT),
             lambda body: body["fields"].__setitem__("hair_colour", "brown hair"),
             "`hair_colour`",
             "review",
         ),
         (_approved, _set("fields", ["brown hair"]), "`fields`", "review"),
-        (lambda _, run: _latest(run, CAPTIONS), _drop("prose"), "`prose`", "caption"),
+        (_latest(CAPTIONS), _drop("prose"), "`prose`", "caption"),
         (
-            lambda _, run: _latest(run, WD14),
+            _latest(WD14),
             _set("tags", [{"tag": "1girl"}]),
             "tag entry 0",
             "tag",

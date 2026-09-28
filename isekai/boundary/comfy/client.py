@@ -136,9 +136,7 @@ def _reported() -> Iterator[None]:
     except (urllib.error.URLError, OSError) as unreachable:
         # A timeout arrives raw or wrapped in a `URLError`; read as its parent
         # class it would send the operator to bring up a pod that is up.
-        if isinstance(unreachable, TimeoutError) or isinstance(
-            getattr(unreachable, "reason", None), TimeoutError
-        ):
+        if isinstance(getattr(unreachable, "reason", unreachable), TimeoutError):
             raise TransportFailure(
                 "transient",
                 f"the endpoint did not answer within {TIMEOUT} s; check the pod's "
