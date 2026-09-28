@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-09-28
+
 ### Security
 
 - **The ComfyUI transport ignores an exported proxy and bounds every wait.** Requests go through the client's own
