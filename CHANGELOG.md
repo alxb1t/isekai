@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-09-28 · 0039-the-photo-metadata
+
 ### Security
 
 - A photograph can be stripped to the blocks that decode its pixels, colour profile and orientation, by a byte
