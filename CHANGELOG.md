@@ -18,6 +18,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   (0041 D1, D2).
 - The privacy principles enter `docs/principles.md`, and `docs/decisions.md` records that renders stay on a pod
   and that the pod's operator is a trust boundary, accepted knowingly (0041 D5).
+- One session rendered both flows through the checked host key and the strict tunnel, on a pod created with
+  its telemetry switches set (0041 D6).
 
 ### Changed
 

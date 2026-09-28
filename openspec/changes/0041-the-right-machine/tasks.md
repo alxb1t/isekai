@@ -8,7 +8,7 @@ metered boot, per [design](design.md).
 - [x] 1 — The volume and the telemetry switches
 - [x] 2 — The host-key check and the strict tunnel
 - [x] 3 — The privacy rules in `docs/`
-- [ ] 4 — 🛑 **HUMAN · METERED** — one boot, checked
+- [x] 4 — 🛑 **HUMAN · METERED** — one boot, checked
 
 Line numbers are `88cac24`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
 
@@ -42,7 +42,7 @@ Line numbers are `88cac24`'s. Every new test carries `@pytest.mark.spec` with th
 **Ceiling: 45 minutes and ~$0.30; planned at about 10 minutes and ~$0.10.** The pod goes up and down only through
 `infra/render.sh`; the RunPod MCP confirms it gone. A synthetic portrait only, per [D6](design.md#d6).
 
-- [ ] 4.1 On the operator's go, run the session [D6](design.md#d6) describes, and read the pod's `env` back through the API while it runs.
+- [x] 4.1 On the operator's go, run the session [D6](design.md#d6) describes, and read the pod's `env` back through the API while it runs.
   Verify: `grep -c 'Host key verified' .data/v0.29/log.txt` prints `1`, and `grep -c '^refused' .data/v0.29/log.txt` prints `0`.
-- [ ] 4.2 Record the evidence in `openspec/changes/0041-the-right-machine/acceptance.md`, one line each, with no pod id, address or fingerprint value.
+- [x] 4.2 Record the evidence in `openspec/changes/0041-the-right-machine/acceptance.md`, one line each, with no pod id, address or fingerprint value.
   Verify: `grep -c -e '^host key: verified' -e '^tunnel: strict' -e '^telemetry switches: set' -e '^renders: arrived' -e 'pods: \[\]' openspec/changes/0041-the-right-machine/acceptance.md` prints `5`.
