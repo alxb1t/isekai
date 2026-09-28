@@ -6,7 +6,7 @@ each phase ends green, per [design](design.md).
 ## Progress
 
 - [x] 1 — v0.1 to v0.13, rewritten
-- [ ] 2 — v0.14 to v0.22.3, rewritten
+- [x] 2 — v0.14 to v0.22.3, rewritten
 - [ ] 3 — v0.22.4 to v0.26.0 and the preamble, rewritten
 - [ ] 4 — The rules and their tests
 
@@ -26,9 +26,9 @@ Line numbers are `9dc8240`'s. Each rewrite follows [D1](design.md#d1) and [D3](d
 
 ## 2 — v0.14 to v0.22.3, rewritten
 
-- [ ] 2.1 Rewrite `0.14.0` to `0.22.3`, each heading with its change id; the `0.22.3` re-pin table goes, per [D3](design.md#d3).
+- [x] 2.1 Rewrite `0.14.0` to `0.22.3`, each heading with its change id; the `0.22.3` re-pin table goes, per [D3](design.md#d3).
   Verify: `test "$(sed -n '/^## \[0.22.3\]/,/^## \[0.13.0\]/p' CHANGELOG.md | wc -l)" -lt 250 && echo ok` prints `ok`, and `sed -n '/^## \[0.22.3\]/,/^## \[0.14.0\]/p' CHANGELOG.md | grep '^## \[' | grep -vc ' · 00'` prints `0`.
-- [ ] 2.2 Keep only the Keep a Changelog sections from `0.22.3` down.
+- [x] 2.2 Keep only the Keep a Changelog sections from `0.22.3` down.
   Verify: `sed -n '/^## \[0.22.3\]/,$p' CHANGELOG.md | grep '^### ' | grep -vcE '^### (Added|Changed|Deprecated|Removed|Fixed|Security)$'` prints `0`.
 
 ## 3 — v0.22.4 to v0.26.0 and the preamble, rewritten
