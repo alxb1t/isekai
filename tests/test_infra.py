@@ -1625,16 +1625,22 @@ HOST_KEY_FUNCTIONS = (
     "verify_host_key",
 )
 TORN_DOWN = "torn down: ./infra/down.sh"
+RE_RUN = "the pod is torn down, and bash infra/up.sh boots a fresh one\n"
 
 
 def check_host_key(
-    up_sh: str, printed: str | None, cwd: Path, *, answers: bool = True
+    up_sh: str,
+    printed: str | None,
+    cwd: Path,
+    *,
+    answers: bool = True,
+    torn: bool = True,
 ) -> tuple[subprocess.CompletedProcess[str], str | None]:
     """Run `verify_host_key` against a pod log and a scan that answers `HOST_KEY`.
 
     Return the run and the known-hosts file it left, if any. `printed` is the
     fingerprint the log carries; None is a log that never prints one. With
-    `answers` False, the scan never answers.
+    `answers` False, the scan never answers; with `torn` False, `down.sh` fails.
     """
     scan = f'echo "[$host]:$port {HOST_KEY}"' if answers else ":"
     lines = ["step: sshd"] + ([f"isekai host key: {printed}"] if printed else [])
@@ -1649,7 +1655,9 @@ def check_host_key(
             f"api() {{ printf '%s' {shlex.quote(events)}; }}",
             f"ssh-keyscan() {{ {scan}; }}",
             "sleep() { SECONDS=$((SECONDS + $1)); }",
-            'bash() { echo "torn down: $*"; }',
+            'bash() { echo "torn down: $*"; }'
+            if torn
+            else 'bash() { echo "delete failed: $*"; return 1; }',
         ]
     )
     done = run_functions(up_sh, HOST_KEY_FUNCTIONS, stubs, cwd)
@@ -1713,10 +1721,9 @@ def test_a_mismatch_is_refused(up_sh: str, tmp_path: Path) -> None:
     assert kept is None
     assert done.stderr.startswith(
         f"refused: the pod's host key {HOST_KEY_FINGERPRINT} does not match"
-        f" the fingerprint it printed, {OTHER_FINGERPRINT}; the pod is torn down,"
-        " and bash infra/up.sh boots a fresh one"
+        f" the fingerprint it printed, {OTHER_FINGERPRINT}\n{TORN_DOWN}\n"
     )
-    assert TORN_DOWN in done.stderr
+    assert done.stderr.endswith(RE_RUN)
     assert "pod-test" not in done.stderr
 
 
@@ -1734,11 +1741,27 @@ def test_a_scan_no_one_answers_is_refused_as_such(up_sh: str, tmp_path: Path) ->
     assert done.returncode == 1
     assert kept is None
     assert done.stderr.startswith(
-        "refused: the pod's SSH answered no host-key scan within 180 s;"
+        f"refused: the pod's SSH answered no host-key scan within 180 s\n{TORN_DOWN}\n"
     )
     assert "does not match" not in done.stderr
-    assert "bash infra/up.sh" in done.stderr
-    assert TORN_DOWN in done.stderr
+    assert done.stderr.endswith(RE_RUN)
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+@pytest.mark.parametrize(
+    ("printed", "answers"),
+    [(OTHER_FINGERPRINT, True), (HOST_KEY_FINGERPRINT, False)],
+    ids=["mismatch", "no-scan"],
+)
+def test_a_failed_teardown_claims_none_and_names_no_re_run(
+    up_sh: str, tmp_path: Path, printed: str, answers: bool
+) -> None:
+    done, kept = check_host_key(up_sh, printed, tmp_path, answers=answers, torn=False)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.endswith("delete failed: ./infra/down.sh\n")
+    assert "torn down" not in done.stderr
+    assert "bash infra/up.sh" not in done.stderr
 
 
 @pytest.mark.spec_exempt(

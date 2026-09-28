@@ -51,7 +51,14 @@ check_volume() {
     || refuse "the models volume holds $size GB, but config/models.json needs $need bytes; grow it to $(( (need + 999999999) / 1000000000 )) GB with the RunPod MCP's update-network-volume"
 }
 
-refuse_and_tear_down() { echo "refused: $*" >&2; bash ./infra/down.sh >&2; exit 1; }
+# refuse_and_tear_down <reason> [<next step>]: the next step is printed only once
+# down.sh has stopped the billing; a failed teardown ends on down.sh's own words.
+refuse_and_tear_down() {
+  echo "refused: $1" >&2
+  bash ./infra/down.sh >&2 || exit 1
+  [ -z "${2:-}" ] || echo "$2" >&2
+  exit 1
+}
 
 # The log stays open, so each read is cut at 10 s; what it held by then is read.
 printed_fingerprint() {
@@ -84,10 +91,12 @@ verify_host_key() {
     sleep 5
   done
   [ -n "$key" ] \
-    || refuse_and_tear_down "the pod's SSH answered no host-key scan within 180 s; the pod is torn down, and bash infra/up.sh boots a fresh one"
+    || refuse_and_tear_down "the pod's SSH answered no host-key scan within 180 s" \
+         "the pod is torn down, and bash infra/up.sh boots a fresh one"
   scanned=$(echo "$key" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}') || true
   [ "$scanned" = "$printed" ] \
-    || refuse_and_tear_down "the pod's host key ${scanned:-(unreadable)} does not match the fingerprint it printed, $printed; the pod is torn down, and bash infra/up.sh boots a fresh one"
+    || refuse_and_tear_down "the pod's host key ${scanned:-(unreadable)} does not match the fingerprint it printed, $printed" \
+         "the pod is torn down, and bash infra/up.sh boots a fresh one"
   echo "$key" > .runpod_known_hosts
   echo "Host key verified: $printed"
 }
