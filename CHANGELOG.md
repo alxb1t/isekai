@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is refused naming the field, and nothing is saved (0037 design D6).
 - **A run's frame must name its photograph with one plain filename, and carry its name and digest**, or the run
   is refused naming `run.json`; a frame can no longer point a run at another file on the machine (0037 design D7).
+- **A render session's watchdog polls its session and ends with it, its tunnel keeps host keys in a file of its
+  own, removed at teardown, and its checks reach the tunnel with `--noproxy '*'`** (0037 design D8, D9, D11).
 
 ## [0.25.1] - 2026-09-27
 

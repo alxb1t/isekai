@@ -42,7 +42,8 @@ photographs with: uv run python -m isekai tag ${flows[*]} --runs $runs $(dirname
 [ ! -f .runpod_pod_id ] \
   || refuse "a pod is already recorded in .runpod_pod_id; run bash infra/down.sh first"
 # Something already answering on the port would be rendered against instead.
-if curl -sf --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; then
+# --noproxy: an exported http_proxy would take loopback too (0037 design D11).
+if curl -sf --noproxy '*' --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; then
   refuse "$SERVER already answers. An earlier session's tunnel stops with \
 pkill -f -- '-L 8188:localhost:8188'; lsof -iTCP:8188 -sTCP:LISTEN shows anything else"
 fi
@@ -54,6 +55,7 @@ uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 |
 tunnel=""
 watchdog=""
 up_out=$(mktemp)
+known_hosts=$(mktemp)
 teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   local status=${1:-$?}
   # Nothing in here may end the handler before down.sh runs: a second Ctrl-C is
@@ -63,7 +65,7 @@ teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   trap '' INT TERM HUP
   if [ -n "$watchdog" ]; then kill "$watchdog" 2>/dev/null; fi
   if [ -n "$tunnel" ]; then kill "$tunnel" 2>/dev/null; fi
-  rm -f "$up_out"
+  rm -f "$up_out" "$known_hosts"
   if [ -f .runpod_pod_id ]; then
     bash ./infra/down.sh 2>&1 | tee -a "$log"
     [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
@@ -76,8 +78,14 @@ trap teardown EXIT; trap 'teardown 130' INT; trap 'teardown 143' TERM; trap 'tea
 # The ceiling is a halt (CLAUDE.md). A TERM to this shell waits for the command
 # in flight, so the watchdog stops that too; the pending TERM then runs the trap.
 # Renders already written are kept, and the same command renders only the rest.
+# Polled, so a session killed past its trap takes the watchdog with it (0037 D8).
 (
-  sleep "$CEILING" </dev/null >/dev/null 2>&1
+  end=$((SECONDS + CEILING))
+  while [ "$SECONDS" -lt "$end" ]; do
+    kill -0 $$ 2>/dev/null || exit 0
+    sleep 5 </dev/null >/dev/null 2>&1
+  done
+  kill -0 $$ 2>/dev/null || exit 0
   echo "refused: the session reached its ${CEILING}s ceiling; renders so far are \
 kept, and in a new session bash infra/render.sh $runs $* renders only the rest" \
     | tee -a "$log" >&2
@@ -95,9 +103,11 @@ read -r host port < <(
   || refuse "up.sh printed no Tunnel: line with a host and a port"
 
 open_tunnel() {
-  # accept-new: each pod is a fresh host whose key no one has seen yet.
+  # accept-new: each pod is a fresh host whose key no one has seen yet. Its key is
+  # trusted for this session alone, so a later pod on the same address is not refused.
   ssh -i ~/.ssh/id_ed25519_runpod -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
-    -o ExitOnForwardFailure=yes -N -L 8188:localhost:8188 "root@$host" -p "$port" &
+    -o UserKnownHostsFile="$known_hosts" -o ExitOnForwardFailure=yes \
+    -N -L 8188:localhost:8188 "root@$host" -p "$port" &
   tunnel=$!
 }
 open_tunnel
@@ -105,7 +115,7 @@ open_tunnel
 # sshd and ComfyUI come up after the port is mapped, so a tunnel that died is
 # reopened until the bound.
 deadline=$((SECONDS + WAIT))
-until curl -sf --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; do
+until curl -sf --noproxy '*' --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; do
   [ "$SECONDS" -lt "$deadline" ] \
     || refuse "$SERVER/system_stats did not answer within ${WAIT}s"
   kill -0 "$tunnel" 2>/dev/null || open_tunnel

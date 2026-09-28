@@ -8,7 +8,7 @@ metered session proves them together, per [design](design.md).
 - [x] 1 — The transport
 - [x] 2 — The review surface
 - [x] 3 — The run frame
-- [ ] 4 — The render session
+- [x] 4 — The render session
 - [ ] 5 — 🛑 **HUMAN · METERED** — one render session with a dead `http_proxy` exported
 
 Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) names. Every new test carries
@@ -47,13 +47,13 @@ Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) nam
 
 ## 4 — The render session
 
-- [ ] 4.1 **HALT CHECK** — the watchdog sleeps once, the tunnel uses the operator's known hosts, and the checks follow a proxy.
+- [x] 4.1 **HALT CHECK** — the watchdog sleeps once, the tunnel uses the operator's known hosts, and the checks follow a proxy.
   Verify: `grep -cF 'sleep "$CEILING"' infra/render.sh` prints `1`, and `grep -c -e 'UserKnownHostsFile' -e 'noproxy' infra/render.sh` prints `0`.
-- [ ] 4.2 Make the watchdog in `infra/render.sh` poll per [D8](design.md#d8); in `tests/test_infra.py`, make `unbounded_session` look for `end=$((SECONDS + CEILING))`, and add `test_the_watchdog_ends_with_its_session` (`pod-image:session:the-watchdog-ends-with-its-session`).
+- [x] 4.2 Make the watchdog in `infra/render.sh` poll per [D8](design.md#d8); in `tests/test_infra.py`, make `unbounded_session` look for `end=$((SECONDS + CEILING))`, and add `test_the_watchdog_ends_with_its_session` (`pod-image:session:the-watchdog-ends-with-its-session`).
   Verify: `grep -cF 'sleep "$CEILING"' infra/render.sh` prints `0`, `grep -cF 'kill -0 $$ 2>/dev/null || exit 0' infra/render.sh` prints `2`, and `grep -c '^def test_the_watchdog_ends_with_its_session' tests/test_infra.py` prints `1`.
-- [ ] 4.3 Give each session its own known-hosts file in `infra/render.sh` per [D9](design.md#d9); add `test_a_sessions_host_keys_are_its_own` (`pod-image:session:host-keys-are-the-sessions-own`) to `tests/test_infra.py`.
+- [x] 4.3 Give each session its own known-hosts file in `infra/render.sh` per [D9](design.md#d9); add `test_a_sessions_host_keys_are_its_own` (`pod-image:session:host-keys-are-the-sessions-own`) to `tests/test_infra.py`.
   Verify: `grep -cF 'UserKnownHostsFile="$known_hosts"' infra/render.sh` prints `1`, `grep -cF 'rm -f "$up_out" "$known_hosts"' infra/render.sh` prints `1`, and `grep -c '^def test_a_sessions_host_keys_are_its_own' tests/test_infra.py` prints `1`.
-- [ ] 4.4 Pass `--noproxy '*'` to every `curl` in `infra/render.sh` that names `$SERVER`, per [D11](design.md#d11); add `test_the_session_reaches_its_tunnel_without_a_proxy` (`pod-image:session:the-tunnel-is-reached-directly`) to `tests/test_infra.py`.
+- [x] 4.4 Pass `--noproxy '*'` to every `curl` in `infra/render.sh` that names `$SERVER`, per [D11](design.md#d11); add `test_the_session_reaches_its_tunnel_without_a_proxy` (`pod-image:session:the-tunnel-is-reached-directly`) to `tests/test_infra.py`.
   Verify: `grep -F '"$SERVER' infra/render.sh | grep -F 'curl' | grep -vcF -- "--noproxy '*'"` prints `0`, and `grep -c '^def test_the_session_reaches_its_tunnel_without_a_proxy' tests/test_infra.py` prints `1`.
 
 ## 5 — 🛑 **HUMAN · METERED** — one render session with a dead `http_proxy` exported
