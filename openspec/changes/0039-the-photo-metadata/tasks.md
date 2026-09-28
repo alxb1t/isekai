@@ -5,7 +5,7 @@ The stripper first, with its tests; then the upload through a narrower seam, the
 
 ## Progress
 
-- [ ] 1 — The stripper
+- [x] 1 — The stripper
 - [ ] 2 — The upload
 
 Line numbers are `984a74f`'s. Every new test carries `@pytest.mark.spec` with the key its task names, or `spec_exempt` where
@@ -13,11 +13,11 @@ the task says so.
 
 ## 1 — The stripper
 
-- [ ] 1.1 **HALT CHECK** — the upload sends the file as it is, and no stripper exists.
+- [x] 1.1 **HALT CHECK** — the upload sends the file as it is, and no stripper exists.
   Verify: `grep -c 'Path(path).read_bytes()' isekai/boundary/comfy/client.py` prints `1`, and `grep -c 'def strip_metadata' isekai/shared/image.py` prints `0`.
-- [ ] 1.2 Add `strip_metadata` to `isekai/shared/image.py` per [D1](design.md#d1), [D2](design.md#d2) and [D5](design.md#d5), stdlib only.
+- [x] 1.2 Add `strip_metadata` to `isekai/shared/image.py` per [D1](design.md#d1), [D2](design.md#d2) and [D5](design.md#d5), stdlib only.
   Verify: `grep -c '^def strip_metadata' isekai/shared/image.py` prints `1`, and `grep -cE '^(import|from) (PIL|numpy|av)' isekai/shared/image.py` prints `0`.
-- [ ] 1.3 Add to `tests/test_image.py`, per [D6](design.md#d6): `test_the_orientation_survives_the_strip` (`image-generation:photo-metadata:the-orientation-survives`), `test_the_pixels_are_unchanged_by_the_strip` (`image-generation:photo-metadata:the-pixels-are-unchanged`), and `test_no_block_outside_the_allowlist_survives`, `test_the_hand_built_photographs_still_walk`, each `spec_exempt`.
+- [x] 1.3 Add to `tests/test_image.py`, per [D6](design.md#d6): `test_the_orientation_survives_the_strip` (`image-generation:photo-metadata:the-orientation-survives`), `test_the_pixels_are_unchanged_by_the_strip` (`image-generation:photo-metadata:the-pixels-are-unchanged`), and `test_no_block_outside_the_allowlist_survives`, `test_the_hand_built_photographs_still_walk`, each `spec_exempt`.
   Verify: `grep -c -e '^def test_the_orientation_survives_the_strip' -e '^def test_the_pixels_are_unchanged_by_the_strip' -e '^def test_no_block_outside_the_allowlist_survives' -e '^def test_the_hand_built_photographs_still_walk' tests/test_image.py` prints `4`.
 
 ## 2 — The upload

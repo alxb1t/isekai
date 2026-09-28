@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Security
+
+- A photograph can be stripped to the blocks that decode its pixels, colour profile and orientation, by a byte
+  walk that never re-encodes; one it cannot walk to its end is refused (0039 D1, D2, D5).
+
 ## [0.26.1] - 2026-09-28 · 0038-the-changelog
 
 ### Changed
