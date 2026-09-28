@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is refused naming `run.json`; a frame can no longer point a run at another file on the machine (0037 design D7).
 - **A render session's watchdog polls its session and ends with it, its tunnel keeps host keys in a file of its
   own, removed at teardown, and its checks reach the tunnel with `--noproxy '*'`** (0037 design D8, D9, D11).
+- **One metered session proved the boundaries end to end**: with a dead `http_proxy` exported, both flows rendered
+  on a real pod with no refusal, and the RunPod MCP confirmed no pod left (0037 design D10).
 
 ## [0.25.1] - 2026-09-27
 

@@ -9,7 +9,7 @@ metered session proves them together, per [design](design.md).
 - [x] 2 — The review surface
 - [x] 3 — The run frame
 - [x] 4 — The render session
-- [ ] 5 — 🛑 **HUMAN · METERED** — one render session with a dead `http_proxy` exported
+- [x] 5 — 🛑 **HUMAN · METERED** — one render session with a dead `http_proxy` exported
 
 Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) names. Every new test carries
 `@pytest.mark.spec` with the key its task names, and every text-check test has a twin.
@@ -62,7 +62,7 @@ Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) nam
 `infra/render.sh`, which runs `infra/up.sh` and `infra/down.sh`; the RunPod MCP confirms it gone. A synthetic
 portrait only, per [D10](design.md#d10).
 
-- [ ] 5.1 The operator puts one synthetic portrait in `.data/v0.26/photos/`, exports `http_proxy=http://127.0.0.1:9` with `https_proxy` unset, and runs the `run-flows` skill over both flows: approves the sheets, then says go.
-  Verify: `ls .data/v0.26/runs/*/summon-anime-wai/outputs/*.png .data/v0.26/runs/*/conjure-anime-wai/outputs/*.png` lists a render for each flow, and `grep -c '^refused' .data/v0.26/log.txt` prints `0`.
-- [ ] 5.2 Record the session in `openspec/changes/0037-the-boundaries/acceptance.md`: the command, the renders, the exported proxy, and the RunPod MCP's answer that no pod is left.
+- [x] 5.1 The operator puts one synthetic portrait in `.data/v0.26/photos/`, exports `http_proxy=http://127.0.0.1:9` with `https_proxy` unset, and runs the `run-flows` skill over both flows: approves the sheets, then says go.
+  Verify: `ls .data/v0.26/runs/*/summon-anime-wai/outputs/*/*.png .data/v0.26/runs/*/conjure-anime-wai/outputs/*/*.png` lists a render for each flow, and `grep -c '^refused' .data/v0.26/log.txt` prints `0`.
+- [x] 5.2 Record the session in `openspec/changes/0037-the-boundaries/acceptance.md`: the command, the renders, the exported proxy, and the RunPod MCP's answer that no pod is left.
   Verify: `grep -c -e 'http_proxy=http://127.0.0.1:9' -e 'pods: \[\]' openspec/changes/0037-the-boundaries/acceptance.md` prints `2`.
