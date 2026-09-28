@@ -5,7 +5,7 @@ metered session proves them together, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The transport
+- [x] 1 — The transport
 - [ ] 2 — The review surface
 - [ ] 3 — The run frame
 - [ ] 4 — The render session
@@ -16,21 +16,21 @@ Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) nam
 
 ## 1 — The transport
 
-- [ ] 1.1 **HALT CHECK** — the client calls `request.urlopen` directly, with no proxy handler and no timeout.
+- [x] 1.1 **HALT CHECK** — the client calls `request.urlopen` directly, with no proxy handler and no timeout.
   Verify: `grep -c 'request.urlopen(' isekai/boundary/comfy/client.py` prints `5`, and `grep -c -e 'ProxyHandler' -e 'timeout' isekai/boundary/comfy/client.py` prints `0`.
-- [ ] 1.2 Add `OPENER` and `TIMEOUT = 60` to `isekai/boundary/comfy/client.py`, send every call through `OPENER.open(…, timeout=TIMEOUT)`, and give a timeout its own transient refusal, per [D1](design.md#d1) and [D2](design.md#d2).
+- [x] 1.2 Add `OPENER` and `TIMEOUT = 60` to `isekai/boundary/comfy/client.py`, send every call through `OPENER.open(…, timeout=TIMEOUT)`, and give a timeout its own transient refusal, per [D1](design.md#d1) and [D2](design.md#d2).
   Verify: `grep -c 'request.urlopen(' isekai/boundary/comfy/client.py` prints `0`, `grep -c 'OPENER.open(' isekai/boundary/comfy/client.py` prints `5`, and `grep -c 'did not answer within' isekai/boundary/comfy/client.py` prints `1`.
-- [ ] 1.3 Add `stub_comfy` to `tests/fakes.py` and move the `urllib.request.urlopen` stubs in `tests/test_generate.py` and `tests/test_resume.py` onto it; make the guards in `tests/test_sheet_stage.py` and `tests/test_pipeline_cli.py` stub it too, per [D1](design.md#d1).
+- [x] 1.3 Add `stub_comfy` to `tests/fakes.py` and move the `urllib.request.urlopen` stubs in `tests/test_generate.py` and `tests/test_resume.py` onto it; make the guards in `tests/test_sheet_stage.py` and `tests/test_pipeline_cli.py` stub it too, per [D1](design.md#d1).
   Verify: `cat tests/test_generate.py tests/test_resume.py | grep -cF 'setattr(urllib.request, "urlopen"'` prints `0`, and `grep -l stub_comfy tests/test_sheet_stage.py tests/test_pipeline_cli.py | grep -c .` prints `2`.
-- [ ] 1.4 Add `test_no_proxy_in_the_environment_reaches_the_rendering_endpoint` (`comfy-transport:proxy:an-exported-proxy-is-ignored`) and `test_an_unanswered_request_is_refused_transient` (`comfy-transport:timeout:an-unanswered-request-is-transient`) to `tests/test_generate.py`, per [D1](design.md#d1) and [D2](design.md#d2).
+- [x] 1.4 Add `test_no_proxy_in_the_environment_reaches_the_rendering_endpoint` (`comfy-transport:proxy:an-exported-proxy-is-ignored`) and `test_an_unanswered_request_is_refused_transient` (`comfy-transport:timeout:an-unanswered-request-is-transient`) to `tests/test_generate.py`, per [D1](design.md#d1) and [D2](design.md#d2).
   Verify: `grep -c -e '^def test_no_proxy_in_the_environment_reaches_the_rendering_endpoint' -e '^def test_an_unanswered_request_is_refused_transient' tests/test_generate.py` prints `2`.
-- [ ] 1.5 Add D6's sentence on the ComfyUI transport to `docs/decisions.md`, with `0037` in its *Made by*, per [D1](design.md#d1).
+- [x] 1.5 Add D6's sentence on the ComfyUI transport to `docs/decisions.md`, with `0037` in its *Made by*, per [D1](design.md#d1).
   Verify: `grep -c "The ComfyUI transport ignores the environment's proxy the same way" docs/decisions.md` prints `1`.
-- [ ] 1.6 Add `RENDER_DEADLINE = 600` and the `deadline` parameter to `isekai/pipeline/generate.py`, refuse a non-string prompt id in `submit`, and quote the id in `history`, per [D3](design.md#d3); add `test_an_unfinished_prompt_is_refused_at_the_deadline` and `test_a_prompt_id_that_is_not_a_string_is_refused` to `tests/test_generate.py`.
+- [x] 1.6 Add `RENDER_DEADLINE = 600` and the `deadline` parameter to `isekai/pipeline/generate.py`, refuse a non-string prompt id in `submit`, and quote the id in `history`, per [D3](design.md#d3); add `test_an_unfinished_prompt_is_refused_at_the_deadline` and `test_a_prompt_id_that_is_not_a_string_is_refused` to `tests/test_generate.py`.
   Verify: `grep -c '^RENDER_DEADLINE = 600' isekai/pipeline/generate.py` prints `1`, and `grep -c -e '^def test_an_unfinished_prompt_is_refused_at_the_deadline' -e '^def test_a_prompt_id_that_is_not_a_string_is_refused' tests/test_generate.py` prints `2`.
-- [ ] 1.7 Draw the multipart boundary and escape names in `isekai/boundary/comfy/multipart.py`, per [D4](design.md#d4); add `test_the_boundary_appears_in_no_part` and `test_names_are_escaped` to `tests/test_multipart.py`.
+- [x] 1.7 Draw the multipart boundary and escape names in `isekai/boundary/comfy/multipart.py`, per [D4](design.md#d4); add `test_the_boundary_appears_in_no_part` and `test_names_are_escaped` to `tests/test_multipart.py`.
   Verify: `grep -c 'convertpyBoundary' isekai/boundary/comfy/multipart.py` prints `0`, and `grep -c -e '^def test_the_boundary_appears_in_no_part' -e '^def test_names_are_escaped' tests/test_multipart.py` prints `2`.
-- [ ] 1.8 Keep printable characters only in `_error_body`, per [D5](design.md#d5); add `test_an_error_body_loses_its_control_characters` (`comfy-transport:error-text:control-characters-are-dropped`) to `tests/test_generate.py`.
+- [x] 1.8 Keep printable characters only in `_error_body`, per [D5](design.md#d5); add `test_an_error_body_loses_its_control_characters` (`comfy-transport:error-text:control-characters-are-dropped`) to `tests/test_generate.py`.
   Verify: `grep -c 'isprintable' isekai/boundary/comfy/client.py` prints `1`, and `grep -c '^def test_an_error_body_loses_its_control_characters' tests/test_generate.py` prints `1`.
 
 ## 2 — The review surface

@@ -1,4 +1,4 @@
-"""The Ollama host, offline: one hand-written double, shared by every caller.
+"""The loopback hosts, offline: hand-written doubles, shared by every caller.
 
 Shared here rather than imported from one test module by another, which would
 make that module undeletable -- the same rule `tests/images.py` and
@@ -14,8 +14,12 @@ knows about a GPU.
 Hand-written rather than mocked. The suite has no HTTP server, no bound socket
 and no `unittest.mock`, and this is what keeps it that way while still making the
 request body assertable -- the property `ComfyTransport` gives the workflow.
+
+`RefusingConnection` sits below both seams, where a proxy test on either path
+asks which address urllib dialled.
 """
 
+import http.client
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -51,4 +55,26 @@ class FakeTransport:
         return [json.loads(body) for _, body in self.sent]
 
 
-__all__: Sequence[str] = ("FakeTransport",)
+class RefusingConnection(http.client.HTTPConnection):
+    """Stands in for the real connection and refuses, naming the host it was given.
+
+    Not a `Transport`, because the thing under test is which address urllib
+    resolves the request to, below every seam. Nothing binds a socket: the
+    connection refuses before it would open one, and the host it names is the
+    assertion.
+    """
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        body: object = None,
+        headers: Mapping[str, object] | None = None,
+        *,
+        encode_chunked: bool = False,
+    ) -> None:
+        """Refuse, carrying the address this connection was constructed for."""
+        raise ConnectionRefusedError(f"asked for {self.host}:{self.port}")
+
+
+__all__: Sequence[str] = ("FakeTransport", "RefusingConnection")

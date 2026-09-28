@@ -30,6 +30,7 @@ from isekai.foundation.run import (
 from isekai.pipeline.caption import FakeReader
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
+from tests.fakes import stub_comfy
 from tests.images import jpeg_bytes
 from tests.stages import FAKE_PINS, FIELD_MAP, caption, sheet, write_wd14
 
@@ -87,6 +88,7 @@ def test_a_tag_is_placed_in_its_primary_criterion_and_no_model_is_reached(
 
     monkeypatch.setattr("subprocess.Popen", unreachable)
     monkeypatch.setattr("urllib.request.urlopen", unreachable)
+    stub_comfy(monkeypatch, unreachable)
 
     written = sheet(run, schema, vocabulary, tags=[DanbooruTag("brown_hair")])
 

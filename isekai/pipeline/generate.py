@@ -82,6 +82,10 @@ STAGE_RENDER = "render"
 # A seed is what the sampler takes: an unsigned 64-bit integer.
 SEED_BITS = 64
 
+# Seconds a queued prompt may take before the render gives up on it: a ComfyUI
+# restarted in place loses the prompt, and the pod bills while the poll waits.
+RENDER_DEADLINE = 600
+
 
 @dataclass(frozen=True)
 class Render:
@@ -426,6 +430,7 @@ def render(
     seeds: Sequence[int] | None = None,
     rng: random.Random | None = None,
     poll: float = 1.0,
+    deadline: float = RENDER_DEADLINE,
 ) -> list[Render]:
     """Render `flow`'s approved sheet for this run, one image per seed.
 
@@ -477,7 +482,7 @@ def render(
         # leaves resume nothing on disk to reason about.
         try:
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
-            body = _submit(client, graph, poll)
+            body = _submit(client, graph, poll, deadline)
         except Refusal as failed:
             raise _recorded(run, flow, directory, version, failed, seed) from failed
         # The sidecar first, so an image always has its provenance: a crash
@@ -538,10 +543,19 @@ def _recorded(
     )
 
 
-def _submit(client: ComfyTransport, graph: Workflow, poll: float) -> bytes:
-    """Queue one graph, wait for it, and return the image's bytes."""
+def _submit(
+    client: ComfyTransport, graph: Workflow, poll: float, deadline: float
+) -> bytes:
+    """Queue one graph, wait up to `deadline` seconds, and return the image's bytes."""
     prompt_id = client.submit(graph)
+    end = time.monotonic() + deadline
     while prompt_id not in (history := _history(client, prompt_id)):
+        if time.monotonic() >= end:
+            raise TransportFailure(
+                "transient",
+                f"prompt {prompt_id} did not finish within {deadline:g} s; check "
+                "the pod's ComfyUI log",
+            )
         time.sleep(poll)
     record = history[prompt_id]
     outputs = record.get("outputs") if isinstance(record, dict) else None
@@ -563,7 +577,8 @@ def _submit(client: ComfyTransport, graph: Workflow, poll: float) -> bytes:
 def _history(client: ComfyTransport, prompt_id: str) -> dict[str, Any]:
     """Return the endpoint's history, refusing one that is not a JSON object.
 
-    `in` on a list never matches, so without this a list would be polled forever.
+    `in` on a list never matches, so without this a list would be polled until the
+    deadline.
     """
     history: object = client.history(prompt_id)
     if not isinstance(history, dict):

@@ -36,7 +36,7 @@ from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
-from tests.fakes import READER
+from tests.fakes import READER, stub_comfy
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, fake_wd14
 from tests.transports import FakeTransport
@@ -444,6 +444,7 @@ def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
 
     monkeypatch.setattr("shutil.which", unreachable)
     monkeypatch.setattr("urllib.request.urlopen", unreachable)
+    stub_comfy(monkeypatch, unreachable)
     monkeypatch.setattr(ollama, "_verified_build", unreachable)
 
     wired = wiring_from(runs=tmp_path / "runs")

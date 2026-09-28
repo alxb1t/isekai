@@ -293,6 +293,7 @@ def render(
     seeds: Sequence[int] | None = None,
     rng: random.Random | None = None,
     poll: float = 1.0,
+    deadline: float = generate_stage.RENDER_DEADLINE,
 ) -> list[generate_stage.Render]:
     """Call the render stage on an endpoint no pod-boot record names, at `RUNTIME`.
 
@@ -308,4 +309,5 @@ def render(
         seeds=seeds,
         rng=rng,
         poll=poll,
+        deadline=deadline,
     )

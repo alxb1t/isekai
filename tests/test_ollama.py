@@ -10,7 +10,6 @@ import http.client
 import json
 import urllib.error
 import urllib.request
-from collections.abc import Mapping
 
 import pytest
 
@@ -23,7 +22,7 @@ from isekai.boundary.ollama import (
     post,
 )
 from isekai.foundation.refusal import Refusal
-from tests.transports import FakeTransport
+from tests.transports import FakeTransport, RefusingConnection
 
 BODY = {"model": "a-model", "prompt": "describe", "stream": False}
 REMEDY = "ollama pull a-model"
@@ -37,29 +36,6 @@ def test_the_boundary_speaks_one_endpoint_at_one_ceiling() -> None:
     assert GENERATE == "/api/generate"
     assert HOST == "http://127.0.0.1:11434"
     assert TIMEOUT == 900
-
-
-class RefusingConnection(http.client.HTTPConnection):
-    """Stands in for the real connection and refuses, naming the host it was given.
-
-    The only stand-in in this file that is not a `Transport`, because the thing
-    under test is `post` itself -- which address urllib resolves the request to,
-    below the seam every other test here drives. Nothing binds a socket: the
-    connection refuses before it would open one, and the host it names is the
-    assertion.
-    """
-
-    def request(
-        self,
-        method: str,
-        url: str,
-        body: object = None,
-        headers: Mapping[str, object] | None = None,
-        *,
-        encode_chunked: bool = False,
-    ) -> None:
-        """Refuse, carrying the address this connection was constructed for."""
-        raise ConnectionRefusedError(f"asked for {self.host}:{self.port}")
 
 
 @pytest.mark.spec_exempt("structural: no environment may redirect a fixed address")

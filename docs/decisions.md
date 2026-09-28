@@ -98,11 +98,12 @@ names is checked against `config/reader.json` before its first call.** The addre
 flag and no environment variable. The call uses Ollama's own `/api/generate`, which carries the sampling
 options the OpenAI-compatible endpoint cannot. Ollama's own record of the model must name the model and
 projector files the manifest pins, or the call is refused and spends no attempt.
+The ComfyUI transport ignores the environment's proxy the same way.
 
 - **Why:** a photograph's destination must not be changeable by accident — an exported `http_proxy`
   once sent every photograph off the machine. An alias is a name the runtime resolves, and the files
   behind it shape the prose, so a caption can claim a pin only once those files are checked.
-- **Made by:** `0019`, `0033`.
+- **Made by:** `0019`, `0033`, `0037`.
 
 ### D7 · WD14 is one artifact in two files
 

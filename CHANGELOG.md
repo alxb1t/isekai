@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **The ComfyUI transport ignores an exported proxy and bounds every wait.** Requests go through the client's own
+  `OPENER` at a 60 s timeout and a render gives up at 600 s, each refused transient; a prompt id that is not a
+  string is refused permanent (0037 design D1–D3).
+- **An upload's boundary is random and in no part, its names are escaped, and an endpoint's error text keeps
+  printable characters only** (0037 design D4, D5).
+
 ## [0.25.1] - 2026-09-27
 
 ### Changed

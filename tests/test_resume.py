@@ -33,7 +33,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV, snapshot
-from tests.fakes import READER, FakeComfyClient, url_of
+from tests.fakes import READER, FakeComfyClient, stub_comfy, url_of
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, FakeSession, fake_wd14
 from tests.transports import FakeTransport
@@ -610,7 +610,7 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
         reached.append(url_of(req))
         raise urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
 
-    monkeypatch.setattr(urllib.request, "urlopen", refused)
+    stub_comfy(monkeypatch, refused)
     wired.client = ComfyClient("http://127.0.0.1:8188")
     assert isinstance(wired.err, io.StringIO)
 
