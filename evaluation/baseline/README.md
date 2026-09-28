@@ -46,9 +46,8 @@ of a standing figure is a crop of its chest, and a subject with no face in it me
 while proving nothing about the rest of the graph.
 
 What the landscape case is *for* is the injector's short-side rounding on the **height** axis:
-832×554 resolves to a 1536×1024 target, an aspect ratio this pipeline has never rendered and a gap
-`CHANGELOG.md` v0.11 names explicitly. A crop exercises that identically to a natively-framed wide
-shot.
+832×554 resolves to a 1536×1024 target, an aspect ratio this pipeline has never rendered. A crop
+exercises that identically to a natively-framed wide shot.
 
 ### Sources deliberately unused
 
@@ -156,8 +155,7 @@ and every `run.json`'s `photo_sha256` matches the digest the builder recorded �
 provably the subject it claims to be.
 
 **The landscape rendered.** `s6` is the first landscape input this project has ever put through a GPU,
-at an aspect ratio — 1536×1024 — the pipeline had never produced. That closes the gap `CHANGELOG.md`
-v0.11 named explicitly.
+at an aspect ratio — 1536×1024 — the pipeline had never produced. That closes the landscape gap.
 
 **The dials were held, and identically across all six subjects:**
 
@@ -255,7 +253,7 @@ pairs are exact metric ties and the correlation is computed over the 22 that cou
 
 **These numbers were recomputed at converge**, after the pose reader's preprocessing was brought onto
 the pinned artifacts' reference pipeline (a 1.25-padded aspect-preserving warp, ImageNet
-normalisation, BGR input — see `CHANGELOG.md`). The re-run is local and free: the same renders, the
+normalisation, BGR input). The re-run is local and free: the same renders, the
 same photographs, the same models. **Only the pose axis moved**; every other axis in all thirty
 records is byte-identical to what the metered session produced, which is what makes this a
 recomputation rather than a new measurement.
