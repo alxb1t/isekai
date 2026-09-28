@@ -4,10 +4,12 @@ FROM nvidia/cuda:12.4.1-devel-ubuntu22.04@sha256:da6791294b0b04d7e65d87b7451d6f2
 
 ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 
-# System packages
+# System packages. The host keys `openssh-server` makes are deleted in this layer:
+# a later one would only hide them. Each pod makes its own (0040 design D1).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git python3 python3-pip curl wget openssh-server \
         libgl1 libglib2.0-0 \
+    && rm -f /etc/ssh/ssh_host_* \
     && rm -rf /var/lib/apt/lists/*
 
 # uv
@@ -24,6 +26,20 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI \
     && git checkout 250b2e9551a7bc7a8ebb5beb07e0fecd2983e04a
 WORKDIR /opt/ComfyUI
 
+# The Python environment: `image/` is a uv project whose lock carries every hash
+# of ComfyUI's, the preprocessors' and InstantID's packages, and the cu128 torch
+# stack with the Blackwell (sm_120) kernels. `--locked` refuses a stale lock, so
+# nothing resolves at build time. `tools/derive_image_project.py` writes it.
+# Before the node clones, so bumping a node's pin does not reinstall torch
+# (0040 design D4).
+COPY image/pyproject.toml /opt/isekai/image/pyproject.toml
+COPY image/uv.lock /opt/isekai/image/uv.lock
+COPY image/.python-version /opt/isekai/image/.python-version
+ENV VIRTUAL_ENV=/opt/ComfyUI/.venv
+ENV UV_PROJECT_ENVIRONMENT=$VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN uv sync --locked --project /opt/isekai/image
+
 # InstantID custom nodes — pinned (pack is maintenance-only since Apr 2025)
 RUN git clone https://github.com/cubiq/ComfyUI_InstantID.git \
         /opt/ComfyUI/custom_nodes/ComfyUI_InstantID \
@@ -35,18 +51,6 @@ RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
         /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux \
     && cd /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux \
     && git checkout e8b689a513c3e6b63edc44066560ca5919c0576e
-
-# The Python environment: `image/` is a uv project whose lock carries every hash
-# of ComfyUI's, the preprocessors' and InstantID's packages, and the cu128 torch
-# stack with the Blackwell (sm_120) kernels. `--locked` refuses a stale lock, so
-# nothing resolves at build time. `tools/derive_image_project.py` writes it.
-COPY image/pyproject.toml /opt/isekai/image/pyproject.toml
-COPY image/uv.lock /opt/isekai/image/uv.lock
-COPY image/.python-version /opt/isekai/image/.python-version
-ENV VIRTUAL_ENV=/opt/ComfyUI/.venv
-ENV UV_PROJECT_ENVIRONMENT=$VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-RUN uv sync --locked --project /opt/isekai/image
 
 # Provisioning is three tracked files, not one: the driver, the pinned manifest it
 # reads, and the module that owns every decision taken about it. Copying only the

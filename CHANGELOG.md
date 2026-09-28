@@ -9,6 +9,21 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-28 · 0040-the-pod-image
+
+### Security
+
+- The image ships no SSH host key: each boot makes an Ed25519 key, serves with it alone and prints its fingerprint.
+  ComfyUI writes only to memory and saves no metadata, and holds on too little memory; the environment now installs
+  before the node clones (0040 D1, D2, D3, D4).
+
+### Changed
+
+- A pod boots image `v0.28-rc1`, built on request from this version's tree, so it carries the key and memory
+  changes (0040 D5).
+- One session on `v0.28-rc1` rendered both flows, a rotated photograph upright among them: the pod made its own
+  host key, ComfyUI wrote to memory, and no render carried a text chunk (0040 D6).
+
 ## [0.27.0] - 2026-09-28 · 0039-the-photo-metadata
 
 ### Security

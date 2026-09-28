@@ -162,7 +162,8 @@ python -m isekai generate --flow summon-anime-wai .inputs/me.jpg --server http:/
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
 artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
 submitted, the image the pod booted and the runtime it reported. **Download anything you want to keep
-before the next step** — renders live on the pod's ephemeral disk, and only the models volume persists.
+before the next step** — renders live in the pod's memory, which dies with it, and only the models volume
+persists.
 
 Omit `--server` to assemble every prompt and stop without rendering, which is how a whole batch is
 checked before anything is rented. Assembly happens before any endpoint is acquired either way, so a
@@ -449,10 +450,11 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │ ◀──────────── ~14 GB ──────────┘
     │                                  │ 4  run container → CMD = /start.sh:
     │                                  │      • authorized_keys ← PUBLIC_KEY
-    │                                  │      • start sshd            (:22)
+    │                                  │      • own host key, start sshd (:22)
     │                                  │      • mount volume → /runpod-volume
     │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
     │                                  │      • provision from config/models.json (verified)
+    │                                  │      • ComfyUI's files → /dev/shm (memory)
     │                                  │      • exec ComfyUI          (:8188)
     │ 5  poll GET /v2/pods/{id} ──────▶│
     │    ◀──── ssh.direct host:port ───┘

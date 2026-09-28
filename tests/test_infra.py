@@ -655,12 +655,13 @@ def test_the_check_catches_a_resolving_install() -> None:
 
 
 # The line each step of `start.sh` begins with: the SSH key, sshd, provisioning,
-# the download inside it, and ComfyUI.
+# the download inside it, the memory directories, and ComfyUI.
 BOOT_STEPS = (
     "mkdir -p ~/.ssh",
     "mkdir -p /run/sshd",
     "if ! provision; then",
     'MODELS_DIR="$MODELS_ROOT" bash',
+    "mkdir -p /dev/shm/comfyui/input",
     "exec python main.py",
 )
 
@@ -694,6 +695,242 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
     assert unstamped_steps(
         stamped.replace('echo "$(date -u +%FT%TZ)"\nexec', "exec")
     ) == ["exec python main.py"]
+
+
+# The pod's own host key, and ComfyUI's writing kept in memory: text checks over
+# the shipped files, proved on a pod by `0040` design D6.
+
+
+def joined_lines(text: str) -> list[str]:
+    """Return each line of a script, its continuation lines joined into one."""
+    return re.sub(r"\\\n", " ", text).splitlines()
+
+
+def baked_host_key_faults(dockerfile: str) -> list[str]:
+    """Return how a host key could reach the image.
+
+    Kept by the layer installing the SSH server, or made or installed again by any
+    other line; comments are not read.
+    """
+    lines = [
+        line for line in joined_lines(dockerfile) if not line.lstrip().startswith("#")
+    ]
+    install = next(
+        line for line in lines if line.startswith("RUN ") and "openssh-server" in line
+    )
+    faults = []
+    if install.find("rm -f /etc/ssh/ssh_host_*") < install.index("openssh-server"):
+        faults.append("the install layer keeps its keys")
+    if any(
+        word in line
+        for line in lines
+        if line is not install
+        for word in ("ssh_host_", "ssh-keygen", "openssh")
+    ):
+        faults.append("another line touches the SSH server's keys")
+    return faults
+
+
+@pytest.mark.spec("pod-image:host-key:the-image-carries-none")
+def test_the_image_carries_no_host_key(dockerfile: str) -> None:
+    assert baked_host_key_faults(dockerfile) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_image_carries_no_host_key")
+def test_the_check_catches_a_host_key_kept_or_made_again() -> None:
+    install = (
+        "# the keys `openssh-server` makes are deleted here\n"
+        "RUN apt-get install -y \\\n        openssh-server \\\n"
+        "    && rm -f /etc/ssh/ssh_host_* \\\n"
+        "    && rm -rf /var/lib/apt/lists/*\n"
+    )
+    assert baked_host_key_faults(install) == []
+    later = install.replace(" \\\n    && rm -f", "\nRUN rm -f")
+    assert baked_host_key_faults(later) == [
+        "the install layer keeps its keys",
+        "another line touches the SSH server's keys",
+    ]
+    before = (
+        "RUN rm -f /etc/ssh/ssh_host_* \\\n    && apt-get install -y openssh-server\n"
+    )
+    assert baked_host_key_faults(before) == ["the install layer keeps its keys"]
+    for again in ("RUN ssh-keygen -A", "RUN dpkg-reconfigure openssh-server"):
+        assert baked_host_key_faults(f"{install}{again}\n") == [
+            "another line touches the SSH server's keys"
+        ]
+
+
+def boot_step(start_sh: str, name: str) -> str:
+    """Return the `start.sh` step `name` opens, from its timestamp to its blank line."""
+    lines = start_sh.splitlines()
+    opens = next(i for i, line in enumerate(lines) if line.endswith(f'step: {name}"'))
+    closes = next(i for i, line in enumerate(lines[opens:], opens) if not line)
+    return "\n".join(lines[opens:closes])
+
+
+def host_key_faults(start_sh: str) -> list[str]:
+    """Return what the sshd step lacks of a key made at boot, served alone, printed."""
+    step = boot_step(start_sh, "sshd")
+    faults = []
+    if "ssh-keygen -A" in step or "ssh-keygen -q -t ed25519" not in step:
+        faults.append("makes other than one Ed25519 key")
+    if not re.search(r'^/usr/sbin/sshd -o HostKey="\$key"$', step, re.M):
+        faults.append("serves other than its own key")
+    if 'echo "isekai host key: $(ssh-keygen -lf "$key.pub"' not in step:
+        faults.append("prints no fingerprint")
+    return faults
+
+
+@pytest.mark.spec("pod-image:host-key:each-boot-makes-and-prints-one")
+def test_each_boot_makes_and_prints_its_own_key(start_sh: str) -> None:
+    assert host_key_faults(start_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_each_boot_makes_and_prints_its_own_key"
+)
+def test_the_check_catches_an_sshd_serving_every_stock_key() -> None:
+    stock = 'echo "$(date -u +%FT%TZ) step: sshd"\nssh-keygen -A\n/usr/sbin/sshd\n\n'
+    assert host_key_faults(stock) == [
+        "makes other than one Ed25519 key",
+        "serves other than its own key",
+        "prints no fingerprint",
+    ]
+
+
+def serve_command(start_sh: str) -> str:
+    """Return the line that starts ComfyUI, its continuation lines joined into one."""
+    return next(
+        line
+        for line in joined_lines(start_sh)
+        if line.startswith("exec python main.py")
+    )
+
+
+def comfyui_directories(start_sh: str) -> dict[str, str]:
+    """Return each directory ComfyUI writes to, by kind, as its start line sets it.
+
+    e.g. `--temp-directory /dev/shm/comfyui` -> {"temp": "/dev/shm/comfyui/temp"}
+    """
+    found = dict(
+        re.findall(
+            r"--(input|output|temp|user)-directory (\S+)", serve_command(start_sh)
+        )
+    )
+    # ComfyUI writes its temp files to `temp` under the directory it is given.
+    if "temp" in found:
+        found["temp"] += "/temp"
+    return found
+
+
+def unmade_directories(start_sh: str) -> list[str]:
+    """Return each directory ComfyUI writes to that no `mkdir -p` makes before it."""
+    before = start_sh[: start_sh.index("exec python main.py")]
+    made = {
+        path
+        for line in before.splitlines()
+        if line.startswith("mkdir -p ")
+        for path in line.split()[2:]
+    }
+    return sorted(set(comfyui_directories(start_sh).values()) - made)
+
+
+@pytest.mark.spec("pod-image:memory:comfyui-writes-to-memory")
+def test_comfyui_writes_to_memory(start_sh: str) -> None:
+    directories = comfyui_directories(start_sh)
+    assert sorted(directories) == ["input", "output", "temp", "user"]
+    assert all(path.startswith("/dev/shm/") for path in directories.values())
+    assert unmade_directories(start_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_to_memory")
+def test_the_check_catches_a_directory_on_disk_or_not_made() -> None:
+    assert comfyui_directories("exec python main.py --port 8188\n") == {}
+    unmade = (
+        "mkdir -p /dev/shm/comfyui/input\n"
+        "exec python main.py --input-directory /dev/shm/comfyui/input \\\n"
+        "    --temp-directory /dev/shm/comfyui\n"
+    )
+    assert unmade_directories(unmade) == ["/dev/shm/comfyui/temp"]
+
+
+def memory_hold_faults(start_sh: str) -> list[str]:
+    """Return what the memory step lacks of a hold on too little free memory."""
+    step = boot_step(start_sh, "the memory directories")
+    faults = []
+    measured = re.search(r"df -k --output=(\S+) /dev/shm", step)
+    if measured is None:
+        faults.append("does not measure /dev/shm")
+    else:
+        columns = measured.group(1).split(",")
+        free = columns.index("avail") + 1 if "avail" in columns else 0
+        if f"free_kib=\"$(awk '{{print ${free}}}'" not in step:
+            faults.append("reads other than the free column")
+    if not re.search(
+        r'^if \[ "\$free_kib" -lt "\$SHM_FREE_FLOOR_KIB" \]; then$', step, re.M
+    ):
+        faults.append("compares against no floor")
+    if any(int(guess) for guess in re.findall(r"\bfree_kib=(\d+)", step)):
+        faults.append("defaults an unreadable figure to free memory")
+    if not re.search(r'>&2\n\s*exec sleep "\$HOLD_SECONDS"$', step, re.M):
+        faults.append("does not say why and hold")
+    return faults
+
+
+@pytest.mark.spec("pod-image:memory:too-little-memory-holds")
+def test_too_little_memory_holds_the_pod(start_sh: str) -> None:
+    floor = re.search(
+        r"^SHM_FREE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)$", start_sh, re.M
+    )
+    assert floor is not None
+    assert int(floor.group(1)) >= 1
+    assert memory_hold_faults(start_sh) == []
+    step = boot_step(start_sh, "the memory directories")
+    assert start_sh.index(step) < start_sh.index("exec python main.py")
+
+
+@pytest.mark.spec_exempt("structural: twin of test_too_little_memory_holds_the_pod")
+def test_the_check_catches_a_memory_step_that_never_holds() -> None:
+    holds = (
+        'echo "$(date -u +%FT%TZ) step: the memory directories"\n'
+        "mkdir -p /dev/shm/comfyui/input\n"
+        "shm_kib=\"$(df -k --output=size,avail /dev/shm | tail -n 1)\" || shm_kib=''\n"
+        'free_kib="$(awk \'{print $2}\' <<<"$shm_kib")"\n'
+        'case "$free_kib" in\n'
+        "    '' | *[!0-9]*) free_kib=0 ;;\n"
+        "esac\n"
+        'if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then\n'
+        '    echo "ERROR: too little" >&2\n'
+        '    exec sleep "$HOLD_SECONDS"\n'
+        "fi\n\n"
+    )
+    assert memory_hold_faults(holds) == []
+    silent = holds.replace(
+        '    echo "ERROR: too little" >&2\n    exec sleep "$HOLD_SECONDS"\n',
+        "    true\n",
+    )
+    assert memory_hold_faults(silent) == ["does not say why and hold"]
+    for inverted in ('[ "$free_kib" -ge', '! [ "$free_kib" -lt'):
+        assert memory_hold_faults(holds.replace('[ "$free_kib" -lt', inverted)) == [
+            "compares against no floor"
+        ]
+    size_column = holds.replace("{print $2}", "{print $1}")
+    assert memory_hold_faults(size_column) == ["reads other than the free column"]
+    guessed = holds.replace("free_kib=0 ;;", "free_kib=99999999 ;;")
+    assert memory_hold_faults(guessed) == [
+        "defaults an unreadable figure to free memory"
+    ]
+
+
+@pytest.mark.spec("pod-image:render-metadata:none-is-written")
+def test_comfyui_writes_no_metadata(start_sh: str) -> None:
+    assert "--disable-metadata" in serve_command(start_sh).split()
+
+
+@pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_no_metadata")
+def test_the_check_catches_the_flag_outside_the_start_line() -> None:
+    elsewhere = "# --disable-metadata\nexec python main.py --port 8188\n"
+    assert "--disable-metadata" not in serve_command(elsewhere).split()
 
 
 WORKFLOWS = sorted((REPO / ".github" / "workflows").glob("*.yml"))
