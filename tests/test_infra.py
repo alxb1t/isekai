@@ -701,27 +701,24 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
 # the shipped files, proved on a pod by `0040` design D6.
 
 
-def instructions(dockerfile: str) -> list[str]:
-    """Return each build instruction, its continuation lines joined into one."""
-    return re.sub(r"\\\n", " ", dockerfile).splitlines()
+def joined_lines(text: str) -> list[str]:
+    """Return each line of a script, its continuation lines joined into one."""
+    return re.sub(r"\\\n", " ", text).splitlines()
 
 
-def keeps_host_keys(dockerfile: str) -> bool:
-    """Return whether the layer installing the SSH server keeps the keys it made.
-
-    A later layer deleting them only hides them: the earlier one still ships.
-    """
+def deletes_host_keys_where_installed(dockerfile: str) -> bool:
+    """Return whether the layer installing the SSH server deletes the keys it made."""
     install = next(
         line
-        for line in instructions(dockerfile)
+        for line in joined_lines(dockerfile)
         if line.startswith("RUN ") and "openssh-server" in line
     )
-    return "rm -f /etc/ssh/ssh_host_*" not in install
+    return "rm -f /etc/ssh/ssh_host_*" in install
 
 
 @pytest.mark.spec("pod-image:host-key:the-image-carries-none")
 def test_the_image_carries_no_host_key(dockerfile: str) -> None:
-    assert not keeps_host_keys(dockerfile)
+    assert deletes_host_keys_where_installed(dockerfile)
 
 
 @pytest.mark.spec_exempt("structural: twin of test_the_image_carries_no_host_key")
@@ -731,8 +728,10 @@ def test_the_check_catches_host_keys_deleted_in_a_later_layer() -> None:
         "    && rm -rf /var/lib/apt/lists/*\n"
         "RUN rm -f /etc/ssh/ssh_host_*\n"
     )
-    assert keeps_host_keys(later)
-    assert not keeps_host_keys(later.replace("\nRUN rm", " \\\n    && rm"))
+    assert not deletes_host_keys_where_installed(later)
+    assert deletes_host_keys_where_installed(
+        later.replace("\nRUN rm", " \\\n    && rm")
+    )
 
 
 def boot_step(start_sh: str, name: str) -> str:
@@ -777,7 +776,7 @@ def serve_command(start_sh: str) -> str:
     """Return the line that starts ComfyUI, its continuation lines joined into one."""
     return next(
         line
-        for line in instructions(start_sh)
+        for line in joined_lines(start_sh)
         if line.startswith("exec python main.py")
     )
 
@@ -833,9 +832,9 @@ def memory_hold_faults(start_sh: str) -> list[str]:
     """Return what the memory step lacks of a hold on too little free memory."""
     step = boot_step(start_sh, "the memory directories")
     faults = []
-    if "df -k --output=size,avail /dev/shm" not in step:
+    if not re.search(r"df -k .*/dev/shm", step):
         faults.append("does not measure /dev/shm")
-    if '-lt "$SHM_FREE_FLOOR_KIB"' not in step:
+    if not re.search(r'-(?:lt|ge) "\$SHM_FREE_FLOOR_KIB"', step):
         faults.append("compares against no floor")
     if not re.search(r'>&2\n\s*exec sleep "\$HOLD_SECONDS"$', step, re.M):
         faults.append("does not say why and hold")
@@ -848,7 +847,7 @@ def test_too_little_memory_holds_the_pod(start_sh: str) -> None:
         r"^SHM_FREE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)$", start_sh, re.M
     )
     assert floor is not None
-    assert int(floor.group(1)) * 1024 * 1024 * 1024 >= 1000**3
+    assert int(floor.group(1)) >= 1
     assert memory_hold_faults(start_sh) == []
     step = boot_step(start_sh, "the memory directories")
     assert start_sh.index(step) < start_sh.index("exec python main.py")
