@@ -706,32 +706,58 @@ def joined_lines(text: str) -> list[str]:
     return re.sub(r"\\\n", " ", text).splitlines()
 
 
-def deletes_host_keys_where_installed(dockerfile: str) -> bool:
-    """Return whether the layer installing the SSH server deletes the keys it made."""
+def baked_host_key_faults(dockerfile: str) -> list[str]:
+    """Return how a host key could reach the image.
+
+    Kept by the layer installing the SSH server, or made or installed again by any
+    other line; comments are not read.
+    """
+    lines = [
+        line for line in joined_lines(dockerfile) if not line.lstrip().startswith("#")
+    ]
     install = next(
-        line
-        for line in joined_lines(dockerfile)
-        if line.startswith("RUN ") and "openssh-server" in line
+        line for line in lines if line.startswith("RUN ") and "openssh-server" in line
     )
-    return "rm -f /etc/ssh/ssh_host_*" in install
+    faults = []
+    if install.find("rm -f /etc/ssh/ssh_host_*") < install.index("openssh-server"):
+        faults.append("the install layer keeps its keys")
+    if any(
+        word in line
+        for line in lines
+        if line is not install
+        for word in ("ssh_host_", "ssh-keygen", "openssh")
+    ):
+        faults.append("another line touches the SSH server's keys")
+    return faults
 
 
 @pytest.mark.spec("pod-image:host-key:the-image-carries-none")
 def test_the_image_carries_no_host_key(dockerfile: str) -> None:
-    assert deletes_host_keys_where_installed(dockerfile)
+    assert baked_host_key_faults(dockerfile) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_the_image_carries_no_host_key")
-def test_the_check_catches_host_keys_deleted_in_a_later_layer() -> None:
-    later = (
+def test_the_check_catches_a_host_key_kept_or_made_again() -> None:
+    install = (
+        "# the keys `openssh-server` makes are deleted here\n"
         "RUN apt-get install -y \\\n        openssh-server \\\n"
+        "    && rm -f /etc/ssh/ssh_host_* \\\n"
         "    && rm -rf /var/lib/apt/lists/*\n"
-        "RUN rm -f /etc/ssh/ssh_host_*\n"
     )
-    assert not deletes_host_keys_where_installed(later)
-    assert deletes_host_keys_where_installed(
-        later.replace("\nRUN rm", " \\\n    && rm")
+    assert baked_host_key_faults(install) == []
+    later = install.replace(" \\\n    && rm -f", "\nRUN rm -f")
+    assert baked_host_key_faults(later) == [
+        "the install layer keeps its keys",
+        "another line touches the SSH server's keys",
+    ]
+    before = (
+        "RUN rm -f /etc/ssh/ssh_host_* \\\n    && apt-get install -y openssh-server\n"
     )
+    assert baked_host_key_faults(before) == ["the install layer keeps its keys"]
+    for again in ("RUN ssh-keygen -A", "RUN dpkg-reconfigure openssh-server"):
+        assert baked_host_key_faults(f"{install}{again}\n") == [
+            "another line touches the SSH server's keys"
+        ]
 
 
 def boot_step(start_sh: str, name: str) -> str:
@@ -832,10 +858,20 @@ def memory_hold_faults(start_sh: str) -> list[str]:
     """Return what the memory step lacks of a hold on too little free memory."""
     step = boot_step(start_sh, "the memory directories")
     faults = []
-    if not re.search(r"df -k .*/dev/shm", step):
+    measured = re.search(r"df -k --output=(\S+) /dev/shm", step)
+    if measured is None:
         faults.append("does not measure /dev/shm")
-    if not re.search(r'-(?:lt|ge) "\$SHM_FREE_FLOOR_KIB"', step):
+    else:
+        columns = measured.group(1).split(",")
+        free = columns.index("avail") + 1 if "avail" in columns else 0
+        if f"free_kib=\"$(awk '{{print ${free}}}'" not in step:
+            faults.append("reads other than the free column")
+    if not re.search(
+        r'^if \[ "\$free_kib" -lt "\$SHM_FREE_FLOOR_KIB" \]; then$', step, re.M
+    ):
         faults.append("compares against no floor")
+    if any(int(guess) for guess in re.findall(r"\bfree_kib=(\d+)", step)):
+        faults.append("defaults an unreadable figure to free memory")
     if not re.search(r'>&2\n\s*exec sleep "\$HOLD_SECONDS"$', step, re.M):
         faults.append("does not say why and hold")
     return faults
@@ -855,15 +891,35 @@ def test_too_little_memory_holds_the_pod(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_too_little_memory_holds_the_pod")
 def test_the_check_catches_a_memory_step_that_never_holds() -> None:
-    silent = (
+    holds = (
         'echo "$(date -u +%FT%TZ) step: the memory directories"\n'
         "mkdir -p /dev/shm/comfyui/input\n"
-        "df -k --output=size,avail /dev/shm\n"
+        "shm_kib=\"$(df -k --output=size,avail /dev/shm | tail -n 1)\" || shm_kib=''\n"
+        'free_kib="$(awk \'{print $2}\' <<<"$shm_kib")"\n'
+        'case "$free_kib" in\n'
+        "    '' | *[!0-9]*) free_kib=0 ;;\n"
+        "esac\n"
         'if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then\n'
-        "    true\n"
+        '    echo "ERROR: too little" >&2\n'
+        '    exec sleep "$HOLD_SECONDS"\n'
         "fi\n\n"
     )
+    assert memory_hold_faults(holds) == []
+    silent = holds.replace(
+        '    echo "ERROR: too little" >&2\n    exec sleep "$HOLD_SECONDS"\n',
+        "    true\n",
+    )
     assert memory_hold_faults(silent) == ["does not say why and hold"]
+    for inverted in ('[ "$free_kib" -ge', '! [ "$free_kib" -lt'):
+        assert memory_hold_faults(holds.replace('[ "$free_kib" -lt', inverted)) == [
+            "compares against no floor"
+        ]
+    size_column = holds.replace("{print $2}", "{print $1}")
+    assert memory_hold_faults(size_column) == ["reads other than the free column"]
+    guessed = holds.replace("free_kib=0 ;;", "free_kib=99999999 ;;")
+    assert memory_hold_faults(guessed) == [
+        "defaults an unreadable figure to free memory"
+    ]
 
 
 @pytest.mark.spec("pod-image:render-metadata:none-is-written")

@@ -162,7 +162,8 @@ python -m isekai generate --flow summon-anime-wai .inputs/me.jpg --server http:/
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
 artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
 submitted, the image the pod booted and the runtime it reported. **Download anything you want to keep
-before the next step** — renders live on the pod's ephemeral disk, and only the models volume persists.
+before the next step** — renders live in the pod's memory, which dies with it, and only the models volume
+persists.
 
 Omit `--server` to assemble every prompt and stop without rendering, which is how a whole batch is
 checked before anything is rented. Assembly happens before any endpoint is acquired either way, so a
