@@ -46,6 +46,7 @@ from isekai.foundation.artifacts import (
     Frame,
     InstructionsRecord,
     read,
+    require,
     write,
 )
 from isekai.foundation.atomic_write import write_atomically
@@ -233,19 +234,39 @@ class Run:
         return self.path / FRAME_NAME
 
     @property
-    def frame(self) -> Frame:
-        """Return the run's frame, refusing a version this build does not read."""
+    def _remedy(self) -> str:
+        """Return the fix for a damaged frame."""
         # A stage verb given the run id cannot reach a run with no frame, while
         # `open_run` passes over one, so the path is what re-creates it.
-        fix = "offer the photograph again by its path"
-        return read(
-            self.frame_path, RUN_FILE, remedy=f"delete {self.frame_path}, then {fix}"
-        )
+        return f"delete {self.frame_path}, then offer the photograph again by its path"
+
+    @property
+    def frame(self) -> Frame:
+        """Return the run's frame, refusing a version this build does not read."""
+        return read(self.frame_path, RUN_FILE, remedy=self._remedy)
+
+    def _photo_record(self, key: str) -> str:
+        """Return the frame's `photo[key]`, refusing by name a value not a string."""
+        frame = self.frame
+        require(self.frame_path, frame, "photo", dict, self._remedy)
+        record: Mapping[str, object] = {**frame["photo"]}
+        require(self.frame_path, record, key, str, self._remedy)
+        return str(record[key])
 
     @property
     def photo(self) -> Path:
-        """Return the path of the photograph's copy inside the run."""
-        return self.path / str(self.frame["photo"]["name"])
+        """Return the path of the photograph's copy inside the run.
+
+        The name is a file's word, not a path: one that could leave the run is
+        refused, or the run would serve and upload any image on the machine.
+        """
+        name = self._photo_record("name")
+        if name in ("", ".", "..") or "/" in name or "\\" in name:
+            raise Refusal(
+                f"{FRAME_NAME}: names its photograph {name!r}, which is not one "
+                f"plain filename; {self._remedy}"
+            )
+        return self.path / name
 
     @property
     def flows(self) -> list[str]:
@@ -287,7 +308,7 @@ def _run_for(digest: str, runs_root: Path) -> Run | None:
         run = Run(name, runs_root / name)
         if not run.frame_path.exists():
             continue
-        if run.frame["photo"]["sha256"] == digest:
+        if run._photo_record("sha256") == digest:
             return run
         raise Refusal(
             f"{name} already holds a different photograph with the same "

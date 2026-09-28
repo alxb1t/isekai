@@ -7,7 +7,7 @@ metered session proves them together, per [design](design.md).
 
 - [x] 1 — The transport
 - [x] 2 — The review surface
-- [ ] 3 — The run frame
+- [x] 3 — The run frame
 - [ ] 4 — The render session
 - [ ] 5 — 🛑 **HUMAN · METERED** — one render session with a dead `http_proxy` exported
 
@@ -42,7 +42,7 @@ Line numbers are `fcb5e3b`'s; find each site by the text [design](design.md) nam
 
 ## 3 — The run frame
 
-- [ ] 3.1 Check the frame in `Run.photo` and `_run_for` in `isekai/foundation/run.py`, per [D7](design.md#d7); add `test_a_name_that_leaves_the_run_is_refused` (`run-directory:frame:a-name-that-leaves-the-run-is-refused`) and `test_a_frame_without_its_photograph_is_refused` (`run-directory:frame:a-frame-without-its-photograph-is-refused`) to `tests/test_run_directory.py`.
+- [x] 3.1 Check the frame in `Run.photo` and `_run_for` in `isekai/foundation/run.py`, per [D7](design.md#d7); add `test_a_name_that_leaves_the_run_is_refused` (`run-directory:frame:a-name-that-leaves-the-run-is-refused`) and `test_a_frame_without_its_photograph_is_refused` (`run-directory:frame:a-frame-without-its-photograph-is-refused`) to `tests/test_run_directory.py`.
   Verify: `grep -cF 'self.path / str(self.frame["photo"]["name"])' isekai/foundation/run.py` prints `0`, and `grep -c -e '^def test_a_name_that_leaves_the_run_is_refused' -e '^def test_a_frame_without_its_photograph_is_refused' tests/test_run_directory.py` prints `2`.
 
 ## 4 — The render session

@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The review surface refuses a damaged draft, approved sheet, caption or tag list by name**, with the command
   that rewrites it, rather than failing with a server error; a draft update whose fields are not lists of strings
   is refused naming the field, and nothing is saved (0037 design D6).
+- **A run's frame must name its photograph with one plain filename, and carry its name and digest**, or the run
+  is refused naming `run.json`; a frame can no longer point a run at another file on the machine (0037 design D7).
 
 ## [0.25.1] - 2026-09-27
 
