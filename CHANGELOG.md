@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-28 · 0041-the-right-machine
+
 ### Security
 
 - A pod is created only beside a models volume large enough for the manifest, and with its libraries' telemetry
