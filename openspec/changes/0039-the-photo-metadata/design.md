@@ -87,8 +87,8 @@ The calls at `tests/test_generate.py:1028` and `tests/test_resume.py:560-566` mo
 **Refused, never sent whole.** A photograph the walk cannot read to its end — a block that runs past the file, an
 unknown marker before a scan, an unknown critical chunk — raises a `Refusal` naming the photograph and the render
 path's existing remedy for an unreadable photograph. Assembly walks it first, for a flow that uploads a photograph,
-so the refusal is recorded there before anything is rented; it is raised again inside `render`'s upload `try`, so
-`_recorded` records it as permanent and nothing is uploaded.
+even when an earlier build already wrote the prompt, so the refusal is recorded there before anything is rented; it
+is raised again inside `render`'s upload `try`, so `_recorded` records it as permanent and nothing is uploaded.
 
 ### D6
 

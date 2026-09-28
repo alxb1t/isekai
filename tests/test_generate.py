@@ -1011,6 +1011,28 @@ def test_an_unwalkable_photograph_is_refused_at_assembly(
 
 
 @pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+def test_a_prompt_already_on_disk_does_not_skip_the_assembly_walk(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    # A prompt an earlier build assembled without walking: the free pass must
+    # still refuse the photograph, before any client exists, not the render.
+    run = _run(tmp_path, schema, vocabulary)
+    prepare(run, {FLOW: flow})
+    run.photo.write_bytes(_UNWALKABLE)
+
+    assembled, refused = prepare(run, {FLOW: flow})
+
+    assert assembled == {} and len(refused) == 1
+    assert run.photo.name in refused[0]
+    assert f"python -m isekai generate --flow {FLOW} {run.id}" in refused[0]
+    directory = run.path / FLOW / PROMPTS
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    # A permanent failure is never retried: the next pass reads the record.
+    assert prepare(run, {FLOW: flow})[0] == {}
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
 def test_an_unwalkable_photograph_is_refused_before_upload(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
 ) -> None:

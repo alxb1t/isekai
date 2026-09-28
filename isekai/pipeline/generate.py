@@ -173,6 +173,14 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
     directory = run.directory(flow.id, PROMPTS)
     path = directory / artifact_name(version)
     if path.exists():
+        # A prompt an earlier build wrote was never walked, and the walk below
+        # must cost this free pass rather than a boot (0039 design D5).
+        if "photo" in flow.inputs:
+            check_budget(STAGE_ASSEMBLE, directory, version, run)
+            try:
+                strip_metadata(run.photo)
+            except Refusal as broken:
+                raise _unassembled(run, flow, directory, version, broken) from broken
         return path
 
     check_budget(STAGE_ASSEMBLE, directory, version, run)
@@ -189,17 +197,7 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
         if "photo" in flow.inputs:
             strip_metadata(run.photo)
     except (Refusal, KeyError, TypeError, AttributeError) as broken:
-        record = record_failure(
-            directory,
-            version,
-            "permanent",
-            {"stage": STAGE_ASSEMBLE, "detail": str(broken)},
-        )
-        raise Refusal(
-            f"{run.id}: flow {flow.id}'s approved sheet cannot be assembled -- "
-            f"{broken}; fix it, delete {flow.id}/{PROMPTS}/{record.name}, then "
-            f"run `python -m isekai generate --flow {flow.id} {run.id}`"
-        ) from broken
+        raise _unassembled(run, flow, directory, version, broken) from broken
 
     prompt: Prompt = {
         "schema": PROMPT_FILE.schema,
@@ -217,6 +215,23 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
     }
     write(path, PROMPT_FILE, prompt)
     return path
+
+
+def _unassembled(
+    run: Run, flow: Flow, directory: Path, version: int, broken: Exception
+) -> Refusal:
+    """Record a failed assembly as permanent, and return the refusal naming it."""
+    record = record_failure(
+        directory,
+        version,
+        "permanent",
+        {"stage": STAGE_ASSEMBLE, "detail": str(broken)},
+    )
+    return Refusal(
+        f"{run.id}: flow {flow.id}'s approved sheet cannot be assembled -- "
+        f"{broken}; fix it, delete {flow.id}/{PROMPTS}/{record.name}, then "
+        f"run `python -m isekai generate --flow {flow.id} {run.id}`"
+    )
 
 
 def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[str]]:
