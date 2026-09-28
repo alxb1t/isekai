@@ -159,13 +159,15 @@ fi
 #    container disk may outlive it unwiped (0040 design D2).
 echo "$(date -u +%FT%TZ) step: the memory directories"
 mkdir -p /dev/shm/comfyui/input /dev/shm/comfyui/output /dev/shm/comfyui/temp /dev/shm/comfyui/user
-size_kib='' free_kib=''
-read -r size_kib free_kib < <(df -k --output=size,avail /dev/shm | tail -n 1) || true
-echo "/dev/shm KiB, size and free: ${size_kib} ${free_kib}"
-# An unreadable figure fails the test too, and holds.
-if ! [ "$free_kib" -ge "$SHM_FREE_FLOOR_KIB" ] 2>/dev/null; then
-    echo "ERROR: /dev/shm free space '${free_kib}' KiB is unreadable or below the" >&2
-    echo "${SHM_FREE_FLOOR_KIB} KiB floor — too little memory to hold the photograph and its renders." >&2
+shm_kib="$(df -k --output=size,avail /dev/shm | tail -n 1)" || shm_kib=''
+echo "/dev/shm KiB, size and free:${shm_kib}"
+free_kib="$(awk '{print $2}' <<<"$shm_kib")"
+case "$free_kib" in
+    '' | *[!0-9]*) free_kib=0 ;;
+esac
+if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then
+    echo "ERROR: /dev/shm has ${free_kib} KiB free, below the ${SHM_FREE_FLOOR_KIB} KiB" >&2
+    echo "floor — too little memory to hold the photograph and its renders." >&2
     echo "Holding ${HOLD_SECONDS}s, then exiting. ComfyUI was not started." >&2
     exec sleep "$HOLD_SECONDS"
 fi
