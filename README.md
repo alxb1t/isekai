@@ -449,10 +449,11 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │ ◀──────────── ~14 GB ──────────┘
     │                                  │ 4  run container → CMD = /start.sh:
     │                                  │      • authorized_keys ← PUBLIC_KEY
-    │                                  │      • start sshd            (:22)
+    │                                  │      • own host key, start sshd (:22)
     │                                  │      • mount volume → /runpod-volume
     │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
     │                                  │      • provision from config/models.json (verified)
+    │                                  │      • ComfyUI's files → /dev/shm (memory)
     │                                  │      • exec ComfyUI          (:8188)
     │ 5  poll GET /v2/pods/{id} ──────▶│
     │    ◀──── ssh.direct host:port ───┘

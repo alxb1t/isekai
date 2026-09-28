@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Security
+
+- The image ships no SSH host key: each boot makes an Ed25519 key, serves with it alone and prints its fingerprint.
+  ComfyUI writes only to memory and saves no metadata, and holds on too little memory; the environment now installs
+  before the node clones (0040 D1, D2, D3, D4).
+
 ## [0.27.0] - 2026-09-28 · 0039-the-photo-metadata
 
 ### Security

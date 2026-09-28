@@ -13,11 +13,15 @@ echo "${PUBLIC_KEY:-${SSH_PUBLIC_KEY:-}}" > ~/.ssh/authorized_keys
 chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 
-# 2. Start the SSH daemon.
+# 2. Start the SSH daemon. The image ships no host key, so the pod makes its own
+#    and serves with it alone; the printed line is what a client checks it against
+#    (0040 design D1).
 echo "$(date -u +%FT%TZ) step: sshd"
 mkdir -p /run/sshd
-ssh-keygen -A
-/usr/sbin/sshd
+key=/etc/ssh/ssh_host_ed25519_key
+[ -f "$key" ] || ssh-keygen -q -t ed25519 -N '' -f "$key"
+/usr/sbin/sshd -o HostKey="$key"
+echo "isekai host key: $(ssh-keygen -lf "$key.pub" | awk '{print $2}')"
 
 # 3. Where this project's models live, and what a provisioning failure costs.
 #
@@ -47,11 +51,11 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 #
 # The second is the case this pod-side check exists for at all — id set, mount
 # silently failed, so the path falls through to the overlay — and a floor sized
-# only against the first lets it pass. The network volume this project actually
-# provisions onto is 80 GB (≈ 74.5 GiB), so 40 GiB sits clear of both wrong disks
-# with ~12 GiB of headroom above the larger and ~34 GiB below the right one:
-# wide enough that neither a decimal/binary reading of RunPod's sizes nor a
-# filesystem's metadata overhead can move a disk across it.
+# only against the first lets it pass. The network volume this project provisions
+# onto is 20 GB, but it reports its storage cluster's capacity, far above both
+# (docs D27), so 40 GiB sits clear of both wrong disks with ~12 GiB of headroom
+# above the larger: wide enough that neither a decimal/binary reading of RunPod's
+# sizes nor a filesystem's metadata overhead can move a disk across it.
 #
 # Deliberately NOT free space. This guard proves identity, and a volume already
 # holding 16.5 GiB of this project's models plus a second project's is a
@@ -60,6 +64,10 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 # write the failure marker and bill the whole hold, for a pod that needed to
 # download nothing — and it would degrade as the shared volume filled.
 VOLUME_SIZE_FLOOR_KIB=$((40 * 1024 * 1024))
+
+# Below this much free memory ComfyUI would fail its first save mid-session, so the
+# pod holds before it starts instead (0040 design D2).
+SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))
 
 # 4. Provisioning: prepare this project's namespace on the volume, then ensure the
 #    models are on it.
@@ -147,6 +155,30 @@ if ! provision; then
     exec sleep "$HOLD_SECONDS"
 fi
 
-# 5. ComfyUI in the foreground — the main process. If it exits, the pod stops.
+# 5. Everything ComfyUI writes goes to memory, which dies with the pod; the
+#    container disk may outlive it unwiped (0040 design D2).
+echo "$(date -u +%FT%TZ) step: the memory directories"
+mkdir -p /dev/shm/comfyui/input /dev/shm/comfyui/output /dev/shm/comfyui/temp /dev/shm/comfyui/user
+shm_kib="$(df -k --output=size,avail /dev/shm | tail -n 1)" || shm_kib=''
+echo "/dev/shm KiB, size and free:${shm_kib}"
+free_kib="$(awk '{print $2}' <<<"$shm_kib")"
+case "$free_kib" in
+    '' | *[!0-9]*) free_kib=0 ;;
+esac
+if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then
+    echo "ERROR: /dev/shm has ${free_kib} KiB free, below the ${SHM_FREE_FLOOR_KIB} KiB" >&2
+    echo "floor — too little memory to hold the photograph and its renders." >&2
+    echo "Holding ${HOLD_SECONDS}s, then exiting. ComfyUI was not started." >&2
+    exec sleep "$HOLD_SECONDS"
+fi
+
+# 6. ComfyUI in the foreground — the main process. If it exits, the pod stops.
+#    It writes its temp files to `temp` under the directory it is given. No render
+#    carries metadata, so none carries the prompt (0040 design D3).
 echo "$(date -u +%FT%TZ) step: ComfyUI"
-exec python main.py --listen 0.0.0.0 --port 8188
+exec python main.py --listen 0.0.0.0 --port 8188 \
+    --input-directory /dev/shm/comfyui/input \
+    --output-directory /dev/shm/comfyui/output \
+    --temp-directory /dev/shm/comfyui \
+    --user-directory /dev/shm/comfyui/user \
+    --disable-metadata
