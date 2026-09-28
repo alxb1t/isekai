@@ -183,8 +183,11 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
         sheet = body["sheet"]
         # Read here and thrown away, for the reason the whole stage is here: the
         # render target comes from the photograph's own header, and a header
-        # nothing can read must cost an assembly rather than a boot.
+        # nothing can read must cost an assembly rather than a boot. So must a
+        # photograph the upload's strip cannot walk; `render` walks it again.
         photo_resolution(run.photo)
+        if "photo" in flow.inputs:
+            strip_metadata(run.photo)
     except (Refusal, KeyError, TypeError, AttributeError) as broken:
         record = record_failure(
             directory,

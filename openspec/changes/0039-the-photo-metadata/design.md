@@ -50,7 +50,7 @@ at the image's end:
 
 | format | kept | dropped | ends at |
 |---|---|---|---|
-| JPEG | SOI; `APP0` whose payload starts `JFIF\0`; `APP2` whose payload starts `ICC_PROFILE\0`; `APP14` whose payload starts `Adobe`; DQT, DHT, DAC, DRI, every SOF; each SOS with its scan data; EOI | every other `APPn` (EXIF, XMP, MPF, JFXX, …), COM | the first EOI — anything after it goes |
+| JPEG | SOI; `APP0` whose payload starts `JFIF\0`, cut to its 14 fixed bytes with no thumbnail; `APP2` whose payload starts `ICC_PROFILE\0`; `APP14` whose payload starts `Adobe`, cut to its 12 fixed bytes; DQT, DHT, DAC, DRI, every SOF; each SOS with its scan data; EOI | every other `APPn` (EXIF, XMP, MPF, JFXX, …), COM | the first EOI — anything after it goes |
 | PNG | the signature; `IHDR`, `PLTE`, `IDAT`, `IEND`; `tRNS`, `gAMA`, `cHRM`, `sRGB`, `iCCP`, `sBIT`, `cICP` | every other chunk (`eXIf`, `tEXt`, `iTXt`, `zTXt`, `tIME`, …) | `IEND` — anything after it goes |
 
 - **Between scans** of a progressive JPEG, the walk resumes at the next marker that is not a restart marker or a
@@ -86,8 +86,9 @@ The calls at `tests/test_generate.py:1028` and `tests/test_resume.py:560-566` mo
 
 **Refused, never sent whole.** A photograph the walk cannot read to its end — a block that runs past the file, an
 unknown marker before a scan, an unknown critical chunk — raises a `Refusal` naming the photograph and the render
-path's existing remedy for an unreadable photograph. It is raised inside `render`'s upload `try`, so `_recorded`
-records it as permanent and nothing is uploaded.
+path's existing remedy for an unreadable photograph. Assembly walks it first, for a flow that uploads a photograph,
+so the refusal is recorded there before anything is rented; it is raised again inside `render`'s upload `try`, so
+`_recorded` records it as permanent and nothing is uploaded.
 
 ### D6
 

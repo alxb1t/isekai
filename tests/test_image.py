@@ -452,6 +452,27 @@ def test_no_block_outside_the_allowlist_survives(kind: str, tmp_path: Path) -> N
         assert stripped.endswith(b"\xff\xd9")
 
 
+@pytest.mark.spec("image-generation:photo-metadata:no-metadata-leaves-the-machine")
+def test_a_kept_header_keeps_its_fixed_fields_alone(tmp_path: Path) -> None:
+    # A JFIF header whose thumbnail is 4x1 RGB, and an Adobe header with bytes
+    # after its fixed fields: both segments are kept, and neither tail may be.
+    data = _pillow_photo("jpeg")
+    jfif = data.index(b"\xff\xe0")
+    fields = data[jfif + 4 : jfif + 16]  # JFIF\0 to the thumbnail's size
+    thumbnailed = jpeg_segment(0xE0, fields + b"\x04\x01" + b"thumb-needle")
+    adobe = jpeg_segment(0xEE, b"Adobe\x00\x64\x00\x00\x00\x00\x01adobe-needle")
+    original = data[:jfif] + thumbnailed + adobe + data[jfif + 18 :]
+    stripped = _stripped(tmp_path, "photo", original)
+
+    for needle in (b"thumb-needle", b"adobe-needle"):
+        assert needle in original, needle
+        assert needle not in stripped, needle
+    apps = dict(_jpeg_apps(_decoded(stripped)))
+    assert apps["APP0"] == fields + b"\x00\x00"
+    assert apps["APP14"] == b"Adobe\x00\x64\x00\x00\x00\x00\x01"
+    assert _decoded(stripped).tobytes() == _decoded(original).tobytes()
+
+
 @pytest.mark.spec_exempt("structural: the hand-built photographs end without a scan")
 @pytest.mark.parametrize(
     "data",

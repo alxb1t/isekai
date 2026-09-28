@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   walk that never re-encodes; one it cannot walk to its end is refused (0039 D1, D2, D5).
 - The render uploads the stripped photograph under its name, and the run's copy keeps its bytes; the transport
   takes a name and bytes (0039 D3, D4).
+- A JFIF or Adobe header is cut to its fixed fields, so a thumbnail never leaves, and assembly walks the photograph,
+  so one the strip refuses is refused before any pod boots (0039 D1, D5).
 
 ## [0.26.1] - 2026-09-28 · 0038-the-changelog
 

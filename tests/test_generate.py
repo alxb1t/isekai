@@ -987,15 +987,38 @@ def test_the_runs_copy_keeps_its_bytes(
     assert client.uploaded is not None and client.uploaded[1] != _CARRYING_METADATA
 
 
+# A scan with no end: the header reader stops at the frame header and reads this
+# photograph, and the strip cannot walk it to its end.
+_UNWALKABLE = _PLAIN[:-2] + jpeg_segment(0xDA, b"") + b"\x12\x34"
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+def test_an_unwalkable_photograph_is_refused_at_assembly(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    # The free pass, before any client exists: a photograph the strip cannot walk
+    # must cost an assembly rather than a boot.
+    run = _run(tmp_path, schema, vocabulary, body=_UNWALKABLE)
+
+    assembled, refused = prepare(run, {FLOW: flow})
+
+    assert assembled == {} and len(refused) == 1
+    assert run.photo.name in refused[0]
+    assert f"python -m isekai generate --flow {FLOW} {run.id}" in refused[0]
+    directory = run.path / FLOW / PROMPTS
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+    assert not (directory / "001.json").exists()
+
+
 @pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
 def test_an_unwalkable_photograph_is_refused_before_upload(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
 ) -> None:
-    # A scan with no end: the header reader stops at the frame header and reads
-    # this photograph, and the strip cannot walk it to its end.
-    cut = _PLAIN[:-2] + jpeg_segment(0xDA, b"") + b"\x12\x34"
-    run = _run(tmp_path, schema, vocabulary, body=cut)
+    # Assembly walks the photograph first, so the render's own walk is reached
+    # only by a photograph that changed after it -- which this one does.
+    run = _run(tmp_path, schema, vocabulary)
     prepare(run, {FLOW: flow})
+    run.photo.write_bytes(_UNWALKABLE)
     client = FakeComfyClient()
 
     with pytest.raises(Refusal) as refused:

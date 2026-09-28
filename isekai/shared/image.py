@@ -351,6 +351,11 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
 # map, a provenance record -- goes without anyone having to name it.
 _JPEG_KEPT_TABLES = _JPEG_SOF_MARKERS | {0xC4, 0xCC, 0xDB, 0xDD}  # DHT DAC DQT DRI
 _JPEG_KEPT_APPS = {0xE0: b"JFIF\x00", 0xE2: b"ICC_PROFILE\x00", 0xEE: b"Adobe"}
+# JFIF's and Adobe's fixed fields, by payload length. Past them a JFIF header
+# carries a thumbnail and an Adobe one whatever a writer appended, so each is cut
+# to its fields -- JFIF's thumbnail size zeroed -- rather than copied whole; one
+# too short to hold them is what a decoder ignores, and is dropped.
+_JPEG_FIXED_FIELDS = {0xE0: 14, 0xEE: 12}
 _JPEG_DROPPED = frozenset(range(0xE0, 0xF0)) | {0xFE}  # every APPn, and COM
 _JPEG_END_OF_IMAGE = 0xD9
 # Inside a scan, 0xFF is followed by a stuffed 0x00 or a restart marker; any
@@ -423,7 +428,14 @@ def _strip_jpeg(data: bytes) -> bytes:
             code in _JPEG_KEPT_APPS
             and data.startswith(_JPEG_KEPT_APPS[code], at + 2, end)
         ):
-            kept.append(data[start:end])
+            fixed = _JPEG_FIXED_FIELDS.get(code)
+            if fixed is None:
+                kept.append(data[start:end])
+            elif end - at - 2 >= fixed:
+                fields = data[at + 2 : at + 2 + fixed]
+                if code == 0xE0:
+                    fields = fields[:-2] + b"\x00\x00"
+                kept.append(data[start:at] + struct.pack(">H", fixed + 2) + fields)
         elif code not in _JPEG_DROPPED:
             # Dropping a marker the walk does not know could change the pixels.
             raise _Unwalkable(f"it carries marker 0x{code:02X}, which is not known")
