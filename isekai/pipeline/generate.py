@@ -73,6 +73,7 @@ from isekai.foundation.run import (
 from isekai.shared.image import (
     MAX_TARGET_LONG_SIDE,
     dimensions_or_refuse,
+    strip_metadata,
     working_resolution,
 )
 
@@ -461,8 +462,11 @@ def render(
     # manifest declaring the photograph on one side alone never loads, so this
     # gate and that one cannot disagree about the same run.
     try:
+        # The run's copy is only read: its bytes are the run's id (0039 design D3).
         image_name = (
-            client.upload_image(str(run.photo)) if "photo" in flow.inputs else None
+            client.upload_image(run.photo.name, strip_metadata(run.photo))
+            if "photo" in flow.inputs
+            else None
         )
         # Before any seed is submitted, so a report that fails costs no render.
         ran_on = runtime()

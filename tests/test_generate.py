@@ -12,6 +12,7 @@ import io
 import json
 import random
 import re
+import struct
 import urllib.error
 import urllib.request
 from email.message import Message
@@ -86,12 +87,16 @@ def flow() -> Flow:
 
 
 def _run(
-    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, name: str = "ada"
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    name: str = "ada",
+    body: bytes | None = None,
 ) -> Run:
     """Return a run carried all the way to an approved sheet for `FLOW`."""
     photo = tmp_path / f"{name}.jpg"
     # Different bytes per name: the same bytes are the same run, by design.
-    photo.write_bytes(jpeg_bytes(1200, 900 + 8 * len(name)))
+    photo.write_bytes(body or jpeg_bytes(1200, 900 + 8 * len(name)))
     made = open_run(photo, tmp_path / "runs")
     caption(made, FakeReader(prose="Brown hair, brown eyes."))
     sheet(
@@ -930,6 +935,82 @@ def test_a_failed_upload_is_recorded(
     assert "001.error.1.transient.json" in str(again.value)
 
 
+# --- the photograph's metadata (0039 design D3, D5) ----------------------------
+
+
+def _segment(marker: int, payload: bytes) -> bytes:
+    """Return one JPEG segment carrying this payload."""
+    return bytes([0xFF, marker]) + struct.pack(">H", len(payload) + 2) + payload
+
+
+# A camera's EXIF, an editor's XMP and IPTC, a comment, and a video a phone
+# appended after the image's end. Each carries a needle the upload is searched for.
+_NEEDLES = (b"exif-needle", b"xmp-needle", b"iptc-needle", b"comment-needle")
+_TRAILER = b"trailer-needle"
+_CARRYING_METADATA = (
+    jpeg_bytes(1600, 1200)[:2]
+    + _segment(0xE1, b"Exif\x00\x00MM\x00\x2a" + _NEEDLES[0])
+    + _segment(0xE1, b"http://ns.adobe.com/xap/1.0/\x00" + _NEEDLES[1])
+    + _segment(0xED, b"Photoshop 3.0\x00" + _NEEDLES[2])
+    + _segment(0xFE, _NEEDLES[3])
+    + jpeg_bytes(1600, 1200)[2:]
+    + _TRAILER
+)
+
+
+@pytest.mark.spec("image-generation:photo-metadata:no-metadata-leaves-the-machine")
+def test_the_endpoint_receives_no_metadata(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    run = _run(tmp_path, schema, vocabulary, body=_CARRYING_METADATA)
+    prepare(run, {FLOW: flow})
+    client = FakeComfyClient()
+
+    render(run, flow, client, seeds=[42], poll=0)
+
+    assert client.uploaded is not None
+    name, data = client.uploaded
+    assert name == run.photo.name
+    for needle in (*_NEEDLES, _TRAILER):
+        # In the photograph and not in the upload: the twin of the guard.
+        assert needle in run.photo.read_bytes(), needle
+        assert needle not in data, needle
+
+
+@pytest.mark.spec("image-generation:photo-metadata:the-runs-copy-is-untouched")
+def test_the_runs_copy_keeps_its_bytes(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    run = _run(tmp_path, schema, vocabulary, body=_CARRYING_METADATA)
+    prepare(run, {FLOW: flow})
+    client = FakeComfyClient()
+
+    render(run, flow, client, seeds=[42], poll=0)
+
+    assert run.photo.read_bytes() == _CARRYING_METADATA
+    assert client.uploaded is not None and client.uploaded[1] != _CARRYING_METADATA
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+def test_an_unwalkable_photograph_is_refused_before_upload(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, flow: Flow
+) -> None:
+    # A scan with no end: the header reader stops at the frame header and reads
+    # this photograph, and the strip cannot walk it to its end.
+    cut = jpeg_bytes(1600, 1200)[:-2] + _segment(0xDA, b"") + b"\x12\x34"
+    run = _run(tmp_path, schema, vocabulary, body=cut)
+    prepare(run, {FLOW: flow})
+    client = FakeComfyClient()
+
+    with pytest.raises(Refusal) as refused:
+        render(run, flow, client, seeds=[42], poll=0)
+
+    assert client.uploaded is None and client.submissions == []
+    assert run.photo.name in str(refused.value)
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
+
+
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
 @pytest.mark.parametrize(
     "record",
@@ -1009,15 +1090,13 @@ def test_a_history_that_is_not_an_object_is_refused_permanent(
 
 @pytest.mark.spec("comfy-transport:proxy:an-exported-proxy-is-ignored")
 def test_no_proxy_in_the_environment_reaches_the_rendering_endpoint(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The upload carries the photograph, so a proxy must not stand in its way.
 
     The second half is the falsification: a default opener, on the same
     environment, dials the proxy.
     """
-    photo = tmp_path / "photo.png"
-    photo.write_bytes(b"a photograph")
     monkeypatch.setenv("http_proxy", "http://proxy.invalid:8080")
     # Deleted, not set: a `no_proxy` naming loopback would let the twin bypass it.
     monkeypatch.delenv("no_proxy", raising=False)
@@ -1025,7 +1104,7 @@ def test_no_proxy_in_the_environment_reaches_the_rendering_endpoint(
     monkeypatch.setattr(http.client, "HTTPConnection", RefusingConnection)
 
     with pytest.raises(TransportFailure) as refused:
-        ComfyClient("http://127.0.0.1:8188").upload_image(str(photo))
+        ComfyClient("http://127.0.0.1:8188").upload_image("photo.png", b"a photograph")
 
     assert "asked for 127.0.0.1:8188" in str(refused.value)
 
