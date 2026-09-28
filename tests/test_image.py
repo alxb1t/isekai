@@ -17,7 +17,13 @@ from isekai.shared.image import (
     strip_metadata,
     working_resolution,
 )
-from tests.images import jpeg_bytes, jpeg_with_header, png_bytes, png_with_exif
+from tests.images import (
+    jpeg_bytes,
+    jpeg_segment,
+    jpeg_with_header,
+    png_bytes,
+    png_with_exif,
+)
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -305,16 +311,16 @@ _ORIENTATION = 0x0112
 # One needle per block a camera or an editor writes; none may survive the strip.
 _NEEDLES = {
     "jpeg": (
-        *(b"exif-needle", b"xmp-needle", b"iptc-needle", b"mpf-needle"),
-        *(b"jfxx-needle", b"comment-needle", b"trailer-needle"),
+        b"exif-needle",
+        b"xmp-needle",
+        b"iptc-needle",
+        b"mpf-needle",
+        b"jfxx-needle",
+        b"comment-needle",
+        b"trailer-needle",
     ),
     "png": (b"exif-needle", b"xmp-needle", b"text-needle", b"trailer-needle"),
 }
-
-
-def _app(marker: int, payload: bytes) -> bytes:
-    """Return one JPEG APPn or COM segment carrying this payload."""
-    return bytes([0xFF, marker]) + struct.pack(">H", len(payload) + 2) + payload
 
 
 def _pillow_photo(kind: str, *, orientation: int = 1) -> bytes:
@@ -353,9 +359,9 @@ def _pillow_photo(kind: str, *, orientation: int = 1) -> bytes:
     # The blocks Pillow does not write: IPTC, a multi-picture index, a JFIF
     # thumbnail extension -- spliced in ahead of the quantisation tables.
     extra = (
-        _app(0xED, b"Photoshop 3.0\x00iptc-needle")
-        + _app(0xE2, b"MPF\x00mpf-needle")
-        + _app(0xE0, b"JFXX\x00jfxx-needle")
+        jpeg_segment(0xED, b"Photoshop 3.0\x00iptc-needle")
+        + jpeg_segment(0xE2, b"MPF\x00mpf-needle")
+        + jpeg_segment(0xE0, b"JFXX\x00jfxx-needle")
     )
     at = data.index(b"\xff\xdb")
     return data[:at] + extra + data[at:] + b"trailer-needle"
@@ -388,11 +394,10 @@ def _decoded(data: bytes) -> "Image.Image":
     return image
 
 
-def _jpeg_apps(data: bytes) -> list[tuple[str, bytes]]:
-    """Return a JPEG's APPn segments as Pillow reads them: name, payload."""
+def _jpeg_apps(image: "Image.Image") -> list[tuple[str, bytes]]:
+    """Return a decoded JPEG's APPn segments as Pillow read them: name, payload."""
     from PIL.JpegImagePlugin import JpegImageFile
 
-    image = _decoded(data)
     assert isinstance(image, JpegImageFile)
     return image.applist
 
@@ -410,7 +415,7 @@ def test_the_orientation_survives_the_strip(kind: str, tmp_path: Path) -> None:
     if kind == "png":
         assert b"eXIf" not in _png_chunks(upright)
     else:
-        assert "APP1" not in [marker for marker, _ in _jpeg_apps(upright)]
+        assert "APP1" not in [marker for marker, _ in _jpeg_apps(_decoded(upright))]
 
 
 @pytest.mark.spec("image-generation:photo-metadata:the-pixels-are-unchanged")
@@ -434,17 +439,16 @@ def test_no_block_outside_the_allowlist_survives(kind: str, tmp_path: Path) -> N
         # In the original and gone from the upload: the twin of the guard.
         assert needle in original, needle
         assert needle not in stripped, needle
+    decoded = _decoded(stripped)
     # The colour profile is one of the blocks decoding keeps.
-    assert (
-        _decoded(stripped).info["icc_profile"] == _decoded(original).info["icc_profile"]
-    )
+    assert decoded.info["icc_profile"] == _decoded(original).info["icc_profile"]
     if kind == "png":
         assert set(_png_chunks(stripped)) == {b"IHDR", b"iCCP", b"IDAT", b"IEND"}
         assert stripped.endswith(b"IEND\xaeB`\x82")
     else:
-        kept = [(marker, payload[:4]) for marker, payload in _jpeg_apps(stripped)]
+        kept = [(marker, payload[:4]) for marker, payload in _jpeg_apps(decoded)]
         assert kept == [("APP0", b"JFIF"), ("APP2", b"ICC_")]
-        assert "comment" not in _decoded(stripped).info
+        assert "comment" not in decoded.info
         assert stripped.endswith(b"\xff\xd9")
 
 

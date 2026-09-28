@@ -9,9 +9,12 @@ Also strips a photograph's metadata for upload: a byte walk over the same
 segments and chunks, keeping what decodes and never re-encoding.
 """
 
+import io
+import re
 import struct
 import sys
 import zlib
+from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO, NamedTuple
 
@@ -349,14 +352,13 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
 _JPEG_KEPT_TABLES = _JPEG_SOF_MARKERS | {0xC4, 0xCC, 0xDB, 0xDD}  # DHT DAC DQT DRI
 _JPEG_KEPT_APPS = {0xE0: b"JFIF\x00", 0xE2: b"ICC_PROFILE\x00", 0xEE: b"Adobe"}
 _JPEG_DROPPED = frozenset(range(0xE0, 0xF0)) | {0xFE}  # every APPn, and COM
-_JPEG_APP0 = 0xE0
 _JPEG_END_OF_IMAGE = 0xD9
-_JPEG_RESTART_MARKERS = frozenset(range(0xD0, 0xD8))
+# Inside a scan, 0xFF is followed by a stuffed 0x00 or a restart marker; any
+# other byte after it starts the next segment.
+_JPEG_SCAN_END = re.compile(rb"\xff[^\x00\xd0-\xd7]")
 _PNG_KEPT_CHUNKS = frozenset(
-    {
-        *(b"IHDR", b"PLTE", b"IDAT", b"IEND"),
-        *(b"tRNS", b"gAMA", b"cHRM", b"sRGB", b"iCCP", b"sBIT", b"cICP"),
-    }
+    {b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS", b"gAMA", b"cHRM", b"sRGB"}
+    | {b"iCCP", b"sBIT", b"cICP"}
 )
 
 
@@ -378,25 +380,20 @@ def strip_metadata(photo: Path) -> bytes:
             return _strip_png(data)
         if data.startswith(b"\xff\xd8"):
             return _strip_jpeg(data)
-        raise _Unwalkable("it is neither a JPEG nor a PNG")
-    except (OSError, _Unwalkable) as failed:
-        reason = (
-            f"it cannot be read ({failed.strerror})"
-            if isinstance(failed, OSError)
-            else str(failed)
-        )
-        raise Refusal(
-            f"{photo.name}: its metadata cannot be stripped for upload -- {reason}; "
-            "re-export the photograph as a JPEG or PNG and open the run again"
-        ) from failed
+        reason = "it is neither a JPEG nor a PNG"
+    except OSError as unreadable:
+        reason = f"it cannot be read ({unreadable.strerror})"
+    except _Unwalkable as unwalkable:
+        reason = str(unwalkable)
+    raise Refusal(
+        f"{photo.name}: its metadata cannot be stripped for upload -- {reason}; "
+        "re-export the photograph as a JPEG or PNG and open the run again"
+    )
 
 
 def _strip_jpeg(data: bytes) -> bytes:
     """Return a JPEG's kept segments and scans, ending at its first EOI."""
     kept = [data[:2]]
-    exif_at = 1
-    orientation = 1
-    framed = False
     at = 2
     while at < len(data):
         if data[at] != 0xFF:
@@ -406,8 +403,7 @@ def _strip_jpeg(data: bytes) -> bytes:
             at += 1
         if at + 1 >= len(data):
             raise _Unwalkable("it ends inside a marker")
-        code = data[at + 1]
-        start, at = at, at + 2
+        code, start, at = data[at + 1], at, at + 2
         if code == _JPEG_END_OF_IMAGE:
             kept.append(data[start:at])
             break
@@ -417,60 +413,41 @@ def _strip_jpeg(data: bytes) -> bytes:
         end = at + int.from_bytes(data[at : at + 2], "big")
         if end < at + 2 or end > len(data):
             raise _Unwalkable(f"the segment at byte {start} runs past the file")
-        segment, payload, at = data[start:end], data[at + 2 : end], end
         if code == _JPEG_START_OF_SCAN:
-            at = _scan_end(data, end)
-            kept.append(segment + data[end:at])
-        elif code in _JPEG_KEPT_TABLES:
-            framed = framed or code in _JPEG_SOF_MARKERS
-            kept.append(segment)
-        elif code in _JPEG_KEPT_APPS and payload.startswith(_JPEG_KEPT_APPS[code]):
-            # JFIF must stay first, so the orientation goes in behind it.
-            if code == _JPEG_APP0 and len(kept) == 1:
-                exif_at = 2
-            kept.append(segment)
-        elif code in _JPEG_DROPPED:
-            # The header reader reads the orientation before the frame header only.
-            if code == _JPEG_APP1 and not framed and orientation == 1:
-                orientation = _exif_orientation(payload)
-        else:
+            scan = _JPEG_SCAN_END.search(data, end)
+            if scan is None:
+                raise _Unwalkable("a scan runs past the end of the file")
+            kept += [data[start:end], data[end : scan.start()]]
+            end = scan.start()
+        elif code in _JPEG_KEPT_TABLES or (
+            code in _JPEG_KEPT_APPS
+            and data.startswith(_JPEG_KEPT_APPS[code], at + 2, end)
+        ):
+            kept.append(data[start:end])
+        elif code not in _JPEG_DROPPED:
             # Dropping a marker the walk does not know could change the pixels.
             raise _Unwalkable(f"it carries marker 0x{code:02X}, which is not known")
+        at = end
 
-    tiff = _orientation_tiff(orientation)
+    tiff = _orientation_tiff(_jpeg_dimensions, data)
     if tiff:
         exif = b"Exif\x00\x00" + tiff
+        # JFIF must stay first, so the orientation goes in behind it.
+        exif_at = 2 if kept[1:2] and kept[1][1] == 0xE0 else 1
         kept.insert(exif_at, b"\xff\xe1" + struct.pack(">H", len(exif) + 2) + exif)
     return b"".join(kept)
-
-
-def _scan_end(data: bytes, at: int) -> int:
-    """Return where a scan's entropy-coded data ends: the next marker it cannot hold.
-
-    Inside a scan, 0xFF is followed by a stuffed 0x00 or a restart marker; any
-    other byte after it starts the next segment.
-    """
-    while True:
-        at = data.find(b"\xff", at)
-        if at < 0 or at + 1 >= len(data):
-            raise _Unwalkable("a scan runs past the end of the file")
-        if data[at + 1] != 0x00 and data[at + 1] not in _JPEG_RESTART_MARKERS:
-            return at
-        at += 2
 
 
 def _strip_png(data: bytes) -> bytes:
     """Return a PNG's kept chunks, ending at IEND. CRCs are copied, never checked."""
     kept = [_PNG_SIGNATURE]
-    orientation: int | None = None
     at = len(_PNG_SIGNATURE)
     while at < len(data):
-        if at + 8 > len(data):
-            raise _Unwalkable(f"the chunk at byte {at} runs past the file")
-        length, kind = struct.unpack(">I4s", data[at : at + 8])
-        end = at + 8 + length + 4
+        # A length word cut short by the file's end reads short, and is refused.
+        end = at + 8 + int.from_bytes(data[at : at + 4], "big") + 4
         if end > len(data):
             raise _Unwalkable(f"the chunk at byte {at} runs past the file")
+        kind = data[at + 4 : at + 8]
         if len(kept) == 1 and kind != b"IHDR":
             raise _Unwalkable("its first chunk is not IHDR")
         if kind in _PNG_KEPT_CHUNKS:
@@ -478,27 +455,33 @@ def _strip_png(data: bytes) -> bytes:
         elif not kind[0] & 0x20:
             # An uppercase first letter marks a chunk the decoder cannot skip.
             raise _Unwalkable(f"it carries critical chunk {kind!r}, which is not known")
-        elif kind == _PNG_EXIF_CHUNK and orientation is None:
-            orientation = _tiff_orientation(data[at + 8 : end - 4])
-        if kind in _PNG_PIXEL_CHUNKS and orientation is None:
-            # The header reader looks for `eXIf` before the pixel data only.
-            orientation = 1
         at = end
         if kind == b"IEND":
             break
 
-    tiff = _orientation_tiff(orientation or 1)
+    tiff = _orientation_tiff(_png_dimensions, data)
     if tiff:
         chunk = struct.pack(">I", len(tiff)) + _PNG_EXIF_CHUNK + tiff
         kept.insert(2, chunk + struct.pack(">I", zlib.crc32(chunk[4:])))
     return b"".join(kept)
 
 
-def _orientation_tiff(orientation: int) -> bytes:
-    """Return a big-endian TIFF whose IFD0 holds this orientation alone; b"" if upright.
+def _orientation_tiff(
+    parse: Callable[[BinaryIO], _Header | None], data: bytes
+) -> bytes:
+    """Return a big-endian TIFF holding the orientation alone; b"" if upright.
 
-    An unreadable value is treated as upright, as the header reader treats it.
+    The header reader reads the orientation, so the upload turns as the render
+    target was sized. An unreadable value is upright, as that reader treats it.
     """
+    try:
+        header = parse(io.BytesIO(data))
+    except _HeaderTooDeep as deep:
+        raise _Unwalkable(
+            f"its {deep.codec} header is not resolved within the first "
+            f"{MAX_HEADER_BYTES} bytes"
+        ) from deep
+    orientation = header.orientation if header else 1
     if not 2 <= orientation <= 8:
         return b""
     entry = struct.pack(">HHIHH", _EXIF_ORIENTATION_TAG, 3, 1, orientation, 0)

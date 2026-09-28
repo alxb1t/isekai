@@ -12,7 +12,6 @@ import io
 import json
 import random
 import re
-import struct
 import urllib.error
 import urllib.request
 from email.message import Message
@@ -73,7 +72,7 @@ from tests.fakes import (
     stub_comfy,
     url_of,
 )
-from tests.images import jpeg_bytes
+from tests.images import jpeg_bytes, jpeg_segment
 from tests.stages import FIELD_MAP, Always, caption, fake_wd14, render, sheet
 from tests.transports import RefusingConnection
 
@@ -938,22 +937,18 @@ def test_a_failed_upload_is_recorded(
 # --- the photograph's metadata (0039 design D3, D5) ----------------------------
 
 
-def _segment(marker: int, payload: bytes) -> bytes:
-    """Return one JPEG segment carrying this payload."""
-    return bytes([0xFF, marker]) + struct.pack(">H", len(payload) + 2) + payload
-
-
 # A camera's EXIF, an editor's XMP and IPTC, a comment, and a video a phone
 # appended after the image's end. Each carries a needle the upload is searched for.
 _NEEDLES = (b"exif-needle", b"xmp-needle", b"iptc-needle", b"comment-needle")
 _TRAILER = b"trailer-needle"
+_PLAIN = jpeg_bytes(1600, 1200)
 _CARRYING_METADATA = (
-    jpeg_bytes(1600, 1200)[:2]
-    + _segment(0xE1, b"Exif\x00\x00MM\x00\x2a" + _NEEDLES[0])
-    + _segment(0xE1, b"http://ns.adobe.com/xap/1.0/\x00" + _NEEDLES[1])
-    + _segment(0xED, b"Photoshop 3.0\x00" + _NEEDLES[2])
-    + _segment(0xFE, _NEEDLES[3])
-    + jpeg_bytes(1600, 1200)[2:]
+    _PLAIN[:2]
+    + jpeg_segment(0xE1, b"Exif\x00\x00MM\x00\x2a" + _NEEDLES[0])
+    + jpeg_segment(0xE1, b"http://ns.adobe.com/xap/1.0/\x00" + _NEEDLES[1])
+    + jpeg_segment(0xED, b"Photoshop 3.0\x00" + _NEEDLES[2])
+    + jpeg_segment(0xFE, _NEEDLES[3])
+    + _PLAIN[2:]
     + _TRAILER
 )
 
@@ -971,9 +966,10 @@ def test_the_endpoint_receives_no_metadata(
     assert client.uploaded is not None
     name, data = client.uploaded
     assert name == run.photo.name
+    photograph = run.photo.read_bytes()
     for needle in (*_NEEDLES, _TRAILER):
         # In the photograph and not in the upload: the twin of the guard.
-        assert needle in run.photo.read_bytes(), needle
+        assert needle in photograph, needle
         assert needle not in data, needle
 
 
@@ -997,7 +993,7 @@ def test_an_unwalkable_photograph_is_refused_before_upload(
 ) -> None:
     # A scan with no end: the header reader stops at the frame header and reads
     # this photograph, and the strip cannot walk it to its end.
-    cut = jpeg_bytes(1600, 1200)[:-2] + _segment(0xDA, b"") + b"\x12\x34"
+    cut = _PLAIN[:-2] + jpeg_segment(0xDA, b"") + b"\x12\x34"
     run = _run(tmp_path, schema, vocabulary, body=cut)
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
