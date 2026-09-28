@@ -271,11 +271,12 @@ captioning run here; the upload carries what decodes the image and its orientati
 
 ### The rented machine is proved, and forgets
 
-**The rented machine keeps nothing, and proves who it is before it receives anything.** The photograph and
-the render live in its memory, and its host key is checked against the fingerprint it printed.
+**The rented machine keeps nothing, reports to no one, and proves who it is before it receives anything.**
+The photograph and the render live in its memory, every usage report or update check its libraries can be
+told not to send is switched off, and its host key is checked against the fingerprint it printed.
 
-- **Why:** a disk outlives the pod that wrote it, and a tunnel that trusts the first key it sees trusts
-  whatever machine answers.
+- **Why:** a disk outlives the pod that wrote it, a report tells a third party that a machine is rendering,
+  and a tunnel that trusts the first key it sees trusts whatever machine answers.
 - **Held by:**
   - `tests/test_infra.py::test_comfyui_writes_to_memory`
   - `tests/test_infra.py::test_too_little_memory_holds_the_pod`
@@ -283,5 +284,6 @@ the render live in its memory, and its host key is checked against the fingerpri
   - `tests/test_infra.py::test_each_boot_makes_and_prints_its_own_key`
   - `tests/test_infra.py::test_a_matching_key_is_kept`
   - `tests/test_infra.py::test_a_mismatch_is_refused`
+  - `tests/test_infra.py::test_a_scan_no_one_answers_is_refused_as_such`
   - `tests/test_infra.py::test_no_fingerprint_is_refused`
   - `tests/test_infra.py::test_the_pod_is_created_with_telemetry_off`

@@ -1584,6 +1584,7 @@ TELEMETRY_SWITCHES = (
     "ORT_DISABLE_TELEMETRY",
     "HF_HUB_DISABLE_TELEMETRY",
     "DO_NOT_TRACK",
+    "NO_ALBUMENTATIONS_UPDATE",
 )
 
 
@@ -1604,7 +1605,11 @@ def test_the_pod_is_created_with_telemetry_off(up_sh: str) -> None:
 )
 def test_the_telemetry_check_catches_a_switch_left_out() -> None:
     body = 'env: { PUBLIC_KEY: $pubkey,\n  ORT_DISABLE_TELEMETRY: "1" } }\n'
-    assert telemetry_left_on(body) == ["HF_HUB_DISABLE_TELEMETRY", "DO_NOT_TRACK"]
+    assert telemetry_left_on(body) == [
+        "HF_HUB_DISABLE_TELEMETRY",
+        "DO_NOT_TRACK",
+        "NO_ALBUMENTATIONS_UPDATE",
+    ]
 
 
 # A throwaway Ed25519 key made for these tests, and its fingerprint and another's.
@@ -1623,13 +1628,15 @@ TORN_DOWN = "torn down: ./infra/down.sh"
 
 
 def check_host_key(
-    up_sh: str, printed: str | None, cwd: Path
+    up_sh: str, printed: str | None, cwd: Path, *, answers: bool = True
 ) -> tuple[subprocess.CompletedProcess[str], str | None]:
     """Run `verify_host_key` against a pod log and a scan that answers `HOST_KEY`.
 
     Return the run and the known-hosts file it left, if any. `printed` is the
-    fingerprint the log carries; None is a log that never prints one.
+    fingerprint the log carries; None is a log that never prints one. With
+    `answers` False, the scan never answers.
     """
+    scan = f'echo "[$host]:$port {HOST_KEY}"' if answers else ":"
     lines = ["step: sshd"] + ([f"isekai host key: {printed}"] if printed else [])
     events = "".join(
         f"data: {json.dumps({'ts': '', 'source': 'container', 'line': ln})}\n"
@@ -1640,7 +1647,7 @@ def check_host_key(
             "API=https://api.test pod_id=pod-test since=2026-09-28T00:00:00Z",
             "host=203.0.113.7 port=40022",
             f"api() {{ printf '%s' {shlex.quote(events)}; }}",
-            f'ssh-keyscan() {{ echo "[$host]:$port {HOST_KEY}"; }}',
+            f"ssh-keyscan() {{ {scan}; }}",
             "sleep() { SECONDS=$((SECONDS + $1)); }",
             'bash() { echo "torn down: $*"; }',
         ]
@@ -1706,7 +1713,8 @@ def test_a_mismatch_is_refused(up_sh: str, tmp_path: Path) -> None:
     assert kept is None
     assert done.stderr.startswith(
         f"refused: the pod's host key {HOST_KEY_FINGERPRINT} does not match"
-        f" the fingerprint it printed, {OTHER_FINGERPRINT}"
+        f" the fingerprint it printed, {OTHER_FINGERPRINT}; the pod is torn down,"
+        " and bash infra/up.sh boots a fresh one"
     )
     assert TORN_DOWN in done.stderr
     assert "pod-test" not in done.stderr
@@ -1715,6 +1723,31 @@ def test_a_mismatch_is_refused(up_sh: str, tmp_path: Path) -> None:
 @pytest.mark.spec_exempt("structural: twin of test_a_mismatch_is_refused")
 def test_the_mismatch_check_catches_a_key_kept_unchecked(tmp_path: Path) -> None:
     done, kept = check_host_key(BROKEN_HOST_KEY_CHECK, OTHER_FINGERPRINT, tmp_path)
+    assert done.returncode == 0
+    assert kept is not None
+    assert TORN_DOWN not in done.stderr
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+def test_a_scan_no_one_answers_is_refused_as_such(up_sh: str, tmp_path: Path) -> None:
+    done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path, answers=False)
+    assert done.returncode == 1
+    assert kept is None
+    assert done.stderr.startswith(
+        "refused: the pod's SSH answered no host-key scan within 180 s;"
+    )
+    assert "does not match" not in done.stderr
+    assert "bash infra/up.sh" in done.stderr
+    assert TORN_DOWN in done.stderr
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_scan_no_one_answers_is_refused_as_such"
+)
+def test_the_scan_check_catches_a_key_kept_with_none_scanned(tmp_path: Path) -> None:
+    done, kept = check_host_key(
+        BROKEN_HOST_KEY_CHECK, HOST_KEY_FINGERPRINT, tmp_path, answers=False
+    )
     assert done.returncode == 0
     assert kept is not None
     assert TORN_DOWN not in done.stderr

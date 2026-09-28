@@ -148,10 +148,12 @@ becomes usable. **Billing is per second and starts here.**
 ### ⑤ Open the tunnel, in a second terminal
 
 ```sh
-ssh -i ~/.ssh/id_ed25519_runpod -N -L 8188:localhost:8188 root@<ip> -p <port>
+ssh -i ~/.ssh/id_ed25519_runpod -o UserKnownHostsFile=.runpod_known_hosts -o StrictHostKeyChecking=yes \
+  -N -L 8188:localhost:8188 root@<ip> -p <port>
 ```
 
-Use the address `up.sh` printed. Leave it running.
+Paste the `Tunnel:` line `up.sh` printed: it names the address and the pod's host key, which `up.sh` checked
+against the fingerprint the pod printed. Leave it running.
 
 ### ⑥ Render, back in the first terminal
 
@@ -422,14 +424,14 @@ isekai/
 ## Provisioning flow — how `up.sh` and `start.sh` fit together
 
 The two scripts run in **different places at different times**. The common confusion is
-thinking `up.sh` downloads/runs the image — it doesn't. `up.sh` only makes **API calls**;
-**RunPod's GPU host** pulls the image and runs it, and the image's baked-in **`start.sh`** is
+thinking `up.sh` downloads/runs the image — it doesn't. `up.sh` makes **API calls** and scans
+the pod's SSH host key; **RunPod's GPU host** pulls the image and runs it, and the image's baked-in **`start.sh`** is
 what boots SSH + ComfyUI *inside* the container.
 
 | Script | Runs **where** | Runs **when** | Does what |
 |---|---|---|---|
 | `start.sh` | **inside the container, on the pod** | every container boot (baked into the image as its start command) | authorize your key → start `sshd` → start ComfyUI |
-| `infra/up.sh` | **on your machine** | when you want a pod | calls the RunPod REST API, polls, prints the SSH + tunnel commands |
+| `infra/up.sh` | **on your machine** | when you want a pod | reads the models volume, calls the RunPod REST API, polls, checks the pod's host key, prints the SSH + tunnel commands |
 | `infra/down.sh` | **on your machine** | when you're done | `DELETE`s the pod → per-second billing stops |
 
 ```
@@ -442,6 +444,7 @@ PROVISION TIME (every session — this is up.sh / down.sh)
   YOUR MACHINE                     RUNPOD                              GHCR
   ────────────                     ──────                              ────
   ./infra/up.sh
+    │ 0  GET /v2/network-volumes/{id}: refuse another data centre or too small a volume
     │ 1  POST /v2/pods ──────────▶ control plane
     │    (image@digest, GPU type,       │ 2  place pod on a GPU host
     │     volume, PUBLIC_KEY, port 22)  ▼
@@ -458,11 +461,13 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │      • exec ComfyUI          (:8188)
     │ 5  poll GET /v2/pods/{id} ──────▶│
     │    ◀──── ssh.direct host:port ───┘
+    │ 6  read the fingerprint the pod's log printed, ssh-keyscan the pod,
+    │    keep the key in .runpod_known_hosts only if the two match
     ▼
-  prints:  ssh ...   and   ssh -N -L 8188:localhost:8188 ...
+  prints:  ssh ...   and   ssh -N -L 8188:localhost:8188 ...   (both strict, against that file)
 
 USE IT
-  ssh -L 8188:localhost:8188 ...    opens a private tunnel to the pod
+  ssh -L 8188:localhost:8188 ...    opens a private tunnel to the pod, checked against its key
   python -m isekai generate --flow summon-anime-wai photo.jpg --server http://127.0.0.1:8188
                        ──▶ localhost:8188 ──tunnel──▶ ComfyUI ──▶ GPU ──▶ anime.png
 

@@ -67,21 +67,27 @@ scanned_key() {  # the pod's Ed25519 host key, as a known-hosts line
 
 # The fingerprint comes over the authenticated API, not over the connection it
 # vouches for; nothing reaches the pod until the two agree (0041 design D1, D2).
+# sshd can answer after the port is mapped, so the scan waits longer than the log.
 verify_host_key() {
-  local printed="" key="" scanned deadline=$((SECONDS + 60))
-  while [ "$SECONDS" -lt "$deadline" ]; do
-    [ -n "$printed" ] || printed=$(printed_fingerprint) || true
-    if [ -n "$printed" ]; then
-      key=$(scanned_key) || true
-      [ -n "$key" ] && break
-    fi
+  local printed="" key="" scanned
+  local log_deadline=$((SECONDS + 60)) scan_deadline=$((SECONDS + 180))
+  while [ "$SECONDS" -lt "$log_deadline" ]; do
+    printed=$(printed_fingerprint) || true
+    [ -n "$printed" ] && break
     sleep 5
   done
   [ -n "$printed" ] \
     || refuse_and_tear_down "the pod printed no host-key fingerprint within 60 s; read its log with the RunPod MCP's stream-pod-logs"
+  while [ "$SECONDS" -lt "$scan_deadline" ]; do
+    key=$(scanned_key) || true
+    [ -n "$key" ] && break
+    sleep 5
+  done
+  [ -n "$key" ] \
+    || refuse_and_tear_down "the pod's SSH answered no host-key scan within 180 s; the pod is torn down, and bash infra/up.sh boots a fresh one"
   scanned=$(echo "$key" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}') || true
   [ "$scanned" = "$printed" ] \
-    || refuse_and_tear_down "the pod's host key ${scanned:-(none answered)} does not match the fingerprint it printed, $printed"
+    || refuse_and_tear_down "the pod's host key ${scanned:-(unreadable)} does not match the fingerprint it printed, $printed; the pod is torn down, and bash infra/up.sh boots a fresh one"
   echo "$key" > .runpod_known_hosts
   echo "Host key verified: $printed"
 }
@@ -144,7 +150,8 @@ while IFS= read -r gpu; do
               RUNPOD_VOLUME_ID: $vol,
               ORT_DISABLE_TELEMETRY: "1",
               HF_HUB_DISABLE_TELEMETRY: "1",
-              DO_NOT_TRACK: "1" } }')
+              DO_NOT_TRACK: "1",
+              NO_ALBUMENTATIONS_UPDATE: "1" } }')
   # A transport failure is code 000, reported like any status, never a silent exit.
   out=$(api -S -w '\n%{http_code}' -X POST "$API/pods" \
     -H "Content-Type: application/json" \

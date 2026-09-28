@@ -11,8 +11,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Security
 
-- A pod is created with onnxruntime's and the Hugging Face hub's telemetry off and `DO_NOT_TRACK` set, so the
-  machine rendering a likeness reports to no one (0041 D4).
+- A pod is created only beside a models volume large enough for the manifest, and with its libraries' telemetry
+  and update checks off, so the machine rendering a likeness reports to no one (0041 D3, D4).
 - `up.sh` checks a pod's host key against the fingerprint the pod printed, and keeps it for the strict tunnel; a
   mismatch, or no fingerprint in time, refuses and tears the pod down, so only the pod gets a photograph
   (0041 D1, D2).
@@ -20,11 +20,6 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   and that the pod's operator is a trust boundary, accepted knowingly (0041 D5).
 - One session rendered both flows through the checked host key and the strict tunnel, on a pod created with
   its telemetry switches set (0041 D6).
-
-### Changed
-
-- `up.sh` reads the models volume before the create, and refuses a data centre other than the volume's or a volume
-  smaller than the model manifest, before a pod bills (0041 D3).
 
 ## [0.28.0] - 2026-09-28 · 0040-the-pod-image
 
