@@ -11,6 +11,7 @@ small, and every image stays where the run put it. Stdlib only.
 """
 
 import html
+import shlex
 from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import quote
@@ -108,8 +109,8 @@ def _runs(batch: Path, flows_dir: Path) -> list[Run]:
         raise Refusal(
             f"{batch} holds no {BATCH_RUNS}/ directory, so it is not a batch; give "
             f"the path of the batch directory that holds {BATCH_RUNS}/, or open its "
-            f"runs with `python -m isekai tag {flows} --runs {root} "
-            f"{batch / BATCH_PHOTOS}/*`"
+            f"runs with `python -m isekai tag {flows} --runs {shlex.quote(str(root))} "
+            f"{shlex.quote(str(batch / BATCH_PHOTOS))}/*`"
         )
     return [
         Run(path.name, path)

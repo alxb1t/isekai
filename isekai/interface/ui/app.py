@@ -34,6 +34,7 @@ the same repository, so widening it later is a find-and-replace. The paths are
 `POST /api/inputs/{identifier}/approve`, with the built bundle mounted at `/`.
 """
 
+import shlex
 import threading
 from collections.abc import Awaitable, Callable, Mapping
 from pathlib import Path
@@ -486,7 +487,11 @@ def _remedy(batch: Batch, held: Input, verb: str) -> str:
     command would look under `.data/runs` for a run served from another root.
     """
     root = held.run.path.parent
-    runs = "" if root.resolve() == RUNS_ROOT.resolve() else f" --runs {root}"
+    runs = (
+        ""
+        if root.resolve() == RUNS_ROOT.resolve()
+        else f" --runs {shlex.quote(str(root))}"
+    )
     return (
         f"rewrite it with `python -m isekai {verb} --flow {batch.flow.id}{runs} "
         f"--new-version {held.run.id}`"

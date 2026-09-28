@@ -17,6 +17,10 @@ record is by counts from the log: no photograph, run file or page was opened, an
 | 4 | `env -u https_proxy -u HTTPS_PROXY -u no_proxy -u NO_PROXY http_proxy=http://127.0.0.1:9 bash infra/render.sh .data/v0.26/runs summon-anime-wai=1 conjure-anime-wai=1` | exit 0; 8 `assembled`, 4 `rendered`, `Pod terminated` |
 | 5 | `python -m isekai compare .data/v0.26` | `.data/v0.26/compare.html` |
 
+Task 5.1 planned one synthetic portrait; the batch held two photographs, so every count above is for two. What the
+two depict is not recorded here — no photograph was opened for this record — so it makes no claim either way about
+[D10](design.md#d10)'s synthetic-portrait rule.
+
 Refusals across the whole log: 0 (`grep -c '^refused' .data/v0.26/log.txt`).
 
 **The exported proxy:** step 4's, on port 9 of loopback, where nothing listens, with `https_proxy` and `no_proxy`

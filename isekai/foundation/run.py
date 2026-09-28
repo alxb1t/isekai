@@ -266,7 +266,13 @@ class Run:
                 f"{FRAME_NAME}: names its photograph {name!r}, which is not one "
                 f"plain filename; {self._remedy}"
             )
-        return self.path / name
+        path = self.path / name
+        if path.is_symlink():
+            raise Refusal(
+                f"{FRAME_NAME}: its photograph {name!r} is a link, which could point "
+                f"outside the run; {self._remedy}"
+            )
+        return path
 
     @property
     def flows(self) -> list[str]:

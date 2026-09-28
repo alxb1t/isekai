@@ -22,6 +22,8 @@ import contextlib
 import io
 import json
 import random
+import shlex
+import shutil
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
@@ -1016,7 +1018,7 @@ def test_a_damaged_file_is_refused_by_name(
         # Parsed, not matched: the fixture's runs root is not the default, so
         # the command works when pasted only if it names that root.
         command = refusal.split("`python -m isekai ")[1].split("`")[0]
-        parsed = build_parser().parse_args(command.split())
+        parsed = build_parser().parse_args(shlex.split(command))
         assert (parsed.verb, parsed.flows, parsed.new_version, parsed.photos) == (
             verb,
             [FLOW],
@@ -1039,6 +1041,25 @@ def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
     assert f"`python -m isekai caption --flow {FLOW} --new-version {made.id}`" in (
         refusal
     )
+
+
+@pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
+def test_a_damage_remedy_under_a_root_holding_a_space_pastes_as_one_argument(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    root = tmp_path / "my runs"
+    root.mkdir()
+    shutil.move(made.path, root / made.id)
+    moved = Run(made.id, root / made.id)
+    client = _client(replace(wired, runs_root=root), moved, tmp_path)
+    _damage(_latest(CAPTIONS)(client, moved), _drop("prose"))
+
+    refusal = client.get(f"/api/inputs/{moved.id}").json()["refusal"]
+
+    # Split as the shell splits it: an unquoted root would come apart at the space.
+    command = refusal.split("`python -m isekai ")[1].split("`")[0]
+    parsed = build_parser().parse_args(shlex.split(command))
+    assert (parsed.verb, parsed.runs, parsed.photos) == ("caption", root, [moved.id])
 
 
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")

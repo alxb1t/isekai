@@ -830,6 +830,21 @@ def test_a_name_that_leaves_the_run_is_refused(
     assert f"delete {run.frame_path}" in message
 
 
+@pytest.mark.spec("run-directory:frame:a-photograph-that-is-a-link-is-refused")
+def test_a_photograph_that_is_a_link_is_refused(tmp_path: Path, runs: Path) -> None:
+    run = open_run(_photo(tmp_path, "p.jpg", jpeg_bytes(800, 600)), runs)
+    outside = _photo(tmp_path / "elsewhere", "private.jpg", jpeg_bytes(640, 480))
+    run.photo.unlink()
+    run.photo.symlink_to(outside)
+
+    with pytest.raises(Refusal) as refused:
+        _ = run.photo
+
+    message = str(refused.value)
+    assert FRAME_NAME in message and "link" in message
+    assert f"delete {run.frame_path}" in message
+
+
 @pytest.mark.spec("run-directory:frame:a-frame-without-its-photograph-is-refused")
 @pytest.mark.parametrize(
     ("change", "key"),

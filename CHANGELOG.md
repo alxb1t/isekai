@@ -47,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The review surface's damage refusals name a fix that works.** A damaged approved sheet names the file to
   restore, since no command rewrites one and `review` refuses the same damage; every other command names
   `--runs <root>` when the surface serves a runs root that is not the default (0037 design D6).
+- **A pasted remedy survives a runs root holding a space.** The review surface's damage commands and `compare`'s
+  not-a-batch refusal shell-quote the root they name (0037 design D6).
+- **A run whose photograph is a symbolic link is refused** naming `run.json` and its remedy, so a planted run can
+  no longer serve or upload a file outside itself under a plain name (0037 design D7).
 
 ## [0.25.1] - 2026-09-27
 

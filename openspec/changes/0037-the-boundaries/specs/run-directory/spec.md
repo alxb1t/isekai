@@ -16,6 +16,13 @@ which the review surface serves and the render uploads.
 - **THEN** reading the run's photograph is refused naming the frame
 - **AND** no file outside the run is opened
 
+#### Scenario: a photograph that is a link is refused
+- **Key:** `run-directory:frame:a-photograph-that-is-a-link-is-refused`
+- **Layers:** unit
+- **WHEN** the file a frame names as its photograph is a symbolic link
+- **THEN** reading the run's photograph is refused naming the frame and its remedy
+- **AND** the file the link points at is not opened
+
 #### Scenario: a frame without its photograph is refused
 - **Key:** `run-directory:frame:a-frame-without-its-photograph-is-refused`
 - **Layers:** unit

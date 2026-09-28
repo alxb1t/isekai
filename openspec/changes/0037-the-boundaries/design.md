@@ -128,13 +128,18 @@ and `comfy-transport:multipart:names-are-escaped`.
 ### D6
 
 **The surface refuses damage by name.** Each read in `app.py` checks its keys with `artifacts.require` and each
-entry's shape, and refuses naming the file and the command that rewrites it:
+entry's shape, and refuses naming the file and its fix — the command that rewrites it, or for an approved sheet,
+which no command rewrites, the file to restore:
 
 | file | read in | remedy it names |
 |---|---|---|
-| draft, approved sheet | `read_input` | `python -m isekai review --flow <flow> --new-version <id>` |
+| draft | `read_input` | `python -m isekai review --flow <flow> --new-version <id>` |
+| approved sheet | `read_input` | `restore it in <approved path> by hand, then reload the page` |
 | caption | `read_input` | `python -m isekai caption --flow <flow> --new-version <id>` |
 | WD14 list, hosted tag list | `_wd14`, `_tags` | `python -m isekai tag --flow <flow> --new-version <id>` |
+
+Each command names `--runs <root>`, shell-quoted, whenever the run's root is not the default `.data/runs`, so the
+pasted fix reaches the run the surface serves.
 
 `put_draft` checks its body before the lock: `fields` is an object, each value a list, each tag a string; otherwise
 it refuses with `the update's <field> is not a list of tags`, and nothing is written. Keys:
