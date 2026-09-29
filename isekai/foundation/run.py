@@ -132,8 +132,9 @@ PROMPTS = "prompts"
 OUTPUTS = "outputs"
 APPROVED = "approved"
 
-# `001`, and `001.approved` / `001.draft` where a stage has that concept.
-ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>[a-z]+))?\.json$")
+# `001`, and `001.draft` / `001.approved` where a stage has that concept. No
+# other label is a version, so a render's `123.render.json` is never one.
+ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>draft|approved))?\.json$")
 
 # `001.error.1.transient` -- the version it stands in for, the attempt ordinal,
 # and the kind, all decidable without opening anything.

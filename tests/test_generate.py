@@ -45,6 +45,7 @@ from isekai.foundation.run import (
     attempts,
     open_run,
     record_failure,
+    versions,
 )
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import (
@@ -1290,9 +1291,20 @@ def test_the_sidecar_is_written_before_its_image(
         )
 
     directory = run.path / FLOW / OUTPUTS / "001"
-    assert (directory / "42.json").is_file()
+    assert (directory / "42.render.json").is_file()
     assert not (directory / f"42{flow.output_suffix}").exists()
     assert rendered_seeds(directory, flow.output_suffix) == []
+
+
+@pytest.mark.spec("run-directory:readdir:a-render-record-is-never-a-version")
+def test_a_render_record_is_never_read_as_a_version(run: Run, flow: Flow) -> None:
+    prepare(run, {FLOW: flow})
+
+    render(run, flow, FakeComfyClient(), seeds=[123], poll=0)
+
+    directory = run.path / FLOW / OUTPUTS / "001"
+    assert (directory / "123.render.json").is_file()
+    assert versions(directory) == []
 
 
 @pytest.mark.spec("run-directory:budget:at-budget-the-stage-refuses")
@@ -1621,7 +1633,9 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
     assert dispatch(build_parser().parse_args(argv), wired) == 0
 
     for run in runs:
-        sidecar = read(run.path / FLOW / OUTPUTS / "001" / "42.json", RENDER_FILE)
+        sidecar = read(
+            run.path / FLOW / OUTPUTS / "001" / "42.render.json", RENDER_FILE
+        )
         assert sidecar.get("image") == POD_IMAGE
         assert sidecar.get("pinned") is True
         assert sidecar.get("runtime") == read_runtime(FakeComfyClient())

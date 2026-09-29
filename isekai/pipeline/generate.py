@@ -507,7 +507,7 @@ def render(
         # The sidecar first, so an image always has its provenance: a crash
         # between the writes leaves a sidecar with no image, and that seed
         # renders again (`0030` design D6).
-        provenance = directory / f"{seed}.json"
+        provenance = directory / f"{seed}.render.json"
         sidecar: RenderSidecar = {
             "schema": RENDER_FILE.schema,
             "producer": {

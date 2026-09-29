@@ -6,7 +6,7 @@ holds every new scenario; each task below adds the tests that bind them.
 ## Progress
 
 - [x] 1 — The kind
-- [ ] 2 — The record's name
+- [x] 2 — The record's name
 - [ ] 3 — The sheet's failures
 - [ ] 4 — The warning
 
@@ -23,11 +23,11 @@ Line numbers are `69bfd67`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The record's name
 
-- [ ] 2.1 In `isekai/pipeline/generate.py`, name the render's record `<seed>.render.json`; in `isekai/foundation/run.py`, narrow `ARTIFACT`'s label to `draft|approved`, per [D3](design.md#d3).
+- [x] 2.1 In `isekai/pipeline/generate.py`, name the render's record `<seed>.render.json`; in `isekai/foundation/run.py`, narrow `ARTIFACT`'s label to `draft|approved`, per [D3](design.md#d3).
   Verify: `grep -cF 'f"{seed}.render.json"' isekai/pipeline/generate.py` prints `1`, and `grep -cF '(?P<label>draft|approved)' isekai/foundation/run.py` prints `1`.
-- [ ] 2.2 Rename `42.json` to `42.render.json` in `tests/test_generate.py`'s `test_the_sidecar_is_written_before_its_image` and `test_a_render_on_a_pinned_pod_records_its_image_and_runtime`, and in `tests/test_resume.py`'s decoy.
+- [x] 2.2 Rename `42.json` to `42.render.json` in `tests/test_generate.py`'s `test_the_sidecar_is_written_before_its_image` and `test_a_render_on_a_pinned_pod_records_its_image_and_runtime`, and in `tests/test_resume.py`'s decoy.
   Verify: `cat tests/test_generate.py tests/test_resume.py | grep -c '"42.json"'` prints `0`.
-- [ ] 2.3 Add `test_a_render_record_is_never_read_as_a_version` (`run-directory:readdir:a-render-record-is-never-a-version`) to `tests/test_generate.py`: a render for seed `123` writes `123.render.json`, and `versions` of its directory is empty.
+- [x] 2.3 Add `test_a_render_record_is_never_read_as_a_version` (`run-directory:readdir:a-render-record-is-never-a-version`) to `tests/test_generate.py`: a render for seed `123` writes `123.render.json`, and `versions` of its directory is empty.
   Verify: `grep -c '^def test_a_render_record_is_never_read_as_a_version(' tests/test_generate.py` prints `1`.
 
 ## 3 — The sheet's failures
