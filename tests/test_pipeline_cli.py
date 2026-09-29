@@ -500,3 +500,47 @@ def test_one_command_over_two_flows_writes_two_artifacts_each_naming_its_own(
         for written in sorted((tmp_path / "runs").glob("*/*/captions/001.json"))
     }
     assert named == {"flow-a": "a-reader", "flow-b": "b-reader"}
+
+
+def _caption_with_one_refusing(tmp_path: Path, refusing: str) -> tuple[int, Wiring]:
+    """Caption one photograph over two flows, the reader refusing `refusing`'s."""
+    wired = _wiring(tmp_path, flows_dir=_two_models(tmp_path))
+
+    def reader(flow: Flow) -> FakeReader:
+        if flow.id == refusing:
+            raise Refusal(f"{flow.id}: its model is not running")
+        return FakeReader(prose="A person.", models=(flow.model,))
+
+    wired.reader = reader
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    status = dispatch(
+        _cli_args("caption", str(photo), tmp_path, flow=["flow-a", "flow-b"]), wired
+    )
+    return status, wired
+
+
+def _captioned(tmp_path: Path) -> list[str]:
+    """Return the flows with a caption written, by name."""
+    return sorted(
+        path.parent.parent.name
+        for path in (tmp_path / "runs").glob("*/*/captions/001.json")
+    )
+
+
+@pytest.mark.spec("cli:flow-selection:one-flows-refusal-leaves-the-others")
+def test_one_flows_refusal_leaves_the_others(tmp_path: Path) -> None:
+    status, wired = _caption_with_one_refusing(tmp_path, "flow-a")
+
+    assert status == 1
+    assert _captioned(tmp_path) == ["flow-b"]
+    assert isinstance(wired.err, io.StringIO)
+    assert "refused: flow-a: its model is not running" in wired.err.getvalue()
+
+
+@pytest.mark.spec_exempt("twin: the named-first flow runs whatever the per-flow guard")
+def test_a_refusal_after_the_first_flow_leaves_it_written(tmp_path: Path) -> None:
+    status, _ = _caption_with_one_refusing(tmp_path, "flow-b")
+
+    assert status == 1
+    assert _captioned(tmp_path) == ["flow-a"]

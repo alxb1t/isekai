@@ -310,6 +310,34 @@ def test_a_flow_with_only_a_draft_is_not_selected(
     assert approved_flows(run) == [FLOW]
 
 
+@pytest.mark.spec("image-generation:inputs:unapproved-flow-is-refused")
+def test_a_named_unapproved_flow_is_refused_beside_an_approved_one(
+    run: Run, flow: Flow
+) -> None:
+    assembled, refused = prepare(run, {FLOW: flow, "summon-v2": flow})
+
+    assert list(assembled) == [FLOW]
+    assert len(refused) == 1
+    assert "no approved sheet for summon-v2" in refused[0]
+    assert f"python -m isekai review --flow summon-v2 {run.id}" in refused[0]
+    assert FLOW not in refused[0].replace(run.id, "")
+
+
+@pytest.mark.spec_exempt("twin: every named flow approved leaves nothing refused")
+def test_named_flows_all_approved_are_refused_nothing(
+    run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    caption(run, FakeReader(), flow="summon-v2")
+    sheet(run, schema, vocabulary, flow="summon-v2")
+    review(run, "summon-v2")
+    approve(run, "summon-v2", schema, vocabulary)
+
+    assembled, refused = prepare(run, {FLOW: flow, "summon-v2": flow})
+
+    assert sorted(assembled) == [FLOW, "summon-v2"]
+    assert refused == []
+
+
 # --- seeds --------------------------------------------------------------------
 
 

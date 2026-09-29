@@ -724,6 +724,43 @@ def test_tagging_the_tagged_flow_alone_from_that_root_succeeds(
     assert _dispatch(wired, "tag", "--flow", FLOW, str(photo)) == 0
 
 
+@pytest.mark.spec("tagging:declaration:only-untagged-flows-name-the-next-verb")
+def test_only_untagged_flows_name_the_next_verb(tmp_path: Path) -> None:
+    photo = _photo(tmp_path)
+    wired = _wired(tmp_path, flows_dir=_untagged_flows(tmp_path))
+
+    status = _dispatch(wired, "tag", "--flow", "untagged", str(photo))
+
+    assert status == 1
+    assert isinstance(wired.err, io.StringIO)
+    message = wired.err.getvalue()
+    assert "`tag` has nothing to do" in message
+    assert "drop `--flow" not in message
+    # The remedy is a command this build parses, naming the photograph given.
+    command = message.split("`python -m isekai ")[1].split("`")[0]
+    parsed = build_parser().parse_args(command.split())
+    assert (parsed.verb, parsed.flows, parsed.photos) == (
+        "sheet",
+        ["untagged"],
+        [str(photo)],
+    )
+    assert not wired.runs_root.exists()
+
+
+@pytest.mark.spec_exempt("twin: a tagged flow beside the untagged keeps `drop --flow`")
+def test_an_untagged_flow_beside_a_tagged_one_names_no_next_verb(
+    tmp_path: Path,
+) -> None:
+    photo = _photo(tmp_path)
+    wired = _wired(tmp_path, flows_dir=_untagged_flows(tmp_path))
+
+    status = _dispatch(wired, "tag", "--flow", FLOW, "--flow", "untagged", str(photo))
+
+    assert status == 1
+    assert isinstance(wired.err, io.StringIO)
+    assert "sheet" not in wired.err.getvalue()
+
+
 @pytest.mark.spec("tagging:independence:a-complete-tagger-makes-no-call")
 def test_a_complete_local_artifact_is_not_paid_for_by_opening_the_graph(
     run: Run, local: LocalTagger

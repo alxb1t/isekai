@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Fixed
+
+- One flow's refusal no longer drops an input's other flows in any stage verb; `tag` given only untagged flows
+  names `sheet` next; `generate` refuses a named unapproved flow beside approved ones (0047 D1, D2, D3).
+- The binding check demands a test only for a living key, so a cut adding a scenario keeps the gate green (0047 D8).
+
 ## [0.30.3] - 2026-09-29 · 0046-the-terse-specs
 
 ### Changed

@@ -6,7 +6,7 @@ living requirement with [the new scenario](design.md#the-new-scenarios) — besi
 
 ## Progress
 
-- [ ] 1 — The checker and the verbs
+- [x] 1 — The checker and the verbs
 - [ ] 2 — The boundaries
 - [ ] 3 — The host-key read
 
@@ -15,15 +15,15 @@ its task names, and has a twin.
 
 ## 1 — The checker and the verbs
 
-- [ ] 1.1 **HALT CHECK** — `tag` offers only "drop `--flow`", the verbs collect per input, and the host-key check reads by `since`.
+- [x] 1.1 **HALT CHECK** — `tag` offers only "drop `--flow`", the verbs collect per input, and the host-key check reads by `since`.
   Verify: `grep -c 'sheet --flow' isekai/interface/cli.py` prints `0`, `grep -c 'across(' isekai/interface/cli.py` prints `4`, and `grep -c 'logs?since' infra/up.sh` prints `1`.
-- [ ] 1.2 In `tests/test_spec_bindings.py`, demand a test only for living keys, with a twin for a delta-only key, per [D8](design.md#d8).
+- [x] 1.2 In `tests/test_spec_bindings.py`, demand a test only for living keys, with a twin for a delta-only key, per [D8](design.md#d8).
   Verify: `grep -c '^def living_keys' tests/test_spec_bindings.py` prints `1`.
-- [ ] 1.3 In `isekai/interface/cli.py`, name `sheet` when every flow `tag` is given is untagged, per [D1](design.md#d1); add the `tagging` scenario and `test_only_untagged_flows_name_the_next_verb` to `tests/test_tagging.py`.
+- [x] 1.3 In `isekai/interface/cli.py`, name `sheet` when every flow `tag` is given is untagged, per [D1](design.md#d1); add the `tagging` scenario and `test_only_untagged_flows_name_the_next_verb` to `tests/test_tagging.py`.
   Verify: `grep -c 'sheet --flow' isekai/interface/cli.py` prints `1`, and `grep -c '^def test_only_untagged_flows_name_the_next_verb' tests/test_tagging.py` prints `1`.
-- [ ] 1.4 In `isekai/interface/cli.py`, collect each verb's refusals per flow, per [D2](design.md#d2); add the `cli` flow-selection scenario and `test_one_flows_refusal_leaves_the_others` to `tests/test_pipeline_cli.py`.
+- [x] 1.4 In `isekai/interface/cli.py`, collect each verb's refusals per flow, per [D2](design.md#d2); add the `cli` flow-selection scenario and `test_one_flows_refusal_leaves_the_others` to `tests/test_pipeline_cli.py`.
   Verify: `test "$(grep -c 'across(' isekai/interface/cli.py)" -ge 6 && echo ok` prints `ok`, and `grep -c '^def test_one_flows_refusal_leaves_the_others' tests/test_pipeline_cli.py` prints `1`.
-- [ ] 1.5 In `isekai/pipeline/generate.py`, refuse a named flow with no approved sheet beside approved ones, per [D3](design.md#d3); add `test_a_named_unapproved_flow_is_refused_beside_an_approved_one` (`image-generation:inputs:unapproved-flow-is-refused`) to `tests/test_generate.py`.
+- [x] 1.5 In `isekai/pipeline/generate.py`, refuse a named flow with no approved sheet beside approved ones, per [D3](design.md#d3); add `test_a_named_unapproved_flow_is_refused_beside_an_approved_one` (`image-generation:inputs:unapproved-flow-is-refused`) to `tests/test_generate.py`.
   Verify: `grep -c '^def test_a_named_unapproved_flow_is_refused_beside_an_approved_one' tests/test_generate.py` prints `1`.
 
 ## 2 — The boundaries
