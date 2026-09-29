@@ -44,7 +44,9 @@ TORCH_STACK = ("torch", "torchvision", "torchaudio")
 TORCH_INDEX = "https://download.pytorch.org/whl/cu128"
 
 # Both ship the `onnxruntime` module. The -gpu build is for CUDA 13, which the image
-# lacks, so it runs on the CPU anyway; the CPU build says so (0042 design D4).
+# lacks, so it runs on the CPU anyway; the CPU build says so. Not a relabel: without
+# the -gpu build, DWPose runs its box detector on OpenCV, not onnxruntime, which can
+# move `summon-anime-wai`'s pose (0042 design D4).
 DROPPED = ("onnxruntime-gpu",)
 
 # insightface 0.7.3 is an sdist; its `build-system.requires` names these unpinned.

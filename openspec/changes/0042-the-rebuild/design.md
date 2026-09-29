@@ -56,7 +56,7 @@ switches in the image; an honest onnxruntime; hashed build tools; a proved new d
 | [D1](#d1) | `ubuntu:22.04` by digest, one stage; `build-essential` and `ca-certificates` in place of apt's Python; the `NVIDIA_*` `ENV`s | ~3.6 GiB off the pull; torch brings its CUDA | the CUDA runtime base, ~1.2 GiB bigger; a builder stage, which copies uv's Python and the venv across for ~200 MB |
 | [D2](#d2) | the memory step makes a `tmp` directory and exports `TMPDIR` to it; it holds on a `/dev/shm` that is not a tmpfs, and on an unreadable figure, naming each | the upload spools to `TMPDIR`; a guess is not a reading | setting `TMPDIR` in the `Dockerfile`, which would move every build step's temp files too |
 | [D3](#d3) | the telemetry switches as `ENV` in the `Dockerfile`; `up.sh`'s `env` loses them | *declared once*; the image holds for every pod | a copy in each |
-| [D4](#d4) | `onnxruntime==1.30.0` pinned in the deriver, `onnxruntime-gpu` dropped; DWPose's box detector moves to OpenCV, and the operator ruled the release a patch | the CPU is what runs; the package says so and is smaller | a CUDA 12 build of `onnxruntime-gpu` tied to torch's CUDA; restoring `onnxruntime-gpu` for DWPose; releasing as a minor |
+| [D4](#d4) | `onnxruntime==1.30.0` pinned in the deriver, `onnxruntime-gpu` dropped; DWPose's box detector moves to OpenCV, and the operator ruled the release a patch | the CPU is what runs; the package says so and is smaller; the patch ruling is the operator's, no reason given | a CUDA 12 build of `onnxruntime-gpu` tied to torch's CUDA; restoring `onnxruntime-gpu` for DWPose; releasing as a minor |
 | [D5](#d5) | the deriver renders each build constraint as a `{ requirement, hashes }` table | uv checks them under `uv sync --locked` | a hashed constraints file, which `uv sync` does not read |
 | [D6](#d6) | 0.26.1's first bullet names the append-only exception and cites `0038` D6 | the open thread from `0038` | a new bullet |
 | [D7](#d7) | the operator builds `v0.29.1-rc1` on request | it publishes a public image | the agent dispatching it |
@@ -73,7 +73,9 @@ git curl wget ca-certificates openssh-server build-essential libgl1 libglib2.0-0
 ```
 
 `python3` and `python3-pip` go. A new `ENV NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility`
-follows `:5`, so the container runtime mounts the driver.
+follows `:5`: what the old base set, kept for a runtime that honours it. The session showed RunPod sets
+`NVIDIA_VISIBLE_DEVICES=void` and mounts the driver regardless ([acceptance](acceptance.md)), so on RunPod the
+platform mounts it, not these variables.
 
 ### D2
 
@@ -148,8 +150,10 @@ gain `D6`. The bullet stays under `tests/test_changelog.py`'s 300 characters.
 **One session proves it.**
 
 - **The run:** `render.sh` over a synthetic portrait, through `summon-anime-wai` and `conjure-anime-wai`.
-- **The pod's environment**, read over the `SSH:` line `up.sh` prints while the session runs:
-  `tr '\0' '\n' < /proc/1/environ` holds `TMPDIR=/dev/shm/comfyui/tmp` and the telemetry switches.
+- **The pod's environment**, read over the `SSH:` line `up.sh` prints while the session runs, from the ComfyUI
+  process: `tr '\0' '\n' < /proc/"$(pgrep -o -f 'main.py --listen')"/environ` holds `TMPDIR=/dev/shm/comfyui/tmp`
+  and the telemetry switches. Not `/proc/1/environ`: PID 1 is `docker-init`, which runs `start.sh` and never sees
+  what it exports ([acceptance](acceptance.md)).
 - **The pod's log**, through the RunPod MCP's `stream-pod-logs`: `/dev/shm is tmpfs`, and the boot's timestamps,
   created → port 22, set beside 0033's 4 m 33 s.
 - **The renders** arrive, and the MCP shows `pods: []` after.

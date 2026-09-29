@@ -4,7 +4,8 @@
 FROM ubuntu:22.04@sha256:b8b6ee6aa931ecd9d0d952abc34dc0e5f7c6a30c6bb71b079fe399fde0329c02
 
 ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
-# What the CUDA base set, so the container runtime mounts the driver.
+# What the CUDA base set, kept for a runtime that honours it. RunPod sets
+# NVIDIA_VISIBLE_DEVICES=void and mounts the driver regardless (0042 design D1).
 ENV NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility
 # The pod renders a likeness; its libraries are told to report nothing (0042 design D3).
 ENV ORT_DISABLE_TELEMETRY=1 HF_HUB_DISABLE_TELEMETRY=1 DO_NOT_TRACK=1 NO_ALBUMENTATIONS_UPDATE=1
