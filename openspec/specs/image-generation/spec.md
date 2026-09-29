@@ -98,9 +98,9 @@ money on the result the correction exists to improve, and leaves the two indisti
 #### Scenario: every flow with an approved artifact renders
 - **Key:** `image-generation:inputs:every-approved-flow-renders`
 - **Layers:** unit
-- **WHEN** a run has approved artifacts for more than one flow
+- **WHEN** a run has approved artifacts for more than one flow, and the invocation names them
 - **THEN** each of them is rendered
-- **AND** selecting among them requires no flag
+- **AND** an approved flow the invocation does not name is not rendered
 
 ### Requirement: Rendering is idempotent per image
 

@@ -347,6 +347,12 @@ loads it, because a vocabulary no loaded model indexes outlives any particular t
 - **THEN** the read is refused rather than raising a file error
 - **AND** the message names the command that would provision it
 
+#### Scenario: an artifact the manifest does not declare is refused
+- **Key:** `model-provisioning:vocabulary:an-undeclared-artifact-is-refused`
+- **Layers:** unit
+- **WHEN** a caller asks a manifest for an artifact it does not declare
+- **THEN** the command refuses naming the artifact and the manifest it searched
+
 ### Requirement: The reader's files are provisioned from their own manifest, keyed by the model they build
 
 The system SHALL declare the reader's model and projector files as pinned, digested entries in a manifest

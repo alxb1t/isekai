@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.4] - 2026-09-29 · 0047-the-refusals
+
 ### Fixed
 
 - One flow's refusal no longer drops an input's other flows; `tag` given only untagged flows names `sheet`; a

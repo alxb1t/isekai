@@ -167,6 +167,12 @@ call lets a machine that never captions leave the reader untouched.
 - **THEN** the command refuses naming the model and the manifest
 - **AND** no host is contacted
 
+#### Scenario: a model with no readable record names the files first
+- **Key:** `caption:reachability:no-record-names-the-files-first`
+- **Layers:** unit
+- **WHEN** the runtime holds no readable record of the declared model
+- **THEN** the command refuses naming the command that fetches the pinned files, then the one that builds the model
+
 ### Requirement: The flow names the model its reader runs
 
 The system SHALL read the model a flow's reader runs from a required key in that flow's manifest, SHALL
