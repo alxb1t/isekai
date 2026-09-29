@@ -19,6 +19,7 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `docs/pins.md` holds the build tools by hash, the privacy principle names its new tests, and 0.26.1 names its
   append-only exception (0042 D5, D6).
+- A pod boots image `v0.29.1-rc1`, built on request from this version's tree, so it carries the rebuild (0042 D7).
 
 ## [0.29.0] - 2026-09-28 · 0041-the-right-machine
 

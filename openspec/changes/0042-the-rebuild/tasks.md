@@ -7,7 +7,7 @@ The image files and their tests; the docs; then the operator's rc build; then on
 
 - [x] 1 — The image, the start script and `up.sh`
 - [x] 2 — The docs
-- [ ] 3 — 🛑 **HUMAN** — the rc build
+- [x] 3 — 🛑 **HUMAN** — the rc build
 - [ ] 4 — 🛑 **HUMAN · METERED** — one render session on the new image
 
 Line numbers are `ad27f67`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
@@ -42,7 +42,7 @@ Line numbers are `ad27f67`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 3 — 🛑 **HUMAN** — the rc build
 
-- [ ] 3.1 The operator pushes `v0.29.1_the_rebuild` and runs `gh workflow run build-image.yml --ref v0.29.1_the_rebuild -f tag=v0.29.1-rc1`, per [D7](design.md#d7); the job summary's digest and the tag go into `config/image.json`.
+- [x] 3.1 The operator pushes `v0.29.1_the_rebuild` and runs `gh workflow run build-image.yml --ref v0.29.1_the_rebuild -f tag=v0.29.1-rc1`, per [D7](design.md#d7); the job summary's digest and the tag go into `config/image.json`.
   Verify: `grep -c '"tag": "v0.29.1-rc1"' config/image.json` prints `1`.
 
 ## 4 — 🛑 **HUMAN · METERED** — one render session on the new image
