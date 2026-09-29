@@ -16,6 +16,9 @@ VRAM_FLOOR_GB=24
 CUDA_FLOOR="12.8"
 # A lost create exits apart from a refusal: render.sh sweeps only after one (0044 design D2).
 LOST_CREATE_EXIT=3
+# Present from the first create until the record is written: a pod may then exist
+# that no file names, so render.sh sweeps on it and down.sh removes it (0044 D2).
+PENDING=.runpod_pod_pending
 
 # Every call to RunPod: the key reaches curl on a file descriptor, never on its
 # argv, where any process listing could read it; and the call is bounded, so a
@@ -187,6 +190,7 @@ gpus=$(placeable_gpus "$gpus") || exit 1
   || refuse "every card RUNPOD_GPU_TYPE names has less than $VRAM_FLOOR_GB GB; name one with more in .env"
 pod_id=""
 since=$(date -u +%FT%TZ)          # the pod's log is read from here on
+: > "$PENDING"
 while IFS= read -r gpu; do
   echo "Trying '$gpu' ..."
   body=$(jq -n \
@@ -223,15 +227,18 @@ while IFS= read -r gpu; do
   case "$code" in
     201|5??|000|"") lost ;;
   esac
+  rm -f "$PENDING"
   exit 1
 done <<< "$gpus"
 
 if [ -z "$pod_id" ]; then
+  rm -f "$PENDING"
   echo "Pod creation failed: no type in RUNPOD_GPU_TYPE was placed." >&2; exit 1
 fi
 echo "$pod_id" > .runpod_pod_id
 # What `generate` records as the image a render ran on; down.sh removes it.
 echo "$image_ref" > .runpod_pod_image
+rm -f "$PENDING"
 echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 
 # Poll until `ssh.direct` -- a public IP and a mapped :22 -- appears, and give up

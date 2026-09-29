@@ -2934,6 +2934,16 @@ def session_refused(render_sh: str, root: Path) -> bool:
     return session_torn_down(render_sh, root, up_sh)
 
 
+def session_interrupted(render_sh: str, root: Path, *, create_began: bool) -> bool:
+    """Return whether a session interrupted while `up.sh` runs ran `down.sh`.
+
+    The stub signals the session, as a Ctrl-C would, before its create or after
+    it wrote the pending-create marker; no pod is recorded either way.
+    """
+    began = ": > .runpod_pod_pending\n" if create_began else ""
+    return session_torn_down(render_sh, root, f"{began}kill -TERM $PPID\nexit 143\n")
+
+
 RECORDED_TEARDOWN = """#!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -2980,3 +2990,61 @@ def test_the_refusal_check_catches_a_teardown_that_always_sweeps(
     tmp_path: Path,
 ) -> None:
     assert session_refused(ALWAYS_SWEEP, tmp_path)
+
+
+def unmarked_create(up_sh: str, down_sh: str) -> list[str]:
+    """Return what the pending-create marker misses of spanning the create.
+
+    `up.sh` keeps `.runpod_pod_pending` from before its first create until the
+    record is written, so a session interrupted in between sweeps; `down.sh`
+    spends it. e.g. a create with no marker -> ["written before the create", ...]
+    """
+    lines = _code(up_sh)
+    missing = []
+    if "PENDING=.runpod_pod_pending" not in lines:
+        missing.append("named")
+    post = next(i for i, ln in enumerate(lines) if "-X POST" in ln)
+    record = next(i for i, ln in enumerate(lines) if "> .runpod_pod_id" in ln)
+    written = [i for i, ln in enumerate(lines) if ln.strip() == ': > "$PENDING"']
+    if not written or written[0] > post:
+        missing.append("written before the create")
+    if not any(ln.strip() == 'rm -f "$PENDING"' for ln in lines[record + 1 :]):
+        missing.append("removed after the record")
+    if "rm -f .runpod_pod_pending" not in down_sh:
+        missing.append("spent by the teardown")
+    return missing
+
+
+@pytest.mark.spec("pod-image:reconcile:an-interrupt-sweeps-only-once-a-create-began")
+def test_the_pending_create_marker_spans_the_create(up_sh: str, down_sh: str) -> None:
+    assert unmarked_create(up_sh, down_sh) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pending_create_marker_spans_the_create"
+)
+def test_the_marker_check_catches_a_create_with_no_marker() -> None:
+    up = 'out=$(api -X POST "$API/pods")\necho "$pod_id" > .runpod_pod_id\n'
+    assert unmarked_create(up, "rm -f .runpod_pod_id\n") == [
+        "named",
+        "written before the create",
+        "removed after the record",
+        "spent by the teardown",
+    ]
+
+
+@pytest.mark.spec("pod-image:reconcile:an-interrupt-sweeps-only-once-a-create-began")
+def test_an_interrupt_before_the_create_leaves_a_listed_pod(
+    render_sh: str, tmp_path: Path
+) -> None:
+    assert not session_interrupted(render_sh, tmp_path / "before", create_began=False)
+    assert session_interrupted(render_sh, tmp_path / "during", create_began=True)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_an_interrupt_before_the_create_leaves_a_listed_pod"
+)
+def test_the_interrupt_check_catches_a_teardown_that_always_sweeps(
+    tmp_path: Path,
+) -> None:
+    assert session_interrupted(ALWAYS_SWEEP, tmp_path, create_began=False)

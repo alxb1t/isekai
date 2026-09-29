@@ -55,6 +55,7 @@ venv/
 .runpod_pod_id
 .runpod_pod_image
 .runpod_known_hosts
+.runpod_pod_pending
 
 .ruff_cache
 .pytest_cache

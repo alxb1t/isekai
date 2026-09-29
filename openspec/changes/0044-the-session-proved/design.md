@@ -73,11 +73,18 @@ Each failure reaches `check_no_pod` and `down.sh` as the failed listing they alr
 - **`infra/up.sh`:** `LOST_CREATE_EXIT=3`; the create loop's `lost` case exits with it. Every other failure keeps 1.
 - **`infra/render.sh`:** the `up.sh` line becomes
   `bash ./infra/up.sh 2>&1 | tee -a "$log" "$up_out" || { up_status=${PIPESTATUS[0]}; exit "$up_status"; }`.
-  `teardown()` runs `down.sh` when `.runpod_pod_id` exists, or when `up_status` is 3; otherwise it prints that no pod
-  was made.
+  `teardown()` runs `down.sh` when `.runpod_pod_id` exists, when `.runpod_pod_pending` exists, or when `up_status` is
+  3; otherwise it prints that no pod was made. `up_status` is not preset before `up.sh` runs, so an interrupt during
+  `up.sh`'s pre-create checks sweeps nothing. A `.runpod_pod_pending` left by an earlier session refuses before the
+  trap is set, naming `down.sh`.
+- **The pending-create marker:** `up.sh` writes `.runpod_pod_pending` (gitignored) just before its first create and
+  removes it once `.runpod_pod_id` and `.runpod_pod_image` are written, or when every create was definitely refused. A
+  lost create, an interrupt mid-create, or a failed record write leaves it, so the session still sweeps: the
+  spend-safe side. `down.sh` removes it once its sweep leaves no pod.
 
 `session_with_a_lost_create` stubs `up.sh` as `exit 3`. A second stub, a refusal with `exit 1`, must leave `down.sh`
-unrun. D36 needs no edit. Its "a second started at once refuses, and its teardown removes the first's pod" stays true
+unrun. `session_interrupted` signals the session from `up.sh`: before the marker it must leave `down.sh` unrun, after
+it it must run it. D36 needs no edit. Its "a second started at once refuses, and its teardown removes the first's pod" stays true
 within one checkout, whose record the second session sees. A refused session in another checkout now removes
 nothing.
 

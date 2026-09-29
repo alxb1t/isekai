@@ -67,3 +67,10 @@ leaves it billing; one that over-matches deletes a pod that is not this project'
 - **WHEN** a render session holds no record and its pod-creation script refuses, beside a listed pod
 - **THEN** the session's teardown does not run the teardown script
 - **AND** after a create whose outcome is unknown, it does
+
+#### Scenario: an interrupt sweeps only once a create began
+- **Key:** `pod-image:reconcile:an-interrupt-sweeps-only-once-a-create-began`
+- **Layers:** unit
+- **WHEN** a render session holding no record is interrupted while its pod-creation script runs, beside a listed pod
+- **THEN** the session's teardown does not run the teardown script if no create had begun
+- **AND** it does once a create had begun and no record was written

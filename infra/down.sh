@@ -58,7 +58,9 @@ if ! listed=$(isekai_pods); then
   echo "Could not list pods; confirm with the RunPod MCP's list-pods that no 'isekai' pod is left." >&2
   exit 1
 fi
+# up.sh's pending-create marker is spent once a sweep leaves no pod (0044 D2).
 if [ -z "$listed" ] && [ -z "$pod_id" ]; then
+  rm -f .runpod_pod_pending
   echo "No pod to tear down."
   exit 0
 fi
@@ -74,4 +76,5 @@ while read -r id status; do
       ;;
   esac
 done <<< "$listed"
+[ "$failed" -ne 0 ] || rm -f .runpod_pod_pending
 exit "$failed"
