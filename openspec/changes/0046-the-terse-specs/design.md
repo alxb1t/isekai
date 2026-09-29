@@ -41,7 +41,7 @@ a guard for what can be checked.
 | [D2](#d2) | each requirement that breaks the rule becomes a MODIFIED block in `specs/<capability>/spec.md`, titles and keys kept | OpenSpec folds it at release; keys hold every test | editing `openspec/specs/` in place, which bypasses the delta |
 | [D3](#d3) | `## Purpose`, the `</content>` line and the blockquote are edited in `openspec/specs/` in place | a delta cannot carry text outside a requirement | — |
 | [D4](#d4) | the no-image rule and its scenario name a live pod | the listing drops TERMINATED pods first | — |
-| [D5](#d5) | a guard test reads the *effective* spec and fails on a version, a change id, a commit hash, or a line over 120 characters; `ui` is exempt from the history rule until it is rewritten | deltas reach `openspec/specs/` only at release, so the effective spec is what the release will fold | a guard over `openspec/specs/` alone, red for the whole build |
+| [D5](#d5) | a guard test reads the *effective* spec and fails on a version, a change id, a commit hash, or a line over 120 characters other than a title; `ui` is exempt from the history rule until it is rewritten | deltas reach `openspec/specs/` only at release, so the effective spec is what the release will fold | a guard over `openspec/specs/` alone, red for the whole build |
 
 ### D1
 
@@ -98,6 +98,9 @@ terminated, carries no image". Phase 1's rewrite of `pod-image` keeps the senten
 - **The rules:** no isekai version (`v0.<n>`), no change id (`00<nn>` followed by a slug or `design`), no commit hash
   (a backticked run of 7 to 12 hex characters), no line over 120 characters. `ui` is exempt from the version,
   change-id and commit rules until the UI work rewrites it.
+- **Titles:** a `### Requirement:` or `#### Scenario:` line is exempt from the length rule. The `cli`, `sheet` and
+  `tagging` titles past 120 characters are kept, since retitling is a non-goal; settled with the operator at the
+  build.
 - **Twins:** each rule catches a planted line in a temporary tree.
 
 It lands in the last phase, once every capability's rewrite is in the delta.

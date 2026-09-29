@@ -12,7 +12,7 @@ edits that capability's `## Purpose` in place, per [D3](design.md#d3).
 - [x] 4 — `sheet` and `tagging`
 - [x] 5 — `caption` and `review`
 - [x] 6 — `model-provisioning`
-- [ ] 7 — `run-directory`, `field-map`, and the guard
+- [x] 7 — `run-directory`, `field-map`, and the guard
 
 Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-specs/specs`.
 
@@ -54,7 +54,7 @@ Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-spec
 
 ## 7 — `run-directory`, `field-map`, and the guard
 
-- [ ] 7.1 Rewrite `run-directory` and `field-map`, per [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 7.1 Rewrite `run-directory` and `field-map`, per [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `ls openspec/changes/0046-the-terse-specs/specs/run-directory/spec.md openspec/changes/0046-the-terse-specs/specs/field-map/spec.md` lists both, and `grep -c 'first implementation' openspec/changes/0046-the-terse-specs/specs/run-directory/spec.md` prints `0`.
-- [ ] 7.2 Write `tests/test_spec_prose.py` over the effective spec, with a twin per rule, per [D5](design.md#d5).
+- [x] 7.2 Write `tests/test_spec_prose.py` over the effective spec, with a twin per rule, per [D5](design.md#d5).
   Verify: `grep -c -e '^def test_no_spec_names_a_version_change_or_commit' -e '^def test_no_spec_line_passes_120_characters' tests/test_spec_prose.py` prints `2`.

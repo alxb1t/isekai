@@ -1,12 +1,4 @@
-# Capability: `field-map`
-
-## Purpose
-
-One authored table assigning each tag in the pinned vocabulary to the identity criterion it answers, read
-`tag → field` to fill a sheet with no language model in the path and `field → tags` to show the operator every
-candidate. It is keyed by the vocabulary, not by a flow, and it names the tags no criterion can hold.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The table is one authored artifact and the reverse direction is derived
 
@@ -14,11 +6,10 @@ The system SHALL hold the tag-to-criterion assignment in exactly one committed a
 the `field → tags` direction from it rather than storing a second copy. It SHALL NOT place the assignment
 inside a flow's schema document.
 
-Two copies of one mapping is a drift defect this repository already has a genre for: the cheatsheet is the
-table read one way and the router is the same table read the other, so a second stored index is a second
-thing to keep true. Keeping it out of the schema is what makes fixing one tag's criterion one edit rather
-than three frozen directories — a schema lives inside a flow whose whole directory is digest-pinned, and
-`twintails` does not become a different kind of thing because a second flow was written.
+Two stored copies of one mapping drift, and the cheatsheet and the router are one table read two ways. Kept out of
+the schema, fixing one tag's criterion is one edit rather than an edit to every digest-pinned flow: `twintails`
+answers *hair silhouette* in every flow that declares that field
+([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)).
 
 #### Scenario: the reverse index is derived and never authored
 - **Key:** `field-map:table:the-reverse-index-is-derived`
@@ -41,42 +32,14 @@ than three frozen directories — a schema lives inside a flow whose whole direc
 - **THEN** it reports a name, a revision and a digest of its own bytes
 - **AND** a consumer can record which revision it was read at
 
-### Requirement: Every tag in the table resolves in the pinned vocabulary
-
-The system SHALL refuse a table containing a tag that is not in the vocabulary the flows pin, and SHALL
-make that check part of the suite rather than of a review.
-
-An authored artifact held against nothing rots silently, and this one rots in the worst direction: a tag
-that no longer exists routes nothing and shows nothing, and both failures are invisible. Holding it against
-the pin is this repository's own pattern — the artifact-name grep, the registry-keys-equal-artifact-strings
-test — and it is free, because the vocabulary is already provisioned by digest.
-
-#### Scenario: a tag outside the vocabulary is refused
-- **Key:** `field-map:integrity:a-tag-outside-the-vocabulary-is-refused`
-- **Layers:** unit
-- **WHEN** a table entry names a tag the pinned vocabulary does not contain
-- **THEN** loading it is refused, naming the tag
-- **AND** no partial table is returned
-
-#### Scenario: the check runs against the provisioned vocabulary
-- **Key:** `field-map:integrity:the-check-runs-against-the-pin`
-- **Layers:** unit
-- **WHEN** the suite runs with the vocabulary provisioned
-- **THEN** every tag in the committed table resolves in it
-- **AND** the assertion names the vocabulary's revision
-
 ### Requirement: A tag has exactly one primary criterion and may be browsed under several
 
 The system SHALL give every tag in the table exactly one primary criterion, SHALL permit a tag to list
 further criteria it may be browsed under, and SHALL route by the primary alone.
 
-One assignment per tag cannot describe how the criteria are actually used, and the operator's own approved
-sheets are the evidence: he files `navel` under clothes, pose **and** body shape, `collarbone` under pose
-and body shape, and `standing` under framing and pose. A structural case is worse — `lips` is a declared
-criterion of its own in one flow and part of *expression* in another, so a single vocabulary-keyed
-assignment is wrong in one of the two flows whichever way it is written. Routing needs one answer and
-browsing needs all of them, so the table carries both and the ambiguity that remains is decidable: exactly
-one primary, checked the moment the table exists.
+Criteria overlap in use: the operator's approved sheets file `navel` under clothes, pose and body shape, and `lips`
+is a criterion of its own in one flow and part of *expression* in another. Routing needs one answer and browsing
+needs all of them, so the table carries both, and exactly one primary is checked when the table loads.
 
 #### Scenario: every tag declares exactly one primary criterion
 - **Key:** `field-map:membership:every-tag-has-exactly-one-primary`
@@ -97,12 +60,9 @@ one primary, checked the moment the table exists.
 The system SHALL hold a list of tags that answer no criterion, SHALL refuse a table in which any tag
 appears in both that list and a criterion's group, and SHALL NOT serve the excluded list to any surface.
 
-A tag that routes nowhere is dropped either way, so the list changes no behaviour — it changes the record.
-Without it there is no way to tell a deliberate absence from an omission, and `realistic` and
-`photorealistic` reaching a sheet once would be indistinguishable from the twenty other meta tags nobody
-had looked at yet. It is not served to a surface because it is an assertion about the table and not
-material the operator browses; showing him the tags that are never an answer is the opposite of the
-cheatsheet's purpose.
+A tag that routes nowhere is dropped either way, so the list changes the record, not the behaviour: it tells a
+deliberate absence, such as `realistic` or `photorealistic`, from an omission. It is an assertion about the table,
+not material the operator browses, so no surface shows it.
 
 #### Scenario: no tag is in both a criterion's group and the excluded list
 - **Key:** `field-map:excluded:no-tag-is-in-both`
@@ -123,11 +83,9 @@ cheatsheet's purpose.
 The system SHALL require an entry for every field name declared by any tracked flow's schema, and SHALL
 accept an entry whose group is empty.
 
-Completeness is checkable and absence is not: a criterion with no entry is indistinguishable from a
-criterion nobody has authored yet, and the surface would silently omit the row. An empty group, by
-contrast, is an honest answer — the vocabulary holds four tags for eyelashes in total and none at all for
-an age band, so a criterion the tag list cannot express is a fact about the vocabulary and the table is the
-right place to say so.
+A criterion with no entry is indistinguishable from one nobody has authored yet, and the surface would silently
+omit its row. An empty group is an honest answer: a criterion the vocabulary cannot express, such as an age band,
+is a fact about the vocabulary, and the table is where to say it.
 
 #### Scenario: a criterion with no entry is refused
 - **Key:** `field-map:coverage:every-declared-field-has-an-entry`
@@ -149,12 +107,11 @@ The system SHALL place each tag from a tagger's list into its primary criterion,
 primary the acting flow does not declare, SHALL preserve the order the tagger returned within each
 criterion, and SHALL NOT emit any tag the tagger did not return.
 
-The router cannot invent because its input is already the vocabulary — a tagger whose output layer is the
-tag list can only name tags that exist, which is the entire reason the sheet is allowed to change author.
-Dropping by declared field is what keeps one table serving every flow: a criterion five of twenty-one tags
-answer exists whether the acting flow asked for it or not, and a tag routed to a criterion the flow does
-not declare has nowhere legal to go. Preserving the tagger's order costs nothing and is the operator's
-deletion aid, because a hierarchy arrives general-form-first and the general forms are what he deletes.
+The router cannot invent, because its input is already the vocabulary
+([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)). Dropping by declared field lets one table serve
+every flow: a tag whose criterion the flow does not declare has nowhere legal to go. Keeping the tagger's order
+costs nothing and helps the operator delete: a hierarchy arrives general form first, and the general forms are what
+go.
 
 #### Scenario: a tag is placed in its primary criterion
 - **Key:** `field-map:routing:a-tag-goes-to-its-primary`

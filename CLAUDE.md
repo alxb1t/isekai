@@ -111,7 +111,9 @@ implies. Every `#### Scenario:` carries a `- **Key:**` and a `- **Layers:**` bul
 `<capability>:<requirement-slug>:<scenario-slug>`, so a key locates its own file. On release the delta
 is folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
 
-***How a spec reads*** — the rule every requirement and every delta follows.
+***How a spec reads*** — the rule every requirement and every delta follows. `tests/test_spec_prose.py`
+holds what a test can check: no version, change id or commit hash, and no line past 120 characters but a
+title.
 
 - **A requirement is one SHALL paragraph** — what the system does, testable. Then one *why*
   paragraph, in the present tense. A decision in force is linked, not retold.

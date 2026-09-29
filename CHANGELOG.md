@@ -23,6 +23,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   gains a diagram (0046 D2, D3).
 - `model-provisioning` reads to the rule, its stray closing tag gone; each rule's reason leaves its SHALL paragraph
   and its scenarios, and the provisioning hold gains a diagram (0046 D2, D3).
+- `run-directory` and `field-map` read to the rule, and the gate holds it: a spec naming a version, a change id or a
+  commit, or with a line past 120 characters but a title, fails the suite (0046 D2, D3, D5).
 
 ## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
 
