@@ -86,7 +86,10 @@ placeable_gpus() {
     case "$code" in
       200) ;;
       404) refuse "RUNPOD_GPU_TYPE names $gpu, which RunPod does not know; fix .env" ;;
-      *) refuse "RunPod's catalogue answered HTTP ${code:-000} for $gpu; check it with the RunPod MCP's get-gpu-type" ;;
+      *)
+        report "Catalogue read of '$gpu'" "${code:-000}" "${out%$'\n'*}"
+        refuse "RunPod's catalogue could not be read for $gpu; check it with the RunPod MCP's get-gpu-type"
+        ;;
     esac
     memory=$(echo "${out%$'\n'*}" | jq -r '.memory | numbers' 2>/dev/null) || true
     [ -n "$memory" ] \

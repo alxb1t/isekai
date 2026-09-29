@@ -191,12 +191,13 @@ def test_the_driver_aborts_only_once_every_source_is_exhausted(
     assert "landed=0" in download_models_sh
 
 
-def held_on_provisioning(start_sh: str) -> bool:
-    """Whether the guarded provisioning step's failure branch calls `hold`."""
-    lines = start_sh.splitlines()
-    guard = lines.index("if ! provision; then")
-    end = next(i for i in range(guard, len(lines)) if lines[i] == "fi")
-    return any(ln.lstrip().startswith('hold "') for ln in lines[guard:end])
+def hold_calls(script: str) -> list[int]:
+    """Return the index of each line that calls `hold`."""
+    return [
+        i
+        for i, ln in enumerate(script.splitlines())
+        if ln.lstrip().startswith('hold "')
+    ]
 
 
 @pytest.mark.spec(
@@ -213,7 +214,7 @@ def test_a_provisioning_failure_does_not_take_the_container_down(
     # so `set -e` cannot terminate the shell that owns sshd.
     assert provisioning[0].rstrip().endswith("|| return 1")
     assert "if ! provision; then" in start_sh
-    assert held_on_provisioning(start_sh)
+    assert hold_calls(boot_step(start_sh, "provisioning"))
 
 
 @pytest.mark.spec(
@@ -223,7 +224,7 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
     start_sh: str,
 ) -> None:
     lines = start_sh.splitlines()
-    hold = next(i for i, line in enumerate(lines) if line.lstrip().startswith('hold "'))
+    hold = hold_calls(start_sh)[0]
     serve = next(i for i, line in enumerate(lines) if "exec python main.py" in line)
     assert hold < serve
     # nothing on the volume is removed on the failure path
@@ -1099,11 +1100,6 @@ def run_memory_step(
 
     None is a `stat` that fails. A hold prints `held`; a start prints `started`.
     """
-    stubs = tmp_path / "bin"
-    stubs.mkdir(exist_ok=True)
-    # `exec` finds only a file on PATH, so a hold's `sleep` is one.
-    (stubs / "sleep").write_text("#!/bin/sh\necho held\n")
-    (stubs / "sleep").chmod(0o755)
     hold = 'hold() { printf "%s\\n" "$@" >&2; echo held; exit 0; }'
     stat = f"echo {shlex.quote(shm_type)}" if shm_type is not None else "return 1"
     program = "\n".join(
@@ -1120,7 +1116,7 @@ def run_memory_step(
     )
     return subprocess.run(
         ["bash", "-c", program],
-        env={"PATH": f"{stubs}:{os.environ['PATH']}"},
+        env={"PATH": os.environ["PATH"]},
         capture_output=True,
         text=True,
         timeout=30,
@@ -1359,9 +1355,9 @@ def unsafe_api_calls(scripts: dict[str, str]) -> list[str]:
 
 
 @pytest.mark.spec_exempt("structural: how the scripts hand curl the key and a bound")
-def test_every_api_call_is_bounded_and_keeps_the_key_off_argv() -> None:
+def test_every_api_call_is_bounded_and_keeps_the_key_off_argv(stop_sh: str) -> None:
     scripts = {p.name: p.read_text() for p in (REPO / "infra").iterdir() if p.is_file()}
-    scripts["tools/stop_pod.sh"] = (REPO / "tools" / "stop_pod.sh").read_text()
+    scripts["tools/stop_pod.sh"] = stop_sh
     assert all("curl " in scripts[n] for n in ("up.sh", "down.sh", "tools/stop_pod.sh"))
     assert unsafe_api_calls(scripts) == []
 
@@ -2066,6 +2062,12 @@ def pods_sh() -> str:
     return (REPO / "infra" / "pods.sh").read_text()
 
 
+@pytest.fixture(scope="session")
+def stop_sh() -> str:
+    """Read the shipped `tools/stop_pod.sh` once for the whole session."""
+    return (REPO / "tools" / "stop_pod.sh").read_text()
+
+
 def create_body(up_sh: str) -> dict[str, object]:
     """Return the create request `up.sh` builds for a card named `card`."""
     lines = up_sh.splitlines()
@@ -2186,7 +2188,17 @@ def test_the_unknown_card_check_catches_a_card_passed_through() -> None:
     assert placement(BROKEN_PLACEMENT, "RTX 4090\nRTX 4O90").returncode == 0
 
 
-IMAGE_NAME = json.loads(IMAGE_CONFIG.read_text())["image"]
+def copy_image_config(root: Path) -> None:
+    """Copy the shipped `config/image.json` under `root`, where the scripts read it."""
+    (root / "config").mkdir(parents=True, exist_ok=True)
+    (root / "config" / "image.json").write_text(IMAGE_CONFIG.read_text())
+
+
+def stub_command(bin_dir: Path, name: str, script: str) -> None:
+    """Write `script` as the executable `name` in `bin_dir`, found first on PATH."""
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    (bin_dir / name).write_text(script)
+    (bin_dir / name).chmod(0o755)
 
 
 def listed_pod(pod_id: str, status: str, name: str = "isekai") -> dict[str, str]:
@@ -2194,7 +2206,7 @@ def listed_pod(pod_id: str, status: str, name: str = "isekai") -> dict[str, str]
     return {
         "id": pod_id,
         "name": name,
-        "image": f"{IMAGE_NAME}@sha256:0",
+        "image": f"{json.loads(IMAGE_CONFIG.read_text())['image']}@sha256:0",
         "status": status,
     }
 
@@ -2218,8 +2230,7 @@ def pod_check(
 
     Return the run and whether it called RunPod at all.
     """
-    (cwd / "config").mkdir(exist_ok=True)
-    (cwd / "config" / "image.json").write_text(IMAGE_CONFIG.read_text())
+    copy_image_config(cwd)
     first, second = pages or ["", ""]
     listing = (
         "return 22"
@@ -2335,8 +2346,7 @@ def tear_down(
     (root / "infra").mkdir(parents=True)
     (root / "infra" / "down.sh").write_text(down_sh)
     (root / "infra" / "pods.sh").write_text(pods_sh)
-    (root / "config").mkdir()
-    (root / "config" / "image.json").write_text(IMAGE_CONFIG.read_text())
+    copy_image_config(root)
     (root / ".env").write_text("RUNPOD_API_KEY=test-key\n")
     if recorded:
         (root / ".runpod_pod_id").write_text(f"{recorded}\n")
@@ -2346,9 +2356,7 @@ def tear_down(
         (fake / f"page{n}").write_text(page)
     (fake / "refused").write_text("".join(f"{p}\n" for p in refused))
     bin_dir = root / "bin"
-    bin_dir.mkdir()
-    (bin_dir / "curl").write_text(FAKE_CURL)
-    (bin_dir / "curl").chmod(0o755)
+    stub_command(bin_dir, "curl", FAKE_CURL)
     done = subprocess.run(
         ["bash", "infra/down.sh"],
         cwd=root,
@@ -2533,32 +2541,20 @@ def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
     body = shell_function(start_sh, "hold")
     faults = [
         f"holds outside hold(): {ln.strip()}"
-        for ln in start_sh.replace(body, "").splitlines()
-        if "HOLD_SECONDS" in ln
-        and not ln.lstrip().startswith("#")
-        and not ln.startswith("HOLD_SECONDS=")
+        for ln in _code(start_sh.replace(body, ""))
+        if "HOLD_SECONDS" in ln and not ln.startswith("HOLD_SECONDS=")
     ]
-    stubs = tmp_path / "bin"
-    stubs.mkdir(exist_ok=True)
-    (stubs / "bash").write_text('#!/bin/sh\necho "stopped $*"\n')
-    (stubs / "bash").chmod(0o755)
-    program = "\n".join(
+    # `exec` finds only a file on PATH, so the stop's `bash` is one.
+    stub_command(tmp_path / "bin", "bash", '#!/bin/sh\necho "stopped $*"\n')
+    stubs = "\n".join(
         [
-            "set -euo pipefail",
+            f'export PATH="{tmp_path / "bin"}:$PATH"',
             "HOLD_SECONDS=900 STOP_POD=/opt/isekai/tools/stop_pod.sh",
             'sleep() { echo "slept $1"; }',
-            body,
-            'hold "ERROR: why"',
-            "echo returned",
         ]
     )
-    done = subprocess.run(
-        ["/bin/bash", "-c", program],
-        env={"PATH": f"{stubs}:{os.environ['PATH']}"},
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
+    done = run_functions(
+        start_sh, ("hold",), stubs, tmp_path, call='hold "ERROR: why"; echo returned'
     )
     if done.stdout != "slept 900\nstopped /opt/isekai/tools/stop_pod.sh\n":
         faults.append("hold() does not stop the pod once it has waited")
@@ -2570,8 +2566,7 @@ def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
 @pytest.mark.spec("pod-image:stop:a-hold-ends-in-the-stop")
 def test_every_hold_ends_in_the_stop(start_sh: str, tmp_path: Path) -> None:
     assert unstopped_holds(start_sh, tmp_path) == []
-    calls = [ln for ln in start_sh.splitlines() if ln.lstrip().startswith('hold "')]
-    assert len(calls) >= 1
+    assert hold_calls(start_sh)
 
 
 @pytest.mark.spec_exempt("structural: twin of test_every_hold_ends_in_the_stop")
@@ -2587,7 +2582,6 @@ def test_the_hold_check_catches_a_hold_that_exits(tmp_path: Path) -> None:
     ]
 
 
-STOP_SH = (REPO / "tools" / "stop_pod.sh").read_text()
 TRIED_ONCE = (
     "code=$(curl -s --max-time 30 -o /dev/null -w '%{http_code}' -X POST"
     ' "$API/pods/$RUNPOD_POD_ID/action")\n'
@@ -2630,9 +2624,9 @@ def stop_attempts(
 
 
 @pytest.mark.spec("pod-image:stop:a-failed-stop-is-retried")
-def test_a_failed_stop_is_retried_then_given_up(tmp_path: Path) -> None:
+def test_a_failed_stop_is_retried_then_given_up(stop_sh: str, tmp_path: Path) -> None:
     code, attempts, slept = stop_attempts(
-        STOP_SH, ["500", "000", "200"], tmp_path / "ok"
+        stop_sh, ["500", "000", "200"], tmp_path / "ok"
     )
     assert (code, len(attempts), slept) == (0, 3, ["30", "30"])
     for attempt in attempts:
@@ -2640,7 +2634,7 @@ def test_a_failed_stop_is_retried_then_given_up(tmp_path: Path) -> None:
             '-d {"action":"stop"} https://api.runpod.io/v2/pods/pod-test/action'
             in attempt
         )
-    code, attempts, slept = stop_attempts(STOP_SH, ["500"] * 20, tmp_path / "down")
+    code, attempts, slept = stop_attempts(stop_sh, ["500"] * 20, tmp_path / "down")
     assert code == 1
     # tried every 30 s until 300 s had passed
     assert (len(attempts), slept) == (11, ["30"] * 10)

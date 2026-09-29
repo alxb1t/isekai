@@ -14,15 +14,26 @@ api() {
 }
 source ./infra/pods.sh
 
+delete_pod() {  # delete_pod <id>: set code and resp from RunPod's answer
+  out=$(api -S -w '\n%{http_code}' -X DELETE "$API/pods/$1") || true
+  code=${out##*$'\n'}
+  resp=${out%$'\n'*}
+}
+
+detail() {  # detail <body>: RunPod's title and detail, or the body as it came
+  echo "$1" \
+    | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
+      >&2 2>/dev/null \
+    || echo "  $1" >&2
+}
+
 failed=0
 pod_id=""
 if [ -f .runpod_pod_id ]; then
   pod_id=$(cat .runpod_pod_id)
 
   echo "Terminating pod $pod_id ..."
-  out=$(api -S -w '\n%{http_code}' -X DELETE "$API/pods/$pod_id") || true
-  code=${out##*$'\n'}
-  resp=${out%$'\n'*}
+  delete_pod "$pod_id"
 
   if [ "$code" = "204" ]; then
     rm -f .runpod_pod_id .runpod_pod_image .runpod_known_hosts
@@ -36,10 +47,7 @@ if [ -f .runpod_pod_id ]; then
     failed=1
   else
     echo "Delete returned HTTP $code — check the console to be sure the pod is gone." >&2
-    echo "$resp" \
-      | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
-        >&2 2>/dev/null \
-      || echo "  $resp" >&2
+    detail "$resp"
     echo "Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
     failed=1
   fi
@@ -56,12 +64,12 @@ if [ -z "$listed" ] && [ -z "$pod_id" ]; then
 fi
 while read -r id status; do
   [ -n "$id" ] && [ "$id" != "$pod_id" ] || continue
-  out=$(api -S -w '\n%{http_code}' -X DELETE "$API/pods/$id") || true
-  code=${out##*$'\n'}
+  delete_pod "$id"
   case "$code" in
     204) echo "Removed $id ($status)." ;;
     *)
       echo "Delete of $id ($status) returned HTTP $code; confirm it gone with the RunPod MCP's get-pod." >&2
+      detail "$resp"
       failed=1
       ;;
   esac
