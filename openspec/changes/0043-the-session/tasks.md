@@ -8,7 +8,7 @@ stop boot, per [design](design.md).
 - [x] 1 — The gates and the reconciler
 - [x] 2 — The pod's stop
 - [x] 3 — The docs
-- [ ] 4 — 🛑 **HUMAN** — the rc build
+- [x] 4 — 🛑 **HUMAN** — the rc build
 - [ ] 5 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on the new image
 
 Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
@@ -62,7 +62,7 @@ Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 4 — 🛑 **HUMAN** — the rc build
 
-- [ ] 4.1 The operator pushes `v0.30_the_session` and runs `gh workflow run build-image.yml --ref v0.30_the_session -f tag=v0.30-rc1`, per [D8](design.md#d8); the job summary's digest and the tag go into `config/image.json`.
+- [x] 4.1 The operator pushes `v0.30_the_session` and runs `gh workflow run build-image.yml --ref v0.30_the_session -f tag=v0.30-rc1`, per [D8](design.md#d8); the job summary's digest and the tag go into `config/image.json`.
   Verify: `grep -c '"tag": "v0.30-rc1"' config/image.json` prints `1`.
 
 ## 5 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on the new image
