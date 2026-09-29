@@ -9,6 +9,18 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.4] - 2026-09-29 · 0047-the-refusals
+
+### Fixed
+
+- One flow's refusal no longer drops an input's other flows; `tag` given only untagged flows names `sheet`; a
+  render session refuses a batch with a named flow unapproved on any run; a test is demanded only of a living key,
+  so a cut adding a scenario stays green (0047 D1, D2, D3, D8).
+- `show` marks a frame it cannot read and lists the rest; the Ollama refusals name the pinned files' fetch before
+  the build; an artifact the vocabulary manifest does not declare is a refusal, not a traceback (0047 D4, D5, D6).
+- The host-key check reads the container log's last lines, keeping the last key line alone; a `since` read follows
+  when downloads pushed it out, as reading by `since` first stalled on a live boot (0047 D7).
+
 ## [0.30.3] - 2026-09-29 · 0046-the-terse-specs
 
 ### Changed

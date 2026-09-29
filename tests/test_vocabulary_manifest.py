@@ -14,11 +14,16 @@ arrive as a side effect of downloading a tagger this repository did not load
 """
 
 import copy
+import json
+import subprocess
+import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from evaluation.eval_models import load_eval_manifest
+from isekai.boundary import provision
 from isekai.boundary.provision import (
     DIGEST,
     MANIFEST_PATH,
@@ -31,6 +36,7 @@ from isekai.boundary.provision import (
     mirror_entries_without_an_alternate,
     sources_on_a_mutable_ref,
 )
+from isekai.boundary.wd14 import verified_paths
 from isekai.foundation.refusal import Refusal
 from isekai.interface.wiring import load_vocabulary
 from tests.fakes import FakeFetcher
@@ -247,3 +253,43 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
     message = str(refused.value)
     assert VOCABULARY in message
     assert "tools/download_models.sh config/vocabulary.json" in message
+
+
+def _declaring_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Point the vocabulary manifest at a copy declaring nothing, and return it."""
+    manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
+    manifest["entries"] = []
+    path = tmp_path / "vocabulary.json"
+    path.write_text(json.dumps(manifest))
+    monkeypatch.setattr(provision, "VOCABULARY_MANIFEST_PATH", path)
+    return path
+
+
+@pytest.mark.spec("model-provisioning:vocabulary:an-undeclared-artifact-is-refused")
+@pytest.mark.parametrize(
+    "load", [load_vocabulary, verified_paths], ids=["vocabulary", "tagger"]
+)
+def test_an_undeclared_artifact_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, load: Callable[[Path], object]
+) -> None:
+    manifest = _declaring_none(tmp_path, monkeypatch)
+
+    with pytest.raises(Refusal) as refused:
+        load(tmp_path / "models")
+
+    assert f"{VOCABULARY} is not declared in {manifest}" in str(refused.value)
+    assert "tools.derive_vocabulary" in str(refused.value)
+
+
+@pytest.mark.spec_exempt("twin: why the refusal is the callers', not provision.py's")
+def test_provision_runs_by_path_without_the_package() -> None:
+    # The image copies `provision.py` alone and runs it by path; an `isekai`
+    # import there would fail every pod's provisioning (0047 design D6).
+    ran = subprocess.run(
+        [sys.executable, "-S", str(Path(provision.__file__))],
+        capture_output=True,
+        text=True,
+    )
+
+    assert "ModuleNotFoundError" not in ran.stderr
+    assert "usage: provision.py" in ran.stderr

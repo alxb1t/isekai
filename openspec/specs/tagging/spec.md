@@ -263,3 +263,10 @@ declares none is refused, not skipped, because a skip reports success for a flow
 - **WHEN** the hosted tagger's model is built from files the reader's manifest does not pin
 - **THEN** the tag verb refuses the hosted list, naming both digests, and spends no attempt
 - **AND** the local tag list is written
+
+#### Scenario: a command naming only untagged flows names the next verb
+- **Key:** `tagging:declaration:only-untagged-flows-name-the-next-verb`
+- **Layers:** unit
+- **WHEN** the tag verb names only flows whose manifests declare no tagger
+- **THEN** the invocation is refused, saying `tag` has nothing to do for them
+- **AND** the message names the `sheet` command to run next

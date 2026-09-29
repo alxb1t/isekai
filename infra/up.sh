@@ -109,11 +109,23 @@ placeable_gpus() {
 }
 
 # The log stays open, so each read is cut at 10 s; what it held by then is read.
-printed_fingerprint() {
-  api -N --max-time 10 "$API/pods/$pod_id/logs?since=$since" \
+# The container's last lines first, as `since` stalled on a live boot; the last
+# key wins, as a restarted container prints a new one (0047 design D7). A cold
+# volume's downloads can push the key out of those lines, so a read from the
+# boot's start follows when they hold none. Only a line that is the key line
+# counts, so nothing logged later can echo one in.
+key_lines() {
+  api -N --max-time 10 "$API/pods/$pod_id/logs?$1" \
     | jq -rR 'select(startswith("data: ")) | .[6:] | fromjson? | .line // empty
-              | capture("isekai host key: (?<f>SHA256:[A-Za-z0-9+/]+)").f' 2>/dev/null \
-    | head -n 1
+              | capture("^isekai host key: (?<f>SHA256:[A-Za-z0-9+/]+)\\s*$").f' 2>/dev/null \
+    | tail -n 1
+}
+
+printed_fingerprint() {
+  local printed
+  printed=$(key_lines "tail=5000&source=container") || true
+  [ -n "$printed" ] || printed=$(key_lines "since=$since&source=container") || true
+  echo "$printed"
 }
 
 scanned_key() {  # the pod's Ed25519 host key, as a known-hosts line
@@ -189,7 +201,7 @@ gpus=$(placeable_gpus "$gpus") || exit 1
 [ -n "$gpus" ] \
   || refuse "every card RUNPOD_GPU_TYPE names has less than $VRAM_FLOOR_GB GB; name one with more in .env"
 pod_id=""
-since=$(date -u +%FT%TZ)          # the pod's log is read from here on
+since=$(date -u +%FT%TZ)          # a boot's log starts after this
 : > "$PENDING"
 while IFS= read -r gpu; do
   echo "Trying '$gpu' ..."

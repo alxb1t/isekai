@@ -148,6 +148,13 @@ why no progress file is needed before something other than a human is watching.
 - **THEN** each artifact's producer is shown
 - **AND** artifacts produced by different implementations are distinguishable in the output
 
+#### Scenario: a frame it cannot read is marked
+- **Key:** `cli:show:an-unreadable-frame-is-marked`
+- **Layers:** unit
+- **WHEN** a run's frame is unreadable, declares an unknown version, or lacks its photograph
+- **THEN** the report marks the frame with its refusal in place of the photograph line
+- **AND** it lists the run's flows and artifacts as it would otherwise
+
 ### Requirement: Every refusal names the action that would resolve it
 
 The system SHALL end every refusal with the action the operator can take, and SHALL NOT name an action
@@ -221,6 +228,13 @@ controls.
 - **WHEN** a verb that serves a surface is given more than one flow
 - **THEN** the invocation is refused
 - **AND** the message states that the surface serves one flow at a time
+
+#### Scenario: one flow's refusal leaves the input's other flows
+- **Key:** `cli:flow-selection:one-flows-refusal-leaves-the-others`
+- **Layers:** unit
+- **WHEN** a stage verb names more than one flow, and one of them refuses for an input
+- **THEN** the input's other named flows are still acted on
+- **AND** every refusal is reported together at the end
 
 ### Requirement: A flow manifest is refused at load when its declarations do not resolve
 

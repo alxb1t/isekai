@@ -66,6 +66,7 @@ from isekai.shared.vocabulary import (
     DEFAULT_MODELS_DIR,
     VOCABULARY_DEST,
     VOCABULARY_REMEDY,
+    undeclared,
 )
 
 # The two destinations the vocabulary manifest declares. Both are verified before
@@ -252,6 +253,7 @@ def verified_paths(
     """
     from isekai.boundary.provision import (
         VOCABULARY_MANIFEST_PATH,
+        UnknownArtifact,
         entry_for,
         load_manifest,
         resolve,
@@ -263,6 +265,8 @@ def verified_paths(
     for dest in (LABELS_DEST, MODEL_DEST):
         try:
             resolved.append(resolve(dest, models_dir, manifest))
+        except UnknownArtifact as absent:
+            raise undeclared(dest, VOCABULARY_MANIFEST_PATH) from absent
         except FileNotFoundError as absent:
             raise Refusal(
                 f"{dest} is not provisioned under {models_dir}/, and the local "

@@ -40,6 +40,7 @@ with site-packages off the path.
 """
 
 import argparse
+import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from functools import cache, partial
@@ -330,7 +331,7 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return 0
         flows = _flows_for(args, wired)
         if verb == "tag":
-            _require_tagged(flows)
+            _require_tagged(flows, targets, args.runs)
     except Refusal as unselectable:
         print(f"refused: {unselectable}", file=wired.err)
         return 1
@@ -347,13 +348,25 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     return 1 if refused else 0
 
 
-def _require_tagged(flows: Mapping[str, Flow]) -> None:
+def _require_tagged(
+    flows: Mapping[str, Flow], targets: Sequence[str], runs: Path
+) -> None:
     """Refuse a `tag` invocation naming any flow that declares no tagger.
 
     Before any identifier, so no flow named with it is tagged: a skip would report
-    success for a flow that wrote nothing (0032 design D2).
+    success for a flow that wrote nothing (0032 design D2). With every flow
+    untagged, "drop `--flow`" would leave argparse nothing to accept, so the
+    refusal names `sheet` instead (0047 design D1).
     """
     untagged = [name for name, flow in flows.items() if not flow.tagger]
+    if untagged and len(untagged) == len(flows):
+        root = "" if runs == RUNS_ROOT else f" --runs {shlex.quote(str(runs))}"
+        photos = " ".join(shlex.quote(target) for target in targets) or "<photo>"
+        raise Refusal(
+            f"`tag` has nothing to do: {', '.join(untagged)} declare "
+            f'`"tagger": false`; run `python -m isekai sheet --flow '
+            f"{' --flow '.join(untagged)}{root} {photos}` next"
+        )
     if untagged:
         raise Refusal(
             "; ".join(
@@ -390,7 +403,7 @@ def _per_item(
     """Return the work one identifier gets, with everything run-independent done.
 
     `collected` takes the refusals that must not abandon the rest of a
-    photograph's work: `tag`'s, one per tagger.
+    photograph's work: one per flow, and `tag`'s one per tagger.
 
     The flows a verb acts on are a property of the invocation, not of the
     photograph, so they are resolved once by the caller rather than re-read from
@@ -458,8 +471,15 @@ def _per_item(
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
+        if verb == "show":
+            for line in report(run, wired.flows_dir):
+                print(line, file=wired.out)
+            return
+        step: Callable[[str], None]
         if verb == "caption":
-            for name, flow in flows.items():
+
+            def caption_flow(name: str) -> None:
+                flow = flows[name]
                 # **Resolved per flow, not once per invocation.** One command
                 # naming two flows on two models would otherwise resolve one
                 # reader and hand it to both, and the provenance one of the two
@@ -477,12 +497,22 @@ def _per_item(
                         new_version=new_version,
                     ),
                 )
+
+            step = caption_flow
         elif verb == "tag":
-            for name, flow in flows.items():
-                opening = tagger(flow)
-                hosted = _seam(
-                    wired.hosted_tagger, "hosted tagger", "tags the photograph"
-                )(flow)
+
+            def tag_flow(name: str) -> None:
+                flow = flows[name]
+
+                def hosted() -> None:
+                    tagger_for = _seam(
+                        wired.hosted_tagger, "hosted tagger", "tags the photograph"
+                    )
+                    written = tag_hosted(
+                        run, name, tagger_for(flow), new_version=new_version
+                    )
+                    _say(wired, run, "tags", written)
+
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
                 # reaches no network (0032 design D2).
@@ -491,18 +521,17 @@ def _per_item(
                         wired,
                         run,
                         "wd14",
-                        tag_wd14(run, name, opening, new_version=new_version),
+                        tag_wd14(run, name, tagger(flow), new_version=new_version),
                     ),
-                    lambda: _say(
-                        wired,
-                        run,
-                        "tags",
-                        tag_hosted(run, name, hosted, new_version=new_version),
-                    ),
+                    hosted,
                 )
                 collected.extend(across(steps, lambda step: step()))
+
+            step = tag_flow
         elif verb == "sheet":
-            for name, flow in flows.items():
+
+            def sheet_flow(name: str) -> None:
+                flow = flows[name]
                 _say(
                     wired,
                     run,
@@ -518,20 +547,28 @@ def _per_item(
                         new_version=new_version,
                     ),
                 )
+
+            step = sheet_flow
         elif verb == "review":
-            for name in flows:
+
+            def review_flow(name: str) -> None:
                 _say(wired, run, "review", review(run, name, new_version=new_version))
+
+            step = review_flow
         elif verb == "approve":
-            for name, flow in flows.items():
-                written, warnings = approve(run, name, flow.schema, vocabulary())
+
+            def approve_flow(name: str) -> None:
+                written, warnings = approve(run, name, flows[name].schema, vocabulary())
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
-        elif verb == "show":
-            for line in report(run, wired.flows_dir):
-                print(line, file=wired.out)
+
+            step = approve_flow
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")
+        # Each flow's refusal is collected on its own, so one flow's does not cost
+        # the input its other flows (0047 design D2).
+        collected.extend(across(list(flows), step))
 
     return work
 

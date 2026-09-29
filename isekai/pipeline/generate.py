@@ -133,17 +133,24 @@ def seeds_for(
     return draw_seeds(shortfall, rng, already)
 
 
+def _unapproved(run: Run, flows: Sequence[str]) -> str:
+    """Return the refusal for `flows` having no approved sheet, naming the way out."""
+    # `--flow` is required and repeatable, so the remedy names every flow it
+    # refuses rather than a command argparse would refuse.
+    naming = " ".join(f"--flow {one}" for one in flows)
+    return (
+        f"{run.id}: no approved sheet for {', '.join(flows)}, and only an approved "
+        f"sheet is rendered; run `python -m isekai review {naming} {run.id}`, edit "
+        f"the draft, then `python -m isekai approve {naming} {run.id}`"
+    )
+
+
 def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
     """Return the highest approved artifact for `flow`, or refuse naming the way out."""
     directory = run.directory(flow, REVIEW)
     approved = approved_versions(directory)
     if not approved:
-        raise Refusal(
-            f"{run.id}: flow {flow} has no approved sheet, and only an approved "
-            "sheet is rendered; run `python -m isekai review --flow "
-            f"{flow} {run.id}`, edit the draft, then `python -m isekai approve "
-            f"--flow {flow} {run.id}`"
-        )
+        raise Refusal(_unapproved(run, [flow]))
     return approved[-1], directory / artifact_name(approved[-1], APPROVED)
 
 
@@ -234,11 +241,9 @@ def _unassembled(
 def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[str]]:
     """Assemble every approved flow's prompt for one run, before anything is rented.
 
-    A run that has been approved for *nothing* asked for is refused rather than
-    returning empty. Selecting among several approved flows still needs no flag --
-    the refusal fires only when none of the flows asked for has an approved sheet,
-    so "a run renders everything it has been approved for" is unchanged and
-    "rendering did nothing and said nothing" is no longer reachable.
+    Each named flow with no approved sheet is refused by name, beside the approved
+    ones or not (0047 design D3); a run approved for none of them is refused
+    outright rather than returning empty.
 
     **One flow's malformed sheet costs that flow alone**, and it is `across`
     that says so -- the same call `cli.py` collects photographs with, one axis
@@ -247,23 +252,18 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     first broken one took every sibling's turn with it, and did it after
     already writing a permanent record (v0.16 R6).
     """
-    ready = [flow for flow in approved_flows(run) if flow in flows]
+    approved = approved_flows(run)
+    ready = [flow for flow in approved if flow in flows]
+    unapproved = sorted(flow for flow in flows if flow not in approved)
+    refused = [_unapproved(run, unapproved)] if unapproved else []
     if flows and not ready:
-        asked = ", ".join(sorted(flows))
-        # `--flow` is required and repeatable, so the remedy names every flow
-        # that was asked for rather than a command argparse would refuse.
-        naming = " ".join(f"--flow {one}" for one in sorted(flows))
-        raise Refusal(
-            f"{run.id}: no approved sheet for {asked}, and only an approved sheet "
-            f"is rendered; run `python -m isekai review {naming} {run.id}`, edit "
-            f"the draft, then `python -m isekai approve {naming} {run.id}`"
-        )
+        raise Refusal(*refused)
     assembled: dict[str, Path] = {}
 
     def assemble_one(flow: str) -> None:
         assembled[flow] = prompt_artifact(run, flows[flow], flows[flow].schema)
 
-    return assembled, across(ready, assemble_one)
+    return assembled, refused + across(ready, assemble_one)
 
 
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:

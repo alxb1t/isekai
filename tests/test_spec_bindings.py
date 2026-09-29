@@ -1,8 +1,8 @@
 """Every spec↔test binding, held by the gate.
 
-Each scenario key has a test, each `spec` marker names a key, and each test carries
+Each living key has a test, each `spec` marker names a key, and each test carries
 exactly one of `spec` and `spec_exempt`. Keys are read with a regex, markers with
-`ast`: no marker is built at runtime. Why: `0045` design D1, D2.
+`ast`: no marker is built at runtime. Why: `0045` design D1, D2; `0047` design D8.
 """
 
 import ast
@@ -30,6 +30,24 @@ def spec_keys(root: Path) -> set[str]:
         for body in reqs.values()
         for key in _KEY.findall(body)
     }
+
+
+def living_keys(root: Path) -> set[str]:
+    """Return the keys in `openspec/specs/` alone, before any delta applies."""
+    return {
+        key
+        for path in sorted((root / "openspec" / "specs").glob("*/spec.md"))
+        for key in _KEY.findall(path.read_text())
+    }
+
+
+def demanded(root: Path) -> set[str]:
+    """Return the keys a test must name: the living ones no active delta removes.
+
+    A key only an open delta adds may be named but is not demanded, so a cut
+    that adds a scenario stays green until its build writes the test.
+    """
+    return spec_keys(root) & living_keys(root)
 
 
 def _names_marker(node: ast.Attribute) -> bool:
@@ -156,14 +174,20 @@ def keys() -> set[str]:
 
 
 @pytest.fixture(scope="module")
+def required() -> set[str]:
+    """Read the repository's demanded keys once for the module."""
+    return demanded(REPO_ROOT)
+
+
+@pytest.fixture(scope="module")
 def tests() -> list[Test]:
     """Parse the repository's tests once for the module."""
     return marked_tests(REPO_ROOT)
 
 
-@pytest.mark.spec_exempt("structural: every scenario key has a test")
-def test_every_key_has_a_test(keys: set[str], tests: list[Test]) -> None:
-    missing = unbound(keys, tests)
+@pytest.mark.spec_exempt("structural: every living key has a test")
+def test_every_key_has_a_test(required: set[str], tests: list[Test]) -> None:
+    missing = unbound(required, tests)
     assert not missing, f"keys no test names: {missing[:5]}"
 
 
@@ -223,7 +247,7 @@ def _tree(root: Path, tests: str = _TESTS, delta: str | None = None) -> Path:
 @pytest.mark.spec_exempt("structural: twin of test_every_key_has_a_test")
 def test_a_key_with_no_test_is_caught(tmp_path: Path) -> None:
     root = _tree(tmp_path, _TESTS.replace('"cap:gone:gone"', '"cap:kept:kept"'))
-    assert unbound(spec_keys(root), marked_tests(root)) == ["cap:gone:gone"]
+    assert unbound(demanded(root), marked_tests(root)) == ["cap:gone:gone"]
 
 
 @pytest.mark.spec_exempt("structural: twin of test_every_marker_names_a_key")
@@ -269,8 +293,10 @@ def test_built():
     ]
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0045 D2")
-def test_an_added_key_is_demanded_and_a_removed_one_is_not(tmp_path: Path) -> None:
+@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0047 D8")
+def test_an_added_key_is_known_and_neither_it_nor_a_removed_one_is_demanded(
+    tmp_path: Path,
+) -> None:
     delta = """\
 ## ADDED Requirements
 
@@ -287,7 +313,8 @@ def test_an_added_key_is_demanded_and_a_removed_one_is_not(tmp_path: Path) -> No
         tmp_path, _TESTS.replace('@pytest.mark.spec("cap:gone:gone")\n', ""), delta
     )
     assert spec_keys(root) == {"cap:kept:kept", "cap:new:new"}
-    assert unbound(spec_keys(root), marked_tests(root)) == ["cap:new:new"]
+    assert unbound(demanded(root), marked_tests(root)) == []
+    assert unknown(spec_keys(root), marked_tests(root)) == []
     archived = root / "openspec" / "changes" / "archive" / "0000-y" / "specs" / "cap"
     archived.mkdir(parents=True)
     (archived / "spec.md").write_text(delta.replace("cap:new:new", "cap:old:old"))

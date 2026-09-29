@@ -45,6 +45,7 @@ from isekai.foundation.artifacts import (
     Failure,
     Frame,
     InstructionsRecord,
+    PhotoRecord,
     read,
     require,
     write,
@@ -102,6 +103,14 @@ _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
 
 # The frame: what the run is, written once when the run is created.
 FRAME_NAME = "run.json"
+
+# The fields of the frame's photograph record, each with the shape it holds.
+_PHOTO_FIELDS: tuple[tuple[str, type], ...] = (
+    ("name", str),
+    ("sha256", str),
+    ("bytes", int),
+    ("media_type", str),
+)
 
 # The stage directories, and the label an approved artifact carries. The run owns
 # the layout, so a stage that needs another stage's directory asks the run rather
@@ -245,11 +254,23 @@ class Run:
         """Return the run's frame, refusing a version this build does not read."""
         return read(self.frame_path, RUN_FILE, remedy=self._remedy)
 
-    def _photo_record(self, key: str) -> str:
-        """Return the frame's `photo[key]`, refusing by name a value not a string."""
+    @property
+    def photo_record(self) -> PhotoRecord:
+        """Return the frame's record of its photograph, refusing one missing a field.
+
+        Each field is checked by name, so a hand-edited record is a refusal to
+        whoever reads it rather than a `KeyError` three frames later.
+        """
         frame = self.frame
         require(self.frame_path, frame, "photo", dict, self._remedy)
         record: Mapping[str, object] = {**frame["photo"]}
+        for key, shape in _PHOTO_FIELDS:
+            require(self.frame_path, record, key, shape, self._remedy)
+        return frame["photo"]
+
+    def _photo_record(self, key: str) -> str:
+        """Return the frame's `photo[key]`, refusing by name a value not a string."""
+        record: Mapping[str, object] = {**self.photo_record}
         require(self.frame_path, record, key, str, self._remedy)
         return str(record[key])
 

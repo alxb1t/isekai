@@ -4,6 +4,8 @@ Every fact here comes out of a file, which is the opposite rule from the
 completion tests -- control flow uses listings, and people get the whole record.
 """
 
+import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -275,3 +277,44 @@ def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
             printed.append(line)
 
     assert printed == []
+
+
+def _without_photo_field(frame: str, key: str) -> str:
+    """Return the frame's text with one field of its photograph's record removed."""
+    body = json.loads(frame)
+    del body["photo"][key]
+    return json.dumps(body)
+
+
+@pytest.mark.spec("cli:show:an-unreadable-frame-is-marked")
+@pytest.mark.parametrize(
+    ("damage", "shown"),
+    [
+        (lambda frame: "{ not json", "run.json"),
+        (lambda frame: frame.replace('"version": 1', '"version": 99'), "99"),
+        (lambda frame: frame.replace('"photo"', '"elsewhere"'), "`photo`"),
+        (lambda frame: _without_photo_field(frame, "name"), "`name`"),
+        (lambda frame: _without_photo_field(frame, "bytes"), "`bytes`"),
+    ],
+    ids=["unreadable", "unknown-version", "no-photo", "no-name", "no-bytes"],
+)
+def test_an_unreadable_frame_is_marked(
+    run: Run, damage: Callable[[str], str], shown: str
+) -> None:
+    run.frame_path.write_text(damage(run.frame_path.read_text()))
+
+    lines = report(run)
+
+    assert lines[0] == run.id
+    assert lines[1].startswith("  photo    ") and shown in lines[1]
+    assert "delete" in lines[1]
+    assert f"  {FLOW}/captions" in lines
+    assert "* marks the active version for each stage" in lines[-1]
+
+
+@pytest.mark.spec_exempt("twin: a readable frame prints its photograph, not a refusal")
+def test_a_readable_frame_prints_its_photograph(run: Run) -> None:
+    lines = report(run)
+
+    assert "delete" not in lines[1]
+    assert run.frame["photo"]["name"] in lines[1]
