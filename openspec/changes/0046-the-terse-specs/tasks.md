@@ -8,7 +8,7 @@ edits that capability's `## Purpose` in place, per [D3](design.md#d3).
 
 - [x] 1 — The rule, and the terse capabilities
 - [x] 2 — `image-generation`
-- [ ] 3 — `cli`
+- [x] 3 — `cli`
 - [ ] 4 — `sheet` and `tagging`
 - [ ] 5 — `caption` and `review`
 - [ ] 6 — `model-provisioning`
@@ -34,7 +34,7 @@ Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-spec
 
 ## 3 — `cli`
 
-- [ ] 3.1 Rewrite `cli`, per [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 3.1 Rewrite `cli`, per [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `grep -c -E 'v0\.[0-9]+' openspec/changes/0046-the-terse-specs/specs/cli/spec.md` prints `0`, and `test "$(grep -c '^### Requirement:' openspec/changes/0046-the-terse-specs/specs/cli/spec.md)" -ge 1 && echo ok` prints `ok`.
 
 ## 4 — `sheet` and `tagging`

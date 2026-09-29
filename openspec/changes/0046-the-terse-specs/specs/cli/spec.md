@@ -1,24 +1,13 @@
-# Capability: `cli`
-
-## Purpose
-
-The command-line surface: one entry point whose stage verbs, inspection verb `show`, serving verb `ui` and page
-verb `compare` report every refusal a batch produced together. A flow's dials live in its manifest, and no flag
-reaches them.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The pipeline surface is the only entry point, and its verbs are subcommands
 
 The system SHALL expose the staged pipeline as subcommands of a module entry point, and that entry
 point SHALL be the only command-line surface the system offers.
 
-A pipeline that stops for a human cannot have a one-command surface, so it needs verbs. They were added
-beside the single-command render surface rather than into it, so that the path in use at the time was
-not disturbed while the new one was unproven; that surface is deleted in this version, and what was a
-second entry point is now the only one. Subcommands under one parser rather than several scripts keeps
-argument handling in one place and the entry point's import guard to a single target — which is the
-reason the shape survives its original justification.
+A pipeline that stops for a human needs verbs. Subcommands under one parser keep argument handling in one place,
+and the entry point's import guard to one target
+([D20](../../../docs/decisions.md#d20--the-entry-point-loads-no-third-party-package)).
 
 #### Scenario: the pipeline verbs are reachable as subcommands
 - **Key:** `cli:pipeline-surface:verbs-are-subcommands`
@@ -46,10 +35,9 @@ The system SHALL accept several run identifiers in one rendering invocation, SHA
 count of renders per photograph or an explicit list of seeds but not both, and SHALL default to one
 render per photograph.
 
-Reading and filling a sheet are cheap and per-photograph; rendering is where the money is, and a boot
-costs roughly eight renders — so a single-photograph invocation is mostly overhead. Taking many
-identifiers at once is what lets one boot serve a batch. The default is one because the cheap option
-should be what happens when nothing is asked for.
+Rendering is where the money is, and a boot costs more than a render, so one photograph per invocation is mostly
+overhead. Many identifiers let one boot serve a batch. The default is one because the cheap option is what happens
+when nothing is asked for.
 
 #### Scenario: several photographs render in one invocation
 - **Key:** `cli:generate-signature:accepts-many-identifiers`
@@ -78,14 +66,10 @@ The system SHALL do nothing when a stage's artifact already exists, and SHALL re
 to produce a new version. The flag SHALL produce the next version of every artifact its own verb writes,
 and of no artifact another verb writes.
 
-Deciding automatically — writing a new version when some recorded field differs — would make an
-invocation that sometimes costs money and sometimes does not, decided by a field the operator did not
-look at. An explicit flag makes the spend visible in the command line that caused it.
-
-**One meaning per verb.** When one verb wrote the prose and both tag lists, its flag re-read the
-photograph to recover a tag list, and the fix for a damaged tag list re-read prose nothing needed. Each
-verb now writes only its own artifacts, so the flag asks for exactly those: `caption`'s writes the next
-prose and no tag list, and `tag`'s writes the next version of both tag lists and no prose.
+Deciding automatically would make an invocation that sometimes spends and sometimes does not, decided by a field
+the operator did not look at; a flag puts the spend in the command line that caused it. Each verb writes only its
+own artifacts, so its flag asks for exactly those
+([D1](../../../docs/decisions.md#d1--stage--is-two-independent-verbs)).
 
 #### Scenario: a repeat invocation does nothing
 - **Key:** `cli:explicit-versions:repeat-invocation-is-a-no-op`
@@ -115,69 +99,6 @@ prose and no tag list, and `tag`'s writes the next version of both tag lists and
 - **THEN** the next version of each tag list is written
 - **AND** the prose gains no version
 
-### Requirement: Re-running every command is the whole of resume
-
-The system SHALL make running the pipeline's commands a second time, with the same arguments, change
-no byte of the run directory and make no external call.
-
-There is no state machine, so there is nothing to corrupt and nothing to repair. A crashed process, a
-closed laptop and a week-long pause are the same event, and the answer to all three is the same
-invocation. This is also the only assertion that can prove the state model works, and it needs no GPU
-and no network.
-
-#### Scenario: a second full pass changes nothing and calls nothing
-- **Key:** `cli:resume:second-pass-is-inert`
-- **Layers:** unit
-- **WHEN** every pipeline command is run against a complete run, and then run again
-- **THEN** not one byte of the run directory differs
-- **AND** not one external call is made
-
-### Requirement: Inspection prints the run directory with its provenance
-
-The system SHALL provide a command that prints a run's artifacts, which version is active for each
-stage, and what produced each one.
-
-A filename carries only what resume decides on, which leaves a directory that is precise and unreadable.
-This command is what a person reads instead — and it is also the answer to "where is this run", which is
-why no progress file is needed before something other than a human is watching.
-
-#### Scenario: inspection names the active version for each stage
-- **Key:** `cli:show:active-version-is-marked`
-- **Layers:** unit
-- **WHEN** a run is inspected
-- **THEN** each stage's versions are listed and the active one is marked
-- **AND** approval is shown where the concept applies
-
-#### Scenario: inspection reports what produced each artifact
-- **Key:** `cli:show:producers-are-reported`
-- **Layers:** unit
-- **WHEN** a run is inspected
-- **THEN** each artifact's producer is shown
-- **AND** artifacts produced by different implementations are distinguishable in the output
-
-### Requirement: Every refusal names the action that would resolve it
-
-The system SHALL end every refusal with the action the operator can take, and SHALL NOT name an action
-this build cannot perform.
-
-This generalises the posture the evaluator already takes for a missing optional dependency: the failure
-states the command that fixes it. A refusal that names a remedy the build does not have is worse than
-one that names none, because it sends the operator looking for something that is not there.
-
-#### Scenario: a refusal states a remedy
-- **Key:** `cli:refusals:refusal-names-the-remedy`
-- **Layers:** unit
-- **WHEN** any pipeline command refuses
-- **THEN** the message names the action that would resolve it
-- **AND** that action is available in this build
-
-#### Scenario: a refusal exits with a failure status
-- **Key:** `cli:refusals:refusal-exits-non-zero`
-- **Layers:** unit
-- **WHEN** any pipeline command refuses
-- **THEN** the process exits with a failure status
-- **AND** the reason is written to the error stream
-
 ### Requirement: Every stage verb requires the flows it acts on, and takes more than one
 
 The system SHALL require a flow selection on every stage verb — reading, tagging, filling a sheet, reviewing,
@@ -185,21 +106,13 @@ approving and rendering — SHALL accept the selection more than once in a singl
 invocation that names none, naming the flows that are tracked. It SHALL NOT fall back to every tracked
 flow. It SHALL refuse a flow that is not tracked, at the point of selection, naming the flows that are.
 A verb that serves a surface rather than running a stage SHALL require the selection and SHALL accept
-it **exactly once**.
+it exactly once.
 
-A stage cannot act without knowing which flow asked, because the flow is what supplies the thing the
-stage reads: its briefing, its schema, its graph and its dials. Falling back to every tracked flow is an
-unbounded default that spends money at the last verb and burns a paid model call at the first — at
-catalogue scale "everything tracked" is not a selection, it is the absence of one. The selection repeats
-because flows batch: every flow named in one rendering invocation renders on one endpoint, and a second
-boot costs what eight more renders would, so a flow left off the line is a flow that pays for its own
-boot.
-
-A serving verb does not batch, so the reason the flag repeats does not reach it. What it opens is a
-surface showing one schema's fields in one fixed order, and two flows on that surface would be two
-layouts, two field orders and two token budgets sharing one set of controls — a second page rather than
-a wider one. Requiring exactly one keeps the limit where an operator meets it, at the command they
-typed, rather than at a screen that half-works.
+The flow supplies what a stage reads — its briefing, its schema, its graph and its dials — so a stage cannot act
+without one, and every tracked flow is an unbounded default that spends at the last verb. The selection repeats
+because flows batch: every flow named in one rendering invocation shares one boot. A serving verb does not batch,
+and its surface shows one schema's fields in one order, so two flows would be two layouts behind one set of
+controls.
 
 #### Scenario: a stage verb without a flow is refused
 - **Key:** `cli:flow-selection:a-stage-verb-requires-a-flow`
@@ -243,15 +156,9 @@ The system SHALL refuse a flow manifest that names a node role whose id is absen
 graph, and SHALL refuse one that omits a dial the roles it declares require. Both refusals SHALL happen
 at load, before any endpoint is contacted and before any input is transferred.
 
-A manifest is validated at load or it is validated by a render. The second costs a rented GPU and an
-uploaded photograph to discover a typo, and it fails as a bare lookup error rather than a refusal — so
-nothing collects it, no failure record is written, and the rest of the batch dies with it. Refusing at
-load moves the same discovery into a test run.
-
-**The dial check is conditional on the roles a flow declares, not on a fixed list.** Flows differ in what
-they render: one that declares no identity leg legitimately declares none of that leg's dials, and a flat
-list would refuse it for being what it is. What must hold is narrower and true of every flow — that every
-dial the declared roles read is present.
+A manifest not checked at load is checked by a render, which spends a rented GPU and an uploaded photograph on a
+typo and fails as a bare lookup error no refusal collects. The dial check follows the roles a flow declares, not a
+fixed list: a flow with no identity leg declares none of that leg's dials.
 
 #### Scenario: a role naming a node the graph does not carry is refused
 - **Key:** `cli:manifest:a-dangling-node-id-is-refused-at-load`
@@ -278,32 +185,16 @@ The system SHALL resolve every seam a stage reaches — the reader and each tagg
 on, rather than once for the whole invocation, so that a single command naming several flows runs each flow
 on the model its own manifest declares. A seam a flow selects by manifest key SHALL construct nothing until a
 flow asks for it, and a seam this build pins, whose model no manifest names, SHALL resolve for every flow
-whose manifest declares the stage that seam serves. A front
-end that serves no hosted-model stage SHALL remain able to compose a wiring with none of them at all, and
-SHALL refuse naming the seam if a verb that needs one is then invoked through it.
+whose manifest declares the stage that seam serves. A front end that serves no hosted-model stage SHALL remain
+able to compose a wiring with none of them at all, and SHALL refuse naming the seam if a verb that needs one is
+then invoked through it.
 
-Every stage verb already takes more than one flow, and the flow is what supplies everything the stage reads
-— its briefing, its schema, its dials. The model is now one more of those, so resolving it above the loop
-over flows would hand one flow's model to another's, which is the single way a flow could run on a model it
-did not declare while every artifact still looked well-formed. Keeping the uncomposed case expressible is
-what stops a front end that only reviews sheets from having to fabricate doubles for seams it never calls.
-
-Not every seam is selected the same way, and the requirement no longer pretends otherwise. A seam that
-reaches a local runtime is named in a frozen manifest, because which model answers is a claim the flow makes
-about itself and a wrong one falsifies a provenance record. A seam that reads a file this build pins makes no
-such claim: there is no flow for which it would be the wrong model, it reaches no network, and the manifest
-names none of its files. **Whether a flow is tagged at all is a different question, and the manifest now
-answers it**: flows that need no tag list are coming, so a flow declares whether it needs the tagger, and
-still nothing about which model tags. What both cases share — and what this requirement is actually protecting — is that resolution happens
-**inside** the loop, so nothing is constructed for a flow that did not ask and nothing is carried from one
-flow to the next.
-
-**What the per-flow rule protects has narrowed twice, and it is worth saying what is left.** v0.21 removed
-the sheet's hosted seam: that stage now reads a pinned artifact and a committed table, so it is selected by
-nothing. This change removes the second implementation, so there is no longer a way for one flow to run on
-*another implementation's* models. What survives is the case that motivated the rule in the first place and
-is unaffected by either narrowing: two flows in one command may name two different **models**, and each
-artifact must record the one its own manifest asked for.
+A flow supplies everything a stage reads, its model included, so a seam resolved above the loop over flows would
+hand one flow's model to another while every artifact looked well-formed. A seam reaching a local runtime is named
+in the manifest, because which model answers is a claim the flow makes about itself; a seam reading a file this
+build pins makes no such claim, and the manifest names none of its files. Whether a flow is tagged at all is its
+manifest's own key ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)). A front end that
+only reviews sheets composes no seam rather than fabricating doubles.
 
 #### Scenario: a wiring composed without a hosted-model seam still refuses by name
 - **Key:** `cli:resolution:uncomposed-seam-refuses-by-name`
@@ -331,13 +222,13 @@ artifact must record the one its own manifest asked for.
 The system SHALL offer a verb that, given a batch directory holding a `runs/` directory, writes one HTML page into
 that batch directory showing, for each run, the run's photograph and every render of each flow's latest approval,
 each render labelled by its flow and seed and carrying the positive prompt it came from, with each flow's caption
-and a run without a render marked. The page SHALL link every image by a path relative to itself and SHALL embed none. The verb SHALL print
-only the page's path, and SHALL refuse, naming the directory, a batch directory that holds no `runs/`.
+and a run without a render marked. The page SHALL link every image by a path relative to itself and SHALL embed
+none. The verb SHALL print only the page's path, and SHALL refuse, naming the directory, a batch directory that
+holds no `runs/`.
 
-A batch of photographs ends in a question a person answers by eye: which flow kept whom. The answer used to be a
-page written by hand from the run directories, and an agent asked to write it had to read them — the reading the
-flow skills exist to avoid. Linking rather than embedding keeps the page small and keeps every image where the run
-put it; printing only the path is what lets an agent hand the page over without reading it.
+A batch ends in a question a person answers by eye: which flow kept whom. The page answers it without an agent
+reading the run directories, the reading the flow skills exist to avoid. Linking keeps the page small and every
+image where the run put it; printing only the path lets an agent hand the page over unread.
 
 #### Scenario: the page links each photograph to its renders
 - **Key:** `cli:compare:the-page-links-photographs-to-renders`

@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   listing's no-image failure names a live pod, as the listing already drops a terminated one (0046 D1, D2, D3, D4).
 - `image-generation` reads to the rule: each requirement one SHALL and one *why*, with its decisions linked and
   diagrams for the render target and a flow's layout (0046 D2, D3).
+- `cli` reads to the rule, its Purpose two sentences; a history of the per-flow seam and the render surface gives
+  way to the reason each holds (0046 D2, D3).
 
 ## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
 
