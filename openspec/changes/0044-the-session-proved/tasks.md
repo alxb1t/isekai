@@ -6,7 +6,7 @@ The laptop side and its tests; then a metered render boot and stop boot on the p
 ## Progress
 
 - [x] 1 — The laptop side
-- [ ] 2 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on `v0.30-rc2`
+- [x] 2 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on `v0.30-rc2`
 
 Line numbers are `a76a5f5`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
 
@@ -35,9 +35,9 @@ Line numbers are `a76a5f5`'s. Every new test carries `@pytest.mark.spec` with th
 and `infra/up.sh`, and down through `infra/down.sh`; the RunPod MCP confirms each gone. Synthetic portraits only, per
 [D5](design.md#d5).
 
-- [ ] 2.1 On the operator's go, run the render boot [D5](design.md#d5) describes, reading `gpu.memory` and the pod's log with the RunPod MCP while it runs.
+- [x] 2.1 On the operator's go, run the render boot [D5](design.md#d5) describes, reading `gpu.memory` and the pod's log with the RunPod MCP while it runs.
   Verify: `ls .data/v0.30.1/runs/*/summon-anime-wai/outputs/*/*.png .data/v0.30.1/runs/*/conjure-anime-wai/outputs/*/*.png` lists the renders, and `grep -c '^refused' .data/v0.30.1/log.txt` prints `0`.
-- [ ] 2.2 On the operator's go, run the stop boot [D5](design.md#d5) describes, and read the stopped pod's billing once RunPod posts it.
+- [x] 2.2 On the operator's go, run the stop boot [D5](design.md#d5) describes, and read the stopped pod's billing once RunPod posts it.
   Verify: `grep -c -e '^listing: ' -e '^key scope: ' -e '^refused key: ' -e '^stop: EXITED' -e '^signal path: ' -e '^billing while stopped: ' openspec/changes/0044-the-session-proved/acceptance.md` prints `6`.
-- [ ] 2.3 Record the rest in `openspec/changes/0044-the-session-proved/acceptance.md`, one line each, with no pod id, address, fingerprint or key.
+- [x] 2.3 Record the rest in `openspec/changes/0044-the-session-proved/acceptance.md`, one line each, with no pod id, address, fingerprint or key.
   Verify: `grep -c -e '^placement: gpu.memory ' -e '^stop timer: armed' -e '^renders: summon-anime-wai and conjure-anime-wai' -e 'pods: \[\]' openspec/changes/0044-the-session-proved/acceptance.md` prints `4`.

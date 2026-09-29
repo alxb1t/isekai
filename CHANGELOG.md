@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   session `up.sh` refused leaves a listed pod, sweeping only after a lost create (0044 D1, D2).
 - `README.md` names the pod check, the catalogue, the sweep and the stop timer. `0.30.0` gains its `### Security`
   heading, an exception to append-only, and a bullet outside a section is refused (0044 D3, D4).
+- Image `v0.30-rc2` is proved on a pod: both flows render, and the pod stops itself with its own key, whose scope
+  is its own pod. The live read of the pod's log and a refused key's endless retry are carded (0044 D5).
 
 ## [0.30.0] - 2026-09-29 · 0043-the-session
 
