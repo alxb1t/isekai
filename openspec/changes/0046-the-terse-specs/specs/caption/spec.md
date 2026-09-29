@@ -1,21 +1,13 @@
-# Capability: `caption`
-
-## Purpose
-
-Stage ①: read a photograph into descriptive English prose under the standing instructions of the flow that asked,
-knowing nothing of schemas, vocabularies or what happens next, and free to say that something is absent.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The reader may state absence
 
 The system SHALL permit the prose to state that an attribute is absent, and SHALL NOT treat such a
 statement as an error or strip it at this stage.
 
-Licensing absence is what stopped the confabulation. It is also why the next stage is a seam rather
-than plumbing: a positive prompt has no negation, so a sentence saying no tattoos are visible rendered
-tattoos. The component that turns a licensed absence into an empty field is the next stage's job, and
-naming where that happens is the point of allowing it here.
+Licensing absence keeps the reader from confabulating. A positive prompt has no negation — a sentence saying no
+tattoos are visible renders tattoos — so turning a licensed absence into an empty field is the next stage's job,
+and allowing it here names where that happens.
 
 #### Scenario: an absence statement survives into the artifact
 - **Key:** `caption:absence:absence-is-permitted-here`
@@ -29,16 +21,9 @@ naming where that happens is the point of allowing it here.
 The system SHALL reach the reader through an interface that a test double satisfies, so the suite
 exercises the stage without a network call, and SHALL record which implementation produced each caption.
 
-The repository's standing rule is that a parameter is a seam only when something is actually passed
-through it. A stand-in for the offline suite is what passes through this one, and it is also the only
-way the idempotence guarantee can be asserted — proving no call was made requires something that counts
-calls.
-
-**The producer still names the implementation, and the reason has changed.** It used to be what
-distinguished two arms in the record. With one arm it is what distinguishes a real run from a run
-produced by the offline stand-in, and what will distinguish this arm from whatever a later version adds
-beside it — a record that stops naming the implementation because there is only one is a record that
-cannot be read back once there are two.
+A parameter is a seam only when something passes through it: here the offline stand-in, which is also the only way
+to prove a complete stage made no call. The producer names the implementation so a real run is told from the
+stand-in's, and so the record still reads back once a second implementation exists.
 
 #### Scenario: the suite produces a caption with no network
 - **Key:** `caption:seam:offline-double-satisfies-the-interface`
@@ -58,10 +43,8 @@ cannot be read back once there are two.
 The system SHALL classify a reader failure as transient or permanent, SHALL treat a declined request as
 permanent, and SHALL NOT produce a caption by any means other than the reader that was asked for.
 
-A refusal is a result to be recorded and surfaced, not routed around. The rule was first written against
-a second implementation that a failure could silently fall through to; with one arm there is nothing to
-fall through to, and the rule now protects the weaker but still live case — that a failed read produces a
-recorded failure rather than an artifact assembled from something else.
+A refusal is a result to record and surface, not to route around: a failed read yields a recorded failure, never an
+artifact assembled from something else ([D21](../../../docs/decisions.md#d21--retries-follow-what-can-fail)).
 
 #### Scenario: a rate limit or server error is transient
 - **Key:** `caption:failure:rate-limit-is-transient`
@@ -91,23 +74,12 @@ descriptive prose. It SHALL NOT pass a schema, a field list, a vocabulary or a f
 reader, and SHALL NOT accept tags into the caption. A caption SHALL be written inside the flow that
 asked for it, and SHALL NOT be read by any other flow.
 
-Pressing a reader into a schema is measured to make it invent. Instructed never to leave a field blank,
-a reader manufactured nineteen identity marks across seven of ten subjects and its score fell from
-0.518 to 0.307. That is a rule about what reaches the reader, and it is unchanged: the reader still
-receives the photograph and its standing instructions and nothing else. What changes is who the answer
-belongs to. A caption used to be written once per run and reused by any flow added later, which meant a
-second flow silently inherited a reading written to answer a different question — its briefing is part
-of its frozen directory, so two flows asking different questions were sharing one answer. Reuse was
-worth that risk only while a reading was expensive: it costs $0.0159 per photograph at worst and $0.0013
-cached and batched, against a boot that costs $0.036. Two flows over one input now read it twice, and
-the class of error disappears rather than being checked for.
-
-**The prohibition on tags is scoped to this artifact rather than to the run.** A separate stage produces
-tag lists for the same photograph, into its own directories, from models given the photograph and
-nothing else — and that stage exists precisely because asking one call for prose and tags at once would
-rewrite the instruction the prose was measured under. What this requirement forbids is unchanged in
-substance: a caption is prose, a reader is not asked for structure, and nothing about the tag stage
-sends a schema or a field list to any model.
+Pressing a reader into a schema makes it invent: told never to leave a field blank, a reader manufactures identity
+marks. A caption belongs to its flow because the flow's briefing is part of its frozen directory: a flow reusing
+another's caption would inherit an answer to a different question, and a second reading costs little beside a
+boot. The prohibition on tags is scoped to this artifact: the tag stage writes tag lists for the same photograph,
+into its own directories, from models given the photograph alone
+([D1](../../../docs/decisions.md#d1--stage--is-two-independent-verbs)).
 
 #### Scenario: the reader is given the photograph and nothing else
 - **Key:** `caption:inputs:only-the-photograph-is-passed`
@@ -142,20 +114,15 @@ sends a schema or a field list to any model.
 The system SHALL refuse, naming the command that would fix it, when the host serving a declared model
 cannot be reached or reports that the model does not exist, when the model is built from files other than
 the ones the reader's manifest pins for it, and when no entry in that manifest pins the model at all. It
-SHALL record no attempt against the stage's retry budget for any of these conditions, and SHALL make that check at the first call rather than when
-the implementation is constructed.
+SHALL record no attempt against the stage's retry budget for any of these conditions, and SHALL make that check
+at the first call rather than when the implementation is constructed.
 
-A retry budget counts models tried and failed. A server that is not running and a model that was never
-created are neither: both are the operator's single-command fix, and spending a budgeted attempt on them
-leaves a run whose error records have to be deleted by hand before it can be resumed. This is the posture
-the build already takes toward a missing binary, applied to a port and to a model name instead of a path
-entry. Checking at first call rather than at construction is what lets a machine that will never use an
-implementation avoid touching it at all.
-
-**A model built from other files is the same kind of fix.** The alias is a name the local runtime resolves,
-and the files behind it are what shape the prose; the runtime's own record of those files, read once per
-model per invocation, is compared with the manifest's digests. A mismatch is not a failed attempt: it is a
-model to rebuild from the pinned files, one command away.
+A retry budget counts models tried and failed. A server not running, a model never created and a model built from
+other files are none of these: each is the operator's one-command fix, and a spent attempt would leave error records
+to delete by hand before the run resumes. The alias is a name the runtime resolves and the files behind it shape the
+prose, so the runtime's record of them is compared with the manifest's digests
+([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)). Checking at the first
+call lets a machine that never captions leave the reader untouched.
 
 #### Scenario: an unreachable host is refused and costs no attempt
 - **Key:** `caption:reachability:unreachable-host-refuses-without-an-attempt`
@@ -199,18 +166,11 @@ The system SHALL read the model a flow's reader runs from a required key in that
 construct no reader until a flow asks for one, and SHALL refuse — naming the model and the flow — when
 the manifest names a model this build cannot reach.
 
-The implementation no longer varies, so the manifest no longer declares one: a key that can only ever
-hold one value is not a declaration. The model still varies, still differs between flows, and is still
-the thing that costs the operator time when it is wrong — an alias that was never created is the failure
-that will actually happen, and it is the one this key makes nameable. The reader is constructed per flow
-rather than once per invocation for the same reason it always was: one command naming two flows must not
-hand one flow's model to the other's artifact.
-
-The same key names the model the hosted tagger runs, and that is deliberate rather than an economy. One
-alias answers both prompts, which is why the tag prompt is not chat-framed — two calls to one model must
-not arrive framed differently. A second key would say twice what the manifest says once, and would make
-a flow expressible in which the prose and the tags came from different models with nothing recording
-which.
+The model differs between flows, and an alias never created is the failure that will happen, so the manifest names
+it and a refusal can too. The reader is built per flow so one command naming two flows never hands one flow's
+model to the other's artifact. The hosted tagger reads the same key: one alias answers both prompts, framed alike,
+and no flow can take its prose and its tags from different models unrecorded
+([D5](../../../docs/decisions.md#d5--one-arm)).
 
 #### Scenario: the flow's manifest names the model that runs
 - **Key:** `caption:selection:the-flow-names-the-model`
@@ -232,13 +192,11 @@ The system SHALL record in each caption's producer the digests of the model and 
 was verified to be built from, SHALL declare the caption pinned only when that verification ran, and SHALL
 record the sampling options the reader was called with, as they were sent.
 
-A model named by an alias records nothing a later reader can check: the same name can be rebuilt from other
-files and every artifact would still agree. Once the files are verified before the call, the record can say
-which ones answered, and the pin claim becomes true rather than absent.
-
-The sampling options shape the prose as much as the model does, and they are constants in code rather than
-manifest keys. Recording them verbatim is what lets two captions produced under different options be told
-apart from the record alone.
+An alias records nothing a later reader can check: one name can be rebuilt from other files and every artifact would
+still agree. Verifying the files before the call lets the record say which ones answered
+([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)). The sampling options
+shape the prose as much as the model, and they are constants in code, not manifest keys; recording them as sent
+tells two captions under different options apart.
 
 #### Scenario: a verified model's caption declares its pin and names both files
 - **Key:** `caption:provenance:a-verified-model-is-pinned`

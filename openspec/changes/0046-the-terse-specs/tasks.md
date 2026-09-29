@@ -10,7 +10,7 @@ edits that capability's `## Purpose` in place, per [D3](design.md#d3).
 - [x] 2 — `image-generation`
 - [x] 3 — `cli`
 - [x] 4 — `sheet` and `tagging`
-- [ ] 5 — `caption` and `review`
+- [x] 5 — `caption` and `review`
 - [ ] 6 — `model-provisioning`
 - [ ] 7 — `run-directory`, `field-map`, and the guard
 
@@ -44,7 +44,7 @@ Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-spec
 
 ## 5 — `caption` and `review`
 
-- [ ] 5.1 Rewrite `caption` and `review`, per [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 5.1 Rewrite `caption` and `review`, per [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `ls openspec/changes/0046-the-terse-specs/specs/caption/spec.md openspec/changes/0046-the-terse-specs/specs/review/spec.md` lists both, and `cat openspec/changes/0046-the-terse-specs/specs/caption/spec.md openspec/changes/0046-the-terse-specs/specs/review/spec.md | grep -c -e 'used to' -e 'Until now'` prints `0`.
 
 ## 6 — `model-provisioning`

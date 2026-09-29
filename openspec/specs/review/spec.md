@@ -2,12 +2,8 @@
 
 ## Purpose
 
-Stage ③ of the pipeline: the operator's correction of a filled sheet — an editable copy taken into a
-directory of its own, validated against the vocabulary, and approved by a rename, so that the
-machine-written sheet it came from is never altered.
-
-**Source:** `isekai/pipeline/review.py` ·
-**Tests:** `tests/test_review.py`
+Stage ③: the operator corrects a filled sheet — an editable copy in a directory of its own, validated against the
+vocabulary and approved by a rename — so the machine's sheet is never altered.
 
 ## Requirements
 
