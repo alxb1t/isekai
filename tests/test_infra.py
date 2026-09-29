@@ -1878,6 +1878,7 @@ HOST_KEY_FINGERPRINT = "SHA256:rtGEsOEKPlWyEuNlB72E8dAPjGTYjbj3Dkf/rRhsz0U"
 OTHER_FINGERPRINT = "SHA256:NNz7DVAOPM3aU8pc65cmp696rualwnvB7DaCYclXg64"
 HOST_KEY_FUNCTIONS = (
     "refuse_and_tear_down",
+    "key_lines",
     "printed_fingerprint",
     "scanned_key",
     "verify_host_key",
@@ -1894,27 +1895,40 @@ def check_host_key(
     answers: bool = True,
     torn: bool = True,
     earlier: str | None = None,
+    later: str | None = None,
+    pushed_out: bool = False,
 ) -> tuple[subprocess.CompletedProcess[str], str | None]:
     """Run `verify_host_key` against a pod log and a scan that answers `HOST_KEY`.
 
     Return the run and the known-hosts file it left, if any. `printed` is the
     fingerprint the log carries; None is a log that never prints one. With
     `answers` False, the scan never answers; with `torn` False, `down.sh` fails.
-    `earlier` is a fingerprint a previous container printed before `printed`.
+    `earlier` is a fingerprint a previous container printed before `printed`,
+    and `later` a raw line logged after it. With `pushed_out`, the log's last
+    lines hold no key line, which only a read from the boot's start still finds.
     Each `api` call's arguments are appended to `api.args` in `cwd`.
     """
     scan = f'echo "[$host]:$port {HOST_KEY}"' if answers else ":"
     keys = [key for key in (earlier, printed) if key]
     lines = ["step: sshd"] + [f"isekai host key: {key}" for key in keys]
-    events = "".join(
-        f"data: {json.dumps({'ts': '', 'source': 'container', 'line': ln})}\n"
-        for ln in lines
-    )
+    lines += [later] if later else []
+    last = ["downloading: https://models.test/a"] if pushed_out else lines
+
+    def events(logged: list[str]) -> str:
+        return shlex.quote(
+            "".join(
+                f"data: {json.dumps({'ts': '', 'source': 'container', 'line': ln})}\n"
+                for ln in logged
+            )
+        )
+
     stubs = "\n".join(
         [
-            "API=https://api.test pod_id=pod-test",
+            "API=https://api.test pod_id=pod-test since=2026-01-01T00:00:00Z",
             "host=203.0.113.7 port=40022",
-            f"api() {{ echo \"$*\" >> api.args; printf '%s' {shlex.quote(events)}; }}",
+            'api() { echo "$*" >> api.args; case "$*" in'
+            f" *since=*) printf '%s' {events(lines)};;"
+            f" *) printf '%s' {events(last)};; esac; }}",
             f"ssh-keyscan() {{ {scan}; }}",
             "sleep() { SECONDS=$((SECONDS + $1)); }",
             'bash() { echo "torn down: $*"; }'
@@ -1989,6 +2003,35 @@ def test_an_earlier_key_line_does_not_outvote_the_last(
     )
     assert done.returncode == 1
     assert kept is None
+
+
+@pytest.mark.spec("pod-image:host-key:a-matching-key-is-kept")
+def test_only_a_line_that_is_the_key_line_supplies_the_fingerprint(
+    up_sh: str, tmp_path: Path
+) -> None:
+    done, kept = check_host_key(
+        up_sh,
+        HOST_KEY_FINGERPRINT,
+        tmp_path,
+        later=f"custom node: echo isekai host key: {OTHER_FINGERPRINT}",
+    )
+    assert done.returncode == 0, done.stderr
+    assert kept == f"[203.0.113.7]:40022 {HOST_KEY}\n"
+
+
+@pytest.mark.spec("pod-image:host-key:a-matching-key-is-kept")
+def test_a_key_line_pushed_out_of_the_last_lines_is_read_from_the_boot(
+    up_sh: str, tmp_path: Path
+) -> None:
+    done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path, pushed_out=True)
+    assert done.returncode == 0, done.stderr
+    assert kept == f"[203.0.113.7]:40022 {HOST_KEY}\n"
+    assert (tmp_path / "api.args").read_text().splitlines()[:2] == [
+        "-N --max-time 10 https://api.test/pods/pod-test/logs"
+        "?tail=5000&source=container",
+        "-N --max-time 10 https://api.test/pods/pod-test/logs"
+        "?since=2026-01-01T00:00:00Z&source=container",
+    ]
 
 
 @pytest.mark.spec_exempt("structural: twin of test_a_matching_key_is_kept")

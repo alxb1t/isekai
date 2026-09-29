@@ -66,7 +66,8 @@ None.
 - **Files:** `isekai/interface/cli.py`, `isekai/interface/run_view.py`, `isekai/interface/wiring.py`,
   `isekai/pipeline/generate.py`, `isekai/boundary/ollama.py`, `isekai/boundary/wd14.py`, `isekai/shared/vocabulary.py`,
   `isekai/foundation/run.py`, `infra/up.sh`, `tests/test_spec_bindings.py`, and their tests.
-- **Behaviour:** refusals change their words and reach flows they skipped; nothing a successful batch does changes.
+- **Behaviour:** refusals change their words and reach flows they skipped; a render session now refuses a batch
+  with any named flow unapproved on any run, before anything is rented.
 - **Formats:** no run file kind or manifest version moves.
 - **Dependencies:** none.
 - **Spend:** none; the host-key read is proved at the next metered session.

@@ -53,7 +53,7 @@ undeclared artifact; a host-key read that answers.
 | [D4](#d4) | `show` prints the frame's refusal as the photograph line and lists the rest; a missing `photo` key is a refusal too | inspection reads a run in whatever state it is in | refusing the whole report |
 | [D5](#d5) | the no-record, unreadable-record and absent-model refusals name `PROVISION`, then the build | the build fails without the files | the build alone |
 | [D6](#d6) | the vocabulary's callers turn `UnknownArtifact` into a `Refusal` naming the manifest they loaded | a traceback is a defect; `provision.py` runs by path on the pod, where `isekai` does not import | `UnknownArtifact(Refusal)`, which imports `isekai` into `provision.py`; a new exception |
-| [D7](#d7) | the fingerprint is read with `tail=5000&source=container`, the last key line kept | `since` stalled on a live boot; a restarted container prints a new key after the old | `since` with a fallback to `tail` |
+| [D7](#d7) | the fingerprint is read with `tail=5000&source=container`, the last key line kept; a `since` read follows only when those lines hold none; only a line that is the key line counts | `since` stalled on a live boot; a restarted container prints a new key after the old; a cold volume's downloads can push the key out of the last lines | `since` with a fallback to `tail` |
 | [D8](#d8) | a key is demanded a test once it is in the living spec; a key only an open delta adds may be named, not demanded; each new scenario enters the delta with its test | a cut stays green; the release's gate demands the folded keys | demanding every effective key, which reddens every cut that adds a scenario |
 
 ### D1
@@ -95,8 +95,10 @@ and `tools/download_models.sh` runs it by path, so an `isekai` import fails ther
 ### D7
 
 **The host-key read.** `printed_fingerprint` reads `"$API/pods/$pod_id/logs?tail=5000&source=container"` with the
-same `--max-time 10`, and keeps the last match (`tail -n 1`, not `head -n 1`). `since` is no longer taken for the
-read. The stub test asserts the URL and that a later key line wins.
+same `--max-time 10`, and keeps the last match (`tail -n 1`, not `head -n 1`). `since` is no longer the first
+read. The stub test asserts the URL and that a later key line wins. When the last lines hold no key line — a cold
+volume's download progress can push it out — the same read by `since=<before create>` follows. The capture is
+anchored to the start of the line, so a later component that echoes the phrase cannot supply the fingerprint.
 
 ### D8
 

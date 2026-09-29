@@ -4,6 +4,7 @@ Every fact here comes out of a file, which is the opposite rule from the
 completion tests -- control flow uses listings, and people get the whole record.
 """
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -278,6 +279,13 @@ def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
     assert printed == []
 
 
+def _without_photo_field(frame: str, key: str) -> str:
+    """Return the frame's text with one field of its photograph's record removed."""
+    body = json.loads(frame)
+    del body["photo"][key]
+    return json.dumps(body)
+
+
 @pytest.mark.spec("cli:show:an-unreadable-frame-is-marked")
 @pytest.mark.parametrize(
     ("damage", "shown"),
@@ -285,8 +293,10 @@ def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
         (lambda frame: "{ not json", "run.json"),
         (lambda frame: frame.replace('"version": 1', '"version": 99'), "99"),
         (lambda frame: frame.replace('"photo"', '"elsewhere"'), "`photo`"),
+        (lambda frame: _without_photo_field(frame, "name"), "`name`"),
+        (lambda frame: _without_photo_field(frame, "bytes"), "`bytes`"),
     ],
-    ids=["unreadable", "unknown-version", "no-photo"],
+    ids=["unreadable", "unknown-version", "no-photo", "no-name", "no-bytes"],
 )
 def test_an_unreadable_frame_is_marked(
     run: Run, damage: Callable[[str], str], shown: str

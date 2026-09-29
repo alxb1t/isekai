@@ -287,7 +287,7 @@ def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
 
 
 class UnknownArtifact(Exception):
-    """The scorer asked for a destination the eval manifest does not declare."""
+    """A caller asked for a destination the manifest it searched does not declare."""
 
 
 class UnpinnedArtifact(Exception):
@@ -301,14 +301,14 @@ class EscapingDestination(Exception):
 def entry_for(manifest: Manifest, dest: str) -> Entry:
     """Return the entry declaring `dest`, or raise `UnknownArtifact`.
 
-    The lookup the scorer goes through to reach any model at all, so a typo in an
-    artifact name is a named failure rather than a `None` that surfaces three
-    frames later as a missing file.
+    The lookup the scorer and the vocabulary's callers go through to reach a
+    model, so a typo in an artifact name is a named failure rather than a `None`
+    that surfaces three frames later as a missing file.
     """
     for entry in manifest["entries"]:
         if entry["dest"] == dest:
             return entry
-    raise UnknownArtifact(f"{dest} is not declared in eval_models.json")
+    raise UnknownArtifact(f"{dest} is not declared in the manifest searched")
 
 
 def resolve(dest: str, models_dir: Path, manifest: Manifest) -> Path:

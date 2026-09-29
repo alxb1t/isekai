@@ -63,9 +63,10 @@ classified or what state a sheet is in, belongs to the component that owns that 
   or reuse it.
 - **Held by:** review.
 - **Known breaks:** `interface/wiring.py`'s `load_vocabulary` classifies a failure — it turns a missing
-  vocabulary into a refusal — which is the provisioning component's work. `interface/ui/app.py` decides
-  what makes a draft, an approved sheet, a caption or a tag list damaged, and which remedy each names —
-  work that belongs to the review, caption and tagging stages that own those files.
+  or undeclared vocabulary into a refusal — which is the provisioning component's work.
+  `interface/ui/app.py` decides what makes a draft, an approved sheet, a caption or a tag list damaged,
+  and which remedy each names — work that belongs to the review, caption and tagging stages that own
+  those files.
 
 ### The code is layered
 
