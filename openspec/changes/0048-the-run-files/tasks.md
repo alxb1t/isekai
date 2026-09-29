@@ -5,7 +5,7 @@ holds every new scenario; each task below adds the tests that bind them.
 
 ## Progress
 
-- [ ] 1 — The kind
+- [x] 1 — The kind
 - [ ] 2 — The record's name
 - [ ] 3 — The sheet's failures
 - [ ] 4 — The warning
@@ -14,11 +14,11 @@ Line numbers are `69bfd67`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 1 — The kind
 
-- [ ] 1.1 **HALT CHECK** — `read` checks no name, the record is `<seed>.json`, the sheet records nothing, and `sheet` returns a path alone.
+- [x] 1.1 **HALT CHECK** — `read` checks no name, the record is `<seed>.json`, the sheet records nothing, and `sheet` returns a path alone.
   Verify: `grep -c 'The name is not checked' isekai/foundation/artifacts.py` prints `1`, `grep -cF 'f"{seed}.json"' isekai/pipeline/generate.py` prints `1`, `grep -c 'record_failure' isekai/pipeline/sheet.py` prints `0`, and `grep -c ') -> Path | None:' isekai/pipeline/sheet.py` prints `1`.
-- [ ] 1.2 In `isekai/foundation/artifacts.py`, refuse a schema `name` other than the kind's before the version, and restate the docstrings of `read` and `require`, per [D1](design.md#d1); add `test_a_file_of_another_kind_is_refused_naming_both` (`run-directory:kind:another-kind-is-refused`) and `test_the_kind_is_checked_before_the_version` (`run-directory:kind:the-kind-is-checked-first`) to `tests/test_run_directory.py`.
+- [x] 1.2 In `isekai/foundation/artifacts.py`, refuse a schema `name` other than the kind's before the version, and restate the docstrings of `read` and `require`, per [D1](design.md#d1); add `test_a_file_of_another_kind_is_refused_naming_both` (`run-directory:kind:another-kind-is-refused`) and `test_the_kind_is_checked_before_the_version` (`run-directory:kind:the-kind-is-checked-first`) to `tests/test_run_directory.py`.
   Verify: `grep -c 'The name is not checked' isekai/foundation/artifacts.py` prints `0`, `grep -c 'declares kind' isekai/foundation/artifacts.py` prints `1`, and `grep -cE '^def test_(a_file_of_another_kind_is_refused_naming_both|the_kind_is_checked_before_the_version)\(' tests/test_run_directory.py` prints `2`.
-- [ ] 1.3 In `isekai/foundation/artifacts.py`, restate `Frame`'s docstring per [D2](design.md#d2).
+- [x] 1.3 In `isekai/foundation/artifacts.py`, restate `Frame`'s docstring per [D2](design.md#d2).
   Verify: `grep -c 'a rename leaves .id. as it was' isekai/foundation/artifacts.py` prints `1`.
 
 ## 2 — The record's name

@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- A run file whose schema names another kind is refused, naming both, before its version is checked: a file
+  copied into the wrong place is no longer read as whatever its place implies (0048 D1, D2).
+
 ## [0.30.4] - 2026-09-29 · 0047-the-refusals
 
 ### Fixed

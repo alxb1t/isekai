@@ -170,7 +170,11 @@ class ApprovedProducer(ChainProducer):
 
 
 class Frame(TypedDict):
-    """The run's frame: what the run is, written once when it is created."""
+    """The run's frame, written once when the run is created.
+
+    `id` is the id it was created with; the directory's name is the run's id,
+    and a rename leaves `id` as it was.
+    """
 
     schema: SchemaBlock
     id: str
@@ -356,13 +360,13 @@ def write(path: Path, kind: Artifact[T], artifact: T) -> None:
 
 
 def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
-    """Parse a file of `kind`, refusing a version of its shape this build lacks.
+    """Parse a file of `kind`, refusing another kind or a version this build lacks.
 
-    A best-effort parse of a format this build does not know produces fields
-    that look fine and mean nothing, so the declared version is checked before
-    any other key is touched. The name is not checked. A file that is not a JSON
-    object with an object `schema` is refused by name, never raised. `remedy`
-    replaces the default for a file no stage writes.
+    A best-effort parse of a file this build does not know produces fields that
+    look fine and mean nothing, so the declared kind, then the version, is
+    checked before any other key is touched. A file that is not a JSON object
+    with an object `schema` is refused by name, never raised. `remedy` replaces
+    the default for a file no stage writes.
     """
     # A rerun is a no-op while the file exists, so the remedy deletes it first.
     remedy = remedy or f"delete {path}, then run the stage that wrote it again"
@@ -377,6 +381,13 @@ def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
     schema = parsed.get("schema", {})
     if not isinstance(schema, dict):
         raise Refusal(f"{path.name}: its schema block is not an object; {remedy}")
+    # A kind is not a newer build's, so this refusal offers no upgrade.
+    named = schema.get("name")
+    if named != kind.name:
+        raise Refusal(
+            f"{path.name}: declares kind {named!r} and this build reads it as "
+            f"{kind.name!r}; {remedy}"
+        )
     declared = schema.get("version")
     if declared != kind.version:
         raise Refusal(
@@ -396,8 +407,9 @@ def require(
 ) -> None:
     """Refuse by name when `body[key]` is missing or not a `shape`.
 
-    A hand-edited file can lose any key, and `read` checks only the version. Only
-    the outer shape is checked; what is inside is the file's word, as in `read`.
+    A hand-edited file can lose any key, and `read` checks only the kind and the
+    version. Only the outer shape is checked; what is inside is the file's word,
+    as in `read`.
     e.g. no `sheet` -> "001.draft.json: records no `sheet` number; <remedy>"
     """
     if not isinstance(body.get(key), shape):
