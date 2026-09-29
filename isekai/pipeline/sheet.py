@@ -59,7 +59,6 @@ from isekai.foundation.run import (
     artifact_name,
     check_budget,
     latest,
-    next_version,
     record_failure,
     refusal_for,
 )
@@ -124,7 +123,10 @@ def sheet(
     directory = run.directory(flow, SHEETS)
     kept = latest(directory)
     if kept is not None and not new_version:
-        return None, _superseded(run, flow, directory, kept) if tagged else []
+        if not tagged:
+            return None, []
+        return None, _superseded(run, flow, directory, kept)
+    version = (kept or 0) + 1
 
     if not tagged:
         # No tagger was going to run, so an empty sheet hides nothing; and
@@ -139,10 +141,10 @@ def sheet(
         validate(fields, schema, vocabulary)
     else:
         fields, made_by = _from_tag_list(
-            run, flow, directory, schema, vocabulary, field_map
+            run, flow, directory, version, schema, vocabulary, field_map
         )
 
-    path = directory / artifact_name(next_version(directory))
+    path = directory / artifact_name(version)
     artifact: Sheet = {
         "schema": SHEET_FILE.schema,
         "producer": made_by,
@@ -163,6 +165,8 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     refuses an unreadable sheet by name.
     """
     newest = latest(run.directory(flow, WD14))
+    if newest is None:
+        return []
     try:
         filled = read(directory / artifact_name(kept), SHEET_FILE)
     except Refusal:
@@ -170,9 +174,7 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     producer = filled.get("producer")
     source = producer.get("from") if isinstance(producer, dict) else None
     # `bool` is an `int`, and a hand-edited `true` is not a list number.
-    if newest is None or not isinstance(source, int) or isinstance(source, bool):
-        return []
-    if source >= newest:
+    if not isinstance(source, int) or isinstance(source, bool) or source >= newest:
         return []
     return [
         f"{run.id}/{flow}: sheet {kept:03d} was filled from "
@@ -185,6 +187,7 @@ def _from_tag_list(
     run: Run,
     flow: str,
     directory: Path,
+    version: int,
     schema: Schema,
     vocabulary: Vocabulary,
     field_map: FieldMap,
@@ -205,12 +208,9 @@ def _from_tag_list(
             f"which writes {flow}/{WD14}/"
         )
 
-    version = next_version(directory)
     check_budget(STAGE, directory, version, run)
     try:
-        fields, made_by = _route(
-            listed_dir / artifact_name(source), source, run.id, flow, schema, field_map
-        )
+        fields, made_by = _route(run, flow, source, schema, field_map)
         validate(fields, schema, vocabulary)
     except Refusal as failed:
         detail = str(failed)
@@ -224,21 +224,17 @@ def _from_tag_list(
 
 
 def _route(
-    listed_path: Path,
-    source: int,
-    run_id: str,
-    flow: str,
-    schema: Schema,
-    field_map: FieldMap,
+    run: Run, flow: str, source: int, schema: Schema, field_map: FieldMap
 ) -> tuple[dict[str, list[str]], SheetProducer]:
-    """Return the fields routed from the tag list at `listed_path`, and who filled them.
+    """Return the fields routed from tag list `source`, and who filled them.
 
     Refuses naming the fix when the list is damaged.
     """
+    listed_path = run.directory(flow, WD14) / artifact_name(source)
     listed = read(listed_path, WD14_FILE)
     remedy = (
-        f"run `python -m isekai tag --flow {flow} --new-version {run_id}`, "
-        f"then `python -m isekai sheet --flow {flow} --new-version {run_id}`"
+        f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
+        f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
     )
     for key, shape in (("tags", list), ("producer", dict)):
         require(listed_path, listed, key, shape, remedy)
