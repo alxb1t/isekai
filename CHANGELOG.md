@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-29 · 0048-the-run-files
+
 ### Added
 
 - `sheet` warns when it keeps a sheet filled from a tag list older than the flow's latest, naming both and the
