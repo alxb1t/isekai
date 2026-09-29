@@ -59,7 +59,8 @@ from isekai.foundation.run import (
     artifact_name,
     check_budget,
     latest,
-    next_version,
+    record_failure,
+    refusal_for,
 )
 from isekai.shared.field_map import FieldMap, route
 from isekai.shared.field_map import identity as field_map_identity
@@ -94,8 +95,8 @@ def sheet(
     tagged: bool,
     flow_digest: str,
     new_version: bool = False,
-) -> Path | None:
-    """Route this flow's tag list into a sheet, under that flow.
+) -> tuple[Path | None, list[str]]:
+    """Route this flow's tag list into a sheet, under that flow, with its warnings.
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
@@ -116,15 +117,20 @@ def sheet(
     which contributes nothing to a sheet; it cannot hold for the local one the
     sheet is filled from (design.md D21).
 
-    Returns the artifact's path, or None when this flow already had a sheet.
+    Returns the artifact's path, or None when this flow already had a sheet;
+    a kept sheet filled from a superseded tag list is warned about (0048 design D5).
     """
     directory = run.directory(flow, SHEETS)
-    if latest(directory) is not None and not new_version:
-        return None
+    kept = latest(directory)
+    if kept is not None and not new_version:
+        if not tagged:
+            return None, []
+        return None, _superseded(run, flow, directory, kept)
+    version = (kept or 0) + 1
 
     if not tagged:
-        # No tagger was going to run, so an empty sheet hides nothing.
-        check_budget(STAGE, directory, next_version(directory), run)
+        # No tagger was going to run, so an empty sheet hides nothing; and
+        # nothing here can fail, so no budget is checked.
         fields = route((), field_map, schema)
         made_by: SheetProducer = {
             "implementation": EMPTY,
@@ -132,11 +138,13 @@ def sheet(
             "pinned": True,
             "artifacts": {},
         }
+        validate(fields, schema, vocabulary)
     else:
-        fields, made_by = _from_tag_list(run, flow, directory, schema, field_map)
-    validate(fields, schema, vocabulary)
+        fields, made_by = _from_tag_list(
+            run, flow, directory, version, schema, vocabulary, field_map
+        )
 
-    path = directory / artifact_name(next_version(directory))
+    path = directory / artifact_name(version)
     artifact: Sheet = {
         "schema": SHEET_FILE.schema,
         "producer": made_by,
@@ -147,16 +155,49 @@ def sheet(
         "fields": fields,
     }
     write(path, SHEET_FILE, artifact)
-    return path
+    return path, []
+
+
+def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
+    """Return a warning when the kept sheet's tag list is below the flow's latest.
+
+    A sheet it cannot read, or one with no list number, gives none: review
+    refuses an unreadable sheet by name.
+    """
+    newest = latest(run.directory(flow, WD14))
+    if newest is None:
+        return []
+    try:
+        filled = read(directory / artifact_name(kept), SHEET_FILE)
+    except Refusal:
+        return []
+    producer = filled.get("producer")
+    source = producer.get("from") if isinstance(producer, dict) else None
+    # `bool` is an `int`, and a hand-edited `true` is not a list number.
+    if not isinstance(source, int) or isinstance(source, bool) or source >= newest:
+        return []
+    return [
+        f"{run.id}/{flow}: sheet {kept:03d} was filled from "
+        f"{WD14}/{artifact_name(source)}, and {WD14}/{artifact_name(newest)} "
+        f"is newer; run `python -m isekai sheet --flow {flow} --new-version {run.id}`"
+    ]
 
 
 def _from_tag_list(
-    run: Run, flow: str, directory: Path, schema: Schema, field_map: FieldMap
+    run: Run,
+    flow: str,
+    directory: Path,
+    version: int,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    field_map: FieldMap,
 ) -> tuple[dict[str, list[str]], SheetProducer]:
-    """Return the fields routed from this flow's tag list, and who filled them.
+    """Return the checked fields routed from this flow's tag list, and who filled them.
 
-    Refuses naming `tag` when the list is absent, and names the fix when it is
-    malformed; the budget is checked between the two, as for any stage.
+    Refuses naming `tag` when the list is absent, and records nothing: running
+    `tag` is the fix, and a record would bar the sheet that follows. The budget is
+    checked next; a damaged list or a tag outside the vocabulary is then recorded
+    as permanent, since this stage fails the same way every time (0048 design D4).
     """
     listed_dir = run.directory(flow, WD14)
     source = latest(listed_dir)
@@ -167,14 +208,40 @@ def _from_tag_list(
             f"which writes {flow}/{WD14}/"
         )
 
-    check_budget(STAGE, directory, next_version(directory), run)
-
-    listed_path = listed_dir / artifact_name(source)
-    listed = read(listed_path, WD14_FILE)
+    check_budget(STAGE, directory, version, run)
+    # No sheet exists yet to edit, so every fix is a new tag list.
     remedy = (
         f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
         f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
     )
+    try:
+        fields, made_by = _route(run, flow, source, schema, field_map, remedy)
+        validate(fields, schema, vocabulary, remedy=remedy)
+    except Refusal as failed:
+        detail = str(failed)
+        record = record_failure(
+            directory, version, "permanent", {"stage": STAGE, "detail": detail}
+        )
+        raise refusal_for(
+            STAGE, run.id, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
+        ) from failed
+    return fields, made_by
+
+
+def _route(
+    run: Run,
+    flow: str,
+    source: int,
+    schema: Schema,
+    field_map: FieldMap,
+    remedy: str,
+) -> tuple[dict[str, list[str]], SheetProducer]:
+    """Return the fields routed from tag list `source`, and who filled them.
+
+    Refuses naming `remedy` when the list is damaged.
+    """
+    listed_path = run.directory(flow, WD14) / artifact_name(source)
+    listed = read(listed_path, WD14_FILE)
     for key, shape in (("tags", list), ("producer", dict)):
         require(listed_path, listed, key, shape, remedy)
     tags, producer = listed["tags"], listed["producer"]

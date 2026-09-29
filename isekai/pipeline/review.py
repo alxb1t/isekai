@@ -152,9 +152,9 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     approved = approved_versions(review_directory)
     if approved:
         copied = review_directory / artifact_name(approved[-1], APPROVED)
-        carried = read(copied, APPROVED_FILE)
         # An approved artifact is never replaced, so only a hand repairs it.
         remedy = f"restore it in {copied}, then run {again} again"
+        carried = read(copied, APPROVED_FILE, remedy=remedy)
         require(
             copied,
             carried,

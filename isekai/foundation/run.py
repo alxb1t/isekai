@@ -132,8 +132,9 @@ PROMPTS = "prompts"
 OUTPUTS = "outputs"
 APPROVED = "approved"
 
-# `001`, and `001.approved` / `001.draft` where a stage has that concept.
-ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>[a-z]+))?\.json$")
+# `001`, and `001.draft` / `001.approved` where a stage has that concept. No
+# other label is a version, so a render's `123.render.json` is never one.
+ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>draft|approved))?\.json$")
 
 # `001.error.1.transient` -- the version it stands in for, the attempt ordinal,
 # and the kind, all decidable without opening anything.
@@ -165,8 +166,7 @@ Kind = Literal["transient", "permanent"]
 # three; it is now a dictionary lookup over an artifact already on disk, so there
 # is no transient failure left for a second attempt to catch -- which is exactly
 # what `"wd14": 1` above already records for the other local producer. The stage
-# records no failure, so this budget does not bind; it is declared because
-# `check_budget` reads every stage's.
+# records every failure as permanent, so a second attempt waits on a deletion.
 #
 # A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
 # below is a bare lookup, and `across()` and `main()` both catch only `Refusal`
@@ -638,11 +638,16 @@ def refusal_for(
     `budget` is the `BUDGETS` key. When the record refuses the next run -- it is
     permanent, or fills the budget -- the remedy deletes it first, since running
     again would only be refused.
+
+    A failure above version 1 sits beside the version before it, which a bare
+    rerun keeps as complete, so the command asks for the next version.
     """
-    command = f"`python -m isekai {verb} --flow {flow} {run_id}`"
-    where = f"{flow}/{area}/{record.name}"
     # `record_failure` names every record `NNN.error.…`.
-    if exhausted(budget, record.parent, int(record.name[:3])):
+    version = int(record.name[:3])
+    asked = "--new-version " if version > 1 else ""
+    command = f"`python -m isekai {verb} --flow {flow} {asked}{run_id}`"
+    where = f"{flow}/{area}/{record.name}"
+    if exhausted(budget, record.parent, version):
         return Refusal(
             f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
             f"what it names and delete it, then run {command}"

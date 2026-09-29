@@ -168,10 +168,12 @@ def sheet(
     parameter whose effect depends on invisible prior state is one a second call
     on the same run would silently ignore, and two of the tests here do call
     twice. The write replaces version 1 in place, so a repeat is a no-op.
+
+    Returns the path alone; a test of the stage's warnings calls the stage.
     """
     if tags is not None:
         write_wd14(run, tags, flow=flow)
-    return sheet_stage.sheet(
+    written, _ = sheet_stage.sheet(
         run,
         flow,
         schema,
@@ -181,6 +183,7 @@ def sheet(
         flow_digest=flow_digest,
         new_version=new_version,
     )
+    return written
 
 
 @dataclass(frozen=True)

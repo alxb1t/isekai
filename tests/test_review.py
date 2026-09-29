@@ -19,6 +19,7 @@ from isekai.foundation.run import (
     versions,
 )
 from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
@@ -450,6 +451,29 @@ def test_a_reopened_draft_whose_sheet_is_damaged_is_refused_keeping_the_approval
     draft.unlink()
     assert approve(run, FLOW, schema, vocabulary) == (None, [])
     assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
+@pytest.mark.spec("run-directory:kind:another-kind-is-refused")
+@pytest.mark.parametrize("reader", ["review", "generate"])
+def test_an_approval_of_another_kind_is_restored_by_hand_never_deleted(
+    run: Run, schema: Schema, vocabulary: Vocabulary, reader: str
+) -> None:
+    review(run, FLOW)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    _damage(approved, "schema", {"name": "sheet", "version": 1})
+
+    with pytest.raises(Refusal) as refused:
+        if reader == "review":
+            review(run, FLOW, new_version=True)
+        else:
+            prompt_artifact(run, load_flow(FLOW), schema)
+
+    # No command rewrites an approval, so deleting it would lose the human's work.
+    message = str(refused.value)
+    assert "declares kind 'sheet'" in message
+    assert f"restore it in {approved}" in message
+    assert f"delete {approved}" not in message
 
 
 def _follow(message: str, run: Run, schema: Schema, vocabulary: Vocabulary) -> None:

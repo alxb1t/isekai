@@ -28,8 +28,9 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary import ollama
-from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, load_flow
+from isekai.foundation.flow import MANIFEST_NAME, SIBLINGS, Flow, Schema, load_flow
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import open_run
 from isekai.interface.cli import VERBS, _flows_for, build_parser, dispatch, main
 from isekai.interface.wiring import Wiring, reader_for, wiring_from
 from isekai.pipeline.caption import FakeReader, OllamaReader
@@ -38,7 +39,7 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.fakes import READER, stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, fake_wd14
+from tests.stages import FIELD_MAP, Always, fake_wd14, sheet, write_wd14
 from tests.transports import FakeTransport
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -544,3 +545,28 @@ def test_a_refusal_after_the_first_flow_leaves_it_written(tmp_path: Path) -> Non
 
     assert status == 1
     assert _captioned(tmp_path) == ["flow-a"]
+
+
+@pytest.mark.spec("sheet:superseded:a-newer-tag-list-is-named")
+def test_sheet_prints_a_superseded_list_as_a_warning(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 900))
+    run = open_run(photo, tmp_path / "runs")
+    sheet(run, schema, vocabulary)
+    write_wd14(run, version=2)
+    wired = _wiring(tmp_path)
+
+    status = dispatch(
+        _cli_args("sheet", run.id, tmp_path, flow=["summon-anime-wai"]), wired
+    )
+
+    assert status == 0
+    assert isinstance(wired.out, io.StringIO) and isinstance(wired.err, io.StringIO)
+    assert wired.err.getvalue() == (
+        f"warning: {run.id}/summon-anime-wai: sheet 001 was filled from "
+        "wd14/001.json, and wd14/002.json is newer; run `python -m isekai sheet "
+        f"--flow summon-anime-wai --new-version {run.id}`\n"
+    )
+    assert f"{run.id}: sheet is already complete" in wired.out.getvalue()

@@ -9,6 +9,26 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-09-29 · 0048-the-run-files
+
+### Added
+
+- `sheet` warns when it keeps a sheet filled from a tag list older than the flow's latest, naming both and the
+  `--new-version` command: after `tag --new-version`, "already complete" alone hid it (0048 D5).
+
+### Changed
+
+- A run file whose schema names another kind is refused, naming both, before its version is checked: a file
+  copied into the wrong place is no longer read as whatever its place implies. A damaged approval is restored by
+  hand, never deleted, since no command rewrites it (0048 D1, D2).
+- A render's record is `<seed>.render.json`, and a version listing reads only the `draft` and `approved` labels:
+  a three-digit seed's record no longer reads as a version (0048 D3).
+- `sheet` records a damaged tag list and a tag outside the vocabulary as permanent failures, so its budget
+  binds and the refusal names the record and `tag --new-version`, as no sheet exists to edit; an absent tag list
+  still records nothing (0048 D4).
+- A stage's refusal for a failed later version names its rerun with `--new-version`: the bare command reported
+  the version before it as already complete (0048 D4).
+
 ## [0.30.4] - 2026-09-29 · 0047-the-refusals
 
 ### Fixed

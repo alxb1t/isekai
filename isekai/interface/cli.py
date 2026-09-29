@@ -532,21 +532,19 @@ def _per_item(
 
             def sheet_flow(name: str) -> None:
                 flow = flows[name]
-                _say(
-                    wired,
+                written, warnings = sheet(
                     run,
-                    "sheet",
-                    sheet(
-                        run,
-                        name,
-                        flow.schema,
-                        vocabulary(),
-                        field_map(),
-                        tagged=flow.tagger,
-                        flow_digest=flow.digest,
-                        new_version=new_version,
-                    ),
+                    name,
+                    flow.schema,
+                    vocabulary(),
+                    field_map(),
+                    tagged=flow.tagger,
+                    flow_digest=flow.digest,
+                    new_version=new_version,
                 )
+                for warning in warnings:
+                    print(f"warning: {warning}", file=wired.err)
+                _say(wired, run, "sheet", written)
 
             step = sheet_flow
         elif verb == "review":

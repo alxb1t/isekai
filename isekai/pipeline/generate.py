@@ -189,7 +189,8 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
 
     check_budget(STAGE_ASSEMBLE, directory, version, run)
     try:
-        body = read(source, APPROVED_FILE)
+        # No command rewrites an approval, so deleting it loses the human's work.
+        body = read(source, APPROVED_FILE, remedy=f"restore it in {source} by hand")
         positive, negative = assemble(body["fields"], schema.names, flow)
         edited = bool(body["producer"].get("edited"))
         sheet = body["sheet"]
@@ -492,7 +493,12 @@ def render(
     sheet = prompt.get("sheet")
     if sheet is None:
         # An older prompt carries no `sheet`; the approval it came from does.
-        sheet = read(approval, APPROVED_FILE)["sheet"]
+        sheet = read(
+            approval,
+            APPROVED_FILE,
+            remedy=f"restore it in {approval} by hand, then run "
+            f"`python -m isekai generate --flow {flow.id} {run.id}`",
+        )["sheet"]
     produced: list[Render] = []
     for seed in wanted:
         output = directory / f"{seed}{flow.output_suffix}"
@@ -507,7 +513,7 @@ def render(
         # The sidecar first, so an image always has its provenance: a crash
         # between the writes leaves a sidecar with no image, and that seed
         # renders again (`0030` design D6).
-        provenance = directory / f"{seed}.json"
+        provenance = directory / f"{seed}.render.json"
         sidecar: RenderSidecar = {
             "schema": RENDER_FILE.schema,
             "producer": {

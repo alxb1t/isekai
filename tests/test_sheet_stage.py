@@ -23,16 +23,25 @@ from isekai.foundation.run import (
     BUDGETS,
     CAPTIONS,
     Run,
+    attempts,
     open_run,
     record_failure,
     versions,
 )
+from isekai.pipeline import sheet as sheet_stage
 from isekai.pipeline.caption import FakeReader
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.fakes import stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FAKE_PINS, FIELD_MAP, caption, sheet, write_wd14
+from tests.stages import (
+    FAKE_PINS,
+    FIELD_MAP,
+    FLOW_DIGEST,
+    caption,
+    sheet,
+    write_wd14,
+)
 
 FLOW = "summon-anime-wai"
 
@@ -168,9 +177,93 @@ def test_a_tag_list_missing_a_key_is_refused_naming_it(
         sheet(run, schema, vocabulary, tags=None)
 
     message = str(refused.value)
-    assert message.startswith("001.json: ") and named in message
+    assert "-- 001.json: " in message and named in message
     assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
     assert versions(run.directory(FLOW, "sheets")) == []
+
+
+def _damage_the_list(run: Run, vocabulary: Vocabulary) -> Vocabulary:
+    """Write a tag list with no `tags` key, and hand the vocabulary back whole."""
+    listed = write_wd14(run, [DanbooruTag("brown_hair")])
+    body = json.loads(listed.read_text())
+    body.pop("tags")
+    listed.write_text(json.dumps(body))
+    return vocabulary
+
+
+def _drop_the_tag(run: Run, vocabulary: Vocabulary) -> Vocabulary:
+    """Write a tag list naming `brown_hair`, and a vocabulary that lacks it."""
+    write_wd14(run, [DanbooruTag("brown_hair")])
+    kept = {tag: n for tag, n in vocabulary.counts.items() if tag != "brown hair"}
+    return replace(vocabulary, counts=kept)
+
+
+@pytest.mark.spec("run-directory:failure:a-sheet-failure-is-permanent")
+@pytest.mark.parametrize(
+    ("arrange", "named"),
+    [
+        (_damage_the_list, "records no `tags` list"),
+        (_drop_the_tag, "brown hair"),
+    ],
+)
+def test_a_sheet_failure_is_recorded_as_permanent(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    arrange: Callable[[Run, Vocabulary], Vocabulary],
+    named: str,
+) -> None:
+    narrowed = arrange(run, vocabulary)
+    directory = run.directory(FLOW, "sheets")
+
+    with pytest.raises(Refusal) as refused:
+        sheet(run, schema, narrowed, tags=None)
+
+    assert [(one.attempt, one.kind) for one in attempts(directory, 1)] == [
+        (1, "permanent")
+    ]
+    message = str(refused.value)
+    assert named in message
+    # No sheet exists yet to edit: the list is what moves, so re-tagging is the fix.
+    assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
+    assert "replace it with a tag" not in message
+    assert f"see {FLOW}/sheets/001.error.1.permanent.json" in message
+    assert f"delete it, then run `python -m isekai sheet --flow {FLOW} {run.id}`" in (
+        message
+    )
+    assert versions(directory) == []
+
+
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_a_failed_next_sheet_names_the_command_that_writes_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    assert sheet(run, schema, vocabulary) is not None
+    write_wd14(run, [DanbooruTag("brown_hair")], version=2)
+    kept = {tag: n for tag, n in vocabulary.counts.items() if tag != "brown hair"}
+
+    with pytest.raises(Refusal) as refused:
+        sheet(
+            run, schema, replace(vocabulary, counts=kept), tags=None, new_version=True
+        )
+
+    # Sheet 001 stays, so the bare command would report the sheet already complete.
+    assert str(refused.value).endswith(
+        f"delete it, then run `python -m isekai sheet --flow {FLOW} --new-version "
+        f"{run.id}`"
+    )
+
+
+@pytest.mark.spec("run-directory:failure:an-absent-tag-list-leaves-no-record")
+def test_an_absent_tag_list_leaves_no_record(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    directory = run.directory(FLOW, "sheets")
+
+    with pytest.raises(Refusal):
+        sheet(run, schema, vocabulary, tags=None)
+
+    assert attempts(directory, 1) == []
 
 
 @pytest.mark.spec("field-map:routing:an-undeclared-criterion-drops-its-tags")
@@ -475,6 +568,76 @@ def test_a_repeat_invocation_writes_nothing(
     assert sheet(run, schema, vocabulary) is None
     assert written.read_bytes() == before
     assert versions(run.path / FLOW / "sheets") == [1]
+
+
+def _kept(
+    run: Run, schema: Schema, vocabulary: Vocabulary, *, tagged: bool = True
+) -> tuple[Path | None, list[str]]:
+    """Call the stage for a flow that already has a sheet, keeping its warnings."""
+    return sheet_stage.sheet(
+        run,
+        FLOW,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=tagged,
+        flow_digest=FLOW_DIGEST,
+    )
+
+
+@pytest.mark.spec("sheet:superseded:a-newer-tag-list-is-named")
+def test_a_newer_tag_list_is_named(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    written = sheet(run, schema, vocabulary)
+    assert written is not None
+    before = written.read_bytes()
+    write_wd14(run, version=2)
+
+    assert _kept(run, schema, vocabulary) == (
+        None,
+        [
+            f"{run.id}/{FLOW}: sheet 001 was filled from wd14/001.json, and "
+            f"wd14/002.json is newer; run `python -m isekai sheet --flow {FLOW} "
+            f"--new-version {run.id}`"
+        ],
+    )
+    assert written.read_bytes() == before
+    assert versions(run.directory(FLOW, "sheets")) == [1]
+
+
+@pytest.mark.spec("sheet:superseded:the-latest-list-is-silent")
+def test_a_sheet_from_the_latest_list_is_silent(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    sheet(run, schema, vocabulary)
+
+    assert _kept(run, schema, vocabulary) == (None, [])
+    assert versions(run.directory(FLOW, "sheets")) == [1]
+
+
+@pytest.mark.spec("sheet:superseded:an-untagged-flow-is-silent")
+def test_an_untagged_flow_is_silent(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    sheet(run, schema, vocabulary, tags=None, tagged=False)
+    write_wd14(run, version=2)
+
+    assert _kept(run, schema, vocabulary, tagged=False) == (None, [])
+    assert versions(run.directory(FLOW, "sheets")) == [1]
+
+
+@pytest.mark.spec("sheet:superseded:an-unreadable-sheet-is-silent")
+def test_an_unreadable_kept_sheet_is_silent(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    written = sheet(run, schema, vocabulary)
+    assert written is not None
+    written.write_text("{ not json")
+    write_wd14(run, version=2)
+
+    assert _kept(run, schema, vocabulary) == (None, [])
+    assert written.read_text() == "{ not json"
 
 
 # --- the briefing, which nothing reads any more --------------------------------

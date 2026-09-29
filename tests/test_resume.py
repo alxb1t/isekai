@@ -639,7 +639,7 @@ def test_the_completed_output_check_is_not_tied_to_one_format(tmp_path: Path) ->
     directory = tmp_path / "outputs"
     directory.mkdir()
     (directory / f"42{flow.output_suffix}").write_bytes(b"a render")
-    (directory / "42.json").write_text("{}")
+    (directory / "42.render.json").write_text("{}")
     # A form no flow here produces: the predicate takes the flow's word for what
     # counts, so this is not one of its outputs.
     (directory / "43.webm").write_bytes(b"not this flow's output")

@@ -975,6 +975,12 @@ def _drop(key: str) -> Callable[[dict[str, Any]], None]:
         # No command rewrites an approved sheet -- `review` copies it and
         # refuses the same damage -- so the fix is the file to restore.
         (_approved, _set("fields", ["brown hair"]), "`fields`", None),
+        (
+            _approved,
+            _set("schema", {"name": "sheet", "version": 1}),
+            "declares kind 'sheet'",
+            None,
+        ),
         (_latest(CAPTIONS), _drop("prose"), "`prose`", "caption"),
         (
             _latest(WD14),
@@ -989,6 +995,7 @@ def _drop(key: str) -> Callable[[dict[str, Any]], None]:
         "draft",
         "draft-field",
         "approved",
+        "approved-kind",
         "caption",
         "wd14",
         "hosted-string",
