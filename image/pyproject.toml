@@ -8,6 +8,7 @@ dependencies = [
     "torchvision==0.23.0",
     "torchaudio==2.8.0",
     "insightface==0.7.3",
+    "onnxruntime==1.30.0",
     "comfyui-frontend-package==1.51.9",
     "comfyui-workflow-templates==0.11.55",
     "comfyui-embedded-docs==0.5.10",
@@ -57,7 +58,6 @@ dependencies = [
     "albumentations",
     "scikit-learn",
     "matplotlib",
-    "onnxruntime-gpu",
 ]
 
 [tool.uv]
@@ -65,9 +65,9 @@ package = false
 required-version = "==0.12.19"
 environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
 build-constraint-dependencies = [
-    "setuptools==84.0.0",
-    "numpy==2.5.3",
-    "cython==3.3.0",
+    { requirement = "setuptools==84.0.0", hashes = ["sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670"] },
+    { requirement = "numpy==2.5.3", hashes = ["sha256:b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3"] },
+    { requirement = "cython==3.3.0", hashes = ["sha256:428fafed98ea26927000a287b4dfc9ef07339f56656a5329a34eaa593f79a4f8", "sha256:9b24b5c8cd536946b62086fcafee6d5509d3f549f72d553d2336af87ffbe0da1"] },
 ]
 
 [[tool.uv.index]]

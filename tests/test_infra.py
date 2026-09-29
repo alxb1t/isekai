@@ -10,6 +10,7 @@ import os
 import re
 import shlex
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -616,7 +617,7 @@ def test_every_uv_version_the_build_names_is_the_root_projects(
         (REPO / "pyproject.toml").read_text(),
         (REPO / ".github" / "workflows" / "ci.yml").read_text(),
         dockerfile,
-        (REPO / "image" / "pyproject.toml").read_text(),
+        IMAGE_PROJECT.read_text(),
     )
     assert apart == []
 
@@ -668,6 +669,114 @@ def test_the_check_catches_a_resolving_install() -> None:
     assert unlocked_installs(broken) == [
         "RUN uv pip install -r requirements.txt",
         "RUN uv sync",
+    ]
+
+
+IMAGE_PROJECT = REPO / "image" / "pyproject.toml"
+
+
+def unhashed_build_tools(image_pyproject: str) -> list[str]:
+    """Return each build constraint not named by exact version with a sha256 hash.
+
+    e.g. `"cython==3.3.0"` -> ["cython==3.3.0"]
+    """
+    uv = tomllib.loads(image_pyproject)["tool"]["uv"]
+    tools = uv.get("build-constraint-dependencies", [])
+    if not tools:
+        return ["none listed"]
+    unhashed = []
+    for tool in tools:
+        tool = tool if isinstance(tool, dict) else {"requirement": tool}
+        named, hashes = tool.get("requirement", ""), tool.get("hashes", [])
+        if not (
+            re.fullmatch(r"[\w.-]+==[\w.]+", named)
+            and hashes
+            and all(re.fullmatch(r"sha256:[0-9a-f]{64}", h) for h in hashes)
+        ):
+            unhashed.append(named)
+    return unhashed
+
+
+@pytest.mark.spec("pod-image:build:the-build-tools-are-hashed")
+def test_the_build_tools_are_checked_by_hash() -> None:
+    assert unhashed_build_tools(IMAGE_PROJECT.read_text()) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_build_tools_are_checked_by_hash")
+def test_the_check_catches_a_build_tool_by_version_alone() -> None:
+    assert unhashed_build_tools("[tool.uv]\n") == ["none listed"]
+    digest = "sha256:" + "0" * 64
+    image_pyproject = (
+        "[tool.uv]\nbuild-constraint-dependencies = [\n"
+        '    "cython==3.3.0",\n'
+        f'    {{ requirement = "numpy>=2", hashes = ["{digest}"] }},\n'
+        '    { requirement = "setuptools==84.0.0", hashes = [] },\n'
+        f'    {{ requirement = "wheel==0.45.0", hashes = ["{digest}"] }},\n'
+        "]\n"
+    )
+    assert unhashed_build_tools(image_pyproject) == [
+        "cython==3.3.0",
+        "numpy>=2",
+        "setuptools==84.0.0",
+    ]
+
+
+IMAGE_LOCK = REPO / "image" / "uv.lock"
+
+# Each source-only package in the image's lock, to the tools its build asks for: its
+# `build-system.requires`, or setuptools for a `setup.py` with none. uv checks only
+# the tools the constraints list, so a package joins this table once its tools do.
+SDIST_BUILDS = {
+    "antlr4-python3-runtime": ("setuptools",),
+    "fvcore": ("setuptools",),
+    "insightface": ("setuptools", "numpy", "cython"),
+    "iopath": ("setuptools",),
+}
+
+
+def uncovered_sdists(image_lock: str, image_pyproject: str) -> list[str]:
+    """Return each source-only package whose build tools the constraints do not name.
+
+    e.g. a lock gaining `pycocotools` as an sdist alone -> ["pycocotools"]
+    """
+    tools = tomllib.loads(image_pyproject)["tool"]["uv"].get(
+        "build-constraint-dependencies", []
+    )
+    named = {
+        re.split(r"[=<>!~ ]", tool if isinstance(tool, str) else tool["requirement"])[0]
+        for tool in tools
+    }
+    uncovered = []
+    for package in tomllib.loads(image_lock)["package"]:
+        if "sdist" not in package or package.get("wheels"):
+            continue
+        name = package["name"]
+        if name not in SDIST_BUILDS:
+            uncovered.append(name)
+            continue
+        uncovered += [f"{name}: {t}" for t in SDIST_BUILDS[name] if t not in named]
+    return uncovered
+
+
+@pytest.mark.spec("pod-image:build:the-build-tools-are-hashed")
+def test_every_source_only_package_builds_with_constrained_tools() -> None:
+    assert uncovered_sdists(IMAGE_LOCK.read_text(), IMAGE_PROJECT.read_text()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_source_only_package_builds_with_constrained_tools"
+)
+def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
+    image_lock = IMAGE_LOCK.read_text() + (
+        '\n[[package]]\nname = "pycocotools"\nversion = "2.0.8"\n'
+        'source = { registry = "https://pypi.org/simple" }\n'
+        'sdist = { url = "https://example.invalid/pycocotools-2.0.8.tar.gz" }\n'
+    )
+    image_pyproject = IMAGE_PROJECT.read_text()
+    assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools"]
+    no_cython = re.sub(r'\{ requirement = "cython==[^}]*\},?', "", image_pyproject)
+    assert uncovered_sdists(IMAGE_LOCK.read_text(), no_cython) == [
+        "insightface: cython"
     ]
 
 
@@ -840,15 +949,24 @@ def comfyui_directories(start_sh: str) -> dict[str, str]:
     return found
 
 
-def unmade_directories(start_sh: str) -> list[str]:
-    """Return each directory ComfyUI writes to that no `mkdir -p` makes before it."""
-    before = start_sh[: start_sh.index("exec python main.py")]
-    made = {
+def before_serve(start_sh: str) -> str:
+    """Return the start script up to the line that starts ComfyUI."""
+    return start_sh[: start_sh.index("exec python main.py")]
+
+
+def made_directories(start_sh: str) -> set[str]:
+    """Return each directory a `mkdir -p` makes before ComfyUI starts."""
+    return {
         path
-        for line in before.splitlines()
+        for line in before_serve(start_sh).splitlines()
         if line.startswith("mkdir -p ")
         for path in line.split()[2:]
     }
+
+
+def unmade_directories(start_sh: str) -> list[str]:
+    """Return each directory ComfyUI writes to that no `mkdir -p` makes before it."""
+    made = made_directories(start_sh)
     return sorted(set(comfyui_directories(start_sh).values()) - made)
 
 
@@ -937,6 +1055,119 @@ def test_the_check_catches_a_memory_step_that_never_holds() -> None:
     assert memory_hold_faults(guessed) == [
         "defaults an unreadable figure to free memory"
     ]
+
+
+def spool_faults(start_sh: str) -> list[str]:
+    """Return what the start script lacks of a `TMPDIR` made in memory for ComfyUI."""
+    exported = re.search(r"^export TMPDIR=(\S+)$", before_serve(start_sh), re.M)
+    if exported is None:
+        return ["sets no TMPDIR"]
+    faults = []
+    if not exported.group(1).startswith("/dev/shm/"):
+        faults.append("spools outside /dev/shm")
+    if exported.group(1) not in made_directories(start_sh):
+        faults.append("spools to a directory not made")
+    return faults
+
+
+@pytest.mark.spec("pod-image:memory:uploads-spool-to-memory")
+def test_comfyui_spools_uploads_to_memory(start_sh: str) -> None:
+    assert spool_faults(start_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_comfyui_spools_uploads_to_memory")
+def test_the_check_catches_an_upload_spooled_to_disk() -> None:
+    made = "mkdir -p /dev/shm/comfyui/tmp\n"
+    serve = "exec python main.py\n"
+    assert spool_faults(made + serve) == ["sets no TMPDIR"]
+    assert spool_faults(made + serve + "export TMPDIR=/dev/shm/comfyui/tmp\n") == [
+        "sets no TMPDIR"
+    ]
+    assert spool_faults(made + "export TMPDIR=/tmp\n" + serve) == [
+        "spools outside /dev/shm",
+        "spools to a directory not made",
+    ]
+
+
+def run_memory_step(
+    step: str, tmp_path: Path, shm_type: str | None, df_row: str
+) -> subprocess.CompletedProcess[str]:
+    """Run the memory step on a `/dev/shm` of `shm_type` whose `df` row is `df_row`.
+
+    None is a `stat` that fails. A hold prints `held`; a start prints `started`.
+    """
+    stubs = tmp_path / "bin"
+    stubs.mkdir(exist_ok=True)
+    # `exec` finds only a file on PATH, so the hold's `sleep` is one.
+    (stubs / "sleep").write_text("#!/bin/sh\necho held\n")
+    (stubs / "sleep").chmod(0o755)
+    stat = f"echo {shlex.quote(shm_type)}" if shm_type is not None else "return 1"
+    program = "\n".join(
+        [
+            "set -euo pipefail",
+            "HOLD_SECONDS=900 SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))",
+            "mkdir() { :; }",
+            f"stat() {{ {stat}; }}",
+            f"df() {{ printf '%s\\n' '1K-blocks Avail' {shlex.quote(df_row)}; }}",
+            step,
+            "echo started",
+        ]
+    )
+    return subprocess.run(
+        ["bash", "-c", program],
+        env={"PATH": f"{stubs}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
+ROOMY = "8388608 8388608"
+
+
+@pytest.mark.spec("pod-image:memory:a-disk-backed-shm-holds")
+def test_a_shm_that_is_not_memory_holds_the_pod(start_sh: str, tmp_path: Path) -> None:
+    step = boot_step(start_sh, "the memory directories")
+    assert run_memory_step(step, tmp_path, "tmpfs", ROOMY).stdout.endswith("started\n")
+    for shm_type in ("ext2/ext3", "overlayfs"):
+        done = run_memory_step(step, tmp_path, shm_type, ROOMY)
+        assert done.stdout.endswith("held\n")
+        assert shm_type in done.stderr
+    assert run_memory_step(step, tmp_path, None, ROOMY).stdout.endswith("held\n")
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_shm_that_is_not_memory_holds_the_pod"
+)
+def test_the_check_catches_a_shm_never_typed(start_sh: str, tmp_path: Path) -> None:
+    step = boot_step(start_sh, "the memory directories")
+    untyped = re.sub(r'\nif \[ "\$shm_type".*?\nfi', "", step, flags=re.S)
+    assert untyped != step
+    done = run_memory_step(untyped, tmp_path, "ext2/ext3", ROOMY)
+    assert done.stdout.endswith("started\n")
+
+
+@pytest.mark.spec("pod-image:memory:an-unread-figure-holds")
+def test_an_unread_figure_holds_the_pod(start_sh: str, tmp_path: Path) -> None:
+    step = boot_step(start_sh, "the memory directories")
+    for row in ("", "- -", "8388608 n/a"):
+        done = run_memory_step(step, tmp_path, "tmpfs", row)
+        assert done.stdout.endswith("held\n")
+        assert "could not read /dev/shm's free space" in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_an_unread_figure_holds_the_pod")
+def test_the_check_catches_an_unread_figure_taken_as_zero(
+    start_sh: str, tmp_path: Path
+) -> None:
+    # Held, but by the floor, saying the pod has too little memory: a guess.
+    step = boot_step(start_sh, "the memory directories")
+    guessed = re.sub(r"(\*\[!0-9\]\*\)).*?;;", r"\1 free_kib=0 ;;", step, flags=re.S)
+    assert guessed != step
+    done = run_memory_step(guessed, tmp_path, "tmpfs", "- -")
+    assert done.stdout.endswith("held\n")
+    assert "could not read /dev/shm's free space" not in done.stderr
 
 
 @pytest.mark.spec("pod-image:render-metadata:none-is-written")
@@ -1588,28 +1819,45 @@ TELEMETRY_SWITCHES = (
 )
 
 
-def telemetry_left_on(up_sh: str) -> list[str]:
-    """Return each telemetry switch the create body's `env` does not set to "1"."""
-    env = re.search(r"env: \{(.*?)\}", up_sh, re.S)
-    block = env.group(1) if env else ""
-    return [s for s in TELEMETRY_SWITCHES if f'{s}: "1"' not in block]
+def telemetry_left_on(dockerfile: str, up_sh: str) -> list[str]:
+    """Return each switch the image's `ENV` leaves off, and each `up.sh` sets again.
+
+    A switch's last assignment is the one the image keeps, so a later `=0` turns it off.
+    e.g. `up.sh` setting `DO_NOT_TRACK` -> [..., "up.sh: DO_NOT_TRACK"]
+    """
+    env = " ".join(line for line in joined_lines(dockerfile) if line.startswith("ENV "))
+    last = dict(re.findall(r"\b(\w+)=(\S*)", env))
+    left = [s for s in TELEMETRY_SWITCHES if last.get(s) != "1"]
+    return left + [f"up.sh: {s}" for s in TELEMETRY_SWITCHES if s in up_sh]
 
 
 @pytest.mark.spec("pod-image:telemetry:the-switches-are-off")
-def test_the_pod_is_created_with_telemetry_off(up_sh: str) -> None:
-    assert telemetry_left_on(up_sh) == []
+def test_the_pod_is_created_with_telemetry_off(dockerfile: str, up_sh: str) -> None:
+    assert telemetry_left_on(dockerfile, up_sh) == []
 
 
 @pytest.mark.spec_exempt(
     "structural: twin of test_the_pod_is_created_with_telemetry_off"
 )
 def test_the_telemetry_check_catches_a_switch_left_out() -> None:
-    body = 'env: { PUBLIC_KEY: $pubkey,\n  ORT_DISABLE_TELEMETRY: "1" } }\n'
-    assert telemetry_left_on(body) == [
+    dockerfile = (
+        "# DO_NOT_TRACK=1\nENV ORT_DISABLE_TELEMETRY=1 HF_HUB_DISABLE_TELEMETRY=10\n"
+    )
+    up_sh = 'env: { PUBLIC_KEY: $pubkey,\n  NO_ALBUMENTATIONS_UPDATE: "1" } }\n'
+    assert telemetry_left_on(dockerfile, up_sh) == [
         "HF_HUB_DISABLE_TELEMETRY",
         "DO_NOT_TRACK",
         "NO_ALBUMENTATIONS_UPDATE",
+        "up.sh: NO_ALBUMENTATIONS_UPDATE",
     ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pod_is_created_with_telemetry_off"
+)
+def test_the_telemetry_check_catches_a_switch_set_back(dockerfile: str) -> None:
+    set_back = dockerfile + "\nENV DO_NOT_TRACK=0\n"
+    assert telemetry_left_on(set_back, "") == ["DO_NOT_TRACK"]
 
 
 # A throwaway Ed25519 key made for these tests, and its fingerprint and another's.

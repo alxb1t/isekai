@@ -39,7 +39,7 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 |---|---|---|---|
 | the pod image | digest | `config/image.json` | `infra/up.sh` boots only that digest and writes it to `.runpod_pod_image` |
 | the image's base and uv | digest | `Dockerfile` | at build |
-| the image's Python environment | a lock with every installed package's hash; Python by patch; the sdist builds' tools by version | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
+| the image's Python environment | a lock with every installed package's hash; Python by patch; the sdist builds' tools by hash | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
 | ComfyUI and its custom nodes | git commit | `Dockerfile` | at build; `tests/test_infra.py` holds each clone to a commit |
 | isekai's Python dependencies | a lock with every hash | `pyproject.toml`, `uv.lock` | `uv sync --locked`, the gate's first command |
 | uv | exact version | `pyproject.toml`, `image/pyproject.toml`, `.github/workflows/ci.yml`, `Dockerfile` | every `uv` command |
@@ -89,7 +89,6 @@ What stays open, and what stands in for it.
 | the pod's GPU, driver and host | RunPod assigns them | each render records the ComfyUI, Python and PyTorch versions the pod reports |
 | macOS and Metal on the operator's machine | outside the repository | nothing yet |
 | the reader alias's template, system prompt and parameters | the check compares the model and projector layers alone, and changing the rest needs write access to the operator's Ollama store | `config/joycaption.Modelfile`, from which the alias is built |
-| the build tools of the image's sdist-only packages | `image/pyproject.toml`'s build constraints fetch them by version into an isolated build, with no hash checked | the image digest freezes what they built; PyPI never re-serves a released file under new bytes |
 
 **A rebuild is not byte-identical**: apt is open, and insightface compiles from source. What reproduces exactly
 is booting the same digest.

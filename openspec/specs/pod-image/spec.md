@@ -42,11 +42,12 @@ declared. The boot record is what lets a render say which image it ran on.
 The system SHALL build the image only on a manual request naming a tag other than the released one, and
 SHALL report the digest the build produced. The image's base and its build tool SHALL be named by digest,
 and its Python environment SHALL be installed from a lock that carries every package's hash, with no
-resolution at build time.
+resolution at build time. The tools that build its source-only packages SHALL be checked by hash.
 
 A build on every merge made a new image under the same name each time, and the build was not reproducible,
 so the name meant nothing fixed. Building on request means every image that exists was asked for, and its
-digest is known. The lock is what makes two builds of one commit install the same packages.
+digest is known. The lock is what makes two builds of one commit install the same packages, and a build tool
+fetched by version alone runs code the lock never checked.
 
 #### Scenario: a merge builds nothing
 - **Key:** `pod-image:build:only-a-request-builds`
@@ -67,6 +68,12 @@ digest is known. The lock is what makes two builds of one commit install the sam
 - **WHEN** the image's build file is read
 - **THEN** its Python environment is installed from the committed lock, refusing a lock that is out of date
 - **AND** no requirements file is resolved at build time
+
+#### Scenario: the build tools are checked by hash
+- **Key:** `pod-image:build:the-build-tools-are-hashed`
+- **Layers:** unit
+- **WHEN** the image project's build constraints are read
+- **THEN** every build tool is named with its version and at least one hash
 
 ### Requirement: A boot prints when each step begins
 
@@ -167,8 +174,9 @@ check it.
 
 ### Requirement: Everything ComfyUI writes lives in the pod's memory
 
-The pod SHALL start ComfyUI with its input, output, temp and user directories in the pod's memory-backed filesystem,
-and SHALL hold instead of starting ComfyUI when that filesystem has less than 1 GB free.
+The pod SHALL start ComfyUI with its input, output, temp and user directories, and the directory its temporary
+files go to, in the pod's memory-backed filesystem. It SHALL hold instead of starting ComfyUI when that filesystem is
+not a tmpfs, when its free space cannot be read, or when it has less than 1 GB free.
 
 The container disk outlives a render on a disk nobody can wipe. Memory dies with the pod.
 
@@ -184,6 +192,25 @@ The container disk outlives a render on a disk nobody can wipe. Memory dies with
 - **Layers:** unit
 - **WHEN** the pod's memory-backed filesystem has less than 1 GB free
 - **THEN** the start-up script prints why and holds instead of starting ComfyUI
+
+#### Scenario: an upload is spooled to memory
+- **Key:** `pod-image:memory:uploads-spool-to-memory`
+- **Layers:** unit
+- **WHEN** the pod's start-up script is read
+- **THEN** ComfyUI starts with its temporary-file directory under `/dev/shm`
+- **AND** that directory exists before it starts
+
+#### Scenario: a /dev/shm that is not memory holds the pod
+- **Key:** `pod-image:memory:a-disk-backed-shm-holds`
+- **Layers:** unit
+- **WHEN** `/dev/shm` is not a tmpfs
+- **THEN** the start-up script prints what it is and holds instead of starting ComfyUI
+
+#### Scenario: an unreadable free figure holds the pod
+- **Key:** `pod-image:memory:an-unread-figure-holds`
+- **Layers:** unit
+- **WHEN** `/dev/shm`'s free space cannot be read
+- **THEN** the start-up script prints that it could not read it and holds instead of starting ComfyUI
 
 ### Requirement: No render carries metadata
 
@@ -250,12 +277,16 @@ manifest fails its download after the pod is already billing.
 
 ### Requirement: A pod sends no usage report its libraries can be told not to send
 
-The pod-creation script SHALL create every pod with the telemetry switches of the libraries it runs turned off.
+The image SHALL carry the telemetry and update-check switches of the libraries it runs, turned off, so every pod
+runs with them off. The pod-creation script SHALL NOT set them a second time.
 
-The pod renders a person's likeness; nothing on it needs to report anything to anyone.
+The pod renders a person's likeness; nothing on it needs to report anything to anyone. A switch declared in the image
+holds for every pod made from it.
 
 #### Scenario: the pod is created with telemetry off
 - **Key:** `pod-image:telemetry:the-switches-are-off`
 - **Layers:** unit
-- **WHEN** the pod-creation script builds its request
-- **THEN** the pod's environment turns off onnxruntime's and the Hugging Face hub's telemetry, and sets `DO_NOT_TRACK`
+- **WHEN** the image's build file is read
+- **THEN** its environment turns off onnxruntime's and the Hugging Face hub's telemetry and albumentations' update
+  check, and sets `DO_NOT_TRACK`
+- **AND** the pod-creation script sets none of them

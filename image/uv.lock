@@ -10,9 +10,9 @@ supported-markers = [
 
 [manifest]
 build-constraints = [
-    { name = "cython", specifier = "==3.3.0" },
-    { name = "numpy", specifier = "==2.5.3" },
-    { name = "setuptools", specifier = "==84.0.0" },
+    { name = "cython", specifier = "==3.3.0", hashes = ["sha256:428fafed98ea26927000a287b4dfc9ef07339f56656a5329a34eaa593f79a4f8", "sha256:9b24b5c8cd536946b62086fcafee6d5509d3f549f72d553d2336af87ffbe0da1"] },
+    { name = "numpy", specifier = "==2.5.3", hashes = ["sha256:b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3"] },
+    { name = "setuptools", specifier = "==84.0.0", hashes = ["sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670"] },
 ]
 
 [[package]]
@@ -674,7 +674,7 @@ dependencies = [
     { name = "mediapipe" },
     { name = "numpy" },
     { name = "omegaconf" },
-    { name = "onnxruntime-gpu" },
+    { name = "onnxruntime" },
     { name = "opencv-python" },
     { name = "pillow" },
     { name = "psutil" },
@@ -732,7 +732,7 @@ requires-dist = [
     { name = "numpy" },
     { name = "numpy", specifier = ">=1.25.0" },
     { name = "omegaconf" },
-    { name = "onnxruntime-gpu" },
+    { name = "onnxruntime", specifier = "==1.30.0" },
     { name = "opencv-python" },
     { name = "pillow" },
     { name = "psutil" },
@@ -1192,7 +1192,7 @@ wheels = [
 ]
 
 [[package]]
-name = "onnxruntime-gpu"
+name = "onnxruntime"
 version = "1.30.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -1202,7 +1202,7 @@ dependencies = [
     { name = "protobuf" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/80/d96143329dbe925d434b016c890a5caa785fac8e14a1570e5d6818b63545/onnxruntime_gpu-1.30.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:6acc0f4b3d5ac5f2984432faa59dd8fcce6775f8b43a7140afa0f322c7a703b1", size = 246685715, upload-time = "2026-09-10T16:13:10.1Z" },
+    { url = "https://files.pythonhosted.org/packages/34/35/e7f862dbacbc99fadd9b14a614e49c99bf0f35fd9927a82f096e3de33531/onnxruntime-1.30.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:fa688e7891a6aa206636fe7372e27ee75fd17713289f6b4fc7b190e0a7de9328", size = 23585654, upload-time = "2026-09-10T16:31:26.65Z" },
 ]
 
 [[package]]

@@ -280,6 +280,9 @@ told not to send is switched off, and its host key is checked against the finger
 - **Held by:**
   - `tests/test_infra.py::test_comfyui_writes_to_memory`
   - `tests/test_infra.py::test_too_little_memory_holds_the_pod`
+  - `tests/test_infra.py::test_comfyui_spools_uploads_to_memory`
+  - `tests/test_infra.py::test_a_shm_that_is_not_memory_holds_the_pod`
+  - `tests/test_infra.py::test_an_unread_figure_holds_the_pod`
   - `tests/test_infra.py::test_the_image_carries_no_host_key`
   - `tests/test_infra.py::test_each_boot_makes_and_prints_its_own_key`
   - `tests/test_infra.py::test_a_matching_key_is_kept`
