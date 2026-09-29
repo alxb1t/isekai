@@ -17,12 +17,9 @@ which is the reproducibility contract at the finest grain the system has: one
 image, one integer -- a stronger guarantee than "one integer reproduces a run's
 whole sequence", because it reproduces an image rather than an ordering.
 
-**No session lifecycle.** This stage talks to an endpoint somebody else brought
-up, exactly as the prototype did by hand. Acquiring, tunnelling, releasing and
-reconciling orphaned machines land with the version that adds a second flow,
-rather than being dragged into the one whose only risk is the architecture. The
-cost is that an orphaned machine is exactly as possible as it is today, and no
-less.
+**No session lifecycle.** This stage renders against the endpoint it is given;
+creating, tunnelling to and tearing down the pod is infra/render.sh's
+(docs/decisions.md D36).
 
 Stdlib only; the endpoint is behind the repository's existing `ComfyTransport`.
 """

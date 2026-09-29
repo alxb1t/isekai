@@ -7,7 +7,7 @@ stop boot, per [design](design.md).
 
 - [x] 1 — The gates and the reconciler
 - [x] 2 — The pod's stop
-- [ ] 3 — The docs
+- [x] 3 — The docs
 - [ ] 4 — 🛑 **HUMAN** — the rc build
 - [ ] 5 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on the new image
 
@@ -51,13 +51,13 @@ Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 3 — The docs
 
-- [ ] 3.1 Add D36 to `docs/decisions.md`, per [D7](design.md#d7).
+- [x] 3.1 Add D36 to `docs/decisions.md`, per [D7](design.md#d7).
   Verify: `grep -c '^### D36 · A render session is ' docs/decisions.md` prints `1`.
-- [ ] 3.2 Rewrite `isekai/pipeline/generate.py`'s session paragraph, per [D7](design.md#d7).
+- [x] 3.2 Rewrite `isekai/pipeline/generate.py`'s session paragraph, per [D7](design.md#d7).
   Verify: `grep -c 'land with the version that adds a second flow' isekai/pipeline/generate.py` prints `0`, and `grep -c 'D36' isekai/pipeline/generate.py` prints `1`.
-- [ ] 3.3 In `CLAUDE.md`, name `down.sh`'s sweep and the pod's own stop in the teardown rule, and put renders in the pod's memory, per [D7](design.md#d7).
+- [x] 3.3 In `CLAUDE.md`, name `down.sh`'s sweep and the pod's own stop in the teardown rule, and put renders in the pod's memory, per [D7](design.md#d7).
   Verify: `grep -c 'leaves no' CLAUDE.md` prints `1`, and `grep -c "the pod's ephemeral disk" CLAUDE.md` prints `0`.
-- [ ] 3.4 Add `infra/pods.sh` and `tools/stop_pod.sh` to `README.md`'s tree, per [D7](design.md#d7).
+- [x] 3.4 Add `infra/pods.sh` and `tools/stop_pod.sh` to `README.md`'s tree, per [D7](design.md#d7).
   Verify: `grep -c -e '── pods.sh' -e '── stop_pod.sh' README.md` prints `2`.
 
 ## 4 — 🛑 **HUMAN** — the rc build

@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   `down.sh` removes every `isekai` pod, so none bills unseen (0043 D1, D2, D3).
 - A pod stops itself 45 minutes after it boots, and every hold ends in that stop, so a pod bills bounded with
   the laptop gone. ComfyUI starts without RunPod's key (0043 D4, D5, D6).
+- `docs/decisions.md` records `render.sh` as the render session and the bounds that hold it; `CLAUDE.md`'s
+  teardown rule names `down.sh`'s sweep and the pod's own stop (0043 D7).
 
 ## [0.29.1] - 2026-09-29 · 0042-the-rebuild
 

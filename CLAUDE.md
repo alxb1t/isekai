@@ -220,9 +220,9 @@ they decide.**
   names four things, because a rule that leaves any of them implicit is not a rule:
   1. **Who creates the pod** — `infra/up.sh`, and nothing else; `infra/render.sh` runs it for a whole
      render session. Announce before you run either.
-  2. **Who tears it down** — `infra/down.sh`, which `render.sh`'s trap runs on every exit. **Teardown is
-     the act**: it is the call that stops the billing, and it belongs to the same session that created
-     the pod.
+  2. **Who tears it down** — `infra/down.sh`, which `render.sh`'s trap runs on every exit and which leaves no
+     `isekai` pod; the pod also stops itself 45 minutes after it starts. **Teardown is the act**: it is
+     the call that stops the billing, and it belongs to the same session that created the pod.
   3. **Who confirms** — the RunPod MCP, by checking the pod is gone. **Confirmation is not the act.** A
      rule that only names the check has not said what stops the billing, and an unconfirmed teardown is
      not one you may report as done. Record what the MCP returned. When the MCP confirms gone a pod
@@ -236,7 +236,7 @@ they decide.**
   can hold you to it. Exceeding it is a halt, not a judgement call. And whichever route applies, the
   authority to spend comes from a **phase `tasks.md` marks metered, or from the operator's
   explicit go in the session, which quotes the ceiling** — never from the agent.
-- **GPU renders live on the pod's ephemeral disk**; only the models volume persists. Download before
+- **GPU renders live in the pod's memory**; only the models volume persists. Download before
   teardown or the output is gone.
 - **The Blackwell (sm_120) pod needs cu128 PyTorch** — cu124 gives "no kernel image". It is pinned in the
   image; keep it.

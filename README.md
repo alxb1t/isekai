@@ -395,6 +395,7 @@ isekai/
 ├── infra/
 │   ├── up.sh                  # create pod + attach volume, print the tunnel command
 │   ├── down.sh                # remove pod, billing stops
+│   ├── pods.sh                # list this project's pods, for up.sh and down.sh
 │   └── render.sh              # a whole render session: up, tunnel, render, down on every exit
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
@@ -405,6 +406,7 @@ isekai/
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
+│   ├── stop_pod.sh            # on the pod: stop it at its ceiling and after a hold
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   └── typecheck_ui.sh        # the gate's browser half
