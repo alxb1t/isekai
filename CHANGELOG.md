@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
+
 ### Fixed
 
 - The prefix-collision scenario has its test, and a scan no one answers has its own scenario and tests;
