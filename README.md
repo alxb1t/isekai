@@ -59,7 +59,8 @@ Local (your machine)                          RunPod
 ```
 
 **Lifecycle:** `up.sh` (create pod from the image `config/image.json` pins by digest + attach volume) →
-`python -m isekai generate --flow … --server …` → `down.sh` (remove pod, billing stops). Only the pod is
+`python -m isekai generate --flow … --server …` → `down.sh` (remove the recorded pod and every other listed
+`isekai` pod, billing stops). A pod left behind stops itself 45 minutes after it boots. Only the pod is
 ephemeral and metered.
 
 ## Architecture
@@ -432,9 +433,9 @@ what boots SSH + ComfyUI *inside* the container.
 
 | Script | Runs **where** | Runs **when** | Does what |
 |---|---|---|---|
-| `start.sh` | **inside the container, on the pod** | every container boot (baked into the image as its start command) | authorize your key → start `sshd` → start ComfyUI |
-| `infra/up.sh` | **on your machine** | when you want a pod | reads the models volume, calls the RunPod REST API, polls, checks the pod's host key, prints the SSH + tunnel commands |
-| `infra/down.sh` | **on your machine** | when you're done | `DELETE`s the pod → per-second billing stops |
+| `start.sh` | **inside the container, on the pod** | every container boot (baked into the image as its start command) | arm the stop timer → authorize your key → start `sshd` → start ComfyUI; every way out stops the pod |
+| `infra/up.sh` | **on your machine** | when you want a pod | refuses beside a recorded or listed `isekai` pod, reads each card from the catalogue, reads the models volume, calls the RunPod REST API, polls, checks the pod's host key, prints the SSH + tunnel commands |
+| `infra/down.sh` | **on your machine** | when you're done | `DELETE`s the recorded pod and every other listed `isekai` pod → per-second billing stops |
 
 ```
 BUILD TIME (once, or when the image changes)
@@ -446,7 +447,9 @@ PROVISION TIME (every session — this is up.sh / down.sh)
   YOUR MACHINE                     RUNPOD                              GHCR
   ────────────                     ──────                              ────
   ./infra/up.sh
-    │ 0  GET /v2/network-volumes/{id}: refuse another data centre or too small a volume
+    │ 0  GET /v2/pods: refuse beside a recorded or listed 'isekai' pod
+    │    GET /v2/network-volumes/{id}: refuse another data centre or too small a volume
+    │    GET /v2/catalog/gpus/{card}: skip a card under the VRAM floor
     │ 1  POST /v2/pods ──────────▶ control plane
     │    (image@digest, GPU type,       │ 2  place pod on a GPU host
     │     volume, PUBLIC_KEY, port 22)  ▼
@@ -454,13 +457,14 @@ PROVISION TIME (every session — this is up.sh / down.sh)
     │                                  │ 3  pull image ───────────────▶ ghcr image
     │                                  │ ◀──────────── ~14 GB ──────────┘
     │                                  │ 4  run container → CMD = /start.sh:
+    │                                  │      • arm the stop timer (45 min)
     │                                  │      • authorized_keys ← PUBLIC_KEY
     │                                  │      • own host key, start sshd (:22)
     │                                  │      • mount volume → /runpod-volume
     │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
     │                                  │      • provision from config/models.json (verified)
     │                                  │      • ComfyUI's files → /dev/shm (memory)
-    │                                  │      • exec ComfyUI          (:8188)
+    │                                  │      • run ComfyUI           (:8188)
     │ 5  poll GET /v2/pods/{id} ──────▶│
     │    ◀──── ssh.direct host:port ───┘
     │ 6  read the fingerprint the pod's log printed, ssh-keyscan the pod,
@@ -474,8 +478,10 @@ USE IT
                        ──▶ localhost:8188 ──tunnel──▶ ComfyUI ──▶ GPU ──▶ anime.png
 
 TEAR DOWN
-  ./infra/down.sh  ──▶  DELETE /v2/pods/{id}  ──▶  pod removed, billing stops
+  ./infra/down.sh  ──▶  DELETE /v2/pods/{id}, for the recorded pod and every
+                        other listed 'isekai' pod  ──▶  billing stops
                                                    (volume + GHCR image persist)
+  the pod itself   ──▶  stop timer fires at 45 min, or the boot ends  ──▶  pod stops
 ```
 
 ## Cost

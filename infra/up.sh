@@ -14,6 +14,8 @@ API="https://api.runpod.io/v2"
 RAM_FLOOR_GB=24
 VRAM_FLOOR_GB=24
 CUDA_FLOOR="12.8"
+# A lost create exits apart from a refusal: render.sh sweeps only after one (0044 design D2).
+LOST_CREATE_EXIT=3
 
 # Every call to RunPod: the key reaches curl on a file descriptor, never on its
 # argv, where any process listing could read it; and the call is bounded, so a
@@ -218,7 +220,7 @@ while IFS= read -r gpu; do
   [ "$code" = "400" ] && continue
   # RunPod may have placed the pod and the answer been lost on the way back.
   case "$code" in
-    201|5??|000|"") lost ;;
+    201|5??|000|"") lost; exit "$LOST_CREATE_EXIT" ;;
   esac
   exit 1
 done <<< "$gpus"

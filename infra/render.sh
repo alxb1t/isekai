@@ -54,6 +54,7 @@ uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 |
 
 tunnel=""
 watchdog=""
+up_status=""                      # up.sh's exit; its LOST_CREATE_EXIT is 3
 up_out=$(mktemp)
 teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   local status=${1:-$?}
@@ -65,10 +66,14 @@ teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   if [ -n "$watchdog" ]; then kill "$watchdog" 2>/dev/null; fi
   if [ -n "$tunnel" ]; then kill "$tunnel" 2>/dev/null; fi
   rm -f "$up_out"
-  # Recorded or not: a lost create leaves a pod no file names, and down.sh finds
-  # every 'isekai' pod, exiting 0 when there is none (0043 design D3).
-  bash ./infra/down.sh 2>&1 | tee -a "$log"
-  [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+  # A lost create leaves a pod no file names, which down.sh finds. A refusal made
+  # none, so a pod it names is left for the operator's down.sh (0044 design D2).
+  if [ -f .runpod_pod_id ] || [ "$up_status" = 3 ]; then
+    bash ./infra/down.sh 2>&1 | tee -a "$log"
+    [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+  else
+    echo "No pod is recorded and no create was lost; nothing to tear down." | tee -a "$log"
+  fi
   exit "$status"
 }
 # Set before the pod exists, so no step after it can leave the pod billing.
@@ -93,7 +98,10 @@ kept, and in a new session bash infra/render.sh $runs $* renders only the rest" 
 ) &
 watchdog=$!
 
-bash ./infra/up.sh 2>&1 | tee -a "$log" "$up_out"
+# Until up.sh answers, its create may be in flight: an interrupt then is a lost create.
+up_status=3
+bash ./infra/up.sh 2>&1 | tee -a "$log" "$up_out" || { up_status=${PIPESTATUS[0]}; exit "$up_status"; }
+up_status=0
 
 read -r host port < <(
   sed -nE 's/.*Tunnel: .* root@([^ ]+) -p ([0-9]+).*/\1 \2/p' "$up_out"

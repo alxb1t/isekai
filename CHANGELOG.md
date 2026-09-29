@@ -9,7 +9,16 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Fixed
+
+- The pod listing fails on a repeated cursor or an `isekai` pod with no image, and lists only this image; a
+  session `up.sh` refused leaves a listed pod, sweeping only after a lost create (0044 D1, D2).
+- `README.md` names the pod check, the catalogue, the sweep and the stop timer. `0.30.0` gains its `### Security`
+  heading, an exception to append-only, and a bullet outside a section is refused (0044 D3, D4).
+
 ## [0.30.0] - 2026-09-29 · 0043-the-session
+
+### Security
 
 - `up.sh` places a pod only on a host that can render, and refuses beside a recorded or listed `isekai` pod;
   `down.sh` removes every `isekai` pod, so none bills unseen (0043 D1, D2, D3).

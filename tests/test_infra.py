@@ -2199,12 +2199,17 @@ def stub_command(bin_dir: Path, name: str, script: str) -> None:
     (bin_dir / name).chmod(0o755)
 
 
-def listed_pod(pod_id: str, status: str, name: str = "isekai") -> dict[str, str]:
-    """Return a pod as RunPod's v2 list gives it, booted from this project's image."""
+def listed_pod(
+    pod_id: str, status: str, name: str = "isekai", image: str = "@sha256:0"
+) -> dict[str, str]:
+    """Return a pod as RunPod's v2 list gives it, booted from this project's image.
+
+    `image` follows the image's name: e.g. "@sha256:0" -> "ghcr.io/…/isekai@sha256:0".
+    """
     return {
         "id": pod_id,
         "name": name,
-        "image": f"{json.loads(IMAGE_CONFIG.read_text())['image']}@sha256:0",
+        "image": f"{json.loads(IMAGE_CONFIG.read_text())['image']}{image}",
         "status": status,
     }
 
@@ -2307,6 +2312,132 @@ def test_the_listing_check_catches_a_pod_never_listed(tmp_path: Path) -> None:
     pages = pod_pages([], [listed_pod("pod-b", "EXITED")])
     done, _ = pod_check(RECORD_ONLY_POD_CHECK, tmp_path, pages)
     assert done.returncode == 0
+
+
+def listing(
+    pods_sh: str, cwd: Path, pages: list[str]
+) -> tuple[subprocess.CompletedProcess[str], int]:
+    """Run `isekai_pods` against a first page, and a second for any cursor.
+
+    Return the run and how many pages it asked for. A sixth ask fails, so a
+    listing that loops ends.
+    """
+    copy_image_config(cwd)
+    first, second = pages
+    stubs = (
+        "API=https://api.test\n"
+        "api() { n=$(( $(cat asks 2>/dev/null || echo 0) + 1 )); echo $n > asks;"
+        ' [ "$n" -le 5 ] || return 22;'
+        f' case "$*" in *cursor=*) printf "%s" {shlex.quote(second)} ;;'
+        f' *) printf "%s" {shlex.quote(first)} ;; esac; }}'
+    )
+    asks = cwd / "asks"
+    asks.unlink(missing_ok=True)
+    done = run_functions(pods_sh, ("isekai_pods",), stubs, cwd)
+    return done, int(asks.read_text()) if asks.exists() else 0
+
+
+# The listing before 0044 design D1: it loops, skips, and matches by prefix.
+BROKEN_LISTING = """isekai_pods() {
+  local image page more cursor=""
+  image=$(jq -r '.image' config/image.json) || return 1
+  while :; do
+    page=$(api -f "$API/pods${cursor:+?cursor=$cursor}") || return 1
+    echo "$page" | jq -r --arg image "$image" \\
+      '.pods[] | select(.name == "isekai" and ((.image // "") | startswith($image))
+                        and .status != "TERMINATED") | "\\(.id) \\(.status)"' \\
+      || return 1
+    more=$(echo "$page" | jq -r '.pagination.hasNextPage') || return 1
+    [ "$more" = "true" ] || return 0
+    cursor=$(echo "$page" | jq -er '.pagination.nextCursor') || return 1
+  done
+}
+"""
+
+
+def repeated_pages() -> list[str]:
+    """Return a listing whose second page names the cursor it was asked with."""
+    page = json.dumps(
+        {"pods": [], "pagination": {"nextCursor": "p2", "hasNextPage": True}}
+    )
+    return [page, page]
+
+
+@pytest.mark.spec("pod-image:reconcile:a-repeated-cursor-fails")
+def test_a_repeated_cursor_fails_the_listing(pods_sh: str, tmp_path: Path) -> None:
+    done, asks = listing(pods_sh, tmp_path, repeated_pages())
+    assert done.returncode == 1
+    assert done.stderr == "the pod listing answered cursor p2 twice\n"
+    assert asks == 2
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_repeated_cursor_fails_the_listing")
+def test_the_cursor_check_catches_a_listing_that_asks_again(tmp_path: Path) -> None:
+    _, asks = listing(BROKEN_LISTING, tmp_path, repeated_pages())
+    assert asks > 2
+
+
+def look_alike_pages() -> list[str]:
+    """Return a listing of this project's image, named three ways, and look-alikes."""
+    return pod_pages(
+        [
+            listed_pod("pod-a", "RUNNING", image=""),
+            listed_pod("pod-b", "RUNNING", image="@sha256:0"),
+            listed_pod("pod-c", "EXITED", image=":v0.30-rc2"),
+        ],
+        [
+            listed_pod("pod-f", "RUNNING", image="-fork@sha256:0"),
+            listed_pod("pod-g", "RUNNING", image="x:latest"),
+        ],
+    )
+
+
+@pytest.mark.spec("pod-image:reconcile:only-this-image-is-listed")
+def test_only_this_image_is_listed(pods_sh: str, tmp_path: Path) -> None:
+    done, _ = listing(pods_sh, tmp_path, look_alike_pages())
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == "pod-a RUNNING\npod-b RUNNING\npod-c EXITED\n"
+
+
+@pytest.mark.spec_exempt("structural: twin of test_only_this_image_is_listed")
+def test_the_image_check_catches_a_look_alike_listed(tmp_path: Path) -> None:
+    done, _ = listing(BROKEN_LISTING, tmp_path, look_alike_pages())
+    assert "pod-f RUNNING" in done.stdout.splitlines()
+
+
+def bare_pages(bare: dict[str, str]) -> list[str]:
+    """Return a listing whose second page holds `bare` beside another project's pod."""
+    other = listed_pod("pod-x", "RUNNING", name="other")
+    del other["image"]
+    return pod_pages([listed_pod("pod-a", "RUNNING")], [other, bare])
+
+
+def bare_pods() -> list[dict[str, str]]:
+    """Return a pod named 'isekai' with an empty image, and one with none."""
+    empty = listed_pod("pod-e", "RUNNING")
+    empty["image"] = ""
+    missing = listed_pod("pod-e", "EXITED")
+    del missing["image"]
+    return [empty, missing]
+
+
+@pytest.mark.spec("pod-image:reconcile:a-pod-with-no-image-fails")
+def test_a_pod_with_no_image_fails_the_listing(pods_sh: str, tmp_path: Path) -> None:
+    for bare in bare_pods():
+        done, _ = listing(pods_sh, tmp_path, bare_pages(bare))
+        assert done.returncode == 1
+        assert done.stderr == "pod pod-e is named 'isekai' but carries no image\n"
+    done, _ = listing(pods_sh, tmp_path, bare_pages(listed_pod("pod-e", "EXITED")))
+    assert done.returncode == 0, done.stderr
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_pod_with_no_image_fails_the_listing"
+)
+def test_the_bare_pod_check_catches_a_pod_skipped(tmp_path: Path) -> None:
+    for bare in bare_pods():
+        done, _ = listing(BROKEN_LISTING, tmp_path, bare_pages(bare))
+        assert done.returncode == 0
 
 
 # RunPod's API as down.sh reaches it through curl: pages from files, deletes logged.
@@ -2768,14 +2899,14 @@ def test_the_boot_end_check_catches_a_comfyui_that_replaces_the_script(
     ]
 
 
-def session_with_a_lost_create(render_sh: str, root: Path) -> bool:
-    """Run a render session whose create is lost, recording no pod.
+def session_torn_down(render_sh: str, root: Path, up_sh: str) -> bool:
+    """Run a render session whose `up.sh` is `up_sh`, recording no pod.
 
     Return whether its teardown ran `down.sh`.
     """
     (root / "infra").mkdir(parents=True)
     (root / "infra" / "render.sh").write_text(render_sh)
-    (root / "infra" / "up.sh").write_text("echo 'a pod may exist' >&2; exit 1\n")
+    (root / "infra" / "up.sh").write_text(up_sh)
     (root / "infra" / "down.sh").write_text('touch "$(dirname "$0")/../torn"\n')
     run = root / ".data" / "b" / "runs" / "r1"
     run.mkdir(parents=True)
@@ -2793,6 +2924,17 @@ def session_with_a_lost_create(render_sh: str, root: Path) -> bool:
         check=False,
     )
     return (root / "torn").exists()
+
+
+def session_with_a_lost_create(render_sh: str, root: Path) -> bool:
+    """Return whether a session whose create is lost ran `down.sh`."""
+    return session_torn_down(render_sh, root, "echo 'a pod may exist' >&2; exit 3\n")
+
+
+def session_refused(render_sh: str, root: Path) -> bool:
+    """Return whether a session refused beside a listed pod ran `down.sh`."""
+    up_sh = "echo \"refused: an 'isekai' pod already exists\" >&2; exit 1\n"
+    return session_torn_down(render_sh, root, up_sh)
 
 
 RECORDED_TEARDOWN = """#!/usr/bin/env bash
@@ -2818,3 +2960,26 @@ def test_the_lost_create_check_catches_a_teardown_that_needs_a_record(
     tmp_path: Path,
 ) -> None:
     assert not session_with_a_lost_create(RECORDED_TEARDOWN, tmp_path)
+
+
+ALWAYS_SWEEP = """#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+trap 'bash ./infra/down.sh' EXIT
+bash ./infra/up.sh
+"""
+
+
+@pytest.mark.spec("pod-image:reconcile:a-refused-session-leaves-a-listed-pod")
+def test_a_refused_session_leaves_a_listed_pod(render_sh: str, tmp_path: Path) -> None:
+    assert not session_refused(render_sh, tmp_path / "refused")
+    assert session_with_a_lost_create(render_sh, tmp_path / "lost")
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_refused_session_leaves_a_listed_pod"
+)
+def test_the_refusal_check_catches_a_teardown_that_always_sweeps(
+    tmp_path: Path,
+) -> None:
+    assert session_refused(ALWAYS_SWEEP, tmp_path)

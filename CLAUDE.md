@@ -220,8 +220,9 @@ they decide.**
   names four things, because a rule that leaves any of them implicit is not a rule:
   1. **Who creates the pod** — `infra/up.sh`, and nothing else; `infra/render.sh` runs it for a whole
      render session. Announce before you run either.
-  2. **Who tears it down** — `infra/down.sh`, which `render.sh`'s trap runs on every exit and which leaves no
-     `isekai` pod; the pod also stops itself 45 minutes after it starts. **Teardown is the act**: it is
+  2. **Who tears it down** — `infra/down.sh`, which `render.sh`'s trap runs on every exit once a pod is
+     recorded or a create was lost, and which leaves no `isekai` pod; the pod also stops itself 45 minutes
+     after it starts. **Teardown is the act**: it is
      the call that stops the billing, and it belongs to the same session that created the pod.
   3. **Who confirms** — the RunPod MCP, by checking the pod is gone. **Confirmation is not the act.** A
      rule that only names the check has not said what stops the billing, and an unconfirmed teardown is
