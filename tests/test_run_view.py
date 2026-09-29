@@ -278,11 +278,6 @@ def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
     assert printed == []
 
 
-def _damage_frame(run: Run, body: str) -> None:
-    """Overwrite the run's frame with `body`."""
-    run.frame_path.write_text(body)
-
-
 @pytest.mark.spec("cli:show:an-unreadable-frame-is-marked")
 @pytest.mark.parametrize(
     ("damage", "shown"),
@@ -296,7 +291,7 @@ def _damage_frame(run: Run, body: str) -> None:
 def test_an_unreadable_frame_is_marked(
     run: Run, damage: Callable[[str], str], shown: str
 ) -> None:
-    _damage_frame(run, damage(run.frame_path.read_text()))
+    run.frame_path.write_text(damage(run.frame_path.read_text()))
 
     lines = report(run)
 

@@ -471,8 +471,11 @@ def _per_item(
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
-        # Each flow's refusal is collected on its own, so one flow's does not cost
-        # the input its other flows (0047 design D2).
+        if verb == "show":
+            for line in report(run, wired.flows_dir):
+                print(line, file=wired.out)
+            return
+        step: Callable[[str], None]
         if verb == "caption":
 
             def caption_flow(name: str) -> None:
@@ -495,7 +498,7 @@ def _per_item(
                     ),
                 )
 
-            collected.extend(across(list(flows), caption_flow))
+            step = caption_flow
         elif verb == "tag":
 
             def tag_flow(name: str) -> None:
@@ -524,7 +527,7 @@ def _per_item(
                 )
                 collected.extend(across(steps, lambda step: step()))
 
-            collected.extend(across(list(flows), tag_flow))
+            step = tag_flow
         elif verb == "sheet":
 
             def sheet_flow(name: str) -> None:
@@ -545,13 +548,13 @@ def _per_item(
                     ),
                 )
 
-            collected.extend(across(list(flows), sheet_flow))
+            step = sheet_flow
         elif verb == "review":
 
             def review_flow(name: str) -> None:
                 _say(wired, run, "review", review(run, name, new_version=new_version))
 
-            collected.extend(across(list(flows), review_flow))
+            step = review_flow
         elif verb == "approve":
 
             def approve_flow(name: str) -> None:
@@ -560,12 +563,12 @@ def _per_item(
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
 
-            collected.extend(across(list(flows), approve_flow))
-        elif verb == "show":
-            for line in report(run, wired.flows_dir):
-                print(line, file=wired.out)
+            step = approve_flow
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")
+        # Each flow's refusal is collected on its own, so one flow's does not cost
+        # the input its other flows (0047 design D2).
+        collected.extend(across(list(flows), step))
 
     return work
 

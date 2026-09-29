@@ -112,6 +112,14 @@ BUILD = "ollama create {model} -f config/joycaption.Modelfile"
 TRUNCATED = "length"
 
 
+def _rebuild(remedy: str) -> str:
+    """Return the fix for a model not built from the pinned files: fetch, then build."""
+    return (
+        f"fetch the pinned files (`{PROVISION}`), then build the model "
+        f"(`{remedy}`), then run this command again"
+    )
+
+
 class OllamaFailure(Exception):
     """The host answered and a stage cannot use it; the kind says what comes next.
 
@@ -242,8 +250,7 @@ def ask(
     if status == 404:
         raise Refusal(
             f"{HOST} does not carry the model {model!r} this flow declares; "
-            f"fetch the pinned files (`{PROVISION}`), then build the model "
-            f"(`{remedy}`), then run this command again"
+            f"{_rebuild(remedy)}"
         )
     if status >= 500:
         raise OllamaFailure("transient", f"{HOST} answered {status} for {model}")
@@ -293,8 +300,7 @@ def _layer_digests(record: Path, remedy: str) -> dict[Role, str]:
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as unread:
         raise Refusal(
             f"Ollama's record at {record} does not read as a model record, so the "
-            f"model cannot be checked; fetch the pinned files (`{PROVISION}`), "
-            f"then build the model (`{remedy}`), then run this command again"
+            f"model cannot be checked; {_rebuild(remedy)}"
         ) from unread
     return found
 
@@ -343,9 +349,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
     record = root / name / (tag or "latest")
     if not record.is_file():
         raise Refusal(
-            f"Ollama has no record of {model!r} at {record}; fetch the pinned "
-            f"files (`{PROVISION}`), then build the model (`{remedy}`), then run "
-            "this command again"
+            f"Ollama has no record of {model!r} at {record}; {_rebuild(remedy)}"
         )
     found = _layer_digests(record, remedy)
     differ = [
@@ -357,8 +361,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
     if differ:
         raise Refusal(
             f"{model!r} is built from files config/reader.json does not pin: "
-            f"{'; '.join(differ)}; fetch the pinned files (`{PROVISION}`), rebuild "
-            f"the model (`{remedy}`), then run this command again"
+            f"{'; '.join(differ)}; {_rebuild(remedy)}"
         )
     return MappingProxyType(
         {built[role]: {"sha256": pins[built[role]]} for role in LAYERS}

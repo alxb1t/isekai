@@ -267,22 +267,17 @@ def _declaring_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.mark.spec("model-provisioning:vocabulary:an-undeclared-artifact-is-refused")
 @pytest.mark.parametrize(
-    ("load", "dest"),
-    [(load_vocabulary, VOCABULARY), (verified_paths, VOCABULARY)],
-    ids=["vocabulary", "tagger"],
+    "load", [load_vocabulary, verified_paths], ids=["vocabulary", "tagger"]
 )
 def test_an_undeclared_artifact_is_refused(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    load: Callable[[Path], object],
-    dest: str,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, load: Callable[[Path], object]
 ) -> None:
     manifest = _declaring_none(tmp_path, monkeypatch)
 
     with pytest.raises(Refusal) as refused:
         load(tmp_path / "models")
 
-    assert f"{dest} is not declared in {manifest}" in str(refused.value)
+    assert f"{VOCABULARY} is not declared in {manifest}" in str(refused.value)
     assert "tools.derive_vocabulary" in str(refused.value)
 
 
