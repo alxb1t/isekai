@@ -59,10 +59,11 @@ docs that match the scripts; the changelog's sections checked; `v0.30-rc2` prove
 **The listing.** In `isekai_pods`:
 
 - **The match:** `.image == $image or (.image | startswith($image + "@")) or (.image | startswith($image + ":"))`.
-- **No image:** a pod whose `name` is `isekai` and whose `image` is missing or empty makes the function return non-zero,
-  naming the pod on stderr.
+- **No image:** a pod whose `name` is `isekai`, whose status is not `TERMINATED`, and whose `image` is missing or empty
+  makes the function return non-zero, naming the pod on stderr. A terminated pod bills nothing and is skipped first.
 - **The cursor:** the loop keeps the cursor it asked with. A `nextCursor` equal to it, with `hasNextPage` true, returns
-  non-zero, naming the repeat on stderr.
+  non-zero, naming the repeat on stderr. A cycle of cursors never repeats the last one, so the loop also stops at
+  100 pages, naming the cap.
 
 Each failure reaches `check_no_pod` and `down.sh` as the failed listing they already refuse on.
 

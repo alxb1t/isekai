@@ -104,7 +104,9 @@ watchdog=$!
 
 # From its first create until its record, up.sh keeps .runpod_pod_pending, so an
 # interrupt then is a lost create and one before it sweeps nothing.
-bash ./infra/up.sh 2>&1 | tee -a "$log" "$up_out" || { up_status=${PIPESTATUS[0]}; exit "$up_status"; }
+# A log write that fails after a good up.sh is a failed session, never exit 0.
+bash ./infra/up.sh 2>&1 | tee -a "$log" "$up_out" \
+  || { up_status=${PIPESTATUS[0]}; exit "$(( up_status == 0 ? 1 : up_status ))"; }
 up_status=0
 
 read -r host port < <(

@@ -3,22 +3,28 @@
 
 # isekai_pods: every page, since v2 filters nothing; a failed page returns non-zero.
 # A TERMINATED pod bills nothing and cannot be deleted again, so it is not listed.
-# A fault fails the listing rather than hanging or missing a pod (0044 design D1).
+# A fault fails the listing rather than hanging or missing a pod (0044 design D1):
+# a cursor asked twice in a row, or past 100 pages, a cycle of cursors.
 isekai_pods() {
-  local image page more next cursor=""
+  local image page more next cursor="" pages=0
   image=$(jq -r '.image' config/image.json) || return 1
   while :; do
+    if [ "$pages" -ge 100 ]; then
+      echo "the pod listing ran past 100 pages" >&2
+      return 1
+    fi
+    pages=$((pages + 1))
     page=$(api -f "$API/pods?limit=1000${cursor:+&cursor=$(jq -rn --arg c "$cursor" '$c|@uri')}") \
       || return 1
-    # A pod named 'isekai' with no image cannot be told to be this project's or not,
-    # so it fails the listing; a look-alike image, one that only begins with ours, is not ours.
+    # A live pod named 'isekai' with no image cannot be told to be this project's or
+    # not, so it fails the listing; a look-alike image, one that only begins with ours,
+    # is not ours.
     echo "$page" | jq -r --arg image "$image" \
-      '.pods[] | select(.name == "isekai")
+      '.pods[] | select(.name == "isekai" and .status != "TERMINATED")
        | if (.image // "") == "" then
            "pod \(.id) is named \u0027isekai\u0027 but carries no image\n" | halt_error(1)
-         elif .status != "TERMINATED"
-              and (.image == $image or (.image | startswith($image + "@"))
-                   or (.image | startswith($image + ":"))) then
+         elif .image == $image or (.image | startswith($image + "@"))
+              or (.image | startswith($image + ":")) then
            "\(.id) \(.status)"
          else empty end' \
       || return 1

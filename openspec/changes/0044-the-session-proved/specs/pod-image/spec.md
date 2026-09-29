@@ -49,6 +49,12 @@ leaves it billing; one that over-matches deletes a pod that is not this project'
 - **WHEN** the provider answers a page with the cursor it was asked for, and more to come
 - **THEN** the listing fails rather than asking again
 
+#### Scenario: a cycle of cursors fails the listing
+- **Key:** `pod-image:reconcile:a-cursor-cycle-fails`
+- **Layers:** unit
+- **WHEN** the provider answers pages whose cursors cycle, each with more to come
+- **THEN** the listing fails at its page cap, naming it, rather than asking without end
+
 #### Scenario: only this project's image is listed
 - **Key:** `pod-image:reconcile:only-this-image-is-listed`
 - **Layers:** unit
@@ -60,6 +66,12 @@ leaves it billing; one that over-matches deletes a pod that is not this project'
 - **Layers:** unit
 - **WHEN** a pod named for this project carries no image
 - **THEN** the listing fails rather than leaving it out
+
+#### Scenario: a terminated pod is not listed
+- **Key:** `pod-image:reconcile:a-terminated-pod-is-not-listed`
+- **Layers:** unit
+- **WHEN** a pod named for this project is terminated, with an image or with none
+- **THEN** the listing leaves it out and does not fail
 
 #### Scenario: a refused session leaves a listed pod
 - **Key:** `pod-image:reconcile:a-refused-session-leaves-a-listed-pod`
@@ -74,3 +86,9 @@ leaves it billing; one that over-matches deletes a pod that is not this project'
 - **WHEN** a render session holding no record is interrupted while its pod-creation script runs, beside a listed pod
 - **THEN** the session's teardown does not run the teardown script if no create had begun
 - **AND** it does once a create had begun and no record was written
+
+#### Scenario: an unrecorded create is swept
+- **Key:** `pod-image:reconcile:an-unrecorded-create-is-swept`
+- **Layers:** unit
+- **WHEN** a render session's pod-creation script began a create and ended before its record, by a failed write or a kill
+- **THEN** the session's teardown runs the teardown script

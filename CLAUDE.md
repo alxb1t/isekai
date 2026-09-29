@@ -227,8 +227,9 @@ they decide.**
   3. **Who confirms** — the RunPod MCP, by checking the pod is gone. **Confirmation is not the act.** A
      rule that only names the check has not said what stops the billing, and an unconfirmed teardown is
      not one you may report as done. Record what the MCP returned. When the MCP confirms gone a pod
-     whose `down.sh` did not answer 204, delete `.runpod_pod_id`, `.runpod_pod_image` and
-     `.runpod_known_hosts`: a leftover image record would lend its pin to a later render.
+     whose `down.sh` did not answer 204, delete `.runpod_pod_id`, `.runpod_pod_image`,
+     `.runpod_known_hosts` and `.runpod_pod_pending`: a leftover image record would lend its pin to a
+     later render.
   4. **What happens when the MCP is unreachable** — it must be authorized from an *interactive* session,
      so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
      unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.

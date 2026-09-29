@@ -2374,6 +2374,41 @@ def test_the_cursor_check_catches_a_listing_that_asks_again(tmp_path: Path) -> N
     assert asks > 2
 
 
+def cycling_listing(
+    pods_sh: str, cwd: Path
+) -> tuple[subprocess.CompletedProcess[str], int]:
+    """Run `isekai_pods` against pages whose cursors alternate, a, b, a, ...
+
+    Return the run and how many pages it asked for; a 151st ask fails.
+    """
+    copy_image_config(cwd)
+    page = '{"pods": [], "pagination": {"nextCursor": "%s", "hasNextPage": true}}'
+    stubs = (
+        "API=https://api.test\n"
+        "api() { n=$(( $(cat asks 2>/dev/null || echo 0) + 1 )); echo $n > asks;"
+        ' [ "$n" -le 150 ] || return 22;'
+        f" if [ $((n % 2)) -eq 0 ]; then printf {shlex.quote(page % 'b')};"
+        f" else printf {shlex.quote(page % 'a')}; fi; }}"
+    )
+    done = run_functions(pods_sh, ("isekai_pods",), stubs, cwd)
+    asks = cwd / "asks"
+    return done, int(asks.read_text()) if asks.exists() else 0
+
+
+@pytest.mark.spec("pod-image:reconcile:a-cursor-cycle-fails")
+def test_a_cursor_cycle_fails_the_listing(pods_sh: str, tmp_path: Path) -> None:
+    done, asks = cycling_listing(pods_sh, tmp_path)
+    assert done.returncode == 1
+    assert done.stderr == "the pod listing ran past 100 pages\n"
+    assert asks == 100
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_cursor_cycle_fails_the_listing")
+def test_the_page_cap_catches_a_listing_that_cycles(tmp_path: Path) -> None:
+    _, asks = cycling_listing(BROKEN_LISTING, tmp_path)
+    assert asks > 100
+
+
 def look_alike_pages() -> list[str]:
     """Return a listing of this project's image, named three ways, and look-alikes."""
     return pod_pages(
@@ -2435,6 +2470,37 @@ def test_the_bare_pod_check_catches_a_pod_skipped(tmp_path: Path) -> None:
     for bare in bare_pods():
         done, _ = listing(BROKEN_LISTING, tmp_path, bare_pages(bare))
         assert done.returncode == 0
+
+
+# A listing that tells a bare pod before a terminated one, as pods.sh did.
+BARE_FIRST_LISTING = """isekai_pods() {
+  local page
+  page=$(api -f "$API/pods") || return 1
+  echo "$page" | jq -r '.pods[] | select(.name == "isekai")
+    | if (.image // "") == "" then "no image\\n" | halt_error(1)
+      elif .status != "TERMINATED" then "\\(.id) \\(.status)" else empty end'
+}
+"""
+
+
+def terminated_pages() -> list[str]:
+    """Return a listing of terminated pods named 'isekai', one bare, one not."""
+    bare = listed_pod("pod-t", "TERMINATED")
+    del bare["image"]
+    return pod_pages([bare, listed_pod("pod-u", "TERMINATED")], [])
+
+
+@pytest.mark.spec("pod-image:reconcile:a-terminated-pod-is-not-listed")
+def test_a_terminated_pod_is_not_listed(pods_sh: str, tmp_path: Path) -> None:
+    done, _ = listing(pods_sh, tmp_path, terminated_pages())
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == ""
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_terminated_pod_is_not_listed")
+def test_the_terminated_check_catches_a_bare_pod_told_first(tmp_path: Path) -> None:
+    done, _ = listing(BARE_FIRST_LISTING, tmp_path, terminated_pages())
+    assert done.returncode == 1
 
 
 # RunPod's API as down.sh reaches it through curl: pages from files, deletes logged.
@@ -3048,3 +3114,28 @@ def test_the_interrupt_check_catches_a_teardown_that_always_sweeps(
     tmp_path: Path,
 ) -> None:
     assert session_interrupted(ALWAYS_SWEEP, tmp_path, create_began=False)
+
+
+def session_unrecorded(render_sh: str, root: Path, end: str) -> bool:
+    """Return whether a session whose `up.sh` began a create, then ended, ran `down.sh`.
+
+    `up.sh` ends by `end` before its record: e.g. "exit 1", a failed record write.
+    """
+    return session_torn_down(render_sh, root, f": > .runpod_pod_pending\n{end}\n")
+
+
+UNRECORDED_ENDS = {"a failed record write": "exit 1", "a kill": "kill -KILL $$"}
+
+
+@pytest.mark.spec("pod-image:reconcile:an-unrecorded-create-is-swept")
+def test_an_unrecorded_create_is_swept(render_sh: str, tmp_path: Path) -> None:
+    for case, end in UNRECORDED_ENDS.items():
+        assert session_unrecorded(render_sh, tmp_path / case, end), case
+
+
+@pytest.mark.spec_exempt("structural: twin of test_an_unrecorded_create_is_swept")
+def test_the_unrecorded_check_catches_a_teardown_that_needs_a_record(
+    tmp_path: Path,
+) -> None:
+    for case, end in UNRECORDED_ENDS.items():
+        assert not session_unrecorded(RECORDED_TEARDOWN, tmp_path / case, end), case

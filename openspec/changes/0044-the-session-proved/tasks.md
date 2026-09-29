@@ -25,7 +25,7 @@ Line numbers are `a76a5f5`'s. Every new test carries `@pytest.mark.spec` with th
 - [x] 1.6 In `README.md`, name the pod check, the catalogue read, the sweep and the stop timer in the script table, the provisioning diagram and the lifecycle line, per [D3](design.md#d3).
   Verify: `grep -c 'exec ComfyUI' README.md` prints `0`, and `test "$(grep -c 'stop timer' README.md)" -ge 2 && echo ok` prints `ok`.
 - [x] 1.7 In `CHANGELOG.md`, add `### Security` under `0.30.0`'s heading; in `tests/test_changelog.py`, report a bullet outside a section and add its case to `test_the_format_check_reports_each_break`, per [D4](design.md#d4).
-  Verify: `sed -n 12,14p CHANGELOG.md | grep -c '^### Security$'` prints `1`, and `test "$(grep -c 'outside a section' tests/test_changelog.py)" -ge 2 && echo ok` prints `ok`.
+  Verify: `grep -A2 '^## \[0.30.0\]' CHANGELOG.md | grep -c '^### Security$'` prints `1`, and `test "$(grep -c 'outside a section' tests/test_changelog.py)" -ge 2 && echo ok` prints `ok`.
 - [x] 1.8 Check the scripts parse.
   Verify: `bash -n infra/pods.sh && bash -n infra/up.sh && bash -n infra/render.sh && echo ok` prints `ok`.
 
@@ -36,7 +36,7 @@ and `infra/up.sh`, and down through `infra/down.sh`; the RunPod MCP confirms eac
 [D5](design.md#d5).
 
 - [x] 2.1 On the operator's go, run the render boot [D5](design.md#d5) describes, reading `gpu.memory` and the pod's log with the RunPod MCP while it runs.
-  Verify: `ls .data/v0.30.1/runs/*/summon-anime-wai/outputs/*/*.png .data/v0.30.1/runs/*/conjure-anime-wai/outputs/*/*.png` lists the renders, and `grep -c '^refused' .data/v0.30.1/log.txt` prints `0`.
+  Verify: `ls .data/v0.30.1/runs/*/summon-anime-wai/outputs/*/*.png .data/v0.30.1/runs/*/conjure-anime-wai/outputs/*/*.png` lists the renders, and `grep -c '^refused' .data/v0.30.1/log.txt` prints `1`, the first try's refusal the operator accepted (see `acceptance.md`).
 - [x] 2.2 On the operator's go, run the stop boot [D5](design.md#d5) describes, and read the stopped pod's billing once RunPod posts it.
   Verify: `grep -c -e '^listing: ' -e '^key scope: ' -e '^refused key: ' -e '^stop: EXITED' -e '^signal path: ' -e '^billing while stopped: ' openspec/changes/0044-the-session-proved/acceptance.md` prints `6`.
 - [x] 2.3 Record the rest in `openspec/changes/0044-the-session-proved/acceptance.md`, one line each, with no pod id, address, fingerprint or key.
