@@ -106,7 +106,8 @@ cost every other photograph its rented session.
 - **WHEN** a tracked flow's graph is inspected
 - **THEN** a scaling node sits between the image loader and every node that reads the photograph — the
   identity node and each ControlNet preprocessor
-- **AND** no consumer reads the loader directly
+- **AND** no consumer reads the loader directly, so every node is handed the same scaled image
+- **AND** a preprocessor's own working resolution stays a separate dial on that node
 
 #### Scenario: the target preserves aspect and places the short side at the working scale
 - **Key:** `image-generation:working-resolution:short-side-at-the-working-scale`

@@ -105,6 +105,15 @@ terminated, carries no image". Phase 1's rewrite of `pod-image` keeps the senten
 
 It lands in the last phase, once every capability's rewrite is in the delta.
 
+## Meaning check
+
+Converge was skipped for this prose change. Each MODIFIED block was compared with the living text it replaces —
+mechanically for SHALL words, numbers, literals and scenario keys, then read for meaning, per capability. Every
+requirement kept its meaning but for D4's intended narrowing and two scenarios that had lost a clause, restored:
+`sheet:output:sheet-names-its-vocabulary` and `image-generation:working-resolution:scale-precedes-every-consumer`.
+The `cli`, `comfy-transport` and `image-generation` Purposes regained statements the rewrite had dropped; every
+decision link resolves.
+
 ## Dependencies
 
 None.

@@ -3,7 +3,7 @@
 ## Purpose
 
 Stage ④: a flow declares what it needs and the dials it runs at, prompts are assembled from an approved sheet
-before any GPU is rented, and each render records the configuration that produced it.
+before any GPU is rented, and each render records what identifies the configuration that produced it.
 
 ## Requirements
 

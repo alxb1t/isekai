@@ -2,9 +2,10 @@
 
 ## Purpose
 
-The command-line surface: one entry point whose stage verbs, inspection verb `show`, serving verb `ui` and page
-verb `compare` report every refusal a batch produced together. A flow's dials live in its manifest, and no flag
-reaches them.
+The command-line surface: one entry point whose stage verbs report every refusal a batch produced together, beside
+the inspection verb `show`, the serving verb `ui` and the page verb `compare`. `--seed` and `--count` are
+range-checked at parse time, so a bad one fails before a pod is touched; a flow's dials live in its manifest, and no
+flag reaches them.
 
 ## Requirements
 

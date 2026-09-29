@@ -172,7 +172,7 @@ spending an attempt, and that refusal SHALL NOT prevent the local tag list from 
 The two taggers are not one thing. The hosted tagger is chosen by a string in a frozen manifest, because which model
 answers is a claim the flow makes; the local tagger is a file this build pins, costs nothing, reaches no network and
 is never the wrong model. The hosted tagger reads the reader's key, so one alias answers both prompts, framed alike,
-and no flow can take its prose and its hosted tags from different models unrecorded. Whether a flow is tagged is the
+and no flow can take its prose and its hosted tags from different models. Whether a flow is tagged is the
 manifest's own key ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)); a flow that
 declares none is refused, not skipped, because a skip reports success for a flow that wrote nothing.
 

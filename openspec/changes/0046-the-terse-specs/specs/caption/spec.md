@@ -169,7 +169,7 @@ the manifest names a model this build cannot reach.
 The model differs between flows, and an alias never created is the failure that will happen, so the manifest names
 it and a refusal can too. The reader is built per flow so one command naming two flows never hands one flow's
 model to the other's artifact. The hosted tagger reads the same key: one alias answers both prompts, framed alike,
-and no flow can take its prose and its tags from different models unrecorded
+and no flow can take its prose and its tags from different models
 ([D5](../../../docs/decisions.md#d5--one-arm)).
 
 #### Scenario: the flow's manifest names the model that runs

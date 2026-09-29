@@ -103,6 +103,7 @@ fills it, and approval still gates the render
 - **Layers:** unit
 - **WHEN** a sheet is written
 - **THEN** it records the vocabulary's name, revision and digest
+- **AND** that record is what a later reader checks the fill against
 
 #### Scenario: the sheet records the field map it was routed by
 - **Key:** `sheet:output:sheet-names-its-field-map`
