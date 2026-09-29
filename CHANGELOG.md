@@ -9,6 +9,25 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.3] - 2026-09-29 · 0046-the-terse-specs
+
+### Changed
+
+- `CLAUDE.md` states how a spec reads. `agent-skills`, `comfy-transport` and `pod-image` read to it, and the pod
+  listing's no-image failure names a live pod, as the listing already drops a terminated one (0046 D1, D2, D3, D4).
+- `image-generation` reads to the rule: each requirement one SHALL and one *why*, with its decisions linked and
+  diagrams for the render target and a flow's layout (0046 D2, D3).
+- `cli` reads to the rule, its Purpose two sentences; a history of the per-flow seam and the render surface gives
+  way to the reason each holds (0046 D2, D3).
+- `sheet` and `tagging` read to the rule: measured figures and the story of the move from prose to a tag list go,
+  and the sheet's fill gains a diagram (0046 D2, D3).
+- `caption` and `review` read to the rule: measured scores and costs go, and the review's copy-then-approve layout
+  gains a diagram (0046 D2, D3).
+- `model-provisioning` reads to the rule, its stray closing tag gone; each rule's reason leaves its SHALL paragraph
+  and its scenarios, and the provisioning hold gains a diagram (0046 D2, D3).
+- `run-directory` and `field-map` read to the rule, and the gate holds it: a spec naming a version, a change id or a
+  commit, or with a line past 120 characters but a title, fails the suite (0046 D2, D3, D5).
+
 ## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
 
 ### Fixed

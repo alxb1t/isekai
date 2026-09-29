@@ -1,12 +1,4 @@
-# Capability: `model-provisioning`
-
-## Purpose
-
-Which model artifacts the shipped graph requires, where each comes from, and how its bytes are proven to be the
-intended ones before anything loads them. The manifest is the source of truth: every source pinned to an immutable
-revision, every artifact carrying a digest, nothing trusted by name.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The manifest declares every artifact the shipped graph requires
 

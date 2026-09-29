@@ -1,11 +1,4 @@
-# Capability: `caption`
-
-## Purpose
-
-Stage ①: read a photograph into descriptive English prose under the standing instructions of the flow that asked,
-knowing nothing of schemas, vocabularies or what happens next, and free to say that something is absent.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The reader may state absence
 

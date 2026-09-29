@@ -11,60 +11,25 @@ from pathlib import Path
 
 import pytest
 
+from tests.specs import effective, write_tree
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _KEY = re.compile(r"^- \*\*Key:\*\* `([^`]+)`", re.M)
-_SECTION = re.compile(r"^## (.*)$", re.M)
-_REQUIREMENT = re.compile(r"^### Requirement: (.*)$", re.M)
-_FROM = re.compile(r"^- FROM: `### Requirement: (.*)`$", re.M)
-_TO = re.compile(r"^- TO: `### Requirement: (.*)`$", re.M)
 _MARKERS = ("spec", "spec_exempt")
 
 Marker = tuple[str, str | None]
 Test = tuple[str, str, list[Marker]]
 
 
-def _split(heading: re.Pattern[str], text: str) -> dict[str, str]:
-    """Return each heading's captured title, stripped, mapped to its body."""
-    parts = heading.split(text)
-    return {
-        title.strip(): body
-        for title, body in zip(parts[1::2], parts[2::2], strict=True)
-    }
-
-
-def _requirements(text: str) -> dict[str, set[str]]:
-    """Return each requirement's title, mapped to the keys of its scenarios."""
-    return {
-        title: set(_KEY.findall(body))
-        for title, body in _split(_REQUIREMENT, text).items()
-    }
-
-
 def spec_keys(root: Path) -> set[str]:
-    """Return the living spec's keys, as the active changes' deltas leave them.
-
-    Each delta applies in OpenSpec's order: a RENAMED requirement carries its keys
-    to its new title, a REMOVED one drops them, a MODIFIED one replaces them, an
-    ADDED one brings its own.
-    """
-    living = {
-        path.parent.name: _requirements(path.read_text())
-        for path in sorted((root / "openspec" / "specs").glob("*/spec.md"))
+    """Return the living spec's keys, as the active changes' deltas leave them."""
+    return {
+        key
+        for _, reqs in effective(root).values()
+        for body in reqs.values()
+        for key in _KEY.findall(body)
     }
-    changes = root / "openspec" / "changes"
-    # The glob's depth leaves out `archive/<id>/`: an archived delta is folded in.
-    for delta in sorted(changes.glob("*/specs/*/spec.md")):
-        reqs = living.setdefault(delta.parent.name, {})
-        sections = _split(_SECTION, delta.read_text())
-        renamed = sections.get("RENAMED Requirements", "")
-        for old, new in zip(_FROM.findall(renamed), _TO.findall(renamed), strict=True):
-            reqs[new.strip()] = reqs.pop(old.strip(), set())
-        for title in _REQUIREMENT.findall(sections.get("REMOVED Requirements", "")):
-            reqs.pop(title.strip(), None)
-        for heading in ("MODIFIED Requirements", "ADDED Requirements"):
-            reqs |= _requirements(sections.get(heading, ""))
-    return {key for reqs in living.values() for held in reqs.values() for key in held}
 
 
 def _names_marker(node: ast.Attribute) -> bool:
@@ -249,14 +214,9 @@ def test_gone():
 
 def _tree(root: Path, tests: str = _TESTS, delta: str | None = None) -> Path:
     """Write a spec, a test file and, if given, an active delta under `root`."""
-    (root / "openspec" / "specs" / "cap").mkdir(parents=True)
-    (root / "openspec" / "specs" / "cap" / "spec.md").write_text(_LIVING)
+    write_tree(root, _LIVING, delta)
     (root / "tests").mkdir()
     (root / "tests" / "test_cap.py").write_text(tests)
-    if delta is not None:
-        spec = root / "openspec" / "changes" / "0001-x" / "specs" / "cap" / "spec.md"
-        spec.parent.mkdir(parents=True)
-        spec.write_text(delta)
     return root
 
 

@@ -1,11 +1,4 @@
-# Capability: `image-generation`
-
-## Purpose
-
-Stage ④: a flow declares what it needs and the dials it runs at, prompts are assembled from an approved sheet
-before any GPU is rented, and each render records what identifies the configuration that produced it.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: A flow is pinned by equality; changing any file in it is an explicit act
 
@@ -48,37 +41,6 @@ so it shows which side of a re-pin it falls on.
 - **THEN** every tracked flow still matches its committed digest
 - **AND** the change that moved it records which flow moved and what changed in it
 
-### Requirement: Assembly is pure, local and happens before the session opens
-
-The system SHALL assemble every prompt from its approved sheet and its flow's dials without a network
-call or a rented machine, SHALL write each assembled prompt as an artifact, and SHALL complete assembly
-for the whole batch before acquiring any endpoint.
-
-Assembly is free and rendering is not, so a malformed sheet should cost nothing rather than a boot and
-several minutes. Doing the whole batch first is what turns that from a per-item saving into a
-guarantee, and it makes the entirety of prompt construction testable offline.
-
-#### Scenario: assembly needs no endpoint
-- **Key:** `image-generation:assembly:assembly-is-local-and-free`
-- **Layers:** unit
-- **WHEN** prompts are assembled
-- **THEN** no endpoint is contacted and no machine is acquired
-- **AND** each assembled prompt is written as an artifact
-
-#### Scenario: a malformed sheet is caught before anything is rented
-- **Key:** `image-generation:assembly:bad-sheet-fails-before-the-session`
-- **Layers:** unit
-- **WHEN** one photograph's approved sheet cannot be assembled
-- **THEN** the failure is reported before any endpoint is acquired
-- **AND** the remaining photographs' prompts are still assembled
-
-#### Scenario: the prompt is built from the sheet and the flow's dials only
-- **Key:** `image-generation:assembly:prompt-comes-from-sheet-and-dials`
-- **Layers:** unit
-- **WHEN** a prompt is assembled
-- **THEN** its content is the flow's declared fragments and the sheet's fields in the schema's order
-- **AND** no text is taken from the graph's own committed strings
-
 ### Requirement: Only an approved sheet is rendered
 
 The system SHALL render from an approved artifact only, and SHALL refuse a flow that has none, naming
@@ -101,29 +63,6 @@ money on the result the correction exists to improve, and leaves the two indisti
 - **WHEN** a run has approved artifacts for more than one flow
 - **THEN** each of them is rendered
 - **AND** selecting among them requires no flag
-
-### Requirement: Rendering is idempotent per image
-
-The system SHALL treat a render whose output already exists as complete, and SHALL decide that from the
-output directory's contents rather than by re-rendering.
-
-Rendering is the only step in the pipeline that costs money on every pass, so it is the one where
-idempotence is worth the most. Deciding it from the directory keeps the rule the same as every other
-stage's: a listing, never a parse.
-
-#### Scenario: a named seed already rendered is skipped
-- **Key:** `image-generation:idempotence:existing-seed-is-not-rerendered`
-- **Layers:** unit
-- **WHEN** an explicitly named seed's output already exists
-- **THEN** it is not rendered again
-- **AND** no endpoint call is made for it
-
-#### Scenario: raising the count renders only the shortfall
-- **Key:** `image-generation:idempotence:raising-count-renders-the-shortfall`
-- **Layers:** unit
-- **WHEN** a count larger than the number of existing renders is requested
-- **THEN** only the difference is rendered
-- **AND** the existing renders are untouched
 
 ### Requirement: The endpoint is reached through the existing transport seam
 
@@ -245,21 +184,6 @@ cost every other photograph its rented session.
 - **THEN** the remaining photographs are still rendered and the refusal is reported against its own
   photograph
 - **AND** the process is not terminated
-
-### Requirement: A seed is drawn at full width
-
-The system SHALL draw a seed across the full width the sampler accepts rather than a narrower range.
-
-An output is named by the seed that produced it, so the seed space is the reproducibility contract at
-its finest grain. Narrowing it raises the rate at which a drawn seed collides with one already on disk,
-which is the condition the drawing rule already guards against.
-
-#### Scenario: a drawn seed spans the full width
-- **Key:** `image-generation:seeds:seeds-are-drawn-at-full-64-bit-width`
-- **Layers:** unit
-- **WHEN** a seed is drawn from the injected source
-- **THEN** it is drawn across the full 64-bit space
-- **AND** the width is stated in one place rather than repeated as a literal at each draw
 
 ### Requirement: A render asks a flow which node roles it declares
 
@@ -564,77 +488,3 @@ number lets a render name the sheet the person corrected, not only its approval.
   approval's
 - **THEN** each records the flow's digest and the sheet's number
 - **AND** the producer's `from` still names the approval
-
-### Requirement: A render records the image and the runtime it ran on
-
-The system SHALL record in every render the image reference a pod was booted from, and declare the render
-pinned, when the pod-boot record names one; otherwise it SHALL record no image and declare the render
-unpinned. It SHALL also record the ComfyUI, Python and PyTorch versions the endpoint reports about itself,
-read once per session and only when a render will run.
-
-The declared image says what should have run; the endpoint's own report says what did. Recording both is
-what catches a pod that is not what the pin says, and an endpoint that is not a pod at all declares itself
-unpinned rather than borrowing a pin it never had. Reading the report only when a render will run keeps a
-completed batch inert.
-
-#### Scenario: a render on a pinned pod records its image and runtime
-- **Key:** `image-generation:runtime:a-pinned-pod-is-recorded`
-- **Layers:** unit
-- **WHEN** a render is written while the pod-boot record names an image
-- **THEN** the render records that image and declares itself pinned
-- **AND** it records the ComfyUI, Python and PyTorch versions the endpoint reported
-
-#### Scenario: a render on an endpoint no pod-boot record names is unpinned
-- **Key:** `image-generation:runtime:an-unrecorded-endpoint-is-unpinned`
-- **Layers:** unit
-- **WHEN** a render is written with no pod-boot record
-- **THEN** the render records no image and declares itself unpinned
-
-#### Scenario: a complete batch asks the endpoint nothing
-- **Key:** `image-generation:runtime:a-complete-batch-reads-no-report`
-- **Layers:** unit
-- **WHEN** every requested seed is already rendered
-- **THEN** the endpoint's report is not read
-
-### Requirement: A photograph leaves the machine without its metadata
-
-The system SHALL send a photograph to the rendering endpoint carrying only the blocks that decode its pixels, its
-colour profile and its orientation, with every other block and any data after the image's end removed. It SHALL
-leave the compressed image data unchanged, SHALL leave the run's own copy of the photograph unchanged, and SHALL
-refuse a photograph it cannot walk to its end rather than send it whole.
-
-A camera writes the position, the time and the device into the file, and a phone may append a video or a depth map
-after the image. The render needs none of it, and the upload is the one place the photograph leaves the machine.
-
-#### Scenario: the endpoint receives no metadata
-- **Key:** `image-generation:photo-metadata:no-metadata-leaves-the-machine`
-- **Layers:** unit
-- **WHEN** a photograph carrying EXIF, XMP, IPTC, a comment and data after its end is rendered
-- **THEN** the bytes uploaded carry none of them
-- **AND** the upload keeps the photograph's name
-
-#### Scenario: the orientation survives
-- **Key:** `image-generation:photo-metadata:the-orientation-survives`
-- **Layers:** unit
-- **WHEN** a photograph with an orientation other than upright is stripped
-- **THEN** the stripped photograph declares the same orientation
-- **AND** a photograph that is upright carries no metadata block at all
-
-#### Scenario: the pixels are unchanged
-- **Key:** `image-generation:photo-metadata:the-pixels-are-unchanged`
-- **Layers:** unit
-- **WHEN** a JPEG or a PNG is stripped
-- **THEN** it decodes to the same pixels as the original
-
-#### Scenario: the run's copy keeps its bytes
-- **Key:** `image-generation:photo-metadata:the-runs-copy-is-untouched`
-- **Layers:** unit
-- **WHEN** a photograph is rendered
-- **THEN** the run's copy of it is byte for byte what it was
-
-#### Scenario: a photograph that cannot be walked is refused, not sent
-- **Key:** `image-generation:photo-metadata:an-unwalkable-photograph-is-refused`
-- **Layers:** unit
-- **WHEN** a photograph's segments or chunks cannot be read to the image's end
-- **THEN** the render is refused and recorded, naming the photograph
-- **AND** nothing is uploaded

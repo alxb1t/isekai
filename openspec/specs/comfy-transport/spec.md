@@ -2,25 +2,9 @@
 
 ## Purpose
 
-Talking to a running ComfyUI over HTTP: uploading the photo, queueing the workflow, waiting for the render, and
-downloading the result.
-
-**Source:** `isekai/boundary/comfy/__init__.py`, `isekai/boundary/comfy/multipart.py`,
-`isekai/boundary/comfy/client.py`, `isekai/boundary/comfy/contract.py`, `isekai/pipeline/generate.py` ·
-**Tests:** `tests/test_multipart.py`, `tests/test_generate.py`
-
-The transport is an **injectable seam** behind a Protocol — `ComfyTransport`, declared in
-`isekai/boundary/comfy/contract.py` with no network in it, which is what lets the whole suite run against
-`FakeComfyClient`. The transport is on `python -m isekai`'s import graph, which reaches no wheel, so the
-multipart body is built by hand rather than pulled from a dependency, which is why its wire format is
-specified here rather than delegated to a library's contract. **No test in this capability reaches a
-real GPU or the network**; the transport is fully mocked, and actual diffusion quality is judged by
-eye on a live pod.
-
-**Where the polling loop lives.** Until v0.15 this preamble pointed at a module and a test file that
-were **deleted together in `8baf2b3` at v0.14**, with the old render path. The loop that submits a
-workflow and waits for it is `isekai/pipeline/generate.py`'s `render`, and the scenarios that hold it
-are in `tests/test_generate.py`. The pointer was stale rather than wrong, so this is a redirect.
+Talking to a running ComfyUI over HTTP — uploading the photo, queueing the workflow, waiting for the render, and
+downloading the result — behind the `ComfyTransport` seam the suite fakes, so no test reaches a real GPU or the
+network. Diffusion quality is judged by eye on a live pod, outside this capability.
 
 ## Requirements
 
@@ -31,15 +15,15 @@ matches the body it produced and encoding fields and files in the wire format th
 boundary that appears in no part of the body, and SHALL escape a double quote or a line break in a part's name or
 filename.
 
-A fixed boundary inside a part's bytes ends the part early, and a quote or a line break in a filename rewrites the
-part's headers. Neither happens with today's names and photographs, and neither may.
+The transport is on the entry point's import graph, which loads no third-party package
+([D20](../../../docs/decisions.md#d20--the-entry-point-loads-no-third-party-package)). A fixed boundary inside a
+part's bytes ends the part early, and a quote or a line break in a filename rewrites the part's headers.
 
 #### Scenario: the content type declares the same boundary the body uses
 - **Key:** `comfy-transport:multipart:content-type-declares-boundary`
 - **Layers:** unit
 - **WHEN** a multipart body is built
 - **THEN** the returned content type names the boundary that separates the body's parts
-- **AND** a mismatch here would make the server reject an otherwise valid body
 
 #### Scenario: fields and files are encoded as wire format
 - **Key:** `comfy-transport:multipart:encodes-fields-and-files`
@@ -53,7 +37,7 @@ part's headers. Neither happens with today's names and photographs, and neither 
 - **Layers:** unit
 - **WHEN** a file part carries arbitrary binary data
 - **THEN** those bytes appear in the body unchanged
-- **AND** no text encoding is applied to them, so a photo is not corrupted in transit
+- **AND** no text encoding is applied to them
 
 #### Scenario: the boundary appears in no part
 - **Key:** `comfy-transport:multipart:the-boundary-appears-in-no-part`
@@ -68,10 +52,6 @@ part's headers. Neither happens with today's names and photographs, and neither 
 - **WHEN** a filename carries a double quote, a carriage return or a line feed
 - **THEN** the part's header carries each of them percent-encoded
 - **AND** the part's headers end where the encoder ends them
-
-> Polling and output selection live in `isekai/pipeline/generate.py`'s `render`;
-> `ComfyClient.history()` is a single unconditional GET. The transport module supplies the calls, the
-> render stage supplies the loop.
 
 ### Requirement: Render completion polling
 
@@ -108,6 +88,8 @@ number can hold: a ComfyUI restarted in place loses the prompt, and the pod bill
 The system SHALL download the images the completed history record names, rather than guessing an output
 path.
 
+The server names its outputs, and the history record is where it says what it named them.
+
 #### Scenario: the image named in the history is downloaded
 - **Key:** `comfy-transport:retrieval:downloads-image-named-in-history`
 - **Layers:** unit
@@ -136,8 +118,8 @@ offline stand-in able to answer it, so the suite stays offline.
 The system SHALL send every request to the rendering endpoint at the address it was given, and SHALL ignore any
 proxy the environment names.
 
-The upload carries the photograph. A proxy exported for some other tool would receive it, and the reader's call
-once sent every photograph off the machine that way.
+The upload carries the photograph, and a proxy exported for some other tool would receive it
+([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)).
 
 #### Scenario: an exported proxy is not used
 - **Key:** `comfy-transport:proxy:an-exported-proxy-is-ignored`

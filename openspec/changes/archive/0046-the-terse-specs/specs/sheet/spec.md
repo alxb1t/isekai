@@ -1,12 +1,4 @@
-# Capability: `sheet`
-
-## Purpose
-
-Stage ②: fill a sheet's fields with vocabulary tags from the WD14 tag list, through the field map, against the
-schema inside the flow that asked — or leave them empty for a flow that declares no tagger. The stage knows nothing
-of flows beyond the directory it reads and writes and whether a tag list is expected.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: A schema is a declared field list inside its flow
 

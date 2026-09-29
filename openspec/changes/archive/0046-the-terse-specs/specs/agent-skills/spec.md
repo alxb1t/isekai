@@ -1,11 +1,4 @@
-# Capability: `agent-skills`
-
-## Purpose
-
-The skills an AI agent follows to run the flows for the operator: which commands to run, where to stop for a
-person, and what never to read — so an agent needs no lookup and spends little context.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Every command a skill names is one this build accepts
 

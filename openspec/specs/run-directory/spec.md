@@ -2,15 +2,9 @@
 
 ## Purpose
 
-The directory every pipeline stage couples through, and the only thing they share: how a photograph
-becomes an identified run, how the run is nested input above and flow below, how artifacts are numbered
-and never overwritten, how a filename carries everything resume decides on, and how a failure is
-recorded without becoming a completion.
-
-**Source:** `isekai/foundation/run.py`, `isekai/foundation/refusal.py`,
-`isekai/foundation/atomic_write.py` ·
-**Tests:** `tests/test_run_directory.py`, `tests/test_resume.py`, `tests/test_caption.py`,
-`tests/test_sheet_stage.py`, `tests/test_review.py`, `tests/test_generate.py`
+The directory every stage couples through, and the only thing stages share: a photograph becomes an identified run,
+nested input above and flow below, whose artifacts are numbered, never overwritten, and read as done from their
+filenames alone.
 
 ## Requirements
 
@@ -95,13 +89,9 @@ PNG, and a PNG stored under a `.jpg` name is a filename that lies about its byte
 The system SHALL write every artifact with a schema name and version and a producer record, and SHALL
 record in the producer which upstream artifact version the work was derived from.
 
-A producer that names only a model cannot explain its own result. The instruction text given to a
-reader is the variable with the largest measured effect on what comes back — one briefing change moved
-a reader's score from 0.518 to 0.307 and manufactured nineteen identity marks that were not in the
-photographs — so the digest of that text is recorded beside the model that read it. Instruction text
-does not always come from a file: a producer whose instructions are fixed by this build rather than by
-a flow has bytes to hash and no path to name, and a record that invented a path for it would assert a
-location that does not exist.
+A producer that names only a model cannot explain its result. The instruction text shapes what comes back, so its
+digest is recorded beside the model that read it. Instructions fixed by this build rather than by a flow have
+bytes to hash and no path, and a record that invented a path would assert a location that does not exist.
 
 #### Scenario: an artifact carries its schema name and version
 - **Key:** `run-directory:provenance:artifact-declares-its-schema`
@@ -312,25 +302,13 @@ what would fix it.
 
 ### Requirement: A run root is under the ignored root or outside the repository
 
-The system SHALL refuse a run root that lies inside the repository working tree and is not under the
-repository's single ignored data root. A run root outside the repository entirely SHALL be accepted.
-The system SHALL decide whether a run root lies inside either of those directories **by the identity of
-the directories themselves**, and SHALL NOT decide it by comparing the text of resolved paths.
+The system SHALL refuse a run root inside the repository's working tree unless it is under the ignored
+data root, and SHALL accept one outside the repository. It SHALL decide containment by the identity of
+the directories, never by comparing the text of their paths.
 
-A run holds a copy of the photograph by construction — that is what makes a run reconstructable from
-disk — so a run directory is a directory of personal photographs. Inside the working tree and outside
-the ignored root, those photographs are trackable by version control and are one `git add` from being
-published; outside the repository they are not, whatever path they sit at. The rule therefore bounds
-the working tree rather than bounding the filesystem, which is also what keeps the flag useful: a
-version's acceptance run, or a run on another disk, remains expressible.
-
-Deciding by text was the whole of the rule's first implementation and it did not hold. Path resolution
-follows symbolic links and removes relative segments, but it does not fold case, and the filesystem this
-system is developed on opens a differently-cased spelling of a directory as that directory. So a run
-root inside the working tree, named with one letter of its own path in the wrong case, compared as a
-different path and was accepted — the exact outcome the rule exists to refuse, reached without any
-adversary and by an ordinary typing mistake. Identity is decidable where text is not: two names for one
-directory are one directory, and the filesystem will say so.
+A run holds a copy of the photograph, so a run root git can reach is one `git add` from publishing a
+likeness ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)). Two spellings of
+one directory are one directory, and only its identity says so.
 
 #### Scenario: a run root inside the working tree and outside the ignored root is refused
 - **Key:** `run-directory:containment:in-tree-run-root-is-refused`
@@ -352,7 +330,7 @@ directory are one directory, and the filesystem will say so.
 - **Layers:** unit
 - **WHEN** a run root resolves to a path outside the repository working tree
 - **THEN** it is accepted and runs are created under it
-- **AND** no containment check applies to it, because version control cannot reach it
+- **AND** no containment check applies to it
 
 #### Scenario: the default run root is under the ignored root
 - **Key:** `run-directory:containment:default-is-the-ignored-root`
@@ -366,15 +344,17 @@ The system SHALL place the input and its frame at the root of a run, and SHALL p
 stage produces under a directory named for the flow that produced it. It SHALL NOT place any stage's
 artifacts above the flow level, and SHALL NOT let one flow read another flow's artifacts.
 
-The layout is a picture of the coupling rather than a filing convention: above the flow split sits what
-every flow shares, and after this change the only thing every flow shares is the input itself, copied
-once however many flows run. Nesting stage-first meant adding a flow scattered four entries across four
-stage directories; nesting flow-first means adding a flow adds one subtree, and retiring one flow's work
-for one input is removing one directory. Keeping captions below the split is what makes a flow's
-briefing binding: a caption written under one flow's instructions can never be picked up by a flow whose
-instructions differ, because the two never name the same directory. The same holds for every artifact a
-photograph yields, including those a flow cannot produce at all: a stage directory that is simply absent
-is how a run records that a flow did not declare what it would take to fill it.
+```
+runs/<input-id>/
+├── run.json, the photograph      shared by every flow, copied once
+└── <flow-id>/                    one subtree per flow
+    └── captions/ wd14/ tags/ sheets/ review/ prompts/ outputs/
+```
+
+Above the split sits the one thing every flow shares, the input. A flow adds one subtree, and retiring one flow's
+work for one input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A caption
+written under one flow's briefing can never be picked up by another flow, because the two never name the same
+directory, and a stage directory that is absent records that the flow did not declare what would fill it.
 
 #### Scenario: every stage writes under the flow
 - **Key:** `run-directory:layout:stage-artifacts-live-under-the-flow`
@@ -410,10 +390,8 @@ is how a run records that a flow did not declare what it would take to fill it.
 The system SHALL determine which of a flow's outputs are already produced from filenames alone, using
 the output form that flow declares, and SHALL NOT assume any particular image format.
 
-Every "is this done?" test is a directory listing, and the rendering test was the one that had an
-extension written into it — so a flow whose output is not a still image would have had its finished work
-reported as missing and re-rendered, on the one stage that costs money on every pass. The path already
-generalised; the predicate did not.
+A listing with an image extension written into it would report a non-image flow's finished work as missing and
+render it again, on the one stage that costs money on every pass.
 
 #### Scenario: the completed-output check is not tied to one format
 - **Key:** `run-directory:listings:resume-does-not-assume-an-image-format`
@@ -428,14 +406,9 @@ The system SHALL resolve a run's flows through the flows root the invocation sup
 default, and SHALL refuse a run holding a directory no flow answers for before any line of the report is
 printed.
 
-A verb that takes an injected root and then reads a different one is a seam that is not a seam: the
-double it is given in a test is not the one it uses, and a run captured under another root cannot be
-inspected at all. Inspection is the one verb whose whole job is reading a run in whatever state it is
-in, which is what makes the bypass matter here rather than being a tidiness point.
-
-Refusing after output has begun is worse than refusing: the report streams, so a reader sees a partial
-account and then an error, with no way to tell which lines were complete. What is printed must be
-decided before anything is.
+A verb that takes an injected root and reads another is a seam that is not one: a run captured under another root
+cannot be inspected, and inspection's whole job is reading a run in any state. The report streams, so a refusal
+after output begins leaves a partial account with no way to tell which lines were complete.
 
 #### Scenario: inspection reads the flows root it is given
 - **Key:** `run-directory:inspection:the-injected-flows-root-is-used`

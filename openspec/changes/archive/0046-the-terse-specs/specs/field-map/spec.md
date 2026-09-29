@@ -1,12 +1,4 @@
-# Capability: `field-map`
-
-## Purpose
-
-One authored table assigning each tag in the pinned vocabulary to the identity criterion it answers, read
-`tag → field` to fill a sheet with no language model in the path and `field → tags` to show the operator every
-candidate. It is keyed by the vocabulary, not by a flow, and it names the tags no criterion can hold.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The table is one authored artifact and the reverse direction is derived
 
@@ -39,30 +31,6 @@ answers *hair silhouette* in every flow that declares that field
 - **WHEN** the table is loaded
 - **THEN** it reports a name, a revision and a digest of its own bytes
 - **AND** a consumer can record which revision it was read at
-
-### Requirement: Every tag in the table resolves in the pinned vocabulary
-
-The system SHALL refuse a table containing a tag that is not in the vocabulary the flows pin, and SHALL
-make that check part of the suite rather than of a review.
-
-An authored artifact held against nothing rots silently, and this one rots in the worst direction: a tag
-that no longer exists routes nothing and shows nothing, and both failures are invisible. Holding it against
-the pin is this repository's own pattern — the artifact-name grep, the registry-keys-equal-artifact-strings
-test — and it is free, because the vocabulary is already provisioned by digest.
-
-#### Scenario: a tag outside the vocabulary is refused
-- **Key:** `field-map:integrity:a-tag-outside-the-vocabulary-is-refused`
-- **Layers:** unit
-- **WHEN** a table entry names a tag the pinned vocabulary does not contain
-- **THEN** loading it is refused, naming the tag
-- **AND** no partial table is returned
-
-#### Scenario: the check runs against the provisioned vocabulary
-- **Key:** `field-map:integrity:the-check-runs-against-the-pin`
-- **Layers:** unit
-- **WHEN** the suite runs with the vocabulary provisioned
-- **THEN** every tag in the committed table resolves in it
-- **AND** the assertion names the vocabulary's revision
 
 ### Requirement: A tag has exactly one primary criterion and may be browsed under several
 

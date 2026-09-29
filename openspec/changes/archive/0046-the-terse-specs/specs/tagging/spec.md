@@ -1,12 +1,4 @@
-# Capability: `tagging`
-
-## Purpose
-
-Producing a raw list of Danbooru tags for a photograph, from a model given the photograph alone, stored unnarrowed
-so the operator sees what was offered. Two taggers ship — a hosted one the flow's manifest names and a local one
-reading a pinned file — and neither blocks the other or the caption.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: A tagger is given the photograph and nothing else, and returns tags
 
@@ -50,58 +42,6 @@ surface may mark, and this stage may not drop.
 - **WHEN** a tagger returns tags that are not in the flow's pinned vocabulary
 - **THEN** every one of them is stored
 - **AND** the stored order is the tagger's own
-
-### Requirement: An answer that is not a list at all is a permanent failure
-
-The system SHALL treat a hosted tagger's response that contains no separator as unusable, SHALL record
-it as a permanent failure, and SHALL write no artifact for it.
-
-A wrong tag is not an error here — the list is advisory and the operator has accepted that it will
-contain wrong tags. What must be caught is a different thing: a model that answers in prose yields one
-element the length of a paragraph, which no chip can render and which is indistinguishable from a
-single legitimate tag to anything that does not look. This is the smallest test that separates *wrong*
-from *not a list*, and it touches no content, which is what keeps the previous requirement true.
-
-#### Scenario: a prose answer is refused rather than stored as one enormous tag
-- **Key:** `tagging:failure:a-response-with-no-comma-is-permanent`
-- **Layers:** unit
-- **WHEN** a hosted tagger returns a response containing no separator
-- **THEN** the failure is recorded as permanent
-- **AND** no tag artifact is written
-
-### Requirement: Each tagger has its own directory, its own budget and its own idempotence
-
-The system SHALL write each tagger's output to its own directory under the flow, SHALL give each its own
-retry budget, and SHALL decide each one's completeness independently of the others and of the caption.
-
-The two taggers fail for unrelated reasons and at unrelated cost. One is a network call to a host that
-may be down, timing out or returning a truncated body; the other is a deterministic pass over a file,
-which either works or names a missing file. Sharing a completeness check between them would spend a
-model call to retry a matrix multiplication, and sharing one with the caption would re-read a photograph
-to recover a tag list. Separate directories are also what make the partial state legible in a listing
-rather than by opening files: a run with prose and one tag list is one directory short, and the next
-invocation produces exactly what is missing.
-
-#### Scenario: one tagger's completeness does not decide another's
-- **Key:** `tagging:independence:each-tagger-resumes-on-its-own`
-- **Layers:** unit
-- **WHEN** one tagger has written an artifact and another has not
-- **THEN** re-running produces only the missing one
-- **AND** the existing artifact is neither read nor rewritten
-
-#### Scenario: a complete tagger makes no call
-- **Key:** `tagging:independence:a-complete-tagger-makes-no-call`
-- **Layers:** unit
-- **WHEN** a tagger whose artifact already exists is run again without a new version being asked for
-- **THEN** no call is made to the model
-- **AND** nothing is written
-
-#### Scenario: each tagger refuses on its own budget, naming its own directory
-- **Key:** `tagging:budget:each-tagger-has-its-own-budget`
-- **Layers:** unit
-- **WHEN** a tagger has spent its attempts
-- **THEN** the command refuses naming that tagger's own directory and the records in it
-- **AND** the refusal is a named refusal rather than an unhandled error
 
 ### Requirement: A tagger's producer names what made the artifact, and claims a pin only when it has one
 

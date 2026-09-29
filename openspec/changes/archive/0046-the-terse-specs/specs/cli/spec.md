@@ -1,13 +1,4 @@
-# Capability: `cli`
-
-## Purpose
-
-The command-line surface: one entry point whose stage verbs report every refusal a batch produced together, beside
-the inspection verb `show`, the serving verb `ui` and the page verb `compare`. `--seed` and `--count` are
-range-checked at parse time, so a bad one fails before a pod is touched; a flow's dials live in its manifest, and no
-flag reaches them.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The pipeline surface is the only entry point, and its verbs are subcommands
 
@@ -107,69 +98,6 @@ own artifacts, so its flag asks for exactly those
 - **WHEN** `tag` is given the flag for a run that holds prose and both tag lists
 - **THEN** the next version of each tag list is written
 - **AND** the prose gains no version
-
-### Requirement: Re-running every command is the whole of resume
-
-The system SHALL make running the pipeline's commands a second time, with the same arguments, change
-no byte of the run directory and make no external call.
-
-There is no state machine, so there is nothing to corrupt and nothing to repair. A crashed process, a
-closed laptop and a week-long pause are the same event, and the answer to all three is the same
-invocation. This is also the only assertion that can prove the state model works, and it needs no GPU
-and no network.
-
-#### Scenario: a second full pass changes nothing and calls nothing
-- **Key:** `cli:resume:second-pass-is-inert`
-- **Layers:** unit
-- **WHEN** every pipeline command is run against a complete run, and then run again
-- **THEN** not one byte of the run directory differs
-- **AND** not one external call is made
-
-### Requirement: Inspection prints the run directory with its provenance
-
-The system SHALL provide a command that prints a run's artifacts, which version is active for each
-stage, and what produced each one.
-
-A filename carries only what resume decides on, which leaves a directory that is precise and unreadable.
-This command is what a person reads instead — and it is also the answer to "where is this run", which is
-why no progress file is needed before something other than a human is watching.
-
-#### Scenario: inspection names the active version for each stage
-- **Key:** `cli:show:active-version-is-marked`
-- **Layers:** unit
-- **WHEN** a run is inspected
-- **THEN** each stage's versions are listed and the active one is marked
-- **AND** approval is shown where the concept applies
-
-#### Scenario: inspection reports what produced each artifact
-- **Key:** `cli:show:producers-are-reported`
-- **Layers:** unit
-- **WHEN** a run is inspected
-- **THEN** each artifact's producer is shown
-- **AND** artifacts produced by different implementations are distinguishable in the output
-
-### Requirement: Every refusal names the action that would resolve it
-
-The system SHALL end every refusal with the action the operator can take, and SHALL NOT name an action
-this build cannot perform.
-
-This generalises the posture the evaluator already takes for a missing optional dependency: the failure
-states the command that fixes it. A refusal that names a remedy the build does not have is worse than
-one that names none, because it sends the operator looking for something that is not there.
-
-#### Scenario: a refusal states a remedy
-- **Key:** `cli:refusals:refusal-names-the-remedy`
-- **Layers:** unit
-- **WHEN** any pipeline command refuses
-- **THEN** the message names the action that would resolve it
-- **AND** that action is available in this build
-
-#### Scenario: a refusal exits with a failure status
-- **Key:** `cli:refusals:refusal-exits-non-zero`
-- **Layers:** unit
-- **WHEN** any pipeline command refuses
-- **THEN** the process exits with a failure status
-- **AND** the reason is written to the error stream
 
 ### Requirement: Every stage verb requires the flows it acts on, and takes more than one
 
