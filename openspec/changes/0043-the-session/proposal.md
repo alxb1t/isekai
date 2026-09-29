@@ -7,7 +7,7 @@ backlog: [op·P1]
 
 No pod bills unseen. `up.sh` places a pod only on a host that can render, and refuses while any `isekai` pod exists;
 `down.sh` leaves none; the pod stops itself at its ceiling and at the end of every hold; and `render.sh` is recorded
-as the session. One rc build, one metered phase: a render boot and a stop boot.
+as the session. One rc build; the metered render boot and stop boot are deferred to the next version.
 
 | read | for |
 |---|---|
@@ -39,8 +39,8 @@ and orphans the first pod, and a lost create leaves one no file names.
 - **ComfyUI starts without the key** in its environment ([D6](design.md#d6)).
 - **D36 records `render.sh` as the session**; `generate.py`, `CLAUDE.md` and `README.md` follow
   ([D7](design.md#d7)).
-- **A new image, built on request and proved on a render boot and a stop boot** ([D8](design.md#d8),
-  [D9](design.md#d9)).
+- **A new image, built on request** ([D8](design.md#d8)); its render boot and stop boot are deferred to the next
+  version, which RunPod's capacity forced ([D9](design.md#d9)).
 
 ## Capabilities
 
@@ -66,7 +66,7 @@ None.
 - **Behaviour:** the render is unchanged; a pod refuses, stops or is removed where it used to bill.
 - **Formats:** no run file kind or manifest version moves.
 - **Dependencies:** none.
-- **Spend:** one metered phase, each boot inside 45 minutes and ~$0.30.
+- **Spend:** ~$0.09 on a boot that got no SSH address; the metered phase is deferred to the next version.
 
 ## Not in this change
 

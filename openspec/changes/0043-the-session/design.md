@@ -1,7 +1,8 @@
 # Design — 0043 the session
 
 How `up.sh` places a pod only where it can render and refuses beside another, how `down.sh` leaves none, how the pod
-stops itself and every hold ends in that stop, and how a render boot and a stop boot prove it. **Verdict:
+stops itself and every hold ends in that stop, and how a render boot and a stop boot prove it — deferred to the
+next version. **Verdict:
 feasible** — shell edits held by text and stub tests; the key's stop was probed on a pod before the cut.
 
 ## Context
@@ -68,7 +69,7 @@ volume's rent.
 | [D6](#d6) | `start.sh` unsets `RUNPOD_API_KEY` before ComfyUI starts | least privilege: nothing ComfyUI's process prints can carry the key | leaving it in ComfyUI's environment |
 | [D7](#d7) | D36 records `render.sh` as the session; `generate.py`, `CLAUDE.md` and `README.md` follow | the lifecycle is shell over an API the package never calls | a Python `session()` beside `up.sh` |
 | [D8](#d8) | the operator builds `v0.30-rc1` on request | it publishes a public image | the agent dispatching it |
-| [D9](#d9) | a render boot, then a stop boot, in one metered phase | the new digest renders; the stop and the refusal are live | a single boot |
+| [D9](#d9) | a render boot, then a stop boot, in one metered phase; deferred to the next version | the new digest renders; the stop and the refusal are live | a single boot |
 
 ### D1
 
@@ -219,13 +220,24 @@ The timer's subshell, forked at the first step, keeps its copy. A root process c
 The record is `acceptance.md`, one line per piece of evidence, with no pod id, address or fingerprint. Planned at
 ~$0.20.
 
+**Deferred, 2026-09-29, on the operator's ruling.** RunPod had no capacity for the listed cards, so both boots move
+to the next version's metered phase, placed near its last phase. What the attempts proved and left open:
+
+| session | what happened | proved |
+|---|---|---|
+| first | the create was accepted with the floors; the MCP read `gpu.memory` 30 and `cudaVersion` 13.0 on the `v0.30-rc1` digest; no `ssh.direct` came within 420 s, so `up.sh` tore the pod down and the MCP showed `pods: []` | the floors place a host that can render |
+| second | no card was placed; no pod was created | — |
+
+Open until then: that the image boots and renders, that the timer is armed, and the whole stop boot. The spend was
+~$0.09, the first session's 7 minutes at $0.72/h. The next version proves this code on the image it pins.
+
 ## Dependencies
 
 None.
 
 ## Risks / Trade-offs
 
-- **EXITED may still bill** — the probe's pod kept its hourly `cost` → D9 reads the billing. Either way the
+- **EXITED may still bill** — the probe's pod kept its hourly `cost` → D9's deferred stop boot reads the billing. Either way the
   container and its memory are gone, and the next `up.sh` refuses until `down.sh` removes the pod.
 - **The key's scope is unknown beyond stopping its own pod** → the key reaches only `start.sh`, the timer and
   `tools/stop_pod.sh`; a root process on the pod can still read it (D35).
@@ -238,3 +250,4 @@ None.
 ## Verdict
 
 **feasible** — edits to the pod scripts and the image files, each held by a test; the stop's key proved on a pod.
+The live acceptance is deferred to the next version ([D9](#d9)).

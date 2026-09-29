@@ -1,7 +1,7 @@
 # Tasks — 0043 the session
 
-The gates and the reconciler; the pod's stop; the docs; then the operator's rc build; then a metered render boot and
-stop boot, per [design](design.md).
+The gates and the reconciler; the pod's stop; the docs; then the operator's rc build, per [design](design.md). The
+metered render boot and stop boot are deferred to the next version ([D9](design.md#d9)).
 
 ## Progress
 
@@ -9,7 +9,6 @@ stop boot, per [design](design.md).
 - [x] 2 — The pod's stop
 - [x] 3 — The docs
 - [x] 4 — 🛑 **HUMAN** — the rc build
-- [ ] 5 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on the new image
 
 Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with the key its task names, and has a twin.
 
@@ -65,15 +64,12 @@ Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with th
 - [x] 4.1 The operator pushes `v0.30_the_session` and runs `gh workflow run build-image.yml --ref v0.30_the_session -f tag=v0.30-rc1`, per [D8](design.md#d8); the job summary's digest and the tag go into `config/image.json`.
   Verify: `grep -c '"tag": "v0.30-rc1"' config/image.json` prints `1`.
 
-## 5 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on the new image
+## Deferred — the acceptance
 
-**Ceiling: 45 minutes and ~$0.30 a boot; planned at ~$0.20 in all.** The pods go up only through `infra/render.sh`
-and `infra/up.sh`, and down through `infra/down.sh`; the RunPod MCP confirms each gone. Synthetic portraits only, per
-[D9](design.md#d9).
+RunPod had no capacity on 2026-09-29, so the render boot and the stop boot move to the next version's metered
+phase, near its last phase, per [D9](design.md#d9). That version runs these checks against the image it pins:
 
-- [ ] 5.1 On the operator's go, run the render session [D9](design.md#d9) describes, and read the pod's `gpu.memory` with the RunPod MCP while it runs.
-  Verify: `ls .data/v0.30/runs/*/summon-anime-wai/outputs/*/*.png .data/v0.30/runs/*/conjure-anime-wai/outputs/*/*.png` lists the renders, and `grep -c '^refused' .data/v0.30/log.txt` prints `0`.
-- [ ] 5.2 On the operator's go, run the stop boot [D9](design.md#d9) describes, and read the stopped pod's billing once RunPod posts it.
-  Verify: `grep -c -e '^stop: EXITED' -e '^a second up.sh: refused' -e '^billing while stopped: ' openspec/changes/0043-the-session/acceptance.md` prints `3`.
-- [ ] 5.3 Record the rest of the evidence in `openspec/changes/0043-the-session/acceptance.md`, one line each, with no pod id, address or fingerprint.
-  Verify: `grep -c -e '^placement: gpu.memory ' -e '^renders: summon-anime-wai and conjure-anime-wai' -e 'pods: \[\]' openspec/changes/0043-the-session/acceptance.md` prints `3`.
+- The render session over `summon-anime-wai` and `conjure-anime-wai` leaves renders for both, and no line of the
+  batch's log starts with `refused`.
+- The stop boot: the pod reaches EXITED, a second `up.sh` refuses, and the stopped pod's billing is read.
+- The evidence is one line each in that change's `acceptance.md`, with no pod id, address or fingerprint.
