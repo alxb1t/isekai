@@ -63,19 +63,28 @@ def spec_keys(root: Path) -> set[str]:
     return keys | added
 
 
+def _names_marker(node: ast.Attribute) -> bool:
+    """Return whether `node` is `<x>.mark.spec` or `<x>.mark.spec_exempt`."""
+    return (
+        node.attr in _MARKERS
+        and isinstance(node.value, ast.Attribute)
+        and node.value.attr == "mark"
+    )
+
+
+def _target(decorator: ast.expr) -> ast.expr:
+    """Return a decorator's callee if it is a call, else the decorator itself."""
+    return decorator.func if isinstance(decorator, ast.Call) else decorator
+
+
 def _marker(decorator: ast.expr) -> Marker | None:
     """Return a `spec` or `spec_exempt` decorator as (name, argument), else None.
 
     An argument that is not one string literal reads as None, so `unmarked` fails it.
     """
     call = decorator if isinstance(decorator, ast.Call) else None
-    target = call.func if call else decorator
-    if not (
-        isinstance(target, ast.Attribute)
-        and target.attr in _MARKERS
-        and isinstance(target.value, ast.Attribute)
-        and target.value.attr == "mark"
-    ):
+    target = _target(decorator)
+    if not (isinstance(target, ast.Attribute) and _names_marker(target)):
         return None
     if call and len(call.args) == 1 and not call.keywords:
         (arg,) = call.args
@@ -84,21 +93,66 @@ def _marker(decorator: ast.expr) -> Marker | None:
     return target.attr, None
 
 
+Function = ast.FunctionDef | ast.AsyncFunctionDef
+
+
+def _collected(body: list[ast.stmt], prefix: str = "") -> list[tuple[str, Function]]:
+    """Return each `test_` function pytest collects from `body`, by its test id.
+
+    That is a top-level one, and a method of a `Test*` class, nested or not.
+    """
+    found: list[tuple[str, Function]] = []
+    for node in body:
+        if isinstance(node, Function) and node.name.startswith("test_"):
+            found.append((prefix + node.name, node))
+        elif isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
+            found += _collected(node.body, f"{prefix}{node.name}::")
+    return found
+
+
+def _modules(root: Path) -> list[tuple[str, ast.Module]]:
+    """Return each test module under `tests/`, parsed, by its repo-relative path."""
+    return [
+        (path.relative_to(root).as_posix(), ast.parse(path.read_text()))
+        for path in sorted((root / "tests").rglob("test_*.py"))
+    ]
+
+
 def marked_tests(root: Path) -> list[Test]:
-    """Return each `test_` function under `tests/` with its `spec*` markers.
+    """Return each test pytest collects under `tests/` with its `spec*` markers.
 
     e.g. `@pytest.mark.spec("a:b:c") def test_x` in `tests/test_y.py`
-    -> ("tests/test_y.py", "test_x", [("spec", "a:b:c")])
+    -> ("tests/test_y.py", "test_x", [("spec", "a:b:c")]).
+    A method of a `Test*` class reads `TestZ::test_x`.
     """
-    found: list[Test] = []
-    for path in sorted((root / "tests").rglob("test_*.py")):
-        for node in ast.parse(path.read_text()).body:
-            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and (
-                node.name.startswith("test_")
-            ):
-                markers = [m for d in node.decorator_list if (m := _marker(d))]
-                found.append((path.relative_to(root).as_posix(), node.name, markers))
-    return found
+    return [
+        (file, name, [m for d in node.decorator_list if (m := _marker(d))])
+        for file, module in _modules(root)
+        for name, node in _collected(module.body)
+    ]
+
+
+def stray(root: Path) -> list[str]:
+    """Return every `spec*` marker not on a collected test's decorators, as `file:line`.
+
+    A module's `pytestmark`, a `pytest.param(marks=...)`, a class's decorator: each
+    would bind a test this checker never reads.
+    """
+    found: list[str] = []
+    for file, module in _modules(root):
+        read = {
+            id(_target(d))
+            for _, node in _collected(module.body)
+            for d in node.decorator_list
+        }
+        found += [
+            f"{file}:{node.lineno}"
+            for node in ast.walk(module)
+            if isinstance(node, ast.Attribute)
+            and _names_marker(node)
+            and id(node) not in read
+        ]
+    return sorted(found)
 
 
 def unbound(keys: set[str], tests: list[Test]) -> list[str]:
@@ -154,6 +208,12 @@ def test_every_marker_names_a_key(keys: set[str], tests: list[Test]) -> None:
 def test_every_test_carries_one_marker(tests: list[Test]) -> None:
     loose = unmarked(tests)
     assert not loose, f"tests without exactly one marker: {loose[:5]}"
+
+
+@pytest.mark.spec_exempt("structural: no spec marker sits where none is read")
+def test_no_marker_sits_where_none_is_read() -> None:
+    loose = stray(REPO_ROOT)
+    assert not loose, f"spec markers off a test's decorators: {loose[:5]}"
 
 
 _LIVING = """\
@@ -268,3 +328,55 @@ def test_an_added_key_is_demanded_and_a_removed_one_is_not(tmp_path: Path) -> No
     archived.mkdir(parents=True)
     (archived / "spec.md").write_text(delta.replace("cap:new:new", "cap:old:old"))
     assert "cap:old:old" not in spec_keys(root)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_test_carries_one_marker")
+def test_a_test_inside_a_test_class_is_checked(tmp_path: Path) -> None:
+    tests = """\
+import pytest
+
+
+class TestCap:
+    def test_loose(self):
+        pass
+
+    @pytest.mark.spec("cap:kept:kept")
+    def test_kept(self):
+        pass
+
+    class TestInner:
+        def test_deep(self):
+            pass
+
+
+class Helper:
+    def test_not_collected(self):
+        pass
+"""
+    root = _tree(tmp_path, tests)
+    assert unmarked(marked_tests(root)) == [
+        "tests/test_cap.py::TestCap::TestInner::test_deep",
+        "tests/test_cap.py::TestCap::test_loose",
+    ]
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_marker_sits_where_none_is_read")
+def test_a_module_pytestmark_naming_a_spec_marker_is_caught(tmp_path: Path) -> None:
+    tests = 'import pytest\n\npytestmark = pytest.mark.spec("cap:kept:kept")\n'
+    assert stray(_tree(tmp_path, tests)) == ["tests/test_cap.py:3"]
+
+
+@pytest.mark.spec_exempt("structural: twin of test_no_marker_sits_where_none_is_read")
+def test_a_param_marks_naming_a_spec_marker_is_caught(tmp_path: Path) -> None:
+    tests = """\
+import pytest
+
+
+@pytest.mark.parametrize(
+    "x", [pytest.param(1, marks=pytest.mark.spec_exempt("structural"))]
+)
+@pytest.mark.spec("cap:kept:kept")
+def test_kept(x):
+    pass
+"""
+    assert stray(_tree(tmp_path, tests)) == ["tests/test_cap.py:5"]
