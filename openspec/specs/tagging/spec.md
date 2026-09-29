@@ -2,15 +2,9 @@
 
 ## Purpose
 
-Producing a list of Danbooru tags for a photograph, from a model given the photograph and nothing else,
-stored raw and unnarrowed so the operator can see what was offered before any stage narrowed it. Two
-taggers ship and they are not alike: one reaches a hosted model a flow's manifest declares, the other
-opens a pinned file on this machine. Neither writes prose, neither is a reader, and neither may block
-the other or the caption.
-
-**Source:** `isekai/pipeline/tagging.py`, `isekai/boundary/wd14.py`, `isekai/boundary/ollama.py`,
-`config/vocabulary.json` ·
-**Tests:** `tests/test_tagging.py`, `tests/test_wd14.py`
+Producing a raw list of Danbooru tags for a photograph, from a model given the photograph alone, stored unnarrowed
+so the operator sees what was offered. Two taggers ship — a hosted one the flow's manifest names and a local one
+reading a pinned file — and neither blocks the other or the caption.
 
 ## Requirements
 

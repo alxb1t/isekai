@@ -17,6 +17,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   diagrams for the render target and a flow's layout (0046 D2, D3).
 - `cli` reads to the rule, its Purpose two sentences; a history of the per-flow seam and the render surface gives
   way to the reason each holds (0046 D2, D3).
+- `sheet` and `tagging` read to the rule: measured figures and the story of the move from prose to a tag list go,
+  and the sheet's fill gains a diagram (0046 D2, D3).
 
 ## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
 

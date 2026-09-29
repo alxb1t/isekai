@@ -9,7 +9,7 @@ edits that capability's `## Purpose` in place, per [D3](design.md#d3).
 - [x] 1 — The rule, and the terse capabilities
 - [x] 2 — `image-generation`
 - [x] 3 — `cli`
-- [ ] 4 — `sheet` and `tagging`
+- [x] 4 — `sheet` and `tagging`
 - [ ] 5 — `caption` and `review`
 - [ ] 6 — `model-provisioning`
 - [ ] 7 — `run-directory`, `field-map`, and the guard
@@ -39,7 +39,7 @@ Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-spec
 
 ## 4 — `sheet` and `tagging`
 
-- [ ] 4.1 Rewrite `sheet` and `tagging`, per [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 4.1 Rewrite `sheet` and `tagging`, per [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `ls openspec/changes/0046-the-terse-specs/specs/sheet/spec.md openspec/changes/0046-the-terse-specs/specs/tagging/spec.md` lists both, and `cat openspec/changes/0046-the-terse-specs/specs/sheet/spec.md openspec/changes/0046-the-terse-specs/specs/tagging/spec.md | grep -c -e 'used to' -e 'this version'` prints `0`.
 
 ## 5 — `caption` and `review`
