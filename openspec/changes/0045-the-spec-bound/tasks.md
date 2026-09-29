@@ -5,7 +5,7 @@ The rebindings, so the gate can hold them; then the checker, per [design](design
 ## Progress
 
 - [x] 1 — The bindings
-- [ ] 2 — The checker
+- [x] 2 — The checker
 
 Line numbers are `be1e2bb`'s. Every new test carries `@pytest.mark.spec` with the key its task names, or
 `spec_exempt` as a twin or a structural check.
@@ -23,9 +23,9 @@ Line numbers are `be1e2bb`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The checker
 
-- [ ] 2.1 Write `tests/test_spec_bindings.py` with `test_every_key_has_a_test`, `test_every_marker_names_a_key` and `test_every_test_carries_one_marker`, each with its twin, per [D1](design.md#d1).
+- [x] 2.1 Write `tests/test_spec_bindings.py` with `test_every_key_has_a_test`, `test_every_marker_names_a_key` and `test_every_test_carries_one_marker`, each with its twin, per [D1](design.md#d1).
   Verify: `grep -c -e '^def test_every_key_has_a_test' -e '^def test_every_marker_names_a_key' -e '^def test_every_test_carries_one_marker' tests/test_spec_bindings.py` prints `3`.
-- [ ] 2.2 Read the active changes' deltas into the key set, with a twin over an ADDED key and a REMOVED requirement, per [D2](design.md#d2).
+- [x] 2.2 Read the active changes' deltas into the key set, with a twin over an ADDED key and a REMOVED requirement, per [D2](design.md#d2).
   Verify: `grep -q 'REMOVED Requirements' tests/test_spec_bindings.py && grep -q 'ADDED Requirements' tests/test_spec_bindings.py && echo ok` prints `ok`.
-- [ ] 2.3 In `CLAUDE.md`, name the checker in place of the "no checker" sentence, per [D6](design.md#d6).
+- [x] 2.3 In `CLAUDE.md`, name the checker in place of the "no checker" sentence, per [D6](design.md#d6).
   Verify: `grep -c 'no spec↔test binding checker' CLAUDE.md` prints `0`, and `grep -c 'tests/test_spec_bindings.py' CLAUDE.md` prints `1`.

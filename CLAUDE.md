@@ -137,8 +137,8 @@ block.
 
 The tooling is **operator tooling, recorded and not pinned**: `@fission-ai/openspec@1.11.0`, resolved on
 `PATH`. It is deliberately **not** in the gate — nothing in CI runs it, so a moving version can never
-turn CI red. There is **no spec↔test binding checker in this repo**, so `spec` / `spec_exempt` bindings are
-maintained by hand and reviewed, not enforced; that gap is known and open.
+turn CI red. `tests/test_spec_bindings.py` holds every binding: each key has a test, each marker a key,
+each test one marker.
 
 ---
 
