@@ -74,10 +74,10 @@ def format_problems(text: str) -> list[str]:
             sectioned = VERSION.fullmatch(line) is None
         elif line.startswith("### "):
             sectioned = True
+            if line[4:] not in SECTIONS:
+                problems.append(f"not a Keep a Changelog section: {line}")
         elif line.startswith("- ") and not sectioned:
             problems.append(f"bullet outside a section: {line}")
-        if line.startswith("### ") and line[4:] not in SECTIONS:
-            problems.append(f"not a Keep a Changelog section: {line}")
         if re.match(r"\s+[-*] ", line):
             problems.append(f"nested bullet: {line.strip()}")
 

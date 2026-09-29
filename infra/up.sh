@@ -37,6 +37,7 @@ lost() {  # a create whose outcome is unknown may have placed a pod no file reco
   echo "The create's outcome is unknown: a pod named 'isekai' may exist and bill." >&2
   echo "Run bash infra/down.sh -- it finds and removes every 'isekai' pod --" >&2
   echo "then re-run bash infra/up.sh." >&2
+  exit "$LOST_CREATE_EXIT"
 }
 
 refuse() { echo "refused: $*" >&2; exit 1; }
@@ -220,7 +221,7 @@ while IFS= read -r gpu; do
   [ "$code" = "400" ] && continue
   # RunPod may have placed the pod and the answer been lost on the way back.
   case "$code" in
-    201|5??|000|"") lost; exit "$LOST_CREATE_EXIT" ;;
+    201|5??|000|"") lost ;;
   esac
   exit 1
 done <<< "$gpus"

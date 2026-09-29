@@ -2226,6 +2226,15 @@ def pod_pages(first: list[dict[str, str]], second: list[dict[str, str]]) -> list
     ]
 
 
+def serve_pages(pages: list[str]) -> str:
+    """Return shell that prints the first page, or the second for any cursor."""
+    first, second = pages
+    return (
+        f'case "$*" in *cursor=*) printf "%s" {shlex.quote(second)} ;;'
+        f' *) printf "%s" {shlex.quote(first)} ;; esac'
+    )
+
+
 def pod_check(
     script: str, cwd: Path, pages: list[str] | None
 ) -> tuple[subprocess.CompletedProcess[str], bool]:
@@ -2234,13 +2243,7 @@ def pod_check(
     Return the run and whether it called RunPod at all.
     """
     copy_image_config(cwd)
-    first, second = pages or ["", ""]
-    listing = (
-        "return 22"
-        if pages is None
-        else f'case "$*" in *cursor=*) printf "%s" {shlex.quote(second)} ;;'
-        f' *) printf "%s" {shlex.quote(first)} ;; esac'
-    )
+    listing = "return 22" if pages is None else serve_pages(pages)
     stubs = f"API=https://api.test\napi() {{ touch called; {listing}; }}"
     done = run_functions(script, ("refuse", "isekai_pods", "check_no_pod"), stubs, cwd)
     return done, (cwd / "called").exists()
@@ -2323,13 +2326,10 @@ def listing(
     listing that loops ends.
     """
     copy_image_config(cwd)
-    first, second = pages
     stubs = (
         "API=https://api.test\n"
         "api() { n=$(( $(cat asks 2>/dev/null || echo 0) + 1 )); echo $n > asks;"
-        ' [ "$n" -le 5 ] || return 22;'
-        f' case "$*" in *cursor=*) printf "%s" {shlex.quote(second)} ;;'
-        f' *) printf "%s" {shlex.quote(first)} ;; esac; }}'
+        f' [ "$n" -le 5 ] || return 22; {serve_pages(pages)}; }}'
     )
     asks = cwd / "asks"
     asks.unlink(missing_ok=True)
@@ -2357,10 +2357,7 @@ BROKEN_LISTING = """isekai_pods() {
 
 def repeated_pages() -> list[str]:
     """Return a listing whose second page names the cursor it was asked with."""
-    page = json.dumps(
-        {"pods": [], "pagination": {"nextCursor": "p2", "hasNextPage": True}}
-    )
-    return [page, page]
+    return [pod_pages([], [])[0]] * 2
 
 
 @pytest.mark.spec("pod-image:reconcile:a-repeated-cursor-fails")
