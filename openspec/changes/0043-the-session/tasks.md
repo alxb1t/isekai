@@ -62,7 +62,8 @@ Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with th
 ## 4 — 🛑 **HUMAN** — the rc build
 
 - [x] 4.1 The operator pushes `v0.30_the_session` and runs `gh workflow run build-image.yml --ref v0.30_the_session -f tag=v0.30-rc1`, per [D8](design.md#d8); the job summary's digest and the tag go into `config/image.json`.
-  Verify: `grep -c '"tag": "v0.30-rc1"' config/image.json` prints `1`.
+  Rebuilt as `v0.30-rc2` once `start.sh` and `tools/stop_pod.sh` changed, per [D8](design.md#d8).
+  Verify: `grep -c '"tag": "v0.30-rc2"' config/image.json` prints `1`.
 
 ## Deferred — the acceptance
 

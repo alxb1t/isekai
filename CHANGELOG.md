@@ -15,7 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   the laptop gone. ComfyUI starts without RunPod's key (0043 D4, D5, D6).
 - `docs/decisions.md` records `render.sh` as the render session and the bounds that hold it; `CLAUDE.md`'s
   teardown rule names `down.sh`'s sweep and the pod's own stop (0043 D7).
-- A pod boots image `v0.30-rc1`, built on request from this version's tree, so it carries the stop (0043 D8).
+- A pod boots image `v0.30-rc2`, built on request from this version's tree, so it carries the stop. It replaces
+  `v0.30-rc1`, built before the boot's end and the stop's retry changed in `start.sh` and `tools/stop_pod.sh` (0043 D8).
 - The live acceptance of `v0.30-rc1`, a render boot and a stop boot, is deferred to the next version: RunPod had
   no capacity. One boot placed a host within the floors but got no SSH address (0043 D9).
 - A boot that ends, ComfyUI exiting included, stops the pod rather than restarting with a fresh ceiling; the stop

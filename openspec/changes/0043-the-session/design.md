@@ -68,7 +68,7 @@ volume's rent.
 | [D5](#d5) | one `hold` function prints why, sleeps `HOLD_SECONDS`, then runs the stop; it replaces every `exec sleep "$HOLD_SECONDS"` | a restarted container would re-boot and hold forever | exiting, as today |
 | [D6](#d6) | `start.sh` unsets `RUNPOD_API_KEY` before ComfyUI starts | least privilege: nothing ComfyUI's process prints can carry the key | leaving it in ComfyUI's environment |
 | [D7](#d7) | D36 records `render.sh` as the session; `generate.py`, `CLAUDE.md` and `README.md` follow | the lifecycle is shell over an API the package never calls | a Python `session()` beside `up.sh` |
-| [D8](#d8) | the operator builds `v0.30-rc1` on request | it publishes a public image | the agent dispatching it |
+| [D8](#d8) | the operator builds `v0.30-rc1` on request, and `v0.30-rc2` once the boot's end changed | it publishes a public image | the agent dispatching it |
 | [D9](#d9) | a render boot, then a stop boot, in one metered phase; deferred to the next version | the new digest renders; the stop and the refusal are live | a single boot |
 
 ### D1
@@ -215,6 +215,10 @@ forked at the first step, keeps its copy. A root process can still read `/proc/1
 **The rc build is the operator's.** Push `v0.30_the_session`, then
 `gh workflow run build-image.yml --ref v0.30_the_session -f tag=v0.30-rc1`; the job summary's digest goes into
 `config/image.json` with the tag `v0.30-rc1`.
+
+**Rebuilt as `v0.30-rc2`.** The fix that ends every boot in the stop and makes the stop retry changed `start.sh` and
+`tools/stop_pod.sh`, both baked into the image, after `v0.30-rc1` was built. The operator rebuilt from that tree
+with `-f tag=v0.30-rc2`, and `config/image.json` pins it.
 
 ### D9
 
