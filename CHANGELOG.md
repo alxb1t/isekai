@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- `CLAUDE.md` states how a spec reads. `agent-skills`, `comfy-transport` and `pod-image` read to it, and the pod
+  listing's no-image failure names a live pod, as the listing already drops a terminated one (0046 D1, D2, D3, D4).
+
 ## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
 
 ### Fixed

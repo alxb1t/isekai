@@ -2,25 +2,8 @@
 
 ## Purpose
 
-Talking to a running ComfyUI over HTTP: uploading the photo, queueing the workflow, waiting for the render, and
-downloading the result.
-
-**Source:** `isekai/boundary/comfy/__init__.py`, `isekai/boundary/comfy/multipart.py`,
-`isekai/boundary/comfy/client.py`, `isekai/boundary/comfy/contract.py`, `isekai/pipeline/generate.py` ·
-**Tests:** `tests/test_multipart.py`, `tests/test_generate.py`
-
-The transport is an **injectable seam** behind a Protocol — `ComfyTransport`, declared in
-`isekai/boundary/comfy/contract.py` with no network in it, which is what lets the whole suite run against
-`FakeComfyClient`. The transport is on `python -m isekai`'s import graph, which reaches no wheel, so the
-multipart body is built by hand rather than pulled from a dependency, which is why its wire format is
-specified here rather than delegated to a library's contract. **No test in this capability reaches a
-real GPU or the network**; the transport is fully mocked, and actual diffusion quality is judged by
-eye on a live pod.
-
-**Where the polling loop lives.** Until v0.15 this preamble pointed at a module and a test file that
-were **deleted together in `8baf2b3` at v0.14**, with the old render path. The loop that submits a
-workflow and waits for it is `isekai/pipeline/generate.py`'s `render`, and the scenarios that hold it
-are in `tests/test_generate.py`. The pointer was stale rather than wrong, so this is a redirect.
+Talking to a running ComfyUI over HTTP — uploading the photo, queueing the workflow, waiting for the render, and
+downloading the result — behind the `ComfyTransport` seam the suite fakes.
 
 ## Requirements
 
@@ -68,10 +51,6 @@ part's headers. Neither happens with today's names and photographs, and neither 
 - **WHEN** a filename carries a double quote, a carriage return or a line feed
 - **THEN** the part's header carries each of them percent-encoded
 - **AND** the part's headers end where the encoder ends them
-
-> Polling and output selection live in `isekai/pipeline/generate.py`'s `render`;
-> `ComfyClient.history()` is a single unconditional GET. The transport module supplies the calls, the
-> render stage supplies the loop.
 
 ### Requirement: Render completion polling
 

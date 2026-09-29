@@ -111,6 +111,30 @@ implies. Every `#### Scenario:` carries a `- **Key:**` and a `- **Layers:**` bul
 `<capability>:<requirement-slug>:<scenario-slug>`, so a key locates its own file. On release the delta
 is folded in and the change moves to `openspec/changes/archive/`; archived changes are never deleted.
 
+***How a spec reads*** — the rule every requirement and every delta follows.
+
+- **A requirement is one SHALL paragraph** — what the system does, testable. Then one *why*
+  paragraph, in the present tense. A decision in force is linked, not retold.
+- **A scenario has one WHEN, one THEN and at most two AND**, each on one line where it fits. It
+  carries no reasons.
+- **A flow, a state or a layout gets an ASCII diagram**, in a fenced block.
+- **No history** — no version, no change id, no "used to", no "this change". A figure stays only when
+  it is the rule.
+- **`## Purpose` is one or two sentences.**
+
+Before, `run-directory`'s *A run root is under the ignored root or outside the repository* stated its
+SHALL, then a paragraph of reasons, then a paragraph on how its first implementation failed. After:
+
+```
+The system SHALL refuse a run root inside the repository's working tree unless it is under the ignored
+data root, and SHALL accept one outside the repository. It SHALL decide containment by the identity of
+the directories, never by comparing the text of their paths.
+
+A run holds a copy of the photograph, so a run root git can reach is one `git add` from publishing a
+likeness ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)). Two spellings of
+one directory are one directory, and only its identity says so.
+```
+
 **The version line is one line in four places** — `proposal.md`'s `version:`, `CHANGELOG.md`'s
 `## [X.Y.Z]`, `pyproject.toml`'s `version`, and the annotated tag `vX.Y.Z`. A minor release spells that
 `vX.Y` / `## [X.Y.0]` / `vX.Y.0`; a patch release spells it `vX.Y.Z` throughout, as `0.22.1` did. All

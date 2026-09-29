@@ -6,7 +6,7 @@ edits that capability's `## Purpose` in place, per [D3](design.md#d3).
 
 ## Progress
 
-- [ ] 1 — The rule, and the terse capabilities
+- [x] 1 — The rule, and the terse capabilities
 - [ ] 2 — `image-generation`
 - [ ] 3 — `cli`
 - [ ] 4 — `sheet` and `tagging`
@@ -18,13 +18,13 @@ Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-spec
 
 ## 1 — The rule, and the terse capabilities
 
-- [ ] 1.1 **HALT CHECK** — `CLAUDE.md` states no spec rule, and the history the design names is in the specs.
+- [x] 1.1 **HALT CHECK** — `CLAUDE.md` states no spec rule, and the history the design names is in the specs.
   Verify: `grep -c 'How a spec reads' CLAUDE.md` prints `0`, and `grep -c '8baf2b3' openspec/specs/comfy-transport/spec.md` prints `1`.
-- [ ] 1.2 In `CLAUDE.md`, add *How a spec reads* after *The living spec*, per [D1](design.md#d1).
+- [x] 1.2 In `CLAUDE.md`, add *How a spec reads* after *The living spec*, per [D1](design.md#d1).
   Verify: `grep -c 'How a spec reads' CLAUDE.md` prints `1`.
-- [ ] 1.3 Rewrite `pod-image`, keeping [D4](design.md#d4)'s block, and `agent-skills`, per [D2](design.md#d2).
+- [x] 1.3 Rewrite `pod-image`, keeping [D4](design.md#d4)'s block, and `agent-skills`, per [D2](design.md#d2).
   Verify: `grep -c '^### Requirement:' openspec/changes/0046-the-terse-specs/specs/agent-skills/spec.md` prints `1`, and `grep -c 'a live pod this project named' openspec/changes/0046-the-terse-specs/specs/pod-image/spec.md` prints `1`.
-- [ ] 1.4 Rewrite `comfy-transport`, and delete its blockquote, per [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 1.4 Rewrite `comfy-transport`, and delete its blockquote, per [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `grep -c '^>' openspec/specs/comfy-transport/spec.md` prints `0`, and `grep -c '8baf2b3' openspec/specs/comfy-transport/spec.md` prints `0`.
 
 ## 2 — `image-generation`
