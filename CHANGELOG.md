@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-09-29 · 0042-the-rebuild
+
 ### Security
 
 - An upload spools to memory, and a pod holds on a `/dev/shm` that is not a tmpfs or not read. The image, now on
