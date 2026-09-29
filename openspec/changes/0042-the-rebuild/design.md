@@ -23,7 +23,8 @@ See [proposal](proposal.md) — *Why*. What holds at the cut (`ad27f67`):
   entries, `DROPPED = ("onnxruntime",)` (`:46`), and `BUILD_CONSTRAINTS` (`:49`) are rendered as plain strings
   (`:125`). comfyui_controlnet_aux's requirements name `onnxruntime-gpu`; no upstream names `onnxruntime`.
 - **`onnxruntime-gpu` 1.30.0** (`image/uv.lock:1195`) is built for CUDA 13, which nothing in the image supplies, so
-  it runs on the CPU after a warning. InstantID's face analysis asks for the CPU anyway.
+  it runs on the CPU after a warning. InstantID's face analysis asks for the CPU anyway. DWPose, in
+  `summon-anime-wai` only, runs its box detector through it.
 - **`start.sh`'s memory step** is `:158-173`: `mkdir -p` of the input, output, temp and user directories
   (`:161`), the `df` read (`:162`), an unreadable figure set to `free_kib=0` (`:165-167`), the floor's hold
   (`:168-173`). ComfyUI starts at `:178-184`. No `TMPDIR` is set.
@@ -55,7 +56,7 @@ switches in the image; an honest onnxruntime; hashed build tools; a proved new d
 | [D1](#d1) | `ubuntu:22.04` by digest, one stage; `build-essential` and `ca-certificates` in place of apt's Python; the `NVIDIA_*` `ENV`s | ~3.6 GiB off the pull; torch brings its CUDA | the CUDA runtime base, ~1.2 GiB bigger; a builder stage, which copies uv's Python and the venv across for ~200 MB |
 | [D2](#d2) | the memory step makes a `tmp` directory and exports `TMPDIR` to it; it holds on a `/dev/shm` that is not a tmpfs, and on an unreadable figure, naming each | the upload spools to `TMPDIR`; a guess is not a reading | setting `TMPDIR` in the `Dockerfile`, which would move every build step's temp files too |
 | [D3](#d3) | the telemetry switches as `ENV` in the `Dockerfile`; `up.sh`'s `env` loses them | *declared once*; the image holds for every pod | a copy in each |
-| [D4](#d4) | `onnxruntime==1.30.0` pinned in the deriver, `onnxruntime-gpu` dropped | the CPU is what runs; the package says so and is smaller | a CUDA 12 build of `onnxruntime-gpu` tied to torch's CUDA |
+| [D4](#d4) | `onnxruntime==1.30.0` pinned in the deriver, `onnxruntime-gpu` dropped; DWPose's box detector moves to OpenCV, and the operator ruled the release a patch | the CPU is what runs; the package says so and is smaller | a CUDA 12 build of `onnxruntime-gpu` tied to torch's CUDA; restoring `onnxruntime-gpu` for DWPose; releasing as a minor |
 | [D5](#d5) | the deriver renders each build constraint as a `{ requirement, hashes }` table | uv checks them under `uv sync --locked` | a hashed constraints file, which `uv sync` does not read |
 | [D6](#d6) | 0.26.1's first bullet names the append-only exception and cites `0038` D6 | the open thread from `0038` | a new bullet |
 | [D7](#d7) | the operator builds `v0.29.1-rc1` on request | it publishes a public image | the agent dispatching it |
@@ -103,6 +104,17 @@ ENV ORT_DISABLE_TELEMETRY=1 HF_HUB_DISABLE_TELEMETRY=1 DO_NOT_TRACK=1 NO_ALBUMEN
 **onnxruntime is the CPU package.** In `tools/derive_image_project.py`: `PINS` gains `onnxruntime==1.30.0`,
 `DROPPED` becomes `("onnxruntime-gpu",)`, and the comment says why. `uv run python -m tools.derive_image_project`
 rewrites `image/pyproject.toml` and `image/uv.lock`.
+
+**What it moves.** The session showed that DWPose, finding no GPU provider, runs its box detector through OpenCV on
+the CPU, where `onnxruntime-gpu` had run it through onnxruntime ([acceptance](acceptance.md)). DWPose is in
+`summon-anime-wai` only, and its keypoints condition the pose, so this changes code that shapes that flow's render:
+the same inputs may give a different image. `conjure-anime-wai` has no DWPose. The operator accepted OpenCV pending an
+evaluation on more photographs.
+
+**The operator's ruling, 2026-09-29: the release stays a patch, `v0.29.1`.** `CLAUDE.md`'s patch rule says nothing
+changes the image for the same inputs; this move can, and the operator ruled it a patch all the same, choosing to
+record the ruling here over releasing as a minor or restoring `onnxruntime-gpu` for DWPose. The operator gave no
+further reason, and this design records none.
 
 ### D5
 
@@ -158,9 +170,15 @@ Ceiling 45 minutes and ~$0.30 a session; planned at ~$0.10.
   the check, as for every rebuild.
 - **`stat -f` on `/dev/shm` prints another name for a tmpfs** → the pod holds and prints the name; the session shows
   it.
+- **DWPose's box detector on OpenCV finds a different box than onnxruntime did** → `summon-anime-wai`'s pose, and so
+  its image, can differ from `v0.28-rc1`'s for the same inputs; accepted pending an evaluation on more photographs,
+  and ruled a patch by the operator ([D4](#d4)).
 - **The re-derive moves other packages** — upstream is read at the pinned commits, so only onnxruntime's entries
   should move → `git diff --stat -- image/` is read at the task.
 
 ## Verdict
 
 **feasible** — edits to the image files and the deriver, each held by a test, proved on one pod.
+
+DWPose's move to OpenCV, found in the session, breaks the patch rule's same-image clause for `summon-anime-wai`; the
+operator ruled on 2026-09-29 that the release stays a patch ([D4](#d4)).
