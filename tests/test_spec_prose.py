@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.test_spec_bindings import _REQUIREMENT, _SECTION, _split
+from tests.specs import effective, write_tree
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WIDTH = 120
@@ -26,28 +26,12 @@ _HISTORY_EXEMPT = frozenset({"ui"})
 _TITLES = ("### Requirement: ", "#### Scenario: ")
 
 
-def effective(root: Path) -> dict[str, str]:
-    """Return each capability's spec text, as the active changes' deltas leave it.
-
-    A MODIFIED block replaces the requirement it names; an ADDED one is appended.
-    """
-    preambles: dict[str, str] = {}
-    requirements: dict[str, dict[str, str]] = {}
-    for path in sorted((root / "openspec" / "specs").glob("*/spec.md")):
-        text = path.read_text()
-        preambles[path.parent.name] = _REQUIREMENT.split(text, maxsplit=1)[0]
-        requirements[path.parent.name] = _split(_REQUIREMENT, text)
-    # The glob's depth leaves out `archive/<id>/`: an archived delta is folded in.
-    for delta in sorted((root / "openspec" / "changes").glob("*/specs/*/spec.md")):
-        sections = _split(_SECTION, delta.read_text())
-        reqs = requirements.setdefault(delta.parent.name, {})
-        preambles.setdefault(delta.parent.name, "")
-        for heading in ("MODIFIED Requirements", "ADDED Requirements"):
-            reqs |= _split(_REQUIREMENT, sections.get(heading, ""))
+def texts(root: Path) -> dict[str, str]:
+    """Return each capability's effective spec as one text."""
     return {
-        cap: preambles[cap]
+        cap: preamble
         + "".join(f"### Requirement: {title}{body}" for title, body in reqs.items())
-        for cap, reqs in requirements.items()
+        for cap, (preamble, reqs) in effective(root).items()
     }
 
 
@@ -72,15 +56,21 @@ def long_lines(specs: dict[str, str]) -> list[str]:
     ]
 
 
+@pytest.fixture(scope="module")
+def specs() -> dict[str, str]:
+    """Read the repository's effective spec once for the module."""
+    return texts(REPO_ROOT)
+
+
 @pytest.mark.spec_exempt("structural: no spec names a version, a change id or a commit")
-def test_no_spec_names_a_version_change_or_commit() -> None:
-    found = history(effective(REPO_ROOT))
+def test_no_spec_names_a_version_change_or_commit(specs: dict[str, str]) -> None:
+    found = history(specs)
     assert not found, f"history in a spec: {found[:5]}"
 
 
 @pytest.mark.spec_exempt("structural: no spec line passes 120 characters")
-def test_no_spec_line_passes_120_characters() -> None:
-    found = long_lines(effective(REPO_ROOT))
+def test_no_spec_line_passes_120_characters(specs: dict[str, str]) -> None:
+    found = long_lines(specs)
     assert not found, f"spec lines past {WIDTH} characters: {found[:5]}"
 
 
@@ -89,7 +79,7 @@ _LIVING = """\
 
 ## Purpose
 
-{purpose}
+What it is for.
 
 ## Requirements
 
@@ -104,15 +94,8 @@ The system SHALL keep.
 
 
 def _tree(root: Path, told: str, delta: str | None = None, cap: str = "cap") -> Path:
-    """Write one capability's living spec and, if given, an active delta for it."""
-    spec = root / "openspec" / "specs" / cap / "spec.md"
-    spec.parent.mkdir(parents=True)
-    spec.write_text(_LIVING.format(cap=cap, purpose="What it is for.", told=told))
-    if delta is not None:
-        path = root / "openspec" / "changes" / "0001-x" / "specs" / cap / "spec.md"
-        path.parent.mkdir(parents=True)
-        path.write_text(delta)
-    return root
+    """Write one capability whose `Told` requirement reads `told`."""
+    return write_tree(root, _LIVING.format(cap=cap, told=told), delta, cap)
 
 
 @pytest.mark.spec_exempt(
@@ -128,7 +111,7 @@ def _tree(root: Path, told: str, delta: str | None = None, cap: str = "cap") -> 
     ],
 )
 def test_a_version_a_change_or_a_commit_is_caught(tmp_path: Path, line: str) -> None:
-    assert history(effective(_tree(tmp_path, line))) == [f"cap: {line}"]
+    assert history(texts(_tree(tmp_path, line))) == [f"cap: {line}"]
 
 
 @pytest.mark.spec_exempt(
@@ -149,12 +132,12 @@ The system SHALL tell, as it did in v0.20.
 The system SHALL be new since v0.30.
 """
     root = _tree(tmp_path, "The rule changed in v0.21.", delta)
-    assert history(effective(root)) == [
+    assert history(texts(root)) == [
         "cap: The system SHALL tell, as it did in v0.20.",
         "cap: The system SHALL be new since v0.30.",
     ]
     exempt = _tree(tmp_path / "ui", "The rule changed in v0.21.", cap="ui")
-    assert history(effective(exempt)) == []
+    assert history(texts(exempt)) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_no_spec_line_passes_120_characters")
@@ -164,4 +147,4 @@ def test_a_line_past_120_characters_is_caught(tmp_path: Path) -> None:
         f"## ADDED Requirements\n\n### Requirement: {long}\n\n#### Scenario: {long}\n"
     )
     root = _tree(tmp_path, f"{'y' * WIDTH}\n{long}", delta)
-    assert long_lines(effective(root)) == [f"cap: {long[:60]}…"]
+    assert long_lines(texts(root)) == [f"cap: {long[:60]}…"]
