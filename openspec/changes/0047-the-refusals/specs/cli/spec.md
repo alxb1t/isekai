@@ -57,3 +57,33 @@ controls.
 - **WHEN** a stage verb names more than one flow, and one of them refuses for an input
 - **THEN** the input's other named flows are still acted on
 - **AND** every refusal is reported together at the end
+
+### Requirement: Inspection prints the run directory with its provenance
+
+The system SHALL provide a command that prints a run's artifacts, which version is active for each
+stage, and what produced each one.
+
+A filename carries only what resume decides on, which leaves a directory that is precise and unreadable.
+This command is what a person reads instead — and it is also the answer to "where is this run", which is
+why no progress file is needed before something other than a human is watching.
+
+#### Scenario: inspection names the active version for each stage
+- **Key:** `cli:show:active-version-is-marked`
+- **Layers:** unit
+- **WHEN** a run is inspected
+- **THEN** each stage's versions are listed and the active one is marked
+- **AND** approval is shown where the concept applies
+
+#### Scenario: inspection reports what produced each artifact
+- **Key:** `cli:show:producers-are-reported`
+- **Layers:** unit
+- **WHEN** a run is inspected
+- **THEN** each artifact's producer is shown
+- **AND** artifacts produced by different implementations are distinguishable in the output
+
+#### Scenario: a frame it cannot read is marked
+- **Key:** `cli:show:an-unreadable-frame-is-marked`
+- **Layers:** unit
+- **WHEN** a run's frame is unreadable, declares an unknown version, or lacks its photograph
+- **THEN** the report marks the frame with its refusal in place of the photograph line
+- **AND** it lists the run's flows and artifacts as it would otherwise

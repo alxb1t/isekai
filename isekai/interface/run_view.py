@@ -20,6 +20,7 @@ from typing import Any
 
 from isekai.foundation.artifacts import VERSIONS
 from isekai.foundation.flow import FLOWS_DIR, load_flow
+from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     ARTIFACT,
     CAPTIONS,
@@ -178,16 +179,20 @@ def report(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
     list makes "everything refusable is read first" true by construction rather
     than by a paragraph asking the next editor to keep it so.
     """
-    lines: list[str] = []
-    frame = run.frame
-    photo = frame["photo"]
+    lines: list[str] = [run.id]
+    # A frame this build cannot read is marked, like an artifact, and the rest
+    # listed: `show` reads a run in whatever state it is in (0047 design D4).
+    try:
+        photo = run.photo_record
+    except Refusal as unreadable:
+        lines.append(f"  photo    {unreadable}")
+    else:
+        lines.append(
+            f"  photo    {photo['name']}  {photo['media_type']}  {photo['bytes']} bytes"
+        )
+        lines.append(f"           sha256 {photo['sha256']}")
     stages = listings(run)
     outputs = rendered(run, flows_dir)
-    lines.append(f"{run.id}")
-    lines.append(
-        f"  photo    {photo['name']}  {photo['media_type']}  {photo['bytes']} bytes"
-    )
-    lines.append(f"           sha256 {photo['sha256']}")
 
     for listing in stages:
         name = f"{listing.flow}/{listing.stage}"

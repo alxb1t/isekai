@@ -173,10 +173,10 @@ def ask(
 ) -> str:
     """Return the model's own answer to `body`, or refuse, or raise.
 
-    `remedy` is the one command that fixes an absent model, and the caller supplies
-    it: which command fixes an absent model depends on how that model was named.
-    Both callers here build a machine-local alias, with `BUILD`; a registry tag
-    fetched by `ollama pull` is the other shape, and the manifest still names one.
+    `remedy` is the command that builds an absent model, and the caller supplies
+    it: which command builds it depends on how that model was named. Both callers
+    here build a machine-local alias, with `BUILD`, from the files `PROVISION`
+    fetches, so the refusal names that fetch first (0047 design D5).
 
     **A missing model and a missing host refuse rather than spending an attempt.**
     A retry budget counts models tried and failed, and neither of those is that;
@@ -242,7 +242,8 @@ def ask(
     if status == 404:
         raise Refusal(
             f"{HOST} does not carry the model {model!r} this flow declares; "
-            f"create it (`{remedy}`), then run this command again"
+            f"fetch the pinned files (`{PROVISION}`), then build the model "
+            f"(`{remedy}`), then run this command again"
         )
     if status >= 500:
         raise OllamaFailure("transient", f"{HOST} answered {status} for {model}")
@@ -292,8 +293,8 @@ def _layer_digests(record: Path, remedy: str) -> dict[Role, str]:
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as unread:
         raise Refusal(
             f"Ollama's record at {record} does not read as a model record, so the "
-            f"model cannot be checked; rebuild it (`{remedy}`), then run this "
-            "command again"
+            f"model cannot be checked; fetch the pinned files (`{PROVISION}`), "
+            f"then build the model (`{remedy}`), then run this command again"
         ) from unread
     return found
 
@@ -342,8 +343,9 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
     record = root / name / (tag or "latest")
     if not record.is_file():
         raise Refusal(
-            f"Ollama has no record of {model!r} at {record}; build it "
-            f"(`{remedy}`), then run this command again"
+            f"Ollama has no record of {model!r} at {record}; fetch the pinned "
+            f"files (`{PROVISION}`), then build the model (`{remedy}`), then run "
+            "this command again"
         )
     found = _layer_digests(record, remedy)
     differ = [

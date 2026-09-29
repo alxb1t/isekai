@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from isekai.foundation.artifacts import VocabularyRecord
+from isekai.foundation.refusal import Refusal
 
 # The destination the vocabulary manifest declares, and the models root the
 # scorer already defaults to. One tree, two consumers, one provisioning rule.
@@ -47,6 +48,19 @@ _UNDERSCORES = re.compile(r"[_\s]+")
 
 # A commit sha inside a pinned source URL, which is the vocabulary's revision.
 _REVISION = re.compile(r"/resolve/(?P<revision>[0-9a-f]{40})/")
+
+
+def undeclared(dest: str, manifest: Path) -> Refusal:
+    """Return the refusal for a `dest` the vocabulary manifest does not declare.
+
+    Built here, not in `provision.py`, which runs by path on the pod where
+    `isekai` does not import (0047 design D6).
+    """
+    return Refusal(
+        f"{dest} is not declared in {manifest}; add it to "
+        "`tools/derive_vocabulary.py`, run `uv run python -m "
+        "tools.derive_vocabulary`, then run this command again"
+    )
 
 
 def normalise(phrase: str) -> str:

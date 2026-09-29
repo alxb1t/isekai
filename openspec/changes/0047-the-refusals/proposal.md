@@ -63,9 +63,9 @@ None.
 
 ## Impact
 
-- **Files:** `isekai/interface/cli.py`, `isekai/interface/run_view.py`, `isekai/pipeline/generate.py`,
-  `isekai/boundary/ollama.py`, `isekai/boundary/provision.py`, `infra/up.sh`, `tests/test_spec_bindings.py`, and their
-  tests.
+- **Files:** `isekai/interface/cli.py`, `isekai/interface/run_view.py`, `isekai/interface/wiring.py`,
+  `isekai/pipeline/generate.py`, `isekai/boundary/ollama.py`, `isekai/boundary/wd14.py`, `isekai/shared/vocabulary.py`,
+  `isekai/foundation/run.py`, `infra/up.sh`, `tests/test_spec_bindings.py`, and their tests.
 - **Behaviour:** refusals change their words and reach flows they skipped; nothing a successful batch does changes.
 - **Formats:** no run file kind or manifest version moves.
 - **Dependencies:** none.

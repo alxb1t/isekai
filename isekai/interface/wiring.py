@@ -36,6 +36,7 @@ from isekai.shared.vocabulary import (
     VOCABULARY_DEST,
     VOCABULARY_REMEDY,
     Vocabulary,
+    undeclared,
 )
 from isekai.shared.vocabulary import load as read_vocabulary
 
@@ -236,6 +237,7 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
     """
     from isekai.boundary.provision import (
         VOCABULARY_MANIFEST_PATH,
+        UnknownArtifact,
         entry_for,
         load_manifest,
         resolve,
@@ -244,6 +246,8 @@ def load_vocabulary(models_dir: Path = DEFAULT_MODELS_DIR) -> Vocabulary:
     manifest = load_manifest(VOCABULARY_MANIFEST_PATH)
     try:
         path = resolve(VOCABULARY_DEST, models_dir, manifest)
+    except UnknownArtifact as absent:
+        raise undeclared(VOCABULARY_DEST, VOCABULARY_MANIFEST_PATH) from absent
     except FileNotFoundError as absent:
         # A `FileNotFoundError` is the one failure here that has a remedy this
         # build can perform, and a traceback names a path instead of naming it.

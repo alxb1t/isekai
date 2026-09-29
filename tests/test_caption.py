@@ -497,6 +497,7 @@ def test_an_absent_model_names_the_command_that_creates_it_and_costs_no_attempt(
     message = str(refused.value)
     assert f"ollama create {READER}" in message
     assert "config/joycaption.Modelfile" in message
+    assert _names_the_files_first(message)
     directory = run.directory(FLOW.id, CAPTIONS)
     assert attempts(directory, 1) == []
 
@@ -608,6 +609,42 @@ def test_a_model_with_no_record_refuses_naming_the_command_that_builds_it(
         refused.value
     )
     assert attempts(run.directory(FLOW.id, CAPTIONS), 1) == []
+
+
+def _names_the_files_first(message: str) -> bool:
+    """Return whether `message` names the fetch of the pinned files before the build."""
+    build = f"ollama create {READER} -f config/joycaption.Modelfile"
+    return ollama.PROVISION in message and (
+        message.index(ollama.PROVISION) < message.find(build)
+    )
+
+
+@pytest.mark.spec("caption:reachability:no-record-names-the-files-first")
+@pytest.mark.parametrize("record", [None, "{ not json"], ids=["none", "unreadable"])
+def test_no_record_names_the_files_first(
+    run: Run, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, record: str | None
+) -> None:
+    if record is not None:
+        root = ollama_records(tmp_path / "records")
+        (root / READER / "latest").write_text(record)
+        monkeypatch.setattr(ollama, "MODEL_RECORDS", root)
+    reader = OllamaReader(
+        model=READER, transport=FakeTransport(payload={"response": "A person."})
+    )
+
+    with pytest.raises(Refusal) as refused:
+        caption(run, reader)
+
+    assert _names_the_files_first(str(refused.value))
+    assert attempts(run.directory(FLOW.id, CAPTIONS), 1) == []
+
+
+@pytest.mark.spec_exempt("twin: a build-only remedy does not name the files first")
+def test_a_build_only_remedy_is_not_read_as_naming_the_files_first() -> None:
+    build = f"ollama create {READER} -f config/joycaption.Modelfile"
+
+    assert not _names_the_files_first(f"build it (`{build}`)")
+    assert not _names_the_files_first(f"(`{build}`), then (`{ollama.PROVISION}`)")
 
 
 @pytest.mark.spec("caption:reachability:the-check-fires-at-first-call")

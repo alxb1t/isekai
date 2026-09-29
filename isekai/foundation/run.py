@@ -45,6 +45,7 @@ from isekai.foundation.artifacts import (
     Failure,
     Frame,
     InstructionsRecord,
+    PhotoRecord,
     read,
     require,
     write,
@@ -245,11 +246,16 @@ class Run:
         """Return the run's frame, refusing a version this build does not read."""
         return read(self.frame_path, RUN_FILE, remedy=self._remedy)
 
-    def _photo_record(self, key: str) -> str:
-        """Return the frame's `photo[key]`, refusing by name a value not a string."""
+    @property
+    def photo_record(self) -> PhotoRecord:
+        """Return the frame's record of its photograph, refusing a frame with none."""
         frame = self.frame
         require(self.frame_path, frame, "photo", dict, self._remedy)
-        record: Mapping[str, object] = {**frame["photo"]}
+        return frame["photo"]
+
+    def _photo_record(self, key: str) -> str:
+        """Return the frame's `photo[key]`, refusing by name a value not a string."""
+        record: Mapping[str, object] = {**self.photo_record}
         require(self.frame_path, record, key, str, self._remedy)
         return str(record[key])
 

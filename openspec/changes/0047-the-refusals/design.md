@@ -52,7 +52,7 @@ undeclared artifact; a host-key read that answers.
 | [D3](#d3) | every named flow with no approved sheet is refused, beside approved ones or not | the scenario already demands it | dropping it, as today |
 | [D4](#d4) | `show` prints the frame's refusal as the photograph line and lists the rest; a missing `photo` key is a refusal too | inspection reads a run in whatever state it is in | refusing the whole report |
 | [D5](#d5) | the no-record, unreadable-record and absent-model refusals name `PROVISION`, then the build | the build fails without the files | the build alone |
-| [D6](#d6) | `UnknownArtifact` subclasses `Refusal` and names the manifest it was given | a traceback is a defect; the evaluator's `pytest.raises` still holds | a new exception |
+| [D6](#d6) | the vocabulary's callers turn `UnknownArtifact` into a `Refusal` naming the manifest they loaded | a traceback is a defect; `provision.py` runs by path on the pod, where `isekai` does not import | `UnknownArtifact(Refusal)`, which imports `isekai` into `provision.py`; a new exception |
 | [D7](#d7) | the fingerprint is read with `tail=5000&source=container`, the last key line kept | `since` stalled on a live boot; a restarted container prints a new key after the old | `since` with a fallback to `tail` |
 | [D8](#d8) | a key is demanded a test once it is in the living spec; a key only an open delta adds may be named, not demanded; each new scenario enters the delta with its test | a cut stays green; the release's gate demands the folded keys | demanding every effective key, which reddens every cut that adds a scenario |
 
@@ -87,8 +87,10 @@ mismatch refusal's shape. `tests/test_caption.py:595-610`'s assertion on the bui
 
 ### D6
 
-**The undeclared artifact.** `class UnknownArtifact(Refusal)`; `entry_for` takes the manifest's path, and its message
-reads `<dest> is not declared in <manifest path>`. Its callers pass the path they loaded.
+**The undeclared artifact.** `provision.py` stays standard-library only: `Dockerfile` copies it alone into the image
+and `tools/download_models.sh` runs it by path, so an `isekai` import fails there. `wiring.load_vocabulary` and
+`wd14.verified_paths` catch `UnknownArtifact` and raise `shared/vocabulary.py`'s refusal: `<dest> is not declared in
+<manifest path>`, naming `tools/derive_vocabulary.py` as the fix. Amended at the build, on the operator's choice.
 
 ### D7
 
