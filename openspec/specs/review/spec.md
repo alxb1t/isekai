@@ -12,10 +12,14 @@ vocabulary and approved by a rename — so the machine's sheet is never altered.
 The system SHALL take the sheet into a separate directory before any edit is possible, and SHALL NOT
 provide any path by which the stage that filled the sheet has its output altered.
 
-The machine's raw sheet is the baseline the correction is worth measuring against: the unreviewed route
-carries 0.568 of the sheet's attributes into the render and the reviewed one carries 0.917. Editing in
-place destroys that baseline permanently, on every run. Separating the directories makes the guarantee
-a property of the layout rather than a rule a tool is trusted to follow.
+```
+sheet directory ──review──▶ review directory: draft ──approve, a rename──▶ approved
+(never edited)               (edited in place)                          (never overwritten)
+```
+
+The machine's sheet is the baseline the correction is measured against, and editing it in place destroys that
+baseline on every run. Separate directories make the guarantee a property of the layout, not a rule a tool is
+trusted to follow.
 
 #### Scenario: review copies rather than edits
 - **Key:** `review:copy:review-writes-to-its-own-directory`
@@ -104,10 +108,9 @@ predicts, which is a subset of the wider tag corpus, so calling an absent tag un
 The system SHALL estimate the assembled prompt's token count at approval and SHALL warn — not refuse —
 when it exceeds the text encoder's window.
 
-Sheets already run well past that window and nothing currently says so, which means every one is being
-silently chunked and averaged. It is a warning rather than a refusal because the sheet is the ground
-truth for what the render was asked to contain; deleting fields to fit would make the question of
-whether a criterion survived unanswerable at the moment it is asked.
+A prompt past the window is silently chunked and averaged, so the operator is told. It is a warning, not a
+refusal, because the sheet is the truth of what the render was asked to contain; deleting fields to fit would hide
+whether a criterion survived.
 
 #### Scenario: an over-long prompt warns and still approves
 - **Key:** `review:budget:over-window-warns-not-refuses`
@@ -121,9 +124,9 @@ whether a criterion survived unanswerable at the moment it is asked.
 The system SHALL record on the approved artifact whether its content differs from the sheet it was
 copied from.
 
-Whether a sheet was actually corrected is the difference between the 0.568 route and the 0.917 one, and
-without this it is an assumption rather than a fact on disk. It is also what lets the machine's raw
-draft be rendered deliberately as a control — approved unedited, and recorded as such.
+Whether a sheet was corrected decides which route a render measures, and without this record it is an assumption
+rather than a fact on disk. It also lets the machine's draft be rendered as a control — approved unedited, and
+recorded as such.
 
 #### Scenario: an untouched copy is recorded as unedited
 - **Key:** `review:provenance:unedited-copy-is-declared`
@@ -144,9 +147,8 @@ draft be rendered deliberately as a control — approved unedited, and recorded 
 The system SHALL report a refusal from review or approval to the operator and exit with a failure
 status, and SHALL NOT write an error record or consume a retry budget for it.
 
-Error records exist so that a batch of twenty photographs does not halt on one item's failure. This
-stage has no batch and no unattended retry — the operator is present by definition, and a refusal here
-is a message to them rather than state for a later resume to reason about.
+Error records keep a batch from halting on one photograph. Review has no batch and no unattended retry: the
+operator is present, and a refusal is a message to them, not state for a later resume.
 
 #### Scenario: a refusal is reported and leaves no error record
 - **Key:** `review:refusal:no-error-record-is-written`
@@ -154,19 +156,16 @@ is a message to them rather than state for a later resume to reason about.
 - **WHEN** review or approval refuses
 - **THEN** the reason is reported and the command exits with a failure status
 - **AND** no error record is written into the run directory
+
 ### Requirement: A draft is updated in place by one function, and a changed field set is refused
 
 The system SHALL provide one way to replace a draft's field values in place, SHALL leave the draft's
 version number and the sheet it records as its source unchanged, and SHALL refuse an update whose set of
 field names differs from the set the draft already carries.
 
-Until now a draft was written once and then edited by hand, so nothing owned the update and the envelope
-was only ever built at creation. A second writer arriving without a single owner is how two envelopes
-drift apart in the same directory. The field-set refusal is what makes that owner load-bearing rather
-than clerical: two of the four ways a sheet can be invalid at approval are a missing field and a field
-the schema does not have, and checking the set at the one write point turns both from a property the
-editing surface is trusted to have into a property of the pipeline — at the cost of one comparison,
-without opening the validator or changing what it means.
+A second writer without a single owner is how two envelopes drift apart in one directory. Checking the field set at
+the one write point turns a missing field and a field the schema lacks from a property the editing surface is
+trusted to have into a property of the pipeline, at the cost of one comparison.
 
 #### Scenario: an update replaces the values and keeps the version
 - **Key:** `review:draft-update:values-are-replaced-in-place`
@@ -195,12 +194,10 @@ The system SHALL report a sheet's token cost as a count over the assembled posit
 prefix, the sheet's tags and the flow's trailer, joined as the renderer joins them — and SHALL report
 alongside it each field's own share of that count and the fixed overhead that is not any field's.
 
-The number exists to be steered by while a sheet is being corrected, which is when tags are added and
-when the budget is crossed. A count that omits the prefix and trailer understates what the text encoder
-will read by about nineteen tokens against a window of seventy-seven, so a sheet reported comfortably
-inside the budget is in fact past it and silently chunked. Reporting the per-field shares and the
-overhead from the same call is what makes the number act on: the shares sum into the total, the overhead
-is the remainder, and the operator's question is never *how many tokens* but *which tag goes*.
+The count is steered by while a sheet is corrected, when tags are added and the budget is crossed. A count that
+omits the prefix and trailer understates what the text encoder reads, so a sheet reported inside the budget can be
+past it and silently chunked. The shares and the overhead come from the same call, so they sum to the total and
+answer the operator's real question: which tag goes.
 
 #### Scenario: the total is the assembled prompt's, not the tags' alone
 - **Key:** `review:budget:count-covers-the-assembled-prompt`

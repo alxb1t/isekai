@@ -14,23 +14,11 @@ directory, so that altering a dial, a prompt fragment, the graph, the schema or 
 suite naming the flow. Re-pinning SHALL be possible only as a deliberate edit to the committed digest, in
 a change that states what moved and why.
 
-**The freeze's job is that nothing changes silently, not that nothing changes.** The previous wording said
-changing a file *"creates a new flow"*, and the repository then did otherwise: `v0.22.3` removed two tags
-from both tracked flows' negative prompts and re-pinned, because the reason for the edit was that the
-renders were better — a claim about output that the freeze exists to surface rather than to forbid.
-Stating a rule the project does not follow is worse than stating the narrower one it does.
-
-**A new identifier is still what a *divergence* costs.** Two flows exist to be compared over one cohort,
-and that comparison is only possible if an identifier means one configuration. So the test is not whether
-a file changed but whether the old configuration is still wanted: where both must exist — a variant, an
-alternative base, a second generation — the answer is a new flow, and re-pinning would destroy the
-comparison. Where the old configuration is simply abandoned, re-pinning records that in one place.
-
-**Re-pinning is not free and must not become routine.** Runs rendered before the edit were produced by
-bytes that no longer exist. A sheet, a prompt and a render record the flow's digest, so an artifact shows
-which side of a re-pin it falls on; an artifact written before that record began shows nothing. A change that re-pins therefore owes a statement
-of what moved, in prose a later reader can find; a change that re-pins without one has spent the rule and
-left nothing in its place.
+The freeze makes nothing change silently; it does not stop change. Where the old configuration is still wanted — a
+variant, another base, a second generation — the answer is a new flow, because two flows are compared only while an
+identifier means one configuration ([D15](../../../docs/decisions.md#d15--a-flow-is-named-for-what-it-is)). Where it
+is abandoned, a re-pin records what moved in one place, and each sheet, prompt and render records the flow's digest,
+so it shows which side of a re-pin it falls on.
 
 #### Scenario: editing any file in a tracked flow fails the suite
 - **Key:** `image-generation:immutability:flow-manifest-is-pinned-by-equality`
@@ -96,9 +84,9 @@ guarantee, and it makes the entirety of prompt construction testable offline.
 The system SHALL render from an approved artifact only, and SHALL refuse a flow that has none, naming
 the commands that would produce one.
 
-The correction is the single largest measured gain in the pipeline. Rendering an unapproved draft would
-silently spend money producing the result the correction exists to improve on, and would make the two
-indistinguishable afterwards.
+A person's correction is what the render is for
+([D33](../../../docs/decisions.md#d33--the-operator-decides-what-is-rendered)). Rendering an unapproved draft spends
+money on the result the correction exists to improve, and leaves the two indistinguishable afterwards.
 
 #### Scenario: an unapproved flow is refused
 - **Key:** `image-generation:inputs:unapproved-flow-is-refused`
@@ -142,9 +130,8 @@ stage's: a listing, never a parse.
 The system SHALL reach the rendering endpoint through the repository's existing transport interface, so
 the whole stage is exercised by the offline suite with no GPU and no network.
 
-The transport is already provider-neutral — HTTP to a host and a port, knowing nothing about who rents
-the machine — and is already backed by a test double the existing suite runs against. Introducing a
-second way to reach it would give the network boundary two implementations to keep in step.
+The transport is provider-neutral — HTTP to a host and a port — and backed by a test double. A second way to
+reach the endpoint would give the network boundary two implementations to keep in step.
 
 #### Scenario: the suite renders through the double
 - **Key:** `image-generation:transport:offline-double-drives-the-stage`
@@ -155,29 +142,24 @@ second way to reach it would give the network boundary two implementations to ke
 
 ### Requirement: The render target is derived from the photograph's own header
 
-The system SHALL derive the render target from the photograph's own dimensions before any node reads
-it, and SHALL scale the photograph to that target. Without it the render happens at whatever size the
-input happened to be, so "the path runs" is a claim about the photographs that were tried rather than
-about the path.
+The system SHALL derive the render target from the photograph's own dimensions before any node reads it,
+and SHALL scale the photograph to that target. The target SHALL preserve the photograph's aspect ratio, place its
+short side at the base family's working scale, and keep both dimensions a multiple of the latent stride. The
+dimensions SHALL be the ones the image loader will present, after any rotation the file records, read however deep
+in the file the frame header sits. The system SHALL state every ceiling it enforces, SHALL refuse rather than
+clamp, and SHALL refuse one photograph without terminating the process.
 
-What the target buys is the photograph's **aspect ratio**; its magnitude is discarded. The target SHALL
-preserve that aspect ratio, place the short side at the base family's working scale, and keep both
-dimensions a multiple of the latent stride. A short side chosen this way holds for every aspect ratio,
-which a target expressed as a total pixel count does not: at a fixed megapixel budget the short side
-moves with the aspect ratio, so a wide photograph lands below the base's trained scale while a squarer
-one clears it — a failure that varies by input and reports nothing.
+```
+photograph ─▶ frame header ─▶ recorded rotation ─▶ target ─▶ scale node ─┬─▶ identity node
+              (at any depth)   (as the loader)                           └─▶ each ControlNet preprocessor
+```
 
-The dimensions it derives SHALL be the ones the image loader will present, which are not always the
-ones the file's frame header states: a photograph taken upright on a phone is stored rotated with a tag
-recording the rotation, and the loader applies that tag before any node sees the pixels. It SHALL also
-read those dimensions however deep in the file the header sits, because an ordinary camera writes a
-thumbnail, a colour profile and rights metadata ahead of it.
-
-Because a short-side rule places no bound on the other axis and a header field is an unverified number,
-the system SHALL state every ceiling it enforces rather than leaving one implied, and SHALL refuse
-rather than clamp. A refusal SHALL be recoverable per photograph rather than terminating the process,
-because a batch holds many photographs and one unreadable header must not cost the others their
-session.
+Without a target, "the path runs" is a claim about the photographs tried, not about the path. A short side holds for
+every aspect ratio; a fixed pixel count puts a wide photograph below the base's trained scale and reports nothing.
+No node can derive a target from the image it is handed, and the scale node scales to the exact target, so a size
+read before rotation squashes the photograph unreported. A clamp would distort the aspect ratio
+([D11](../../../docs/decisions.md#d11--the-photograph-is-scaled-once)), and a refusal that ended the process would
+cost every other photograph its rented session.
 
 #### Scenario: the photograph is scaled before any consumer reads it
 - **Key:** `image-generation:working-resolution:scale-precedes-every-consumer`
@@ -186,8 +168,7 @@ session.
 - **THEN** a scaling node sits between the image loader and every node that reads the photograph — the
   identity node and each ControlNet preprocessor
 - **AND** no consumer reads the loader directly, so every node is handed the same scaled image
-- **AND** this is a claim about which image each consumer receives and not about what a consumer then
-  does with it internally: a preprocessor's own working resolution is a separate dial on that node
+- **AND** a preprocessor's own working resolution stays a separate dial on that node
 
 #### Scenario: the target preserves aspect and places the short side at the working scale
 - **Key:** `image-generation:working-resolution:short-side-at-the-working-scale`
@@ -203,55 +184,43 @@ session.
 - **WHEN** a photograph in either supported codec is measured
 - **THEN** the dimensions derived are the ones its own frame header states, for a landscape, a portrait
   and a square photograph alike
-- **AND** they are read from the photograph rather than declared alongside it, because no node
-  available to this pipeline can derive a target from the image it is handed — so a dimension the
-  system does not read is a dimension nothing supplies
+- **AND** they are read from the photograph rather than declared alongside it
 
 #### Scenario: a photograph below the working scale is scaled up
 - **Key:** `image-generation:working-resolution:small-photos-are-scaled-up`
 - **Layers:** unit
 - **WHEN** the photograph's short side is below the working scale
 - **THEN** the computed target is larger than the photograph
-- **AND** scaling is therefore not a ceiling but a normalisation, because a photograph below the base's
-  trained scale renders as badly as one far above it
 
 #### Scenario: a rotated photograph is measured as it will be loaded
 - **Key:** `image-generation:working-resolution:orientation-is-honoured`
 - **Layers:** unit
-- **WHEN** the photograph records a rotation that transposes it, **in either supported codec**
+- **WHEN** the photograph records a rotation that transposes it, in either supported codec
 - **THEN** the dimensions derived are the transposed ones the loader will present
-- **AND** a photograph recording no rotation, or one that only flips it, is measured as its header
-  states, because the scale node scales to the exact target given rather than fitting to it — so a
-  target computed against the untransposed size would squash the photograph non-uniformly with nothing
-  reporting it
-- **AND** the rule holds wherever the codec puts the tag, because the loader reads it from both and the
-  mismatch this prevents is a property of the loader rather than of the container
+- **AND** a photograph recording no rotation, or one that only flips it, is measured as its header states
+- **AND** the rule holds wherever the codec puts the tag
 
 #### Scenario: a photograph whose frame header sits behind large metadata is still read
 - **Key:** `image-generation:working-resolution:a-deep-header-is-still-read`
 - **Layers:** unit
 - **WHEN** the photograph carries metadata larger than any fixed prefix ahead of its frame header
 - **THEN** its dimensions are still read and the render proceeds
-- **AND** the refusal is reserved for a file that genuinely has no readable frame header, because a
-  valid camera photograph refused as unreadable is a false report of a defect in the input
+- **AND** only a file with no readable frame header is refused as unreadable
 
 #### Scenario: a photograph whose dimensions cannot be read is refused
 - **Key:** `image-generation:working-resolution:unreadable-dimensions-are-refused`
 - **Layers:** unit
 - **WHEN** the photograph is not a format whose dimensions can be read, or its header is truncated
 - **THEN** that photograph is refused with a message naming the file
-- **AND** no default size is substituted, because a silently wrong resolution is a wrong render rather
-  than an error
+- **AND** no default size is substituted
 
 #### Scenario: a photograph whose aspect ratio drives the target past the long-side bound is refused
 - **Key:** `image-generation:working-resolution:an-extreme-aspect-ratio-is-refused`
 - **Layers:** unit
 - **WHEN** placing the photograph's short side at the working scale would put its long side past the
   stated bound
-- **THEN** that photograph is refused with a message naming the file, both computed dimensions and the
-  bound
-- **AND** the target is not clamped instead, because a clamped target no longer preserves the aspect
-  ratio and would squash the photograph in the way the orientation rule exists to prevent
+- **THEN** that photograph is refused with a message naming the file, both computed dimensions and the bound
+- **AND** the target is not clamped instead
 
 #### Scenario: a header declaring an impossible dimension is refused
 - **Key:** `image-generation:working-resolution:an-out-of-range-header-dimension-is-refused`
@@ -259,8 +228,7 @@ session.
 - **WHEN** a header declares a dimension past the stated maximum
 - **THEN** that photograph is refused with a message naming the file and the maximum, before any target
   is computed from it
-- **AND** the maximum is the same for every format the system reads, so a file is not accepted in one
-  codec and refused in another for a dimension neither can render
+- **AND** the maximum is the same for every format the system reads
 
 #### Scenario: a file whose header walk exceeds the byte budget is refused
 - **Key:** `image-generation:working-resolution:an-unbounded-header-walk-is-refused`
@@ -268,8 +236,7 @@ session.
 - **WHEN** reading a file's header consumes more than the stated byte budget without reaching a frame
   header
 - **THEN** that photograph is refused with a message naming the file and the budget
-- **AND** the budget is generous enough for any camera's metadata, so this bounds the work a malformed
-  or hostile file can demand without refusing a valid one
+- **AND** the budget holds any camera's metadata
 
 #### Scenario: one unusable photograph does not end the batch
 - **Key:** `image-generation:working-resolution:a-refusal-is-per-photograph`
@@ -277,8 +244,7 @@ session.
 - **WHEN** one photograph in a batch is refused for any of the reasons above
 - **THEN** the remaining photographs are still rendered and the refusal is reported against its own
   photograph
-- **AND** the process is not terminated, because the endpoint is already rented by the time the batch
-  runs and a terminating refusal takes every other photograph with it
+- **AND** the process is not terminated
 
 ### Requirement: A seed is drawn at full width
 
@@ -305,19 +271,11 @@ not declare. Where a role names both a transfer and a patch, the manifest's `inp
 SHALL agree about it, and a manifest declaring it under one and not the other SHALL be refused when the
 flow is loaded, naming the flow and the key that is missing.
 
-A flow declaring fewer roles used to pass the whole suite and fail on a rented GPU, after the
-photograph had already been uploaded — which is the half of "a broken flow costs a test run, not a
-boot" that was not true. Four roles are required because every image flow has them; the seven that are
-not required include a photograph, an identity adapter and a pose preprocessor, which a sheet-only flow
-does not have, and a hires resize and a hires sampler, which an ordinary cheaper flow does not have
-either. Refusing at load rather than at render is what moves the failure from money to a test run.
-
-The two gates over the photograph sit in different places — the transfer is gated on `inputs` and the
-patch on `nodes` — so nothing holds them in agreement unless the manifest is checked. A flow naming the
-photograph under `nodes` alone would upload nothing and leave the graph file's own committed filename in
-the load node: a paid render of the wrong person, with the whole suite green. The mirror case transfers a
-photograph no node reads. Identity preservation is the product, so a disagreement that can render
-somebody else is refused before anything runs rather than inspected afterwards.
+Refusing at load moves a broken flow's failure from a rented GPU to a test run. Every image flow has the required
+roles; a sheet-only flow has no photograph, identity adapter or pose preprocessor, and a cheaper flow no hires
+pass. The transfer is gated on `inputs` and the patch on `nodes`, so only the load check holds them together: a
+photograph under `nodes` alone uploads nothing and renders the graph's own committed filename — somebody else, with
+the suite green.
 
 #### Scenario: a flow missing a required role is refused at load
 - **Key:** `image-generation:roles:a-missing-required-role-is-refused-offline`
@@ -354,32 +312,21 @@ The system SHALL define a flow as a directory containing exactly the manifest an
 graph, a schema and a caption briefing — all of them directly in that directory, with no sub-directory
 and no other file. The manifest SHALL declare its required inputs, the vocabulary and the models its
 render is pinned to, the model its hosted stages run, whether it needs the tagger, its node roles, its
-prompt fragments and its dials.
-The manifest SHALL NOT name any of its sibling files, SHALL declare the version of its own format, and
-SHALL contain no computed or conditional value.
+prompt fragments and its dials. The manifest SHALL NOT name any of its sibling files, SHALL declare the
+version of its own format, and SHALL contain no computed or conditional value.
 
-A manifest that computes nothing is fully checkable without executing anything, which is what lets a
-broken flow be caught by the test suite rather than after a pod boot and several minutes. Holding the
-schema and the briefing inside the directory is what makes a flow the complete specification of how an
-input becomes an image: the briefing decides what enters the caption and the sheet decides the render, so
-a changed briefing is a changed image, which the freeze surfaces: a new flow when the old one is still
-wanted, a recorded re-pin when it is abandoned. The files sit directly in the directory
-rather than in sub-directories because the digest that freezes a flow covers regular files only; a nested
-layout would leave the schema and the briefing outside the freeze while the gate stayed green. A key that
-can only ever hold one value is not a declaration, which is why the manifest names no filenames.
+```
+flows/<id>/
+├── flow.json              the manifest
+├── graph.json
+├── schema.json
+└── caption.briefing.md
+```
 
-**The rule names its files rather than counting them, and the change of form is deliberate.** It was
-written as *five flat files* when there were five, and the count has now changed once — the sheet
-briefing had no reader after the sheet began to be filled from a tag list, and a file nothing reads is
-not a member of a structural rule. A count in a requirement, in a scenario key, and in four test names
-is five places to get it wrong the next time the set moves, and none of them was ever an assertion: the
-check has always been that the directory's contents equal the manifest plus the named siblings, which is
-true at any size. Naming the members makes the rule say what the check does.
-
-**This is not the weakening v0.19 refused.** That refusal was to *add* a sixth file — a model recipe —
-to the frozen set, and it was declined because a recipe that shapes no render makes no per-flow claim;
-the file went to `scripts/` instead. Removing a member that stopped being read is the opposite act, and
-the two are recorded together here so a later reader does not mistake one for a precedent for the other.
+A manifest that computes nothing is checkable without running anything, so a broken flow fails the suite, not a
+boot. The briefing and the schema shape the image, so they sit inside the freeze, and the digest covers regular
+files only, so a nested file would escape it ([D14](../../../docs/decisions.md#d14--a-flow-is-one-flat-directory)).
+A key that can hold only one value is not a declaration, so the manifest names no filename.
 
 #### Scenario: a flow holds the manifest and its named siblings, and nothing else
 - **Key:** `image-generation:manifest:a-flow-is-flat-and-its-files-are-named`
@@ -433,21 +380,11 @@ The system SHALL require every flow manifest to declare, in one top-level key, t
 stages run. It SHALL refuse a manifest that declares none, and SHALL refuse one whose value is not a
 non-empty string, naming the key in both cases. It SHALL derive no part of that value at load time.
 
-**The key is a bare string and not a block, and that is the shape the arm count decides.** A block was
-right when a flow chose between an implementation reached over a network to a third party and one reached
-over a socket to this machine: it held the choice, the model each stage ran, and the name of the
-distinction. With one implementation the distinction is gone and a block holding a single key is what
-this repository already calls not a declaration — the same rule that stops the manifest naming its own
-siblings. Flattening also closes a hole rather than opening one: the loader's allowlist refuses an
-unrecognised **top-level** key, so a misspelling is now caught by a check that already exists, where
-inside a block it was caught by nothing.
-
-The key is separate from the models a flow's render is pinned to, and the separation is the point: one
-names what a rented GPU loads and is pinned by digest, the other names what the local runtime is asked
-for by alias. One key rather than one per stage is what makes *this flow is wholly one model* a property
-of the document rather than of two lookups that happen to agree — and it is true of the running system,
-where the reader and the hosted tagger deliberately share an alias so that two prompts reach one model
-framed alike.
+The key is a bare string, not a block: with one arm there is no choice to hold
+([D5](../../../docs/decisions.md#d5--one-arm)), and the loader's allowlist of top-level keys catches a misspelling.
+It is separate from the render's models, which a rented GPU loads by digest; this one the local runtime is asked for
+by alias. One key, not one per stage, makes *this flow is wholly one model* a property of the document — the reader
+and the hosted tagger share an alias, so two prompts reach one model framed alike.
 
 #### Scenario: a flow declares the model it runs
 - **Key:** `image-generation:model:flow-declares-the-model-it-runs`
@@ -468,20 +405,16 @@ framed alike.
 - **Layers:** unit
 - **WHEN** a flow manifest declares a model that is absent of characters or is not a string
 - **THEN** loading it is refused naming the key
-- **AND** the value is not coerced into a string that would name a model no runtime holds
+- **AND** the value is not coerced into a string
 
 ### Requirement: An unrecognised manifest key is refused, naming what it carries
 
 The system SHALL refuse to load a flow whose manifest carries any top-level key the build does not
 recognise, naming the key. The refusal SHALL NOT require the flow to be executed.
 
-Every declared key is required, so a misspelled one is two failures at once: the key the build reads is
-absent, and a key it does not read is present. The first is already caught. The second is what this
-requirement closes, and it matters most for the model key — a manifest carrying `modl` alongside no
-`model` would otherwise be refused for the absence alone, naming a key the operator did not misspell and
-sending him to add a second one rather than to fix the one he wrote. The loader already refuses a missing
-key, a manifest that calls itself something else, an absent sibling file and a missing node role; an
-unknown key is that same shape.
+Every declared key is required, so a misspelt key is two failures: the key the build reads is absent, and a key it
+does not read is present. A manifest carrying `modl` and no `model`, refused for the absence alone, sends the
+operator to add a second key rather than fix the one they wrote.
 
 #### Scenario: an unrecognised manifest key is refused naming it
 - **Key:** `image-generation:manifest:unknown-key-is-refused`
@@ -503,17 +436,10 @@ The system SHALL record a failure to reach an endpoint as transient rather than 
 assemble each selected flow independently, so that one flow whose sheet cannot be assembled does not
 prevent another from being assembled or rendered.
 
-The kinds separate what will fail again from what might not, and a transport error is the clearest case
-of the second: a transient record tells the operator that trying again may succeed. At the rendering
-stage the kind does not change what the next invocation does. That stage's budget is one attempt, so a
-record of either kind refuses the next render until the operator deletes it — a paid stage is never
-retried on its own.
-
-Assembling every selected flow in one expression makes the first failure the invocation's failure. The
-batch-over-photographs rule already collects one refusal per photograph and carries on; a flow is the
-same kind of unit and gets the same treatment. Without it, a malformed sheet for one flow leaves a
-second flow unrenderable until the first is repaired, and the permanent record written before the raise
-means repairing it is not enough.
+A transient record says trying again may succeed
+([D21](../../../docs/decisions.md#d21--retries-follow-what-can-fail)). At the render the kind changes nothing: its
+budget is one attempt, so a record of either kind refuses the next render until the operator deletes it. A flow is a
+unit, as a photograph is: one flow's malformed sheet must not leave another unrenderable.
 
 #### Scenario: an unreachable endpoint is recorded transient
 - **Key:** `image-generation:failure:an-unreachable-endpoint-is-transient`
@@ -556,18 +482,11 @@ The system SHALL require every flow manifest to declare, in one top-level key, w
 tagger, as a boolean. It SHALL refuse a manifest that declares none, and SHALL refuse one whose value is
 not a boolean, naming the key in both cases. It SHALL derive no part of that value at load time.
 
-**Flows that need no tag list are coming, and whether a flow is tagged is a thing flows now differ in** —
-which is what the manifest declares. The tag verb reads it to refuse a flow that declares no tagger, and
-the sheet stage is told it to fill such a flow's sheet empty rather than refuse.
-
-**A boolean and not a list of taggers.** The tag verb runs both taggers together, so a list would declare a
-choice no flow makes. **A value that is not a boolean is refused rather than coerced**: a manifest whose
-`"false"` read as true would tag a flow that said it needs none.
-
-**Adding the key moves the manifest's format version**, because every key is required and the loader
-reads one version. Both tracked flows declare that they need the tagger and are re-pinned in place: their
-configuration did not change, only the format that states it, and a new identifier would claim a variant
-that does not exist.
+Flows differ in whether they are tagged, so the manifest declares it: the tag verb refuses a flow that declares no
+tagger, and the sheet stage fills its sheet empty
+([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)). A boolean, not a list: the tag verb
+runs both taggers together. A value that is not a boolean is refused, not coerced — a `"false"` read as true would
+tag a flow that needs none.
 
 #### Scenario: a flow declares whether it needs the tagger
 - **Key:** `image-generation:tagger:flow-declares-whether-it-is-tagged`
@@ -596,14 +515,11 @@ The system SHALL accept either a count of renders or an explicit list of seeds, 
 SHALL draw seeds from an injectable source when given a count, and SHALL name each output by its seed
 under the number of the approval it was rendered from.
 
-Naming the output by its seed is the reproducibility contract at the finest grain the system has: one
-image, one integer. The two ways of asking are separate verbs — one explores, one reproduces — and
-combining them has no meaning. Drawing from an injectable source is what keeps the suite deterministic
-without making production output predictable.
-
-**The directory is the approval's number, and the requirement now says so.** It said *sheet version* while
-the code grouped by approval; one sheet approved twice renders into two directories. The sheet's own number
-is recorded in the render instead.
+One image, one integer: the seed is the reproducibility contract
+([D13](../../../docs/decisions.md#d13--the-seed-reproduces-the-graph-not-the-pixels)). A count explores and a seed list
+reproduces, so combining them means nothing. An injectable source keeps the suite deterministic without making
+output predictable. One sheet approved twice renders into two directories; the sheet's own number is recorded in
+the render.
 
 #### Scenario: a count draws that many distinct seeds
 - **Key:** `image-generation:seeds:count-draws-distinct-seeds`
@@ -638,9 +554,8 @@ is recorded in the render instead.
 The system SHALL record in every prompt and every render the digest of the flow's directory and the number
 of the sheet the approval was made from. The number of the approval itself stays the producer's `from`.
 
-A flow's identifier can mean two configurations across a re-pin, and only the digest tells them apart. The
-sheet's number was recorded nowhere past the approval, so a render could name its approval but not the
-sheet the person corrected.
+A flow's identifier can mean two configurations across a re-pin, and only the digest tells them apart. The sheet's
+number lets a render name the sheet the person corrected, not only its approval.
 
 #### Scenario: a render records its flow's digest and its sheet
 - **Key:** `image-generation:provenance:the-flow-digest-and-the-sheet-are-recorded`

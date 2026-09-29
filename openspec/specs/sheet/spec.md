@@ -14,14 +14,11 @@ The system SHALL read the field list from a schema document inside the flow's ow
 declares, in order, each field's name, whether it is scored, and the vocabulary suffix convention that
 applies to it. The schema SHALL NOT declare a version and SHALL NOT declare a vocabulary.
 
-The schema is data rather than code so that it can be checked without executing anything, and so that a
-second schema — a photoreal flow's, say — is a file rather than a branch. It carries no version because
-inside a frozen flow directory a version protects nothing: the flow's digest already proves the field
-list byte for byte, and a changed field list is a new flow rather than a new schema version. That is
-also what makes a schema change measurable, because the old flow and the new one can be rendered over
-one cohort and compared. It declares no vocabulary because the flow does: where two things could own a
-declaration the flow owns it, since the flow is the unit that is frozen, selected, rendered and
-compared, and the vocabulary is provisioned like the models are.
+The schema is data, so it is checked without running anything, and a second schema is a file rather than a branch.
+It carries no version: the flow's digest proves the field list byte for byte, and a changed field list is a new
+flow, compared with the old one over one cohort. It declares no vocabulary because the flow does — the flow is the
+unit that is frozen, selected, rendered and compared
+([D14](../../../docs/decisions.md#d14--a-flow-is-one-flat-directory)).
 
 #### Scenario: field order in the schema is the order in the prompt
 - **Key:** `sheet:schema:field-order-is-declared-once`
@@ -55,11 +52,10 @@ compared, and the vocabulary is provisioned like the models are.
 
 The system SHALL emit no tag that is not in the vocabulary.
 
-An invented tag that merely looks canonical is worse than an obviously invalid one, because it passes every
-later check on its way into the prompt. **After this change the property holds by construction rather than
-by filtering**: the tagger's output layer is the vocabulary, and the router emits only tags it was given.
-The requirement stays because it is what a later reader checks a fill against, and because it is the
-invariant any future producer would have to satisfy to be allowed near a sheet.
+An invented tag that looks canonical passes every later check on its way into the prompt. The tagger's output layer
+is the vocabulary and the router emits only tags it was given, so this holds by construction
+([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)); the requirement is what a later reader checks a fill
+against, and what any future producer must meet.
 
 #### Scenario: every emitted tag is in the vocabulary
 - **Key:** `sheet:purity:no-tag-outside-the-vocabulary`
@@ -73,40 +69,28 @@ invariant any future producer would have to satisfy to be allowed near a sheet.
 The system SHALL fill a sheet from a schema, a vocabulary, a field map and — for a flow that declares the
 tagger — its local tag list, and SHALL store fields only. It SHALL NOT store an assembled prompt in a sheet,
 SHALL NOT be told which flow requested the work beyond whether a tag list is expected and the flow's digest
-it records, and SHALL NOT read prose. For a flow that declares the tagger it SHALL refuse naming the verb that produces the tag list when
-that list is absent. For a flow that declares none it SHALL write every field empty, and the sheet's
-producer SHALL record that no tag list and no model filled it. Every sheet SHALL record the digest of the
-flow it was filled for, and SHALL carry the tag list's confidence floor into its producer where the list
+it records, and SHALL NOT read prose. For a flow that declares the tagger it SHALL refuse naming the verb that
+produces the tag list when that list is absent. For a flow that declares none it SHALL write every field empty,
+and the sheet's producer SHALL record that no tag list and no model filled it. Every sheet SHALL record the digest
+of the flow it was filled for, and SHALL carry the tag list's confidence floor into its producer where the list
 records one.
 
-Storing the assembled prompt in the sheet creates a footgun where a human edits the prompt block and a
-rebuild silently overwrites it. Keeping the stage ignorant of flows is what lets the same code serve every
-flow without learning that flows exist: the composition root resolves a flow to its schema and hands the
-stage a primitive.
+```
+flow declares the tagger? ──yes──▶ local tag list present? ──yes──▶ fill through the field map
+         │                                  │
+         no                                 no ──▶ refuse, naming the verb that produces it
+         ▼
+every field empty; the producer names no tag list and no model
+```
 
-**The input changes from prose to a tag list because of what the two producers can be wrong about.** A
-reader asked for a field structure can invent a tag that merely looks canonical, and it did: `light` and
-`dark` reached an assembled prompt as bare tags meaning *lighting* and *darkness*, past every guard, and one
-sheet lost its subject count entirely. A tagger whose output layer **is** the vocabulary cannot make that
-class of error, because naming a tag outside the list is not something it can express. It can be wrong about
-the photograph, and that is the operator's to correct on the surface — which he does to every sheet
-regardless, so sheet fidelity was never the metric. Prose remains a reading aid for the operator and stops
-being a machine input, so a failed reader no longer blocks a sheet it does not feed.
-
-**For a flow that declares the tagger, the tag list is a prerequisite rather than an aid, and the refusal
-is what says so.** A sheet with every
-field empty is legal and therefore silent, so producing one when the tagger never ran would hide the one
-thing the operator needs told. The rule that an absent tag artifact is an absent aid holds for a tagger that
-contributes nothing to a sheet; it cannot hold for the one the sheet is filled from.
-
-**A flow that declares no tagger gets empty fields, and that is not the silence the refusal guards
-against.** The refusal exists because an empty sheet would hide a tagger that never ran; for a flow that
-declares none, no tagger was going to run, so there is nothing to hide. The person fills the sheet on the
-review surface and approves it, and approval still gates the render.
-
-The stage learns only whether a tag list is expected — a boolean the composition root reads from the
-manifest — and the flow's digest, a string it records and never reads, so it stays ignorant of flows. The
-digest is what ties a sheet to the schema and field names it was filled against, when a flow is re-pinned.
+A prompt stored in the sheet would be edited by a person and silently overwritten by a rebuild. The stage learns
+only whether a tag list is expected and the flow's digest, which it records and never reads, so one stage serves
+every flow; the digest ties a sheet to the schema it was filled against across a re-pin. It reads a tag list, not
+prose, because a tagger whose output layer is the vocabulary cannot name a tag outside it
+([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)). An empty sheet is legal and so silent: for a tagged
+flow it would hide a tagger that never ran, and for a flow that declares none there is nothing to hide — a person
+fills it, and approval still gates the render
+([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)).
 
 #### Scenario: a sheet stores fields and no prompt
 - **Key:** `sheet:output:sheet-stores-fields-only`

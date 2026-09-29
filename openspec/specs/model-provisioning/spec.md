@@ -13,13 +13,11 @@ revision, every artifact carrying a digest, nothing trusted by name.
 The manifest SHALL declare an entry for every model file a render of a tracked flow's graph loads,
 including files that no field of the graph names — the annotator checkpoints a preprocessor node
 fetches for itself. A graph that requires a file the manifest does not declare MUST fail the suite
-offline, because the alternative is discovering it on a metered pod.
+offline.
 
-The graph the rule is stated over is the one the repository ships under `flows/<id>/graph.json`, not a
-single path fixed here. A flow is the unit that owns a graph, so a rule naming one file by hand would
-go stale the moment a second flow is added — and it would go stale silently, because a manifest check
-against a graph that is no longer rendered still passes. Stating it over the tracked flows keeps the
-check binding on whatever is actually rendered.
+Otherwise the missing file is found on a metered pod. The rule is stated over every tracked flow's
+`flows/<id>/graph.json`, because a check against one hand-named graph still passes once that graph is no longer
+rendered.
 
 #### Scenario: a model filename named in the graph has a manifest entry
 - **Key:** `model-provisioning:manifest-completeness:graph-filename-has-an-entry`
@@ -35,31 +33,23 @@ check binding on whatever is actually rendered.
 - **WHEN** the graph contains a preprocessor node that downloads model files it exposes no field for
 - **THEN** the manifest declares those files, resolved through a tracked mapping from node class to
   required filenames
-- **AND** adding such a node without extending the mapping fails the check rather than passing
-  silently
+- **AND** adding such a node without extending the mapping fails the check
 
 ### Requirement: Every source is pinned to an immutable revision and a digest
 
-Every entry SHALL name its bytes by a revision that cannot move and by a SHA-256 digest. A source
-that resolves a branch is not a pin: the same URL returns different bytes on different days, and no
-record in this repository would show that it had.
+Every entry SHALL name its bytes by a revision that cannot move and by a SHA-256 digest. Where every host
+serving an artifact is a mirror, its digest SHALL be the one the artifact's publisher states, not one computed from
+a fetched copy. These rules SHALL be enforced where the manifest is read on the pod: the system SHALL refuse,
+before any transfer begins and with a message naming the entry, a destination that does not resolve inside the
+models root, a source that is not a pinned URL free of whitespace, and an entry declaring no sources at all. The
+system SHALL carry the resolved destination through to whatever performs the transfer, rather than have that
+component join paths of its own.
 
-Where an artifact has no first-party source at all — every host serving it is a mirror — the digest
-is not merely a check on the transfer but the whole trust root, and it SHALL be the digest the
-artifact's publisher states rather than one computed from whichever copy was fetched first. A digest
-taken from a mirror attests only that the mirrors agree with each other.
-
-These rules SHALL be enforced where the manifest is read on the pod, not only where it is asserted
-against in the suite. A check that runs at commit time constrains the manifest this repository
-tracks; it does not constrain a manifest the module is handed, and it is the module that joins a
-destination onto the filesystem, hands a URL to a transfer, and decides what to fetch. Accordingly
-the system SHALL refuse — before any transfer begins and with a message naming the entry — a
-destination that does not resolve inside the models root, a source that is not a pinned URL free of
-whitespace, and an entry declaring no sources at all.
-
-The system SHALL also carry the resolved destination through to whatever performs the transfer,
-rather than having that component join paths of its own, so the containment rule is enforced in one
-place instead of being restated wherever a path is assembled.
+A branch is not a pin: one URL returns different bytes on different days, and no record here would show it. Where
+no first-party source exists the digest is the whole trust root, and a digest taken from a mirror attests only that
+the mirrors agree. A check at commit time constrains the tracked manifest, not one the module is handed, and the
+module is what joins a destination onto the filesystem and hands a URL to a transfer; carrying the resolved path
+keeps containment in one place.
 
 #### Scenario: no source resolves a mutable ref
 - **Key:** `model-provisioning:immutable-pins:no-source-resolves-a-mutable-ref`
@@ -80,54 +70,44 @@ place instead of being restated wherever a path is assembled.
 - **Layers:** unit
 - **WHEN** an entry's primary source is a third-party mirror rather than the publisher
 - **THEN** the entry declares at least one additional source for the same digest
-- **AND** the digest is what makes any of those sources acceptable, so the alternates add
-  availability without adding trust
+- **AND** every source is accepted only by that digest
 
 #### Scenario: an artifact its publisher does not host is pinned to the publisher's stated digest
 - **Key:** `model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest`
 - **Layers:** unit
 - **WHEN** an entry is served only by mirrors, none of them the publisher
-- **THEN** its declared digest equals the one the publisher states for that artifact, and the check
-  runs offline as part of the ordinary suite rather than only when a human re-derives the manifest
-- **AND** the tie between the shipped bytes and the publisher's own digest is therefore held by the
-  gate, so changing it is a deliberate test edit rather than a silent retrust of the mirrors
-- **AND** that published digest is read from the publisher's own machine-readable record when the
-  manifest is derived, rather than transcribed by hand into the files that compare against each
-  other, because three copies of one transcription cross-check the copying and not the value
+- **THEN** its declared digest equals the one the publisher states for that artifact, checked offline in the suite
+- **AND** that digest is read from the publisher's own machine-readable record when the manifest is derived, not
+  transcribed by hand
 
 #### Scenario: a destination that escapes the models root is refused
 - **Key:** `model-provisioning:immutable-pins:an-escaping-destination-is-refused`
 - **Layers:** unit
 - **WHEN** an entry names a destination that is absolute, or that resolves outside the models root
 - **THEN** provisioning refuses before any transfer, naming the entry and the destination
-- **AND** the destination handed to the transfer is the already-resolved path, so no component
-  downstream joins a path of its own and the rule is enforced in exactly one place
-- **AND** the digest offers no protection here, because whoever supplies the destination supplies the
-  digest beside it — and a second project shares the volume this tree lives on
+- **AND** the destination handed to the transfer is the already-resolved path
 
 #### Scenario: a source that is not a pinned URL is refused at the point of use
 - **Key:** `model-provisioning:immutable-pins:a-malformed-source-is-refused-at-runtime`
 - **Layers:** unit
 - **WHEN** an entry declares a source that is not a pinned URL, or that contains whitespace
 - **THEN** provisioning refuses before any transfer, naming the entry and the source
-- **AND** the transfer receives the sources as a list rather than as a string it must split, so a
-  source's shape can never change how many arguments the transfer is given
+- **AND** the transfer receives the sources as a list rather than as a string it must split
 
 #### Scenario: an entry declaring no sources is refused
 - **Key:** `model-provisioning:immutable-pins:an-entry-with-no-sources-is-refused`
 - **Layers:** unit
 - **WHEN** an entry declares an empty list of sources
-- **THEN** provisioning refuses with a message saying that no source was declared for that
-  destination
-- **AND** it does not report that every source was rejected, because an entry that offered nothing
-  and an entry whose every offer was refused are different failures with different fixes
+- **THEN** provisioning refuses with a message saying that no source was declared for that destination
+- **AND** it does not report that every source was rejected
 
 ### Requirement: Bytes are verified before they are trusted
 
 Provisioning SHALL compute each file's digest and compare it to the manifest before that file is
-usable, whether it was just downloaded or was already on the volume. Verification that runs only on
-the download path leaves a warm volume permanently unchecked — which is the case the digest exists
-for.
+usable, whether it was just downloaded or was already on the volume.
+
+Verification only on the download path leaves a warm volume unchecked for good, and that is the case the digest
+exists for.
 
 #### Scenario: contents that do not match the declared digest are rejected
 - **Key:** `model-provisioning:byte-verification:mismatched-bytes-are-rejected`
@@ -148,21 +128,21 @@ for.
 - **Layers:** unit
 - **WHEN** a download is interrupted or its bytes fail verification
 - **THEN** nothing appears at the destination filename
-- **AND** a subsequent run therefore sees the file as absent rather than as present-and-trusted
+- **AND** a later run sees the file as absent
 
 #### Scenario: an existing file that fails verification is left on disk
 - **Key:** `model-provisioning:byte-verification:a-present-file-that-fails-is-not-deleted`
 - **Layers:** unit
 - **WHEN** a file that was already present fails verification
 - **THEN** provisioning stops without removing it
-- **AND** the file survives for inspection, because the volume may hold artifacts this project did
-  not put there
+- **AND** the file survives for inspection
 
 ### Requirement: A source is checked before a large transfer begins
 
 Where a source publishes the digest of what it will serve, provisioning SHALL compare that published
-digest against the manifest before transferring the file. A multi-gigabyte download that ends in a
-mismatch costs the same as one that ends in success.
+digest against the manifest before transferring the file.
+
+A multi-gigabyte download that ends in a mismatch costs the same as one that ends in success.
 
 #### Scenario: a published digest that disagrees with the manifest aborts before transfer
 - **Key:** `model-provisioning:preflight:published-digest-mismatch-aborts-before-transfer`
@@ -175,9 +155,9 @@ mismatch costs the same as one that ends in success.
 ### Requirement: A transfer that fails advances to the next declared source
 
 Where an entry declares more than one source, provisioning SHALL try them in the manifest's order
-and abort only when every one of them has failed. An alternate that is never reached buys no
-availability: the failure it exists for — a mirror that has gone away — is exactly the one that
-stops the run.
+and abort only when every one of them has failed.
+
+An alternate that is never reached buys no availability: a mirror that has gone away is the failure it exists for.
 
 #### Scenario: the plan carries every source that survives the pre-flight
 - **Key:** `model-provisioning:source-fallback:the-plan-carries-every-surviving-source`
@@ -195,21 +175,20 @@ stops the run.
 
 ### Requirement: A provisioning failure leaves the pod reachable
 
-When provisioning aborts, the pod SHALL stay up with its SSH daemon running rather than terminating.
-The abort policy leaves a mismatched file on disk for a human to inspect, and that is only true if
-the human can get in: a container whose entrypoint exits takes its daemon with it and dies again on
-every subsequent boot, within seconds of start.
+When provisioning aborts — preparing the models namespace or fetching into it — the pod SHALL stay up with its
+SSH daemon running rather than terminating. The hold SHALL be bounded, shorter than the session's spending ceiling
+allows, SHALL end in the pod stopping itself, and the failure SHALL be legible from outside the container's log.
 
-That hold SHALL cover preparing the models namespace as well as fetching into it. Preparing the
-volume is provisioning by any reading a human would give the word, and a failure there — an
-unwritable volume, a link onto a path that could not be cleared — terminates the entrypoint exactly
-as a fetch failure used to.
+```
+provisioning fails ──▶ hold: SSH up, inference server not started, marker written off the volume
+                          │
+                          └── window ends ──▶ the pod stops itself
+```
 
-The hold SHALL be bounded rather than indefinite, SHALL end in the pod stopping itself, and the failure SHALL be
-legible from outside the container's log. A pod holding open reports as running and healthy while it bills, so an
-unattended failure that looks like success is the one that outlasts the session's spending ceiling; the bound
-SHALL be shorter than that ceiling allows. A hold that ended in its process exiting would boot again if the
-container restarted, and hold again, so it would never end.
+The abort policy leaves a mismatched file on disk for a person to inspect, which holds only if they can get in: an
+entrypoint that exits takes its daemon with it and dies again on every boot. A pod holding open reports as running
+and healthy while it bills, so an unbounded hold outlasts the spending ceiling; a hold that ended in its process
+exiting would restart with the container and hold again.
 
 #### Scenario: a provisioning abort holds the pod open instead of stopping it
 - **Key:** `model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open`
@@ -223,41 +202,35 @@ container restarted, and hold again, so it would never end.
 - **Layers:** unit
 - **WHEN** preparing the models namespace fails before any artifact is fetched
 - **THEN** the entrypoint reports the failure and holds the pod open exactly as a fetch failure does
-- **AND** no step of preparing the namespace can terminate the entrypoint, because the guarantee is
-  about provisioning and not about one of its steps
+- **AND** no step of preparing the namespace can terminate the entrypoint
 
 #### Scenario: the hold is bounded and leaves a marker outside the log
 - **Key:** `model-provisioning:reachability:the-hold-is-bounded-and-marked`
 - **Layers:** unit
 - **WHEN** the entrypoint holds the pod open after a provisioning failure
-- **THEN** the hold ends within a stated window shorter than the session's spending ceiling allows, by
-  stopping the pod, and a marker recording the failure is written where the failure itself cannot have
-  made it unwritable
-- **AND** the marker is therefore not written onto the volume, because the volume is exactly the
-  thing that may have failed
+- **THEN** the hold ends by stopping the pod, within a stated window shorter than the session's spending ceiling
+  allows
+- **AND** a marker recording the failure is written where the failure cannot have made it unwritable
+- **AND** the marker is not written onto the volume
 
 #### Scenario: the pod refuses to provision onto anything but its network volume
 - **Key:** `model-provisioning:reachability:provisioning-requires-the-network-volume`
 - **Layers:** unit
-- **WHEN** the pod is created without the network volume it expects, or the models namespace would
-  otherwise be prepared somewhere that is not that volume
-- **THEN** the pod is refused before it is created if the volume it expects is not named, and the
-  entrypoint refuses before preparing the namespace if what it finds is not that volume
-- **AND** the entrypoint is told which volume to expect rather than inferring it, because the failure
-  this prevents — a full model stack downloaded onto storage that does not survive the pod — renders
-  correctly, bills fully and is discovered only on the next metered session
+- **WHEN** the pod is created without the network volume it expects, or the models namespace would be prepared
+  somewhere that is not that volume
+- **THEN** the pod is refused before it is created if the volume it expects is not named
+- **AND** the entrypoint refuses before preparing the namespace if what it finds is not that volume
+- **AND** the entrypoint is told which volume to expect rather than inferring it
 
 ### Requirement: Model artifacts resolve inside the project's own namespace
 
 Every artifact this project provisions SHALL resolve within a directory tree belonging to this
-project, including artifacts a custom node downloads for itself. Files written outside that tree
-land on storage that does not survive the pod, so they are re-fetched during metered renders and
-cannot be verified against the manifest at all.
+project, including artifacts a custom node downloads for itself. A node that fetches its own models SHALL be
+bound to the manifest by name rather than by a naming convention.
 
-A node that fetches its own models SHALL be bound to the manifest by name rather than by a naming
-convention. A rule that recognises such nodes by how their class is spelled binds the ones that
-happen to be spelled that way and silently passes the ones that are not, so the artifacts of an
-unrecognised node are load-bearing while nothing checks that they are still declared.
+Files written outside that tree land on storage that does not survive the pod, so they are re-fetched during
+metered renders and never verified against the manifest. A rule matching how a class is spelled binds the nodes
+spelled that way and silently passes the rest.
 
 #### Scenario: annotator checkpoints resolve onto the project's models tree
 - **Key:** `model-provisioning:namespace:annotator-checkpoints-resolve-onto-the-models-tree`
@@ -274,8 +247,7 @@ unrecognised node are load-bearing while nothing checks that they are still decl
   models
 - **THEN** every such class present in the graph has its artifacts declared in the manifest, and a
   class in the graph that is absent from that set fails the check
-- **AND** membership is by name rather than by how a class is spelled, so a node that fetches for
-  itself cannot pass by not matching a pattern
+- **AND** membership is by name, not by how a class is spelled
 
 ### Requirement: Manifest derivation is shared and each manifest stays byte-identical
 
@@ -286,19 +258,11 @@ that is byte-identical on a re-run. A deriver that hashes fetched bytes SHALL di
 itself and nothing else: it SHALL refuse a response whose body is shorter than the length that response
 declares, and SHALL require the identity content coding.
 
-Two derivers already share these names by import, which makes that structure load-bearing the moment a
-third arrives; the entry type is currently declared twice under one name with two different shapes, and
-a third shape is how that becomes a defect rather than an oddity. The byte-identical rule is what makes
-the extraction verifiable for nothing: re-run every deriver, and any difference is the refactor's fault.
-
-**A digest of whatever arrived is not a digest of the artifact**, and the byte-identical rule fails
-here in the one direction nothing would notice: the wrong digest is a real SHA-256 with a plausible
-byte count, it is written to a tracked file, and it becomes a refusal of the *correct* artifact at
-whatever verifies it later. Two different things produce it. A connection dropped mid-body leaves a
-truncated read that the standard library returns without complaint, where a length comparison catches
-it. And a request naming no acceptable coding accepts every coding, so a host may answer one fetch
-compressed and the next one not — which the length comparison cannot catch, because a coded response
-declares its coded length.
+One module means no two entry shapes share a name. The byte-identical rule makes any change to a deriver
+checkable: re-run it, and any difference is the change's. A digest of whatever arrived is a real SHA-256, written
+to a tracked file, that later refuses the correct artifact. A dropped connection returns a truncated body without
+complaint, which the length check catches; a request naming no coding may be answered compressed, which only the
+identity coding prevents, because a coded response declares its coded length.
 
 #### Scenario: the entry type is declared once
 - **Key:** `model-provisioning:derivation:entry-type-has-one-definition`
@@ -333,7 +297,7 @@ declares its coded length.
 - **Layers:** unit
 - **WHEN** a deriver digests an artifact by fetching and hashing its bytes
 - **THEN** the request declares that only the identity coding is acceptable
-- **AND** a compressed response is therefore never hashed in place of the artifact
+- **AND** a compressed response is never hashed in place of the artifact
 
 ### Requirement: The tag vocabulary and the model it indexes are provisioned from one manifest
 
@@ -342,20 +306,11 @@ its own manifest, and SHALL provision and verify it exactly as every other model
 build loads the model that tag list is the output layer of, the manifest SHALL pin that model beside
 it, at the same revision, and a consumer SHALL verify both before its first use.
 
-The file was untracked and produced only as a side effect of downloading a model this repository did
-not run, so a fresh clone could not fill a sheet at all. Giving it its own manifest also makes swapping
-the vocabulary a matter of pointing one manifest somewhere else, rather than a code change.
-
-**The tag list and the tagger are one artifact split in two, and this version is what makes that
-true.** Row N of the list names output neuron N of the graph, so a list and a graph from different
-revisions mislabel every tag — silently, because the vector has the right length and every name in it
-is a real tag. Nothing downstream can detect it. A manifest holding one half without the other is
-therefore a manifest that cannot catch the one failure that matters, which is why the revision the two
-entries name is itself a contract rather than a coincidence.
-
-That claim is conditional on a build loading the model, and it was correct to refuse it while none
-did: until the model is loaded, the vocabulary genuinely outlives any particular tagger and pinning
-one would have made swapping the list a decision about a model nobody opened.
+A pinned tag list lets a fresh clone fill a sheet, and swapping the vocabulary means pointing one manifest
+elsewhere, not changing code. The list and the tagger are one artifact in two files: row N of the list names output
+N of the model, so a pair from two revisions mislabels every tag, silently
+([D7](../../../docs/decisions.md#d7--wd14-is-one-artifact-in-two-files)). The model is pinned only where a build
+loads it, because a vocabulary no loaded model indexes outlives any particular tagger.
 
 #### Scenario: the vocabulary has a pinned, digested entry
 - **Key:** `model-provisioning:vocabulary:entry-is-pinned-and-digested`
@@ -399,10 +354,9 @@ of their own, derived like every other manifest, and SHALL name, for each model 
 entry is its model file and which its projector. The provisioning driver SHALL fetch and verify that
 manifest's entries exactly as it does every other's.
 
-The files were fetched by hand and their digests lived in a comment, so a clone could not provision the
-reader and nothing could check what the local runtime was built from. A manifest makes the files
-fetchable by the same command as every other artifact, and gives the pre-call check one place to read the
-pins from.
+A manifest makes the reader's files fetchable by the same command as every other artifact, and gives the pre-call
+check one place to read the pins from
+([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)).
 
 #### Scenario: the reader's manifest pins both files of each model
 - **Key:** `model-provisioning:reader:each-model-names-its-model-and-projector`

@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.3] - 2026-09-29 · 0046-the-terse-specs
+
 ### Changed
 
 - `CLAUDE.md` states how a spec reads. `agent-skills`, `comfy-transport` and `pod-image` read to it, and the pod

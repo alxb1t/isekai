@@ -14,13 +14,10 @@ The system SHALL pass a tagger exactly one input — the photograph — and SHAL
 field list, a vocabulary, a caption, a flow identifier or any prose. It SHALL accept exactly one output:
 a list of tags.
 
-This is the reader's own rule, applied to a different producer for the same measured reason. Pressing a
-model into a schema is what makes it invent: instructed never to leave a field blank, a reader
-manufactured nineteen identity marks across seven of ten subjects and its score fell from 0.518 to
-0.307. A tagger is at greater risk than a reader, not less, because its output is already a list and a
-field list would look like help. Withholding the caption also keeps the two producers independent: a
-tagger shown the prose would agree with it, and agreement between two producers that saw the same text
-is not corroboration.
+Pressing a model into a schema makes it invent: told never to leave a field blank, a reader manufactures identity
+marks. A tagger is at greater risk, because its output is already a list and a field list would look like help.
+Withholding the caption keeps the two producers independent: a tagger shown the prose agrees with it, and that is
+not corroboration.
 
 #### Scenario: the tagger receives the photograph and nothing else
 - **Key:** `tagging:inputs:only-the-photograph-is-passed`
@@ -41,17 +38,11 @@ is not corroboration.
 The system SHALL store a tagger's output without canonicalising it, without filtering it against any
 vocabulary and without re-ordering it by anything other than a score the tagger itself returned.
 
-**The reason changes with this version and gets stronger.** It used to be that the raw list was what a model
-offered *before the sorter narrowed it*, and the sorter's narrowing was what the operator was trying to see
-behind. There is no sorter now: the local tagger's list **is** the sheet's source, and the thing that
-narrows it is a committed table that drops every tag no criterion can hold. So the raw artifact is the only
-place the dropped tags survive — it is how the operator sees what the router refused, and it is what makes a
-missing group in the table findable instead of invisible. A filtered artifact would leave the table's gaps
-unobservable from disk, which is the one failure mode an authored artifact has.
-
-The same rule still holds for a tagger whose output reaches no sheet: its list is advisory, it will contain
-wrong tags, and nothing is dropped for being outside the vocabulary. Marking which tags a vocabulary
-contains is a display concern and is not filtering — the surface may mark, and this stage may not drop.
+The local list is the sheet's source, and a committed table narrows it by dropping every tag no criterion holds
+([D2](../../../docs/decisions.md#d2--a-table-fills-the-sheet)). The raw artifact is the only place the dropped tags
+survive, so it shows what the router refused and makes a gap in the table findable from disk. A list that reaches no
+sheet is advisory and keeps its wrong tags too. Marking which tags a vocabulary holds is display, not filtering: the
+surface may mark, and this stage may not drop.
 
 #### Scenario: nothing is dropped for being outside the vocabulary
 - **Key:** `tagging:output:the-list-is-stored-unnarrowed`
@@ -119,16 +110,12 @@ record the digest of the prompt where the tagger was given one, SHALL record the
 the tagger was sampled and the confidence floor where it filtered, and SHALL declare the artifact pinned
 only where every artifact the tagger read is verified against a committed digest.
 
-A producer that names only a model cannot explain its own result, and the instruction text is the
-variable with the largest measured effect on what comes back. But a prompt held as a module constant has
-no path, so the record carries its digest without claiming a location it does not have. The pin claim is
-the sharper half: a pin claimed where the bytes were not checked would be worse than no claim at all. The
-local tagger reads a file whose bytes this repository has committed a digest for; the hosted tagger's model
-is checked against its pinned files before its first call, so it names those files and claims its pin too.
-
-**The options and the floor are recorded because they are constants, not keys.** Neither is declared by a
-flow, and both shape what the list holds: the options what the model answers, the floor which scored tags
-are kept at all.
+A producer that names only a model cannot explain its result. The instruction text shapes what comes back, and a
+prompt held as a module constant has no path, so the record carries its digest alone. A pin claimed over unchecked
+bytes is worse than none: the local tagger reads a file whose digest is committed, and the hosted tagger's model is
+checked against its pinned files before its first call
+([D6](../../../docs/decisions.md#d6--ollama-at-a-fixed-local-address-on-a-checked-model)). The options and the floor are
+constants, not manifest keys, and both shape what the list holds.
 
 #### Scenario: the local tagger declares its pin and names both digests
 - **Key:** `tagging:provenance:the-local-tagger-declares-its-pin`
@@ -165,12 +152,10 @@ The system SHALL verify the local tagger's model file and its label index agains
 repository commits before the first inference, SHALL refuse naming the command that would fetch either
 when it is absent or its bytes differ, and SHALL NOT use one without the other.
 
-They are one artifact split across two files: row N of the label index names output neuron N of the
-model. A mismatched pair does not fail — it produces a complete, well-formed, confidently-scored tag
-list in which every tag is the wrong tag, and nothing downstream could detect it. That is the worst
-failure shape this stage has, and verifying the pair together is the only thing that closes it. Checking
-at first use rather than at construction is what lets a machine that never tags avoid touching a
-467 MB file.
+They are one artifact in two files: row N of the label index names output N of the model
+([D7](../../../docs/decisions.md#d7--wd14-is-one-artifact-in-two-files)). A mismatched pair does not fail — it yields a
+well-formed, confidently scored list in which every tag is wrong, and nothing downstream can tell. Checking at first
+use lets a machine that never tags leave the model file unopened.
 
 #### Scenario: a model and label index from different revisions are refused
 - **Key:** `tagging:pin:the-label-index-and-the-model-are-verified-together`
@@ -191,12 +176,10 @@ The system SHALL reach every tagger through an interface a test double satisfies
 this stage with no network call and without the model file present, and the double SHALL make it
 provable that a complete stage made no call.
 
-The model this stage reads is nearly half a gigabyte and is not in the repository; a suite that needed
-it would be a suite that does not run on a fresh clone, and the gate would silently stop covering this
-capability. Proving that a completed stage makes no call also requires something that counts calls, which
-is the same reason the reader has a double. The seam is at the boundary as well as at the stage, because
-the preparation rule and the label-index ordering are logic that has to be tested and neither is
-reachable through the stage's own double.
+The model is not in the repository, and a suite that needed it would not run on a fresh clone, so the gate would
+silently stop covering this stage. Proving that a complete stage made no call needs something that counts calls.
+The seam sits at the boundary as well as at the stage, because the preparation rule and the label-index ordering
+are logic the stage's own double does not reach.
 
 #### Scenario: the suite produces both tag artifacts with no network and no model file
 - **Key:** `tagging:seam:offline-double-satisfies-the-interface`
@@ -211,14 +194,10 @@ The system SHALL produce the local tag list, then the hosted tag list, under the
 in either SHALL NOT remove, prevent or invalidate the other's artifact — whether the failure is the
 photograph's or the build's. The caption verb SHALL write no tag list.
 
-The two taggers used to share a verb with the caption, and failures are collected per photograph rather
-than per stage, so the first refusal ended that photograph's work and the order was the isolation. That
-made a prose refusal cost the local tag list, which is the sheet's only input.
-
-The caption is now its own verb, and inside the tag verb each tagger's refusal is collected on its own: a
-local tagger that fails for one photograph, or cannot be opened for any, still lets the hosted tagger run,
-and a hosted tagger that fails never costs the local list. The local tagger still runs first, because it is
-the sheet's input and it reaches no network.
+Failures are collected per photograph, and the local list is the sheet's only input, so a refusal of the prose or of
+the hosted list must not cost it ([D1](../../../docs/decisions.md#d1--stage--is-two-independent-verbs)). Inside the
+tag verb each tagger's refusal is collected on its own. The local tagger runs first because it is the sheet's input
+and reaches no network.
 
 #### Scenario: a hosted tagger failure leaves the local tag list on disk
 - **Key:** `tagging:order:a-late-failure-leaves-the-earlier-artifacts-complete`
@@ -250,22 +229,12 @@ whose manifest declares no tagger, naming the flow and the key. A hosted tagger 
 model, or whose model is not built from the files the reader's manifest pins, SHALL refuse without
 spending an attempt, and that refusal SHALL NOT prevent the local tag list from being written.
 
-The two are not implementations of one thing and must not be made to look like one. The hosted tagger is
-selected by a string in a frozen manifest, because which model answers is a claim the flow makes about
-itself. The local tagger makes no such claim: it is a file this build pins, it costs nothing, it reaches
-no network, and there is no flow for which it would be the wrong model. **Whether a flow is tagged at all
-is a claim the flow does make**, now that flows needing no tag list are coming — so the manifest declares
-it, and still names nothing about which model tags.
-
-**The hosted tagger reads the same key the reader does, and that is a decision rather than an economy.**
-One alias answers both prompts, which is why the tag prompt is not chat-framed — two calls to one model
-must not arrive framed differently. A key of its own would let a flow be written in which the prose and
-the hosted tags came from different models with nothing in the record saying which was which, and it
-would say twice what the manifest already says once.
-
-**A flow that declares no tagger is refused rather than skipped.** An operator who names it asked for work
-the flow does not do; a skip would report success for a flow that wrote nothing, and the refusal says which
-flow to drop from the command.
+The two taggers are not one thing. The hosted tagger is chosen by a string in a frozen manifest, because which model
+answers is a claim the flow makes; the local tagger is a file this build pins, costs nothing, reaches no network and
+is never the wrong model. The hosted tagger reads the reader's key, so one alias answers both prompts, framed alike,
+and no flow can take its prose and its hosted tags from different models. Whether a flow is tagged is the
+manifest's own key ([D31](../../../docs/decisions.md#d31--a-flow-declares-whether-it-is-tagged)); a flow that
+declares none is refused, not skipped, because a skip reports success for a flow that wrote nothing.
 
 #### Scenario: the local tagger needs no model key
 - **Key:** `tagging:independence:the-local-tagger-needs-no-model-key`
