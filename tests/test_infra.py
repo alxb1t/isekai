@@ -1385,14 +1385,12 @@ def unwarned_lost_create(up_sh: str) -> list[str]:
     unknown = [ln for ln in lines if ln.lstrip().startswith("201|5??|000|")]
     if not unknown:
         missing.append("201 without an id, 5xx and no answer are unknown")
-    if "list-pods" not in up_sh:
-        missing.append("names the MCP's list-pods")
+    if "bash infra/down.sh" not in shell_function(up_sh, "lost"):
+        missing.append("names down.sh")
     return missing
 
 
-@pytest.mark.spec_exempt(
-    "structural: a lost create answer is announced, not a scenario about the product"
-)
+@pytest.mark.spec("pod-image:reconcile:a-lost-create-names-the-teardown")
 def test_a_create_whose_outcome_is_unknown_says_a_pod_may_exist(up_sh: str) -> None:
     assert unwarned_lost_create(up_sh) == []
 
@@ -1405,7 +1403,7 @@ def test_the_lost_create_check_catches_a_silent_create() -> None:
     assert unwarned_lost_create(up_sh) == [
         "a transport failure is reported",
         "201 without an id, 5xx and no answer are unknown",
-        "names the MCP's list-pods",
+        "names down.sh",
     ]
 
 
@@ -1413,7 +1411,9 @@ def unnamed_record_removal(down_sh: str) -> bool:
     """Whether `down.sh`'s 404 refusal omits the files to delete once confirmed."""
     lines = down_sh.splitlines()
     start = next(i for i, line in enumerate(lines) if '"$code" = "404"' in line)
-    end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith("el"))
+    end = next(
+        i for i in range(start + 1, len(lines)) if lines[i].lstrip().startswith("el")
+    )
     fix = "rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts"
     return fix not in "\n".join(lines[start:end])
 
@@ -1734,15 +1734,22 @@ def test_the_proxy_check_catches_a_curl_that_follows_one() -> None:
 
 
 def run_functions(
-    script: str, names: tuple[str, ...], stubs: str, cwd: Path
+    script: str,
+    names: tuple[str, ...],
+    stubs: str,
+    cwd: Path,
+    call: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run the last named function in strict bash, beside the others and the stubs."""
+    """Run `call`, or the last named function, in strict bash beside the stubs.
+
+    e.g. `call='f "a b"'` runs `f` with one argument.
+    """
     program = "\n".join(
         [
             "set -euo pipefail",
             stubs,
             *(shell_function(script, n) for n in names),
-            names[-1],
+            call or names[-1],
         ]
     )
     return subprocess.run(
@@ -2045,3 +2052,423 @@ def test_the_fingerprint_check_catches_a_key_kept_with_none_printed(
     assert done.returncode == 0
     assert kept is not None
     assert TORN_DOWN not in done.stderr
+
+
+@pytest.fixture(scope="session")
+def pods_sh() -> str:
+    """Read the shipped `infra/pods.sh` once for the whole session."""
+    return (REPO / "infra" / "pods.sh").read_text()
+
+
+def create_body(up_sh: str) -> dict[str, object]:
+    """Return the create request `up.sh` builds for a card named `card`."""
+    lines = up_sh.splitlines()
+    start = next(i for i, ln in enumerate(lines) if ln.strip() == "body=$(jq -n \\")
+    end = next(i for i in range(start, len(lines)) if lines[i].endswith("')"))
+    floors = [ln for ln in lines if re.match(r"(RAM_FLOOR_GB|CUDA_FLOOR)=", ln)]
+    program = "\n".join(
+        [
+            "image_ref=img gpu=card RUNPOD_VOLUME_ID=vol RUNPOD_DATACENTER=dc",
+            "PUBKEY=key",
+            *floors,
+            *lines[start : end + 1],
+            'printf "%s" "$body"',
+        ]
+    )
+    done = subprocess.run(
+        ["bash", "-c", program], capture_output=True, text=True, timeout=30, check=True
+    )
+    return json.loads(done.stdout)
+
+
+def unfloored_create(up_sh: str) -> list[str]:
+    """Return each floor the create request does not carry.
+
+    e.g. a body with `gpu: { id: $gpu, count: 1 }` -> ["host memory", "CUDA version"]
+    """
+    gpu = create_body(up_sh)["gpu"]
+    assert isinstance(gpu, dict)
+    missing = []
+    ram = gpu.get("minRamPerGpu")
+    if not (isinstance(ram, int) and ram >= 24):
+        missing.append("host memory")
+    # torch's cu128 build, which the Blackwell pod needs (CLAUDE.md).
+    if gpu.get("minCudaVersion") != "12.8":
+        missing.append("CUDA version")
+    return missing
+
+
+@pytest.mark.spec("pod-image:placement:the-create-carries-the-floors")
+def test_the_create_carries_the_floors(up_sh: str) -> None:
+    assert unfloored_create(up_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_create_carries_the_floors")
+def test_the_floor_check_catches_a_create_with_none() -> None:
+    up_sh = (
+        "  body=$(jq -n \\\n"
+        '    --arg gpu    "$gpu" \\\n'
+        "    '{ gpu: { id: $gpu, count: 1 } }')\n"
+    )
+    assert unfloored_create(up_sh) == ["host memory", "CUDA version"]
+
+
+# RunPod's catalogue, as `placeable_gpus` reads it: a card's VRAM, or a 404.
+CATALOGUE_STUBS = "\n".join(
+    [
+        "API=https://api.test VRAM_FLOOR_GB=24",
+        "api() {",
+        '  case "${@: -1}" in',
+        "    */RTX%204090) printf '{\"memory\":24}\\n200' ;;",
+        "    */RTX%20A4000) printf '{\"memory\":16}\\n200' ;;",
+        '    *) printf \'{"title":"Not Found"}\\n404\' ;;',
+        "  esac",
+        "}",
+    ]
+)
+BROKEN_PLACEMENT = 'refuse() { exit 1; }\nplaceable_gpus() {\n  echo "$1"\n}\n'
+
+
+def placement(up_sh: str, cards: str) -> subprocess.CompletedProcess[str]:
+    """Run `placeable_gpus` over `cards`, one per line, against the catalogue stub."""
+    return run_functions(
+        up_sh,
+        ("refuse", "placeable_gpus"),
+        CATALOGUE_STUBS,
+        REPO,
+        call=f"placeable_gpus {shlex.quote(cards)}",
+    )
+
+
+def placed_before_create(up_sh: str) -> bool:
+    """Whether `up.sh` reads the catalogue before its create call."""
+    lines = up_sh.splitlines()
+    placed = [i for i, ln in enumerate(lines) if ln.startswith("gpus=$(placeable_gpus")]
+    creates = next(i for i, line in enumerate(lines) if 'POST "$API/pods"' in line)
+    return bool(placed) and placed[0] < creates
+
+
+@pytest.mark.spec("pod-image:placement:a-card-short-of-memory-is-skipped")
+def test_a_card_short_of_memory_is_skipped(up_sh: str) -> None:
+    done = placement(up_sh, "RTX A4000\nRTX 4090")
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == "RTX 4090\n"
+    assert done.stderr == "skipped: RTX A4000 has 16 GB, below 24\n"
+    assert placed_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_card_short_of_memory_is_skipped")
+def test_the_skip_check_catches_a_card_never_read() -> None:
+    done = placement(BROKEN_PLACEMENT, "RTX A4000\nRTX 4090")
+    assert done.stdout == "RTX A4000\nRTX 4090\n"
+    assert not placed_before_create('out=$(api -X POST "$API/pods")\n')
+
+
+@pytest.mark.spec("pod-image:placement:an-unknown-card-is-refused")
+def test_an_unknown_card_is_refused(up_sh: str) -> None:
+    done = placement(up_sh, "RTX 4090\nRTX 4O90")
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: RUNPOD_GPU_TYPE names RTX 4O90, which RunPod does not know;"
+        " fix .env\n"
+    )
+    assert placed_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_an_unknown_card_is_refused")
+def test_the_unknown_card_check_catches_a_card_passed_through() -> None:
+    assert placement(BROKEN_PLACEMENT, "RTX 4090\nRTX 4O90").returncode == 0
+
+
+IMAGE_NAME = json.loads(IMAGE_CONFIG.read_text())["image"]
+
+
+def listed_pod(pod_id: str, status: str, name: str = "isekai") -> dict[str, str]:
+    """Return a pod as RunPod's v2 list gives it, booted from this project's image."""
+    return {
+        "id": pod_id,
+        "name": name,
+        "image": f"{IMAGE_NAME}@sha256:0",
+        "status": status,
+    }
+
+
+def pod_pages(first: list[dict[str, str]], second: list[dict[str, str]]) -> list[str]:
+    """Return a two-page v2 listing, the first page naming a cursor to the second."""
+    return [
+        json.dumps(
+            {"pods": first, "pagination": {"nextCursor": "p2", "hasNextPage": True}}
+        ),
+        json.dumps(
+            {"pods": second, "pagination": {"nextCursor": None, "hasNextPage": False}}
+        ),
+    ]
+
+
+def pod_check(
+    script: str, cwd: Path, pages: list[str] | None
+) -> tuple[subprocess.CompletedProcess[str], bool]:
+    """Run `check_no_pod` against `pages`; None is a listing that fails.
+
+    Return the run and whether it called RunPod at all.
+    """
+    (cwd / "config").mkdir(exist_ok=True)
+    (cwd / "config" / "image.json").write_text(IMAGE_CONFIG.read_text())
+    first, second = pages or ["", ""]
+    listing = (
+        "return 22"
+        if pages is None
+        else f'case "$*" in *cursor=*) printf "%s" {shlex.quote(second)} ;;'
+        f' *) printf "%s" {shlex.quote(first)} ;; esac'
+    )
+    stubs = f"API=https://api.test\napi() {{ touch called; {listing}; }}"
+    done = run_functions(script, ("refuse", "isekai_pods", "check_no_pod"), stubs, cwd)
+    return done, (cwd / "called").exists()
+
+
+def checked_before_volume(up_sh: str) -> bool:
+    """Whether `up.sh` looks for another pod before the volume check and the create."""
+    lines = up_sh.splitlines()
+    checks = [i for i, ln in enumerate(lines) if ln == "check_no_pod"]
+    volume = next((i for i, ln in enumerate(lines) if ln == "check_volume"), None)
+    return bool(checks) and volume is not None and checks[0] < volume
+
+
+BROKEN_POD_CHECK = "refuse() { exit 1; }\ncheck_no_pod() {\n  :\n}\n"
+RECORD_ONLY_POD_CHECK = (
+    "refuse() { exit 1; }\ncheck_no_pod() {\n  [ ! -f .runpod_pod_id ] || refuse\n}\n"
+)
+
+
+@pytest.mark.spec("pod-image:reconcile:a-recorded-pod-refuses")
+def test_a_recorded_pod_refuses_a_creation(
+    up_sh: str, pods_sh: str, tmp_path: Path
+) -> None:
+    (tmp_path / ".runpod_pod_id").write_text("pod-a\n")
+    done, called = pod_check(up_sh + pods_sh, tmp_path, pod_pages([], []))
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: a pod is already recorded in .runpod_pod_id; run bash infra/down.sh\n"
+    )
+    assert not called
+    assert checked_before_volume(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_recorded_pod_refuses_a_creation")
+def test_the_record_check_catches_a_record_never_read(tmp_path: Path) -> None:
+    (tmp_path / ".runpod_pod_id").write_text("pod-a\n")
+    done, _ = pod_check(BROKEN_POD_CHECK, tmp_path, pod_pages([], []))
+    assert done.returncode == 0
+    assert not checked_before_volume("check_volume\ncheck_no_pod\n")
+
+
+@pytest.mark.spec("pod-image:reconcile:a-listed-pod-refuses")
+def test_a_listed_pod_refuses_a_creation(
+    up_sh: str, pods_sh: str, tmp_path: Path
+) -> None:
+    script = up_sh + pods_sh
+    others = [
+        listed_pod("pod-x", "RUNNING", name="other"),
+        listed_pod("pod-t", "TERMINATED"),
+    ]
+    done, _ = pod_check(
+        script, tmp_path, pod_pages(others, [listed_pod("pod-b", "EXITED")])
+    )
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: an 'isekai' pod already exists: pod-b (EXITED);"
+        " run bash infra/down.sh\n"
+    )
+    done, _ = pod_check(script, tmp_path, pod_pages(others, []))
+    assert done.returncode == 0, done.stderr
+    done, _ = pod_check(script, tmp_path, None)
+    assert done.returncode == 1
+    assert "list-pods" in done.stderr
+    assert checked_before_volume(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_listed_pod_refuses_a_creation")
+def test_the_listing_check_catches_a_pod_never_listed(tmp_path: Path) -> None:
+    pages = pod_pages([], [listed_pod("pod-b", "EXITED")])
+    done, _ = pod_check(RECORD_ONLY_POD_CHECK, tmp_path, pages)
+    assert done.returncode == 0
+
+
+# RunPod's API as down.sh reaches it through curl: pages from files, deletes logged.
+FAKE_CURL = """#!/usr/bin/env bash
+url="${@: -1}"
+case " $* " in
+  *" -X DELETE "*)
+    echo "${url##*/}" >> "$FAKE/deleted"
+    if grep -qx "${url##*/}" "$FAKE/refused" 2>/dev/null; then
+      printf '{}\\n500'
+    else
+      printf '\\n204'
+    fi ;;
+  *)
+    [ -f "$FAKE/page1" ] || exit 22
+    case "$url" in *cursor=*) cat "$FAKE/page2" ;; *) cat "$FAKE/page1" ;; esac ;;
+esac
+"""
+
+
+def tear_down(
+    down_sh: str,
+    pods_sh: str,
+    root: Path,
+    *,
+    recorded: str | None,
+    pages: list[str] | None,
+    refused: tuple[str, ...] = (),
+) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    """Run `down.sh` in a copy of the repository against a fake RunPod.
+
+    Return the run and the pod ids it deleted, in order. `pages` None is a
+    listing that fails; `refused` pods answer a delete with 500.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "down.sh").write_text(down_sh)
+    (root / "infra" / "pods.sh").write_text(pods_sh)
+    (root / "config").mkdir()
+    (root / "config" / "image.json").write_text(IMAGE_CONFIG.read_text())
+    (root / ".env").write_text("RUNPOD_API_KEY=test-key\n")
+    if recorded:
+        (root / ".runpod_pod_id").write_text(f"{recorded}\n")
+    fake = root / "fake"
+    fake.mkdir()
+    for n, page in enumerate(pages or [], start=1):
+        (fake / f"page{n}").write_text(page)
+    (fake / "refused").write_text("".join(f"{p}\n" for p in refused))
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "curl").write_text(FAKE_CURL)
+    (bin_dir / "curl").chmod(0o755)
+    done = subprocess.run(
+        ["bash", "infra/down.sh"],
+        cwd=root,
+        env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "FAKE": str(fake)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    deleted = fake / "deleted"
+    return done, deleted.read_text().split() if deleted.exists() else []
+
+
+RECORD_ONLY_DOWN = """#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+[ -f .runpod_pod_id ] || exit 0
+curl -s --max-time 30 -w '\\n%{http_code}' -X DELETE \\
+  "https://api.test/pods/$(cat .runpod_pod_id)"
+"""
+
+
+@pytest.mark.spec("pod-image:reconcile:the-teardown-leaves-none")
+def test_the_teardown_leaves_no_pod(down_sh: str, pods_sh: str, tmp_path: Path) -> None:
+    pages = pod_pages(
+        [listed_pod("pod-a", "RUNNING"), listed_pod("pod-x", "RUNNING", name="other")],
+        [listed_pod("pod-b", "EXITED")],
+    )
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "rec", recorded="pod-a", pages=pages
+    )
+    assert done.returncode == 0, done.stderr
+    assert deleted == ["pod-a", "pod-b"]
+    assert "Removed pod-b (EXITED)." in done.stdout
+    assert not (tmp_path / "rec" / ".runpod_pod_id").exists()
+
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "bare", recorded=None, pages=pages
+    )
+    assert done.returncode == 0, done.stderr
+    assert deleted == ["pod-a", "pod-b"]
+
+    empty = pod_pages([], [])
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "none", recorded=None, pages=empty
+    )
+    assert (done.returncode, deleted, done.stdout) == (0, [], "No pod to tear down.\n")
+
+    done, deleted = tear_down(
+        down_sh,
+        pods_sh,
+        tmp_path / "held",
+        recorded=None,
+        pages=pages,
+        refused=("pod-a",),
+    )
+    assert done.returncode == 1
+    assert deleted == ["pod-a", "pod-b"]
+
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "blind", recorded="pod-a", pages=None
+    )
+    assert done.returncode == 1
+    assert deleted == ["pod-a"]
+    assert "list-pods" in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_teardown_leaves_no_pod")
+def test_the_teardown_check_catches_one_that_removes_the_record_alone(
+    pods_sh: str, tmp_path: Path
+) -> None:
+    pages = pod_pages([listed_pod("pod-a", "RUNNING")], [listed_pod("pod-b", "EXITED")])
+    _, deleted = tear_down(
+        RECORD_ONLY_DOWN, pods_sh, tmp_path, recorded="pod-a", pages=pages
+    )
+    assert deleted == ["pod-a"]
+
+
+def session_on_record(
+    render_sh: str, root: Path
+) -> tuple[subprocess.CompletedProcess[str], bool]:
+    """Run a render session in a copy of the repository beside a recorded pod.
+
+    Return the run and whether its teardown ran `down.sh`.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "render.sh").write_text(render_sh)
+    (root / "infra" / "down.sh").write_text('touch "$(dirname "$0")/../torn"\n')
+    (root / ".runpod_pod_id").write_text("pod-a\n")
+    run = root / ".data" / "b" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "run.json").write_text("{}")
+    done = subprocess.run(
+        ["bash", "infra/render.sh", ".data/b/runs", "summon-anime-wai=1"],
+        cwd=root,
+        env={"PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    return done, (root / "torn").exists()
+
+
+LATE_RECORD_CHECK = """#!/usr/bin/env bash
+cd "$(dirname "$0")/.."
+teardown() { bash ./infra/down.sh; }
+trap teardown EXIT
+[ ! -f .runpod_pod_id ] || { echo "refused: a pod is already recorded" >&2; exit 1; }
+"""
+
+
+@pytest.mark.spec("pod-image:reconcile:a-session-refuses-a-recorded-pod")
+def test_a_session_refuses_a_recorded_pod(render_sh: str, tmp_path: Path) -> None:
+    done, torn = session_on_record(render_sh, tmp_path)
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: a pod is already recorded in .runpod_pod_id;"
+        " run bash infra/down.sh first\n"
+    )
+    assert not torn
+    assert (tmp_path / ".runpod_pod_id").exists()
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_session_refuses_a_recorded_pod")
+def test_the_session_check_catches_a_record_read_after_the_trap(tmp_path: Path) -> None:
+    done, torn = session_on_record(LATE_RECORD_CHECK, tmp_path)
+    assert done.returncode == 1
+    assert torn

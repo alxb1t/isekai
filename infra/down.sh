@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Terminate the pod recorded by up.sh — billing stops. The network volume persists.
+# Terminate the pod recorded by up.sh, then every other 'isekai' pod listed —
+# billing stops, and no pod is left for nothing to watch (0043 design D3). The
+# network volume persists.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -10,36 +12,58 @@ API="https://api.runpod.io/v2"
 api() {
   curl -s --max-time 30 -H @<(printf 'Authorization: Bearer %s\n' "$RUNPOD_API_KEY") "$@"
 }
+source ./infra/pods.sh
 
-if [ ! -f .runpod_pod_id ]; then
-  echo "No .runpod_pod_id — nothing to tear down (already down?)."
-  echo "If infra/up.sh said a create's outcome is unknown, find the pod with the RunPod MCP's"
-  echo "list-pods, write its id to .runpod_pod_id and run bash infra/down.sh again."
+failed=0
+pod_id=""
+if [ -f .runpod_pod_id ]; then
+  pod_id=$(cat .runpod_pod_id)
+
+  echo "Terminating pod $pod_id ..."
+  out=$(api -S -w '\n%{http_code}' -X DELETE "$API/pods/$pod_id") || true
+  code=${out##*$'\n'}
+  resp=${out%$'\n'*}
+
+  if [ "$code" = "204" ]; then
+    rm -f .runpod_pod_id .runpod_pod_image .runpod_known_hosts
+    echo "Pod terminated. Billing stopped. (Network volume kept.)"
+  elif [ "$code" = "404" ]; then
+    # A 404 is also what a wrong key gets, so it is never read as gone: a false
+    # "gone" leaves a pod billing (0034 design D3).
+    echo "The API does not know pod $pod_id: it may be gone, or the key may be wrong." >&2
+    echo "Confirm it is gone with the RunPod MCP's get-pod; the record files are kept" >&2
+    echo "until then. Once it is gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
+    failed=1
+  else
+    echo "Delete returned HTTP $code — check the console to be sure the pod is gone." >&2
+    echo "$resp" \
+      | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
+        >&2 2>/dev/null \
+      || echo "  $resp" >&2
+    echo "Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
+    failed=1
+  fi
+fi
+
+# A lost create or a second up.sh leaves a pod no record names.
+if ! listed=$(isekai_pods); then
+  echo "Could not list pods; confirm with the RunPod MCP's list-pods that no 'isekai' pod is left." >&2
+  exit 1
+fi
+if [ -z "$listed" ] && [ -z "$pod_id" ]; then
+  echo "No pod to tear down."
   exit 0
 fi
-pod_id=$(cat .runpod_pod_id)
-
-echo "Terminating pod $pod_id ..."
-out=$(api -S -w '\n%{http_code}' -X DELETE "$API/pods/$pod_id") || true
-code=${out##*$'\n'}
-resp=${out%$'\n'*}
-
-if [ "$code" = "204" ]; then
-  rm -f .runpod_pod_id .runpod_pod_image .runpod_known_hosts
-  echo "Pod terminated. Billing stopped. (Network volume kept.)"
-elif [ "$code" = "404" ]; then
-  # A 404 is also what a wrong key gets, so it is never read as gone: a false
-  # "gone" leaves a pod billing (0034 design D3).
-  echo "The API does not know pod $pod_id: it may be gone, or the key may be wrong." >&2
-  echo "Confirm it is gone with the RunPod MCP's get-pod; the record files are kept" >&2
-  echo "until then. Once it is gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
-  exit 1
-else
-  echo "Delete returned HTTP $code — check the console to be sure the pod is gone." >&2
-  echo "$resp" \
-    | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
-      >&2 2>/dev/null \
-    || echo "  $resp" >&2
-  echo "Once the RunPod MCP confirms it gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
-  exit 1
-fi
+while read -r id status; do
+  [ -n "$id" ] && [ "$id" != "$pod_id" ] || continue
+  out=$(api -S -w '\n%{http_code}' -X DELETE "$API/pods/$id") || true
+  code=${out##*$'\n'}
+  case "$code" in
+    204) echo "Removed $id ($status)." ;;
+    *)
+      echo "Delete of $id ($status) returned HTTP $code; confirm it gone with the RunPod MCP's get-pod." >&2
+      failed=1
+      ;;
+  esac
+done <<< "$listed"
+exit "$failed"

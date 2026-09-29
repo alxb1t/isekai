@@ -5,7 +5,7 @@ stop boot, per [design](design.md).
 
 ## Progress
 
-- [ ] 1 — The gates and the reconciler
+- [x] 1 — The gates and the reconciler
 - [ ] 2 — The pod's stop
 - [ ] 3 — The docs
 - [ ] 4 — 🛑 **HUMAN** — the rc build
@@ -15,21 +15,21 @@ Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 1 — The gates and the reconciler
 
-- [ ] 1.1 **HALT CHECK** — nothing lists pods, the create carries no floor, and every hold exits.
+- [x] 1.1 **HALT CHECK** — nothing lists pods, the create carries no floor, and every hold exits.
   Verify: `grep -c -e 'minRamPerGpu' -e 'isekai_pods' infra/up.sh` prints `0`, `ls infra/pods.sh tools/stop_pod.sh` fails, and `grep -c -F 'exec sleep "$HOLD_SECONDS"' start.sh` prints `4`.
-- [ ] 1.2 Write `infra/pods.sh` with `isekai_pods`, per [D2](design.md#d2).
+- [x] 1.2 Write `infra/pods.sh` with `isekai_pods`, per [D2](design.md#d2).
   Verify: `grep -c '^isekai_pods()' infra/pods.sh` prints `1`, and `grep -q hasNextPage infra/pods.sh && echo ok` prints `ok`.
-- [ ] 1.3 In `infra/up.sh`, add the floors to the create and the catalogue's VRAM skip and unknown-card refusal, per [D1](design.md#d1).
+- [x] 1.3 In `infra/up.sh`, add the floors to the create and the catalogue's VRAM skip and unknown-card refusal, per [D1](design.md#d1).
   Verify: `grep -c -F 'minRamPerGpu: $ram, minCudaVersion: $cuda' infra/up.sh` prints `1`, and `grep -q 'catalog/gpus/' infra/up.sh && echo ok` prints `ok`.
-- [ ] 1.4 In `infra/up.sh`, add `check_no_pod` before `check_volume`, and make `lost()` name `down.sh`, per [D2](design.md#d2).
+- [x] 1.4 In `infra/up.sh`, add `check_no_pod` before `check_volume`, and make `lost()` name `down.sh`, per [D2](design.md#d2).
   Verify: `grep -c '^check_no_pod$' infra/up.sh` prints `1`, and `sed -n '/^lost()/,/^}/p' infra/up.sh | grep -c 'list-pods'` prints `0`.
-- [ ] 1.5 In `infra/down.sh`, remove every other listed `isekai` pod after the recorded one, per [D3](design.md#d3).
+- [x] 1.5 In `infra/down.sh`, remove every other listed `isekai` pod after the recorded one, per [D3](design.md#d3).
   Verify: `grep -c 'source ./infra/pods.sh' infra/down.sh` prints `1`, and `grep -c 'No .runpod_pod_id — nothing to tear down' infra/down.sh` prints `0`.
-- [ ] 1.6 Add to `tests/test_infra.py`: `test_the_create_carries_the_floors` (`pod-image:placement:the-create-carries-the-floors`), `test_a_card_short_of_memory_is_skipped` (`pod-image:placement:a-card-short-of-memory-is-skipped`) and `test_an_unknown_card_is_refused` (`pod-image:placement:an-unknown-card-is-refused`).
+- [x] 1.6 Add to `tests/test_infra.py`: `test_the_create_carries_the_floors` (`pod-image:placement:the-create-carries-the-floors`), `test_a_card_short_of_memory_is_skipped` (`pod-image:placement:a-card-short-of-memory-is-skipped`) and `test_an_unknown_card_is_refused` (`pod-image:placement:an-unknown-card-is-refused`).
   Verify: `grep -c -e '^def test_the_create_carries_the_floors' -e '^def test_a_card_short_of_memory_is_skipped' -e '^def test_an_unknown_card_is_refused' tests/test_infra.py` prints `3`.
-- [ ] 1.7 Add to `tests/test_infra.py`: `test_a_recorded_pod_refuses_a_creation` (`pod-image:reconcile:a-recorded-pod-refuses`), `test_a_listed_pod_refuses_a_creation` (`pod-image:reconcile:a-listed-pod-refuses`) and `test_the_teardown_leaves_no_pod` (`pod-image:reconcile:the-teardown-leaves-none`).
+- [x] 1.7 Add to `tests/test_infra.py`: `test_a_recorded_pod_refuses_a_creation` (`pod-image:reconcile:a-recorded-pod-refuses`), `test_a_listed_pod_refuses_a_creation` (`pod-image:reconcile:a-listed-pod-refuses`) and `test_the_teardown_leaves_no_pod` (`pod-image:reconcile:the-teardown-leaves-none`).
   Verify: `grep -c -e '^def test_a_recorded_pod_refuses_a_creation' -e '^def test_a_listed_pod_refuses_a_creation' -e '^def test_the_teardown_leaves_no_pod' tests/test_infra.py` prints `3`.
-- [ ] 1.8 Add `test_a_session_refuses_a_recorded_pod` (`pod-image:reconcile:a-session-refuses-a-recorded-pod`) to `tests/test_infra.py`, and bind `unwarned_lost_create` to `lost()` naming `down.sh` under `pod-image:reconcile:a-lost-create-names-the-teardown`.
+- [x] 1.8 Add `test_a_session_refuses_a_recorded_pod` (`pod-image:reconcile:a-session-refuses-a-recorded-pod`) to `tests/test_infra.py`, and bind `unwarned_lost_create` to `lost()` naming `down.sh` under `pod-image:reconcile:a-lost-create-names-the-teardown`.
   Verify: `grep -c '^def test_a_session_refuses_a_recorded_pod' tests/test_infra.py` prints `1`, and `grep -c 'pod-image:reconcile:a-lost-create-names-the-teardown' tests/test_infra.py` prints `1`.
 
 ## 2 — The pod's stop
