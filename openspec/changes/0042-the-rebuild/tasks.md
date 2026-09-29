@@ -6,7 +6,7 @@ The image files and their tests; the docs; then the operator's rc build; then on
 ## Progress
 
 - [x] 1 — The image, the start script and `up.sh`
-- [ ] 2 — The docs
+- [x] 2 — The docs
 - [ ] 3 — 🛑 **HUMAN** — the rc build
 - [ ] 4 — 🛑 **HUMAN · METERED** — one render session on the new image
 
@@ -33,11 +33,11 @@ Line numbers are `ad27f67`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The docs
 
-- [ ] 2.1 In `docs/pins.md`, say the sdist builds' tools are pinned by hash, and remove their *Not pinned* row, per [D5](design.md#d5).
+- [x] 2.1 In `docs/pins.md`, say the sdist builds' tools are pinned by hash, and remove their *Not pinned* row, per [D5](design.md#d5).
   Verify: `grep -c "the sdist builds' tools by hash" docs/pins.md` prints `1`, and `grep -c 'the build tools of the image' docs/pins.md` prints `0`.
-- [ ] 2.2 Add the tests from 1.6 to the *Held by* list of *The rented machine is proved, and forgets* in `docs/principles.md`.
+- [x] 2.2 Add the tests from 1.6 to the *Held by* list of *The rented machine is proved, and forgets* in `docs/principles.md`.
   Verify: `grep -c -e 'test_comfyui_spools_uploads_to_memory' -e 'test_a_shm_that_is_not_memory_holds_the_pod' -e 'test_an_unread_figure_holds_the_pod' docs/principles.md` prints `3`.
-- [ ] 2.3 In `CHANGELOG.md`, make 0.26.1's first bullet name the append-only exception, per [D6](design.md#d6).
+- [x] 2.3 In `CHANGELOG.md`, make 0.26.1's first bullet name the append-only exception, per [D6](design.md#d6).
   Verify: `grep -c 'the one stated exception to append-only' CHANGELOG.md` prints `1`.
 
 ## 3 — 🛑 **HUMAN** — the rc build

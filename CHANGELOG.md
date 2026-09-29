@@ -15,6 +15,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   plain Ubuntu with CPU onnxruntime, carries the telemetry switches; its build tools are checked by hash
   (0042 D1, D2, D3, D4, D5).
 
+### Changed
+
+- `docs/pins.md` holds the build tools by hash, the privacy principle names its new tests, and 0.26.1 names its
+  append-only exception (0042 D5, D6).
+
 ## [0.29.0] - 2026-09-28 · 0041-the-right-machine
 
 ### Security
@@ -59,8 +64,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Changed
 
-- Every version rewritten terse: Keep a Changelog sections only, each heading from `0.7.0` naming its change, and
-  the preamble holding the rules only (0038 D1, D2, D3, D5).
+- Every version rewritten terse, the one stated exception to append-only: Keep a Changelog sections only, each
+  heading from `0.7.0` naming its change, and the preamble holding the rules only (0038 D1, D2, D3, D5, D6).
 - `CLAUDE.md` states the changelog's rules, no code, doc or README cites it, and `tests/test_changelog.py` holds
   both (0038 D6, D7, D8).
 
