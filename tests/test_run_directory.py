@@ -884,7 +884,7 @@ def test_the_run_id_is_the_digest_prefix_and_the_slug() -> None:
     assert run_id("f" * 64, "Holiday Snap") == f"{'f' * 12}_holiday-snap"
 
 
-@pytest.mark.spec("run-directory:identity:same-name-different-bytes-differ")
+@pytest.mark.spec("run-directory:identity:a-prefix-collision-refuses")
 def test_a_digest_prefix_collision_is_refused_rather_than_mixed(
     tmp_path: Path, runs: Path
 ) -> None:

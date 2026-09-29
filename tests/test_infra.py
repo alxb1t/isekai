@@ -312,7 +312,10 @@ def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
     bound = re.search(r"^HOLD_SECONDS=(\d+)$", start_sh, re.M)
     assert bound is not None
     assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
-    assert 'sleep "$HOLD_SECONDS"' in shell_function(start_sh, "hold")
+    hold = shell_function(start_sh, "hold")
+    assert 'sleep "$HOLD_SECONDS"' in hold
+    # a hold that returns leaves the pod billing
+    assert hold.removesuffix("}").rstrip().endswith('exec bash "$STOP_POD"')
     # an indefinite hold bills until a human notices it
     assert "tail -f /dev/null" not in start_sh
 
@@ -1990,7 +1993,7 @@ def test_the_mismatch_check_catches_a_key_kept_unchecked(tmp_path: Path) -> None
     assert TORN_DOWN not in done.stderr
 
 
-@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+@pytest.mark.spec("pod-image:host-key:a-scan-no-one-answers-is-refused")
 def test_a_scan_no_one_answers_is_refused_as_such(up_sh: str, tmp_path: Path) -> None:
     done, kept = check_host_key(up_sh, HOST_KEY_FINGERPRINT, tmp_path, answers=False)
     assert done.returncode == 1
@@ -2002,13 +2005,7 @@ def test_a_scan_no_one_answers_is_refused_as_such(up_sh: str, tmp_path: Path) ->
     assert done.stderr.endswith(RE_RUN)
 
 
-@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
-@pytest.mark.parametrize(
-    ("printed", "answers"),
-    [(OTHER_FINGERPRINT, True), (HOST_KEY_FINGERPRINT, False)],
-    ids=["mismatch", "no-scan"],
-)
-def test_a_failed_teardown_claims_none_and_names_no_re_run(
+def _assert_a_failed_teardown_claims_none(
     up_sh: str, tmp_path: Path, printed: str, answers: bool
 ) -> None:
     done, kept = check_host_key(up_sh, printed, tmp_path, answers=answers, torn=False)
@@ -2017,6 +2014,20 @@ def test_a_failed_teardown_claims_none_and_names_no_re_run(
     assert done.stderr.endswith("delete failed: ./infra/down.sh\n")
     assert "torn down" not in done.stderr
     assert "bash infra/up.sh" not in done.stderr
+
+
+@pytest.mark.spec("pod-image:host-key:a-mismatch-is-refused")
+def test_a_failed_teardown_after_a_mismatch_claims_none(
+    up_sh: str, tmp_path: Path
+) -> None:
+    _assert_a_failed_teardown_claims_none(up_sh, tmp_path, OTHER_FINGERPRINT, True)
+
+
+@pytest.mark.spec("pod-image:host-key:a-scan-no-one-answers-is-refused")
+def test_a_failed_teardown_after_an_unanswered_scan_claims_none(
+    up_sh: str, tmp_path: Path
+) -> None:
+    _assert_a_failed_teardown_claims_none(up_sh, tmp_path, HOST_KEY_FINGERPRINT, False)
 
 
 @pytest.mark.spec_exempt(

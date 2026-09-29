@@ -9,6 +9,15 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
+
+### Fixed
+
+- The prefix-collision scenario has its test, and a scan no one answers has its own scenario and tests;
+  the hold's test checks that the hold ends in the pod's stop (0045 D3, D4, D5).
+- The gate checks every spec↔test binding: each scenario key has a test, each marker names a key, and each
+  test carries one marker, counting an active change's deltas; `CLAUDE.md` names the check (0045 D1, D2, D6).
+
 ## [0.30.1] - 2026-09-29 · 0044-the-session-proved
 
 ### Fixed
