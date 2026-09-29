@@ -8,7 +8,7 @@ living requirement with [the new scenario](design.md#the-new-scenarios) — besi
 
 - [x] 1 — The checker and the verbs
 - [x] 2 — The boundaries
-- [ ] 3 — The host-key read
+- [x] 3 — The host-key read
 
 Line numbers are `9995b54`'s code, unchanged at `b748c61`. Every new test carries `@pytest.mark.spec` with the key
 its task names, and has a twin.
@@ -37,7 +37,7 @@ its task names, and has a twin.
 
 ## 3 — The host-key read
 
-- [ ] 3.1 In `infra/up.sh`, read the fingerprint with `tail=5000&source=container` and keep the last key line, per [D7](design.md#d7); in `tests/test_infra.py`, add `test_the_fingerprint_is_read_from_the_log_s_last_lines` (`pod-image:host-key:a-matching-key-is-kept`).
+- [x] 3.1 In `infra/up.sh`, read the fingerprint with `tail=5000&source=container` and keep the last key line, per [D7](design.md#d7); in `tests/test_infra.py`, add `test_the_fingerprint_is_read_from_the_log_s_last_lines` (`pod-image:host-key:a-matching-key-is-kept`).
   Verify: `grep -c 'logs?since' infra/up.sh` prints `0`, `grep -c 'tail=5000&source=container' infra/up.sh` prints `1`, and `grep -c '^def test_the_fingerprint_is_read_from_the_log_s_last_lines' tests/test_infra.py` prints `1`.
-- [ ] 3.2 Check the script parses.
+- [x] 3.2 Check the script parses.
   Verify: `bash -n infra/up.sh && echo ok` prints `ok`.

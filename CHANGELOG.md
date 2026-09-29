@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The binding check demands a test only for a living key, so a cut adding a scenario keeps the gate green (0047 D8).
 - `show` marks a frame it cannot read and lists the rest; the Ollama refusals name the pinned files' fetch before
   the build; an artifact the vocabulary manifest does not declare is a refusal, not a traceback (0047 D4, D5, D6).
+- The host-key check reads the container log's last lines and keeps the last key, since reading by `since` stalled
+  on a live boot (0047 D7).
 
 ## [0.30.3] - 2026-09-29 · 0046-the-terse-specs
 

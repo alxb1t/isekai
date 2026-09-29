@@ -1893,24 +1893,28 @@ def check_host_key(
     *,
     answers: bool = True,
     torn: bool = True,
+    earlier: str | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], str | None]:
     """Run `verify_host_key` against a pod log and a scan that answers `HOST_KEY`.
 
     Return the run and the known-hosts file it left, if any. `printed` is the
     fingerprint the log carries; None is a log that never prints one. With
     `answers` False, the scan never answers; with `torn` False, `down.sh` fails.
+    `earlier` is a fingerprint a previous container printed before `printed`.
+    Each `api` call's arguments are appended to `api.args` in `cwd`.
     """
     scan = f'echo "[$host]:$port {HOST_KEY}"' if answers else ":"
-    lines = ["step: sshd"] + ([f"isekai host key: {printed}"] if printed else [])
+    keys = [key for key in (earlier, printed) if key]
+    lines = ["step: sshd"] + [f"isekai host key: {key}" for key in keys]
     events = "".join(
         f"data: {json.dumps({'ts': '', 'source': 'container', 'line': ln})}\n"
         for ln in lines
     )
     stubs = "\n".join(
         [
-            "API=https://api.test pod_id=pod-test since=2026-09-28T00:00:00Z",
+            "API=https://api.test pod_id=pod-test",
             "host=203.0.113.7 port=40022",
-            f"api() {{ printf '%s' {shlex.quote(events)}; }}",
+            f"api() {{ echo \"$*\" >> api.args; printf '%s' {shlex.quote(events)}; }}",
             f"ssh-keyscan() {{ {scan}; }}",
             "sleep() { SECONDS=$((SECONDS + $1)); }",
             'bash() { echo "torn down: $*"; }'
@@ -1959,6 +1963,32 @@ def test_a_matching_key_is_kept(
     assert unchecked_connections(up_sh) == []
     assert "Tunnel:" in up_sh and "SSH:" in up_sh
     assert shared_host_keys(render_sh, down_sh) == []
+
+
+@pytest.mark.spec("pod-image:host-key:a-matching-key-is-kept")
+def test_the_fingerprint_is_read_from_the_log_s_last_lines(
+    up_sh: str, tmp_path: Path
+) -> None:
+    done, kept = check_host_key(
+        up_sh, HOST_KEY_FINGERPRINT, tmp_path, earlier=OTHER_FINGERPRINT
+    )
+    assert done.returncode == 0, done.stderr
+    assert kept is not None
+    assert (tmp_path / "api.args").read_text() == (
+        "-N --max-time 10 https://api.test/pods/pod-test/logs"
+        "?tail=5000&source=container\n"
+    )
+
+
+@pytest.mark.spec_exempt("twin: a later key line wins over an earlier one")
+def test_an_earlier_key_line_does_not_outvote_the_last(
+    up_sh: str, tmp_path: Path
+) -> None:
+    done, kept = check_host_key(
+        up_sh, OTHER_FINGERPRINT, tmp_path, earlier=HOST_KEY_FINGERPRINT
+    )
+    assert done.returncode == 1
+    assert kept is None
 
 
 @pytest.mark.spec_exempt("structural: twin of test_a_matching_key_is_kept")
