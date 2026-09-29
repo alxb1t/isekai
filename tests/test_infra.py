@@ -721,6 +721,65 @@ def test_the_check_catches_a_build_tool_by_version_alone() -> None:
     ]
 
 
+IMAGE_LOCK = REPO / "image" / "uv.lock"
+
+# Each source-only package in the image's lock, to the tools its build asks for: its
+# `build-system.requires`, or setuptools for a `setup.py` with none. uv checks only
+# the tools the constraints list, so a package joins this table once its tools do.
+SDIST_BUILDS = {
+    "antlr4-python3-runtime": ("setuptools",),
+    "fvcore": ("setuptools",),
+    "insightface": ("setuptools", "numpy", "cython"),
+    "iopath": ("setuptools",),
+}
+
+
+def uncovered_sdists(image_lock: str, image_pyproject: str) -> list[str]:
+    """Return each source-only package whose build tools the constraints do not name.
+
+    e.g. a lock gaining `pycocotools` as an sdist alone -> ["pycocotools"]
+    """
+    tools = tomllib.loads(image_pyproject)["tool"]["uv"].get(
+        "build-constraint-dependencies", []
+    )
+    named = {
+        re.split(r"[=<>!~ ]", tool if isinstance(tool, str) else tool["requirement"])[0]
+        for tool in tools
+    }
+    uncovered = []
+    for package in tomllib.loads(image_lock)["package"]:
+        if "sdist" not in package or package.get("wheels"):
+            continue
+        name = package["name"]
+        if name not in SDIST_BUILDS:
+            uncovered.append(name)
+            continue
+        uncovered += [f"{name}: {t}" for t in SDIST_BUILDS[name] if t not in named]
+    return uncovered
+
+
+@pytest.mark.spec("pod-image:build:the-build-tools-are-hashed")
+def test_every_source_only_package_builds_with_constrained_tools() -> None:
+    assert uncovered_sdists(IMAGE_LOCK.read_text(), IMAGE_PROJECT.read_text()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_source_only_package_builds_with_constrained_tools"
+)
+def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
+    image_lock = IMAGE_LOCK.read_text() + (
+        '\n[[package]]\nname = "pycocotools"\nversion = "2.0.8"\n'
+        'source = { registry = "https://pypi.org/simple" }\n'
+        'sdist = { url = "https://example.invalid/pycocotools-2.0.8.tar.gz" }\n'
+    )
+    image_pyproject = IMAGE_PROJECT.read_text()
+    assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools"]
+    no_cython = re.sub(r'\{ requirement = "cython==[^}]*\},?', "", image_pyproject)
+    assert uncovered_sdists(IMAGE_LOCK.read_text(), no_cython) == [
+        "insightface: cython"
+    ]
+
+
 # The line each step of `start.sh` begins with: the SSH key, sshd, provisioning,
 # the download inside it, the memory directories, and ComfyUI.
 BOOT_STEPS = (
@@ -1761,13 +1820,14 @@ TELEMETRY_SWITCHES = (
 
 
 def telemetry_left_on(dockerfile: str, up_sh: str) -> list[str]:
-    """Return each switch the image's `ENV` leaves unset, and each `up.sh` sets again.
+    """Return each switch the image's `ENV` leaves off, and each `up.sh` sets again.
 
+    A switch's last assignment is the one the image keeps, so a later `=0` turns it off.
     e.g. `up.sh` setting `DO_NOT_TRACK` -> [..., "up.sh: DO_NOT_TRACK"]
     """
     env = " ".join(line for line in joined_lines(dockerfile) if line.startswith("ENV "))
-    set_on = set(re.findall(r"\b(\w+)=1\b", env))
-    left = [s for s in TELEMETRY_SWITCHES if s not in set_on]
+    last = dict(re.findall(r"\b(\w+)=(\S*)", env))
+    left = [s for s in TELEMETRY_SWITCHES if last.get(s) != "1"]
     return left + [f"up.sh: {s}" for s in TELEMETRY_SWITCHES if s in up_sh]
 
 
@@ -1790,6 +1850,14 @@ def test_the_telemetry_check_catches_a_switch_left_out() -> None:
         "NO_ALBUMENTATIONS_UPDATE",
         "up.sh: NO_ALBUMENTATIONS_UPDATE",
     ]
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_pod_is_created_with_telemetry_off"
+)
+def test_the_telemetry_check_catches_a_switch_set_back(dockerfile: str) -> None:
+    set_back = dockerfile + "\nENV DO_NOT_TRACK=0\n"
+    assert telemetry_left_on(set_back, "") == ["DO_NOT_TRACK"]
 
 
 # A throwaway Ed25519 key made for these tests, and its fingerprint and another's.
