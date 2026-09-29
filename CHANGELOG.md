@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Fixed
+
+- The prefix-collision scenario has its test, and a scan no one answers has its own scenario and tests;
+  the hold's test checks that the hold ends in the pod's stop (0045 D3, D4, D5).
+
 ## [0.30.1] - 2026-09-29 · 0044-the-session-proved
 
 ### Fixed
