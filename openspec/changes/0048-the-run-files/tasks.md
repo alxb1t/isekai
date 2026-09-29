@@ -7,7 +7,7 @@ holds every new scenario; each task below adds the tests that bind them.
 
 - [x] 1 — The kind
 - [x] 2 — The record's name
-- [ ] 3 — The sheet's failures
+- [x] 3 — The sheet's failures
 - [ ] 4 — The warning
 
 Line numbers are `69bfd67`'s. Every new test carries `@pytest.mark.spec` with the key its task names.
@@ -32,9 +32,9 @@ Line numbers are `69bfd67`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 3 — The sheet's failures
 
-- [ ] 3.1 In `isekai/pipeline/sheet.py`, record a refusal from the tagged branch's reads, entry checks and `validate` as permanent through `refusal_for`, and drop the untagged branch's `check_budget`, per [D4](design.md#d4); restate the `BUDGETS` comment in `isekai/foundation/run.py`.
+- [x] 3.1 In `isekai/pipeline/sheet.py`, record a refusal from the tagged branch's reads, entry checks and `validate` as permanent through `refusal_for`, and drop the untagged branch's `check_budget`, per [D4](design.md#d4); restate the `BUDGETS` comment in `isekai/foundation/run.py`.
   Verify: `test "$(grep -c 'record_failure' isekai/pipeline/sheet.py)" -ge 2 && echo ok` prints `ok`, `grep -c 'check_budget(STAGE' isekai/pipeline/sheet.py` prints `1`, and `grep -c 'records no failure' isekai/foundation/run.py` prints `0`.
-- [ ] 3.2 In `tests/test_sheet_stage.py`, restate `test_a_tag_list_missing_a_key_is_refused_naming_it` for the recorded refusal; add `test_a_sheet_failure_is_recorded_as_permanent` (`run-directory:failure:a-sheet-failure-is-permanent`), with a damaged list and a tag outside the vocabulary as its cases, and `test_an_absent_tag_list_leaves_no_record` (`run-directory:failure:an-absent-tag-list-leaves-no-record`).
+- [x] 3.2 In `tests/test_sheet_stage.py`, restate `test_a_tag_list_missing_a_key_is_refused_naming_it` for the recorded refusal; add `test_a_sheet_failure_is_recorded_as_permanent` (`run-directory:failure:a-sheet-failure-is-permanent`), with a damaged list and a tag outside the vocabulary as its cases, and `test_an_absent_tag_list_leaves_no_record` (`run-directory:failure:an-absent-tag-list-leaves-no-record`).
   Verify: `grep -cF 'startswith("001.json: ")' tests/test_sheet_stage.py` prints `0`, and `grep -cE '^def test_(a_sheet_failure_is_recorded_as_permanent|an_absent_tag_list_leaves_no_record)\(' tests/test_sheet_stage.py` prints `2`.
 
 ## 4 — The warning

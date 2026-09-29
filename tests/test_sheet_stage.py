@@ -23,6 +23,7 @@ from isekai.foundation.run import (
     BUDGETS,
     CAPTIONS,
     Run,
+    attempts,
     open_run,
     record_failure,
     versions,
@@ -168,9 +169,70 @@ def test_a_tag_list_missing_a_key_is_refused_naming_it(
         sheet(run, schema, vocabulary, tags=None)
 
     message = str(refused.value)
-    assert message.startswith("001.json: ") and named in message
+    assert "-- 001.json: " in message and named in message
     assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
     assert versions(run.directory(FLOW, "sheets")) == []
+
+
+def _damage_the_list(run: Run, vocabulary: Vocabulary) -> Vocabulary:
+    """Write a tag list with no `tags` key, and hand the vocabulary back whole."""
+    listed = write_wd14(run, [DanbooruTag("brown_hair")])
+    body = json.loads(listed.read_text())
+    body.pop("tags")
+    listed.write_text(json.dumps(body))
+    return vocabulary
+
+
+def _drop_the_tag(run: Run, vocabulary: Vocabulary) -> Vocabulary:
+    """Write a tag list naming `brown_hair`, and a vocabulary that lacks it."""
+    write_wd14(run, [DanbooruTag("brown_hair")])
+    kept = {tag: n for tag, n in vocabulary.counts.items() if tag != "brown hair"}
+    return replace(vocabulary, counts=kept)
+
+
+@pytest.mark.spec("run-directory:failure:a-sheet-failure-is-permanent")
+@pytest.mark.parametrize(
+    ("arrange", "named"),
+    [
+        (_damage_the_list, "records no `tags` list"),
+        (_drop_the_tag, "brown hair"),
+    ],
+)
+def test_a_sheet_failure_is_recorded_as_permanent(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    arrange: Callable[[Run, Vocabulary], Vocabulary],
+    named: str,
+) -> None:
+    narrowed = arrange(run, vocabulary)
+    directory = run.directory(FLOW, "sheets")
+
+    with pytest.raises(Refusal) as refused:
+        sheet(run, schema, narrowed, tags=None)
+
+    assert [(one.attempt, one.kind) for one in attempts(directory, 1)] == [
+        (1, "permanent")
+    ]
+    message = str(refused.value)
+    assert named in message
+    assert f"see {FLOW}/sheets/001.error.1.permanent.json" in message
+    assert f"delete it, then run `python -m isekai sheet --flow {FLOW} {run.id}`" in (
+        message
+    )
+    assert versions(directory) == []
+
+
+@pytest.mark.spec("run-directory:failure:an-absent-tag-list-leaves-no-record")
+def test_an_absent_tag_list_leaves_no_record(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    directory = run.directory(FLOW, "sheets")
+
+    with pytest.raises(Refusal):
+        sheet(run, schema, vocabulary, tags=None)
+
+    assert attempts(directory, 1) == []
 
 
 @pytest.mark.spec("field-map:routing:an-undeclared-criterion-drops-its-tags")

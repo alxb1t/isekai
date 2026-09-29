@@ -60,6 +60,8 @@ from isekai.foundation.run import (
     check_budget,
     latest,
     next_version,
+    record_failure,
+    refusal_for,
 )
 from isekai.shared.field_map import FieldMap, route
 from isekai.shared.field_map import identity as field_map_identity
@@ -123,8 +125,8 @@ def sheet(
         return None
 
     if not tagged:
-        # No tagger was going to run, so an empty sheet hides nothing.
-        check_budget(STAGE, directory, next_version(directory), run)
+        # No tagger was going to run, so an empty sheet hides nothing; and
+        # nothing here can fail, so no budget is checked.
         fields = route((), field_map, schema)
         made_by: SheetProducer = {
             "implementation": EMPTY,
@@ -132,9 +134,11 @@ def sheet(
             "pinned": True,
             "artifacts": {},
         }
+        validate(fields, schema, vocabulary)
     else:
-        fields, made_by = _from_tag_list(run, flow, directory, schema, field_map)
-    validate(fields, schema, vocabulary)
+        fields, made_by = _from_tag_list(
+            run, flow, directory, schema, vocabulary, field_map
+        )
 
     path = directory / artifact_name(next_version(directory))
     artifact: Sheet = {
@@ -151,12 +155,19 @@ def sheet(
 
 
 def _from_tag_list(
-    run: Run, flow: str, directory: Path, schema: Schema, field_map: FieldMap
+    run: Run,
+    flow: str,
+    directory: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    field_map: FieldMap,
 ) -> tuple[dict[str, list[str]], SheetProducer]:
-    """Return the fields routed from this flow's tag list, and who filled them.
+    """Return the checked fields routed from this flow's tag list, and who filled them.
 
-    Refuses naming `tag` when the list is absent, and names the fix when it is
-    malformed; the budget is checked between the two, as for any stage.
+    Refuses naming `tag` when the list is absent, and records nothing: running
+    `tag` is the fix, and a record would bar the sheet that follows. The budget is
+    checked next; a damaged list or a tag outside the vocabulary is then recorded
+    as permanent, since this stage fails the same way every time (0048 design D4).
     """
     listed_dir = run.directory(flow, WD14)
     source = latest(listed_dir)
@@ -167,13 +178,40 @@ def _from_tag_list(
             f"which writes {flow}/{WD14}/"
         )
 
-    check_budget(STAGE, directory, next_version(directory), run)
+    version = next_version(directory)
+    check_budget(STAGE, directory, version, run)
+    try:
+        fields, made_by = _route(
+            listed_dir / artifact_name(source), source, run.id, flow, schema, field_map
+        )
+        validate(fields, schema, vocabulary)
+    except Refusal as failed:
+        detail = str(failed)
+        record = record_failure(
+            directory, version, "permanent", {"stage": STAGE, "detail": detail}
+        )
+        raise refusal_for(
+            STAGE, run.id, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
+        ) from failed
+    return fields, made_by
 
-    listed_path = listed_dir / artifact_name(source)
+
+def _route(
+    listed_path: Path,
+    source: int,
+    run_id: str,
+    flow: str,
+    schema: Schema,
+    field_map: FieldMap,
+) -> tuple[dict[str, list[str]], SheetProducer]:
+    """Return the fields routed from the tag list at `listed_path`, and who filled them.
+
+    Refuses naming the fix when the list is damaged.
+    """
     listed = read(listed_path, WD14_FILE)
     remedy = (
-        f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
-        f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
+        f"run `python -m isekai tag --flow {flow} --new-version {run_id}`, "
+        f"then `python -m isekai sheet --flow {flow} --new-version {run_id}`"
     )
     for key, shape in (("tags", list), ("producer", dict)):
         require(listed_path, listed, key, shape, remedy)

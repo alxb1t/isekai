@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   copied into the wrong place is no longer read as whatever its place implies (0048 D1, D2).
 - A render's record is `<seed>.render.json`, and a version listing reads only the `draft` and `approved` labels:
   a three-digit seed's record no longer reads as a version (0048 D3).
+- `sheet` records a damaged tag list and a tag outside the vocabulary as permanent failures, so its budget
+  binds and the refusal names the record to delete; an absent tag list still records nothing (0048 D4).
 
 ## [0.30.4] - 2026-09-29 · 0047-the-refusals
 
