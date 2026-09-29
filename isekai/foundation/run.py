@@ -638,11 +638,16 @@ def refusal_for(
     `budget` is the `BUDGETS` key. When the record refuses the next run -- it is
     permanent, or fills the budget -- the remedy deletes it first, since running
     again would only be refused.
+
+    A failure above version 1 sits beside the version before it, which a bare
+    rerun keeps as complete, so the command asks for the next version.
     """
-    command = f"`python -m isekai {verb} --flow {flow} {run_id}`"
-    where = f"{flow}/{area}/{record.name}"
     # `record_failure` names every record `NNN.error.…`.
-    if exhausted(budget, record.parent, int(record.name[:3])):
+    version = int(record.name[:3])
+    asked = "--new-version " if version > 1 else ""
+    command = f"`python -m isekai {verb} --flow {flow} {asked}{run_id}`"
+    where = f"{flow}/{area}/{record.name}"
+    if exhausted(budget, record.parent, version):
         return Refusal(
             f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
             f"what it names and delete it, then run {command}"

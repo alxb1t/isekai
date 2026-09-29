@@ -234,6 +234,26 @@ def test_a_sheet_failure_is_recorded_as_permanent(
     assert versions(directory) == []
 
 
+@pytest.mark.spec("cli:refusals:refusal-names-the-remedy")
+def test_a_failed_next_sheet_names_the_command_that_writes_it(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    assert sheet(run, schema, vocabulary) is not None
+    write_wd14(run, [DanbooruTag("brown_hair")], version=2)
+    kept = {tag: n for tag, n in vocabulary.counts.items() if tag != "brown hair"}
+
+    with pytest.raises(Refusal) as refused:
+        sheet(
+            run, schema, replace(vocabulary, counts=kept), tags=None, new_version=True
+        )
+
+    # Sheet 001 stays, so the bare command would report the sheet already complete.
+    assert str(refused.value).endswith(
+        f"delete it, then run `python -m isekai sheet --flow {FLOW} --new-version "
+        f"{run.id}`"
+    )
+
+
 @pytest.mark.spec("run-directory:failure:an-absent-tag-list-leaves-no-record")
 def test_an_absent_tag_list_leaves_no_record(
     run: Run, schema: Schema, vocabulary: Vocabulary

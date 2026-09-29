@@ -489,6 +489,23 @@ def test_a_file_of_another_kind_is_refused_naming_both(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.spec("run-directory:kind:another-kind-is-refused")
+@pytest.mark.parametrize("body", [{}, {"schema": {"version": 1}}])
+def test_a_file_that_names_no_kind_is_refused_as_declaring_none(
+    tmp_path: Path, body: dict[str, object]
+) -> None:
+    path = tmp_path / "001.json"
+    write_json(path, body)
+
+    with pytest.raises(Refusal) as refused:
+        read(path, CAPTION_FILE)
+
+    assert str(refused.value) == (
+        "001.json: declares no kind and this build reads it as 'caption'; "
+        f"delete {path}, then run the stage that wrote it again"
+    )
+
+
 @pytest.mark.spec("run-directory:kind:the-kind-is-checked-first")
 def test_the_kind_is_checked_before_the_version(tmp_path: Path) -> None:
     path = tmp_path / "001.json"

@@ -384,8 +384,9 @@ def read(path: Path, kind: Artifact[T], *, remedy: str | None = None) -> T:
     # A kind is not a newer build's, so this refusal offers no upgrade.
     named = schema.get("name")
     if named != kind.name:
+        declares = "no kind" if named is None else f"kind {named!r}"
         raise Refusal(
-            f"{path.name}: declares kind {named!r} and this build reads it as "
+            f"{path.name}: declares {declares} and this build reads it as "
             f"{kind.name!r}; {remedy}"
         )
     declared = schema.get("version")
