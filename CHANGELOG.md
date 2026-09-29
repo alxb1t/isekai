@@ -11,6 +11,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `up.sh` places a pod only on a host that can render, and refuses beside a recorded or listed `isekai` pod;
   `down.sh` removes every `isekai` pod, so none bills unseen (0043 D1, D2, D3).
+- A pod stops itself 45 minutes after it boots, and every hold ends in that stop, so a pod bills bounded with
+  the laptop gone. ComfyUI starts without RunPod's key (0043 D4, D5, D6).
 
 ## [0.29.1] - 2026-09-29 · 0042-the-rebuild
 

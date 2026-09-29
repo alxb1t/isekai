@@ -6,7 +6,7 @@ stop boot, per [design](design.md).
 ## Progress
 
 - [x] 1 — The gates and the reconciler
-- [ ] 2 — The pod's stop
+- [x] 2 — The pod's stop
 - [ ] 3 — The docs
 - [ ] 4 — 🛑 **HUMAN** — the rc build
 - [ ] 5 — 🛑 **HUMAN · METERED** — a render boot and a stop boot on the new image
@@ -34,19 +34,19 @@ Line numbers are `2747163`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The pod's stop
 
-- [ ] 2.1 Write `tools/stop_pod.sh`, per [D4](design.md#d4), and add it to the `Dockerfile`'s copies and its `chmod`.
+- [x] 2.1 Write `tools/stop_pod.sh`, per [D4](design.md#d4), and add it to the `Dockerfile`'s copies and its `chmod`.
   Verify: `grep -q -F '{"action":"stop"}' tools/stop_pod.sh && echo ok` prints `ok`, and `grep -c 'tools/stop_pod.sh' Dockerfile` prints `2`.
-- [ ] 2.2 In `start.sh`, add the stop timer as the first step, per [D4](design.md#d4).
+- [x] 2.2 In `start.sh`, add the stop timer as the first step, per [D4](design.md#d4).
   Verify: `grep -c -F '( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &' start.sh` prints `1`, and `grep -c '^POD_CEILING_SECONDS=2700$' start.sh` prints `1`.
-- [ ] 2.3 In `start.sh`, add `hold` and make every hold call it, per [D5](design.md#d5).
+- [x] 2.3 In `start.sh`, add `hold` and make every hold call it, per [D5](design.md#d5).
   Verify: `grep -c -F 'exec sleep "$HOLD_SECONDS"' start.sh` prints `0`, and `grep -c '^hold()' start.sh` prints `1`.
-- [ ] 2.4 In `start.sh`, unset `RUNPOD_API_KEY` before the ComfyUI step, per [D6](design.md#d6).
+- [x] 2.4 In `start.sh`, unset `RUNPOD_API_KEY` before the ComfyUI step, per [D6](design.md#d6).
   Verify: `grep -c '^unset RUNPOD_API_KEY$' start.sh` prints `1`.
-- [ ] 2.5 Add to `tests/test_infra.py`: `test_the_pod_arms_its_stop_first` (`pod-image:stop:armed-at-boot`), `test_every_hold_ends_in_the_stop` (`pod-image:stop:a-hold-ends-in-the-stop`) and `test_a_failed_stop_is_retried_then_given_up` (`pod-image:stop:a-failed-stop-is-retried`).
+- [x] 2.5 Add to `tests/test_infra.py`: `test_the_pod_arms_its_stop_first` (`pod-image:stop:armed-at-boot`), `test_every_hold_ends_in_the_stop` (`pod-image:stop:a-hold-ends-in-the-stop`) and `test_a_failed_stop_is_retried_then_given_up` (`pod-image:stop:a-failed-stop-is-retried`).
   Verify: `grep -c -e '^def test_the_pod_arms_its_stop_first' -e '^def test_every_hold_ends_in_the_stop' -e '^def test_a_failed_stop_is_retried_then_given_up' tests/test_infra.py` prints `3`.
-- [ ] 2.6 Add `test_comfyui_starts_without_the_key` (`pod-image:stop:comfyui-holds-no-key`) to `tests/test_infra.py`; rebind the hold tests at `:194-224`, `:301-310`, `memory_hold_faults` and `run_memory_step` to `hold`, and add `tools/stop_pod.sh` to `unsafe_api_calls`'s files.
+- [x] 2.6 Add `test_comfyui_starts_without_the_key` (`pod-image:stop:comfyui-holds-no-key`) to `tests/test_infra.py`; rebind the hold tests at `:194-224`, `:301-310`, `memory_hold_faults` and `run_memory_step` to `hold`, and add `tools/stop_pod.sh` to `unsafe_api_calls`'s files.
   Verify: `grep -c '^def test_comfyui_starts_without_the_key' tests/test_infra.py` prints `1`, and `grep -q -F 'tools/stop_pod.sh' tests/test_infra.py && echo ok` prints `ok`.
-- [ ] 2.7 Check the image files the way `CLAUDE.md` asks of an image phase.
+- [x] 2.7 Check the image files the way `CLAUDE.md` asks of an image phase.
   Verify: `bash -n start.sh && bash -n tools/stop_pod.sh && echo ok` prints `ok`, and `docker build --check .` exits `0`.
 
 ## 3 — The docs

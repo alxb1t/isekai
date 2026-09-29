@@ -191,6 +191,14 @@ def test_the_driver_aborts_only_once_every_source_is_exhausted(
     assert "landed=0" in download_models_sh
 
 
+def held_on_provisioning(start_sh: str) -> bool:
+    """Whether the guarded provisioning step's failure branch calls `hold`."""
+    lines = start_sh.splitlines()
+    guard = lines.index("if ! provision; then")
+    end = next(i for i in range(guard, len(lines)) if lines[i] == "fi")
+    return any(ln.lstrip().startswith('hold "') for ln in lines[guard:end])
+
+
 @pytest.mark.spec(
     "model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open"
 )
@@ -205,7 +213,7 @@ def test_a_provisioning_failure_does_not_take_the_container_down(
     # so `set -e` cannot terminate the shell that owns sshd.
     assert provisioning[0].rstrip().endswith("|| return 1")
     assert "if ! provision; then" in start_sh
-    assert 'exec sleep "$HOLD_SECONDS"' in start_sh
+    assert held_on_provisioning(start_sh)
 
 
 @pytest.mark.spec(
@@ -215,9 +223,7 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
     start_sh: str,
 ) -> None:
     lines = start_sh.splitlines()
-    hold = next(
-        i for i, line in enumerate(lines) if 'exec sleep "$HOLD_SECONDS"' in line
-    )
+    hold = next(i for i, line in enumerate(lines) if line.lstrip().startswith('hold "'))
     serve = next(i for i, line in enumerate(lines) if "exec python main.py" in line)
     assert hold < serve
     # nothing on the volume is removed on the failure path
@@ -305,7 +311,7 @@ def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
     bound = re.search(r"^HOLD_SECONDS=(\d+)$", start_sh, re.M)
     assert bound is not None
     assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
-    assert 'exec sleep "$HOLD_SECONDS"' in start_sh
+    assert 'sleep "$HOLD_SECONDS"' in shell_function(start_sh, "hold")
     # an indefinite hold bills until a human notices it
     assert "tail -f /dev/null" not in start_sh
 
@@ -780,9 +786,10 @@ def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
     ]
 
 
-# The line each step of `start.sh` begins with: the SSH key, sshd, provisioning,
-# the download inside it, the memory directories, and ComfyUI.
+# The line each step of `start.sh` begins with: the stop timer, the SSH key, sshd,
+# provisioning, the download inside it, the memory directories, and ComfyUI.
 BOOT_STEPS = (
+    '( sleep "$POD_CEILING_SECONDS"',
     "mkdir -p ~/.ssh",
     "mkdir -p /run/sshd",
     "if ! provision; then",
@@ -1007,7 +1014,7 @@ def memory_hold_faults(start_sh: str) -> list[str]:
         faults.append("compares against no floor")
     if any(int(guess) for guess in re.findall(r"\bfree_kib=(\d+)", step)):
         faults.append("defaults an unreadable figure to free memory")
-    if not re.search(r'>&2\n\s*exec sleep "\$HOLD_SECONDS"$', step, re.M):
+    if not re.search(r'SHM_FREE_FLOOR_KIB" \]; then\n\s*hold "ERROR: ', step):
         faults.append("does not say why and hold")
     return faults
 
@@ -1035,15 +1042,11 @@ def test_the_check_catches_a_memory_step_that_never_holds() -> None:
         "    '' | *[!0-9]*) free_kib=0 ;;\n"
         "esac\n"
         'if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then\n'
-        '    echo "ERROR: too little" >&2\n'
-        '    exec sleep "$HOLD_SECONDS"\n'
+        '    hold "ERROR: too little"\n'
         "fi\n\n"
     )
     assert memory_hold_faults(holds) == []
-    silent = holds.replace(
-        '    echo "ERROR: too little" >&2\n    exec sleep "$HOLD_SECONDS"\n',
-        "    true\n",
-    )
+    silent = holds.replace('    hold "ERROR: too little"\n', "    true\n")
     assert memory_hold_faults(silent) == ["does not say why and hold"]
     for inverted in ('[ "$free_kib" -ge', '! [ "$free_kib" -lt'):
         assert memory_hold_faults(holds.replace('[ "$free_kib" -lt', inverted)) == [
@@ -1098,9 +1101,10 @@ def run_memory_step(
     """
     stubs = tmp_path / "bin"
     stubs.mkdir(exist_ok=True)
-    # `exec` finds only a file on PATH, so the hold's `sleep` is one.
+    # `exec` finds only a file on PATH, so a hold's `sleep` is one.
     (stubs / "sleep").write_text("#!/bin/sh\necho held\n")
     (stubs / "sleep").chmod(0o755)
+    hold = 'hold() { printf "%s\\n" "$@" >&2; echo held; exit 0; }'
     stat = f"echo {shlex.quote(shm_type)}" if shm_type is not None else "return 1"
     program = "\n".join(
         [
@@ -1109,6 +1113,7 @@ def run_memory_step(
             "mkdir() { :; }",
             f"stat() {{ {stat}; }}",
             f"df() {{ printf '%s\\n' '1K-blocks Avail' {shlex.quote(df_row)}; }}",
+            hold,
             step,
             "echo started",
         ]
@@ -1356,7 +1361,8 @@ def unsafe_api_calls(scripts: dict[str, str]) -> list[str]:
 @pytest.mark.spec_exempt("structural: how the scripts hand curl the key and a bound")
 def test_every_api_call_is_bounded_and_keeps_the_key_off_argv() -> None:
     scripts = {p.name: p.read_text() for p in (REPO / "infra").iterdir() if p.is_file()}
-    assert "curl " in scripts["up.sh"] and "curl " in scripts["down.sh"]
+    scripts["tools/stop_pod.sh"] = (REPO / "tools" / "stop_pod.sh").read_text()
+    assert all("curl " in scripts[n] for n in ("up.sh", "down.sh", "tools/stop_pod.sh"))
     assert unsafe_api_calls(scripts) == []
 
 
@@ -2472,3 +2478,206 @@ def test_the_session_check_catches_a_record_read_after_the_trap(tmp_path: Path) 
     done, torn = session_on_record(LATE_RECORD_CHECK, tmp_path)
     assert done.returncode == 1
     assert torn
+
+
+TIMER = '( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &'
+
+
+def unarmed_stop(start_sh: str, dockerfile: str) -> list[str]:
+    """Return what `start.sh` lacks of a stop armed, in the background, at boot.
+
+    e.g. a script whose first step is the SSH key -> ["armed first", ...]
+    """
+    faults = []
+    steps = [ln for ln in start_sh.splitlines() if re.search(r'step: [^"]+"$', ln)]
+    if not steps or not steps[0].endswith('step: the stop timer"'):
+        faults.append("armed first")
+    ceiling = re.search(r"^POD_CEILING_SECONDS=(\d+)$", start_sh, re.M)
+    if ceiling is None or not 0 < int(ceiling[1]) <= SESSION_CEILING_SECONDS:
+        faults.append("a ceiling within the session's")
+    if TIMER not in start_sh.splitlines():
+        faults.append("in the background")
+    stop = re.search(r"^STOP_POD=(\S+)$", start_sh, re.M)
+    if stop is None or image_copies(dockerfile).get(stop[1]) != "tools/stop_pod.sh":
+        faults.append("a stop the image holds")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:armed-at-boot")
+def test_the_pod_arms_its_stop_first(start_sh: str, dockerfile: str) -> None:
+    assert unarmed_stop(start_sh, dockerfile) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_pod_arms_its_stop_first")
+def test_the_armed_stop_check_catches_a_late_foreground_timer(dockerfile: str) -> None:
+    late = (
+        'echo "$(date -u +%FT%TZ) step: the SSH key"\n'
+        "POD_CEILING_SECONDS=3600\nSTOP_POD=/opt/isekai/stop.sh\n"
+        'echo "$(date -u +%FT%TZ) step: the stop timer"\n'
+        'sleep "$POD_CEILING_SECONDS"; bash "$STOP_POD"\n'
+    )
+    assert unarmed_stop(late, dockerfile) == [
+        "armed first",
+        "a ceiling within the session's",
+        "in the background",
+        "a stop the image holds",
+    ]
+
+
+def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
+    """Return how `start.sh` holds without ending in the stop.
+
+    Runs `hold` with `sleep` and the stop's `bash` stubbed; each line outside it
+    that waits out `HOLD_SECONDS` is a hold that bypasses it.
+    """
+    body = shell_function(start_sh, "hold")
+    faults = [
+        f"holds outside hold(): {ln.strip()}"
+        for ln in start_sh.replace(body, "").splitlines()
+        if "HOLD_SECONDS" in ln
+        and not ln.lstrip().startswith("#")
+        and not ln.startswith("HOLD_SECONDS=")
+    ]
+    stubs = tmp_path / "bin"
+    stubs.mkdir(exist_ok=True)
+    (stubs / "bash").write_text('#!/bin/sh\necho "stopped $*"\n')
+    (stubs / "bash").chmod(0o755)
+    program = "\n".join(
+        [
+            "set -euo pipefail",
+            "HOLD_SECONDS=900 STOP_POD=/opt/isekai/tools/stop_pod.sh",
+            'sleep() { echo "slept $1"; }',
+            body,
+            'hold "ERROR: why"',
+            "echo returned",
+        ]
+    )
+    done = subprocess.run(
+        ["/bin/bash", "-c", program],
+        env={"PATH": f"{stubs}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if done.stdout != "slept 900\nstopped /opt/isekai/tools/stop_pod.sh\n":
+        faults.append("hold() does not stop the pod once it has waited")
+    if not done.stderr.startswith("ERROR: why\n"):
+        faults.append("hold() does not say why")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:a-hold-ends-in-the-stop")
+def test_every_hold_ends_in_the_stop(start_sh: str, tmp_path: Path) -> None:
+    assert unstopped_holds(start_sh, tmp_path) == []
+    calls = [ln for ln in start_sh.splitlines() if ln.lstrip().startswith('hold "')]
+    assert len(calls) >= 1
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_hold_ends_in_the_stop")
+def test_the_hold_check_catches_a_hold_that_exits(tmp_path: Path) -> None:
+    exits = (
+        "HOLD_SECONDS=900\n"
+        'hold() {\n    printf "%s\\n" "$@" >&2\n    sleep "$HOLD_SECONDS"\n}\n'
+        'if ! provision; then\n    exec sleep "$HOLD_SECONDS"\nfi\n'
+    )
+    assert unstopped_holds(exits, tmp_path) == [
+        'holds outside hold(): exec sleep "$HOLD_SECONDS"',
+        "hold() does not stop the pod once it has waited",
+    ]
+
+
+STOP_SH = (REPO / "tools" / "stop_pod.sh").read_text()
+TRIED_ONCE = (
+    "code=$(curl -s --max-time 30 -o /dev/null -w '%{http_code}' -X POST"
+    ' "$API/pods/$RUNPOD_POD_ID/action")\n'
+    '[ "$code" = "200" ]\n'
+)
+
+
+def stop_attempts(
+    script: str, codes: list[str], tmp_path: Path
+) -> tuple[int, list[str], list[str]]:
+    """Run the stop script against RunPod answering `codes`, one per attempt.
+
+    Return its exit code, each attempt's curl arguments, and each wait between them.
+    """
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "codes").write_text("".join(f"{c}\n" for c in codes))
+    stubs = "\n".join(
+        [
+            "export RUNPOD_API_KEY=test-key RUNPOD_POD_ID=pod-test",
+            'curl() { echo "$*" >> attempts;'
+            ' sed -n "$(wc -l < attempts | tr -d " ")p" codes; }',
+            'sleep() { echo "$1" >> slept; SECONDS=$((SECONDS + $1)); }',
+        ]
+    )
+    done = subprocess.run(
+        ["bash", "-c", f"{stubs}\n{script}"],
+        cwd=tmp_path,
+        env={"PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    def read(name: str) -> list[str]:
+        path = tmp_path / name
+        return path.read_text().splitlines() if path.exists() else []
+
+    return done.returncode, read("attempts"), read("slept")
+
+
+@pytest.mark.spec("pod-image:stop:a-failed-stop-is-retried")
+def test_a_failed_stop_is_retried_then_given_up(tmp_path: Path) -> None:
+    code, attempts, slept = stop_attempts(
+        STOP_SH, ["500", "000", "200"], tmp_path / "ok"
+    )
+    assert (code, len(attempts), slept) == (0, 3, ["30", "30"])
+    for attempt in attempts:
+        assert (
+            '-d {"action":"stop"} https://api.runpod.io/v2/pods/pod-test/action'
+            in attempt
+        )
+    code, attempts, slept = stop_attempts(STOP_SH, ["500"] * 20, tmp_path / "down")
+    assert code == 1
+    # tried every 30 s until 300 s had passed
+    assert (len(attempts), slept) == (11, ["30"] * 10)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_failed_stop_is_retried_then_given_up"
+)
+def test_the_retry_check_catches_a_stop_tried_once(tmp_path: Path) -> None:
+    code, attempts, slept = stop_attempts(TRIED_ONCE, ["500", "200"], tmp_path)
+    assert (code, len(attempts), slept) == (1, 1, [])
+
+
+def key_left_for_comfyui(start_sh: str) -> list[str]:
+    """Return how the key could still reach ComfyUI, or be gone before the timer."""
+    lines = before_serve(start_sh).splitlines()
+    unset = [i for i, ln in enumerate(lines) if ln == "unset RUNPOD_API_KEY"]
+    if not unset:
+        return ["never unset"]
+    faults = []
+    timer = next((i for i, ln in enumerate(lines) if ln == TIMER), None)
+    if timer is None or unset[0] < timer:
+        faults.append("unset before the timer forks")
+    if any("RUNPOD_API_KEY=" in ln for ln in lines[unset[-1] :]):
+        faults.append("set again before ComfyUI")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:comfyui-holds-no-key")
+def test_comfyui_starts_without_the_key(start_sh: str) -> None:
+    assert key_left_for_comfyui(start_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_comfyui_starts_without_the_key")
+def test_the_key_check_catches_a_key_kept_or_unset_too_early() -> None:
+    serve = "exec python main.py\n"
+    assert key_left_for_comfyui(f"{TIMER}\n{serve}") == ["never unset"]
+    assert key_left_for_comfyui(f"unset RUNPOD_API_KEY\n{TIMER}\n{serve}") == [
+        "unset before the timer forks"
+    ]
