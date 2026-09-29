@@ -21,6 +21,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   and the sheet's fill gains a diagram (0046 D2, D3).
 - `caption` and `review` read to the rule: measured scores and costs go, and the review's copy-then-approve layout
   gains a diagram (0046 D2, D3).
+- `model-provisioning` reads to the rule, its stray closing tag gone; each rule's reason leaves its SHALL paragraph
+  and its scenarios, and the provisioning hold gains a diagram (0046 D2, D3).
 
 ## [0.30.2] - 2026-09-29 · 0045-the-spec-bound
 

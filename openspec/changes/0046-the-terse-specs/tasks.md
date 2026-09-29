@@ -11,7 +11,7 @@ edits that capability's `## Purpose` in place, per [D3](design.md#d3).
 - [x] 3 — `cli`
 - [x] 4 — `sheet` and `tagging`
 - [x] 5 — `caption` and `review`
-- [ ] 6 — `model-provisioning`
+- [x] 6 — `model-provisioning`
 - [ ] 7 — `run-directory`, `field-map`, and the guard
 
 Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-specs/specs`.
@@ -49,7 +49,7 @@ Line numbers are `9995b54`'s. `D` below is `openspec/changes/0046-the-terse-spec
 
 ## 6 — `model-provisioning`
 
-- [ ] 6.1 Rewrite `model-provisioning`, and delete its `</content>` line, per [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 6.1 Rewrite `model-provisioning`, and delete its `</content>` line, per [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `grep -c '</content>' openspec/specs/model-provisioning/spec.md` prints `0`, and `test "$(grep -c '^### Requirement:' openspec/changes/0046-the-terse-specs/specs/model-provisioning/spec.md)" -ge 1 && echo ok` prints `ok`.
 
 ## 7 — `run-directory`, `field-map`, and the guard
