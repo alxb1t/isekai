@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-09-29 · 0044-the-session-proved
+
 ### Fixed
 
 - The pod listing fails on a repeated cursor or an `isekai` pod with no image, and lists only this image; a
