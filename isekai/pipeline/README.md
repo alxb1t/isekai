@@ -32,7 +32,7 @@ at least once; a list of names cannot.
 |---|---|---|
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_view.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `sheet.py` | `interface/cli.py` | `tests/stages.py` |
+| `sheet.py` | `interface/cli.py` | `tests/stages.py`, `tests/test_sheet_stage.py` |
 | `review.py` | `interface/cli.py`, `interface/ui/app.py`, `interface/ui/batch.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `generate.py` | `interface/cli.py`, `interface/run_view.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_run_view.py` |
 

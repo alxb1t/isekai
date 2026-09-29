@@ -28,12 +28,20 @@ from isekai.foundation.run import (
     record_failure,
     versions,
 )
+from isekai.pipeline import sheet as sheet_stage
 from isekai.pipeline.caption import FakeReader
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.fakes import stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FAKE_PINS, FIELD_MAP, caption, sheet, write_wd14
+from tests.stages import (
+    FAKE_PINS,
+    FIELD_MAP,
+    FLOW_DIGEST,
+    caption,
+    sheet,
+    write_wd14,
+)
 
 FLOW = "summon-anime-wai"
 
@@ -537,6 +545,76 @@ def test_a_repeat_invocation_writes_nothing(
     assert sheet(run, schema, vocabulary) is None
     assert written.read_bytes() == before
     assert versions(run.path / FLOW / "sheets") == [1]
+
+
+def _kept(
+    run: Run, schema: Schema, vocabulary: Vocabulary, *, tagged: bool = True
+) -> tuple[Path | None, list[str]]:
+    """Call the stage for a flow that already has a sheet, keeping its warnings."""
+    return sheet_stage.sheet(
+        run,
+        FLOW,
+        schema,
+        vocabulary,
+        FIELD_MAP,
+        tagged=tagged,
+        flow_digest=FLOW_DIGEST,
+    )
+
+
+@pytest.mark.spec("sheet:superseded:a-newer-tag-list-is-named")
+def test_a_newer_tag_list_is_named(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    written = sheet(run, schema, vocabulary)
+    assert written is not None
+    before = written.read_bytes()
+    write_wd14(run, version=2)
+
+    assert _kept(run, schema, vocabulary) == (
+        None,
+        [
+            f"{run.id}/{FLOW}: sheet 001 was filled from wd14/001.json, and "
+            f"wd14/002.json is newer; run `python -m isekai sheet --flow {FLOW} "
+            f"--new-version {run.id}`"
+        ],
+    )
+    assert written.read_bytes() == before
+    assert versions(run.directory(FLOW, "sheets")) == [1]
+
+
+@pytest.mark.spec("sheet:superseded:the-latest-list-is-silent")
+def test_a_sheet_from_the_latest_list_is_silent(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    sheet(run, schema, vocabulary)
+
+    assert _kept(run, schema, vocabulary) == (None, [])
+    assert versions(run.directory(FLOW, "sheets")) == [1]
+
+
+@pytest.mark.spec("sheet:superseded:an-untagged-flow-is-silent")
+def test_an_untagged_flow_is_silent(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    sheet(run, schema, vocabulary, tags=None, tagged=False)
+    write_wd14(run, version=2)
+
+    assert _kept(run, schema, vocabulary, tagged=False) == (None, [])
+    assert versions(run.directory(FLOW, "sheets")) == [1]
+
+
+@pytest.mark.spec("sheet:superseded:an-unreadable-sheet-is-silent")
+def test_an_unreadable_kept_sheet_is_silent(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    written = sheet(run, schema, vocabulary)
+    assert written is not None
+    written.write_text("{ not json")
+    write_wd14(run, version=2)
+
+    assert _kept(run, schema, vocabulary) == (None, [])
+    assert written.read_text() == "{ not json"
 
 
 # --- the briefing, which nothing reads any more --------------------------------

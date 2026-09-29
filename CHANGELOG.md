@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- `sheet` warns when it keeps a sheet filled from a tag list older than the flow's latest, naming both and the
+  `--new-version` command: after `tag --new-version`, "already complete" alone hid it (0048 D5).
+
 ### Changed
 
 - A run file whose schema names another kind is refused, naming both, before its version is checked: a file

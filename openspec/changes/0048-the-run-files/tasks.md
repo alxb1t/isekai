@@ -8,7 +8,7 @@ holds every new scenario; each task below adds the tests that bind them.
 - [x] 1 — The kind
 - [x] 2 — The record's name
 - [x] 3 — The sheet's failures
-- [ ] 4 — The warning
+- [x] 4 — The warning
 
 Line numbers are `69bfd67`'s. Every new test carries `@pytest.mark.spec` with the key its task names.
 
@@ -39,9 +39,9 @@ Line numbers are `69bfd67`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 4 — The warning
 
-- [ ] 4.1 In `isekai/pipeline/sheet.py`, return `(path, warnings)` and warn on a tagged flow's kept path, per [D5](design.md#d5); in `isekai/interface/cli.py`, print each warning in `sheet_flow`; in `tests/stages.py`, return the path alone.
+- [x] 4.1 In `isekai/pipeline/sheet.py`, return `(path, warnings)` and warn on a tagged flow's kept path, per [D5](design.md#d5); in `isekai/interface/cli.py`, print each warning in `sheet_flow`; in `tests/stages.py`, return the path alone.
   Verify: `grep -c 'is newer' isekai/pipeline/sheet.py` prints `1`, `grep -cF 'print(f"warning: {warning}"' isekai/interface/cli.py` prints `2`, and `grep -c ') -> Path | None:' isekai/pipeline/sheet.py` prints `0`.
-- [ ] 4.2 Add `test_a_newer_tag_list_is_named` (`sheet:superseded:a-newer-tag-list-is-named`), `test_a_sheet_from_the_latest_list_is_silent` (`sheet:superseded:the-latest-list-is-silent`), `test_an_untagged_flow_is_silent` (`sheet:superseded:an-untagged-flow-is-silent`) and `test_an_unreadable_kept_sheet_is_silent` (`sheet:superseded:an-unreadable-sheet-is-silent`) to `tests/test_sheet_stage.py`.
+- [x] 4.2 Add `test_a_newer_tag_list_is_named` (`sheet:superseded:a-newer-tag-list-is-named`), `test_a_sheet_from_the_latest_list_is_silent` (`sheet:superseded:the-latest-list-is-silent`), `test_an_untagged_flow_is_silent` (`sheet:superseded:an-untagged-flow-is-silent`) and `test_an_unreadable_kept_sheet_is_silent` (`sheet:superseded:an-unreadable-sheet-is-silent`) to `tests/test_sheet_stage.py`.
   Verify: `grep -cE '^def test_(a_newer_tag_list_is_named|a_sheet_from_the_latest_list_is_silent|an_untagged_flow_is_silent|an_unreadable_kept_sheet_is_silent)\(' tests/test_sheet_stage.py` prints `4`.
-- [ ] 4.3 Add `test_sheet_prints_a_superseded_list_as_a_warning` (`sheet:superseded:a-newer-tag-list-is-named`) to `tests/test_pipeline_cli.py`: the warning on stderr, "sheet is already complete" on stdout, exit `0`.
+- [x] 4.3 Add `test_sheet_prints_a_superseded_list_as_a_warning` (`sheet:superseded:a-newer-tag-list-is-named`) to `tests/test_pipeline_cli.py`: the warning on stderr, "sheet is already complete" on stdout, exit `0`.
   Verify: `grep -c '^def test_sheet_prints_a_superseded_list_as_a_warning(' tests/test_pipeline_cli.py` prints `1`.

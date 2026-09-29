@@ -96,8 +96,8 @@ def sheet(
     tagged: bool,
     flow_digest: str,
     new_version: bool = False,
-) -> Path | None:
-    """Route this flow's tag list into a sheet, under that flow.
+) -> tuple[Path | None, list[str]]:
+    """Route this flow's tag list into a sheet, under that flow, with its warnings.
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
@@ -118,11 +118,13 @@ def sheet(
     which contributes nothing to a sheet; it cannot hold for the local one the
     sheet is filled from (design.md D21).
 
-    Returns the artifact's path, or None when this flow already had a sheet.
+    Returns the artifact's path, or None when this flow already had a sheet;
+    a kept sheet filled from a superseded tag list is warned about (0048 design D5).
     """
     directory = run.directory(flow, SHEETS)
-    if latest(directory) is not None and not new_version:
-        return None
+    kept = latest(directory)
+    if kept is not None and not new_version:
+        return None, _superseded(run, flow, directory, kept) if tagged else []
 
     if not tagged:
         # No tagger was going to run, so an empty sheet hides nothing; and
@@ -151,7 +153,32 @@ def sheet(
         "fields": fields,
     }
     write(path, SHEET_FILE, artifact)
-    return path
+    return path, []
+
+
+def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
+    """Return a warning when the kept sheet's tag list is below the flow's latest.
+
+    A sheet it cannot read, or one with no list number, gives none: review
+    refuses an unreadable sheet by name.
+    """
+    newest = latest(run.directory(flow, WD14))
+    try:
+        filled = read(directory / artifact_name(kept), SHEET_FILE)
+    except Refusal:
+        return []
+    producer = filled.get("producer")
+    source = producer.get("from") if isinstance(producer, dict) else None
+    # `bool` is an `int`, and a hand-edited `true` is not a list number.
+    if newest is None or not isinstance(source, int) or isinstance(source, bool):
+        return []
+    if source >= newest:
+        return []
+    return [
+        f"{run.id}/{flow}: sheet {kept:03d} was filled from "
+        f"{WD14}/{artifact_name(source)}, and {WD14}/{artifact_name(newest)} "
+        f"is newer; run `python -m isekai sheet --flow {flow} --new-version {run.id}`"
+    ]
 
 
 def _from_tag_list(
