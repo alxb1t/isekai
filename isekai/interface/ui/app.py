@@ -263,7 +263,8 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             # No command rewrites an approved sheet: `review` copies it and
             # refuses the same damage, so only a hand repairs it.
             remedy = f"restore it in {approved} by hand, then reload the page"
-            fields = _fields(approved, read(approved, APPROVED_FILE), remedy)
+            body = read(approved, APPROVED_FILE, remedy=remedy)
+            fields = _fields(approved, body, remedy)
         elif draft is not None:
             remedy = _remedy(batch, held, "review")
             fields = _fields(draft, read(draft, DRAFT_FILE), remedy)

@@ -209,9 +209,14 @@ def _from_tag_list(
         )
 
     check_budget(STAGE, directory, version, run)
+    # No sheet exists yet to edit, so every fix is a new tag list.
+    remedy = (
+        f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
+        f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
+    )
     try:
-        fields, made_by = _route(run, flow, source, schema, field_map)
-        validate(fields, schema, vocabulary)
+        fields, made_by = _route(run, flow, source, schema, field_map, remedy)
+        validate(fields, schema, vocabulary, remedy=remedy)
     except Refusal as failed:
         detail = str(failed)
         record = record_failure(
@@ -224,18 +229,19 @@ def _from_tag_list(
 
 
 def _route(
-    run: Run, flow: str, source: int, schema: Schema, field_map: FieldMap
+    run: Run,
+    flow: str,
+    source: int,
+    schema: Schema,
+    field_map: FieldMap,
+    remedy: str,
 ) -> tuple[dict[str, list[str]], SheetProducer]:
     """Return the fields routed from tag list `source`, and who filled them.
 
-    Refuses naming the fix when the list is damaged.
+    Refuses naming `remedy` when the list is damaged.
     """
     listed_path = run.directory(flow, WD14) / artifact_name(source)
     listed = read(listed_path, WD14_FILE)
-    remedy = (
-        f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
-        f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
-    )
     for key, shape in (("tags", list), ("producer", dict)):
         require(listed_path, listed, key, shape, remedy)
     tags, producer = listed["tags"], listed["producer"]

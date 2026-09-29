@@ -224,6 +224,9 @@ def test_a_sheet_failure_is_recorded_as_permanent(
     ]
     message = str(refused.value)
     assert named in message
+    # No sheet exists yet to edit: the list is what moves, so re-tagging is the fix.
+    assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
+    assert "replace it with a tag" not in message
     assert f"see {FLOW}/sheets/001.error.1.permanent.json" in message
     assert f"delete it, then run `python -m isekai sheet --flow {FLOW} {run.id}`" in (
         message
