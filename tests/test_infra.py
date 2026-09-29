@@ -617,7 +617,7 @@ def test_every_uv_version_the_build_names_is_the_root_projects(
         (REPO / "pyproject.toml").read_text(),
         (REPO / ".github" / "workflows" / "ci.yml").read_text(),
         dockerfile,
-        (REPO / "image" / "pyproject.toml").read_text(),
+        IMAGE_PROJECT.read_text(),
     )
     assert apart == []
 
@@ -681,10 +681,13 @@ def unhashed_build_tools(image_pyproject: str) -> list[str]:
     e.g. `"cython==3.3.0"` -> ["cython==3.3.0"]
     """
     uv = tomllib.loads(image_pyproject)["tool"]["uv"]
+    tools = uv.get("build-constraint-dependencies", [])
+    if not tools:
+        return ["none listed"]
     unhashed = []
-    for tool in uv.get("build-constraint-dependencies", []):
-        named = tool.get("requirement", "") if isinstance(tool, dict) else tool
-        hashes = tool.get("hashes", []) if isinstance(tool, dict) else []
+    for tool in tools:
+        tool = tool if isinstance(tool, dict) else {"requirement": tool}
+        named, hashes = tool.get("requirement", ""), tool.get("hashes", [])
         if not (
             re.fullmatch(r"[\w.-]+==[\w.]+", named)
             and hashes
@@ -696,13 +699,12 @@ def unhashed_build_tools(image_pyproject: str) -> list[str]:
 
 @pytest.mark.spec("pod-image:build:the-build-tools-are-hashed")
 def test_the_build_tools_are_checked_by_hash() -> None:
-    image_pyproject = IMAGE_PROJECT.read_text()
-    assert tomllib.loads(image_pyproject)["tool"]["uv"]["build-constraint-dependencies"]
-    assert unhashed_build_tools(image_pyproject) == []
+    assert unhashed_build_tools(IMAGE_PROJECT.read_text()) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_the_build_tools_are_checked_by_hash")
 def test_the_check_catches_a_build_tool_by_version_alone() -> None:
+    assert unhashed_build_tools("[tool.uv]\n") == ["none listed"]
     digest = "sha256:" + "0" * 64
     image_pyproject = (
         "[tool.uv]\nbuild-constraint-dependencies = [\n"
@@ -888,12 +890,16 @@ def comfyui_directories(start_sh: str) -> dict[str, str]:
     return found
 
 
+def before_serve(start_sh: str) -> str:
+    """Return the start script up to the line that starts ComfyUI."""
+    return start_sh[: start_sh.index("exec python main.py")]
+
+
 def made_directories(start_sh: str) -> set[str]:
     """Return each directory a `mkdir -p` makes before ComfyUI starts."""
-    before = start_sh[: start_sh.index("exec python main.py")]
     return {
         path
-        for line in before.splitlines()
+        for line in before_serve(start_sh).splitlines()
         if line.startswith("mkdir -p ")
         for path in line.split()[2:]
     }
@@ -994,8 +1000,7 @@ def test_the_check_catches_a_memory_step_that_never_holds() -> None:
 
 def spool_faults(start_sh: str) -> list[str]:
     """Return what the start script lacks of a `TMPDIR` made in memory for ComfyUI."""
-    before = start_sh[: start_sh.index("exec python main.py")]
-    exported = re.search(r"^export TMPDIR=(\S+)$", before, re.M)
+    exported = re.search(r"^export TMPDIR=(\S+)$", before_serve(start_sh), re.M)
     if exported is None:
         return ["sets no TMPDIR"]
     faults = []
@@ -1094,19 +1099,13 @@ def test_an_unread_figure_holds_the_pod(start_sh: str, tmp_path: Path) -> None:
 
 
 @pytest.mark.spec_exempt("structural: twin of test_an_unread_figure_holds_the_pod")
-def test_the_check_catches_an_unread_figure_taken_as_zero(tmp_path: Path) -> None:
+def test_the_check_catches_an_unread_figure_taken_as_zero(
+    start_sh: str, tmp_path: Path
+) -> None:
     # Held, but by the floor, saying the pod has too little memory: a guess.
-    guessed = (
-        'shm_kib="$(df | tail -n 1)"\n'
-        'free_kib="$(awk \'{print $2}\' <<<"$shm_kib")"\n'
-        'case "$free_kib" in\n'
-        "    '' | *[!0-9]*) free_kib=0 ;;\n"
-        "esac\n"
-        'if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then\n'
-        '    echo "ERROR: /dev/shm has ${free_kib} KiB free" >&2\n'
-        '    exec sleep "$HOLD_SECONDS"\n'
-        "fi"
-    )
+    step = boot_step(start_sh, "the memory directories")
+    guessed = re.sub(r"(\*\[!0-9\]\*\)).*?;;", r"\1 free_kib=0 ;;", step, flags=re.S)
+    assert guessed != step
     done = run_memory_step(guessed, tmp_path, "tmpfs", "- -")
     assert done.stdout.endswith("held\n")
     assert "could not read /dev/shm's free space" not in done.stderr
