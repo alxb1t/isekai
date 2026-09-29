@@ -16,6 +16,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 _KEY = re.compile(r"^- \*\*Key:\*\* `([^`]+)`", re.M)
 _SECTION = re.compile(r"^## (.*)$", re.M)
 _REQUIREMENT = re.compile(r"^### Requirement: (.*)$", re.M)
+_FROM = re.compile(r"^- FROM: `### Requirement: (.*)`$", re.M)
+_TO = re.compile(r"^- TO: `### Requirement: (.*)`$", re.M)
 _MARKERS = ("spec", "spec_exempt")
 
 Marker = tuple[str, str | None]
@@ -42,25 +44,27 @@ def _requirements(text: str) -> dict[str, set[str]]:
 def spec_keys(root: Path) -> set[str]:
     """Return the living spec's keys, as the active changes' deltas leave them.
 
-    A delta's ADDED and MODIFIED keys join; a REMOVED requirement's living keys leave.
+    Each delta applies in OpenSpec's order: a RENAMED requirement carries its keys
+    to its new title, a REMOVED one drops them, a MODIFIED one replaces them, an
+    ADDED one brings its own.
     """
     living = {
         path.parent.name: _requirements(path.read_text())
         for path in sorted((root / "openspec" / "specs").glob("*/spec.md"))
     }
-    keys = {key for reqs in living.values() for held in reqs.values() for key in held}
-    added: set[str] = set()
     changes = root / "openspec" / "changes"
     # The glob's depth leaves out `archive/<id>/`: an archived delta is folded in.
     for delta in sorted(changes.glob("*/specs/*/spec.md")):
-        capability = delta.parent.name
-        for heading, body in _split(_SECTION, delta.read_text()).items():
-            if heading in ("ADDED Requirements", "MODIFIED Requirements"):
-                added |= set(_KEY.findall(body))
-            elif heading == "REMOVED Requirements":
-                for title in _REQUIREMENT.findall(body):
-                    keys -= living.get(capability, {}).get(title.strip(), set())
-    return keys | added
+        reqs = living.setdefault(delta.parent.name, {})
+        sections = _split(_SECTION, delta.read_text())
+        renamed = sections.get("RENAMED Requirements", "")
+        for old, new in zip(_FROM.findall(renamed), _TO.findall(renamed), strict=True):
+            reqs[new.strip()] = reqs.pop(old.strip(), set())
+        for title in _REQUIREMENT.findall(sections.get("REMOVED Requirements", "")):
+            reqs.pop(title.strip(), None)
+        for heading in ("MODIFIED Requirements", "ADDED Requirements"):
+            reqs |= _requirements(sections.get(heading, ""))
+    return {key for reqs in living.values() for held in reqs.values() for key in held}
 
 
 def _names_marker(node: ast.Attribute) -> bool:
@@ -380,3 +384,47 @@ def test_kept(x):
     pass
 """
     assert stray(_tree(tmp_path, tests)) == ["tests/test_cap.py:5"]
+
+
+@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0045 D2")
+def test_a_modified_requirement_that_re_keys_a_scenario_drops_the_old_key(
+    tmp_path: Path,
+) -> None:
+    delta = """\
+## MODIFIED Requirements
+
+### Requirement: Gone
+#### Scenario: moved
+- **Key:** `cap:gone:moved`
+"""
+    root = _tree(tmp_path, _TESTS.replace("cap:gone:gone", "cap:gone:moved"), delta)
+    assert spec_keys(root) == {"cap:kept:kept", "cap:gone:moved"}
+    assert unbound(spec_keys(root), marked_tests(root)) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0045 D2")
+def test_a_renamed_requirement_keeps_its_keys_until_a_modified_one_re_keys_them(
+    tmp_path: Path,
+) -> None:
+    renamed = """\
+## RENAMED Requirements
+
+- FROM: `### Requirement: Gone`
+- TO: `### Requirement: Went`
+"""
+    assert spec_keys(_tree(tmp_path / "a", delta=renamed)) == {
+        "cap:kept:kept",
+        "cap:gone:gone",
+    }
+    re_keyed = f"""\
+{renamed}
+## MODIFIED Requirements
+
+### Requirement: Went
+#### Scenario: gone
+- **Key:** `cap:went:gone`
+"""
+    assert spec_keys(_tree(tmp_path / "b", delta=re_keyed)) == {
+        "cap:kept:kept",
+        "cap:went:gone",
+    }

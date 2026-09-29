@@ -40,10 +40,10 @@ green today.
 
 | id | decision | because | rejected |
 |---|---|---|---|
-| [D1](#d1) | `tests/test_spec_bindings.py` reads keys with a regex and markers with `ast`, and fails on an unbound key, a marker naming no key, and a test with neither marker or more than one | static reading is enough — no marker is built at runtime; it runs in milliseconds | a collection hook in `conftest.py`, which fails every run, not one test |
-| [D2](#d2) | the key set is the living spec, plus each active change's ADDED and MODIFIED keys, minus the living keys of each requirement a delta REMOVES | the gate stays green while a change is built | the living spec alone, which is red mid-build |
+| [D1](#d1) | `tests/test_spec_bindings.py` reads keys with a regex and markers with `ast`, and fails on an unbound key, a marker naming no key, a test with neither marker or more than one, and a marker off a collected test's decorators | static reading is enough — no marker is built at runtime; it runs in milliseconds | a collection hook in `conftest.py`, which fails every run, not one test |
+| [D2](#d2) | the key set is the living spec as each active change's delta leaves it: a RENAMED requirement keeps its keys under its new title, a REMOVED one loses them, a MODIFIED one's are replaced by the delta's, an ADDED one's join | the gate stays green while a change is built | the living spec alone, which is red mid-build |
 | [D3](#d3) | `tests/test_run_directory.py:887` binds `run-directory:identity:a-prefix-collision-refuses` | it is the test that exercises the collision | a new test beside it |
-| [D4](#d4) | a scenario for the scan no one answers; `test_a_scan_no_one_answers_is_refused_as_such` binds to it; the parametrised teardown test splits into a mismatch function and a no-scan function | a marker lives on a function, not on a parameter | a mark inside `pytest.param`, which the checker would have to read |
+| [D4](#d4) | a scenario for the scan no one answers; `test_a_scan_no_one_answers_is_refused_as_such` binds to it; the parametrised teardown test splits into a mismatch function and a no-scan function | a marker lives on a function, not on a parameter | a mark inside `pytest.param`, which the checker would have to read — it now refuses one instead (D1's `stray`) |
 | [D5](#d5) | the hold's test asserts that `hold` ends in `exec bash "$STOP_POD"` | the scenario's THEN since v0.30 | a new test |
 | [D6](#d6) | `CLAUDE.md:140-141` names the checker | the gap is closed | — |
 
@@ -56,24 +56,32 @@ keys     ← openspec/specs/*/spec.md  ─┐
             + active deltas (D2)      ├─▶ unbound(keys, markers)   → []
 markers  ← ast of tests/**/*.py  ─────┘   unknown(keys, markers)   → []
              (spec / spec_exempt per      unmarked(tests)          → []
-              test_ function)
+              collected test)             stray(root)              → []
 ```
 
-- `spec_keys(root)` returns the key set. `test_markers(root)` returns each `test_` function with its markers, as
-  `(file, function, [("spec", key) | ("spec_exempt", reason)])`.
-- Each of `unbound`, `unknown` and `unmarked` returns a sorted list; each test asserts it is empty and names the first
-  offenders.
+- `spec_keys(root)` returns the key set. `marked_tests(root)` returns each test pytest collects — a top-level
+  `test_` function, or a `test_` method of a `Test*` class, nested or not, named `TestX::test_y` — with its markers,
+  as `(file, test, [("spec", key) | ("spec_exempt", reason)])`.
+- `stray(root)` returns every `spec` or `spec_exempt` mark that is not on a collected test's decorators — a module's
+  `pytestmark`, a `pytest.param(marks=…)`, a class's decorator — as `file:line`; its gate test is
+  `test_no_marker_sits_where_none_is_read`.
+- Each of `unbound`, `unknown`, `unmarked` and `stray` returns a sorted list; each test asserts it is empty and names
+  the first offenders.
 - **Twins** run each function over a temporary tree that breaks it once: a key with no test, a marker naming no key,
-  a test with neither marker, a test with more than one.
+  a test with neither marker, a test with more than one, an unmarked test inside a `Test*` class, a module
+  `pytestmark` and a `pytest.param(marks=…)` naming a spec mark.
 
 ### D2
 
 **Keys mid-build.** For each `openspec/changes/<id>/` other than `archive/`:
 
-- the keys in its deltas' ADDED and MODIFIED sections join the set;
-- each title under a REMOVED section drops the keys of that requirement from the living spec's set.
+- each delta applies in OpenSpec's order, per requirement: a RENAMED requirement's keys move from its FROM title to
+  its TO title; a REMOVED title drops that requirement's keys; a MODIFIED requirement's keys replace its living ones;
+  an ADDED requirement's keys join.
 
-A twin checks that a key only a delta adds is bound, and a key only a REMOVED requirement held is not demanded.
+Twins check that a key only a delta adds is bound, a key only a REMOVED requirement held is not demanded, a scenario a
+MODIFIED requirement re-keys leaves its old key undemanded, and a RENAMED requirement keeps its keys until a MODIFIED
+one re-keys them.
 
 ### D3
 
@@ -97,7 +105,7 @@ A twin checks that a key only a delta adds is bound, and a key only a REMOVED re
 ### D5
 
 **The hold's test.** `test_the_hold_ends_on_its_own_well_inside_the_session_ceiling` gains
-`assert shell_function(start_sh, "hold").rstrip().endswith('exec bash "$STOP_POD"')`.
+`assert shell_function(start_sh, "hold").removesuffix("}").rstrip().endswith('exec bash "$STOP_POD"')`.
 
 ### D6
 
@@ -114,7 +122,7 @@ None.
 - **A marker built at runtime would escape the checker** → none exists; `unmarked` fails a test whose decorator it
   cannot read as either marker.
 - **A delta written loosely** (a key outside a section, a REMOVED title that matches nothing) → the checker reads only
-  the ADDED, MODIFIED and REMOVED headings OpenSpec validates, and a REMOVED title matching no living requirement
+  the ADDED, MODIFIED, REMOVED and RENAMED headings OpenSpec validates, and a REMOVED title matching no living requirement
   drops nothing.
 
 ## Verdict
