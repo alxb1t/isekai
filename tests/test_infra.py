@@ -312,10 +312,10 @@ def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
     bound = re.search(r"^HOLD_SECONDS=(\d+)$", start_sh, re.M)
     assert bound is not None
     assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
-    hold = shell_function(start_sh, "hold").splitlines()
-    assert '    sleep "$HOLD_SECONDS"' in hold
-    # the line before the closing brace: a hold that returns leaves the pod billing
-    assert hold[-2] == '    exec bash "$STOP_POD"'
+    hold = shell_function(start_sh, "hold")
+    assert 'sleep "$HOLD_SECONDS"' in hold
+    # a hold that returns leaves the pod billing
+    assert hold.removesuffix("}").rstrip().endswith('exec bash "$STOP_POD"')
     # an indefinite hold bills until a human notices it
     assert "tail -f /dev/null" not in start_sh
 

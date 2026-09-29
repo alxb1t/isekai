@@ -22,18 +22,20 @@ Marker = tuple[str, str | None]
 Test = tuple[str, str, list[Marker]]
 
 
-def _sections(text: str) -> dict[str, str]:
-    """Return each `## ` heading of a spec file, mapped to its body."""
-    parts = _SECTION.split(text)
-    return dict(zip(parts[1::2], parts[2::2], strict=True))
+def _split(heading: re.Pattern[str], text: str) -> dict[str, str]:
+    """Return each heading's captured title, stripped, mapped to its body."""
+    parts = heading.split(text)
+    return {
+        title.strip(): body
+        for title, body in zip(parts[1::2], parts[2::2], strict=True)
+    }
 
 
 def _requirements(text: str) -> dict[str, set[str]]:
     """Return each requirement's title, mapped to the keys of its scenarios."""
-    parts = _REQUIREMENT.split(text)
     return {
-        title.strip(): set(_KEY.findall(body))
-        for title, body in zip(parts[1::2], parts[2::2], strict=True)
+        title: set(_KEY.findall(body))
+        for title, body in _split(_REQUIREMENT, text).items()
     }
 
 
@@ -49,14 +51,13 @@ def spec_keys(root: Path) -> set[str]:
     keys = {key for reqs in living.values() for held in reqs.values() for key in held}
     added: set[str] = set()
     changes = root / "openspec" / "changes"
+    # The glob's depth leaves out `archive/<id>/`: an archived delta is folded in.
     for delta in sorted(changes.glob("*/specs/*/spec.md")):
-        if delta.parts[len(changes.parts)] == "archive":
-            continue
         capability = delta.parent.name
-        for heading, body in _sections(delta.read_text()).items():
-            if heading.strip() in ("ADDED Requirements", "MODIFIED Requirements"):
+        for heading, body in _split(_SECTION, delta.read_text()).items():
+            if heading in ("ADDED Requirements", "MODIFIED Requirements"):
                 added |= set(_KEY.findall(body))
-            elif heading.strip() == "REMOVED Requirements":
+            elif heading == "REMOVED Requirements":
                 for title in _REQUIREMENT.findall(body):
                     keys -= living.get(capability, {}).get(title.strip(), set())
     return keys | added
@@ -125,21 +126,33 @@ def unmarked(tests: list[Test]) -> list[str]:
     )
 
 
+@pytest.fixture(scope="module")
+def keys() -> set[str]:
+    """Read the repository's keys once for the module."""
+    return spec_keys(REPO_ROOT)
+
+
+@pytest.fixture(scope="module")
+def tests() -> list[Test]:
+    """Parse the repository's tests once for the module."""
+    return marked_tests(REPO_ROOT)
+
+
 @pytest.mark.spec_exempt("structural: every scenario key has a test")
-def test_every_key_has_a_test() -> None:
-    missing = unbound(spec_keys(REPO_ROOT), marked_tests(REPO_ROOT))
+def test_every_key_has_a_test(keys: set[str], tests: list[Test]) -> None:
+    missing = unbound(keys, tests)
     assert not missing, f"keys no test names: {missing[:5]}"
 
 
 @pytest.mark.spec_exempt("structural: every spec marker names a scenario key")
-def test_every_marker_names_a_key() -> None:
-    stray = unknown(spec_keys(REPO_ROOT), marked_tests(REPO_ROOT))
+def test_every_marker_names_a_key(keys: set[str], tests: list[Test]) -> None:
+    stray = unknown(keys, tests)
     assert not stray, f"markers naming no key: {stray[:5]}"
 
 
 @pytest.mark.spec_exempt("structural: every test carries one marker")
-def test_every_test_carries_one_marker() -> None:
-    loose = unmarked(marked_tests(REPO_ROOT))
+def test_every_test_carries_one_marker(tests: list[Test]) -> None:
+    loose = unmarked(tests)
     assert not loose, f"tests without exactly one marker: {loose[:5]}"
 
 
@@ -199,13 +212,31 @@ def test_a_marker_naming_no_key_is_caught(tmp_path: Path) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_every_test_carries_one_marker")
 def test_a_test_with_no_marker_or_two_is_caught(tmp_path: Path) -> None:
-    tests = (
-        _TESTS.replace('@pytest.mark.spec("cap:kept:kept")\n', "")
-        + '\n\n@pytest.mark.spec("cap:kept:kept")\n'
-        + '@pytest.mark.spec_exempt("structural")\ndef test_both():\n    pass\n'
-        + '\n\nKEY = "cap:kept:kept"\n\n\n@pytest.mark.spec(KEY)\n'
-        + "def test_built():\n    pass\n"
-    )
+    tests = """\
+import pytest
+
+KEY = "cap:kept:kept"
+
+
+def test_kept():
+    pass
+
+
+@pytest.mark.spec("cap:gone:gone")
+def test_gone():
+    pass
+
+
+@pytest.mark.spec("cap:kept:kept")
+@pytest.mark.spec_exempt("structural")
+def test_both():
+    pass
+
+
+@pytest.mark.spec(KEY)
+def test_built():
+    pass
+"""
     root = _tree(tmp_path, tests)
     assert unmarked(marked_tests(root)) == [
         "tests/test_cap.py::test_both",
