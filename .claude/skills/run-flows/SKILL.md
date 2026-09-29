@@ -130,7 +130,8 @@ echo "renders: $(grep -c ': rendered ' "$BATCH/log.txt")"
 echo "refusals: $(grep -c '^refused' "$BATCH/log.txt")"
 ```
 
-`render.sh` tears the pod down on every exit. Confirm it is gone yourself: the RunPod MCP's `list-pods` shows no
+`render.sh` tears down its own pod on every exit. A refusal naming a listed `isekai` pod leaves that pod: tell the
+operator at once, and run `bash infra/down.sh` only on their word. Confirm it is gone yourself: the RunPod MCP's `list-pods` shows no
 pod named `isekai`. Report what it returned.
 
 - **Exit 0**: report the render count.
@@ -138,7 +139,7 @@ pod named `isekai`. Report what it returned.
   `tail -15 .data/<batch>/log.txt | grep -v -e 'root@' -e '[Pp]od [a-z0-9]\{12,\}'`, and report them. A
   `ceiling` refusal keeps the renders so far; step 4 again renders only the rest, and needs a new go.
 - **`down.sh` could not confirm** (its message names the RunPod MCP): once `list-pods` shows the pod gone, run
-  `rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts`. A pod still listed: tell the operator at once — it
+  `rm -f .runpod_pod_id .runpod_pod_image .runpod_known_hosts .runpod_pod_pending`. A pod still listed: tell the operator at once — it
   is billing.
 
 ## 5 — The comparison page

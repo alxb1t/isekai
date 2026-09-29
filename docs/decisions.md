@@ -354,9 +354,10 @@ the key would sit in the same memory.**
 **It assembles every prompt before any pod exists, creates the pod through `up.sh`, tunnels to it strictly,
 renders, and tears it down on every exit.** Three bounds hold it: the laptop's watchdog; the pod's own stop at its
 ceiling; and `up.sh`, which refuses while any `isekai` pod is listed, with `down.sh` leaving none. One session runs
-at a time: a second started at once refuses, and its teardown removes the first's pod.
+at a time: a second started at once refuses and leaves the first's pod, sweeping without a record only after its
+own create was lost.
 
 - **Why:** the lifecycle is shell over a REST API the package never calls. A Python `session()` would be a second
   creator of pods beside `up.sh`, which [D28](#d28--the-image-carries-code-the-volume-carries-weights) forbids,
   and a pod the laptop can no longer reach must still stop.
-- **Made by:** `0035`, `0043`.
+- **Made by:** `0035`, `0043`, `0044`.

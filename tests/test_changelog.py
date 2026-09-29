@@ -68,9 +68,16 @@ def format_problems(text: str) -> list[str]:
         if (version >= FIRST_CHANGE) != (match["change"] is not None):
             problems.append(f"change id wrong for its version: {heading}")
 
+    sectioned = True
     for line in lines:
-        if line.startswith("### ") and line[4:] not in SECTIONS:
-            problems.append(f"not a Keep a Changelog section: {line}")
+        if line.startswith("## "):
+            sectioned = VERSION.fullmatch(line) is None
+        elif line.startswith("### "):
+            sectioned = True
+            if line[4:] not in SECTIONS:
+                problems.append(f"not a Keep a Changelog section: {line}")
+        elif line.startswith("- ") and not sectioned:
+            problems.append(f"bullet outside a section: {line}")
         if re.match(r"\s+[-*] ", line):
             problems.append(f"nested bullet: {line.strip()}")
 
@@ -119,6 +126,10 @@ def test_the_changelog_keeps_its_format() -> None:
         ("## [Unreleased]\n\n## [0.5.0]\n", "malformed heading"),
         ("## [Unreleased]\n\n### Notes\n", "not a Keep a Changelog section"),
         ("## [Unreleased]\n\n### Added\n\n- a\n  - b\n", "nested bullet"),
+        (
+            "## [Unreleased]\n\n## [0.30.0] - 2026-09-29 · 0043-the-session\n\n- a\n",
+            "bullet outside a section",
+        ),
         (
             "## [Unreleased]\n\n### Added\n\n- "
             + "word " * 40
