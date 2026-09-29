@@ -225,7 +225,7 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
 ) -> None:
     lines = start_sh.splitlines()
     hold = hold_calls(start_sh)[0]
-    serve = next(i for i, line in enumerate(lines) if "exec python main.py" in line)
+    serve = next(i for i, line in enumerate(lines) if "python main.py" in line)
     assert hold < serve
     # nothing on the volume is removed on the failure path
     assert "rm " not in "\n".join(lines[hold - 6 : serve])
@@ -796,7 +796,7 @@ BOOT_STEPS = (
     "if ! provision; then",
     'MODELS_DIR="$MODELS_ROOT" bash',
     "mkdir -p /dev/shm/comfyui/input",
-    "exec python main.py",
+    "python main.py",
 )
 
 
@@ -827,8 +827,8 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
     stamped = "\n".join(f'echo "$(date -u +%FT%TZ)"\n{step}' for step in BOOT_STEPS)
     assert unstamped_steps(stamped) == []
     assert unstamped_steps(
-        stamped.replace('echo "$(date -u +%FT%TZ)"\nexec', "exec")
-    ) == ["exec python main.py"]
+        stamped.replace('echo "$(date -u +%FT%TZ)"\npython', "python")
+    ) == ["python main.py"]
 
 
 # The pod's own host key, and ComfyUI's writing kept in memory: text checks over
@@ -935,9 +935,7 @@ def test_the_check_catches_an_sshd_serving_every_stock_key() -> None:
 def serve_command(start_sh: str) -> str:
     """Return the line that starts ComfyUI, its continuation lines joined into one."""
     return next(
-        line
-        for line in joined_lines(start_sh)
-        if line.startswith("exec python main.py")
+        line for line in joined_lines(start_sh) if line.startswith("python main.py")
     )
 
 
@@ -959,7 +957,7 @@ def comfyui_directories(start_sh: str) -> dict[str, str]:
 
 def before_serve(start_sh: str) -> str:
     """Return the start script up to the line that starts ComfyUI."""
-    return start_sh[: start_sh.index("exec python main.py")]
+    return start_sh[: start_sh.index("python main.py")]
 
 
 def made_directories(start_sh: str) -> set[str]:
@@ -988,10 +986,10 @@ def test_comfyui_writes_to_memory(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_to_memory")
 def test_the_check_catches_a_directory_on_disk_or_not_made() -> None:
-    assert comfyui_directories("exec python main.py --port 8188\n") == {}
+    assert comfyui_directories("python main.py --port 8188\n") == {}
     unmade = (
         "mkdir -p /dev/shm/comfyui/input\n"
-        "exec python main.py --input-directory /dev/shm/comfyui/input \\\n"
+        "python main.py --input-directory /dev/shm/comfyui/input \\\n"
         "    --temp-directory /dev/shm/comfyui\n"
     )
     assert unmade_directories(unmade) == ["/dev/shm/comfyui/temp"]
@@ -1029,7 +1027,7 @@ def test_too_little_memory_holds_the_pod(start_sh: str) -> None:
     assert int(floor.group(1)) >= 1
     assert memory_hold_faults(start_sh) == []
     step = boot_step(start_sh, "the memory directories")
-    assert start_sh.index(step) < start_sh.index("exec python main.py")
+    assert start_sh.index(step) < start_sh.index("python main.py")
 
 
 @pytest.mark.spec_exempt("structural: twin of test_too_little_memory_holds_the_pod")
@@ -1082,7 +1080,7 @@ def test_comfyui_spools_uploads_to_memory(start_sh: str) -> None:
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_spools_uploads_to_memory")
 def test_the_check_catches_an_upload_spooled_to_disk() -> None:
     made = "mkdir -p /dev/shm/comfyui/tmp\n"
-    serve = "exec python main.py\n"
+    serve = "python main.py\n"
     assert spool_faults(made + serve) == ["sets no TMPDIR"]
     assert spool_faults(made + serve + "export TMPDIR=/dev/shm/comfyui/tmp\n") == [
         "sets no TMPDIR"
@@ -1178,7 +1176,7 @@ def test_comfyui_writes_no_metadata(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_no_metadata")
 def test_the_check_catches_the_flag_outside_the_start_line() -> None:
-    elsewhere = "# --disable-metadata\nexec python main.py --port 8188\n"
+    elsewhere = "# --disable-metadata\npython main.py --port 8188\n"
     assert "--disable-metadata" not in serve_command(elsewhere).split()
 
 
@@ -2624,41 +2622,52 @@ def stop_attempts(
 
 
 @pytest.mark.spec("pod-image:stop:a-failed-stop-is-retried")
-def test_a_failed_stop_is_retried_then_given_up(stop_sh: str, tmp_path: Path) -> None:
+def test_a_failed_stop_is_retried_until_it_succeeds(
+    stop_sh: str, tmp_path: Path
+) -> None:
     code, attempts, slept = stop_attempts(
         stop_sh, ["500", "000", "200"], tmp_path / "ok"
     )
-    assert (code, len(attempts), slept) == (0, 3, ["30", "30"])
+    assert (code, len(attempts), slept) == (0, 3, ["30", "60"])
     for attempt in attempts:
         assert (
             '-d {"action":"stop"} https://api.runpod.io/v2/pods/pod-test/action'
             in attempt
         )
-    code, attempts, slept = stop_attempts(stop_sh, ["500"] * 20, tmp_path / "down")
-    assert code == 1
-    # tried every 30 s until 300 s had passed
-    assert (len(attempts), slept) == (11, ["30"] * 10)
+    # An hour of failures: the wait doubles to five minutes, and nothing gives up.
+    code, attempts, slept = stop_attempts(
+        stop_sh, ["500"] * 20 + ["200"], tmp_path / "down"
+    )
+    assert (code, len(attempts)) == (0, 21)
+    assert slept == ["30", "60", "120", "240"] + ["300"] * 16
 
 
 @pytest.mark.spec_exempt(
-    "structural: twin of test_a_failed_stop_is_retried_then_given_up"
+    "structural: twin of test_a_failed_stop_is_retried_until_it_succeeds"
 )
 def test_the_retry_check_catches_a_stop_tried_once(tmp_path: Path) -> None:
     code, attempts, slept = stop_attempts(TRIED_ONCE, ["500", "200"], tmp_path)
     assert (code, len(attempts), slept) == (1, 1, [])
 
 
+# The key leaves the environment and stays in the shell, for the stop at the end.
+KEY_HIDDEN = "export -n RUNPOD_API_KEY"
+
+
 def key_left_for_comfyui(start_sh: str) -> list[str]:
     """Return how the key could still reach ComfyUI, or be gone before the timer."""
     lines = before_serve(start_sh).splitlines()
-    unset = [i for i, ln in enumerate(lines) if ln == "unset RUNPOD_API_KEY"]
+    unset = [i for i, ln in enumerate(lines) if ln == KEY_HIDDEN]
     if not unset:
         return ["never unset"]
     faults = []
     timer = next((i for i, ln in enumerate(lines) if ln == TIMER), None)
     if timer is None or unset[0] < timer:
         faults.append("unset before the timer forks")
-    if any("RUNPOD_API_KEY=" in ln for ln in lines[unset[-1] :]):
+    if any(
+        "RUNPOD_API_KEY=" in ln or re.match(r"export .*RUNPOD_API_KEY", ln)
+        for ln in lines[unset[-1] + 1 :]
+    ):
         faults.append("set again before ComfyUI")
     return faults
 
@@ -2670,8 +2679,142 @@ def test_comfyui_starts_without_the_key(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_starts_without_the_key")
 def test_the_key_check_catches_a_key_kept_or_unset_too_early() -> None:
-    serve = "exec python main.py\n"
+    serve = "python main.py\n"
     assert key_left_for_comfyui(f"{TIMER}\n{serve}") == ["never unset"]
-    assert key_left_for_comfyui(f"unset RUNPOD_API_KEY\n{TIMER}\n{serve}") == [
+    assert key_left_for_comfyui(
+        f"{TIMER}\n{KEY_HIDDEN}\nexport RUNPOD_API_KEY\n{serve}"
+    ) == ["set again before ComfyUI"]
+    assert key_left_for_comfyui(f"{KEY_HIDDEN}\n{TIMER}\n{serve}") == [
         "unset before the timer forks"
     ]
+
+
+def unstopped_ends(start_sh: str, tmp_path: Path) -> list[str]:
+    """Return each way a boot ends without the stop, or with the key in ComfyUI.
+
+    Runs the start script's traps, then its last step, with ComfyUI and the stop's
+    `bash` stubbed: once for each way ComfyUI can exit, and once for a step that
+    fails before it.
+    """
+    lines = start_sh.splitlines()
+    traps = [ln for ln in _code(start_sh) if ln.startswith("trap ")]
+    # The line that takes the key from ComfyUI's environment, and what follows it.
+    hidden = next(
+        i for i, ln in enumerate(lines) if re.match(r"^\S.*RUNPOD_API_KEY$", ln)
+    )
+    tail = "\n".join(lines[hidden:])
+    # `exec` finds only a file on PATH, so the stop's `bash` is one.
+    bin_dir = tmp_path / "bin"
+    stub_command(
+        bin_dir, "bash", '#!/bin/sh\necho "stopped $1 with ${RUNPOD_API_KEY:-no} key"\n'
+    )
+    stub_command(
+        bin_dir,
+        "python",
+        '#!/bin/sh\necho "ComfyUI has ${RUNPOD_API_KEY:-no} key"\nexit "$STATUS"\n',
+    )
+    stop = "stopped /opt/isekai/tools/stop_pod.sh with test-key key\n"
+    cases = {
+        "a ComfyUI that exits": ("export STATUS=0", "ComfyUI has no key\n" + stop),
+        "a ComfyUI that fails": ("export STATUS=1", "ComfyUI has no key\n" + stop),
+        "a step that fails before ComfyUI": ("false", stop),
+    }
+    faults = []
+    for case, (before, expected) in cases.items():
+        program = "\n".join(
+            [
+                "set -euo pipefail",
+                f'export PATH="{bin_dir}:$PATH" RUNPOD_API_KEY=test-key',
+                "STOP_POD=/opt/isekai/tools/stop_pod.sh",
+                *traps,
+                before,
+                tail,
+            ]
+        )
+        done = subprocess.run(
+            ["bash", "-c", program],
+            cwd=tmp_path,
+            env={"PATH": os.environ["PATH"]},
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        # The step's own timestamp line is not what is checked.
+        said = [ln for ln in done.stdout.splitlines(True) if " step: " not in ln]
+        if "".join(said) != expected:
+            faults.append(f"{case} does not end in the stop")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:a-boot-that-ends-stops-the-pod")
+def test_a_boot_that_ends_stops_the_pod(start_sh: str, tmp_path: Path) -> None:
+    assert unstopped_ends(start_sh, tmp_path) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_boot_that_ends_stops_the_pod")
+def test_the_boot_end_check_catches_a_comfyui_that_replaces_the_script(
+    tmp_path: Path,
+) -> None:
+    replaced = (
+        "unset RUNPOD_API_KEY\n\n"
+        'echo "$(date -u +%FT%TZ) step: ComfyUI"\n'
+        "exec python main.py --port 8188\n"
+    )
+    assert unstopped_ends(replaced, tmp_path) == [
+        "a ComfyUI that exits does not end in the stop",
+        "a ComfyUI that fails does not end in the stop",
+        "a step that fails before ComfyUI does not end in the stop",
+    ]
+
+
+def session_with_a_lost_create(render_sh: str, root: Path) -> bool:
+    """Run a render session whose create is lost, recording no pod.
+
+    Return whether its teardown ran `down.sh`.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "render.sh").write_text(render_sh)
+    (root / "infra" / "up.sh").write_text("echo 'a pod may exist' >&2; exit 1\n")
+    (root / "infra" / "down.sh").write_text('touch "$(dirname "$0")/../torn"\n')
+    run = root / ".data" / "b" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "run.json").write_text("{}")
+    # The assembly passes and nothing answers on the port.
+    stub_command(root / "bin", "uv", "#!/bin/sh\nexit 0\n")
+    stub_command(root / "bin", "curl", "#!/bin/sh\nexit 7\n")
+    subprocess.run(
+        ["bash", "infra/render.sh", ".data/b/runs", "summon-anime-wai=1"],
+        cwd=root,
+        env={"PATH": f"{root / 'bin'}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    return (root / "torn").exists()
+
+
+RECORDED_TEARDOWN = """#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+teardown() { if [ -f .runpod_pod_id ]; then bash ./infra/down.sh; fi; }
+trap teardown EXIT
+bash ./infra/up.sh
+"""
+
+
+@pytest.mark.spec("pod-image:session:every-exit-tears-down")
+def test_a_session_whose_create_is_lost_still_tears_down(
+    render_sh: str, tmp_path: Path
+) -> None:
+    assert session_with_a_lost_create(render_sh, tmp_path)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_session_whose_create_is_lost_still_tears_down"
+)
+def test_the_lost_create_check_catches_a_teardown_that_needs_a_record(
+    tmp_path: Path,
+) -> None:
+    assert not session_with_a_lost_create(RECORDED_TEARDOWN, tmp_path)

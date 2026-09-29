@@ -18,6 +18,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A pod boots image `v0.30-rc1`, built on request from this version's tree, so it carries the stop (0043 D8).
 - The live acceptance of `v0.30-rc1`, a render boot and a stop boot, is deferred to the next version: RunPod had
   no capacity. One boot placed a host within the floors but got no SSH address (0043 D9).
+- A boot that ends, ComfyUI exiting included, stops the pod rather than restarting with a fresh ceiling; the stop
+  retries until it succeeds; and a session whose create was lost still sweeps with `down.sh` (0043 D3, D4, D6).
 
 ## [0.29.1] - 2026-09-29 · 0042-the-rebuild
 

@@ -7,11 +7,13 @@ set -euo pipefail
 # minutes go (0033 design D2).
 
 # 1. The pod stops itself at its ceiling, whatever happens to the machine that
-#    created it; the subshell keeps the key step 7 unsets (0043 design D4).
+#    created it (0043 design D4). A boot that ends, however it ends, stops the pod
+#    too: an exit would restart the container, and the restart arm a fresh ceiling.
 POD_CEILING_SECONDS=2700
 STOP_POD=/opt/isekai/tools/stop_pod.sh
 echo "$(date -u +%FT%TZ) step: the stop timer"
 ( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &
+trap 'export RUNPOD_API_KEY; exec bash "$STOP_POD"' EXIT
 
 # 2. Install the SSH public key so we can log in with our private key.
 echo "$(date -u +%FT%TZ) step: the SSH key"
@@ -196,15 +198,17 @@ if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then
         "ComfyUI was not started."
 fi
 
-# ComfyUI needs no key, and code it runs can print its environment; the timer
-# keeps the copy it forked with (0043 design D6).
-unset RUNPOD_API_KEY
+# ComfyUI needs no key, and code it runs can print its environment. The key
+# leaves the environment but stays in this shell, for the stop at its end
+# (0043 design D6).
+export -n RUNPOD_API_KEY
 
-# 7. ComfyUI in the foreground — the main process. If it exits, the pod stops.
+# 7. ComfyUI in the foreground, as this script's child: when it exits, with
+#    success or not, the script ends and step 1's trap stops the pod.
 #    It writes its temp files to `temp` under the directory it is given. No render
 #    carries metadata, so none carries the prompt (0040 design D3).
 echo "$(date -u +%FT%TZ) step: ComfyUI"
-exec python main.py --listen 0.0.0.0 --port 8188 \
+python main.py --listen 0.0.0.0 --port 8188 \
     --input-directory /dev/shm/comfyui/input \
     --output-directory /dev/shm/comfyui/output \
     --temp-directory /dev/shm/comfyui \

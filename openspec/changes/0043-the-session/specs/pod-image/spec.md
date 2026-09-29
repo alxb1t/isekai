@@ -70,11 +70,14 @@ pod, and a lost create left one only the provider's console could find.
 ### Requirement: A pod stops itself at its ceiling
 
 The pod SHALL stop itself through the provider's API, with the key the provider gives it, a stated time after it
-starts, whatever happens to the machine that created it. A stop that fails SHALL be retried for a stated window and
-then give up. ComfyUI SHALL start without that key in its environment.
+starts, whatever happens to the machine that created it. A boot that ends, however it ends, SHALL end in the stop. A
+stop that fails SHALL be retried, at an interval that grows to a stated bound, until it succeeds. ComfyUI SHALL start
+without that key in its environment.
 
-A watchdog on the laptop dies with the laptop, and a pod left running bills with a photograph in its memory. ComfyUI
-needs no key, and code it runs can print its environment into a log.
+A watchdog on the laptop dies with the laptop, and a pod left running bills with a photograph in its memory. A
+start-up script whose process exits restarts the container, and the restart arms a fresh ceiling, so a boot that
+fails before its ceiling would never be stopped; so would a pod whose stop gave up. ComfyUI needs no key, and code it
+runs can print its environment into a log.
 
 #### Scenario: the pod arms its stop first
 - **Key:** `pod-image:stop:armed-at-boot`
@@ -89,11 +92,17 @@ needs no key, and code it runs can print its environment into a log.
 - **WHEN** the start-up script holds the pod, for any reason
 - **THEN** once its window has passed it runs the stop, rather than letting its process exit
 
-#### Scenario: a failed stop is retried, then given up
+#### Scenario: a boot that ends stops the pod
+- **Key:** `pod-image:stop:a-boot-that-ends-stops-the-pod`
+- **Layers:** unit
+- **WHEN** ComfyUI exits, with success or not, or a step of the start-up script fails before it starts
+- **THEN** the start-up script runs the stop, with the provider's key, rather than letting its process exit
+
+#### Scenario: a failed stop is retried until it succeeds
 - **Key:** `pod-image:stop:a-failed-stop-is-retried`
 - **Layers:** unit
 - **WHEN** the provider does not answer the stop with success
-- **THEN** the stop script tries again at a stated interval, and exits non-zero once a stated window has passed
+- **THEN** the stop script tries again, at an interval that grows to a stated bound, until the provider does
 
 #### Scenario: ComfyUI starts without the key
 - **Key:** `pod-image:stop:comfyui-holds-no-key`

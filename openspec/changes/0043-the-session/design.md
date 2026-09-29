@@ -64,7 +64,7 @@ volume's rent.
 | [D1](#d1) | the create carries `minRamPerGpu: 24` and `minCudaVersion: "12.8"`; a card under 24 GB of VRAM is skipped, named; an unknown card refuses | nothing that cannot render is placed; a typo is not a silent fallback | an architecture gate — no field reports one |
 | [D2](#d2) | `up.sh` refuses on a record, then on any listed `isekai` pod, before the volume check; `lost()` names `down.sh` | the tool finds an orphan before it makes another | removing orphans in `up.sh` |
 | [D3](#d3) | `down.sh` removes the recorded pod, then every other listed `isekai` pod; with no record, every listed one | one invariant: no `isekai` pod is left | the recorded pod only |
-| [D4](#d4) | `tools/stop_pod.sh` stops the pod through v2 with RunPod's key, retrying every 30 s for 5 minutes; `start.sh`'s first step arms it at 45 minutes | the probe proved the key; a laptop's watchdog dies with the laptop | REST v1, which retires; an account key on the pod |
+| [D4](#d4) | `tools/stop_pod.sh` stops the pod through v2 with RunPod's key, retrying until it succeeds, the wait doubling from 30 s to 5 minutes; `start.sh`'s first step arms it at 45 minutes, and a trap runs it however the boot ends | the probe proved the key; a laptop's watchdog dies with the laptop; an exit restarts the container, re-arming the ceiling | REST v1, which retires; an account key on the pod; a stop that gives up |
 | [D5](#d5) | one `hold` function prints why, sleeps `HOLD_SECONDS`, then runs the stop; it replaces every `exec sleep "$HOLD_SECONDS"` | a restarted container would re-boot and hold forever | exiting, as today |
 | [D6](#d6) | `start.sh` unsets `RUNPOD_API_KEY` before ComfyUI starts | least privilege: nothing ComfyUI's process prints can carry the key | leaving it in ComfyUI's environment |
 | [D7](#d7) | D36 records `render.sh` as the session; `generate.py`, `CLAUDE.md` and `README.md` follow | the lifecycle is shell over an API the package never calls | a Python `session()` beside `up.sh` |
@@ -120,16 +120,22 @@ listing fails ──▶ "could not list pods; confirm with the RunPod MCP's list
 
 It exits 0 only when every removal answered 204. The no-record message of `:15-17` goes.
 
+`render.sh`'s `teardown()` runs `down.sh` whether or not a record exists: a lost create records no pod, and
+`down.sh` finds it by the listing.
+
 ### D4
 
 **The pod stops itself.** `tools/stop_pod.sh`, copied to `/opt/isekai/tools/stop_pod.sh` and made executable:
 
 ```
-deadline=$((SECONDS + 300))
+wait_s=30
 POST $API/pods/$RUNPOD_POD_ID/action {"action":"stop"}   curl --max-time 30, key via @<(printf …)
   200 ──▶ print the time, exit 0
-  else ──▶ past the deadline? exit 1 : print the code, sleep 30, try again
+  else ──▶ print the code, sleep wait_s, double it up to 300, try again
 ```
+
+It never gives up: a stop that exited would leave ComfyUI billing, or end a hold's container, which restarts and
+holds again.
 
 `start.sh` gains a first step, before the SSH key, with its `date -u` line:
 
@@ -138,9 +144,14 @@ POD_CEILING_SECONDS=2700
 STOP_POD=/opt/isekai/tools/stop_pod.sh
 echo "$(date -u +%FT%TZ) step: the stop timer"
 ( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &
+trap 'export RUNPOD_API_KEY; exec bash "$STOP_POD"' EXIT
 ```
 
-The subshell copies the environment when it forks, so D6's `unset` later leaves its key in place. `docker-init` reaps
+The trap runs the stop however the script ends — ComfyUI exiting, with success or not, or a `set -e` step before
+it — because an exit ends the container, RunPod restarts it, and the restart arms a fresh ceiling: a boot that died
+before 45 minutes would never be stopped. A hold's `exec` replaces the shell, so the trap does not run twice.
+
+The subshell copies the environment when it forks, so D6's `export -n` later leaves its key in place. `docker-init` reaps
 it. `BOOT_STEPS` gains `( sleep "$POD_CEILING_SECONDS"`. `unsafe_api_calls`'s files gain `tools/stop_pod.sh`.
 
 ### D5
@@ -157,20 +168,21 @@ hold() {  # hold <line>...: say why, stay reachable HOLD_SECONDS, then stop the 
 ```
 
 Each hold's run of `echo … >&2` lines that ends in `exec sleep "$HOLD_SECONDS"` becomes one `hold` call carrying its
-lines. The provisioning hold writes its marker first, as today. A stop that gives up exits, which ends the container
-as a hold did before. The tests that read `exec sleep "$HOLD_SECONDS"` read the `hold` calls and the function's
+lines. The provisioning hold writes its marker first, as today. The tests that read `exec sleep "$HOLD_SECONDS"` read the `hold` calls and the function's
 body; `run_memory_step` stubs `hold` beside `sleep`.
 
 ### D6
 
 **ComfyUI starts without the key.** Before the ComfyUI step's `echo`, so the stamp stays on the line before
-`exec python main.py`:
+`python main.py`:
 
 ```
-unset RUNPOD_API_KEY
+export -n RUNPOD_API_KEY
 ```
 
-The timer's subshell, forked at the first step, keeps its copy. A root process can still read `/proc/1/environ`
+The key leaves the environment ComfyUI inherits and stays in the shell, whose trap re-exports it for the stop once
+ComfyUI exits. ComfyUI runs as the script's child, not by `exec`, so the script outlives it. The timer's subshell,
+forked at the first step, keeps its copy. A root process can still read `/proc/1/environ`
 (D35's boundary); what this removes is the key in anything ComfyUI's process prints.
 
 ### D7
