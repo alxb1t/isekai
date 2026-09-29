@@ -348,3 +348,15 @@ the key would sit in the same memory.**
 - **Why:** no program can hide memory from its host, and the provider offers no confidential computing.
   Only rendering locally removes the boundary.
 - **Made by:** `0041`.
+
+### D36 · A render session is `infra/render.sh`
+
+**It assembles every prompt before any pod exists, creates the pod through `up.sh`, tunnels to it strictly,
+renders, and tears it down on every exit.** Three bounds hold it: the laptop's watchdog; the pod's own stop at its
+ceiling; and `up.sh`, which refuses while any `isekai` pod is listed, with `down.sh` leaving none. One session runs
+at a time: a second started at once refuses, and its teardown removes the first's pod.
+
+- **Why:** the lifecycle is shell over a REST API the package never calls. A Python `session()` would be a second
+  creator of pods beside `up.sh`, which [D28](#d28--the-image-carries-code-the-volume-carries-weights) forbids,
+  and a pod the laptop can no longer reach must still stop.
+- **Made by:** `0035`, `0043`.

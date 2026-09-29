@@ -10,6 +10,10 @@ set -a; source ./.env; set +a    # load RUNPOD_* config
 
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 API="https://api.runpod.io/v2"
+# What a host needs to render: torch's cu128 build and the model stack (0043 design D1).
+RAM_FLOOR_GB=24
+VRAM_FLOOR_GB=24
+CUDA_FLOOR="12.8"
 
 # Every call to RunPod: the key reaches curl on a file descriptor, never on its
 # argv, where any process listing could read it; and the call is bounded, so a
@@ -17,6 +21,7 @@ API="https://api.runpod.io/v2"
 api() {
   curl -s --max-time 30 -H @<(printf 'Authorization: Bearer %s\n' "$RUNPOD_API_KEY") "$@"
 }
+source ./infra/pods.sh
 
 report() {  # report <call> <status> <body>, per 0034 design D4
   echo "$1 returned HTTP $2:" >&2
@@ -27,10 +32,9 @@ report() {  # report <call> <status> <body>, per 0034 design D4
 }
 
 lost() {  # a create whose outcome is unknown may have placed a pod no file records
-  echo "The create's outcome is unknown: a pod named 'isekai' may exist and bill," >&2
-  echo "with no .runpod_pod_id to record it. Check the RunPod MCP's list-pods;" >&2
-  echo "for an 'isekai' pod there, write its id to .runpod_pod_id and run" >&2
-  echo "bash infra/down.sh, then re-run bash infra/up.sh." >&2
+  echo "The create's outcome is unknown: a pod named 'isekai' may exist and bill." >&2
+  echo "Run bash infra/down.sh -- it finds and removes every 'isekai' pod --" >&2
+  echo "then re-run bash infra/up.sh." >&2
 }
 
 refuse() { echo "refused: $*" >&2; exit 1; }
@@ -58,6 +62,44 @@ refuse_and_tear_down() {
   bash ./infra/down.sh >&2 || exit 1
   [ -z "${2:-}" ] || echo "$2" >&2
   exit 1
+}
+
+# A pod beside a recorded or listed one orphans it, billing with nothing watching
+# it; down.sh removes them all (0043 design D2).
+check_no_pod() {
+  local listed
+  [ ! -f .runpod_pod_id ] \
+    || refuse "a pod is already recorded in .runpod_pod_id; run bash infra/down.sh"
+  listed=$(isekai_pods) \
+    || refuse "the account's pods could not be listed; check them with the RunPod MCP's list-pods"
+  [ -z "$listed" ] \
+    || refuse "an 'isekai' pod already exists: $(echo "$listed" | awk '{printf "%s%s (%s)", (NR > 1 ? ", " : ""), $1, $2}'); run bash infra/down.sh"
+}
+
+# placeable_gpus <cards>: the cards the catalogue gives VRAM_FLOOR_GB or more, one
+# per line. A card RunPod does not know refuses: a typo never lands another card.
+placeable_gpus() {
+  local gpu out code memory
+  while IFS= read -r gpu; do
+    out=$(api -S -w '\n%{http_code}' "$API/catalog/gpus/$(jq -rn --arg g "$gpu" '$g|@uri')") || true
+    code=${out##*$'\n'}
+    case "$code" in
+      200) ;;
+      404) refuse "RUNPOD_GPU_TYPE names $gpu, which RunPod does not know; fix .env" ;;
+      *)
+        report "Catalogue read of '$gpu'" "${code:-000}" "${out%$'\n'*}"
+        refuse "RunPod's catalogue could not be read for $gpu; check it with the RunPod MCP's get-gpu-type"
+        ;;
+    esac
+    memory=$(echo "${out%$'\n'*}" | jq -r '.memory | numbers' 2>/dev/null) || true
+    [ -n "$memory" ] \
+      || refuse "RunPod's catalogue names no memory for $gpu; check it with the RunPod MCP's get-gpu-type"
+    if jq -en --argjson m "$memory" --argjson f "$VRAM_FLOOR_GB" '$m < $f' >/dev/null; then
+      echo "skipped: $gpu has $memory GB, below $VRAM_FLOOR_GB" >&2
+    else
+      echo "$gpu"
+    fi
+  done <<< "$1"
 }
 
 # The log stays open, so each read is cut at 10 s; what it held by then is read.
@@ -123,6 +165,7 @@ if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
   exit 1
 fi
 
+check_no_pod
 check_volume
 
 echo "Creating pod in $RUNPOD_DATACENTER ..."
@@ -136,6 +179,9 @@ if [ -z "$gpus" ]; then
   echo "ERROR: RUNPOD_GPU_TYPE names no GPU type in .env — refusing to create a pod." >&2
   exit 1
 fi
+gpus=$(placeable_gpus "$gpus") || exit 1
+[ -n "$gpus" ] \
+  || refuse "every card RUNPOD_GPU_TYPE names has less than $VRAM_FLOOR_GB GB; name one with more in .env"
 pod_id=""
 since=$(date -u +%FT%TZ)          # the pod's log is read from here on
 while IFS= read -r gpu; do
@@ -146,9 +192,11 @@ while IFS= read -r gpu; do
     --arg vol    "$RUNPOD_VOLUME_ID" \
     --arg dc     "$RUNPOD_DATACENTER" \
     --arg pubkey "$PUBKEY" \
+    --argjson ram "$RAM_FLOOR_GB" \
+    --arg cuda   "$CUDA_FLOOR" \
     '{ name: "isekai",
        image: $image,
-       gpu: { id: $gpu, count: 1 },
+       gpu: { id: $gpu, count: 1, minRamPerGpu: $ram, minCudaVersion: $cuda },
        mounts: { network: [{ volumeId: $vol, path: "/runpod-volume" }] },
        ports: ["22/tcp"],
        disk: 30,

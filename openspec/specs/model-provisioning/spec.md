@@ -216,10 +216,11 @@ volume is provisioning by any reading a human would give the word, and a failure
 unwritable volume, a link onto a path that could not be cleared — terminates the entrypoint exactly
 as a fetch failure used to.
 
-The hold SHALL be bounded rather than indefinite, and the failure SHALL be legible from outside the
-container's log. A pod holding open reports as running and healthy while it bills, so an unattended
-failure that looks like success is the one that outlasts the session's spending ceiling; the bound
-SHALL be shorter than that ceiling allows.
+The hold SHALL be bounded rather than indefinite, SHALL end in the pod stopping itself, and the failure SHALL be
+legible from outside the container's log. A pod holding open reports as running and healthy while it bills, so an
+unattended failure that looks like success is the one that outlasts the session's spending ceiling; the bound
+SHALL be shorter than that ceiling allows. A hold that ended in its process exiting would boot again if the
+container restarted, and hold again, so it would never end.
 
 #### Scenario: a provisioning abort holds the pod open instead of stopping it
 - **Key:** `model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open`
@@ -240,8 +241,8 @@ SHALL be shorter than that ceiling allows.
 - **Key:** `model-provisioning:reachability:the-hold-is-bounded-and-marked`
 - **Layers:** unit
 - **WHEN** the entrypoint holds the pod open after a provisioning failure
-- **THEN** the hold ends on its own within a stated window shorter than the session's spending
-  ceiling allows, and a marker recording the failure is written where the failure itself cannot have
+- **THEN** the hold ends within a stated window shorter than the session's spending ceiling allows, by
+  stopping the pod, and a marker recording the failure is written where the failure itself cannot have
   made it unwritable
 - **AND** the marker is therefore not written onto the volume, because the volume is exactly the
   thing that may have failed

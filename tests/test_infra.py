@@ -191,6 +191,15 @@ def test_the_driver_aborts_only_once_every_source_is_exhausted(
     assert "landed=0" in download_models_sh
 
 
+def hold_calls(script: str) -> list[int]:
+    """Return the index of each line that calls `hold`."""
+    return [
+        i
+        for i, ln in enumerate(script.splitlines())
+        if ln.lstrip().startswith('hold "')
+    ]
+
+
 @pytest.mark.spec(
     "model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open"
 )
@@ -205,7 +214,7 @@ def test_a_provisioning_failure_does_not_take_the_container_down(
     # so `set -e` cannot terminate the shell that owns sshd.
     assert provisioning[0].rstrip().endswith("|| return 1")
     assert "if ! provision; then" in start_sh
-    assert 'exec sleep "$HOLD_SECONDS"' in start_sh
+    assert hold_calls(boot_step(start_sh, "provisioning"))
 
 
 @pytest.mark.spec(
@@ -215,10 +224,8 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
     start_sh: str,
 ) -> None:
     lines = start_sh.splitlines()
-    hold = next(
-        i for i, line in enumerate(lines) if 'exec sleep "$HOLD_SECONDS"' in line
-    )
-    serve = next(i for i, line in enumerate(lines) if "exec python main.py" in line)
+    hold = hold_calls(start_sh)[0]
+    serve = next(i for i, line in enumerate(lines) if "python main.py" in line)
     assert hold < serve
     # nothing on the volume is removed on the failure path
     assert "rm " not in "\n".join(lines[hold - 6 : serve])
@@ -305,7 +312,7 @@ def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
     bound = re.search(r"^HOLD_SECONDS=(\d+)$", start_sh, re.M)
     assert bound is not None
     assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
-    assert 'exec sleep "$HOLD_SECONDS"' in start_sh
+    assert 'sleep "$HOLD_SECONDS"' in shell_function(start_sh, "hold")
     # an indefinite hold bills until a human notices it
     assert "tail -f /dev/null" not in start_sh
 
@@ -780,15 +787,16 @@ def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
     ]
 
 
-# The line each step of `start.sh` begins with: the SSH key, sshd, provisioning,
-# the download inside it, the memory directories, and ComfyUI.
+# The line each step of `start.sh` begins with: the stop timer, the SSH key, sshd,
+# provisioning, the download inside it, the memory directories, and ComfyUI.
 BOOT_STEPS = (
+    '( sleep "$POD_CEILING_SECONDS"',
     "mkdir -p ~/.ssh",
     "mkdir -p /run/sshd",
     "if ! provision; then",
     'MODELS_DIR="$MODELS_ROOT" bash',
     "mkdir -p /dev/shm/comfyui/input",
-    "exec python main.py",
+    "python main.py",
 )
 
 
@@ -819,8 +827,8 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
     stamped = "\n".join(f'echo "$(date -u +%FT%TZ)"\n{step}' for step in BOOT_STEPS)
     assert unstamped_steps(stamped) == []
     assert unstamped_steps(
-        stamped.replace('echo "$(date -u +%FT%TZ)"\nexec', "exec")
-    ) == ["exec python main.py"]
+        stamped.replace('echo "$(date -u +%FT%TZ)"\npython', "python")
+    ) == ["python main.py"]
 
 
 # The pod's own host key, and ComfyUI's writing kept in memory: text checks over
@@ -927,9 +935,7 @@ def test_the_check_catches_an_sshd_serving_every_stock_key() -> None:
 def serve_command(start_sh: str) -> str:
     """Return the line that starts ComfyUI, its continuation lines joined into one."""
     return next(
-        line
-        for line in joined_lines(start_sh)
-        if line.startswith("exec python main.py")
+        line for line in joined_lines(start_sh) if line.startswith("python main.py")
     )
 
 
@@ -951,7 +957,7 @@ def comfyui_directories(start_sh: str) -> dict[str, str]:
 
 def before_serve(start_sh: str) -> str:
     """Return the start script up to the line that starts ComfyUI."""
-    return start_sh[: start_sh.index("exec python main.py")]
+    return start_sh[: start_sh.index("python main.py")]
 
 
 def made_directories(start_sh: str) -> set[str]:
@@ -980,10 +986,10 @@ def test_comfyui_writes_to_memory(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_to_memory")
 def test_the_check_catches_a_directory_on_disk_or_not_made() -> None:
-    assert comfyui_directories("exec python main.py --port 8188\n") == {}
+    assert comfyui_directories("python main.py --port 8188\n") == {}
     unmade = (
         "mkdir -p /dev/shm/comfyui/input\n"
-        "exec python main.py --input-directory /dev/shm/comfyui/input \\\n"
+        "python main.py --input-directory /dev/shm/comfyui/input \\\n"
         "    --temp-directory /dev/shm/comfyui\n"
     )
     assert unmade_directories(unmade) == ["/dev/shm/comfyui/temp"]
@@ -1007,7 +1013,7 @@ def memory_hold_faults(start_sh: str) -> list[str]:
         faults.append("compares against no floor")
     if any(int(guess) for guess in re.findall(r"\bfree_kib=(\d+)", step)):
         faults.append("defaults an unreadable figure to free memory")
-    if not re.search(r'>&2\n\s*exec sleep "\$HOLD_SECONDS"$', step, re.M):
+    if not re.search(r'SHM_FREE_FLOOR_KIB" \]; then\n\s*hold "ERROR: ', step):
         faults.append("does not say why and hold")
     return faults
 
@@ -1021,7 +1027,7 @@ def test_too_little_memory_holds_the_pod(start_sh: str) -> None:
     assert int(floor.group(1)) >= 1
     assert memory_hold_faults(start_sh) == []
     step = boot_step(start_sh, "the memory directories")
-    assert start_sh.index(step) < start_sh.index("exec python main.py")
+    assert start_sh.index(step) < start_sh.index("python main.py")
 
 
 @pytest.mark.spec_exempt("structural: twin of test_too_little_memory_holds_the_pod")
@@ -1035,15 +1041,11 @@ def test_the_check_catches_a_memory_step_that_never_holds() -> None:
         "    '' | *[!0-9]*) free_kib=0 ;;\n"
         "esac\n"
         'if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then\n'
-        '    echo "ERROR: too little" >&2\n'
-        '    exec sleep "$HOLD_SECONDS"\n'
+        '    hold "ERROR: too little"\n'
         "fi\n\n"
     )
     assert memory_hold_faults(holds) == []
-    silent = holds.replace(
-        '    echo "ERROR: too little" >&2\n    exec sleep "$HOLD_SECONDS"\n',
-        "    true\n",
-    )
+    silent = holds.replace('    hold "ERROR: too little"\n', "    true\n")
     assert memory_hold_faults(silent) == ["does not say why and hold"]
     for inverted in ('[ "$free_kib" -ge', '! [ "$free_kib" -lt'):
         assert memory_hold_faults(holds.replace('[ "$free_kib" -lt', inverted)) == [
@@ -1078,7 +1080,7 @@ def test_comfyui_spools_uploads_to_memory(start_sh: str) -> None:
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_spools_uploads_to_memory")
 def test_the_check_catches_an_upload_spooled_to_disk() -> None:
     made = "mkdir -p /dev/shm/comfyui/tmp\n"
-    serve = "exec python main.py\n"
+    serve = "python main.py\n"
     assert spool_faults(made + serve) == ["sets no TMPDIR"]
     assert spool_faults(made + serve + "export TMPDIR=/dev/shm/comfyui/tmp\n") == [
         "sets no TMPDIR"
@@ -1096,11 +1098,7 @@ def run_memory_step(
 
     None is a `stat` that fails. A hold prints `held`; a start prints `started`.
     """
-    stubs = tmp_path / "bin"
-    stubs.mkdir(exist_ok=True)
-    # `exec` finds only a file on PATH, so the hold's `sleep` is one.
-    (stubs / "sleep").write_text("#!/bin/sh\necho held\n")
-    (stubs / "sleep").chmod(0o755)
+    hold = 'hold() { printf "%s\\n" "$@" >&2; echo held; exit 0; }'
     stat = f"echo {shlex.quote(shm_type)}" if shm_type is not None else "return 1"
     program = "\n".join(
         [
@@ -1109,13 +1107,14 @@ def run_memory_step(
             "mkdir() { :; }",
             f"stat() {{ {stat}; }}",
             f"df() {{ printf '%s\\n' '1K-blocks Avail' {shlex.quote(df_row)}; }}",
+            hold,
             step,
             "echo started",
         ]
     )
     return subprocess.run(
         ["bash", "-c", program],
-        env={"PATH": f"{stubs}:{os.environ['PATH']}"},
+        env={"PATH": os.environ["PATH"]},
         capture_output=True,
         text=True,
         timeout=30,
@@ -1177,7 +1176,7 @@ def test_comfyui_writes_no_metadata(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_no_metadata")
 def test_the_check_catches_the_flag_outside_the_start_line() -> None:
-    elsewhere = "# --disable-metadata\nexec python main.py --port 8188\n"
+    elsewhere = "# --disable-metadata\npython main.py --port 8188\n"
     assert "--disable-metadata" not in serve_command(elsewhere).split()
 
 
@@ -1354,9 +1353,10 @@ def unsafe_api_calls(scripts: dict[str, str]) -> list[str]:
 
 
 @pytest.mark.spec_exempt("structural: how the scripts hand curl the key and a bound")
-def test_every_api_call_is_bounded_and_keeps_the_key_off_argv() -> None:
+def test_every_api_call_is_bounded_and_keeps_the_key_off_argv(stop_sh: str) -> None:
     scripts = {p.name: p.read_text() for p in (REPO / "infra").iterdir() if p.is_file()}
-    assert "curl " in scripts["up.sh"] and "curl " in scripts["down.sh"]
+    scripts["tools/stop_pod.sh"] = stop_sh
+    assert all("curl " in scripts[n] for n in ("up.sh", "down.sh", "tools/stop_pod.sh"))
     assert unsafe_api_calls(scripts) == []
 
 
@@ -1385,14 +1385,12 @@ def unwarned_lost_create(up_sh: str) -> list[str]:
     unknown = [ln for ln in lines if ln.lstrip().startswith("201|5??|000|")]
     if not unknown:
         missing.append("201 without an id, 5xx and no answer are unknown")
-    if "list-pods" not in up_sh:
-        missing.append("names the MCP's list-pods")
+    if "bash infra/down.sh" not in shell_function(up_sh, "lost"):
+        missing.append("names down.sh")
     return missing
 
 
-@pytest.mark.spec_exempt(
-    "structural: a lost create answer is announced, not a scenario about the product"
-)
+@pytest.mark.spec("pod-image:reconcile:a-lost-create-names-the-teardown")
 def test_a_create_whose_outcome_is_unknown_says_a_pod_may_exist(up_sh: str) -> None:
     assert unwarned_lost_create(up_sh) == []
 
@@ -1405,7 +1403,7 @@ def test_the_lost_create_check_catches_a_silent_create() -> None:
     assert unwarned_lost_create(up_sh) == [
         "a transport failure is reported",
         "201 without an id, 5xx and no answer are unknown",
-        "names the MCP's list-pods",
+        "names down.sh",
     ]
 
 
@@ -1413,7 +1411,9 @@ def unnamed_record_removal(down_sh: str) -> bool:
     """Whether `down.sh`'s 404 refusal omits the files to delete once confirmed."""
     lines = down_sh.splitlines()
     start = next(i for i, line in enumerate(lines) if '"$code" = "404"' in line)
-    end = next(i for i in range(start + 1, len(lines)) if lines[i].startswith("el"))
+    end = next(
+        i for i in range(start + 1, len(lines)) if lines[i].lstrip().startswith("el")
+    )
     fix = "rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts"
     return fix not in "\n".join(lines[start:end])
 
@@ -1734,15 +1734,22 @@ def test_the_proxy_check_catches_a_curl_that_follows_one() -> None:
 
 
 def run_functions(
-    script: str, names: tuple[str, ...], stubs: str, cwd: Path
+    script: str,
+    names: tuple[str, ...],
+    stubs: str,
+    cwd: Path,
+    call: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run the last named function in strict bash, beside the others and the stubs."""
+    """Run `call`, or the last named function, in strict bash beside the stubs.
+
+    e.g. `call='f "a b"'` runs `f` with one argument.
+    """
     program = "\n".join(
         [
             "set -euo pipefail",
             stubs,
             *(shell_function(script, n) for n in names),
-            names[-1],
+            call or names[-1],
         ]
     )
     return subprocess.run(
@@ -2045,3 +2052,769 @@ def test_the_fingerprint_check_catches_a_key_kept_with_none_printed(
     assert done.returncode == 0
     assert kept is not None
     assert TORN_DOWN not in done.stderr
+
+
+@pytest.fixture(scope="session")
+def pods_sh() -> str:
+    """Read the shipped `infra/pods.sh` once for the whole session."""
+    return (REPO / "infra" / "pods.sh").read_text()
+
+
+@pytest.fixture(scope="session")
+def stop_sh() -> str:
+    """Read the shipped `tools/stop_pod.sh` once for the whole session."""
+    return (REPO / "tools" / "stop_pod.sh").read_text()
+
+
+def create_body(up_sh: str) -> dict[str, object]:
+    """Return the create request `up.sh` builds for a card named `card`."""
+    lines = up_sh.splitlines()
+    start = next(i for i, ln in enumerate(lines) if ln.strip() == "body=$(jq -n \\")
+    end = next(i for i in range(start, len(lines)) if lines[i].endswith("')"))
+    floors = [ln for ln in lines if re.match(r"(RAM_FLOOR_GB|CUDA_FLOOR)=", ln)]
+    program = "\n".join(
+        [
+            "image_ref=img gpu=card RUNPOD_VOLUME_ID=vol RUNPOD_DATACENTER=dc",
+            "PUBKEY=key",
+            *floors,
+            *lines[start : end + 1],
+            'printf "%s" "$body"',
+        ]
+    )
+    done = subprocess.run(
+        ["bash", "-c", program], capture_output=True, text=True, timeout=30, check=True
+    )
+    return json.loads(done.stdout)
+
+
+def unfloored_create(up_sh: str) -> list[str]:
+    """Return each floor the create request does not carry.
+
+    e.g. a body with `gpu: { id: $gpu, count: 1 }` -> ["host memory", "CUDA version"]
+    """
+    gpu = create_body(up_sh)["gpu"]
+    assert isinstance(gpu, dict)
+    missing = []
+    ram = gpu.get("minRamPerGpu")
+    if not (isinstance(ram, int) and ram >= 24):
+        missing.append("host memory")
+    # torch's cu128 build, which the Blackwell pod needs (CLAUDE.md).
+    if gpu.get("minCudaVersion") != "12.8":
+        missing.append("CUDA version")
+    return missing
+
+
+@pytest.mark.spec("pod-image:placement:the-create-carries-the-floors")
+def test_the_create_carries_the_floors(up_sh: str) -> None:
+    assert unfloored_create(up_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_create_carries_the_floors")
+def test_the_floor_check_catches_a_create_with_none() -> None:
+    up_sh = (
+        "  body=$(jq -n \\\n"
+        '    --arg gpu    "$gpu" \\\n'
+        "    '{ gpu: { id: $gpu, count: 1 } }')\n"
+    )
+    assert unfloored_create(up_sh) == ["host memory", "CUDA version"]
+
+
+# RunPod's catalogue, as `placeable_gpus` reads it: a card's VRAM, or a 404.
+CATALOGUE_STUBS = "\n".join(
+    [
+        "API=https://api.test VRAM_FLOOR_GB=24",
+        "api() {",
+        '  case "${@: -1}" in',
+        "    */RTX%204090) printf '{\"memory\":24}\\n200' ;;",
+        "    */RTX%20A4000) printf '{\"memory\":16}\\n200' ;;",
+        '    *) printf \'{"title":"Not Found"}\\n404\' ;;',
+        "  esac",
+        "}",
+    ]
+)
+BROKEN_PLACEMENT = 'refuse() { exit 1; }\nplaceable_gpus() {\n  echo "$1"\n}\n'
+
+
+def placement(up_sh: str, cards: str) -> subprocess.CompletedProcess[str]:
+    """Run `placeable_gpus` over `cards`, one per line, against the catalogue stub."""
+    return run_functions(
+        up_sh,
+        ("refuse", "placeable_gpus"),
+        CATALOGUE_STUBS,
+        REPO,
+        call=f"placeable_gpus {shlex.quote(cards)}",
+    )
+
+
+def placed_before_create(up_sh: str) -> bool:
+    """Whether `up.sh` reads the catalogue before its create call."""
+    lines = up_sh.splitlines()
+    placed = [i for i, ln in enumerate(lines) if ln.startswith("gpus=$(placeable_gpus")]
+    creates = next(i for i, line in enumerate(lines) if 'POST "$API/pods"' in line)
+    return bool(placed) and placed[0] < creates
+
+
+@pytest.mark.spec("pod-image:placement:a-card-short-of-memory-is-skipped")
+def test_a_card_short_of_memory_is_skipped(up_sh: str) -> None:
+    done = placement(up_sh, "RTX A4000\nRTX 4090")
+    assert done.returncode == 0, done.stderr
+    assert done.stdout == "RTX 4090\n"
+    assert done.stderr == "skipped: RTX A4000 has 16 GB, below 24\n"
+    assert placed_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_card_short_of_memory_is_skipped")
+def test_the_skip_check_catches_a_card_never_read() -> None:
+    done = placement(BROKEN_PLACEMENT, "RTX A4000\nRTX 4090")
+    assert done.stdout == "RTX A4000\nRTX 4090\n"
+    assert not placed_before_create('out=$(api -X POST "$API/pods")\n')
+
+
+@pytest.mark.spec("pod-image:placement:an-unknown-card-is-refused")
+def test_an_unknown_card_is_refused(up_sh: str) -> None:
+    done = placement(up_sh, "RTX 4090\nRTX 4O90")
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: RUNPOD_GPU_TYPE names RTX 4O90, which RunPod does not know;"
+        " fix .env\n"
+    )
+    assert placed_before_create(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_an_unknown_card_is_refused")
+def test_the_unknown_card_check_catches_a_card_passed_through() -> None:
+    assert placement(BROKEN_PLACEMENT, "RTX 4090\nRTX 4O90").returncode == 0
+
+
+def copy_image_config(root: Path) -> None:
+    """Copy the shipped `config/image.json` under `root`, where the scripts read it."""
+    (root / "config").mkdir(parents=True, exist_ok=True)
+    (root / "config" / "image.json").write_text(IMAGE_CONFIG.read_text())
+
+
+def stub_command(bin_dir: Path, name: str, script: str) -> None:
+    """Write `script` as the executable `name` in `bin_dir`, found first on PATH."""
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    (bin_dir / name).write_text(script)
+    (bin_dir / name).chmod(0o755)
+
+
+def listed_pod(pod_id: str, status: str, name: str = "isekai") -> dict[str, str]:
+    """Return a pod as RunPod's v2 list gives it, booted from this project's image."""
+    return {
+        "id": pod_id,
+        "name": name,
+        "image": f"{json.loads(IMAGE_CONFIG.read_text())['image']}@sha256:0",
+        "status": status,
+    }
+
+
+def pod_pages(first: list[dict[str, str]], second: list[dict[str, str]]) -> list[str]:
+    """Return a two-page v2 listing, the first page naming a cursor to the second."""
+    return [
+        json.dumps(
+            {"pods": first, "pagination": {"nextCursor": "p2", "hasNextPage": True}}
+        ),
+        json.dumps(
+            {"pods": second, "pagination": {"nextCursor": None, "hasNextPage": False}}
+        ),
+    ]
+
+
+def pod_check(
+    script: str, cwd: Path, pages: list[str] | None
+) -> tuple[subprocess.CompletedProcess[str], bool]:
+    """Run `check_no_pod` against `pages`; None is a listing that fails.
+
+    Return the run and whether it called RunPod at all.
+    """
+    copy_image_config(cwd)
+    first, second = pages or ["", ""]
+    listing = (
+        "return 22"
+        if pages is None
+        else f'case "$*" in *cursor=*) printf "%s" {shlex.quote(second)} ;;'
+        f' *) printf "%s" {shlex.quote(first)} ;; esac'
+    )
+    stubs = f"API=https://api.test\napi() {{ touch called; {listing}; }}"
+    done = run_functions(script, ("refuse", "isekai_pods", "check_no_pod"), stubs, cwd)
+    return done, (cwd / "called").exists()
+
+
+def checked_before_volume(up_sh: str) -> bool:
+    """Whether `up.sh` looks for another pod before the volume check and the create."""
+    lines = up_sh.splitlines()
+    checks = [i for i, ln in enumerate(lines) if ln == "check_no_pod"]
+    volume = next((i for i, ln in enumerate(lines) if ln == "check_volume"), None)
+    return bool(checks) and volume is not None and checks[0] < volume
+
+
+BROKEN_POD_CHECK = "refuse() { exit 1; }\ncheck_no_pod() {\n  :\n}\n"
+RECORD_ONLY_POD_CHECK = (
+    "refuse() { exit 1; }\ncheck_no_pod() {\n  [ ! -f .runpod_pod_id ] || refuse\n}\n"
+)
+
+
+@pytest.mark.spec("pod-image:reconcile:a-recorded-pod-refuses")
+def test_a_recorded_pod_refuses_a_creation(
+    up_sh: str, pods_sh: str, tmp_path: Path
+) -> None:
+    (tmp_path / ".runpod_pod_id").write_text("pod-a\n")
+    done, called = pod_check(up_sh + pods_sh, tmp_path, pod_pages([], []))
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: a pod is already recorded in .runpod_pod_id; run bash infra/down.sh\n"
+    )
+    assert not called
+    assert checked_before_volume(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_recorded_pod_refuses_a_creation")
+def test_the_record_check_catches_a_record_never_read(tmp_path: Path) -> None:
+    (tmp_path / ".runpod_pod_id").write_text("pod-a\n")
+    done, _ = pod_check(BROKEN_POD_CHECK, tmp_path, pod_pages([], []))
+    assert done.returncode == 0
+    assert not checked_before_volume("check_volume\ncheck_no_pod\n")
+
+
+@pytest.mark.spec("pod-image:reconcile:a-listed-pod-refuses")
+def test_a_listed_pod_refuses_a_creation(
+    up_sh: str, pods_sh: str, tmp_path: Path
+) -> None:
+    script = up_sh + pods_sh
+    others = [
+        listed_pod("pod-x", "RUNNING", name="other"),
+        listed_pod("pod-t", "TERMINATED"),
+    ]
+    done, _ = pod_check(
+        script, tmp_path, pod_pages(others, [listed_pod("pod-b", "EXITED")])
+    )
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: an 'isekai' pod already exists: pod-b (EXITED);"
+        " run bash infra/down.sh\n"
+    )
+    done, _ = pod_check(script, tmp_path, pod_pages(others, []))
+    assert done.returncode == 0, done.stderr
+    done, _ = pod_check(script, tmp_path, None)
+    assert done.returncode == 1
+    assert "list-pods" in done.stderr
+    assert checked_before_volume(up_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_listed_pod_refuses_a_creation")
+def test_the_listing_check_catches_a_pod_never_listed(tmp_path: Path) -> None:
+    pages = pod_pages([], [listed_pod("pod-b", "EXITED")])
+    done, _ = pod_check(RECORD_ONLY_POD_CHECK, tmp_path, pages)
+    assert done.returncode == 0
+
+
+# RunPod's API as down.sh reaches it through curl: pages from files, deletes logged.
+FAKE_CURL = """#!/usr/bin/env bash
+url="${@: -1}"
+case " $* " in
+  *" -X DELETE "*)
+    echo "${url##*/}" >> "$FAKE/deleted"
+    if grep -qx "${url##*/}" "$FAKE/refused" 2>/dev/null; then
+      printf '{}\\n500'
+    else
+      printf '\\n204'
+    fi ;;
+  *)
+    [ -f "$FAKE/page1" ] || exit 22
+    case "$url" in *cursor=*) cat "$FAKE/page2" ;; *) cat "$FAKE/page1" ;; esac ;;
+esac
+"""
+
+
+def tear_down(
+    down_sh: str,
+    pods_sh: str,
+    root: Path,
+    *,
+    recorded: str | None,
+    pages: list[str] | None,
+    refused: tuple[str, ...] = (),
+) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    """Run `down.sh` in a copy of the repository against a fake RunPod.
+
+    Return the run and the pod ids it deleted, in order. `pages` None is a
+    listing that fails; `refused` pods answer a delete with 500.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "down.sh").write_text(down_sh)
+    (root / "infra" / "pods.sh").write_text(pods_sh)
+    copy_image_config(root)
+    (root / ".env").write_text("RUNPOD_API_KEY=test-key\n")
+    if recorded:
+        (root / ".runpod_pod_id").write_text(f"{recorded}\n")
+    fake = root / "fake"
+    fake.mkdir()
+    for n, page in enumerate(pages or [], start=1):
+        (fake / f"page{n}").write_text(page)
+    (fake / "refused").write_text("".join(f"{p}\n" for p in refused))
+    bin_dir = root / "bin"
+    stub_command(bin_dir, "curl", FAKE_CURL)
+    done = subprocess.run(
+        ["bash", "infra/down.sh"],
+        cwd=root,
+        env={"PATH": f"{bin_dir}:{os.environ['PATH']}", "FAKE": str(fake)},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    deleted = fake / "deleted"
+    return done, deleted.read_text().split() if deleted.exists() else []
+
+
+RECORD_ONLY_DOWN = """#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+[ -f .runpod_pod_id ] || exit 0
+curl -s --max-time 30 -w '\\n%{http_code}' -X DELETE \\
+  "https://api.test/pods/$(cat .runpod_pod_id)"
+"""
+
+
+@pytest.mark.spec("pod-image:reconcile:the-teardown-leaves-none")
+def test_the_teardown_leaves_no_pod(down_sh: str, pods_sh: str, tmp_path: Path) -> None:
+    pages = pod_pages(
+        [listed_pod("pod-a", "RUNNING"), listed_pod("pod-x", "RUNNING", name="other")],
+        [listed_pod("pod-b", "EXITED")],
+    )
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "rec", recorded="pod-a", pages=pages
+    )
+    assert done.returncode == 0, done.stderr
+    assert deleted == ["pod-a", "pod-b"]
+    assert "Removed pod-b (EXITED)." in done.stdout
+    assert not (tmp_path / "rec" / ".runpod_pod_id").exists()
+
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "bare", recorded=None, pages=pages
+    )
+    assert done.returncode == 0, done.stderr
+    assert deleted == ["pod-a", "pod-b"]
+
+    empty = pod_pages([], [])
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "none", recorded=None, pages=empty
+    )
+    assert (done.returncode, deleted, done.stdout) == (0, [], "No pod to tear down.\n")
+
+    done, deleted = tear_down(
+        down_sh,
+        pods_sh,
+        tmp_path / "held",
+        recorded=None,
+        pages=pages,
+        refused=("pod-a",),
+    )
+    assert done.returncode == 1
+    assert deleted == ["pod-a", "pod-b"]
+
+    done, deleted = tear_down(
+        down_sh, pods_sh, tmp_path / "blind", recorded="pod-a", pages=None
+    )
+    assert done.returncode == 1
+    assert deleted == ["pod-a"]
+    assert "list-pods" in done.stderr
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_teardown_leaves_no_pod")
+def test_the_teardown_check_catches_one_that_removes_the_record_alone(
+    pods_sh: str, tmp_path: Path
+) -> None:
+    pages = pod_pages([listed_pod("pod-a", "RUNNING")], [listed_pod("pod-b", "EXITED")])
+    _, deleted = tear_down(
+        RECORD_ONLY_DOWN, pods_sh, tmp_path, recorded="pod-a", pages=pages
+    )
+    assert deleted == ["pod-a"]
+
+
+def session_on_record(
+    render_sh: str, root: Path
+) -> tuple[subprocess.CompletedProcess[str], bool]:
+    """Run a render session in a copy of the repository beside a recorded pod.
+
+    Return the run and whether its teardown ran `down.sh`.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "render.sh").write_text(render_sh)
+    (root / "infra" / "down.sh").write_text('touch "$(dirname "$0")/../torn"\n')
+    (root / ".runpod_pod_id").write_text("pod-a\n")
+    run = root / ".data" / "b" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "run.json").write_text("{}")
+    done = subprocess.run(
+        ["bash", "infra/render.sh", ".data/b/runs", "summon-anime-wai=1"],
+        cwd=root,
+        env={"PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    return done, (root / "torn").exists()
+
+
+LATE_RECORD_CHECK = """#!/usr/bin/env bash
+cd "$(dirname "$0")/.."
+teardown() { bash ./infra/down.sh; }
+trap teardown EXIT
+[ ! -f .runpod_pod_id ] || { echo "refused: a pod is already recorded" >&2; exit 1; }
+"""
+
+
+@pytest.mark.spec("pod-image:reconcile:a-session-refuses-a-recorded-pod")
+def test_a_session_refuses_a_recorded_pod(render_sh: str, tmp_path: Path) -> None:
+    done, torn = session_on_record(render_sh, tmp_path)
+    assert done.returncode == 1
+    assert done.stderr == (
+        "refused: a pod is already recorded in .runpod_pod_id;"
+        " run bash infra/down.sh first\n"
+    )
+    assert not torn
+    assert (tmp_path / ".runpod_pod_id").exists()
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_session_refuses_a_recorded_pod")
+def test_the_session_check_catches_a_record_read_after_the_trap(tmp_path: Path) -> None:
+    done, torn = session_on_record(LATE_RECORD_CHECK, tmp_path)
+    assert done.returncode == 1
+    assert torn
+
+
+TIMER = '( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &'
+
+
+def unarmed_stop(start_sh: str, dockerfile: str) -> list[str]:
+    """Return what `start.sh` lacks of a stop armed, in the background, at boot.
+
+    e.g. a script whose first step is the SSH key -> ["armed first", ...]
+    """
+    faults = []
+    steps = [ln for ln in start_sh.splitlines() if re.search(r'step: [^"]+"$', ln)]
+    if not steps or not steps[0].endswith('step: the stop timer"'):
+        faults.append("armed first")
+    ceiling = re.search(r"^POD_CEILING_SECONDS=(\d+)$", start_sh, re.M)
+    if ceiling is None or not 0 < int(ceiling[1]) <= SESSION_CEILING_SECONDS:
+        faults.append("a ceiling within the session's")
+    if TIMER not in start_sh.splitlines():
+        faults.append("in the background")
+    stop = re.search(r"^STOP_POD=(\S+)$", start_sh, re.M)
+    if stop is None or image_copies(dockerfile).get(stop[1]) != "tools/stop_pod.sh":
+        faults.append("a stop the image holds")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:armed-at-boot")
+def test_the_pod_arms_its_stop_first(start_sh: str, dockerfile: str) -> None:
+    assert unarmed_stop(start_sh, dockerfile) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_pod_arms_its_stop_first")
+def test_the_armed_stop_check_catches_a_late_foreground_timer(dockerfile: str) -> None:
+    late = (
+        'echo "$(date -u +%FT%TZ) step: the SSH key"\n'
+        "POD_CEILING_SECONDS=3600\nSTOP_POD=/opt/isekai/stop.sh\n"
+        'echo "$(date -u +%FT%TZ) step: the stop timer"\n'
+        'sleep "$POD_CEILING_SECONDS"; bash "$STOP_POD"\n'
+    )
+    assert unarmed_stop(late, dockerfile) == [
+        "armed first",
+        "a ceiling within the session's",
+        "in the background",
+        "a stop the image holds",
+    ]
+
+
+def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
+    """Return how `start.sh` holds without ending in the stop.
+
+    Runs `hold` with `sleep` and the stop's `bash` stubbed; each line outside it
+    that waits out `HOLD_SECONDS` is a hold that bypasses it.
+    """
+    body = shell_function(start_sh, "hold")
+    faults = [
+        f"holds outside hold(): {ln.strip()}"
+        for ln in _code(start_sh.replace(body, ""))
+        if "HOLD_SECONDS" in ln and not ln.startswith("HOLD_SECONDS=")
+    ]
+    # `exec` finds only a file on PATH, so the stop's `bash` is one.
+    stub_command(tmp_path / "bin", "bash", '#!/bin/sh\necho "stopped $*"\n')
+    stubs = "\n".join(
+        [
+            f'export PATH="{tmp_path / "bin"}:$PATH"',
+            "HOLD_SECONDS=900 STOP_POD=/opt/isekai/tools/stop_pod.sh",
+            'sleep() { echo "slept $1"; }',
+        ]
+    )
+    done = run_functions(
+        start_sh, ("hold",), stubs, tmp_path, call='hold "ERROR: why"; echo returned'
+    )
+    if done.stdout != "slept 900\nstopped /opt/isekai/tools/stop_pod.sh\n":
+        faults.append("hold() does not stop the pod once it has waited")
+    if not done.stderr.startswith("ERROR: why\n"):
+        faults.append("hold() does not say why")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:a-hold-ends-in-the-stop")
+def test_every_hold_ends_in_the_stop(start_sh: str, tmp_path: Path) -> None:
+    assert unstopped_holds(start_sh, tmp_path) == []
+    assert hold_calls(start_sh)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_hold_ends_in_the_stop")
+def test_the_hold_check_catches_a_hold_that_exits(tmp_path: Path) -> None:
+    exits = (
+        "HOLD_SECONDS=900\n"
+        'hold() {\n    printf "%s\\n" "$@" >&2\n    sleep "$HOLD_SECONDS"\n}\n'
+        'if ! provision; then\n    exec sleep "$HOLD_SECONDS"\nfi\n'
+    )
+    assert unstopped_holds(exits, tmp_path) == [
+        'holds outside hold(): exec sleep "$HOLD_SECONDS"',
+        "hold() does not stop the pod once it has waited",
+    ]
+
+
+TRIED_ONCE = (
+    "code=$(curl -s --max-time 30 -o /dev/null -w '%{http_code}' -X POST"
+    ' "$API/pods/$RUNPOD_POD_ID/action")\n'
+    '[ "$code" = "200" ]\n'
+)
+
+
+def stop_attempts(
+    script: str, codes: list[str], tmp_path: Path
+) -> tuple[int, list[str], list[str]]:
+    """Run the stop script against RunPod answering `codes`, one per attempt.
+
+    Return its exit code, each attempt's curl arguments, and each wait between them.
+    """
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "codes").write_text("".join(f"{c}\n" for c in codes))
+    stubs = "\n".join(
+        [
+            "export RUNPOD_API_KEY=test-key RUNPOD_POD_ID=pod-test",
+            'curl() { echo "$*" >> attempts;'
+            ' sed -n "$(wc -l < attempts | tr -d " ")p" codes; }',
+            'sleep() { echo "$1" >> slept; SECONDS=$((SECONDS + $1)); }',
+        ]
+    )
+    done = subprocess.run(
+        ["bash", "-c", f"{stubs}\n{script}"],
+        cwd=tmp_path,
+        env={"PATH": os.environ["PATH"]},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    def read(name: str) -> list[str]:
+        path = tmp_path / name
+        return path.read_text().splitlines() if path.exists() else []
+
+    return done.returncode, read("attempts"), read("slept")
+
+
+@pytest.mark.spec("pod-image:stop:a-failed-stop-is-retried")
+def test_a_failed_stop_is_retried_until_it_succeeds(
+    stop_sh: str, tmp_path: Path
+) -> None:
+    code, attempts, slept = stop_attempts(
+        stop_sh, ["500", "000", "200"], tmp_path / "ok"
+    )
+    assert (code, len(attempts), slept) == (0, 3, ["30", "60"])
+    for attempt in attempts:
+        assert (
+            '-d {"action":"stop"} https://api.runpod.io/v2/pods/pod-test/action'
+            in attempt
+        )
+    # An hour of failures: the wait doubles to five minutes, and nothing gives up.
+    code, attempts, slept = stop_attempts(
+        stop_sh, ["500"] * 20 + ["200"], tmp_path / "down"
+    )
+    assert (code, len(attempts)) == (0, 21)
+    assert slept == ["30", "60", "120", "240"] + ["300"] * 16
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_failed_stop_is_retried_until_it_succeeds"
+)
+def test_the_retry_check_catches_a_stop_tried_once(tmp_path: Path) -> None:
+    code, attempts, slept = stop_attempts(TRIED_ONCE, ["500", "200"], tmp_path)
+    assert (code, len(attempts), slept) == (1, 1, [])
+
+
+# The key leaves the environment and stays in the shell, for the stop at the end.
+KEY_HIDDEN = "export -n RUNPOD_API_KEY"
+
+
+def key_left_for_comfyui(start_sh: str) -> list[str]:
+    """Return how the key could still reach ComfyUI, or be gone before the timer."""
+    lines = before_serve(start_sh).splitlines()
+    unset = [i for i, ln in enumerate(lines) if ln == KEY_HIDDEN]
+    if not unset:
+        return ["never unset"]
+    faults = []
+    timer = next((i for i, ln in enumerate(lines) if ln == TIMER), None)
+    if timer is None or unset[0] < timer:
+        faults.append("unset before the timer forks")
+    if any(
+        "RUNPOD_API_KEY=" in ln or re.match(r"export .*RUNPOD_API_KEY", ln)
+        for ln in lines[unset[-1] + 1 :]
+    ):
+        faults.append("set again before ComfyUI")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:comfyui-holds-no-key")
+def test_comfyui_starts_without_the_key(start_sh: str) -> None:
+    assert key_left_for_comfyui(start_sh) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_comfyui_starts_without_the_key")
+def test_the_key_check_catches_a_key_kept_or_unset_too_early() -> None:
+    serve = "python main.py\n"
+    assert key_left_for_comfyui(f"{TIMER}\n{serve}") == ["never unset"]
+    assert key_left_for_comfyui(
+        f"{TIMER}\n{KEY_HIDDEN}\nexport RUNPOD_API_KEY\n{serve}"
+    ) == ["set again before ComfyUI"]
+    assert key_left_for_comfyui(f"{KEY_HIDDEN}\n{TIMER}\n{serve}") == [
+        "unset before the timer forks"
+    ]
+
+
+def unstopped_ends(start_sh: str, tmp_path: Path) -> list[str]:
+    """Return each way a boot ends without the stop, or with the key in ComfyUI.
+
+    Runs the start script's traps, then its last step, with ComfyUI and the stop's
+    `bash` stubbed: once for each way ComfyUI can exit, and once for a step that
+    fails before it.
+    """
+    lines = start_sh.splitlines()
+    traps = [ln for ln in _code(start_sh) if ln.startswith("trap ")]
+    # The line that takes the key from ComfyUI's environment, and what follows it.
+    hidden = next(
+        i for i, ln in enumerate(lines) if re.match(r"^\S.*RUNPOD_API_KEY$", ln)
+    )
+    tail = "\n".join(lines[hidden:])
+    # `exec` finds only a file on PATH, so the stop's `bash` is one.
+    bin_dir = tmp_path / "bin"
+    stub_command(
+        bin_dir, "bash", '#!/bin/sh\necho "stopped $1 with ${RUNPOD_API_KEY:-no} key"\n'
+    )
+    stub_command(
+        bin_dir,
+        "python",
+        '#!/bin/sh\necho "ComfyUI has ${RUNPOD_API_KEY:-no} key"\nexit "$STATUS"\n',
+    )
+    stop = "stopped /opt/isekai/tools/stop_pod.sh with test-key key\n"
+    cases = {
+        "a ComfyUI that exits": ("export STATUS=0", "ComfyUI has no key\n" + stop),
+        "a ComfyUI that fails": ("export STATUS=1", "ComfyUI has no key\n" + stop),
+        "a step that fails before ComfyUI": ("false", stop),
+    }
+    faults = []
+    for case, (before, expected) in cases.items():
+        program = "\n".join(
+            [
+                "set -euo pipefail",
+                f'export PATH="{bin_dir}:$PATH" RUNPOD_API_KEY=test-key',
+                "STOP_POD=/opt/isekai/tools/stop_pod.sh",
+                *traps,
+                before,
+                tail,
+            ]
+        )
+        done = subprocess.run(
+            ["bash", "-c", program],
+            cwd=tmp_path,
+            env={"PATH": os.environ["PATH"]},
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        # The step's own timestamp line is not what is checked.
+        said = [ln for ln in done.stdout.splitlines(True) if " step: " not in ln]
+        if "".join(said) != expected:
+            faults.append(f"{case} does not end in the stop")
+    return faults
+
+
+@pytest.mark.spec("pod-image:stop:a-boot-that-ends-stops-the-pod")
+def test_a_boot_that_ends_stops_the_pod(start_sh: str, tmp_path: Path) -> None:
+    assert unstopped_ends(start_sh, tmp_path) == []
+
+
+@pytest.mark.spec_exempt("structural: twin of test_a_boot_that_ends_stops_the_pod")
+def test_the_boot_end_check_catches_a_comfyui_that_replaces_the_script(
+    tmp_path: Path,
+) -> None:
+    replaced = (
+        "unset RUNPOD_API_KEY\n\n"
+        'echo "$(date -u +%FT%TZ) step: ComfyUI"\n'
+        "exec python main.py --port 8188\n"
+    )
+    assert unstopped_ends(replaced, tmp_path) == [
+        "a ComfyUI that exits does not end in the stop",
+        "a ComfyUI that fails does not end in the stop",
+        "a step that fails before ComfyUI does not end in the stop",
+    ]
+
+
+def session_with_a_lost_create(render_sh: str, root: Path) -> bool:
+    """Run a render session whose create is lost, recording no pod.
+
+    Return whether its teardown ran `down.sh`.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "render.sh").write_text(render_sh)
+    (root / "infra" / "up.sh").write_text("echo 'a pod may exist' >&2; exit 1\n")
+    (root / "infra" / "down.sh").write_text('touch "$(dirname "$0")/../torn"\n')
+    run = root / ".data" / "b" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "run.json").write_text("{}")
+    # The assembly passes and nothing answers on the port.
+    stub_command(root / "bin", "uv", "#!/bin/sh\nexit 0\n")
+    stub_command(root / "bin", "curl", "#!/bin/sh\nexit 7\n")
+    subprocess.run(
+        ["bash", "infra/render.sh", ".data/b/runs", "summon-anime-wai=1"],
+        cwd=root,
+        env={"PATH": f"{root / 'bin'}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    return (root / "torn").exists()
+
+
+RECORDED_TEARDOWN = """#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+teardown() { if [ -f .runpod_pod_id ]; then bash ./infra/down.sh; fi; }
+trap teardown EXIT
+bash ./infra/up.sh
+"""
+
+
+@pytest.mark.spec("pod-image:session:every-exit-tears-down")
+def test_a_session_whose_create_is_lost_still_tears_down(
+    render_sh: str, tmp_path: Path
+) -> None:
+    assert session_with_a_lost_create(render_sh, tmp_path)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_a_session_whose_create_is_lost_still_tears_down"
+)
+def test_the_lost_create_check_catches_a_teardown_that_needs_a_record(
+    tmp_path: Path,
+) -> None:
+    assert not session_with_a_lost_create(RECORDED_TEARDOWN, tmp_path)

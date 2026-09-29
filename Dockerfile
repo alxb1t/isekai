@@ -81,9 +81,10 @@ ENV AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts
 
 COPY start.sh /start.sh
 COPY tools/download_models.sh /opt/isekai/tools/download_models.sh
+COPY tools/stop_pod.sh /opt/isekai/tools/stop_pod.sh
 COPY config/models.json /opt/isekai/config/models.json
 COPY isekai/boundary/provision.py /opt/isekai/isekai/boundary/provision.py
-RUN chmod +x /start.sh /opt/isekai/tools/download_models.sh
+RUN chmod +x /start.sh /opt/isekai/tools/download_models.sh /opt/isekai/tools/stop_pod.sh
 
 EXPOSE 8188 22
 

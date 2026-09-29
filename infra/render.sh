@@ -65,10 +65,10 @@ teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   if [ -n "$watchdog" ]; then kill "$watchdog" 2>/dev/null; fi
   if [ -n "$tunnel" ]; then kill "$tunnel" 2>/dev/null; fi
   rm -f "$up_out"
-  if [ -f .runpod_pod_id ]; then
-    bash ./infra/down.sh 2>&1 | tee -a "$log"
-    [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
-  fi
+  # Recorded or not: a lost create leaves a pod no file names, and down.sh finds
+  # every 'isekai' pod, exiting 0 when there is none (0043 design D3).
+  bash ./infra/down.sh 2>&1 | tee -a "$log"
+  [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
   exit "$status"
 }
 # Set before the pod exists, so no step after it can leave the pod billing.
