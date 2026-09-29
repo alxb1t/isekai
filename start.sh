@@ -156,14 +156,26 @@ if ! provision; then
 fi
 
 # 5. Everything ComfyUI writes goes to memory, which dies with the pod; the
-#    container disk may outlive it unwiped (0040 design D2).
+#    container disk may outlive it unwiped (0040 design D2). An upload spools to
+#    TMPDIR first, and a /dev/shm that is not memory, or not read, holds (0042 design D2).
 echo "$(date -u +%FT%TZ) step: the memory directories"
-mkdir -p /dev/shm/comfyui/input /dev/shm/comfyui/output /dev/shm/comfyui/temp /dev/shm/comfyui/user
+mkdir -p /dev/shm/comfyui/input /dev/shm/comfyui/output /dev/shm/comfyui/temp /dev/shm/comfyui/user /dev/shm/comfyui/tmp
+export TMPDIR=/dev/shm/comfyui/tmp
+shm_type="$(stat -f -c %T /dev/shm)" || shm_type=''
 shm_kib="$(df -k --output=size,avail /dev/shm | tail -n 1)" || shm_kib=''
-echo "/dev/shm KiB, size and free:${shm_kib}"
+echo "/dev/shm is ${shm_type}; KiB, size and free:${shm_kib}"
+if [ "$shm_type" != "tmpfs" ]; then
+    echo "ERROR: /dev/shm is '${shm_type}', not a tmpfs — the photograph would reach a disk." >&2
+    echo "Holding ${HOLD_SECONDS}s, then exiting. ComfyUI was not started." >&2
+    exec sleep "$HOLD_SECONDS"
+fi
 free_kib="$(awk '{print $2}' <<<"$shm_kib")"
 case "$free_kib" in
-    '' | *[!0-9]*) free_kib=0 ;;
+    '' | *[!0-9]*)
+        echo "ERROR: could not read /dev/shm's free space from '${shm_kib}'." >&2
+        echo "Holding ${HOLD_SECONDS}s, then exiting. ComfyUI was not started." >&2
+        exec sleep "$HOLD_SECONDS"
+        ;;
 esac
 if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then
     echo "ERROR: /dev/shm has ${free_kib} KiB free, below the ${SHM_FREE_FLOOR_KIB} KiB" >&2

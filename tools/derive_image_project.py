@@ -37,16 +37,35 @@ PINS = (
     "torchvision==0.23.0",
     "torchaudio==2.8.0",
     "insightface==0.7.3",
+    "onnxruntime==1.30.0",
 )
 TORCH_STACK = ("torch", "torchvision", "torchaudio")
 TORCH_INDEX = "https://download.pytorch.org/whl/cu128"
 
-# Both ship the `onnxruntime` module; the -gpu build is the one both custom-node
-# packs ask for, so the CPU build is left out (0033 design D2).
-DROPPED = ("onnxruntime",)
+# Both ship the `onnxruntime` module. The -gpu build is for CUDA 13, which the image
+# lacks, so it runs on the CPU anyway; the CPU build says so (0042 design D4).
+DROPPED = ("onnxruntime-gpu",)
 
 # insightface 0.7.3 is an sdist; its `build-system.requires` names these unpinned.
-BUILD_CONSTRAINTS = ("setuptools==84.0.0", "numpy==2.5.3", "cython==3.3.0")
+# Each carries its wheel hashes from `image/uv.lock`, so uv checks what it builds
+# with (0042 design D5).
+BUILD_CONSTRAINTS = (
+    (
+        "setuptools==84.0.0",
+        ("sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",),
+    ),
+    (
+        "numpy==2.5.3",
+        ("sha256:b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3",),
+    ),
+    (
+        "cython==3.3.0",
+        (
+            "sha256:428fafed98ea26927000a287b4dfc9ef07339f56656a5329a34eaa593f79a4f8",
+            "sha256:9b24b5c8cd536946b62086fcafee6d5509d3f549f72d553d2336af87ffbe0da1",
+        ),
+    ),
+)
 
 PYTHON = "3.12.14"
 
@@ -103,8 +122,12 @@ def uv_required(pyproject: str) -> str:
 def render(deps: list[str], uv: str) -> str:
     """Return `image/pyproject.toml`'s text for `deps`, requiring uv as `uv` says."""
 
-    def array(items: tuple[str, ...] | list[str]) -> str:
-        return "[\n" + "".join(f'    "{item}",\n' for item in items) + "]"
+    def array(items: list[str]) -> str:
+        return "[\n" + "".join(f"    {item},\n" for item in items) + "]"
+
+    def constraint(requirement: str, hashes: tuple[str, ...]) -> str:
+        listed = ", ".join(f'"{digest}"' for digest in hashes)
+        return f'{{ requirement = "{requirement}", hashes = [{listed}] }}'
 
     sources = "".join(
         f'{name} = {{ index = "pytorch-cu128" }}\n' for name in TORCH_STACK
@@ -115,14 +138,15 @@ def render(deps: list[str], uv: str) -> str:
         'name = "isekai-image"\n'
         'version = "0"\n'
         'requires-python = "==3.12.*"\n'
-        f"dependencies = {array(deps)}\n"
+        f"dependencies = {array([f'"{dep}"' for dep in deps])}\n"
         "\n"
         "[tool.uv]\n"
         "package = false\n"
         f'required-version = "{uv}"\n'
         "environments = "
         "[\"sys_platform == 'linux' and platform_machine == 'x86_64'\"]\n"
-        f"build-constraint-dependencies = {array(BUILD_CONSTRAINTS)}\n"
+        "build-constraint-dependencies = "
+        f"{array([constraint(*each) for each in BUILD_CONSTRAINTS])}\n"
         "\n"
         "[[tool.uv.index]]\n"
         'name = "pytorch-cu128"\n'

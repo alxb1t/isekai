@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Security
+
+- An upload spools to memory, and a pod holds on a `/dev/shm` that is not a tmpfs or not read. The image, now on
+  plain Ubuntu with CPU onnxruntime, carries the telemetry switches; its build tools are checked by hash
+  (0042 D1, D2, D3, D4, D5).
+
 ## [0.29.0] - 2026-09-28 · 0041-the-right-machine
 
 ### Security

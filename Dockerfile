@@ -1,13 +1,19 @@
-# CUDA runtime. The base and uv are named by digest, the tag kept for a reader;
-# `docker buildx imagetools inspect <tag>` resolves one (0033 design D2).
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04@sha256:da6791294b0b04d7e65d87b7451d6f2390b4d36225ab0701ee7dfec5769829f5
+# Plain Ubuntu, no CUDA: torch's own wheels bring every CUDA library it loads, and
+# the host's driver is mounted by the container runtime (0042 design D1). The base
+# and uv are named by digest; `docker buildx imagetools inspect <tag>` resolves one.
+FROM ubuntu:22.04@sha256:b8b6ee6aa931ecd9d0d952abc34dc0e5f7c6a30c6bb71b079fe399fde0329c02
 
 ENV PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
+# What the CUDA base set, so the container runtime mounts the driver.
+ENV NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility
+# The pod renders a likeness; its libraries are told to report nothing (0042 design D3).
+ENV ORT_DISABLE_TELEMETRY=1 HF_HUB_DISABLE_TELEMETRY=1 DO_NOT_TRACK=1 NO_ALBUMENTATIONS_UPDATE=1
 
 # System packages. The host keys `openssh-server` makes are deleted in this layer:
 # a later one would only hide them. Each pod makes its own (0040 design D1).
+# Python is uv's; `build-essential` compiles insightface's extension.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git python3 python3-pip curl wget openssh-server \
+        git curl wget ca-certificates openssh-server build-essential \
         libgl1 libglib2.0-0 \
     && rm -f /etc/ssh/ssh_host_* \
     && rm -rf /var/lib/apt/lists/*

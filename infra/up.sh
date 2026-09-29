@@ -140,7 +140,6 @@ pod_id=""
 since=$(date -u +%FT%TZ)          # the pod's log is read from here on
 while IFS= read -r gpu; do
   echo "Trying '$gpu' ..."
-  # The pod renders a likeness; its libraries are told to report nothing (0041 design D4).
   body=$(jq -n \
     --arg image  "$image_ref" \
     --arg gpu    "$gpu" \
@@ -156,11 +155,7 @@ while IFS= read -r gpu; do
        dataCenterIds: [$dc],
        cloud: "SECURE",
        env: { PUBLIC_KEY: $pubkey,
-              RUNPOD_VOLUME_ID: $vol,
-              ORT_DISABLE_TELEMETRY: "1",
-              HF_HUB_DISABLE_TELEMETRY: "1",
-              DO_NOT_TRACK: "1",
-              NO_ALBUMENTATIONS_UPDATE: "1" } }')
+              RUNPOD_VOLUME_ID: $vol } }')
   # A transport failure is code 000, reported like any status, never a silent exit.
   out=$(api -S -w '\n%{http_code}' -X POST "$API/pods" \
     -H "Content-Type: application/json" \
