@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.4] - 2026-09-30 · 0052-the-paydown
+
+### Changed
+
 - The accepted risks of D6, D27, D35 and D36 are written in their decisions, and the patched module globals and
   `_once`'s transience rule as known breaks, so a reader of a topic finds its risk there (0052 D1, D2).
 - `show` lists every failure record under its stage or render group, names each file or directory below a flow
