@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   (0052 D3, D4, D5).
 - The image's clone guard refuses an `ADD` from an ssh or scp address, which BuildKit clones as it does a git one
   (0052 D6).
+- The review rail's run button reads `in the manifest`, which is what it counts, and the tag-list and tab-close
+  comments no longer promise more than the code does (0052 D7).
 
 ## [0.31.3] - 2026-09-30 · 0051-the-terse-comments
 

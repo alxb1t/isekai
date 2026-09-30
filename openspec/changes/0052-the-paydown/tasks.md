@@ -8,7 +8,7 @@ scenarios; phase 2 adds their tests.
 - [x] 1 — The records
 - [x] 2 — What `show` hid
 - [x] 3 — The guard
-- [ ] 4 — The words
+- [x] 4 — The words
 
 Line numbers are `4fd5d99`'s. Every new test carries `@pytest.mark.spec` with the key its task names. No existing
 test turns red: `show`'s legend test asserts with `in`, and the guard's twin only gains cases.
@@ -48,5 +48,5 @@ test turns red: `show`'s legend test asserts with `in`, and the guard's twin onl
 
 ## 4 — The words
 
-- [ ] 4.1 Reword `Batch.wd14_path`'s docstring in `isekai/interface/ui/batch.py`, the run button in `ui/src/components/BatchRail.vue`, and the `beforeunload` comment in `ui/src/ReviewApp.vue`, per [D7](design.md#d7).
+- [x] 4.1 Reword `Batch.wd14_path`'s docstring in `isekai/interface/ui/batch.py`, the run button in `ui/src/components/BatchRail.vue`, and the `beforeunload` comment in `ui/src/ReviewApp.vue`, per [D7](design.md#d7).
   Verify: `grep -c 'every list after it' isekai/interface/ui/batch.py` prints `0`, `grep -c 'in the manifest' ui/src/components/BatchRail.vue` prints `1`, and `grep -c 'can lose the last edit' ui/src/ReviewApp.vue` prints `1`.

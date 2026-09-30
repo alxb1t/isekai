@@ -77,7 +77,7 @@ function ready(id: string): void {
 
     <!-- The only route to the manifest mid-batch, clickable at any time. -->
     <button class="rail__run mono" type="button" @click="$emit('manifest')">
-      run · {{ approved }} of {{ inputs.length }} approved
+      run · {{ approved }} of {{ inputs.length }} in the manifest
     </button>
   </nav>
 </template>

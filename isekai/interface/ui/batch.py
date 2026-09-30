@@ -98,7 +98,7 @@ class Batch:
 
         **`None` is never a refusal here**, and neither is it for `tags_path`
         below. A run never tagged has no such directory, and a failed
-        tagger leaves its own list absent and every list after it -- legitimate
+        tagger leaves its own list absent and never the other's -- legitimate
         absences, none of which may stop a review.
         The tag lists are an aid, and a surface that refused to open because a
         helper was missing would have confused an aid for an input.
