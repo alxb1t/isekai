@@ -46,7 +46,7 @@ root resolves from anywhere; drift turns something red.
 | [D1](#d1) | `pinned_commits` counts every `git clone`, whatever its flags or host, against the checkouts; the test compares the clone count with the map | a principle's guard must not narrow to today's clones | the hard-coded `== 3` |
 | [D2](#d2) | `SDIST_BUILDS` is keyed by name and version; pins.md's *Not pinned* gains the requirements a backend adds while it builds | a bump then fails until its tools are recorded again | the deriver writing the map, which needs the network |
 | [D3](#d3) | the caption and tags goldens come from readings carrying `artifacts` and `options` | the bytes of a pinned producer are held | a second golden per kind |
-| [D4](#d4) | a malformed report raises the transport's permanent failure in its words; the CLI keeps a refused report for the session | the transport SHALL and "read once per session" | refusing the session once with no record, a new requirement |
+| [D4](#d4) | a malformed report raises the transport's permanent failure in its words; the CLI keeps a permanently refused report for the session, never a transient one | the transport SHALL and "read once per session" | refusing the session once with no record, a new requirement |
 | [D5](#d5) | the models root is `REPOSITORY / "models"`, pinned in `ANCHORS` with `FIELD_MAP_PATH`; `evaluation/` imports it; the refusal keeps "from the repository root" | every other root is anchored; the remedy's command is relative to the root | a `--models` flag |
 | [D6](#d6) | "16.5 GiB" leaves `up.sh`'s message and the tests' comments, with no figure in its place | a figure goes stale | the corrected figure |
 | [D7](#d7) | `make drift` runs the fetching derivers and fails on a diff; `make derive` adds the field map; `drift.yml` runs `make drift` weekly | a drift report that never updates anything | re-deriving the field map in CI, which lacks the vocabulary |
@@ -84,7 +84,9 @@ rewritten to the bytes those produce.
 **The runtime report.** `read_runtime` raises `TransportFailure("permanent", …)` in the words `_reported` uses for a
 shape this build does not read, so a `{"system": null}` report reads as any other unread answer. In `cli.py`, the
 report's reader keeps a refusal as well as a success, as the tagger's seam does, so the endpoint is asked once per
-session. `render` still records the refusal per photograph and flow, before any seed is submitted.
+session. A transient `TransportFailure` is raised and not kept, so the next render asks again: kept, one blip would
+refuse every photograph in the session and fill each one's render budget. `render` still records the refusal per
+photograph and flow, before any seed is submitted.
 
 ### D5
 
@@ -122,7 +124,7 @@ None.
 
 - **A source goes down for a day** → the weekly run is red once; the next run tells a move from an outage.
 - **`uv lock` resolves differently on a new uv** → uv is pinned to the root project's version in the workflow.
-- **A kept refusal outlives a fixed endpoint within one session** → the session is one invocation; the next asks
+- **A kept permanent refusal outlives a fixed endpoint within one session** → the session is one invocation; the next asks
   again.
 
 ## Verdict

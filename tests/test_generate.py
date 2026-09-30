@@ -1707,6 +1707,47 @@ def test_a_refused_report_is_asked_once_and_submits_nothing(
     assert err.getvalue().count("a shape this build does not read") == len(runs)
 
 
+class _BlipOnce(FakeComfyClient):
+    """An endpoint whose first report request fails transiently, then answers."""
+
+    def system_stats(self) -> dict[str, Any]:
+        if self.stats_calls == 0:
+            self.stats_calls += 1
+            raise TransportFailure("transient", "the endpoint failed with HTTP 502")
+        return super().system_stats()
+
+
+@pytest.mark.spec("image-generation:runtime:a-transient-report-is-asked-again")
+def test_a_transient_report_failure_is_asked_again_by_the_next_render(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    from isekai.interface import wiring
+    from isekai.interface.cli import build_parser, dispatch
+
+    first, second = (_run(tmp_path, schema, vocabulary, n) for n in ("ada", "grace"))
+    client = _BlipOnce()
+    err = io.StringIO()
+    wired = wiring.Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=client,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=err,
+    )
+    argv = ["generate", "--flow", FLOW, "--seed", "42", first.id, second.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert client.stats_calls == 2
+    assert err.getvalue().count("render failed (transient)") == 1
+    sidecar = second.path / FLOW / OUTPUTS / "001" / "42.render.json"
+    assert read(sidecar, RENDER_FILE).get("runtime") == read_runtime(FakeComfyClient())
+
+
 @pytest.mark.spec("image-generation:runtime:an-unrecorded-endpoint-is-unpinned")
 def test_a_render_with_no_pod_boot_record_is_unpinned(run: Run, flow: Flow) -> None:
     prepare(run, {FLOW: flow})

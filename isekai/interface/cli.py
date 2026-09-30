@@ -47,6 +47,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
+from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
@@ -394,10 +395,13 @@ def _seam(value: T | None, name: str, does: str) -> T:
 
 
 def _once(read: Callable[[], T]) -> Callable[[], T]:
-    """Return `read`, called at most once: its answer or its refusal is kept.
+    """Return `read`, answered at most once: its answer or its refusal is kept.
 
     A refusal is the build's or the endpoint's, not a photograph's, so meeting
-    it again would redo the work to learn nothing (0049 design D4).
+    it again would redo the work to learn nothing (0049 design D4). A transient
+    transport failure is the exception: it is raised and not kept, since the
+    endpoint may answer the next ask, and keeping it would refuse every later
+    photograph in the session and spend each one's render budget.
     """
     outcome: list[T | Refusal] = []
 
@@ -405,6 +409,10 @@ def _once(read: Callable[[], T]) -> Callable[[], T]:
         if not outcome:
             try:
                 outcome.append(read())
+            except TransportFailure as failed:
+                if failed.kind == "transient":
+                    raise
+                outcome.append(failed)
             except Refusal as refused:
                 outcome.append(refused)
         kept = outcome[0]

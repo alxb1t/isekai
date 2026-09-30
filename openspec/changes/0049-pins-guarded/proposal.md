@@ -53,8 +53,8 @@ None.
 
 - `comfy-transport`: MODIFIED *The server's runtime is read from its own report* — gains a report in a shape this
   build does not read, refused as permanent.
-- `image-generation`: MODIFIED *A render records the image and the runtime it ran on* — gains a refused report,
-  asked once and submitting nothing.
+- `image-generation`: MODIFIED *A render records the image and the runtime it ran on* — gains a report refused
+  as permanent, asked once and submitting nothing, and a transient one, asked again by the next render.
 
 ## Impact
 
