@@ -31,6 +31,7 @@ from evaluation import eval_models
 from isekai.boundary import provision
 from isekai.foundation import flow, run
 from isekai.interface import wiring
+from isekai.shared import field_map, vocabulary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -62,6 +63,16 @@ ANCHORS = (
         eval_models.EVAL_MANIFEST_PATH,
         ("evaluation", "eval_models.json"),
         id="eval_models.EVAL_MANIFEST_PATH",
+    ),
+    pytest.param(
+        vocabulary.DEFAULT_MODELS_DIR,
+        ("models",),
+        id="vocabulary.DEFAULT_MODELS_DIR",
+    ),
+    pytest.param(
+        field_map.FIELD_MAP_PATH,
+        ("config", "field_map.json"),
+        id="field_map.FIELD_MAP_PATH",
     ),
 )
 

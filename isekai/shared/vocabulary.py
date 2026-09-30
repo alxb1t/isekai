@@ -25,11 +25,13 @@ from typing import Any
 
 from isekai.foundation.artifacts import VocabularyRecord
 from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import REPOSITORY
 
 # The destination the vocabulary manifest declares, and the models root the
 # scorer already defaults to. One tree, two consumers, one provisioning rule.
+# Anchored like every other root, so it resolves from any working directory.
 VOCABULARY_DEST = "wd14/selected_tags.csv"
-DEFAULT_MODELS_DIR = Path("models")
+DEFAULT_MODELS_DIR = REPOSITORY / "models"
 
 # The one command that provisions anything in this repository, pointed at the
 # manifest that declares this file. Named here because `interface/wiring.py` and

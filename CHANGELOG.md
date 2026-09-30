@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   (0049 D1, D2).
 - A runtime report in a shape this build does not read is refused as the transport refuses any such answer,
   permanent, and is not asked again in the session; the caption and tags goldens hold a pinned producer (0049 D3, D4).
+- The models root resolves from any working directory, anchored like every other root; `up.sh`'s missing-volume
+  refusal no longer states a stale download size (0049 D5, D6).
 
 ## [0.31.0] - 2026-09-29 · 0048-the-run-files
 

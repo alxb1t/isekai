@@ -400,7 +400,7 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
     # What the guard proves is identity -- the 20 GB ephemeral container disk is
     # not the network volume -- and capacity discriminates those two whatever the
     # volume's fill level is. Free space does not: this project already put
-    # 16.5 GiB on a volume it shares with a second project, so a floor on
+    # the models on a volume it shares with a second project, so a floor on
     # availability degrades as the volume fills and would refuse a warm boot that
     # needed to download nothing.
     body = provision_body(start_sh)
@@ -459,7 +459,7 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
     # resolves to the container overlay rather than to the volume (design.md D5).
     # That overlay's backing disk is the container `disk`, LARGER than the
     # pod's own volume disk, so a floor that only clears the volume disk lets the
-    # overlay through and 16.5 GiB lands on storage that dies at teardown.
+    # overlay through and the models land on storage that dies at teardown.
     floor = re.search(
         r"^VOLUME_SIZE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)", start_sh, re.M
     )

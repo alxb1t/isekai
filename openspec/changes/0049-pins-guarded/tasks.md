@@ -7,7 +7,7 @@ scenario; each task below adds the tests that bind them.
 
 - [x] 1 — The image's pins
 - [x] 2 — The records
-- [ ] 3 — The roots
+- [x] 3 — The roots
 - [ ] 4 — Drift
 
 Line numbers are `df5e436`'s. Every new test carries `@pytest.mark.spec` with the key its task names, or
@@ -33,9 +33,9 @@ Line numbers are `df5e436`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 3 — The roots
 
-- [ ] 3.1 In `isekai/shared/vocabulary.py`, anchor `DEFAULT_MODELS_DIR` on `REPOSITORY`; in `evaluation/__main__.py`, import it; in `tests/test_package_paths.py`, add it and `FIELD_MAP_PATH` to `ANCHORS`, per [D5](design.md#d5).
+- [x] 3.1 In `isekai/shared/vocabulary.py`, anchor `DEFAULT_MODELS_DIR` on `REPOSITORY`; in `evaluation/__main__.py`, import it; in `tests/test_package_paths.py`, add it and `FIELD_MAP_PATH` to `ANCHORS`, per [D5](design.md#d5).
   Verify: `cat isekai/shared/vocabulary.py evaluation/__main__.py | grep -c 'Path("models")'` prints `0`, and `grep -cE 'id="(vocabulary\.DEFAULT_MODELS_DIR|field_map\.FIELD_MAP_PATH)"' tests/test_package_paths.py` prints `2`.
-- [ ] 3.2 Drop "16.5 GiB" from `infra/up.sh`'s message and the comments in `tests/test_infra.py`, per [D6](design.md#d6).
+- [x] 3.2 Drop "16.5 GiB" from `infra/up.sh`'s message and the comments in `tests/test_infra.py`, per [D6](design.md#d6).
   Verify: `cat infra/up.sh tests/test_infra.py | grep -c '16\.5'` prints `0`, and `bash -n infra/up.sh && echo ok` prints `ok`.
 
 ## 4 — Drift
