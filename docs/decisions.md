@@ -369,5 +369,6 @@ own create was lost.
 - **Accepts:** ComfyUI's history and node cache hold the batch's photograph until the teardown.
   Reopen when a pod serves more than one batch.
 - **Accepts:** a `down.sh` run while a create is in flight spends that create's pending marker, so an interrupt
-  before it records leaves a pod only the pod's own stop ends. Reopen when two sessions share a checkout.
+  before it records leaves a pod no trap tears down: its own stop ends it, or the `down.sh` the next `up.sh`
+  names. Reopen when two sessions share a checkout.
 - **Made by:** `0035`, `0043`, `0044`, `0052`.
