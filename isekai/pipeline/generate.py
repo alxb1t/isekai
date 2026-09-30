@@ -177,8 +177,8 @@ def prompt_artifact(run: Run, flow: Flow, schema: Schema) -> Path:
     directory = run.directory(flow.id, PROMPTS)
     path = directory / artifact_name(version)
     if path.exists():
-        # A prompt an earlier build wrote was never walked, and the walk below
-        # must cost this free pass rather than a boot (0039 design D5).
+        # A prompt already on disk may have been written without the walk, and
+        # the walk below must cost this free pass rather than a boot.
         if "photo" in flow.inputs:
             check_budget(STAGE_ASSEMBLE, directory, version, run)
             try:
@@ -243,15 +243,15 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     """Assemble every approved flow's prompt for one run, before anything is rented.
 
     Each named flow with no approved sheet is refused by name, beside the approved
-    ones or not (0047 design D3); a run approved for none of them is refused
-    outright rather than returning empty.
+    ones or not; a run approved for none of them is refused outright rather than
+    returning empty.
 
     **One flow's malformed sheet costs that flow alone**, and it is `across`
     that says so -- the same call `cli.py` collects photographs with, one axis
     down. The flows of a run are independent -- separate subtrees, separate
     sheets, separate error records -- so a dict comprehension raising at the
-    first broken one took every sibling's turn with it, and did it after
-    already writing a permanent record (v0.16 R6).
+    first broken one would take every sibling's turn with it, after already
+    writing a permanent record.
     """
     approved = approved_flows(run)
     ready = [flow for flow in approved if flow in flows]
@@ -271,10 +271,10 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     """Return the seeds already produced into `directory`, from filenames alone.
 
     `suffix` is what the flow says it produces, so the predicate names no format
-    of its own. Every "is this done?" check here is a directory listing, and this
-    was the one with an extension written into it -- a flow whose output is not a
-    still image would have had its finished work reported as missing and rendered
-    again, on the one stage that costs money on every pass (design.md D11).
+    of its own. Every "is this done?" check here is a directory listing, and an
+    extension written into this one would report the finished work of a flow whose
+    output is not a still image as missing and render it again, on the one stage
+    that costs money on every pass.
     """
     if not directory.is_dir():
         return []
@@ -297,8 +297,7 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
     The one fact that belongs here rather than beside the constant: it bounds the
     *working* target and not the hires one, because hires scales both axes by the
     same factor and so does not change the aspect ratio, and bounding the hires
-    value would silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect
-    (design.md D4).
+    value would silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect.
     """
     width, height = working_resolution(
         *dimensions_or_refuse(
@@ -319,7 +318,7 @@ def photo_resolution(photo: Path) -> tuple[int, int]:
 
 
 # The dials each sampler takes from the manifest -- the hires pass declares its
-# own `denoise` and `steps`, so it takes neither from that list -- now live in
+# own `denoise` and `steps`, so it takes neither from that list -- live in
 # `foundation/flow.py` beside `ROLE_DIALS`, because `load_flow` validates what
 # this module reads and a second copy of the list is a second thing to drift.
 
@@ -337,13 +336,13 @@ def build_graph(
     `summon-anime-wai`'s graph carries cfg 7 and identity strength 0.5; the
     measured configuration is
     5 and 0.8, and a render that used the file's values would be a configuration
-    nothing measured (design.md D12).
+    nothing measured.
 
     **Every patch below is conditional on the flow declaring the role.**
     `load_flow` has already refused a flow missing one of the four required ones,
     so those four always land; a flow without a photograph, an identity adapter, a
     pose preprocessor or a hires pass renders rather than raising on a rented
-    machine (design.md D9).
+    machine.
     """
     graph = flow.graph()
     dials = flow.dials
@@ -458,7 +457,7 @@ def render(
 
     `image` is the reference the pod booted, or None for an endpoint no pod-boot
     record names, which the sidecar declares unpinned. `runtime` is called only
-    when a seed will render, so a complete batch reads no report (0033 design D5).
+    when a seed will render, so a complete batch reads no report.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
@@ -480,7 +479,7 @@ def render(
         # Before the upload and any seed, so a report that fails costs no render
         # and sends no photograph: a photograph leaves only to be rendered.
         ran_on = runtime()
-        # The run's copy is only read: its bytes are the run's id (0039 design D3).
+        # The run's copy is only read: its bytes are the run's id (D16).
         image_name = (
             client.upload_image(run.photo.name, strip_metadata(run.photo))
             if "photo" in flow.inputs
@@ -512,7 +511,7 @@ def render(
             raise _recorded(run, flow, directory, version, failed, seed) from failed
         # The sidecar first, so an image always has its provenance: a crash
         # between the writes leaves a sidecar with no image, and that seed
-        # renders again (`0030` design D6).
+        # renders again.
         provenance = directory / f"{seed}.render.json"
         sidecar: RenderSidecar = {
             "schema": RENDER_FILE.schema,

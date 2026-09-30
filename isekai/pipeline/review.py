@@ -6,7 +6,7 @@ once by stage (2) and is read-only to everything else; `review/<flow>/` is the
 only mutable directory in a run. The alternative -- both stages writing into one
 directory, told apart by number -- makes "the machine's sheet is never edited" a
 convention that an editor, a script or a careless command can break silently and
-permanently (design.md D3).
+permanently.
 
 **The baseline is what is being protected.** The unreviewed route carries 0.568
 of a sheet's attributes into the render and the reviewed one carries 0.917.
@@ -97,10 +97,10 @@ def current_draft(directory: Path) -> Path | None:
 def state(directory: Path) -> Status:
     """Return where this input stands in stage ③, from filenames alone.
 
-    **The one definition of the three states**, because the alternative is
-    what this replaced: `readonly`, the `PUT` gate and the rail's status
-    were three expressions over the same two predicates, true together only
-    because they happened to agree.
+    **The one definition of the three states**, because the alternative --
+    `readonly`, the `PUT` gate and the rail's status as three expressions over
+    the same two predicates -- is true together only while they happen to
+    agree.
 
     `re-opened` is an approved artifact with a **later** version beside it,
     which is exactly what `review --flow F --new-version <run>` writes and nothing
@@ -186,7 +186,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
         "fields": carried["fields"],
     }
     # Carried where the source records them, so the approval can name the
-    # schema and table its fields came through (0033 design D5).
+    # schema and table its fields came through.
     if "schema_document" in carried:
         draft["schema_document"] = carried["schema_document"]
     if "field_map" in carried:
@@ -213,23 +213,22 @@ def estimate_tokens(fields: Mapping[str, Sequence[str]], schema: Schema) -> int:
 def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
     """Replace the current draft's field values in place, and return its path.
 
-    The one owner of a draft update. A draft was written once and then edited by
-    hand until now, so nothing owned this and the draft's shape was only ever built
-    at creation; a second writer arriving without a single owner is how two shapes
+    The one owner of a draft update. The draft's shape is otherwise built only at
+    creation, and a second writer arriving without a single owner is how two shapes
     of one file drift apart.
 
     **It does not create.** `review()` owns that, and teaching this to create too
     would spend a version number on a stray keypress -- there is no Save control
-    on the surface that calls it and no confirm step to attribute one to
-    (design.md D5). The version and the sheet the draft records are its identity
-    and are carried across untouched.
+    on the surface that calls it and no confirm step to attribute one to. The
+    version and the sheet the draft records are its identity and are carried
+    across untouched.
 
     **A changed field set is refused**, which is what makes this owner
     load-bearing rather than clerical: a missing field and a field the schema does
     not have are two of the four ways a sheet can be invalid at approval, and
     comparing the set at the one write point turns both from a property the
     editing surface is trusted to have into a property of the write path -- for
-    one comparison, without opening the validator (design.md D6).
+    one comparison, without opening the validator.
     """
     directory = run.directory(flow, REVIEW)
     path = current_draft(directory)
@@ -285,12 +284,11 @@ def token_budget(
     being added back by hand. That is the whole point: counting the tags alone
     understates what the encoder reads by about nineteen tokens against a window
     of seventy-seven, so a sheet reported comfortably inside the budget is past it
-    and silently chunked (design.md D4).
+    and silently chunked.
 
     `estimate_tokens` is deliberately left alone. It is `approve()`'s, it is
     passed a `Schema` and never a `Flow`, and changing its signature would move
-    every one of its call sites for a warning on a path this version deprecates
-    as guidance.
+    every one of its call sites for a warning on a path deprecated as guidance.
 
     A field absent from a mid-edit draft contributes nothing rather than raising,
     because the surface recomputes this on every keystroke.

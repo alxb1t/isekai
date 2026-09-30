@@ -8,7 +8,7 @@ digest-verified file on disk and resolves through **no key naming its model** --
 the manifest's `tagger` says whether a flow is tagged, never which model tags,
 and there is no tagged flow for which it would be wrong. A Protocol
 whose two implementations resolve through different mechanisms is a shared name
-rather than a seam (design.md D3).
+rather than a seam.
 
 **Neither narrows anything, and that is the product.** Stage (2) is where a tag
 list is filtered down to a sheet; seeing *behind* that filter is the whole reason
@@ -21,13 +21,12 @@ tag, and the review surface shows only the tags the vocabulary carries
 
 **`tag_wd14` and `tag_hosted` are the `tag` verb, and `caption()` is not part of
 it**: `cli.py` runs WD14 first, then the hosted tagger, collects each one's refusal
-on its own, and reports each artifact on its own (0032 design D2).
+on its own, and reports each artifact on its own (D1).
 
 **The two artifacts resume independently**, which is why each has its own
 directory, its own `latest()` check and its own `BUDGETS` entry. WD14 is
 deterministic and free; the hosted tagger is over HTTP with a retry budget.
-Coupling their idempotence would spend a model call to retry a matrix multiply
-(design.md D4).
+Coupling their idempotence would spend a model call to retry a matrix multiply.
 
 Stdlib only. `wd14.Session` and `ollama.Transport` are the seams, and their
 doubles are what keep the suite offline.
@@ -65,7 +64,7 @@ from isekai.foundation.run import (
 )
 
 # The verb a refusal tells the operator to run again: `tag` writes both lists, so
-# neither stage name above is a verb (0032 design D2).
+# neither stage name above is a verb (D1).
 VERB = "tag"
 
 # The whole of what the hosted tagger is told. **"Long" is the lever**: it takes
@@ -77,7 +76,7 @@ VERB = "tag"
 # pins `TEMPLATE {{ .Prompt }}`, the shipped prose briefing goes through it
 # unframed, and hand-building chat markup here would make two calls to the same
 # model use different framing -- and would double-apply the day that TEMPLATE
-# gains one (design.md D11).
+# gains one.
 TAG_PROMPT = "Write a long list of Booru tags for this image.\n"
 
 # What the hosted tagger is sampled at. `repeat_penalty` is the sorter's, kept on
@@ -88,11 +87,11 @@ TAG_PROMPT = "Write a long list of Booru tags for this image.\n"
 # `num_predict` is the reader's 1024 and is *not* the constraint -- eight runs,
 # every one `done_reason: stop`, the longest 200 tokens. Stated rather than
 # inherited, so nobody later reads the number as evidence of a measurement it did
-# not come from (design.md D12).
+# not come from.
 #
 # `num_ctx` is the reader's 4096 and for the reader's reason -- the window
 # Ollama was already resolving, pinned so it stops depending on the host. This
-# prompt is the cheaper of the two: measured at v0.22.1, `prompt_eval_count` is
+# prompt is the cheaper of the two: its measured `prompt_eval_count` is
 # **779** against the reader's 1275, the 48-byte prompt costing ~50 tokens
 # beside the same constant ~729 for the photograph. 779 + 1024 of 4096.
 TAGGER_OPTIONS: Mapping[str, Any] = {
@@ -114,7 +113,7 @@ TAGGER_REMEDY = ollama.BUILD
 # model that answers in prose yields one element no chip can render, and that is
 # detectable and should be -- one comma is the whole test, and it touches no
 # content. Anything richer starts filtering, which is what this stage exists not
-# to do (design.md D15).
+# to do.
 SEPARATOR = ","
 
 
@@ -180,8 +179,7 @@ class OllamaTagger:
 
     **No briefing and no schema.** Unlike the reader, this one is told nothing
     that varies by flow -- the prompt is a module constant, which is precisely
-    why its provenance is recorded with `constant_record` and carries no path
-    (design.md D16).
+    why its provenance is recorded with `constant_record` and carries no path.
 
     The photograph goes as its own bytes, unresized, for the reader's reason: the
     resampler lives in a wheel a module on the entry point's import graph may not
@@ -276,8 +274,8 @@ def tag_wd14(
     **This producer claims a pin**, and a sheet built from this list carries the
     `true` across (`pipeline/sheet.py`). It carries **both** digests -- the ones
     the session was actually verified against, not the ones the manifest happens
-    to hold at write time (design.md D17). The hosted tagger claims its pin the
-    same way, from `ollama.verified_build`.
+    to hold at write time. The hosted tagger claims its pin the same way, from
+    `ollama.verified_build`.
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete.
@@ -347,10 +345,10 @@ def tag_hosted(
     canonicalisation, no vocabulary filtering, no re-ordering: narrowing is stage
     (2)'s job and seeing behind it is why this artifact exists.
 
-    `pinned` and `artifacts` are what the tagger verified its model against
-    (0033 design D4). The prompt's digest is recorded with no path, because the
-    prompt is a module constant and a record that invented a path would assert a
-    location that does not exist.
+    `pinned` and `artifacts` are what the tagger verified its model against (D6).
+    The prompt's digest is recorded with no path, because the prompt is a module
+    constant and a record that invented a path would assert a location that does
+    not exist.
     """
     directory = run.directory(flow, TAGS)
     if latest(directory) is not None and not new_version:

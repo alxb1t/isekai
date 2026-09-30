@@ -16,7 +16,7 @@ rendered tattoos -- and turning a licensed absence into an empty field is the
 **No fallback reader.** A decline is a result to be recorded and surfaced, not
 routed around: substituting a different implementation would write an artifact
 whose provenance record is untrue, and the whole discipline of this pipeline is
-that a producer names what actually made the artifact (design.md D6).
+that a producer names what actually made the artifact.
 
 **One implementation ships, and the flow names the model it runs.**
 `OllamaReader` reaches a runtime over HTTP to a socket on this machine, and the
@@ -24,7 +24,7 @@ flow's manifest declares the alias -- `interface/wiring.py` resolves it per flow
 so one command over two flows gives each its own. The adapter lives here, beside
 the Protocol and the double it shares, rather than in `boundary/`: an
 implementation of a Protocol in a different layer from the Protocol is the
-arrangement that avoids (design.md D5).
+arrangement this avoids.
 
 Stdlib only. The transports are behind `Reader`, and `FakeReader` is what keeps
 the suite offline.
@@ -65,12 +65,12 @@ STAGE = "caption"
 # measurement: a reader whose output moves between runs cannot replace a
 # transcript on the grounds of reproducibility, which was the whole argument for
 # adopting it. The budget is this stage's alone -- prose runs longer than one
-# word and shorter than sixteen fields (design.md D10).
+# word and shorter than sixteen fields.
 #
 # **`num_ctx` is pinned at the window Ollama was already resolving**, which is
 # the only value that leaves what this reader produces unchanged -- and that is
 # the whole point of pinning it rather than raising it. Measured on this
-# machine, at v0.22.1:
+# machine:
 #
 # | | tokens |
 # |---|---|
@@ -93,7 +93,7 @@ READER_OPTIONS: Mapping[str, Any] = {
 }
 
 # The one command that turns an absent reader into a present one: the alias is
-# machine-local and built from a committed recipe (design.md D3).
+# machine-local and built from a committed recipe.
 READER_REMEDY = ollama.BUILD
 
 
@@ -168,8 +168,7 @@ class OllamaReader:
     **The photograph goes as its own bytes, unresized.** The prototype's encoder
     downscaled through PIL, which is in the `eval` extra and cannot be imported
     from a module `isekai.__main__` reaches. So nothing is resampled, and nothing
-    needs to be: the vision tower encodes at patch14-384 whatever it is handed
-    (design.md D7).
+    needs to be: the vision tower encodes at patch14-384 whatever it is handed.
     """
 
     model: str
@@ -243,8 +242,8 @@ def caption(
     the photograph and its standing instructions and nothing else -- `flow` never
     reaches it -- but the answer is written under that flow, because the briefing
     it was produced under is part of that flow's frozen directory. Two flows over
-    one photograph read it twice, and a flow can no longer inherit a reading
-    written to answer a different question (design.md D5).
+    one photograph read it twice, and a flow cannot inherit a reading written to
+    answer a different question.
 
     Returns the artifact's path when one is written, and None when the stage was
     already complete -- which is the whole of resume at this stage: no special
