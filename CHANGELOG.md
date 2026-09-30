@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.2] - 2026-09-30 · 0050-the-colour-profile
+
 ### Changed
 
 - A photograph's upload no longer carries its colour profile or colour hints: they can name the device and hold

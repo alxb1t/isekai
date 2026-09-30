@@ -614,13 +614,14 @@ the session.
 
 ### Requirement: A photograph leaves the machine without its metadata
 
-The system SHALL send a photograph to the rendering endpoint carrying only the blocks that decode its pixels, its
-colour profile and its orientation, with every other block and any data after the image's end removed. It SHALL
-leave the compressed image data unchanged, SHALL leave the run's own copy of the photograph unchanged, and SHALL
-refuse a photograph it cannot walk to its end rather than send it whole.
+The system SHALL send a photograph to the rendering endpoint carrying only the blocks that decode its pixels and its
+orientation, with every other block and any data after the image's end removed. It SHALL leave the compressed image
+data unchanged, SHALL leave the run's own copy of the photograph unchanged, and SHALL refuse a photograph it cannot
+walk to its end rather than send it whole.
 
 A camera writes the position, the time and the device into the file, and a phone may append a video or a depth map
-after the image. The render needs none of it, and the upload is the one place the photograph leaves the machine.
+after the image. The render needs none of it, and the upload is the one place the photograph leaves the machine. A
+colour profile names a device and may carry free text, and the endpoint decodes the pixels without it.
 
 #### Scenario: the endpoint receives no metadata
 - **Key:** `image-generation:photo-metadata:no-metadata-leaves-the-machine`
@@ -654,3 +655,10 @@ after the image. The render needs none of it, and the upload is the one place th
 - **WHEN** a photograph's segments or chunks cannot be read to the image's end
 - **THEN** the render is refused and recorded, naming the photograph
 - **AND** nothing is uploaded
+
+#### Scenario: no colour profile leaves the machine
+- **Key:** `image-generation:photo-metadata:no-colour-profile-leaves`
+- **Layers:** unit
+- **WHEN** a photograph carrying a colour profile and colour hints is sent to the endpoint
+- **THEN** the upload carries neither
+- **AND** the pixels the upload decodes to are the photograph's
