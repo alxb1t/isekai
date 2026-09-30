@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.3] - 2026-09-30 · 0051-the-terse-comments
+
 ### Changed
 
 - The run directory's and the shared modules' comments carry no version, change id or design citation; a
