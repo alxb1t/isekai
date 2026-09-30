@@ -14,12 +14,12 @@ import pytest
 from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.run import OUTPUTS, Run, open_run, record_failure
-from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.caption import READER_OPTIONS, FakeReader
 from isekai.pipeline.generate import prompt_artifact, read_runtime, render
 from isekai.pipeline.review import approve, review, save_draft
-from isekai.pipeline.tagging import FakeTagger, tag_hosted, tag_wd14
+from isekai.pipeline.tagging import TAGGER_OPTIONS, FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import POD_IMAGE, FakeComfyClient
+from tests.fakes import POD_IMAGE, READER_ARTIFACTS, FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FLOW, caption, fake_tagger, sheet
 
@@ -56,8 +56,14 @@ def _error(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     )
 
 
+# The caption and tags goldens hold a pinned producer's keys: 0049 design D3.
 def _caption(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    path = caption(run, FakeReader(prose="Brown hair, brown eyes."))
+    reader = FakeReader(
+        prose="Brown hair, brown eyes.",
+        artifacts=READER_ARTIFACTS,
+        options=READER_OPTIONS,
+    )
+    path = caption(run, reader)
     assert path is not None
     return path
 
@@ -69,7 +75,8 @@ def _wd14(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
 
 
 def _tags(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
-    path = tag_hosted(run, FLOW.id, FakeTagger())
+    tagger = FakeTagger(artifacts=READER_ARTIFACTS, options=TAGGER_OPTIONS)
+    path = tag_hosted(run, FLOW.id, tagger)
     assert path is not None
     return path
 

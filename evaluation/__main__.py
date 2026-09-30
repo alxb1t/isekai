@@ -43,10 +43,10 @@ from evaluation.evaluate import (
 )
 from isekai.boundary.provision import digest_of
 
-# Where the scorer's own artifacts live, verified against
-# `evaluation/eval_models.json` before any of them is loaded. Local to the
+# The scorer's own artifacts live under the repository's models root, verified
+# against `evaluation/eval_models.json` before any of them is loaded. Local to the
 # operator's machine: these are not what the pod provisions (design.md D18).
-DEFAULT_MODELS_DIR = Path("models")
+from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 
 def parse_args() -> argparse.Namespace:

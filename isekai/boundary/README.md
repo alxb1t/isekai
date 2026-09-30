@@ -13,8 +13,8 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 | file | does | reaches |
 |---|---|---|
-| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `TransportFailure` | nothing |
-| `comfy/contract.py` | the `ComfyTransport` Protocol, the image type and `TransportFailure`, which carries its kind — the network boundary's shape, with no network in it | nothing |
+| `comfy/__init__.py` | the ComfyUI transport's front door: `ComfyTransport`, `ComfyClient`, `Image`, `TransportFailure`, `unread` | nothing |
+| `comfy/contract.py` | the `ComfyTransport` Protocol, the image type, `TransportFailure`, which carries its kind, and `unread`, the permanent failure for an answer in a shape this build does not read — the network boundary's shape, with no network in it | nothing |
 | `comfy/client.py` | upload · submit · poll · retrieve · the server's own report, over `urllib`, never through a proxy and never past `TIMEOUT`; every failure it meets is raised as a `TransportFailure`: a 4xx or an unreadable answer permanent, a 5xx, a closed tunnel or a timeout transient | the rented GPU |
 | `comfy/multipart.py` | builds one multipart body; private to the package | nothing |
 | `ollama.py` | one POST to a local runtime, the classification of what comes back, and the check that a model is built from the files `config/reader.json` pins | the hosted model, over HTTP to localhost; Ollama's model records on disk |
@@ -28,7 +28,7 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `comfy/` | `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/test_generate.py`, `tests/test_resume.py` |
+| `comfy/` | `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/test_generate.py`, `tests/test_resume.py` |
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py` |
 | `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_eval_manifest.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |

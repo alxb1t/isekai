@@ -8,7 +8,12 @@ from contextlib import contextmanager
 from typing import Any
 from urllib import parse, request
 
-from isekai.boundary.comfy.contract import ComfyTransport, Image, TransportFailure
+from isekai.boundary.comfy.contract import (
+    ComfyTransport,
+    Image,
+    TransportFailure,
+    unread,
+)
 from isekai.boundary.comfy.multipart import build_multipart
 from isekai.foundation.flow import Workflow
 
@@ -142,12 +147,8 @@ def _reported() -> Iterator[None]:
             "its address with `--server` -- or drop `--server` to assemble the "
             "prompts and stop",
         ) from unreachable
-    except (ValueError, KeyError, TypeError) as unread:
-        raise TransportFailure(
-            "permanent",
-            "the endpoint answered in a shape this build does not read "
-            f"({unread!r}); check that `--server` names a ComfyUI",
-        ) from unread
+    except (ValueError, KeyError, TypeError) as answer:
+        raise unread(answer) from answer
 
 
 def _error_body(answered: urllib.error.HTTPError) -> str:

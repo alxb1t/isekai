@@ -136,6 +136,8 @@ class FakeReader:
     prose: str = "A person, described in prose."
     implementation: str = "fake-reader"
     models: tuple[str, ...] = ("fake-model",)
+    artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
     failure: StageFailure | None = None
     calls: list[tuple[Path, str]] = field(default_factory=list)
 
@@ -145,7 +147,11 @@ class FakeReader:
         if self.failure is not None:
             raise self.failure
         return Reading(
-            prose=self.prose, implementation=self.implementation, models=self.models
+            prose=self.prose,
+            implementation=self.implementation,
+            models=self.models,
+            artifacts=self.artifacts,
+            options=self.options,
         )
 
 

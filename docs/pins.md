@@ -42,7 +42,7 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 | the image's Python environment | a lock with every installed package's hash; Python by patch; the sdist builds' tools by hash | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
 | ComfyUI and its custom nodes | git commit | `Dockerfile` | at build; `tests/test_infra.py` holds each clone to a commit |
 | isekai's Python dependencies | a lock with every hash | `pyproject.toml`, `uv.lock` | `uv sync --locked`, the gate's first command |
-| uv | exact version | `pyproject.toml`, `image/pyproject.toml`, `.github/workflows/ci.yml`, `Dockerfile` | every `uv` command |
+| uv | exact version | `pyproject.toml`, `image/pyproject.toml`, `.github/workflows/ci.yml` and `drift.yml`, `Dockerfile` | every `uv` command |
 | CI's actions, runner and Node | commit SHA; runner and Node by version | `.github/workflows/` | every run |
 | the render models | sha256 at an immutable revision | `config/models.json` | on landing, and on every boot |
 | the tag vocabulary and WD14 | sha256, one revision for both | `config/vocabulary.json` | on landing, and when the tagger opens |
@@ -53,6 +53,10 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 ## Re-pinning
 
 One recipe per pin. Each is a commit inside a change, and each change says what moved and why.
+
+`make drift` re-runs every deriver that fetches and fails on a diff: a pinned source moved. `drift.yml` runs it
+weekly. `make derive` runs the field map's deriver and then the same recipe, so it fails on a diff too — the
+diff is what to review.
 
 - **The pod image.** Push the branch, run `gh workflow run build-image.yml --ref <branch> -f tag=<vX.Y-rcN>`,
   and copy the digest from the job summary into `config/image.json`. A new digest is proved on a pod, in a
@@ -65,7 +69,7 @@ One recipe per pin. Each is a commit inside a change, and each change says what 
 - **ComfyUI or a custom node.** Move its commit in the `Dockerfile`, then `make derive` and rebuild. A new core
   changes output, so the change carries a render comparison.
 - **isekai's dependencies.** `uv lock --upgrade-package <name>`, and review the diff of `uv.lock`.
-- **uv.** Move `required-version` in `pyproject.toml`, `version:` in `.github/workflows/ci.yml`, and the
+- **uv.** Move `required-version` in `pyproject.toml`, `version:` in each workflow that sets up uv, and the
   `COPY --from` reference with its digest in the `Dockerfile`, then `make derive` carries it into
   `image/pyproject.toml`. `tests/test_infra.py` fails while any of them disagrees.
 - **An action.** Replace its SHA and the release in its comment; `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
@@ -88,6 +92,7 @@ What stays open, and what stands in for it.
 | the Ollama runtime | the operator installs it, outside the repository | the alias's model and projector layers are checked, and the caption and the hosted tags record both file digests |
 | the pod's GPU, driver and host | RunPod assigns them | each render records the ComfyUI, Python and PyTorch versions the pod reports |
 | macOS and Metal on the operator's machine | outside the repository | nothing yet |
+| the requirements a build backend adds while it builds | uv fetches what the backend asks for at build time, outside the constraints | the map of each source-only package's declared tools, checked against the lock |
 | the reader alias's template, system prompt and parameters | the check compares the model and projector layers alone, and changing the rest needs write access to the operator's Ollama store | `config/joycaption.Modelfile`, from which the alias is built |
 
 **A rebuild is not byte-identical**: apt is open, and insightface compiles from source. What reproduces exactly

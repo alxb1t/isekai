@@ -177,7 +177,7 @@ fi
 # question is answerable and tripping it costs nothing, because no pod exists yet.
 if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
   echo "ERROR: RUNPOD_VOLUME_ID is empty in .env — refusing to create a pod." >&2
-  echo "Without the network volume, provisioning downloads 16.5 GiB onto storage" >&2
+  echo "Without the network volume, provisioning downloads every model onto storage" >&2
   echo "that dies at teardown: it renders correctly, bills fully, and is noticed" >&2
   echo "only on the next metered session." >&2
   exit 1

@@ -158,13 +158,19 @@ class FakeTagger:
     tags: tuple[str, ...] = ("1girl", "solo", "looking at viewer")
     implementation: str = "fake-tagger"
     models: tuple[str, ...] = ("fake-model",)
+    artifacts: Mapping[str, DigestRecord] = field(default_factory=dict)
+    options: Mapping[str, Any] = field(default_factory=dict)
     calls: list[Path] = field(default_factory=list)
 
     def tag(self, photo: Path) -> Tagging:
         """Record the call and return the fixed tags."""
         self.calls.append(photo)
         return Tagging(
-            tags=self.tags, implementation=self.implementation, models=self.models
+            tags=self.tags,
+            implementation=self.implementation,
+            models=self.models,
+            artifacts=self.artifacts,
+            options=self.options,
         )
 
 

@@ -5,7 +5,7 @@ inputs and returns an answer, and none of them reads a score.
 
 **Each reads `foundation`.** `field_map.py` imports `artifacts`, `flow`,
 `refusal` and `run`; `fields.py` imports `flow` and `refusal`; `image.py`
-imports `refusal`; `vocabulary.py` imports `artifacts` and `refusal`. A schema is a flow's, so
+imports `refusal`; `vocabulary.py` imports `artifacts`, `refusal` and `run`. A schema is a flow's, so
 validating a sheet against one means knowing what a flow is. What none of them
 does is reach a boundary or decide a stage's order.
 
@@ -25,10 +25,10 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `field_map.py` | `interface/cli.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_ui_api.py` |
+| `field_map.py` | `interface/cli.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_package_paths.py`, `tests/test_ui_api.py` |
 | `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | `tests/test_sheet_schema.py` |
 | `image.py` | `interface/ui/batch.py`, `pipeline/generate.py` | `evaluation/evaluate.py`, `tests/test_evaluate.py`, `tests/test_generate.py`, `tests/test_image.py` |
-| `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `tools/derive_field_map.py`, `tests/conftest.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py` |
+| `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/ui/batch.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are

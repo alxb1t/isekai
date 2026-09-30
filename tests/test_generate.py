@@ -16,12 +16,13 @@ import urllib.error
 import urllib.request
 from email.message import Message
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
-from isekai.boundary.comfy import ComfyClient, TransportFailure
+from isekai.boundary.comfy import ComfyClient, TransportFailure, unread
 from isekai.boundary.comfy.client import TIMEOUT
 from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, Runtime, read
 from isekai.foundation.flow import (
@@ -39,6 +40,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     OUTPUTS,
     PROMPTS,
+    Kind,
     Run,
     across,
     artifact_name,
@@ -1602,6 +1604,38 @@ def test_the_client_reads_the_report_over_the_transport(
     assert report["system"]["comfyui_version"] == FAKE_SYSTEM["comfyui_version"]
 
 
+@pytest.mark.spec("comfy-transport:runtime:an-unread-report-is-permanent")
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"system": None},
+        {"system": {"comfyui_version": "0.3.0", "python_version": "3.12.14"}},
+        {"devices": []},
+    ],
+    ids=["null", "a-missing-version", "no-system"],
+)
+def test_a_report_in_an_unread_shape_is_permanent(report: dict[str, Any]) -> None:
+    with pytest.raises(TransportFailure) as refused:
+        read_runtime(FakeComfyClient(report=report))
+
+    assert refused.value.kind == "permanent"
+    # the transport's own words for any answer in a shape it does not read
+    cause = refused.value.__cause__
+    assert isinstance(cause, Exception)
+    assert str(refused.value) == str(unread(cause))
+
+
+@pytest.mark.spec("comfy-transport:runtime:an-unfetched-report-keeps-its-kind")
+@pytest.mark.parametrize("kind", ["transient", "permanent"])
+def test_an_unfetched_report_keeps_the_transports_kind(kind: Kind) -> None:
+    failure = TransportFailure(kind, "the endpoint failed with HTTP 502")
+
+    with pytest.raises(TransportFailure) as refused:
+        read_runtime(FakeComfyClient(report_failure=failure))
+
+    assert refused.value is failure
+
+
 @pytest.mark.spec("image-generation:runtime:a-pinned-pod-is-recorded")
 def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
     tmp_path: Path,
@@ -1641,6 +1675,78 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
         assert sidecar.get("runtime") == read_runtime(FakeComfyClient())
     # One report for the session, however many renders it served.
     assert client.stats_calls == 1
+
+
+@pytest.mark.spec("image-generation:runtime:a-refused-report-is-asked-once")
+def test_a_refused_report_is_asked_once_and_submits_nothing(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    from isekai.interface import wiring
+    from isekai.interface.cli import build_parser, dispatch
+
+    runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "grace")]
+    client = FakeComfyClient(report={"system": None})
+    err = io.StringIO()
+    wired = wiring.Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=client,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=err,
+    )
+    argv = ["generate", "--flow", FLOW, "--seed", "42", *(run.id for run in runs)]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert client.stats_calls == 1
+    assert client.submissions == []
+    assert client.uploaded is None
+    assert err.getvalue().count("a shape this build does not read") == len(runs)
+
+
+class _BlipOnce(FakeComfyClient):
+    """An endpoint whose first report request fails transiently, then answers."""
+
+    def system_stats(self) -> dict[str, Any]:
+        if self.stats_calls == 0:
+            self.stats_calls += 1
+            raise TransportFailure("transient", "the endpoint failed with HTTP 502")
+        return super().system_stats()
+
+
+@pytest.mark.spec("image-generation:runtime:a-transient-report-is-asked-again")
+def test_a_transient_report_failure_is_asked_again_by_the_next_render(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    from isekai.interface import wiring
+    from isekai.interface.cli import build_parser, dispatch
+
+    first, second = (_run(tmp_path, schema, vocabulary, n) for n in ("ada", "grace"))
+    client = _BlipOnce()
+    err = io.StringIO()
+    wired = wiring.Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=client,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=err,
+    )
+    argv = ["generate", "--flow", FLOW, "--seed", "42", first.id, second.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert client.stats_calls == 2
+    assert err.getvalue().count("render failed (transient)") == 1
+    sidecar = second.path / FLOW / OUTPUTS / "001" / "42.render.json"
+    assert read(sidecar, RENDER_FILE).get("runtime") == read_runtime(FakeComfyClient())
 
 
 @pytest.mark.spec("image-generation:runtime:an-unrecorded-endpoint-is-unpinned")

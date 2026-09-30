@@ -43,10 +43,11 @@ import argparse
 import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from functools import cache, partial
+from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
+from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
@@ -393,6 +394,35 @@ def _seam(value: T | None, name: str, does: str) -> T:
     return value
 
 
+def _once(read: Callable[[], T]) -> Callable[[], T]:
+    """Return `read`, answered at most once: its answer or its refusal is kept.
+
+    A refusal is the build's or the endpoint's, not a photograph's, so meeting
+    it again would redo the work to learn nothing (0049 design D4). A transient
+    transport failure is the exception: it is raised and not kept, since the
+    endpoint may answer the next ask, and keeping it would refuse every later
+    photograph in the session and spend each one's render budget.
+    """
+    outcome: list[T | Refusal] = []
+
+    def reading() -> T:
+        if not outcome:
+            try:
+                outcome.append(read())
+            except TransportFailure as failed:
+                if failed.kind == "transient":
+                    raise
+                outcome.append(failed)
+            except Refusal as refused:
+                outcome.append(refused)
+        kept = outcome[0]
+        if isinstance(kept, Refusal):
+            raise kept
+        return kept
+
+    return reading
+
+
 def _per_item(
     verb: str,
     args: argparse.Namespace,
@@ -414,8 +444,7 @@ def _per_item(
     two verbs need it at all.
     """
     new_version = bool(getattr(args, "new_version", False))
-    opened: list[LocalTagger] = []
-    unopenable: list[Refusal] = []
+    opening: list[Callable[[], LocalTagger]] = []
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -453,21 +482,10 @@ def _per_item(
         a key; giving it one before then buys two sessions and no behaviour.
         """
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
-
-        def opening() -> LocalTagger:
-            # A refusal is kept as well as a success: it is the build's, not a
-            # photograph's, so the 467 MB hash is not re-run to meet it again.
-            if unopenable:
-                raise unopenable[0]
-            if not opened:
-                try:
-                    opened.append(resolve(flow))
-                except Refusal as refused:
-                    unopenable.append(refused)
-                    raise
-            return opened[0]
-
-        return opening
+        if not opening:
+            # A refusal is kept too, so the 467 MB hash is not re-run to meet it.
+            opening.append(_once(lambda: resolve(flow)))
+        return opening[0]
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)
@@ -605,7 +623,7 @@ def _generate(
         return refused
     image = booted_image()
     # One report per session, read only when a render will run.
-    ran_on = cache(partial(read_runtime, client))
+    ran_on = _once(lambda: read_runtime(client))
 
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair

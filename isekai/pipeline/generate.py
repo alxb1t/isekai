@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from isekai.boundary.comfy import ComfyTransport, TransportFailure
+from isekai.boundary.comfy import ComfyTransport, TransportFailure, unread
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     PROMPT_FILE,
@@ -419,21 +419,20 @@ def graph_digest(graph: Workflow) -> str:
 def read_runtime(client: ComfyTransport) -> Runtime:
     """Return the ComfyUI, Python and PyTorch versions the endpoint reports.
 
-    A report without them refuses, and `render` records that as a permanent
-    failure rather than writing a sidecar that claims a runtime it never read.
+    A report without them is an answer in a shape this build does not read, and
+    `render` records it as permanent rather than claim a runtime it never read.
+    A failed request keeps the transport's own kind.
     """
+    report = client.system_stats()
     try:
-        system = client.system_stats()["system"]
+        system = report["system"]
         return {
             "comfyui_version": str(system["comfyui_version"]),
             "python_version": str(system["python_version"]),
             "pytorch_version": str(system["pytorch_version"]),
         }
-    except (KeyError, TypeError) as missing:
-        raise Refusal(
-            f"the endpoint's /system_stats report carries no {missing}, so the "
-            "runtime a render ran on cannot be recorded"
-        ) from missing
+    except (KeyError, TypeError) as answer:
+        raise unread(answer) from answer
 
 
 def render(
@@ -478,14 +477,15 @@ def render(
     # manifest declaring the photograph on one side alone never loads, so this
     # gate and that one cannot disagree about the same run.
     try:
+        # Before the upload and any seed, so a report that fails costs no render
+        # and sends no photograph: a photograph leaves only to be rendered.
+        ran_on = runtime()
         # The run's copy is only read: its bytes are the run's id (0039 design D3).
         image_name = (
             client.upload_image(run.photo.name, strip_metadata(run.photo))
             if "photo" in flow.inputs
             else None
         )
-        # Before any seed is submitted, so a report that fails costs no render.
-        ran_on = runtime()
     except Refusal as failed:
         raise _recorded(run, flow, directory, version, failed, None) from failed
     # Constant across seeds: the flow's files on disk do not change mid-render.

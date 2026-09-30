@@ -413,12 +413,12 @@ isekai/
 │   └── typecheck_ui.sh        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
-├── Makefile                   # `make gate`, and `make derive` to re-run the derivers
+├── Makefile                   # `make gate`; `make derive` and `make drift` re-run the derivers
 ├── image/                     # the pod's Python environment: a locked uv project, derived
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── start.sh                   # baked into the image as its start command
-├── .github/workflows/         # CI: run the gate; build & push the image to GHCR on request
+├── .github/workflows/         # CI: the gate; the weekly drift check; the image, on request
 ├── .claude/skills/            # run-flows, compare-renders: the flows, for an agent
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths

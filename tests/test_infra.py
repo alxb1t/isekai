@@ -25,7 +25,7 @@ from isekai.boundary.provision import (
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
-from tools.derive_image_project import pinned_commits, uv_required
+from tools.derive_image_project import CLONE, pinned_commits, uv_required
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -400,7 +400,7 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
     # What the guard proves is identity -- the 20 GB ephemeral container disk is
     # not the network volume -- and capacity discriminates those two whatever the
     # volume's fill level is. Free space does not: this project already put
-    # 16.5 GiB on a volume it shares with a second project, so a floor on
+    # the models on a volume it shares with a second project, so a floor on
     # availability degrades as the volume fills and would refuse a warm boot that
     # needed to download nothing.
     body = provision_body(start_sh)
@@ -412,11 +412,35 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
 
 
 @pytest.mark.spec_exempt(
-    "structural: a clone with no checkout is not a pin, and this holds all three"
+    "structural: a clone with no checkout is not a pin, and this holds every clone"
 )
 def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> None:
-    # ComfyUI's core and the two custom-node packs, each on a full commit sha
-    assert len(pinned_commits(dockerfile)) == 3
+    clones = CLONE.findall(dockerfile)
+    assert clones
+    assert len(pinned_commits(dockerfile)) == len(clones)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_git_clone_in_the_image_is_pinned_to_a_commit"
+)
+@pytest.mark.parametrize(
+    "unpinned",
+    [
+        "RUN git clone --depth 1 https://github.com/c/d.git /d\n",
+        "RUN git clone https://gitlab.com/c/d.git /d\n",
+        "RUN git -C /opt clone https://github.com/c/d.git\n",
+        "RUN git -c advice.detachedHead=false clone https://github.com/c/d.git /d\n",
+        "ADD https://github.com/c/d.git /d\n",
+    ],
+    ids=["a-flag", "another-host", "a-directory-option", "a-config-option", "an-add"],
+)
+def test_the_count_catches_a_clone_with_a_flag_and_another_host(
+    unpinned: str,
+) -> None:
+    pinned = f"RUN git clone https://github.com/a/b.git /b && git checkout {'0' * 40}\n"
+    assert pinned_commits(pinned) == {"a/b": "0" * 40}
+    with pytest.raises(SystemExit):
+        pinned_commits(pinned + unpinned)
 
 
 @pytest.mark.spec(
@@ -438,7 +462,7 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
     # resolves to the container overlay rather than to the volume (design.md D5).
     # That overlay's backing disk is the container `disk`, LARGER than the
     # pod's own volume disk, so a floor that only clears the volume disk lets the
-    # overlay through and 16.5 GiB lands on storage that dies at teardown.
+    # overlay through and the models land on storage that dies at teardown.
     floor = re.search(
         r"^VOLUME_SIZE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)", start_sh, re.M
     )
@@ -600,32 +624,42 @@ def test_the_check_catches_an_image_named_by_tag() -> None:
     ]
 
 
-def uv_versions_apart(root: str, ci: str, dockerfile: str, image: str) -> list[str]:
+def uv_versions_apart(
+    root: str, workflows: dict[str, str], dockerfile: str, image: str
+) -> list[str]:
     """Return each place naming a uv version other than the root project's.
 
-    e.g. a `Dockerfile` copying `uv:0.8.24` under `==0.12.19` -> ["Dockerfile"]
+    `workflows` maps each workflow's name to its text; one that sets up uv
+    names a version. e.g. a `Dockerfile` copying `uv:0.8.24` under `==0.12.19`
+    -> ["Dockerfile"]
     """
-    setup = re.search(r"astral-sh/setup-uv@.*\n(?:.*\n)*?\s+version:\s*\"?([\w.]+)", ci)
+    named: dict[str, str | None] = {}
+    for name, workflow in workflows.items():
+        if "astral-sh/setup-uv@" not in workflow:
+            continue
+        setup = re.search(
+            r"astral-sh/setup-uv@.*\n(?:.*\n)*?\s+version:\s*\"?([\w.]+)", workflow
+        )
+        named[name] = f"=={setup.group(1)}" if setup else None
     copied = re.search(
         r"^COPY\s+--from=ghcr\.io/astral-sh/uv:([\w.]+)@", dockerfile, re.M
     )
-    named = {
-        "ci.yml": f"=={setup.group(1)}" if setup else None,
-        "Dockerfile": f"=={copied.group(1)}" if copied else None,
-        "image/pyproject.toml": uv_required(image),
-    }
+    named["Dockerfile"] = f"=={copied.group(1)}" if copied else None
+    named["image/pyproject.toml"] = uv_required(image)
     return [where for where, version in named.items() if version != uv_required(root)]
 
 
 @pytest.mark.spec_exempt(
-    "structural: one uv version, in CI, the image and both projects"
+    "structural: one uv version, in every workflow, the image and both projects"
 )
 def test_every_uv_version_the_build_names_is_the_root_projects(
     dockerfile: str,
 ) -> None:
+    workflows = {path.name: path.read_text() for path in WORKFLOWS}
+    assert "ci.yml" in workflows and "drift.yml" in workflows
     apart = uv_versions_apart(
         (REPO / "pyproject.toml").read_text(),
-        (REPO / ".github" / "workflows" / "ci.yml").read_text(),
+        workflows,
         dockerfile,
         IMAGE_PROJECT.read_text(),
     )
@@ -637,16 +671,24 @@ def test_every_uv_version_the_build_names_is_the_root_projects(
 )
 def test_the_check_catches_a_uv_version_that_drifted() -> None:
     root = '[tool.uv]\nrequired-version = "==0.12.19"\n'
-    ci = (
+    setup = (
         "      - uses: astral-sh/setup-uv@abc # v6\n"
         "        with:\n"
-        '          version: "0.12.19"\n'
+        '          version: "{}"\n'
     )
+    workflows = {
+        "ci.yml": setup.format("0.12.19"),
+        "drift.yml": setup.format("0.8.24"),
+        "unversioned.yml": "      - uses: astral-sh/setup-uv@abc # v6\n",
+        "build-image.yml": "      - uses: actions/checkout@abc # v4\n",
+    }
     dockerfile = (
         "COPY --from=ghcr.io/astral-sh/uv:0.8.24@sha256:abc /uv /usr/local/bin/\n"
     )
     image = '[tool.uv]\nrequired-version = "==0.8.24"\n'
-    assert uv_versions_apart(root, ci, dockerfile, image) == [
+    assert uv_versions_apart(root, workflows, dockerfile, image) == [
+        "drift.yml",
+        "unversioned.yml",
         "Dockerfile",
         "image/pyproject.toml",
     ]
@@ -733,21 +775,21 @@ def test_the_check_catches_a_build_tool_by_version_alone() -> None:
 
 IMAGE_LOCK = REPO / "image" / "uv.lock"
 
-# Each source-only package in the image's lock, to the tools its build asks for: its
-# `build-system.requires`, or setuptools for a `setup.py` with none. uv checks only
-# the tools the constraints list, so a package joins this table once its tools do.
+# Each source-only package in the image's lock, by name and version, to the tools its
+# build asks for: its `build-system.requires`, or setuptools for a `setup.py` with none.
+# A bump is a new key, so it fails until its tools are read again: 0049 design D2.
 SDIST_BUILDS = {
-    "antlr4-python3-runtime": ("setuptools",),
-    "fvcore": ("setuptools",),
-    "insightface": ("setuptools", "numpy", "cython"),
-    "iopath": ("setuptools",),
+    ("antlr4-python3-runtime", "4.9.3"): ("setuptools",),
+    ("fvcore", "0.1.5.post20221221"): ("setuptools",),
+    ("insightface", "0.7.3"): ("setuptools", "numpy", "cython"),
+    ("iopath", "0.1.10"): ("setuptools",),
 }
 
 
 def uncovered_sdists(image_lock: str, image_pyproject: str) -> list[str]:
     """Return each source-only package whose build tools the constraints do not name.
 
-    e.g. a lock gaining `pycocotools` as an sdist alone -> ["pycocotools"]
+    e.g. a lock gaining `pycocotools` 2.0.8 as an sdist alone -> ["pycocotools 2.0.8"]
     """
     tools = tomllib.loads(image_pyproject)["tool"]["uv"].get(
         "build-constraint-dependencies", []
@@ -760,11 +802,12 @@ def uncovered_sdists(image_lock: str, image_pyproject: str) -> list[str]:
     for package in tomllib.loads(image_lock)["package"]:
         if "sdist" not in package or package.get("wheels"):
             continue
-        name = package["name"]
-        if name not in SDIST_BUILDS:
-            uncovered.append(name)
+        name, version = package["name"], package["version"]
+        if (name, version) not in SDIST_BUILDS:
+            uncovered.append(f"{name} {version}")
             continue
-        uncovered += [f"{name}: {t}" for t in SDIST_BUILDS[name] if t not in named]
+        build = SDIST_BUILDS[name, version]
+        uncovered += [f"{name}: {t}" for t in build if t not in named]
     return uncovered
 
 
@@ -777,17 +820,21 @@ def test_every_source_only_package_builds_with_constrained_tools() -> None:
     "structural: twin of test_every_source_only_package_builds_with_constrained_tools"
 )
 def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
-    image_lock = IMAGE_LOCK.read_text() + (
+    lock = IMAGE_LOCK.read_text()
+    image_lock = lock + (
         '\n[[package]]\nname = "pycocotools"\nversion = "2.0.8"\n'
         'source = { registry = "https://pypi.org/simple" }\n'
         'sdist = { url = "https://example.invalid/pycocotools-2.0.8.tar.gz" }\n'
     )
     image_pyproject = IMAGE_PROJECT.read_text()
-    assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools"]
+    assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools 2.0.8"]
+    bumped = lock.replace(
+        'name = "insightface"\nversion = "0.7.3"',
+        'name = "insightface"\nversion = "0.7.4"',
+    )
+    assert uncovered_sdists(bumped, image_pyproject) == ["insightface 0.7.4"]
     no_cython = re.sub(r'\{ requirement = "cython==[^}]*\},?', "", image_pyproject)
-    assert uncovered_sdists(IMAGE_LOCK.read_text(), no_cython) == [
-        "insightface: cython"
-    ]
+    assert uncovered_sdists(lock, no_cython) == ["insightface: cython"]
 
 
 # The line each step of `start.sh` begins with: the stop timer, the SSH key, sshd,

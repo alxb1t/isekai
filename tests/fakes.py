@@ -6,7 +6,7 @@ from urllib.request import Request
 
 import pytest
 
-from isekai.boundary.comfy import Image
+from isekai.boundary.comfy import Image, TransportFailure
 from isekai.boundary.comfy import client as comfy_client
 from isekai.boundary.ollama import LAYERS
 from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
@@ -51,8 +51,15 @@ class FakeComfyClient:
         pending_polls: int = 0,
         image: Image | None = None,
         view_bytes: bytes = b"\x89PNG\r\n",
+        report: dict[str, Any] | None = None,
+        report_failure: TransportFailure | None = None,
     ) -> None:
         self.pending_polls = pending_polls
+        # the system report, or the failure asking for it raises
+        if report is None:
+            report = {"system": dict(FAKE_SYSTEM), "devices": []}
+        self.report = report
+        self.report_failure = report_failure
         self.image: Image = image or {
             "filename": "out.png",
             "subfolder": "",
@@ -91,7 +98,9 @@ class FakeComfyClient:
 
     def system_stats(self) -> dict[str, Any]:
         self.stats_calls += 1
-        return {"system": dict(FAKE_SYSTEM), "devices": []}
+        if self.report_failure is not None:
+            raise self.report_failure
+        return self.report
 
 
 class FakeFetcher:

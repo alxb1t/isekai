@@ -9,6 +9,27 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-09-30 · 0049-pins-guarded
+
+### Fixed
+
+- The image's clone check counts every `git clone`, whatever its flags or host; a bumped source-only package
+  fails until its build tools are recorded again, and pins.md names what a backend adds while it builds
+  (0049 D1, D2).
+- A runtime report in a shape this build does not read is refused, permanent, as the transport refuses any
+  such answer, and is not asked again in the session; the caption and tags goldens hold a pinned producer
+  (0049 D3, D4).
+- The models root resolves from any working directory, anchored like every other root; `up.sh`'s missing-volume
+  refusal no longer states a stale download size (0049 D5, D6).
+- The clone check also counts a clone behind git's own options and refuses a git `ADD`; a render reads the
+  runtime report before it uploads, so a refused report sends no photograph; CI keeps no checkout token
+  (0049 D1, D4).
+
+### Added
+
+- `make drift` re-runs the fetching derivers and fails on a diff, and `drift.yml` runs it weekly, so a moved
+  source turns something red; `make derive` fails on a diff too (0049 D7).
+
 ## [0.31.0] - 2026-09-29 · 0048-the-run-files
 
 ### Added
