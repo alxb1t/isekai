@@ -23,6 +23,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   session, the volume and the image pin name D36, D27 and D28 (0051 D1, D2).
 - The suite's comments, docstrings and exemption reasons carry no version or design citation; a test's
   docstring keeps only what it proves (0051 D1, D2).
+- CLAUDE.md states the comment rule, and a guard fails on a version, a change id or a design citation in a
+  comment, a docstring or an exemption reason; the package READMEs name every importer (0051 D3, D4, D5).
 
 ## [0.31.2] - 2026-09-30 · 0050-the-colour-profile
 

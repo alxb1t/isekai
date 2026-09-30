@@ -11,7 +11,7 @@ docstrings and `spec_exempt` reasons of its tree per [D1](design.md#d1) and [D2]
 - [x] 4 — interface
 - [x] 5 — tools, infra, start.sh and the Dockerfile
 - [x] 6 — tests
-- [ ] 7 — The rule, the guard and the README rows
+- [x] 7 — The rule, the guard and the README rows
 
 Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HISTORY`**, is
 `design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]`.
@@ -50,9 +50,9 @@ Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HIST
 
 ## 7 — The rule, the guard and the README rows
 
-- [ ] 7.1 Add the rule to `CLAUDE.md`'s *Engineering conventions*, per [D3](design.md#d3).
+- [x] 7.1 Add the rule to `CLAUDE.md`'s *Engineering conventions*, per [D3](design.md#d3).
   Verify: `grep -c 'A comment says what and why' CLAUDE.md` prints `1`.
-- [ ] 7.2 In `tests/test_spec_prose.py`, widen `_HISTORY` and add `test_no_comment_names_a_version_change_or_design` with its twin, per [D4](design.md#d4).
+- [x] 7.2 In `tests/test_spec_prose.py`, widen `_HISTORY` and add `test_no_comment_names_a_version_change_or_design` with its twin, per [D4](design.md#d4).
   Verify: `grep -c '^def test_no_comment_names_a_version_change_or_design(' tests/test_spec_prose.py` prints `1`, and `grep -c 'design.md' tests/test_spec_prose.py` prints a number above `0`.
-- [ ] 7.3 Complete the importer rows of `isekai/foundation/README.md`, `isekai/shared/README.md` and `isekai/boundary/README.md`, per [D5](design.md#d5).
+- [x] 7.3 Complete the importer rows of `isekai/foundation/README.md`, `isekai/shared/README.md` and `isekai/boundary/README.md`, per [D5](design.md#d5).
   Verify: `grep '^| .run\.py. ' isekai/foundation/README.md | grep -c 'interface/compare_view.py'` prints `1`, and `grep '^| .comfy/. ' isekai/boundary/README.md | grep -c 'tests/stages.py'` prints `1`.
