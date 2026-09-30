@@ -1,6 +1,6 @@
 """Re-derive `config/models.json` from the authored source spec below.
 
-The manifest is *derived*, never transcribed, and that now holds for every entry
+The manifest is *derived*, never transcribed, and that holds for every entry
 without exception. Hugging Face publishes each LFS object's SHA-256 as its object
 id, so every mirrored digest comes out of the `paths-info` API rather than out of
 a human reading a web page; and the base checkpoint -- the one artifact no
@@ -22,8 +22,7 @@ property the pins exist to remove.
 
 What is left here is this manifest's *spec*: what to pin, and the one publisher
 record the mirrors are held against. The entry types, both digest strategies and
-the writer live in `tools/manifest.py`, shared with the two sibling derivers
-(design.md D10).
+the writer live in `tools/manifest.py`, shared with the two sibling derivers.
 """
 
 import json
@@ -52,7 +51,8 @@ PINNED = "2026-09-05"
 DIGEST_PATTERN = re.compile(r"[0-9a-fA-F]{64}")
 
 # Hugging Face orgs that publish the artifact they serve. A primary source outside
-# this set is a mirror, and a mirror must declare an alternate (design.md D10).
+# this set is a mirror, and a mirror must declare an alternate: the digest makes
+# any host interchangeable, so a second one adds availability without adding trust.
 PUBLISHERS = (
     "InstantX",
     "xinsir",
@@ -63,25 +63,24 @@ PUBLISHERS = (
 
 # WAI-illustrious-SDXL v17.0 (Civitai model 827184, version 2883731). The model is
 # published on Civitai and has no first-party Hugging Face repo, so every source below
-# is a mirror and the digest is the acceptance test (design.md D1).
+# is a mirror and the digest is the acceptance test.
 #
-# That digest is *fetched*, not typed. It used to be a constant here, copied by a
-# human into three files that then compared against each other -- which cross-checks
-# the copying and not the value, in the one entry where the digest is not merely a
-# check on the transfer but the whole trust root. Civitai publishes it per version,
-# so it joins every other digest in this file and the human leaves the loop
-# (design.md D13).
+# That digest is *fetched*, not typed. A constant here, copied by a human into three
+# files that then compare against each other, would cross-check the copying and not
+# the value, in the one entry where the digest is not merely a check on the transfer
+# but the whole trust root. Civitai publishes it per version, so it joins every other
+# digest in this file and the human stays out of the loop.
 #
-# The residual is unchanged and stated: Civitai is still the trust root, it publishes
-# no signature, and WAI has no first-party host. The digest is computed by the
-# platform after upload, so it is an independent cross-check of the mirrors rather
-# than an attestation by the author. The byte count discriminates nothing on its own:
+# The residual is stated: Civitai is the trust root, it publishes no signature, and
+# WAI has no first-party host. The digest is computed by the platform after upload,
+# so it is an independent cross-check of the mirrors rather than an attestation by
+# the author. The byte count discriminates nothing on its own:
 # every published WAI version reports the same one.
 WAI_VERSION_ID = 2883731
 WAI_FILE = "waiIllustriousSDXL_v170.safetensors"
 WAI_DEST = f"checkpoints/{WAI_FILE}"
 
-# From the sibling project, which pins the same repo and the same files (design.md D2).
+# From the sibling project, which pins the same repo and the same files.
 INSTANTID = "57b32dfee076092ad2930c71fd6d439c2c3b1820"
 ANTELOPE = "ba0c3e10f4548361eb9a63265d87ce1140ab5a05"
 ANTELOPE_ALT = "397cafa6d8310e96e302e96528c20a4c92a884f2"
@@ -128,7 +127,7 @@ ANTELOPE_FILES = (
 )
 
 SPECS: tuple[Spec, ...] = (
-    # Primary first, then the byte-identical mirrors v0.9's fallback walks in order.
+    # Primary first, then the byte-identical mirrors the fallback walks in order.
     Spec(
         WAI_DEST,
         (
@@ -210,7 +209,7 @@ SPECS: tuple[Spec, ...] = (
     ),
     # The two annotator checkpoints `DWPreprocessor` would otherwise fetch for
     # itself, onto container disk, mid-render. The layout under the redirect is
-    # the pack's own: <AUX_ANNOTATOR_CKPTS_PATH>/<repo>/<path> (design.md D7).
+    # the pack's own: <AUX_ANNOTATOR_CKPTS_PATH>/<repo>/<path>.
     Spec(
         "annotator_ckpts/yzd-v/DWPose/yolox_l.onnx",
         (
@@ -263,8 +262,7 @@ def civitai_file(payload: dict[str, Any], filename: str) -> str:
     publishes AutoV2 (a truncation), CRC32 and BLAKE3, and none of them may stand
     in: a value in a SHA-256 field that is not one verifies nothing. BLAKE3 is
     deliberately not recorded either -- verifying it would need a wheel the
-    runtime rule forbids, and a field nothing reads is a one-entry registry
-    (design.md D13).
+    runtime rule forbids, and a field nothing reads is a one-entry registry.
     """
     for item in payload.get("files", []):
         if item.get("name") != filename:

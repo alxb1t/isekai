@@ -9,7 +9,7 @@ docstrings and `spec_exempt` reasons of its tree per [D1](design.md#d1) and [D2]
 - [x] 2 — boundary
 - [x] 3 — pipeline
 - [x] 4 — interface
-- [ ] 5 — tools, infra, start.sh and the Dockerfile
+- [x] 5 — tools, infra, start.sh and the Dockerfile
 - [ ] 6 — tests
 - [ ] 7 — The rule, the guard and the README rows
 
@@ -40,7 +40,7 @@ Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HIST
 
 ## 5 — tools, infra, start.sh and the Dockerfile
 
-- [ ] 5.1 Rewrite the history in `tools/`, `infra/`, `start.sh` and the `Dockerfile`.
+- [x] 5.1 Rewrite the history in `tools/`, `infra/`, `start.sh` and the `Dockerfile`.
   Verify: `grep -rlE 'design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]' tools infra start.sh Dockerfile | sort` prints `tools/derive_field_map.py` and `tools/derive_manifest.py` alone, each for its data, and `bash -n start.sh infra/*.sh tools/*.sh && echo ok` prints `ok`.
 
 ## 6 — tests

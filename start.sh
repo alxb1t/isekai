@@ -4,10 +4,10 @@
 set -euo pipefail
 
 # Each step prints the UTC time it begins, so the pod log says where a boot's
-# minutes go (0033 design D2).
+# minutes go.
 
 # 1. The pod stops itself at its ceiling, whatever happens to the machine that
-#    created it (0043 design D4). A boot that ends, however it ends, stops the pod
+#    created it (D36). A boot that ends, however it ends, stops the pod
 #    too: an exit would restart the container, and the restart arm a fresh ceiling.
 POD_CEILING_SECONDS=2700
 STOP_POD=/opt/isekai/tools/stop_pod.sh
@@ -23,8 +23,7 @@ chmod 700 ~/.ssh
 chmod 600 ~/.ssh/authorized_keys
 
 # 3. Start the SSH daemon. The image ships no host key, so the pod makes its own
-#    and serves with it alone; the printed line is what a client checks it against
-#    (0040 design D1).
+#    and serves with it alone; the printed line is what a client checks it against.
 echo "$(date -u +%FT%TZ) step: sshd"
 mkdir -p /run/sshd
 key=/etc/ssh/ssh_host_ed25519_key
@@ -41,11 +40,11 @@ MODELS_ROOT=/opt/ComfyUI/models
 
 # The hold below bills while it holds, so it is bounded rather than indefinite.
 # 900 s is ~$0.19 at the 4090 rate this project runs on — inside the ~$0.30
-# per-session ceiling that a 3600 s hold would more than double (design.md D6).
+# per-session ceiling that a 3600 s hold would more than double.
 HOLD_SECONDS=900
 
 # A hold that ended in its process exiting would boot again in a restarted
-# container, and hold again, forever; it ends in the stop (0043 design D5).
+# container, and hold again, forever; it ends in the stop.
 hold() {  # hold <line>...: say why, stay reachable HOLD_SECONDS, then stop the pod
     printf '%s\n' "$@" >&2
     echo "Holding ${HOLD_SECONDS}s, then stopping the pod." >&2
@@ -55,12 +54,12 @@ hold() {  # hold <line>...: say why, stay reachable HOLD_SECONDS, then stop the 
 
 # The marker goes on container disk, never into the namespace: the namespace is
 # exactly the thing that may have failed, and a marker a broken volume prevents
-# you from writing does not make the failure legible (design.md D6).
+# you from writing does not make the failure legible.
 FAILURE_MARKER=/opt/isekai/provisioning-failed
 
 # `mountpoint -q` does NOT discriminate here. RunPod mounts the pod's own 20 GB
 # volume disk at the mount path when no network volume is attached, so the path
-# exists and IS a mountpoint — the wrong one (design.md D5). Capacity does
+# exists and IS a mountpoint — the wrong one. Capacity does
 # discriminate, and capacity is what is measured. There are exactly two wrong
 # disks this path can resolve to, and the floor clears BOTH:
 #
@@ -71,7 +70,7 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 # silently failed, so the path falls through to the overlay — and a floor sized
 # only against the first lets it pass. The network volume this project provisions
 # onto is 20 GB, but it reports its storage cluster's capacity, far above both
-# (docs D27), so 40 GiB sits clear of both wrong disks with ~12 GiB of headroom
+# (D27), so 40 GiB sits clear of both wrong disks with ~12 GiB of headroom
 # above the larger: wide enough that neither a decimal/binary reading of RunPod's
 # sizes nor a filesystem's metadata overhead can move a disk across it.
 #
@@ -84,7 +83,7 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 VOLUME_SIZE_FLOOR_KIB=$((40 * 1024 * 1024))
 
 # Below this much free memory ComfyUI would fail its first save mid-session, so the
-# pod holds before it starts instead (0040 design D2).
+# pod holds before it starts instead.
 SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))
 
 # 5. Provisioning: prepare this project's namespace on the volume, then ensure the
@@ -93,8 +92,8 @@ SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))
 # Both steps live in one function because the reachability guarantee is about
 # provisioning and not about one of its steps: preparing the volume is
 # provisioning by any reading a human would give the word, and a failure there —
-# an unwritable volume, a link onto a path that could not be cleared — used to
-# terminate the entrypoint exactly as a fetch failure once did. Every step here
+# an unwritable volume, a link onto a path that could not be cleared — would
+# terminate the entrypoint exactly as a fetch failure would. Every step here
 # returns rather than exits, so nothing inside can kill the shell that owns the
 # sshd started at step 3.
 provision() {
@@ -131,7 +130,7 @@ provision() {
     # The tree being replaced is the image's own, on container disk. It is NOT
     # empty: the ComfyUI clone tracks `models/configs/*.yaml`, and the delete
     # drops them knowingly, because the graph uses `CheckpointLoaderSimple`,
-    # which takes no config (design.md D17).
+    # which takes no config.
     mkdir -p "$MODELS_NAMESPACE" || return 1
     if [ ! -L "$MODELS_ROOT" ]; then
         # Guarded on the delete's premise, not on its proxy: what makes it safe
@@ -154,11 +153,11 @@ provision() {
 }
 
 # A provisioning abort must NOT take the container down. The abort policy leaves a
-# mismatched file on disk for a human to inspect (design.md D4), and under `set -e`
+# mismatched file on disk for a human to inspect, and under `set -e`
 # a non-zero exit here would kill PID 1 — taking the sshd started at step 3 with it
 # and dying again seconds into every subsequent boot, so there is no way in. Hold
 # the pod open in the foreground instead: reachable, ComfyUI not started, nothing
-# deleted (design.md D17).
+# deleted.
 #
 # Bounded, and marked. A pod holding open reports as running and healthy while it
 # bills, so the failure that outlasts a session's spending ceiling is the one
@@ -173,8 +172,8 @@ if ! provision; then
 fi
 
 # 6. Everything ComfyUI writes goes to memory, which dies with the pod; the
-#    container disk may outlive it unwiped (0040 design D2). An upload spools to
-#    TMPDIR first, and a /dev/shm that is not memory, or not read, holds (0042 design D2).
+#    container disk may outlive it unwiped. An upload spools to
+#    TMPDIR first, and a /dev/shm that is not memory, or not read, holds.
 echo "$(date -u +%FT%TZ) step: the memory directories"
 mkdir -p /dev/shm/comfyui/input /dev/shm/comfyui/output /dev/shm/comfyui/temp /dev/shm/comfyui/user /dev/shm/comfyui/tmp
 export TMPDIR=/dev/shm/comfyui/tmp
@@ -199,14 +198,13 @@ if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then
 fi
 
 # ComfyUI needs no key, and code it runs can print its environment. The key
-# leaves the environment but stays in this shell, for the stop at its end
-# (0043 design D6).
+# leaves the environment but stays in this shell, for the stop at its end.
 export -n RUNPOD_API_KEY
 
 # 7. ComfyUI in the foreground, as this script's child: when it exits, with
 #    success or not, the script ends and step 1's trap stops the pod.
 #    It writes its temp files to `temp` under the directory it is given. No render
-#    carries metadata, so none carries the prompt (0040 design D3).
+#    carries metadata, so none carries the prompt.
 echo "$(date -u +%FT%TZ) step: ComfyUI"
 python main.py --listen 0.0.0.0 --port 8188 \
     --input-directory /dev/shm/comfyui/input \

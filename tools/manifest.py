@@ -4,14 +4,12 @@
 `config/reader.json` each answer one question -- what the graph needs on the pod,
 what the scorer loads on the operator's machine, what the pipeline fills sheets
 from, what the local reader is built from -- and that separation is deliberate
-and stays (design.md D10). What they share is *how* a manifest is derived, and
-that lives here.
+and stays. What they share is *how* a manifest is derived, and that lives here.
 
-Two derivers already shared these names by import, which makes an accidental
-structure load-bearing the moment a third one arrives. Worse, the entry spec was
-declared twice, under one name, with two different shapes; a third shape is how
-that becomes a defect rather than an oddity. One definition, in a module, is the
-fix.
+Derivers sharing these names by importing one another would make an accidental
+structure load-bearing, and an entry spec declared in more than one of them,
+under one name, drifts into different shapes -- a defect rather than an oddity.
+One definition, in a module, prevents both.
 
 **Both digest strategies are here because an artifact gets one or the other, not
 because a deriver gets one or the other.** Hugging Face publishes a SHA-256 only
@@ -28,11 +26,11 @@ becomes a refusal of the *correct* artifact at whatever verifies it later.
 
 Operator tooling: nothing installs it and `python -m isekai` does not import it.
 The derivers run from the repository root as modules, `uv run python -m
-tools.derive_manifest`, so `isekai` and `tools` both import (`0029` design D1).
+tools.derive_manifest`, so `isekai` and `tools` both import.
 
-**The refactor this module is verifiable for nothing.** Every deriver's output
-must still be byte-identical on a re-run, which is the rule they were already
-held to -- so any difference is this extraction's fault.
+**A change to this module is verifiable for nothing.** Every deriver's output
+must stay byte-identical on a re-run, the rule they are held to -- so any
+difference is this module's fault.
 """
 
 import hashlib
@@ -51,8 +49,7 @@ USER_AGENT = "isekai-derive"
 # accepts every one of them (RFC 7231 5.3.4) and `urllib` neither negotiates nor
 # decompresses, so an unasked-for gzip would be hashed in place of the artifact --
 # and the length comparison cannot catch that, because a coded response declares
-# its *coded* length. Latent rather than observed, and kept for that reason
-# (design.md D25).
+# its *coded* length. Latent rather than observed, and kept for that reason.
 #
 # Both asked for **and** checked: the request header is the polite half and a
 # server may ignore it, so `digest_of_url` refuses on the response's own
@@ -160,7 +157,7 @@ def digest_of_url(url: str, cap: int) -> tuple[str, int]:
     partial file -- which is a pin that refuses the correct artifact later, and
     the one failure mode a derivation cannot self-detect. `curl` compares against
     `Content-Length` and exits 18 on this; the standard library does not, so the
-    comparison is made here (design.md D25).
+    comparison is made here.
     """
     request = urllib.request.Request(
         url,

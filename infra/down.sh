@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Terminate the pod recorded by up.sh, then every other 'isekai' pod listed —
-# billing stops, and no pod is left for nothing to watch (0043 design D3). The
+# billing stops, and no pod is left for nothing to watch (D36). The
 # network volume persists.
 set -euo pipefail
 
@@ -40,7 +40,7 @@ if [ -f .runpod_pod_id ]; then
     echo "Pod terminated. Billing stopped. (Network volume kept.)"
   elif [ "$code" = "404" ]; then
     # A 404 is also what a wrong key gets, so it is never read as gone: a false
-    # "gone" leaves a pod billing (0034 design D3).
+    # "gone" leaves a pod billing.
     echo "The API does not know pod $pod_id: it may be gone, or the key may be wrong." >&2
     echo "Confirm it is gone with the RunPod MCP's get-pod; the record files are kept" >&2
     echo "until then. Once it is gone: rm .runpod_pod_id .runpod_pod_image .runpod_known_hosts" >&2
@@ -58,7 +58,7 @@ if ! listed=$(isekai_pods); then
   echo "Could not list pods; confirm with the RunPod MCP's list-pods that no 'isekai' pod is left." >&2
   exit 1
 fi
-# up.sh's pending-create marker is spent once a sweep leaves no pod (0044 D2).
+# up.sh's pending-create marker is spent once a sweep leaves no pod (D36).
 if [ -z "$listed" ] && [ -z "$pod_id" ]; then
   rm -f .runpod_pod_pending
   echo "No pod to tear down."

@@ -3,8 +3,8 @@
 **Stdlib, offline, no network.** The route the roadmap credited to Danbooru's
 `search[name_matches]` wildcard needs no Danbooru at all: a wildcard intersected
 with the pinned vocabulary **is** a match against the pinned vocabulary, and the
-240 candidates the API would return are the 74% that get thrown away (design.md
-D15). If this script ever appears to need an HTTP call, that is a halt.
+240 candidates the API would return are the 74% that get thrown away. If this
+script ever appears to need an HTTP call, that is a halt.
 
 Run it from the repository root:
 
@@ -22,20 +22,20 @@ is what lets the operator's pruning pass see the junk rather than inherit it.
    every tag that *is* that suffix or *ends in* `" " + suffix`. Not substring:
    substring gives `hair` 265 rather than 103.
 2. **The seven seed lists** — `clothes`, `pose` and `body_shape` hold 102 of the
-   200 tags the operator approved over the v0.20 batch and not one of them
-   declares a suffix, so the criteria that carry the weight are exactly the ones
-   the suffix walk cannot reach. A seed is a **stem**, matched on word boundaries
-   against its own inflections.
+   200 tags the operator approved over the batch `APPROVED` names and not one of
+   them declares a suffix, so the criteria that carry the weight are exactly the
+   ones the suffix walk cannot reach. A seed is a **stem**, matched on word
+   boundaries against its own inflections.
 3. **The dead briefing's own examples** — `flows/conjure-v1/sheet.briefing.md`
-   named example tags by criterion. The briefing is deleted; its example tags
-   were transcribed before it went, and `BRIEFING` holds them.
+   named example tags by criterion. The briefing is deleted, and `BRIEFING`
+   holds the only copy of its example tags.
 
-**One primary per tag, decided in three steps (design.md D30 ③).** The operator's
-own filings decide first, because a tag he approved and then rendered is
-render-tested and no ordering is; then the declared precedence order settles what
-he has never filed; then phase 8 overrides individual tags by hand. Every
-criterion that loses a tag keeps it under `also`, so nothing is hidden from
-browsing and exactly one criterion routes it.
+**One primary per tag, decided in three steps.** The operator's own filings
+decide first, because a tag he approved and then rendered is render-tested and no
+ordering is; then the declared precedence order settles what he has never filed;
+then the operator's own pass overrides individual tags by hand. Every criterion
+that loses a tag keeps it under `also`, so nothing is hidden from browsing and
+exactly one criterion routes it.
 
 **Every input this script reads is tracked or pinned, so the table re-derives
 byte-identically anywhere.** The filings are `FILED`, transcribed below; the
@@ -58,7 +58,7 @@ from isekai.shared.vocabulary import Vocabulary
 
 # The table's own monotonic counter. There is no upstream revision to name --
 # the artifact is authored here -- so it is bumped by whoever edits this spec.
-# Phase 1 shipped 1, phase 2 the seeded table; this is the operator's pass.
+# 1 is the first table, 2 the seeded table, 3 the operator's pass.
 REVISION = 3
 
 # Where the operator's approved sheets live. Gitignored, and read by `--refresh`
@@ -69,8 +69,8 @@ APPROVED = ".data/v0.20/runs/*/summon-open-v1/review/*.approved.json"
 
 # A `hair` tag whose non-suffix words carry one of these takes `hair_colour`;
 # every other takes `hair_silhouette`. Both list all 103, so nothing is hidden
-# from browsing -- the split is the router's, not the cheatsheet's (design.md
-# D16). The operator's own sheets show the split separates cleanly.
+# from browsing -- the split is the router's, not the cheatsheet's. The
+# operator's own sheets show the split separates cleanly.
 COLOUR_WORDS = frozenset(
     """aqua black blond blonde blue brown colored gradient gray green grey
     multicolored orange pink purple rainbow red silver split-color streaked
@@ -78,8 +78,8 @@ COLOUR_WORDS = frozenset(
 )
 
 # The suffix each criterion's schema entry declares, authored here rather than
-# read from `Field.suffix`: after this version's cascade retires, that key has no
-# runtime consumer at all and reading it here would resurrect one (design.md D28).
+# read from `Field.suffix`: that key has no runtime consumer at all, and reading
+# it here would give it one.
 SUFFIXES: Mapping[str, str] = {
     "skin_ancestry": "skin",
     "hair_colour": "hair",
@@ -143,19 +143,19 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 # authored home for an exclusion is here. The definition is semantic and not
 # empirical -- *never a criterion*, rather than *WD14 was wrong about it on this
 # photograph* -- because the second kind would silently shrink `clothes` by seven
-# ordinary garments (design.md D8).
+# ordinary garments.
 #
 # **One entry, at the operator's call, and it is a start rather than a survey.**
 # `photorealistic` describes how the picture was rendered and not the person in
 # it, so no identity criterion can hold it -- and the router drops it either way.
 # What the entry buys is the record: the absence is a decision somebody took
 # rather than a gap nobody had looked at. `realistic` 19,111 is the same kind of
-# tag and appeared on all eight of the v0.20 photographs; it is deliberately not
-# here yet, because the operator named one.
+# tag and appears on all eight photographs of the batch `APPROVED` names; it is
+# deliberately not here yet, because the operator named one.
 EXCLUDED: tuple[str, ...] = ("photorealistic",)
 
 # The example tags `flows/conjure-v1/sheet.briefing.md` named, by the field it
-# named them under. The briefing is deleted; they were transcribed before it went.
+# named them under. The briefing is deleted, so this is their only copy.
 # Every one is held against the vocabulary before it is written.
 BRIEFING: Mapping[str, tuple[str, ...]] = {
     "count": ("1girl", "1boy", "2girls", "multiple girls"),
@@ -194,15 +194,15 @@ BRIEFING: Mapping[str, tuple[str, ...]] = {
 # What the operator filed, transcribed. **The table is derived from tracked
 # inputs only, and this constant is why.** The filings are the strongest signal
 # the table can be built from -- a tag he approved and then rendered is
-# render-tested, which no precedence order is (design.md D30 (3)) -- and they
-# live in `.data/`, which is gitignored and exists on one machine. Reading them
-# at derivation time made the committed table unreproducible off that machine:
-# 17 tags changed or lost their primary and `accessories` emptied. So they are
+# render-tested, which no precedence order is -- and they live in `.data/`,
+# which is gitignored and exists on one machine. Reading them at derivation time
+# would make the committed table unreproducible off that machine: tags would
+# change or lose their primary and `accessories` would empty. So they are
 # transcribed here, exactly as `BRIEFING` above transcribes the dead briefing's
 # 41 examples, and `filings()` below is kept as an authoring aid that prints the
 # drift rather than as an input.
 #
-# 113 tags over the ten approved sheets of the v0.20 batch, as
+# 113 tags over the ten approved sheets of the batch `APPROVED` names, as
 # `tag -> criterion -> how often`. The keys decide: for each tag filed under more
 # than one criterion, `PRECEDENCE` picks the same winner the counts do.
 # Refresh it with `--refresh` after a batch, never by hand.
@@ -367,8 +367,7 @@ def inflect(word: str) -> set[str]:
 
     `-s/-es/-ing/-ed`, not only the plural. Plurals alone leave twelve of the
     operator's 113 approved tags unreachable -- an `-ing` form, or a phrase with
-    an `-ed` word -- so the drop-`e` and consonant-doubling cases are handled too
-    (design.md D30 (1)).
+    an `-ed` word -- so the drop-`e` and consonant-doubling cases are handled too.
     """
     forms = {word}
     forms.add(word + "es" if word.endswith(("s", "x", "z", "ch", "sh")) else word + "s")
@@ -401,7 +400,7 @@ def matcher(stems: Iterable[str]) -> re.Pattern[str]:
     `scar` matches `scarf` as a substring and `\\bscar\\b` takes 44 matches to 15.
     Inflections rather than bare boundaries, which is the defect the roadmap's own
     remedy would have introduced: `\\bbraid\\b` alone loses `twin braids` 153,036
-    and seven more (design.md D18).
+    and seven more.
     """
     alternatives = sorted({f for stem in stems for f in forms(stem)})
     return re.compile(r"\b(?:" + "|".join(re.escape(a) for a in alternatives) + r")\b")
@@ -497,7 +496,7 @@ def build(
     # Both hair criteria browse all 103. The split decides which one *routes* a
     # tag and nothing else; the operator is content to browse the whole group
     # together, and hiding half of it behind a colour test would be the router's
-    # rule leaking into the cheatsheet (design.md D16).
+    # rule leaking into the cheatsheet.
     hair = by_suffix("hair", vocabulary)
     browsable["hair_colour"] |= hair
     browsable["hair_silhouette"] |= hair

@@ -11,7 +11,7 @@ and `git diff --exit-code config/reader.json` is the check.
 names the reader by an alias `ollama create` builds from the Modelfile, and the
 files behind that alias shape the prose. `aliases` names, for each alias, which
 entry is its model and which its projector, so `isekai/boundary/ollama.py` can
-compare them with Ollama's own record before the first call (0033 design D4).
+compare them with Ollama's own record before the first call (D6).
 """
 
 from isekai.boundary.provision import READER_MANIFEST_PATH as MANIFEST_PATH

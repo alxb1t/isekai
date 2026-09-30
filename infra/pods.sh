@@ -1,9 +1,9 @@
 # Sourced by up.sh and down.sh after their api(): the account's pods this
-# project made, one "<id> <status>" line each (0043 design D2).
+# project made, one "<id> <status>" line each (D36).
 
 # isekai_pods: every page, since v2 filters nothing; a failed page returns non-zero.
 # A TERMINATED pod bills nothing and cannot be deleted again, so it is not listed.
-# A fault fails the listing rather than hanging or missing a pod (0044 design D1):
+# A fault fails the listing rather than hanging or missing a pod:
 # a cursor asked twice in a row, or past 100 pages, a cycle of cursors.
 isekai_pods() {
   local image page more next cursor="" pages=0

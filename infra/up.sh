@@ -10,25 +10,25 @@ set -a; source ./.env; set +a    # load RUNPOD_* config
 
 PUBKEY="$(cat ~/.ssh/id_ed25519_runpod.pub)"
 API="https://api.runpod.io/v2"
-# What a host needs to render: torch's cu128 build and the model stack (0043 design D1).
+# What a host needs to render: torch's cu128 build and the model stack.
 RAM_FLOOR_GB=24
 VRAM_FLOOR_GB=24
 CUDA_FLOOR="12.8"
-# A lost create exits apart from a refusal: render.sh sweeps only after one (0044 design D2).
+# A lost create exits apart from a refusal: render.sh sweeps only after one (D36).
 LOST_CREATE_EXIT=3
 # Present from the first create until the record is written: a pod may then exist
-# that no file names, so render.sh sweeps on it and down.sh removes it (0044 D2).
+# that no file names, so render.sh sweeps on it and down.sh removes it (D36).
 PENDING=.runpod_pod_pending
 
 # Every call to RunPod: the key reaches curl on a file descriptor, never on its
 # argv, where any process listing could read it; and the call is bounded, so a
-# stalled read cannot hold the poll past its 420 s teardown (0034 design D2).
+# stalled read cannot hold the poll past its 420 s teardown.
 api() {
   curl -s --max-time 30 -H @<(printf 'Authorization: Bearer %s\n' "$RUNPOD_API_KEY") "$@"
 }
 source ./infra/pods.sh
 
-report() {  # report <call> <status> <body>, per 0034 design D4
+report() {  # report <call> <status> <body>
   echo "$1 returned HTTP $2:" >&2
   echo "$3" \
     | jq -er 'select(type == "object" and has("title")) | "  \(.title): \(.detail)"' \
@@ -46,7 +46,7 @@ lost() {  # a create whose outcome is unknown may have placed a pod no file reco
 refuse() { echo "refused: $*" >&2; exit 1; }
 
 # A pod outside its volume's data centre boots without its models, and a volume
-# smaller than the manifest fails its download after billing starts (0041 design D3).
+# smaller than the manifest fails its download after billing starts (D27).
 check_volume() {
   local volume dc size need
   volume=$(api -f "$API/network-volumes/$RUNPOD_VOLUME_ID") \
@@ -71,7 +71,7 @@ refuse_and_tear_down() {
 }
 
 # A pod beside a recorded or listed one orphans it, billing with nothing watching
-# it; down.sh removes them all (0043 design D2).
+# it; down.sh removes them all (D36).
 check_no_pod() {
   local listed
   [ ! -f .runpod_pod_id ] \
@@ -109,8 +109,8 @@ placeable_gpus() {
 }
 
 # The log stays open, so each read is cut at 10 s; what it held by then is read.
-# The container's last lines first, as `since` stalled on a live boot; the last
-# key wins, as a restarted container prints a new one (0047 design D7). A cold
+# The container's last lines first, as `since` stalls on a live boot; the last
+# key wins, as a restarted container prints a new one. A cold
 # volume's downloads can push the key out of those lines, so a read from the
 # boot's start follows when they hold none. Only a line that is the key line
 # counts, so nothing logged later can echo one in.
@@ -133,7 +133,7 @@ scanned_key() {  # the pod's Ed25519 host key, as a known-hosts line
 }
 
 # The fingerprint comes over the authenticated API, not over the connection it
-# vouches for; nothing reaches the pod until the two agree (0041 design D1, D2).
+# vouches for; nothing reaches the pod until the two agree.
 # sshd can answer after the port is mapped, so the scan waits longer than the log.
 verify_host_key() {
   local printed="" key="" scanned
@@ -162,7 +162,7 @@ verify_host_key() {
 }
 
 # The pod boots the digest config/image.json pins, never a tag, and nothing in the
-# environment overrides it: moving the pin is a commit (0033 design D3).
+# environment overrides it: moving the pin is a commit (D28).
 image_ref="$(jq -r '"\(.image)@\(.digest)"' config/image.json)"
 if ! [[ "$image_ref" =~ @sha256:[0-9a-f]{64}$ ]]; then
   echo "ERROR: config/image.json names no sha256 digest ($image_ref)." >&2
@@ -173,7 +173,7 @@ fi
 # The client half of the volume guard, and the half that is certain. The pod-side
 # check cannot see whether a network volume was ever requested: RunPod defaults
 # `volumeInGb` to 20 and mounts the pod's OWN volume disk at the mount path when
-# none is attached, so the mount point exists either way (design.md D5). Here the
+# none is attached, so the mount point exists either way. Here the
 # question is answerable and tripping it costs nothing, because no pod exists yet.
 if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
   echo "ERROR: RUNPOD_VOLUME_ID is empty in .env — refusing to create a pod." >&2
@@ -258,11 +258,10 @@ echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 # null` and only RunPod's SSH proxy, a restricted shell that will not carry the
 # port forward this pipeline needs. The pod is then useless and bills anyway.
 #
-# This poll was unbounded, which made it the one thing in this repository that
-# could bill indefinitely while looking like it was working. It cost two sessions
-# on 2026-09-08. On timeout the pod is **torn down here**: a bounded wait that
-# leaves the meter running has not solved the problem it was added for, and
-# teardown is the act that stops the billing.
+# Unbounded, this poll would be the one thing in this repository that could bill
+# indefinitely while looking like it was working. On timeout the pod is **torn
+# down here**: a bounded wait that leaves the meter running has not solved the
+# problem it exists for, and teardown is the act that stops the billing.
 #
 # 420s, not 180s. The IP check itself answers in seconds, but the pod is not
 # usable until the image has pulled and ComfyUI has started -- observed at 2-4
@@ -270,18 +269,16 @@ echo "Pod $pod_id created at $(date -u +%FT%TZ). Waiting for SSH ..."
 # never comes up; the cost of a shorter one is tearing down healthy pods
 # mid-boot.
 #
-# The prototype's companion change -- exposing ComfyUI's port through RunPod's
-# HTTP proxy, and probing it as a fallback -- is deliberately NOT taken. That
-# proxy is a public, unauthenticated endpoint and ComfyUI has no auth, so a
-# version adopting it must put authentication in front of ComfyUI first
-# (design.md D10). The bounded wait adds no exposure; it only removes one, and
-# that asymmetry is why one half crosses and the other does not. The grep this
-# phase is verified by is literal, so the two names stay out of this file
-# entirely -- including out of the comment that says why.
+# Exposing ComfyUI's port through RunPod's HTTP proxy, and probing it as a
+# fallback, is deliberately NOT done. That proxy is a public, unauthenticated
+# endpoint and ComfyUI has no auth, so adopting it must put authentication in
+# front of ComfyUI first. The bounded wait adds no exposure; it only removes one.
+# The two names stay out of this file entirely, so a literal grep for them finds
+# nothing -- including in the comment that says why.
 deadline=$((SECONDS + 420))
 while true; do
   # A failed read -- transport, status or body -- is "not yet", never an abort:
-  # under `set -e` an abort here skips the teardown below (0034 design D2).
+  # under `set -e` an abort here skips the teardown below.
   read -r host port < <(
     api -f "$API/pods/$pod_id" \
       | jq -r '.ssh.direct | "\(.host // "") \(.port // "")"' 2>/dev/null
