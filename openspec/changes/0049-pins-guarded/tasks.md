@@ -5,7 +5,7 @@ scenario; each task below adds the tests that bind them.
 
 ## Progress
 
-- [ ] 1 — The image's pins
+- [x] 1 — The image's pins
 - [ ] 2 — The records
 - [ ] 3 — The roots
 - [ ] 4 — Drift
@@ -15,11 +15,11 @@ Line numbers are `df5e436`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 1 — The image's pins
 
-- [ ] 1.1 **HALT CHECK** — the clone test counts three, the build-tool map is keyed by name, and no workflow runs on a schedule.
+- [x] 1.1 **HALT CHECK** — the clone test counts three, the build-tool map is keyed by name, and no workflow runs on a schedule.
   Verify: `grep -c 'len(pinned_commits(dockerfile)) == 3' tests/test_infra.py` prints `1`, `grep -c '^    "insightface": ' tests/test_infra.py` prints `1`, and `cat .github/workflows/*.yml | grep -c 'schedule:'` prints `0`.
-- [ ] 1.2 In `tools/derive_image_project.py`, count every `git clone` against the checkouts, per [D1](design.md#d1); in `tests/test_infra.py`, restate `test_every_git_clone_in_the_image_is_pinned_to_a_commit` and add its twin `test_the_count_catches_a_clone_with_a_flag_and_another_host`.
+- [x] 1.2 In `tools/derive_image_project.py`, count every `git clone` against the checkouts, per [D1](design.md#d1); in `tests/test_infra.py`, restate `test_every_git_clone_in_the_image_is_pinned_to_a_commit` and add its twin `test_the_count_catches_a_clone_with_a_flag_and_another_host`.
   Verify: `grep -c 'len(pinned_commits(dockerfile)) == 3' tests/test_infra.py` prints `0`, and `grep -c '^def test_the_count_catches_a_clone_with_a_flag_and_another_host(' tests/test_infra.py` prints `1`.
-- [ ] 1.3 In `tests/test_infra.py`, key `SDIST_BUILDS` by name and version and give `test_the_check_catches_a_source_only_package_the_constraints_miss` a bumped insightface, per [D2](design.md#d2); add the backend row to `docs/pins.md`'s *Not pinned*.
+- [x] 1.3 In `tests/test_infra.py`, key `SDIST_BUILDS` by name and version and give `test_the_check_catches_a_source_only_package_the_constraints_miss` a bumped insightface, per [D2](design.md#d2); add the backend row to `docs/pins.md`'s *Not pinned*.
   Verify: `grep -cF '("insightface", "0.7.3")' tests/test_infra.py` prints `1`, and `grep -c 'a build backend adds while it builds' docs/pins.md` prints `1`.
 
 ## 2 — The records

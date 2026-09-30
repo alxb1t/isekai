@@ -68,12 +68,31 @@ BUILD_CONSTRAINTS = {
 PYTHON = "3.12.14"
 
 
+CLONE = re.compile(r"\bgit clone\b")
+URL = re.compile(r"(?:https?|ssh|git)://\S+|[\w.-]+@[\w.-]+:\S+")
+
+
+def repository(url: str) -> str:
+    """Return a GitHub clone's `owner/name`, or any other clone's URL, without `.git`.
+
+    e.g. "https://github.com/a/b.git" -> "a/b"
+    """
+    url = url.removesuffix(".git")
+    return url.removeprefix("https://github.com/")
+
+
 def pinned_commits(dockerfile: str) -> dict[str, str]:
-    """Return each cloned repository's `owner/name`, to the commit it checks out.
+    """Return each cloned repository, as `repository` names it, to its commit.
 
     e.g. "git clone https://github.com/a/b.git ... git checkout <sha>" -> {"a/b": sha}
     """
-    clones = re.findall(r"git clone https://github\.com/(\S+?)(?:\.git)?\s", dockerfile)
+    # Every `git clone` counts, whatever its flags or host: 0049 design D1.
+    clones = []
+    for clone in CLONE.finditer(dockerfile):
+        url = URL.search(dockerfile, clone.end())
+        if url is None:
+            raise SystemExit("Dockerfile: a `git clone` with no URL")
+        clones.append(repository(url.group(0)))
     checkouts = re.findall(r"git checkout ([0-9a-f]{40})\b", dockerfile)
     if len(clones) != len(checkouts):
         raise SystemExit("Dockerfile: a `git clone` without its `git checkout <sha>`")

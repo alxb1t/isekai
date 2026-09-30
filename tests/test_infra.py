@@ -412,11 +412,32 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
 
 
 @pytest.mark.spec_exempt(
-    "structural: a clone with no checkout is not a pin, and this holds all three"
+    "structural: a clone with no checkout is not a pin, and this holds every clone"
 )
 def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> None:
-    # ComfyUI's core and the two custom-node packs, each on a full commit sha
-    assert len(pinned_commits(dockerfile)) == 3
+    clones = re.findall(r"\bgit clone\b", dockerfile)
+    assert clones
+    assert len(pinned_commits(dockerfile)) == len(clones)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_every_git_clone_in_the_image_is_pinned_to_a_commit"
+)
+@pytest.mark.parametrize(
+    "unpinned",
+    [
+        "RUN git clone --depth 1 https://github.com/c/d.git /d\n",
+        "RUN git clone https://gitlab.com/c/d.git /d\n",
+    ],
+    ids=["a-flag", "another-host"],
+)
+def test_the_count_catches_a_clone_with_a_flag_and_another_host(
+    unpinned: str,
+) -> None:
+    pinned = f"RUN git clone https://github.com/a/b.git /b && git checkout {'0' * 40}\n"
+    assert pinned_commits(pinned) == {"a/b": "0" * 40}
+    with pytest.raises(SystemExit):
+        pinned_commits(pinned + unpinned)
 
 
 @pytest.mark.spec(
@@ -733,21 +754,21 @@ def test_the_check_catches_a_build_tool_by_version_alone() -> None:
 
 IMAGE_LOCK = REPO / "image" / "uv.lock"
 
-# Each source-only package in the image's lock, to the tools its build asks for: its
-# `build-system.requires`, or setuptools for a `setup.py` with none. uv checks only
-# the tools the constraints list, so a package joins this table once its tools do.
+# Each source-only package in the image's lock, by name and version, to the tools its
+# build asks for: its `build-system.requires`, or setuptools for a `setup.py` with none.
+# A bump is a new key, so it fails until its tools are read again: 0049 design D2.
 SDIST_BUILDS = {
-    "antlr4-python3-runtime": ("setuptools",),
-    "fvcore": ("setuptools",),
-    "insightface": ("setuptools", "numpy", "cython"),
-    "iopath": ("setuptools",),
+    ("antlr4-python3-runtime", "4.9.3"): ("setuptools",),
+    ("fvcore", "0.1.5.post20221221"): ("setuptools",),
+    ("insightface", "0.7.3"): ("setuptools", "numpy", "cython"),
+    ("iopath", "0.1.10"): ("setuptools",),
 }
 
 
 def uncovered_sdists(image_lock: str, image_pyproject: str) -> list[str]:
     """Return each source-only package whose build tools the constraints do not name.
 
-    e.g. a lock gaining `pycocotools` as an sdist alone -> ["pycocotools"]
+    e.g. a lock gaining `pycocotools` 2.0.8 as an sdist alone -> ["pycocotools 2.0.8"]
     """
     tools = tomllib.loads(image_pyproject)["tool"]["uv"].get(
         "build-constraint-dependencies", []
@@ -760,11 +781,12 @@ def uncovered_sdists(image_lock: str, image_pyproject: str) -> list[str]:
     for package in tomllib.loads(image_lock)["package"]:
         if "sdist" not in package or package.get("wheels"):
             continue
-        name = package["name"]
-        if name not in SDIST_BUILDS:
-            uncovered.append(name)
+        name, version = package["name"], package["version"]
+        if (name, version) not in SDIST_BUILDS:
+            uncovered.append(f"{name} {version}")
             continue
-        uncovered += [f"{name}: {t}" for t in SDIST_BUILDS[name] if t not in named]
+        build = SDIST_BUILDS[name, version]
+        uncovered += [f"{name}: {t}" for t in build if t not in named]
     return uncovered
 
 
@@ -783,7 +805,12 @@ def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
         'sdist = { url = "https://example.invalid/pycocotools-2.0.8.tar.gz" }\n'
     )
     image_pyproject = IMAGE_PROJECT.read_text()
-    assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools"]
+    assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools 2.0.8"]
+    bumped = IMAGE_LOCK.read_text().replace(
+        'name = "insightface"\nversion = "0.7.3"',
+        'name = "insightface"\nversion = "0.7.4"',
+    )
+    assert uncovered_sdists(bumped, image_pyproject) == ["insightface 0.7.4"]
     no_cython = re.sub(r'\{ requirement = "cython==[^}]*\},?', "", image_pyproject)
     assert uncovered_sdists(IMAGE_LOCK.read_text(), no_cython) == [
         "insightface: cython"

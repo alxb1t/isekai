@@ -88,6 +88,7 @@ What stays open, and what stands in for it.
 | the Ollama runtime | the operator installs it, outside the repository | the alias's model and projector layers are checked, and the caption and the hosted tags record both file digests |
 | the pod's GPU, driver and host | RunPod assigns them | each render records the ComfyUI, Python and PyTorch versions the pod reports |
 | macOS and Metal on the operator's machine | outside the repository | nothing yet |
+| the requirements a build backend adds while it builds | uv fetches what the backend asks for at build time, outside the constraints | the map of each source-only package's declared tools, checked against the lock |
 | the reader alias's template, system prompt and parameters | the check compares the model and projector layers alone, and changing the rest needs write access to the operator's Ollama store | `config/joycaption.Modelfile`, from which the alias is built |
 
 **A rebuild is not byte-identical**: apt is open, and insightface compiles from source. What reproduces exactly
