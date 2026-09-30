@@ -126,17 +126,17 @@ def png_with_exif(
     # carrying orientation.
     ihdr_end = 8 + 4 + 4 + struct.unpack(">I", base[8:12])[0] + 4
     padding = b"".join(
-        _png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
+        png_chunk(b"tEXt", b"pad\x00%d" % n) for n in range(chunks_before)
     )
     return (
         base[:ihdr_end]
         + padding
-        + _png_chunk(b"eXIf", _exif_tiff(orientation))
+        + png_chunk(b"eXIf", _exif_tiff(orientation))
         + base[ihdr_end:]
     )
 
 
-def _png_chunk(kind: bytes, payload: bytes) -> bytes:
+def png_chunk(kind: bytes, payload: bytes) -> bytes:
     """Return one length-prefixed, CRC-suffixed PNG chunk."""
     return (
         struct.pack(">I", len(payload))

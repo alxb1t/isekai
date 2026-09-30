@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from isekai.foundation.flow import Workflow, load_flow
+from isekai.foundation.refusal import Refusal
 from isekai.shared.image import (
     DIMENSION_STEP,
     MAX_HEADER_BYTES,
@@ -22,6 +23,7 @@ from tests.images import (
     jpeg_segment,
     jpeg_with_header,
     png_bytes,
+    png_chunk,
     png_with_exif,
 )
 
@@ -327,7 +329,7 @@ def _pillow_photo(kind: str, *, orientation: int = 1) -> bytes:
     """Return a decodable photograph carrying every block the strip must drop.
 
     `kind` is `jpeg`, `progressive` or `png`. The colour profile rides along too,
-    because it is one of the blocks the strip must keep.
+    because it is one of the blocks the strip must drop.
     """
     from PIL import Image, ImageCms, PngImagePlugin
 
@@ -440,16 +442,58 @@ def test_no_block_outside_the_allowlist_survives(kind: str, tmp_path: Path) -> N
         assert needle in original, needle
         assert needle not in stripped, needle
     decoded = _decoded(stripped)
-    # The colour profile is one of the blocks decoding keeps.
-    assert decoded.info["icc_profile"] == _decoded(original).info["icc_profile"]
+    assert "icc_profile" in _decoded(original).info
+    assert "icc_profile" not in decoded.info
     if kind == "png":
-        assert set(_png_chunks(stripped)) == {b"IHDR", b"iCCP", b"IDAT", b"IEND"}
+        assert set(_png_chunks(stripped)) == {b"IHDR", b"IDAT", b"IEND"}
         assert stripped.endswith(b"IEND\xaeB`\x82")
     else:
         kept = [(marker, payload[:4]) for marker, payload in _jpeg_apps(decoded)]
-        assert kept == [("APP0", b"JFIF"), ("APP2", b"ICC_")]
+        assert kept == [("APP0", b"JFIF")]
         assert "comment" not in decoded.info
         assert stripped.endswith(b"\xff\xd9")
+
+
+# The colour hints a PNG may carry beside its profile, each with a valid payload.
+_COLOUR_CHUNKS = {
+    b"gAMA": struct.pack(">I", 45455),
+    b"cHRM": struct.pack(">8I", 31270, 32900, 64000, 33000, 30000, 60000, 15000, 6000),
+    b"sRGB": b"\x00",
+    b"sBIT": b"\x08\x08\x08",
+    b"cICP": b"\x01\x0d\x00\x01",
+}
+
+
+@pytest.mark.spec("image-generation:photo-metadata:no-colour-profile-leaves")
+@pytest.mark.parametrize("kind", ["jpeg", "png"])
+def test_no_colour_profile_leaves(kind: str, tmp_path: Path) -> None:
+    from PIL import Image, ImageCms
+
+    image = Image.linear_gradient("L").resize((48, 32)).convert("RGB")
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    out = io.BytesIO()
+    image.save(out, "PNG" if kind == "png" else "JPEG", icc_profile=icc)
+    original = out.getvalue()
+    if kind == "png":
+        # Spliced behind the signature and IHDR by hand: Pillow writes no sRGB
+        # beside a profile.
+        hints = b"".join(png_chunk(*hint) for hint in _COLOUR_CHUNKS.items())
+        ihdr_end = len(png_bytes(1, 1))
+        original = original[:ihdr_end] + hints + original[ihdr_end:]
+    stripped = _stripped(tmp_path, "photo", original)
+    before, after = _decoded(original), _decoded(stripped)
+
+    # The premise, then the guard: each block is in the original and not the upload.
+    assert before.info["icc_profile"] == icc
+    assert "icc_profile" not in after.info
+    if kind == "png":
+        colour = {b"iCCP", *_COLOUR_CHUNKS}
+        assert colour <= set(_png_chunks(original))
+        assert not colour & set(_png_chunks(stripped))
+    else:
+        assert b"ICC_PROFILE\x00" in original
+        assert b"ICC_PROFILE\x00" not in stripped
+    assert after.tobytes() == before.tobytes()
 
 
 @pytest.mark.spec("image-generation:photo-metadata:no-metadata-leaves-the-machine")
@@ -489,3 +533,65 @@ def test_the_hand_built_photographs_still_walk(data: bytes, tmp_path: Path) -> N
     assert image_dimensions(_write(tmp_path, "stripped", stripped)) == image_dimensions(
         _write(tmp_path, "original", data)
     )
+
+
+# A walk the strip cannot finish, per defect: each must refuse rather than crash
+# or send the file whole (0050 design D2).
+_PNG = png_bytes(16, 16)
+_JPEG = jpeg_bytes(16, 16)
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+@pytest.mark.parametrize(
+    ("data", "reason"),
+    [
+        (_PNG[:20], "the chunk at byte 8 runs past the file"),
+        (_PNG.replace(b"IHDR", b"tEXt"), "its first chunk is not IHDR"),
+        (
+            _PNG + png_chunk(b"QUUX", b""),
+            "it carries critical chunk b'QUUX', which is not known",
+        ),
+        (
+            _JPEG[:2] + jpeg_segment(0xF0, b"jpg0") + _JPEG[2:],
+            "it carries marker 0xF0, which is not known",
+        ),
+        (_JPEG[:5], "the segment at byte 2 runs past the file"),
+        (_JPEG[:2] + b"\x00" + _JPEG[2:], "byte 2 is not a marker"),
+        (_JPEG[:2] + b"\xff", "it ends inside a marker"),
+        (
+            jpeg_with_header(16, 16, header_padding=MAX_HEADER_BYTES + 1024),
+            f"its JPEG header is not resolved within the first {MAX_HEADER_BYTES} "
+            "bytes",
+        ),
+        (b"GIF89a" + bytes(16), "it is neither a JPEG nor a PNG"),
+    ],
+    ids=[
+        "truncated-chunk",
+        "first-chunk-not-ihdr",
+        "unknown-critical-chunk",
+        "unknown-marker",
+        "short-length-word",
+        "not-a-marker",
+        "ends-inside-a-marker",
+        "header-too-deep",
+        "neither-codec",
+    ],
+)
+def test_each_unwalkable_photograph_is_refused_by_name(
+    data: bytes, reason: str, tmp_path: Path
+) -> None:
+    with pytest.raises(Refusal) as refused:
+        _stripped(tmp_path, "photo.bin", data)
+
+    assert str(refused.value).startswith("photo.bin: ")
+    assert reason in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+def test_a_photograph_that_cannot_be_read_is_refused_by_name(tmp_path: Path) -> None:
+    # No bytes to parametrise: the file the strip is handed does not exist.
+    with pytest.raises(Refusal) as refused:
+        strip_metadata(tmp_path / "photo.bin")
+
+    assert str(refused.value).startswith("photo.bin: ")
+    assert "it cannot be read (" in str(refused.value)
