@@ -7,8 +7,9 @@ Run it from the repository root:
 It reads the commits the `Dockerfile` checks out, fetches ComfyUI's and
 comfyui_controlnet_aux's requirement lists at those commits, writes
 `image/pyproject.toml`, and runs `uv lock --project image`. Re-running without a
-change upstream leaves `image/` byte-identical -- `git diff --stat -- image/` is
-the check. Why the image is a project of its own: 0033 design D2.
+change upstream leaves `image/` byte-identical -- `make drift`, or
+`git diff --exit-code -- image/`, is the check. Why the image is a project of
+its own: 0033 design D2.
 
 It writes no provisioning manifest, so `tests/test_derivation.py` does not list it.
 """
@@ -68,7 +69,14 @@ BUILD_CONSTRAINTS = {
 PYTHON = "3.12.14"
 
 
-CLONE = re.compile(r"\bgit clone\b")
+# `git`, any global options (`-C dir`, `-c k=v`, `--no-pager`), then `clone`; a
+# backslash counts as a gap so a continued line still reads as one command.
+CLONE = re.compile(r"\bgit(?:[\s\\]+-\S+(?:[\s\\]+[^\s\\-]\S*)?)*[\s\\]+clone\b")
+# An `ADD` whose source is a git repository: BuildKit clones it, and no
+# `git checkout` follows to pin it.
+ADD_GIT = re.compile(
+    r"^[ \t]*ADD\b(?:[^\n]|\\\n)*?(?:\bgit://|\bgit@|\.git\b)", re.M | re.I
+)
 URL = re.compile(r"(?:https?|ssh|git)://\S+|[\w.-]+@[\w.-]+:\S+")
 
 
@@ -86,7 +94,11 @@ def pinned_commits(dockerfile: str) -> dict[str, str]:
 
     e.g. "git clone https://github.com/a/b.git ... git checkout <sha>" -> {"a/b": sha}
     """
-    # Every `git clone` counts, whatever its flags or host: 0049 design D1.
+    # Every `git clone` counts, whatever its options or host: 0049 design D1.
+    if ADD_GIT.search(dockerfile):
+        raise SystemExit(
+            "Dockerfile: an `ADD` of a git repository, which no checkout pins"
+        )
     clones = []
     for clone in CLONE.finditer(dockerfile):
         url = URL.search(dockerfile, clone.end())

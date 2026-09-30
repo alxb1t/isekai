@@ -53,10 +53,12 @@ root resolves from anywhere; drift turns something red.
 
 ### D1
 
-**Clones.** `pinned_commits` finds each `git clone` command — any flags, any URL — and each `git checkout <40-hex>`,
-and exits naming the gap when their counts differ. Its map still keys a GitHub clone by `owner/name`. The test asserts
-that the map holds one entry per `git clone` in the `Dockerfile`. A twin feeds a clone with a flag and one from
-another host, each without a checkout, and expects the exit.
+**Clones.** `pinned_commits` finds each `git clone` command — any flags, any URL, any of git's own options before
+`clone` — and each `git checkout <40-hex>`, and exits naming the gap when their counts differ. It exits on an `ADD` of a
+git repository too, which BuildKit clones with no checkout to pin it. Its map still keys a GitHub clone by
+`owner/name`. The test asserts that the map holds one entry per `git clone` in the `Dockerfile`. A twin feeds a clone
+with a flag, one from another host, one behind `-C` and one behind `-c`, each without a checkout, and a git `ADD`, and
+expects the exit.
 
 ### D2
 
@@ -86,7 +88,7 @@ shape this build does not read, so a `{"system": null}` report reads as any othe
 report's reader keeps a refusal as well as a success, as the tagger's seam does, so the endpoint is asked once per
 session. A transient `TransportFailure` is raised and not kept, so the next render asks again: kept, one blip would
 refuse every photograph in the session and fill each one's render budget. `render` still records the refusal per
-photograph and flow, before any seed is submitted.
+photograph and flow, and asks for the report before it uploads the photograph or submits any seed.
 
 ### D5
 

@@ -19,6 +19,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   (0049 D3, D4).
 - The models root resolves from any working directory, anchored like every other root; `up.sh`'s missing-volume
   refusal no longer states a stale download size (0049 D5, D6).
+- The clone check also counts a clone behind git's own options and refuses a git `ADD`; a render reads the
+  runtime report before it uploads, so a refused report sends no photograph; CI keeps no checkout token
+  (0049 D1, D4).
 
 ### Added
 

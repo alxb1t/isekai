@@ -37,6 +37,7 @@ the session.
 - **Layers:** unit
 - **WHEN** the endpoint's report is refused as permanent during a session
 - **THEN** no graph is submitted in that session
+- **AND** no photograph is uploaded in that session
 - **AND** the endpoint is asked for its report once
 
 #### Scenario: a report that fails transiently is asked again

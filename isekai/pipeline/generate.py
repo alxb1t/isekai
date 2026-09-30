@@ -477,14 +477,15 @@ def render(
     # manifest declaring the photograph on one side alone never loads, so this
     # gate and that one cannot disagree about the same run.
     try:
+        # Before the upload and any seed, so a report that fails costs no render
+        # and sends no photograph: a photograph leaves only to be rendered.
+        ran_on = runtime()
         # The run's copy is only read: its bytes are the run's id (0039 design D3).
         image_name = (
             client.upload_image(run.photo.name, strip_metadata(run.photo))
             if "photo" in flow.inputs
             else None
         )
-        # Before any seed is submitted, so a report that fails costs no render.
-        ran_on = runtime()
     except Refusal as failed:
         raise _recorded(run, flow, directory, version, failed, None) from failed
     # Constant across seeds: the flow's files on disk do not change mid-render.

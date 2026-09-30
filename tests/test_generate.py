@@ -1704,6 +1704,7 @@ def test_a_refused_report_is_asked_once_and_submits_nothing(
 
     assert client.stats_calls == 1
     assert client.submissions == []
+    assert client.uploaded is None
     assert err.getvalue().count("a shape this build does not read") == len(runs)
 
 

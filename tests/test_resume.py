@@ -621,8 +621,9 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
     assert "infra/up.sh" in message
     assert "--server" in message
     assert "Traceback" not in message
-    # Nothing is submitted, polled or downloaded once the upload is refused.
-    assert reached == ["http://127.0.0.1:8188/upload/image"]
+    # Nothing is uploaded, submitted, polled or downloaded once the first request,
+    # the runtime report, is refused.
+    assert reached == ["http://127.0.0.1:8188/system_stats"]
     # The assembly still happened before the endpoint was reached at all.
     assert (wired.runs_root / run_id / FLOW / "prompts" / "001.json").exists()
 
