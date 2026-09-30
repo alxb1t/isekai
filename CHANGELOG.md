@@ -9,6 +9,20 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.4] - 2026-09-30 · 0052-the-paydown
+
+### Changed
+
+- The accepted risks of D6, D27, D35 and D36 are written in their decisions, and the patched module globals and
+  `_once`'s transience rule as known breaks, so a reader of a topic finds its risk there (0052 D1, D2).
+- `show` lists every failure record under its stage or render group, names each file or directory below a flow
+  it does not read, and says when a file declares no kind, so a run is never shown as other than it is
+  (0052 D3, D4, D5).
+- The image's clone guard refuses an `ADD` from an ssh or scp address, which BuildKit clones as it does a git one
+  (0052 D6).
+- The review rail's run button reads `in the manifest`, which is what it counts, and the tag-list and tab-close
+  comments no longer promise more than the code does (0052 D7).
+
 ## [0.31.3] - 2026-09-30 · 0051-the-terse-comments
 
 ### Changed

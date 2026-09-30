@@ -364,8 +364,8 @@ function onKey(event: KeyboardEvent): void {
   }
 }
 
-// The draft is written before the tab goes, so a close mid-debounce loses
-// nothing. Nothing lives only in the browser.
+// The draft is flushed as the tab goes, best-effort: the browser may cancel
+// the request, so a close mid-debounce can lose the last edit.
 const onLeave = () => void sheet.flush()
 
 onMounted(async () => {

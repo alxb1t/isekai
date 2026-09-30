@@ -24,7 +24,7 @@ runs/2026-09-17/sheets/00003.draft.json · saved 14:02:11        neutral-500
 
 **Batch rail** (132px, right border): kicker `batch`, one 5px-padded card per input with a thumbnail
 at its true aspect ratio, the filename in mono 10.5px, and an 8px status mark. A legend at the foot
-lists `approved` / `edited` / `untouched`. A `run` entry sits below it showing `3 of 3 approved`,
+lists `approved` / `edited` / `untouched`. A `run` entry sits below it showing `3 of 3 in the manifest`,
 clickable at any time — that is the only route to the manifest mid-batch.
 
 **Source column** (492px portrait / 620px landscape, right border, 16px padding): kicker
@@ -230,7 +230,7 @@ suggestions at once.
 The batch is finished and it is safe to return to the terminal.
 
 - Header: `run 2026-09-17 · 3 inputs · 3 approved` and `nothing left to review` in `accent-300`.
-- Rail: three filled marks, all still selectable, with `run · 3 of 3 approved` at the foot.
+- Rail: three filled marks, all still selectable, with `run · 3 of 3 in the manifest` at the foot.
 - Work area becomes a manifest, flush left with whitespace right:
   - `3 of 3 approved` as an h3, then `sheets written to runs/2026-09-17/` in mono `accent-300`
   - a three-column table — `sheet` / `tokens` / `approved` — one row per input:

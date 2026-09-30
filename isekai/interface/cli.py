@@ -15,7 +15,7 @@ would be unreachable -- nothing writes a later one.
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
     generate  (4) assemble every prompt locally, then render
-    show          print a run's artifacts and what produced each one
+    show          print a run's artifacts, what produced each, and its failures
     ui        (3) serve the review surface for a batch of inputs
     compare       write a page of every run's photograph beside its renders
 
@@ -72,7 +72,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
     ("generate", "assemble the prompts for a run, then render them"),
-    ("show", "print a run's artifacts, versions and producers"),
+    ("show", "print a run's artifacts, versions, producers and failures"),
     ("ui", "serve the review surface for a batch of inputs"),
     ("compare", "write a page of each run's photograph beside its renders"),
 )

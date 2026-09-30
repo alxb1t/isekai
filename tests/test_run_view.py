@@ -12,8 +12,15 @@ import pytest
 
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import WD14, Run, open_run
-from isekai.interface.run_view import listings, rendered, report
+from isekai.foundation.run import OUTPUTS, WD14, Run, open_run, record_failure
+from isekai.interface.run_view import (
+    FailureRecord,
+    listings,
+    render_failures,
+    rendered,
+    report,
+    unread,
+)
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review
@@ -144,6 +151,10 @@ def test_renders_are_listed_under_the_approval_they_came_from(
         (
             '{"schema": {"name": "novel", "version": 1}, "producer": {}}',
             "declares kind 'novel', which this build does not read",
+        ),
+        (
+            '{"schema": {"version": 1}, "producer": {}}',
+            "declares no kind, which this build does not read",
         ),
         (
             '{"schema": {"name": "caption", "version": 1}, "producer": {"from": "x"}}',
@@ -316,3 +327,122 @@ def test_a_readable_frame_prints_its_photograph(run: Run) -> None:
 
     assert "delete" not in lines[1]
     assert run.frame["photo"]["name"] in lines[1]
+
+
+# --- failure records, and the names show does not read ------------------------
+
+
+def _rendered(run: Run) -> Run:
+    """Return `run` with its approved sheet assembled and rendered at seed 42."""
+    flow = load_flow(FLOW)
+    prepare(run, {FLOW: flow})
+    render(run, flow, FakeComfyClient(), seeds=[42], poll=0)
+    return run
+
+
+def _below(lines: list[str], header: str) -> list[str]:
+    """Return the lines under `header`, up to the next header or the legend."""
+    start = lines.index(header) + 1
+    end = next(
+        (i for i in range(start, len(lines)) if not lines[i].startswith("   ")),
+        len(lines),
+    )
+    return lines[start:end]
+
+
+@pytest.mark.spec("cli:show:failure-records-are-listed")
+def test_failure_records_are_listed_under_their_stage(run: Run) -> None:
+    captions = run.directory(FLOW, "captions")
+    record_failure(captions, 2, "transient", {"stage": "caption", "detail": "x"})
+    record_failure(captions, 2, "permanent", {"stage": "caption", "detail": "x"})
+
+    listing = next(item for item in listings(run) if item.stage == "captions")
+    lines = report(run)
+
+    assert listing.failures == [
+        FailureRecord(2, 1, "transient"),
+        FailureRecord(2, 2, "permanent"),
+    ]
+    assert _below(lines, f"  {FLOW}/captions")[1:] == [
+        "   ! 002  failed · attempt 1 · transient",
+        "   ! 002  failed · attempt 2 · permanent",
+    ]
+    assert not any("not read" in line for line in lines)
+    assert "! marks a failure record" in lines[-1]
+
+
+@pytest.mark.spec("cli:show:failure-records-are-listed")
+def test_a_stage_holding_only_failures_is_not_reported_empty(run: Run) -> None:
+    tags = run.directory(FLOW, "tags")
+    record_failure(tags, 1, "permanent", {"stage": "tags", "detail": "x"})
+
+    lines = report(run)
+
+    assert not any(f"{FLOW}/tags" in line and "(none)" in line for line in lines)
+    assert _below(lines, f"  {FLOW}/tags") == [
+        "   ! 001  failed · attempt 1 · permanent"
+    ]
+
+
+@pytest.mark.spec("cli:show:failure-records-are-listed")
+def test_render_failures_are_listed_under_their_group(run: Run) -> None:
+    group = _rendered(run).directory(FLOW, OUTPUTS, "001")
+    record_failure(group, 1, "permanent", {"stage": "render", "seed": 7, "detail": "x"})
+
+    lines = report(run)
+
+    assert render_failures(run) == {(FLOW, 1): [FailureRecord(1, 1, "permanent")]}
+    assert _below(lines, f"  {FLOW}/outputs/001") == [
+        "     42",
+        "   ! 001  failed · attempt 1 · permanent",
+    ]
+    assert not any("not read" in line for line in lines)
+
+
+@pytest.mark.spec("cli:show:an-unread-name-is-named")
+@pytest.mark.parametrize(
+    ("place", "name", "is_directory"),
+    [
+        ("", "notes.txt", False),
+        ("", "stray", True),
+        ("", "captions.bak", True),
+        ("captions", "001.json.bak", False),
+        ("review", "old", True),
+        ("outputs", "notes.txt", False),
+        ("outputs", "latest", True),
+        ("outputs/001", "42.json", False),
+        ("outputs/001", "thumbs", True),
+    ],
+    ids=[
+        "flow-file",
+        "flow-directory",
+        "flow-near-stage",
+        "stage-file",
+        "stage-directory",
+        "outputs-file",
+        "outputs-directory",
+        "group-file",
+        "group-directory",
+    ],
+)
+def test_a_name_show_does_not_read_is_named(
+    run: Run, place: str, name: str, is_directory: bool
+) -> None:
+    _rendered(run)
+    # Every name a stage writes is read, which is what makes the stray one news.
+    assert unread(run) == []
+    target = run.directory(FLOW, *filter(None, place.split("/")), name)
+    if is_directory:
+        target.mkdir()
+        (target / "inside.txt").write_text("x")
+    else:
+        target.write_text("x")
+    shown = "/".join(filter(None, (FLOW, place, name))) + ("/" if is_directory else "")
+
+    lines = report(run)
+
+    assert unread(run) == [shown]
+    assert f"  not read  {shown}" in lines
+    assert lines.index(f"  not read  {shown}") == len(lines) - 2
+    assert "     42" in lines
+    assert any(line.strip().startswith("* 001 approved") for line in lines)

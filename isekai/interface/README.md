@@ -16,7 +16,7 @@ neither is privileged and neither goes through the other.
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
-| `run_view.py` | the `show` verb: a run's artifacts, active versions and producers. Reads everything, decides nothing |
+| `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the batch directory. Reads, decides nothing |
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
 | `ui/batch.py` | the batch and the whole startup refusal order. **Imports no web framework**, which is what keeps that order testable in the main suite |

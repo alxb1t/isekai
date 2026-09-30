@@ -267,6 +267,20 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
     return assembled, refused + across(ready, assemble_one)
 
 
+# A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
+SIDECAR = ".render.json"
+
+
+def is_render(path: Path, suffix: str) -> bool:
+    """Return whether `path` is a render a flow producing `suffix` wrote."""
+    return path.suffix == suffix and path.stem.isdigit()
+
+
+def is_sidecar(path: Path) -> bool:
+    """Return whether `path` is a render's sidecar."""
+    return path.name.endswith(SIDECAR) and path.name.removesuffix(SIDECAR).isdigit()
+
+
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     """Return the seeds already produced into `directory`, from filenames alone.
 
@@ -279,9 +293,7 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     if not directory.is_dir():
         return []
     return sorted(
-        int(path.stem)
-        for path in directory.iterdir()
-        if path.suffix == suffix and path.stem.isdigit()
+        int(path.stem) for path in directory.iterdir() if is_render(path, suffix)
     )
 
 
@@ -512,7 +524,7 @@ def render(
         # The sidecar first, so an image always has its provenance: a crash
         # between the writes leaves a sidecar with no image, and that seed
         # renders again.
-        provenance = directory / f"{seed}.render.json"
+        provenance = directory / f"{seed}{SIDECAR}"
         sidecar: RenderSidecar = {
             "schema": RENDER_FILE.schema,
             "producer": {

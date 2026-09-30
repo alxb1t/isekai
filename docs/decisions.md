@@ -103,7 +103,9 @@ The ComfyUI transport ignores the environment's proxy the same way.
 - **Why:** a photograph's destination must not be changeable by accident — an exported `http_proxy`
   once sent every photograph off the machine. An alias is a name the runtime resolves, and the files
   behind it shape the prose, so a caption can claim a pin only once those files are checked.
-- **Made by:** `0019`, `0033`, `0037`.
+- **Accepts:** whatever holds port 11434 receives the photograph; nothing probes that it is Ollama.
+  Reopen when a listener that is not Ollama is seen there, or the address stops being loopback-only.
+- **Made by:** `0019`, `0033`, `0037`, `0052`.
 
 ### D7 · WD14 is one artifact in two files
 
@@ -318,7 +320,9 @@ that the volume is at least the manifest's size, before the create.
   manifest is clean by construction. A missing mount would fall through to the container disk: it would
   render, bill, and lose everything at teardown. A volume cannot move between data centres, so a pod
   elsewhere boots without its models.
-- **Made by:** `0009`, `0011`, `0033`, `0041`.
+- **Accepts:** a pin freezes bytes, not intent: most weights come only from third-party mirrors,
+  trusted as the publisher's. Reopen when a publisher ships a first-party copy, or a mirror is compromised.
+- **Made by:** `0009`, `0011`, `0033`, `0041`, `0052`.
 
 ### D28 · The image carries code, the volume carries weights
 
@@ -347,7 +351,9 @@ the key would sit in the same memory.**
 
 - **Why:** no program can hide memory from its host, and the provider offers no confidential computing.
   Only rendering locally removes the boundary.
-- **Made by:** `0041`.
+- **Accepts:** code ComfyUI runs can read the stop key from other processes' environments, since the
+  image names no `USER`. Reopen when a node or model is not fully trusted, or the key's scope is account-wide.
+- **Made by:** `0041`, `0052`.
 
 ### D36 · A render session is `infra/render.sh`
 
@@ -360,4 +366,9 @@ own create was lost.
 - **Why:** the lifecycle is shell over a REST API the package never calls. A Python `session()` would be a second
   creator of pods beside `up.sh`, which [D28](#d28--the-image-carries-code-the-volume-carries-weights) forbids,
   and a pod the laptop can no longer reach must still stop.
-- **Made by:** `0035`, `0043`, `0044`.
+- **Accepts:** ComfyUI's history and node cache hold the batch's photograph until the teardown.
+  Reopen when a pod serves more than one batch.
+- **Accepts:** a `down.sh` run while a create is in flight spends that create's pending marker, so an interrupt
+  before it records leaves a pod no trap tears down: its own stop ends it, or the `down.sh` the next `up.sh`
+  names. Reopen when two sessions share a checkout.
+- **Made by:** `0035`, `0043`, `0044`, `0052`.

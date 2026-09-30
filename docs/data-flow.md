@@ -31,8 +31,8 @@ its neighbours.
               ── then renders each prompt ──▶ outputs/   on a rented GPU
 ```
 
-Beside them, `show` reads a run's artifacts, versions and producers and decides
-nothing — it writes no file and reaches no model. `compare` reads a batch's runs the
+Beside them, `show` reads a run's artifacts, versions, producers and failure records,
+names what below a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a batch's runs the
 same way and writes one page into the batch directory, `compare.html`: each run's
 photograph beside each flow's renders, linked and never embedded.
 
