@@ -1,7 +1,6 @@
 import io
 import struct
 import warnings
-import zlib
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,6 +23,7 @@ from tests.images import (
     jpeg_segment,
     jpeg_with_header,
     png_bytes,
+    png_chunk,
     png_with_exif,
 )
 
@@ -475,21 +475,17 @@ def test_no_colour_profile_leaves(kind: str, tmp_path: Path) -> None:
     image.save(out, "PNG" if kind == "png" else "JPEG", icc_profile=icc)
     original = out.getvalue()
     if kind == "png":
-        # Spliced behind the signature and IHDR, 33 bytes: Pillow writes no sRGB
+        # Spliced behind the signature and IHDR by hand: Pillow writes no sRGB
         # beside a profile.
-        hints = b"".join(
-            struct.pack(">I", len(payload))
-            + chunk
-            + payload
-            + struct.pack(">I", zlib.crc32(chunk + payload))
-            for chunk, payload in _COLOUR_CHUNKS.items()
-        )
-        original = original[:33] + hints + original[33:]
+        hints = b"".join(png_chunk(*hint) for hint in _COLOUR_CHUNKS.items())
+        ihdr_end = len(png_bytes(1, 1))
+        original = original[:ihdr_end] + hints + original[ihdr_end:]
     stripped = _stripped(tmp_path, "photo", original)
+    before, after = _decoded(original), _decoded(stripped)
 
     # The premise, then the guard: each block is in the original and not the upload.
-    assert _decoded(original).info["icc_profile"] == icc
-    assert "icc_profile" not in _decoded(stripped).info
+    assert before.info["icc_profile"] == icc
+    assert "icc_profile" not in after.info
     if kind == "png":
         colour = {b"iCCP", *_COLOUR_CHUNKS}
         assert colour <= set(_png_chunks(original))
@@ -497,7 +493,7 @@ def test_no_colour_profile_leaves(kind: str, tmp_path: Path) -> None:
     else:
         assert b"ICC_PROFILE\x00" in original
         assert b"ICC_PROFILE\x00" not in stripped
-    assert _decoded(stripped).tobytes() == _decoded(original).tobytes()
+    assert after.tobytes() == before.tobytes()
 
 
 @pytest.mark.spec("image-generation:photo-metadata:no-metadata-leaves-the-machine")
@@ -552,7 +548,7 @@ _JPEG = jpeg_bytes(16, 16)
         (_PNG[:20], "the chunk at byte 8 runs past the file"),
         (_PNG.replace(b"IHDR", b"tEXt"), "its first chunk is not IHDR"),
         (
-            _PNG + struct.pack(">I", 0) + b"QUUX" + bytes(4),
+            _PNG + png_chunk(b"QUUX", b""),
             "it carries critical chunk b'QUUX', which is not known",
         ),
         (
