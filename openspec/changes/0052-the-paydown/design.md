@@ -52,7 +52,7 @@ UI's behaviour beyond one label.
 | [D3](#d3) | `show` lists every failure record, one `!` line an attempt, under its stage or render group | append-only and rare; the attempt count is information | only the last attempt of each version |
 | [D4](#d4) | `show` names every file or directory below a flow it does not read, on a `not read` line | "`show` hides nothing" with no exception | directories only |
 | [D5](#d5) | a file with no kind reads `declares no kind, which this build does not read` | `read`'s own wording (`isekai/foundation/artifacts.py:387`) | — |
-| [D6](#d6) | `ADD_GIT` also matches `ssh://` and a whitespace-led `user@host:` source | the ssh and scp forms BuildKit clones, which the guard misses | reusing `URL` whole, which also matches `https://` |
+| [D6](#d6) | `ADD_GIT` also matches `ssh://` and a whitespace- or quote-led `user@host:` source | the ssh and scp forms BuildKit clones, which the guard misses | reusing `URL` whole, which also matches `https://` |
 | [D7](#d7) | the review surface's `wd14_path` docstring, run button and `beforeunload` comment are reworded; the rail's count is unchanged | the count matches the manifest's rows; only its label is wrong | recounting re-opened inputs |
 
 ### D1
@@ -68,6 +68,8 @@ D35   - **Accepts:** code ComfyUI runs can read the stop key from other processe
         image names no `USER`. Reopen when a node or model is not fully trusted, or the key's scope is account-wide.
 D36   - **Accepts:** ComfyUI's history and node cache hold the batch's photograph until the teardown.
         Reopen when a pod serves more than one batch.
+      - **Accepts:** a `down.sh` run while a create is in flight spends that create's pending marker, so an interrupt
+        before it records leaves a pod only the pod's own stop ends. Reopen when two sessions share a checkout.
 ```
 
 *A component is a contract* gains, after its `Held by`:
@@ -77,8 +79,7 @@ D36   - **Accepts:** ComfyUI's history and node cache hold the batch's photograp
   globals the suite patches, not parameters, so two roots in one process means patching global state.
 ```
 
-A risk with no line: D36 already says one session runs at a time, which is the accepted race; a fully rendered old
-run refusing at assembly is behaviour, loud, and uploads nothing.
+A risk with no line: a fully rendered old run refusing at assembly is behaviour, loud, and uploads nothing.
 
 ### D2
 
@@ -136,12 +137,13 @@ and `declares kind '<name>', which this build does not read` otherwise.
 
 ```
 ADD_GIT  (?:\bgit://|\bgit@|\.git\b)
-      →  (?:\bgit://|\bgit@|\.git\b|\bssh://|\s[\w.-]+@[\w.-]+:)
+      →  (?:\bgit://|\bgit@|\.git\b|\bssh://|[\s"'][\w.-]+@[\w.-]+:)
 ```
 
-The twin gains `ADD ssh://deploy@example.com/nodes /opt/nodes` (`an-ssh-add`) and
-`ADD deploy@example.com:nodes /opt/nodes` (`an-scp-add`). An `https://user@host:port` source is still not a git
-`ADD`: no whitespace precedes its user.
+The twin gains `ADD ssh://deploy@example.com/nodes /opt/nodes` (`an-ssh-add`),
+`ADD deploy@example.com:nodes /opt/nodes` (`an-scp-add`) and its exec form
+`ADD ["deploy@example.com:nodes", "/opt/nodes"]` (`an-scp-exec-add`). An `https://user@host:port` source is still
+not a git `ADD`: no whitespace or quote precedes its user.
 
 ### D7
 
@@ -175,3 +177,7 @@ None.
 ## Verdict
 
 **feasible** — records, one pattern, and one module's listing; nothing a stage writes changes.
+
+**A patch:** `show`'s new lines are required by the existing requirement *Inspection prints the run directory with
+its provenance*, because a run directory printed without its failure records is not the run directory; the delta's
+SHALL only states that outright.

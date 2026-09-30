@@ -433,6 +433,7 @@ def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> 
         "ADD https://github.com/c/d.git /d\n",
         "ADD ssh://deploy@example.com/nodes /opt/nodes\n",
         "ADD deploy@example.com:nodes /opt/nodes\n",
+        'ADD ["deploy@example.com:nodes", "/opt/nodes"]\n',
     ],
     ids=[
         "a-flag",
@@ -442,6 +443,7 @@ def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> 
         "an-add",
         "an-ssh-add",
         "an-scp-add",
+        "an-scp-exec-add",
     ],
 )
 def test_the_count_catches_a_clone_with_a_flag_and_another_host(

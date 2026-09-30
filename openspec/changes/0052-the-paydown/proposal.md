@@ -54,9 +54,11 @@ None.
 
 ## Impact
 
-- **Files:** `isekai/interface/run_view.py`, `isekai/foundation/run.py`, `tools/derive_image_project.py`,
-  `isekai/interface/ui/batch.py`, `ui/src/components/BatchRail.vue`, `ui/src/ReviewApp.vue`, `docs/decisions.md`,
-  `docs/principles.md`, `isekai/boundary/README.md`, `tests/test_run_view.py`, `tests/test_infra.py`.
+- **Files:** `isekai/interface/run_view.py`, `isekai/foundation/run.py`, `isekai/pipeline/generate.py`,
+  `isekai/interface/cli.py`, `tools/derive_image_project.py`, `isekai/interface/ui/batch.py`,
+  `ui/src/components/BatchRail.vue`, `ui/src/ReviewApp.vue`, `ui/design/states.md`, `docs/decisions.md`,
+  `docs/principles.md`, `docs/data-flow.md`, `README.md`, `isekai/boundary/README.md`, `isekai/interface/README.md`,
+  `tests/test_run_view.py`, `tests/test_infra.py`.
 - **Behaviour:** `show` prints more lines; the rail's run button reads `in the manifest`. Nothing a stage writes
   changes.
 - **Formats:** none. No file the image copies changes.

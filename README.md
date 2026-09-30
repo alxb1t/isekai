@@ -186,8 +186,8 @@ malformed sheet costs nothing rather than a boot.
 python -m isekai show .inputs/me.jpg
 ```
 
-Prints a run's artifacts, versions and what produced each one. It reaches no model and no GPU, and it
-works on a checkout that has provisioned nothing.
+Prints a run's artifacts, versions, what produced each one and every failure record, and names anything below a
+flow it does not read. It reaches no model and no GPU, and it works on a checkout that has provisioned nothing.
 
 ### A batch of photographs, through both flows
 
