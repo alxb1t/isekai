@@ -17,7 +17,6 @@ Stdlib only.
 
 import json
 import os
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,9 +37,10 @@ from isekai.foundation.run import (
     WD14,
     Kind,
     Run,
+    failure_named,
     is_approved,
 )
-from isekai.pipeline.generate import rendered_seeds
+from isekai.pipeline.generate import is_render, is_sidecar, rendered_seeds
 
 # The stages in the order a run passes through them. Every one of them is a
 # flow's own -- the run is input above and flow below -- so there is nothing for
@@ -52,11 +52,8 @@ from isekai.pipeline.generate import rendered_seeds
 # says less than a run holds.
 STAGES: tuple[str, ...] = (CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS)
 
-# A render's sidecar, as the render stage names it beside `<seed><suffix>`.
-_SIDECAR = re.compile(r"^\d+\.render\.json$")
 
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class FailureRecord:
     """One failure record, read from its name alone."""
 
@@ -80,16 +77,8 @@ class Listing:
 
 def _failure_of(name: str) -> FailureRecord | None:
     """Return the failure record `name` is, or None when it is not one."""
-    match = ERROR.match(name)
-    if match is None:
-        return None
-    kind: Kind = "permanent" if match.group("kind") == "permanent" else "transient"
-    return FailureRecord(int(match.group("version")), int(match.group("attempt")), kind)
-
-
-def _in_order(failures: list[FailureRecord]) -> list[FailureRecord]:
-    """Return `failures` sorted by version, then attempt."""
-    return sorted(failures, key=lambda failure: (failure.version, failure.attempt))
+    named = failure_named(name)
+    return None if named is None else FailureRecord(*named)
 
 
 def _producer_of(path: Path) -> str:
@@ -170,7 +159,7 @@ def _listing(stage: str, flow: str, directory: Path) -> Listing:
         version: _producer_of(directory / names[version]) for version in present
     }
     return Listing(
-        stage, flow, present, active, sorted(approved), producers, _in_order(failures)
+        stage, flow, present, active, sorted(approved), producers, sorted(failures)
     )
 
 
@@ -227,7 +216,7 @@ def render_failures(run: Run) -> dict[tuple[str, int], list[FailureRecord]]:
                 if (failure := _failure_of(name)) is not None
             ]
             if failures:
-                found[(flow, int(group.name))] = _in_order(failures)
+                found[(flow, int(group.name))] = sorted(failures)
     return found
 
 
@@ -274,8 +263,9 @@ def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
                 group,
                 f"{flow}/{OUTPUTS}/{group.name}",
                 lambda path: (
-                    (path.suffix == suffix and path.stem.isdigit())
-                    or bool(_SIDECAR.match(path.name) or ERROR.match(path.name))
+                    is_render(path, suffix)
+                    or is_sidecar(path)
+                    or bool(ERROR.match(path.name))
                 ),
             )
     return sorted(names)

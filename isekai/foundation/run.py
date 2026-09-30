@@ -481,21 +481,25 @@ def attempts(directory: Path, version: int) -> list[Attempt]:
     """
     if not directory.is_dir():
         return []
-    found = [
-        Attempt(
-            int(match.group("attempt")),
-            _kind(match.group("kind")),
-            directory / name,
-        )
-        for name in os.listdir(directory)
-        if (match := ERROR.match(name)) and int(match.group("version")) == version
-    ]
+    found: list[Attempt] = []
+    for name in os.listdir(directory):
+        named = failure_named(name)
+        if named is not None and named[0] == version:
+            found.append(Attempt(named[1], named[2], directory / name))
     return sorted(found, key=lambda recorded: recorded.attempt)
 
 
-def _kind(name: str) -> Kind:
-    """Narrow a filename's kind field to the two values the pattern allows."""
-    return "permanent" if name == "permanent" else "transient"
+def failure_named(name: str) -> tuple[int, int, Kind] | None:
+    """Return the version, attempt and kind a failure record's name carries.
+
+    None when `name` is not a failure record.
+    e.g. `"002.error.1.transient.json"` → `(2, 1, "transient")`
+    """
+    match = ERROR.match(name)
+    if match is None:
+        return None
+    kind: Kind = "permanent" if match.group("kind") == "permanent" else "transient"
+    return int(match.group("version")), int(match.group("attempt")), kind
 
 
 def record_failure(
