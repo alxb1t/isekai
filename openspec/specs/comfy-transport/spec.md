@@ -113,6 +113,19 @@ offline stand-in able to answer it, so the suite stays offline.
 - **THEN** the transport returns the ComfyUI, Python and PyTorch versions the server reports
 - **AND** the offline stand-in answers the same request without a network
 
+#### Scenario: a report in a shape this build does not read is permanent
+- **Key:** `comfy-transport:runtime:an-unread-report-is-permanent`
+- **Layers:** unit
+- **WHEN** the system report does not carry the versions where they are read
+- **THEN** the failure is permanent
+- **AND** it is worded as any answer in a shape this build does not read
+
+#### Scenario: a report the transport cannot fetch keeps the transport's kind
+- **Key:** `comfy-transport:runtime:an-unfetched-report-keeps-its-kind`
+- **Layers:** unit
+- **WHEN** the request for the system report fails in the transport
+- **THEN** the failure is classified as the same failure of any other call
+
 ### Requirement: The transport ignores any proxy the environment names
 
 The system SHALL send every request to the rendering endpoint at the address it was given, and SHALL ignore any

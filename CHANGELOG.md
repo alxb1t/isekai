@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-09-30 · 0049-pins-guarded
+
 ### Fixed
 
 - The image's clone check counts every `git clone`, whatever its flags or host; a bumped source-only package
