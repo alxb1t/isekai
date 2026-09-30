@@ -5,7 +5,7 @@ scenarios; phase 2 adds their tests.
 
 ## Progress
 
-- [ ] 1 — The records
+- [x] 1 — The records
 - [ ] 2 — What `show` hid
 - [ ] 3 — The guard
 - [ ] 4 — The words
@@ -15,13 +15,13 @@ test turns red: `show`'s legend test asserts with `in`, and the guard's twin onl
 
 ## 1 — The records
 
-- [ ] 1.1 **HALT CHECK** — no decision carries an `Accepts:` bullet, and *A component is a contract* has no *Known breaks*.
+- [x] 1.1 **HALT CHECK** — no decision carries an `Accepts:` bullet, and *A component is a contract* has no *Known breaks*.
   Verify: `grep -c 'Accepts:' docs/decisions.md` prints `0`, and `grep -c 'MODEL_RECORDS' docs/principles.md` prints `0`.
-- [ ] 1.2 In `docs/decisions.md`, add the `Accepts:` bullets to D6, D27, D35 and D36, and `0052` to each one's `Made by`, per [D1](design.md#d1).
+- [x] 1.2 In `docs/decisions.md`, add the `Accepts:` bullets to D6, D27, D35 and D36, and `0052` to each one's `Made by`, per [D1](design.md#d1).
   Verify: `grep -c '^- \*\*Accepts:\*\*' docs/decisions.md` prints `4`, and `grep -c '0052' docs/decisions.md` prints `4`.
-- [ ] 1.3 In `docs/principles.md`, add *A component is a contract*'s *Known breaks* per [D1](design.md#d1), and `_once` to *Only a front end composes*'s per [D2](design.md#d2).
+- [x] 1.3 In `docs/principles.md`, add *A component is a contract*'s *Known breaks* per [D1](design.md#d1), and `_once` to *Only a front end composes*'s per [D2](design.md#d2).
   Verify: `grep -c 'MODEL_RECORDS' docs/principles.md` prints `1`, and `grep -c '_once' docs/principles.md` prints `1`.
-- [ ] 1.4 Add `refusal_for`'s docstring sentence in `isekai/foundation/run.py`, and `tests/test_tagging.py` to the `ollama.py` row in `isekai/boundary/README.md`, per [D2](design.md#d2).
+- [x] 1.4 Add `refusal_for`'s docstring sentence in `isekai/foundation/run.py`, and `tests/test_tagging.py` to the `ollama.py` row in `isekai/boundary/README.md`, per [D2](design.md#d2).
   Verify: `grep -c 'did not fail' isekai/foundation/run.py` prints `1`, and `grep '^| .ollama.py.' isekai/boundary/README.md | grep -c test_tagging` prints `1`.
 
 ## 2 — What `show` hid

@@ -638,7 +638,9 @@ def refusal_for(
     again would only be refused.
 
     A failure above version 1 sits beside the version before it, which a bare
-    rerun keeps as complete, so the command asks for the next version.
+    rerun keeps as complete, so the command asks for the next version. `tag`
+    runs both taggers, so its `--new-version` also writes a new version of the
+    list that did not fail.
     """
     # `record_failure` names every record `NNN.error.…`.
     version = int(record.name[:3])

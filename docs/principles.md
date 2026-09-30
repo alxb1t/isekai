@@ -49,6 +49,8 @@ the default; a package earns its place when the contract needs more than one fil
   both scales: a front end composes components, and a front door composes its own modules.
 - **Held by:** review. The suite passes fakes through those parameters — `FakeReader`,
   `FakeComfyClient`.
+- **Known breaks:** `boundary/ollama.py`'s `MODEL_RECORDS` and `interface/wiring.py`'s `POD_IMAGE` are module
+  globals the suite patches, not parameters, so two roots in one process means patching global state.
 
 ### Only a front end composes
 
@@ -66,7 +68,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
   or undeclared vocabulary into a refusal — which is the provisioning component's work.
   `interface/ui/app.py` decides what makes a draft, an approved sheet, a caption or a tag list damaged,
   and which remedy each names — work that belongs to the review, caption and tagging stages that own
-  those files.
+  those files. `interface/cli.py`'s `_once` decides that a transient transport failure is not kept for
+  the session — the render stage's rule.
 
 ### The code is layered
 
