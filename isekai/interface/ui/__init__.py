@@ -2,8 +2,7 @@
 
 A sibling of `cli.py` rather than a client of it. Both front ends call `wiring`
 and the stage functions directly -- no subprocess, no argv serialization, no
-exit codes, and a `Refusal` is caught rather than scraped out of stderr prose
-(design.md D1).
+exit codes, and a `Refusal` is caught rather than scraped out of stderr prose.
 
 Four modules, and the split is what keeps the suite offline. `batch.py` holds the
 batch and the whole startup refusal order and imports no web framework, so that

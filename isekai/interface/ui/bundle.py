@@ -14,7 +14,7 @@ it, and say which part of the system needs it.
 it would churn version control on every build for no reading a human does.
 `ui/dist/` and `ui/node_modules/` are two of the repository's ignored roots,
 and they fail differently from the other two: losing this one costs a
-deterministic rebuild, losing the other an `npm install` (design.md D12).
+deterministic rebuild, losing the other an `npm install`.
 
 Stdlib only -- `subprocess` and `shutil`, and nothing else reaches for either.
 """
@@ -32,27 +32,26 @@ BINARY = "npm"
 
 # **What freshness is measured against: everything under `ui/` that is not one
 # of the two ignored roots.** Stated as an exclusion rather than as a list of
-# build inputs, because that list was wrong twice. It held `src/` and
-# `index.html` alone until v0.22.1, so a bumped dependency, a plugin added to
-# `vite.config.ts` or a changed build script left the previous bundle being
-# served with a green gate -- `npm run typecheck` compiles the source and the
-# server reads the build (v0.20 R6, v0.20 security/S2). Naming those three
-# would have left out `tsconfig.json`, which `vite` reads and which sits in
-# that directory today, and `postcss.config.js` or `public/` for whoever adds
-# one next.
+# build inputs, because a list goes stale. One holding `src/` and `index.html`
+# alone would leave the previous bundle served with a green gate after a bumped
+# dependency, a plugin added to `vite.config.ts` or a changed build script --
+# `npm run typecheck` compiles the source and the server reads the build.
+# Naming those three would still leave out `tsconfig.json`, which `vite` reads
+# and which sits in that directory, and `postcss.config.js` or `public/` for
+# whoever adds one next.
 #
 # The exclusion cannot go stale the same way: `dist/` is this function's own
 # output and `node_modules/` is fetched, and both are ignored roots this
 # repository already names as such. Everything else under `ui/` is tracked
 # source, so the worst this rule can do is rebuild when a design note changes
 # -- a few seconds, against a stale bundle nobody notices, which is the failure
-# this entry was raised twice to stop.
+# this rule stops.
 NOT_SOURCE = frozenset({"dist", "node_modules"})
 
 # The build is local, free and ordinarily a few seconds. A ceiling anyway,
 # because `npm run build` can reach the network resolving a missing dependency
 # and an `isekai ui` that hangs with no port bound and no output is
-# indistinguishable from one that died (v0.20 R9').
+# indistinguishable from one that died.
 BUILD_TIMEOUT = 300
 
 
@@ -67,18 +66,10 @@ def _newest(root: Path) -> float:
 def _is_fresh(dist: Path, source: Path) -> bool:
     """Say whether the built bundle is newer than every source it is built from.
 
-    **Presence is not freshness, and this is the whole of the defect it fixes.**
-    The first version of this function returned any non-empty `dist/`, so an
-    operator whose bundle was built by an earlier version went on being served
-    that earlier version's page -- silently, with a green gate, because
-    `npm run typecheck` compiles the *source* and the server reads the *build*.
-    Nothing was wrong except that nothing had been rebuilt.
-
-    It was unobservable until now for a reason that has just expired: v0.20 is
-    the first version to change `ui/src/` since the bundle began being built on
-    demand, so it is the first in which a stale `dist/` and a fresh checkout
-    disagree. The rule about not going into files a version never touches does
-    not apply to a gap the version itself makes reachable (design.md D28).
+    **Presence is not freshness.** Accepting any non-empty `dist/` would keep
+    serving an operator the page an earlier checkout built -- silently, with a
+    green gate, because `npm run typecheck` compiles the *source* and the server
+    reads the *build*. Nothing would be wrong except that nothing was rebuilt.
 
     Compared by mtime rather than by a content hash: `vite` emits
     content-hashed filenames, so a rebuild that changes nothing is cheap and a

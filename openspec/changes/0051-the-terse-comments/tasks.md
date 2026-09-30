@@ -8,7 +8,7 @@ docstrings and `spec_exempt` reasons of its tree per [D1](design.md#d1) and [D2]
 - [x] 1 — foundation and shared
 - [x] 2 — boundary
 - [x] 3 — pipeline
-- [ ] 4 — interface
+- [x] 4 — interface
 - [ ] 5 — tools, infra, start.sh and the Dockerfile
 - [ ] 6 — tests
 - [ ] 7 — The rule, the guard and the README rows
@@ -35,7 +35,7 @@ Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HIST
 
 ## 4 — interface
 
-- [ ] 4.1 Rewrite the history in `isekai/interface/` and `isekai/__main__.py`.
+- [x] 4.1 Rewrite the history in `isekai/interface/` and `isekai/__main__.py`.
   Verify: `grep -rlE 'design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]' isekai --include='*.py'` prints nothing.
 
 ## 5 — tools, infra, start.sh and the Dockerfile
