@@ -396,22 +396,21 @@ def _seam(value: T | None, name: str, does: str) -> T:
 def _once(read: Callable[[], T]) -> Callable[[], T]:
     """Return `read`, called at most once: its answer or its refusal is kept.
 
-    A refusal is the endpoint's, not a photograph's, so no later render asks
-    again within the session (0049 design D4).
+    A refusal is the build's or the endpoint's, not a photograph's, so meeting
+    it again would redo the work to learn nothing (0049 design D4).
     """
-    kept: list[T] = []
-    refused: list[Refusal] = []
+    outcome: list[T | Refusal] = []
 
     def reading() -> T:
-        if refused:
-            raise refused[0]
-        if not kept:
+        if not outcome:
             try:
-                kept.append(read())
-            except Refusal as failed:
-                refused.append(failed)
-                raise
-        return kept[0]
+                outcome.append(read())
+            except Refusal as refused:
+                outcome.append(refused)
+        kept = outcome[0]
+        if isinstance(kept, Refusal):
+            raise kept
+        return kept
 
     return reading
 
@@ -437,8 +436,7 @@ def _per_item(
     two verbs need it at all.
     """
     new_version = bool(getattr(args, "new_version", False))
-    opened: list[LocalTagger] = []
-    unopenable: list[Refusal] = []
+    opening: list[Callable[[], LocalTagger]] = []
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -476,21 +474,10 @@ def _per_item(
         a key; giving it one before then buys two sessions and no behaviour.
         """
         resolve = _seam(wired.tagger, "tagger", "scores the photograph")
-
-        def opening() -> LocalTagger:
-            # A refusal is kept as well as a success: it is the build's, not a
-            # photograph's, so the 467 MB hash is not re-run to meet it again.
-            if unopenable:
-                raise unopenable[0]
-            if not opened:
-                try:
-                    opened.append(resolve(flow))
-                except Refusal as refused:
-                    unopenable.append(refused)
-                    raise
-            return opened[0]
-
-        return opening
+        if not opening:
+            # A refusal is kept too, so the 467 MB hash is not re-run to meet it.
+            opening.append(_once(lambda: resolve(flow)))
+        return opening[0]
 
     def work(identifier: str) -> None:
         run = _run_for(identifier, wired)

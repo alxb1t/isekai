@@ -22,7 +22,7 @@ import pytest
 
 import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
-from isekai.boundary.comfy import ComfyClient, TransportFailure
+from isekai.boundary.comfy import ComfyClient, TransportFailure, unread
 from isekai.boundary.comfy.client import TIMEOUT
 from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, Runtime, read
 from isekai.foundation.flow import (
@@ -1604,31 +1604,6 @@ def test_the_client_reads_the_report_over_the_transport(
     assert report["system"]["comfyui_version"] == FAKE_SYSTEM["comfyui_version"]
 
 
-class ReportingClient(FakeComfyClient):
-    """A fake whose system report is `report`, or which raises `failure` for it."""
-
-    def __init__(
-        self,
-        report: dict[str, Any] | None = None,
-        failure: TransportFailure | None = None,
-    ) -> None:
-        super().__init__()
-        self.report, self.failure = report, failure
-
-    def system_stats(self) -> dict[str, Any]:
-        self.stats_calls += 1
-        if self.failure is not None:
-            raise self.failure
-        assert self.report is not None
-        return self.report
-
-
-def _worded(refusal: Exception) -> tuple[str, str]:
-    """Return a refusal's words either side of the error it quotes."""
-    text = str(refusal)
-    return text.split(" (", 1)[0], text.rsplit(")", 1)[1]
-
-
 @pytest.mark.spec("comfy-transport:runtime:an-unread-report-is-permanent")
 @pytest.mark.parametrize(
     "report",
@@ -1639,18 +1614,15 @@ def _worded(refusal: Exception) -> tuple[str, str]:
     ],
     ids=["null", "a-missing-version", "no-system"],
 )
-def test_a_report_in_an_unread_shape_is_permanent(
-    monkeypatch: pytest.MonkeyPatch, report: dict[str, Any]
-) -> None:
-    stub_comfy(monkeypatch, lambda _: io.BytesIO(b"not json"))
-    with pytest.raises(TransportFailure) as unread_answer:
-        ComfyClient("http://127.0.0.1:8188").system_stats()
-
+def test_a_report_in_an_unread_shape_is_permanent(report: dict[str, Any]) -> None:
     with pytest.raises(TransportFailure) as refused:
-        read_runtime(ReportingClient(report))
+        read_runtime(FakeComfyClient(report=report))
 
     assert refused.value.kind == "permanent"
-    assert _worded(refused.value) == _worded(unread_answer.value)
+    # the transport's own words for any answer in a shape it does not read
+    cause = refused.value.__cause__
+    assert isinstance(cause, Exception)
+    assert str(refused.value) == str(unread(cause))
 
 
 @pytest.mark.spec("comfy-transport:runtime:an-unfetched-report-keeps-its-kind")
@@ -1659,7 +1631,7 @@ def test_an_unfetched_report_keeps_the_transports_kind(kind: Kind) -> None:
     failure = TransportFailure(kind, "the endpoint failed with HTTP 502")
 
     with pytest.raises(TransportFailure) as refused:
-        read_runtime(ReportingClient(failure=failure))
+        read_runtime(FakeComfyClient(report_failure=failure))
 
     assert refused.value is failure
 
@@ -1713,7 +1685,7 @@ def test_a_refused_report_is_asked_once_and_submits_nothing(
     from isekai.interface.cli import build_parser, dispatch
 
     runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "grace")]
-    client = ReportingClient({"system": None})
+    client = FakeComfyClient(report={"system": None})
     err = io.StringIO()
     wired = wiring.Wiring(
         reader=Always(FakeReader(prose="unused")),

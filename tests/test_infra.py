@@ -25,7 +25,7 @@ from isekai.boundary.provision import (
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
-from tools.derive_image_project import pinned_commits, uv_required
+from tools.derive_image_project import CLONE, pinned_commits, uv_required
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -415,7 +415,7 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(
     "structural: a clone with no checkout is not a pin, and this holds every clone"
 )
 def test_every_git_clone_in_the_image_is_pinned_to_a_commit(dockerfile: str) -> None:
-    clones = re.findall(r"\bgit clone\b", dockerfile)
+    clones = CLONE.findall(dockerfile)
     assert clones
     assert len(pinned_commits(dockerfile)) == len(clones)
 
@@ -817,22 +817,21 @@ def test_every_source_only_package_builds_with_constrained_tools() -> None:
     "structural: twin of test_every_source_only_package_builds_with_constrained_tools"
 )
 def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
-    image_lock = IMAGE_LOCK.read_text() + (
+    lock = IMAGE_LOCK.read_text()
+    image_lock = lock + (
         '\n[[package]]\nname = "pycocotools"\nversion = "2.0.8"\n'
         'source = { registry = "https://pypi.org/simple" }\n'
         'sdist = { url = "https://example.invalid/pycocotools-2.0.8.tar.gz" }\n'
     )
     image_pyproject = IMAGE_PROJECT.read_text()
     assert uncovered_sdists(image_lock, image_pyproject) == ["pycocotools 2.0.8"]
-    bumped = IMAGE_LOCK.read_text().replace(
+    bumped = lock.replace(
         'name = "insightface"\nversion = "0.7.3"',
         'name = "insightface"\nversion = "0.7.4"',
     )
     assert uncovered_sdists(bumped, image_pyproject) == ["insightface 0.7.4"]
     no_cython = re.sub(r'\{ requirement = "cython==[^}]*\},?', "", image_pyproject)
-    assert uncovered_sdists(IMAGE_LOCK.read_text(), no_cython) == [
-        "insightface: cython"
-    ]
+    assert uncovered_sdists(lock, no_cython) == ["insightface: cython"]
 
 
 # The line each step of `start.sh` begins with: the stop timer, the SSH key, sshd,
