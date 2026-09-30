@@ -14,6 +14,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The image's clone check counts every `git clone`, whatever its flags or host; a bumped source-only package
   fails until its build tools are recorded again, and pins.md names what a backend adds while it builds
   (0049 D1, D2).
+- A runtime report in a shape this build does not read is refused as the transport refuses any such answer,
+  permanent, and is not asked again in the session; the caption and tags goldens hold a pinned producer (0049 D3, D4).
 
 ## [0.31.0] - 2026-09-29 · 0048-the-run-files
 

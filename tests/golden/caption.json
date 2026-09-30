@@ -8,10 +8,24 @@
     "models": [
       "fake-model"
     ],
-    "pinned": false,
+    "pinned": true,
     "briefing": {
       "path": "flows/summon-anime-wai/caption.briefing.md",
       "sha256": "033bd182cbb5bf1ef627310c7fc07e386335c0274aef49f4536d6f6c778ca134"
+    },
+    "artifacts": {
+      "joycaption/Llama-Joycaption-Beta-One-Hf-Llava-Q4_K.gguf": {
+        "sha256": "e8ae55dd07e61d541ab741d6ed63e7810192cea65d7ef8cda69b2a99fb06dc15"
+      },
+      "joycaption/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf": {
+        "sha256": "94002cb5c354c7c9e538e64f37d593db9eceeca2e94573bae6cd3b2bd8bb1952"
+      }
+    },
+    "options": {
+      "temperature": 0,
+      "seed": 1,
+      "num_predict": 1024,
+      "num_ctx": 4096
     }
   },
   "prose": "Brown hair, brown eyes."

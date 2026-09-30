@@ -43,7 +43,7 @@ import argparse
 import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from functools import cache, partial
+from functools import cache
 from pathlib import Path
 from typing import Any, TypeVar
 
@@ -393,6 +393,29 @@ def _seam(value: T | None, name: str, does: str) -> T:
     return value
 
 
+def _once(read: Callable[[], T]) -> Callable[[], T]:
+    """Return `read`, called at most once: its answer or its refusal is kept.
+
+    A refusal is the endpoint's, not a photograph's, so no later render asks
+    again within the session (0049 design D4).
+    """
+    kept: list[T] = []
+    refused: list[Refusal] = []
+
+    def reading() -> T:
+        if refused:
+            raise refused[0]
+        if not kept:
+            try:
+                kept.append(read())
+            except Refusal as failed:
+                refused.append(failed)
+                raise
+        return kept[0]
+
+    return reading
+
+
 def _per_item(
     verb: str,
     args: argparse.Namespace,
@@ -605,7 +628,7 @@ def _generate(
         return refused
     image = booted_image()
     # One report per session, read only when a render will run.
-    ran_on = cache(partial(read_runtime, client))
+    ran_on = _once(lambda: read_runtime(client))
 
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair

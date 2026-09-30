@@ -5,6 +5,11 @@ reaches inside.
 """
 
 from isekai.boundary.comfy.client import ComfyClient
-from isekai.boundary.comfy.contract import ComfyTransport, Image, TransportFailure
+from isekai.boundary.comfy.contract import (
+    ComfyTransport,
+    Image,
+    TransportFailure,
+    unread,
+)
 
-__all__ = ["ComfyClient", "ComfyTransport", "Image", "TransportFailure"]
+__all__ = ["ComfyClient", "ComfyTransport", "Image", "TransportFailure", "unread"]

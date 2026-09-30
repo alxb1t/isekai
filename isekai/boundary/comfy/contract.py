@@ -28,6 +28,18 @@ class TransportFailure(Refusal):
         self.kind: Kind = kind
 
 
+def unread(answer: Exception) -> TransportFailure:
+    """Return the permanent failure for an answer in a shape this build does not read.
+
+    e.g. KeyError('system') -> "... does not read (KeyError('system')); ..."
+    """
+    return TransportFailure(
+        "permanent",
+        "the endpoint answered in a shape this build does not read "
+        f"({answer!r}); check that `--server` names a ComfyUI",
+    )
+
+
 class ComfyTransport(Protocol):
     """The transport seam as a type.
 

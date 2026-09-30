@@ -8,9 +8,24 @@
     "models": [
       "fake-model"
     ],
-    "pinned": false,
+    "pinned": true,
     "prompt": {
       "sha256": "3ce90e9fcf084c092d5086b50a78f9c8b12096a1ef4bbae63e963d88b50dad49"
+    },
+    "artifacts": {
+      "joycaption/Llama-Joycaption-Beta-One-Hf-Llava-Q4_K.gguf": {
+        "sha256": "e8ae55dd07e61d541ab741d6ed63e7810192cea65d7ef8cda69b2a99fb06dc15"
+      },
+      "joycaption/llama-joycaption-beta-one-llava-mmproj-model-f16.gguf": {
+        "sha256": "94002cb5c354c7c9e538e64f37d593db9eceeca2e94573bae6cd3b2bd8bb1952"
+      }
+    },
+    "options": {
+      "temperature": 0,
+      "seed": 1,
+      "num_predict": 1024,
+      "num_ctx": 4096,
+      "repeat_penalty": 1.15
     }
   },
   "tags": [

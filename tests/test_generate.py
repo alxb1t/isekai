@@ -16,6 +16,7 @@ import urllib.error
 import urllib.request
 from email.message import Message
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -39,6 +40,7 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     OUTPUTS,
     PROMPTS,
+    Kind,
     Run,
     across,
     artifact_name,
@@ -1602,6 +1604,66 @@ def test_the_client_reads_the_report_over_the_transport(
     assert report["system"]["comfyui_version"] == FAKE_SYSTEM["comfyui_version"]
 
 
+class ReportingClient(FakeComfyClient):
+    """A fake whose system report is `report`, or which raises `failure` for it."""
+
+    def __init__(
+        self,
+        report: dict[str, Any] | None = None,
+        failure: TransportFailure | None = None,
+    ) -> None:
+        super().__init__()
+        self.report, self.failure = report, failure
+
+    def system_stats(self) -> dict[str, Any]:
+        self.stats_calls += 1
+        if self.failure is not None:
+            raise self.failure
+        assert self.report is not None
+        return self.report
+
+
+def _worded(refusal: Exception) -> tuple[str, str]:
+    """Return a refusal's words either side of the error it quotes."""
+    text = str(refusal)
+    return text.split(" (", 1)[0], text.rsplit(")", 1)[1]
+
+
+@pytest.mark.spec("comfy-transport:runtime:an-unread-report-is-permanent")
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"system": None},
+        {"system": {"comfyui_version": "0.3.0", "python_version": "3.12.14"}},
+        {"devices": []},
+    ],
+    ids=["null", "a-missing-version", "no-system"],
+)
+def test_a_report_in_an_unread_shape_is_permanent(
+    monkeypatch: pytest.MonkeyPatch, report: dict[str, Any]
+) -> None:
+    stub_comfy(monkeypatch, lambda _: io.BytesIO(b"not json"))
+    with pytest.raises(TransportFailure) as unread_answer:
+        ComfyClient("http://127.0.0.1:8188").system_stats()
+
+    with pytest.raises(TransportFailure) as refused:
+        read_runtime(ReportingClient(report))
+
+    assert refused.value.kind == "permanent"
+    assert _worded(refused.value) == _worded(unread_answer.value)
+
+
+@pytest.mark.spec("comfy-transport:runtime:an-unfetched-report-keeps-its-kind")
+@pytest.mark.parametrize("kind", ["transient", "permanent"])
+def test_an_unfetched_report_keeps_the_transports_kind(kind: Kind) -> None:
+    failure = TransportFailure(kind, "the endpoint failed with HTTP 502")
+
+    with pytest.raises(TransportFailure) as refused:
+        read_runtime(ReportingClient(failure=failure))
+
+    assert refused.value is failure
+
+
 @pytest.mark.spec("image-generation:runtime:a-pinned-pod-is-recorded")
 def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
     tmp_path: Path,
@@ -1641,6 +1703,36 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
         assert sidecar.get("runtime") == read_runtime(FakeComfyClient())
     # One report for the session, however many renders it served.
     assert client.stats_calls == 1
+
+
+@pytest.mark.spec("image-generation:runtime:a-refused-report-is-asked-once")
+def test_a_refused_report_is_asked_once_and_submits_nothing(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    from isekai.interface import wiring
+    from isekai.interface.cli import build_parser, dispatch
+
+    runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "grace")]
+    client = ReportingClient({"system": None})
+    err = io.StringIO()
+    wired = wiring.Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=client,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=err,
+    )
+    argv = ["generate", "--flow", FLOW, "--seed", "42", *(run.id for run in runs)]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert client.stats_calls == 1
+    assert client.submissions == []
+    assert err.getvalue().count("a shape this build does not read") == len(runs)
 
 
 @pytest.mark.spec("image-generation:runtime:an-unrecorded-endpoint-is-unpinned")

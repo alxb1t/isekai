@@ -6,7 +6,7 @@ scenario; each task below adds the tests that bind them.
 ## Progress
 
 - [x] 1 — The image's pins
-- [ ] 2 — The records
+- [x] 2 — The records
 - [ ] 3 — The roots
 - [ ] 4 — Drift
 
@@ -24,11 +24,11 @@ Line numbers are `df5e436`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The records
 
-- [ ] 2.1 In `tests/test_artifact_bytes.py`, capture `_caption` and `_tags` from readings carrying `artifacts` and `options`, and rewrite `tests/golden/caption.json` and `tests/golden/tags.json`, per [D3](design.md#d3).
+- [x] 2.1 In `tests/test_artifact_bytes.py`, capture `_caption` and `_tags` from readings carrying `artifacts` and `options`, and rewrite `tests/golden/caption.json` and `tests/golden/tags.json`, per [D3](design.md#d3).
   Verify: `cat tests/golden/caption.json tests/golden/tags.json | grep -c '"options"'` prints `2`, and `cat tests/golden/caption.json tests/golden/tags.json | grep -c '"artifacts"'` prints `2`.
-- [ ] 2.2 In `isekai/pipeline/generate.py`, make `read_runtime` raise the transport's permanent failure in its words, per [D4](design.md#d4); add `test_a_report_in_an_unread_shape_is_permanent` (`comfy-transport:runtime:an-unread-report-is-permanent`) and `test_an_unfetched_report_keeps_the_transports_kind` (`comfy-transport:runtime:an-unfetched-report-keeps-its-kind`) to `tests/test_generate.py`.
+- [x] 2.2 In `isekai/pipeline/generate.py`, make `read_runtime` raise the transport's permanent failure in its words, per [D4](design.md#d4); add `test_a_report_in_an_unread_shape_is_permanent` (`comfy-transport:runtime:an-unread-report-is-permanent`) and `test_an_unfetched_report_keeps_the_transports_kind` (`comfy-transport:runtime:an-unfetched-report-keeps-its-kind`) to `tests/test_generate.py`.
   Verify: `grep -c 'carries no {missing}' isekai/pipeline/generate.py` prints `0`, and `grep -cE '^def test_(a_report_in_an_unread_shape_is_permanent|an_unfetched_report_keeps_the_transports_kind)\(' tests/test_generate.py` prints `2`.
-- [ ] 2.3 In `isekai/interface/cli.py`, keep a refused report for the session, per [D4](design.md#d4); add `test_a_refused_report_is_asked_once_and_submits_nothing` (`image-generation:runtime:a-refused-report-is-asked-once`) to `tests/test_generate.py`.
+- [x] 2.3 In `isekai/interface/cli.py`, keep a refused report for the session, per [D4](design.md#d4); add `test_a_refused_report_is_asked_once_and_submits_nothing` (`image-generation:runtime:a-refused-report-is-asked-once`) to `tests/test_generate.py`.
   Verify: `grep -c 'cache(partial(read_runtime' isekai/interface/cli.py` prints `0`, and `grep -c '^def test_a_refused_report_is_asked_once_and_submits_nothing(' tests/test_generate.py` prints `1`.
 
 ## 3 — The roots
