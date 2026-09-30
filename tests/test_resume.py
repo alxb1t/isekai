@@ -106,9 +106,10 @@ def _calls(wired: Wiring) -> tuple[int, int, int, int]:
     making no request, so an assertion that only counted requests would call
     that inert.
 
-    **The sorter is gone rather than uncounted.** Stage ② reaches nothing to
-    count -- it reads one artifact and routes it through a committed table -- so
-    its inertness is the `wd14/` directory's, which the snapshot already covers.
+    **There is no sorter, rather than an uncounted one.** Stage ② reaches
+    nothing to count -- it reads one artifact and routes it through a committed
+    table -- so its inertness is the `wd14/` directory's, which the snapshot
+    already covers.
     """
     resolve_reader = wired.reader
     resolve_wd14, resolve_hosted = wired.tagger, wired.hosted_tagger
@@ -336,7 +337,7 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     collect(lambda: load_flow("summon-v9"))
     collect(lambda: load_flow(FLOW, _incomplete_flow(tmp_path)))
     collect(lambda: page(tmp_path / "not-a-batch"))
-    # An unreachable host rather than an absent binary: the surviving arm is
+    # An unreachable host rather than an absent binary: the one arm is
     # HTTP to a local port, so there is nothing on PATH to be missing.
     collect(
         lambda: OllamaReader(
@@ -392,8 +393,7 @@ AVAILABLE: Sequence[str] = (
     "python -m isekai approve --flow ",
     "python -m isekai generate --flow ",
     "tools/download_models.sh",
-    # The two Ollama remedies, which replaced the `npm install -g` one that told
-    # an operator to install a CLI this build no longer reaches.
+    # The two Ollama remedies.
     "ollama serve",
     "ollama create",
     "npm install",
@@ -479,7 +479,7 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
 
     Not *a command exists with that name* -- `AVAILABLE` above already says
     that. This parses what is printed, so a remedy an operator pastes back is
-    neither a usage error nor a command that does nothing (`0030` design D2).
+    neither a usage error nor a command that does nothing.
     """
     assert _unrunnable(_every_refusal(wired, tmp_path)) == []
 
@@ -550,9 +550,9 @@ def _approved_run(wired: Wiring, tmp_path: Path, name: str) -> str:
 def test_every_prompt_is_assembled_before_the_first_render_is_submitted(
     wired: Wiring, tmp_path: Path
 ) -> None:
-    # The acceptance run caught this: dispatching per-item assembled one prompt
-    # and then immediately reached for the endpoint, so a malformed third sheet
-    # would have been found after a machine was already rented.
+    # Dispatching per item would assemble one prompt and then immediately reach
+    # for the endpoint, so a malformed third sheet would be found after a machine
+    # is already rented.
     ids = [_approved_run(wired, tmp_path, name) for name in ("one", "two", "three")]
     assert isinstance(wired.client, FakeComfyClient)
 

@@ -15,14 +15,14 @@ filename, when approval is legal, and what a token costs.
 **Three write functions reach a run directory, all of stage ③'s**: `review()` at
 startup, `save_draft()` on autosave and `approve()` on the button. Nothing here
 builds an artifact body or an artifact filename, and `tests/test_ui.py`'s grep is
-what keeps that at three (design.md D11).
+what keeps that at three.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
-and `python -m isekai`'s import graph never reaches it at all. That is worth more
-since v0.22.3, not less: `fastapi` and `uvicorn` are declared dependencies now,
-so nothing fails at import time if a module-scope import appears elsewhere -- the
-`-S` guard in `tests/test_pipeline_cli.py` is the only thing that would catch it.
+and `python -m isekai`'s import graph never reaches it at all. That matters
+because `fastapi` and `uvicorn` are declared dependencies, so nothing fails at
+import time if a module-scope import appears elsewhere -- the `-S` guard in
+`tests/test_pipeline_cli.py` is the only thing that would catch it.
 Nothing is suppressed for this module anywhere; `uv sync --locked` installs both
 packages and the import resolves in the environment the gate runs in.
 
@@ -72,8 +72,8 @@ from isekai.pipeline.review import (
 RARE_BELOW = 2000
 
 # Held across a draft update's precondition and its write, so two updates that
-# state one precondition cannot both pass it (`0030` design D4); and across an
-# approval, so no update writes after it (`0031` design D1).
+# state one precondition cannot both pass it; and across an approval, so no
+# update writes after it.
 _DRAFT_UPDATE = threading.Lock()
 
 # Enough rows to choose from without the dropdown becoming a list to read. The
@@ -85,7 +85,7 @@ DEFAULT_LIMIT = 10
 # on disk -- an approved input, a changed field set, a tag outside the vocabulary
 # -- which is a conflict with state rather than a malformed request. One code for
 # all of them, because the page shows the string verbatim in one header line and
-# never branches on the number (design.md D6).
+# never branches on the number.
 REFUSED = 409
 
 # A request that did not come from this machine's own browser, addressed to this
@@ -162,9 +162,9 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         """Describe the batch: its flow, its schema, its inputs and their state."""
         # **The count is every input holding an approved artifact**, which is
         # what `Batch.approved_count` reads off the directory -- and `re-opened`
-        # holds one. Deriving it from `status == "approved"` was the trap: that
-        # agreed with the directory only while the two states were the only two,
-        # and the third ends the coincidence (design.md D5). Read off `state()`
+        # holds one. Deriving it from `status == "approved"` is the trap: that
+        # agrees with the directory only while `draft` and `approved` are the only
+        # states, and `re-opened` ends the coincidence. Read off `state()`
         # rather than by walking the directory a second time, so the count and
         # the statuses cannot disagree by construction rather than by luck.
         summaries = [_summary(batch, held) for held in batch.inputs]
@@ -187,9 +187,9 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         fragment = q.strip()
         found = batch.vocabulary.search(fragment) if fragment else []
         return {
-            # The count is bound where it is used. The `is not None` guard this
-            # once carried dropped no row -- `count()` returns `int` -- and read
-            # as though some fragment match might have no count (v0.18 R11).
+            # The count is bound where it is used, with no `is not None` guard:
+            # `count()` returns `int`, so one would drop no row and read as
+            # though some fragment match might have no count.
             "matches": [
                 {
                     "tag": tag,
@@ -225,15 +225,14 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         `/api/batch`'s payload. Riding that one would tax every page load for a
         surface that may never open; a `?field=` form would be a round trip per
         field and would pre-build a per-field ranking that is deliberately
-        deferred (design.md D13).
+        deferred.
 
         **Ordered by post count and cut at nothing.** Through `Vocabulary.rank`,
         which is the same call `/api/tags` ranks through, so no second ranking
         enters the system rather than merely no second *rule*. A cutoff was
         measured against the operator's own approved sheets and refused:
         `>10,000` hides ten of the 113 tags he approved, and the ones he reaches
-        for -- `gold bracelet` 2,081, `train station` 2,180 -- are in the tail
-        (design.md D7).
+        for -- `gold bracelet` 2,081, `train station` 2,180 -- are in the tail.
 
         **A declared field the table holds nothing for is present and empty**, and
         the excluded list is not served at all. An empty group is the honest answer
@@ -257,7 +256,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         approved = batch.approved_path(held)
         state = batch.state(held)
         # By state, never by which file happens to exist: a stale draft below
-        # the approval must not stand in for it (`0030` design D4).
+        # the approval must not stand in for it.
         fields: dict[str, list[str]] = {}
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
@@ -277,22 +276,21 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "caption": _prose(batch, held, caption) if caption else None,
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
-            # never spells a command (0032 design D4).
+            # never spells a command.
             "caption_command": None
             if caption
             else f"python -m isekai caption --flow {batch.flow.id} {held.run.id}",
             # Both lists ride on this payload rather than on endpoints of their
             # own, and both are `null` where the artifact is absent -- which is
-            # three legitimate states, none of them a failure (design.md D20).
+            # three legitimate states, none of them a failure.
             "wd14": _wd14(batch, held),
             "tags": _tags(batch, held),
             "fields": fields,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`. Not the
-            # absence of a draft, which the rail never keyed on; and not
-            # approval alone, which `v0.22.1` used and which made
-            # `review --new-version <run>` write a draft this page would not edit
-            # (design.md D5).
+            # absence of a draft, which the rail never keys on; and not
+            # approval alone, which would make `review --new-version <run>`
+            # write a draft this page would not edit.
             "readonly": state == "approved",
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
@@ -323,9 +321,9 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         re-opened with `review --new-version <run>` is not that state and is accepted,
         which is what the verb writes the draft for. And an update whose `saved`
         does not match the draft on disk refuses, because the page autosaves on a
-        debounce and two overlapping `PUT`s were free to commit in the order the
-        server happened to finish them -- last write wins, where "last" is not
-        the operator's last keystroke (design.md D6). The check and the write
+        debounce and two overlapping `PUT`s would be free to commit in the order
+        the server happens to finish them -- last write wins, where "last" is not
+        the operator's last keystroke. The check and the write
         hold one lock, so of two updates stating one precondition, the later
         fails it.
         """
@@ -426,13 +424,13 @@ def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
 def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     """Return the hosted tagger's committable tags for the page, or None if absent.
 
-    **Filtered to what the vocabulary carries, and the filter is v0.20's
-    acceptance rather than a preference.** On the acceptance batch roughly nine
-    in ten of this model's tags were outside the vocabulary -- `fashion
+    **Filtered to what the vocabulary carries, and the filter is an acceptance
+    finding rather than a preference.** On an acceptance batch roughly nine in
+    ten of this model's tags were outside the vocabulary -- `fashion
     photography`, `centered subject`, `detailed textures in lace fabric` -- and
     could be committed to no field at all. The operator's verdict on the
     unfiltered list was that only the marked ones carried value, so the rest are
-    attention spent on the busiest pane in the surface (design.md D29).
+    attention spent on the busiest pane in the surface.
 
     **Filtered on the way to the page and never on the way to disk.** The
     artifact keeps every tag the model returned; that is `tagging`'s rule and
@@ -440,7 +438,7 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     what the model actually said, and being able to look behind the router is
     why it exists.
 
-    Membership is decided here for the reason it always was: `/api/tags` answers
+    Membership is decided here because `/api/tags` answers
     a fragment query and has no membership form, so asking per tag would be one
     round trip each, and the vocabulary is already held by this process.
 
@@ -464,12 +462,12 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     # count of zero is *in* it, so membership cannot be read off the number.
     # Deduplicated, and **only here**. `OfferedTag` is `{tag, posts}` where
     # `posts` is a pure function of `tag`, so a repeat is a byte-identical
-    # object carrying no information -- and it was a duplicate Vue key.
+    # object carrying no information -- and it would be a duplicate Vue key.
     # `tagging:output:the-list-is-stored-unnarrowed` forbids canonicalising,
     # filtering against a vocabulary and re-ordering, none of which this is, and
     # the artifact on disk is untouched either way. `_wd14` must **not** get the
     # same treatment: `ScoredTag` is `{tag, confidence}`, where two rows can
-    # legitimately differ (design.md D7).
+    # legitimately differ.
     # `dict.fromkeys` preserves order, so the dedup is visible in the iterator
     # rather than spread across a parallel set and a two-clause condition.
     return [
@@ -544,13 +542,11 @@ def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None
     filename's `NNN` by design. A `revision` int in the body is the correct
     answer and changes the draft's shape, so its version moves and `read`
     refuses every draft already on disk -- that is not a patch. `put_draft`'s
-    lock orders the check and the write; this is what orders the sends
-    (design.md D6).
+    lock orders the check and the write; this is what orders the sends.
 
     **A payload carrying no `saved` states no precondition**, and is allowed:
     the mtime is already on the wire as the field every response returns, so a
-    client that echoes it gets the check and one that cannot has the behaviour
-    it had before.
+    client that echoes it gets the check and one that cannot goes unchecked.
     """
     offered = payload.get("saved")
     if offered is None:

@@ -131,7 +131,7 @@ def test_the_prompt_asks_for_a_long_list_and_is_not_chat_framed() -> None:
     # "Long" is the lever -- 34-40 tags becomes 45-51, and in-vocabulary yield
     # 11-23% becomes 24%. The llama-3 framing is refused because the Modelfile
     # pins `TEMPLATE {{ .Prompt }}` and the prose briefing goes through it
-    # unframed (design.md D11).
+    # unframed.
     assert TAG_PROMPT == "Write a long list of Booru tags for this image.\n"
     assert "<|" not in TAG_PROMPT
 
@@ -140,7 +140,7 @@ def test_the_prompt_asks_for_a_long_list_and_is_not_chat_framed() -> None:
 def test_the_sampling_options_carry_the_sorters_repeat_penalty() -> None:
     # Kept on the sorter's precedent rather than a budget argument: at
     # temperature 0 there is no sampling noise to break a loop, and a
-    # comma-separated list is that loop with more surface (design.md D12).
+    # comma-separated list is that loop with more surface.
     assert TAGGER_OPTIONS == {
         "temperature": 0,
         "seed": 1,
@@ -153,7 +153,7 @@ def test_the_sampling_options_carry_the_sorters_repeat_penalty() -> None:
         "repeat_penalty": 1.15,
     }
     # One window for both prompts, because one model answers both -- and the
-    # pinned value is the one Ollama was already resolving, so neither output
+    # pinned value is the one Ollama resolves unpinned, so neither output
     # moves.
     assert TAGGER_OPTIONS["num_ctx"] == READER_OPTIONS["num_ctx"]
 
@@ -178,7 +178,7 @@ def test_every_tag_is_stored_exactly_as_it_came_including_the_unusable(
     # `fashion photography` and `high resolution` are out of the vocabulary and
     # `blue eyes` contradicts what the reader wrote about the same photograph.
     # All three are stored: narrowing is stage (2)'s job, and seeing behind it is
-    # why this artifact exists (design.md D1).
+    # why this artifact exists.
     answered = "1girl, fashion photography, blue eyes, high resolution, solo"
     transport = _answer(answered)
 
@@ -233,7 +233,7 @@ def test_a_single_comma_is_enough_and_content_is_never_judged(
     run: Run, hosted: Hosted
 ) -> None:
     # One comma separates "not a list at all" from "wrong", and only the first is
-    # a failure here. Anything richer starts filtering (design.md D15).
+    # a failure here. Anything richer starts filtering.
     path = tag_hosted(run, FLOW, hosted(_answer("nonsense, drivel")))
 
     assert path is not None
@@ -244,9 +244,9 @@ def test_a_single_comma_is_enough_and_content_is_never_judged(
 def test_the_refusal_names_the_verb_the_operator_would_actually_run(
     run: Run, hosted: Hosted
 ) -> None:
-    # `python -m isekai tags` does not exist: one verb writes both lists (0032
-    # design D2), so naming the stage here would name a command that refuses
-    # with "unknown verb".
+    # `python -m isekai tags` does not exist: one verb writes both lists (D1),
+    # so naming the stage here would name a command that refuses with "unknown
+    # verb".
     with pytest.raises(Refusal) as refused:
         tag_hosted(run, FLOW, hosted(_answer("prose with no separator")))
 
@@ -333,9 +333,8 @@ def test_the_local_producer_claims_a_pin_and_names_both_digests(
 
     assert path is not None
     producer = read(path, WD14_FILE)["producer"]
-    # The first producer in this repository that can honestly claim one: a local
-    # file with a digest is not the hosted service `pinned` was written for
-    # (design.md D17).
+    # A producer that can honestly claim one: a local file with a digest is not
+    # the hosted service `pinned` exists for.
     assert producer["pinned"] is True
     assert producer["implementation"] == "wd14"
     # **The digests the session was verified against**, carried through from
@@ -363,7 +362,7 @@ def test_the_hosted_producer_records_the_prompt_digest_and_no_path(run: Run) -> 
     producer = read(path, TAGS_FILE)["producer"]
     assert producer["pinned"] is False
     # Digest only. A module constant has no file, and a record that invented a
-    # path would assert a location that does not exist (design.md D16).
+    # path would assert a location that does not exist.
     assert producer["prompt"] == constant_record(TAG_PROMPT)
     assert "path" not in producer["prompt"]
 
@@ -427,7 +426,7 @@ def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
     # Proved by calling it, with the 467 MB open replaced: every tracked flow
     # gets a tagger, none of them is refused, and **no flow is ever read** -- no
     # manifest key names the local tagger's model, because it is a file this
-    # build pins and there is no flow for which it would be wrong (design.md D3).
+    # build pins and there is no flow for which it would be wrong (D7).
     opened = fake_tagger()
     monkeypatch.setattr(wiring, "open_session", lambda *_a, **_k: opened)
 
@@ -442,12 +441,11 @@ def test_the_local_tagger_resolves_identically_for_every_tracked_flow(
 @pytest.mark.spec("tagging:independence:the-hosted-tagger-runs-the-flows-model")
 @pytest.mark.parametrize("flow_id", tracked_flows())
 def test_the_hosted_tagger_runs_the_model_the_flow_names(flow_id: str) -> None:
-    """There is no absence case left, which is what this replaces.
+    """There is no absence case: every flow names the model its tagger runs.
 
-    The scenario it retires described a flow declaring no hosted model. `model`
-    is required of every flow now, so that state is not merely unreached but
-    unrepresentable -- the loader refuses the manifest before anything resolves.
-    What is asserted instead is what the tagger does (design.md D25).
+    A flow declaring no hosted model is not merely unreached but unrepresentable:
+    `model` is required of every flow, so the loader refuses the manifest before
+    anything resolves. What is asserted is what the tagger does.
     """
     flow = load_flow(flow_id)
 
@@ -768,7 +766,7 @@ def test_a_complete_local_artifact_is_not_paid_for_by_opening_the_graph(
     # The whole reason the seam is a thunk. Opening the tagger hashes 467 MB and
     # loads a graph; a run whose list is already written must not pay for that
     # to return `None`, and a completed run must still resume on a machine that
-    # has since emptied `models/` (design.md D14).
+    # has since emptied `models/`.
     assert tag_wd14(run, FLOW, lambda: local) is not None
 
     def refuse() -> LocalTagger:

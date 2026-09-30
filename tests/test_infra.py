@@ -459,7 +459,7 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
 ) -> None:
     # The one case this pod-side guard still exists for is the one `up.sh` cannot
     # see: the id is set and the mount silently failed, so `/runpod-volume`
-    # resolves to the container overlay rather than to the volume (design.md D5).
+    # resolves to the container overlay rather than to the volume (D27).
     # That overlay's backing disk is the container `disk`, LARGER than the
     # pod's own volume disk, so a floor that only clears the volume disk lets the
     # overlay through and the models land on storage that dies at teardown.
@@ -476,7 +476,7 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
 
 
 # The image mirrors the repository's layout, and no boot proves a rebuilt image
-# before a pod uses it, so these hold its paths statically: `0029` design D5.
+# before a pod uses it, so these hold its paths statically.
 
 IMAGE_ROOT = "/opt/isekai"
 
@@ -561,7 +561,7 @@ def test_the_check_catches_a_manifest_copied_beside_where_it_looks() -> None:
 
 
 # The image is built on request, from inputs named by digest, into a locked
-# environment: 0033 design D2.
+# environment (D28).
 
 BUILD_WORKFLOW = REPO / ".github" / "workflows" / "build-image.yml"
 
@@ -777,7 +777,7 @@ IMAGE_LOCK = REPO / "image" / "uv.lock"
 
 # Each source-only package in the image's lock, by name and version, to the tools its
 # build asks for: its `build-system.requires`, or setuptools for a `setup.py` with none.
-# A bump is a new key, so it fails until its tools are read again: 0049 design D2.
+# A bump is a new key, so it fails until its tools are read again.
 SDIST_BUILDS = {
     ("antlr4-python3-runtime", "4.9.3"): ("setuptools",),
     ("fvcore", "0.1.5.post20221221"): ("setuptools",),
@@ -882,7 +882,7 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
 
 
 # The pod's own host key, and ComfyUI's writing kept in memory: text checks over
-# the shipped files, proved on a pod by `0040` design D6.
+# the shipped files, proved on a pod.
 
 
 def joined_lines(text: str) -> list[str]:
@@ -1262,7 +1262,7 @@ def test_the_check_catches_a_plain_run_line_holding_a_colon() -> None:
     assert unparseable_run_lines(broken) == ['- run: echo "a: b"']
 
 
-# A pod boots the digest `config/image.json` pins, and nothing else: 0033 design D3.
+# A pod boots the digest `config/image.json` pins, and nothing else (D28).
 
 IMAGE_CONFIG = REPO / "config" / "image.json"
 IMAGE_REFERENCE = (
@@ -1362,7 +1362,7 @@ def test_the_check_catches_a_boot_record_left_behind() -> None:
 
 
 # RunPod retires REST v1 on 2026-11-15, after which no pod can be torn down
-# through it: 0034 design D5.
+# through it.
 RETIRED_API = "rest.runpod.io"
 
 
@@ -2468,7 +2468,7 @@ def listing(
     return done, int(asks.read_text()) if asks.exists() else 0
 
 
-# The listing before 0044 design D1: it loops, skips, and matches by prefix.
+# A broken listing: it loops, skips, and matches by prefix.
 BROKEN_LISTING = """isekai_pods() {
   local image page more cursor=""
   image=$(jq -r '.image' config/image.json) || return 1

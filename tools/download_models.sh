@@ -7,7 +7,7 @@
 # One driver, one manifest per invocation. The graph's stack is the default because the
 # pod is where this runs most; the vocabulary is a sibling manifest held to the same pins,
 # the same digests and the same containment rule, so it is provisioned by the same command
-# rather than by a second one that would have to be kept in step (design.md D9).
+# rather than by a second one that would have to be kept in step.
 #
 # Idempotent: an entry already present and verified is skipped, so a re-boot on a warm
 # volume is a no-op. NOT skipped by name — `provision.py` hashes every file it finds, so
@@ -15,7 +15,8 @@
 # disk and the run aborts: the volume is shared with another project, and a file this run
 # did not write is not this run's to remove.
 #
-# The split is deliberate (design.md D14): `provision.py` owns every decision and this
+# The split is deliberate, so every decision is a unit test in Python rather than
+# a subprocess test of a script: `provision.py` owns every decision and this
 # script owns only the transfer. It asks for a plan, runs `wget` for whatever URL it is
 # handed, and asks the module to verify and land the result. Nothing lands under its final
 # name until its SHA-256 matches the manifest.
@@ -45,7 +46,7 @@ plan="$(python3 "$PROVISION" plan "$MODELS_DIR" ${MANIFEST:+"$MANIFEST"})"
 #
 # The target arrives resolved because `provision.py` resolved it. Nothing here
 # joins `$MODELS_DIR` onto a manifest-controlled field, so the containment rule
-# has exactly one site (design.md D7).
+# has exactly one site.
 while IFS=$'\t' read -r -a fields; do
     action="${fields[0]:-}"
     [ -n "$action" ] || continue

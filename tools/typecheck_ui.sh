@@ -2,9 +2,9 @@
 #
 # The gate's browser half, and the only mechanical check it has.
 #
-# `vue-tsc --noEmit` is declared in `ui/package.json` and was in no gate command,
-# so a phase whose whole product is browser code could end "green" while the
-# bundle did not compile (design.md D22). This script is what the Makefile's
+# `vue-tsc --noEmit` is declared in `ui/package.json`; in no gate command, it
+# would let a phase whose whole product is browser code end "green" while the
+# bundle did not compile. This script is what the Makefile's
 # `gate` target runs, because the gate's commands run from the repository root
 # and `npm run` needs the package directory -- and because a missing toolchain
 # has to refuse by name rather than exit 127 with `vue-tsc: command not found`.

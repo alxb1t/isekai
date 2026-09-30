@@ -160,7 +160,7 @@ def test_show_marks_a_file_it_cannot_read(run: Run, body: str, shown: str) -> No
     assert "fake-reader" in captions.producers[1]
 
 
-# --- the two stages v0.20 adds ------------------------------------------------
+# --- the two tagging stages ---------------------------------------------------
 
 
 @pytest.mark.spec("run-directory:layout:stage-artifacts-live-under-the-flow")
@@ -195,11 +195,12 @@ def test_show_does_not_refuse_for_a_run_captioned_before_these_stages_existed(
 ) -> None:
     # An old run simply lacks the two directories, which is the same state as a
     # run whose caption has not been produced. No migration, and nothing to
-    # detect (design.md, Migration Plan).
+    # detect.
     #
     # `wd14/` is removed rather than never written: a sheet cannot be filled
-    # without a tag list now, so the fixture has one -- and a run from before
-    # v0.20 has a sheet and neither list, which is exactly this state on disk.
+    # without a tag list, so the fixture has one -- and a run older than the
+    # tagging stages has a sheet and neither list, which is exactly this state on
+    # disk.
     for path in run.directory(FLOW, WD14).iterdir():
         path.unlink()
     by_name = {(item.stage, item.flow): item for item in listings(run)}
@@ -213,10 +214,9 @@ def test_show_does_not_refuse_for_a_run_captioned_before_these_stages_existed(
 def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
     tmp_path: Path,
 ) -> None:
-    # `run_view` appends "unpinned" for `pinned is False`, and every artifact in
-    # this repository recorded exactly that until v0.20. A WD14 artifact is the
-    # first one `show` can report as pinned, which is the field finally doing its
-    # job rather than a surprise (design.md D17).
+    # `run_view` appends "unpinned" for `pinned is False`. A WD14 artifact is one
+    # `show` can report as pinned, which is the field doing its job rather than a
+    # surprise.
     photo = tmp_path / "ada.jpg"
     photo.write_bytes(jpeg_bytes(1200, 900))
     made = open_run(photo, tmp_path / "runs")
@@ -236,11 +236,10 @@ def test_show_prints_the_wd14_artifact_without_the_word_unpinned(
 
 @pytest.mark.spec("run-directory:inspection:the-injected-flows-root-is-used")
 def test_show_reads_the_flows_root_it_is_given(run: Run, tmp_path: Path) -> None:
-    """`Wiring` has a `flows_dir` seam and this was the one reader ignoring it.
+    """`Wiring` has a `flows_dir` seam, and this reader must not ignore it.
 
-    `rendered()` called `load_flow` with the module default, so `show` against
-    an injected flows root went to `flows/` regardless of what was passed
-    (v0.16 R2).
+    Were `rendered()` to call `load_flow` with the module default, `show` against
+    an injected flows root would go to `flows/` regardless of what was passed.
     """
     scratch = tmp_path / "scratch-flows" / FLOW
     scratch.mkdir(parents=True)
@@ -262,12 +261,11 @@ def test_show_reads_the_flows_root_it_is_given(run: Run, tmp_path: Path) -> None
 def test_a_directory_no_flow_answers_for_refuses_before_any_line_is_printed(
     run: Run,
 ) -> None:
-    """`report` is a generator, so a lazy `load_flow` refused mid-stream.
+    """`report` is a generator, so a lazy `load_flow` would refuse mid-stream.
 
     `run.flows` is an unfiltered listing of the run's subdirectories, so a
-    stray directory becomes a flow the report tries to load -- and fifteen
-    lines of record had already streamed to the terminal above the refusal
-    (v0.16 R2).
+    stray directory becomes a flow the report tries to load -- and lines of
+    record would already have streamed to the terminal above the refusal.
     """
     (run.path / "not-a-flow").mkdir()
     printed: list[str] = []

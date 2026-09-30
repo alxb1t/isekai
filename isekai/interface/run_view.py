@@ -36,16 +36,13 @@ from isekai.foundation.run import (
 from isekai.pipeline.generate import rendered_seeds
 
 # The stages in the order a run passes through them. Every one of them is a
-# flow's own now -- the run is input above and flow below -- so there is nothing
-# left for a per-flow-ness column to say. Declared once here so the listing cannot
-# drift from the layout it describes.
+# flow's own -- the run is input above and flow below -- so there is nothing for
+# a per-flow-ness column to say. Declared once here so the listing cannot drift
+# from the layout it describes.
 #
 # **The tuple is explicit, so a new stage directory is invisible to `show` until
-# it is named here.** By the standing rule that a version does not go into files
-# it never touches, editing this would be out of v0.20's scope -- and the rule
-# does not apply, because v0.20 does not inherit this gap, it **creates** it.
-# Shipping a stage `show` cannot see is shipping a verb that lies about what a
-# run holds (design.md D23).
+# it is named here.** Shipping a stage `show` cannot see is shipping a verb that
+# lies about what a run holds.
 STAGES: tuple[str, ...] = (CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS)
 
 
@@ -153,10 +150,10 @@ def rendered(run: Run, flows_dir: Path = FLOWS_DIR) -> list[tuple[str, int, list
     because what counts as a produced output is the flow's answer rather than an
     extension written in here.
 
-    **`flows_dir` is a parameter because `Wiring` has one**, and this was the one
-    place in the package that read the module default instead -- so `show`
-    against an injected flows root went to `flows/` regardless of what was
-    passed, and refused naming a flow the caller never asked about (v0.16 R2).
+    **`flows_dir` is a parameter because `Wiring` has one**: reading the module
+    default instead would send `show` against an injected flows root to `flows/`
+    regardless of what was passed, and refuse naming a flow the caller never
+    asked about.
     """
     return [
         (flow, int(group.name), rendered_seeds(group, suffix))
@@ -173,15 +170,15 @@ def report(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
     **A list rather than a generator, so no refusal can escape mid-print.**
     `rendered()` loads a flow and a flow refuses, and a generator's body does
     not start until the caller asks for its first line -- so a run holding a
-    directory no flow answers for printed fifteen lines of record and *then*
-    failed, leaving half a report above the refusal (v0.16 R2). Both callers
-    drain this in full, so laziness bought nothing and cost the ordering; a
-    list makes "everything refusable is read first" true by construction rather
-    than by a paragraph asking the next editor to keep it so.
+    directory no flow answers for would print lines of record and *then* fail,
+    leaving half a report above the refusal. Both callers drain this in full, so
+    laziness buys nothing and costs the ordering; a list makes "everything
+    refusable is read first" true by construction rather than by a paragraph
+    asking the next editor to keep it so.
     """
     lines: list[str] = [run.id]
     # A frame this build cannot read is marked, like an artifact, and the rest
-    # listed: `show` reads a run in whatever state it is in (0047 design D4).
+    # listed: `show` reads a run in whatever state it is in.
     try:
         photo = run.photo_record
     except Refusal as unreadable:

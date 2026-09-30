@@ -7,7 +7,7 @@ the same declaration rather than each spelling the file by string key.
 
 **A shape is a declaration for the type checker, not a check at run time.** A
 `TypedDict` is a plain dict, so no byte a run writes depends on this module
-beyond `write_json`'s one form. Why and how: `0028` design D1-D4.
+beyond `write_json`'s one form.
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -23,7 +23,7 @@ from isekai.foundation.refusal import Refusal
 
 # A tag in Danbooru's spelling, `long_hair`, as WD14 emits it. The router
 # accepts only this, so a space-spelled stand-in for WD14's output is a type
-# error rather than a silent miss (`0028` design D6).
+# error rather than a silent miss.
 DanbooruTag = NewType("DanbooruTag", str)
 
 T = TypeVar("T", bound=Mapping[str, object])
@@ -140,7 +140,7 @@ class TagsProducer(TypedDict):
 
 
 # The functional form below, because `from` is a Python keyword. `from` is
-# absent from a sheet no tag list filled (0032 design D3).
+# absent from a sheet no tag list filled (D31).
 SheetProducer = TypedDict(
     "SheetProducer",
     {
@@ -222,10 +222,10 @@ class Tags(TypedDict):
     tags: list[str]
 
 
-# Today's shape. Runs written before v0.21 hold earlier sheet shapes under the
-# same version; readers use only `vocabulary` and `fields`, which every one has.
-# A key that only records is `NotRequired` under its kind's version, so a file
-# written before it existed still reads (0033 design D6).
+# Today's shape. Older runs hold earlier sheet shapes under the same version;
+# readers use only `vocabulary` and `fields`, which every one has. A key that
+# only records is `NotRequired` under its kind's version, so a file written
+# before it existed still reads (D32).
 class Sheet(TypedDict):
     """A tag list, routed into a flow's fields."""
 

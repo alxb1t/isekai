@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One whole render session: create the pod, open the tunnel, wait for ComfyUI,
-# render each flow, and tear the pod down on every way out (0035 design D3).
+# render each flow, and tear the pod down on every way out (D36).
 #
 #   bash infra/render.sh <runs> <flow>=<count> ...
 #   e.g. bash infra/render.sh .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
@@ -45,7 +45,7 @@ photographs with: uv run python -m isekai tag ${flows[*]} --runs $runs $(dirname
 [ ! -f .runpod_pod_pending ] \
   || refuse "an earlier create was never recorded (.runpod_pod_pending); run bash infra/down.sh first"
 # Something already answering on the port would be rendered against instead.
-# --noproxy: an exported http_proxy would take loopback too (0037 design D11).
+# --noproxy: an exported http_proxy would take loopback too.
 if curl -sf --noproxy '*' --max-time 5 "$SERVER/system_stats" >/dev/null 2>&1; then
   refuse "$SERVER already answers. An earlier session's tunnel stops with \
 pkill -f -- '-L 8188:localhost:8188'; lsof -iTCP:8188 -sTCP:LISTEN shows anything else"
@@ -71,7 +71,7 @@ teardown() {  # teardown [status]; a signal passes its own, an exit keeps $?
   rm -f "$up_out"
   # A create up.sh began but never recorded leaves a pod no file names, which
   # down.sh finds. A refusal or an interrupt before the create made none, so a pod
-  # it names is left for the operator's down.sh (0044 design D2).
+  # it names is left for the operator's down.sh (D36).
   if [ -f .runpod_pod_id ] || [ -f .runpod_pod_pending ] || [ "$up_status" = 3 ]; then
     bash ./infra/down.sh 2>&1 | tee -a "$log"
     [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
@@ -86,7 +86,7 @@ trap teardown EXIT; trap 'teardown 130' INT; trap 'teardown 143' TERM; trap 'tea
 # The ceiling is a halt (CLAUDE.md). A TERM to this shell waits for the command
 # in flight, so the watchdog stops that too; the pending TERM then runs the trap.
 # Renders already written are kept, and the same command renders only the rest.
-# Polled, so a session killed past its trap takes the watchdog with it (0037 D8).
+# Polled, so a session killed past its trap takes the watchdog with it.
 (
   end=$((SECONDS + CEILING))
   while [ "$SECONDS" -lt "$end" ]; do
@@ -117,7 +117,7 @@ read -r host port < <(
 
 open_tunnel() {
   # up.sh kept the pod's key only once it matched the fingerprint the pod printed;
-  # down.sh removes it with the pod (0041 design D1).
+  # down.sh removes it with the pod.
   ssh -i ~/.ssh/id_ed25519_runpod -o BatchMode=yes -o StrictHostKeyChecking=yes \
     -o UserKnownHostsFile=.runpod_known_hosts -o ExitOnForwardFailure=yes \
     -N -L 8188:localhost:8188 "root@$host" -p "$port" &

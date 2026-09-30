@@ -18,7 +18,7 @@ assignment cannot serve both consumers: the operator's own approved sheets file
 `navel` under clothes, pose *and* body shape, and `lips` is a declared field of
 its own on `conjure-anime-wai` while it is part of *expression* on
 `summon-anime-wai`. Routing
-needs one answer and browsing needs all of them (design.md D4).
+needs one answer and browsing needs all of them.
 
 **The loader raises all four checks, and the tests prove them.** The spec says
 *loading it is refused*, so a check that lived only in a test would implement
@@ -263,7 +263,7 @@ def route(
     because `tagging`'s rule is that neither list is narrowed or canonicalised,
     while the vocabulary and this table are normalised at their own read. A bare
     lookup therefore misses **every multi-word tag** -- measured at 118 of 230
-    over the v0.20 batch, and silently, since a tag that matches nothing is
+    over one real batch, and silently, since a tag that matches nothing is
     indistinguishable from a tag no criterion claims. The normalised spelling is
     also what is written, because `shared/fields.py`'s `validate()` refuses a
     sheet whose tags are not in the vocabulary's own spelling.

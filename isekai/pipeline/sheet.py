@@ -7,16 +7,15 @@ list is expected: it is handed the tag list, the schema, the vocabulary and the
 table, so the same code serves every flow without learning that flows exist, and
 the flow decides only which directory is read and written.
 
-**Nothing here is a model and nothing here is a seam.** Two sorter
-implementations used to live in this file behind a Protocol, and the argument for
-the seam was that a malformed answer had to be permanent for either. There is no
-answer: the stage reads one artifact and looks each tag up in one committed table,
-so there is no transport to inject, no offline double to satisfy an interface and
-no response whose structure could fail to match the field list. What replaced them
-is a dictionary lookup in `isekai/shared/field_map.py`, and the property it buys
-is stronger than the one the seam asserted -- a tagger whose output layer **is**
-the vocabulary cannot name a tag outside it, so "no tag is invented" holds by
-construction rather than by filtering.
+**Nothing here is a model and nothing here is a seam.** A seam behind a Protocol
+would exist so that a model's malformed answer is permanent for any
+implementation. There is no answer: the stage reads one artifact and looks each
+tag up in one committed table, so there is no transport to inject, no offline
+double to satisfy an interface and no response whose structure could fail to match
+the field list. The lookup is a dictionary in `isekai/shared/field_map.py`, and
+the property it buys is stronger than the one that seam would assert -- a tagger
+whose output layer **is** the vocabulary cannot name a tag outside it, so "no tag
+is invented" holds by construction rather than by filtering.
 
 **The schema is a data file, not code.** It can be checked without executing
 anything, and a second schema -- a photoreal flow's, say -- is a file rather than
@@ -27,13 +26,11 @@ carries no version and no vocabulary, because inside a frozen flow directory the
 digest proves the field list and the flow declares the vocabulary. Its reader
 lives beside `Schema` in `isekai/foundation/flow.py`.
 
-**Field names are slugs because they have to be.** The structured-output flag
-became a tool input schema at the API, which enforces `^[a-zA-Z0-9_.-]{1,64}$` on
-property keys; several of the names then in the schema carried a space or a slash
-and the first call hit a hard 400. The flag is gone with the sorters and the rule
-is not:
-`flow.py`'s reader still enforces it, and one name everywhere removes the class of
-error.
+**Field names are slugs because they have to be.** An API that takes the schema
+as a tool input schema enforces `^[a-zA-Z0-9_.-]{1,64}$` on property keys, and a
+name carrying a space or a slash fails the first call with a hard 400. No stage
+here sends the schema, and the rule stays: `flow.py`'s reader enforces it, and one
+name everywhere removes the class of error.
 
 Stdlib only.
 """
@@ -75,13 +72,13 @@ from isekai.shared.vocabulary import identity as vocabulary_identity
 STAGE = "sheet"
 
 # What the sheet records as having filled it. The string the *tag* artifact's
-# producer carries, because that is what the sheet's content now comes from --
+# producer carries, because that is what the sheet's content comes from --
 # written out rather than imported from `tagging.py`, since no stage imports
 # another.
 TAGGER = "wd14"
 
 # What the sheet records as having filled it when the flow declares no tagger:
-# no tag list and no model, so nothing unpinned shaped it (0032 design D3).
+# no tag list and no model, so nothing unpinned shaped it (D31).
 EMPTY = "empty"
 
 
@@ -100,25 +97,24 @@ def sheet(
 
     `tagged` says whether the flow declares the tagger, and has no default
     because a default decides silently. Untagged, no list is read and every
-    field is written empty for the person to fill (0032 design D3).
-    `flow_digest` is recorded and never read (0033 design D5).
+    field is written empty for the person to fill (D31).
+    `flow_digest` is recorded and never read.
 
     **The fill is told nothing about flows beyond `tagged`, and reaches nothing
     at all.** It is handed a tag list, the schema, the vocabulary and the table,
     so the same code serves every flow without learning that flows exist; `flow`
     decides only which directory is read and written. A flow shares nothing, so
-    the tag list read here is the one produced under this flow's own directory
-    (design.md D5).
+    the tag list read here is the one produced under this flow's own directory (D17).
 
     **For a tagged flow, an absent tag list is a refusal.** A sheet with every
     field empty is legal and therefore silent, so writing one when the tagger
     never ran would hide the only thing the operator needs told. The rule that a
     missing tag artifact is an absent aid still holds for the *hosted* tagger,
     which contributes nothing to a sheet; it cannot hold for the local one the
-    sheet is filled from (design.md D21).
+    sheet is filled from.
 
     Returns the artifact's path, or None when this flow already had a sheet;
-    a kept sheet filled from a superseded tag list is warned about (0048 design D5).
+    a kept sheet filled from a superseded tag list is warned about.
     """
     directory = run.directory(flow, SHEETS)
     kept = latest(directory)
@@ -197,7 +193,7 @@ def _from_tag_list(
     Refuses naming `tag` when the list is absent, and records nothing: running
     `tag` is the fix, and a record would bar the sheet that follows. The budget is
     checked next; a damaged list or a tag outside the vocabulary is then recorded
-    as permanent, since this stage fails the same way every time (0048 design D4).
+    as permanent, since this stage fails the same way every time (D21).
     """
     listed_dir = run.directory(flow, WD14)
     source = latest(listed_dir)

@@ -9,20 +9,20 @@ implementations of one Protocol: one is selected by a string in a frozen manifes
 because which model answers is a claim a flow makes about itself, and the other by
 a pin in this build that no flow has an opinion about. A Protocol whose two
 implementations resolve through different mechanisms is a shared name rather than
-a seam (design.md D3).
+a seam.
 
-**This file's non-stdlib imports are all function-local.** `onnxruntime`,
-`numpy` and `Pillow` are declared dependencies as of v0.22.3 and are imported
-inside the functions that need them, so `python -m isekai`'s import graph reaches
-no wheel and the `-S` guard still passes. Because they are installed by default,
-an import moved to module scope here resolves rather than failing; the `-S` guard
-and `tests/test_wd14.py`'s source scan catch it. The arrangement is `ollama.py`'s:
-the transport here, the adapter in `pipeline/`. There is no adapter in this file.
+**This file's non-stdlib imports are all function-local.** `onnxruntime`, `numpy`
+and `Pillow` are declared dependencies and are imported inside the functions that
+need them, so `python -m isekai`'s import graph reaches no wheel and the `-S` guard
+still passes. Because they are installed by default, an import moved to module scope
+here resolves rather than failing; the `-S` guard and `tests/test_wd14.py`'s source
+scan catch it. The arrangement is `ollama.py`'s: the transport here, the adapter in
+`pipeline/`. There is no adapter in this file.
 
 **Opening the session is the expensive act and it happens once, on first use.**
 The graph is 467 MB and takes ~0.9 s to open, against ~0.4 s a photograph. So
 `wiring` resolves a tagger per flow and nothing is constructed until a flow asks
--- a machine that never captions must not open the file anyway (design.md D14).
+-- a machine that never captions must not open the file anyway.
 Nothing at module scope holds a session: an `__init__.py` in this package carries
 a docstring and no code by rule, and a module-level lazy handle is that rule
 broken one directory down.
@@ -34,7 +34,7 @@ load-bearing in a way nothing else in this repository's use of it is --
 mapping a phrase the order means nothing. Here a pair from two revisions mislabels
 every tag silently: the vector has the right length and every name in it is a real
 tag. That is why both halves are pinned in `config/vocabulary.json` and why both
-digests are verified before the first inference (design.md D17, D18).
+digests are verified before the first inference (D7).
 
 **Preparation sits behind the seam rather than in front of it**, so `Session`
 takes a photograph and not a prepared array. That is what makes the stage itself
@@ -102,8 +102,8 @@ GENERAL_CATEGORY = 0
 # the recall this stage exists to buy. The band also admits wrong tags --
 # `black hair 0.31` on a brown-haired subject -- and that is what printing the
 # number is for: sorted descending, it arrives under `brown hair 0.91` and refutes
-# itself (design.md D13). Not a manifest key and not a flag; add one the day a
-# flow wants a different floor, with a reason.
+# itself. Not a manifest key and not a flag; add one the day a flow wants a
+# different floor, with a reason.
 FLOOR = 0.15
 
 # What the graph was trained to see. The photograph is composited onto white,
@@ -141,7 +141,7 @@ class LocalTagger:
     holding them here: they are the digests `verified_paths` actually checked
     the bytes against a moment earlier. An artifact that re-read the manifest at
     write time could record a pin it was *not* produced under -- which is exactly
-    the claim `pinned: true` exists to make trustworthy (design.md D17, D18).
+    the claim `pinned: true` exists to make trustworthy.
     """
 
     session: "Session"
@@ -176,7 +176,7 @@ def silence_onnxruntime() -> None:
 
     Loading it opens an HTTPS connection to Microsoft, and the client's teardown
     at exit aborted `tag` with 134. The switch is read at load, so the
-    `disable_telemetry_events()` API is too late for both: 0035 design D5.
+    `disable_telemetry_events()` API is too late for both.
     """
     os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 
@@ -190,15 +190,14 @@ def _require(module: str) -> ModuleType:
     `ModuleNotFoundError` traceback, in a package whose rule is that every
     failure is a named `Refusal` naming its remedy.
 
-    **The import is still function-local, and that is what this indirection is
-    for now.** v0.22.3 made these three declared dependencies rather than an
-    extra, so a synced checkout has them and this path is the unsynced case
-    rather than the ordinary one — but the entry point still reaches no
-    third-party package at module scope, which is why `isekai show` works on a
-    checkout that has provisioned nothing.
+    **The import is function-local, and that is what this indirection is for.**
+    These three are declared dependencies rather than an extra, so a synced checkout
+    has them and this path is the unsynced case rather than the ordinary one — but
+    the entry point reaches no third-party package at module scope, which is why
+    `isekai show` works on a checkout that has provisioned nothing.
 
     Not shared with `eval_backends`' copy, and that is the whole content of the
-    difference: that one names an extra and this one no longer does, so one
+    difference: that one names an extra and this one does not, so one
     function would have to be told which sentence to print — and the sentence it
     prints is the only thing either does.
 
@@ -210,9 +209,9 @@ def _require(module: str) -> ModuleType:
     except ModuleNotFoundError as absent:  # pragma: no cover - environment
         raise Refusal(
             f"the local tagger's stack is not installed ({module} is missing); "
-            "run `uv sync`. It is a declared dependency of this project as of "
-            "v0.22.3, so a synced checkout has it and every test runs against a "
-            "fake session regardless."
+            "run `uv sync`. It is a declared dependency of this project, so a "
+            "synced checkout has it and every test runs against a fake session "
+            "regardless."
         ) from absent
 
 
@@ -296,13 +295,12 @@ def prepare(photo: Path, dimension: int) -> object:
     input size, and a number hard-coded here would resize correctly against the
     one graph it was written for and silently wrongly against every other.
 
-    **The return type is `object` rather than `Any`**, and that is the honest one
-    as well as the one that needs no suppression: the array is opaque to every
-    caller here -- the only thing anything may do with it is hand it back to
-    `Session.run`. `numpy.typing.NDArray` could be named now that `numpy` is a
-    declared dependency, and it would say more than any caller is allowed to
-    use; naming the value opaque says exactly what the seam permits, without
-    waiving a rule.
+    **The return type is `object` rather than `Any`**, and that is the honest one as
+    well as the one that needs no suppression: the array is opaque to every caller
+    here -- the only thing anything may do with it is hand it back to `Session.run`.
+    `numpy.typing.NDArray` could be named, since `numpy` is a declared dependency,
+    and it would say more than any caller is allowed to use; naming the value opaque
+    says exactly what the seam permits, without waiving a rule.
 
     The third-party imports are function-local, which is what keeps them off
     `python -m isekai`'s import graph at module scope.

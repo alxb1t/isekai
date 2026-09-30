@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop this pod through RunPod's API, with the key RunPod put in its environment:
 # a watchdog on the laptop dies with the laptop, and this runs on the pod
-# (0043 design D4). A failed stop is tried again until it succeeds, the wait
+# (D36). A failed stop is tried again until it succeeds, the wait
 # doubling from 30 s to 5 minutes: a stop that gave up would leave the pod billing.
 #
 #   bash /opt/isekai/tools/stop_pod.sh

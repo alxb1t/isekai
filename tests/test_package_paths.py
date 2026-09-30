@@ -1,10 +1,8 @@
 """The repo-root anchors, pinned to the directory that holds `pyproject.toml`.
 
 Each constant in `ANCHORS` anchors a repository path on its own `__file__`
--- v0.16's fold took `SCHEMAS_DIR` and `BRIEFINGS_DIR` with it, because a schema
-and a briefing are a flow's now and a flow is reached through `FLOWS_DIR`, and
-v0.22 replaced `claude_cli.ROOT` with `run.REPOSITORY` when the file it lived in
-was deleted -- the same anchor, named where `DATA_ROOT` already is. Each is
+-- a schema and a briefing are a flow's, reached through `FLOWS_DIR`, and the
+repository root is `run.REPOSITORY`, named where `DATA_ROOT` already is. Each is
 asserted **absolutely**: strip the anchor's own suffix, and what remains must be
 the directory holding `pyproject.toml`. None of them is compared against another
 constant, because two constants that move together prove nothing about where
@@ -17,10 +15,7 @@ own directory or the manifest takes dozens of tests down at collection.
 still beside it, leaving every assertion about the *relationship* between the two
 green while the guard that keeps a run directory -- which holds a copy of a
 photograph by construction -- one `git add` from publication quietly narrowed to
-the package (design.md D7).
-
-Written while every anchor was still correct, and green across the restructure
-that moved the files carrying them.
+the package (D18).
 """
 
 from pathlib import Path

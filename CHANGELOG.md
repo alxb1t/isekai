@@ -9,6 +9,25 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.31.3] - 2026-09-30 · 0051-the-terse-comments
+
+### Changed
+
+- The run directory's and the shared modules' comments carry no version, change id or design citation; a
+  decision in force is named by its id, so a reader follows the reason to `docs/decisions.md` (0051 D1, D2).
+- The boundary modules' comments and a tagger refusal carry no version or design citation; the Ollama, reader
+  and vocabulary pins name D6, D7 and D23 (0051 D1, D2).
+- The stages' comments carry no version or design citation; the untagged sheet, the permanent sheet failure and
+  the tag verb's paired lists name D31, D21 and D1 (0051 D1, D2).
+- The CLI's, the review UI's and the wiring's comments carry no version or design citation; the runs root, the
+  seed and the tagger's declaration name D18, D13 and D31 (0051 D1, D2).
+- The render scripts', the image's and the derivers' comments carry no version or design citation; the render
+  session, the volume and the image pin name D36, D27 and D28 (0051 D1, D2).
+- The suite's comments, docstrings and exemption reasons carry no version or design citation; a test's
+  docstring keeps only what it proves (0051 D1, D2).
+- CLAUDE.md states the comment rule, and a guard fails on a version, a change id or a design citation in a
+  comment, a docstring or an exemption reason; the package READMEs name every importer (0051 D3, D4, D5).
+
 ## [0.31.2] - 2026-09-30 · 0050-the-colour-profile
 
 ### Changed

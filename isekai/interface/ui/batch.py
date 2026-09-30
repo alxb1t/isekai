@@ -9,8 +9,7 @@ at all. `app.py` is the only module in this package that imports FastAPI.
 that ten photographs belong together: a run is one input and the layout has no
 batch object, so recording one would add an artifact to a layout whose own rules
 make a shape change a hand migration. A restart loses the rail and one retyped
-command restores it; the sheets are independent of it and survive either way
-(design.md D3).
+command restores it; the sheets are independent of it and survive either way.
 
 **The approved count is read from the directory, never from memory**, so the
 surface stays truthful when something is approved by the verb while it is
@@ -51,8 +50,8 @@ class Input:
     The dimensions are read once, here, because `image_dimensions()` reports an
     unreadable header by calling `sys.exit()` -- a `BaseException` that inside a
     request handler would take the worker down rather than become a response.
-    Since v0.22.1 `_prepare` turns that exit into a `Refusal` at startup, so an
-    unreadable header costs its own photograph and not the batch.
+    `_prepare` turns that exit into a `Refusal` at startup, so an unreadable
+    header costs its own photograph and not the batch.
     """
 
     run: Run
@@ -98,12 +97,11 @@ class Batch:
         """Return the local tagger's scored list for this input, or None.
 
         **`None` is never a refusal here**, and neither is it for `tags_path`
-        below. A run captioned before v0.20 has no such directory, and a failed
+        below. A run never tagged has no such directory, and a failed
         tagger leaves its own list absent and every list after it -- legitimate
         absences, none of which may stop a review.
         The tag lists are an aid, and a surface that refused to open because a
-        helper was missing would have confused an aid for an input
-        (design.md D20).
+        helper was missing would have confused an aid for an input.
         """
         return latest_artifact(held.run.directory(self.flow.id, WD14))
 
@@ -153,7 +151,7 @@ def establish(
     it, then the bundle. A refusal the
     operator cannot read is a refusal that did not happen, and the terminal is
     where they already are when they start this -- the browser has no designed
-    home for one until a refusal surface exists (design.md D6).
+    home for one until a refusal surface exists.
 
     **Every input's failure is reported together.** Ten photographs with two
     missing sheets must name both and start nothing, rather than making the
@@ -197,8 +195,8 @@ def _prepare(identifier: str, wired: Wiring, flow: str) -> Input:
     review(run, flow)
     # Through the one wrap, in the module that owns the hazard: an unreadable
     # header is reported by `sys.exit`, a `BaseException` that `across` walks
-    # straight past -- so unwrapped, one bad photograph killed the batch and
-    # named nothing (v0.18 R7).
+    # straight past -- so unwrapped, one bad photograph would kill the batch and
+    # name nothing.
     width, height = dimensions_or_refuse(
         run.photo,
         "the surface reads the photograph's own header to size the page and "

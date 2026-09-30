@@ -3,8 +3,7 @@
 The sibling of `derive_manifest.py`, and deliberately a sibling rather than a
 second half of it: `models.json` is the manifest of what **the graph** needs on
 the pod, and this one is the manifest of what **the scorer** loads on the
-operator's own machine (design.md D18). Merging them would make one file answer
-two questions.
+operator's own machine. Merging them would make one file answer two questions.
 
 Same rule as its sibling: the manifest is *derived*, never transcribed. Run it
 from the repository root:
@@ -20,18 +19,19 @@ shaped differently from the graph's:
 
 - **Three entries are copied out of `config/models.json`, byte for byte.** The
   scorer's ArcFace must be the artifact the generator injects identity *with*, or
-  design.md D8's claim about self-grading describes two different models. Copying
-  rather than re-deriving is what makes the two files unable to drift apart:
-  there is one derivation, and this one reads its output.
+  the claim that ArcFace grades the adapter against itself, and so may only
+  falsify, describes two different models. Copying rather than re-deriving is
+  what makes the two files unable to drift apart: there is one derivation, and
+  this one reads its output.
 - **A small non-LFS file is hashed by fetching it.** Hugging Face publishes a
   SHA-256 only for LFS objects, and `config.json` / `preprocessor_config.json` /
   `labels.json` are plain git blobs -- but a scorer that loads a model's
   architecture and its input normalisation from unpinned bytes is pinning the
   weights and not the model. The URL already addresses an immutable revision, so
   the bytes are fixed; this records what they are. The size cap is what stops
-  that path from ever quietly downloading a checkpoint. That strategy is no
-  longer this file's: it lives in `tools/manifest.py` alongside the LFS one,
-  where every deriver reaches for whichever an artifact needs (design.md D10).
+  that path from ever quietly downloading a checkpoint. That strategy is not
+  this file's: it lives in `tools/manifest.py` alongside the LFS one, where
+  every deriver reaches for whichever an artifact needs.
 """
 
 import json
@@ -55,30 +55,31 @@ PUBLISHERS = (
 
 # StyleID, the primary face axis: a CLIP image encoder with LoRA adapters merged.
 # `kwanyun/StyleID`, SIGGRAPH 2026. Non-commercial research use -- a recorded
-# deviation, and the reason it may not be the sole carrier of the face axis
-# (design.md D16).
+# deviation, and the reason it may not be the sole carrier of the face axis.
 STYLEID = "1967c354f339a636e5b3e16ecab3d0075aa27ab1"
 
-# The human parser the region masks come from (design.md D7). NVIDIA Source Code
+# The human parser the region masks come from. NVIDIA Source Code
 # License, inherited from SegFormer -- non-commercial, a recorded deviation. The
 # `onnx/` export is pinned rather than the safetensors: the scorer runs it through
 # `onnxruntime`, which is the same runtime the detector below needs.
 SEGFORMER = "584abc1e1d260e23c0fc627c5217a09b2b461046"
 
-# The anime-face detector the guard's box-IoU method needs (design.md D9).
+# The anime-face detector the guard's box-IoU method needs.
 #
-# NOT `Fuyucchi/yolov8_animeface`, which design.md D19 names. That repository
+# NOT `Fuyucchi/yolov8_animeface`, the AGPL-3.0 detector. That repository
 # publishes no ONNX at all -- its HF tree and its single GitHub release both carry
-# only `yolov8x6_animeface.pt` under `library_name: ultralytics` -- so D19's stated
+# only `yolov8x6_animeface.pt` under `library_name: ultralytics` -- so the
 # mechanism, "loaded through `onnxruntime`, and `ultralytics` is never imported",
-# has no artifact to point at. Resolved 2026-09-06 in favour of this one, which is
-# an ONNX export under MIT and therefore dissolves D19's AGPL problem rather than
-# routing around it. The `_s` variant is the larger of the two the repo ships.
+# has no artifact to point at there. This one is an ONNX export under MIT and
+# therefore dissolves the AGPL problem -- `ultralytics` linked into this Apache-2.0
+# repository -- rather than routing around it. The `_s` variant is the larger of
+# the two the repo ships.
 ANIMEFACE = "784dc4c0bb692351ddcdbe6131a050b17d3025d5"
 
 # The destinations copied out of `config/models.json` byte for byte, in the order
-# they are emitted. `glintr100` is the load-bearing one (design.md D8); the two
-# DWPose artifacts are convenience, and are copied for the same reason anyway.
+# they are emitted. `glintr100` is the load-bearing one, the encoder the generator
+# injects identity with; the two DWPose artifacts are convenience, and are copied
+# for the same reason anyway.
 #
 # Imported rather than restated. The whole purpose of this list is that the two
 # manifests cannot drift apart, so keeping two copies of the list of things that
@@ -161,7 +162,7 @@ def copied_entries() -> list[ManifestEntry]:
 
     Read rather than re-derived, so the two manifests have one derivation between
     them and the recognizer the scorer loads cannot become a different build of
-    the one the generator injects with (design.md D8, D18).
+    the one the generator injects with.
     """
     graph: Manifest = json.loads(GRAPH_MANIFEST_PATH.read_text())
     by_dest = {entry["dest"]: entry for entry in graph["entries"]}

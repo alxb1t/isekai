@@ -8,8 +8,8 @@ It reads the commits the `Dockerfile` checks out, fetches ComfyUI's and
 comfyui_controlnet_aux's requirement lists at those commits, writes
 `image/pyproject.toml`, and runs `uv lock --project image`. Re-running without a
 change upstream leaves `image/` byte-identical -- `make drift`, or
-`git diff --exit-code -- image/`, is the check. Why the image is a project of
-its own: 0033 design D2.
+`git diff --exit-code -- image/`, is the check. The image is a project of its
+own so that a rebuild installs the same environment (D28).
 
 It writes no provisioning manifest, so `tests/test_derivation.py` does not list it.
 """
@@ -47,12 +47,12 @@ TORCH_INDEX = "https://download.pytorch.org/whl/cu128"
 # Both ship the `onnxruntime` module. The -gpu build is for CUDA 13, which the image
 # lacks, so it runs on the CPU anyway; the CPU build says so. Not a relabel: without
 # the -gpu build, DWPose runs its box detector on OpenCV, not onnxruntime, which can
-# move `summon-anime-wai`'s pose (0042 design D4).
+# move `summon-anime-wai`'s pose.
 DROPPED = ("onnxruntime-gpu",)
 
 # insightface 0.7.3 is an sdist; its `build-system.requires` names these unpinned.
 # Each carries its wheel hashes from `image/uv.lock`, so uv checks what it builds
-# with (0042 design D5).
+# with.
 BUILD_CONSTRAINTS = {
     "setuptools==84.0.0": [
         "sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
@@ -94,7 +94,8 @@ def pinned_commits(dockerfile: str) -> dict[str, str]:
 
     e.g. "git clone https://github.com/a/b.git ... git checkout <sha>" -> {"a/b": sha}
     """
-    # Every `git clone` counts, whatever its options or host: 0049 design D1.
+    # Every `git clone` counts, whatever its options or host, so the guard never
+    # narrows to the clones the Dockerfile happens to hold.
     if ADD_GIT.search(dockerfile):
         raise SystemExit(
             "Dockerfile: an `ADD` of a git repository, which no checkout pins"

@@ -1,11 +1,11 @@
 """The manifest of model artifacts, and the checks that keep it honest.
 
 `config/models.json` decides which bytes this repository renders with, and this
-module owns every *decision* taken about it: whether the manifest says what a pin
-is supposed to say, and, for each entry, whether to skip it, abort the run or
-fetch it. The bytes move through `wget` on the pod (design.md D3, D14); the only
-network call here is the cheap pre-flight HEAD behind the `Fetcher` seam, which a
-fake replaces so the whole suite stays offline.
+module owns every *decision* taken about it: whether the manifest says what a pin is
+supposed to say, and, for each entry, whether to skip it, abort the run or fetch it.
+The bytes move through `wget` on the pod; the only network call here is the cheap
+pre-flight HEAD behind the `Fetcher` seam, which a fake replaces so the whole suite
+stays offline.
 
 On `python -m isekai`'s import graph through `ollama.py`, which reads the
 reader's manifest; it imports only the standard library.
@@ -27,16 +27,15 @@ MANIFEST_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "mode
 
 # The third manifest: the tag list the sorting stage fills a sheet from. A sibling
 # of the other two rather than a section of either -- one file per question, and
-# this one answers what the pipeline's vocabulary is (design.md D9). The path is
-# declared here, beside the graph's, because the checks that keep a manifest
-# honest are this module's and all three are held to them.
+# this one answers what the pipeline's vocabulary is. The path is declared here,
+# beside the graph's, because the checks that keep a manifest honest are this
+# module's and all three are held to them.
 VOCABULARY_MANIFEST_PATH = (
     Path(__file__).resolve().parent.parent.parent / "config" / "vocabulary.json"
 )
 
 # The fourth: the reader's model and projector files, keyed by the alias a flow
-# names, so the files behind an alias can be checked before it answers (0033
-# design D4).
+# names, so the files behind an alias can be checked before it answers (D6).
 READER_MANIFEST_PATH = (
     Path(__file__).resolve().parent.parent.parent / "config" / "reader.json"
 )
@@ -129,8 +128,8 @@ def mirror_entries_without_an_alternate(manifest: Manifest) -> list[str]:
     """Return the destinations of mirror-primary entries that declare no alternate.
 
     A digest makes the source interchangeable, so an alternate adds availability
-    without adding trust (design.md D10) -- but only an entry whose primary is
-    somebody's mirror actually needs one.
+    without adding trust -- but only an entry whose primary is somebody's mirror
+    actually needs one.
     """
     publishers = set(manifest["publishers"])
     missing: list[str] = []
@@ -152,10 +151,10 @@ class Fetcher(Protocol):
     """The pre-flight seam: what a source says it would serve, before it serves it.
 
     The bytes themselves do not move through here. `wget` in the shell moves them
-    and the shell hands the result back to `land` (design.md D14), so what passes
-    through this seam is the cheap question a ranged request can answer: does the
-    source's *published* digest already disagree with the manifest? A fake answers
-    it from a dict, which is what keeps the suite offline.
+    and the shell hands the result back to `land`, so what passes through this seam
+    is the cheap question a ranged request can answer: does the source's *published*
+    digest already disagree with the manifest? A fake answers it from a dict, which
+    is what keeps the suite offline.
     """
 
     def published_digest(self, url: str) -> str | None:
@@ -187,10 +186,9 @@ class HuggingFaceFetcher:
     therefore loses the header and every entry degrades to post-verification
     silently, so the redirect is deliberately not followed.
 
-    Observed behaviour, not a documented contract, so every failure mode here --
-    a missing header, a changed redirect shape, a network error -- returns None
-    and the entry degrades to download-and-post-verify. It must never degrade to
-    trust (design.md D10).
+    Observed behaviour, not a documented contract, so every failure mode here -- a
+    missing header, a changed redirect shape, a network error -- returns None and
+    the entry degrades to download-and-post-verify. It must never degrade to trust.
     """
 
     def published_digest(self, url: str) -> str | None:
@@ -217,7 +215,7 @@ class Decision:
     them yields bytes that verify, then hand the result to `land`.
 
     `urls` is the whole ordered list rather than a single winner because that is
-    what makes D10's ordered fallback real: the pre-flight can only reject a
+    what makes the ordered fallback real: the pre-flight can only reject a
     source that answers, and the failure the alternates exist for — a mirror that
     has gone away — is one the pre-flight collapses to "publishes no digest".
 
@@ -260,10 +258,9 @@ def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
     """Return the destination resolved under `models_dir`, or None if it escapes.
 
     The one place a manifest destination is joined onto the filesystem, so the
-    containment rule has exactly one site to be enforced at (design.md D7). The
-    digest offers no protection here: whoever supplies the destination supplies
-    the digest beside it, and a second project shares the volume this tree lives
-    on.
+    containment rule has exactly one site to be enforced at. The digest offers no
+    protection here: whoever supplies the destination supplies the digest beside it,
+    and a second project shares the volume this tree lives on.
 
     Lexical on purpose — `normpath` rather than `resolve` — because `MODELS_ROOT`
     on the pod IS a symlink onto the namespace, so resolving would report the
@@ -325,13 +322,12 @@ def resolve(dest: str, models_dir: Path, manifest: Manifest) -> Path:
     the only reason to believe the bytes on disk are the right ones, and an entry
     pointing at `resolve/main/` says nothing about which bytes those were.
 
-    A fourth refusal sits under the third: the join onto `models_dir` goes
-    through `isekai.boundary.provision.resolve_dest`, which is the repository's
-    **single** site for the containment rule (design.md D7). Every caller here
-    passes a literal today, so this is not an exploit path being closed -- it is
-    the invariant keeping one enforcement site rather than two, so a destination
-    that climbs out of the models root is refused here exactly as it is on the
-    pod.
+    A fourth refusal sits under the third: the join onto `models_dir` goes through
+    `isekai.boundary.provision.resolve_dest`, which is the repository's **single**
+    site for the containment rule. Every caller here passes a literal today, so this
+    is not an exploit path being closed -- it is the invariant keeping one
+    enforcement site rather than two, so a destination that climbs out of the models
+    root is refused here exactly as it is on the pod.
     """
     entry = entry_for(manifest, dest)
     for source in entry["sources"]:
@@ -353,17 +349,17 @@ def resolve(dest: str, models_dir: Path, manifest: Manifest) -> Path:
 def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     """Decide what to do about one entry: skip it, abort the run, or fetch it.
 
-    A file already at the destination is *hashed*, never taken on its name — that
-    is the whole point of a manifest, and skip-if-present is what would otherwise
-    leave a warm volume permanently unchecked (design.md D4). A present file that
-    fails is left exactly where it is: the volume is shared, and a file this run
-    did not write is not this run's to remove.
+    A file already at the destination is *hashed*, never taken on its name — that is
+    the whole point of a manifest, and skip-if-present is what would otherwise leave
+    a warm volume permanently unchecked. A present file that fails is left exactly
+    where it is: the volume is shared, and a file this run did not write is not this
+    run's to remove.
 
     An absent file is offered *every* source that survives the pre-flight, in the
-    manifest's order, so the driver can walk them (design.md D16). Only a source
-    that positively disagrees is dropped; a source that publishes nothing is kept,
-    because the pre-flight is an optimisation and never a substitute for hashing
-    the bytes that landed.
+    manifest's order, so the driver can walk them. Only a source that positively
+    disagrees is dropped; a source that publishes nothing is kept, because the
+    pre-flight is an optimisation and never a substitute for hashing the bytes that
+    landed.
     """
     dest = resolve_dest(entry, models_dir)
     if dest is None:
@@ -413,9 +409,9 @@ def land(entry: Entry, dest: Path, partial: Path) -> None:
     interrupted or tampered transfer never occupies the final name and the next
     run sees the file as absent rather than as present-and-trusted.
 
-    Takes the destination rather than deriving one, so `resolve_dest` really is
-    the single site the containment rule is enforced at (design.md D7) instead of
-    being the single site plus everywhere that calls it again.
+    Takes the destination rather than deriving one, so `resolve_dest` really is the
+    single site the containment rule is enforced at instead of being the single site
+    plus everywhere that calls it again.
     """
     try:
         verify(partial, entry["sha256"])
@@ -490,7 +486,7 @@ def manifest_argument(given: str | None) -> Path:
     provisioner takes the file as an argument rather than growing a verb per
     consumer. It is what makes the vocabulary a *provisioned* artifact rather than
     one that is merely verified: `bash tools/download_models.sh
-    config/vocabulary.json` fetches it through this exact path (design.md D9).
+    config/vocabulary.json` fetches it through this exact path.
     """
     return MANIFEST_PATH if given is None else Path(given)
 
@@ -627,13 +623,13 @@ MODELS_ROOT = "/opt/ComfyUI/models"
 
 # Where the network volume mounts, and this project's slice of it. The volume is
 # shared with another project under a different convention, so nothing here
-# reaches outside `MODELS_NAMESPACE` (design.md D9).
+# reaches outside `MODELS_NAMESPACE`.
 VOLUME_MOUNT = "/runpod-volume"
 MODELS_NAMESPACE = f"{VOLUME_MOUNT}/isekai"
 
 # The preprocessor nodes whose checkpoints `comfyui_controlnet_aux` fetches into
 # its own `ckpts` directory -- container disk, unless AUX_ANNOTATOR_CKPTS_PATH
-# says otherwise (design.md D7).
+# says otherwise.
 ANNOTATOR_NODES = ("DWPreprocessor", "LineArtPreprocessor")
 
 

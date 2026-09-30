@@ -2,7 +2,7 @@
 
 A batch ends in a question a person answers by eye -- which flow kept whom -- and
 this writes the page they answer it on, so an agent can hand it over without
-reading a run. Like `run_view`, it reads and decides nothing (0035 design D2).
+reading a run. Like `run_view`, it reads and decides nothing.
 
     <batch>/runs/<id>/...  ->  <batch>/compare.html
 

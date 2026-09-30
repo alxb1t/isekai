@@ -1,14 +1,13 @@
 """The pipeline's command line: `python -m isekai <verb>`.
 
-**The only surface.** v0.13 built this parser beside the old single-command one
-and v0.14 deleted that one, discharging the suspension of the repository's own
-rule: there is one render path, and this is its entry point. Four separate scripts
-were rejected for the same reason one parser was chosen: it would multiply the
-import guard by four and give argument parsing four places to drift.
+**The only surface.** There is one render path, and this is its entry point.
+Four separate scripts were rejected for the same reason one parser was chosen: it
+would multiply the import guard by four and give argument parsing four places to
+drift.
 
 **Schema migration is not a verb.** Every run file kind is at its first version,
 so an upgrade command would be a dispatch table with no entries and its refusal
-would be unreachable -- nothing writes a later one (design.md D2).
+would be unreachable -- nothing writes a later one.
 
     caption   (1) a photograph in, prose out
     tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
@@ -27,13 +26,12 @@ takes exactly one, because the surface is one schema's fields in one order;
 hold. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
-so neither surface is privileged and neither goes through the other
-(design.md D1).
+so neither surface is privileged and neither goes through the other.
 
 **`isekai/__main__.py` is a shim over this file.** `runpy` pins where the entry
 point's *path* is; it does not pin where the parser lives, and a package's largest
-interface surface has no business being the one module outside the filing scheme
-(design.md D3). Everything the verb line does is here.
+interface surface has no business being the one module outside the filing
+scheme. Everything the verb line does is here.
 
 Stdlib only, and held to that by a subprocess guard that imports the entry point
 with site-packages off the path.
@@ -150,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
     }
 
     # `compare` takes a batch directory instead: its runs root is the batch's
-    # `runs/`, so a second way to name it could only disagree (0035 design D2).
+    # `runs/`, so a second way to name it could only disagree.
     for name in (name for name in made if name != "compare"):
         made[name].add_argument(
             "photos",
@@ -165,7 +163,7 @@ def build_parser() -> argparse.ArgumentParser:
         # this repository and outside `.data/`, where nothing ignores it and a
         # `git add` would publish it. A path outside the repository needs no
         # check at all: version control cannot reach it, whatever it is, and that
-        # is what keeps a run on another disk expressible (design.md D7).
+        # is what keeps a run on another disk expressible (D18).
         made[name].add_argument(
             "--runs",
             type=Path,
@@ -222,7 +220,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
-    # and the other reproduces, and combining them has no meaning (design.md D13).
+    # and the other reproduces, and combining them has no meaning (D13).
     render = made["generate"].add_mutually_exclusive_group()
     render.add_argument(
         "--count",
@@ -355,9 +353,9 @@ def _require_tagged(
     """Refuse a `tag` invocation naming any flow that declares no tagger.
 
     Before any identifier, so no flow named with it is tagged: a skip would report
-    success for a flow that wrote nothing (0032 design D2). With every flow
-    untagged, "drop `--flow`" would leave argparse nothing to accept, so the
-    refusal names `sheet` instead (0047 design D1).
+    success for a flow that wrote nothing (D31). With every flow untagged, "drop
+    `--flow`" would leave argparse nothing to accept, so the refusal names `sheet`
+    instead.
     """
     untagged = [name for name, flow in flows.items() if not flow.tagger]
     if untagged and len(untagged) == len(flows):
@@ -398,7 +396,7 @@ def _once(read: Callable[[], T]) -> Callable[[], T]:
     """Return `read`, answered at most once: its answer or its refusal is kept.
 
     A refusal is the build's or the endpoint's, not a photograph's, so meeting
-    it again would redo the work to learn nothing (0049 design D4). A transient
+    it again would redo the work to learn nothing. A transient
     transport failure is the exception: it is raised and not kept, since the
     endpoint may answer the next ask, and keeping it would refuse every later
     photograph in the session and spend each one's render budget.
@@ -474,8 +472,8 @@ def _per_item(
         reason and says so.
 
         One slot, because `wiring.tagger_for` takes a `Flow` and reads nothing
-        from it -- no manifest key names the local tagger's model (design.md
-        D3). Keying the memo by flow would open the same graph once
+        from it -- no manifest key names the local tagger's model (D31).
+        Keying the memo by flow would open the same graph once
         per flow named on one command line and hold every copy for the rest of
         the invocation. The parameter stays because the seam's shape is per flow
         and the day one of them selects a different tagger is the day this needs
@@ -501,7 +499,7 @@ def _per_item(
                 # **Resolved per flow, not once per invocation.** One command
                 # naming two flows on two models would otherwise resolve one
                 # reader and hand it to both, and the provenance one of the two
-                # artifacts records would be false (design.md D6).
+                # artifacts records would be false.
                 reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
                 _say(
                     wired,
@@ -533,7 +531,7 @@ def _per_item(
 
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
-                # reaches no network (0032 design D2).
+                # reaches no network (D1).
                 steps: tuple[Callable[[], None], ...] = (
                     lambda: _say(
                         wired,
@@ -583,7 +581,7 @@ def _per_item(
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")
         # Each flow's refusal is collected on its own, so one flow's does not cost
-        # the input its other flows (0047 design D2).
+        # the input its other flows.
         collected.extend(across(list(flows), step))
 
     return work

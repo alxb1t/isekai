@@ -2,7 +2,7 @@
 
 A golden file per kind pins what today's writers produce, so moving the shapes
 into one contract is proven to move no byte. The tripwire is an AST scan like
-`tests/test_layers.py`'s. Why and how: `0028` design D8 and D9.
+`tests/test_layers.py`'s.
 """
 
 import ast
@@ -56,7 +56,7 @@ def _error(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     )
 
 
-# The caption and tags goldens hold a pinned producer's keys: 0049 design D3.
+# The caption and tags goldens hold a pinned producer's keys.
 def _caption(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
     reader = FakeReader(
         prose="Brown hair, brown eyes.",

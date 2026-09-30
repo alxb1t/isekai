@@ -56,7 +56,7 @@ def undeclared(dest: str, manifest: Path) -> Refusal:
     """Return the refusal for a `dest` the vocabulary manifest does not declare.
 
     Built here, not in `provision.py`, which runs by path on the pod where
-    `isekai` does not import (0047 design D6).
+    `isekai` does not import.
     """
     return Refusal(
         f"{dest} is not declared in {manifest}; add it to "

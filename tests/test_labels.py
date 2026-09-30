@@ -397,7 +397,8 @@ def test_scores_are_pulled_per_axis_from_the_scorers_own_records() -> None:
 @pytest.mark.spec("evaluation:labels:correlation-is-per-axis")
 def test_axes_are_never_rolled_up_into_one_agreement(tmp_path: Path) -> None:
     # `agreement` takes one axis's scores and returns one figure. There is no
-    # signature here that could average two axes together (design.md D2).
+    # signature here that could average two axes together: a rollup needs
+    # per-axis thresholds, and a threshold no labels have earned is invented.
     records = json.loads(
         json.dumps(
             [

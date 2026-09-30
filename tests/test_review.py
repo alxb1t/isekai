@@ -795,7 +795,7 @@ def test_draft_update_refuses_when_there_is_no_draft(
     assert not directory.exists() or not versions(directory)
 
     # And once the draft has been approved it is gone, so the same refusal covers
-    # a stale tab reaching a finished input (design.md D5).
+    # a stale tab reaching a finished input.
     review(run, FLOW)
     approve(run, FLOW, schema, vocabulary)
     before = snapshot(run.path)

@@ -1,20 +1,18 @@
 """The pipeline's own entry point: its verbs, its refusals, and its import guard.
 
-This is the only entry point: v0.14 deleted the single-command surface `convert.py`
-carried, so the rule below has exactly one subject and the guard that holds it lives
-here, beside the falsification that keeps it honest.
+This is the only entry point, so the rule below has exactly one subject and the
+guard that holds it lives here, beside the falsification that keeps it honest.
 
-**The rule narrowed in v0.22.3 and the guard got more load-bearing, not less.** It
-used to be *the runtime is stdlib-only*, backed by `dependencies = []`; onnxruntime,
-numpy, Pillow, fastapi and uvicorn are declared dependencies now, because the local
-tagger runs on every `caption` and `uv sync` was stripping an extra it was never told
-about. What survives is the claim the architecture actually rests on: **the entry
-point imports no third-party package at module scope.** `wd14.py`'s three imports are
-function-local and `interface/ui/__init__.py` keeps FastAPI off the graph the same
-way, which is why `isekai show` works on a checkout that has provisioned nothing.
-With the packages installed by default, a module-scope import resolves rather than
-failing, so this guard is what catches one appearing here; `tests/test_wd14.py`'s
-source scan also catches one in `boundary/wd14.py`.
+**The runtime is not stdlib-only, which makes the guard more load-bearing, not
+less.** onnxruntime, numpy, Pillow, fastapi and uvicorn are declared dependencies,
+because the local tagger runs on every `caption` and `uv sync` strips an extra it
+is never told about. What the architecture actually rests on is this claim: **the
+entry point imports no third-party package at module scope** (D20). `wd14.py`'s
+three imports are function-local and `interface/ui/__init__.py` keeps FastAPI off
+the graph the same way, which is why `isekai show` works on a checkout that has
+provisioned nothing. With the packages installed by default, a module-scope import
+resolves rather than failing, so this guard is what catches one appearing here;
+`tests/test_wd14.py`'s source scan also catches one in `boundary/wd14.py`.
 """
 
 import argparse
@@ -122,7 +120,7 @@ def _flow_declaring(
 def _two_models(tmp_path: Path) -> Path:
     """Return a flows root with two flows naming two different models.
 
-    **Neither omits the key**, because omitting it is no longer expressible: with
+    **Neither omits the key**, because omitting it is not expressible: with
     `model` required there is no default to fall back to, and the case the
     per-flow resolution still has real work in is two flows naming two *models*.
     """
@@ -236,14 +234,12 @@ def test_the_stdlib_guard_would_actually_catch_a_third_party_import() -> None:
     # A check that cannot fail is not a check. If `-S` ever stopped removing
     # site-packages, the two guards above would pass for the wrong reason and an
     # accidental wheel in `python -m isekai`'s import graph would ship silently.
-    # It moved here with the guard it falsifies: it used to sit beside the one
-    # that held `convert.py`, and that guard died with its target.
     #
     # **It names a declared dependency for readability, not for reach.** Both
     # `pytest` and `onnxruntime` resolve from the same site-packages, so either
     # would go red the moment `-S` stopped removing it -- this is not a stronger
-    # probe than the `import pytest` it replaced, only a clearer one about which
-    # wheels the guards above exist to exclude.
+    # probe than an `import pytest`, only a clearer one about which wheels the
+    # guards above exist to exclude.
     result = _stdlib_import("import onnxruntime")
 
     assert result.returncode != 0
@@ -316,8 +312,8 @@ def test_a_serving_verb_takes_the_one_flow_it_is_given() -> None:
 
 @pytest.mark.spec("cli:flow-selection:the-flag-is-repeatable")
 def test_no_named_flow_is_silently_dropped(tmp_path: Path) -> None:
-    # The old flag was a single string: a second `--flow` overwrote the first
-    # and the invocation acted on one of the two without saying so.
+    # With a single-string flag, a second `--flow` would overwrite the first and
+    # the invocation would act on one of the two without saying so.
     wired = _wiring(tmp_path, flows_dir=_two_flows(tmp_path))
     parsed = build_parser().parse_args(
         ["review", "--flow", "summon-anime-wai", "--flow", "other-v1"]
@@ -383,11 +379,11 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
 ) -> None:
     """The refusal fires at the first call, not at resolution.
 
-    There is no unknown-implementation case left to refuse -- a one-entry registry
+    There is no unknown-implementation case to refuse -- a one-entry registry
     has no key to miss. What a manifest can still get wrong is the **model**, and
     an alias that was never created is the failure that will actually happen. It
     is named where it is discovered: at the call, by `ollama.py`, with the one
-    command that fixes it (design.md D22).
+    command that fixes it.
     """
     flow = _flow_declaring(tmp_path, model=READER)
     reader = reader_for(flow)
@@ -410,10 +406,10 @@ def test_a_model_this_build_cannot_reach_refuses_naming_it_and_the_remedy(
 def test_the_implementation_the_artifacts_record_is_the_one_the_adapter_names() -> None:
     """The duplication between the record and the adapter cannot drift.
 
-    There was a registry here whose keys had to equal `Reading.implementation`,
-    and the table is gone -- with one implementation there is no string to key one
-    on. The property the table protected survives without it, and is asserted
-    directly: what a caption's producer records is what the adapter calls itself.
+    With one implementation there is no string to key a registry on, so no table
+    has to equal `Reading.implementation`. The property such a table would protect
+    is asserted directly: what a caption's producer records is what the adapter
+    calls itself.
     """
     assert OllamaReader(model="r").implementation == "ollama"
 
@@ -475,13 +471,13 @@ def test_a_wiring_composed_without_a_reader_refuses_by_name(tmp_path: Path) -> N
 def test_one_command_over_two_flows_writes_two_artifacts_each_naming_its_own(
     tmp_path: Path,
 ) -> None:
-    """The reason the resolution moved inside the loop, and it still has work.
+    """The reason the resolution sits inside the loop, and it has work.
 
     Hoisted above it, one invocation naming two flows resolves a single reader
     and hands it to both -- so one of the two captions records a producer that did
-    not produce it, with the whole gate green. What it would have got wrong used
-    to be the *implementation*; with one arm it is the **model**, which still
-    differs per flow and is still what the artifact has to record.
+    not produce it, with the whole gate green. With one arm, what it would get
+    wrong is the **model**, which differs per flow and is what the artifact has
+    to record.
     """
     wired = _wiring(tmp_path, flows_dir=_two_models(tmp_path))
     wired.reader = lambda flow: FakeReader(prose="A person.", models=(flow.model,))

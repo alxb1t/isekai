@@ -67,6 +67,9 @@ proves, or `@pytest.mark.spec_exempt("<reason>")` if it is genuinely structural.
 unregistered marker, so an unregistered one would bind nothing while looking exactly like a binding.
 Behaviour gets a scenario first; a new test gets a binding.
 
+**A comment says what and why, in the present tense.** It names a decision in force as a plain `D27`, never a link,
+and carries no version, change id or design citation; the archive keeps the history.
+
 ---
 
 ## How a change is cut here

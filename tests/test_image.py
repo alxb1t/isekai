@@ -184,8 +184,8 @@ def test_a_photo_whose_dimensions_cannot_be_read_stops_the_run(
 
 
 # The two header ceilings. A header field is an unverified number until something
-# bounds it (design.md D8). The third stated ceiling is the target's long side,
-# enforced where the target is computed for a render -- see `tests/test_generate.py`.
+# bounds it. The third stated ceiling is the target's long side, enforced where
+# the target is computed for a render -- see `tests/test_generate.py`.
 
 
 @pytest.mark.spec(
@@ -230,10 +230,9 @@ def test_a_header_walk_past_the_byte_ceiling_is_refused(tmp_path: Path) -> None:
     assert str(MAX_HEADER_BYTES) in message
 
 
-# The PNG half of the orientation rule. v0.10 closed the JPEG branch and left this
-# one open; the phase-6 loader probe measured the pod and found `LoadImage`
-# transposes a PNG carrying an `eXIf` chunk exactly as it transposes a tagged
-# JPEG -- and every input this project has ever rendered is a PNG.
+# The PNG half of the orientation rule. A loader probe on the pod measures that
+# `LoadImage` transposes a PNG carrying an `eXIf` chunk exactly as it transposes a
+# tagged JPEG -- and every input this project has ever rendered is a PNG.
 
 
 @pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
@@ -273,7 +272,7 @@ def test_the_exif_chunk_is_found_wherever_the_writer_put_it(tmp_path: Path) -> N
 @pytest.mark.spec("image-generation:working-resolution:orientation-is-honoured")
 def test_both_codecs_agree_on_the_same_rotation(tmp_path: Path) -> None:
     # The mismatch this rule prevents is a property of the loader, not of the
-    # container: the phase-6 probe measured both and both transposed.
+    # container: a loader probe on the pod measured both and both transposed.
     as_jpeg = _write(tmp_path, "r.jpg", jpeg_with_header(4032, 3024, orientation=6))
     as_png = _write(tmp_path, "r.png", png_with_exif(4032, 3024, 6))
     assert image_dimensions(as_jpeg) == image_dimensions(as_png) == (3024, 4032)
@@ -306,8 +305,8 @@ def test_a_png_declaring_an_unbounded_exif_chunk_is_refused(tmp_path: Path) -> N
     assert "frame header" not in message
 
 
-# The stripper (0039 design D1, D2, D6). Its photographs are made by Pillow, a
-# runtime dependency imported inside the helpers, so each one really decodes.
+# The stripper. Its photographs are made by Pillow, a runtime dependency imported
+# inside the helpers, so each one really decodes.
 _ORIENTATION = 0x0112
 
 # One needle per block a camera or an editor writes; none may survive the strip.
@@ -431,7 +430,7 @@ def test_the_pixels_are_unchanged_by_the_strip(kind: str, tmp_path: Path) -> Non
     assert _decoded(stripped).tobytes() == _decoded(original).tobytes()
 
 
-@pytest.mark.spec_exempt("structural: the allowlist of 0039 design D1, block by block")
+@pytest.mark.spec_exempt("structural: the strip's allowlist, block by block")
 @pytest.mark.parametrize("kind", ["jpeg", "progressive", "png"])
 def test_no_block_outside_the_allowlist_survives(kind: str, tmp_path: Path) -> None:
     original = _pillow_photo(kind)
@@ -536,7 +535,7 @@ def test_the_hand_built_photographs_still_walk(data: bytes, tmp_path: Path) -> N
 
 
 # A walk the strip cannot finish, per defect: each must refuse rather than crash
-# or send the file whole (0050 design D2).
+# or send the file whole.
 _PNG = png_bytes(16, 16)
 _JPEG = jpeg_bytes(16, 16)
 

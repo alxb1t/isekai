@@ -110,7 +110,7 @@ class FakeFetcher:
     thing. `published` maps a source URL to the digest that source claims it
     would serve; a URL absent from the map publishes nothing, which is the case
     where pre-flight has to degrade to post-download verification rather than to
-    trust (design.md D10).
+    trust.
     """
 
     def __init__(self, published: dict[str, str] | None = None) -> None:

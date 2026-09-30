@@ -2,7 +2,7 @@
 
 Each living key has a test, each `spec` marker names a key, and each test carries
 exactly one of `spec` and `spec_exempt`. Keys are read with a regex, markers with
-`ast`: no marker is built at runtime. Why: `0045` design D1, D2; `0047` design D8.
+`ast`: no marker is built at runtime.
 """
 
 import ast
@@ -293,7 +293,7 @@ def test_built():
     ]
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0047 D8")
+@pytest.mark.spec_exempt("structural: twin of the active deltas' keys")
 def test_an_added_key_is_known_and_neither_it_nor_a_removed_one_is_demanded(
     tmp_path: Path,
 ) -> None:
@@ -373,7 +373,7 @@ def test_kept(x):
     assert stray(_tree(tmp_path, tests)) == ["tests/test_cap.py:5"]
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0045 D2")
+@pytest.mark.spec_exempt("structural: twin of the active deltas' keys")
 def test_a_modified_requirement_that_re_keys_a_scenario_drops_the_old_key(
     tmp_path: Path,
 ) -> None:
@@ -389,7 +389,7 @@ def test_a_modified_requirement_that_re_keys_a_scenario_drops_the_old_key(
     assert unbound(spec_keys(root), marked_tests(root)) == []
 
 
-@pytest.mark.spec_exempt("structural: twin of the active deltas' keys, per 0045 D2")
+@pytest.mark.spec_exempt("structural: twin of the active deltas' keys")
 def test_a_renamed_requirement_keeps_its_keys_until_a_modified_one_re_keys_them(
     tmp_path: Path,
 ) -> None:
