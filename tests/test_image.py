@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from isekai.foundation.flow import Workflow, load_flow
+from isekai.foundation.refusal import Refusal
 from isekai.shared.image import (
     DIMENSION_STEP,
     MAX_HEADER_BYTES,
@@ -489,3 +490,45 @@ def test_the_hand_built_photographs_still_walk(data: bytes, tmp_path: Path) -> N
     assert image_dimensions(_write(tmp_path, "stripped", stripped)) == image_dimensions(
         _write(tmp_path, "original", data)
     )
+
+
+# A walk the strip cannot finish, per defect: each must refuse rather than crash
+# or send the file whole (0050 design D2).
+_PNG = png_bytes(16, 16)
+_JPEG = jpeg_bytes(16, 16)
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+@pytest.mark.parametrize(
+    ("data", "reason"),
+    [
+        (_PNG[:20], "the chunk at byte 8 runs past the file"),
+        (_PNG.replace(b"IHDR", b"tEXt"), "its first chunk is not IHDR"),
+        (
+            _PNG + struct.pack(">I", 0) + b"QUUX" + bytes(4),
+            "it carries critical chunk b'QUUX', which is not known",
+        ),
+        (
+            _JPEG[:2] + jpeg_segment(0xF0, b"jpg0") + _JPEG[2:],
+            "it carries marker 0xF0, which is not known",
+        ),
+        (_JPEG[:5], "the segment at byte 2 runs past the file"),
+        (b"GIF89a" + bytes(16), "it is neither a JPEG nor a PNG"),
+    ],
+    ids=[
+        "truncated-chunk",
+        "first-chunk-not-ihdr",
+        "unknown-critical-chunk",
+        "unknown-marker",
+        "short-length-word",
+        "neither-codec",
+    ],
+)
+def test_each_unwalkable_photograph_is_refused_by_name(
+    data: bytes, reason: str, tmp_path: Path
+) -> None:
+    with pytest.raises(Refusal) as refused:
+        _stripped(tmp_path, "photo.bin", data)
+
+    assert str(refused.value).startswith("photo.bin: ")
+    assert reason in str(refused.value)

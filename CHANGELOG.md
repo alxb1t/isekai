@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Fixed
+
+- Each way the upload's strip refuses a photograph it cannot walk is now reached by a test, so none can regress into
+  a crash or a whole upload unnoticed (0050 D2).
+
 ## [0.31.1] - 2026-09-30 · 0049-pins-guarded
 
 ### Fixed
