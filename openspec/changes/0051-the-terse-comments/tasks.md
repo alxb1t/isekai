@@ -5,7 +5,7 @@ docstrings and `spec_exempt` reasons of its tree per [D1](design.md#d1) and [D2]
 
 ## Progress
 
-- [ ] 1 — foundation and shared
+- [x] 1 — foundation and shared
 - [ ] 2 — boundary
 - [ ] 3 — pipeline
 - [ ] 4 — interface
@@ -18,9 +18,9 @@ Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HIST
 
 ## 1 — foundation and shared
 
-- [ ] 1.1 **HALT CHECK** — the history is where the design counts it, and `CLAUDE.md` has no comment rule.
+- [x] 1.1 **HALT CHECK** — the history is where the design counts it, and `CLAUDE.md` has no comment rule.
   Verify: `grep -rlE 'design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]' isekai --include='*.py' | wc -l` prints `24`, and `grep -c 'A comment says what and why' CLAUDE.md` prints `0`.
-- [ ] 1.2 Rewrite the history in `isekai/foundation/` and `isekai/shared/`.
+- [x] 1.2 Rewrite the history in `isekai/foundation/` and `isekai/shared/`.
   Verify: `grep -rlE 'design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]' isekai/foundation isekai/shared --include='*.py'` prints nothing.
 
 ## 2 — boundary

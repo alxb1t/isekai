@@ -28,7 +28,7 @@ from isekai.foundation.refusal import Refusal
 WORKING_SCALE = 1024
 DIMENSION_STEP = 64
 
-# Three stated ceilings (design.md D8). A short-side rule places no bound on the
+# Three stated ceilings. A short-side rule places no bound on the
 # other axis, and a header field is an unverified number until something bounds
 # it. Each refuses rather than clamping: a clamped target no longer preserves the
 # aspect ratio, and would squash the photo the way the orientation rule exists to
@@ -269,7 +269,7 @@ def image_dimensions(path: str) -> tuple[int, int]:
 
     An unreadable or truncated header stops the run naming the file. There is no
     default size, because a silently wrong resolution is a wrong render rather
-    than an error (design.md D2).
+    than an error.
 
     A header that declares a dimension past `MAX_HEADER_DIMENSION`, and a marker
     walk that passes `MAX_HEADER_BYTES` without reaching a frame header, are each
@@ -317,7 +317,7 @@ def working_resolution(width: int, height: int) -> tuple[int, int]:
     Expressed as a short side rather than a pixel budget on purpose. At a fixed
     megapixel count the short side moves with the aspect ratio, so a wide photo
     lands below the base family's own trained scale while a squarer one clears it
-    -- a failure that varies by input and reports nothing (design.md D2).
+    -- a failure that varies by input and reports nothing.
     """
     scale = WORKING_SCALE / min(width, height)
     long_side = round(max(width, height) * scale / DIMENSION_STEP) * DIMENSION_STEP
@@ -332,13 +332,12 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
     a `SystemExit` is a `BaseException`, so `across` walks straight past it and
     the remaining photographs die with it.
 
-    **One wrap, because there were two.** `generate.photo_resolution` had it and
-    `ui/batch.py` grew a second copy in v0.22.1 -- with a second wording for the
-    identical failure. It lives here rather than at either caller because the
-    hazard is a property of `image_dimensions` and every future caller inherits
-    it; `remedy` is a parameter because what to do about it is not -- the render
-    path says *open the run again* and the review surface says *start the
-    surface again*.
+    **One wrap, for `generate.photo_resolution` and `ui/batch.py` alike**, so the
+    identical failure has one wording. It lives here rather than at either caller
+    because the hazard is a property of `image_dimensions` and every future caller
+    inherits it; `remedy` is a parameter because what to do about it is not --
+    the render path says *open the run again* and the review surface says *start
+    the surface again*.
     """
     try:
         return image_dimensions(str(photo))
@@ -346,7 +345,7 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
         raise Refusal(f"{unreadable}; {remedy}") from unreadable
 
 
-# What a stripped photograph keeps (0039 design D1). An allowlist rather than a
+# What a stripped photograph keeps. An allowlist rather than a
 # list of metadata to drop: a block nobody named -- an appended video, a depth
 # map, a provenance record -- goes without anyone having to name it.
 _JPEG_KEPT_TABLES = _JPEG_SOF_MARKERS | {0xC4, 0xCC, 0xDB, 0xDD}  # DHT DAC DQT DRI
@@ -361,7 +360,7 @@ _JPEG_END_OF_IMAGE = 0xD9
 # Inside a scan, 0xFF is followed by a stuffed 0x00 or a restart marker; any
 # other byte after it starts the next segment.
 _JPEG_SCAN_END = re.compile(rb"\xff[^\x00\xd0-\xd7]")
-# No colour chunk is kept: the endpoint decodes without them (0050 D1).
+# No colour chunk is kept: the endpoint decodes without them.
 _PNG_KEPT_CHUNKS = frozenset({b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS"})
 
 
@@ -373,9 +372,8 @@ def strip_metadata(photo: Path) -> bytes:
     """Return the photograph's bytes with every block decoding does not need removed.
 
     The pixel data and the orientation are kept -- the orientation as a minimal
-    EXIF of its own -- and anything after the image's end goes (0039 design D1,
-    D2; 0050 D1). A photograph the walk cannot read to
-    its end is refused rather than sent whole (D5).
+    EXIF of its own -- and anything after the image's end goes. A photograph the
+    walk cannot read to its end is refused rather than sent whole.
     """
     try:
         data = photo.read_bytes()

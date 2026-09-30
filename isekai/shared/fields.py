@@ -7,7 +7,7 @@ It lives in `shared/` rather than in `foundation/` beside `Schema` because it
 depends on a `Vocabulary`, and `shared/vocabulary.py` already imports
 `foundation/refusal.py`; a vocabulary-dependent function in `foundation` would
 make the two groups import each other in both directions. `shared` already
-imports `foundation`, so this adds no new direction (design.md D8).
+imports `foundation`, so this adds no new direction.
 
 Stdlib only.
 """

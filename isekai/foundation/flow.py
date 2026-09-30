@@ -10,8 +10,7 @@ a computed field.
 names none of them -- a key that can only ever hold one value is not a
 declaration -- and they all sit directly in the directory, because the digest that
 freezes a flow covers regular files only. The rule names its files rather than
-tallying them: the count has changed once already, and a rule carrying a numeral
-is a rule that goes stale (design.md D10).
+tallying them: a rule carrying a numeral is a rule that goes stale.
 
 **A flow never changes silently.** A divergence -- a dial, a prompt fragment, the
 graph, the schema or the briefing, while the old configuration is still wanted --
@@ -25,7 +24,7 @@ its committed prompts.
 **The dials are the measured ones, not the graph file's.** `summon-anime-wai`'s
 graph carries a guidance scale of 7 and an identity control strength of 0.5, and every
 measured run overrode them to 5 and 0.8. A manifest transcribed from the graph
-would ship a configuration nothing measured (design.md D12), so the two disagree
+would ship a configuration nothing measured, so the two disagree
 on purpose and a test says so.
 
 Stdlib only.
@@ -56,12 +55,11 @@ MANIFEST_VERSION = 4
 # ever hold one value is not a declaration. They sit directly in the directory
 # because `manifest_digest` covers regular files only, so a nested layout would
 # leave the schema and the briefing outside the freeze while the gate stayed
-# green (design.md D1, D3).
+# green (D14).
 #
-# **Named, not counted.** `sheet.briefing.md` was the fifth and has had no reader
-# since v0.21, so the rule's numeral has now been wrong once; a rule that tallies
-# is a rule that goes stale, and `tests/test_flow.py` asserts the length here so
-# a sibling cannot be added silently (design.md D10).
+# **Named, not counted.** A rule that tallies is a rule that goes stale, and
+# `tests/test_flow.py` asserts the length here so a sibling cannot be added
+# silently.
 MANIFEST_NAME = "flow.json"
 GRAPH_NAME = "graph.json"
 SCHEMA_NAME = "schema.json"
@@ -87,11 +85,9 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # Every top-level key this build knows, and a manifest carrying any other is
 # refused naming it -- `load_flow` is where that reason lives.
 #
-# **It is exactly `REQUIRED`: there is no optional key.** `hosted` was the one,
-# and it is gone. That block named a distinction -- a model reached over a
-# network to a third party, as against one over a socket to this machine -- and
-# only the second survives, so a block whose name no longer distinguishes
-# anything, holding a single key, is not a declaration (design.md D1).
+# **It is exactly `REQUIRED`: there is no optional key.** Every model is reached
+# over a socket to this machine (D5), so a block marking a model reached over a
+# network to a third party would distinguish nothing.
 KNOWN = REQUIRED
 
 # What `model` names, and why it is not `reader`. **One alias answers the reader
@@ -103,14 +99,14 @@ KNOWN = REQUIRED
 # Deliberately not `models`, which is required, holds the render weights a rented
 # GPU loads and pins every one by digest: one names a file on disk, the other a
 # name a host resolves at call time, and **nothing verifies the bytes behind
-# this one** (design.md D1).
+# this one**.
 
 # The node roles every image flow has, checked at load the way the prompt's
 # fragments already are. Every other role is optional and guarded at the patch
 # site: a photograph, an identity adapter and a pose preprocessor are absent from
 # a sheet-only flow, and a hires resize and a hires sampler from any ordinary
-# cheaper one. Unchecked, a flow declaring fewer passed the whole gate and died on
-# a rented GPU -- after the photograph had already been uploaded (design.md D9).
+# cheaper one. Unchecked, a flow declaring fewer passes the whole gate and dies on
+# a rented GPU -- after the photograph is uploaded.
 REQUIRED_NODES = ("positive", "negative", "latent", "sampler")
 
 # Every role that names a transfer as well as a patch, and so has to be declared
@@ -125,10 +121,10 @@ TRANSFERRED_INPUTS = ("photo",)
 
 # The dials the sampler reads, and the ones the second pass reads on top of its
 # own. Declared here rather than at the patch site because `load_flow` has to
-# check them: a manifest missing `steps` passed all six gate commands, rented the
-# pod, uploaded the photograph, and then raised a bare `KeyError` out of
-# `patch()` -- not a `Refusal`, so `across` never collected it and the rest of
-# the batch died with it (v0.16 R8, v0.17 R6).
+# check them: a manifest missing `steps` would pass the gate, rent the pod,
+# upload the photograph, and then raise a bare `KeyError` out of `patch()` -- not
+# a `Refusal`, so `across` would never collect it and the rest of the batch would
+# die with it.
 SAMPLER_DIALS = ("steps", "cfg", "sampler_name", "scheduler", "denoise")
 SECOND_PASS_DIALS = ("cfg", "sampler_name", "scheduler")
 
@@ -136,7 +132,7 @@ SECOND_PASS_DIALS = ("cfg", "sampler_name", "scheduler")
 # flat "every dial in a fixed list is present" check rejects
 # `conjure-anime-wai`, which legitimately declares no `ip_weight`, no
 # `identity_cn_strength`, no `openpose_strength` and no `identity` or `openpose`
-# role at all (design.md D4). This mirrors `generate.patch()`'s own guards, and
+# role at all. This mirrors `generate.patch()`'s own guards, and
 # `hires_resize` is in it because `_hires_target` reads `hires_scale`
 # unconditionally whenever that role is declared -- a dependency no reader of
 # `patch()` alone would see, which is why the mapping is encoded here rather
@@ -154,7 +150,7 @@ ROLE_DIALS: Mapping[str, tuple[str, ...]] = {
 # rather than written into the resume predicate, so "which of my outputs are
 # already produced" is a question asked of the flow and not of an extension
 # somebody typed. A flow whose output is not a still image is unscheduled, and
-# this is the one line it changes when it arrives (design.md D11).
+# this is the one line it changes when it arrives.
 OUTPUT_SUFFIX = ".png"
 
 
@@ -163,8 +159,8 @@ OUTPUT_SUFFIX = ".png"
 # The schema's type lives here, beside the flow, because a flow is what decides
 # which schema a run is sorted against: the document sits in the flow's own
 # directory, and both ends of prompt assembly -- the field order and the prompt
-# fragments -- are read off this module. Held in `sheet.py` it made the sorter a
-# dependency of the renderer, which is the edge that move removed (design.md D6).
+# fragments -- are read off this module. Held in `sheet.py`, it would make the
+# sorter a dependency of the renderer.
 
 
 # What the API enforces on a tool input schema's property keys. Held beside the
@@ -249,7 +245,7 @@ class Model:
     The digest is here as well as in `config/models.json` because a destination
     path alone does not pin bytes: re-pinning a checkpoint would make an existing
     flow identifier render differently with the gate green. The duplication is
-    only safe because a test holds the two equal, naming the flow (design.md D4).
+    only safe because a test holds the two equal, naming the flow.
     """
 
     dest: str
@@ -360,11 +356,10 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     suite rather than on a rented machine.
 
     **A key this build does not read is refused too, not ignored**, and with
-    every key now required the allowlist below is the whole of what closes a
+    every key required the allowlist below is the whole of what closes a
     misspelling: `modl` is caught as an unknown key *and* as a missing one, in
-    the same load, with no check written for it. That is what flattening `hosted`
-    bought -- the block had no allowlist of its own, so `{"sortr": "x"}` inside it
-    loaded clean (design.md D3).
+    the same load, with no check written for it. A nested block would need an
+    allowlist of its own, or `{"sortr": "x"}` inside it would load clean.
     """
     directory = flow_path(flow, flows_dir)
     manifest = directory / MANIFEST_NAME
@@ -421,7 +416,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     # The value, not only its presence. A bare `str()` here would load
     # `{"model": null}` as the string `"None"` and send a run at an alias that
     # cannot exist, which is a refusal at first call with the manifest looking
-    # correct on the way there (design.md D4).
+    # correct on the way there.
     named = document["model"]
     if not isinstance(named, str) or not named.strip():
         raise Refusal(
@@ -430,7 +425,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             "string"
         )
     # A boolean, never coerced: `bool("false")` is true, and a flow that said it
-    # needs no tagger would be tagged (0032 design D1).
+    # needs no tagger would be tagged (D31).
     tagger = document["tagger"]
     if not isinstance(tagger, bool):
         raise Refusal(
@@ -466,7 +461,7 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
             )
     # Role-conditional: only the dials the roles this flow *declares* are read.
     # A flow with no identity adapter and no pose preprocessor declares neither
-    # `ip_weight` nor `openpose_strength`, and is correct (design.md D4).
+    # `ip_weight` nor `openpose_strength`, and is correct.
     needed = sorted(dials_read(document["nodes"]) - set(document["dials"]))
     if needed:
         raise Refusal(
@@ -485,8 +480,8 @@ def load_flow(flow: str, flows_dir: Path = FLOWS_DIR) -> Flow:
     # Last, because it is the only check that reads a second file -- and it can
     # only run once the check above has established there is one. Nothing
     # locates a node by class, so a role naming an id the graph does not carry
-    # is a manifest that agrees with nothing, and until now it agreed with the
-    # gate right up to the rented machine (v0.17 R6).
+    # is a manifest that agrees with nothing, and unchecked it would agree with
+    # the gate right up to the rented machine.
     committed: Any = json.loads((directory / GRAPH_NAME).read_text())
     dangling = sorted(
         f"{role} -> {node}"

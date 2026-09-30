@@ -58,7 +58,7 @@ from isekai.foundation.refusal import Refusal
 # reconstructable from disk and also what makes `runs/` hold personal photographs
 # by construction -- so "nothing generated is outside the ignored root" is a
 # structural fact here rather than one `.gitignore` line staying correct forever
-# (design.md D14). `models/` deliberately stays where it is: it is fetched from a
+# (D18). `models/` deliberately stays where it is: it is fetched from a
 # pinned manifest and is re-derivable byte for byte, so its loss costs a
 # re-download rather than the loss of work.
 DATA_ROOT = Path(__file__).resolve().parent.parent.parent / ".data"
@@ -66,9 +66,8 @@ RUNS_ROOT = DATA_ROOT / "runs"
 
 # The repository root, derived from `DATA_ROOT` rather than recomputed, so the
 # two cannot drift apart: both are then anchored to one `__file__`. Named here
-# because this module owns `DATA_ROOT`; `interface/wiring.py` spelled the same
-# expression until v0.22 rehomed `instructions_record`, which needs it too, and
-# a second derivation is a second thing to keep true.
+# because this module owns `DATA_ROOT` and `instructions_record` needs it, and a
+# second derivation is a second thing to keep true.
 REPOSITORY = DATA_ROOT.parent
 
 # Enough of the digest to separate two photographs and few enough characters to
@@ -76,10 +75,10 @@ REPOSITORY = DATA_ROOT.parent
 ID_DIGEST_CHARS = 12
 
 # What separates the digest from the slug. An underscore, because `slug` maps
-# every unsafe character to a hyphen and a hyphenated slug left a reader no way to
-# see where the digest ended. A slug can never contain an underscore, so the
+# every unsafe character to a hyphen and a hyphenated slug would leave a reader no
+# way to see where the digest ended. A slug can never contain an underscore, so the
 # boundary is unambiguous. Nothing parses the id -- `startswith` on the prefix is
-# its only use -- so this is readability alone (design.md D10).
+# its only use -- so this is readability alone.
 ID_SEPARATOR = "_"
 
 # How much of a filename stem survives into the id. A stem is a human's label,
@@ -114,8 +113,7 @@ _PHOTO_FIELDS: tuple[tuple[str, type], ...] = (
 
 # The stage directories, and the label an approved artifact carries. The run owns
 # the layout, so a stage that needs another stage's directory asks the run rather
-# than importing the stage -- which is what closed five of the six stage-to-stage
-# edges (design.md D6). `approved` is here for the same reason: `review` writes it
+# than importing the stage. `approved` is here for the same reason: `review` writes it
 # and both `generate` and the inspection command read it.
 #
 # **Every one of them sits under a flow**: `runs/<input-id>/<flow-id>/<stage>/`.
@@ -171,7 +169,7 @@ Kind = Literal["transient", "permanent"]
 # A missing entry here is not a missing feature, it is a crash: `BUDGETS[stage]`
 # below is a bare lookup, and `across()` and `main()` both catch only `Refusal`
 # -- so an unlisted stage name escapes as a raw traceback in a package where
-# every failure is a named refusal (design.md D6).
+# every failure is a named refusal.
 BUDGETS: Mapping[str, int] = {
     "caption": 3,
     "wd14": 1,
@@ -194,7 +192,7 @@ def slug(stem: str) -> str:
     so the id is always `<digest>_<something>` and never ends in a bare underscore.
     Every unsafe character becomes a hyphen, which is why the id's own separator
     is an underscore: a slug can never contain one, so the boundary between the
-    digest and the readable half is unambiguous (design.md D10).
+    digest and the readable half is unambiguous.
     """
     cleaned = _UNSAFE.sub("-", stem.lower()).strip("-")[:ID_SLUG_CHARS].strip("-")
     return cleaned or "photo"
@@ -623,9 +621,9 @@ def refusal_for(
     `StageFailure` rather than twice, because the two stages differ only in nouns.
 
     **`flow` is threaded in rather than patched at the call sites.** Every stage
-    verb has taken `--flow`, required, since v0.16, so the command this built
-    without it was one argparse refuses -- and copy-pasting the remedy a refusal
-    states got an operator a usage error instead of the fix. One argument makes
+    verb requires `--flow`, so a command built without it is one argparse
+    refuses -- and copy-pasting the remedy a refusal states would get an operator
+    a usage error instead of the fix. One argument makes
     that true of every caller at once, including the ones a later stage adds.
 
     **And the flow is passed once, not twice.** The record's location is
@@ -664,7 +662,7 @@ def instructions_record(path: Path) -> InstructionsRecord:
     This is the variable the evidence says matters most: one change to a reader's
     instructions moved its score from 0.518 to 0.307 and manufactured nineteen
     identity marks. An artifact whose provenance names the model but not the
-    instructions cannot explain its own result (design.md D7).
+    instructions cannot explain its own result.
     """
     resolved = path.resolve()
     inside = resolved.is_relative_to(REPOSITORY)
@@ -680,14 +678,13 @@ def constant_record(text: str) -> DigestRecord:
     `instructions_record` above takes a `Path` and hashes the file behind it,
     which a producer whose instructions are a module constant cannot use: there
     is no file and no location, and **a record that invented a path would assert
-    one that does not exist** (design.md D16).
+    one that does not exist**.
 
     So the key is simply absent rather than empty or placeheld. A consumer asking
     where the text came from gets no answer, which is the true one -- it came
-    from this build, and the digest is what identifies which build. The
-    alternative considered and refused was another file in the flow directory:
-    that is the trade v0.19 already priced when `joycaption.Modelfile` went to
-    `scripts/` instead, and a tag prompt shapes the operator's reading rather
+    from this build, and the digest is what identifies which build. Another
+    file in the flow directory is refused: `joycaption.Modelfile` sits in
+    `config/` for the same trade, and a tag prompt shapes the operator's reading rather
     than the render, so it makes no per-flow claim.
     """
     return {"sha256": digest_of(text.encode())}
