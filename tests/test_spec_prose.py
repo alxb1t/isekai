@@ -106,19 +106,22 @@ def _tree(root: Path, told: str, delta: str | None = None, cap: str = "cap") -> 
     return write_tree(root, _LIVING.format(cap=cap, told=told), delta, cap)
 
 
+# Each form `_HISTORY` reads, fed to both guards' twins.
+_CITED = [
+    "since v0.21",
+    "see 0044-the-session",
+    "`0045` design D2",
+    "design.md D4",
+    "deleted in `8baf2b3`",
+]
+
+
 @pytest.mark.spec_exempt(
     "structural: twin of test_no_spec_names_a_version_change_or_commit"
 )
-@pytest.mark.parametrize(
-    "line",
-    [
-        "The rule changed in v0.21.",
-        "It came with 0044-the-session.",
-        "See `0045` design D2.",
-        "It was deleted in `8baf2b3`.",
-    ],
-)
-def test_a_version_a_change_or_a_commit_is_caught(tmp_path: Path, line: str) -> None:
+@pytest.mark.parametrize("cited", _CITED)
+def test_a_version_a_change_or_a_commit_is_caught(tmp_path: Path, cited: str) -> None:
+    line = f"The rule is kept, {cited}."
     assert history(texts(_tree(tmp_path, line))) == [f"cap: {line}"]
 
 
@@ -197,13 +200,13 @@ def comment_history(root: Path, paths: list[str]) -> list[str]:
     """
     found = []
     for name in paths:
-        path = root / name
         if name.endswith(".py"):
-            prose = _python_prose(path.read_text())
-        elif name.endswith(".sh") or path.name == "Dockerfile":
-            prose = _shell_prose(path.read_text())
+            reader = _python_prose
+        elif name.endswith(".sh") or Path(name).name == "Dockerfile":
+            reader = _shell_prose
         else:
             continue
+        prose = reader((root / name).read_text())
         found += [f"{name}:{line}" for line, text in prose if _HISTORY.search(text)]
     return found
 
@@ -218,18 +221,9 @@ def test_no_comment_names_a_version_change_or_design() -> None:
         text=True,
     ).stdout.splitlines()
 
-    assert "isekai/foundation/run.py" in tracked, "git ls-files listed no source"
+    assert tracked, "git ls-files listed no source"
     found = comment_history(REPO_ROOT, tracked)
     assert not found, f"history in a comment: {found[:5]}"
-
-
-_CITED = [
-    "since v0.21",
-    "see 0044-the-session",
-    "`0045` design D2",
-    "design.md D4",
-    "deleted in `8baf2b3`",
-]
 
 
 @pytest.mark.spec_exempt(
