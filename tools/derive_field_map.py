@@ -28,7 +28,7 @@ is what lets the operator's pruning pass see the junk rather than inherit it.
    boundaries against its own inflections.
 3. **The dead briefing's own examples** — `flows/conjure-v1/sheet.briefing.md`
    named example tags by criterion. The briefing is deleted, and `BRIEFING`
-   holds the only copy of its example tags.
+   holds its example tags.
 
 **One primary per tag, decided in three steps.** The operator's own filings
 decide first, because a tag he approved and then rendered is render-tested and no
@@ -155,7 +155,7 @@ SEEDS: Mapping[str, tuple[str, tuple[str, ...]]] = {
 EXCLUDED: tuple[str, ...] = ("photorealistic",)
 
 # The example tags `flows/conjure-v1/sheet.briefing.md` named, by the field it
-# named them under. The briefing is deleted, so this is their only copy.
+# named them under. The briefing is deleted; this holds its example tags.
 # Every one is held against the vocabulary before it is written.
 BRIEFING: Mapping[str, tuple[str, ...]] = {
     "count": ("1girl", "1boy", "2girls", "multiple girls"),

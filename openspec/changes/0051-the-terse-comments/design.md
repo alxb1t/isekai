@@ -106,6 +106,26 @@ and one holding a third party's `v0.2.2.4`. The module's docstring names both gu
 3 fix          one commit restoring each CHANGED meaning; recorded here, under this heading
 ```
 
+**The check, run after the build.** The mechanical proof held: every changed `.py` file's AST, docstrings and
+`spec_exempt` reasons aside, and every shell file's non-comment lines, match `main`, but the `wd14.py` refusal's
+"as of v0.22.3" and `tests/test_spec_prose.py`'s guard. Six parallel readers, a tree each, judged each rewritten hunk:
+
+| tree | hunks | SAME | CHANGED |
+|---|---|---|---|
+| foundation, shared | 41 | 39 | 2 |
+| boundary, pipeline | 65 | 64 | 1 |
+| interface, `CLAUDE.md` | 48 | 48 | 0 |
+| tools, infra, `start.sh`, `Dockerfile` | 71 | 67 | 4 |
+| tests, the larger files | 75 | 74 | 1 |
+| tests, the rest | 78 | 76 | 2 |
+
+**One fix commit restores nine:** `flow.py`'s single key is not a declaration, and only the model `model` names is
+local; `sheet.py`'s comparison with that seam's own property; `test_ui_api.py`'s reason a missing tag list never
+blocks review; `download_models.sh`'s reason for the split; `manifest.py`'s "a refactor", not "a change";
+`derive_field_map.py`'s "only copy", twice, which git contradicts; `stages.py`'s call sites passing nothing;
+`test_labels.py`'s reason no rollup exists. **One is kept:** `run.py` names `config/` for `joycaption.Modelfile`, a
+true present-tense fact the old text left implied.
+
 ## Dependencies
 
 None.

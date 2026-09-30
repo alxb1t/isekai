@@ -123,8 +123,8 @@ def write_wd14(
     """Write the tag artifact the sheet stage reads, in `tag_wd14`'s own shape.
 
     One helper rather than a fixture per module: `sheet()` below calls it for any
-    test that has not written one, which is why no call site passes an offline
-    sorter double.
+    test that has not written one, so a call site passes nothing to get the tag
+    list the stage reads.
     """
     directory = run.directory(flow, WD14)
     path = directory / artifact_name(version)

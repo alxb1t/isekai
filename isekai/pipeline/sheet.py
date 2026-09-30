@@ -13,9 +13,9 @@ implementation. There is no answer: the stage reads one artifact and looks each
 tag up in one committed table, so there is no transport to inject, no offline
 double to satisfy an interface and no response whose structure could fail to match
 the field list. The lookup is a dictionary in `isekai/shared/field_map.py`, and
-the property it buys is stronger than a seam could assert -- a tagger whose output
-layer **is** the vocabulary cannot name a tag outside it, so "no tag is invented"
-holds by construction rather than by filtering.
+the property it buys is stronger than the one that seam would assert -- a tagger
+whose output layer **is** the vocabulary cannot name a tag outside it, so "no tag
+is invented" holds by construction rather than by filtering.
 
 **The schema is a data file, not code.** It can be checked without executing
 anything, and a second schema -- a photoreal flow's, say -- is a file rather than

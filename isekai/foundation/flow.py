@@ -85,9 +85,10 @@ REQUIRED_PROMPT = ("prefix", "trailer", "negative", "separator")
 # Every top-level key this build knows, and a manifest carrying any other is
 # refused naming it -- `load_flow` is where that reason lives.
 #
-# **It is exactly `REQUIRED`: there is no optional key.** Every model is reached
-# over a socket to this machine (D5), so a block marking a model reached over a
-# network to a third party would distinguish nothing.
+# **It is exactly `REQUIRED`: there is no optional key.** The model `model` names
+# is reached over a socket to this machine (D5), so a block marking one reached
+# over a network to a third party would distinguish nothing, and a block holding
+# a single key is not a declaration.
 KNOWN = REQUIRED
 
 # What `model` names, and why it is not `reader`. **One alias answers the reader

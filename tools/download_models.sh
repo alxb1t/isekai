@@ -15,7 +15,8 @@
 # disk and the run aborts: the volume is shared with another project, and a file this run
 # did not write is not this run's to remove.
 #
-# The split is deliberate: `provision.py` owns every decision and this
+# The split is deliberate, so every decision is a unit test in Python rather than
+# a subprocess test of a script: `provision.py` owns every decision and this
 # script owns only the transfer. It asks for a plan, runs `wget` for whatever URL it is
 # handed, and asks the module to verify and land the result. Nothing lands under its final
 # name until its SHA-256 matches the manifest.

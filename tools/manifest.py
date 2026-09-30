@@ -28,9 +28,9 @@ Operator tooling: nothing installs it and `python -m isekai` does not import it.
 The derivers run from the repository root as modules, `uv run python -m
 tools.derive_manifest`, so `isekai` and `tools` both import.
 
-**A change to this module is verifiable for nothing.** Every deriver's output
+**A refactor of this module is verifiable for nothing.** Every deriver's output
 must stay byte-identical on a re-run, the rule they are held to -- so any
-difference is this module's fault.
+difference is the refactor's fault.
 """
 
 import hashlib

@@ -819,7 +819,8 @@ def test_an_input_with_neither_artifact_carries_null_and_still_serves(
     # tag lists were never written. It cannot be produced by filling a sheet --
     # the stage refuses without a tag list -- so it is produced by removing the
     # one the fixture wrote, which is the state on disk either way. Both are
-    # null, the surface answers 200, and nothing anywhere is a refusal.
+    # null, the surface answers 200, and nothing anywhere is a refusal: the tag
+    # lists are an aid, and a missing aid never blocks review.
     _clear_wd14(made)
 
     response = client.get(f"/api/inputs/{made.id}")
