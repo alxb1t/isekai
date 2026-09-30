@@ -75,7 +75,8 @@ CLONE = re.compile(r"\bgit(?:[\s\\]+-\S+(?:[\s\\]+[^\s\\-]\S*)?)*[\s\\]+clone\b"
 # An `ADD` whose source is a git repository: BuildKit clones it, and no
 # `git checkout` follows to pin it.
 ADD_GIT = re.compile(
-    r"^[ \t]*ADD\b(?:[^\n]|\\\n)*?(?:\bgit://|\bgit@|\.git\b)", re.M | re.I
+    r"^[ \t]*ADD\b(?:[^\n]|\\\n)*?(?:\bgit://|\bgit@|\.git\b|\bssh://|\s[\w.-]+@[\w.-]+:)",
+    re.M | re.I,
 )
 URL = re.compile(r"(?:https?|ssh|git)://\S+|[\w.-]+@[\w.-]+:\S+")
 

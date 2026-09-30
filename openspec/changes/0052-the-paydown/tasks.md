@@ -7,7 +7,7 @@ scenarios; phase 2 adds their tests.
 
 - [x] 1 — The records
 - [x] 2 — What `show` hid
-- [ ] 3 — The guard
+- [x] 3 — The guard
 - [ ] 4 — The words
 
 Line numbers are `4fd5d99`'s. Every new test carries `@pytest.mark.spec` with the key its task names. No existing
@@ -41,9 +41,9 @@ test turns red: `show`'s legend test asserts with `in`, and the guard's twin onl
 
 ## 3 — The guard
 
-- [ ] 3.1 **HALT CHECK** — `ADD_GIT` has no ssh alternative.
+- [x] 3.1 **HALT CHECK** — `ADD_GIT` has no ssh alternative.
   Verify: `grep -c 'bssh://' tools/derive_image_project.py` prints `0`.
-- [ ] 3.2 Widen `ADD_GIT` in `tools/derive_image_project.py`, and add the `an-ssh-add` and `an-scp-add` cases to `test_the_count_catches_a_clone_with_a_flag_and_another_host` in `tests/test_infra.py`, per [D6](design.md#d6).
+- [x] 3.2 Widen `ADD_GIT` in `tools/derive_image_project.py`, and add the `an-ssh-add` and `an-scp-add` cases to `test_the_count_catches_a_clone_with_a_flag_and_another_host` in `tests/test_infra.py`, per [D6](design.md#d6).
   Verify: `grep -c 'bssh://' tools/derive_image_project.py` prints `1`, and `grep -o 'an-s[sc][hp]-add' tests/test_infra.py | wc -l` prints `2`.
 
 ## 4 — The words
