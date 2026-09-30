@@ -45,7 +45,7 @@ None.
 
 ## Impact
 
-- **Files:** `isekai/shared/image.py`, `tests/test_image.py`.
+- **Files:** `isekai/shared/image.py`, `tests/test_image.py`, `tests/images.py`.
 - **Behaviour:** the uploaded bytes lose the profile and colour chunks; the pixels the endpoint decodes do not change.
 - **Formats:** none. No file the image copies changes.
 - **Dependencies:** none.

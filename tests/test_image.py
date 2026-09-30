@@ -556,6 +556,13 @@ _JPEG = jpeg_bytes(16, 16)
             "it carries marker 0xF0, which is not known",
         ),
         (_JPEG[:5], "the segment at byte 2 runs past the file"),
+        (_JPEG[:2] + b"\x00" + _JPEG[2:], "byte 2 is not a marker"),
+        (_JPEG[:2] + b"\xff", "it ends inside a marker"),
+        (
+            jpeg_with_header(16, 16, header_padding=MAX_HEADER_BYTES + 1024),
+            f"its JPEG header is not resolved within the first {MAX_HEADER_BYTES} "
+            "bytes",
+        ),
         (b"GIF89a" + bytes(16), "it is neither a JPEG nor a PNG"),
     ],
     ids=[
@@ -564,6 +571,9 @@ _JPEG = jpeg_bytes(16, 16)
         "unknown-critical-chunk",
         "unknown-marker",
         "short-length-word",
+        "not-a-marker",
+        "ends-inside-a-marker",
+        "header-too-deep",
         "neither-codec",
     ],
 )
@@ -575,3 +585,13 @@ def test_each_unwalkable_photograph_is_refused_by_name(
 
     assert str(refused.value).startswith("photo.bin: ")
     assert reason in str(refused.value)
+
+
+@pytest.mark.spec("image-generation:photo-metadata:an-unwalkable-photograph-is-refused")
+def test_a_photograph_that_cannot_be_read_is_refused_by_name(tmp_path: Path) -> None:
+    # No bytes to parametrise: the file the strip is handed does not exist.
+    with pytest.raises(Refusal) as refused:
+        strip_metadata(tmp_path / "photo.bin")
+
+    assert str(refused.value).startswith("photo.bin: ")
+    assert "it cannot be read (" in str(refused.value)

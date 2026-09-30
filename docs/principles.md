@@ -268,7 +268,8 @@ captioning run here; the upload carries what decodes the image and its orientati
 - **Held by:** `tests/test_generate.py::test_the_endpoint_receives_no_metadata`,
   `tests/test_image.py::test_a_kept_header_keeps_its_fixed_fields_alone`,
   `tests/test_image.py::test_the_orientation_survives_the_strip`,
-  `tests/test_image.py::test_the_pixels_are_unchanged_by_the_strip`.
+  `tests/test_image.py::test_the_pixels_are_unchanged_by_the_strip`,
+  `tests/test_image.py::test_no_colour_profile_leaves`.
 
 ### The rented machine is proved, and forgets
 
