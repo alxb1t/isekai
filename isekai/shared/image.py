@@ -350,7 +350,7 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
 # list of metadata to drop: a block nobody named -- an appended video, a depth
 # map, a provenance record -- goes without anyone having to name it.
 _JPEG_KEPT_TABLES = _JPEG_SOF_MARKERS | {0xC4, 0xCC, 0xDB, 0xDD}  # DHT DAC DQT DRI
-_JPEG_KEPT_APPS = {0xE0: b"JFIF\x00", 0xE2: b"ICC_PROFILE\x00", 0xEE: b"Adobe"}
+_JPEG_KEPT_APPS = {0xE0: b"JFIF\x00", 0xEE: b"Adobe"}
 # JFIF's and Adobe's fixed fields, by payload length. Past them a JFIF header
 # carries a thumbnail and an Adobe one whatever a writer appended, so each is cut
 # to its fields -- JFIF's thumbnail size zeroed -- rather than copied whole; one
@@ -361,10 +361,8 @@ _JPEG_END_OF_IMAGE = 0xD9
 # Inside a scan, 0xFF is followed by a stuffed 0x00 or a restart marker; any
 # other byte after it starts the next segment.
 _JPEG_SCAN_END = re.compile(rb"\xff[^\x00\xd0-\xd7]")
-_PNG_KEPT_CHUNKS = frozenset(
-    {b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS", b"gAMA", b"cHRM", b"sRGB"}
-    | {b"iCCP", b"sBIT", b"cICP"}
-)
+# No colour chunk is kept: the endpoint decodes without them (0050 D1).
+_PNG_KEPT_CHUNKS = frozenset({b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS"})
 
 
 class _Unwalkable(Exception):
@@ -374,9 +372,9 @@ class _Unwalkable(Exception):
 def strip_metadata(photo: Path) -> bytes:
     """Return the photograph's bytes with every block decoding does not need removed.
 
-    The pixel data, the colour profile and the orientation are kept verbatim --
-    the orientation as a minimal EXIF of its own -- and anything after the
-    image's end goes (0039 design D1, D2). A photograph the walk cannot read to
+    The pixel data and the orientation are kept -- the orientation as a minimal
+    EXIF of its own -- and anything after the image's end goes (0039 design D1,
+    D2; 0050 D1). A photograph the walk cannot read to
     its end is refused rather than sent whole (D5).
     """
     try:

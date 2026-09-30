@@ -1,6 +1,7 @@
 import io
 import struct
 import warnings
+import zlib
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -328,7 +329,7 @@ def _pillow_photo(kind: str, *, orientation: int = 1) -> bytes:
     """Return a decodable photograph carrying every block the strip must drop.
 
     `kind` is `jpeg`, `progressive` or `png`. The colour profile rides along too,
-    because it is one of the blocks the strip must keep.
+    because it is one of the blocks the strip must drop.
     """
     from PIL import Image, ImageCms, PngImagePlugin
 
@@ -441,16 +442,62 @@ def test_no_block_outside_the_allowlist_survives(kind: str, tmp_path: Path) -> N
         assert needle in original, needle
         assert needle not in stripped, needle
     decoded = _decoded(stripped)
-    # The colour profile is one of the blocks decoding keeps.
-    assert decoded.info["icc_profile"] == _decoded(original).info["icc_profile"]
+    assert "icc_profile" in _decoded(original).info
+    assert "icc_profile" not in decoded.info
     if kind == "png":
-        assert set(_png_chunks(stripped)) == {b"IHDR", b"iCCP", b"IDAT", b"IEND"}
+        assert set(_png_chunks(stripped)) == {b"IHDR", b"IDAT", b"IEND"}
         assert stripped.endswith(b"IEND\xaeB`\x82")
     else:
         kept = [(marker, payload[:4]) for marker, payload in _jpeg_apps(decoded)]
-        assert kept == [("APP0", b"JFIF"), ("APP2", b"ICC_")]
+        assert kept == [("APP0", b"JFIF")]
         assert "comment" not in decoded.info
         assert stripped.endswith(b"\xff\xd9")
+
+
+# The colour hints a PNG may carry beside its profile, each with a valid payload.
+_COLOUR_CHUNKS = {
+    b"gAMA": struct.pack(">I", 45455),
+    b"cHRM": struct.pack(">8I", 31270, 32900, 64000, 33000, 30000, 60000, 15000, 6000),
+    b"sRGB": b"\x00",
+    b"sBIT": b"\x08\x08\x08",
+    b"cICP": b"\x01\x0d\x00\x01",
+}
+
+
+@pytest.mark.spec("image-generation:photo-metadata:no-colour-profile-leaves")
+@pytest.mark.parametrize("kind", ["jpeg", "png"])
+def test_no_colour_profile_leaves(kind: str, tmp_path: Path) -> None:
+    from PIL import Image, ImageCms
+
+    image = Image.linear_gradient("L").resize((48, 32)).convert("RGB")
+    icc = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
+    out = io.BytesIO()
+    image.save(out, "PNG" if kind == "png" else "JPEG", icc_profile=icc)
+    original = out.getvalue()
+    if kind == "png":
+        # Spliced behind the signature and IHDR, 33 bytes: Pillow writes no sRGB
+        # beside a profile.
+        hints = b"".join(
+            struct.pack(">I", len(payload))
+            + chunk
+            + payload
+            + struct.pack(">I", zlib.crc32(chunk + payload))
+            for chunk, payload in _COLOUR_CHUNKS.items()
+        )
+        original = original[:33] + hints + original[33:]
+    stripped = _stripped(tmp_path, "photo", original)
+
+    # The premise, then the guard: each block is in the original and not the upload.
+    assert _decoded(original).info["icc_profile"] == icc
+    assert "icc_profile" not in _decoded(stripped).info
+    if kind == "png":
+        colour = {b"iCCP", *_COLOUR_CHUNKS}
+        assert colour <= set(_png_chunks(original))
+        assert not colour & set(_png_chunks(stripped))
+    else:
+        assert b"ICC_PROFILE\x00" in original
+        assert b"ICC_PROFILE\x00" not in stripped
+    assert _decoded(stripped).tobytes() == _decoded(original).tobytes()
 
 
 @pytest.mark.spec("image-generation:photo-metadata:no-metadata-leaves-the-machine")

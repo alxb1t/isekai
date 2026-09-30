@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- A photograph's upload no longer carries its colour profile or colour hints: they can name the device and hold
+  free text, and the endpoint decodes the same pixels without them (0050 D1).
+
 ### Fixed
 
 - Each way the upload's strip refuses a photograph it cannot walk is now reached by a test, so none can regress into
