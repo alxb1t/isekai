@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - The run directory's and the shared modules' comments carry no version, change id or design citation; a
   decision in force is named by its id, so a reader follows the reason to `docs/decisions.md` (0051 D1, D2).
+- The boundary modules' comments and a tagger refusal carry no version or design citation; the Ollama, reader
+  and vocabulary pins name D6, D7 and D23 (0051 D1, D2).
 
 ## [0.31.2] - 2026-09-30 · 0050-the-colour-profile
 

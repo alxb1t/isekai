@@ -22,7 +22,7 @@ from isekai.foundation.flow import Workflow
 OPENER = request.build_opener(request.ProxyHandler({}))
 
 # Seconds a socket operation may wait: a stopped pod must not hold a request open
-# while it bills (`0037` design D2).
+# while it bills.
 TIMEOUT = 60
 
 
@@ -108,8 +108,7 @@ def _reported() -> Iterator[None]:
     """Turn a failed request into a `TransportFailure` of the kind it was.
 
     e.g. HTTP 400 -> permanent, HTTP 502 -> transient, a refused connection ->
-    transient, a body that is not JSON or not the object asked for -> permanent
-    (`0030` design D3).
+    transient, a body that is not JSON or not the object asked for -> permanent.
     """
     try:
         yield

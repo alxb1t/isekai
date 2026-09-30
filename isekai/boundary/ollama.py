@@ -1,16 +1,15 @@
 """The Ollama boundary: one POST to a local runtime, and what its answer means.
 
-**The second network boundary, and since v0.22 the only one the pipeline has.**
+**The second network boundary, and the only one the pipeline has.**
 Stage (1)'s reader and its hosted tagger both reach their model through this
 module, so the request, the classification and the two refusals live here once
 rather than twice -- the same discipline `ComfyTransport` is already under.
 
-**There was a second transport beside this one**, `claude_cli.py`, and an
-isolation law keeping a flow that declared one arm from reaching a name from the
-other. v0.22 deleted it, so the law has nothing left to separate. Nothing in the
-gate would catch a second transport being reintroduced; what makes one visible is
-that there is no registry to add an entry to -- a second reader is a second
-adapter, in review (design.md D18, D27).
+**There is no second transport beside this one** (D5), so no isolation law keeps a
+flow that declared one arm from reaching a name from another. Nothing in the gate
+would catch a second transport being introduced; what makes one visible is that
+there is no registry to add an entry to -- a second reader is a second adapter, in
+review.
 
 **`/api/generate`, not the OpenAI-compatible endpoint**, and the two missing
 fields are why. `think: false` is load-bearing because a hybrid reasoner draws its
@@ -19,14 +18,14 @@ JSON mid-string on the third subject -- and `repeat_penalty` because at
 temperature 0 there is no sampling noise to break a loop, and one field came back
 with `"white robe"` forty times until the budget ran out. The compatible endpoint
 expresses neither, so using it would re-measure the two known failure modes of the
-model this repository is adopting (design.md D1).
+model this repository is adopting.
 
 **The address is a module constant and cannot be configured.** Not a flag, not an
 environment variable: the runtime reads no environment at all, a fixed local
 address is what `interface/ui/` and `interface/cli.py` already do, and an operator
--controlled destination for a photograph is a security surface this version
+-controlled destination for a photograph is a security surface this repository
 declines to open. `--server`'s deliberate no-default exists because rendering
-costs money; a free loopback call does not inherit that reason (design.md D4).
+costs money; a free loopback call does not inherit that reason (D6).
 **Which is why the opener is built by hand**: `urlopen`'s default carries a proxy
 read from the environment, and urllib bypasses loopback for no address it was not
 explicitly told to -- so `http_proxy` alone would have made the photograph's
@@ -34,8 +33,7 @@ destination configurable after all, by a variable nobody chose.
 
 **The files behind an alias are checked before it answers.** `verified_build`
 compares Ollama's own record of a model with the digests `config/reader.json`
-pins, once per model, and refuses a model built from anything else (0033 design
-D4).
+pins, once per model, and refuses a model built from anything else (D6).
 
 **There is no adapter in this file.** `OllamaReader` and `OllamaTagger` live
 beside their twins in `pipeline/`, because two implementations of one Protocol in
@@ -76,7 +74,7 @@ GENERATE = "/api/generate"
 # the default opener addresses `127.0.0.1:11434` to the proxy instead, and a
 # photograph base64-encoded into the body goes with it. `ProxyHandler({})` reads
 # no environment at all, which is what makes `HOST` reachable by no configuration
-# rather than merely undocumented (design.md D4).
+# rather than merely undocumented (D6).
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 # One ceiling, for both stages, and it is a ceiling on a hang rather than a
@@ -84,7 +82,7 @@ OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 # ran many reader calls in a row and only the first was a cold load. This pipeline
 # alternates the two stages and **the two models do not co-reside in 16 GiB**, so
 # every transition evicts the other and the next call is cold either way. Two
-# numbers would be a knob with no measurement behind it (design.md D10).
+# numbers would be a knob with no measurement behind it.
 TIMEOUT = 900
 
 # Where Ollama records the layers each local model is built from; None means the
@@ -155,7 +153,7 @@ def post(path: str, body: bytes) -> tuple[int, bytes]:
     the two mean opposite things here: one is a host that answered with a status
     worth reading, the other is no host at all. Catching the parent first labels
     every 404 and every 502 as "did not answer", which is exactly the bug the
-    prototype's single handler had (design.md D9).
+    prototype's single handler had.
 
     A status is a return value rather than an exception, so a fake transport
     states one the same way a real host does.
@@ -184,7 +182,7 @@ def ask(
     `remedy` is the command that builds an absent model, and the caller supplies
     it: which command builds it depends on how that model was named. Both callers
     here build a machine-local alias, with `BUILD`, from the files `PROVISION`
-    fetches, so the refusal names that fetch first (0047 design D5).
+    fetches, so the refusal names that fetch first.
 
     **A missing model and a missing host refuse rather than spending an attempt.**
     A retry budget counts models tried and failed, and neither of those is that;
@@ -192,7 +190,7 @@ def ask(
     a run whose error records have to be deleted by hand before it resumes. It is
     the posture this repository already takes for an absent system dependency,
     applied to a **port and a model name** rather than to a `PATH` entry, which is
-    the shape a hosted model needs and a binary check cannot give (design.md D9).
+    the shape a hosted model needs and a binary check cannot give (D23).
 
     **A connection that drops mid-answer is transient, and catching it is not
     optional.** urllib wraps only what the send raised; anything `getresponse()`

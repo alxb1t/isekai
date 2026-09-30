@@ -6,7 +6,7 @@ docstrings and `spec_exempt` reasons of its tree per [D1](design.md#d1) and [D2]
 ## Progress
 
 - [x] 1 — foundation and shared
-- [ ] 2 — boundary
+- [x] 2 — boundary
 - [ ] 3 — pipeline
 - [ ] 4 — interface
 - [ ] 5 — tools, infra, start.sh and the Dockerfile
@@ -25,7 +25,7 @@ Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HIST
 
 ## 2 — boundary
 
-- [ ] 2.1 Rewrite the history in `isekai/boundary/`, the refusal in `isekai/boundary/wd14.py:211-216` included.
+- [x] 2.1 Rewrite the history in `isekai/boundary/`, the refusal in `isekai/boundary/wd14.py:211-216` included.
   Verify: `grep -rlE 'design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]' isekai/boundary --include='*.py'` prints nothing.
 
 ## 3 — pipeline
