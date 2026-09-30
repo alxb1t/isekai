@@ -136,7 +136,7 @@ ARTIFACT = re.compile(r"^(?P<version>\d{3})(?:\.(?P<label>draft|approved))?\.jso
 
 # `001.error.1.transient` -- the version it stands in for, the attempt ordinal,
 # and the kind, all decidable without opening anything.
-_ERROR = re.compile(
+ERROR = re.compile(
     r"^(?P<version>\d{3})\.error\.(?P<attempt>\d+)\.(?P<kind>transient|permanent)\.json$"
 )
 
@@ -488,7 +488,7 @@ def attempts(directory: Path, version: int) -> list[Attempt]:
             directory / name,
         )
         for name in os.listdir(directory)
-        if (match := _ERROR.match(name)) and int(match.group("version")) == version
+        if (match := ERROR.match(name)) and int(match.group("version")) == version
     ]
     return sorted(found, key=lambda recorded: recorded.attempt)
 

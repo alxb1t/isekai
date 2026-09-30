@@ -1,5 +1,8 @@
 """The inspection command: a run's artifacts, its active versions, its producers.
 
+It also lists every failure record, and names every file or directory below a
+flow that it does not read, so a run is never described as other than it is.
+
 A filename carries only what resume decides on, which leaves a directory that is
 precise and unreadable. This is what a person reads instead -- and it is also the
 answer to "where is this run", which is why no progress file ships: a person
@@ -14,6 +17,8 @@ Stdlib only.
 
 import json
 import os
+import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -24,12 +29,14 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     ARTIFACT,
     CAPTIONS,
+    ERROR,
     OUTPUTS,
     PROMPTS,
     REVIEW,
     SHEETS,
     TAGS,
     WD14,
+    Kind,
     Run,
     is_approved,
 )
@@ -40,10 +47,22 @@ from isekai.pipeline.generate import rendered_seeds
 # a per-flow-ness column to say. Declared once here so the listing cannot drift
 # from the layout it describes.
 #
-# **The tuple is explicit, so a new stage directory is invisible to `show` until
-# it is named here.** Shipping a stage `show` cannot see is shipping a verb that
-# lies about what a run holds.
+# **The tuple is explicit, so a new stage directory reads as `not read` until it
+# is named here.** Shipping a stage `show` cannot list is shipping a verb that
+# says less than a run holds.
 STAGES: tuple[str, ...] = (CAPTIONS, WD14, TAGS, SHEETS, REVIEW, PROMPTS)
+
+# A render's sidecar, as the render stage names it beside `<seed><suffix>`.
+_SIDECAR = re.compile(r"^\d+\.render\.json$")
+
+
+@dataclass(frozen=True)
+class FailureRecord:
+    """One failure record, read from its name alone."""
+
+    version: int
+    attempt: int
+    kind: Kind
 
 
 @dataclass(frozen=True)
@@ -56,6 +75,21 @@ class Listing:
     active: int | None
     approved: list[int]
     producers: dict[int, str]
+    failures: list[FailureRecord]
+
+
+def _failure_of(name: str) -> FailureRecord | None:
+    """Return the failure record `name` is, or None when it is not one."""
+    match = ERROR.match(name)
+    if match is None:
+        return None
+    kind: Kind = "permanent" if match.group("kind") == "permanent" else "transient"
+    return FailureRecord(int(match.group("version")), int(match.group("attempt")), kind)
+
+
+def _in_order(failures: list[FailureRecord]) -> list[FailureRecord]:
+    """Return `failures` sorted by version, then attempt."""
+    return sorted(failures, key=lambda failure: (failure.version, failure.attempt))
 
 
 def _producer_of(path: Path) -> str:
@@ -73,6 +107,8 @@ def _producer_of(path: Path) -> str:
     if not isinstance(schema, dict):
         return "unreadable"
     kind, declared = schema.get("name"), schema.get("version")
+    if kind is None:
+        return "declares no kind, which this build does not read"
     if not isinstance(kind, str) or kind not in VERSIONS:
         return f"declares kind {kind!r}, which this build does not read"
     if declared != VERSIONS[kind]:
@@ -106,16 +142,19 @@ def _producer_of(path: Path) -> str:
 def _listing(stage: str, flow: str, directory: Path) -> Listing:
     """Build one stage's listing from a single reading of its directory.
 
-    One `os.listdir`, not three: the versions, the approved ones and each
-    version's actual filename all come out of the same pass, so the listing does
-    not stat three candidate names per version to find the one that is there.
+    One `os.listdir`, not three: the versions, the approved ones, each version's
+    actual filename and the failure records all come out of the same pass, so the
+    listing does not stat three candidate names per version to find the one there.
     """
     names: dict[int, str] = {}
     approved: list[int] = []
+    failures: list[FailureRecord] = []
     if directory.is_dir():
         for name in sorted(os.listdir(directory)):
             match = ARTIFACT.match(name)
             if match is None:
+                if (failure := _failure_of(name)) is not None:
+                    failures.append(failure)
                 continue
             version = int(match.group("version"))
             names[version] = name
@@ -130,7 +169,9 @@ def _listing(stage: str, flow: str, directory: Path) -> Listing:
     producers = {
         version: _producer_of(directory / names[version]) for version in present
     }
-    return Listing(stage, flow, present, active, sorted(approved), producers)
+    return Listing(
+        stage, flow, present, active, sorted(approved), producers, _in_order(failures)
+    )
 
 
 def listings(run: Run) -> list[Listing]:
@@ -159,9 +200,85 @@ def rendered(run: Run, flows_dir: Path = FLOWS_DIR) -> list[tuple[str, int, list
         (flow, int(group.name), rendered_seeds(group, suffix))
         for flow in run.flows
         for suffix in (load_flow(flow, flows_dir).output_suffix,)
+        for group in _groups(run, flow)
+    ]
+
+
+def _groups(run: Run, flow: str) -> list[Path]:
+    """Return a flow's render groups: the outputs directories named by digits."""
+    return [
+        group
         for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
         if group.is_dir() and group.name.isdigit()
     ]
+
+
+def render_failures(run: Run) -> dict[tuple[str, int], list[FailureRecord]]:
+    """Return each render group's failure records, keyed by flow and group.
+
+    e.g. `{("summon-anime-wai", 1): [FailureRecord(1, 1, "permanent")]}`
+    """
+    found: dict[tuple[str, int], list[FailureRecord]] = {}
+    for flow in run.flows:
+        for group in _groups(run, flow):
+            failures = [
+                failure
+                for name in os.listdir(group)
+                if (failure := _failure_of(name)) is not None
+            ]
+            if failures:
+                found[(flow, int(group.name))] = _in_order(failures)
+    return found
+
+
+def _unread_in(directory: Path, below: str, read: Callable[[Path], bool]) -> list[str]:
+    """Return the names in `directory` that `read` rejects, as paths below the run."""
+    if not directory.is_dir():
+        return []
+    return [
+        f"{below}/{path.name}" + ("/" if path.is_dir() else "")
+        for path in directory.iterdir()
+        if not read(path)
+    ]
+
+
+def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
+    """Return every name below a flow that `show` does not read, sorted.
+
+    A flow reads its stage directories and `outputs`; a stage, its artifacts and
+    failure records; `outputs`, its numbered groups; a group, its renders, their
+    sidecars and its failure records. A directory ends in `/`, never descended.
+    e.g. `["summon-anime-wai/outputs/001/notes.txt", "summon-anime-wai/stray/"]`
+    """
+    names: list[str] = []
+    for flow in run.flows:
+        suffix = load_flow(flow, flows_dir).output_suffix
+        names += _unread_in(
+            run.directory(flow),
+            flow,
+            lambda path: path.is_dir() and path.name in (*STAGES, OUTPUTS),
+        )
+        for stage in STAGES:
+            names += _unread_in(
+                run.directory(flow, stage),
+                f"{flow}/{stage}",
+                lambda path: bool(ARTIFACT.match(path.name) or ERROR.match(path.name)),
+            )
+        names += _unread_in(
+            run.directory(flow, OUTPUTS),
+            f"{flow}/{OUTPUTS}",
+            lambda path: path.is_dir() and path.name.isdigit(),
+        )
+        for group in _groups(run, flow):
+            names += _unread_in(
+                group,
+                f"{flow}/{OUTPUTS}/{group.name}",
+                lambda path: (
+                    (path.suffix == suffix and path.stem.isdigit())
+                    or bool(_SIDECAR.match(path.name) or ERROR.match(path.name))
+                ),
+            )
+    return sorted(names)
 
 
 def report(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
@@ -190,10 +307,12 @@ def report(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
         lines.append(f"           sha256 {photo['sha256']}")
     stages = listings(run)
     outputs = rendered(run, flows_dir)
+    group_failures = render_failures(run)
+    stray = unread(run, flows_dir)
 
     for listing in stages:
         name = f"{listing.flow}/{listing.stage}"
-        if not listing.versions:
+        if not listing.versions and not listing.failures:
             lines.append(f"  {name:<22} (none)")
             continue
         lines.append(f"  {name}")
@@ -202,11 +321,26 @@ def report(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
             state = " approved" if version in listing.approved else ""
             producer = listing.producers.get(version, "")
             lines.append(f"   {mark} {version:03d}{state}  {producer}")
+        lines += _failure_lines(listing.failures)
 
     for flow, version, seeds in outputs:
         lines.append(f"  {flow}/{OUTPUTS}/{version:03d}")
         for seed in seeds:
             lines.append(f"     {seed}")
+        lines += _failure_lines(group_failures.get((flow, version), []))
 
-    lines.append("  * marks the active version for each stage")
+    for path in stray:
+        lines.append(f"  not read  {path}")
+
+    lines.append(
+        "  * marks the active version for each stage · ! marks a failure record"
+    )
     return lines
+
+
+def _failure_lines(failures: list[FailureRecord]) -> list[str]:
+    """Return one `!` line per failure record."""
+    return [
+        f"   ! {record.version:03d}  failed · attempt {record.attempt} · {record.kind}"
+        for record in failures
+    ]
