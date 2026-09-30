@@ -1,17 +1,15 @@
 """What the project declares it needs, and that each name is declared once.
 
-**One module, because these are one invariant.** The two tests here arrived in
-v0.22.3 in two files -- one under the tagger, one under the review surface --
-because that is which feature noticed them. Neither is about a tagger or a
-surface: both assert the shape of `pyproject.toml`, and split across two files
-they carried two copies of the same requirement-name parser and two reads of the
-same manifest.
+**One module, because these are one invariant.** Neither test is about a tagger
+or a surface: both assert the shape of `pyproject.toml`, and split across two
+files they would carry two copies of the same requirement-name parser and two
+reads of the same manifest.
 
-**The defect they exist against was the gate itself.** While the tagger's stack
-and the server sat in extras, `uv sync --locked` -- gate command one, with no
-`--extra` -- removed them on every run, because uv makes the environment match
-exactly what it is told. The symptom looked like a missing install rather than a
-removal, so it recurred: the operator kept re-running `uv sync --extra tagging`.
+**The defect they exist against is the gate itself.** With the tagger's stack and
+the server in extras, `uv sync --locked` -- gate command one, with no `--extra` --
+would remove them on every run, because uv makes the environment match exactly
+what it is told. The symptom looks like a missing install rather than a removal,
+so it would recur: the operator would keep re-running `uv sync --extra tagging`.
 """
 
 import re
@@ -72,13 +70,13 @@ def test_everything_a_run_reaches_is_a_declared_dependency(manifest: dict) -> No
 def test_no_package_is_named_in_more_than_one_list(manifest: dict) -> None:
     """A name lives in exactly one list, so two copies of it cannot drift apart.
 
-    **This is the general form of a rule v0.22.3 found the hard way.** While the
-    server lived in a `ui` extra that gate command one never installed, the `dev`
-    group had to re-pin the same two packages so `tests/test_ui_api.py` would run
-    at all, and a test held the two lists equal. Making them declared removed the
-    second list rather than keeping it in step -- and the rule that removal
-    implies is not *"`dependencies` and `dev` must not overlap"* but this one,
-    which also catches an extra re-flooring what the project already pins.
+    **This is the general form of a rule.** With the server in a `ui` extra that
+    gate command one never installs, the `dev` group would have to re-pin the
+    same two packages so `tests/test_ui_api.py` would run at all, and a test
+    would hold the two lists equal. Declaring them removes the second list rather
+    than keeping it in step -- and the rule that removal implies is not
+    *"`dependencies` and `dev` must not overlap"* but this one, which also catches
+    an extra re-flooring what the project already pins.
     """
     lists = {"dependencies": manifest["project"]["dependencies"]}
     lists |= manifest["project"]["optional-dependencies"]
@@ -100,7 +98,7 @@ def test_no_package_is_named_in_more_than_one_list(manifest: dict) -> None:
 )
 def test_the_scorers_stack_is_the_only_optional_one(manifest: dict) -> None:
     # `eval` is a measurement stack, not a way to render, so a checkout that
-    # never scores anything should not carry `torch`. It is the only extra left:
+    # never scores anything should not carry `torch`. It is the only extra:
     # everything a *run* reaches is declared above.
     extras = manifest["project"]["optional-dependencies"]
 

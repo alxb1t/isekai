@@ -3,7 +3,7 @@
 A flow names its reader by an alias `ollama create` builds from
 `config/joycaption.Modelfile`. `config/reader.json` pins the files behind it and
 says which is the model and which the projector, so the check in
-`isekai/boundary/ollama.py` has one place to read them from (0033 design D4).
+`isekai/boundary/ollama.py` has one place to read them from (D6).
 """
 
 import copy

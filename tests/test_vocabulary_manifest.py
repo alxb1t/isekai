@@ -3,14 +3,13 @@
 Two entries, and one artifact split in two: `selected_tags.csv` is the output
 layer of the `model.onnx` beside it, row N naming neuron N, so a pair at two
 revisions mislabels every tag with nothing downstream able to notice. That is why
-the revision the two share is asserted here rather than assumed (design.md D18,
-D24). Both are pinned to an immutable revision; the CSV's digest is obtained by
-fetching and hashing, because at roughly 300 KB it is not stored as a large file
-and so publishes none, and the graph's is read from its LFS object id.
+the revision the two share is asserted here rather than assumed (D7). Both are
+pinned to an immutable revision; the CSV's digest is obtained by fetching and
+hashing, because at roughly 300 KB it is not stored as a large file and so
+publishes none, and the graph's is read from its LFS object id.
 
-The manifest exists at all so that a fresh clone can fill a sheet: the CSV used to
-arrive as a side effect of downloading a tagger this repository did not load
-(design.md D9). It now loads it.
+The manifest exists at all so that a fresh clone can fill a sheet: the CSV is
+provisioned from it, beside the tagger this repository loads.
 """
 
 import copy
@@ -284,7 +283,7 @@ def test_an_undeclared_artifact_is_refused(
 @pytest.mark.spec_exempt("twin: why the refusal is the callers', not provision.py's")
 def test_provision_runs_by_path_without_the_package() -> None:
     # The image copies `provision.py` alone and runs it by path; an `isekai`
-    # import there would fail every pod's provisioning (0047 design D6).
+    # import there would fail every pod's provisioning.
     ran = subprocess.run(
         [sys.executable, "-S", str(Path(provision.__file__))],
         capture_output=True,

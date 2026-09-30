@@ -2,7 +2,7 @@
 
 A renamed or deleted test would otherwise orphan the principle naming it while the
 page still reads as held. Only `tests/<file>.py::<name>` names are checked; prose
-such as *review* is not. Why: `0027` design D4.
+such as *review* is not.
 """
 
 import ast

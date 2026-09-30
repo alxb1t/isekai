@@ -117,9 +117,9 @@ def test_an_input_with_no_sheet_is_refused_by_name_and_told_what_to_run(
 
     message = str(refused.value)
     assert bare.id in message
-    # The remedy has to be a command this build can actually run -- which is why
-    # `review.py`'s was repaired in the same version: startup calls `review()`
-    # once per input, so this is the surface's likeliest message.
+    # The remedy has to be a command this build can actually run -- and
+    # `review.py`'s matters most: startup calls `review()` once per input, so
+    # this is the surface's likeliest message.
     assert f"python -m isekai sheet --flow {FLOW}" in message
 
 
@@ -149,8 +149,8 @@ def test_every_unreadable_photograph_is_named_rather_than_killing_the_batch(
 
     `image_dimensions()` reports an unreadable header with `sys.exit()`, a
     `BaseException` that `across` -- which catches `Refusal` -- walks straight
-    past. With one bad photograph the batch died naming nothing; with two, the
-    first one killed it before the second was ever looked at (v0.18 R7).
+    past. With one bad photograph the batch would die naming nothing; with two,
+    the first would kill it before the second was ever looked at.
     """
     first = _input(wired, tmp_path, "ada", schema, vocabulary)
     ready = _input(wired, tmp_path, "grace", schema, vocabulary)
@@ -215,7 +215,7 @@ def test_establishing_a_batch_writes_nothing_that_describes_the_batch(
 
     written = set(snapshot(wired.runs_root))
     # The only thing startup writes is a draft per input, inside that input's own
-    # run. Nothing anywhere says the two belong together (design.md D3).
+    # run. Nothing anywhere says the two belong together.
     assert {name for name in written if "draft" in name} == {
         f"{first.id}/{FLOW}/{REVIEW}/001.draft.json",
         f"{second.id}/{FLOW}/{REVIEW}/001.draft.json",
@@ -259,7 +259,7 @@ def test_an_input_outside_the_batch_is_refused_by_name(
     assert held.id in str(refused.value)
 
 
-# --- the invariant that replaced a structural guarantee -----------------------
+# --- the invariant that stands in for a structural guarantee ------------------
 
 
 @pytest.mark.spec("ui:invariant:server-never-names-an-artifact")
@@ -269,13 +269,13 @@ def test_the_invariant_holds_no_module_of_the_surface_names_an_artifact() -> Non
     `import artifact_name as name_it` walks straight past this, and a filename
     built by hand in an f-string is invisible to it. A check that overstated
     itself would be worse than none, so what it is worth is written down here
-    rather than inferred from the fact that it exists (design.md D11).
+    rather than inferred from the fact that it exists.
 
     What it does buy is the one failure that matters: an approved artifact
     written around `approve()`'s `validate()` carries a tag outside the
     vocabulary into a prompt, and the first symptom is a render that looks wrong,
-    minutes and money later. The same claim held by habit alone in this
-    repository was false six times before two releases closed it.
+    minutes and money later. The same claim held by habit alone would go false
+    with nothing to say so.
     """
     surface = Path(__file__).resolve().parent.parent / "isekai" / "interface" / "ui"
     forbidden = ("artifact_name(", "write_json(", "write(")
@@ -337,7 +337,7 @@ def test_absent_fetched_dependencies_refuse_and_name_the_command(
         bundle.ensure_built(source)
 
     # A build is local and free and may run implicitly; fetching pulls arbitrary
-    # third-party packages, so it is named rather than done (design.md D12).
+    # third-party packages, so it is named rather than done.
     assert "npm install" in str(refused.value)
     assert not (source / "dist").exists()
 
@@ -375,9 +375,9 @@ def test_the_gate_installs_the_web_framework_the_api_tests_need() -> None:
 
 
 # The manifest's own invariants -- that the server is declared, and declared
-# once -- moved to `tests/test_packaging.py` in v0.22.3. They are not facts about
-# the review surface, and split across two feature files they carried two copies
-# of one requirement-name parser.
+# once -- live in `tests/test_packaging.py`. They are not facts about the review
+# surface, and split across two feature files they would carry two copies of one
+# requirement-name parser.
 
 
 # --- the bundle is rebuilt when the source moves under it ---------------------
@@ -387,10 +387,10 @@ def test_the_gate_installs_the_web_framework_the_api_tests_need() -> None:
 def test_a_bundle_older_than_its_source_is_rebuilt_rather_than_served(
     tmp_path: Path,
 ) -> None:
-    # The defect this replaces: `ensure_built` returned any non-empty `dist/`,
-    # so a bundle built by an earlier version went on being served while the
-    # source sat rebuilt. Silent, and green -- `npm run typecheck` compiles the
-    # source and the server reads the build (design.md D28).
+    # The defect this prevents: were `ensure_built` to return any non-empty
+    # `dist/`, a bundle built from older source would go on being served while
+    # the source sat rebuilt. Silent, and green -- `npm run typecheck` compiles
+    # the source and the server reads the build.
     source = tmp_path / "ui"
     (source / "src").mkdir(parents=True)
     (source / "dist").mkdir()
@@ -432,15 +432,14 @@ def _built_tree(tmp_path: Path) -> Path:
 def test_a_build_config_edited_after_the_build_makes_the_bundle_stale(
     tmp_path: Path, name: str
 ) -> None:
-    """The inputs `_is_fresh` did not watch until v0.22.1.
+    """The inputs outside `src/` that `_is_fresh` watches.
 
     A bumped dependency, an added vite plugin or a changed build script all
-    change the emitted bundle and move nothing under `src/` -- so the operator
-    went on being served the previous build, silently, with a green gate
-    (v0.20 R6, v0.20 security/S2). `tsconfig.json` is in this list because the
-    fix is an exclusion rather than a list of build inputs: an allowlist naming
-    the other three would have missed it, which is how the list was wrong the
-    first time.
+    change the emitted bundle and move nothing under `src/` -- so, unwatched,
+    the operator would go on being served the previous build, silently, with a
+    green gate. `tsconfig.json` is in this list because the watch is an
+    exclusion rather than a list of build inputs: an allowlist naming the other
+    three would miss it.
     """
     source = _built_tree(tmp_path)
 
@@ -473,7 +472,7 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     `timeout=` kwarg is dropped from the call, which is the only way this can
     regress. `npm run build` can reach the network resolving a missing
     dependency, and an `isekai ui` that hangs with no port bound and no output
-    is indistinguishable from one that died (v0.20 R9').
+    is indistinguishable from one that died.
     """
     source = tmp_path / "ui"
     (source / "node_modules").mkdir(parents=True)

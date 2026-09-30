@@ -21,6 +21,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   seed and the tagger's declaration name D18, D13 and D31 (0051 D1, D2).
 - The render scripts', the image's and the derivers' comments carry no version or design citation; the render
   session, the volume and the image pin name D36, D27 and D28 (0051 D1, D2).
+- The suite's comments, docstrings and exemption reasons carry no version or design citation; a test's
+  docstring keeps only what it proves (0051 D1, D2).
 
 ## [0.31.2] - 2026-09-30 · 0050-the-colour-profile
 

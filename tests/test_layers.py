@@ -3,7 +3,6 @@
 Each rule is a function over a root directory, so the twins can run it on a small
 package built under `tmp_path`. Imports inside functions count: a lazy import is
 still an edge. `tests/` is not scanned -- a component's own tests reach inside it.
-Why and how: `0027` design D3.
 """
 
 import ast
@@ -47,7 +46,7 @@ def _is_module(root: Path, name: str) -> bool:
 def _sources(root: Path, scope: tuple[str, ...]) -> Iterator[Path]:
     """Yield every Python file under `scope`, failing on an entry that is not there.
 
-    A missing entry would narrow the check with no failure: `0029` design D8.
+    A missing entry would narrow the check with no failure.
     """
     for entry in scope:
         path = root / entry

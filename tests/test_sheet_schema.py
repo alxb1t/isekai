@@ -2,8 +2,8 @@
 
 The tracked schema itself is read, not a fixture copy of it -- the same rule the
 suite reads the shipped graph and the tracked manifests under. It is reached
-through the flow that owns it, because after v0.16 there is no schema document
-outside a flow directory.
+through the flow that owns it, because there is no schema document outside a
+flow directory.
 """
 
 import json
@@ -26,7 +26,7 @@ from isekai.shared.vocabulary import Vocabulary
 
 SCHEMA_PATH = load_flow("summon-anime-wai").schema_path
 
-# D8's sixteen, in the one order a prompt is assembled in, and the seven a
+# The sixteen, in the one order a prompt is assembled in, and the seven a
 # measurement is taken over. Restated here so that reordering the schema document
 # is a deliberate test edit, the way the committed prompts already are.
 PROMPT_ORDER = (

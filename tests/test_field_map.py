@@ -289,10 +289,10 @@ def test_the_committed_table_covers_every_declared_criterion() -> None:
     assert set(document["fields"]) == declared
 
 
-# The seven seeds `notes/v0.19_improvements/ui.md:575` records for hair
-# silhouette -- the only seed list that exists on disk anywhere, and the version's
-# one verifiable number. `hime_cut` is ONE seed: splitting it yields a bare `cut`
-# that pulls in the whole `cutout` family, a 32-tag error.
+# The seven seeds the operator's notes record for hair silhouette -- the only
+# seed list that exists on disk anywhere, and the one verifiable number.
+# `hime_cut` is ONE seed: splitting it yields a bare `cut` that pulls in the
+# whole `cutout` family, a 32-tag error.
 SEVEN = ("ponytail", "braid", "bun", "bangs", "twintails", "updo", "hime cut")
 
 # The six the record's substring route adds and the matcher's rule does not.

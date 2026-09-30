@@ -121,7 +121,7 @@ def test_no_value_in_a_manifest_is_derived_at_load_time(flow: Flow) -> None:
 def test_the_dials_are_the_measured_ones_and_not_the_graph_files(flow: Flow) -> None:
     # The graph carries the prototype's committed values; every measured run
     # overrode them. A manifest transcribed from the graph would ship a
-    # configuration nothing measured (design.md D12).
+    # configuration nothing measured.
     graph = flow.graph()
     assert graph[flow.node("sampler")]["inputs"]["cfg"] == 7
     assert flow.dials["cfg"] == 5
@@ -159,12 +159,11 @@ def test_the_schema_briefings_and_graph_each_flow_needs_are_in_its_directory() -
 def test_a_flow_is_flat_and_holds_its_named_files_and_nothing_else() -> None:
     """The rule names its files rather than tallying them, and asserts both ends.
 
-    **`len(SIBLINGS)` is the assertion this rule has never had.** The set-equality
-    below shrinks on both sides at once -- it stayed green through the removal of
-    `sheet.briefing.md` and would stay green through the silent addition of a
-    sibling, which is exactly the thing the freeze exists to make loud. The
-    count is pinned here, and only here, so the prose elsewhere can stop carrying
-    a numeral (design.md D10).
+    **`len(SIBLINGS)` is asserted as well as the set.** The set-equality below
+    shrinks on both sides at once -- it would stay green through the removal of a
+    sibling and through the silent addition of one, which is exactly the thing
+    the freeze exists to make loud. The count is pinned here, and only here, so
+    the prose elsewhere carries no numeral.
     """
     assert len(SIBLINGS) == 3
     assert SIBLINGS == (GRAPH_NAME, SCHEMA_NAME, CAPTION_BRIEFING_NAME)
@@ -209,7 +208,7 @@ def _manifest_digests() -> dict[str, str]:
 def test_every_model_a_flow_declares_carries_the_manifests_digest_for_it() -> None:
     # A destination path does not pin bytes. Re-pinning a checkpoint would
     # otherwise make an existing flow identifier render differently with the gate
-    # green, on the 6.9 GB that decides what the image looks like (design.md D4).
+    # green, on the 6.9 GB that decides what the image looks like.
     digests = _manifest_digests()
     for name in tracked_flows():
         flow = load_flow(name)
@@ -241,7 +240,7 @@ def test_a_flow_whose_model_digest_disagrees_fails_naming_the_flow(
 def test_every_model_a_flows_graph_needs_is_declared_by_that_flow() -> None:
     # Everything the graph names *and* everything its nodes fetch while naming
     # nothing. The gate is where an unpinned artifact is caught, so the list
-    # being complete is what the check is worth (design.md D15).
+    # being complete is what the check is worth.
     from isekai.boundary.provision import (
         annotator_files,
         graph_model_files,
@@ -327,12 +326,11 @@ def test_a_flow_declaring_fewer_than_the_required_nodes_is_refused(
 def test_a_manifest_missing_a_dial_its_own_roles_read_is_refused_naming_it(
     tmp_path: Path, dial: str
 ) -> None:
-    """A manifest with an incomplete `dials` block used to load clean.
+    """Unchecked, a manifest with an incomplete `dials` block would load clean.
 
-    It then passed all six gate commands, rented the pod, uploaded the
-    photograph, and raised a bare `KeyError` out of `patch()` -- not a `Refusal`,
-    so `across` never collected it and the rest of the batch died with it
-    (v0.16 R8).
+    It would then pass the gate, rent the pod, upload the photograph, and raise a
+    bare `KeyError` out of `patch()` -- not a `Refusal`, so `across` would never
+    collect it and the rest of the batch would die with it.
     """
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
@@ -348,7 +346,7 @@ def test_a_manifest_missing_a_dial_its_own_roles_read_is_refused_naming_it(
 
 @pytest.mark.spec("image-generation:manifest:invalid-manifest-names-the-field")
 def test_a_dial_no_declared_role_reads_is_not_required(tmp_path: Path) -> None:
-    """Role-conditional, never a flat list (design.md D4).
+    """Role-conditional, never a flat list.
 
     A flat *every dial in a fixed list is present* check rejects
     `conjure-anime-wai`, which declares no identity adapter and no pose
@@ -377,8 +375,7 @@ def test_a_role_naming_a_node_the_graph_does_not_carry_is_refused(
 ) -> None:
     """Nothing locates a node by class, so a dangling id agrees with nothing.
 
-    Until v0.22.1 it agreed with the gate too, right up to the rented machine
-    (v0.17 R6).
+    Unchecked, it would agree with the gate too, right up to the rented machine.
     """
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
@@ -659,12 +656,11 @@ def test_no_text_is_taken_from_the_graphs_own_committed_strings(
     """Assembly ignores the graph's committed strings, proved against a witness.
 
     **Run on a scratch flow whose graph carries a distinctive negative**, not on
-    the tracked one. The tell used to be `worst detail`, a tag the graph had and
-    no manifest did; `0025-running-the-flow` emptied that node, and asserting
+    the tracked one. The tracked graphs' negative node is empty, and asserting
     that emptiness against the tracked flow would be asserting the fixture --
     `negative != ""` holds for any non-empty prompt, so the leak this scenario
-    exists to catch would no longer have anything to fail on. Planting a string
-    the manifest cannot supply keeps a witness that can.
+    exists to catch would have nothing to fail on. Planting a string the
+    manifest cannot supply keeps a witness that can.
     """
     root = _scratch(tmp_path)
     scratch = root / "summon-anime-wai"
@@ -692,8 +688,8 @@ def test_no_text_is_taken_from_the_graphs_own_committed_strings(
 def test_every_tracked_flows_graph_carries_no_negative_of_its_own() -> None:
     # The other half, on the tracked flows: `flow.json`'s fragment is the only
     # negative there is. `generate.py` patches this node on every render, so a
-    # string here would be dead data that reads like a second source of truth --
-    # which is exactly what it was until v0.22.3, drifted and unnoticed.
+    # string here would be dead data that reads like a second source of truth,
+    # and would drift unnoticed.
     for name in tracked_flows():
         tracked = load_flow(name)
         node = tracked.graph()[tracked.node("negative")]["inputs"]["text"]
@@ -734,7 +730,7 @@ def test_the_tracked_flows_each_declare_the_model_they_are_meant_to_run() -> Non
     `manifest_digest` freezes bytes without knowing whether they are the right
     ones, so a flow committed naming the wrong alias would be frozen naming the
     wrong alias. **The first commit is exactly where this mistake lives**, and one
-    assertion on the shipped flows is what it costs (design.md D1).
+    assertion on the shipped flows is what it costs.
     """
     for name in tracked_flows():
         assert load_flow(name).model == "joycaption-beta-one-q4k"
@@ -744,12 +740,7 @@ def test_the_tracked_flows_each_declare_the_model_they_are_meant_to_run() -> Non
 def test_a_manifest_declaring_no_model_is_refused_naming_the_key(
     tmp_path: Path,
 ) -> None:
-    """Required, not optional, and that is what carries `MANIFEST_VERSION` to 3.
-
-    The key it replaced was optional so that adding it edited no frozen
-    directory. That cost is no longer payable in either direction: the
-    directories it was protecting are deleted by this change.
-    """
+    """`model` is required, not optional, so a manifest declaring none is refused."""
     root = _scratch(tmp_path)
     document = json.loads((root / "summon-anime-wai" / MANIFEST_NAME).read_text())
     del document["model"]
@@ -768,9 +759,9 @@ def test_a_model_that_is_not_a_non_empty_string_is_refused(
 ) -> None:
     """The value, not only its presence.
 
-    A bare `str()` loaded `{"model": null}` as the Python string `"None"` and sent
-    a run at an alias that cannot exist -- a refusal at the first call, with the
-    manifest looking correct the whole way there (design.md D4).
+    A bare `str()` would load `{"model": null}` as the Python string `"None"` and
+    send a run at an alias that cannot exist -- a refusal at the first call, with
+    the manifest looking correct the whole way there.
     """
     root = _scratch(tmp_path, model=value)
 
@@ -825,13 +816,13 @@ def _misspelled(tmp_path: Path, typo: str) -> Refusal:
 def test_a_misspelled_model_key_is_refused_naming_what_was_written(
     tmp_path: Path, typo: str
 ) -> None:
-    """What flattening the block bought, and it cost no new check.
+    """What a flat manifest buys, and it costs no new check.
 
-    The `hosted` block had no allowlist of its own -- `{"sortr": "x"}` inside it
-    loaded clean -- and a top-level key is guarded by the allowlist that already
-    existed. Each of these fails twice at once, as an unknown key *and* as a
+    A nested block would need an allowlist of its own -- `{"sortr": "x"}` inside
+    it would load clean -- and a top-level key is guarded by the allowlist that
+    exists. Each of these fails twice at once, as an unknown key *and* as a
     missing one, and the allowlist runs first so the message names the key the
-    operator actually wrote rather than the one he did not (design.md D3).
+    operator actually wrote rather than the one he did not.
     """
     assert typo not in KNOWN
 
@@ -858,9 +849,9 @@ def test_a_typo_that_collides_with_a_real_key_is_refused_for_the_absence(
 def test_every_key_this_build_reads_is_required() -> None:
     """There is no optional key, which is what leaves the allowlist doing it all.
 
-    `hosted` was the one, and with it gone `KNOWN` and `REQUIRED` are the same
-    tuple -- so a misspelling can no longer be indistinguishable from a
-    deliberate omission, because there are no deliberate omissions.
+    `KNOWN` and `REQUIRED` are the same tuple -- so a misspelling cannot be
+    indistinguishable from a deliberate omission, because there are no
+    deliberate omissions.
     """
     assert MANIFEST_VERSION == 4
     assert KNOWN == REQUIRED

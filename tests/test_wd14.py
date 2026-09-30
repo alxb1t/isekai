@@ -1,13 +1,12 @@
 """The WD14 boundary, exercised with no model file and no wheel installed.
 
 **Nothing here imports `numpy`, `Pillow` or `onnxruntime`**, and that is the
-point rather than a limitation. It used to hold because the `tagging` extra was
-absent from the environment the gate ran in; v0.22.3 made those three declared
-dependencies, so they are now installed and the discipline is the suite's own --
-everything that can be decided without a wheel is decided in `select` and
-`read_labels`, against `FakeSession`, and this file is what holds that split
-honest. A test here that reached for a real wheel would still pass, which is
-exactly why the split has to be kept deliberately rather than by absence.
+point rather than a limitation. Those three are declared dependencies, so they
+are installed and the discipline is the suite's own -- everything that can be
+decided without a wheel is decided in `select` and `read_labels`, against
+`FakeSession`, and this file is what holds that split honest. A test here that
+reached for a real wheel would still pass, which is exactly why the split has to be
+kept deliberately rather than by absence.
 
 **The one silent failure mode is the label-index ordering.** Row N of
 `selected_tags.csv` names output neuron N, so a pair from two revisions mislabels
@@ -124,7 +123,7 @@ def test_the_floor_is_inclusive_and_what_sits_below_it_is_dropped() -> None:
 def test_the_floor_is_the_measured_one_and_not_a_rounder_number() -> None:
     # 0.35 would lose `blurry background 0.19`, `cowboy shot 0.20` and
     # `head tilt 0.28` -- three tags correction-mining measured the operator
-    # adding by hand, which is the recall this stage exists to buy (design.md D13).
+    # adding by hand, which is the recall this stage exists to buy.
     assert FLOOR == 0.15
 
 
@@ -237,7 +236,7 @@ def test_both_halves_present_and_matching_resolve_to_their_two_paths(
     assert (labels, model) == (tmp_path / LABELS_DEST, tmp_path / MODEL_DEST)
     # And the digests it checked come back with them, so whatever records a
     # provenance records what was verified rather than what the manifest says
-    # at write time (design.md D17).
+    # at write time.
     assert pins == {
         LABELS_DEST: {"sha256": hashlib.sha256(INDEX.encode()).hexdigest()},
         MODEL_DEST: {"sha256": hashlib.sha256(b"graph").hexdigest()},
@@ -249,9 +248,9 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # A machine that never captions must not pay for a 467 MB file, so `wiring`
-    # resolves a tagger per flow and nothing is constructed until one asks
-    # (design.md D14). Re-imported with both the manifest reader and the resolver
-    # rigged to raise: reaching either at import time is the defect.
+    # resolves a tagger per flow and nothing is constructed until one asks.
+    # Re-imported with both the manifest reader and the resolver rigged to
+    # raise: reaching either at import time is the defect.
     def refuse(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("the boundary reached provisioning at import time")
 
@@ -288,8 +287,8 @@ def test_an_unsynced_environment_refuses_by_name_rather_than_raising_importerror
 ) -> None:
     # Without this an unsynced checkout gets a bare `ModuleNotFoundError`
     # traceback, in a package whose rule is that every failure is a named
-    # `Refusal` naming its remedy. The remedy is now plain `uv sync`, because
-    # there is no extra to opt into any more.
+    # `Refusal` naming its remedy. The remedy is plain `uv sync`, because there
+    # is no extra to opt into.
     import isekai.boundary.wd14 as boundary
 
     def absent(module: str) -> object:
@@ -336,7 +335,7 @@ def test_the_session_is_handed_the_photograph_and_nothing_else(
     assert session.seen == [photo]
 
 
-# The variable onnxruntime reads, once, when it loads: 0035 design D5.
+# The variable onnxruntime reads, once, when it loads.
 TELEMETRY_SWITCH = "ORT_DISABLE_TELEMETRY"
 
 
@@ -364,7 +363,7 @@ def telemetry_left_on(switch_at_import: list[str | None]) -> bool:
 
 
 # Loading onnxruntime opens an HTTPS connection to Microsoft unless the switch is
-# set first, and the client's teardown at exit aborted `tag`: 0035 design D5.
+# set first, and the client's teardown at exit would abort `tag`.
 def _open_wd14(_tmp_path: Path) -> None:
     wd14.OnnxSession(Path("model.onnx"))
 
@@ -375,9 +374,7 @@ def _open_evaluation(tmp_path: Path) -> None:
     eval_backends.OnnxSession("m.onnx", tmp_path)
 
 
-@pytest.mark.spec_exempt(
-    "structural: no requirement names the runtime's telemetry; 0035 design D5"
-)
+@pytest.mark.spec_exempt("structural: no requirement names the runtime's telemetry")
 @pytest.mark.parametrize("opening", [_open_wd14, _open_evaluation])
 def test_every_onnx_session_switches_telemetry_off_before_the_import(
     opening: Callable[[Path], None], monkeypatch: pytest.MonkeyPatch, tmp_path: Path

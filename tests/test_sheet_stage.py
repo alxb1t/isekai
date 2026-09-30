@@ -1,6 +1,6 @@
 """Stage (2): a tag list in, canonical fields out, routed by the committed table.
 
-**There is no double to drive it through any more, and that is stronger than one.**
+**There is no double to drive it through, and that is stronger than one.**
 The stage reaches nothing: it reads one artifact and looks each tag up in a table,
 so "no model was reached" is asserted by rigging both transports to explode rather
 than by counting a fake's calls. `tests/stages.sheet` writes the tag list the
@@ -87,9 +87,8 @@ def test_a_tag_is_placed_in_its_primary_criterion_and_no_model_is_reached(
 ) -> None:
     """Non-vacuous: both transports are rigged to explode before the stage runs.
 
-    The isolation argument, applied to the stage that used to have a seam. A
-    router that reached a model would be caught here rather than being trusted
-    not to.
+    The isolation argument, applied to a stage with no seam. A router that
+    reached a model would be caught here rather than being trusted not to.
     """
 
     def unreachable(*args: object, **kwargs: object) -> object:
@@ -325,9 +324,9 @@ def test_nothing_the_tagger_did_not_return_reaches_the_sheet(
 def test_the_stage_refuses_once_its_budget_of_one_is_spent(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    """The budget is one now, because a dictionary lookup has no transient failure.
+    """The budget is one, because a dictionary lookup has no transient failure.
 
-    There is nothing left to *make* fail transiently, so the attempt is recorded
+    There is nothing to *make* fail transiently, so the attempt is recorded
     directly -- which is the honest shape of the assertion anyway: the guard is
     about what is on disk, not about what raised.
     """
@@ -507,7 +506,7 @@ def test_every_tag_in_a_written_sheet_is_in_the_vocabulary(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     # `hair` is in the vocabulary and in the table; `jeans` is in both as well.
-    # Nothing here can be outside it, which is the property's new form: the
+    # Nothing here can be outside it, which is the property's form: the
     # tagger's output layer *is* the vocabulary and the router invents nothing.
     written = sheet(
         run,
@@ -540,9 +539,9 @@ def test_the_sheet_is_written_under_the_flow_that_asked_for_it(
 def test_a_second_flow_gets_its_own_fill_and_leaves_the_first_alone(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    # Sharing is gone: two flows over one input are two independent tag lists,
+    # Nothing is shared: two flows over one input are two independent tag lists,
     # so the class of error where a flow inherits another's answer cannot occur
-    # rather than being checked for (design.md D5).
+    # rather than being checked for (D17).
     first = sheet(run, schema, vocabulary, tags=[DanbooruTag("brown_hair")])
 
     second = sheet(
@@ -640,7 +639,7 @@ def test_an_unreadable_kept_sheet_is_silent(
     assert written.read_text() == "{ not json"
 
 
-# --- the briefing, which nothing reads any more --------------------------------
+# --- the briefing, which nothing reads -----------------------------------------
 #
 
 

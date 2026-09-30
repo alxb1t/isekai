@@ -1,9 +1,8 @@
 """The vocabulary object: what a tag is, whether it exists, and how strong it is.
 
-**The four-pass cascade this module used to carry is gone**, and with it sixteen
-of this file's tests. Nothing maps free text onto a tag any more: the sheet's
-input is a list the tagger already emitted, so every tag arrives canonical and
-the only question left about one is whether the list contains it.
+**Nothing maps free text onto a tag**: the sheet's input is a list the tagger
+already emitted, so every tag arrives canonical and the only question about one
+is whether the list contains it.
 
 Offline by construction: every test builds its vocabulary from a CSV written in
 `tests/conftest.py`, so nothing here needs the provisioned artifact or the

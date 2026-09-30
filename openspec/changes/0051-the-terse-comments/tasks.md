@@ -10,7 +10,7 @@ docstrings and `spec_exempt` reasons of its tree per [D1](design.md#d1) and [D2]
 - [x] 3 — pipeline
 - [x] 4 — interface
 - [x] 5 — tools, infra, start.sh and the Dockerfile
-- [ ] 6 — tests
+- [x] 6 — tests
 - [ ] 7 — The rule, the guard and the README rows
 
 Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HISTORY`**, is
@@ -45,7 +45,7 @@ Line numbers are `9f8a479`'s. The pattern every phase's check greps for, **`HIST
 
 ## 6 — tests
 
-- [ ] 6.1 Rewrite the history in `tests/`, its `spec_exempt` reasons included.
+- [x] 6.1 Rewrite the history in `tests/`, its `spec_exempt` reasons included.
   Verify: `grep -rlE 'design\.md.?,? *D[0-9]|\b00[0-9]{2}.? +(design|proposal|tasks|D[0-9])|\bv0\.[0-9]' tests | sort` prints `tests/test_evaluate.py`, `tests/test_field_map.py`, `tests/test_infra.py` and `tests/test_spec_prose.py` alone, each for its data.
 
 ## 7 — The rule, the guard and the README rows

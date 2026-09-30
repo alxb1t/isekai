@@ -229,7 +229,7 @@ def test_a_photograph_this_build_cannot_read_stops_the_run_naming_the_fix(
 # by name rather than `run`, which merely imports it. Patching through `run` would
 # have passed either way -- `run.os` IS the global `os` module object -- so naming
 # the real subject is what makes these break on a move rather than sleep through
-# it (design.md D4).
+# it.
 
 
 @pytest.mark.spec("run-directory:atomicity:interrupted-write-leaves-nothing")
@@ -951,14 +951,13 @@ def test_a_digest_prefix_collision_is_refused_rather_than_mixed(
 REPO = Path(__file__).resolve().parent.parent
 
 # One path per directory a tracked producer names a photograph or a render under.
-# `.data/` is the single ignored root (design.md D14), and v0.14 made it the only
-# one that is generated into: the run directory holds a copy of the photograph,
-# and `evaluation/baseline/build_contact_sheets.py` -- which pastes the reference
-# photograph beside the renders -- now defaults `--renders` to `.data/baseline` and is
-# documented to write its sheets under `.data/labels`, where it used to use
-# `outputs/`. `.inputs/baseline` is the one exception and is not generated at
-# all: an operator puts source photographs there by hand. All four hold a
-# person's likeness by construction.
+# `.data/` is the single ignored root, and the only one that is generated into
+# (D18): the run directory holds a copy of the photograph, and
+# `evaluation/baseline/build_contact_sheets.py` -- which pastes the reference
+# photograph beside the renders -- defaults `--renders` to `.data/baseline` and is
+# documented to write its sheets under `.data/labels`. `.inputs/baseline` is the
+# one exception and is not generated at all: an operator puts source photographs
+# there by hand. All four hold a person's likeness by construction.
 GENERATED = (
     ".data/runs/000000000000-ada/photo.jpg",
     ".data/baseline/ada/0.png",
@@ -989,12 +988,12 @@ def test_every_directory_a_producer_writes_a_photograph_into_is_ignored(
 
 # --- where a run root may point -----------------------------------------------
 
-# The defect the flag had was never "outside `.data/`" -- it was "inside the git
+# The defect a flag can have is not "outside `.data/`" -- it is "inside the git
 # working tree, where nothing ignores it". `--runs /Volumes/BigDisk/runs` is safe
 # because version control cannot reach it; `--runs ./acceptance-runs` is the hole,
 # and `run.py` copies the photograph into the run directory by construction, so
 # such a directory holds personal photographs one `git add` from being published
-# (design.md D7).
+# (D18).
 
 
 def _wiring(*flags: str) -> Wiring:
@@ -1077,8 +1076,8 @@ def test_wiring_from_cannot_be_used_to_skip_the_containment_guard() -> None:
     """The argv-free door is the same door.
 
     `wiring_from` exists so a front end that never parses a command line still
-    cannot compose a `Wiring` without this check -- which is the whole reason the
-    extraction was made, so it is asserted rather than assumed (design.md D1).
+    cannot compose a `Wiring` without this check -- which is the whole reason it
+    exists, so it is asserted rather than assumed (D19).
     """
     inside = REPO / "acceptance-runs"
 

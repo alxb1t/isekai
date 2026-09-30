@@ -125,9 +125,9 @@ def test_every_entry_declares_at_least_one_source(manifest: Manifest) -> None:
 # version 2883731). WAI has no first-party Hugging Face repo, so every source the
 # manifest declares for it is a mirror and this digest is the acceptance test:
 # any host serving matching bytes is equally acceptable, and one serving anything
-# else is rejected whoever it is (design.md D1).
+# else is rejected whoever it is.
 #
-# `derive_manifest.py` now *fetches* this value from Civitai's own record and holds
+# `derive_manifest.py` *fetches* this value from Civitai's own record and holds
 # the mirrors against it, so no human transcribes it into the derivation. But that
 # runs only when a human points the tool at the network. Pinned here as well, by
 # hand and on purpose: this copy is the offline anchor, and an anchor that fetches
@@ -154,7 +154,7 @@ def _checkpoints(manifest: Manifest) -> list[Entry]:
 
 
 @pytest.mark.spec_exempt(
-    "the one-path rule, not a provisioning scenario: design.md D3 admits one base"
+    "the one-path rule, not a provisioning scenario: D8 admits one base"
 )
 def test_the_manifest_declares_exactly_one_base_checkpoint(manifest: Manifest) -> None:
     # A second declared checkpoint would be a second path in everything but name.
@@ -177,8 +177,8 @@ def test_the_base_checkpoint_carries_the_digest_its_publisher_states(
 
 # --- the trust root, derived rather than transcribed ---
 #
-# `derive_manifest.py` claimed the manifest is "derived, never transcribed", and
-# then read the one digest that matters most -- the base checkpoint's, which is
+# `derive_manifest.py` claims the manifest is "derived, never transcribed", so it
+# cannot read the one digest that matters most -- the base checkpoint's, which is
 # the whole trust root for an artifact no publisher hosts -- out of a constant a
 # human typed. Three copies of one transcription cross-check the copying, not the
 # value. The parse is a pure function so the suite can hold it offline; only the
@@ -242,7 +242,7 @@ def test_a_file_publishing_no_sha256_is_refused_rather_than_downgraded() -> None
 
 
 @pytest.mark.spec_exempt(
-    "structural: BLAKE3 is published and deliberately not recorded (design.md D13)"
+    "structural: BLAKE3 is published and deliberately not recorded"
 )
 def test_the_derived_manifest_records_no_blake3(manifest: Manifest) -> None:
     # Verifying it would need a wheel the runtime rule forbids, and a field
@@ -255,9 +255,9 @@ def test_the_derived_manifest_records_no_blake3(manifest: Manifest) -> None:
     "model-provisioning:immutable-pins:mirrored-artifact-pins-the-published-digest"
 )
 def test_a_record_omitting_its_size_still_yields_the_digest() -> None:
-    # The size was read with a subscript where every sibling read uses `.get` with
-    # a `SystemExit`, and no caller consumed it -- so an omitted `sizeKB` aborted
-    # derivation with a raw `KeyError` for a number nobody wanted. What this
+    # No caller consumes the size, so reading it with a subscript where every
+    # sibling read uses `.get` with a `SystemExit` would abort derivation on an
+    # omitted `sizeKB` with a raw `KeyError` for a number nobody wants. What this
     # function is for is the digest.
     payload = {
         "files": [

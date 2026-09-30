@@ -2,7 +2,7 @@
 
 The rule is `CLAUDE.md`'s *How a spec reads*; this holds the parts a test can check,
 over the effective spec — the living `spec.md` with each active delta's blocks in
-place, which is what a release will fold. Why: `0046` design D5.
+place, which is what a release will fold.
 """
 
 import re

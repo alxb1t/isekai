@@ -2,7 +2,7 @@
 
 `CHANGELOG.md` is a release record: Keep a Changelog sections, one short bullet
 per change, and each heading naming its change. It is not a source, so no code,
-doc or README points into it (`0038` design D8).
+doc or README points into it.
 """
 
 import re

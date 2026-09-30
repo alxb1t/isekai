@@ -3,7 +3,7 @@
 `docs/pins.md` is an inventory: it names where each pin is declared and checked.
 A file that moves and leaves the guide pointing at nothing is the drift the pins
 exist to stop, so every repository path the guide names in backticks is held to
-exist (`0033` design D10).
+exist.
 """
 
 import re

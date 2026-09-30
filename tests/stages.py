@@ -1,6 +1,6 @@
 """The two stages that read a briefing, bound to the one tracked flow's copies.
 
-A briefing is part of a flow now, so `caption` and `sheet` are handed the path
+A briefing is part of a flow, so `caption` and `sheet` are handed the path
 they read it from rather than defaulting to a file at the repository root. Almost
 every test in the suite drives them over `summon-anime-wai`; binding it once
 here keeps it from being repeated at seventy call sites, and a test that means to
@@ -123,8 +123,8 @@ def write_wd14(
     """Write the tag artifact the sheet stage reads, in `tag_wd14`'s own shape.
 
     One helper rather than a fixture per module: `sheet()` below calls it for any
-    test that has not written one, which is why forty-six call sites that used to
-    pass an offline sorter double lost it and gained nothing.
+    test that has not written one, which is why no call site passes an offline
+    sorter double.
     """
     directory = run.directory(flow, WD14)
     path = directory / artifact_name(version)
@@ -222,7 +222,7 @@ class FakeSession:
     The double `tagging:seam:offline-double-satisfies-the-interface` names. It
     opens nothing, reads nothing and imports nothing -- which is only possible
     because the seam takes the photograph rather than a prepared array, so
-    `numpy` and `Pillow` sit behind it with the graph (design.md D26).
+    `numpy` and `Pillow` sit behind it with the graph.
 
     `seen` is what makes the idempotence assertion provable: showing that a
     completed stage opens no session needs something that counts. `calls` is

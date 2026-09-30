@@ -292,7 +292,7 @@ def test_the_guard_names_the_method_it_used_and_the_agreement_it_measured() -> N
 @pytest.mark.spec("evaluation:guard:method-is-reported")
 def test_the_guard_measures_both_methods_whichever_one_is_authoritative() -> None:
     # Both numbers are computed on every run at no extra cost, which is what lets
-    # phase 8 choose between them on real renders rather than on an argument.
+    # a measurement choose between them on real renders rather than an argument.
     by_iou = run_guard(PHOTO_FACE, RENDER_FACE, method="iou")
     by_centroid = run_guard(PHOTO_FACE, RENDER_FACE, method="centroid")
 
@@ -398,9 +398,9 @@ def test_every_axis_in_a_report_is_tagged_absolute_or_relative(
 def test_the_embedding_axes_are_relative_and_the_rest_absolute(
     tmp_path: Path,
 ) -> None:
-    # The distinction is the whole of design.md D1: a colour distance and a
-    # keypoint agreement mean the same thing in both domains; a cosine across the
-    # photograph-to-drawing gap does not.
+    # The distinction: a colour distance and a keypoint agreement mean the same
+    # thing in both domains; a cosine across the photograph-to-drawing gap does
+    # not.
     report, _ = _score(tmp_path)
 
     assert _axis(report, "face_styleid").kind == "relative"
@@ -697,7 +697,7 @@ def test_the_claims_a_report_prints_are_the_ones_the_design_requires() -> None:
     assert "not a percentage" in joined
 
 
-# --- phase 8: the guard's method, settled by measurement and pinned here -------
+# --- the guard's method, settled by measurement and pinned here -------------
 
 
 @pytest.mark.spec("evaluation:guard:method-is-reported")

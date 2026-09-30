@@ -125,7 +125,7 @@ def _fewer_roles_flow(tmp_path: Path) -> Flow:
 
     **It is a `tmp_path` scratch and never a directory in `flows/`.** Anything in
     `flows/` becomes a product flow: pinned, bound into the provisioning union,
-    selectable, and undeletable under the append-only rule (design.md D9).
+    selectable, and undeletable under the append-only rule.
     """
     source = load_flow(FLOW)
     root = tmp_path / "scratch-flows" / FEWER
@@ -430,10 +430,9 @@ def test_the_stage_renders_through_the_double_with_no_gpu(
     assert len(client.submissions) == 1
 
 
-# The transport's own two scenarios, held here because `render` is now the only
-# caller of the seam. They moved out of `tests/test_polling.py` with the render
-# path that file drove; the behaviour they describe is unchanged, and deleting
-# them would have deleted a requirement that is still true (design.md D8).
+# The transport's own two scenarios, held here because `render` is the only
+# caller of the seam; deleting them would delete a requirement that is still
+# true.
 
 
 @pytest.mark.spec("comfy-transport:polling:polls-history-until-complete")
@@ -713,9 +712,9 @@ def test_generate_on_a_run_approved_for_nothing_refuses_at_the_command(
     assert "python -m isekai review" in message
     assert "python -m isekai approve" in message
     # *Names the commands that would produce one* -- so the commands it names
-    # have to be ones this build accepts. Every stage verb has required `--flow`
-    # since v0.16, and until v0.22.1 both of these were printed without it, so
-    # copy-pasting the remedy got an argparse usage error (v0.16 R5).
+    # have to be ones this build accepts. Every stage verb requires `--flow`, so
+    # a command printed without it would get an operator copy-pasting the remedy
+    # an argparse usage error.
     named = re.findall(r"`python -m isekai ([^`]+)`", message)
     assert len(named) == 2
     for command in named:
@@ -744,9 +743,9 @@ def test_one_unreadable_header_does_not_cost_the_batch_its_turn(
     # opens a run cleanly and only the header read ever finds it.
     bad.photo.write_bytes(b"\x89PNG\r\n\x1a\n")
 
-    # `_generate`'s own composition: `prepare` now returns one run's per-flow
+    # `_generate`'s own composition: `prepare` returns one run's per-flow
     # refusals rather than raising at the first, so the batch's collection is
-    # `across`'s list plus theirs (v0.16 R6).
+    # `across`'s list plus theirs.
     broken: list[str] = []
 
     def assemble_one(one: Run) -> None:
@@ -767,9 +766,9 @@ def test_one_flows_malformed_sheet_does_not_cost_its_siblings_their_assembly(
     """Two flows on one run, one of them broken: the other is still assembled.
 
     The flows of a run are independent -- separate subtrees, separate sheets,
-    separate error records -- so the dict comprehension that raised at the first
-    broken one took its siblings' turn with it, after having already written a
-    permanent record into the broken flow's own directory (v0.16 R6).
+    separate error records -- so raising at the first broken one would take its
+    siblings' turn with it, after already writing a permanent record into the
+    broken flow's own directory.
     """
     fewer = _fewer_roles_flow(tmp_path)
     photo = tmp_path / "ada.jpg"
@@ -965,7 +964,7 @@ def test_a_failed_upload_is_recorded(
     assert "001.error.1.transient.json" in str(again.value)
 
 
-# --- the photograph's metadata (0039 design D3, D5) ----------------------------
+# --- the photograph's metadata ------------------------------------------------
 
 
 # A camera's EXIF, an editor's XMP and IPTC, a comment, and a video a phone
@@ -1324,7 +1323,7 @@ def test_a_transient_render_record_still_refuses_the_next_attempt_on_the_count(
 
     Asserted rather than left implicit, because the arithmetic is invisible from
     the record alone and the test beside this one could be read as promising the
-    next attempt proceeds (converge R1).
+    next attempt proceeds.
     """
     prepare(run, {FLOW: flow})
     directory = run.path / FLOW / OUTPUTS / "001"
@@ -1540,7 +1539,7 @@ def test_a_flow_that_declares_no_photograph_uploads_nothing(
     assert client.submissions
 
 
-# --- what a prompt and a render record (0033 design D5) -----------------------
+# --- what a prompt and a render record ----------------------------------------
 
 
 @pytest.mark.spec(

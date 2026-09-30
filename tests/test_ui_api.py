@@ -5,10 +5,10 @@ group, so `uv sync --locked` installs it and the four `ui` scenarios bound here
 and nowhere else are actually proved. `tests/test_ui.py` asserts the framework is
 present, so its absence is a failure rather than a silent skip.
 
-The `importorskip` below is what remains of the older posture, and it is kept as
-a belt for an environment synced without the dev group: a module-level `from
-fastapi.testclient import TestClient` would fail *collection* there, which is
-gate command five going red over a missing test tool rather than a defect.
+The `importorskip` below is kept as a belt for an environment synced without the
+dev group: a module-level `from fastapi.testclient import TestClient` would fail
+*collection* there, which is gate command five going red over a missing test tool
+rather than a defect.
 
 This is deliberately not the eval tests' pattern. Those stay in the main suite by
 faking their boundary in `tests/eval_fakes.py` and never importing the extra at
@@ -85,9 +85,9 @@ from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-anime-wai"
 
-# The address every client below is built against. Since v0.22.1 the app
-# refuses a request not addressed to the loopback address it was bound to, so
-# a test client has to speak that address rather than `TestClient`'s default
+# The address every client below is built against. The app refuses a request
+# not addressed to the loopback address it was bound to, so a test client has
+# to speak that address rather than `TestClient`'s default
 # `http://testserver` -- which is exactly the header an attacker's page sends.
 PORT = 8765
 ADDRESS = f"http://{HOST}:{PORT}"
@@ -326,7 +326,7 @@ def test_an_empty_fragment_returns_nothing_rather_than_everything(
 
     # The dropdown appears on the first keystroke and not before. An empty
     # fragment is contained by every tag, so answering it literally would be
-    # the 8,106-tag transfer this endpoint exists to delete.
+    # the 8,106-tag transfer this endpoint exists to avoid.
     assert body["matches"] == []
     assert body["total"] == 0
 
@@ -372,11 +372,10 @@ def test_an_input_re_opened_with_a_new_version_is_editable_again(
 ) -> None:
     """The state `review --flow F --new-version` produces, and what it is for.
 
-    `v0.22.1` refused every update to an approved input, which made this state a
-    dead end: the verb wrote a draft the surface would not edit, and the refusal
-    it shipped said so outright, naming this version as the one that resolves it.
-    The gate is now *approved and no later draft*, so the page shows the draft,
-    offers the form and accepts the write (design.md D5).
+    Refusing every update to an approved input would make this state a dead end:
+    the verb would write a draft the surface would not edit. The gate is
+    *approved and no later draft*, so the page shows the draft, offers the form
+    and accepts the write.
     """
     fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
     assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
@@ -412,11 +411,11 @@ def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
 ) -> None:
     """The hazard a third status creates, pinned from the side the count is on.
 
-    `/api/batch["approved"]` was derived from the status string and
-    `Batch.approved_count` reads the directory. They agree only while every
-    input holding an approved artifact also *reports* approved -- which stops
-    being true the moment a status exists meaning *has one, and is open again*.
-    So the payload's count reads the directory too (design.md D5).
+    Derived from the status string, `/api/batch["approved"]` would agree with
+    `Batch.approved_count`, which reads the directory, only while every input
+    holding an approved artifact also *reports* approved -- which stops being
+    true the moment a status exists meaning *has one, and is open again*. So the
+    payload's count reads the directory too.
     """
     assert client.get("/api/batch").json()["inputs"][0]["status"] == "draft"
     assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
@@ -443,10 +442,10 @@ def test_an_update_written_against_a_stale_draft_is_refused(
 ) -> None:
     """The page autosaves on a debounce, so two `PUT`s can be in flight at once.
 
-    Nothing ordered them: they committed in whatever order the server finished
-    them, so last write won where *last* was not the operator's last keystroke.
+    Unordered, they would commit in whatever order the server finished them, so
+    last write would win where *last* is not the operator's last keystroke.
     `st_mtime` is the precondition because nothing else exists on disk -- the
-    draft carries no timestamp, no revision counter and no digest (design.md D6).
+    draft carries no timestamp, no revision counter and no digest.
     """
     body = client.get(f"/api/inputs/{made.id}").json()
     fields, saved = body["fields"], body["saved"]
@@ -479,9 +478,9 @@ def test_an_update_written_against_a_stale_draft_is_refused(
 def test_an_update_stating_no_precondition_is_still_accepted(
     client: TestClient, made: Run
 ) -> None:
-    # A payload carrying no `saved` states no precondition, and gets the
-    # behaviour it had before -- the mtime is already on the wire as the field
-    # every response returns, so a client that echoes it gets the check.
+    # A payload carrying no `saved` states no precondition, and is written
+    # without the check -- the mtime is already on the wire as the field every
+    # response returns, so a client that echoes it gets the check.
     fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
 
     assert (
@@ -683,7 +682,7 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
     body = reopened.get(f"/api/inputs/{made.id}").json()
 
     # Approval deletes the draft and reopening writes no replacement, so there is
-    # nothing on disk for an edit to be written into (design.md D5).
+    # nothing on disk for an edit to be written into.
     assert body["readonly"] is True
     assert body["draft"] is None
     assert body["approved"] == "001.approved.json"
@@ -720,7 +719,7 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
     # vocabulary it emits and so every one of them is committable.
     assert body["wd14"] == [{"tag": "1girl", "confidence": 0.9}]
     # Filtered: `fashion photography` is in no field's reach, and on the
-    # acceptance batch nine in ten of this model's tags were like it (D29).
+    # acceptance batch nine in ten of this model's tags were like it.
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
 
 
@@ -731,11 +730,10 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
     """Deduplicated on the hosted side only, and the asymmetry is the point.
 
     `OfferedTag` is `{tag, posts}` where `posts` is a pure function of `tag`, so
-    a repeat is a byte-identical object carrying no information -- and it was a
-    duplicate Vue key. `ScoredTag` is `{tag, confidence}`, where two rows can
-    legitimately differ, so `_wd14` is left whole: deduping it would falsify
-    `ui:source:both-tag-lists-are-shown-raw-and-read-only`'s first `THEN`
-    (design.md D7).
+    a repeat is a byte-identical object carrying no information -- and it would
+    be a duplicate Vue key. `ScoredTag` is `{tag, confidence}`, where two rows
+    can legitimately differ, so `_wd14` is left whole: deduping it would falsify
+    `ui:source:both-tag-lists-are-shown-raw-and-read-only`'s first `THEN`.
     """
     _clear_wd14(made)
     tag_wd14(made, FLOW, fake_tagger)
@@ -807,7 +805,7 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
     assert marked["brown hair"]["posts"] == vocabulary.count("brown hair")
     assert marked["blue eyes"]["posts"] == vocabulary.count("blue eyes")
     # Every tag that reaches the page carries a number, because every tag that
-    # reaches the page is in the vocabulary. There is no membership flag left to
+    # reaches the page is in the vocabulary. There is no membership flag to
     # send: it would be `true` on all of them.
     assert all(one["posts"] > 0 for one in body["tags"])
     assert all(set(one) == {"tag", "posts"} for one in body["tags"])
@@ -817,11 +815,11 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
 def test_an_input_with_neither_artifact_carries_null_and_still_serves(
     client: TestClient, made: Run
 ) -> None:
-    # A run whose sheet was filled before v0.20 and whose tag lists were never
-    # written. It cannot be produced by filling a sheet now -- the stage refuses
-    # without a tag list -- so it is produced by removing the one the fixture
-    # wrote, which is the state on disk either way. Both are null, the surface
-    # answers 200, and nothing anywhere is a refusal (design.md D20).
+    # A run whose sheet was filled before the tagging stages existed and whose
+    # tag lists were never written. It cannot be produced by filling a sheet --
+    # the stage refuses without a tag list -- so it is produced by removing the
+    # one the fixture wrote, which is the state on disk either way. Both are
+    # null, the surface answers 200, and nothing anywhere is a refusal.
     _clear_wd14(made)
 
     response = client.get(f"/api/inputs/{made.id}")
@@ -839,7 +837,7 @@ def test_one_list_present_and_the_other_absent_is_also_silent(
 ) -> None:
     # The state a run is in when the hosted tagger has not been reached: a WD14
     # list and no hosted one. A missing hosted list is an absent aid, never a
-    # blocked review (design.md D3).
+    # blocked review.
     tag_wd14(made, FLOW, fake_tagger)
 
     body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
@@ -853,8 +851,8 @@ def test_the_caption_reaches_the_page_whole_and_the_browser_splits_it(
     client: TestClient, made: Run
 ) -> None:
     # The split is `ui/src/caption.ts`'s and the server does not do it: sending
-    # prose to be split and back would be a round trip for a regex
-    # (design.md D10). What the server owes is the prose, unmodified.
+    # prose to be split and back would be a round trip for a regex. What the
+    # server owes is the prose, unmodified.
     body = client.get(f"/api/inputs/{made.id}").json()
 
     assert body["caption"] == "Dark brown hair, brown eyes."

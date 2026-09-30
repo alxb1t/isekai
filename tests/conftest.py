@@ -70,9 +70,9 @@ def _shipped_workflow() -> Workflow:
 
     The suite reads the shipped graph itself: a byte-identical fixture copy with
     no drift check is a second thing to rename and a silent divergence waiting to
-    happen (design.md D9). It is reached through the flow that declares it rather
-    than through a path constant, so the fixture and the render path agree on
-    which file the shipped graph is by construction.
+    happen. It is reached through the flow that declares it rather than through a
+    path constant, so the fixture and the render path agree on which file the
+    shipped graph is by construction.
     """
     return json.loads(load_flow("summon-anime-wai").graph_path.read_text())
 
@@ -145,7 +145,7 @@ def require_vocabulary(path: Path) -> None:
 
     It skips only where `ISEKAI_VOCABULARY=absent` declares the file missing, as
     CI does; anywhere else a check that reads it fails rather than skip silently.
-    Why: `0027` design D5.
+    Why: the operator's machine runs the gate at every phase and release.
     """
     if path.exists():
         return

@@ -251,13 +251,9 @@ def test_the_stage_refuses_once_the_budget_is_spent(run: Run) -> None:
 
 @pytest.mark.spec("caption:failure:decline-is-permanent")
 def test_a_decline_names_the_photograph_and_writes_no_artifact(run: Run) -> None:
-    """The scenario lost its second clause with the second arm (design.md D21).
+    """A decline is recorded as permanent, and no caption is written for it.
 
-    It used to assert that no *other implementation* was substituted. With one
-    arm that is vacuously true, and this repository has a written standard against
-    asserting what cannot fail. What survives is the live half: a decline is
-    recorded as permanent, naming the photograph, and no caption is written for
-    the attempt.
+    The refusal names the photograph.
     """
     reader = FakeReader(failure=StageFailure("permanent", "the reader declined"))
 
@@ -662,7 +658,7 @@ def test_a_completed_caption_reads_no_model_record(
     assert caption(run, reader) is None
 
 
-@pytest.mark.spec_exempt("structural: the check is memoised per model, 0033 design D4")
+@pytest.mark.spec_exempt("structural: the check is memoised per model")
 def test_a_models_record_is_read_once_per_root(
     run: Run, tmp_path: Path, model_records: Path
 ) -> None:

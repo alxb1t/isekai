@@ -1,7 +1,7 @@
 """The agent skills: every command they name is one this build accepts.
 
 A skill exists so an agent runs the flows without reading the source, and it is
-worth that only while its commands are true (0035 design D6).
+worth that only while its commands are true.
 """
 
 import re
