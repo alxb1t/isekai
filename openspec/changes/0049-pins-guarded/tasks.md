@@ -8,7 +8,7 @@ scenario; each task below adds the tests that bind them.
 - [x] 1 — The image's pins
 - [x] 2 — The records
 - [x] 3 — The roots
-- [ ] 4 — Drift
+- [x] 4 — Drift
 
 Line numbers are `df5e436`'s. Every new test carries `@pytest.mark.spec` with the key its task names, or
 `@pytest.mark.spec_exempt` as a structural twin.
@@ -40,9 +40,9 @@ Line numbers are `df5e436`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 4 — Drift
 
-- [ ] 4.1 In the `Makefile`, add `drift` and end it in `git diff --exit-code --stat`, and make `derive` run the field map's deriver then `drift`'s recipe; add `.github/workflows/drift.yml`, per [D7](design.md#d7).
+- [x] 4.1 In the `Makefile`, add `drift` and end it in `git diff --exit-code --stat`, and make `derive` run the field map's deriver then `drift`'s recipe; add `.github/workflows/drift.yml`, per [D7](design.md#d7).
   Verify: `grep -c '^drift:' Makefile` prints `1`, `grep -c 'git diff --exit-code --stat' Makefile` prints `1`, `grep -c 'schedule:' .github/workflows/drift.yml` prints `1`, and `grep -c 'make drift' .github/workflows/drift.yml` prints `1`.
-- [ ] 4.2 In `tests/test_infra.py`, make `uv_versions_apart` read every workflow's uv version, and restate `test_every_uv_version_the_build_names_is_the_root_projects` and `test_the_check_catches_a_uv_version_that_drifted`.
+- [x] 4.2 In `tests/test_infra.py`, make `uv_versions_apart` read every workflow's uv version, and restate `test_every_uv_version_the_build_names_is_the_root_projects` and `test_the_check_catches_a_uv_version_that_drifted`.
   Verify: `grep -c 'def uv_versions_apart(root: str, ci: str' tests/test_infra.py` prints `0`.
-- [ ] 4.3 Restate the *Known breaks* line in `docs/principles.md`, and name `make drift` in `docs/pins.md`'s *Re-pinning*, per [D7](design.md#d7).
+- [x] 4.3 Restate the *Known breaks* line in `docs/principles.md`, and name `make drift` in `docs/pins.md`'s *Re-pinning*, per [D7](design.md#d7).
   Verify: `grep -c 'never re-run' docs/principles.md` prints `0`, and `grep -c 'make drift' docs/pins.md` prints `1`.

@@ -164,7 +164,7 @@ a test re-derives it and expects the same bytes.**
   `tests/test_field_map.py::test_the_committed_table_re_derives_without_reading_the_gitignored_runs`.
 - **Known breaks:** the sampling options do not say they are not manifest keys. The field map's
   re-derivation skips in CI, which declares the vocabulary absent, and the derivers that fetch from the
-  network are never re-run.
+  network run weekly in `drift.yml`, outside the gate.
 
 ### Everything that shapes an output is pinned
 
