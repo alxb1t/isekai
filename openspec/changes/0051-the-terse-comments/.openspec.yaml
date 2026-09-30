@@ -1,0 +1,6 @@
+# This change carries no spec delta: it rewrites comments and docstrings, and adds a
+# structural guard. See proposal.md.
+#
+# `skip_specs` is honoured only when this file names a resolvable `schema`.
+schema: spec-driven
+skip_specs: true
