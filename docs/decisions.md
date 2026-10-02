@@ -118,7 +118,7 @@ inference** — `config/vocabulary.json`.
 
 ### D8 · The base
 
-**Both flows draw on WAI-illustrious-SDXL.** A flow on another base is a new flow, named for that base
+**Every flow draws on WAI-illustrious-SDXL.** A flow on another base is a new flow, named for that base
 ([D15](#d15--a-flow-is-named-for-what-it-is)). The checkpoint and its digest belong to each flow.
 
 - **Why:** the sheet's tags are how a render is steered, so the base's grasp of tags is the ceiling. Its

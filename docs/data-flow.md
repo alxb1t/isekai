@@ -25,6 +25,7 @@ its neighbours.
       ▼
   ③ review ── reads sheets/ ──▶ review/NNN.draft.json
      approve ── reads the draft ──▶ review/NNN.approved.json
+      │   with --from, reads the source flow's approval instead
       │           (or `ui`, the same stage in a browser)
       ▼
   ④ generate ── reads the approved sheet ──▶ prompts/   assembled, offline
@@ -90,8 +91,9 @@ seeing behind it is what these artifacts are for.
 only thing every flow shares is the input itself — the run holds a *copy of the
 photograph*, which is what makes it reconstructable from disk. Below the split is
 one subtree per flow, so adding a flow adds a subtree and no flow can read
-another's artifacts. Nesting stage-first would scatter a new flow across every
-stage directory instead.
+another's artifacts unless the operator names it as a source
+([D38](decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
+Nesting stage-first would scatter a new flow across every stage directory instead.
 
 The names above are `run.py`'s, not each stage's: the run owns the layout. Inside
 a directory an artifact is `NNN.json`, with `NNN.draft.json` and

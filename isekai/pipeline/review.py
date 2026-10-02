@@ -105,9 +105,11 @@ def state(directory: Path) -> Status:
     `re-opened` is an approved artifact with a **later** version beside it,
     which is exactly what `review --flow F --new-version <run>` writes and nothing
     else does. Later rather than merely present, so a draft that predated
-    the approval could never re-open one -- and `approved_versions()[-1]` is
-    the number the approved artifact records as `approved_from`, because
-    `approve()` derives its filename and that field from one local.
+    the approval could never re-open one -- and for an approval made from a
+    draft, `approved_versions()[-1]` is the number it records as
+    `approved_from`, because `approve()` derives its filename and that field
+    from one local. A copy keeps its source's producer and names its origin in
+    `copied_from` instead.
 
     Filenames only: no artifact is opened, and the common unapproved case
     costs a single listing.

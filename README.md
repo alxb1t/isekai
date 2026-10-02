@@ -191,7 +191,7 @@ flow it does not read. It reaches no model and no GPU, and it works on a checkou
 
 ### A batch of photographs, through both flows
 
-The same steps for a directory of photographs and both tracked flows, one command per step. Written
+The same steps for a directory of photographs and `summon` and `conjure`, one command per step. Written
 for zsh, where `P=(…)` is an array of every file in the directory; in bash, use `"${P[@]}"` for `$P`.
 
 ```sh

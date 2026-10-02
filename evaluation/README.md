@@ -18,10 +18,10 @@ uv run python -m evaluation <batch>/runs --cohort <cohort>
 Run it over a batch's runs after `summon` has rendered them:
 
 ```
-python -m isekai approve --flow control-anime-wai --from summon-anime-wai <run>…
+uv run python -m isekai approve --runs <runs> --flow control-anime-wai --from summon-anime-wai <run>…
 bash infra/render.sh <runs> control-anime-wai=summon-anime-wai
-python -m evaluation <runs> --cohort <cohort>
-python -m isekai compare <batch>
+uv run python -m evaluation <runs> --cohort <cohort>
+uv run python -m isekai compare <batch>
 ```
 
 On a batch `summon` has not rendered, one session renders both, the source first:

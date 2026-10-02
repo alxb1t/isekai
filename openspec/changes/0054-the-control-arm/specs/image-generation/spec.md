@@ -76,6 +76,13 @@ the sheet: seeds from one approval under a sheet copied from another compare two
 - **THEN** the run is refused naming both approvals and the command that brings them in step
 - **AND** no endpoint is contacted
 
+#### Scenario: a damaged approval record is refused by name
+- **Key:** `image-generation:seeds-from:a-damaged-approval-record-is-refused`
+- **Layers:** unit
+- **WHEN** a source flow is named and the flow's approval records its producer or its origin in a damaged shape
+- **THEN** the run is refused naming the approval's file
+- **AND** no endpoint is contacted
+
 #### Scenario: a copy behind a source that renders first is refused first
 - **Key:** `image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first`
 - **Layers:** unit

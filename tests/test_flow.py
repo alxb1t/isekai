@@ -416,7 +416,7 @@ def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
 def test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads(
     name: str,
 ) -> None:
-    """Both directions, on both flows: nothing missing, and nothing spare.
+    """Both directions, on every flow: nothing missing, and nothing spare.
 
     The refusal in `load_flow` only checks the first. This checks the second as
     a property of the flows that ship -- 12/12 for `summon-anime-wai` and 9/9

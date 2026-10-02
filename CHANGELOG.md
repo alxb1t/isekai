@@ -22,6 +22,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `approve --from` copies again once the source is approved again; `generate --seeds-from` refuses an out-of-step copy
   before any pod, and `--in-step-with` does when `render.sh` takes a source and its dependent in one session, source
   first (0054 D5, D6).
+- A source with no render, or rendered from an older approval, is fixed by one session naming the flow beside it; a
+  damaged approval record under `--seeds-from` is refused by name rather than crashing (0054 D3, D5).
 
 ## [0.32.0] - 2026-10-02 · 0053-the-evaluation-mechanism
 

@@ -43,6 +43,7 @@ from isekai.foundation.artifacts import (
     Prompt,
     Runtime,
     read,
+    require,
     write,
 )
 from isekai.foundation.artifacts import Render as RenderSidecar
@@ -307,11 +308,14 @@ def render_groups(run: Run, flow: str) -> list[Path]:
     ]
 
 
-def source_seeds(run: Run, source: str, suffix: str) -> tuple[int, list[int]]:
+def source_seeds(
+    run: Run, source: str, suffix: str, flows: Sequence[str]
+) -> tuple[int, list[int]]:
     """Return `source`'s latest render group for `run` and its seeds, or refuse.
 
     `suffix` is what `source` says it produces. The group is the number of the
-    source approval those renders came from.
+    source approval those renders came from. `flows` are the flows taking the
+    seeds, named in the remedy so one session renders the source and them.
 
     Read from filenames alone. A latest group holding no render counts as none:
     an empty list would read downstream as "draw a seed", which is the opposite
@@ -323,8 +327,8 @@ def source_seeds(run: Run, source: str, suffix: str) -> tuple[int, list[int]]:
     if not seeds:
         raise Refusal(
             f"{run.id}: no render of {source} to take seeds from; run "
-            f"`bash infra/render.sh {_runs_root(run)} {source}=1` "
-            "to render it first"
+            f"`bash infra/render.sh {_runs_root(run)} {source}=1"
+            f"{_dependents(flows, source)}` to render it first"
         )
     return int(groups[-1].name), seeds
 
@@ -344,9 +348,17 @@ def refuse_out_of_step(
     brings the two in step.
     """
     version, path = approved_artifact(run, flow)
-    body = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
-    copied = body["producer"].get("copied_from")
-    if copied is None or copied["flow"] != source:
+    remedy = f"restore it in {path} by hand"
+    body = read(path, APPROVED_FILE, remedy=remedy)
+    require(path, body, "producer", dict, remedy)
+    producer = body["producer"]
+    if producer.get("copied_from") is None:
+        return
+    require(path, producer, "copied_from", dict, remedy)
+    copied = producer["copied_from"]
+    require(path, copied, "flow", str, remedy)
+    require(path, copied, "approval", int, remedy)
+    if copied["flow"] != source:
         return
     latest = f"{source}'s latest renders came from approval"
     if group is None:
@@ -364,9 +376,14 @@ def refuse_out_of_step(
             f"{run.id}` to copy the newer one"
         )
     raise Refusal(
-        f"{head}`bash infra/render.sh {_runs_root(run)} {source}=1` to render "
-        f"{source} again first"
+        f"{head}`bash infra/render.sh {_runs_root(run)} {source}=1"
+        f"{_dependents([flow], source)}` to render {source} again first"
     )
+
+
+def _dependents(flows: Sequence[str], source: str) -> str:
+    """Return render.sh's specs for `flows` on `source`'s seeds, each after a space."""
+    return "".join(f" {flow}={source}" for flow in flows)
 
 
 def _runs_root(run: Run) -> str:

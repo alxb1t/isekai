@@ -1815,6 +1815,11 @@ def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
     runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "grace")]
     subject = load_flow(FLOW)
     for made in runs:
+        # An earlier group on other seeds, so only the latest one can pass.
+        prepare(made, {FLOW: subject})
+        render(made, subject, FakeComfyClient(), seeds=[7], poll=0)
+        review(made, FLOW, new_version=True)
+        approve(made, FLOW, schema, vocabulary)
         prepare(made, {FLOW: subject})
         render(made, subject, FakeComfyClient(), seeds=[11, 12], poll=0)
         approve(made, CONTROL, schema, vocabulary, source=FLOW)
@@ -1847,7 +1852,8 @@ def test_a_run_without_a_source_render_is_refused_before_any_endpoint(
 
     message = err.getvalue()
     assert f"{run.id}: no render of {FLOW}" in message
-    assert f"bash infra/render.sh {tmp_path / 'runs'} {FLOW}=1" in message
+    remedy = f"bash infra/render.sh {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
+    assert remedy in message
     _assert_nothing_rented(client, run, CONTROL)
 
 
@@ -1922,6 +1928,45 @@ def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpo
     assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
         copy == "older"
     )
+    # One session renders the source again and the flow on its seeds.
+    render_both = f"render.sh {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
+    assert (render_both in message) == (copy == "newer")
+    _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec("image-generation:seeds-from:a-damaged-approval-record-is-refused")
+@pytest.mark.parametrize(
+    "producer",
+    [
+        "a string",
+        {"copied_from": "a string"},
+        {"copied_from": {"flow": FLOW}},
+    ],
+)
+def test_a_damaged_approval_record_is_refused_by_name_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run, producer: object
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    subject = load_flow(FLOW)
+    prepare(run, {FLOW: subject})
+    render(run, subject, FakeComfyClient(), seeds=[11], poll=0)
+    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    # The prompt is assembled first, so `prepare` does not read the approval again.
+    prepare(run, {CONTROL: load_flow(CONTROL)})
+    approved = run.path / CONTROL / "review" / "001.approved.json"
+    body = json.loads(approved.read_text())
+    body["producer"] = producer
+    approved.write_text(json.dumps(body))
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert err.getvalue().startswith("refused: 001.approved.json: records no `")
+    assert f"restore it in {approved} by hand" in err.getvalue()
     _assert_nothing_rented(client, run, CONTROL)
 
 

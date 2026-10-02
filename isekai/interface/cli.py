@@ -690,7 +690,9 @@ def _generate(
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
         if args.seeds_from is not None:
-            group, borrowed[run.id] = source_seeds(run, args.seeds_from, source_suffix)
+            group, borrowed[run.id] = source_seeds(
+                run, args.seeds_from, source_suffix, list(flows)
+            )
             for flow in assembled:
                 refuse_out_of_step(run, flow, args.seeds_from, group)
         if args.in_step_with is not None:

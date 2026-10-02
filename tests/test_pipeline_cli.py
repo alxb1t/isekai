@@ -592,10 +592,14 @@ def test_an_untracked_approval_source_is_refused_naming_the_flows_there_are(
     wired = _wiring(tmp_path)
     err = io.StringIO()
     wired.err = err
+    # A photograph, so a run would be opened if the source were checked late.
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
     parsed = build_parser().parse_args(
-        ["approve", "--flow", "summon-anime-wai", "--from", "summon-v9", "x"]
+        ["approve", "--flow", "summon-anime-wai", "--from", "summon-v9", str(photo)]
     )
 
     assert dispatch(parsed, wired) == 1
 
+    assert not (tmp_path / "runs").exists()
     assert "summon-v9: not a flow this build tracks" in err.getvalue()
