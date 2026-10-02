@@ -1,0 +1,168 @@
+{
+  "tagger": {
+    "models/wd14/model.onnx": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "models/wd14/tags.csv": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "floor": 0.15,
+  "rows": [
+    {
+      "run": "187ec7dce855aaaa",
+      "flow": "summon-anime-wai",
+      "group": 1,
+      "seed": 1,
+      "outcome": "read",
+      "fields": {
+        "hair_colour": {
+          "asked": [
+            "brown hair"
+          ],
+          "missed": []
+        },
+        "eye_colour": {
+          "asked": [
+            "green eyes"
+          ],
+          "missed": []
+        },
+        "clothes": {
+          "asked": [
+            "shirt",
+            "black shirt",
+            "jacket"
+          ],
+          "missed": [
+            "shirt",
+            "black shirt"
+          ]
+        },
+        "marks": {
+          "asked": [],
+          "missed": []
+        }
+      }
+    },
+    {
+      "run": "28c3bb7ce031bbbb",
+      "flow": "summon-anime-wai",
+      "group": 1,
+      "seed": 1,
+      "outcome": "read",
+      "fields": {
+        "hair_colour": {
+          "asked": [
+            "brown hair"
+          ],
+          "missed": []
+        },
+        "eye_colour": {
+          "asked": [
+            "green eyes"
+          ],
+          "missed": []
+        },
+        "clothes": {
+          "asked": [
+            "shirt",
+            "black shirt",
+            "jacket"
+          ],
+          "missed": []
+        },
+        "marks": {
+          "asked": [],
+          "missed": []
+        }
+      }
+    },
+    {
+      "run": "d2043248d6e1cccc",
+      "flow": "summon-anime-wai",
+      "group": 2,
+      "seed": 3,
+      "outcome": "unreadable",
+      "fields": {}
+    },
+    {
+      "run": "28c3bb7ce031bbbb",
+      "flow": "control-anime-wai",
+      "group": 1,
+      "seed": 1,
+      "outcome": "read",
+      "fields": {
+        "hair_colour": {
+          "asked": [
+            "brown hair"
+          ],
+          "missed": []
+        },
+        "eye_colour": {
+          "asked": [
+            "green eyes"
+          ],
+          "missed": []
+        },
+        "clothes": {
+          "asked": [
+            "shirt",
+            "black shirt",
+            "jacket"
+          ],
+          "missed": [
+            "shirt",
+            "black shirt"
+          ]
+        },
+        "marks": {
+          "asked": [],
+          "missed": []
+        }
+      }
+    },
+    {
+      "run": "d2043248d6e1cccc",
+      "flow": "control-anime-wai",
+      "group": 1,
+      "seed": 1,
+      "outcome": "no approval",
+      "fields": {}
+    }
+  ],
+  "totals": {
+    "control-anime-wai": {
+      "hair_colour": {
+        "read_back": 1,
+        "asked": 1
+      },
+      "eye_colour": {
+        "read_back": 1,
+        "asked": 1
+      },
+      "clothes": {
+        "read_back": 1,
+        "asked": 3
+      },
+      "marks": {
+        "read_back": 0,
+        "asked": 0
+      }
+    },
+    "summon-anime-wai": {
+      "hair_colour": {
+        "read_back": 2,
+        "asked": 2
+      },
+      "eye_colour": {
+        "read_back": 2,
+        "asked": 2
+      },
+      "clothes": {
+        "read_back": 4,
+        "asked": 6
+      },
+      "marks": {
+        "read_back": 0,
+        "asked": 0
+      }
+    }
+  }
+}

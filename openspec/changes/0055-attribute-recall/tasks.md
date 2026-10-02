@@ -5,7 +5,7 @@ scenario; each task below adds the tests that bind them.
 
 ## Progress
 
-- [ ] 1 — The arithmetic
+- [x] 1 — The arithmetic
 - [ ] 2 — The reader
 - [ ] 3 — The command
 - [ ] 4 — The records
@@ -14,11 +14,11 @@ Line numbers are `73f45f4`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 1 — The arithmetic
 
-- [ ] 1.1 **HALT CHECK** — no code reads `scored`, the tagger's floor is `0.15`, and no recall module exists.
+- [x] 1.1 **HALT CHECK** — no code reads `scored`, the tagger's floor is `0.15`, and no recall module exists.
   Verify: `grep -rn 'schema\.scored' isekai evaluation tools --include='*.py' | wc -l` prints `0`, `grep -c '^FLOOR = 0.15' isekai/boundary/wd14.py` prints `1`, and `test ! -e evaluation/recall.py && echo none` prints `none`.
-- [ ] 1.2 Write the pure half of `evaluation/recall.py`: `count`, `totals`, `record` and `table`, per [D1](design.md#d1).
+- [x] 1.2 Write the pure half of `evaluation/recall.py`: `count`, `totals`, `record` and `table`, per [D1](design.md#d1).
   Verify: `grep -cE '^def (count|totals|record|table)\(' evaluation/recall.py` prints `4`.
-- [ ] 1.3 Add `tests/test_recall.py` and the pair `tests/recall/recall.json`, `tests/recall/recall.txt`, binding `evaluation:recall:a-missed-tag-is-named`, `evaluation:recall:only-scored-fields-are-counted` and `evaluation:recall:the-table-re-derives-from-the-record`, on tag sets written by hand.
+- [x] 1.3 Add `tests/test_recall.py` and the pair `tests/recall/recall.json`, `tests/recall/recall.txt`, binding `evaluation:recall:a-missed-tag-is-named`, `evaluation:recall:only-scored-fields-are-counted` and `evaluation:recall:the-table-re-derives-from-the-record`, on tag sets written by hand.
   Verify: `grep -c 'pytest.mark.spec("evaluation:recall:' tests/test_recall.py` prints `3`, and `ls tests/recall` prints `recall.json` and `recall.txt`.
 
 ## 2 — The reader
