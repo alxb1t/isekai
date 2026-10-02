@@ -398,11 +398,13 @@ def approve(
 def _copy_approval(
     run: Run, flow: str, schema: Schema, vocabulary: Vocabulary, source: str
 ) -> Path | None:
-    """Write `source`'s latest approval under `flow`, or None if `flow` has one.
+    """Write `source`'s latest approval under `flow`, or None if `flow` is in step.
 
-    The fields are validated against `flow`'s schema, so a copy the target cannot
-    hold is refused like any draft. `sheet` stays `source`'s: it is provenance,
-    and `copied_from` says where to look.
+    `flow` is in step when its latest approval is a copy of `source`'s latest; an
+    older copy or a hand approval is copied over under the next number. The fields
+    are validated against `flow`'s schema, so a copy the target cannot hold is
+    refused like any draft. `sheet` stays `source`'s: it is provenance, and
+    `copied_from` says where to look.
     """
     origin = run.directory(source, REVIEW)
     versions_held = approved_versions(origin)
@@ -413,11 +415,23 @@ def _copy_approval(
             f"the draft, then `python -m isekai approve --flow {source} {run.id}` "
             "first"
         )
-    directory = run.directory(flow, REVIEW)
-    if approved_versions(directory):
-        return None
-
     approval = versions_held[-1]
+    directory = run.directory(flow, REVIEW)
+    held = approved_versions(directory)
+    if held:
+        mine = directory / artifact_name(held[-1], APPROVED)
+        latest = read(mine, APPROVED_FILE)
+        require(
+            mine,
+            latest,
+            "producer",
+            dict,
+            f"delete {mine}, then run {_again(run, flow)} to approve it afresh",
+        )
+        copied_from = latest["producer"].get("copied_from")
+        if copied_from == {"flow": source, "approval": approval}:
+            return None
+
     path = origin / artifact_name(approval, APPROVED)
     body = read(path, APPROVED_FILE)
     remedy = f"delete {path}, then run {_again(run, source)} to approve it afresh"

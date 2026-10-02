@@ -288,8 +288,11 @@ reaches a model or a GPU** — its scope is stage ③ alone.
 - `--count COUNT` — how many renders per photograph per flow (default 1, seeds drawn).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
 - `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
-  `--count` or `--seed`.
-- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source.
+  `--count` or `--seed`. A flow whose approval is a copy made from another approval than the one those
+  renders came from is refused before any boot.
+- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source;
+  a copy already of the source's latest writes nothing, and any other approval is copied over under the next
+  number.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.

@@ -54,7 +54,13 @@ from isekai.interface.compare_view import write_page
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, booted_image, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.generate import prepare, read_runtime, render, source_seeds
+from isekai.pipeline.generate import (
+    prepare,
+    read_runtime,
+    refuse_out_of_step,
+    render,
+    source_seeds,
+)
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
@@ -666,7 +672,9 @@ def _generate(
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
         if args.seeds_from is not None:
-            borrowed[run.id] = source_seeds(run, args.seeds_from, source_suffix)
+            group, borrowed[run.id] = source_seeds(run, args.seeds_from, source_suffix)
+            for flow in assembled:
+                refuse_out_of_step(run, flow, args.seeds_from, group)
         for flow, path in assembled.items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))

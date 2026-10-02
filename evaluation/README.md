@@ -24,6 +24,12 @@ python -m evaluation <runs> --cohort <cohort>
 python -m isekai compare <batch>
 ```
 
+On a batch `summon` has not rendered, one session renders both, the source first:
+
+```
+bash infra/render.sh <runs> summon-anime-wai=1 control-anime-wai=summon-anime-wai
+```
+
 The control row is the floor; the difference from the `summon` row is the face mechanism's share.
 
 ## Files

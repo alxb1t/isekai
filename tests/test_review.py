@@ -989,3 +989,32 @@ def test_an_approved_target_is_not_copied_over(
 
     assert (again, warnings) == (None, [])
     assert snapshot(run.path / CONTROL) == before
+
+
+@pytest.mark.spec("review:copy-from:a-newer-source-approval-is-copied-again")
+@pytest.mark.parametrize("target", ["an older copy", "a hand approval"])
+def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
+    run: Run, schema: Schema, vocabulary: Vocabulary, target: str
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    if target == "an older copy":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    else:
+        sheet(run, schema, vocabulary, flow=CONTROL)
+        review(run, CONTROL)
+        approve(run, CONTROL, schema, vocabulary)
+    held = run.path / CONTROL / "review" / "001.approved.json"
+    frozen = held.read_bytes()
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    _edit(draft, hair_silhouette=["long hair"])
+    newer, _ = approve(run, FLOW, schema, vocabulary)
+    assert newer is not None
+
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert copied == run.path / CONTROL / "review" / "002.approved.json"
+    body = read(copied, APPROVED_FILE)
+    assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 2}
+    assert body["fields"] == read(newer, APPROVED_FILE)["fields"]
+    assert held.read_bytes() == frozen

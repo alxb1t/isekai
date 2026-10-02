@@ -1875,3 +1875,49 @@ def test_the_parser_refuses_a_source_beside_a_count_or_a_seed(
         build_parser().parse_args(
             ["generate", "--flow", CONTROL, "--seeds-from", FLOW, *beside]
         )
+
+
+@pytest.mark.spec("image-generation:seeds-from:a-copy-out-of-step-is-refused-first")
+@pytest.mark.parametrize("copy", ["older", "newer"])
+def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run, copy: str
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    subject = load_flow(FLOW)
+
+    def render_source() -> None:
+        prepare(run, {FLOW: subject})
+        render(run, subject, FakeComfyClient(), seeds=[11], poll=0)
+
+    def approve_source_again() -> None:
+        review(run, FLOW, new_version=True)
+        approve(run, FLOW, schema, vocabulary)
+
+    # `older`: the copy is of approval 1, the source's renders of approval 2.
+    # `newer`: the copy is of approval 2, the source's renders of approval 1.
+    if copy == "older":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+        approve_source_again()
+        render_source()
+    else:
+        render_source()
+        approve_source_again()
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    message = err.getvalue()
+    assert f"{CONTROL}'s approval" in message
+    assert "001" in message and "002" in message
+    assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
+        copy == "older"
+    )
+    assert client.submissions == []
+    assert client.uploaded is None
+    assert client.stats_calls == 0
+    assert not (run.path / CONTROL / OUTPUTS).exists()

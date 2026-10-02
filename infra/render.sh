@@ -5,8 +5,10 @@
 #   bash infra/render.sh <runs> <flow>=<count|source> ...
 #   e.g. bash infra/render.sh .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
 #        bash infra/render.sh .data/b1/runs control-anime-wai=summon-anime-wai
+#        bash infra/render.sh .data/b1/runs summon-anime-wai=1 control-anime-wai=summon-anime-wai
 #
 # A count draws that many seeds; a source flow renders its latest seeds again.
+# A source rendered by count in the same line goes first, and is one session.
 # Output is shown and appended to the batch's log, <runs>/../log.txt.
 
 set -euo pipefail
@@ -32,6 +34,21 @@ for spec in "$@"; do
   flows+=(--flow "${spec%%=*}")
   names+=("${spec%%=*}"); values+=("${spec#*=}")
   if [[ "${spec#*=}" =~ ^[0-9]+$ ]]; then modes+=(--count); else modes+=(--seeds-from); fi
+done
+
+# A source rendered by count earlier in this line has no seeds until the pod is up,
+# so its dependents are checked at their turn in the render loop; one placed before
+# its source could never be.
+defer=()
+for i in "${!names[@]}"; do
+  defer+=(0)
+  [ "${modes[$i]}" = --seeds-from ] || continue
+  for j in "${!names[@]}"; do
+    { [ "${names[$j]}" = "${values[$i]}" ] && [ "${modes[$j]}" = --count ]; } || continue
+    [ "$j" -lt "$i" ] \
+      || refuse "'${names[$i]}=${values[$i]}' comes before its source '${names[$j]}=${values[$j]}'; put the source first"
+    defer[$i]=1
+  done
 done
 
 # Every run under the root, by id. bash 3.2 (macOS) has no mapfile.
@@ -61,6 +78,7 @@ uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 |
 # A source flow's render is checked here too, so a missing one refuses before the pod.
 for i in "${!names[@]}"; do
   [ "${modes[$i]}" = --count ] && continue
+  [ "${defer[$i]}" = 1 ] && continue
   uv run python -m isekai generate --flow "${names[$i]}" --seeds-from "${values[$i]}" \
     --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
 done

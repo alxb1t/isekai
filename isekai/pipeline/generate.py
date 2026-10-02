@@ -307,25 +307,59 @@ def render_groups(run: Run, flow: str) -> list[Path]:
     ]
 
 
-def source_seeds(run: Run, source: str, suffix: str) -> list[int]:
-    """Return the seeds of `source`'s latest render group for `run`, or refuse.
+def source_seeds(run: Run, source: str, suffix: str) -> tuple[int, list[int]]:
+    """Return `source`'s latest render group for `run` and its seeds, or refuse.
 
-    `suffix` is what `source` says it produces.
+    `suffix` is what `source` says it produces. The group is the number of the
+    source approval those renders came from.
 
     Read from filenames alone. A latest group holding no render counts as none:
     an empty list would read downstream as "draw a seed", which is the opposite
     of taking the source's.
-    e.g. `outputs/001/{11.png, 12.png}` -> `[11, 12]`
+    e.g. `outputs/001/{11.png, 12.png}` -> `(1, [11, 12])`
     """
     groups = render_groups(run, source)
     seeds = rendered_seeds(groups[-1], suffix) if groups else []
     if not seeds:
         raise Refusal(
             f"{run.id}: no render of {source} to take seeds from; run "
-            f"`bash infra/render.sh {shlex.quote(str(run.path.parent))} {source}=1` "
+            f"`bash infra/render.sh {_runs_root(run)} {source}=1` "
             "to render it first"
         )
-    return seeds
+    return int(groups[-1].name), seeds
+
+
+def refuse_out_of_step(run: Run, flow: str, source: str, group: int) -> None:
+    """Refuse a `flow` whose approval is a copy of another of `source`'s than `group`.
+
+    A flow whose approval does not name `source` as its origin is not checked: it
+    is rendered on `source`'s seeds under its own sheet, a different experiment.
+    The remedy depends on which side is behind, so each is told which command
+    brings the two in step.
+    """
+    version, path = approved_artifact(run, flow)
+    body = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
+    copied = body["producer"].get("copied_from")
+    if copied is None or copied["flow"] != source or copied["approval"] == group:
+        return
+    held = f"{run.id}: {flow}'s approval {version:03d} is a copy of {source}'s approval"
+    if copied["approval"] < group:
+        raise Refusal(
+            f"{held} {copied['approval']:03d}, and {source}'s latest renders came from "
+            f"approval {group:03d}; run `python -m isekai approve --flow {flow} "
+            f"--from {source} {run.id}` to copy the newer one"
+        )
+    raise Refusal(
+        f"{held} {copied['approval']:03d}, and {source}'s latest renders came from "
+        f"the older approval {group:03d}; run "
+        f"`bash infra/render.sh {_runs_root(run)} {source}=1` to render {source} "
+        "again first"
+    )
+
+
+def _runs_root(run: Run) -> str:
+    """Return the runs directory of `run`, quoted for a shell."""
+    return shlex.quote(str(run.path.parent))
 
 
 def photo_resolution(photo: Path) -> tuple[int, int]:

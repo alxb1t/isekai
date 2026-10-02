@@ -568,7 +568,7 @@ def test_sheet_prints_a_superseded_list_as_a_warning(
     assert f"{run.id}: sheet is already complete" in wired.out.getvalue()
 
 
-@pytest.mark.spec_exempt("structural: the guard on a flag no scenario names")
+@pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")
 def test_a_flow_named_as_its_own_approval_source_is_refused_naming_it(
     tmp_path: Path,
 ) -> None:
@@ -585,7 +585,7 @@ def test_a_flow_named_as_its_own_approval_source_is_refused_naming_it(
     assert not (tmp_path / "runs").exists()
 
 
-@pytest.mark.spec_exempt("structural: the guard on a flag no scenario names")
+@pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")
 def test_an_untracked_approval_source_is_refused_naming_the_flows_there_are(
     tmp_path: Path,
 ) -> None:
