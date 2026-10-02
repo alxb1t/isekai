@@ -125,6 +125,16 @@ inference** — `config/vocabulary.json`.
   LoRA ecosystem is what keeps the style library and a character LoRA within reach.
 - **Made by:** `0010`.
 
+### D37 · The evaluator's encoder shares no pin with the generator
+
+**The evaluator finds, aligns and embeds a face with models only its own manifest pins,
+`evaluation/eval_models.json`, and refuses to score when a destination there is one `config/models.json`
+carries too.**
+
+- **Why:** the identity adapter is trained to satisfy the generator's own recognizer, so a count on that
+  recognizer is the adapter grading itself. A different encoder has different blind spots.
+- **Made by:** `0053`.
+
 ## The render
 
 ### D9 · Composition comes from noise
@@ -268,11 +278,12 @@ so does the paid render.** The numbers are `run.py`'s `BUDGETS`.
 
 ### D22 · Dependencies are declared and pinned
 
-**Runtime dependencies are declared and pinned exactly. `[eval]` is the only optional extra.**
+**Runtime dependencies are declared and pinned exactly. There is no optional extra: the evaluator adds no
+package to the runtime list, and one it ever needs goes into an `[eval]` extra, never into the pipeline's.**
 
 - **Why:** an optional extra that the gate's `uv sync` is not told about gets uninstalled — the tagger
   disappeared on every gate run. The pins decide what a second machine installs.
-- **Made by:** `0025`.
+- **Made by:** `0025`, `0053`.
 
 ### D23 · System dependencies refuse rather than being assumed
 

@@ -7,7 +7,7 @@ The delta holds every new scenario; each task below adds the tests that bind the
 
 - [x] 1 — The arithmetic
 - [x] 2 — The encoder
-- [ ] 3 — The entry point
+- [x] 3 — The entry point
 - [ ] 4 — The deletion
 
 Line numbers are `20ef5a7`'s. Every new test carries `@pytest.mark.spec` with the key its task names. The batch and
@@ -35,11 +35,11 @@ its record are the operator's, after the release.
 
 ## 3 — The entry point
 
-- [ ] 3.1 Rewrite `evaluation/__main__.py` per [D5](design.md#d5): `runs`, `--cohort`, `--models`, `--flows`; `Run` and `run_view.rendered` for the runs and the seeds; `evaluation.json` beside the runs; the table on stdout.
+- [x] 3.1 Rewrite `evaluation/__main__.py` per [D5](design.md#d5): `runs`, `--cohort`, `--models`, `--flows`; `Run` and `run_view.rendered` for the runs and the seeds; `evaluation.json` beside the runs; the table on stdout.
   Verify: `grep -c photo_sha256 evaluation/__main__.py` prints `0`, `grep -c '"--cohort"' evaluation/__main__.py` prints `1`, and `grep -c 'sys.exit' evaluation/__main__.py` prints `0`.
-- [ ] 3.2 Add `tests/test_evaluation_cli.py` binding `evaluation:cohort:a-faceless-photograph-is-refused` and `evaluation:table:a-failure-is-a-row`, on a batch under `tmp_path` made with `open_run` and a fake embedder; one render with no face, one photograph never rendered, every other row written.
+- [x] 3.2 Add `tests/test_evaluation_cli.py` binding `evaluation:cohort:a-faceless-photograph-is-refused` and `evaluation:table:a-failure-is-a-row`, on a batch under `tmp_path` made with `open_run` and a fake embedder; one render with no face, one photograph never rendered, every other row written.
   Verify: `grep -c 'pytest.mark.spec("evaluation:' tests/test_evaluation_cli.py` prints `2`.
-- [ ] 3.3 In `docs/decisions.md`, restate D22 per [D6](design.md#d6) and add D37 per [D7](design.md#d7); in `docs/principles.md`, add `## Measurement` after *Privacy* with its three principles and the tests that hold them.
+- [x] 3.3 In `docs/decisions.md`, restate D22 per [D6](design.md#d6) and add D37 per [D7](design.md#d7); in `docs/principles.md`, add `## Measurement` after *Privacy* with its three principles and the tests that hold them.
   Verify: `grep -c '^### D37' docs/decisions.md` prints `1`, `grep -c 'only optional extra' docs/decisions.md` prints `0`, and `grep -c '^## Measurement' docs/principles.md` prints `1`.
 
 ## 4 — The deletion
