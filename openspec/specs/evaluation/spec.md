@@ -158,7 +158,8 @@ generator's file under another name is still the generator's. A face not found s
 
 The system SHALL write one record per batch holding, for every cohort photograph and every flow, the render's
 seed, its nearest photograph and its outcome — a hit, a miss, no face found, unreadable, not rendered — and SHALL
-print one table from that record alone, a row of counts per flow, each followed by its chance row. A run whose
+print one table from that record alone, a row of counts per flow, each followed by its chance row. The render
+ranked SHALL be the first seed of the flow's latest render group. A run whose
 frame, or one of whose flows, cannot be read SHALL be reported as unreadable, and its readable flows scored. The
 record SHALL count the runs outside the cohort and the unreadable runs and name none of them, naming each on the
 error stream alone, and SHALL be refused before anything is scored where git can reach it: inside the
@@ -173,9 +174,10 @@ chance                  1.0 / 18          2.1 / 18
 
 A table that shows only its wins is not evidence; a failure reported mid-batch scrolls away, and one damaged
 file is no reason to lose the rest. A row per flow, with its own chance beneath it, is what lets a second flow be
-read beside the first without a second tool. A run's id carries its photograph's digest and filename, and a run
-outside the cohort is by construction not one of its synthetic people, so the record — the file a later change
-commits — names none, and is never written where one `git add` publishes it
+read beside the first without a second tool. The latest group is the render the operator last made, and the one
+a control flow's seeds are taken from. A run's id carries its photograph's digest and filename, and a run
+outside the cohort is by construction not one of its synthetic people, so the record — the file a batch
+publishes — names none, and is never written where one `git add` publishes it
 ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
 
 #### Scenario: one row per flow
@@ -233,6 +235,13 @@ commits — names none, and is never written where one `git add` publishes it
 - **WHEN** the table is printed from a committed record
 - **THEN** it equals the table committed beside that record
 
+#### Scenario: the latest render group is the one ranked
+- **Key:** `evaluation:table:the-latest-group-is-ranked`
+- **Layers:** unit
+- **WHEN** a flow holds renders under two approvals
+- **THEN** the row ranks the first seed of the later approval's group
+- **AND** every other seed is listed as also rendered
+
 ### Requirement: Every model the evaluator loads is pinned and verified
 
 The system SHALL resolve each model it loads from a pinned manifest carrying a revision and a digest,
@@ -272,3 +281,94 @@ bytes it was counted with cannot be walked back to them.
 - **THEN** it is refused naming the destination, before any bytes are read
 - **AND** the check is the provisioner's own, so the containment rule has one enforcement site rather
   than two
+
+### Requirement: Attribute recall counts the approved sheet's scored tags read back from each render
+
+For each render under the runs it is given, the system SHALL read the render with the tagger that fills the
+sheet, at that tagger's own floor, and SHALL count, per scored field of the render's flow, the tags of the
+approval the render was made from that it reads back, naming each tag it does not. It SHALL read each render
+alone, with no cohort, SHALL write one record per batch holding a row per render and a total per flow, and SHALL
+print its table from that record alone. A render that does not decode, and a render whose approval cannot be
+read, SHALL each be a row saying so and SHALL NOT end the reading of another. Named runs SHALL narrow the
+reading, and a name the runs do not hold SHALL refuse before any render is read. The record SHALL name the
+tagger's files by digest and its floor, and SHALL be refused where git can reach it.
+
+```
+review/<NNN>.approved.json ── the scored fields' tags ──▶ tags asked ─┐
+outputs/<NNN>/<seed>.png ──── the tagger, at its floor ──▶ tags seen ──┴─▶ read back / asked, each miss named
+```
+
+Hair, eyes and clothes reach a render as the approved sheet's tags, so whether they survived is whether the
+tagger can read them back; the sheet's vocabulary is that tagger's label set, so it answers in the sheet's own
+words
+([D39](../../../docs/decisions.md#d39--attribute-recall-uses-the-sheets-tagger)).
+Tags are counted, not renders: a field showing three of its four tags is not a failed render, and the missing
+one is the finding. Whether the sheet is true of the photograph is the review's to say.
+
+#### Scenario: a tag read back is counted
+- **Key:** `evaluation:recall:a-tag-read-back-is-counted`
+- **Layers:** unit
+- **WHEN** the tagger reads a scored field's tag from the render at or above its floor
+- **THEN** the tag counts as read back
+- **AND** the field's count is the tags read back over the tags asked
+
+#### Scenario: a missed tag is named
+- **Key:** `evaluation:recall:a-missed-tag-is-named`
+- **Layers:** unit
+- **WHEN** a scored field's tag is not read from the render
+- **THEN** the row names the tag under its field
+
+#### Scenario: only the flow's scored fields are counted
+- **Key:** `evaluation:recall:only-scored-fields-are-counted`
+- **Layers:** unit
+- **WHEN** the approval holds tags in a field the flow's schema does not score
+- **THEN** no count is taken over them
+- **AND** a scored field holding no tag counts nothing
+
+#### Scenario: every render is a row, and every flow has a total
+- **Key:** `evaluation:recall:every-render-is-a-row`
+- **Layers:** unit
+- **WHEN** the runs hold renders across flows, approvals and seeds
+- **THEN** each render is a row counted against the approval its group names
+- **AND** each flow has a total over its rows
+
+#### Scenario: a render that does not decode is a row
+- **Key:** `evaluation:recall:an-unreadable-render-is-a-row`
+- **Layers:** unit
+- **WHEN** a render file does not decode as an image
+- **THEN** its row says it is unreadable
+- **AND** every other render is read
+
+#### Scenario: a render without its approval is a row
+- **Key:** `evaluation:recall:a-render-without-its-approval-is-a-row`
+- **Layers:** unit
+- **WHEN** the approval a render's group names is absent or cannot be read
+- **THEN** its row says so
+- **AND** every other render is read
+
+#### Scenario: named runs narrow the reading
+- **Key:** `evaluation:recall:named-runs-narrow-the-reading`
+- **Layers:** unit
+- **WHEN** runs are named after the runs directory
+- **THEN** only their renders are read
+- **AND** a name the runs directory does not hold refuses naming it, before any render is read
+
+#### Scenario: the record names the tagger and its floor
+- **Key:** `evaluation:recall:the-record-names-the-tagger-and-its-floor`
+- **Layers:** unit
+- **WHEN** the record is written
+- **THEN** it names the tagger's model and label files by digest
+- **AND** it names the floor a tag was read at
+
+#### Scenario: a record git can reach is refused
+- **Key:** `evaluation:recall:a-record-git-can-reach-is-refused`
+- **Layers:** unit
+- **WHEN** the record would be written inside the working tree and outside the ignored data root
+- **THEN** the reading is refused naming the path and the move that fixes it, before any render is read
+- **AND** no record is written
+
+#### Scenario: the table re-derives from the record
+- **Key:** `evaluation:recall:the-table-re-derives-from-the-record`
+- **Layers:** unit
+- **WHEN** the table is printed from a committed record
+- **THEN** it equals the table committed beside that record
