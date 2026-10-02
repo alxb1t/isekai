@@ -5,14 +5,19 @@ the tags the tagger sees in the render; each miss is named. The tags are counted
 not the renders: a field showing three of its four tags is not a failed render.
 
 The arithmetic is stdlib and `normalise` alone, so it is tested on tag sets
-written by hand and never needs the tagger.
+written by hand. The reader is the pipeline's own tagger, behind `Read`, so the
+suite passes it a fake.
 """
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
+from pathlib import Path
 from typing import Literal, TypedDict
 
+from isekai.boundary import wd14
+from isekai.foundation.refusal import Refusal
 from isekai.shared.vocabulary import normalise
 
+Read = Callable[[Path], set[str]]
 Outcome = Literal["read", "unreadable", "no approval"]
 
 
@@ -98,6 +103,33 @@ def record(rows: Sequence[Row], tagger: Mapping[str, str], floor: float) -> Reco
         "rows": list(rows),
         "totals": totals(rows),
     }
+
+
+def reading(tagger: wd14.LocalTagger) -> Read:
+    """Return a reader of the normalised tags `tagger` sees in an image, at its floor.
+
+    An image that does not decode refuses naming the file, so the command can
+    make it a row and read the next.
+    """
+
+    def read(path: Path) -> set[str]:
+        try:
+            found = wd14.scored(path, tagger.session, tagger.labels)
+        except OSError as undecodable:
+            raise Refusal(f"{path} does not decode as an image") from undecodable
+        return {normalise(one.tag) for one in found}
+
+    return read
+
+
+def _reader(models: Path) -> tuple[Read, dict[str, str]]:
+    """Return the real reader and the digest of each file it was verified against.
+
+    `wd14.open_session` checks both pins before the graph is opened, so the
+    digests returned are those of the bytes read.
+    """
+    tagger = wd14.open_session(models)
+    return reading(tagger), {dest: pin["sha256"] for dest, pin in tagger.pins.items()}
 
 
 def _cell(read_back: int, asked: int) -> str:

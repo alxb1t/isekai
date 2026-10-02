@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `evaluation/recall.py` counts, per scored field, the approved sheet's tags a render reads back, names each miss, and
   prints a per-flow table from its record alone (0055 D1).
+- Recall reads each render with the pipeline's WD14 tagger at its own floor, in the sheet's spelling, and refuses an image
+  that does not decode by name (0055 D2).
 
 ## [0.33.0] - 2026-10-02 · 0054-the-control-arm
 

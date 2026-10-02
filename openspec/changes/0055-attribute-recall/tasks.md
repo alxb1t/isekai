@@ -6,7 +6,7 @@ scenario; each task below adds the tests that bind them.
 ## Progress
 
 - [x] 1 — The arithmetic
-- [ ] 2 — The reader
+- [x] 2 — The reader
 - [ ] 3 — The command
 - [ ] 4 — The records
 
@@ -23,11 +23,11 @@ Line numbers are `73f45f4`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The reader
 
-- [ ] 2.1 **HALT CHECK** — the tagger reads `brown hair` from a real render at its own floor.
+- [x] 2.1 **HALT CHECK** — the tagger reads `brown hair` from a real render at its own floor.
   Verify: `uv run python -c "import glob,pathlib;from isekai.boundary import wd14;from isekai.shared.vocabulary import normalise;t=wd14.open_session();p=pathlib.Path(glob.glob('.data/v0.30.1/runs/28c3bb7ce031*/summon-anime-wai/outputs/001/*.png')[0]);print('brown hair' in {normalise(s.tag) for s in wd14.scored(p,t.session,t.labels)})"` prints `True`.
-- [ ] 2.2 Add `Read` and `_reader` to `evaluation/recall.py`, per [D2](design.md#d2): `wd14.open_session`, `wd14.scored` at the default floor, `normalise`, and a file that does not decode refused by name.
+- [x] 2.2 Add `Read` and `_reader` to `evaluation/recall.py`, per [D2](design.md#d2): `wd14.open_session`, `wd14.scored` at the default floor, `normalise`, and a file that does not decode refused by name.
   Verify: `grep -c '^def _reader(' evaluation/recall.py` prints `1`, and `grep -c 'wd14.scored(' evaluation/recall.py` prints `1`.
-- [ ] 2.3 Add to `tests/test_recall.py` a test binding `evaluation:recall:a-tag-read-back-is-counted`, with `fake_tagger` from `tests/stages.py`: a tag at or above the floor is read back in the sheet's spelling, one below it is not.
+- [x] 2.3 Add to `tests/test_recall.py` a test binding `evaluation:recall:a-tag-read-back-is-counted`, with `fake_tagger` from `tests/stages.py`: a tag at or above the floor is read back in the sheet's spelling, one below it is not.
   Verify: `grep -c 'evaluation:recall:a-tag-read-back-is-counted' tests/test_recall.py` prints `1`.
 
 ## 3 — The command
