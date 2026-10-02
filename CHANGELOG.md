@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-02 · 0053-the-evaluation-mechanism
+
 ### Added
 
 - The evaluator ranks a cohort's photographs for each render and counts two hits, its own photograph and its
