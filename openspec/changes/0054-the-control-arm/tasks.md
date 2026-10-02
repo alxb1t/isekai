@@ -5,7 +5,7 @@ scenario; each task below adds the tests that bind them.
 
 ## Progress
 
-- [ ] 1 — The flow
+- [x] 1 — The flow
 - [ ] 2 — The approval
 - [ ] 3 — The seeds
 - [ ] 4 — The records
@@ -15,11 +15,11 @@ phase's changelog bullet names the control's full digest, which the changelog-di
 
 ## 1 — The flow
 
-- [ ] 1.1 **HALT CHECK** — `summon` is pinned at the digest the brief read, its face dials are `0.9` and `0.8`, and no control flow exists.
+- [x] 1.1 **HALT CHECK** — `summon` is pinned at the digest the brief read, its face dials are `0.9` and `0.8`, and no control flow exists.
   Verify: `grep -c '96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698' tests/test_flow.py` prints `1`, `grep -c '"ip_weight": 0.9,\|"identity_cn_strength": 0.8,' flows/summon-anime-wai/flow.json` prints `2`, and `test ! -e flows/control-anime-wai && echo none` prints `none`.
-- [ ] 1.2 Copy `flows/summon-anime-wai/` to `flows/control-anime-wai/` and edit `flow.json`'s `flow`, `ip_weight` and `identity_cn_strength` per [D1](design.md#d1); add the control's digest to `PINNED` in `tests/test_flow.py`.
+- [x] 1.2 Copy `flows/summon-anime-wai/` to `flows/control-anime-wai/` and edit `flow.json`'s `flow`, `ip_weight` and `identity_cn_strength` per [D1](design.md#d1); add the control's digest to `PINNED` in `tests/test_flow.py`.
   Verify: `cmp flows/summon-anime-wai/graph.json flows/control-anime-wai/graph.json && cmp flows/summon-anime-wai/schema.json flows/control-anime-wai/schema.json && cmp flows/summon-anime-wai/caption.briefing.md flows/control-anime-wai/caption.briefing.md && echo same` prints `same`, `grep -c '"flow": "control-anime-wai"\|"ip_weight": 0,\|"identity_cn_strength": 0,' flows/control-anime-wai/flow.json` prints `3`, and `grep -c '"control-anime-wai":' tests/test_flow.py` prints `1`.
-- [ ] 1.3 Add `CONTROLS` and the equality test to `tests/test_flow.py`, binding `image-generation:control:files-equal-the-subject` and `image-generation:control:manifest-differs-only-in-the-face-dials`.
+- [x] 1.3 Add `CONTROLS` and the equality test to `tests/test_flow.py`, binding `image-generation:control:files-equal-the-subject` and `image-generation:control:manifest-differs-only-in-the-face-dials`.
   Verify: `grep -c '^CONTROLS' tests/test_flow.py` prints `1`, and `grep -c 'image-generation:control:' tests/test_flow.py` prints `2`.
 
 ## 2 — The approval

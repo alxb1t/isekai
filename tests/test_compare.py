@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.flow import load_flow
+from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.run import (
     OUTPUTS,
     PROMPTS,
@@ -195,7 +195,8 @@ def test_a_directory_without_runs_is_refused_naming_it(tmp_path: Path) -> None:
     assert err.startswith("refused: ")
     assert str(batch) in err
     # The fix is a command to paste, naming where the stages put the runs.
-    assert f"`python -m isekai tag --flow {CONJURE} --flow {SUMMON} " in err
+    flows = " ".join(f"--flow {flow}" for flow in tracked_flows())
+    assert f"`python -m isekai tag {flows} " in err
     assert f"--runs {batch / 'runs'} " in err
     assert list(batch.iterdir()) == []
 
