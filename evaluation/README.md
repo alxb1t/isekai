@@ -14,7 +14,7 @@ uv run python -m evaluation <batch>/runs --cohort <cohort>
 uv run python -m evaluation.recall <batch>/runs [<run>…]
         │
         ├─ recall.py   count · totals · record · table · the reader · the command
-        ├─ record.py   destination: where a record goes, refused where git can reach
+        ├─ record.py   runs_in · destination: where a record goes, refused where git can reach
         └─ writes <batch>/recall.json, prints the table
 ```
 
@@ -50,7 +50,7 @@ The control row is the floor; the difference from the `summon` row is the face m
 | `cohort.py` | the cohort, the two counts, chance, the record and its table. Stdlib only |
 | `face.py` | finds the face, aligns it to the template, embeds it; `python -m evaluation.face <image>…` probes the detector |
 | `recall.py` | the recall count, its record and table, the reader over the pipeline's tagger, and the command: `python -m evaluation.recall` |
-| `record.py` | `destination`: `<batch>/<name>`, refused where git can reach it; both commands call it |
+| `record.py` | what both commands ask of a batch: `runs_in` lists its runs, `destination` is `<batch>/<name>`, refused where git can reach it |
 | `eval_models.py` | reads the evaluator's manifest, and names any entry whose destination or digest the graph's manifest also carries (D37) |
 | `eval_models.json` | the evaluator's pinned manifest, derived by `tools/derive_eval_manifest.py` |
 

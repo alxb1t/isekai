@@ -21,7 +21,7 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Literal, TypedDict
 
-from evaluation.record import destination
+from evaluation.record import destination, runs_in
 from isekai.boundary import wd14
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -33,7 +33,6 @@ from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
-    FRAME_NAME,
     OUTPUTS,
     REVIEW,
     Run,
@@ -101,6 +100,11 @@ def count(
     return out
 
 
+def _read_back(field: FieldRecall) -> int:
+    """Return how many of the field's tags the render shows."""
+    return len(field["asked"]) - len(field["missed"])
+
+
 def totals(rows: Sequence[Row]) -> dict[str, dict[str, Total]]:
     """Return each flow's tags read back over tags asked, per field, from its read rows.
 
@@ -116,7 +120,7 @@ def totals(rows: Sequence[Row]) -> dict[str, dict[str, Total]]:
         for name, field in row["fields"].items():
             total = out[row["flow"]].setdefault(name, {"read_back": 0, "asked": 0})
             total["asked"] += len(field["asked"])
-            total["read_back"] += len(field["asked"]) - len(field["missed"])
+            total["read_back"] += _read_back(field)
     return out
 
 
@@ -164,7 +168,7 @@ def _cell(read_back: int, asked: int) -> str:
 
 def _cell_of(field: FieldRecall) -> str:
     """Return one render's field as a cell."""
-    return _cell(len(field["asked"]) - len(field["missed"]), len(field["asked"]))
+    return _cell(_read_back(field), len(field["asked"]))
 
 
 def _missed(row: Row) -> str:
@@ -246,19 +250,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 
 def _held(runs: Path, names: Sequence[str]) -> list[Run]:
-    """Return the runs under `runs` with a frame, narrowed to `names` when given.
+    """Return the runs under `runs`, narrowed to `names` when given.
 
     A name no run holds refuses naming it, before any render is read.
     """
-    if not runs.is_dir():
-        raise Refusal(
-            f"{runs} is not a directory; give the batch's runs directory, the "
-            "one `infra/render.sh` rendered into"
-        )
-    held = [
-        Run(frame.parent.name, frame.parent)
-        for frame in sorted(runs.glob(f"*/{FRAME_NAME}"))
-    ]
+    held = runs_in(runs)
     absent = [name for name in names if name not in {run.id for run in held}]
     if absent:
         raise Refusal(
@@ -277,6 +273,63 @@ def _asked(run: Run, flow: str, group: int) -> dict[str, list[str]]:
     body = read_artifact(path, APPROVED_FILE, remedy=remedy)
     require(path, body, "fields", dict, remedy)
     return body["fields"]
+
+
+def _row(
+    run: Run,
+    flow: str,
+    group: int,
+    seed: int,
+    outcome: Outcome,
+    fields: dict[str, FieldRecall],
+) -> Row:
+    """Return one render's row."""
+    return {
+        "run": run.id,
+        "flow": flow,
+        "group": group,
+        "seed": seed,
+        "outcome": outcome,
+        "fields": fields,
+    }
+
+
+def _group_rows(
+    run: Run,
+    flow: str,
+    group: int,
+    seeds: Sequence[int],
+    suffix: str,
+    scored: Sequence[str],
+    read_tags: Read,
+    notes: list[str],
+) -> list[Row]:
+    """Return a row per seed of one render group, counted against its approval.
+
+    An approval that cannot be read costs the group its reading; an image that
+    does not decode costs only its own.
+    """
+    try:
+        asked = _asked(run, flow, group)
+    except Refusal as unapproved:
+        notes.append(f"no approval: {run.id}: {unapproved}")
+        return [_row(run, flow, group, seed, "no approval", {}) for seed in seeds]
+    rows: list[Row] = []
+    for seed in seeds:
+        try:
+            seen = read_tags(
+                run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
+            )
+        except Refusal as undecodable:
+            notes.append(
+                f"unreadable: {undecodable}; render it again or delete it, then "
+                "this command again"
+            )
+            rows.append(_row(run, flow, group, seed, "unreadable", {}))
+        else:
+            fields = count(asked, scored, seen)
+            rows.append(_row(run, flow, group, seed, "read", fields))
+    return rows
 
 
 def survey(
@@ -303,37 +356,16 @@ def survey(
                 )
                 continue
             for _, group, seeds in groups:
-                try:
-                    asked: dict[str, list[str]] | None = _asked(run, flow, group)
-                except Refusal as unapproved:
-                    asked = None
-                    notes.append(f"no approval: {run.id}: {unapproved}")
-                for seed in seeds:
-                    row: Row = {
-                        "run": run.id,
-                        "flow": flow,
-                        "group": group,
-                        "seed": seed,
-                        "outcome": "no approval",
-                        "fields": {},
-                    }
-                    rows.append(row)
-                    if asked is None:
-                        continue
-                    render = run.directory(
-                        flow, OUTPUTS, f"{group:03d}", f"{seed}{loaded.output_suffix}"
-                    )
-                    try:
-                        seen = read_tags(render)
-                    except Refusal as undecodable:
-                        row["outcome"] = "unreadable"
-                        notes.append(
-                            f"unreadable: {undecodable}; render it again or delete "
-                            "it, then this command again"
-                        )
-                    else:
-                        row["outcome"] = "read"
-                        row["fields"] = count(asked, scored, seen)
+                rows += _group_rows(
+                    run,
+                    flow,
+                    group,
+                    seeds,
+                    loaded.output_suffix,
+                    scored,
+                    read_tags,
+                    notes,
+                )
     return rows, notes
 
 

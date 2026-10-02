@@ -32,11 +32,12 @@ from evaluation.cohort import (
 )
 from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
 from evaluation.record import destination as record_destination
+from evaluation.record import runs_in
 from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
+from isekai.foundation.run import OUTPUTS, Run
 from isekai.interface.run_view import rendered
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
@@ -69,19 +70,6 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "--flows", type=Path, default=FLOWS_DIR, help="where the flows are declared"
     )
     return p.parse_args(argv)
-
-
-def _runs(directory: Path) -> list[Run]:
-    """Return every run under `directory` that has a frame, in name order."""
-    if not directory.is_dir():
-        raise Refusal(
-            f"{directory} is not a directory; give the batch's runs directory, the "
-            "one `infra/render.sh` rendered into"
-        )
-    return [
-        Run(frame.parent.name, frame.parent)
-        for frame in sorted(directory.glob(f"*/{FRAME_NAME}"))
-    ]
 
 
 def _gallery(cohort: Cohort, embed: Embed) -> dict[Photograph, Vector]:
@@ -134,8 +122,9 @@ def _rows(
         ]
         if not renders:
             continue
-        latest = next(found for found in renders if found[0] == renders[-1][0])
-        (group, seed), rest = latest, [found for found in renders if found != latest]
+        group = renders[-1][0]
+        seed = next(s for g, s in renders if g == group)
+        rest = [s for g, s in renders if (g, s) != (group, seed)]
         try:
             vector = embed(
                 run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
@@ -152,7 +141,7 @@ def _rows(
                 if vector is None
                 else scored(source, run.id, seed, rank(vector, gallery))
             )
-        rows[flow]["also_rendered"] = [s for _, s in rest]
+        rows[flow]["also_rendered"] = rest
     return rows, whole
 
 
@@ -178,7 +167,7 @@ def score(
     matched: list[tuple[Run, Photograph]] = []
     outside = unreadable = 0
     notes: list[str] = []
-    for run in _runs(runs):
+    for run in runs_in(runs):
         try:
             source = cohort.by_digest(run.photo_record["sha256"])
         except Refusal as damaged:

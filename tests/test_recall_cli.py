@@ -9,7 +9,14 @@ from evaluation.recall import Record
 from isekai.boundary import wd14
 from isekai.foundation.artifacts import APPROVED_FILE
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, REVIEW, Run, open_run
+from isekai.foundation.run import (
+    APPROVED,
+    OUTPUTS,
+    REVIEW,
+    Run,
+    artifact_name,
+    open_run,
+)
 from isekai.interface import wiring
 
 SUMMON = "summon-anime-wai"
@@ -40,7 +47,7 @@ class _Tagger:
 
 def _approve(run: Run, flow: str, group: int, fields: dict[str, list[str]]) -> None:
     """Write the approval render group `group` is made from."""
-    path = run.directory(flow, REVIEW, f"{group:03d}.approved.json")
+    path = run.directory(flow, REVIEW, artifact_name(group, APPROVED))
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"schema": APPROVED_FILE.schema, "fields": fields}))
 
