@@ -38,9 +38,12 @@ When the operator names a source flow, the system SHALL render one image per see
 render group for the same run, reading the seeds from filenames alone, and SHALL record the source flow on
 each render. It SHALL refuse a run whose source flow has no render before any endpoint is acquired, SHALL
 refuse a flow named as its own source, and SHALL accept neither a count nor an explicit seed beside a source.
+Where the flow's approval is a copy of the source's, it SHALL refuse a run whose copy was not made from the
+approval the source's latest renders came from, before any endpoint is acquired.
 
 A render on the same seed starts from the same noise, so two flows differ only in what the operator changed
-between them; a fresh seed would add a difference of its own as large as the one measured.
+between them; a fresh seed would add a difference of its own as large as the one measured. The same holds for
+the sheet: seeds from one approval under a sheet copied from another compare two prompts, silently.
 
 #### Scenario: one render per source seed
 - **Key:** `image-generation:seeds-from:one-render-per-source-seed`
@@ -54,6 +57,14 @@ between them; a fresh seed would add a difference of its own as large as the one
 - **Layers:** unit
 - **WHEN** a source flow is named and a run holds no render of it
 - **THEN** the run is refused naming the source flow and the command that renders it
+- **AND** no endpoint is contacted
+
+#### Scenario: a copy out of step with the source's renders is refused first
+- **Key:** `image-generation:seeds-from:a-copy-out-of-step-is-refused-first`
+- **Layers:** unit
+- **WHEN** the flow's approval is a copy of a source approval other than the one the source's latest renders
+  came from
+- **THEN** the run is refused naming both approvals and the command that brings them in step
 - **AND** no endpoint is contacted
 
 #### Scenario: a flow is not its own source

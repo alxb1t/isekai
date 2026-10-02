@@ -38,6 +38,11 @@ trying to draw the face, not `summon` minus the photograph.
 - **Seeds taken from another flow:** `generate --seeds-from <flow>` renders one image per seed of the source
   flow's latest render group, read from filenames; `render.sh` takes `control-anime-wai=summon-anime-wai`; the
   render's record names the source ([D3](design.md#d3)).
+- **The pair stays in step:** a source approved again is copied again under the target's next number, and a
+  render refuses when the target's sheet and the source's seeds come from different approvals
+  ([D5](design.md#d5)).
+- **One session for a fresh batch:** `render.sh <runs> summon-anime-wai=1 control-anime-wai=summon-anime-wai`
+  renders the source, then its control on the seeds just made ([D6](design.md#d6)).
 - **The one crossing is named:** a stage reads another flow's artifacts only when the operator names that flow
   as a source, and what it writes records it; D38 says so ([D4](design.md#d4)).
 - **The recipe:** `evaluation/README.md` says how the control batch is rendered and read ([D4](design.md#d4)).

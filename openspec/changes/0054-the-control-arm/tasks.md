@@ -1,6 +1,6 @@
 # Tasks — 0054 the control arm
 
-The flow, the approval, the seeds, then the records, per [design](design.md). The deltas hold every new
+The flow, the approval, the seeds, the records, then the sync, per [design](design.md). The deltas hold every new
 scenario; each task below adds the tests that bind them.
 
 ## Progress
@@ -9,6 +9,7 @@ scenario; each task below adds the tests that bind them.
 - [x] 2 — The approval
 - [x] 3 — The seeds
 - [x] 4 — The records
+- [ ] 5 — The sync
 
 Line numbers are `04dfe26`'s. Every new test carries `@pytest.mark.spec` with the key its task names. The flow
 phase's changelog bullet names the control's full digest, which the changelog-digest test requires.
@@ -48,3 +49,18 @@ phase's changelog bullet names the control's full digest, which the changelog-di
   Verify: `grep -c '^### D38 · A control flow is its subject with the face chain at zero' docs/decisions.md` prints `1`.
 - [x] 4.2 In `evaluation/README.md`, add `## The control arm` with the four commands and the floor line; in `README.md:387`'s tree, add the control's line; in `CLAUDE.md:5-7`, name the third flow.
   Verify: `grep -c '^## The control arm' evaluation/README.md` prints `1`, `grep -c 'control-anime-wai=summon-anime-wai' evaluation/README.md` prints `1`, `grep -c 'flows/control-anime-wai/' README.md` prints `1`, and `grep -c 'control-anime-wai' CLAUDE.md` prints `1`.
+
+## 5 — The sync
+
+Line numbers in this phase are `34feabf`'s.
+
+- [ ] 5.1 **HALT CHECK** — the copy writes nothing for any approved target, and the seeds are taken without reading the target's approval.
+  Verify: `sed -n 417p isekai/pipeline/review.py | grep -c 'if approved_versions(directory):'` prints `1`, and `grep -c 'copied_from' isekai/pipeline/generate.py` prints `0`.
+- [ ] 5.2 In `isekai/pipeline/review.py`, make `_copy_approval` write nothing only for a copy of the source's latest approval and copy again otherwise, per [D5](design.md#d5); add to `tests/test_review.py` a test binding `review:copy-from:a-newer-source-approval-is-copied-again`, with a source approved a second time and a target approved by hand as its cases.
+  Verify: `grep -c 'a-newer-source-approval-is-copied-again' tests/test_review.py` prints `1`, and `sed -n 417p isekai/pipeline/review.py | grep -c 'if approved_versions(directory):'` prints `0`.
+- [ ] 5.3 In `isekai/pipeline/generate.py`, return the group with the seeds from `source_seeds` and add `refuse_out_of_step`; in `isekai/interface/cli.py`, call it in `assemble_one` for every flow assembled, per [D5](design.md#d5); add to `tests/test_generate.py` a test binding `image-generation:seeds-from:a-copy-out-of-step-is-refused-first`, with an older copy and a newer copy as its cases, each asserting no endpoint is contacted.
+  Verify: `grep -c '^def refuse_out_of_step(' isekai/pipeline/generate.py` prints `1`, `grep -c 'refuse_out_of_step(' isekai/interface/cli.py` prints `1`, and `grep -c 'a-copy-out-of-step-is-refused-first' tests/test_generate.py` prints `1`.
+- [ ] 5.4 In `tests/test_pipeline_cli.py`, bind `test_a_flow_named_as_its_own_approval_source_is_refused_naming_it` (`:572`) and `test_an_untracked_approval_source_is_refused_naming_the_flows_there_are` (`:589`) to `review:copy-from:the-source-is-another-tracked-flow`.
+  Verify: `grep -c 'review:copy-from:the-source-is-another-tracked-flow' tests/test_pipeline_cli.py` prints `2`, and `grep -c 'the guard on a flag no scenario names' tests/test_pipeline_cli.py` prints `0`.
+- [ ] 5.5 In `infra/render.sh`, refuse a source spec placed after its dependent and defer the pre-pod seeds pass for a source an earlier spec renders by count, per [D6](design.md#d6); add the one-session line to the usage comment and to `evaluation/README.md`'s recipe.
+  Verify: `bash -n infra/render.sh && echo ok` prints `ok`, `grep -c 'put the source first' infra/render.sh` prints `1`, and `grep -c 'summon-anime-wai=1 control-anime-wai=summon-anime-wai' infra/render.sh evaluation/README.md | grep -c ':1'` prints `2`.

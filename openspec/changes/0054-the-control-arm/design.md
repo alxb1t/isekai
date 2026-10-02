@@ -54,6 +54,8 @@ origin recorded; a render on another flow's seeds, recorded; the crossing named 
 | [D1](#d1) | `flows/control-anime-wai/` is `summon`'s files; `flow.json` differs in `flow`, `ip_weight` 0, `identity_cn_strength` 0; a test holds the equality; `PINNED` gains the digest | one graph, two numbers; a byte comparison cannot be argued with | nodes removed from the graph; a control-named `filename_prefix` |
 | [D2](#d2) | `approve --from <flow>`: the source's latest approval's fields, validated against the target's schema, written as the target's next approval with `producer.copied_from` | a `cp` carries the wrong identifier; a second review lets the prompts drift | a verb of its own; copying the draft |
 | [D3](#d3) | `generate --seeds-from <flow>`: the source's latest group's seeds, from filenames, checked in the free pass; the sidecar records `seeds_from`; `render.sh` takes `<flow>=<flow>` | same noise makes the pair an ablation; the check before the pod costs nothing | `--seed` per run by hand; pairing by a record |
+| [D5](#d5) | the target is in step when its latest approval is a copy of the source's latest; otherwise `approve --from` copies again under the next number; `generate --seeds-from` refuses a copy made from another approval than the source's latest renders | a source approved again after the copy left the control on the old sheet and the new seeds, silently | a warning alone; refusing every re-copy |
+| [D6](#d6) | `render.sh` defers the pre-pod seeds check for a source an earlier spec renders by count in the same session, and refuses a source spec placed after its dependent | a fresh batch is one command and one boot | two sessions always |
 | [D4](#d4) | D38 under *Flows*; `run-directory` MODIFIED with the named-source crossing; the recipe in `evaluation/README.md`; `README.md` and `CLAUDE.md` name the third flow | the crossing is the operator's act, stated once | a new capability for the control |
 
 ### D1
@@ -126,6 +128,49 @@ summon-anime-wai <run>` for every run, `bash infra/render.sh <runs> control-anim
 row is the floor, the difference is the face mechanism's share. `README.md:387` gains the control's line in the
 tree; `CLAUDE.md:5-7` names the third flow in its paragraph.
 
+### D5
+
+**In step.** What holds after the first four phases (`34feabf`): `_copy_approval`
+(`isekai/pipeline/review.py:398`) returns `None` for any approved target (`:417-418`); `source_seeds`
+(`isekai/pipeline/generate.py:310`) returns the seeds of the source's latest render group, whose directory name
+is the source approval those renders came from; `assemble_one` (`isekai/interface/cli.py:664-669`) stores them.
+
+```
+approve --from S, target T
+   T has no approval ───────────────────────────────▶ copy as T's next number
+   T's latest is a copy of S's latest ──────────────▶ nothing written
+   anything else (an older copy, a hand approval) ──▶ copy S's latest as T's next number
+
+generate --seeds-from S, flow T, S's latest render group G
+   T's approval has no copied_from naming S ────────▶ no check
+   copied_from.approval == G ───────────────────────▶ render
+   copied_from.approval <  G ───────────────────────▶ refuse: `approve --flow T --from S <run>`
+   copied_from.approval >  G ───────────────────────▶ refuse: render S first, `render.sh <runs> S=1`
+```
+
+`_copy_approval` reads the target's latest approval when one exists and returns `None` only when its
+`producer.copied_from` equals `{"flow": source, "approval": <source's latest>}`. `source_seeds` returns
+`(group, seeds)`, `group` the latest render group's number. `refuse_out_of_step(run, flow, source, group)` in
+`generate.py` reads `flow`'s latest approval through `approved_artifact` and raises the refusals drawn, each naming
+both approval numbers. `assemble_one` calls it for every flow assembled, inside the same collection as
+`source_seeds`, so it refuses in the free pass.
+
+The CLI guard tests at `tests/test_pipeline_cli.py:572` and `:589` bind
+`review:copy-from:the-source-is-another-tracked-flow` in place of their exemption.
+
+### D6
+
+**One session.** What holds (`34feabf`): `infra/render.sh` parses each spec into `names`, `modes`, `values`
+(`:28-35`), runs the free seeds pass for every `--seeds-from` spec before `up.sh` (`:62-66`), and renders the specs
+in order (`:150-154`). With `summon-anime-wai=1 control-anime-wai=summon-anime-wai` the free pass refuses: the
+source has no render yet.
+
+After the parse loop, for each `--seeds-from` spec: a spec naming its source with a count *later* in the line is
+refused, `'<spec>' comes before its source '<source>=<count>'; put the source first`; one naming its source with a
+count *earlier* is marked deferred. The free seeds pass skips a deferred spec; its checks then run at its turn in
+the render loop, after the source has rendered. `evaluation/README.md`'s recipe gains the one-session line for a
+fresh batch beside the two-step form.
+
 ## Dependencies
 
 None.
@@ -139,6 +184,10 @@ None.
   the script's own tests read it for teardown and ceiling only.
 - **The CHANGELOG bullet must carry the digest or the gate is red at the end of the flow phase** → stated in
   [D1](#d1); the gate names the flow.
+- **A deferred seeds check refuses on a paid pod** → only when the source's own render failed in that session,
+  which the log already shows; the control's renders are skipped, nothing else is lost.
+- **`refuse_out_of_step` checks only a copy naming the source** → a flow rendered on another's seeds under its own
+  hand approval is a different experiment, and is not refused.
 - **A copied approval names a sheet version under another flow** → `sheet` is provenance only; `copied_from`
   says where to look.
 
