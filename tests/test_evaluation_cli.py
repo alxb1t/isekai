@@ -6,6 +6,7 @@ from PIL import Image
 
 import evaluation.__main__ as entry
 from evaluation.cohort import Vector
+from evaluation.face import load
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, open_run
@@ -82,3 +83,60 @@ def test_a_render_with_no_face_and_an_unrendered_photograph_are_rows(
         "p2/p2-1.png": "not rendered",
     }
     assert "p2/p2-1.png  not rendered" in capsys.readouterr().out
+
+
+class _Decoding(_Embedder):
+    """The fake embedder, opening each image as the real one does first."""
+
+    def __call__(self, path: Path) -> Vector | None:
+        load(path)
+        return super().__call__(path)
+
+
+@pytest.mark.spec("evaluation:cohort:an-undecodable-file-is-refused")
+def test_a_cohort_file_that_is_not_an_image_refuses_naming_it(tmp_path: Path) -> None:
+    runs, cohort = _batch(tmp_path)
+    (cohort / "p1" / "notes.txt").write_text("not a photograph")
+    embed = _Decoding(VECTORS)
+
+    with pytest.raises(Refusal, match=r"notes\.txt.*remove it from the cohort"):
+        entry.score(runs, cohort, embed, FLOWS_DIR)
+    assert all(path.is_relative_to(cohort) for path in embed.seen)
+
+
+@pytest.mark.spec("evaluation:table:an-unreadable-render-is-a-row")
+def test_a_render_that_does_not_decode_is_its_own_row(tmp_path: Path) -> None:
+    runs, cohort = _batch(tmp_path)
+    (render,) = runs.glob(f"*/{FLOW}/{OUTPUTS}/001/22.png")
+    render.write_bytes(b"\x89PNG trunc")
+    vectors = {**VECTORS, "22.png": [0.9, 0.1, 0.0]}
+
+    rec, _ = entry.score(runs, cohort, _Decoding(vectors), FLOWS_DIR)
+
+    outcomes = {r["photograph"]: r["outcome"] for r in rec["flows"][FLOW]["rows"]}
+    assert outcomes == {
+        "p1/p1-1.png": "hit",
+        "p1/p1-2.png": "unreadable",
+        "p2/p2-1.png": "not rendered",
+    }
+
+
+@pytest.mark.spec("evaluation:table:an-unreadable-run-is-reported")
+def test_a_run_that_cannot_be_read_is_listed_and_the_others_are_scored(
+    tmp_path: Path,
+) -> None:
+    runs, cohort = _batch(tmp_path)
+    (damaged,) = runs.glob("*_p1-2")
+    (stray,) = runs.glob("*_p2-1")
+    (damaged / "run.json").write_text("{not json")
+    (stray / "a-retired-flow").mkdir()
+
+    rec, _ = entry.score(runs, cohort, _Embedder(VECTORS), FLOWS_DIR)
+
+    outcomes = {r["photograph"]: r["outcome"] for r in rec["flows"][FLOW]["rows"]}
+    assert rec["unreadable"] == sorted([damaged.name, stray.name])
+    assert outcomes == {
+        "p1/p1-1.png": "hit",
+        "p1/p1-2.png": "not rendered",
+        "p2/p2-1.png": "not rendered",
+    }

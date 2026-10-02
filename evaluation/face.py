@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from isekai.boundary.wd14 import silence_onnxruntime
+from isekai.foundation.refusal import Refusal
 
 if TYPE_CHECKING:
     from onnxruntime import InferenceSession
@@ -184,9 +185,16 @@ def align(image: Image.Image, landmarks: np.ndarray) -> Image.Image:
 
 
 def load(path: Path) -> Image.Image:
-    """Return the image at `path`, upright and RGB."""
-    with Image.open(path) as opened:
-        return ImageOps.exif_transpose(opened).convert("RGB")
+    """Return the image at `path`, upright and RGB.
+
+    A file that does not decode -- not an image, or one cut short -- refuses
+    naming it; the caller knows what removing it means and names the fix.
+    """
+    try:
+        with Image.open(path) as opened:
+            return ImageOps.exif_transpose(opened).convert("RGB")
+    except OSError as undecodable:
+        raise Refusal(f"{path} does not decode as an image") from undecodable
 
 
 def embed(path: Path, detector: Finds, encoder: Encodes) -> list[float] | None:

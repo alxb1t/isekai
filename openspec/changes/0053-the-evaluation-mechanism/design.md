@@ -66,7 +66,7 @@ second encoder or seed; the cohort's generation; the root README's showcase; del
 | [D1](#d1) | the cohort is `<dir>/<person>/<file>`; a run is its photograph's when the frame's `photo.sha256` equals the file's digest | the directory is the ground truth; a run is keyed by its bytes | a cohort manifest; a `person` key in the frame |
 | [D2](#d2) | per render, rank the cohort by cosine; a photograph-level hit and a person-level hit with the source excluded; chance as expected hits | threshold-free, ground truth known, a copied pixel earns nothing on the second | a same-person threshold; AUC; an average cosine |
 | [D3](#d3) | YuNet detects and lands five landmarks, SFace embeds the aligned 112×112 crop; both from `opencv`'s Hugging Face repositories, on onnxruntime; a numpy similarity transform and `PIL.Image.transform` align | independent of the generator's pins, Apache-2.0 and MIT, ONNX, SFace already measured on this task; no package added | `glintr100`, the adapter's own target; StyleID, torch and non-commercial; `opencv-python` for the warp |
-| [D4](#d4) | one `evaluation.json` per batch, one table with a column per flow, re-derived from the record; a failure is a row | every render visible, the control arm drops in as a column later | a record per render; a table per flow |
+| [D4](#d4) | one `evaluation.json` per batch, one table with a row per flow, each followed by its chance row, re-derived from the record; a failure is a row | every render visible, the control arm drops in as a row later | a record per render; a table per flow |
 | [D5](#d5) | `python -m evaluation <runs> --cohort <dir>` reads each `run.json` under `<runs>` through `Run`, each flow's seeds through `run_view.rendered`, writes `<runs>/../evaluation.json` and prints the table | the readers exist; the batch is what `render.sh` leaves | a `--flow` flag; parsing sidecars |
 | [D6](#d6) | no package is added; `[eval]` and both overrides go; D22 says the evaluator adds no package to the runtime list | the isolation holds by construction; an empty extra is a config nothing reads | an empty `[eval]` |
 | [D7](#d7) | D37 records the encoder's independence as a decision; `## Measurement` enters the principles with the tests that hold each | a choice about this evaluator is a decision; a rule every component follows is a principle | encoder independence as a principle |
@@ -126,12 +126,13 @@ the render's box, the crop is resized to 112×112 without alignment, and the pho
  "encoder": {"detector": "<dest>", "encoder": "<dest>"},
  "flows": {"summon-anime-wai": {
     "rows": [{"person": "p1", "photograph": "p1/1.png", "run": "<id>", "seed": 123,
-              "outcome": "hit" | "miss" | "no face found" | "not rendered",
+              "outcome": "hit" | "miss" | "no face found" | "unreadable" | "not rendered",
               "nearest": "p1/1.png", "nearest_without_source": "p1/2.png",
               "photograph_hit": true, "person_hit": true}, …],
     "counts": {"photograph": {"hits": 15, "of": 18, "chance": 1.0},
                "person": {"hits": 14, "of": 18, "chance": 2.1}}}},
- "outside_the_cohort": ["<run id>", …]}
+ "outside_the_cohort": ["<run id>", …],
+ "unreadable": ["<run id>", …]}
 ```
 
 `table(record) -> str` prints the diagram in the delta: a row per flow, a chance row, then every row whose
@@ -145,8 +146,9 @@ missed; the two booleans keep the split.
 `DEFAULT_MODELS_DIR`, `--flows` defaulting to `FLOWS_DIR`. It lists `runs/*/run.json`, opens each as `Run`, matches
 it per D1, embeds every cohort photograph once (refusing per D1), then for each run and each `(flow, group, seeds)`
 from `run_view.rendered` embeds `outputs/<group>/<seed>.png`, ranks per D2, and collects rows. A refusal from one
-render is its row. It writes `runs.parent / "evaluation.json"` and prints `table`. Exit `0` with rows; `1` only on
-a refusal of the cohort itself or an unreadable `runs`.
+render is its row, and one from a run's frame or flows lists the run as `unreadable`. It writes
+`runs.parent / "evaluation.json"` and prints `table`. Exit `0` with rows; `1` only on a refusal of the cohort
+itself or an unreadable `runs`.
 
 ### D6
 

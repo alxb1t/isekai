@@ -26,11 +26,11 @@ generator*.
 what a count may claim.
 
 ### Requirement: A cross-base comparison refuses only the axes it invalidates
-**Reason**: No embedding axis compares renders across bases; a flow on another base is a column of its own.
-**Migration**: None. `evaluation:table:one-column-per-flow` holds the comparison.
+**Reason**: No embedding axis compares renders across bases; a flow on another base is a row of its own.
+**Migration**: None. `evaluation:table:one-row-per-flow` holds the comparison.
 
 ### Requirement: The report is one record per render and one table per run
-**Reason**: The record is one per batch and the table one per batch, with a column per flow.
+**Reason**: The record is one per batch and the table one per batch, with a row per flow.
 **Migration**: `evaluation:table:a-failure-is-a-row` and `evaluation:table:the-table-re-derives-from-the-record`
 hold the record and the table.
 
@@ -55,8 +55,8 @@ inverted by `evaluation:encoder:shares-no-pin-with-the-generator`.
 The system SHALL read the cohort from a directory holding one sub-directory per person, each holding that
 person's photographs, and SHALL match a run to its photograph by the digest the run's frame records against the
 digests of the cohort's files. A run whose photograph is in no cohort file SHALL be reported as such and never
-end the scoring. A cohort photograph in which no face is found SHALL refuse the scoring before any render is
-scored, naming the file.
+end the scoring. A cohort file that does not decode as an image, or in which no face is found, SHALL refuse
+the scoring before any render is scored, naming the file.
 
 ```
 cohort/
@@ -68,8 +68,8 @@ cohort/
 
 Identification has a ground truth, which is who each photograph is of; the directory is the one place that says
 so. A run is keyed by its photograph's bytes, so the digest is the match and no run file changes. The cohort is
-the instrument: a photograph with no face would leave a gallery with a hole, so it is refused up front while
-nothing has been spent.
+the instrument: a file with no face, or no image, would leave a gallery with a hole and a count of photographs
+it does not hold, so it is refused up front while nothing has been spent.
 
 #### Scenario: a run is matched to its photograph by digest
 - **Key:** `evaluation:cohort:a-run-is-matched-by-digest`
@@ -89,6 +89,13 @@ nothing has been spent.
 - **Layers:** unit
 - **WHEN** no face is found in a cohort photograph
 - **THEN** the scoring is refused naming the file
+- **AND** no render is scored
+
+#### Scenario: a cohort file that is not an image refuses the scoring
+- **Key:** `evaluation:cohort:an-undecodable-file-is-refused`
+- **Layers:** unit
+- **WHEN** a file in a person's directory does not decode as an image
+- **THEN** the scoring is refused naming the file and its removal
 - **AND** no render is scored
 
 ### Requirement: Two counts over the cohort, never a score
@@ -172,8 +179,10 @@ whose it is.
 ### Requirement: Every render is a row
 
 The system SHALL write one record per batch holding, for every cohort photograph and every flow, the render's
-seed, its nearest photograph and its outcome — a hit, a miss, no face found, not rendered — and SHALL print one
-table with a column per flow from that record alone. No render's outcome SHALL end the scoring of another.
+seed, its nearest photograph and its outcome — a hit, a miss, no face found, unreadable, not rendered — and SHALL
+print one table from that record alone, a row of counts per flow, each followed by its chance row. A run whose
+frame or flows cannot be read SHALL be reported as unreadable. No render's outcome, and no run's, SHALL end the
+scoring of another.
 
 ```
                     photograph-level   person-level
@@ -181,14 +190,16 @@ summon-anime-wai         15 / 18           14 / 18
 chance                  1.0 / 18          2.1 / 18
 ```
 
-A table that shows only its wins is not evidence; a failure reported mid-batch scrolls away. A column per flow
-is what lets a second flow be read beside the first without a second tool.
+A table that shows only its wins is not evidence; a failure reported mid-batch scrolls away, and one damaged
+file is no reason to lose the rest. A row per flow, with its own chance beneath it, is what lets a second flow be
+read beside the first without a second tool.
 
-#### Scenario: one column per flow
-- **Key:** `evaluation:table:one-column-per-flow`
+#### Scenario: one row per flow
+- **Key:** `evaluation:table:one-row-per-flow`
 - **Layers:** unit
 - **WHEN** the runs hold renders of more than one flow
-- **THEN** the table carries one column per flow, each with both counts
+- **THEN** the table carries one row per flow, each with both counts
+- **AND** each followed by the chance row over that flow's renders
 
 #### Scenario: a failure is a row, never an exit
 - **Key:** `evaluation:table:a-failure-is-a-row`
@@ -196,6 +207,20 @@ is what lets a second flow be read beside the first without a second tool.
 - **WHEN** one render has no face found and another photograph was never rendered
 - **THEN** each is a row naming its outcome
 - **AND** every other render is scored and written
+
+#### Scenario: a render that does not decode is a row
+- **Key:** `evaluation:table:an-unreadable-render-is-a-row`
+- **Layers:** unit
+- **WHEN** a render file does not decode as an image
+- **THEN** its photograph's row says it is unreadable
+- **AND** every other render is scored
+
+#### Scenario: a run that cannot be read is reported and does not end the scoring
+- **Key:** `evaluation:table:an-unreadable-run-is-reported`
+- **Layers:** unit
+- **WHEN** a run's frame or one of its flows cannot be read
+- **THEN** the run is reported as unreadable
+- **AND** every other run is scored
 
 #### Scenario: the table re-derives from the record
 - **Key:** `evaluation:table:the-table-re-derives-from-the-record`

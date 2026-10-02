@@ -35,6 +35,8 @@ from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
 from isekai.interface.run_view import rendered
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
+# A face's embedding, or None when no face is found; a file that does not decode
+# as an image refuses.
 Embed = Callable[[Path], Vector | None]
 
 
@@ -78,10 +80,13 @@ def _runs(directory: Path) -> list[Run]:
 
 
 def _gallery(cohort: Cohort, embed: Embed) -> dict[Photograph, Vector]:
-    """Return every cohort photograph's embedding, refusing one with no face."""
+    """Return each cohort photograph's embedding, refusing one with no image or face."""
     gallery: dict[Photograph, Vector] = {}
     for photograph in cohort.photographs:
-        vector = embed(photograph.path)
+        try:
+            vector = embed(photograph.path)
+        except Refusal as undecodable:
+            raise Refusal(f"{undecodable}; remove it from the cohort") from undecodable
         if vector is None:
             raise Refusal(
                 f"no face is found in {photograph.path}, so no render can be ranked "
@@ -97,8 +102,12 @@ def _rows(
     gallery: dict[Photograph, Vector],
     embed: Embed,
     flows_dir: Path,
+    refused: list[str],
 ) -> dict[str, Row]:
-    """Return the row of each flow `run` rendered: its first seed, ranked."""
+    """Return the row of each flow `run` rendered: its first seed, ranked.
+
+    A render that does not decode is its own row, and why is added to `refused`.
+    """
     seeds: dict[str, list[tuple[int, int]]] = {}
     for flow, group, found in rendered(run, flows_dir):
         seeds.setdefault(flow, []).extend((group, seed) for seed in found)
@@ -108,27 +117,44 @@ def _rows(
             continue
         (group, seed), rest = renders[0], renders[1:]
         name = f"{seed}{load_flow(flow, flows_dir).output_suffix}"
-        vector = embed(run.directory(flow, OUTPUTS, f"{group:03d}", name))
-        rows[flow] = (
-            unscored(source, run.id, seed, "no face found")
-            if vector is None
-            else scored(source, run.id, seed, rank(vector, gallery))
-        )
+        try:
+            vector = embed(run.directory(flow, OUTPUTS, f"{group:03d}", name))
+        except Refusal as undecodable:
+            refused.append(
+                f"{undecodable}; render it again or delete it, then this command again"
+            )
+            rows[flow] = unscored(source, run.id, seed, "unreadable")
+        else:
+            rows[flow] = (
+                unscored(source, run.id, seed, "no face found")
+                if vector is None
+                else scored(source, run.id, seed, rank(vector, gallery))
+            )
         rows[flow]["also_rendered"] = [s for _, s in rest]
     return rows
 
 
-def score(runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path) -> Record:
-    """Return the batch's record: every cohort photograph's row in every flow.
+def score(
+    runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path
+) -> tuple[Record, list[str]]:
+    """Return the batch's record, and why each unreadable run or render was.
 
     Every cohort photograph is embedded before any render is opened, so a cohort
-    with a faceless photograph refuses while nothing has been scored.
+    with a faceless photograph refuses while nothing has been scored. A run whose
+    frame or flows refuse is listed as unreadable, and the others are scored.
     """
     cohort = load_cohort(cohort_dir)
     matched: list[tuple[Run, Photograph]] = []
     outside: list[str] = []
+    unreadable: list[str] = []
+    refused: list[str] = []
     for run in _runs(runs):
-        source = cohort.by_digest(run.photo_record["sha256"])
+        try:
+            source = cohort.by_digest(run.photo_record["sha256"])
+        except Refusal as damaged:
+            unreadable.append(run.id)
+            refused.append(f"{run.id}: {damaged}")
+            continue
         if source is None:
             outside.append(run.id)
         else:
@@ -136,9 +162,16 @@ def score(runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path) -> Record
     gallery = _gallery(cohort, embed)
     flows: dict[str, list[Row]] = {}
     for run, source in matched:
-        for flow, row in _rows(run, source, gallery, embed, flows_dir).items():
+        try:
+            rows = _rows(run, source, gallery, embed, flows_dir, refused)
+        except Refusal as damaged:
+            unreadable.append(run.id)
+            refused.append(f"{run.id}: {damaged}")
+            continue
+        for flow, row in rows.items():
             flows.setdefault(flow, []).append(row)
-    return record(cohort, flows, outside, {"detector": DETECTOR, "encoder": ENCODER})
+    encoder = {"detector": DETECTOR, "encoder": ENCODER}
+    return record(cohort, flows, outside, encoder, unreadable=unreadable), refused
 
 
 def _embedder(models: Path) -> Embed:
@@ -176,12 +209,14 @@ def main(argv: Sequence[str]) -> int:
     args = parse_args(argv)
     try:
         embed = _embedder(args.models)
-        rec = score(args.runs, args.cohort, embed, args.flows)
+        rec, unreadable = score(args.runs, args.cohort, embed, args.flows)
     except Refusal as refused:
         print(f"refused: {refused}", file=sys.stderr)
         return 1
     write_json(args.runs.parent / "evaluation.json", rec)
     print(table(rec), end="")
+    for why in unreadable:
+        print(f"unreadable: {why}", file=sys.stderr)
     return 0
 
 

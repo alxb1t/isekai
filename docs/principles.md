@@ -314,7 +314,7 @@ percentage.
 
 ### Every render is a row
 
-**Every cohort photograph has a row in every flow — a hit, a miss, no face found, not rendered — and no
+**Every cohort photograph has a row in every flow — a hit, a miss, no face found, unreadable, not rendered — and no
 render's outcome ends the scoring of another.**
 
 - **Why:** a table that shows only its wins is not evidence, and a failure reported mid-batch scrolls away.

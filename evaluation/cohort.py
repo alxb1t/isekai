@@ -19,7 +19,7 @@ from isekai.boundary.provision import digest_of
 from isekai.foundation.refusal import Refusal
 
 Vector = Sequence[float]
-Outcome = Literal["hit", "miss", "no face found", "not rendered"]
+Outcome = Literal["hit", "miss", "no face found", "unreadable", "not rendered"]
 
 
 @dataclass(frozen=True)
@@ -90,6 +90,7 @@ class Record(TypedDict):
     encoder: dict[str, str]
     flows: dict[str, FlowRecord]
     outside_the_cohort: list[str]
+    unreadable: list[str]
 
 
 def load_cohort(directory: Path) -> Cohort:
@@ -200,11 +201,14 @@ def record(
     flows: Mapping[str, Sequence[Row]],
     outside: Sequence[str],
     encoder: Mapping[str, str],
+    *,
+    unreadable: Sequence[str] = (),
 ) -> Record:
     """Return the batch's record: a row per cohort photograph per flow, and counts.
 
     A photograph a flow holds no row for is `not rendered`. A count is over the
-    renders scored, and its chance is summed over the same renders.
+    renders scored, and its chance is summed over the same renders. `unreadable`
+    names the runs whose frame or flows could not be read.
     """
     by_name = {p.name: p for p in cohort.photographs}
     out: dict[str, FlowRecord] = {}
@@ -236,6 +240,7 @@ def record(
         "encoder": dict(encoder),
         "flows": out,
         "outside_the_cohort": sorted(outside),
+        "unreadable": sorted(unreadable),
     }
 
 
@@ -291,7 +296,8 @@ def table(rec: Record) -> str:
         if row["also_rendered"]
     ]
     outside = [f"outside the cohort  {run}" for run in rec["outside_the_cohort"]]
-    for block in (failures, also, outside):
+    unreadable = [f"unreadable  {run}" for run in rec["unreadable"]]
+    for block in (failures, also, outside, unreadable):
         if block:
             text += ["", *block]
     return "\n".join(text) + "\n"

@@ -35,7 +35,7 @@ never been counted on a current flow.
   person-level hit with the source excluded; the chance line beside each ([D2](design.md#d2)).
 - **The encoder shares no pin with the generator:** YuNet finds and aligns the face, SFace embeds it, both from
   OpenCV's own Hugging Face repositories, on onnxruntime ([D3](design.md#d3)).
-- **Every render is a row:** one record per batch, one table with a column per flow; a failure is a named row and
+- **Every render is a row:** one record per batch, one table with a row per flow and its chance beneath; a failure is a named row and
   never an exit ([D4](design.md#d4)).
 - **The entry point reads a current run** ([D5](design.md#d5)).
 - **No package is added; `[eval]` is deleted** ([D6](design.md#d6)).

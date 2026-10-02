@@ -155,7 +155,7 @@ def test_neither_record_nor_table_carries_a_cosine_a_mean_or_a_percentage() -> N
     assert not re.search(r"%|cosine|mean|average", written, re.I)
 
 
-@pytest.mark.spec("evaluation:table:one-column-per-flow")
+@pytest.mark.spec("evaluation:table:one-row-per-flow")
 def test_every_flow_has_its_own_counts_in_the_table(tmp_path: Path) -> None:
     cohort = _cohort(tmp_path, {"p1": 1, "p2": 1})
     p1, p2 = cohort.photographs
