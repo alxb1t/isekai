@@ -30,13 +30,13 @@ from evaluation.cohort import (
     unscored,
 )
 from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
+from evaluation.record import destination as record_destination
 from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
 from isekai.interface.run_view import rendered
-from isekai.interface.wiring import trackable
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 # A face's embedding, or None when no face is found; a file that does not decode
@@ -233,24 +233,11 @@ def _embedder(models: Path) -> Embed:
     return lambda path: embed(path, detector, encoder)
 
 
-def _destination(runs: Path) -> Path:
-    """Return where the record goes, refusing a place git can reach (D18)."""
-    destination = runs.parent / "evaluation.json"
-    if trackable(destination.parent):
-        raise Refusal(
-            f"{destination.resolve()} is inside this repository and outside .data/, "
-            "the one directory git ignores, so the record would be one `git add` from "
-            "being published; give a runs directory under .data/<batch>/ or outside "
-            "the repository"
-        )
-    return destination
-
-
 def main(argv: Sequence[str]) -> int:
     """Score the batch, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
-        destination = _destination(args.runs)
+        destination = record_destination(args.runs, "evaluation.json")
         embed = _embedder(args.models)
         rec, notes = score(args.runs, args.cohort, embed, args.flows)
     except Refusal as refused:

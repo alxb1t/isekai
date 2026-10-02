@@ -7,7 +7,7 @@ scenario; each task below adds the tests that bind them.
 
 - [x] 1 — The arithmetic
 - [x] 2 — The reader
-- [ ] 3 — The command
+- [x] 3 — The command
 - [ ] 4 — The records
 
 Line numbers are `73f45f4`'s. Every new test carries `@pytest.mark.spec` with the key its task names.
@@ -32,11 +32,11 @@ Line numbers are `73f45f4`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 3 — The command
 
-- [ ] 3.1 Write `evaluation/record.py` with `destination(runs, name)`, its refusal ending in the move and "then this command again" per [D3](design.md#d3); make `evaluation/__main__.py` call it with `"evaluation.json"` and drop `_destination`.
+- [x] 3.1 Write `evaluation/record.py` with `destination(runs, name)`, its refusal ending in the move and "then this command again" per [D3](design.md#d3); make `evaluation/__main__.py` call it with `"evaluation.json"` and drop `_destination`.
   Verify: `grep -c '^def destination(' evaluation/record.py` prints `1`, `grep -c 'give a runs directory' evaluation/__main__.py evaluation/record.py | grep -c ':0'` prints `2`, and `grep -c 'then this command again' evaluation/record.py` prints `1`.
-- [ ] 3.2 Add `main`, the run narrowing and the row loop to `evaluation/recall.py`, per [D3](design.md#d3), with the `python -m evaluation.recall` entry.
+- [x] 3.2 Add `main`, the run narrowing and the row loop to `evaluation/recall.py`, per [D3](design.md#d3), with the `python -m evaluation.recall` entry.
   Verify: `grep -c '^def main(' evaluation/recall.py` prints `1`, and `grep -c '"recall.json"' evaluation/recall.py` prints `1`.
-- [ ] 3.3 Add `tests/test_recall_cli.py` binding `evaluation:recall:every-render-is-a-row`, `evaluation:recall:an-unreadable-render-is-a-row`, `evaluation:recall:a-render-without-its-approval-is-a-row`, `evaluation:recall:named-runs-narrow-the-reading`, `evaluation:recall:the-record-names-the-tagger-and-its-floor` and `evaluation:recall:a-record-git-can-reach-is-refused`, on a batch under `tmp_path` with a fake reader.
+- [x] 3.3 Add `tests/test_recall_cli.py` binding `evaluation:recall:every-render-is-a-row`, `evaluation:recall:an-unreadable-render-is-a-row`, `evaluation:recall:a-render-without-its-approval-is-a-row`, `evaluation:recall:named-runs-narrow-the-reading`, `evaluation:recall:the-record-names-the-tagger-and-its-floor` and `evaluation:recall:a-record-git-can-reach-is-refused`, on a batch under `tmp_path` with a fake reader.
   Verify: `grep -c 'pytest.mark.spec("evaluation:recall:' tests/test_recall_cli.py` prints `6`.
 
 ## 4 — The records

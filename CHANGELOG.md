@@ -15,6 +15,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   prints a per-flow table from its record alone (0055 D1).
 - Recall reads each render with the pipeline's WD14 tagger at its own floor, in the sheet's spelling, and refuses an image
   that does not decode by name (0055 D2).
+- `python -m evaluation.recall <runs> [<run>...]` reads every render of every group and seed against its group's approval,
+  writes `<batch>/recall.json` and prints the table; the record is refused where git can reach it, and that refusal now
+  names the move and the command to run again (0055 D3).
 
 ## [0.33.0] - 2026-10-02 · 0054-the-control-arm
 

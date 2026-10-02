@@ -4,18 +4,43 @@ For each scored field of a flow, the tags the approval asked for are set against
 the tags the tagger sees in the render; each miss is named. The tags are counted,
 not the renders: a field showing three of its four tags is not a failed render.
 
+    uv run python -m evaluation.recall <batch>/runs [<run>...]
+
+Every render of every group and seed is read alone, with no cohort, against the
+approval its group names. The record is written beside the runs, as
+`<batch>/recall.json`, and the table printed; why a row is not read is on stderr.
+
 The arithmetic is stdlib and `normalise` alone, so it is tested on tag sets
 written by hand. The reader is the pipeline's own tagger, behind `Read`, so the
 suite passes it a fake.
 """
 
+import argparse
+import sys
 from collections.abc import Callable, Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Literal, TypedDict
 
+from evaluation.record import destination
 from isekai.boundary import wd14
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    require,
+    write_json,
+)
+from isekai.foundation.artifacts import read as read_artifact
+from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.shared.vocabulary import normalise
+from isekai.foundation.run import (
+    APPROVED,
+    FRAME_NAME,
+    OUTPUTS,
+    REVIEW,
+    Run,
+    artifact_name,
+)
+from isekai.interface.run_view import rendered
+from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, normalise
 
 Read = Callable[[Path], set[str]]
 Outcome = Literal["read", "unreadable", "no approval"]
@@ -197,3 +222,139 @@ def table(rec: Record) -> str:
         for flow, total in sorted(rec["totals"].items())
     ]
     return "\n\n".join(blocks) + "\n"
+
+
+def parse_args(argv: Sequence[str]) -> argparse.Namespace:
+    """Parse the command line."""
+    p = argparse.ArgumentParser(
+        prog="python -m evaluation.recall",
+        description="Count, per scored field, the approved sheet's tags each render "
+        "reads back.",
+    )
+    p.add_argument("runs", type=Path, help="a batch's runs directory")
+    p.add_argument("names", nargs="*", help="read only these runs, by directory name")
+    p.add_argument(
+        "--models",
+        type=Path,
+        default=DEFAULT_MODELS_DIR,
+        help="where the pinned tagger lives",
+    )
+    p.add_argument(
+        "--flows", type=Path, default=FLOWS_DIR, help="where the flows are declared"
+    )
+    return p.parse_args(argv)
+
+
+def _held(runs: Path, names: Sequence[str]) -> list[Run]:
+    """Return the runs under `runs` with a frame, narrowed to `names` when given.
+
+    A name no run holds refuses naming it, before any render is read.
+    """
+    if not runs.is_dir():
+        raise Refusal(
+            f"{runs} is not a directory; give the batch's runs directory, the "
+            "one `infra/render.sh` rendered into"
+        )
+    held = [
+        Run(frame.parent.name, frame.parent)
+        for frame in sorted(runs.glob(f"*/{FRAME_NAME}"))
+    ]
+    absent = [name for name in names if name not in {run.id for run in held}]
+    if absent:
+        raise Refusal(
+            f"{', '.join(absent)} is not a run under {runs}; name runs by their "
+            "directory names there, then this command again"
+        )
+    return [run for run in held if not names or run.id in names]
+
+
+def _asked(run: Run, flow: str, group: int) -> dict[str, list[str]]:
+    """Return the tags the approval of `group` holds, by field, or refuse naming it."""
+    path = run.directory(flow, REVIEW, artifact_name(group, APPROVED))
+    if not path.is_file():
+        raise Refusal(f"{path} is absent; restore it, then this command again")
+    remedy = f"restore it in {path} by hand"
+    body = read_artifact(path, APPROVED_FILE, remedy=remedy)
+    require(path, body, "fields", dict, remedy)
+    return body["fields"]
+
+
+def survey(
+    runs: Sequence[Run], read_tags: Read, flows_dir: Path
+) -> tuple[list[Row], list[str]]:
+    """Return a row per render of `runs`, and a line saying why one was not read.
+
+    A flow that does not load costs only its own renders; an approval that cannot
+    be read and an image that does not decode each cost only the render they
+    belong to.
+    """
+    rows: list[Row] = []
+    notes: list[str] = []
+    for run in runs:
+        for flow in run.flows:
+            try:
+                loaded = load_flow(flow, flows_dir)
+                scored = loaded.schema.scored
+                groups = rendered(run, flows_dir, flows=(flow,))
+            except Refusal as unloadable:
+                notes.append(
+                    f"unreadable: {run.id}: {unloadable}; move {run.directory(flow)} "
+                    "out of the run, then this command again"
+                )
+                continue
+            for _, group, seeds in groups:
+                try:
+                    asked: dict[str, list[str]] | None = _asked(run, flow, group)
+                except Refusal as unapproved:
+                    asked = None
+                    notes.append(f"no approval: {run.id}: {unapproved}")
+                for seed in seeds:
+                    row: Row = {
+                        "run": run.id,
+                        "flow": flow,
+                        "group": group,
+                        "seed": seed,
+                        "outcome": "no approval",
+                        "fields": {},
+                    }
+                    rows.append(row)
+                    if asked is None:
+                        continue
+                    render = run.directory(
+                        flow, OUTPUTS, f"{group:03d}", f"{seed}{loaded.output_suffix}"
+                    )
+                    try:
+                        seen = read_tags(render)
+                    except Refusal as undecodable:
+                        row["outcome"] = "unreadable"
+                        notes.append(
+                            f"unreadable: {undecodable}; render it again or delete "
+                            "it, then this command again"
+                        )
+                    else:
+                        row["outcome"] = "read"
+                        row["fields"] = count(asked, scored, seen)
+    return rows, notes
+
+
+def main(argv: Sequence[str]) -> int:
+    """Read the batch, write its record beside the runs, and print the table."""
+    args = parse_args(argv)
+    try:
+        target = destination(args.runs, "recall.json")
+        held = _held(args.runs, args.names)
+        read_tags, pins = _reader(args.models)
+        rows, notes = survey(held, read_tags, args.flows)
+    except Refusal as refused:
+        print(f"refused: {refused}", file=sys.stderr)
+        return 1
+    rec = record(rows, pins, wd14.FLOOR)
+    write_json(target, rec)
+    print(table(rec), end="")
+    for note in notes:
+        print(note, file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))
