@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - The evaluator ranks a cohort's photographs for each render and counts two hits, its own photograph and its
   own person with the source set aside, beside the hits chance gives; every render is a row (0053 D1, D2, D4).
+- The evaluator finds and aligns a face with OpenCV's YuNet and embeds it with SFace, both pinned in its own
+  manifest, so the count is not the generator's recognizer grading itself (0053 D3).
 
 ## [0.31.4] - 2026-09-30 · 0052-the-paydown
 

@@ -6,7 +6,7 @@ The delta holds every new scenario; each task below adds the tests that bind the
 ## Progress
 
 - [x] 1 — The arithmetic
-- [ ] 2 — The encoder
+- [x] 2 — The encoder
 - [ ] 3 — The entry point
 - [ ] 4 — The deletion
 
@@ -24,13 +24,13 @@ its record are the operator's, after the release.
 
 ## 2 — The encoder
 
-- [ ] 2.1 In `tools/derive_eval_manifest.py`, add `"opencv"` to `PUBLISHERS`, add the two `Spec`s of [D3](design.md#d3) with the revisions in [design](design.md#context), set `PINNED` to today, and run `uv run python -m tools.derive_eval_manifest`.
+- [x] 2.1 In `tools/derive_eval_manifest.py`, add `"opencv"` to `PUBLISHERS`, add the two `Spec`s of [D3](design.md#d3) with the revisions in [design](design.md#context), set `PINNED` to today, and run `uv run python -m tools.derive_eval_manifest`.
   Verify: `grep -c '"dest": "opencv_face/' evaluation/eval_models.json` prints `2`, and `grep -c '0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79\|8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4' evaluation/eval_models.json` prints `2`.
-- [ ] 2.2 Write `evaluation/face.py`: `Detector`, `Encoder`, `align`, `embed` and the `python -m evaluation.face <image>…` probe, per [D3](design.md#d3); `onnxruntime` imported inside the constructors after `silence_onnxruntime()`.
+- [x] 2.2 Write `evaluation/face.py`: `Detector`, `Encoder`, `align`, `embed` and the `python -m evaluation.face <image>…` probe, per [D3](design.md#d3); `onnxruntime` imported inside the constructors after `silence_onnxruntime()`.
   Verify: `grep -cE '^def (align|embed)\(|^class (Detector|Encoder)' evaluation/face.py` prints `4`, `grep -c 'silence_onnxruntime()' evaluation/face.py` prints `2`, and `grep -c '^import onnxruntime' evaluation/face.py` prints `0`.
-- [ ] 2.3 Add `tests/test_face.py` binding `evaluation:encoder:the-crop-is-aligned` (the template's own points give the identity transform; a shifted copy gives the shift back) and `evaluation:encoder:no-face-is-its-own-outcome` (`embed` with a detector that finds nothing returns `None`).
+- [x] 2.3 Add `tests/test_face.py` binding `evaluation:encoder:the-crop-is-aligned` (the template's own points give the identity transform; a shifted copy gives the shift back) and `evaluation:encoder:no-face-is-its-own-outcome` (`embed` with a detector that finds nothing returns `None`).
   Verify: `grep -c 'pytest.mark.spec("evaluation:encoder:' tests/test_face.py` prints `2`.
-- [ ] 2.4 **HALT CHECK** — land the two models with `bash tools/download_models.sh evaluation/eval_models.json`, then probe `.data/v0.30.1`: the three upper-body photographs and their `summon-anime-wai` renders each report a face; the full-body run is reported, not required. A miss on an upper-body render takes the fallback of [D3](design.md#d3) and records it in `design.md`.
+- [x] 2.4 **HALT CHECK** — land the two models with `bash tools/download_models.sh evaluation/eval_models.json`, then probe `.data/v0.30.1`: the three upper-body photographs and their `summon-anime-wai` renders each report a face; the full-body run is reported, not required. A miss on an upper-body render takes the fallback of [D3](design.md#d3) and records it in `design.md`.
   Verify: `uv run python -m evaluation.face .data/v0.30.1/runs/{187ec7dce855,28c3bb7ce031,d2043248d6e1}*/photo.png .data/v0.30.1/runs/{187ec7dce855,28c3bb7ce031,d2043248d6e1}*/summon-anime-wai/outputs/001/*.png | grep -c '^face '` prints `6`.
 
 ## 3 — The entry point

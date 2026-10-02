@@ -39,6 +39,10 @@ SHARED_WITH_THE_GRAPH = (
     "annotator_ckpts/hr16/DWPose-TorchScript-BatchSize5/dw-ll_ucoco_384_bs5.torchscript.pt",
 )
 
+# The face detector and the encoder the cohort is ranked with (D37).
+DETECTOR = "opencv_face/face_detection_yunet_2023mar.onnx"
+ENCODER = "opencv_face/face_recognition_sface_2021dec.onnx"
+
 # The one the report marks as falsifying-only (design.md D8).
 RECOGNIZER = "insightface/models/antelopev2/glintr100.onnx"
 

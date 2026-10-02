@@ -42,7 +42,7 @@ from isekai.boundary.provision import MANIFEST_PATH as GRAPH_MANIFEST_PATH
 from tools.manifest import Manifest, ManifestEntry, Source, Spec, entry_for, write
 
 # The date the revisions below were taken. Bumping a revision means bumping this.
-PINNED = "2026-09-06"
+PINNED = "2026-10-02"
 
 # Hugging Face orgs that publish the artifact they serve. A primary source outside
 # this set is a mirror and must declare an alternate -- which is the rule the three
@@ -51,6 +51,7 @@ PUBLISHERS = (
     "kwanY",
     "mattmdjaga",
     "deepghs",
+    "opencv",
 )
 
 # StyleID, the primary face axis: a CLIP image encoder with LoRA adapters merged.
@@ -75,6 +76,12 @@ SEGFORMER = "584abc1e1d260e23c0fc627c5217a09b2b461046"
 # repository -- rather than routing around it. The `_s` variant is the larger of
 # the two the repo ships.
 ANIMEFACE = "784dc4c0bb692351ddcdbe6131a050b17d3025d5"
+
+# The face detector and the encoder the cohort is ranked with, from OpenCV's own
+# repositories: YuNet finds the face and its five landmarks, SFace embeds the
+# aligned crop. Neither is a pin the generator carries (D37).
+YUNET = "3cc26e7f1014a5ee5d74a42acee58bafc9d0a310"
+SFACE = "3d7082438a6e4551e840c9b2bb60b71e8da4b524"
 
 # The destinations copied out of `config/models.json` byte for byte, in the order
 # they are emitted. `glintr100` is the load-bearing one, the encoder the generator
@@ -153,6 +160,26 @@ SPECS: tuple[Spec, ...] = (
             ),
         ),
         lfs=False,
+    ),
+    Spec(
+        "opencv_face/face_detection_yunet_2023mar.onnx",
+        (
+            Source(
+                "opencv/face_detection_yunet",
+                YUNET,
+                "face_detection_yunet_2023mar.onnx",
+            ),
+        ),
+    ),
+    Spec(
+        "opencv_face/face_recognition_sface_2021dec.onnx",
+        (
+            Source(
+                "opencv/face_recognition_sface",
+                SFACE,
+                "face_recognition_sface_2021dec.onnx",
+            ),
+        ),
     ),
 )
 

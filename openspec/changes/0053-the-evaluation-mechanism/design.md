@@ -105,7 +105,7 @@ YuNet: input `[1, 3, 640, 640]` BGR float, no normalisation; the image letterbox
 strides' heads decoded with priors, scores thresholded at 0.6, NMS at 0.3, the highest-scoring box kept; its five
 landmarks mapped back to image pixels. SFace: `align(image, landmarks)` solves the least-squares similarity
 transform from the five landmarks to the 112×112 ArcFace template and warps with `PIL.Image.transform(AFFINE)`;
-input `[1, 3, 112, 112]` BGR float, no normalisation; output 128-d, L2-normalised. The template:
+input `[1, 3, 112, 112]` RGB float, no normalisation, as OpenCV's `FaceRecognizerSF` swaps it before SFace; output 128-d, L2-normalised. The template:
 
 ```
 (38.2946, 51.6963) (73.5318, 51.5014) (56.0252, 71.7366) (41.5493, 92.3655) (70.7299, 92.2041)
