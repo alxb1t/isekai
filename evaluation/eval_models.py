@@ -5,8 +5,9 @@ sibling of `config/models.json`, never a section of it: that file is what the gr
 needs on the pod, and these run on the operator's machine.
 
 A model both files carry would let the generator's own recognizer grade the
-adapter trained to satisfy it, so `shared_with_the_graph` names any such
-destination and the entry point refuses on it (D37). Refusal on a bad digest is
+adapter trained to satisfy it, so `shared_with_the_graph` names any entry whose
+destination or bytes the graph's manifest carries, and the entry point refuses on
+it (D37). Refusal on a bad digest is
 `isekai.boundary.provision.resolve`'s.
 """
 
@@ -27,6 +28,16 @@ def load_eval_manifest(path: Path = EVAL_MANIFEST_PATH) -> Manifest:
 
 
 def shared_with_the_graph(evaluation: Manifest, graph: Manifest) -> list[str]:
-    """Return every destination both manifests carry, in the evaluator's order."""
-    theirs = {entry["dest"] for entry in graph["entries"]}
-    return [entry["dest"] for entry in evaluation["entries"] if entry["dest"] in theirs]
+    """Return each evaluator destination whose name or digest the graph carries.
+
+    In the evaluator's order. The digest is compared too, because the generator's
+    bytes under another name are still the generator's.
+    """
+    theirs = {
+        key for entry in graph["entries"] for key in (entry["dest"], entry["sha256"])
+    }
+    return [
+        entry["dest"]
+        for entry in evaluation["entries"]
+        if entry["dest"] in theirs or entry["sha256"] in theirs
+    ]

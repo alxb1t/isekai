@@ -21,7 +21,10 @@ from isekai.boundary.provision import digest_of
 from isekai.foundation.refusal import Refusal
 
 FIXTURE = Path(__file__).resolve().parent / "cohort"
-ENCODER = {"detector": "d.onnx", "encoder": "e.onnx"}
+ENCODER = {
+    "detector": {"dest": "d.onnx", "sha256": "d" * 64},
+    "encoder": {"dest": "e.onnx", "sha256": "e" * 64},
+}
 
 
 def _cohort(root: Path, people: dict[str, int]) -> Cohort:
@@ -64,15 +67,15 @@ def test_a_run_outside_the_cohort_is_listed_and_the_others_are_scored(
     p1, p2 = cohort.photographs
     assert cohort.by_digest("0" * 64) is None
 
-    rec = record(cohort, {"f": [scored(p1, "r1", 1, [p1, p2])]}, ["stray"], ENCODER)
+    rec = record(cohort, {"f": [scored(p1, "r1", 1, [p1, p2])]}, 1, ENCODER)
 
-    assert rec["outside_the_cohort"] == ["stray"]
+    assert rec["outside_the_cohort"] == 1
     assert rec["flows"]["f"]["counts"]["photograph"] == {
         "hits": 1,
         "of": 1,
         "chance": 0.5,
     }
-    assert "outside the cohort  stray" in table(rec)
+    assert "runs outside the cohort  1" in table(rec)
 
 
 @pytest.mark.spec("evaluation:counts:photograph-level-hit")
@@ -89,7 +92,7 @@ def test_a_render_nearest_its_own_photograph_is_one_photograph_level_hit(
     source = _named(cohort, "p1/1.png")
 
     ranked = rank([0.9, 0.1, 0.0], gallery)
-    rec = record(cohort, {"f": [scored(source, "r", 1, ranked)]}, [], ENCODER)
+    rec = record(cohort, {"f": [scored(source, "r", 1, ranked)]}, 0, ENCODER)
 
     assert ranked[0] == source
     assert rec["flows"]["f"]["counts"]["photograph"]["hits"] == 1
@@ -127,7 +130,7 @@ def test_each_count_carries_its_denominator_and_the_hits_chance_gives(
         scored(p2, "r2", 1, [p2, *cohort.photographs[:3]]),
     ]
 
-    counts = record(cohort, {"f": rows}, [], ENCODER)["flows"]["f"]["counts"]
+    counts = record(cohort, {"f": rows}, 0, ENCODER)["flows"]["f"]["counts"]
 
     assert chance(p1, cohort) == (1 / 4, 2 / 3)
     assert chance(p2, cohort) == (1 / 4, 0.0)
@@ -170,10 +173,12 @@ def test_every_flow_has_its_own_counts_in_the_table(tmp_path: Path) -> None:
         ],
     }
 
-    lines = table(record(cohort, flows, [], ENCODER)).splitlines()
+    lines = table(record(cohort, flows, 0, ENCODER)).splitlines()
 
-    assert re.fullmatch(r"summon-anime-wai\s+1 / 2\s+0 / 2", lines[3])
     assert re.fullmatch(r"control\s+0 / 1\s+0 / 1", lines[1])
+    assert re.fullmatch(r"chance\s+0\.5 / 1\s+0\.0 / 1", lines[2])
+    assert re.fullmatch(r"summon-anime-wai\s+1 / 2\s+0 / 2", lines[3])
+    assert re.fullmatch(r"chance\s+1\.0 / 2\s+0\.0 / 2", lines[4])
 
 
 @pytest.mark.spec("evaluation:table:the-table-re-derives-from-the-record")
@@ -183,7 +188,7 @@ def test_the_committed_table_re_derives_from_its_record() -> None:
     assert table(rec) == (FIXTURE / "evaluation.txt").read_text()
 
 
-@pytest.mark.spec_exempt("structural: a cohort whose bytes repeat cannot key a run")
+@pytest.mark.spec("evaluation:cohort:two-files-with-one-digest-are-refused")
 def test_two_cohort_files_with_one_digest_refuse_naming_both(tmp_path: Path) -> None:
     for person in ("p1", "p2"):
         (tmp_path / person).mkdir()

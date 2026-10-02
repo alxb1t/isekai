@@ -128,8 +128,8 @@ inference** — `config/vocabulary.json`.
 ### D37 · The evaluator's encoder shares no pin with the generator
 
 **The evaluator finds, aligns and embeds a face with models only its own manifest pins,
-`evaluation/eval_models.json`, and refuses to score when a destination there is one `config/models.json`
-carries too.**
+`evaluation/eval_models.json`, and refuses to score when a destination or a digest there is one
+`config/models.json` carries too.**
 
 - **Why:** the identity adapter is trained to satisfy the generator's own recognizer, so a count on that
   recognizer is the adapter grading itself. A different encoder has different blind spots.

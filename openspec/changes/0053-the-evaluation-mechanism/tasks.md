@@ -19,8 +19,8 @@ its record are the operator's, after the release.
   Verify: `grep -c photo_sha256 evaluation/__main__.py` prints `5`, `find .data -name '*.render.json' | wc -l` prints `0`, `shasum -a 256 models/opencv_face/sface.onnx | cut -c1-16` prints `0ba9fbfa01b5270c`, and `grep -q 'huggingface' isekai/boundary/provision.py && echo ok` prints `ok`.
 - [x] 1.2 Write `evaluation/cohort.py`: `Photograph`, `Cohort`, `load_cohort`, `rank`, `hits`, `chance`, `record` and `table`, per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4); stdlib and `isekai.boundary.provision.digest_of` alone.
   Verify: `grep -cE '^def (load_cohort|rank|hits|chance|record|table)\(' evaluation/cohort.py` prints `6`, and `grep -c '^import numpy\|^from PIL' evaluation/cohort.py` prints `0`.
-- [x] 1.3 Add `tests/test_cohort.py` binding `evaluation:cohort:a-run-is-matched-by-digest`, `evaluation:cohort:a-run-outside-the-cohort-is-reported`, `evaluation:counts:photograph-level-hit`, `evaluation:counts:person-level-excludes-the-source`, `evaluation:counts:chance-is-reported`, `evaluation:counts:no-average-no-percentage`, `evaluation:table:one-row-per-flow` and `evaluation:table:the-table-re-derives-from-the-record`, on vectors written by hand.
-  Verify: `grep -c 'pytest.mark.spec("evaluation:' tests/test_cohort.py` prints `8`.
+- [x] 1.3 Add `tests/test_cohort.py` binding `evaluation:cohort:a-run-is-matched-by-digest`, `evaluation:cohort:a-run-outside-the-cohort-is-reported`, `evaluation:counts:photograph-level-hit`, `evaluation:counts:person-level-excludes-the-source`, `evaluation:counts:chance-is-reported`, `evaluation:counts:no-average-no-percentage`, `evaluation:table:one-row-per-flow`, `evaluation:table:the-table-re-derives-from-the-record` and `evaluation:cohort:two-files-with-one-digest-are-refused`, on vectors written by hand.
+  Verify: `grep -c 'pytest.mark.spec("evaluation:' tests/test_cohort.py` prints `9`.
 
 ## 2 — The encoder
 
@@ -37,8 +37,8 @@ its record are the operator's, after the release.
 
 - [x] 3.1 Rewrite `evaluation/__main__.py` per [D5](design.md#d5): `runs`, `--cohort`, `--models`, `--flows`; `Run` and `run_view.rendered` for the runs and the seeds; `evaluation.json` beside the runs; the table on stdout.
   Verify: `grep -c photo_sha256 evaluation/__main__.py` prints `0`, `grep -c '"--cohort"' evaluation/__main__.py` prints `1`, and `grep -c 'sys.exit' evaluation/__main__.py` prints `0`.
-- [x] 3.2 Add `tests/test_evaluation_cli.py` binding `evaluation:cohort:a-faceless-photograph-is-refused` and `evaluation:table:a-failure-is-a-row`, on a batch under `tmp_path` made with `open_run` and a fake embedder; one render with no face, one photograph never rendered, every other row written.
-  Verify: `grep -c 'pytest.mark.spec("evaluation:' tests/test_evaluation_cli.py` prints `2`.
+- [x] 3.2 Add `tests/test_evaluation_cli.py` binding `evaluation:cohort:a-faceless-photograph-is-refused` and `evaluation:table:a-failure-is-a-row`, on a batch under `tmp_path` made with `open_run` and a fake embedder; one render with no face, one photograph never rendered, every other row written. It also binds `evaluation:cohort:an-undecodable-file-is-refused`, `evaluation:table:an-unreadable-render-is-a-row`, `evaluation:table:an-unreadable-run-is-reported`, `evaluation:table:an-unreadable-flow-costs-only-its-own`, `evaluation:table:the-record-names-no-unscored-run`, `evaluation:table:a-record-git-can-reach-is-refused` and `evaluation:pinned-artifacts:the-record-names-the-bytes`.
+  Verify: `grep -c 'pytest.mark.spec("evaluation:' tests/test_evaluation_cli.py` prints `9`.
 - [x] 3.3 In `docs/decisions.md`, restate D22 per [D6](design.md#d6) and add D37 per [D7](design.md#d7); in `docs/principles.md`, add `## Measurement` after *Privacy* with its three principles and the tests that hold them.
   Verify: `grep -c '^### D37' docs/decisions.md` prints `1`, `grep -c 'only optional extra' docs/decisions.md` prints `0`, and `grep -c '^## Measurement' docs/principles.md` prints `1`.
 
@@ -48,7 +48,7 @@ its record are the operator's, after the release.
   Verify: `ls evaluation/evaluate.py evaluation/eval_backends.py evaluation/ciede2000.py evaluation/labels.py evaluation/baseline tests/test_evaluate.py tests/test_labels.py tests/test_ciede2000.py tests/eval_fakes.py 2>&1 | grep -c 'No such file'` prints `9`.
 - [x] 4.2 In `evaluation/eval_models.py`, replace `SHARED_WITH_THE_GRAPH`, `RECOGNIZER` and `shared_entries_that_differ` with `DETECTOR`, `ENCODER` and `shared_with_the_graph`; `__main__` refuses on a non-empty result; in `tools/derive_eval_manifest.py`, drop the copied entries, the old `Spec`s and the old publishers, and re-run it.
   Verify: `grep -c '^def shared_with_the_graph' evaluation/eval_models.py` prints `1`, `grep -c 'glintr100\|styleid\|segformer\|anime_face' evaluation/eval_models.json` prints `0`, and `grep -c '"dest"' evaluation/eval_models.json` prints `2`.
-- [x] 4.3 In `tests/test_eval_manifest.py`, delete the tests binding `recognizer-matches-the-generators-pin` and add one binding `evaluation:encoder:shares-no-pin-with-the-generator`; re-point `tests/test_wd14.py:371-375` at `evaluation.face`.
+- [x] 4.3 In `tests/test_eval_manifest.py`, delete the tests binding `recognizer-matches-the-generators-pin` and add one binding `evaluation:encoder:shares-no-pin-with-the-generator` and one binding `evaluation:encoder:shares-no-bytes-with-the-generator`; re-point `tests/test_wd14.py:371-375` at `evaluation.face`.
   Verify: `grep -c 'recognizer-matches' tests/test_eval_manifest.py` prints `0`, `grep -c 'shares-no-pin-with-the-generator' tests/test_eval_manifest.py` prints `1`, and `grep -c 'eval_backends' tests/test_wd14.py` prints `0`.
 - [x] 4.4 In `pyproject.toml`, delete the optional-dependencies table with its comment, the ruff line for `eval_backends.py` and the `ty` override, per [D6](design.md#d6); run `uv lock`.
   Verify: `grep -c 'optional-dependencies\|eval_backends' pyproject.toml` prints `0`, `grep -c 'unresolved-import' pyproject.toml` prints `1` (the archive probe's), and `grep -c '^name = "torch"' uv.lock` prints `0`.

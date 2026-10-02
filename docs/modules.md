@@ -15,7 +15,7 @@ graph has no cycles. `tests/test_layers.py` holds both, lazy imports included.
 Module-level, cross-group:
   interface   ──▶ boundary · foundation · pipeline · shared
   pipeline    ──▶ boundary · foundation · shared
-  evaluation  ──▶ boundary · foundation · shared    (evaluation/, beside the package)
+  evaluation  ──▶ boundary · foundation · interface · shared    (evaluation/, beside the package)
   boundary    ──▶ foundation · shared
   shared      ──▶ foundation
   foundation  ──▶ nothing above it

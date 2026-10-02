@@ -8,4 +8,4 @@ summon-anime-wai  p3/1.png  not rendered
 
 summon-anime-wai  p2/2.png  also rendered 1005
 
-outside the cohort  7a1b3c5d9e2f-stranger
+runs outside the cohort  1

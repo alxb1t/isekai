@@ -19,6 +19,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   and prints the table; D37 and the measurement principles say why the count is shaped so (0053 D5, D7).
 - A render that does not decode is an `unreadable` row and a run whose frame or flows refuse is listed as
   unreadable, so neither ends the batch; a cohort file that is not an image refuses naming it (0053 D1, D5).
+- `evaluation.json` names its models and cohort photographs by digest and counts, never names, the runs it did
+  not score; it is refused where git can reach it, and a retired flow costs a run only its own renders (0053 D4, D5).
 
 ### Removed
 

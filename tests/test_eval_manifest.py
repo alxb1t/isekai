@@ -170,3 +170,17 @@ def test_a_destination_the_generator_also_pins_refuses_the_scoring_naming_it(
     assert shared_with_the_graph(eval_manifest, graph) == [borrowed["dest"]]
     with pytest.raises(Refusal, match=re.escape(borrowed["dest"])):
         entry_point._embedder(tmp_path)
+
+
+@pytest.mark.spec("evaluation:encoder:shares-no-bytes-with-the-generator")
+def test_the_generators_bytes_under_another_destination_refuse_the_scoring(
+    eval_manifest: Manifest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    graph = load_manifest()
+    renamed = {**graph["entries"][0], "dest": "opencv_face/renamed.onnx"}
+    eval_manifest["entries"].append(cast(Any, renamed))
+    monkeypatch.setattr(eval_models, "load_eval_manifest", lambda: eval_manifest)
+
+    assert shared_with_the_graph(eval_manifest, graph) == [renamed["dest"]]
+    with pytest.raises(Refusal, match=re.escape(renamed["dest"])):
+        entry_point._embedder(tmp_path)

@@ -6,10 +6,13 @@ from PIL import Image
 
 import evaluation.__main__ as entry
 from evaluation.cohort import Vector
+from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
 from evaluation.face import load
+from isekai.boundary.provision import digest_of, entry_for
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, open_run
+from isekai.interface import wiring
 
 FLOW = "summon-anime-wai"
 # Each image's face embedding, by file name; an absent name has no face found.
@@ -131,12 +134,92 @@ def test_a_run_that_cannot_be_read_is_listed_and_the_others_are_scored(
     (damaged / "run.json").write_text("{not json")
     (stray / "a-retired-flow").mkdir()
 
-    rec, _ = entry.score(runs, cohort, _Embedder(VECTORS), FLOWS_DIR)
+    rec, notes = entry.score(runs, cohort, _Embedder(VECTORS), FLOWS_DIR)
 
     outcomes = {r["photograph"]: r["outcome"] for r in rec["flows"][FLOW]["rows"]}
-    assert rec["unreadable"] == sorted([damaged.name, stray.name])
+    assert rec["unreadable"] == 2
+    assert all(any(run.name in note for note in notes) for run in (damaged, stray))
     assert outcomes == {
         "p1/p1-1.png": "hit",
         "p1/p1-2.png": "not rendered",
         "p2/p2-1.png": "not rendered",
+    }
+
+
+@pytest.mark.spec("evaluation:table:an-unreadable-flow-costs-only-its-own")
+def test_a_flow_this_build_does_not_carry_costs_its_run_only_that_flow(
+    tmp_path: Path,
+) -> None:
+    runs, cohort = _batch(tmp_path)
+    (run,) = runs.glob("*_p1-1")
+    (run / "a-retired-flow").mkdir()
+
+    rec, notes = entry.score(runs, cohort, _Embedder(VECTORS), FLOWS_DIR)
+
+    outcomes = {r["photograph"]: r["outcome"] for r in rec["flows"][FLOW]["rows"]}
+    assert outcomes["p1/p1-1.png"] == "hit"
+    assert rec["unreadable"] == 1
+    assert any(f"move {run / 'a-retired-flow'} out of the run" in n for n in notes)
+
+
+@pytest.mark.spec("evaluation:table:the-record-names-no-unscored-run")
+def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    runs, cohort = _batch(tmp_path)
+    stranger = tmp_path / "elsewhere" / "stranger.png"
+    stranger.parent.mkdir()
+    Image.new("RGB", (8, 8), (0, 0, 200)).save(stranger)
+    outside = open_run(stranger, runs).id
+    (damaged,) = runs.glob("*_p2-1")
+    (damaged / "run.json").write_text("{not json")
+    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(VECTORS))
+
+    code = entry.main([str(runs), "--cohort", str(cohort)])
+
+    written = (runs.parent / "evaluation.json").read_text()
+    rec = json.loads(written)
+    out, err = capsys.readouterr()
+    assert code == 0
+    assert (rec["outside_the_cohort"], rec["unreadable"]) == (1, 1)
+    for run in (outside, damaged.name):
+        assert run not in written + out
+        assert run in err
+
+
+@pytest.mark.spec("evaluation:table:a-record-git-can-reach-is-refused")
+def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repository = tmp_path / "repository"
+    runs, cohort = _batch(repository)
+    monkeypatch.setattr(wiring, "REPOSITORY", repository)
+    monkeypatch.setattr(wiring, "DATA_ROOT", repository / ".data")
+    embed = _Embedder(VECTORS)
+    monkeypatch.setattr(entry, "_embedder", lambda models: embed)
+
+    code = entry.main([str(runs), "--cohort", str(cohort)])
+
+    assert code == 1
+    assert str(runs.parent.resolve() / "evaluation.json") in capsys.readouterr().err
+    assert not (runs.parent / "evaluation.json").exists()
+    assert embed.seen == []
+
+
+@pytest.mark.spec("evaluation:pinned-artifacts:the-record-names-the-bytes")
+def test_the_record_names_each_model_and_cohort_photograph_by_its_digest(
+    tmp_path: Path,
+) -> None:
+    runs, cohort = _batch(tmp_path)
+    manifest = load_eval_manifest()
+
+    rec, _ = entry.score(runs, cohort, _Embedder(VECTORS), FLOWS_DIR)
+
+    assert rec["encoder"] == {
+        role: {"dest": dest, "sha256": entry_for(manifest, dest)["sha256"]}
+        for role, dest in (("detector", DETECTOR), ("encoder", ENCODER))
+    }
+    assert rec["cohort"]["sha256"] == {
+        f"{photo.parent.name}/{photo.name}": digest_of(photo)
+        for photo in sorted(cohort.glob("*/*"))
     }

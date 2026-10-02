@@ -4,12 +4,14 @@
 
 Each run is matched to its cohort photograph by the digest its frame records;
 each flow's first render is ranked against every cohort photograph. The record
-is written beside the runs, as `<batch>/evaluation.json`, and the table printed.
+is written beside the runs, as `<batch>/evaluation.json`, and the table printed;
+a run the record does not score is counted there and named on stderr alone.
 A separate entry point, not a verb: the evaluator measures the pipeline and
 `isekai` never imports it.
 """
 
 import argparse
+import shlex
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -27,12 +29,14 @@ from evaluation.cohort import (
     table,
     unscored,
 )
-from evaluation.eval_models import DETECTOR, ENCODER
+from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
+from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
 from isekai.interface.run_view import rendered
+from isekai.interface.wiring import trackable
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 # A face's embedding, or None when no face is found; a file that does not decode
@@ -102,26 +106,42 @@ def _rows(
     gallery: dict[Photograph, Vector],
     embed: Embed,
     flows_dir: Path,
-    refused: list[str],
-) -> dict[str, Row]:
-    """Return the row of each flow `run` rendered: its first seed, ranked.
+    notes: list[str],
+) -> tuple[dict[str, Row], bool]:
+    """Return each rendered flow's row, and whether every flow in `run` was read.
 
-    A render that does not decode is its own row, and why is added to `refused`.
+    A row ranks the flow's first seed. A flow that does not load costs only its
+    own renders, and a render that does not decode is its own row; why each was
+    is added to `notes`.
     """
-    seeds: dict[str, list[tuple[int, int]]] = {}
-    for flow, group, found in rendered(run, flows_dir):
-        seeds.setdefault(flow, []).extend((group, seed) for seed in found)
     rows: dict[str, Row] = {}
-    for flow, renders in seeds.items():
+    whole = True
+    for flow in run.flows:
+        try:
+            suffix = load_flow(flow, flows_dir).output_suffix
+        except Refusal as unloadable:
+            notes.append(
+                f"unreadable: {run.id}: {unloadable}; move {run.directory(flow)} out "
+                "of the run, then this command again"
+            )
+            whole = False
+            continue
+        renders = [
+            (group, seed)
+            for _, group, found in rendered(run, flows_dir, flows=(flow,))
+            for seed in found
+        ]
         if not renders:
             continue
         (group, seed), rest = renders[0], renders[1:]
-        name = f"{seed}{load_flow(flow, flows_dir).output_suffix}"
         try:
-            vector = embed(run.directory(flow, OUTPUTS, f"{group:03d}", name))
+            vector = embed(
+                run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
+            )
         except Refusal as undecodable:
-            refused.append(
-                f"{undecodable}; render it again or delete it, then this command again"
+            notes.append(
+                f"unreadable: {undecodable}; render it again or delete it, then this "
+                "command again"
             )
             rows[flow] = unscored(source, run.id, seed, "unreadable")
         else:
@@ -131,47 +151,52 @@ def _rows(
                 else scored(source, run.id, seed, rank(vector, gallery))
             )
         rows[flow]["also_rendered"] = [s for _, s in rest]
-    return rows
+    return rows, whole
+
+
+def _models() -> dict[str, dict[str, str]]:
+    """Return the detector and the encoder, each by destination and pinned digest."""
+    manifest = load_eval_manifest()
+    return {
+        role: {"dest": dest, "sha256": entry_for(manifest, dest)["sha256"]}
+        for role, dest in (("detector", DETECTOR), ("encoder", ENCODER))
+    }
 
 
 def score(
     runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path
 ) -> tuple[Record, list[str]]:
-    """Return the batch's record, and why each unreadable run or render was.
+    """Return the batch's record, and a line naming each run or render it did not score.
 
     Every cohort photograph is embedded before any render is opened, so a cohort
     with a faceless photograph refuses while nothing has been scored. A run whose
-    frame or flows refuse is listed as unreadable, and the others are scored.
+    frame or a flow refuses is counted as unreadable, and the rest are scored.
     """
     cohort = load_cohort(cohort_dir)
     matched: list[tuple[Run, Photograph]] = []
-    outside: list[str] = []
-    unreadable: list[str] = []
-    refused: list[str] = []
+    outside = unreadable = 0
+    notes: list[str] = []
     for run in _runs(runs):
         try:
             source = cohort.by_digest(run.photo_record["sha256"])
         except Refusal as damaged:
-            unreadable.append(run.id)
-            refused.append(f"{run.id}: {damaged}")
+            unreadable += 1
+            notes.append(f"unreadable: {run.id}: {damaged}")
             continue
         if source is None:
-            outside.append(run.id)
+            outside += 1
+            notes.append(f"outside the cohort: {run.id}")
         else:
             matched.append((run, source))
     gallery = _gallery(cohort, embed)
     flows: dict[str, list[Row]] = {}
     for run, source in matched:
-        try:
-            rows = _rows(run, source, gallery, embed, flows_dir, refused)
-        except Refusal as damaged:
-            unreadable.append(run.id)
-            refused.append(f"{run.id}: {damaged}")
-            continue
+        rows, whole = _rows(run, source, gallery, embed, flows_dir, notes)
+        unreadable += not whole
         for flow, row in rows.items():
             flows.setdefault(flow, []).append(row)
-    encoder = {"detector": DETECTOR, "encoder": ENCODER}
-    return record(cohort, flows, outside, encoder, unreadable=unreadable), refused
+    rec = record(cohort, flows, outside, _models(), unreadable=unreadable)
+    return rec, notes
 
 
 def _embedder(models: Path) -> Embed:
@@ -184,39 +209,57 @@ def _embedder(models: Path) -> Embed:
     shared = shared_with_the_graph(manifest, load_manifest())
     if shared:
         raise Refusal(
-            f"the evaluator's manifest carries {', '.join(shared)}, which the "
-            "generator's manifest carries too, so the count would be the generator "
-            "grading itself; pin another model in `evaluation/eval_models.json`"
+            f"the evaluator's manifest carries {', '.join(shared)}, whose destination "
+            "or bytes the generator's manifest carries too, so the count would be the "
+            "generator grading itself; pin another model in "
+            "`evaluation/eval_models.json`"
         )
+    fetch = (
+        f"MODELS_DIR={shlex.quote(str(models.resolve()))} bash "
+        "tools/download_models.sh evaluation/eval_models.json"
+    )
     try:
         detector = Detector(resolve(DETECTOR, models, manifest))
         encoder = Encoder(resolve(ENCODER, models, manifest))
     except FileNotFoundError as absent:
         raise Refusal(
-            f"{absent.filename} is not provisioned; run `bash tools/download_models.sh "
-            "evaluation/eval_models.json`, then this command again"
+            f"{absent.filename} is not provisioned; run `{fetch}`, then this command "
+            "again"
         ) from absent
     except DigestMismatch as swapped:
         raise Refusal(
-            f"{swapped}; delete that file, run `bash tools/download_models.sh "
-            "evaluation/eval_models.json`, then this command again"
+            f"{swapped}; delete that file, run `{fetch}`, then this command again"
         ) from swapped
     return lambda path: embed(path, detector, encoder)
+
+
+def _destination(runs: Path) -> Path:
+    """Return where the record goes, refusing a place git can reach (D18)."""
+    destination = runs.parent / "evaluation.json"
+    if trackable(destination.parent):
+        raise Refusal(
+            f"{destination.resolve()} is inside this repository and outside .data/, "
+            "the one directory git ignores, so the record would be one `git add` from "
+            "being published; give a runs directory under .data/<batch>/ or outside "
+            "the repository"
+        )
+    return destination
 
 
 def main(argv: Sequence[str]) -> int:
     """Score the batch, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
+        destination = _destination(args.runs)
         embed = _embedder(args.models)
-        rec, unreadable = score(args.runs, args.cohort, embed, args.flows)
+        rec, notes = score(args.runs, args.cohort, embed, args.flows)
     except Refusal as refused:
         print(f"refused: {refused}", file=sys.stderr)
         return 1
-    write_json(args.runs.parent / "evaluation.json", rec)
+    write_json(destination, rec)
     print(table(rec), end="")
-    for why in unreadable:
-        print(f"unreadable: {why}", file=sys.stderr)
+    for note in notes:
+        print(note, file=sys.stderr)
     return 0
 
 

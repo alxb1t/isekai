@@ -77,7 +77,8 @@ second encoder or seed; the cohort's generation; the root README's showcase; del
 **The cohort.** `cohort.py` holds `load_cohort(directory) -> Cohort`: every file directly under each sub-directory
 is a `Photograph(person, path, sha256)`, the digest by `isekai.boundary.provision.digest_of`. A run is matched by
 `run.frame["photo"]["sha256"]`; no match gives the outcome `outside the cohort`. A cohort photograph the detector
-finds no face in refuses the whole scoring with `Refusal` naming the file, before any render is opened.
+finds no face in, a cohort file that does not decode, and two cohort files with one digest each refuse the whole
+scoring with `Refusal` naming the file, before any render is opened.
 
 ### D2
 
@@ -122,8 +123,10 @@ the render's box, the crop is resized to 112×112 without alignment, and the pho
 **The record and the table.** `evaluation.json`:
 
 ```
-{"cohort": {"directory": "cohort", "people": ["p1", …], "photographs": 18},
- "encoder": {"detector": "<dest>", "encoder": "<dest>"},
+{"cohort": {"directory": "cohort", "people": ["p1", …], "photographs": 18,
+            "sha256": {"p1/1.png": "<digest>", …}},
+ "encoder": {"detector": {"dest": "<dest>", "sha256": "<digest>"},
+             "encoder": {"dest": "<dest>", "sha256": "<digest>"}},
  "flows": {"summon-anime-wai": {
     "rows": [{"person": "p1", "photograph": "p1/1.png", "run": "<id>", "seed": 123,
               "outcome": "hit" | "miss" | "no face found" | "unreadable" | "not rendered",
@@ -131,14 +134,17 @@ the render's box, the crop is resized to 112×112 without alignment, and the pho
               "photograph_hit": true, "person_hit": true}, …],
     "counts": {"photograph": {"hits": 15, "of": 18, "chance": 1.0},
                "person": {"hits": 14, "of": 18, "chance": 2.1}}}},
- "outside_the_cohort": ["<run id>", …],
- "unreadable": ["<run id>", …]}
+ "outside_the_cohort": 1,
+ "unreadable": 0}
 ```
 
 `table(record) -> str` prints the diagram in the delta: a row per flow, a chance row, then every row whose
 outcome is not `hit`, named. A run with several renders of one flow contributes its first seed; the rest are
 listed as `also rendered`. `outcome` is `hit` when both hits hold, `miss` when the face was found and either
-missed; the two booleans keep the split.
+missed; the two booleans keep the split. Each model is named by its pinned digest and each cohort photograph by
+its own. The runs outside the cohort and the unreadable runs are counted, never named: a run's id carries its
+photograph's digest and filename, and a run outside the cohort is by construction not a synthetic person, so the
+record a later change commits names none — the entry point names each on stderr.
 
 ### D5
 
@@ -146,9 +152,11 @@ missed; the two booleans keep the split.
 `DEFAULT_MODELS_DIR`, `--flows` defaulting to `FLOWS_DIR`. It lists `runs/*/run.json`, opens each as `Run`, matches
 it per D1, embeds every cohort photograph once (refusing per D1), then for each run and each `(flow, group, seeds)`
 from `run_view.rendered` embeds `outputs/<group>/<seed>.png`, ranks per D2, and collects rows. A refusal from one
-render is its row, and one from a run's frame or flows lists the run as `unreadable`. It writes
+render is its row; one from a run's frame counts the run as `unreadable`, and one from a flow counts it and costs
+only that flow's renders. Before anything is embedded it refuses a `runs.parent` inside the working tree and
+outside `.data/`, by `wiring.trackable`, the decision the CLI's run-root check makes (D18). It writes
 `runs.parent / "evaluation.json"` and prints `table`. Exit `0` with rows; `1` only on a refusal of the cohort
-itself or an unreadable `runs`.
+itself, an unreadable `runs`, or a record git could reach.
 
 ### D6
 

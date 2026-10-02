@@ -84,13 +84,17 @@ class FlowRecord(TypedDict):
 
 
 class Record(TypedDict):
-    """One batch's evaluation: the cohort, the encoder, every flow, every stray run."""
+    """One batch's evaluation: the cohort, the models, every flow, the runs unscored.
+
+    The runs unscored are counted, never named: a run's id carries its photograph's
+    filename.
+    """
 
     cohort: dict[str, object]
-    encoder: dict[str, str]
+    encoder: dict[str, dict[str, str]]
     flows: dict[str, FlowRecord]
-    outside_the_cohort: list[str]
-    unreadable: list[str]
+    outside_the_cohort: int
+    unreadable: int
 
 
 def load_cohort(directory: Path) -> Cohort:
@@ -199,16 +203,17 @@ def _count(hit: Sequence[bool], odds: Sequence[float]) -> Count:
 def record(
     cohort: Cohort,
     flows: Mapping[str, Sequence[Row]],
-    outside: Sequence[str],
-    encoder: Mapping[str, str],
+    outside: int,
+    encoder: Mapping[str, Mapping[str, str]],
     *,
-    unreadable: Sequence[str] = (),
+    unreadable: int = 0,
 ) -> Record:
     """Return the batch's record: a row per cohort photograph per flow, and counts.
 
     A photograph a flow holds no row for is `not rendered`. A count is over the
-    renders scored, and its chance is summed over the same renders. `unreadable`
-    names the runs whose frame or flows could not be read.
+    renders scored, and its chance is summed over the same renders. `outside` and
+    `unreadable` count the runs outside the cohort and the runs with a frame or a
+    flow that could not be read; `encoder` names each model by `dest` and `sha256`.
     """
     by_name = {p.name: p for p in cohort.photographs}
     out: dict[str, FlowRecord] = {}
@@ -236,11 +241,12 @@ def record(
             "directory": cohort.directory.name,
             "people": cohort.people,
             "photographs": len(cohort.photographs),
+            "sha256": {p.name: p.sha256 for p in cohort.photographs},
         },
-        "encoder": dict(encoder),
+        "encoder": {role: dict(model) for role, model in encoder.items()},
         "flows": out,
-        "outside_the_cohort": sorted(outside),
-        "unreadable": sorted(unreadable),
+        "outside_the_cohort": outside,
+        "unreadable": unreadable,
     }
 
 
@@ -295,9 +301,15 @@ def table(rec: Record) -> str:
         for row in entry["rows"]
         if row["also_rendered"]
     ]
-    outside = [f"outside the cohort  {run}" for run in rec["outside_the_cohort"]]
-    unreadable = [f"unreadable  {run}" for run in rec["unreadable"]]
-    for block in (failures, also, outside, unreadable):
+    strays = [
+        f"runs {label}  {count}"
+        for label, count in (
+            ("outside the cohort", rec["outside_the_cohort"]),
+            ("unreadable", rec["unreadable"]),
+        )
+        if count
+    ]
+    for block in (failures, also, strays):
         if block:
             text += ["", *block]
     return "\n".join(text) + "\n"

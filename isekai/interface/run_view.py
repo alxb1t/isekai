@@ -17,7 +17,7 @@ Stdlib only.
 
 import json
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -172,7 +172,9 @@ def listings(run: Run) -> list[Listing]:
     ]
 
 
-def rendered(run: Run, flows_dir: Path = FLOWS_DIR) -> list[tuple[str, int, list[int]]]:
+def rendered(
+    run: Run, flows_dir: Path = FLOWS_DIR, flows: Sequence[str] | None = None
+) -> list[tuple[str, int, list[int]]]:
     """Return each flow's rendered seeds, by approval, from filenames alone.
 
     The outputs directory is the approval's number, not the sheet's. The flow
@@ -183,11 +185,13 @@ def rendered(run: Run, flows_dir: Path = FLOWS_DIR) -> list[tuple[str, int, list
     **`flows_dir` is a parameter because `Wiring` has one**: reading the module
     default instead would send `show` against an injected flows root to `flows/`
     regardless of what was passed, and refuse naming a flow the caller never
-    asked about.
+    asked about. `flows` narrows the listing to those of the run's flows, so a
+    caller can read one flow without loading the others; it is every flow the run
+    holds by default.
     """
     return [
         (flow, int(group.name), rendered_seeds(group, suffix))
-        for flow in run.flows
+        for flow in (run.flows if flows is None else flows)
         for suffix in (load_flow(flow, flows_dir).output_suffix,)
         for group in _groups(run, flow)
     ]
