@@ -896,3 +896,96 @@ def test_the_draft_and_the_approval_carry_the_sheets_schema_and_field_map(
     approved, _ = approve(bare, FLOW, schema, vocabulary)
     assert approved is not None
     assert "field_map" not in read(approved, APPROVED_FILE)
+
+
+# --- copying another flow's approval ------------------------------------------
+
+CONTROL = "control-anime-wai"
+
+
+def _approved_source(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
+    """Approve `FLOW` unedited and return its approval."""
+    review(run, FLOW)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    return approved
+
+
+@pytest.mark.spec("review:copy-from:fields-are-copied-and-validated")
+def test_a_copy_carries_the_sources_fields_and_the_targets_schema_validates_them(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    source = _approved_source(run, schema, vocabulary)
+    narrower = Schema(schema.name, schema.fields[1:])
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, CONTROL, narrower, vocabulary, source=FLOW)
+    assert schema.fields[0].name in str(refused.value)
+    assert not (run.path / CONTROL / "review").exists()
+
+    copied, warnings = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert copied == run.path / CONTROL / "review" / "001.approved.json"
+    assert warnings == []
+    assert (
+        read(copied, APPROVED_FILE)["fields"] == read(source, APPROVED_FILE)["fields"]
+    )
+
+
+@pytest.mark.spec("review:copy-from:the-origin-is-recorded")
+def test_a_copied_approval_names_its_flow_and_the_approval_it_came_from(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    source = _approved_source(run, schema, vocabulary)
+
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert copied is not None
+    body = read(copied, APPROVED_FILE)
+    assert body["flow"] == CONTROL
+    assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 1}
+    assert body["sheet"] == read(source, APPROVED_FILE)["sheet"]
+
+
+@pytest.mark.spec("run-directory:layout:a-named-source-is-recorded")
+def test_a_copy_records_its_source_and_leaves_the_sources_files_alone(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    before = snapshot(run.path / FLOW)
+
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert copied is not None
+    assert read(copied, APPROVED_FILE)["producer"]["copied_from"]["flow"] == FLOW
+    assert snapshot(run.path / FLOW) == before
+
+
+@pytest.mark.spec("review:copy-from:no-source-approval-is-refused")
+def test_a_source_with_no_approval_is_refused_naming_it_and_the_command(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    review(run, FLOW)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    message = str(refused.value)
+    assert FLOW in message
+    assert f"`python -m isekai approve --flow {FLOW} {run.id}`" in message
+    assert not (run.path / CONTROL / "review").exists()
+
+
+@pytest.mark.spec("review:copy-from:an-approved-target-writes-nothing")
+def test_an_approved_target_is_not_copied_over(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved_source(run, schema, vocabulary)
+    copied, _ = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    assert copied is not None
+    before = snapshot(run.path / CONTROL)
+
+    again, warnings = approve(run, CONTROL, schema, vocabulary, source=FLOW)
+
+    assert (again, warnings) == (None, [])
+    assert snapshot(run.path / CONTROL) == before

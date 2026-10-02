@@ -310,8 +310,12 @@ def approve(
     flow: str,
     schema: Schema,
     vocabulary: Vocabulary,
+    source: str | None = None,
 ) -> tuple[Path | None, list[str]]:
     """Validate `flow`'s current draft and approve it, returning it and any warnings.
+
+    With `source`, no draft is read: `source`'s latest approval is copied under
+    `flow` instead, and the copy names where it came from.
 
     Validation is the last place an invented tag can be caught: one that merely
     looks canonical passes every later check on its way into the prompt. The
@@ -320,6 +324,8 @@ def approve(
     absent tag unreal would overclaim.
     """
     directory = run.directory(flow, REVIEW)
+    if source is not None:
+        return _copy_approval(run, flow, schema, vocabulary, source), []
     draft = current_draft(directory)
     if draft is None:
         if approved_versions(directory):
@@ -359,12 +365,12 @@ def approve(
     for key, shape in (("sheet", int), ("producer", dict), ("vocabulary", dict)):
         require(draft, body, key, shape, remedy)
     sheet_version, producer = body["sheet"], body["producer"]
-    source = run.directory(flow, SHEETS) / artifact_name(sheet_version)
+    sheet_path = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body: ReviewApproved = {
         "schema": APPROVED_FILE.schema,
         "producer": {
             **producer,
-            "edited": _differs(fields, draft, source, _resheet(run, flow, draft)),
+            "edited": _differs(fields, draft, sheet_path, _resheet(run, flow, draft)),
             "approved_from": version,
         },
         "flow": flow,
@@ -387,6 +393,56 @@ def approve(
     write(path, APPROVED_FILE, approved_body)
     draft.unlink()
     return path, warnings
+
+
+def _copy_approval(
+    run: Run, flow: str, schema: Schema, vocabulary: Vocabulary, source: str
+) -> Path | None:
+    """Write `source`'s latest approval under `flow` as its next, or None if approved.
+
+    The fields are validated against `flow`'s schema, so a copy the target cannot
+    hold is refused like any draft. `sheet` stays `source`'s: it is provenance,
+    and `copied_from` says where to look.
+    """
+    origin = run.directory(source, REVIEW)
+    versions_held = approved_versions(origin)
+    if not versions_held:
+        naming = f"--flow {source}"
+        raise Refusal(
+            f"{run.id}: {flow} is copied from {source}, which has no approved "
+            f"sheet; run `python -m isekai review {naming} {run.id}`, edit the "
+            f"draft, then `python -m isekai approve {naming} {run.id}` first"
+        )
+    directory = run.directory(flow, REVIEW)
+    if approved_versions(directory):
+        return None
+
+    approval = versions_held[-1]
+    path = origin / artifact_name(approval, APPROVED)
+    body = read(path, APPROVED_FILE)
+    remedy = f"delete {path}, then run {_again(run, source)} to approve it afresh"
+    require(path, body, "fields", dict, remedy)
+    fields = {name: list(tags) for name, tags in body["fields"].items()}
+    validate(fields, schema, vocabulary)
+
+    copied: ReviewApproved = {
+        "schema": APPROVED_FILE.schema,
+        "producer": {
+            **body["producer"],
+            "copied_from": {"flow": source, "approval": approval},
+        },
+        "flow": flow,
+        "sheet": body["sheet"],
+        "vocabulary": body["vocabulary"],
+        "fields": fields,
+    }
+    if "schema_document" in body:
+        copied["schema_document"] = body["schema_document"]
+    if "field_map" in body:
+        copied["field_map"] = body["field_map"]
+    target = directory / artifact_name(next_version(directory), APPROVED)
+    write(target, APPROVED_FILE, copied)
+    return target
 
 
 def _again(run: Run, flow: str) -> str:

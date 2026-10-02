@@ -6,7 +6,7 @@ scenario; each task below adds the tests that bind them.
 ## Progress
 
 - [x] 1 — The flow
-- [ ] 2 — The approval
+- [x] 2 — The approval
 - [ ] 3 — The seeds
 - [ ] 4 — The records
 
@@ -24,11 +24,11 @@ phase's changelog bullet names the control's full digest, which the changelog-di
 
 ## 2 — The approval
 
-- [ ] 2.1 In `isekai/foundation/artifacts.py`, add `CopiedFrom` and `ApprovedProducer.copied_from`; in `isekai/pipeline/review.py`, give `approve` the `source` keyword per [D2](design.md#d2).
+- [x] 2.1 In `isekai/foundation/artifacts.py`, add `CopiedFrom` and `ApprovedProducer.copied_from`; in `isekai/pipeline/review.py`, give `approve` the `source` keyword per [D2](design.md#d2).
   Verify: `grep -c '^class CopiedFrom\|copied_from: NotRequired\[CopiedFrom\]' isekai/foundation/artifacts.py` prints `2`, and `grep -c 'source: str | None = None' isekai/pipeline/review.py` prints `1`.
-- [ ] 2.2 In `isekai/interface/cli.py`, add `--from` to `approve` with `dest="source"`, refuse a source among the `--flow` names in `dispatch`, and pass it through `approve_flow`.
+- [x] 2.2 In `isekai/interface/cli.py`, add `--from` to `approve` with `dest="source"`, refuse a source among the `--flow` names in `dispatch`, and pass it through `approve_flow`.
   Verify: `grep -c '"--from"' isekai/interface/cli.py` prints `1`, and `grep -c 'source=args.source' isekai/interface/cli.py` prints `1`.
-- [ ] 2.3 Add to `tests/test_review.py` tests binding `review:copy-from:fields-are-copied-and-validated`, `review:copy-from:the-origin-is-recorded`, `review:copy-from:no-source-approval-is-refused`, `review:copy-from:an-approved-target-writes-nothing` and `run-directory:layout:a-named-source-is-recorded`; add to `tests/test_pipeline_cli.py` a test that `approve --from X --flow X` is refused naming `X`.
+- [x] 2.3 Add to `tests/test_review.py` tests binding `review:copy-from:fields-are-copied-and-validated`, `review:copy-from:the-origin-is-recorded`, `review:copy-from:no-source-approval-is-refused`, `review:copy-from:an-approved-target-writes-nothing` and `run-directory:layout:a-named-source-is-recorded`; add to `tests/test_pipeline_cli.py` a test that `approve --from X --flow X` is refused naming `X`.
   Verify: `grep -c 'review:copy-from:' tests/test_review.py` prints `4`, `grep -c 'run-directory:layout:a-named-source-is-recorded' tests/test_review.py` prints `1`, and `grep -c '"--from"' tests/test_pipeline_cli.py` prints a number above `0`.
 
 ## 3 — The seeds

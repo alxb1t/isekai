@@ -159,11 +159,19 @@ ChainProducer = TypedDict(
 )
 
 
+class CopiedFrom(TypedDict):
+    """The approval another flow's approval was copied from."""
+
+    flow: str
+    approval: int
+
+
 class ApprovedProducer(ChainProducer):
     """The draft's producer, and what approving it recorded."""
 
     edited: bool
     approved_from: int
+    copied_from: NotRequired[CopiedFrom]
 
 
 # --- the kinds ----------------------------------------------------------------

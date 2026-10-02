@@ -184,6 +184,14 @@ def build_parser() -> argparse.ArgumentParser:
             metavar="FLOW",
             help="a flow to act on; repeatable, and required",
         )
+    # The one verb that reads another flow, and only the one the operator names.
+    made["approve"].add_argument(
+        "--from",
+        dest="source",
+        default=None,
+        metavar="FLOW",
+        help="copy this flow's latest approval under each --flow instead of a draft",
+    )
     for name in ("caption", "tag", "sheet", "review"):
         made[name].add_argument(
             "--new-version",
@@ -329,6 +337,18 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0
         flows = _flows_for(args, wired)
+        if verb == "approve" and args.source is not None:
+            tracked = tracked_flows(wired.flows_dir)
+            if args.source not in tracked:
+                raise Refusal(
+                    f"{args.source}: not a flow this build tracks; the flows it "
+                    f"carries are {', '.join(tracked) or '(none)'}"
+                )
+        if verb == "approve" and args.source in flows:
+            raise Refusal(
+                f"{args.source}: a flow is not its own source; drop `--from "
+                f"{args.source}` or `--flow {args.source}` from the command"
+            )
         if verb == "tag":
             _require_tagged(flows, targets, args.runs)
     except Refusal as unselectable:
@@ -572,7 +592,13 @@ def _per_item(
         elif verb == "approve":
 
             def approve_flow(name: str) -> None:
-                written, warnings = approve(run, name, flows[name].schema, vocabulary())
+                written, warnings = approve(
+                    run,
+                    name,
+                    flows[name].schema,
+                    vocabulary(),
+                    source=args.source,
+                )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
