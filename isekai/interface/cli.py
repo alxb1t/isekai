@@ -300,6 +300,17 @@ def _run_for(identifier: str, wired: Wiring) -> Run:
     return open_run(photo, wired.runs_root)
 
 
+def _require_tracked(names: Sequence[str], wired: Wiring) -> None:
+    """Refuse the names that are no tracked flow, naming the flows there are."""
+    tracked = tracked_flows(wired.flows_dir)
+    unknown = [name for name in names if name not in tracked]
+    if unknown:
+        raise Refusal(
+            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
+            f"carries are {', '.join(tracked) or '(none)'}"
+        )
+
+
 def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     """Return the flows this invocation acts on, loaded, refusing an untracked one.
 
@@ -310,13 +321,7 @@ def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     selection is the inspection verb rather than a missing flag.
     """
     named: list[str] = list(getattr(args, "flows", None) or [])
-    tracked = tracked_flows(wired.flows_dir)
-    unknown = [name for name in named if name not in tracked]
-    if unknown:
-        raise Refusal(
-            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
-            f"carries are {', '.join(tracked) or '(none)'}"
-        )
+    _require_tracked(named, wired)
     # Deduplicated, order kept: naming a flow twice is a typo, not a request for
     # two renders of it.
     return {name: load_flow(name, wired.flows_dir) for name in dict.fromkeys(named)}
@@ -375,12 +380,7 @@ def _refuse_bad_source(
     """
     if source is None:
         return
-    tracked = tracked_flows(wired.flows_dir)
-    if source not in tracked:
-        raise Refusal(
-            f"{source}: not a flow this build tracks; the flows it carries are "
-            f"{', '.join(tracked) or '(none)'}"
-        )
+    _require_tracked([source], wired)
     if source in flows:
         raise Refusal(
             f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
@@ -651,6 +651,11 @@ def _generate(
     ready: list[tuple[Run, str]] = []
     # The seeds each run takes from the source flow, when one is named.
     borrowed: dict[str, list[int]] = {}
+    source_suffix = (
+        load_flow(args.seeds_from, wired.flows_dir).output_suffix
+        if args.seeds_from is not None
+        else ""
+    )
     # Collected alongside `across`'s, not raised: `prepare` already tried every
     # flow, so one run's broken sheet is a refusal to report at the end rather
     # than a reason its sibling flows go unrendered.
@@ -661,11 +666,7 @@ def _generate(
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
         if args.seeds_from is not None:
-            try:
-                borrowed[run.id] = source_seeds(run, args.seeds_from, wired.flows_dir)
-            except Refusal as unseeded:
-                broken.append(str(unseeded))
-                return
+            borrowed[run.id] = source_seeds(run, args.seeds_from, source_suffix)
         for flow, path in assembled.items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))

@@ -54,7 +54,6 @@ from isekai.foundation.flow import (
     Schema,
     Workflow,
     assemble,
-    load_flow,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -299,20 +298,26 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     )
 
 
-def source_seeds(run: Run, source: str, flows_dir: Path) -> list[int]:
+def render_groups(run: Run, flow: str) -> list[Path]:
+    """Return a flow's render groups: the outputs directories named by digits."""
+    return [
+        group
+        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
+        if group.is_dir() and group.name.isdigit()
+    ]
+
+
+def source_seeds(run: Run, source: str, suffix: str) -> list[int]:
     """Return the seeds of `source`'s latest render group for `run`, or refuse.
+
+    `suffix` is what `source` says it produces.
 
     Read from filenames alone. A latest group holding no render counts as none:
     an empty list would read downstream as "draw a seed", which is the opposite
     of taking the source's.
     e.g. `outputs/001/{11.png, 12.png}` -> `[11, 12]`
     """
-    suffix = load_flow(source, flows_dir).output_suffix
-    groups = sorted(
-        group
-        for group in run.directory(source, OUTPUTS).glob("*")
-        if group.is_dir() and group.name.isdigit()
-    )
+    groups = render_groups(run, source)
     seeds = rendered_seeds(groups[-1], suffix) if groups else []
     if not seeds:
         raise Refusal(

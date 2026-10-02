@@ -25,11 +25,13 @@ refuse() { echo "refused: $*" | tee -a "${log:-/dev/null}" >&2; exit 1; }
 runs=$1; shift
 [ -d "$runs" ] || refuse "$runs is not a directory; give the batch's runs/"
 log="$(dirname "$runs")/log.txt"
-flows=()
+flows=(); names=(); modes=(); values=()
 for spec in "$@"; do
   [[ "$spec" =~ ^[a-z0-9-]+=([1-9][0-9]*|[a-z][a-z0-9-]*)$ ]] \
     || refuse "'$spec' is not <flow>=<count> or <flow>=<source>, e.g. summon-anime-wai=1"
   flows+=(--flow "${spec%%=*}")
+  names+=("${spec%%=*}"); values+=("${spec#*=}")
+  if [[ "${spec#*=}" =~ ^[0-9]+$ ]]; then modes+=(--count); else modes+=(--seeds-from); fi
 done
 
 # Every run under the root, by id. bash 3.2 (macOS) has no mapfile.
@@ -57,9 +59,9 @@ fi
 # missing approval refuses here rather than on a billing pod.
 uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
 # A source flow's render is checked here too, so a missing one refuses before the pod.
-for spec in "$@"; do
-  [[ "${spec#*=}" =~ ^[0-9]+$ ]] && continue
-  uv run python -m isekai generate --flow "${spec%%=*}" --seeds-from "${spec#*=}" \
+for i in "${!names[@]}"; do
+  [ "${modes[$i]}" = --count ] && continue
+  uv run python -m isekai generate --flow "${names[$i]}" --seeds-from "${values[$i]}" \
     --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
 done
 
@@ -145,10 +147,8 @@ done
 
 # One flow failing does not cost the next its render; the exit says any failed.
 failed=0
-for spec in "$@"; do
-  if [[ "${spec#*=}" =~ ^[0-9]+$ ]]; then seeds=(--count "${spec#*=}")
-  else seeds=(--seeds-from "${spec#*=}"); fi
-  uv run python -m isekai generate --flow "${spec%%=*}" "${seeds[@]}" \
+for i in "${!names[@]}"; do
+  uv run python -m isekai generate --flow "${names[$i]}" "${modes[$i]}" "${values[$i]}" \
     --server "$SERVER" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log" \
     || failed=1
 done

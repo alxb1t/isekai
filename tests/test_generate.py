@@ -1798,11 +1798,6 @@ def _seeded_session(
     )
 
 
-def _seeds_from(*flags: str, runs: list[Run]) -> list[str]:
-    """Return the argv of rendering the control on the subject's seeds."""
-    return ["generate", "--flow", CONTROL, *flags, *(run.id for run in runs)]
-
-
 @pytest.mark.spec("image-generation:seeds-from:one-render-per-source-seed")
 def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
@@ -1816,7 +1811,7 @@ def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
         render(made, subject, FakeComfyClient(), seeds=[11, 12], poll=0)
         approve(made, CONTROL, schema, vocabulary, source=FLOW)
     wired = _seeded_session(tmp_path, vocabulary, FakeComfyClient(), io.StringIO())
-    argv = _seeds_from("--seeds-from", FLOW, runs=runs)
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, *(r.id for r in runs)]
 
     assert dispatch(build_parser().parse_args(argv), wired) == 0
 
@@ -1838,7 +1833,7 @@ def test_a_run_without_a_source_render_is_refused_before_any_endpoint(
     client = FakeComfyClient()
     err = io.StringIO()
     wired = _seeded_session(tmp_path, vocabulary, client, err)
-    argv = _seeds_from("--seeds-from", FLOW, runs=[run])
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, run.id]
 
     assert dispatch(build_parser().parse_args(argv), wired) == 1
 

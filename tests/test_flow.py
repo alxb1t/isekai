@@ -7,6 +7,7 @@ renders.
 """
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -946,17 +947,12 @@ def _control_differences(control_dir: Path, subject_dir: Path) -> list[str]:
     return differing
 
 
-def _control_pair(tmp_path: Path) -> tuple[Path, Path]:
-    """Copy the tracked control and its subject into a scratch root."""
-    pair = []
-    for control, subject in CONTROLS.items():
-        for name in (control, subject):
-            target = tmp_path / name
-            target.mkdir()
-            for item in (MANIFEST_NAME, *SIBLINGS):
-                (target / item).write_bytes((load_flow(name).path / item).read_bytes())
-            pair.append(target)
-    return pair[0], pair[1]
+def _control_pair(tmp_path: Path, control: str) -> tuple[Path, Path]:
+    """Copy a tracked control and its subject into a scratch root."""
+    return (
+        shutil.copytree(load_flow(control).path, tmp_path / control),
+        shutil.copytree(load_flow(CONTROLS[control]).path, tmp_path / "subject"),
+    )
 
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
@@ -986,7 +982,7 @@ def test_a_control_manifest_differs_only_in_its_name_and_zeroed_face_dials(
 
 @pytest.mark.spec("image-generation:control:files-equal-the-subject")
 def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
-    control, subject = _control_pair(tmp_path)
+    control, subject = _control_pair(tmp_path, "control-anime-wai")
     assert _control_differences(control, subject) == []
     (control / GRAPH_NAME).write_text("{}\n")
 
@@ -995,7 +991,7 @@ def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
 
 @pytest.mark.spec("image-generation:control:manifest-differs-only-in-the-face-dials")
 def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> None:
-    control, subject = _control_pair(tmp_path)
+    control, subject = _control_pair(tmp_path, "control-anime-wai")
     document = json.loads((control / MANIFEST_NAME).read_text())
     document["dials"]["cfg"] = 99
     (control / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")

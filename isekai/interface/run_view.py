@@ -40,7 +40,12 @@ from isekai.foundation.run import (
     failure_named,
     is_approved,
 )
-from isekai.pipeline.generate import is_render, is_sidecar, rendered_seeds
+from isekai.pipeline.generate import (
+    is_render,
+    is_sidecar,
+    render_groups,
+    rendered_seeds,
+)
 
 # The stages in the order a run passes through them. Every one of them is a
 # flow's own -- the run is input above and flow below -- so there is nothing for
@@ -193,16 +198,7 @@ def rendered(
         (flow, int(group.name), rendered_seeds(group, suffix))
         for flow in (run.flows if flows is None else flows)
         for suffix in (load_flow(flow, flows_dir).output_suffix,)
-        for group in _groups(run, flow)
-    ]
-
-
-def _groups(run: Run, flow: str) -> list[Path]:
-    """Return a flow's render groups: the outputs directories named by digits."""
-    return [
-        group
-        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
-        if group.is_dir() and group.name.isdigit()
+        for group in render_groups(run, flow)
     ]
 
 
@@ -213,7 +209,7 @@ def render_failures(run: Run) -> dict[tuple[str, int], list[FailureRecord]]:
     """
     found: dict[tuple[str, int], list[FailureRecord]] = {}
     for flow in run.flows:
-        for group in _groups(run, flow):
+        for group in render_groups(run, flow):
             failures = [
                 failure
                 for name in os.listdir(group)
@@ -262,7 +258,7 @@ def unread(run: Run, flows_dir: Path = FLOWS_DIR) -> list[str]:
             f"{flow}/{OUTPUTS}",
             lambda path: path.is_dir() and path.name.isdigit(),
         )
-        for group in _groups(run, flow):
+        for group in render_groups(run, flow):
             names += _unread_in(
                 group,
                 f"{flow}/{OUTPUTS}/{group.name}",
