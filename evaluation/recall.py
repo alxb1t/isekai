@@ -21,8 +21,10 @@ from collections.abc import Callable, Collection, Mapping, Sequence
 from pathlib import Path
 from typing import Literal, TypedDict
 
+from evaluation.face import UNDECODABLE
 from evaluation.record import destination, runs_in
 from isekai.boundary import wd14
+from isekai.boundary.provision import DigestMismatch
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     require,
@@ -144,7 +146,7 @@ def reading(tagger: wd14.LocalTagger) -> Read:
     def read(path: Path) -> set[str]:
         try:
             found = wd14.scored(path, tagger.session, tagger.labels)
-        except OSError as undecodable:
+        except UNDECODABLE as undecodable:
             raise Refusal(f"{path} does not decode as an image") from undecodable
         return {normalise(one.tag) for one in found}
 
@@ -155,9 +157,15 @@ def _reader(models: Path) -> tuple[Read, dict[str, str]]:
     """Return the real reader and the digest of each file it was verified against.
 
     `wd14.open_session` checks both pins before the graph is opened, so the
-    digests returned are those of the bytes read.
+    digests returned are those of the bytes read. A file whose bytes do not match
+    its pin refuses naming the command that fetches it again.
     """
-    tagger = wd14.open_session(models)
+    try:
+        tagger = wd14.open_session(models)
+    except DigestMismatch as swapped:
+        raise Refusal(
+            f"{swapped}; delete that file, run `{wd14.REMEDY}`, then this command again"
+        ) from swapped
     return reading(tagger), {dest: pin["sha256"] for dest, pin in tagger.pins.items()}
 
 
@@ -265,14 +273,22 @@ def _held(runs: Path, names: Sequence[str]) -> list[Run]:
 
 
 def _asked(run: Run, flow: str, group: int) -> dict[str, list[str]]:
-    """Return the tags the approval of `group` holds, by field, or refuse naming it."""
+    """Return the tags the approval of `group` holds, by field, or refuse naming it.
+
+    A field that is not a list of tags refuses, so a hand-edited string is never
+    counted letter by letter.
+    """
     path = run.directory(flow, REVIEW, artifact_name(group, APPROVED))
     if not path.is_file():
         raise Refusal(f"{path} is absent; restore it, then this command again")
     remedy = f"restore it in {path} by hand"
     body = read_artifact(path, APPROVED_FILE, remedy=remedy)
     require(path, body, "fields", dict, remedy)
-    return body["fields"]
+    fields = body["fields"]
+    for name, tags in fields.items():
+        if not (isinstance(tags, list) and all(isinstance(t, str) for t in tags)):
+            raise Refusal(f"{path}: `{name}` is not a list of tags; {remedy}")
+    return fields
 
 
 def _row(

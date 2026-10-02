@@ -1,7 +1,9 @@
 # `evaluation/` — counting whether a render is its person
 
-The cohort evaluator, beside the package it measures: `isekai` never imports it.
-It ranks a cohort's photographs for each render and counts two hits beside chance.
+Two commands, beside the package they measure: `isekai` never imports either.
+The cohort evaluator, `python -m evaluation`, ranks a cohort's photographs for each
+render and counts two hits beside chance; attribute recall, `python -m
+evaluation.recall`, counts the approved sheet's scored tags each render reads back.
 It adds no package: `onnxruntime`, `numpy` and `Pillow` are already the pipeline's.
 
 ```
@@ -14,6 +16,7 @@ uv run python -m evaluation <batch>/runs --cohort <cohort>
 uv run python -m evaluation.recall <batch>/runs [<run>…]
         │
         ├─ recall.py   count · totals · record · table · the reader · the command
+        ├─ face.py     UNDECODABLE: what a render that does not decode raises
         ├─ record.py   runs_in · destination: where a record goes, refused where git can reach
         └─ writes <batch>/recall.json, prints the table
 ```
@@ -48,7 +51,7 @@ The control row is the floor; the difference from the `summon` row is the face m
 |---|---|
 | `__main__.py` | the command line: matches each run to its cohort photograph, embeds, ranks, writes the record |
 | `cohort.py` | the cohort, the two counts, chance, the record and its table. Stdlib only |
-| `face.py` | finds the face, aligns it to the template, embeds it; `python -m evaluation.face <image>…` probes the detector |
+| `face.py` | finds the face, aligns it to the template, embeds it, and names what a file that does not decode raises; `python -m evaluation.face <image>…` probes the detector |
 | `recall.py` | the recall count, its record and table, the reader over the pipeline's tagger, and the command: `python -m evaluation.recall` |
 | `record.py` | what both commands ask of a batch: `runs_in` lists its runs, `destination` is `<batch>/<name>`, refused where git can reach it |
 | `eval_models.py` | reads the evaluator's manifest, and names any entry whose destination or digest the graph's manifest also carries (D37) |
@@ -65,7 +68,7 @@ at least once; a list of names cannot.
 | `recall.py` | — | `tests/test_recall.py`, `tests/test_recall_cli.py` |
 | `record.py` | `__main__.py`, `recall.py` | — |
 | `cohort.py` | `__main__.py` | `tests/test_cohort.py`, `tests/test_evaluation_cli.py` |
-| `face.py` | `__main__.py` | `tests/test_evaluation_cli.py`, `tests/test_face.py`, `tests/test_wd14.py` |
+| `face.py` | `__main__.py`, `recall.py` | `tests/test_evaluation_cli.py`, `tests/test_face.py`, `tests/test_wd14.py` |
 | `eval_models.py` | `__main__.py`, `face.py` | `tools/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_evaluation_cli.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
 
 > Files and importers only. What a component *is* is

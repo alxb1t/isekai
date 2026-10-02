@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,7 @@ from PIL import Image
 import evaluation.recall as recall
 from evaluation.recall import Record
 from isekai.boundary import wd14
+from isekai.boundary.provision import DigestMismatch
 from isekai.foundation.artifacts import APPROVED_FILE
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -18,7 +20,9 @@ from isekai.foundation.run import (
     open_run,
 )
 from isekai.interface import wiring
+from tests.stages import fake_tagger
 
+FIXTURE = Path(__file__).resolve().parent / "recall"
 SUMMON = "summon-anime-wai"
 CONTROL = "control-anime-wai"
 PINS = {"wd14/model.onnx": "m" * 64, "wd14/selected_tags.csv": "c" * 64}
@@ -151,6 +155,30 @@ def test_a_render_whose_approval_is_absent_is_its_own_row(
     assert "33.png" not in {path.name for path in tagger.seen}
 
 
+@pytest.mark.spec("evaluation:recall:a-render-without-its-approval-is-a-row")
+def test_a_render_whose_approval_holds_a_field_that_is_not_tags_is_its_own_row(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runs, a, _ = _batch(tmp_path)
+    damaged = a.directory(SUMMON, REVIEW, artifact_name(2, APPROVED))
+    damaged.write_text(
+        json.dumps(
+            {"schema": APPROVED_FILE.schema, "fields": {"hair_colour": "blue hair"}}
+        )
+    )
+    tagger = _Tagger()
+
+    assert _run(monkeypatch, tagger, runs) == 0
+
+    rows = {row["seed"]: row for row in _record(runs)["rows"]}
+    assert rows[33]["outcome"] == "no approval"
+    assert rows[33]["fields"] == {}
+    assert "002.approved.json" in capsys.readouterr().err
+    assert "33.png" not in {path.name for path in tagger.seen}
+
+
 @pytest.mark.spec("evaluation:recall:named-runs-narrow-the-reading")
 def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
     tmp_path: Path,
@@ -204,3 +232,44 @@ def test_a_record_inside_the_working_tree_and_outside_the_ignored_root_is_refuse
     assert "then this command again" in refusal
     assert not (runs.parent / "recall.json").exists()
     assert tagger.seen == []
+
+
+@pytest.mark.spec("evaluation:recall:the-record-names-the-tagger-and-its-floor")
+def test_the_reader_records_each_file_the_tagger_verified_by_its_destination(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pins = {
+        wd14.LABELS_DEST: {"sha256": "b" * 64},
+        wd14.MODEL_DEST: {"sha256": "a" * 64},
+    }
+    monkeypatch.setattr(
+        wd14, "open_session", lambda models: replace(fake_tagger(), pins=pins)
+    )
+
+    _, digests = recall._reader(tmp_path)
+
+    assert digests == {wd14.LABELS_DEST: "b" * 64, wd14.MODEL_DEST: "a" * 64}
+    committed = json.loads((FIXTURE / "recall.json").read_text())
+    assert set(committed["tagger"]) == set(digests)
+
+
+@pytest.mark.spec("evaluation:pinned-artifacts:digest-mismatch-is-refused")
+def test_a_tagger_file_that_does_not_match_its_pin_refuses_naming_the_fetch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runs, _, _ = _batch(tmp_path)
+
+    def swapped(models: Path) -> wd14.LocalTagger:
+        raise DigestMismatch(f"{wd14.MODEL_DEST}: expected {'a' * 64}, got {'f' * 64}")
+
+    monkeypatch.setattr(wd14, "open_session", swapped)
+
+    assert recall.main([str(runs)]) == 1
+
+    refusal = capsys.readouterr().err
+    assert refusal.startswith("refused: ")
+    assert wd14.MODEL_DEST in refusal
+    assert wd14.REMEDY in refusal
+    assert not (runs.parent / "recall.json").exists()

@@ -8,7 +8,7 @@ right home for something composed without it.
 
 `_check_run_root` travels with `wiring()`, its only caller. It is the guard that
 keeps a run directory -- which holds a copy of the photograph by construction --
-from sitting inside the working tree and outside the one root git ignores.
+from sitting inside the working tree and outside the ignored data root.
 `trackable` is that rule's decision, and the evaluator asks it of its record.
 
 Stdlib only, and on `python -m isekai`'s import graph.

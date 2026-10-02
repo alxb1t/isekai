@@ -13,6 +13,7 @@ from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, open_run
 from isekai.interface import wiring
+from tests.images import oversized_png
 
 FLOW = "summon-anime-wai"
 # Each image's face embedding, by file name; an absent name has no face found.
@@ -124,6 +125,21 @@ def test_a_render_that_does_not_decode_is_its_own_row(tmp_path: Path) -> None:
     }
 
 
+@pytest.mark.spec("evaluation:table:an-unreadable-render-is-a-row")
+def test_a_render_too_large_to_open_is_its_own_row(tmp_path: Path) -> None:
+    runs, cohort = _batch(tmp_path)
+    (render,) = runs.glob(f"*/{FLOW}/{OUTPUTS}/001/22.png")
+    render.write_bytes(oversized_png())
+    vectors = {**VECTORS, "22.png": [0.9, 0.1, 0.0]}
+
+    rec, notes = entry.score(runs, cohort, _Decoding(vectors), FLOWS_DIR)
+
+    outcomes = {r["photograph"]: r["outcome"] for r in rec["flows"][FLOW]["rows"]}
+    assert outcomes["p1/p1-2.png"] == "unreadable"
+    assert outcomes["p1/p1-1.png"] == "hit"
+    assert any("22.png does not decode" in note for note in notes)
+
+
 @pytest.mark.spec("evaluation:table:the-latest-group-is-ranked")
 def test_the_first_seed_of_the_latest_render_group_is_the_one_ranked(
     tmp_path: Path,
@@ -145,6 +161,24 @@ def test_the_first_seed_of_the_latest_render_group_is_the_one_ranked(
     assert (row["seed"], row["also_rendered"]) == (33, [11, 44])
     assert row["outcome"] == "miss"
     assert [p.name for p in embed.seen if p.parent.parent == later.parent] == ["33.png"]
+
+
+@pytest.mark.spec("evaluation:table:the-latest-group-is-ranked")
+def test_a_latest_group_holding_no_render_is_not_rendered(tmp_path: Path) -> None:
+    runs, cohort = _batch(tmp_path)
+    run = open_run(cohort / "p1" / "p1-1.png", runs)
+    failed = run.directory(FLOW, OUTPUTS, "002")
+    failed.mkdir()
+    (failed / "001.error.1.permanent.json").write_text("{}")
+    embed = _Embedder(VECTORS)
+
+    rec, _ = entry.score(runs, cohort, embed, FLOWS_DIR)
+
+    row = next(
+        r for r in rec["flows"][FLOW]["rows"] if r["photograph"] == "p1/p1-1.png"
+    )
+    assert row["outcome"] == "not rendered"
+    assert "11.png" not in {path.name for path in embed.seen}
 
 
 @pytest.mark.spec("evaluation:table:an-unreadable-run-is-reported")

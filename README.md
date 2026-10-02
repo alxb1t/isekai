@@ -388,8 +388,9 @@ isekai/
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
-├── evaluation/                # the cohort evaluator, beside the package it measures —
-│                              #   `uv run python -m evaluation <runs> --cohort <dir>`
+├── evaluation/                # the cohort evaluator and attribute recall, beside the package —
+│                              #   `uv run python -m evaluation <runs> --cohort <dir>`,
+│                              #   `uv run python -m evaluation.recall <runs>`
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable

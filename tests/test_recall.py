@@ -5,8 +5,9 @@ from pathlib import Path
 import pytest
 
 from evaluation.recall import Record, Row, count, reading, table, totals
-from isekai.boundary.wd14 import FLOOR, read_labels
+from isekai.boundary.wd14 import FLOOR, prepare, read_labels
 from isekai.foundation.refusal import Refusal
+from tests.images import oversized_png
 from tests.stages import fake_tagger
 
 FIXTURE = Path(__file__).resolve().parent / "recall"
@@ -90,3 +91,21 @@ def test_a_tag_at_the_floor_is_read_back_in_the_sheets_spelling(tmp_path: Path) 
     undecodable = replace(fake_tagger(), session=_Undecodable())
     with pytest.raises(Refusal, match=r"1\.png does not decode"):
         reading(undecodable)(render)
+
+
+class _Preparing:
+    """A session that prepares the image as the real one does, then sees nothing."""
+
+    def run(self, photo: Path) -> list[float]:
+        prepare(photo, 8)
+        return [0.0, 0.0, 0.0]
+
+
+@pytest.mark.spec("evaluation:recall:an-unreadable-render-is-a-row")
+def test_an_image_too_large_to_open_is_refused_naming_it(tmp_path: Path) -> None:
+    render = tmp_path / "1.png"
+    render.write_bytes(oversized_png())
+    tagger = replace(fake_tagger(), session=_Preparing())
+
+    with pytest.raises(Refusal, match=r"1\.png does not decode"):
+        reading(tagger)(render)

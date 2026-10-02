@@ -99,9 +99,10 @@ def _rows(
 ) -> tuple[dict[str, Row], bool]:
     """Return each rendered flow's row, and whether every flow in `run` was read.
 
-    A row ranks the first seed of the flow's latest render group. A flow that does
-    not load costs only its own renders, and a render that does not decode is its
-    own row; why each was is added to `notes`.
+    A row ranks the first seed of the flow's latest render group; a latest group
+    holding no render leaves the flow not rendered, as it leaves a control flow no
+    seeds to take. A flow that does not load costs only its own renders, and a
+    render that does not decode is its own row; why each was is added to `notes`.
     """
     rows: dict[str, Row] = {}
     whole = True
@@ -115,16 +116,11 @@ def _rows(
             )
             whole = False
             continue
-        renders = [
-            (group, seed)
-            for _, group, found in rendered(run, flows_dir, flows=(flow,))
-            for seed in found
-        ]
-        if not renders:
+        groups = rendered(run, flows_dir, flows=(flow,))
+        if not groups or not groups[-1][2]:
             continue
-        group = renders[-1][0]
-        seed = next(s for g, s in renders if g == group)
-        rest = [s for g, s in renders if (g, s) != (group, seed)]
+        _, group, (seed, *_) = groups[-1]
+        rest = [s for _, g, found in groups for s in found if (g, s) != (group, seed)]
         try:
             vector = embed(
                 run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
