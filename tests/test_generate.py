@@ -1923,3 +1923,58 @@ def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpo
         copy == "older"
     )
     _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec(
+    "image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first"
+)
+@pytest.mark.parametrize("copy", ["behind", "in step"])
+def test_a_copy_behind_a_source_that_renders_first_is_refused_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run, copy: str
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    # The source is approved twice and never rendered; the copy is of 1 or of 2.
+    if copy == "behind":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    review(run, FLOW, new_version=True)
+    approve(run, FLOW, schema, vocabulary)
+    if copy == "in step":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--in-step-with", FLOW, run.id]
+
+    refused = 1 if copy == "behind" else 0
+    assert dispatch(build_parser().parse_args(argv), wired) == refused
+
+    message = err.getvalue()
+    assert ("001" in message and "002" in message) == (copy == "behind")
+    assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
+        copy == "behind"
+    )
+    _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec(
+    "image-generation:seeds-from:the-check-before-the-source-takes-no-endpoint"
+)
+def test_the_check_before_the_source_renders_is_refused_beside_a_server(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--in-step-with", FLOW]
+    argv += ["--server", "http://127.0.0.1:8188", run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert err.getvalue().startswith("refused: --in-step-with")
+    assert "--server" in err.getvalue()
+    assert not (run.path / CONTROL / PROMPTS).exists()
+    _assert_nothing_rented(client, run, CONTROL)

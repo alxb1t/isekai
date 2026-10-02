@@ -1,7 +1,7 @@
 # Design — 0054 the control arm
 
 How the control flow is made and held equal, how an approval crosses flows, how a render reuses another flow's
-seeds, and where each is recorded. **Verdict: feasible** — a directory and a test, one flag on `approve`, one on
+seeds, and where each is recorded. **Verdict: feasible** — a directory and a test, one flag on `approve`, two on
 `generate`, one grammar form in `render.sh`, each held by a test.
 
 ## Context
@@ -55,7 +55,7 @@ origin recorded; a render on another flow's seeds, recorded; the crossing named 
 | [D2](#d2) | `approve --from <flow>`: the source's latest approval's fields, validated against the target's schema, written as the target's next approval with `producer.copied_from` | a `cp` carries the wrong identifier; a second review lets the prompts drift | a verb of its own; copying the draft |
 | [D3](#d3) | `generate --seeds-from <flow>`: the source's latest group's seeds, from filenames, checked in the free pass; the sidecar records `seeds_from`; `render.sh` takes `<flow>=<flow>` | same noise makes the pair an ablation; the check before the pod costs nothing | `--seed` per run by hand; pairing by a record |
 | [D5](#d5) | the target is in step when its latest approval is a copy of the source's latest; otherwise `approve --from` copies again under the next number; `generate --seeds-from` refuses a copy made from another approval than the source's latest renders | a source approved again after the copy left the control on the old sheet and the new seeds, silently | a warning alone; refusing every re-copy |
-| [D6](#d6) | `render.sh` defers the pre-pod seeds check for a source an earlier spec renders by count in the same session, and refuses a source spec placed after its dependent | a fresh batch is one command and one boot | two sessions always |
+| [D6](#d6) | `render.sh` checks a dependent of a source an earlier spec renders by count in the same session against the source's latest approval before the pod, takes its seeds at its turn, and refuses a source spec placed after its dependent | a fresh batch is one command and one boot, and its copy is still checked for free | two sessions always; checking the copy only on the pod |
 | [D4](#d4) | D38 under *Flows*; `run-directory` MODIFIED with the named-source crossing; the recipe in `evaluation/README.md`; `README.md` and `CLAUDE.md` name the third flow | the crossing is the operator's act, stated once | a new capability for the control |
 
 ### D1
@@ -167,8 +167,11 @@ source has no render yet.
 
 After the parse loop, for each `--seeds-from` spec: a spec naming its source with a count *later* in the line is
 refused, `'<spec>' comes before its source '<source>=<count>'; put the source first`; one naming its source with a
-count *earlier* is marked deferred. The free seeds pass skips a deferred spec; its checks then run at its turn in
-the render loop, after the source has rendered. `evaluation/README.md`'s recipe gains the one-session line for a
+count *earlier* is marked deferred. The free seeds pass runs a deferred spec as `generate --flow <flow>
+--in-step-with <source>`, which renders nothing: `--in-step-with` sits in `generate`'s exclusive group, `dispatch`
+refuses it beside `--server`, and `assemble_one` calls `refuse_out_of_step` with no group, which compares the copy
+with the source's latest approval, the group the source's count render writes into. Its seeds are taken at its turn
+in the render loop, after the source has rendered. `evaluation/README.md`'s recipe gains the one-session line for a
 fresh batch beside the two-step form.
 
 ## Dependencies
@@ -185,7 +188,8 @@ None.
 - **The CHANGELOG bullet must carry the digest or the gate is red at the end of the flow phase** → stated in
   [D1](#d1); the gate names the flow.
 - **A deferred seeds check refuses on a paid pod** → only when the source's own render failed in that session,
-  which the log already shows; the control's renders are skipped, nothing else is lost.
+  which the log already shows; a copy behind the source's latest approval is refused before the pod, and the
+  control's renders are skipped, nothing else is lost.
 - **`refuse_out_of_step` checks only a copy naming the source** → a flow rendered on another's seeds under its own
   hand approval is a different experiment, and is not refused.
 - **A copied approval names a sheet version under another flow** → `sheet` is provenance only; `copied_from`
@@ -193,4 +197,4 @@ None.
 
 ## Verdict
 
-**feasible** — a directory, two flags, one grammar form, each with its test and its record.
+**feasible** — a directory, three flags, one grammar form, each with its test and its record.

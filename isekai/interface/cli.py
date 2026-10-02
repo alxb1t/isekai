@@ -257,6 +257,18 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FLOW",
         help="render this flow's latest seeds for each run; not with the others",
     )
+    # The free check for a source rendered by count earlier in the same session,
+    # whose seeds do not exist until the pod is up: it renders nothing.
+    render.add_argument(
+        "--in-step-with",
+        dest="in_step_with",
+        default=None,
+        metavar="FLOW",
+        help=(
+            "check that each copy of this flow's approval is of its latest, and "
+            "render nothing; for a source that renders first in the same session"
+        ),
+    )
     # No default, deliberately. Assembly is free and rendering is not, so the
     # invocation that costs money is the one that names where to spend it --
     # `generate` without `--server` assembles every prompt and stops, which is
@@ -359,6 +371,12 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             _refuse_bad_source(args.source, "from", flows, wired)
         if verb == "generate":
             _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
+            _refuse_bad_source(args.in_step_with, "in-step-with", flows, wired)
+            if args.in_step_with is not None and args.server is not None:
+                raise Refusal(
+                    "--in-step-with checks before the session and renders nothing; "
+                    f"drop `--server {args.server}` from the command"
+                )
         if verb == "tag":
             _require_tagged(flows, targets, args.runs)
     except Refusal as unselectable:
@@ -675,13 +693,16 @@ def _generate(
             group, borrowed[run.id] = source_seeds(run, args.seeds_from, source_suffix)
             for flow in assembled:
                 refuse_out_of_step(run, flow, args.seeds_from, group)
+        if args.in_step_with is not None:
+            for flow in assembled:
+                refuse_out_of_step(run, flow, args.in_step_with)
         for flow, path in assembled.items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))
 
     refused = across(list(targets), assemble_one) + broken
     client = wired.client
-    if client is None:
+    if client is None or args.in_step_with is not None:
         return refused
     image = booted_image()
     # One report per session, read only when a render will run.

@@ -39,7 +39,16 @@ render group for the same run, reading the seeds from filenames alone, and SHALL
 each render. It SHALL refuse a run whose source flow has no render before any endpoint is acquired, SHALL
 refuse a flow named as its own source, and SHALL accept neither a count nor an explicit seed beside a source.
 Where the flow's approval is a copy of the source's, it SHALL refuse a run whose copy was not made from the
-approval the source's latest renders came from, before any endpoint is acquired.
+approval the source's latest renders came from, before any endpoint is acquired. Where the source renders first
+in the same session, it SHALL refuse, before any endpoint is acquired, a copy not made from the source's latest
+approval, and that check SHALL render nothing.
+
+```
+render.sh <runs> S=1 T=S
+   free pass: assemble S and T
+   free pass: T in step with S's latest approval?  no ──▶ refused, no pod
+   pod: render S into its latest approval's group, then T on those seeds
+```
 
 A render on the same seed starts from the same noise, so two flows differ only in what the operator changed
 between them; a fresh seed would add a difference of its own as large as the one measured. The same holds for
@@ -66,6 +75,20 @@ the sheet: seeds from one approval under a sheet copied from another compare two
   came from
 - **THEN** the run is refused naming both approvals and the command that brings them in step
 - **AND** no endpoint is contacted
+
+#### Scenario: a copy behind a source that renders first is refused first
+- **Key:** `image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first`
+- **Layers:** unit
+- **WHEN** the source renders first in the same session and the flow's approval is a copy of an older source
+  approval
+- **THEN** the run is refused naming both approvals and the command that copies the latest
+- **AND** no endpoint is acquired
+
+#### Scenario: the check before the source renders takes no endpoint
+- **Key:** `image-generation:seeds-from:the-check-before-the-source-takes-no-endpoint`
+- **Layers:** unit
+- **WHEN** the check against a source that renders first is asked for beside an endpoint
+- **THEN** the invocation is refused before any run is opened
 
 #### Scenario: a flow is not its own source
 - **Key:** `image-generation:seeds-from:a-flow-is-not-its-own-source`

@@ -3282,3 +3282,56 @@ def test_the_unrecorded_check_catches_a_teardown_that_needs_a_record(
 ) -> None:
     for case, end in UNRECORDED_ENDS.items():
         assert not session_unrecorded(RECORDED_TEARDOWN, tmp_path / case, end), case
+
+
+def session_with_a_dependent(render_sh: str, root: Path) -> tuple[bool, list[str]]:
+    """Run `summon=1 control=summon` with every control-only `generate` refused.
+
+    Return whether `up.sh` ran, and each `uv` call the session made. The stub
+    refuses as the CLI does a control whose copy is behind its source.
+    """
+    (root / "infra").mkdir(parents=True)
+    (root / "infra" / "render.sh").write_text(render_sh)
+    (root / "infra" / "up.sh").write_text('touch "$(dirname "$0")/../up"\nexit 1\n')
+    (root / "infra" / "down.sh").write_text("exit 0\n")
+    run = root / ".data" / "b" / "runs" / "r1"
+    run.mkdir(parents=True)
+    (run / "run.json").write_text("{}")
+    uv = (
+        '#!/bin/sh\necho "$*" >> "$(dirname "$0")/uv.calls"\n'
+        'case "$*" in "run python -m isekai generate --flow control-anime-wai "*)\n'
+        '  echo "refused: r1: behind" >&2; exit 1;;\nesac\nexit 0\n'
+    )
+    stub_command(root / "bin", "uv", uv)
+    stub_command(root / "bin", "curl", "#!/bin/sh\nexit 7\n")
+    subprocess.run(
+        [
+            "bash",
+            "infra/render.sh",
+            ".data/b/runs",
+            "summon-anime-wai=1",
+            "control-anime-wai=summon-anime-wai",
+        ],
+        cwd=root,
+        env={"PATH": f"{root / 'bin'}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    calls = root / "bin" / "uv.calls"
+    return (root / "up").exists(), calls.read_text().splitlines()
+
+
+@pytest.mark.spec(
+    "image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first"
+)
+def test_a_dependent_behind_its_source_in_one_session_refuses_before_the_pod(
+    render_sh: str, tmp_path: Path
+) -> None:
+    booted, calls = session_with_a_dependent(render_sh, tmp_path)
+    assert not booted
+    assert (
+        "run python -m isekai generate --flow control-anime-wai "
+        "--in-step-with summon-anime-wai --runs .data/b/runs r1"
+    ) in calls

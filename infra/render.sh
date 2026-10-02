@@ -37,8 +37,9 @@ for spec in "$@"; do
 done
 
 # A source rendered by count earlier in this line has no seeds until the pod is up,
-# so its dependents are checked at their turn in the render loop; one placed before
-# its source could never be.
+# so before the pod its dependents are checked against its latest approval, the
+# group it renders into, and their seeds at their turn; one placed before its source
+# could never be.
 defer=()
 for i in "${!names[@]}"; do
   defer+=(0)
@@ -75,11 +76,13 @@ fi
 # Free work first: every prompt is assembled before anything is rented, so a
 # missing approval refuses here rather than on a billing pod.
 uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
-# A source flow's render is checked here too, so a missing one refuses before the pod.
+# A source flow's render is checked here too, so a missing one or a copy out of
+# step with it refuses before the pod.
 for i in "${!names[@]}"; do
   [ "${modes[$i]}" = --count ] && continue
-  [ "${defer[$i]}" = 1 ] && continue
-  uv run python -m isekai generate --flow "${names[$i]}" --seeds-from "${values[$i]}" \
+  check=--seeds-from
+  [ "${defer[$i]}" = 1 ] && check=--in-step-with
+  uv run python -m isekai generate --flow "${names[$i]}" "$check" "${values[$i]}" \
     --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
 done
 

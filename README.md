@@ -290,6 +290,8 @@ reaches a model or a GPU** — its scope is stage ③ alone.
 - `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
   `--count` or `--seed`. A flow whose approval is a copy made from another approval than the one those
   renders came from is refused before any boot.
+- `--in-step-with FLOW` — refuse a flow whose approval is a copy of an older approval than that flow's latest, and
+  render nothing; `render.sh` runs it before the pod for a source it renders first in the same session.
 - `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source;
   a copy already of the source's latest writes nothing, and any other approval is copied over under the next
   number.

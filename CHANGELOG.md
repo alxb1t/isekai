@@ -19,9 +19,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   pod, and records the source on each render; `render.sh` takes `<flow>=<source>` beside `<flow>=<count>` (0054 D3).
 - D38 records the control flow and the named-source crossing; `evaluation/README.md` gives the control batch's four
   commands, and the README and CLAUDE.md name the third flow (0054 D4).
-- `approve --from` copies again when the source was approved after the last copy, and `generate --seeds-from` refuses
-  a copy out of step with the source's renders before any pod; `render.sh` takes a source and its dependent in one
-  session, source first (0054 D5, D6).
+- `approve --from` copies again once the source is approved again; `generate --seeds-from` refuses an out-of-step copy
+  before any pod, and `--in-step-with` does when `render.sh` takes a source and its dependent in one session, source
+  first (0054 D5, D6).
 
 ## [0.32.0] - 2026-10-02 · 0053-the-evaluation-mechanism
 

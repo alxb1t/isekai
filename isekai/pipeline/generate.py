@@ -329,8 +329,14 @@ def source_seeds(run: Run, source: str, suffix: str) -> tuple[int, list[int]]:
     return int(groups[-1].name), seeds
 
 
-def refuse_out_of_step(run: Run, flow: str, source: str, group: int) -> None:
+def refuse_out_of_step(
+    run: Run, flow: str, source: str, group: int | None = None
+) -> None:
     """Refuse a `flow` whose approval is a copy of another of `source`'s than `group`.
+
+    `group` is the approval `source`'s latest renders came from. None stands for
+    `source`'s latest approval, the group a source that renders first in the same
+    session writes into, so the copy is checked before that source has rendered.
 
     A flow whose approval does not name `source` as its origin is not checked: it
     is rendered on `source`'s seeds under its own sheet, a different experiment.
@@ -340,12 +346,17 @@ def refuse_out_of_step(run: Run, flow: str, source: str, group: int) -> None:
     version, path = approved_artifact(run, flow)
     body = read(path, APPROVED_FILE, remedy=f"restore it in {path} by hand")
     copied = body["producer"].get("copied_from")
-    if copied is None or copied["flow"] != source or copied["approval"] == group:
+    if copied is None or copied["flow"] != source:
+        return
+    latest = f"{source}'s latest renders came from approval"
+    if group is None:
+        latest = f"{source}'s latest approval is"
+        group = approved_artifact(run, source)[0]
+    if copied["approval"] == group:
         return
     head = (
         f"{run.id}: {flow}'s approval {version:03d} is a copy of {source}'s approval "
-        f"{copied['approval']:03d}, and {source}'s latest renders came from approval "
-        f"{group:03d}; run "
+        f"{copied['approval']:03d}, and {latest} {group:03d}; run "
     )
     if copied["approval"] < group:
         raise Refusal(
