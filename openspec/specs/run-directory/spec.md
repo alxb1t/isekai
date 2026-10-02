@@ -368,7 +368,8 @@ one directory are one directory, and only its identity says so.
 
 The system SHALL place the input and its frame at the root of a run, and SHALL place every artifact any
 stage produces under a directory named for the flow that produced it. It SHALL NOT place any stage's
-artifacts above the flow level, and SHALL NOT let one flow read another flow's artifacts.
+artifacts above the flow level, and SHALL NOT let one flow read another flow's artifacts, except where the
+operator names a source flow; then what is written SHALL record the source.
 
 ```
 runs/<input-id>/
@@ -380,7 +381,10 @@ runs/<input-id>/
 Above the split sits the one thing every flow shares, the input. A flow adds one subtree, and retiring one flow's
 work for one input removes one directory ([D17](../../../docs/decisions.md#d17--input-above-flow-below)). A caption
 written under one flow's briefing can never be picked up by another flow, because the two never name the same
-directory, and a stage directory that is absent records that the flow did not declare what would fill it.
+directory, and a stage directory that is absent records that the flow did not declare what would fill it. A
+source flow the operator names is not a flow reaching into another on its own, and the record of it is what keeps
+the two flows comparable
+([D38](../../../docs/decisions.md#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
 
 #### Scenario: every stage writes under the flow
 - **Key:** `run-directory:layout:stage-artifacts-live-under-the-flow`
@@ -410,6 +414,13 @@ directory, and a stage directory that is absent records that the flow did not de
 - **WHEN** one flow's directory is removed from a run
 - **THEN** every other flow's artifacts remain readable
 - **AND** the input and its frame remain
+
+#### Scenario: a named source is the one crossing, and it is recorded
+- **Key:** `run-directory:layout:a-named-source-is-recorded`
+- **Layers:** unit
+- **WHEN** a stage writes under one flow from another flow the operator named as its source
+- **THEN** the artifact written records the source flow
+- **AND** the source flow's artifacts are unchanged
 
 ### Requirement: A resume check asks the flow what it produces rather than assuming an image
 

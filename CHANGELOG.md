@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-02 · 0054-the-control-arm
+
 ### Added
 
 - A third flow, `control-anime-wai`, is `summon-anime-wai`'s directory with its face dials at 0, held equal to it by a
