@@ -235,7 +235,7 @@ the source or the runs ([0035 design D1](openspec/changes/archive/0035-the-flow-
 - **`compare-renders`** is its last step alone: `uv run python -m isekai compare .data/<batch>` writes
   `.data/<batch>/compare.html` and prints only its path.
 
-④ – ⑦ are one script, **`bash infra/render.sh <runs> <flow>=<count> …`**: it assembles every prompt before
+④ – ⑦ are one script, **`bash infra/render.sh <runs> <flow>=<count|source> …`**: it assembles every prompt before
 renting, runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI, renders each flow, and tears the pod
 down on every exit — an error or a Ctrl-C included. The RunPod MCP still confirms the pod is gone.
 
@@ -287,6 +287,9 @@ reaches a model or a GPU** — its scope is stage ③ alone.
   second boot costs what eight more renders would.
 - `--count COUNT` — how many renders per photograph per flow (default 1, seeds drawn).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
+- `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
+  `--count` or `--seed`.
+- `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source.
 - `--server SERVER` — the ComfyUI endpoint, reached through the tunnel; **omit it to assemble every
   prompt and stop without rendering**, which is how a whole batch is checked before anything is
   rented.
@@ -389,6 +392,7 @@ isekai/
 │   ├── graph.json             # the API graph
 │   ├── schema.json            # the sheet's field list, in prompt order
 │   └── caption.briefing.md    # the standing instructions the photograph is read under
+├── flows/control-anime-wai/   # summon's files with the face dials at 0, held equal by a test
 ├── ui/                        # the review surface: Vue 3 + Vite; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is a copy of design/, Inter vendored beside it
 │   └── design/                # the imported design handoff — read-only, never edited

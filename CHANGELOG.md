@@ -17,6 +17,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   against its schema, and records the source and its version so the two flows share one sheet (0054 D2).
 - `generate --seeds-from <flow>` renders each run on its source flow's latest seeds, refuses a run with none before any
   pod, and records the source on each render; `render.sh` takes `<flow>=<source>` beside `<flow>=<count>` (0054 D3).
+- D38 records the control flow and the named-source crossing; `evaluation/README.md` gives the control batch's four
+  commands, and the README and CLAUDE.md name the third flow (0054 D4).
 
 ## [0.32.0] - 2026-10-02 · 0053-the-evaluation-mechanism
 

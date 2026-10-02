@@ -12,6 +12,20 @@ uv run python -m evaluation <batch>/runs --cohort <cohort>
         └─ writes <batch>/evaluation.json, prints the table
 ```
 
+## The control arm
+
+**The floor under the count: `summon` with the face chain at zero, on the same sheet and the same noise.**
+Run it over a batch's runs after `summon` has rendered them:
+
+```
+python -m isekai approve --flow control-anime-wai --from summon-anime-wai <run>…
+bash infra/render.sh <runs> control-anime-wai=summon-anime-wai
+python -m evaluation <runs> --cohort <cohort>
+python -m isekai compare <batch>
+```
+
+The control row is the floor; the difference from the `summon` row is the face mechanism's share.
+
 ## Files
 
 | file | does |

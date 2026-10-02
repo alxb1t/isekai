@@ -8,7 +8,7 @@ scenario; each task below adds the tests that bind them.
 - [x] 1 — The flow
 - [x] 2 — The approval
 - [x] 3 — The seeds
-- [ ] 4 — The records
+- [x] 4 — The records
 
 Line numbers are `04dfe26`'s. Every new test carries `@pytest.mark.spec` with the key its task names. The flow
 phase's changelog bullet names the control's full digest, which the changelog-digest test requires.
@@ -44,7 +44,7 @@ phase's changelog bullet names the control's full digest, which the changelog-di
 
 ## 4 — The records
 
-- [ ] 4.1 In `docs/decisions.md`, add D38 after D31 per [D4](design.md#d4).
+- [x] 4.1 In `docs/decisions.md`, add D38 after D31 per [D4](design.md#d4).
   Verify: `grep -c '^### D38 · A control flow is its subject with the face chain at zero' docs/decisions.md` prints `1`.
-- [ ] 4.2 In `evaluation/README.md`, add `## The control arm` with the four commands and the floor line; in `README.md:387`'s tree, add the control's line; in `CLAUDE.md:5-7`, name the third flow.
+- [x] 4.2 In `evaluation/README.md`, add `## The control arm` with the four commands and the floor line; in `README.md:387`'s tree, add the control's line; in `CLAUDE.md:5-7`, name the third flow.
   Verify: `grep -c '^## The control arm' evaluation/README.md` prints `1`, `grep -c 'control-anime-wai=summon-anime-wai' evaluation/README.md` prints `1`, `grep -c 'flows/control-anime-wai/' README.md` prints `1`, and `grep -c 'control-anime-wai' CLAUDE.md` prints `1`.

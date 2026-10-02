@@ -211,6 +211,17 @@ flow that declares `false`; `sheet` fills such a flow's sheet with every field e
   together, so a list would declare a choice no flow makes.
 - **Made by:** `0032`.
 
+### D38 · A control flow is its subject with the face chain at zero
+
+**`control-anime-wai` is `summon-anime-wai`'s directory with `ip_weight` and `identity_cn_strength` at 0, held
+equal to it by a test; its approval is copied from `summon`'s and its renders take `summon`'s seeds, each
+recording the source. A stage reads another flow only when the operator names it as a source.**
+
+- **Why:** the count's floor is the same sheet and the same noise with the face mechanism off; the comparison
+  is sound only while the two differ in exactly that. D17 forbids a flow reaching into another on its own, and
+  an operator's named source is not that.
+- **Made by:** `0054`.
+
 ## Runs
 
 ### D16 · A run is keyed by the photograph's bytes
@@ -226,7 +237,8 @@ again resumes the same run.**
 
 **`runs/<input>/<flow>/<stage>/`.**
 
-- **Why:** adding a flow adds one subtree, and no flow can read another's artifacts.
+- **Why:** adding a flow adds one subtree, and no flow reads another's artifacts unless the operator names
+  it as a source ([D38](#d38--a-control-flow-is-its-subject-with-the-face-chain-at-zero)).
 - **Made by:** `0016`.
 
 ### D18 · Runs stay out of what git tracks
