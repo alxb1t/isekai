@@ -1,0 +1,98 @@
+{
+  "cohort": {
+    "directory": "cohort",
+    "people": [
+      "p1",
+      "p2",
+      "p3"
+    ],
+    "photographs": 5
+  },
+  "encoder": {
+    "detector": "opencv_face/face_detection_yunet_2023mar.onnx",
+    "encoder": "opencv_face/face_recognition_sface_2021dec.onnx"
+  },
+  "flows": {
+    "summon-anime-wai": {
+      "rows": [
+        {
+          "person": "p1",
+          "photograph": "p1/1.png",
+          "run": "5f3a9c1e2b7d-p1-1",
+          "seed": 1001,
+          "outcome": "hit",
+          "nearest": "p1/1.png",
+          "nearest_without_source": "p1/2.png",
+          "photograph_hit": true,
+          "person_hit": true,
+          "also_rendered": []
+        },
+        {
+          "person": "p1",
+          "photograph": "p1/2.png",
+          "run": "0c4e8a2d6f1b-p1-2",
+          "seed": 1002,
+          "outcome": "miss",
+          "nearest": "p2/1.png",
+          "nearest_without_source": "p2/1.png",
+          "photograph_hit": false,
+          "person_hit": false,
+          "also_rendered": []
+        },
+        {
+          "person": "p2",
+          "photograph": "p2/1.png",
+          "run": "9b2d7e4f1a3c-p2-1",
+          "seed": 1003,
+          "outcome": "no face found",
+          "nearest": null,
+          "nearest_without_source": null,
+          "photograph_hit": false,
+          "person_hit": false,
+          "also_rendered": []
+        },
+        {
+          "person": "p2",
+          "photograph": "p2/2.png",
+          "run": "3e7f1c9a5d2b-p2-2",
+          "seed": 1004,
+          "outcome": "hit",
+          "nearest": "p2/2.png",
+          "nearest_without_source": "p2/1.png",
+          "photograph_hit": true,
+          "person_hit": true,
+          "also_rendered": [
+            1005
+          ]
+        },
+        {
+          "person": "p3",
+          "photograph": "p3/1.png",
+          "run": null,
+          "seed": null,
+          "outcome": "not rendered",
+          "nearest": null,
+          "nearest_without_source": null,
+          "photograph_hit": false,
+          "person_hit": false,
+          "also_rendered": []
+        }
+      ],
+      "counts": {
+        "photograph": {
+          "hits": 2,
+          "of": 3,
+          "chance": 0.6
+        },
+        "person": {
+          "hits": 2,
+          "of": 3,
+          "chance": 0.8
+        }
+      }
+    }
+  },
+  "outside_the_cohort": [
+    "7a1b3c5d9e2f-stranger"
+  ]
+}

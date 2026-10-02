@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- The evaluator ranks a cohort's photographs for each render and counts two hits, its own photograph and its
+  own person with the source set aside, beside the hits chance gives; every render is a row (0053 D1, D2, D4).
+
 ## [0.31.4] - 2026-09-30 · 0052-the-paydown
 
 ### Changed

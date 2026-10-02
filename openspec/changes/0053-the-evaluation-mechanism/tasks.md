@@ -5,7 +5,7 @@ The delta holds every new scenario; each task below adds the tests that bind the
 
 ## Progress
 
-- [ ] 1 — The arithmetic
+- [x] 1 — The arithmetic
 - [ ] 2 — The encoder
 - [ ] 3 — The entry point
 - [ ] 4 — The deletion
@@ -15,11 +15,11 @@ its record are the operator's, after the release.
 
 ## 1 — The arithmetic
 
-- [ ] 1.1 **HALT CHECK** — the entry point reads the old shape, no current render exists, the local SFace is the published one, and the provisioner pins Hugging Face alone.
+- [x] 1.1 **HALT CHECK** — the entry point reads the old shape, no current render exists, the local SFace is the published one, and the provisioner pins Hugging Face alone.
   Verify: `grep -c photo_sha256 evaluation/__main__.py` prints `5`, `find .data -name '*.render.json' | wc -l` prints `0`, `shasum -a 256 models/opencv_face/sface.onnx | cut -c1-16` prints `0ba9fbfa01b5270c`, and `grep -q 'huggingface' isekai/boundary/provision.py && echo ok` prints `ok`.
-- [ ] 1.2 Write `evaluation/cohort.py`: `Photograph`, `Cohort`, `load_cohort`, `rank`, `hits`, `chance`, `record` and `table`, per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4); stdlib and `isekai.boundary.provision.digest_of` alone.
+- [x] 1.2 Write `evaluation/cohort.py`: `Photograph`, `Cohort`, `load_cohort`, `rank`, `hits`, `chance`, `record` and `table`, per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4); stdlib and `isekai.boundary.provision.digest_of` alone.
   Verify: `grep -cE '^def (load_cohort|rank|hits|chance|record|table)\(' evaluation/cohort.py` prints `6`, and `grep -c '^import numpy\|^from PIL' evaluation/cohort.py` prints `0`.
-- [ ] 1.3 Add `tests/test_cohort.py` binding `evaluation:cohort:a-run-is-matched-by-digest`, `evaluation:cohort:a-run-outside-the-cohort-is-reported`, `evaluation:counts:photograph-level-hit`, `evaluation:counts:person-level-excludes-the-source`, `evaluation:counts:chance-is-reported`, `evaluation:counts:no-average-no-percentage`, `evaluation:table:one-column-per-flow` and `evaluation:table:the-table-re-derives-from-the-record`, on vectors written by hand.
+- [x] 1.3 Add `tests/test_cohort.py` binding `evaluation:cohort:a-run-is-matched-by-digest`, `evaluation:cohort:a-run-outside-the-cohort-is-reported`, `evaluation:counts:photograph-level-hit`, `evaluation:counts:person-level-excludes-the-source`, `evaluation:counts:chance-is-reported`, `evaluation:counts:no-average-no-percentage`, `evaluation:table:one-column-per-flow` and `evaluation:table:the-table-re-derives-from-the-record`, on vectors written by hand.
   Verify: `grep -c 'pytest.mark.spec("evaluation:' tests/test_cohort.py` prints `8`.
 
 ## 2 — The encoder
