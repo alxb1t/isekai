@@ -226,7 +226,7 @@ def _check_run_root(runs: Path) -> None:
     if trackable(resolved):
         raise Refusal(
             f"--runs {resolved} is inside this repository and outside "
-            f"{DATA_ROOT}, the one directory git ignores; a run holds a copy of "
+            f"{DATA_ROOT}, the ignored data root; a run holds a copy of "
             "the photograph, so that directory would be trackable and one `git "
             "add` from being published -- point it under .data/ or at a path "
             "outside the repository entirely"

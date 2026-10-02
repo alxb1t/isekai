@@ -33,7 +33,7 @@ def destination(runs: Path, name: str) -> Path:
     if trackable(target.parent):
         raise Refusal(
             f"{target.resolve()} is inside this repository and outside .data/, "
-            "the one directory git ignores, so the record would be one `git add` from "
+            "the ignored data root, so the record would be one `git add` from "
             f"being published; move {runs.parent.resolve()} under .data/, "
             "then this command again with its new runs path"
         )
