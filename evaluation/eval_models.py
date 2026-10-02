@@ -10,11 +10,9 @@ destination and the entry point refuses on it (D37). Refusal on a bad digest is
 `isekai.boundary.provision.resolve`'s.
 """
 
-import json
 from pathlib import Path
-from typing import Any
 
-from isekai.boundary.provision import Manifest
+from isekai.boundary.provision import Manifest, load_manifest
 
 EVAL_MANIFEST_PATH = Path(__file__).resolve().parent / "eval_models.json"
 
@@ -25,8 +23,7 @@ ENCODER = "opencv_face/face_recognition_sface_2021dec.onnx"
 
 def load_eval_manifest(path: Path = EVAL_MANIFEST_PATH) -> Manifest:
     """Read and parse the tracked eval manifest."""
-    parsed: Any = json.loads(path.read_text())
-    return parsed
+    return load_manifest(path)
 
 
 def shared_with_the_graph(evaluation: Manifest, graph: Manifest) -> list[str]:

@@ -15,6 +15,7 @@ the spec must leave the file byte-identical --
 `git diff --exit-code evaluation/eval_models.json` is the check.
 """
 
+from evaluation.eval_models import DETECTOR, ENCODER
 from evaluation.eval_models import EVAL_MANIFEST_PATH as MANIFEST_PATH
 from tools.manifest import Manifest, Source, Spec, entry_for, write
 
@@ -33,7 +34,7 @@ SFACE = "3d7082438a6e4551e840c9b2bb60b71e8da4b524"
 
 SPECS: tuple[Spec, ...] = (
     Spec(
-        "opencv_face/face_detection_yunet_2023mar.onnx",
+        DETECTOR,
         (
             Source(
                 "opencv/face_detection_yunet",
@@ -43,7 +44,7 @@ SPECS: tuple[Spec, ...] = (
         ),
     ),
     Spec(
-        "opencv_face/face_recognition_sface_2021dec.onnx",
+        ENCODER,
         (
             Source(
                 "opencv/face_recognition_sface",

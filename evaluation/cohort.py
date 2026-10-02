@@ -136,14 +136,18 @@ def rank(render: Vector, gallery: Mapping[Photograph, Vector]) -> list[Photograp
     return sorted(gallery, key=lambda p: _cosine(render, gallery[p]), reverse=True)
 
 
+def _without(ranked: Sequence[Photograph], source: Photograph) -> Photograph:
+    """Return the nearest photograph that is not the render's own."""
+    return next(p for p in ranked if p != source)
+
+
 def hits(ranked: Sequence[Photograph], source: Photograph) -> tuple[bool, bool]:
     """Return the photograph-level and the person-level hit for one ranking.
 
     The person-level hit skips the source, so a render that copied its
     photograph's pixels earns the first and not the second.
     """
-    without = next(p for p in ranked if p != source)
-    return ranked[0] == source, without.person == source.person
+    return ranked[0] == source, _without(ranked, source).person == source.person
 
 
 def chance(source: Photograph, cohort: Cohort) -> tuple[float, float]:
@@ -158,18 +162,13 @@ def scored(
 ) -> Row:
     """Return the row of a render whose face was found and ranked."""
     photograph_hit, person_hit = hits(ranked, source)
-    without = next(p for p in ranked if p != source)
+    outcome: Outcome = "hit" if photograph_hit and person_hit else "miss"
     return {
-        "person": source.person,
-        "photograph": source.name,
-        "run": run,
-        "seed": seed,
-        "outcome": "hit" if photograph_hit and person_hit else "miss",
+        **unscored(source, run, seed, outcome),
         "nearest": ranked[0].name,
-        "nearest_without_source": without.name,
+        "nearest_without_source": _without(ranked, source).name,
         "photograph_hit": photograph_hit,
         "person_hit": person_hit,
-        "also_rendered": [],
     }
 
 
@@ -189,6 +188,11 @@ def unscored(
         "person_hit": False,
         "also_rendered": [],
     }
+
+
+def _count(hit: Sequence[bool], odds: Sequence[float]) -> Count:
+    """Return the hits over the renders scored, and chance summed over the same."""
+    return {"hits": sum(hit), "of": len(hit), "chance": round(sum(odds), 1)}
 
 
 def record(
@@ -215,16 +219,12 @@ def record(
         out[flow] = {
             "rows": rows,
             "counts": {
-                "photograph": {
-                    "hits": sum(row["photograph_hit"] for row in ranked),
-                    "of": len(ranked),
-                    "chance": round(sum(photo for photo, _ in odds), 1),
-                },
-                "person": {
-                    "hits": sum(row["person_hit"] for row in ranked),
-                    "of": len(ranked),
-                    "chance": round(sum(person for _, person in odds), 1),
-                },
+                "photograph": _count(
+                    [row["photograph_hit"] for row in ranked], [o[0] for o in odds]
+                ),
+                "person": _count(
+                    [row["person_hit"] for row in ranked], [o[1] for o in odds]
+                ),
             },
         }
     return {

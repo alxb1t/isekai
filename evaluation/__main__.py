@@ -10,7 +10,6 @@ A separate entry point, not a verb: the evaluator measures the pipeline and
 """
 
 import argparse
-import json
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -29,6 +28,7 @@ from evaluation.cohort import (
     unscored,
 )
 from evaluation.eval_models import DETECTOR, ENCODER
+from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
@@ -180,7 +180,7 @@ def main(argv: Sequence[str]) -> int:
     except Refusal as refused:
         print(f"refused: {refused}", file=sys.stderr)
         return 1
-    (args.runs.parent / "evaluation.json").write_text(json.dumps(rec, indent=2) + "\n")
+    write_json(args.runs.parent / "evaluation.json", rec)
     print(table(rec), end="")
     return 0
 
