@@ -27,6 +27,7 @@ Stdlib only; the endpoint is behind the repository's existing `ComfyTransport`.
 import hashlib
 import json
 import random
+import shlex
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -53,6 +54,7 @@ from isekai.foundation.flow import (
     Schema,
     Workflow,
     assemble,
+    load_flow,
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -297,6 +299,30 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     )
 
 
+def source_seeds(run: Run, source: str, flows_dir: Path) -> list[int]:
+    """Return the seeds of `source`'s latest render group for `run`, or refuse.
+
+    Read from filenames alone. A latest group holding no render counts as none:
+    an empty list would read downstream as "draw a seed", which is the opposite
+    of taking the source's.
+    e.g. `outputs/001/{11.png, 12.png}` -> `[11, 12]`
+    """
+    suffix = load_flow(source, flows_dir).output_suffix
+    groups = sorted(
+        group
+        for group in run.directory(source, OUTPUTS).glob("*")
+        if group.is_dir() and group.name.isdigit()
+    )
+    seeds = rendered_seeds(groups[-1], suffix) if groups else []
+    if not seeds:
+        raise Refusal(
+            f"{run.id}: no render of {source} to take seeds from; run "
+            f"`bash infra/render.sh {shlex.quote(str(run.path.parent))} {source}=1` "
+            "to render it first"
+        )
+    return seeds
+
+
 def photo_resolution(photo: Path) -> tuple[int, int]:
     """Return the working resolution for `photo`, as a refusal rather than an exit.
 
@@ -455,6 +481,7 @@ def render(
     runtime: Callable[[], Runtime],
     count: int | None = None,
     seeds: Sequence[int] | None = None,
+    seeds_from: str | None = None,
     rng: random.Random | None = None,
     poll: float = 1.0,
     deadline: float = RENDER_DEADLINE,
@@ -469,7 +496,8 @@ def render(
 
     `image` is the reference the pod booted, or None for an endpoint no pod-boot
     record names, which the sidecar declares unpinned. `runtime` is called only
-    when a seed will render, so a complete batch reads no report.
+    when a seed will render, so a complete batch reads no report. `seeds_from`
+    names the flow `seeds` were taken from, and the sidecar records it.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
@@ -542,6 +570,7 @@ def render(
             **({"image": image} if image is not None else {}),
             "pinned": image is not None,
             "runtime": ran_on,
+            **({"seeds_from": seeds_from} if seeds_from is not None else {}),
         }
         write(provenance, RENDER_FILE, sidecar)
         # Atomically, like every other artifact in a run, and for a sharper

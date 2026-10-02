@@ -2,9 +2,11 @@
 # One whole render session: create the pod, open the tunnel, wait for ComfyUI,
 # render each flow, and tear the pod down on every way out (D36).
 #
-#   bash infra/render.sh <runs> <flow>=<count> ...
+#   bash infra/render.sh <runs> <flow>=<count|source> ...
 #   e.g. bash infra/render.sh .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
+#        bash infra/render.sh .data/b1/runs control-anime-wai=summon-anime-wai
 #
+# A count draws that many seeds; a source flow renders its latest seeds again.
 # Output is shown and appended to the batch's log, <runs>/../log.txt.
 
 set -euo pipefail
@@ -19,14 +21,14 @@ CEILING=2640                      # seconds to the halt: CLAUDE.md's 45 minutes,
 # Until the runs root is checked there is no batch, so no log to write it to.
 refuse() { echo "refused: $*" | tee -a "${log:-/dev/null}" >&2; exit 1; }
 
-[ "$#" -ge 2 ] || refuse "usage: bash infra/render.sh <runs> <flow>=<count> ..."
+[ "$#" -ge 2 ] || refuse "usage: bash infra/render.sh <runs> <flow>=<count|source> ..."
 runs=$1; shift
 [ -d "$runs" ] || refuse "$runs is not a directory; give the batch's runs/"
 log="$(dirname "$runs")/log.txt"
 flows=()
 for spec in "$@"; do
-  [[ "$spec" =~ ^[a-z0-9-]+=[1-9][0-9]*$ ]] \
-    || refuse "'$spec' is not <flow>=<count>, e.g. summon-anime-wai=1"
+  [[ "$spec" =~ ^[a-z0-9-]+=([1-9][0-9]*|[a-z][a-z0-9-]*)$ ]] \
+    || refuse "'$spec' is not <flow>=<count> or <flow>=<source>, e.g. summon-anime-wai=1"
   flows+=(--flow "${spec%%=*}")
 done
 
@@ -54,6 +56,12 @@ fi
 # Free work first: every prompt is assembled before anything is rented, so a
 # missing approval refuses here rather than on a billing pod.
 uv run python -m isekai generate "${flows[@]}" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
+# A source flow's render is checked here too, so a missing one refuses before the pod.
+for spec in "$@"; do
+  [[ "${spec#*=}" =~ ^[0-9]+$ ]] && continue
+  uv run python -m isekai generate --flow "${spec%%=*}" --seeds-from "${spec#*=}" \
+    --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log"
+done
 
 tunnel=""
 watchdog=""
@@ -138,7 +146,9 @@ done
 # One flow failing does not cost the next its render; the exit says any failed.
 failed=0
 for spec in "$@"; do
-  uv run python -m isekai generate --flow "${spec%%=*}" --count "${spec#*=}" \
+  if [[ "${spec#*=}" =~ ^[0-9]+$ ]]; then seeds=(--count "${spec#*=}")
+  else seeds=(--seeds-from "${spec#*=}"); fi
+  uv run python -m isekai generate --flow "${spec%%=*}" "${seeds[@]}" \
     --server "$SERVER" --runs "$runs" "${ids[@]}" 2>&1 | tee -a "$log" \
     || failed=1
 done

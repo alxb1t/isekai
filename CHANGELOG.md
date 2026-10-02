@@ -15,6 +15,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   test; digest `f44b0f40647d0c51fa0eecab5a501c8f0318992fe8aac631c7a6cd0d81b61f7d` (0054 D1).
 - `approve --flow <flow> --from <source> <run>` copies the source flow's latest approval under the flow, validated
   against its schema, and records the source and its version so the two flows share one sheet (0054 D2).
+- `generate --seeds-from <flow>` renders each run on its source flow's latest seeds, refuses a run with none before any
+  pod, and records the source on each render; `render.sh` takes `<flow>=<source>` beside `<flow>=<count>` (0054 D3).
 
 ## [0.32.0] - 2026-10-02 · 0053-the-evaluation-mechanism
 

@@ -54,7 +54,7 @@ from isekai.interface.compare_view import write_page
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, booted_image, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.generate import prepare, read_runtime, render
+from isekai.pipeline.generate import prepare, read_runtime, render, source_seeds
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
@@ -244,6 +244,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="render exactly this seed; repeatable, and not combinable with --count",
     )
+    render.add_argument(
+        "--seeds-from",
+        dest="seeds_from",
+        default=None,
+        metavar="FLOW",
+        help="render this flow's latest seeds for each run; not with the others",
+    )
     # No default, deliberately. Assembly is free and rendering is not, so the
     # invocation that costs money is the one that names where to spend it --
     # `generate` without `--server` assembles every prompt and stops, which is
@@ -337,18 +344,10 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0
         flows = _flows_for(args, wired)
-        if verb == "approve" and args.source is not None:
-            tracked = tracked_flows(wired.flows_dir)
-            if args.source not in tracked:
-                raise Refusal(
-                    f"{args.source}: not a flow this build tracks; the flows it "
-                    f"carries are {', '.join(tracked) or '(none)'}"
-                )
-        if verb == "approve" and args.source in flows:
-            raise Refusal(
-                f"{args.source}: a flow is not its own source; drop `--from "
-                f"{args.source}` or `--flow {args.source}` from the command"
-            )
+        if verb == "approve":
+            _refuse_bad_source(args.source, "from", flows, wired)
+        if verb == "generate":
+            _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
         if verb == "tag":
             _require_tagged(flows, targets, args.runs)
     except Refusal as unselectable:
@@ -365,6 +364,28 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
+
+
+def _refuse_bad_source(
+    source: str | None, flag: str, flows: Mapping[str, Flow], wired: Wiring
+) -> None:
+    """Refuse a named source that is no tracked flow, or is one of `flows`.
+
+    A flow is not its own source: the pair is compared only while they differ.
+    """
+    if source is None:
+        return
+    tracked = tracked_flows(wired.flows_dir)
+    if source not in tracked:
+        raise Refusal(
+            f"{source}: not a flow this build tracks; the flows it carries are "
+            f"{', '.join(tracked) or '(none)'}"
+        )
+    if source in flows:
+        raise Refusal(
+            f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
+            f"`--flow {source}` from the command"
+        )
 
 
 def _require_tagged(
@@ -628,6 +649,8 @@ def _generate(
     machine and then discover the third sheet was broken.
     """
     ready: list[tuple[Run, str]] = []
+    # The seeds each run takes from the source flow, when one is named.
+    borrowed: dict[str, list[int]] = {}
     # Collected alongside `across`'s, not raised: `prepare` already tried every
     # flow, so one run's broken sheet is a refusal to report at the end rather
     # than a reason its sibling flows go unrendered.
@@ -637,6 +660,12 @@ def _generate(
         run = _run_for(identifier, wired)
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
+        if args.seeds_from is not None:
+            try:
+                borrowed[run.id] = source_seeds(run, args.seeds_from, wired.flows_dir)
+            except Refusal as unseeded:
+                broken.append(str(unseeded))
+                return
         for flow, path in assembled.items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))
@@ -658,7 +687,8 @@ def _generate(
             image=image,
             runtime=ran_on,
             count=args.count,
-            seeds=args.seeds,
+            seeds=borrowed.get(run.id, args.seeds),
+            seeds_from=args.seeds_from,
             rng=wired.rng,
         )
         for made in produced:

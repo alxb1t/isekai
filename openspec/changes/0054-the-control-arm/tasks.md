@@ -7,7 +7,7 @@ scenario; each task below adds the tests that bind them.
 
 - [x] 1 — The flow
 - [x] 2 — The approval
-- [ ] 3 — The seeds
+- [x] 3 — The seeds
 - [ ] 4 — The records
 
 Line numbers are `04dfe26`'s. Every new test carries `@pytest.mark.spec` with the key its task names. The flow
@@ -33,13 +33,13 @@ phase's changelog bullet names the control's full digest, which the changelog-di
 
 ## 3 — The seeds
 
-- [ ] 3.1 In `isekai/foundation/artifacts.py`, add `Render.seeds_from`; in `isekai/pipeline/generate.py`, add `source_seeds` and the `seeds_from` keyword on `render` that writes it into the sidecar, per [D3](design.md#d3).
+- [x] 3.1 In `isekai/foundation/artifacts.py`, add `Render.seeds_from`; in `isekai/pipeline/generate.py`, add `source_seeds` and the `seeds_from` keyword on `render` that writes it into the sidecar, per [D3](design.md#d3).
   Verify: `grep -c 'seeds_from: NotRequired\[str\]' isekai/foundation/artifacts.py` prints `1`, and `grep -c '^def source_seeds(' isekai/pipeline/generate.py` prints `1`.
-- [ ] 3.2 In `isekai/interface/cli.py`, add `--seeds-from` to `generate`'s exclusive group, refuse a source among the `--flow` names, and call `source_seeds` in `assemble_one` with its refusal collected in `broken`.
+- [x] 3.2 In `isekai/interface/cli.py`, add `--seeds-from` to `generate`'s exclusive group, refuse a source among the `--flow` names, and call `source_seeds` in `assemble_one` with its refusal collected in `broken`.
   Verify: `grep -c '"--seeds-from"' isekai/interface/cli.py` prints `1`, and `grep -c 'source_seeds(' isekai/interface/cli.py` prints `1`.
-- [ ] 3.3 Add to `tests/test_generate.py` tests binding `image-generation:seeds-from:one-render-per-source-seed`, `image-generation:seeds-from:no-source-render-is-refused-first`, `image-generation:seeds-from:a-flow-is-not-its-own-source` and `image-generation:seeds-from:excludes-count-and-seeds`, the last on the parser beside `test_the_parser_refuses_a_count_and_a_seed_together` (`:384`).
+- [x] 3.3 Add to `tests/test_generate.py` tests binding `image-generation:seeds-from:one-render-per-source-seed`, `image-generation:seeds-from:no-source-render-is-refused-first`, `image-generation:seeds-from:a-flow-is-not-its-own-source` and `image-generation:seeds-from:excludes-count-and-seeds`, the last on the parser beside `test_the_parser_refuses_a_count_and_a_seed_together` (`:384`).
   Verify: `grep -c 'image-generation:seeds-from:' tests/test_generate.py` prints `4`.
-- [ ] 3.4 In `infra/render.sh`, widen the spec regex, add the free pass per named source before `up.sh`, and choose `--count` or `--seeds-from` in the render loop, per [D3](design.md#d3); restate the usage comment with both forms.
+- [x] 3.4 In `infra/render.sh`, widen the spec regex, add the free pass per named source before `up.sh`, and choose `--count` or `--seeds-from` in the render loop, per [D3](design.md#d3); restate the usage comment with both forms.
   Verify: `bash -n infra/render.sh && echo ok` prints `ok`, `grep -c -- '--seeds-from' infra/render.sh` prints `2`, and `grep -c 'control-anime-wai=summon-anime-wai' infra/render.sh` prints `1`.
 
 ## 4 — The records
