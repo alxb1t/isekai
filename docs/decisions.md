@@ -135,6 +135,18 @@ inference** — `config/vocabulary.json`.
   recognizer is the adapter grading itself. A different encoder has different blind spots.
 - **Made by:** `0053`.
 
+### D39 · Attribute recall uses the sheet's tagger
+
+**Attribute recall reads each render with WD14, the tagger whose tags fill the sheet, at the same floor, and
+counts the approved sheet's scored tags it reads back.**
+
+- **Why:** the sheet's vocabulary is that tagger's label set, so only it answers in the sheet's own words, and
+  the same floor asks whether the render would put the tag on its own sheet. The generator is not trained to
+  satisfy it, so this is not the case D37 guards against.
+- **Accepts:** its blind spots are on both sides: a tag it cannot see is neither asked well nor read well.
+  Reopen when a tag set a second tagger shares with the vocabulary exists.
+- **Made by:** `0055`.
+
 ## The render
 
 ### D9 · Composition comes from noise

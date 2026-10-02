@@ -19,6 +19,13 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   writes `<batch>/recall.json` and prints the table; the record is refused where git can reach it, and that refusal now
   names the move and the command to run again (0055 D3).
 
+### Changed
+
+- The cohort evaluator ranks the first seed of each flow's latest render group, not the lowest one (0055 D4).
+- D39 records that recall uses the sheet's tagger; `evaluation/README.md`, the evaluation spec's header and the
+  boundary README name recall and its importers, and the README says every tracked flow names the same model
+  (0055 D2, D5).
+
 ## [0.33.0] - 2026-10-02 · 0054-the-control-arm
 
 ### Added

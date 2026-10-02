@@ -3,12 +3,14 @@
 ## Purpose
 
 Counting, over a cohort of known people, how often each render is nearest its own photograph and its own
-person, beside the hits chance gives, with an encoder the generator does not use.
+person, beside the hits chance gives, with an encoder the generator does not use; and counting, per scored
+field, the approved sheet's tags each render reads back.
 
 **Source:** `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/face.py`,
-`evaluation/eval_models.py`, `evaluation/eval_models.json`, `isekai/boundary/provision.py` ·
+`evaluation/eval_models.py`, `evaluation/eval_models.json`, `evaluation/recall.py`,
+`evaluation/record.py`, `isekai/boundary/provision.py` ·
 **Tests:** `tests/test_cohort.py`, `tests/test_face.py`, `tests/test_evaluation_cli.py`,
-`tests/test_eval_manifest.py`
+`tests/test_eval_manifest.py`, `tests/test_recall.py`, `tests/test_recall_cli.py`
 
 ## Requirements
 

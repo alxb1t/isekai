@@ -3,9 +3,10 @@
     uv run python -m evaluation <batch>/runs --cohort <cohort>
 
 Each run is matched to its cohort photograph by the digest its frame records;
-each flow's first render is ranked against every cohort photograph. The record
-is written beside the runs, as `<batch>/evaluation.json`, and the table printed;
-a run the record does not score is counted there and named on stderr alone.
+the first seed of each flow's latest render group is ranked against every cohort
+photograph. The record is written beside the runs, as `<batch>/evaluation.json`,
+and the table printed; a run the record does not score is counted there and named
+on stderr alone.
 A separate entry point, not a verb: the evaluator measures the pipeline and
 `isekai` never imports it.
 """
@@ -110,9 +111,9 @@ def _rows(
 ) -> tuple[dict[str, Row], bool]:
     """Return each rendered flow's row, and whether every flow in `run` was read.
 
-    A row ranks the flow's first seed. A flow that does not load costs only its
-    own renders, and a render that does not decode is its own row; why each was
-    is added to `notes`.
+    A row ranks the first seed of the flow's latest render group. A flow that does
+    not load costs only its own renders, and a render that does not decode is its
+    own row; why each was is added to `notes`.
     """
     rows: dict[str, Row] = {}
     whole = True
@@ -133,7 +134,8 @@ def _rows(
         ]
         if not renders:
             continue
-        (group, seed), rest = renders[0], renders[1:]
+        latest = next(found for found in renders if found[0] == renders[-1][0])
+        (group, seed), rest = latest, [found for found in renders if found != latest]
         try:
             vector = embed(
                 run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")

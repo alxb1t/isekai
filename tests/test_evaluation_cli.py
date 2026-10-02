@@ -124,6 +124,29 @@ def test_a_render_that_does_not_decode_is_its_own_row(tmp_path: Path) -> None:
     }
 
 
+@pytest.mark.spec("evaluation:table:the-latest-group-is-ranked")
+def test_the_first_seed_of_the_latest_render_group_is_the_one_ranked(
+    tmp_path: Path,
+) -> None:
+    runs, cohort = _batch(tmp_path)
+    run = open_run(cohort / "p1" / "p1-1.png", runs)
+    later = run.directory(FLOW, OUTPUTS, "002")
+    later.mkdir()
+    for seed in (33, 44):
+        Image.new("RGB", (8, 8)).save(later / f"{seed}.png")
+    vectors = {**VECTORS, "33.png": [0.0, 1.0, 0.0], "44.png": [1.0, 0.0, 0.0]}
+    embed = _Embedder(vectors)
+
+    rec, _ = entry.score(runs, cohort, embed, FLOWS_DIR)
+
+    row = next(
+        r for r in rec["flows"][FLOW]["rows"] if r["photograph"] == "p1/p1-1.png"
+    )
+    assert (row["seed"], row["also_rendered"]) == (33, [11, 44])
+    assert row["outcome"] == "miss"
+    assert [p.name for p in embed.seen if p.parent.parent == later.parent] == ["33.png"]
+
+
 @pytest.mark.spec("evaluation:table:an-unreadable-run-is-reported")
 def test_a_run_that_cannot_be_read_is_listed_and_the_others_are_scored(
     tmp_path: Path,

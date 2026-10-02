@@ -8,7 +8,7 @@ scenario; each task below adds the tests that bind them.
 - [x] 1 — The arithmetic
 - [x] 2 — The reader
 - [x] 3 — The command
-- [ ] 4 — The records
+- [x] 4 — The records
 
 Line numbers are `73f45f4`'s. Every new test carries `@pytest.mark.spec` with the key its task names.
 
@@ -41,11 +41,11 @@ Line numbers are `73f45f4`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 4 — The records
 
-- [ ] 4.1 In `evaluation/__main__.py`, rank the first seed of the latest render group, per [D4](design.md#d4); add to `tests/test_evaluation_cli.py` a test binding `evaluation:table:the-latest-group-is-ranked`.
+- [x] 4.1 In `evaluation/__main__.py`, rank the first seed of the latest render group, per [D4](design.md#d4); add to `tests/test_evaluation_cli.py` a test binding `evaluation:table:the-latest-group-is-ranked`.
   Verify: `grep -c 'evaluation:table:the-latest-group-is-ranked' tests/test_evaluation_cli.py` prints `1`, and `grep -c 'renders\[0\], renders\[1:\]' evaluation/__main__.py` prints `0`.
-- [ ] 4.2 In `docs/decisions.md`, add D39 after D37 per [D2](design.md#d2).
+- [x] 4.2 In `docs/decisions.md`, add D39 after D37 per [D2](design.md#d2).
   Verify: `grep -c "^### D39 · Attribute recall uses the sheet's tagger" docs/decisions.md` prints `1`.
-- [ ] 4.3 In `evaluation/README.md`, add the recall command, `recall.py` and `record.py` to *Files* and *Imported by*; rewrite `openspec/specs/evaluation/spec.md:3-11` to carry recall in *Purpose*, *Source* and *Tests*, per [D5](design.md#d5).
+- [x] 4.3 In `evaluation/README.md`, add the recall command, `recall.py` and `record.py` to *Files* and *Imported by*; rewrite `openspec/specs/evaluation/spec.md:3-11` to carry recall in *Purpose*, *Source* and *Tests*, per [D5](design.md#d5).
   Verify: `grep -c 'evaluation.recall' evaluation/README.md` prints a number above `0`, and `grep -c 'evaluation/recall.py' openspec/specs/evaluation/spec.md` prints `1`.
-- [ ] 4.4 Close the cards of [D5](design.md#d5) that are edits: rename the test at `tests/test_cohort.py:63`; add `tests/test_evaluation_cli.py` to `provision.py`'s importers and `evaluation/recall.py` to `wd14.py`'s in `isekai/boundary/README.md`; write "every tracked flow names the same one" at `README.md:19`.
+- [x] 4.4 Close the cards of [D5](design.md#d5) that are edits: rename the test at `tests/test_cohort.py:63`; add `tests/test_evaluation_cli.py` to `provision.py`'s importers and `evaluation/recall.py` to `wd14.py`'s in `isekai/boundary/README.md`; write "every tracked flow names the same one" at `README.md:19`.
   Verify: `grep -c 'outside_the_cohort_is_listed' tests/test_cohort.py` prints `0`, `grep -c 'test_evaluation_cli' isekai/boundary/README.md` prints `1`, `grep -c 'evaluation/recall.py' isekai/boundary/README.md` prints `1`, and `grep -c 'both tracked flows' README.md` prints `0`.
