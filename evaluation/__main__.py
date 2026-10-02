@@ -3,9 +3,10 @@
     uv run python -m evaluation <batch>/runs --cohort <cohort>
 
 Each run is matched to its cohort photograph by the digest its frame records;
-each flow's first render is ranked against every cohort photograph. The record
-is written beside the runs, as `<batch>/evaluation.json`, and the table printed;
-a run the record does not score is counted there and named on stderr alone.
+the first seed of each flow's latest render group is ranked against every cohort
+photograph. The record is written beside the runs, as `<batch>/evaluation.json`,
+and the table printed; a run the record does not score is counted there and named
+on stderr alone.
 A separate entry point, not a verb: the evaluator measures the pipeline and
 `isekai` never imports it.
 """
@@ -30,13 +31,14 @@ from evaluation.cohort import (
     unscored,
 )
 from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
+from evaluation.record import destination as record_destination
+from evaluation.record import runs_in
 from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
+from isekai.foundation.run import OUTPUTS, Run
 from isekai.interface.run_view import rendered
-from isekai.interface.wiring import trackable
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
 # A face's embedding, or None when no face is found; a file that does not decode
@@ -70,19 +72,6 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def _runs(directory: Path) -> list[Run]:
-    """Return every run under `directory` that has a frame, in name order."""
-    if not directory.is_dir():
-        raise Refusal(
-            f"{directory} is not a directory; give the batch's runs directory, the "
-            "one `infra/render.sh` rendered into"
-        )
-    return [
-        Run(frame.parent.name, frame.parent)
-        for frame in sorted(directory.glob(f"*/{FRAME_NAME}"))
-    ]
-
-
 def _gallery(cohort: Cohort, embed: Embed) -> dict[Photograph, Vector]:
     """Return each cohort photograph's embedding, refusing one with no image or face."""
     gallery: dict[Photograph, Vector] = {}
@@ -110,9 +99,10 @@ def _rows(
 ) -> tuple[dict[str, Row], bool]:
     """Return each rendered flow's row, and whether every flow in `run` was read.
 
-    A row ranks the flow's first seed. A flow that does not load costs only its
-    own renders, and a render that does not decode is its own row; why each was
-    is added to `notes`.
+    A row ranks the first seed of the flow's latest render group; a latest group
+    holding no render leaves the flow not rendered, as it leaves a control flow no
+    seeds to take. A flow that does not load costs only its own renders, and a
+    render that does not decode is its own row; why each was is added to `notes`.
     """
     rows: dict[str, Row] = {}
     whole = True
@@ -126,14 +116,11 @@ def _rows(
             )
             whole = False
             continue
-        renders = [
-            (group, seed)
-            for _, group, found in rendered(run, flows_dir, flows=(flow,))
-            for seed in found
-        ]
-        if not renders:
+        groups = rendered(run, flows_dir, flows=(flow,))
+        if not groups or not groups[-1][2]:
             continue
-        (group, seed), rest = renders[0], renders[1:]
+        _, group, (seed, *_) = groups[-1]
+        rest = [s for _, g, found in groups for s in found if (g, s) != (group, seed)]
         try:
             vector = embed(
                 run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
@@ -150,7 +137,7 @@ def _rows(
                 if vector is None
                 else scored(source, run.id, seed, rank(vector, gallery))
             )
-        rows[flow]["also_rendered"] = [s for _, s in rest]
+        rows[flow]["also_rendered"] = rest
     return rows, whole
 
 
@@ -176,7 +163,7 @@ def score(
     matched: list[tuple[Run, Photograph]] = []
     outside = unreadable = 0
     notes: list[str] = []
-    for run in _runs(runs):
+    for run in runs_in(runs):
         try:
             source = cohort.by_digest(run.photo_record["sha256"])
         except Refusal as damaged:
@@ -233,24 +220,11 @@ def _embedder(models: Path) -> Embed:
     return lambda path: embed(path, detector, encoder)
 
 
-def _destination(runs: Path) -> Path:
-    """Return where the record goes, refusing a place git can reach (D18)."""
-    destination = runs.parent / "evaluation.json"
-    if trackable(destination.parent):
-        raise Refusal(
-            f"{destination.resolve()} is inside this repository and outside .data/, "
-            "the one directory git ignores, so the record would be one `git add` from "
-            "being published; give a runs directory under .data/<batch>/ or outside "
-            "the repository"
-        )
-    return destination
-
-
 def main(argv: Sequence[str]) -> int:
     """Score the batch, write its record beside the runs, and print the table."""
     args = parse_args(argv)
     try:
-        destination = _destination(args.runs)
+        destination = record_destination(args.runs, "evaluation.json")
         embed = _embedder(args.models)
         rec, notes = score(args.runs, args.cohort, embed, args.flows)
     except Refusal as refused:

@@ -39,6 +39,10 @@ CROP = 112
 SIDE = 640
 STRIDES = (8, 16, 32)
 SCORE = 0.6
+# What Pillow raises for a file that does not decode: not an image or cut short
+# is an `OSError`, a corrupt stream can be a `ValueError` or an `EOFError`, and a
+# header declaring too many pixels is a `DecompressionBombError`.
+UNDECODABLE = (OSError, ValueError, EOFError, Image.DecompressionBombError)
 
 
 @dataclass(frozen=True)
@@ -187,13 +191,14 @@ def align(image: Image.Image, landmarks: np.ndarray) -> Image.Image:
 def load(path: Path) -> Image.Image:
     """Return the image at `path`, upright and RGB.
 
-    A file that does not decode -- not an image, or one cut short -- refuses
-    naming it; the caller knows what removing it means and names the fix.
+    A file that does not decode -- not an image, one cut short, or one too large
+    to open -- refuses naming it; the caller knows what removing it means and
+    names the fix.
     """
     try:
         with Image.open(path) as opened:
             return ImageOps.exif_transpose(opened).convert("RGB")
-    except OSError as undecodable:
+    except UNDECODABLE as undecodable:
         raise Refusal(f"{path} does not decode as an image") from undecodable
 
 

@@ -16,7 +16,7 @@ pipeline: build once, spin up a GPU for minutes, convert, tear down.
 > **The whole pipeline runs on open models.** Stage ① reaches JoyCaption over a local
 > [Ollama](https://ollama.com) and nothing here needs an API key or a subscription; stage ② reaches
 > no model at all. The flow's manifest names the one model it runs, in a required `model` key, and
-> both tracked flows name the same one. *(Until v0.22 there was a second arm over the `claude` CLI,
+> every tracked flow names the same one. *(Until v0.22 there was a second arm over the `claude` CLI,
 > selected by a flow declaring no `hosted` block. Nothing had called it for anything measured since
 > v0.19, so v0.22 removed it and the block with it.)*
 > **The model is not digest-pinned**; the flow names it and nothing verifies the bytes behind the
@@ -388,8 +388,9 @@ isekai/
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
-├── evaluation/                # the cohort evaluator, beside the package it measures —
-│                              #   `uv run python -m evaluation <runs> --cohort <dir>`
+├── evaluation/                # the cohort evaluator and attribute recall, beside the package —
+│                              #   `uv run python -m evaluation <runs> --cohort <dir>`,
+│                              #   `uv run python -m evaluation.recall <runs>`
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable

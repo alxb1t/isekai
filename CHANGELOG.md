@@ -9,6 +9,25 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-02 · 0055-attribute-recall
+
+### Added
+
+- `evaluation/recall.py` counts, per scored field, the approved sheet's tags a render reads back, names each miss, and
+  prints a per-flow table from its record alone (0055 D1).
+- Recall reads each render with the pipeline's WD14 tagger at its own floor, in the sheet's spelling, and refuses an image
+  that does not decode by name (0055 D2).
+- `python -m evaluation.recall <runs> [<run>...]` reads every render of every group and seed against its group's approval,
+  writes `<batch>/recall.json` and prints the table; the record is refused where git can reach it, and that refusal now
+  names the move and the command to run again (0055 D3).
+
+### Changed
+
+- The cohort evaluator ranks the first seed of each flow's latest render group, not the lowest one (0055 D4).
+- D39 records that recall uses the sheet's tagger; `evaluation/README.md`, the evaluation spec's header and the
+  boundary README name recall and its importers, and the README says every tracked flow names the same model
+  (0055 D2, D5).
+
 ## [0.33.0] - 2026-10-02 · 0054-the-control-arm
 
 ### Added

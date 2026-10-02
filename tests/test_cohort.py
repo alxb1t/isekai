@@ -60,7 +60,7 @@ def test_a_run_is_scored_as_the_photograph_whose_digest_its_frame_records(
 
 
 @pytest.mark.spec("evaluation:cohort:a-run-outside-the-cohort-is-reported")
-def test_a_run_outside_the_cohort_is_listed_and_the_others_are_scored(
+def test_a_run_outside_the_cohort_is_counted_and_the_others_are_scored(
     tmp_path: Path,
 ) -> None:
     cohort = _cohort(tmp_path, {"p1": 1, "p2": 1})

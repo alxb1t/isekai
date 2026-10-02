@@ -704,7 +704,8 @@ refuse a flow named as its own source, and SHALL accept neither a count nor an e
 Where the flow's approval is a copy of the source's, it SHALL refuse a run whose copy was not made from the
 approval the source's latest renders came from, before any endpoint is acquired. Where the source renders first
 in the same session, it SHALL refuse, before any endpoint is acquired, a copy not made from the source's latest
-approval, and that check SHALL render nothing.
+approval, and that check SHALL render nothing. It SHALL refuse, naming its file, an approval whose record of its
+producer or origin is damaged.
 
 ```
 render.sh <runs> S=1 T=S

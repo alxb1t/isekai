@@ -144,3 +144,19 @@ def png_chunk(kind: bytes, payload: bytes) -> bytes:
         + payload
         + struct.pack(">I", zlib.crc32(kind + payload))
     )
+
+
+def oversized_png(width: int = 20000, height: int = 20000) -> bytes:
+    """Return a whole PNG whose header declares more pixels than Pillow will open.
+
+    Every chunk's CRC is right, so Pillow reads the header as a PNG and refuses it
+    for its size rather than as a broken file: what it raises then is not an
+    `OSError`.
+    """
+    header = struct.pack(">II", width, height) + b"\x08\x02\x00\x00\x00"
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", b"")
+        + png_chunk(b"IEND", b"")
+    )

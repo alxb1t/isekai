@@ -1,0 +1,14 @@
+control-anime-wai
+run           group  seed  hair_colour  eye_colour  clothes  marks
+28c3bb7ce031  1      1     1 / 1        1 / 1       1 / 3    -
+  missed: clothes: shirt, black shirt
+d2043248d6e1  1      1     no approval
+total                      1 / 1        1 / 1       1 / 3    -
+
+summon-anime-wai
+run           group  seed  hair_colour  eye_colour  clothes  marks
+187ec7dce855  1      1     1 / 1        1 / 1       1 / 3    -
+  missed: clothes: shirt, black shirt
+28c3bb7ce031  1      1     1 / 1        1 / 1       3 / 3    -
+d2043248d6e1  2      3     unreadable
+total                      2 / 2        2 / 2       4 / 6    -
