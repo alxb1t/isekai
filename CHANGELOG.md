@@ -18,6 +18,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `python -m evaluation <runs> --cohort <dir>` scores a current batch, writes `evaluation.json` beside the runs
   and prints the table; D37 and the measurement principles say why the count is shaped so (0053 D5, D7).
 
+### Removed
+
+- The old evaluator — the canvas, the regions, the guard, the axes, the labels, the baseline and the `[eval]`
+  extra — is deleted; the cohort count replaces it and the evaluator adds no package (0053 D6, D8).
+
 ## [0.31.4] - 2026-09-30 · 0052-the-paydown
 
 ### Changed

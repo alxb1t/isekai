@@ -57,8 +57,9 @@ None.
 - `evaluation`: ADDED *Two counts over the cohort, never a score*.
 - `evaluation`: ADDED *The encoder shares no pin with the generator*.
 - `evaluation`: ADDED *Every render is a row*.
-- `evaluation`: in the deletion phase, per [D8](design.md#d8): MODIFIED *Every model the scorer loads is pinned and
-  verified* — loses the sentence binding the recognizer to the generator's pin; REMOVED *The comparison canvas is
+- `evaluation`: in the deletion phase, per [D8](design.md#d8): *Every model the scorer loads is pinned and
+  verified* is REMOVED and ADDED as *Every model the evaluator loads is pinned and verified*, without the sentence
+  binding the recognizer to the generator's pin; REMOVED *The comparison canvas is
   the render's own*, *Regions are parsed from the photograph only*, *The face-location guard refuses rather than
   scores the wrong pixels*, *An absent face is its own outcome, never a low score*, *Every axis declares what it may
   claim*, *A cross-base comparison refuses only the axes it invalidates*, *The report is one record per render and

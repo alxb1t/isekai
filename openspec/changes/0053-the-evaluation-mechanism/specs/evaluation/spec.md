@@ -1,3 +1,53 @@
+## REMOVED Requirements
+
+### Requirement: The comparison canvas is the render's own
+**Reason**: A render is compared to a cohort by face embedding, not pixel for pixel against its photograph,
+so no shared canvas is built.
+**Migration**: None. The cohort's requirements replace the per-render comparison.
+
+### Requirement: Regions are parsed from the photograph only
+**Reason**: No region is measured: hair, clothes and colour are outside the count.
+**Migration**: None.
+
+### Requirement: The face-location guard refuses rather than scores the wrong pixels
+**Reason**: The detector aligns the face it finds before it is embedded, so there is no region a wrong box
+could poison.
+**Migration**: None. A face not found is its own outcome under *The encoder shares no pin with the
+generator*.
+
+### Requirement: An absent face is its own outcome, never a low score
+**Reason**: The rule moves to the encoder that finds the face.
+**Migration**: `evaluation:encoder:no-face-is-its-own-outcome` and
+`evaluation:cohort:a-faceless-photograph-is-refused` hold it.
+
+### Requirement: Every axis declares what it may claim
+**Reason**: There are no axes; there are two counts, each with its chance line.
+**Migration**: `evaluation:counts:chance-is-reported` and `evaluation:counts:no-average-no-percentage` hold
+what a count may claim.
+
+### Requirement: A cross-base comparison refuses only the axes it invalidates
+**Reason**: No embedding axis compares renders across bases; a flow on another base is a column of its own.
+**Migration**: None. `evaluation:table:one-column-per-flow` holds the comparison.
+
+### Requirement: The report is one record per render and one table per run
+**Reason**: The record is one per batch and the table one per batch, with a column per flow.
+**Migration**: `evaluation:table:a-failure-is-a-row` and `evaluation:table:the-table-re-derives-from-the-record`
+hold the record and the table.
+
+### Requirement: Human labels are collected blind and pairwise
+**Reason**: Identification over a cohort has its ground truth in the cohort's directory, so no human
+label is collected.
+**Migration**: None. `evaluation:cohort:a-run-is-matched-by-digest` holds the ground truth.
+
+### Requirement: Every model the scorer loads is pinned and verified
+**Reason**: The evaluator's encoder is no longer the generator's recognizer, so the rule binding the two pins
+goes, and the rest is restated under the evaluator's name.
+**Migration**: `evaluation:pinned-artifacts:digest-mismatch-is-refused`,
+`evaluation:pinned-artifacts:unpinned-source-is-refused` and
+`evaluation:pinned-artifacts:escaping-destination-is-refused` carry forward under *Every model the evaluator
+loads is pinned and verified*. `evaluation:pinned-artifacts:recognizer-matches-the-generators-pin` is
+inverted by `evaluation:encoder:shares-no-pin-with-the-generator`.
+
 ## ADDED Requirements
 
 ### Requirement: The cohort is the ground truth
@@ -152,3 +202,34 @@ is what lets a second flow be read beside the first without a second tool.
 - **Layers:** unit
 - **WHEN** the table is printed from a committed record
 - **THEN** it equals the table committed beside that record
+
+### Requirement: Every model the evaluator loads is pinned and verified
+
+The system SHALL resolve each model it loads from a pinned manifest carrying a revision and a digest,
+SHALL verify that digest before use, and SHALL refuse rather than score when it does not match. It
+SHALL join the manifest's destination onto the models root through the same containment check the
+provisioner uses, and SHALL refuse a destination that does not land under that root.
+
+A score produced by an unverified model is a number from an unknown thing.
+
+#### Scenario: a digest mismatch refuses the run
+- **Key:** `evaluation:pinned-artifacts:digest-mismatch-is-refused`
+- **Layers:** unit
+- **WHEN** a model artifact on disk does not match the digest the manifest pins
+- **THEN** the run is refused naming the artifact and both digests
+- **AND** no render is ranked with it
+
+#### Scenario: an unpinned entry is refused
+- **Key:** `evaluation:pinned-artifacts:unpinned-source-is-refused`
+- **Layers:** unit
+- **WHEN** a manifest entry names a source that is not a pinned revision
+- **THEN** it is refused rather than fetched
+
+#### Scenario: a destination that escapes the models root is refused
+- **Key:** `evaluation:pinned-artifacts:escaping-destination-is-refused`
+- **Layers:** unit
+- **WHEN** the evaluator resolves an entry whose destination climbs out of, or is absolute against, the
+  models root
+- **THEN** it is refused naming the destination, before any bytes are read
+- **AND** the check is the provisioner's own, so the containment rule has one enforcement site rather
+  than two

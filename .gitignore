@@ -15,10 +15,7 @@ models/
 # Everything the staged pipeline captures or generates (design.md D14)
 .data
 
-# `outputs/` is gone. It had two producers: the render path v0.14 deletes, and
-# `evaluation/baseline/build_contact_sheets.py`, which v0.14 repoints under `.data/` — so
-# D14's "nothing generated is outside the one ignored root" is now literally
-# true, rather than true of the pipeline and not of the labelling aid beside it.
+# `outputs/` is gone: nothing generated is outside the one ignored root (D14).
 #
 # `.inputs/` stays, and v0.13's comment here was wrong to schedule it for
 # deletion. It holds *source photographs* an operator puts there by hand, which

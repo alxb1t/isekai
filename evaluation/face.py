@@ -10,7 +10,9 @@ onnxruntime, and neither is a pin the generator carries (D37).
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from importlib import import_module
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
@@ -62,9 +64,14 @@ class Encodes(Protocol):
         ...
 
 
+def _import(module: str) -> ModuleType:
+    """Return `module`, imported here so a test can watch the import happen."""
+    return import_module(module)
+
+
 def _session(model: Path) -> "InferenceSession":
     """Open `model` on the CPU, its load-time warnings silenced."""
-    import onnxruntime
+    onnxruntime = _import("onnxruntime")
 
     options = onnxruntime.SessionOptions()
     options.log_severity_level = 3

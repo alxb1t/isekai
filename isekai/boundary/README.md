@@ -3,10 +3,9 @@
 A hosted model, a rented GPU, a download. Each file is one way out, and this is
 where a way out belongs.
 
-**It is not yet where every way out lives.** Three sit outside this directory
-today: `evaluation/labels.py` spawns `git`, `interface/ui/bundle.py` spawns
-`npm`, and `interface/ui/app.py` binds a port. Moving them behind this boundary
-is the better repository and is filed rather than done — a documentation release
+**It is not yet where every way out lives.** Some sit outside this directory
+today: `interface/ui/bundle.py` spawns `npm`, and `interface/ui/app.py` binds a
+port. Moving them behind this boundary is the better repository and is filed rather than done — a documentation release
 that quietly refactors is two changes wearing one name (`0024` design.md D6).
 
 ## Files
@@ -31,14 +30,14 @@ at least once; a list of names cannot.
 | `comfy/` | `interface/cli.py`, `interface/wiring.py`, `pipeline/generate.py` | `tests/fakes.py`, `tests/stages.py`, `tests/test_generate.py`, `tests/test_resume.py` |
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py`, `tests/test_tagging.py` |
-| `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/eval_backends.py`, `evaluation/eval_models.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_eval_manifest.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
-| `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/eval_backends.py`, `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
+| `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_cohort.py`, `tests/test_eval_manifest.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_eval_manifest.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
+| `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `tests/stages.py`, `tests/test_resume.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
 
 > `provision.py` is on `python -m isekai`'s import graph, through `ollama.py`'s
 > check of the reader's manifest. It imports only the standard library, so the
 > module-scope import rule holds.
 >
-> **`wd14.py` is**, and it touches the tagger's stack; `evaluation/eval_backends.py`
+> **`wd14.py` is**, and it touches the tagger's stack; `evaluation/face.py`
 > touches it too, off that graph. Every one of `wd14.py`'s imports of it --
 > `onnxruntime`, `numpy`, `Pillow` -- is **function-local**, which keeps the `-S`
 > guard green. They are declared dependencies as of v0.22.3, so one moved to

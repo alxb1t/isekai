@@ -2,14 +2,12 @@
 
 ## Purpose
 
-Scoring one render against the photograph that produced it: the shared canvas the two agree on pixel for
-pixel, the guard that refuses rather than scores the wrong region, four axes and the claim each is allowed
-to make, and the blind human labelling that is what any of those numbers are checked against.
+Counting, over a cohort of known people, how often each render is nearest its own photograph and its own
+person, beside the hits chance gives, with an encoder the generator does not use.
 
-**Source:** `evaluation/__main__.py`, `evaluation/evaluate.py`, `evaluation/eval_backends.py`,
-`evaluation/eval_models.py`, `evaluation/ciede2000.py`, `evaluation/labels.py`,
-`evaluation/eval_models.json`, `isekai/boundary/provision.py` ·
-**Tests:** `tests/test_evaluate.py`, `tests/test_labels.py`, `tests/test_ciede2000.py`,
+**Source:** `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/face.py`,
+`evaluation/eval_models.py`, `evaluation/eval_models.json`, `isekai/boundary/provision.py` ·
+**Tests:** `tests/test_cohort.py`, `tests/test_face.py`, `tests/test_evaluation_cli.py`,
 `tests/test_eval_manifest.py`
 
 ## Requirements

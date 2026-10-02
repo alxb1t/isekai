@@ -1,22 +1,26 @@
-# `evaluation/` — scoring a render against its photograph
+# `evaluation/` — counting whether a render is its person
 
-A real install boundary as well as a filing one: `eval_backends.py` is the only
-module in the tree that imports the `[eval]` extra, and it is imported lazily.
-Everything the scorer *decides* is stdlib-only and is tested in CI with the stack
-absent.
+The cohort evaluator, beside the package it measures: `isekai` never imports it.
+It ranks a cohort's photographs for each render and counts two hits beside chance.
+It adds no package: `onnxruntime`, `numpy` and `Pillow` are already the pipeline's.
+
+```
+uv run python -m evaluation <batch>/runs --cohort <cohort>
+        │
+        ├─ cohort.py   load_cohort · rank · hits · chance · record · table
+        ├─ face.py     Detector (YuNet) · align · Encoder (SFace) · embed
+        └─ writes <batch>/evaluation.json, prints the table
+```
 
 ## Files
 
 | file | does |
 |---|---|
-| `__main__.py` | the command line: `uv run --extra eval python -m evaluation <run>/ --photo <photo>` |
-| `evaluate.py` | what a score is and when one may not be claimed — the axes, the guards, the cohort question, the report. Stdlib only |
-| `eval_backends.py` | the real models behind the seams: detect, parse, encode, sample, read pose. The only importer of the optional extra |
-| `ciede2000.py` | one absolute colour distance — the only axis that means the same thing in a photograph and a drawing |
-| `eval_models.py` | reads the scorer's manifest, and proves it has not drifted from the graph's; `boundary/provision.py` verifies the bytes |
-| `labels.py` | collects the operator's blind judgement and correlates a metric against it |
-| `eval_models.json` | the scorer's pinned manifest, derived by `tools/derive_eval_manifest.py` |
-| [`baseline/`](baseline/README.md) | the calibration: the subjects' recipe, the labels, the agreement |
+| `__main__.py` | the command line: matches each run to its cohort photograph, embeds, ranks, writes the record |
+| `cohort.py` | the cohort, the two counts, chance, the record and its table. Stdlib only |
+| `face.py` | finds the face, aligns it to the template, embeds it; `python -m evaluation.face <image>…` probes the detector |
+| `eval_models.py` | reads the evaluator's manifest, and names any destination the graph's manifest also carries (D37) |
+| `eval_models.json` | the evaluator's pinned manifest, derived by `tools/derive_eval_manifest.py` |
 
 ## Imported by
 
@@ -25,17 +29,10 @@ at least once; a list of names cannot.
 
 | file | inside `evaluation/` | outside |
 |---|---|---|
-| `evaluate.py` | `__main__.py`, `eval_backends.py` | `tests/eval_fakes.py`, `tests/test_evaluate.py` |
-| `eval_backends.py` | `__main__.py` | — |
-| `ciede2000.py` | `eval_backends.py`, `evaluate.py` | `tests/eval_fakes.py`, `tests/test_ciede2000.py` |
-| `eval_models.py` | `eval_backends.py` | `tools/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
-| `labels.py` | — | `tests/test_labels.py` |
-
-> `eval_backends.py` has **no test importer** and `pyproject.toml`'s
-> `unresolved-import` override blinds `ty` to its first-party imports, so no gate
-> command reads them. **That debt is open and unpaid**, and naming a version that
-> would pay it has not worked: it was written against v0.19 and has outlasted
-> three releases since. It is in the backlog, not in a sentence here.
+| `__main__.py` | — | `tests/test_evaluation_cli.py`, `tests/test_eval_manifest.py` |
+| `cohort.py` | `__main__.py` | `tests/test_cohort.py`, `tests/test_evaluation_cli.py` |
+| `face.py` | `__main__.py` | `tests/test_face.py`, `tests/test_wd14.py` |
+| `eval_models.py` | `__main__.py`, `face.py` | `tools/derive_eval_manifest.py`, `tests/test_eval_manifest.py`, `tests/test_package_paths.py`, `tests/test_vocabulary_manifest.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../docs/principles.md)'s, and the choices in force are

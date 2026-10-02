@@ -10,9 +10,8 @@ dev group: a module-level `from fastapi.testclient import TestClient` would fail
 *collection* there, which is gate command five going red over a missing test tool
 rather than a defect.
 
-This is deliberately not the eval tests' pattern. Those stay in the main suite by
-faking their boundary in `tests/eval_fakes.py` and never importing the extra at
-all; here the thing under test *is* the HTTP surface, so there is nothing to fake
+This is deliberately not the evaluator tests' pattern. Those fake the embedder;
+here the thing under test *is* the HTTP surface, so there is nothing to fake
 that would leave anything worth asserting.
 
 Everything that can be asserted without a server is in `tests/test_ui.py`.

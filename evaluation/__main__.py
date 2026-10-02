@@ -143,11 +143,18 @@ def score(runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path) -> Record
 
 def _embedder(models: Path) -> Embed:
     """Return the real embedder: the pinned detector and encoder, verified."""
-    from evaluation.eval_models import load_eval_manifest
+    from evaluation.eval_models import load_eval_manifest, shared_with_the_graph
     from evaluation.face import Detector, Encoder, embed
-    from isekai.boundary.provision import DigestMismatch, resolve
+    from isekai.boundary.provision import DigestMismatch, load_manifest, resolve
 
     manifest = load_eval_manifest()
+    shared = shared_with_the_graph(manifest, load_manifest())
+    if shared:
+        raise Refusal(
+            f"the evaluator's manifest carries {', '.join(shared)}, which the "
+            "generator's manifest carries too, so the count would be the generator "
+            "grading itself; pin another model in `evaluation/eval_models.json`"
+        )
     try:
         detector = Detector(resolve(DETECTOR, models, manifest))
         encoder = Encoder(resolve(ENCODER, models, manifest))

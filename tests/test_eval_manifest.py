@@ -1,19 +1,15 @@
 import copy
 import hashlib
-import json
+import re
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
-from evaluation.eval_models import (
-    RECOGNIZER,
-    SHARED_WITH_THE_GRAPH,
-    load_eval_manifest,
-    shared_entries_that_differ,
-)
+import evaluation.__main__ as entry_point
+from evaluation import eval_models
+from evaluation.eval_models import ENCODER, load_eval_manifest, shared_with_the_graph
 from isekai.boundary.provision import (
-    MANIFEST_PATH,
     DigestMismatch,
     EscapingDestination,
     Manifest,
@@ -22,10 +18,12 @@ from isekai.boundary.provision import (
     entries_with_missing_keys,
     entries_without_a_digest,
     entry_for,
+    load_manifest,
     mirror_entries_without_an_alternate,
     resolve,
     sources_on_a_mutable_ref,
 )
+from isekai.foundation.refusal import Refusal
 
 
 @pytest.fixture
@@ -71,17 +69,17 @@ def test_no_source_in_the_eval_manifest_resolves_a_mutable_ref(
 def test_an_unpinned_entry_is_refused_rather_than_loaded(
     eval_manifest: Manifest, tmp_path: Path
 ) -> None:
-    entry = cast(dict[str, Any], entry_for(eval_manifest, RECOGNIZER))
+    entry = cast(dict[str, Any], entry_for(eval_manifest, ENCODER))
     body = b"whatever the bytes are, the pin is what says they are the right ones"
     entry["sha256"] = hashlib.sha256(body).hexdigest()
     entry["sources"] = [
-        "https://huggingface.co/DIAMONIK7777/antelopev2/resolve/main/glintr100.onnx"
+        "https://huggingface.co/opencv/face_recognition_sface/resolve/main/face_recognition_sface_2021dec.onnx"
     ]
     _land(tmp_path, entry, body)
 
     # The digest on disk matches: the refusal is about the pin, not the bytes.
     with pytest.raises(UnpinnedArtifact) as refused:
-        resolve(RECOGNIZER, tmp_path, eval_manifest)
+        resolve(ENCODER, tmp_path, eval_manifest)
     assert "resolve/main" in str(refused.value)
 
 
@@ -103,24 +101,24 @@ def test_every_mirror_primary_in_the_eval_manifest_declares_an_alternate(
 def test_bytes_matching_the_pin_resolve_to_their_path(
     eval_manifest: Manifest, tmp_path: Path
 ) -> None:
-    entry = cast(dict[str, Any], entry_for(eval_manifest, RECOGNIZER))
-    body = b"the recognizer's bytes, as far as this test is concerned"
+    entry = cast(dict[str, Any], entry_for(eval_manifest, ENCODER))
+    body = b"the encoder's bytes, as far as this test is concerned"
     entry["sha256"] = hashlib.sha256(body).hexdigest()
     expected = _land(tmp_path, entry, body)
 
-    assert resolve(RECOGNIZER, tmp_path, eval_manifest) == expected
+    assert resolve(ENCODER, tmp_path, eval_manifest) == expected
 
 
 @pytest.mark.spec("evaluation:pinned-artifacts:digest-mismatch-is-refused")
 def test_a_digest_mismatch_refuses_naming_the_artifact_and_both_digests(
     eval_manifest: Manifest, tmp_path: Path
 ) -> None:
-    entry = cast(dict[str, Any], entry_for(eval_manifest, RECOGNIZER))
+    entry = cast(dict[str, Any], entry_for(eval_manifest, ENCODER))
     landed = _land(tmp_path, entry, b"not the bytes the manifest pins")
     computed = hashlib.sha256(b"not the bytes the manifest pins").hexdigest()
 
     with pytest.raises(DigestMismatch) as refused:
-        resolve(RECOGNIZER, tmp_path, eval_manifest)
+        resolve(ENCODER, tmp_path, eval_manifest)
 
     message = str(refused.value)
     assert str(landed) in message
@@ -133,7 +131,7 @@ def test_an_artifact_the_manifest_does_not_declare_is_refused(
     eval_manifest: Manifest, tmp_path: Path
 ) -> None:
     with pytest.raises(UnknownArtifact):
-        resolve("styleid/a_model_nobody_pinned.safetensors", tmp_path, eval_manifest)
+        resolve("opencv_face/a_model_nobody_pinned.onnx", tmp_path, eval_manifest)
 
 
 # The two shapes `isekai.boundary.provision.resolve_dest` refuses, mirroring
@@ -151,7 +149,7 @@ def test_a_destination_outside_the_models_root_is_refused_rather_than_loaded(
     # The scorer's join goes through the provisioner's containment check, so the
     # rule has one enforcement site rather than two. Nothing is landed on disk:
     # the refusal must come before any byte is read, not from a missing file.
-    entry = cast(dict[str, Any], entry_for(eval_manifest, RECOGNIZER))
+    entry = cast(dict[str, Any], entry_for(eval_manifest, ENCODER))
     entry["dest"] = dest
 
     with pytest.raises(EscapingDestination) as refused:
@@ -159,37 +157,16 @@ def test_a_destination_outside_the_models_root_is_refused_rather_than_loaded(
     assert dest in str(refused.value)
 
 
-@pytest.mark.spec("evaluation:pinned-artifacts:recognizer-matches-the-generators-pin")
-def test_the_recognizer_is_the_pin_the_graphs_own_manifest_carries() -> None:
-    assert shared_entries_that_differ() == []
-
-
-@pytest.mark.spec("evaluation:pinned-artifacts:recognizer-matches-the-generators-pin")
-def test_the_recognizer_is_one_of_the_shared_entries() -> None:
-    assert RECOGNIZER in SHARED_WITH_THE_GRAPH
-
-
-@pytest.mark.spec("evaluation:pinned-artifacts:recognizer-matches-the-generators-pin")
-def test_a_recognizer_that_drifted_from_the_graphs_pin_is_reported(
-    eval_manifest: Manifest,
+@pytest.mark.spec("evaluation:encoder:shares-no-pin-with-the-generator")
+def test_a_destination_the_generator_also_pins_refuses_the_scoring_naming_it(
+    eval_manifest: Manifest, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # A different build of ArcFace, pinned only in the scorer's manifest. Nothing
-    # about the file's shape is wrong; only the two files no longer agree.
-    entry = cast(dict[str, Any], entry_for(eval_manifest, RECOGNIZER))
-    entry["sha256"] = "0" * 64
+    graph = load_manifest()
+    borrowed = graph["entries"][0]
+    eval_manifest["entries"].append(borrowed)
+    monkeypatch.setattr(eval_models, "load_eval_manifest", lambda: eval_manifest)
 
-    assert shared_entries_that_differ(eval_manifest) == [RECOGNIZER]
-
-
-@pytest.mark.spec("evaluation:pinned-artifacts:recognizer-matches-the-generators-pin")
-def test_a_shared_entry_dropped_from_the_graphs_manifest_is_reported(
-    eval_manifest: Manifest, tmp_path: Path
-) -> None:
-    graph: dict[str, Any] = json.loads(MANIFEST_PATH.read_text())
-    graph["entries"] = [
-        entry for entry in graph["entries"] if entry["dest"] != RECOGNIZER
-    ]
-    thinned = tmp_path / "models.json"
-    thinned.write_text(json.dumps(graph))
-
-    assert shared_entries_that_differ(eval_manifest, thinned) == [RECOGNIZER]
+    assert shared_with_the_graph(load_eval_manifest(), graph) == []
+    assert shared_with_the_graph(eval_manifest, graph) == [borrowed["dest"]]
+    with pytest.raises(Refusal, match=re.escape(borrowed["dest"])):
+        entry_point._embedder(tmp_path)

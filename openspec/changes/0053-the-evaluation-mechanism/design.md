@@ -70,7 +70,7 @@ second encoder or seed; the cohort's generation; the root README's showcase; del
 | [D5](#d5) | `python -m evaluation <runs> --cohort <dir>` reads each `run.json` under `<runs>` through `Run`, each flow's seeds through `run_view.rendered`, writes `<runs>/../evaluation.json` and prints the table | the readers exist; the batch is what `render.sh` leaves | a `--flow` flag; parsing sidecars |
 | [D6](#d6) | no package is added; `[eval]` and both overrides go; D22 says the evaluator adds no package to the runtime list | the isolation holds by construction; an empty extra is a config nothing reads | an empty `[eval]` |
 | [D7](#d7) | D37 records the encoder's independence as a decision; `## Measurement` enters the principles with the tests that hold each | a choice about this evaluator is a decision; a rule every component follows is a principle | encoder independence as a principle |
-| [D8](#d8) | the deletion is the last phase, and that phase adds `REMOVED` and `MODIFIED` to this change's delta as it deletes the tests | the binding checker fails a marker whose key an active delta removed, so the delta and the tests move together | `REMOVED` at the cut, which turns the gate red at the cut; deleting first |
+| [D8](#d8) | the deletion is the last phase, and that phase adds `REMOVED` and `ADDED` to this change's delta as it deletes the tests | the binding checker fails a marker whose key an active delta removed, so the delta and the tests move together | `REMOVED` at the cut, which turns the gate red at the cut; deleting first |
 
 ### D1
 
@@ -179,9 +179,9 @@ the `recognizer-matches-the-generators-pin` tests; replaces `SHARED_WITH_THE_GRA
 `tests/test_wd14.py:371-375` at `evaluation.face`; rewrites `evaluation/README.md`; replaces `docs/modules.md:74`.
 
 In the same phase, this change's `specs/evaluation/spec.md` gains `## REMOVED Requirements` for every
-requirement the proposal lists as REMOVED, each with **Reason** and **Migration**, and `## MODIFIED Requirements`
-with *Every model the scorer loads is pinned and verified* minus its last SHALL sentence and its
-`recognizer-matches-the-generators-pin` scenario; and the living spec's `## Purpose`, *Source* and *Tests* lines
+requirement the proposal lists as REMOVED, each with **Reason** and **Migration**, plus *Every model the scorer loads is pinned and verified*,
+re-added as *Every model the evaluator loads is pinned and verified* minus its last SHALL sentence and its
+`recognizer-matches-the-generators-pin` scenario — OpenSpec refuses a `MODIFIED` that drops a scenario; and the living spec's `## Purpose`, *Source* and *Tests* lines
 are rewritten to the cohort evaluator.
 `tests/test_spec_bindings.py` is why the delta moves with the tests: a `REMOVED` at the cut would make every old
 marker name a key the effective spec lacks, and the gate would be red before the first phase.

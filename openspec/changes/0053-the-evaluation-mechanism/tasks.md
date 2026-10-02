@@ -8,7 +8,7 @@ The delta holds every new scenario; each task below adds the tests that bind the
 - [x] 1 — The arithmetic
 - [x] 2 — The encoder
 - [x] 3 — The entry point
-- [ ] 4 — The deletion
+- [x] 4 — The deletion
 
 Line numbers are `20ef5a7`'s. Every new test carries `@pytest.mark.spec` with the key its task names. The batch and
 its record are the operator's, after the release.
@@ -44,15 +44,15 @@ its record are the operator's, after the release.
 
 ## 4 — The deletion
 
-- [ ] 4.1 Delete `evaluation/evaluate.py`, `evaluation/eval_backends.py`, `evaluation/ciede2000.py`, `evaluation/labels.py`, `evaluation/baseline/`, `tests/test_evaluate.py`, `tests/test_labels.py`, `tests/test_ciede2000.py` and `tests/eval_fakes.py`, per [D8](design.md#d8).
+- [x] 4.1 Delete `evaluation/evaluate.py`, `evaluation/eval_backends.py`, `evaluation/ciede2000.py`, `evaluation/labels.py`, `evaluation/baseline/`, `tests/test_evaluate.py`, `tests/test_labels.py`, `tests/test_ciede2000.py` and `tests/eval_fakes.py`, per [D8](design.md#d8).
   Verify: `ls evaluation/evaluate.py evaluation/eval_backends.py evaluation/ciede2000.py evaluation/labels.py evaluation/baseline tests/test_evaluate.py tests/test_labels.py tests/test_ciede2000.py tests/eval_fakes.py 2>&1 | grep -c 'No such file'` prints `9`.
-- [ ] 4.2 In `evaluation/eval_models.py`, replace `SHARED_WITH_THE_GRAPH`, `RECOGNIZER` and `shared_entries_that_differ` with `DETECTOR`, `ENCODER` and `shared_with_the_graph`; `__main__` refuses on a non-empty result; in `tools/derive_eval_manifest.py`, drop the copied entries, the old `Spec`s and the old publishers, and re-run it.
+- [x] 4.2 In `evaluation/eval_models.py`, replace `SHARED_WITH_THE_GRAPH`, `RECOGNIZER` and `shared_entries_that_differ` with `DETECTOR`, `ENCODER` and `shared_with_the_graph`; `__main__` refuses on a non-empty result; in `tools/derive_eval_manifest.py`, drop the copied entries, the old `Spec`s and the old publishers, and re-run it.
   Verify: `grep -c '^def shared_with_the_graph' evaluation/eval_models.py` prints `1`, `grep -c 'glintr100\|styleid\|segformer\|anime_face' evaluation/eval_models.json` prints `0`, and `grep -c '"dest"' evaluation/eval_models.json` prints `2`.
-- [ ] 4.3 In `tests/test_eval_manifest.py`, delete the tests binding `recognizer-matches-the-generators-pin` and add one binding `evaluation:encoder:shares-no-pin-with-the-generator`; re-point `tests/test_wd14.py:371-375` at `evaluation.face`.
+- [x] 4.3 In `tests/test_eval_manifest.py`, delete the tests binding `recognizer-matches-the-generators-pin` and add one binding `evaluation:encoder:shares-no-pin-with-the-generator`; re-point `tests/test_wd14.py:371-375` at `evaluation.face`.
   Verify: `grep -c 'recognizer-matches' tests/test_eval_manifest.py` prints `0`, `grep -c 'shares-no-pin-with-the-generator' tests/test_eval_manifest.py` prints `1`, and `grep -c 'eval_backends' tests/test_wd14.py` prints `0`.
-- [ ] 4.4 In `pyproject.toml`, delete the optional-dependencies table with its comment, the ruff line for `eval_backends.py` and the `ty` override, per [D6](design.md#d6); run `uv lock`.
-  Verify: `grep -c 'optional-dependencies\|eval_backends\|unresolved-import' pyproject.toml` prints `0`, and `grep -c '^name = "torch"' uv.lock` prints `0`.
-- [ ] 4.5 Rewrite `evaluation/README.md` for the cohort evaluator; replace `docs/modules.md:74`'s `eval_backends.py` line; restate `README.md:313-314` and `:383-385` per [D6](design.md#d6).
+- [x] 4.4 In `pyproject.toml`, delete the optional-dependencies table with its comment, the ruff line for `eval_backends.py` and the `ty` override, per [D6](design.md#d6); run `uv lock`.
+  Verify: `grep -c 'optional-dependencies\|eval_backends' pyproject.toml` prints `0`, `grep -c 'unresolved-import' pyproject.toml` prints `1` (the archive probe's), and `grep -c '^name = "torch"' uv.lock` prints `0`.
+- [x] 4.5 Rewrite `evaluation/README.md` for the cohort evaluator; replace `docs/modules.md:74`'s `eval_backends.py` line; restate `README.md:313-314` and `:383-385` per [D6](design.md#d6).
   Verify: `grep -rc 'eval_backends\|\[eval\]' evaluation/README.md docs/modules.md README.md | grep -v ':0'` prints nothing.
-- [ ] 4.6 In this change's `specs/evaluation/spec.md`, add `## REMOVED Requirements` for every requirement the [proposal](proposal.md) lists as REMOVED, each with **Reason** and **Migration**, and `## MODIFIED Requirements` with *Every model the scorer loads is pinned and verified* minus its last SHALL sentence and its `recognizer-matches-the-generators-pin` scenario; rewrite `openspec/specs/evaluation/spec.md:3-13` — *Purpose*, *Source*, *Tests* — to the cohort evaluator; `openspec validate 0053-the-evaluation-mechanism --strict`.
-  Verify: `grep -c '^## REMOVED Requirements' openspec/changes/0053-the-evaluation-mechanism/specs/evaluation/spec.md` prints `1`, `grep -c '^### Requirement:' openspec/changes/0053-the-evaluation-mechanism/specs/evaluation/spec.md` prints `13`, and `grep -c 'blind human labelling' openspec/specs/evaluation/spec.md` prints `0`.
+- [x] 4.6 In this change's `specs/evaluation/spec.md`, add `## REMOVED Requirements` for every requirement the [proposal](proposal.md) lists as REMOVED, each with **Reason** and **Migration**, plus *Every model the scorer loads is pinned and verified*, re-added as *Every model the evaluator loads is pinned and verified* minus its last SHALL sentence and its `recognizer-matches-the-generators-pin` scenario; rewrite `openspec/specs/evaluation/spec.md:3-13` — *Purpose*, *Source*, *Tests* — to the cohort evaluator; `openspec validate 0053-the-evaluation-mechanism --strict`.
+  Verify: `grep -c '^## REMOVED Requirements' openspec/changes/0053-the-evaluation-mechanism/specs/evaluation/spec.md` prints `1`, `grep -c '^### Requirement:' openspec/changes/0053-the-evaluation-mechanism/specs/evaluation/spec.md` prints `14`, and `grep -c 'blind human labelling' openspec/specs/evaluation/spec.md` prints `0`.
