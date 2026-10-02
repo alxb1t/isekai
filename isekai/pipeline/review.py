@@ -417,9 +417,8 @@ def _copy_approval(
         )
     approval = versions_held[-1]
     directory = run.directory(flow, REVIEW)
-    held = approved_versions(directory)
-    if held:
-        mine = directory / artifact_name(held[-1], APPROVED)
+    mine = latest_artifact(directory, APPROVED)
+    if mine is not None:
         latest = read(mine, APPROVED_FILE)
         require(
             mine,

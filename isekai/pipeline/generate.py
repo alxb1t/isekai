@@ -342,18 +342,19 @@ def refuse_out_of_step(run: Run, flow: str, source: str, group: int) -> None:
     copied = body["producer"].get("copied_from")
     if copied is None or copied["flow"] != source or copied["approval"] == group:
         return
-    held = f"{run.id}: {flow}'s approval {version:03d} is a copy of {source}'s approval"
+    head = (
+        f"{run.id}: {flow}'s approval {version:03d} is a copy of {source}'s approval "
+        f"{copied['approval']:03d}, and {source}'s latest renders came from approval "
+        f"{group:03d}; run "
+    )
     if copied["approval"] < group:
         raise Refusal(
-            f"{held} {copied['approval']:03d}, and {source}'s latest renders came from "
-            f"approval {group:03d}; run `python -m isekai approve --flow {flow} "
-            f"--from {source} {run.id}` to copy the newer one"
+            f"{head}`python -m isekai approve --flow {flow} --from {source} "
+            f"{run.id}` to copy the newer one"
         )
     raise Refusal(
-        f"{held} {copied['approval']:03d}, and {source}'s latest renders came from "
-        f"the older approval {group:03d}; run "
-        f"`bash infra/render.sh {_runs_root(run)} {source}=1` to render {source} "
-        "again first"
+        f"{head}`bash infra/render.sh {_runs_root(run)} {source}=1` to render "
+        f"{source} again first"
     )
 
 

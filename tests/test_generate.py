@@ -1798,6 +1798,14 @@ def _seeded_session(
     )
 
 
+def _assert_nothing_rented(client: FakeComfyClient, run: Run, flow: str) -> None:
+    """Assert no endpoint was contacted and `flow` has no outputs under `run`."""
+    assert client.submissions == []
+    assert client.uploaded is None
+    assert client.stats_calls == 0
+    assert not (run.path / flow / OUTPUTS).exists()
+
+
 @pytest.mark.spec("image-generation:seeds-from:one-render-per-source-seed")
 def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
@@ -1840,10 +1848,7 @@ def test_a_run_without_a_source_render_is_refused_before_any_endpoint(
     message = err.getvalue()
     assert f"{run.id}: no render of {FLOW}" in message
     assert f"bash infra/render.sh {tmp_path / 'runs'} {FLOW}=1" in message
-    assert client.submissions == []
-    assert client.uploaded is None
-    assert client.stats_calls == 0
-    assert not (run.path / CONTROL / OUTPUTS).exists()
+    _assert_nothing_rented(client, run, CONTROL)
 
 
 @pytest.mark.spec("image-generation:seeds-from:a-flow-is-not-its-own-source")
@@ -1917,7 +1922,4 @@ def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpo
     assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
         copy == "older"
     )
-    assert client.submissions == []
-    assert client.uploaded is None
-    assert client.stats_calls == 0
-    assert not (run.path / CONTROL / OUTPUTS).exists()
+    _assert_nothing_rented(client, run, CONTROL)
