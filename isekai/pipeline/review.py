@@ -105,9 +105,11 @@ def state(directory: Path) -> Status:
     `re-opened` is an approved artifact with a **later** version beside it,
     which is exactly what `review --flow F --new-version <run>` writes and nothing
     else does. Later rather than merely present, so a draft that predated
-    the approval could never re-open one -- and `approved_versions()[-1]` is
-    the number the approved artifact records as `approved_from`, because
-    `approve()` derives its filename and that field from one local.
+    the approval could never re-open one -- and for an approval made from a
+    draft, `approved_versions()[-1]` is the number it records as
+    `approved_from`, because `approve()` derives its filename and that field
+    from one local. A copy keeps its source's producer and names its origin in
+    `copied_from` instead.
 
     Filenames only: no artifact is opened, and the common unapproved case
     costs a single listing.
@@ -310,8 +312,12 @@ def approve(
     flow: str,
     schema: Schema,
     vocabulary: Vocabulary,
+    source: str | None = None,
 ) -> tuple[Path | None, list[str]]:
     """Validate `flow`'s current draft and approve it, returning it and any warnings.
+
+    With `source`, no draft is read: `source`'s latest approval is copied under
+    `flow` instead, and the copy names where it came from.
 
     Validation is the last place an invented tag can be caught: one that merely
     looks canonical passes every later check on its way into the prompt. The
@@ -319,6 +325,8 @@ def approve(
     what is true -- that set is a subset of the wider tag corpus, so calling an
     absent tag unreal would overclaim.
     """
+    if source is not None:
+        return _copy_approval(run, flow, schema, vocabulary, source), []
     directory = run.directory(flow, REVIEW)
     draft = current_draft(directory)
     if draft is None:
@@ -359,12 +367,12 @@ def approve(
     for key, shape in (("sheet", int), ("producer", dict), ("vocabulary", dict)):
         require(draft, body, key, shape, remedy)
     sheet_version, producer = body["sheet"], body["producer"]
-    source = run.directory(flow, SHEETS) / artifact_name(sheet_version)
+    sheet_path = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body: ReviewApproved = {
         "schema": APPROVED_FILE.schema,
         "producer": {
             **producer,
-            "edited": _differs(fields, draft, source, _resheet(run, flow, draft)),
+            "edited": _differs(fields, draft, sheet_path, _resheet(run, flow, draft)),
             "approved_from": version,
         },
         "flow": flow,
@@ -387,6 +395,69 @@ def approve(
     write(path, APPROVED_FILE, approved_body)
     draft.unlink()
     return path, warnings
+
+
+def _copy_approval(
+    run: Run, flow: str, schema: Schema, vocabulary: Vocabulary, source: str
+) -> Path | None:
+    """Write `source`'s latest approval under `flow`, or None if `flow` is in step.
+
+    `flow` is in step when its latest approval is a copy of `source`'s latest; an
+    older copy or a hand approval is copied over under the next number. The fields
+    are validated against `flow`'s schema, so a copy the target cannot hold is
+    refused like any draft. `sheet` stays `source`'s: it is provenance, and
+    `copied_from` says where to look.
+    """
+    origin = run.directory(source, REVIEW)
+    versions_held = approved_versions(origin)
+    if not versions_held:
+        raise Refusal(
+            f"{run.id}: {flow} is copied from {source}, which has no approved "
+            f"sheet; run `python -m isekai review --flow {source} {run.id}`, edit "
+            f"the draft, then `python -m isekai approve --flow {source} {run.id}` "
+            "first"
+        )
+    approval = versions_held[-1]
+    directory = run.directory(flow, REVIEW)
+    mine = latest_artifact(directory, APPROVED)
+    if mine is not None:
+        latest = read(mine, APPROVED_FILE)
+        require(
+            mine,
+            latest,
+            "producer",
+            dict,
+            f"delete {mine}, then run {_again(run, flow)} to approve it afresh",
+        )
+        copied_from = latest["producer"].get("copied_from")
+        if copied_from == {"flow": source, "approval": approval}:
+            return None
+
+    path = origin / artifact_name(approval, APPROVED)
+    body = read(path, APPROVED_FILE)
+    remedy = f"delete {path}, then run {_again(run, source)} to approve it afresh"
+    for key, shape in (
+        ("fields", dict),
+        ("sheet", int),
+        ("producer", dict),
+        ("vocabulary", dict),
+    ):
+        require(path, body, key, shape, remedy)
+    fields = {name: list(tags) for name, tags in body["fields"].items()}
+    validate(fields, schema, vocabulary)
+
+    copied: ReviewApproved = {
+        **body,
+        "producer": {
+            **body["producer"],
+            "copied_from": {"flow": source, "approval": approval},
+        },
+        "flow": flow,
+        "fields": fields,
+    }
+    target = directory / artifact_name(next_version(directory), APPROVED)
+    write(target, APPROVED_FILE, copied)
+    return target
 
 
 def _again(run: Run, flow: str) -> str:

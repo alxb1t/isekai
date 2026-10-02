@@ -54,7 +54,13 @@ from isekai.interface.compare_view import write_page
 from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, booted_image, wiring
 from isekai.pipeline.caption import caption
-from isekai.pipeline.generate import prepare, read_runtime, render
+from isekai.pipeline.generate import (
+    prepare,
+    read_runtime,
+    refuse_out_of_step,
+    render,
+    source_seeds,
+)
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
@@ -184,6 +190,14 @@ def build_parser() -> argparse.ArgumentParser:
             metavar="FLOW",
             help="a flow to act on; repeatable, and required",
         )
+    # The one verb that reads another flow, and only the one the operator names.
+    made["approve"].add_argument(
+        "--from",
+        dest="source",
+        default=None,
+        metavar="FLOW",
+        help="copy this flow's latest approval under each --flow instead of a draft",
+    )
     for name in ("caption", "tag", "sheet", "review"):
         made[name].add_argument(
             "--new-version",
@@ -236,6 +250,25 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="render exactly this seed; repeatable, and not combinable with --count",
     )
+    render.add_argument(
+        "--seeds-from",
+        dest="seeds_from",
+        default=None,
+        metavar="FLOW",
+        help="render this flow's latest seeds for each run; not with the others",
+    )
+    # The free check for a source rendered by count earlier in the same session,
+    # whose seeds do not exist until the pod is up: it renders nothing.
+    render.add_argument(
+        "--in-step-with",
+        dest="in_step_with",
+        default=None,
+        metavar="FLOW",
+        help=(
+            "check that each copy of this flow's approval is of its latest, and "
+            "render nothing; for a source that renders first in the same session"
+        ),
+    )
     # No default, deliberately. Assembly is free and rendering is not, so the
     # invocation that costs money is the one that names where to spend it --
     # `generate` without `--server` assembles every prompt and stops, which is
@@ -285,6 +318,17 @@ def _run_for(identifier: str, wired: Wiring) -> Run:
     return open_run(photo, wired.runs_root)
 
 
+def _require_tracked(names: Sequence[str], wired: Wiring) -> None:
+    """Refuse the names that are no tracked flow, naming the flows there are."""
+    tracked = tracked_flows(wired.flows_dir)
+    unknown = [name for name in names if name not in tracked]
+    if unknown:
+        raise Refusal(
+            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
+            f"carries are {', '.join(tracked) or '(none)'}"
+        )
+
+
 def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     """Return the flows this invocation acts on, loaded, refusing an untracked one.
 
@@ -295,13 +339,7 @@ def _flows_for(args: argparse.Namespace, wired: Wiring) -> dict[str, Flow]:
     selection is the inspection verb rather than a missing flag.
     """
     named: list[str] = list(getattr(args, "flows", None) or [])
-    tracked = tracked_flows(wired.flows_dir)
-    unknown = [name for name in named if name not in tracked]
-    if unknown:
-        raise Refusal(
-            f"{', '.join(unknown)}: not a flow this build tracks; the flows it "
-            f"carries are {', '.join(tracked) or '(none)'}"
-        )
+    _require_tracked(named, wired)
     # Deduplicated, order kept: naming a flow twice is a typo, not a request for
     # two renders of it.
     return {name: load_flow(name, wired.flows_dir) for name in dict.fromkeys(named)}
@@ -329,6 +367,16 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0
         flows = _flows_for(args, wired)
+        if verb == "approve":
+            _refuse_bad_source(args.source, "from", flows, wired)
+        if verb == "generate":
+            _refuse_bad_source(args.seeds_from, "seeds-from", flows, wired)
+            _refuse_bad_source(args.in_step_with, "in-step-with", flows, wired)
+            if args.in_step_with is not None and args.server is not None:
+                raise Refusal(
+                    "--in-step-with checks before the session and renders nothing; "
+                    f"drop `--server {args.server}` from the command"
+                )
         if verb == "tag":
             _require_tagged(flows, targets, args.runs)
     except Refusal as unselectable:
@@ -345,6 +393,23 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
+
+
+def _refuse_bad_source(
+    source: str | None, flag: str, flows: Mapping[str, Flow], wired: Wiring
+) -> None:
+    """Refuse a named source that is no tracked flow, or is one of `flows`.
+
+    A flow is not its own source: the pair is compared only while they differ.
+    """
+    if source is None:
+        return
+    _require_tracked([source], wired)
+    if source in flows:
+        raise Refusal(
+            f"{source}: a flow is not its own source; drop `--{flag} {source}` or "
+            f"`--flow {source}` from the command"
+        )
 
 
 def _require_tagged(
@@ -572,7 +637,13 @@ def _per_item(
         elif verb == "approve":
 
             def approve_flow(name: str) -> None:
-                written, warnings = approve(run, name, flows[name].schema, vocabulary())
+                written, warnings = approve(
+                    run,
+                    name,
+                    flows[name].schema,
+                    vocabulary(),
+                    source=args.source,
+                )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
                 _say(wired, run, "approve", written)
@@ -602,6 +673,13 @@ def _generate(
     machine and then discover the third sheet was broken.
     """
     ready: list[tuple[Run, str]] = []
+    # The seeds each run takes from the source flow, when one is named.
+    borrowed: dict[str, list[int]] = {}
+    source_suffix = (
+        load_flow(args.seeds_from, wired.flows_dir).output_suffix
+        if args.seeds_from is not None
+        else ""
+    )
     # Collected alongside `across`'s, not raised: `prepare` already tried every
     # flow, so one run's broken sheet is a refusal to report at the end rather
     # than a reason its sibling flows go unrendered.
@@ -611,13 +689,22 @@ def _generate(
         run = _run_for(identifier, wired)
         assembled, refusals = prepare(run, flows)
         broken.extend(refusals)
+        if args.seeds_from is not None:
+            group, borrowed[run.id] = source_seeds(
+                run, args.seeds_from, source_suffix, list(flows)
+            )
+            for flow in assembled:
+                refuse_out_of_step(run, flow, args.seeds_from, group)
+        if args.in_step_with is not None:
+            for flow in assembled:
+                refuse_out_of_step(run, flow, args.in_step_with)
         for flow, path in assembled.items():
             print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
             ready.append((run, flow))
 
     refused = across(list(targets), assemble_one) + broken
     client = wired.client
-    if client is None:
+    if client is None or args.in_step_with is not None:
         return refused
     image = booted_image()
     # One report per session, read only when a render will run.
@@ -632,7 +719,8 @@ def _generate(
             image=image,
             runtime=ran_on,
             count=args.count,
-            seeds=args.seeds,
+            seeds=borrowed.get(run.id, args.seeds),
+            seeds_from=args.seeds_from,
             rng=wired.rng,
         )
         for made in produced:

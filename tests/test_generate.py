@@ -49,6 +49,7 @@ from isekai.foundation.run import (
     record_failure,
     versions,
 )
+from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import (
     SEED_BITS,
@@ -1770,3 +1771,255 @@ def test_a_complete_batch_asks_the_endpoint_nothing(run: Run, flow: Flow) -> Non
     assert (
         render(run, flow, FakeComfyClient(), runtime=unread, seeds=[42], poll=0) == []
     )
+
+
+# --- another flow's seeds -----------------------------------------------------
+
+CONTROL = "control-anime-wai"
+
+
+def _seeded_session(
+    tmp_path: Path,
+    vocabulary: Vocabulary,
+    client: FakeComfyClient,
+    err: io.StringIO,
+) -> Wiring:
+    """Return an offline wiring over `tmp_path`'s runs, serving `client`."""
+    return Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=client,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=tmp_path / "runs",
+        out=io.StringIO(),
+        err=err,
+    )
+
+
+def _assert_nothing_rented(client: FakeComfyClient, run: Run, flow: str) -> None:
+    """Assert no endpoint was contacted and `flow` has no outputs under `run`."""
+    assert client.submissions == []
+    assert client.uploaded is None
+    assert client.stats_calls == 0
+    assert not (run.path / flow / OUTPUTS).exists()
+
+
+@pytest.mark.spec("image-generation:seeds-from:one-render-per-source-seed")
+def test_a_flow_renders_the_seeds_of_its_sources_latest_group(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "grace")]
+    subject = load_flow(FLOW)
+    for made in runs:
+        # An earlier group on other seeds, so only the latest one can pass.
+        prepare(made, {FLOW: subject})
+        render(made, subject, FakeComfyClient(), seeds=[7], poll=0)
+        review(made, FLOW, new_version=True)
+        approve(made, FLOW, schema, vocabulary)
+        prepare(made, {FLOW: subject})
+        render(made, subject, FakeComfyClient(), seeds=[11, 12], poll=0)
+        approve(made, CONTROL, schema, vocabulary, source=FLOW)
+    wired = _seeded_session(tmp_path, vocabulary, FakeComfyClient(), io.StringIO())
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, *(r.id for r in runs)]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 0
+
+    for made in runs:
+        group = made.path / CONTROL / OUTPUTS / "001"
+        assert rendered_seeds(group, load_flow(CONTROL).output_suffix) == [11, 12]
+        for seed in (11, 12):
+            sidecar = read(group / f"{seed}.render.json", RENDER_FILE)
+            assert sidecar.get("seeds_from") == FLOW
+
+
+@pytest.mark.spec("image-generation:seeds-from:no-source-render-is-refused-first")
+def test_a_run_without_a_source_render_is_refused_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    message = err.getvalue()
+    assert f"{run.id}: no render of {FLOW}" in message
+    remedy = f"bash infra/render.sh {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
+    assert remedy in message
+    _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec("image-generation:seeds-from:a-flow-is-not-its-own-source")
+def test_a_flow_named_as_its_own_seed_source_is_refused_naming_it(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", FLOW, "--seeds-from", FLOW, run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert err.getvalue().startswith(f"refused: {FLOW}: a flow is not")
+    assert client.submissions == []
+    assert not (run.path / FLOW / OUTPUTS).exists()
+
+
+@pytest.mark.spec("image-generation:seeds-from:excludes-count-and-seeds")
+@pytest.mark.parametrize("beside", [["--count", "2"], ["--seed", "7"]])
+def test_the_parser_refuses_a_source_beside_a_count_or_a_seed(
+    beside: list[str],
+) -> None:
+    from isekai.interface.cli import build_parser
+
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(
+            ["generate", "--flow", CONTROL, "--seeds-from", FLOW, *beside]
+        )
+
+
+@pytest.mark.spec("image-generation:seeds-from:a-copy-out-of-step-is-refused-first")
+@pytest.mark.parametrize("copy", ["older", "newer"])
+def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run, copy: str
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    subject = load_flow(FLOW)
+
+    def render_source() -> None:
+        prepare(run, {FLOW: subject})
+        render(run, subject, FakeComfyClient(), seeds=[11], poll=0)
+
+    def approve_source_again() -> None:
+        review(run, FLOW, new_version=True)
+        approve(run, FLOW, schema, vocabulary)
+
+    # `older`: the copy is of approval 1, the source's renders of approval 2.
+    # `newer`: the copy is of approval 2, the source's renders of approval 1.
+    if copy == "older":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+        approve_source_again()
+        render_source()
+    else:
+        render_source()
+        approve_source_again()
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    message = err.getvalue()
+    assert f"{CONTROL}'s approval" in message
+    assert "001" in message and "002" in message
+    assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
+        copy == "older"
+    )
+    # One session renders the source again and the flow on its seeds.
+    render_both = f"render.sh {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
+    assert (render_both in message) == (copy == "newer")
+    _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec("image-generation:seeds-from:a-damaged-approval-record-is-refused")
+@pytest.mark.parametrize(
+    "producer",
+    [
+        "a string",
+        {"copied_from": "a string"},
+        {"copied_from": {"flow": FLOW}},
+    ],
+)
+def test_a_damaged_approval_record_is_refused_by_name_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run, producer: object
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    subject = load_flow(FLOW)
+    prepare(run, {FLOW: subject})
+    render(run, subject, FakeComfyClient(), seeds=[11], poll=0)
+    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    # The prompt is assembled first, so `prepare` does not read the approval again.
+    prepare(run, {CONTROL: load_flow(CONTROL)})
+    approved = run.path / CONTROL / "review" / "001.approved.json"
+    body = json.loads(approved.read_text())
+    body["producer"] = producer
+    approved.write_text(json.dumps(body))
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--seeds-from", FLOW, run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert err.getvalue().startswith("refused: 001.approved.json: records no `")
+    assert f"restore it in {approved} by hand" in err.getvalue()
+    _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec(
+    "image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first"
+)
+@pytest.mark.parametrize("copy", ["behind", "in step"])
+def test_a_copy_behind_a_source_that_renders_first_is_refused_before_any_endpoint(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run, copy: str
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    # The source is approved twice and never rendered; the copy is of 1 or of 2.
+    if copy == "behind":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    review(run, FLOW, new_version=True)
+    approve(run, FLOW, schema, vocabulary)
+    if copy == "in step":
+        approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--in-step-with", FLOW, run.id]
+
+    refused = 1 if copy == "behind" else 0
+    assert dispatch(build_parser().parse_args(argv), wired) == refused
+
+    message = err.getvalue()
+    assert ("001" in message and "002" in message) == (copy == "behind")
+    assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
+        copy == "behind"
+    )
+    _assert_nothing_rented(client, run, CONTROL)
+
+
+@pytest.mark.spec(
+    "image-generation:seeds-from:the-check-before-the-source-takes-no-endpoint"
+)
+def test_the_check_before_the_source_renders_is_refused_beside_a_server(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run
+) -> None:
+    from isekai.interface.cli import build_parser, dispatch
+
+    approve(run, CONTROL, schema, vocabulary, source=FLOW)
+    client = FakeComfyClient()
+    err = io.StringIO()
+    wired = _seeded_session(tmp_path, vocabulary, client, err)
+    argv = ["generate", "--flow", CONTROL, "--in-step-with", FLOW]
+    argv += ["--server", "http://127.0.0.1:8188", run.id]
+
+    assert dispatch(build_parser().parse_args(argv), wired) == 1
+
+    assert err.getvalue().startswith("refused: --in-step-with")
+    assert "--server" in err.getvalue()
+    assert not (run.path / CONTROL / PROMPTS).exists()
+    _assert_nothing_rented(client, run, CONTROL)

@@ -7,6 +7,7 @@ renders.
 """
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -50,10 +51,19 @@ PINNED: dict[str, str] = {
     "conjure-anime-wai": (
         "f2bd3202079b1288068aed7ccf57e2b6b0e3b9a1db037973b4be99f83bf22a1f"
     ),
+    "control-anime-wai": (
+        "f44b0f40647d0c51fa0eecab5a501c8f0318992fe8aac631c7a6cd0d81b61f7d"
+    ),
     "summon-anime-wai": (
         "96c605821e68a8ac2f1c7a60807cfcfb4c3658ae4112cc84d21a00bf39f3e698"
     ),
 }
+
+# A control flow and the subject it is held equal to; a second control is one line.
+CONTROLS: dict[str, str] = {"control-anime-wai": "summon-anime-wai"}
+
+# The dials a control zeroes: the face chain, and nothing else.
+FACE_DIALS = ("ip_weight", "identity_cn_strength")
 
 
 @pytest.fixture
@@ -406,7 +416,7 @@ def test_every_role_a_tracked_flow_names_resolves_in_its_own_graph(
 def test_every_dial_a_tracked_flow_declares_is_one_of_its_roles_reads(
     name: str,
 ) -> None:
-    """Both directions, on both flows: nothing missing, and nothing spare.
+    """Both directions, on every flow: nothing missing, and nothing spare.
 
     The refusal in `load_flow` only checks the first. This checks the second as
     a property of the flows that ship -- 12/12 for `summon-anime-wai` and 9/9
@@ -910,3 +920,80 @@ def test_a_tagger_that_is_not_a_boolean_is_refused_naming_the_key(
 
     assert "`tagger`" in str(refused.value)
     assert repr(value) in str(refused.value)
+
+
+# --- a control equals its subject ---------------------------------------------
+
+
+def _control_differences(control_dir: Path, subject_dir: Path) -> list[str]:
+    """Return the files separating a control from its subject beyond the face dials.
+
+    e.g. `["graph.json"]`, or `["flow.json"]` when the manifests differ elsewhere.
+    """
+    differing = [
+        name
+        for name in SIBLINGS
+        if (control_dir / name).read_bytes() != (subject_dir / name).read_bytes()
+    ]
+    manifests = []
+    for directory in (control_dir, subject_dir):
+        document = json.loads((directory / MANIFEST_NAME).read_text())
+        document.pop("flow")
+        for dial in FACE_DIALS:
+            document["dials"].pop(dial)
+        manifests.append(document)
+    if manifests[0] != manifests[1]:
+        differing.append(MANIFEST_NAME)
+    return differing
+
+
+def _control_pair(tmp_path: Path, control: str) -> tuple[Path, Path]:
+    """Copy a tracked control and its subject into a scratch root."""
+    return (
+        shutil.copytree(load_flow(control).path, tmp_path / control),
+        shutil.copytree(load_flow(CONTROLS[control]).path, tmp_path / "subject"),
+    )
+
+
+@pytest.mark.spec("image-generation:control:files-equal-the-subject")
+@pytest.mark.parametrize("control", sorted(CONTROLS))
+def test_a_control_holds_the_subjects_graph_schema_and_briefing(control: str) -> None:
+    differing = _control_differences(
+        load_flow(control).path, load_flow(CONTROLS[control]).path
+    )
+
+    assert GRAPH_NAME not in differing
+    assert SCHEMA_NAME not in differing
+    assert CAPTION_BRIEFING_NAME not in differing
+
+
+@pytest.mark.spec("image-generation:control:manifest-differs-only-in-the-face-dials")
+@pytest.mark.parametrize("control", sorted(CONTROLS))
+def test_a_control_manifest_differs_only_in_its_name_and_zeroed_face_dials(
+    control: str,
+) -> None:
+    differing = _control_differences(
+        load_flow(control).path, load_flow(CONTROLS[control]).path
+    )
+
+    assert MANIFEST_NAME not in differing
+    assert [load_flow(control).dials[dial] for dial in FACE_DIALS] == [0, 0]
+
+
+@pytest.mark.spec("image-generation:control:files-equal-the-subject")
+def test_a_control_whose_graph_drifts_is_named(tmp_path: Path) -> None:
+    control, subject = _control_pair(tmp_path, "control-anime-wai")
+    assert _control_differences(control, subject) == []
+    (control / GRAPH_NAME).write_text("{}\n")
+
+    assert _control_differences(control, subject) == [GRAPH_NAME]
+
+
+@pytest.mark.spec("image-generation:control:manifest-differs-only-in-the-face-dials")
+def test_a_control_whose_manifest_differs_elsewhere_is_named(tmp_path: Path) -> None:
+    control, subject = _control_pair(tmp_path, "control-anime-wai")
+    document = json.loads((control / MANIFEST_NAME).read_text())
+    document["dials"]["cfg"] = 99
+    (control / MANIFEST_NAME).write_text(json.dumps(document, indent=2) + "\n")
+
+    assert _control_differences(control, subject) == [MANIFEST_NAME]

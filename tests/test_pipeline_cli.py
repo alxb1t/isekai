@@ -566,3 +566,40 @@ def test_sheet_prints_a_superseded_list_as_a_warning(
         f"--flow summon-anime-wai --new-version {run.id}`\n"
     )
     assert f"{run.id}: sheet is already complete" in wired.out.getvalue()
+
+
+@pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")
+def test_a_flow_named_as_its_own_approval_source_is_refused_naming_it(
+    tmp_path: Path,
+) -> None:
+    wired = _wiring(tmp_path)
+    err = io.StringIO()
+    wired.err = err
+    parsed = build_parser().parse_args(
+        ["approve", "--flow", "summon-anime-wai", "--from", "summon-anime-wai", "x"]
+    )
+
+    assert dispatch(parsed, wired) == 1
+
+    assert err.getvalue().startswith("refused: summon-anime-wai: a flow is not")
+    assert not (tmp_path / "runs").exists()
+
+
+@pytest.mark.spec("review:copy-from:the-source-is-another-tracked-flow")
+def test_an_untracked_approval_source_is_refused_naming_the_flows_there_are(
+    tmp_path: Path,
+) -> None:
+    wired = _wiring(tmp_path)
+    err = io.StringIO()
+    wired.err = err
+    # A photograph, so a run would be opened if the source were checked late.
+    photo = tmp_path / "ada.jpg"
+    photo.write_bytes(jpeg_bytes(640, 480))
+    parsed = build_parser().parse_args(
+        ["approve", "--flow", "summon-anime-wai", "--from", "summon-v9", str(photo)]
+    )
+
+    assert dispatch(parsed, wired) == 1
+
+    assert not (tmp_path / "runs").exists()
+    assert "summon-v9: not a flow this build tracks" in err.getvalue()

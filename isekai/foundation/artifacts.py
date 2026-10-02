@@ -159,11 +159,19 @@ ChainProducer = TypedDict(
 )
 
 
+class CopiedFrom(TypedDict):
+    """The approval another flow's approval was copied from."""
+
+    flow: str
+    approval: int
+
+
 class ApprovedProducer(ChainProducer):
     """The draft's producer, and what approving it recorded."""
 
     edited: bool
     approved_from: int
+    copied_from: NotRequired[CopiedFrom]
 
 
 # --- the kinds ----------------------------------------------------------------
@@ -282,7 +290,7 @@ class Render(TypedDict):
 
     `sheet` is the sheet the approval was made from; an older sidecar carries
     `sheet_version`, the approval's number, instead. `image` is absent when no
-    pod-boot record named one.
+    pod-boot record named one. `seeds_from` names the flow whose seeds were taken.
     """
 
     schema: SchemaBlock
@@ -298,6 +306,7 @@ class Render(TypedDict):
     image: NotRequired[str]
     pinned: NotRequired[bool]
     runtime: NotRequired[Runtime]
+    seeds_from: NotRequired[str]
 
 
 # --- the descriptors ----------------------------------------------------------

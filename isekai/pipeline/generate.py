@@ -27,6 +27,7 @@ Stdlib only; the endpoint is behind the repository's existing `ComfyTransport`.
 import hashlib
 import json
 import random
+import shlex
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -42,6 +43,7 @@ from isekai.foundation.artifacts import (
     Prompt,
     Runtime,
     read,
+    require,
     write,
 )
 from isekai.foundation.artifacts import Render as RenderSidecar
@@ -297,6 +299,98 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     )
 
 
+def render_groups(run: Run, flow: str) -> list[Path]:
+    """Return a flow's render groups: the outputs directories named by digits."""
+    return [
+        group
+        for group in sorted(run.directory(flow, OUTPUTS).glob("*"))
+        if group.is_dir() and group.name.isdigit()
+    ]
+
+
+def source_seeds(
+    run: Run, source: str, suffix: str, flows: Sequence[str]
+) -> tuple[int, list[int]]:
+    """Return `source`'s latest render group for `run` and its seeds, or refuse.
+
+    `suffix` is what `source` says it produces. The group is the number of the
+    source approval those renders came from. `flows` are the flows taking the
+    seeds, named in the remedy so one session renders the source and them.
+
+    Read from filenames alone. A latest group holding no render counts as none:
+    an empty list would read downstream as "draw a seed", which is the opposite
+    of taking the source's.
+    e.g. `outputs/001/{11.png, 12.png}` -> `(1, [11, 12])`
+    """
+    groups = render_groups(run, source)
+    seeds = rendered_seeds(groups[-1], suffix) if groups else []
+    if not seeds:
+        raise Refusal(
+            f"{run.id}: no render of {source} to take seeds from; run "
+            f"`bash infra/render.sh {_runs_root(run)} {source}=1"
+            f"{_dependents(flows, source)}` to render it first"
+        )
+    return int(groups[-1].name), seeds
+
+
+def refuse_out_of_step(
+    run: Run, flow: str, source: str, group: int | None = None
+) -> None:
+    """Refuse a `flow` whose approval is a copy of another of `source`'s than `group`.
+
+    `group` is the approval `source`'s latest renders came from. None stands for
+    `source`'s latest approval, the group a source that renders first in the same
+    session writes into, so the copy is checked before that source has rendered.
+
+    A flow whose approval does not name `source` as its origin is not checked: it
+    is rendered on `source`'s seeds under its own sheet, a different experiment.
+    The remedy depends on which side is behind, so each is told which command
+    brings the two in step.
+    """
+    version, path = approved_artifact(run, flow)
+    remedy = f"restore it in {path} by hand"
+    body = read(path, APPROVED_FILE, remedy=remedy)
+    require(path, body, "producer", dict, remedy)
+    producer = body["producer"]
+    if producer.get("copied_from") is None:
+        return
+    require(path, producer, "copied_from", dict, remedy)
+    copied = producer["copied_from"]
+    require(path, copied, "flow", str, remedy)
+    require(path, copied, "approval", int, remedy)
+    if copied["flow"] != source:
+        return
+    latest = f"{source}'s latest renders came from approval"
+    if group is None:
+        latest = f"{source}'s latest approval is"
+        group = approved_artifact(run, source)[0]
+    if copied["approval"] == group:
+        return
+    head = (
+        f"{run.id}: {flow}'s approval {version:03d} is a copy of {source}'s approval "
+        f"{copied['approval']:03d}, and {latest} {group:03d}; run "
+    )
+    if copied["approval"] < group:
+        raise Refusal(
+            f"{head}`python -m isekai approve --flow {flow} --from {source} "
+            f"{run.id}` to copy the newer one"
+        )
+    raise Refusal(
+        f"{head}`bash infra/render.sh {_runs_root(run)} {source}=1"
+        f"{_dependents([flow], source)}` to render {source} again first"
+    )
+
+
+def _dependents(flows: Sequence[str], source: str) -> str:
+    """Return render.sh's specs for `flows` on `source`'s seeds, each after a space."""
+    return "".join(f" {flow}={source}" for flow in flows)
+
+
+def _runs_root(run: Run) -> str:
+    """Return the runs directory of `run`, quoted for a shell."""
+    return shlex.quote(str(run.path.parent))
+
+
 def photo_resolution(photo: Path) -> tuple[int, int]:
     """Return the working resolution for `photo`, as a refusal rather than an exit.
 
@@ -455,6 +549,7 @@ def render(
     runtime: Callable[[], Runtime],
     count: int | None = None,
     seeds: Sequence[int] | None = None,
+    seeds_from: str | None = None,
     rng: random.Random | None = None,
     poll: float = 1.0,
     deadline: float = RENDER_DEADLINE,
@@ -469,7 +564,8 @@ def render(
 
     `image` is the reference the pod booted, or None for an endpoint no pod-boot
     record names, which the sidecar declares unpinned. `runtime` is called only
-    when a seed will render, so a complete batch reads no report.
+    when a seed will render, so a complete batch reads no report. `seeds_from`
+    names the flow `seeds` were taken from, and the sidecar records it.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
@@ -542,6 +638,7 @@ def render(
             **({"image": image} if image is not None else {}),
             "pinned": image is not None,
             "runtime": ran_on,
+            **({"seeds_from": seeds_from} if seeds_from is not None else {}),
         }
         write(provenance, RENDER_FILE, sidecar)
         # Atomically, like every other artifact in a run, and for a sharper
