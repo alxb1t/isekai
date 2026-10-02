@@ -9,6 +9,7 @@ right home for something composed without it.
 `_check_run_root` travels with `wiring()`, its only caller. It is the guard that
 keeps a run directory -- which holds a copy of the photograph by construction --
 from sitting inside the working tree and outside the one root git ignores.
+`trackable` is that rule's decision, and the evaluator asks it of its record.
 
 Stdlib only, and on `python -m isekai`'s import graph.
 """
@@ -203,6 +204,15 @@ def _is_within(resolved: Path, ancestor: Path) -> bool:
     )
 
 
+def trackable(directory: Path) -> bool:
+    """Decide whether `directory` is inside the working tree and outside `DATA_ROOT`.
+
+    There, what is written is one `git add` from being published (D18).
+    """
+    resolved = directory.resolve()
+    return _is_within(resolved, REPOSITORY) and not _is_within(resolved, DATA_ROOT)
+
+
 def _check_run_root(runs: Path) -> None:
     """Refuse a run root inside the working tree that is not under `DATA_ROOT`.
 
@@ -213,7 +223,7 @@ def _check_run_root(runs: Path) -> None:
     (D18).
     """
     resolved = runs.resolve()
-    if _is_within(resolved, REPOSITORY) and not _is_within(resolved, DATA_ROOT):
+    if trackable(resolved):
         raise Refusal(
             f"--runs {resolved} is inside this repository and outside "
             f"{DATA_ROOT}, the one directory git ignores; a run holds a copy of "

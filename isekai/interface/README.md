@@ -31,8 +31,8 @@ at least once; a list of names cannot.
 | file | inside `isekai/` | outside |
 |---|---|---|
 | `cli.py` | `__main__.py` | `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_compare.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
-| `run_view.py` | `cli.py` | `tests/test_run_view.py` |
+| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `evaluation/__main__.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
+| `run_view.py` | `cli.py` | `evaluation/__main__.py`, `tests/test_run_view.py` |
 | `compare_view.py` | `cli.py` | `tests/test_compare.py` |
 | `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py` |
 

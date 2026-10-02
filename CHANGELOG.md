@@ -9,6 +9,26 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-02 · 0053-the-evaluation-mechanism
+
+### Added
+
+- The evaluator ranks a cohort's photographs for each render and counts two hits, its own photograph and its
+  own person with the source set aside, beside the hits chance gives; every render is a row (0053 D1, D2, D4).
+- The evaluator finds and aligns a face with OpenCV's YuNet and embeds it with SFace, both pinned in its own
+  manifest, so the count is not the generator's recognizer grading itself (0053 D3).
+- `python -m evaluation <runs> --cohort <dir>` scores a current batch, writes `evaluation.json` beside the runs
+  and prints the table; D37 and the measurement principles say why the count is shaped so (0053 D5, D7).
+- A render that does not decode is an `unreadable` row and a run whose frame or flows refuse is listed as
+  unreadable, so neither ends the batch; a cohort file that is not an image refuses naming it (0053 D1, D5).
+- `evaluation.json` names its models and cohort photographs by digest and counts, never names, the runs it did
+  not score; it is refused where git can reach it, and a retired flow costs a run only its own renders (0053 D4, D5).
+
+### Removed
+
+- The old evaluator — the canvas, the regions, the guard, the axes, the labels, the baseline and the `[eval]`
+  extra — is deleted; the cohort count replaces it and the evaluator adds no package (0053 D6, D8).
+
 ## [0.31.4] - 2026-09-30 · 0052-the-paydown
 
 ### Changed

@@ -1,0 +1,110 @@
+{
+  "cohort": {
+    "directory": "cohort",
+    "people": [
+      "p1",
+      "p2",
+      "p3"
+    ],
+    "photographs": 5,
+    "sha256": {
+      "p1/1.png": "5f3a9c1e2b7d571b912508549df21f8184b4bff0f7bc376140ba9e72f076abda",
+      "p1/2.png": "0c4e8a2d6f1b9eb4217cdc1addd25a72c4a16ddf442e1686cd743cb8dbe65448",
+      "p2/1.png": "9b2d7e4f1a3c0b44c4dbf4dd54b7c1c5df3b0f5293ab08a3e75de83fc432988c",
+      "p2/2.png": "3e7f1c9a5d2bab9b61b6a5b08fb2a804349b8c9f7cd8b110b2e8f27bc9ac9e29",
+      "p3/1.png": "aede740d8da5b7b24c18057a66c1f510a7a325bf56361e55f70216c73fd07ed2"
+    }
+  },
+  "encoder": {
+    "detector": {
+      "dest": "opencv_face/face_detection_yunet_2023mar.onnx",
+      "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+    },
+    "encoder": {
+      "dest": "opencv_face/face_recognition_sface_2021dec.onnx",
+      "sha256": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79"
+    }
+  },
+  "flows": {
+    "summon-anime-wai": {
+      "rows": [
+        {
+          "person": "p1",
+          "photograph": "p1/1.png",
+          "run": "5f3a9c1e2b7d-p1-1",
+          "seed": 1001,
+          "outcome": "hit",
+          "nearest": "p1/1.png",
+          "nearest_without_source": "p1/2.png",
+          "photograph_hit": true,
+          "person_hit": true,
+          "also_rendered": []
+        },
+        {
+          "person": "p1",
+          "photograph": "p1/2.png",
+          "run": "0c4e8a2d6f1b-p1-2",
+          "seed": 1002,
+          "outcome": "miss",
+          "nearest": "p2/1.png",
+          "nearest_without_source": "p2/1.png",
+          "photograph_hit": false,
+          "person_hit": false,
+          "also_rendered": []
+        },
+        {
+          "person": "p2",
+          "photograph": "p2/1.png",
+          "run": "9b2d7e4f1a3c-p2-1",
+          "seed": 1003,
+          "outcome": "no face found",
+          "nearest": null,
+          "nearest_without_source": null,
+          "photograph_hit": false,
+          "person_hit": false,
+          "also_rendered": []
+        },
+        {
+          "person": "p2",
+          "photograph": "p2/2.png",
+          "run": "3e7f1c9a5d2b-p2-2",
+          "seed": 1004,
+          "outcome": "hit",
+          "nearest": "p2/2.png",
+          "nearest_without_source": "p2/1.png",
+          "photograph_hit": true,
+          "person_hit": true,
+          "also_rendered": [
+            1005
+          ]
+        },
+        {
+          "person": "p3",
+          "photograph": "p3/1.png",
+          "run": null,
+          "seed": null,
+          "outcome": "not rendered",
+          "nearest": null,
+          "nearest_without_source": null,
+          "photograph_hit": false,
+          "person_hit": false,
+          "also_rendered": []
+        }
+      ],
+      "counts": {
+        "photograph": {
+          "hits": 2,
+          "of": 3,
+          "chance": 0.6
+        },
+        "person": {
+          "hits": 2,
+          "of": 3,
+          "chance": 0.8
+        }
+      }
+    }
+  },
+  "outside_the_cohort": 1,
+  "unreadable": 0
+}

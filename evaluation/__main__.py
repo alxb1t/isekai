@@ -1,195 +1,267 @@
-#!/usr/bin/env python3
-"""Score a run's renders against the photograph that produced them.
+"""Score a batch of runs against the cohort its photographs came from.
 
-A separate entry point, and deliberately **not** a subcommand of the pipeline: a
-subcommand would put the `[eval]` extra one misplaced import away from `python -m
-isekai`'s import graph, and `[eval]` is the one extra a checkout may legitimately
-not have. The entry-gate rule is about what may be selected to *render*, and an
-evaluator is not a way to render at all.
+    uv run python -m evaluation <batch>/runs --cohort <cohort>
 
-    uv run --extra eval python -m evaluation <run-directory>/ --photo <photo>
-
-**It cannot read a run this pipeline produces today, and the path above no longer
-exists.** The reader below requires a `run.json` carrying `photo_sha256`, `base`
-and `renders` -- v0.12's shape -- and the current run frame writes none of those.
-v0.14 removed the last producer of the shape it *can* read. That is a
-pre-existing gap this version makes total rather than one it introduces, and it
-belongs to the version whose whole content is the evaluation tool, which must
-repoint this reader at the run directory (change 0014's design.md D13). Nothing
-under `tests/` imports this module, so it fails no gate command -- which is
-exactly why it has to be written down here.
-
-It reads the run's own `run.json` for provenance. The photograph is passed in
-rather than read from the manifest, because the manifest records a **digest** and
-never a path -- a digest of a face is not a face, and the pixels are not
-committed. That digest is what makes the supplied photograph checkable rather
-than trusted, and a mismatch refuses.
-
-A manifest that predates v0.12 records no photograph, no graph and no base. In
-that case this **reports what it lacks and refuses**, rather than guessing.
+Each run is matched to its cohort photograph by the digest its frame records;
+each flow's first render is ranked against every cohort photograph. The record
+is written beside the runs, as `<batch>/evaluation.json`, and the table printed;
+a run the record does not score is counted there and named on stderr alone.
+A separate entry point, not a verb: the evaluator measures the pipeline and
+`isekai` never imports it.
 """
 
 import argparse
-import json
+import shlex
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
-from evaluation.evaluate import (
-    AUTHORITATIVE_GUARD_METHOD,
-    Refusal,
-    pod_image_of,
-    score_render,
+from evaluation.cohort import (
+    Cohort,
+    Photograph,
+    Record,
+    Row,
+    Vector,
+    load_cohort,
+    rank,
+    record,
+    scored,
     table,
+    unscored,
 )
-from isekai.boundary.provision import digest_of
-
-# The scorer's own artifacts live under the repository's models root, verified
-# against `evaluation/eval_models.json` before any of them is loaded. Local to the
-# operator's machine: these are not what the pod provisions (design.md D18).
+from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
+from isekai.boundary.provision import entry_for
+from isekai.foundation.artifacts import write_json
+from isekai.foundation.flow import FLOWS_DIR, load_flow
+from isekai.foundation.refusal import Refusal
+from isekai.foundation.run import FRAME_NAME, OUTPUTS, Run
+from isekai.interface.run_view import rendered
+from isekai.interface.wiring import trackable
 from isekai.shared.vocabulary import DEFAULT_MODELS_DIR
 
+# A face's embedding, or None when no face is found; a file that does not decode
+# as an image refuses.
+Embed = Callable[[Path], Vector | None]
 
-def parse_args() -> argparse.Namespace:
+
+def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     """Parse the command line."""
     p = argparse.ArgumentParser(
         prog="python -m evaluation",
-        description="Score a run's renders against its photo.",
+        description="Count, over a cohort, how often each render is nearest its own "
+        "photograph and its own person.",
     )
-    p.add_argument("run_dir", type=Path, help="a run directory containing run.json")
+    p.add_argument("runs", type=Path, help="a batch's runs directory")
     p.add_argument(
-        "--photo",
+        "--cohort",
+        type=Path,
         required=True,
-        help="the photograph this run was rendered from; checked against the "
-        "digest the manifest records",
+        help="the directory holding one sub-directory per person",
     )
     p.add_argument(
         "--models",
         type=Path,
         default=DEFAULT_MODELS_DIR,
-        help="where the pinned eval artifacts live",
+        help="where the pinned detector and encoder live",
     )
     p.add_argument(
-        "--guard",
-        choices=("iou", "centroid"),
-        default=AUTHORITATIVE_GUARD_METHOD,
-        help="which guard method is authoritative; both are always measured",
+        "--flows", type=Path, default=FLOWS_DIR, help="where the flows are declared"
     )
-    p.add_argument(
-        "--subject",
-        default=None,
-        help="the subject this run rendered; defaults to the run directory's name",
-    )
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def missing_provenance(manifest: dict) -> list[str]:
-    """Return what this manifest cannot tell the scorer, by name.
-
-    A `run.json` written before v0.12 records `seed`, `variations`, `seeds` and
-    `overrides` and nothing else, so it can confirm neither the photograph nor
-    the base nor which render is which. The scorer names each thing it lacks and
-    stops. **Guessing would be worse than refusing**: a comparison against the
-    wrong photograph produces four plausible numbers and no way to notice one of
-    them is about somebody else.
-    """
-    lacking: list[str] = []
-    if "photo_sha256" not in manifest:
-        lacking.append(
-            "a digest of the photograph it was rendered from (no `photo_sha256`), "
-            "so the photograph supplied cannot be confirmed to be the right one"
+def _runs(directory: Path) -> list[Run]:
+    """Return every run under `directory` that has a frame, in name order."""
+    if not directory.is_dir():
+        raise Refusal(
+            f"{directory} is not a directory; give the batch's runs directory, the "
+            "one `infra/render.sh` rendered into"
         )
-    if "base" not in manifest:
-        lacking.append("the base checkpoint (no `base`)")
-    if "renders" not in manifest:
-        lacking.append("the per-render provenance (no `renders`)")
-    return lacking
+    return [
+        Run(frame.parent.name, frame.parent)
+        for frame in sorted(directory.glob(f"*/{FRAME_NAME}"))
+    ]
 
 
-def main() -> None:
-    """Score one run directory, or say what it lacks."""
-    args = parse_args()
-    manifest_path = args.run_dir / "run.json"
-    if not manifest_path.exists():
-        sys.exit(f"{manifest_path} does not exist; this is not a run directory")
-    manifest = json.loads(manifest_path.read_text())
-
-    lacking = missing_provenance(manifest)
-    if lacking:
-        sys.exit(
-            f"{manifest_path} predates v0.12's provenance record and cannot "
-            "identify what it is: it does not record "
-            + "; ".join(lacking)
-            + ".\nRe-render it with this version. Refusing rather than guessing: "
-            "a comparison against the wrong photograph produces four plausible "
-            "numbers and no way to notice."
-        )
-
-    photo = args.photo
-    actual = digest_of(Path(photo))
-    if actual != manifest["photo_sha256"]:
-        sys.exit(
-            f"{photo} hashes to {actual}, but this run was rendered from "
-            f"{manifest['photo_sha256']}. These are different photographs."
-        )
-
-    subject = args.subject or args.run_dir.name
-    base = manifest.get("base")
-
-    # Imported here, not at module scope: this is the only import of the `[eval]`
-    # extra in the tree, and `evaluation.evaluate`'s rules are stdlib-only
-    # so they stay testable in CI with the stack absent.
-    from evaluation.eval_backends import (
-        AnimeFaceDetector,
-        ArcFaceEncoder,
-        DwPoseReader,
-        MaskSampler,
-        SegformerParser,
-        StyleIdEncoder,
-    )
-    from evaluation.evaluate import canvas_for
-
-    canvas = canvas_for(photo)
-    parser = SegformerParser(args.models)
-    detector = AnimeFaceDetector(args.models, canvas)
-    style = StyleIdEncoder(args.models, canvas)
-    arcface = ArcFaceEncoder(args.models, canvas)
-    sampler = MaskSampler(parser, photo, canvas)
-    pose = DwPoseReader(args.models, canvas)
-
-    reports = []
-    for render in manifest["renders"]:
-        render_path = args.run_dir / render["image"]
+def _gallery(cohort: Cohort, embed: Embed) -> dict[Photograph, Vector]:
+    """Return each cohort photograph's embedding, refusing one with no image or face."""
+    gallery: dict[Photograph, Vector] = {}
+    for photograph in cohort.photographs:
         try:
-            reports.append(
-                score_render(
-                    photo,
-                    str(render_path),
-                    detector=detector,
-                    style_encoder=style,
-                    recognizer=arcface,
-                    parser=parser,
-                    sampler=sampler,
-                    pose=pose,
-                    subject=subject,
-                    photo_base=base,
-                    render_base=base,
-                    image=render["image"],
-                    guard_method=args.guard,
-                )
+            vector = embed(photograph.path)
+        except Refusal as undecodable:
+            raise Refusal(f"{undecodable}; remove it from the cohort") from undecodable
+        if vector is None:
+            raise Refusal(
+                f"no face is found in {photograph.path}, so no render can be ranked "
+                "against it; replace or remove it from the cohort"
             )
-        except Refusal as refused:
-            sys.exit(f"{render_path}: {refused}")
+        gallery[photograph] = vector
+    return gallery
 
-    # One machine-readable record per render, and one human-readable table for
-    # the run. No average, no verdict, no percentage (design.md D1, D2).
-    for report in reports:
-        out = args.run_dir / f"{Path(report.image or report.render).stem}.eval.json"
-        out.write_text(json.dumps(report.as_record(), indent=2) + "\n")
 
-    rendered = table(reports, args.run_dir.name, base, pod_image_of(manifest))
-    (args.run_dir / "eval.txt").write_text(rendered)
-    print(rendered)
+def _rows(
+    run: Run,
+    source: Photograph,
+    gallery: dict[Photograph, Vector],
+    embed: Embed,
+    flows_dir: Path,
+    notes: list[str],
+) -> tuple[dict[str, Row], bool]:
+    """Return each rendered flow's row, and whether every flow in `run` was read.
+
+    A row ranks the flow's first seed. A flow that does not load costs only its
+    own renders, and a render that does not decode is its own row; why each was
+    is added to `notes`.
+    """
+    rows: dict[str, Row] = {}
+    whole = True
+    for flow in run.flows:
+        try:
+            suffix = load_flow(flow, flows_dir).output_suffix
+        except Refusal as unloadable:
+            notes.append(
+                f"unreadable: {run.id}: {unloadable}; move {run.directory(flow)} out "
+                "of the run, then this command again"
+            )
+            whole = False
+            continue
+        renders = [
+            (group, seed)
+            for _, group, found in rendered(run, flows_dir, flows=(flow,))
+            for seed in found
+        ]
+        if not renders:
+            continue
+        (group, seed), rest = renders[0], renders[1:]
+        try:
+            vector = embed(
+                run.directory(flow, OUTPUTS, f"{group:03d}", f"{seed}{suffix}")
+            )
+        except Refusal as undecodable:
+            notes.append(
+                f"unreadable: {undecodable}; render it again or delete it, then this "
+                "command again"
+            )
+            rows[flow] = unscored(source, run.id, seed, "unreadable")
+        else:
+            rows[flow] = (
+                unscored(source, run.id, seed, "no face found")
+                if vector is None
+                else scored(source, run.id, seed, rank(vector, gallery))
+            )
+        rows[flow]["also_rendered"] = [s for _, s in rest]
+    return rows, whole
+
+
+def _models() -> dict[str, dict[str, str]]:
+    """Return the detector and the encoder, each by destination and pinned digest."""
+    manifest = load_eval_manifest()
+    return {
+        role: {"dest": dest, "sha256": entry_for(manifest, dest)["sha256"]}
+        for role, dest in (("detector", DETECTOR), ("encoder", ENCODER))
+    }
+
+
+def score(
+    runs: Path, cohort_dir: Path, embed: Embed, flows_dir: Path
+) -> tuple[Record, list[str]]:
+    """Return the batch's record, and a line naming each run or render it did not score.
+
+    Every cohort photograph is embedded before any render is opened, so a cohort
+    with a faceless photograph refuses while nothing has been scored. A run whose
+    frame or a flow refuses is counted as unreadable, and the rest are scored.
+    """
+    cohort = load_cohort(cohort_dir)
+    matched: list[tuple[Run, Photograph]] = []
+    outside = unreadable = 0
+    notes: list[str] = []
+    for run in _runs(runs):
+        try:
+            source = cohort.by_digest(run.photo_record["sha256"])
+        except Refusal as damaged:
+            unreadable += 1
+            notes.append(f"unreadable: {run.id}: {damaged}")
+            continue
+        if source is None:
+            outside += 1
+            notes.append(f"outside the cohort: {run.id}")
+        else:
+            matched.append((run, source))
+    gallery = _gallery(cohort, embed)
+    flows: dict[str, list[Row]] = {}
+    for run, source in matched:
+        rows, whole = _rows(run, source, gallery, embed, flows_dir, notes)
+        unreadable += not whole
+        for flow, row in rows.items():
+            flows.setdefault(flow, []).append(row)
+    rec = record(cohort, flows, outside, _models(), unreadable=unreadable)
+    return rec, notes
+
+
+def _embedder(models: Path) -> Embed:
+    """Return the real embedder: the pinned detector and encoder, verified."""
+    from evaluation.eval_models import load_eval_manifest, shared_with_the_graph
+    from evaluation.face import Detector, Encoder, embed
+    from isekai.boundary.provision import DigestMismatch, load_manifest, resolve
+
+    manifest = load_eval_manifest()
+    shared = shared_with_the_graph(manifest, load_manifest())
+    if shared:
+        raise Refusal(
+            f"the evaluator's manifest carries {', '.join(shared)}, whose destination "
+            "or bytes the generator's manifest carries too, so the count would be the "
+            "generator grading itself; pin another model in "
+            "`evaluation/eval_models.json`"
+        )
+    fetch = (
+        f"MODELS_DIR={shlex.quote(str(models.resolve()))} bash "
+        "tools/download_models.sh evaluation/eval_models.json"
+    )
+    try:
+        detector = Detector(resolve(DETECTOR, models, manifest))
+        encoder = Encoder(resolve(ENCODER, models, manifest))
+    except FileNotFoundError as absent:
+        raise Refusal(
+            f"{absent.filename} is not provisioned; run `{fetch}`, then this command "
+            "again"
+        ) from absent
+    except DigestMismatch as swapped:
+        raise Refusal(
+            f"{swapped}; delete that file, run `{fetch}`, then this command again"
+        ) from swapped
+    return lambda path: embed(path, detector, encoder)
+
+
+def _destination(runs: Path) -> Path:
+    """Return where the record goes, refusing a place git can reach (D18)."""
+    destination = runs.parent / "evaluation.json"
+    if trackable(destination.parent):
+        raise Refusal(
+            f"{destination.resolve()} is inside this repository and outside .data/, "
+            "the one directory git ignores, so the record would be one `git add` from "
+            "being published; give a runs directory under .data/<batch>/ or outside "
+            "the repository"
+        )
+    return destination
+
+
+def main(argv: Sequence[str]) -> int:
+    """Score the batch, write its record beside the runs, and print the table."""
+    args = parse_args(argv)
+    try:
+        destination = _destination(args.runs)
+        embed = _embedder(args.models)
+        rec, notes = score(args.runs, args.cohort, embed, args.flows)
+    except Refusal as refused:
+        print(f"refused: {refused}", file=sys.stderr)
+        return 1
+    write_json(destination, rec)
+    print(table(rec), end="")
+    for note in notes:
+        print(note, file=sys.stderr)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main(sys.argv[1:]))

@@ -1,16 +1,54 @@
-# Capability: `evaluation`
+## REMOVED Requirements
 
-## Purpose
+### Requirement: The comparison canvas is the render's own
+**Reason**: A render is compared to a cohort by face embedding, not pixel for pixel against its photograph,
+so no shared canvas is built.
+**Migration**: None. The cohort's requirements replace the per-render comparison.
 
-Counting, over a cohort of known people, how often each render is nearest its own photograph and its own
-person, beside the hits chance gives, with an encoder the generator does not use.
+### Requirement: Regions are parsed from the photograph only
+**Reason**: No region is measured: hair, clothes and colour are outside the count.
+**Migration**: None.
 
-**Source:** `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/face.py`,
-`evaluation/eval_models.py`, `evaluation/eval_models.json`, `isekai/boundary/provision.py` ·
-**Tests:** `tests/test_cohort.py`, `tests/test_face.py`, `tests/test_evaluation_cli.py`,
-`tests/test_eval_manifest.py`
+### Requirement: The face-location guard refuses rather than scores the wrong pixels
+**Reason**: The detector aligns the face it finds before it is embedded, so there is no region a wrong box
+could poison.
+**Migration**: None. A face not found is its own outcome under *The encoder shares no pin with the
+generator*.
 
-## Requirements
+### Requirement: An absent face is its own outcome, never a low score
+**Reason**: The rule moves to the encoder that finds the face.
+**Migration**: `evaluation:encoder:no-face-is-its-own-outcome` and
+`evaluation:cohort:a-faceless-photograph-is-refused` hold it.
+
+### Requirement: Every axis declares what it may claim
+**Reason**: There are no axes; there are two counts, each with its chance line.
+**Migration**: `evaluation:counts:chance-is-reported` and `evaluation:counts:no-average-no-percentage` hold
+what a count may claim.
+
+### Requirement: A cross-base comparison refuses only the axes it invalidates
+**Reason**: No embedding axis compares renders across bases; a flow on another base is a row of its own.
+**Migration**: None. `evaluation:table:one-row-per-flow` holds the comparison.
+
+### Requirement: The report is one record per render and one table per run
+**Reason**: The record is one per batch and the table one per batch, with a row per flow.
+**Migration**: `evaluation:table:a-failure-is-a-row` and `evaluation:table:the-table-re-derives-from-the-record`
+hold the record and the table.
+
+### Requirement: Human labels are collected blind and pairwise
+**Reason**: Identification over a cohort has its ground truth in the cohort's directory, so no human
+label is collected.
+**Migration**: None. `evaluation:cohort:a-run-is-matched-by-digest` holds the ground truth.
+
+### Requirement: Every model the scorer loads is pinned and verified
+**Reason**: The evaluator's encoder is no longer the generator's recognizer, so the rule binding the two pins
+goes, and the rest is restated under the evaluator's name.
+**Migration**: `evaluation:pinned-artifacts:digest-mismatch-is-refused`,
+`evaluation:pinned-artifacts:unpinned-source-is-refused` and
+`evaluation:pinned-artifacts:escaping-destination-is-refused` carry forward under *Every model the evaluator
+loads is pinned and verified*. `evaluation:pinned-artifacts:recognizer-matches-the-generators-pin` is
+inverted by `evaluation:encoder:shares-no-pin-with-the-generator`.
+
+## ADDED Requirements
 
 ### Requirement: The cohort is the ground truth
 

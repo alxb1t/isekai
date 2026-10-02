@@ -952,17 +952,14 @@ REPO = Path(__file__).resolve().parent.parent
 
 # One path per directory a tracked producer names a photograph or a render under.
 # `.data/` is the single ignored root, and the only one that is generated into
-# (D18): the run directory holds a copy of the photograph, and
-# `evaluation/baseline/build_contact_sheets.py` -- which pastes the reference
-# photograph beside the renders -- defaults `--renders` to `.data/baseline` and is
-# documented to write its sheets under `.data/labels`. `.inputs/baseline` is the
-# one exception and is not generated at all: an operator puts source photographs
-# there by hand. All four hold a person's likeness by construction.
+# (D18): a run directory holds a copy of the photograph and its renders, under the
+# default run root or a batch's `runs/`. `.inputs/` is the one exception and is
+# not generated at all: an operator puts source photographs there by hand. Each
+# holds a person's likeness by construction.
 GENERATED = (
     ".data/runs/000000000000-ada/photo.jpg",
-    ".data/baseline/ada/0.png",
-    ".data/labels/pair-01.png",
-    ".inputs/baseline/ada.png",
+    ".data/batch/runs/000000000000-ada/photo.jpg",
+    ".inputs/ada.png",
 )
 
 

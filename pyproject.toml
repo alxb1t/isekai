@@ -1,6 +1,6 @@
 [project]
 name = "isekai"
-version = "0.31.4"
+version = "0.32.0"
 requires-python = ">=3.12"
 # **What running a flow needs, declared rather than optional.** This list was
 # empty until v0.22.3, held by the `-S` guard in `tests/test_pipeline_cli.py`,
@@ -45,40 +45,6 @@ dependencies = [
     "Pillow==12.3.0",
     "fastapi==0.141.1",
     "uvicorn==0.53.0",
-]
-
-# The evaluator's stack, and the only thing left that is genuinely optional. It is
-# the scorer, not a way to render: `eval` measures a cohort after the fact, so a
-# checkout that never scores anything should not carry `torch`.
-#
-# CI never installs this. The eval tests run there without it, because they
-# import the stdlib-only rules and fakes and never `eval_backends.py`; the models
-# themselves are judged by eye, as diffusion quality is. This extra adds no
-# gate command -- and none of the gate's commands installs it, which is
-# exactly the mechanism that used to strip the tagger and now cannot.
-#
-# **It names only what it adds.** `torch` and `transformers` -- StyleID publishes
-# only a CLIPModel safetensors, and the DWPose artifact `models.json` pins is a
-# TorchScript `.pt`, so there is no ONNX route to either and this is not a
-# convenience. The scorer also reaches `onnxruntime` (the region parser and the
-# anime-face detector; loading weights is not linking code, which is what keeps
-# the detector's copyleft question closed -- design.md D19), `numpy` and `Pillow`
-# (arrays, and the loader's orientation transpose) -- and it no longer floors any
-# of those three, because `dependencies` above pins them for every checkout.
-#
-# **Re-floor them here and the drift is back.** Two lists naming one package is
-# the shape v0.22.3 deleted between the `ui` extra and the `dev` group; a floor
-# here beside a pin above would be the same defect wearing the other hat, and
-# `tests/test_packaging.py` fails on it rather than leaving it to review.
-#
-# Deliberately absent: `ultralytics`, asserted by a test rather than left to a
-# licence review nobody runs. `scipy`/`scikit-image` are absent too -- CIEDE2000
-# and Spearman are closed-form, are implemented in-tree against their published
-# formulas, and are unit-tested against published reference data.
-[project.optional-dependencies]
-eval = [
-    "torch>=2.6",
-    "transformers>=4.49",
 ]
 
 # Test and gate tooling only, and NOT runtime: `uv sync --locked` installs this
@@ -146,53 +112,13 @@ known-first-party = ["isekai", "tools", "evaluation"]
 # annotation is a real defect and `-> None` on a test is nearly free.
 "tests/*" = ["D1"]
 
-# `eval_backends.py` is the ONLY module that touches numpy, torch, onnxruntime
-# and Pillow, and it exists to be that boundary -- everything the scorer decides
-# lives in `evaluation/evaluate.py`, which is stdlib-only and fully annotated.
-# The values this file hands around come out of `torch` and `transformers` as
-# well as `numpy`, and the `[eval]` extra that carries those two is NOT installed
-# in the environment the gate runs in, by design, so their types cannot be named
-# even behind `TYPE_CHECKING` -- the type checker would fail on the import it
-# cannot find. (`numpy` itself resolves since v0.22.3 made it a declared
-# dependency; that alone does not name a tensor.)
-#
-# So ANN401 is waived HERE ONLY, and for that one rule. Every other ANN rule
-# still applies, so an unannotated argument in this file is still an error; what
-# is waived is the demand for a more specific type than the environment can name.
-"evaluation/eval_backends.py" = ["ANN401"]
-
-# One file bridges to packages the gate's environment deliberately does NOT
-# install, so `unresolved-import` in it is the configuration working, not a
-# defect: `eval_backends.py`, the scorer's model boundary, over the `[eval]`
-# extra. `wd14.py` and `build_contact_sheets.py` were listed here while the
-# tagger's stack and Pillow were optional; v0.22.3 made them declared
-# dependencies, so their imports resolve and they have no claim to this cover.
-# Scoped to that file and to that one rule -- every other check still applies,
-# which, while `wd14.py` was listed, is how the `invalid-return-type` on
-# `OnnxSession.run` was caught and fixed rather than suppressed.
-#
-# Scoped as an override rather than as per-line `ty: ignore` comments, because
-# those cannot be right in both environments: absent the extra they are load-
-# bearing, and present it they are "unused directive" warnings, and ty exits
-# non-zero on warnings. An override is green whether or not the extra is
-# installed, which is the property that matters -- `make gate` must not depend on
-# what the operator happens to have synced.
-[[tool.ty.overrides]]
-include = ["evaluation/eval_backends.py"]
-
-[tool.ty.overrides.rules]
-unresolved-import = "ignore"
-
-# The archive's one and only `.py` file, in a block of its own because its reason
-# is not the block above's. An archived change records code that was true at a
-# past commit; these rules ask whether it is true TODAY, which the archive makes
-# no claim about. The exemption is PERMANENT -- the probe is never repaired,
+# The archive's one and only `.py` file. An archived change records code that was
+# true at a past commit; these rules ask whether it is true TODAY, which the
+# archive makes no claim about. The exemption is PERMANENT -- the probe is never repaired,
 # because "archived changes are never deleted", and editing it to match today's
 # tree would falsify the record it exists to be. Listed by literal path rather
 # than a `**` glob over the archive, so no file nobody has written yet is granted
-# cover in advance; and kept out of the block above, which means exactly "files
-# that bridge to wheels the gate deliberately does not install" and has no claim
-# to cover against type errors (design.md D5, as corrected in phase 3).
+# cover in advance.
 [[tool.ty.overrides]]
 include = ["openspec/changes/archive/0010-illustrious-base/controlnet_probe.py"]
 

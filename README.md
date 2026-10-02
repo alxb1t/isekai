@@ -311,8 +311,8 @@ uv sync
 ```
 
 It installs everything a run needs, because the local tagger's stack and the review surface's server
-are declared dependencies. There is no extra to opt into — `[eval]`, the scorer's stack, is the only
-one left, and no verb in the pipeline needs it.
+are declared dependencies. There is no extra to opt into, and the evaluator adds no package to the
+list.
 
 **System dependencies — two, and no verb needs both.**
 
@@ -380,9 +380,8 @@ isekai/
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
 │   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
-├── evaluation/                # the scorer, beside the package it measures; the only importer
-│   │                          #   of the [eval] extra — `uv run --extra eval python -m evaluation`
-│   └── baseline/              # its calibration: the subjects' recipe, the labels, the agreement
+├── evaluation/                # the cohort evaluator, beside the package it measures —
+│                              #   `uv run python -m evaluation <runs> --cohort <dir>`
 ├── tests/                     # the suite and its fakes
 ├── models/                    # gitignored; wd14/ holds the tag list and the 467 MB graph
 ├── flows/summon-anime-wai/    # one flow: flat, named files, and it is immutable

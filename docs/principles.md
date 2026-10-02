@@ -295,3 +295,35 @@ told not to send is switched off, and its host key is checked against the finger
   - `tests/test_infra.py::test_a_scan_no_one_answers_is_refused_as_such`
   - `tests/test_infra.py::test_no_fingerprint_is_refused`
   - `tests/test_infra.py::test_the_pod_is_created_with_telemetry_off`
+
+## Measurement
+
+### Identity is a cohort measurement
+
+**Whether a render is its person is counted over a cohort whose people are known, never scored alone.**
+Each render ranks every cohort photograph; the counts are how often its own photograph, and its own person
+with that photograph set aside, comes first — each beside the hits chance gives, with no cosine, mean or
+percentage.
+
+- **Why:** a similarity between a photograph and a drawing has no scale, and a count with its chance line
+  can be checked by a reader. Setting the source aside is what keeps a copied pixel from counting.
+- **Held by:** `tests/test_cohort.py::test_a_render_nearest_its_own_photograph_is_one_photograph_level_hit`,
+  `tests/test_cohort.py::test_the_person_level_hit_looks_past_the_render_s_own_photograph`,
+  `tests/test_cohort.py::test_each_count_carries_its_denominator_and_the_hits_chance_gives`,
+  `tests/test_cohort.py::test_neither_record_nor_table_carries_a_cosine_a_mean_or_a_percentage`.
+
+### Every render is a row
+
+**Every cohort photograph has a row in every flow — a hit, a miss, no face found, unreadable, not rendered — and no
+render's outcome ends the scoring of another.**
+
+- **Why:** a table that shows only its wins is not evidence, and a failure reported mid-batch scrolls away.
+- **Held by:** `tests/test_evaluation_cli.py::test_a_render_with_no_face_and_an_unrendered_photograph_are_rows`.
+
+### A published number ships with the code that computes it
+
+**A figure the repository publishes is re-derived by its code from a committed record, and a test expects
+the same bytes.**
+
+- **Why:** a number computed off-tree cannot be checked or re-run, and drifts from the code that claims it.
+- **Held by:** `tests/test_cohort.py::test_the_committed_table_re_derives_from_its_record`.

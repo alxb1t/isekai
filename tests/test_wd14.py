@@ -267,10 +267,9 @@ def test_importing_the_boundary_opens_no_file_and_computes_no_digest(
 def test_no_wheel_the_tagger_needs_is_imported_at_module_scope() -> None:
     # The rule the `-S` guard rests on: `boundary/wd14.py` reaches `onnxruntime`,
     # `numpy` and `Pillow` through `_require`, inside the function that needs
-    # each -- and `evaluation/eval_backends.py` touches them too (`_numpy()`,
-    # `_pil()`, `OnnxSession.__init__`). This scan catches one moved to module
-    # scope, and so does the `-S` guard in `tests/test_pipeline_cli.py`, because
-    # `cli.py` imports `wd14.py` at module scope.
+    # each. This scan catches one moved to module scope, and so does the `-S`
+    # guard in `tests/test_pipeline_cli.py`, because `cli.py` imports `wd14.py`
+    # at module scope.
     import isekai.boundary.wd14 as boundary
 
     source = Path(boundary.__file__ or "").read_text()
@@ -353,6 +352,9 @@ class _RecordingOrt:
         self.switch_at_import.append(os.environ.get(TELEMETRY_SWITCH))
         return self
 
+    def SessionOptions(self) -> object:  # noqa: N802
+        return type("Options", (), {})()
+
     def InferenceSession(self, *_args: object, **_kwargs: object) -> object:  # noqa: N802
         return type("Session", (), {"get_inputs": lambda _self: [self._Input()]})()
 
@@ -369,9 +371,9 @@ def _open_wd14(_tmp_path: Path) -> None:
 
 
 def _open_evaluation(tmp_path: Path) -> None:
-    from evaluation import eval_backends
+    from evaluation import face
 
-    eval_backends.OnnxSession("m.onnx", tmp_path)
+    face.Detector(tmp_path / "m.onnx")
 
 
 @pytest.mark.spec_exempt("structural: no requirement names the runtime's telemetry")
@@ -379,7 +381,7 @@ def _open_evaluation(tmp_path: Path) -> None:
 def test_every_onnx_session_switches_telemetry_off_before_the_import(
     opening: Callable[[Path], None], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    from evaluation import eval_backends
+    from evaluation import face
 
     ort = _RecordingOrt()
     # Set first, so the undo is recorded even when the switch starts unset: the
@@ -387,9 +389,7 @@ def test_every_onnx_session_switches_telemetry_off_before_the_import(
     monkeypatch.setenv(TELEMETRY_SWITCH, "0")
     monkeypatch.delenv(TELEMETRY_SWITCH)
     monkeypatch.setattr(wd14, "_require", ort.imported)
-    monkeypatch.setattr(eval_backends, "_require", ort.imported)
-    monkeypatch.setattr(eval_backends, "resolve", lambda *_args: tmp_path / "m.onnx")
-    monkeypatch.setattr(eval_backends, "load_eval_manifest", lambda: {})
+    monkeypatch.setattr(face, "_import", ort.imported)
 
     opening(tmp_path)
 

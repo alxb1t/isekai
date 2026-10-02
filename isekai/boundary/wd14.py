@@ -185,8 +185,7 @@ def silence_onnxruntime() -> None:
 def _require(module: str) -> ModuleType:
     """Import one module of the tagger's stack, or refuse naming how to get it.
 
-    `eval_backends._require`'s shape, for `eval_backends`' reason: without it a
-    machine whose environment is missing the stack gets a bare
+    Without it a machine whose environment is missing the stack gets a bare
     `ModuleNotFoundError` traceback, in a package whose rule is that every
     failure is a named `Refusal` naming its remedy.
 
@@ -195,11 +194,6 @@ def _require(module: str) -> ModuleType:
     has them and this path is the unsynced case rather than the ordinary one — but
     the entry point reaches no third-party package at module scope, which is why
     `isekai show` works on a checkout that has provisioned nothing.
-
-    Not shared with `eval_backends`' copy, and that is the whole content of the
-    difference: that one names an extra and this one does not, so one
-    function would have to be told which sentence to print — and the sentence it
-    prints is the only thing either does.
 
     Cached, so the import machinery is consulted once per module rather than
     once per photograph.

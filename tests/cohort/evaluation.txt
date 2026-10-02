@@ -1,0 +1,11 @@
+                   photograph-level   person-level
+summon-anime-wai              2 / 3          2 / 3
+chance                      0.6 / 3        0.8 / 3
+
+summon-anime-wai  p1/2.png  miss  run 0c4e8a2d6f1b-p1-2 seed 1002  nearest p2/1.png  nearest without source p2/1.png
+summon-anime-wai  p2/1.png  no face found  run 9b2d7e4f1a3c-p2-1 seed 1003
+summon-anime-wai  p3/1.png  not rendered
+
+summon-anime-wai  p2/2.png  also rendered 1005
+
+runs outside the cohort  1

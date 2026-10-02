@@ -15,7 +15,7 @@ graph has no cycles. `tests/test_layers.py` holds both, lazy imports included.
 Module-level, cross-group:
   interface   ──▶ boundary · foundation · pipeline · shared
   pipeline    ──▶ boundary · foundation · shared
-  evaluation  ──▶ boundary · foundation · shared    (evaluation/, beside the package)
+  evaluation  ──▶ boundary · foundation · interface · shared    (evaluation/, beside the package)
   boundary    ──▶ foundation · shared
   shared      ──▶ foundation
   foundation  ──▶ nothing above it
@@ -70,13 +70,11 @@ Rules the graph is holding rather than describing:
   is why `isekai show` works on a checkout that has provisioned nothing.
 
   Each wheel-needing tree is reached from inside a function or behind a lazy
-  import: `fastapi`/`uvicorn` from `interface/ui/app.py`; `[eval]` from
-  `evaluation/eval_backends.py`, which also reaches `numpy`, `Pillow` and
-  `onnxruntime` (`_numpy()`, `_pil()`, `OnnxSession.__init__`); the tagger's stack
+  import: `fastapi`/`uvicorn` from `interface/ui/app.py`; the tagger's stack
   from `boundary/wd14.py`. The mechanisms differ, and the difference matters to
-  anyone reading this as a rule to apply. `eval_backends.py` and `wd14.py` reach
-  theirs by an `import_module` call **inside a function**, so the module that
-  reaches them imports cleanly without the wheel. `app.py` does not: it imports
+  anyone reading this as a rule to apply. `wd14.py` reaches its stack by an
+  `import_module` call **inside a function**, so the module imports cleanly
+  without the wheel. `app.py` does not: it imports
   `uvicorn` and `fastapi` at module scope, and the laziness sits one level up —
   `interface/ui/__init__.py`'s `serve()` imports `app.py` inside the function,
   and nothing else imports `app.py` outside the suite.

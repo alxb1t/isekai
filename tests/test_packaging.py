@@ -20,8 +20,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# What a run actually reaches, by the verb that reaches it. The scorer is absent
-# on purpose -- an evaluator is not a way to render, so `eval` stays optional.
+# What a run actually reaches, by the verb that reaches it. The evaluator reaches
+# only these too, which is why there is no extra (D22).
 RUNTIME_STACK = {
     "onnxruntime": "the local tagger's SwinV2 session, on every `caption`",
     "numpy": "the tagger's prepared array in and probability vector out",
@@ -79,7 +79,7 @@ def test_no_package_is_named_in_more_than_one_list(manifest: dict) -> None:
     an extra re-flooring what the project already pins.
     """
     lists = {"dependencies": manifest["project"]["dependencies"]}
-    lists |= manifest["project"]["optional-dependencies"]
+    lists |= manifest["project"].get("optional-dependencies", {})
     lists["dev"] = manifest["dependency-groups"]["dev"]
 
     seen: dict[str, str] = {}
@@ -96,11 +96,7 @@ def test_no_package_is_named_in_more_than_one_list(manifest: dict) -> None:
 @pytest.mark.spec_exempt(
     "structural: the manifest's shape, which no scenario describes"
 )
-def test_the_scorers_stack_is_the_only_optional_one(manifest: dict) -> None:
-    # `eval` is a measurement stack, not a way to render, so a checkout that
-    # never scores anything should not carry `torch`. It is the only extra:
-    # everything a *run* reaches is declared above.
-    extras = manifest["project"]["optional-dependencies"]
-
-    assert set(extras) == {"eval"}
-    assert {"torch", "transformers"} <= names(extras["eval"])
+def test_there_is_no_optional_extra(manifest: dict) -> None:
+    # An extra the gate's `uv sync --locked` is not told about is uninstalled on
+    # every run, and the evaluator needs nothing the pipeline does not declare.
+    assert "optional-dependencies" not in manifest["project"]
