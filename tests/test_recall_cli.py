@@ -7,12 +7,14 @@ from PIL import Image
 
 import evaluation.recall as recall
 from evaluation.recall import Record
+from evaluation.record import run_prefix
 from isekai.boundary import wd14
 from isekai.boundary.provision import DigestMismatch
 from isekai.foundation.artifacts import APPROVED_FILE
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
+    ID_DIGEST_CHARS,
     OUTPUTS,
     REVIEW,
     Run,
@@ -189,7 +191,7 @@ def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
     tagger = _Tagger()
 
     assert _run(monkeypatch, tagger, runs, b.id) == 0
-    assert {row["run"] for row in _record(runs)["rows"]} == {b.id}
+    assert {row["run"] for row in _record(runs)["rows"]} == {run_prefix(b.id)}
     assert {path.name for path in tagger.seen} == {"44.png"}
 
     (runs.parent / "recall.json").unlink()
@@ -198,6 +200,31 @@ def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
     assert "nobody" in capsys.readouterr().err
     assert again.seen == []
     assert not (runs.parent / "recall.json").exists()
+
+
+@pytest.mark.spec("evaluation:recall:a-run-is-named-by-its-digest-prefix")
+def test_a_row_names_its_run_by_its_digest_prefix_and_never_its_filename(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    named = tmp_path / "photos" / "ada-lovelace.png"
+    named.parent.mkdir()
+    Image.new("RGB", (8, 8)).save(named)
+    runs = tmp_path / "batch" / "runs"
+    run = open_run(named, runs)
+    _approve(run, SUMMON, 1, {"hair_colour": ["brown hair"]})
+    _render(run, SUMMON, 1, 11)
+
+    assert _run(monkeypatch, _Tagger(), runs) == 0
+
+    written = (runs.parent / "recall.json").read_text()
+    out = capsys.readouterr().out
+    prefix = run.photo_record["sha256"][:ID_DIGEST_CHARS]
+    assert "ada-lovelace" in run.id
+    assert [row["run"] for row in json.loads(written)["rows"]] == [prefix]
+    assert prefix in out
+    assert "ada-lovelace" not in written + out
 
 
 @pytest.mark.spec("evaluation:recall:the-record-names-the-tagger-and-its-floor")

@@ -17,7 +17,7 @@ uv run python -m evaluation.recall <batch>/runs [<run>…]
         │
         ├─ recall.py   count · totals · record · table · the reader · the command
         ├─ face.py     UNDECODABLE: what a render that does not decode raises
-        ├─ record.py   runs_in · destination: where a record goes, refused where git can reach
+        ├─ record.py   runs_in · run_prefix · destination: a record's runs, by prefix, and where it goes
         └─ writes <batch>/recall.json, prints the table
 ```
 
@@ -53,7 +53,7 @@ The control row is the floor; the difference from the `summon` row is the face m
 | `cohort.py` | the cohort, the two counts, chance, the record and its table. Stdlib only |
 | `face.py` | finds the face, aligns it to the template, embeds it, and names what a file that does not decode raises; `python -m evaluation.face <image>…` probes the detector |
 | `recall.py` | the recall count, its record and table, the reader over the pipeline's tagger, and the command: `python -m evaluation.recall` |
-| `record.py` | what both commands ask of a batch: `runs_in` lists its runs, `destination` is `<batch>/<name>`, refused where git can reach it |
+| `record.py` | what both commands ask of a batch: `runs_in` lists its runs, `run_prefix` is the digest half of a run's id a record names it by, `destination` is `<batch>/<name>`, refused where git can reach it |
 | `eval_models.py` | reads the evaluator's manifest, and names any entry whose destination or digest the graph's manifest also carries (D37) |
 | `eval_models.json` | the evaluator's pinned manifest, derived by `tools/derive_eval_manifest.py` |
 

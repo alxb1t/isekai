@@ -6,7 +6,7 @@
   "floor": 0.15,
   "rows": [
     {
-      "run": "187ec7dce855aaaa",
+      "run": "187ec7dce855",
       "flow": "summon-anime-wai",
       "group": 1,
       "seed": 1,
@@ -42,7 +42,7 @@
       }
     },
     {
-      "run": "28c3bb7ce031bbbb",
+      "run": "28c3bb7ce031",
       "flow": "summon-anime-wai",
       "group": 1,
       "seed": 1,
@@ -75,7 +75,7 @@
       }
     },
     {
-      "run": "d2043248d6e1cccc",
+      "run": "d2043248d6e1",
       "flow": "summon-anime-wai",
       "group": 2,
       "seed": 3,
@@ -83,7 +83,7 @@
       "fields": {}
     },
     {
-      "run": "28c3bb7ce031bbbb",
+      "run": "28c3bb7ce031",
       "flow": "control-anime-wai",
       "group": 1,
       "seed": 1,
@@ -119,7 +119,7 @@
       }
     },
     {
-      "run": "d2043248d6e1cccc",
+      "run": "d2043248d6e1",
       "flow": "control-anime-wai",
       "group": 1,
       "seed": 1,

@@ -32,7 +32,7 @@ from evaluation.cohort import (
 )
 from evaluation.eval_models import DETECTOR, ENCODER, load_eval_manifest
 from evaluation.record import destination as record_destination
-from evaluation.record import runs_in
+from evaluation.record import run_prefix, runs_in
 from isekai.boundary.provision import entry_for
 from isekai.foundation.artifacts import write_json
 from isekai.foundation.flow import FLOWS_DIR, load_flow
@@ -130,12 +130,12 @@ def _rows(
                 f"unreadable: {undecodable}; render it again or delete it, then this "
                 "command again"
             )
-            rows[flow] = unscored(source, run.id, seed, "unreadable")
+            rows[flow] = unscored(source, run_prefix(run.id), seed, "unreadable")
         else:
             rows[flow] = (
-                unscored(source, run.id, seed, "no face found")
+                unscored(source, run_prefix(run.id), seed, "no face found")
                 if vector is None
-                else scored(source, run.id, seed, rank(vector, gallery))
+                else scored(source, run_prefix(run.id), seed, rank(vector, gallery))
             )
         rows[flow]["also_rendered"] = rest
     return rows, whole

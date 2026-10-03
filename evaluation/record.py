@@ -1,5 +1,6 @@
-"""What both evaluators ask of a batch: its runs, and where its record goes.
+"""What both evaluators ask of a batch: its runs, their names, where the record goes.
 
+A record names a run by its digest prefix, since a slug can be a person's name.
 The record sits beside the runs and never where git can reach. Both evaluators
 refuse before they read anything, so a refusal costs no embedding and no tagging.
 """
@@ -7,7 +8,7 @@ refuse before they read anything, so a refusal costs no embedding and no tagging
 from pathlib import Path
 
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, Run
+from isekai.foundation.run import FRAME_NAME, ID_DIGEST_CHARS, Run
 from isekai.interface.wiring import trackable
 
 
@@ -22,6 +23,14 @@ def runs_in(directory: Path) -> list[Run]:
         Run(frame.parent.name, frame.parent)
         for frame in sorted(directory.glob(f"*/{FRAME_NAME}"))
     ]
+
+
+def run_prefix(run_id: str) -> str:
+    """Return the digest half of a run's id: what a record names a run by.
+
+    e.g. `5f3a9c1e2b7d-p1-1` -> `5f3a9c1e2b7d`
+    """
+    return run_id[:ID_DIGEST_CHARS]
 
 
 def destination(runs: Path, name: str) -> Path:

@@ -11,7 +11,7 @@ from evaluation.face import load
 from isekai.boundary.provision import digest_of, entry_for
 from isekai.foundation.flow import FLOWS_DIR
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import OUTPUTS, open_run
+from isekai.foundation.run import ID_DIGEST_CHARS, OUTPUTS, open_run
 from isekai.interface import wiring
 from tests.images import oversized_png
 
@@ -242,6 +242,34 @@ def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
     for run in (outside, damaged.name):
         assert run not in written + out
         assert run in err
+
+
+@pytest.mark.spec("evaluation:table:a-run-is-named-by-its-digest-prefix")
+def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _, cohort = _batch(tmp_path)
+    named = tmp_path / "photos" / "ada-lovelace.png"
+    named.parent.mkdir()
+    named.write_bytes((cohort / "p1" / "p1-1.png").read_bytes())
+    runs = tmp_path / "named" / "runs"
+    run = open_run(named, runs)
+    group = run.directory(FLOW, OUTPUTS, "001")
+    group.mkdir(parents=True)
+    Image.new("RGB", (8, 8)).save(group / "11.png")
+    vectors = {**VECTORS, "11.png": [0.0, 1.0, 0.0]}
+    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(vectors))
+
+    assert entry.main([str(runs), "--cohort", str(cohort)]) == 0
+
+    written = (runs.parent / "evaluation.json").read_text()
+    out = capsys.readouterr().out
+    prefix = run.photo_record["sha256"][:ID_DIGEST_CHARS]
+    (row,) = [r for r in json.loads(written)["flows"][FLOW]["rows"] if r["run"]]
+    assert "ada-lovelace" in run.id
+    assert (row["run"], row["outcome"]) == (prefix, "miss")
+    assert f"run {prefix} seed 11" in out
+    assert "ada-lovelace" not in written + out
 
 
 @pytest.mark.spec("evaluation:table:a-record-git-can-reach-is-refused")

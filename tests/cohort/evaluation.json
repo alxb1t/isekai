@@ -31,7 +31,7 @@
         {
           "person": "p1",
           "photograph": "p1/1.png",
-          "run": "5f3a9c1e2b7d-p1-1",
+          "run": "5f3a9c1e2b7d",
           "seed": 1001,
           "outcome": "hit",
           "nearest": "p1/1.png",
@@ -43,7 +43,7 @@
         {
           "person": "p1",
           "photograph": "p1/2.png",
-          "run": "0c4e8a2d6f1b-p1-2",
+          "run": "0c4e8a2d6f1b",
           "seed": 1002,
           "outcome": "miss",
           "nearest": "p2/1.png",
@@ -55,7 +55,7 @@
         {
           "person": "p2",
           "photograph": "p2/1.png",
-          "run": "9b2d7e4f1a3c-p2-1",
+          "run": "9b2d7e4f1a3c",
           "seed": 1003,
           "outcome": "no face found",
           "nearest": null,
@@ -67,7 +67,7 @@
         {
           "person": "p2",
           "photograph": "p2/2.png",
-          "run": "3e7f1c9a5d2b-p2-2",
+          "run": "3e7f1c9a5d2b",
           "seed": 1004,
           "outcome": "hit",
           "nearest": "p2/2.png",

@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- `evaluation.json` and `recall.json` name a scored run by its digest prefix, and each table prints the same: a
+  run's slug is its photograph's filename, which can be a person's name (0056 D1).
+
 ## [0.34.0] - 2026-10-02 · 0055-attribute-recall
 
 ### Added

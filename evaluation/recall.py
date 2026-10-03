@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Literal, TypedDict
 
 from evaluation.face import UNDECODABLE
-from evaluation.record import destination, runs_in
+from evaluation.record import destination, run_prefix, runs_in
 from isekai.boundary import wd14
 from isekai.boundary.provision import DigestMismatch
 from isekai.foundation.artifacts import (
@@ -194,7 +194,7 @@ def _block(flow: str, rows: Sequence[Row], total: Mapping[str, Total]) -> list[s
     grid: list[list[str]] = [["run", "group", "seed", *names]]
     notes: dict[int, str] = {}
     for row in rows:
-        lead = [row["run"][:12], str(row["group"]), str(row["seed"])]
+        lead = [row["run"], str(row["group"]), str(row["seed"])]
         if row["outcome"] != "read":
             grid.append([*lead, row["outcome"]])
             continue
@@ -301,7 +301,7 @@ def _row(
 ) -> Row:
     """Return one render's row."""
     return {
-        "run": run.id,
+        "run": run_prefix(run.id),
         "flow": flow,
         "group": group,
         "seed": seed,
