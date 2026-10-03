@@ -9,6 +9,15 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-10-03 · 0056-the-evaluation-paydown
+
+### Changed
+
+- `evaluation.json` and `recall.json` name a scored run by its digest prefix, and each table prints the same: a
+  run's slug is its photograph's filename, which can be a person's name (0056 D1).
+- The evaluation spec gives an empty latest render group its own scenario, and the test proving it is bound to it,
+  so the behaviour no longer rides on the latest-group scenario (0056 D2).
+
 ## [0.34.0] - 2026-10-02 · 0055-attribute-recall
 
 ### Added
