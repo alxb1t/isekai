@@ -28,7 +28,7 @@ def runs_in(directory: Path) -> list[Run]:
 def run_prefix(run_id: str) -> str:
     """Return the digest half of a run's id: what a record names a run by.
 
-    e.g. `5f3a9c1e2b7d-p1-1` -> `5f3a9c1e2b7d`
+    e.g. `5f3a9c1e2b7d_p1-1` -> `5f3a9c1e2b7d`
     """
     return run_id[:ID_DIGEST_CHARS]
 
