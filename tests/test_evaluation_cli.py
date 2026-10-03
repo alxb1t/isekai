@@ -163,7 +163,7 @@ def test_the_first_seed_of_the_latest_render_group_is_the_one_ranked(
     assert [p.name for p in embed.seen if p.parent.parent == later.parent] == ["33.png"]
 
 
-@pytest.mark.spec("evaluation:table:the-latest-group-is-ranked")
+@pytest.mark.spec("evaluation:table:an-empty-latest-group-is-not-rendered")
 def test_a_latest_group_holding_no_render_is_not_rendered(tmp_path: Path) -> None:
     runs, cohort = _batch(tmp_path)
     run = open_run(cohort / "p1" / "p1-1.png", runs)

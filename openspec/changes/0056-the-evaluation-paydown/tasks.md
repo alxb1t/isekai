@@ -6,7 +6,7 @@ adds or rebinds the tests that bind them.
 ## Progress
 
 - [x] 1 — The run ids
-- [ ] 2 — The scenario
+- [x] 2 — The scenario
 
 Line numbers are `7f61f56`'s. Every new test carries `@pytest.mark.spec` with the key its task names.
 
@@ -23,5 +23,5 @@ Line numbers are `7f61f56`'s. Every new test carries `@pytest.mark.spec` with th
 
 ## 2 — The scenario
 
-- [ ] 2.1 Bind `test_a_latest_group_holding_no_render_is_not_rendered` (`tests/test_evaluation_cli.py:166-167`) to `evaluation:table:an-empty-latest-group-is-not-rendered`, per [D2](design.md#d2).
+- [x] 2.1 Bind `test_a_latest_group_holding_no_render_is_not_rendered` (`tests/test_evaluation_cli.py:166-167`) to `evaluation:table:an-empty-latest-group-is-not-rendered`, per [D2](design.md#d2).
   Verify: `grep -c 'evaluation:table:the-latest-group-is-ranked' tests/test_evaluation_cli.py` prints `1`, and `grep -c 'evaluation:table:an-empty-latest-group-is-not-rendered' tests/test_evaluation_cli.py` prints `1`.
