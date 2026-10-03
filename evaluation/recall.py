@@ -45,6 +45,9 @@ from isekai.shared.vocabulary import DEFAULT_MODELS_DIR, normalise
 
 Read = Callable[[Path], set[str]]
 Outcome = Literal["read", "unreadable", "no approval"]
+# What a row names its run by when the run's frame does not read: there is no
+# digest to give, and the directory's name may be a person's.
+UNNAMED = ""
 
 
 class FieldRecall(TypedDict):
@@ -299,7 +302,7 @@ def _row(
     outcome: Outcome,
     fields: dict[str, FieldRecall],
 ) -> Row:
-    """Return one render's row, its run named by `name`, the run's digest prefix."""
+    """Return one render's row, its run named by a digest prefix or `UNNAMED`."""
     return {
         "run": name,
         "flow": flow,
@@ -354,19 +357,20 @@ def survey(
 ) -> tuple[list[Row], list[str]]:
     """Return a row per render of `runs`, and a line saying why one was not read.
 
-    A run whose frame does not read costs only its own renders, since a row names
-    its run by the digest the frame records; a flow that does not load costs only
-    its own renders; an approval that cannot be read and an image that does not
-    decode each cost only the render they belong to.
+    A run whose frame does not read has a row per render, unreadable and named
+    by no run, since a row names its run by the digest the frame records; a flow
+    that does not load costs only its own renders; an approval that cannot be
+    read and an image that does not decode each cost only the render they
+    belong to.
     """
     rows: list[Row] = []
     notes: list[str] = []
     for run in runs:
         try:
-            name = run_prefix(run)
+            name: str | None = run_prefix(run)
         except Refusal as damaged:
             notes.append(f"unreadable: {run.id}: {damaged}")
-            continue
+            name = None
         for flow in run.flows:
             try:
                 loaded = load_flow(flow, flows_dir)
@@ -379,6 +383,12 @@ def survey(
                 )
                 continue
             for _, group, seeds in groups:
+                if name is None:
+                    rows += [
+                        _row(UNNAMED, flow, group, seed, "unreadable", {})
+                        for seed in seeds
+                    ]
+                    continue
                 rows += _group_rows(
                     run,
                     name,

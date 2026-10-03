@@ -54,10 +54,12 @@ def run_prefix(run: Run) -> str:
 `ID_DIGEST_CHARS` is imported from `isekai.foundation.run`. The digest is read from the frame rather than sliced
 from the directory's name, so a run directory renamed by hand never lends its new name to a record; for a run
 `open_run` named, the two are the same twelve characters. `evaluation/__main__.py:133-138` passes it in each
-of its three calls; `evaluation/recall.py:304` writes it, and `:197` prints `row["run"]` with no slice. Recall
-reads no frame otherwise, so a run whose frame does not read is noted on the error stream and its renders are not
-read, as the cohort evaluator already treats one. `cohort.py` is untouched: it stores and prints what it is given.
-The notes on the error stream keep `run.id`.
+of its three calls; `evaluation/recall.py:307` writes it, and `:200` prints `row["run"]` with no slice. A run
+whose frame does not read has no digest to name it by, so recall notes it on the error stream and writes each of
+its renders as an `unreadable` row whose `run` is `UNNAMED`, the empty string, without reading the render: a row
+per render still holds, and neither the directory's name nor a guess reaches the record. The cohort evaluator,
+whose record counts unscored runs rather than giving them rows, counts such a run in `unreadable`. `cohort.py` is
+untouched: it stores and prints what it is given. The notes on the error stream keep `run.id`.
 
 The fixtures: each run value in `tests/cohort/evaluation.json` and `tests/recall/recall.json` becomes its first
 twelve characters, then each `.txt` is written from its `.json` by the module's own `table`, never by hand.
