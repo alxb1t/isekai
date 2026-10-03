@@ -238,9 +238,11 @@ def test_the_record_counts_an_outside_and_an_unreadable_run_and_names_neither(
     rec = json.loads(written)
     out, err = capsys.readouterr()
     assert code == 0
+    named = {row["run"] for rows in rec["flows"].values() for row in rows["rows"]}
     assert (rec["outside_the_cohort"], rec["unreadable"]) == (1, 1)
     for run in (outside, damaged.name):
         assert run not in written + out
+        assert run[:ID_DIGEST_CHARS] not in named | {*out.split()}
         assert run in err
 
 
@@ -269,6 +271,26 @@ def test_a_scored_run_is_named_by_its_digest_prefix_and_never_its_filename(
     assert "ada-lovelace" in run.id
     assert (row["run"], row["outcome"]) == (prefix, "miss")
     assert f"run {prefix} seed 11" in out
+    assert "ada-lovelace" not in written + out
+
+
+@pytest.mark.spec("evaluation:table:a-run-is-named-by-its-digest-prefix")
+def test_a_renamed_run_is_named_by_the_digest_its_frame_records(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    runs, cohort = _batch(tmp_path)
+    (run,) = runs.glob("*_p1-2")
+    prefix = run.name[:ID_DIGEST_CHARS]
+    run.rename(runs / "ada-lovelace-old")
+    monkeypatch.setattr(entry, "_embedder", lambda models: _Embedder(VECTORS))
+
+    assert entry.main([str(runs), "--cohort", str(cohort)]) == 0
+
+    written = (runs.parent / "evaluation.json").read_text()
+    out = capsys.readouterr().out
+    rows = json.loads(written)["flows"][FLOW]["rows"]
+    assert {r["photograph"]: r["run"] for r in rows}["p1/p1-2.png"] == prefix
+    assert f"run {prefix} seed 22" in out
     assert "ada-lovelace" not in written + out
 
 

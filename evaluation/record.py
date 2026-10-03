@@ -25,12 +25,16 @@ def runs_in(directory: Path) -> list[Run]:
     ]
 
 
-def run_prefix(run_id: str) -> str:
-    """Return the digest half of a run's id: what a record names a run by.
+def run_prefix(run: Run) -> str:
+    """Return the digest prefix of a run's photograph: what a record names it by.
 
-    e.g. `5f3a9c1e2b7d_p1-1` -> `5f3a9c1e2b7d`
+    It is read from the frame, not sliced from the directory's name, so a run
+    renamed by hand never lends its new name to a record. A frame that does not
+    read refuses, as `Run.photo_record` does.
+
+    e.g. a frame recording `5f3a9c1e2b7d571b…` -> `5f3a9c1e2b7d`
     """
-    return run_id[:ID_DIGEST_CHARS]
+    return run.photo_record["sha256"][:ID_DIGEST_CHARS]
 
 
 def destination(runs: Path, name: str) -> Path:

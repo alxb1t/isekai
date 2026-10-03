@@ -191,7 +191,7 @@ def test_named_runs_narrow_the_reading_and_an_unknown_name_refuses_first(
     tagger = _Tagger()
 
     assert _run(monkeypatch, tagger, runs, b.id) == 0
-    assert {row["run"] for row in _record(runs)["rows"]} == {run_prefix(b.id)}
+    assert {row["run"] for row in _record(runs)["rows"]} == {run_prefix(b)}
     assert {path.name for path in tagger.seen} == {"44.png"}
 
     (runs.parent / "recall.json").unlink()
@@ -225,6 +225,26 @@ def test_a_row_names_its_run_by_its_digest_prefix_and_never_its_filename(
     assert [row["run"] for row in json.loads(written)["rows"]] == [prefix]
     assert prefix in out
     assert "ada-lovelace" not in written + out
+
+
+@pytest.mark.spec("evaluation:recall:a-run-is-named-by-its-digest-prefix")
+def test_a_renamed_run_is_named_by_its_frames_digest_and_a_frameless_one_not_at_all(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    runs, a, b = _batch(tmp_path)
+    prefix = a.photo_record["sha256"][:ID_DIGEST_CHARS]
+    a.path.rename(runs / "ada-lovelace-old")
+    b.frame_path.write_text("{not json")
+
+    assert _run(monkeypatch, _Tagger(), runs) == 0
+
+    written = (runs.parent / "recall.json").read_text()
+    out, err = capsys.readouterr()
+    assert {row["run"] for row in json.loads(written)["rows"]} == {prefix}
+    assert "ada-lovelace" not in written + out
+    assert f"unreadable: {b.id}" in err
 
 
 @pytest.mark.spec("evaluation:recall:the-record-names-the-tagger-and-its-floor")

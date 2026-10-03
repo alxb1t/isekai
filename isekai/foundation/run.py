@@ -78,8 +78,7 @@ ID_DIGEST_CHARS = 12
 # every unsafe character to a hyphen and a hyphenated slug would leave a reader no
 # way to see where the digest ended. A slug can never contain an underscore, so the
 # boundary is unambiguous. Nothing splits the id on it -- `startswith` on the
-# prefix and an evaluation record's slice of it read the leading digest alone --
-# so this is readability alone.
+# prefix is its only use -- so this is readability alone.
 ID_SEPARATOR = "_"
 
 # How much of a filename stem survives into the id. A stem is a human's label,

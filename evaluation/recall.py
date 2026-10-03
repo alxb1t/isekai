@@ -292,16 +292,16 @@ def _asked(run: Run, flow: str, group: int) -> dict[str, list[str]]:
 
 
 def _row(
-    run: Run,
+    name: str,
     flow: str,
     group: int,
     seed: int,
     outcome: Outcome,
     fields: dict[str, FieldRecall],
 ) -> Row:
-    """Return one render's row."""
+    """Return one render's row, its run named by `name`, the run's digest prefix."""
     return {
-        "run": run_prefix(run.id),
+        "run": name,
         "flow": flow,
         "group": group,
         "seed": seed,
@@ -312,6 +312,7 @@ def _row(
 
 def _group_rows(
     run: Run,
+    name: str,
     flow: str,
     group: int,
     seeds: Sequence[int],
@@ -329,7 +330,7 @@ def _group_rows(
         asked = _asked(run, flow, group)
     except Refusal as unapproved:
         notes.append(f"no approval: {run.id}: {unapproved}")
-        return [_row(run, flow, group, seed, "no approval", {}) for seed in seeds]
+        return [_row(name, flow, group, seed, "no approval", {}) for seed in seeds]
     rows: list[Row] = []
     for seed in seeds:
         try:
@@ -341,10 +342,10 @@ def _group_rows(
                 f"unreadable: {undecodable}; render it again or delete it, then "
                 "this command again"
             )
-            rows.append(_row(run, flow, group, seed, "unreadable", {}))
+            rows.append(_row(name, flow, group, seed, "unreadable", {}))
         else:
             fields = count(asked, scored, seen)
-            rows.append(_row(run, flow, group, seed, "read", fields))
+            rows.append(_row(name, flow, group, seed, "read", fields))
     return rows
 
 
@@ -353,13 +354,19 @@ def survey(
 ) -> tuple[list[Row], list[str]]:
     """Return a row per render of `runs`, and a line saying why one was not read.
 
-    A flow that does not load costs only its own renders; an approval that cannot
-    be read and an image that does not decode each cost only the render they
-    belong to.
+    A run whose frame does not read costs only its own renders, since a row names
+    its run by the digest the frame records; a flow that does not load costs only
+    its own renders; an approval that cannot be read and an image that does not
+    decode each cost only the render they belong to.
     """
     rows: list[Row] = []
     notes: list[str] = []
     for run in runs:
+        try:
+            name = run_prefix(run)
+        except Refusal as damaged:
+            notes.append(f"unreadable: {run.id}: {damaged}")
+            continue
         for flow in run.flows:
             try:
                 loaded = load_flow(flow, flows_dir)
@@ -374,6 +381,7 @@ def survey(
             for _, group, seeds in groups:
                 rows += _group_rows(
                     run,
+                    name,
                     flow,
                     group,
                     seeds,

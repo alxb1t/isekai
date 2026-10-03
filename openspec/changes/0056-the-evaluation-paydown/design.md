@@ -37,7 +37,7 @@ backlog.
 
 | id | decision | because | rejected |
 |---|---|---|---|
-| [D1](#d1) | `run_prefix(run_id)` in `evaluation/record.py`, the first `ID_DIGEST_CHARS` characters; both commands write it into their rows; recall's table prints the row's value unsliced | one rule for both records; the prefix names one run; a slug can be a person's name | recall alone; recording why the full id is fine |
+| [D1](#d1) | `run_prefix(run)` in `evaluation/record.py`, the first `ID_DIGEST_CHARS` characters of the digest the run's frame records; both commands write it into their rows; recall's table prints the row's value unsliced | one rule for both records; the prefix names one run; a slug can be a person's name | recall alone; recording why the full id is fine |
 | [D2](#d2) | the delta's `evaluation:table:an-empty-latest-group-is-not-rendered` scenario; the test rebound to it | a behaviour gets a scenario of its own | leaving the SHALL to imply it |
 | [D3](#d3) | 0055·R12 is listed and retired | an archived `tasks.md` records what was true at each commit | editing the archive |
 
@@ -46,15 +46,18 @@ backlog.
 **The prefix.** In `evaluation/record.py`:
 
 ```
-def run_prefix(run_id: str) -> str:
-    """Return the digest half of a run's id: what a record names a run by."""
-    return run_id[:ID_DIGEST_CHARS]
+def run_prefix(run: Run) -> str:
+    """Return the digest prefix of a run's photograph: what a record names it by."""
+    return run.photo_record["sha256"][:ID_DIGEST_CHARS]
 ```
 
-`ID_DIGEST_CHARS` is imported from `isekai.foundation.run`. `evaluation/__main__.py:133-138` passes
-`run_prefix(run.id)` in each of its three calls; `evaluation/recall.py:304` writes `run_prefix(run.id)`, and
-`:197` prints `row["run"]` with no slice. `cohort.py` is untouched: it stores and prints what it is given. The
-notes on the error stream keep `run.id`.
+`ID_DIGEST_CHARS` is imported from `isekai.foundation.run`. The digest is read from the frame rather than sliced
+from the directory's name, so a run directory renamed by hand never lends its new name to a record; for a run
+`open_run` named, the two are the same twelve characters. `evaluation/__main__.py:133-138` passes it in each
+of its three calls; `evaluation/recall.py:304` writes it, and `:197` prints `row["run"]` with no slice. Recall
+reads no frame otherwise, so a run whose frame does not read is noted on the error stream and its renders are not
+read, as the cohort evaluator already treats one. `cohort.py` is untouched: it stores and prints what it is given.
+The notes on the error stream keep `run.id`.
 
 The fixtures: each run value in `tests/cohort/evaluation.json` and `tests/recall/recall.json` becomes its first
 twelve characters, then each `.txt` is written from its `.json` by the module's own `table`, never by hand.
