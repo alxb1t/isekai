@@ -159,7 +159,9 @@ generator's file under another name is still the generator's. A face not found s
 The system SHALL write one record per batch holding, for every cohort photograph and every flow, the render's
 seed, its nearest photograph and its outcome — a hit, a miss, no face found, unreadable, not rendered — and SHALL
 print one table from that record alone, a row of counts per flow, each followed by its chance row. The render
-ranked SHALL be the first seed of the flow's latest render group. A run whose
+ranked SHALL be the first seed of the flow's latest render group; where that group holds no render the row SHALL
+say not rendered, and no earlier group SHALL be ranked in its place. The record and the table SHALL name a run
+they score by its digest prefix alone. A run whose
 frame, or one of whose flows, cannot be read SHALL be reported as unreadable, and its readable flows scored. The
 record SHALL count the runs outside the cohort and the unreadable runs and name none of them, naming each on the
 error stream alone, and SHALL be refused before anything is scored where git can reach it: inside the
@@ -175,10 +177,12 @@ chance                  1.0 / 18          2.1 / 18
 A table that shows only its wins is not evidence; a failure reported mid-batch scrolls away, and one damaged
 file is no reason to lose the rest. A row per flow, with its own chance beneath it, is what lets a second flow be
 read beside the first without a second tool. The latest group is the render the operator last made, and the one
-a control flow's seeds are taken from. A run's id carries its photograph's digest and filename, and a run
+a control flow's seeds are taken from; an empty one is a render that failed, not one to look past. A run's id
+carries its photograph's digest and filename, and a run
 outside the cohort is by construction not one of its synthetic people, so the record — the file a batch
 publishes — names none, and is never written where one `git add` publishes it
 ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
+A run it does score is named by the digest half of its id, which still finds the run and carries no filename.
 
 #### Scenario: one row per flow
 - **Key:** `evaluation:table:one-row-per-flow`
@@ -242,6 +246,20 @@ publishes — names none, and is never written where one `git add` publishes it
 - **THEN** the row ranks the first seed of the later approval's group
 - **AND** every other seed is listed as also rendered
 
+#### Scenario: a latest group holding no render is not rendered
+- **Key:** `evaluation:table:an-empty-latest-group-is-not-rendered`
+- **Layers:** unit
+- **WHEN** a flow's latest render group holds no render and an earlier group does
+- **THEN** the row says not rendered
+- **AND** no render of the earlier group is ranked
+
+#### Scenario: a scored run is named by its digest prefix
+- **Key:** `evaluation:table:a-run-is-named-by-its-digest-prefix`
+- **Layers:** unit
+- **WHEN** a render is ranked
+- **THEN** its row and its table line name the run by the digest prefix of its id
+- **AND** neither carries the photograph's filename
+
 ### Requirement: Every model the evaluator loads is pinned and verified
 
 The system SHALL resolve each model it loads from a pinned manifest carrying a revision and a digest,
@@ -291,7 +309,8 @@ alone, with no cohort, SHALL write one record per batch holding a row per render
 print its table from that record alone. A render that does not decode, and a render whose approval cannot be
 read, SHALL each be a row saying so and SHALL NOT end the reading of another. Named runs SHALL narrow the
 reading, and a name the runs do not hold SHALL refuse before any render is read. The record SHALL name the
-tagger's files by digest and its floor, and SHALL be refused where git can reach it.
+tagger's files by digest and its floor, and SHALL be refused where git can reach it. A row SHALL name its run by
+its digest prefix alone.
 
 ```
 review/<NNN>.approved.json ── the scored fields' tags ──▶ tags asked ─┐
@@ -303,7 +322,8 @@ tagger can read them back; the sheet's vocabulary is that tagger's label set, so
 words
 ([D39](../../../docs/decisions.md#d39--attribute-recall-uses-the-sheets-tagger)).
 Tags are counted, not renders: a field showing three of its four tags is not a failed render, and the missing
-one is the finding. Whether the sheet is true of the photograph is the review's to say.
+one is the finding. Whether the sheet is true of the photograph is the review's to say. A run's id carries its
+photograph's filename, which may be a person's name; the digest half still finds the run.
 
 #### Scenario: a tag read back is counted
 - **Key:** `evaluation:recall:a-tag-read-back-is-counted`
@@ -372,3 +392,10 @@ one is the finding. Whether the sheet is true of the photograph is the review's 
 - **Layers:** unit
 - **WHEN** the table is printed from a committed record
 - **THEN** it equals the table committed beside that record
+
+#### Scenario: a row names its run by its digest prefix
+- **Key:** `evaluation:recall:a-run-is-named-by-its-digest-prefix`
+- **Layers:** unit
+- **WHEN** a render is read
+- **THEN** its row names the run by the digest prefix of its id
+- **AND** the record carries no photograph's filename

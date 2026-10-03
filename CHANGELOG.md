@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-10-03 · 0056-the-evaluation-paydown
+
 ### Changed
 
 - `evaluation.json` and `recall.json` name a scored run by its digest prefix, and each table prints the same: a
