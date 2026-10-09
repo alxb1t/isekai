@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.34.2] - 2026-10-09 · 0057-the-removed-key
+
 ### Fixed
 
 - A `spec` marker may name a key the living spec holds while an open delta removes it, so a cut that removes a
