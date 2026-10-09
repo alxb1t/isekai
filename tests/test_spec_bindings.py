@@ -1,8 +1,8 @@
 """Every spec↔test binding, held by the gate.
 
-Each living key has a test, each `spec` marker names a key, and each test carries
-exactly one of `spec` and `spec_exempt`. Keys are read with a regex, markers with
-`ast`: no marker is built at runtime.
+Each living key has a test, each `spec` marker names a key the living spec or an
+open delta holds, and each test carries exactly one of `spec` and `spec_exempt`.
+Keys are read with a regex, markers with `ast`: no marker is built at runtime.
 """
 
 import ast
@@ -48,6 +48,11 @@ def demanded(root: Path) -> set[str]:
     that adds a scenario stays green until its build writes the test.
     """
     return spec_keys(root) & living_keys(root)
+
+
+def nameable(root: Path) -> set[str]:
+    """Return the keys a marker may name: the living ones, and the active deltas'."""
+    return spec_keys(root) | living_keys(root)
 
 
 def _names_marker(node: ast.Attribute) -> bool:
@@ -169,8 +174,8 @@ def unmarked(tests: list[Test]) -> list[str]:
 
 @pytest.fixture(scope="module")
 def keys() -> set[str]:
-    """Read the repository's keys once for the module."""
-    return spec_keys(REPO_ROOT)
+    """Read the repository's nameable keys once for the module."""
+    return nameable(REPO_ROOT)
 
 
 @pytest.fixture(scope="module")
@@ -255,6 +260,25 @@ def test_a_marker_naming_no_key_is_caught(tmp_path: Path) -> None:
     root = _tree(tmp_path, _TESTS.replace("cap:gone:gone", "cap:gone:typo"))
     assert unknown(spec_keys(root), marked_tests(root)) == [
         "tests/test_cap.py::test_gone -> cap:gone:typo"
+    ]
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_marker_names_a_key")
+def test_a_marker_on_a_removed_key_is_not_stray(tmp_path: Path) -> None:
+    removed = """\
+## REMOVED Requirements
+
+### Requirement: Gone
+**Reason**: replaced.
+"""
+    root = _tree(tmp_path / "a", delta=removed)
+    assert unknown(nameable(root), marked_tests(root)) == []
+    assert unknown(spec_keys(root), marked_tests(root)) == [
+        "tests/test_cap.py::test_gone -> cap:gone:gone"
+    ]
+    nowhere = _tree(tmp_path / "b", _TESTS.replace("cap:gone:gone", "cap:nowhere:x"))
+    assert unknown(nameable(nowhere), marked_tests(nowhere)) == [
+        "tests/test_cap.py::test_gone -> cap:nowhere:x"
     ]
 
 

@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Fixed
+
+- A `spec` marker may name a key the living spec holds while an open delta removes it, so a cut that removes a
+  requirement leaves the gate green until its build deletes the tests (0057 D1, D2).
+
 ## [0.34.1] - 2026-10-03 · 0056-the-evaluation-paydown
 
 ### Changed
