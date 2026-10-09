@@ -1,0 +1,6 @@
+# This change carries no spec delta: it widens a structural test's key set. See proposal.md.
+#
+# `skip_specs` is honoured only when this file names a resolvable `schema`.
+schema: spec-driven
+created: 2026-10-08
+skip_specs: true
