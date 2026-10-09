@@ -258,7 +258,7 @@ def test_a_key_with_no_test_is_caught(tmp_path: Path) -> None:
 @pytest.mark.spec_exempt("structural: twin of test_every_marker_names_a_key")
 def test_a_marker_naming_no_key_is_caught(tmp_path: Path) -> None:
     root = _tree(tmp_path, _TESTS.replace("cap:gone:gone", "cap:gone:typo"))
-    assert unknown(spec_keys(root), marked_tests(root)) == [
+    assert unknown(nameable(root), marked_tests(root)) == [
         "tests/test_cap.py::test_gone -> cap:gone:typo"
     ]
 
@@ -338,7 +338,7 @@ def test_an_added_key_is_known_and_neither_it_nor_a_removed_one_is_demanded(
     )
     assert spec_keys(root) == {"cap:kept:kept", "cap:new:new"}
     assert unbound(demanded(root), marked_tests(root)) == []
-    assert unknown(spec_keys(root), marked_tests(root)) == []
+    assert unknown(nameable(root), marked_tests(root)) == []
     archived = root / "openspec" / "changes" / "archive" / "0000-y" / "specs" / "cap"
     archived.mkdir(parents=True)
     (archived / "spec.md").write_text(delta.replace("cap:new:new", "cap:old:old"))
