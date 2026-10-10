@@ -348,8 +348,9 @@ request.** A request with no `Origin` header is let through — a known, low ris
 **The volume holds exactly the manifest. A pod refuses to start when what is mounted is below the
 capacity floor** — the floor is `start.sh`'s. A network volume reports its storage cluster's capacity,
 far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
-quota, and a 20 GB volume passes. **A pod runs in its volume's data centre**, and `up.sh` checks that, and
-that the volume is at least the manifest's size, before the create.
+quota, and a 20 GB volume passes. **A pod runs in its volume's data centre**: gpunit reads it from the
+volume `gpunit.toml` names and creates the pod there. Nothing checks the volume's size before the create;
+the pod's floor is the size check.
 
 - **Why:** re-downloading every session costs more than the idle rent, and a volume filled only from the
   manifest is clean by construction. A missing mount would fall through to the container disk: it would
@@ -357,18 +358,19 @@ that the volume is at least the manifest's size, before the create.
   elsewhere boots without its models.
 - **Accepts:** a pin freezes bytes, not intent: most weights come only from third-party mirrors,
   trusted as the publisher's. Reopen when a publisher ships a first-party copy, or a mirror is compromised.
-- **Made by:** `0009`, `0011`, `0033`, `0041`, `0052`.
+- **Made by:** `0009`, `0011`, `0033`, `0041`, `0052`, `0058`.
 
 ### D28 · The image carries code, the volume carries weights
 
 **The image lives on GHCR with no weights baked in, is built only on request, and is pinned by digest in
-`config/image.json`. `up.sh` alone creates pods, and boots that digest and nothing else.** Its base and
-uv are named by digest, and its Python environment is the locked uv project under `image/`.
+`gpunit.toml`, with `config/image.json` recording the same digest and the files it was built from. A pod
+is made only by `isekai render`, through gpunit, and boots that digest and nothing else.** Its base and uv
+are named by digest, and its Python environment is the locked uv project under `image/`.
 
-- **Why:** only `up.sh` knows the image, the volume mount and the SSH key, so a pod made any other way has
-  no models and no way in. A moving tag is not a pin: every build under one name was a different image,
-  and nothing recorded which one a render ran on. Moving the pin is a commit.
-- **Made by:** `0010`, `0011`, `0033`.
+- **Why:** only a gpunit session knows the image, the volume and the session's SSH key, so a pod made any
+  other way has no models and no way in. A moving tag is not a pin: every build under one name was a
+  different image, and nothing recorded which one a render ran on. Moving the pin is a commit.
+- **Made by:** `0010`, `0011`, `0033`, `0058`.
 
 ### D34 · Renders stay on a pod
 
@@ -386,24 +388,22 @@ the key would sit in the same memory.**
 
 - **Why:** no program can hide memory from its host, and the provider offers no confidential computing.
   Only rendering locally removes the boundary.
-- **Accepts:** code ComfyUI runs can read the stop key from other processes' environments, since the
-  image names no `USER`. Reopen when a node or model is not fully trusted, or the key's scope is account-wide.
-- **Made by:** `0041`, `0052`.
+- **Accepts:** gpunit's boot script holds the stop key, and ComfyUI runs without it; code ComfyUI runs can
+  still read it from the boot script's `/proc` entry, since the image names no `USER`. Reopen when a node or
+  model is not fully trusted, or the key's scope is account-wide.
+- **Made by:** `0041`, `0052`, `0058`.
 
-### D36 · A render session is `infra/render.sh`
+### D36 · A render session is `isekai render`
 
-**It assembles every prompt before any pod exists, creates the pod through `up.sh`, tunnels to it strictly,
-renders, and tears it down on every exit.** Three bounds hold it: the laptop's watchdog; the pod's own stop at its
-ceiling; and `up.sh`, which refuses while any `isekai` pod is listed, with `down.sh` leaving none. One session runs
-at a time: a second started at once refuses and leaves the first's pod, sweeping without a record only after its
-own create was lost.
+**It assembles every prompt before any pod exists, opens a gpunit session, waits for the endpoint through its
+tunnel, renders, and closes the session on every exit.** Three bounds hold it: the laptop's watchdog; the pod's
+own stop at `gpunit.toml`'s ceiling, armed by gpunit's boot script; and gpunit, which refuses a session beside a
+recorded or listed pod of the project and leaves none listed at teardown. One session runs at a time.
 
-- **Why:** the lifecycle is shell over a REST API the package never calls. A Python `session()` would be a second
-  creator of pods beside `up.sh`, which [D28](#d28--the-image-carries-code-the-volume-carries-weights) forbids,
-  and a pod the laptop can no longer reach must still stop.
+- **Why:** the lifecycle is gpunit's, tested as a library; isekai keeps the order of its flows, its free pass
+  and its log. A pod the laptop can no longer reach must still stop, so the pod stops itself.
 - **Accepts:** ComfyUI's history and node cache hold the batch's photograph until the teardown.
   Reopen when a pod serves more than one batch.
-- **Accepts:** a `down.sh` run while a create is in flight spends that create's pending marker, so an interrupt
-  before it records leaves a pod no trap tears down: its own stop ends it, or the `down.sh` the next `up.sh`
-  names. Reopen when two sessions share a checkout.
-- **Made by:** `0035`, `0043`, `0044`, `0052`.
+- **Accepts:** gpunit's signal handlers replace isekai's while the session is open, so isekai sets none.
+  Reopen when isekai needs a handler of its own.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`.

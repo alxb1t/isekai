@@ -111,7 +111,7 @@ assemble ──▶ gpunit.session() ──▶ await endpoint ──▶ render ea
 
 A pod left running is money and a personal photograph on someone else's machine. A session can stop at any step,
 and the block that holds it closes on every one
-([D36](../../../docs/decisions.md#d36--a-render-session-is-infrarendersh)).
+([D36](../../../docs/decisions.md#d36--a-render-session-is-isekai-render)).
 
 #### Scenario: every exit tears the pod down
 - **Key:** `pod-image:session:every-exit-tears-down`

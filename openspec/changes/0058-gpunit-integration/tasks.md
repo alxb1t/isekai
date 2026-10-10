@@ -9,7 +9,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 2 — The render verb
 - [x] 3 — The pod
 - [x] 4 — The scripts retired
-- [ ] 5 — The documents
+- [x] 5 — The documents
 - [ ] 6 — The build record
 - [ ] 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session
 
@@ -55,9 +55,9 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 5 — The documents
 
-- [ ] 5.1 Rewrite D27, D28, D35 and D36 in `docs/decisions.md`, per [D9](design.md#d9).
+- [x] 5.1 Rewrite D27, D28, D35 and D36 in `docs/decisions.md`, per [D9](design.md#d9).
   Verify: `grep -c '### D36 · A render session is .isekai render.' docs/decisions.md` prints `1`, and `grep -c 'up.sh' docs/decisions.md` prints `0`.
-- [ ] 5.2 Rewrite `README.md`'s lifecycle, ④–⑦, layout and provisioning flow, `CLAUDE.md`'s metered protocol, `docs/pins.md`'s *Re-pinning*, and `.claude/skills/run-flows/SKILL.md`, per [D9](design.md#d9).
+- [x] 5.2 Rewrite `README.md`'s lifecycle, ④–⑦, layout and provisioning flow, `CLAUDE.md`'s metered protocol, `docs/pins.md`'s *Re-pinning*, and `.claude/skills/run-flows/SKILL.md`, per [D9](design.md#d9).
   Verify: `grep -c -E 'up\.sh|down\.sh|render\.sh|runpod_pod' README.md CLAUDE.md docs/pins.md .claude/skills/run-flows/SKILL.md | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
 
 ## 6 — The build record

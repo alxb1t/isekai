@@ -46,22 +46,22 @@ for its exit.
 ```bash
 BATCH=.data/<batch>
 uv run python -m isekai tag --flow summon-anime-wai --flow conjure-anime-wai --runs "$BATCH/runs" "$BATCH"/photos/* >> "$BATCH/log.txt" 2>&1; echo "exit $?"
-echo "refusals: $(grep -c '^refused' "$BATCH/log.txt")"
+echo "refusals: $(grep -c 'refused:' "$BATCH/log.txt")"
 ```
 
 ```bash
 BATCH=.data/<batch>
 uv run python -m isekai caption --flow summon-anime-wai --flow conjure-anime-wai --runs "$BATCH/runs" "$BATCH"/photos/* >> "$BATCH/log.txt" 2>&1; echo "exit $?"
-echo "refusals: $(grep -c '^refused' "$BATCH/log.txt")"
+echo "refusals: $(grep -c 'refused:' "$BATCH/log.txt")"
 ```
 
 ```bash
 BATCH=.data/<batch>
 uv run python -m isekai sheet --flow summon-anime-wai --flow conjure-anime-wai --runs "$BATCH/runs" "$BATCH"/photos/* >> "$BATCH/log.txt" 2>&1; echo "exit $?"
-echo "refusals: $(grep -c '^refused' "$BATCH/log.txt")"
+echo "refusals: $(grep -c 'refused:' "$BATCH/log.txt")"
 ```
 
-When the count rose, read only the refusals — `grep '^refused' .data/<batch>/log.txt` — and show them to the operator.
+When the count rose, read only the refusals — `grep 'refused:' .data/<batch>/log.txt` — and show them to the operator.
 A refusal names its own fix; do not work around one.
 
 ## 2 — Review: stop for "approved"
@@ -87,7 +87,7 @@ for port in 8517 8518; do
 done
 ```
 
-A port `DOWN`: read `grep '^refused' .data/<batch>/log.txt`, stop both servers (step 3's last block), and report.
+A port `DOWN`: read `grep 'refused:' .data/<batch>/log.txt`, stop both servers (step 3's last block), and report.
 
 Both up: give the operator the two addresses and **stop until the operator says "approved"**:
 
@@ -121,26 +121,27 @@ operator's explicit go in this session authorises the spend.
 
 On the go, run this block **in your shell tool's background mode**, not in the foreground, and wait for it to
 exit — do not poll the log. The session outlasts a foreground command, about 13 minutes for five photographs, and a
-command killed mid-render can cut the teardown short. `render.sh` halts itself at the ceiling.
+command killed mid-render can cut the teardown short. `render` halts itself at the ceiling.
 
 ```bash
 BATCH=.data/<batch>
-bash infra/render.sh "$BATCH/runs" summon-anime-wai=1 conjure-anime-wai=1 > /dev/null 2>&1; echo "exit $?"
+uv run python -m isekai render "$BATCH/runs" summon-anime-wai=1 conjure-anime-wai=1 > /dev/null 2>&1; echo "exit $?"
 echo "renders: $(grep -c ': rendered ' "$BATCH/log.txt")"
-echo "refusals: $(grep -c '^refused' "$BATCH/log.txt")"
+echo "refusals: $(grep -c 'refused:' "$BATCH/log.txt")"
 ```
 
-`render.sh` tears down its own pod on every exit. A refusal naming a listed `isekai` pod leaves that pod: tell the
-operator at once, and run `bash infra/down.sh` only on their word. Confirm it is gone yourself: the RunPod MCP's `list-pods` shows no
-pod named `isekai`. Report what it returned.
+`render` tears down its own pod on every exit. A refusal naming a recorded or listed pod leaves that pod: tell the
+operator at once, and run `uv run gpunit down` only on their word. Confirm it is gone yourself: the RunPod MCP's
+`list-pods` shows no pod named `gpunit-isekai`. Report what it returned. A `refused:` line may follow a time, so
+the counts match it anywhere on a line.
 
 - **Exit 0**: report the render count.
-- **Non-zero**: read `grep '^refused' .data/<batch>/log.txt` and
+- **Non-zero**: read `grep 'refused:' .data/<batch>/log.txt` and
   `tail -15 .data/<batch>/log.txt | grep -v -e 'root@' -e '[Pp]od [a-z0-9]\{12,\}'`, and report them. A
   `ceiling` refusal keeps the renders so far; step 4 again renders only the rest, and needs a new go.
-- **`down.sh` could not confirm** (its message names the RunPod MCP): once `list-pods` shows the pod gone, run
-  `rm -f .runpod_pod_id .runpod_pod_image .runpod_known_hosts .runpod_pod_pending`. A pod still listed: tell the operator at once — it
-  is billing.
+- **The teardown failed** (its refusal names `uv run gpunit down`): tell the operator at once, and run it only on
+  their word. Once `list-pods` shows the pod gone and `gpunit down` still refuses, run
+  `rm -f .gpunit/pod .gpunit/pending`. A pod still listed: tell the operator at once — it is billing.
 
 ## 5 — The comparison page
 
