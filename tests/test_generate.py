@@ -71,7 +71,7 @@ from isekai.shared.image import MAX_TARGET_LONG_SIDE
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import (
     FAKE_SYSTEM,
-    POD_IMAGE,
+    SESSION_IMAGE,
     FakeComfyClient,
     stub_comfy,
     url_of,
@@ -913,7 +913,7 @@ def test_a_rejected_graph_is_recorded_permanent(
     directory = run.path / FLOW / OUTPUTS / "001"
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
     assert "HTTP 400" in message and "Prompt outputs failed" in message
-    assert "tunnel" not in message and "infra/up.sh" not in message
+    assert "tunnel" not in message and "isekai render" not in message
 
 
 @pytest.mark.spec("image-generation:failure:a-server-error-is-transient")
@@ -1209,7 +1209,7 @@ def test_an_unanswered_request_is_refused_transient(
     assert refused.value.kind == "transient"
     assert f"did not answer within {TIMEOUT} s" in str(refused.value)
     assert "ComfyUI log" in str(refused.value)
-    assert "infra/up.sh" not in str(refused.value)
+    assert "isekai render" not in str(refused.value)
 
 
 @pytest.mark.spec(
@@ -1641,14 +1641,10 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
     tmp_path: Path,
     schema: Schema,
     vocabulary: Vocabulary,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from isekai.interface import wiring
     from isekai.interface.cli import build_parser, dispatch
 
-    record = tmp_path / ".runpod_pod_image"
-    record.write_text(f"{POD_IMAGE}\n")
-    monkeypatch.setattr(wiring, "POD_IMAGE", record)
     runs = [_run(tmp_path, schema, vocabulary, name) for name in ("ada", "bea")]
     client = FakeComfyClient()
     wired = wiring.Wiring(
@@ -1661,6 +1657,7 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
         runs_root=tmp_path / "runs",
         out=io.StringIO(),
         err=io.StringIO(),
+        image=SESSION_IMAGE,
     )
     argv = ["generate", "--flow", FLOW, "--seed", "42", *(run.id for run in runs)]
 
@@ -1670,7 +1667,7 @@ def test_a_render_on_a_pinned_pod_records_its_image_and_runtime(
         sidecar = read(
             run.path / FLOW / OUTPUTS / "001" / "42.render.json", RENDER_FILE
         )
-        assert sidecar.get("image") == POD_IMAGE
+        assert sidecar.get("image") == SESSION_IMAGE
         assert sidecar.get("pinned") is True
         assert sidecar.get("runtime") == read_runtime(FakeComfyClient())
     # One report for the session, however many renders it served.
@@ -1852,7 +1849,7 @@ def test_a_run_without_a_source_render_is_refused_before_any_endpoint(
 
     message = err.getvalue()
     assert f"{run.id}: no render of {FLOW}" in message
-    remedy = f"bash infra/render.sh {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
+    remedy = f"python -m isekai render {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
     assert remedy in message
     _assert_nothing_rented(client, run, CONTROL)
 
@@ -1929,7 +1926,7 @@ def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpo
         copy == "older"
     )
     # One session renders the source again and the flow on its seeds.
-    render_both = f"render.sh {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
+    render_both = f"render {tmp_path / 'runs'} {FLOW}=1 {CONTROL}={FLOW}`"
     assert (render_both in message) == (copy == "newer")
     _assert_nothing_rented(client, run, CONTROL)
 

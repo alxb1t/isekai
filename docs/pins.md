@@ -23,7 +23,7 @@ Each gain, and where it stops.
 | **integrity** | a file whose bytes differ from its pinned digest is refused | a digest proves the bytes are the pinned ones, not that they are benign; GGUF, safetensors and ONNX carry no code, which is what keeps a model inert |
 | **supply chain** | a new or re-published release never arrives unasked; a moved action tag cannot run new code | a release compromised before it was pinned stays pinned |
 | **comparable figures** | a figure names the configuration that produced it, and a later run can use the same one | only for runs recorded after the pins |
-| **attribution** | each artifact records the files, options, floor, flow and image that shaped it | what is not pinned is recorded, not held; a render on another server, after a teardown that did not answer 204, borrows .runpod_pod_image's pin |
+| **attribution** | each artifact records the files, options, floor, flow and image that shaped it | what is not pinned is recorded, not held; a render outside `isekai render` records no image and declares itself unpinned |
 | **no silent drift** | every move is a commit — a new digest, a re-lock, a re-pin — so `git log` and `git bisect` find when an output changed | |
 | **rollback** | an old image digest boots again | while the registry keeps it |
 | **fail before paying** | a wrong or missing model is refused before a call or a paid render | |
@@ -37,7 +37,8 @@ Each pin: what fixes it, where it is declared, and when it is checked.
 
 | pin | pinned by | declared in | checked |
 |---|---|---|---|
-| the pod image | digest | `config/image.json` | `infra/up.sh` boots only that digest and writes it to `.runpod_pod_image` |
+| the pod image | digest | `gpunit.toml`, and `config/image.json` beside it | gpunit boots only that digest; `tests/test_infra.py` holds the two equal |
+| gpunit's boot script | sha256, at gpunit's tag | `Dockerfile` | at build; `tests/test_infra.py` holds its tag to `pyproject.toml`'s |
 | the image's base and uv | digest | `Dockerfile` | at build |
 | the image's Python environment | a lock with every installed package's hash; Python by patch; the sdist builds' tools by hash | `image/pyproject.toml`, `image/uv.lock`, `image/.python-version` | `uv sync --locked` at build |
 | ComfyUI and its custom nodes | git commit | `Dockerfile` | at build; `tests/test_infra.py` holds each clone to a commit |
@@ -59,8 +60,14 @@ weekly. `make derive` runs the field map's deriver and then the same recipe, so 
 diff is what to review.
 
 - **The pod image.** Push the branch, run `gh workflow run build-image.yml --ref <branch> -f tag=<vX.Y-rcN>`,
-  and copy the digest from the job summary into `config/image.json`. A new digest is proved on a pod, in a
-  metered phase, before it merges ([D28](decisions.md#d28--the-image-carries-code-the-volume-carries-weights)).
+  check the summary's build record equals `config/image.json`'s `files`, copy the tag and digest from it into
+  `config/image.json`, and the digest into `gpunit.toml`'s `image`; `tests/test_infra.py` holds the two equal.
+  An edit to a file the image copies turns that test red until the record is re-derived with
+  `uv run python -m tools.image_record`. A new digest is proved on a pod, in a metered phase,
+  before it merges ([D28](decisions.md#d28--the-image-carries-code-the-volume-carries-weights)).
+- **gpunit.** Move its tag in `pyproject.toml` and run `uv lock`; move the boot script's tag and checksum in
+  the `Dockerfile` (`curl -fsSL <url> | shasum -a 256`), then rebuild the image. `tests/test_infra.py` fails
+  while the two tags disagree.
 - **The base or uv.** Resolve the new reference with `docker buildx imagetools inspect <ref>`, write it with its
   digest into the `Dockerfile`, then rebuild the image.
 - **The image's Python environment.** `make derive` runs `tools/derive_image_project.py`, which re-reads the

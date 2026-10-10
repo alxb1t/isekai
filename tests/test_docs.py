@@ -24,7 +24,6 @@ ROOTS = (
     "evaluation",
     "flows",
     "image",
-    "infra",
     "isekai",
     "tests",
     "tools",
@@ -33,6 +32,7 @@ ROOT_FILES = frozenset(
     {
         "Dockerfile",
         "Makefile",
+        "gpunit.toml",
         "start.sh",
         "pyproject.toml",
         "uv.lock",

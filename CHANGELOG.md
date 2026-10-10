@@ -9,6 +9,33 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
+
+### Added
+
+- `gpunit.toml` declares the render session's GPU — the pinned image, the cards, the floors, the ceiling and the
+  volume — and `gpunit` joins the runtime dependencies; `.env` keeps the API key alone (0058 D6).
+- `isekai render <runs> <flow>=<count|source> …` runs a whole render session over `gpunit.session()`, with its
+  ordering, pre-pod pass, ceiling watchdog and batch log under unit test; a render records the session's image
+  (0058 D1–D5).
+- `config/image.json` records the SHA-256 of the `Dockerfile` and every file it copies; `tools/image_record.py`
+  prints it into `build-image.yml`'s summary, and a test turns red when the tree drifts from it (0058 D10).
+
+### Changed
+
+- The image boots gpunit's `boot.sh -- /start.sh`, added by checksum at gpunit's pin; `start.sh` drops its own
+  stop, key and sshd, reads `GPUNIT_VOLUME_*`, ends a hold by exiting, and `exec`s ComfyUI (0058 D7).
+- D27, D28, D35 and D36, the README's render path, `CLAUDE.md`'s metered protocol, the pins guide's recipes and
+  the run-flows skill describe a session as `isekai render` over gpunit (0058 D9).
+- The pod image is re-pinned to `v0.35-rc1`, `sha256:85f4c1c7…ac441f`, built from this tree; one `isekai render`
+  session rendered both flows on a real pod through gpunit and left no pod behind (0058 D11).
+
+### Removed
+
+- `tools/stop_pod.sh` and its tests: gpunit's boot script stops the pod (0058 D7, D8).
+- `infra/up.sh`, `down.sh`, `pods.sh` and `render.sh` and the tests that read them: `isekai render` and gpunit own
+  the session; the remedies, principles and pins guide name `isekai render` and `gpunit.toml` (0058 D8, D9).
+
 ## [0.34.2] - 2026-10-09 · 0057-the-removed-key
 
 ### Fixed

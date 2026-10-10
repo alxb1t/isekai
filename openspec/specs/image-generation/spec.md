@@ -567,8 +567,8 @@ number lets a render name the sheet the person corrected, not only its approval.
 
 ### Requirement: A render records the image and the runtime it ran on
 
-The system SHALL record in every render the image reference a pod was booted from, and declare the render
-pinned, when the pod-boot record names one; otherwise it SHALL record no image and declare the render
+The system SHALL record in every render the image reference the render session booted, and declare the render
+pinned, when a session names one; otherwise it SHALL record no image and declare the render
 unpinned. It SHALL also record the ComfyUI, Python and PyTorch versions the endpoint reports about itself,
 read only when a render will run, once per session unless a reading fails transiently.
 
@@ -581,14 +581,14 @@ the session.
 #### Scenario: a render on a pinned pod records its image and runtime
 - **Key:** `image-generation:runtime:a-pinned-pod-is-recorded`
 - **Layers:** unit
-- **WHEN** a render is written while the pod-boot record names an image
+- **WHEN** a render is written inside a session that names an image
 - **THEN** the render records that image and declares itself pinned
 - **AND** it records the ComfyUI, Python and PyTorch versions the endpoint reported
 
 #### Scenario: a render on an endpoint no pod-boot record names is unpinned
 - **Key:** `image-generation:runtime:an-unrecorded-endpoint-is-unpinned`
 - **Layers:** unit
-- **WHEN** a render is written with no pod-boot record
+- **WHEN** a render is written outside a session, against a `--server` the operator named
 - **THEN** the render records no image and declares itself unpinned
 
 #### Scenario: a complete batch asks the endpoint nothing

@@ -127,8 +127,8 @@ class FakeFetcher:
 # The alias every tracked flow names, and so the one a real adapter is tested on.
 READER = "joycaption-beta-one-q4k"
 
-# The reference a pinned pod boots, as `infra/up.sh` records it.
-POD_IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "d" * 64
+# The reference a render session's pod boots, as gpunit names it.
+SESSION_IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "d" * 64
 
 
 def _reader_artifacts() -> dict[str, DigestRecord]:

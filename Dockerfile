@@ -80,11 +80,17 @@ ENV AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts
 
 COPY start.sh /start.sh
 COPY tools/download_models.sh /opt/isekai/tools/download_models.sh
-COPY tools/stop_pod.sh /opt/isekai/tools/stop_pod.sh
 COPY config/models.json /opt/isekai/config/models.json
 COPY isekai/boundary/provision.py /opt/isekai/isekai/boundary/provision.py
-RUN chmod +x /start.sh /opt/isekai/tools/download_models.sh /opt/isekai/tools/stop_pod.sh
+
+# gpunit's boot script, at the tag `pyproject.toml` pins gpunit at: it arms the
+# pod's stop, serves sshd on a host key made at boot, prints its fingerprint, and
+# runs `start.sh` without the provider's key, stopping the pod when it ends.
+ADD --checksum=sha256:18742fd46a9889af6212aa76667a43a653767d53f770e0739881869a1f3b03ad \
+    https://raw.githubusercontent.com/alxb1t/gpunit/v0.2.0/boot/boot.sh /opt/gpunit/boot.sh
+RUN chmod +x /start.sh /opt/isekai/tools/download_models.sh /opt/gpunit/boot.sh
 
 EXPOSE 8188 22
 
+ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
 CMD ["/start.sh"]

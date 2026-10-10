@@ -47,7 +47,7 @@ learning** are the point.
 Local (your machine)                          RunPod
 ┌────────────────────────┐                    ┌──────────────────────────────────────┐
 │ repo: isekai           │                    │ GPU Pod (ephemeral)                  │
-│ infra/up.sh, down.sh   │ ── create pod ───▶ │  runs ghcr image directly (ComfyUI)  │
+│ isekai render, gpunit  │ ── create pod ───▶ │  runs ghcr image directly (ComfyUI)  │
 │ ssh -L 8188 (tunnel)   │ ◀── tunnel :8188   │  (host is already GPU-ready)         │
 │ python -m isekai …     │ ── API call ─────▶ │        │ mounts ▼                     │
 └────────────────────────┘                    │   ┌─────────────────────────────┐    │
@@ -55,13 +55,14 @@ Local (your machine)                          RunPod
         │                                     │   │   isekai/ ← this project    │    │
         │ ghcr.io/alxb1t/isekai (free)        │   └─────────────────────────────┘    │
         │ (RunPod pulls it as the pod)        └──────────────────────────────────────┘
-                                                     │  down.sh → remove pod; volume persists
+                                                     │  teardown → pod deleted; volume stays
 ```
 
-**Lifecycle:** `up.sh` (create pod from the image `config/image.json` pins by digest + attach volume) →
-`python -m isekai generate --flow … --server …` → `down.sh` (remove the recorded pod and every other listed
-`isekai` pod, billing stops). A pod left behind stops itself 45 minutes after it boots. Only the pod is
-ephemeral and metered.
+**Lifecycle:** `python -m isekai render <runs> <flow>=<count|source> …` assembles every prompt, opens a
+[gpunit](https://github.com/alxb1t/gpunit) session — a pod from the image `gpunit.toml` pins by digest, the
+volume attached, a tunnel checked against the pod's host key — renders each flow, and deletes the pod on every
+exit, so billing stops. A pod left behind stops itself 45 minutes after it boots. Only the pod is ephemeral and
+metered.
 
 ## Architecture
 
@@ -79,7 +80,7 @@ run.
 
 ```
    free, on your machine                     │  metered, on a rented GPU
-   ① tag · caption ② sheet  ③ review/approve │  ④ up.sh → tunnel → generate → down.sh
+   ① tag · caption ② sheet  ③ review/approve │  ④ – ⑦ render: pod → tunnel → generate → teardown
                                              ▲
                                    the line where it starts costing
 ```
@@ -137,48 +138,31 @@ python -m isekai approve --flow summon-anime-wai .inputs/me.jpg
 this pipeline. `ui` is described under *Correcting the sheets in a browser* below; when you are done
 there, stop it with Ctrl-C.
 
-### ④ Rent the GPU — this is where it starts costing
+### ④ – ⑦ Render on a rented GPU — this is where it starts costing
 
 ```sh
-./infra/up.sh
+python -m isekai render .data/runs summon-anime-wai=1
 ```
 
-It prints the SSH and tunnel commands when the pod is ready, and tears itself down if the pod never
-becomes usable. **Billing is per second and starts here.**
-
-### ⑤ Open the tunnel, in a second terminal
-
-```sh
-ssh -i ~/.ssh/id_ed25519_runpod -o UserKnownHostsFile=.runpod_known_hosts -o StrictHostKeyChecking=yes \
-  -N -L 8188:localhost:8188 root@<ip> -p <port>
-```
-
-Paste the `Tunnel:` line `up.sh` printed: it names the address and the pod's host key, which `up.sh` checked
-against the fingerprint the pod printed. Leave it running.
-
-### ⑥ Render, back in the first terminal
-
-```sh
-python -m isekai generate --flow summon-anime-wai .inputs/me.jpg --server http://127.0.0.1:8188
-```
+One verb is the whole session: it assembles every prompt of every run under the runs root, rents the pod
+(④), tunnels to it (⑤), renders each flow (⑥), and deletes the pod (⑦) on every exit — an error or a Ctrl-C
+included. **Billing is per second, from the pod's create to its deletion.** A request is `<flow>=<count>`, or
+`<flow>=<source>` to render on another flow's latest seeds; everything it says is shown and appended to
+`<runs>/../log.txt`.
 
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
 artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
-submitted, the image the pod booted and the runtime it reported. **Download anything you want to keep
-before the next step** — renders live in the pod's memory, which dies with it, and only the models volume
-persists.
+submitted, the image the session booted and the runtime it reported. Each render is downloaded as it
+finishes: the pod's memory dies with it, and only the models volume persists.
 
-Omit `--server` to assemble every prompt and stop without rendering, which is how a whole batch is
-checked before anything is rented. Assembly happens before any endpoint is acquired either way, so a
-malformed sheet costs nothing rather than a boot.
+`python -m isekai generate --flow … <photo>` without `--server` assembles every prompt and stops, which is
+how a whole batch is checked before anything is rented; `render` does it first either way, so a malformed
+sheet costs nothing rather than a boot.
 
-### ⑦ Tear the pod down
-
-```sh
-./infra/down.sh
-```
-
-**This is the step that costs money if you skip it.** The volume persists; the pod does not.
+**If a teardown fails, the pod may still bill:** `render` says so and names `uv run --env-file .env gpunit down`,
+which deletes what the session left; `--env-file` hands it the key, since gpunit's CLI reads no `.env`. A session
+refused beside a pod an earlier one left ends on the same command. The RunPod MCP confirms no `gpunit-isekai` pod is
+left.
 
 ### Afterwards
 
@@ -209,19 +193,14 @@ uv run python -m isekai ui --runs $R --flow summon-anime-wai  $(ls $R)
 uv run python -m isekai ui --runs $R --flow conjure-anime-wai $(ls $R)
 uv run python -m isekai show --runs $R $P
 
-# ④ – ⑦ metered: one pod renders both flows
-./infra/up.sh
-# second terminal: the tunnel command up.sh printed
-uv run python -m isekai generate --runs $R --flow conjure-anime-wai --count 2 $P --server http://127.0.0.1:8188
-uv run python -m isekai generate --runs $R --flow summon-anime-wai  --count 1 $P --server http://127.0.0.1:8188
-./infra/down.sh
+# ④ – ⑦ metered: one pod renders both flows, and is deleted on every exit
+uv run python -m isekai render $R conjure-anime-wai=2 summon-anime-wai=1
 ```
 
 - **`ui` takes run ids, not photographs.** It reviews work that already exists, and `$(ls $R)` is every
   run this batch made — which is why the batch has a runs root of its own. `--flow` is given exactly
   once, so each flow is its own page: approve every sheet, stop it with Ctrl-C, run the next.
-- **`generate` runs once per flow here** only because the counts differ: `--count` applies to every
-  flow named in one call. With one count, name both flows in one call.
+- **`render` takes a count per flow**, and renders every run under `$R`.
 - **`show` takes no `--flow`**: it reports every flow a run holds.
 
 ### The batch, run by an agent
@@ -235,13 +214,8 @@ the source or the runs ([0035 design D1](openspec/changes/archive/0035-the-flow-
 - **`compare-renders`** is its last step alone: `uv run python -m isekai compare .data/<batch>` writes
   `.data/<batch>/compare.html` and prints only its path.
 
-④ – ⑦ are one script, **`bash infra/render.sh <runs> <flow>=<count|source> …`**: it assembles every prompt before
-renting, runs `up.sh`, opens the tunnel, waits at most 300 s for ComfyUI, renders each flow, and tears the pod
-down on every exit — an error or a Ctrl-C included. The RunPod MCP still confirms the pod is gone.
-
-```sh
-bash infra/render.sh .data/batch/runs conjure-anime-wai=2 summon-anime-wai=1
-```
+The skill renders with the same verb, `uv run python -m isekai render`, and the RunPod MCP still confirms no
+`gpunit-isekai` pod is left.
 
 ### Correcting the sheets in a browser
 
@@ -291,7 +265,7 @@ reaches a model or a GPU** — its scope is stage ③ alone.
   `--count` or `--seed`. A flow whose approval is a copy made from another approval than the one those
   renders came from is refused before any boot.
 - `--in-step-with FLOW` — refuse a flow whose approval is a copy of an older approval than that flow's latest, and
-  render nothing; `render.sh` runs it before the pod for a source it renders first in the same session.
+  render nothing; `render` runs it before the pod for a source it renders first in the same session.
 - `--from FLOW` — on `approve`: copy that flow's latest approval under each `--flow`, recording the source;
   a copy already of the source's latest writes nothing, and any other approval is copied over under the next
   number.
@@ -307,10 +281,10 @@ reaches a model or a GPU** — its scope is stage ③ alone.
 **Prerequisites:**
 
 1. A **RunPod account** with an API key and a small prepaid balance.
-2. A **network volume**, in the same datacenter you configure — required before `up.sh` works.
-3. An SSH key registered with RunPod.
+2. A **network volume**, named by `gpunit.toml`'s `volume`; gpunit creates each pod in its data centre.
 
-Then `cp .env.example .env` and fill it in; it is gitignored and holds every secret.
+Then `cp .env.example .env` and fill in the API key; it is gitignored and holds every secret. gpunit makes
+each session's SSH key itself, under the gitignored `.gpunit/`.
 
 **The Python side is one command and takes no flag:**
 
@@ -402,23 +376,19 @@ isekai/
 ├── ui/                        # the review surface: Vue 3 + Vite; dist/ and node_modules/ ignored
 │   ├── src/                   # the app; styles.css is a copy of design/, Inter vendored beside it
 │   └── design/                # the imported design handoff — read-only, never edited
-├── infra/
-│   ├── up.sh                  # create pod + attach volume, print the tunnel command
-│   ├── down.sh                # remove pod, billing stops
-│   ├── pods.sh                # list this project's pods, for up.sh and down.sh
-│   └── render.sh              # a whole render session: up, tunnel, render, down on every exit
+├── gpunit.toml                # the render session's GPU: the pinned image, cards, floors, ceiling, volume
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
-│   ├── image.json             # the pod image, pinned by digest — what up.sh boots
+│   ├── image.json             # the pod image's digest, the same gpunit.toml boots, and its build record
 │   ├── reader.json            # the reader's model and projector, by digest, per alias
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
-│   ├── stop_pod.sh            # on the pod: stop it at its ceiling and after a hold
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
+│   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
 │   └── typecheck_ui.sh        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
@@ -426,71 +396,52 @@ isekai/
 ├── image/                     # the pod's Python environment: a locked uv project, derived
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
-├── start.sh                   # baked into the image as its start command
+├── start.sh                   # baked into the image; gpunit's boot.sh runs it
 ├── .github/workflows/         # CI: the gate; the weekly drift check; the image, on request
 ├── .claude/skills/            # run-flows, compare-renders: the flows, for an agent
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```
 
-## Provisioning flow — how `up.sh` and `start.sh` fit together
+## Provisioning flow — how `isekai render`, gpunit and `start.sh` fit together
 
-The two scripts run in **different places at different times**. The common confusion is
-thinking `up.sh` downloads/runs the image — it doesn't. `up.sh` makes **API calls** and scans
-the pod's SSH host key; **RunPod's GPU host** pulls the image and runs it, and the image's baked-in **`start.sh`** is
-what boots SSH + ComfyUI *inside* the container.
+They run in **different places at different times**. `isekai render` downloads and runs nothing itself: it
+opens a gpunit session, which makes **API calls** and checks the pod's SSH host key; **RunPod's GPU host**
+pulls the image and runs it, and inside the container gpunit's `boot.sh` runs the image's **`start.sh`**.
 
 | Script | Runs **where** | Runs **when** | Does what |
 |---|---|---|---|
-| `start.sh` | **inside the container, on the pod** | every container boot (baked into the image as its start command) | arm the stop timer → authorize your key → start `sshd` → start ComfyUI; every way out stops the pod |
-| `infra/up.sh` | **on your machine** | when you want a pod | refuses beside a recorded or listed `isekai` pod, reads each card from the catalogue, reads the models volume, calls the RunPod REST API, polls, checks the pod's host key, prints the SSH + tunnel commands |
-| `infra/down.sh` | **on your machine** | when you're done | `DELETE`s the recorded pod and every other listed `isekai` pod → per-second billing stops |
+| `python -m isekai render` | **on your machine** | when you want renders | assembles every prompt, opens a gpunit session on `gpunit.toml`, waits for ComfyUI through the tunnel, renders each flow, closes the session on every exit |
+| `boot.sh` (gpunit's) | **inside the container, on the pod** | every container boot (the image's entrypoint) | arm the stop at the ceiling → authorize the session's key → start `sshd` on a host key made at boot → print its fingerprint → run `start.sh` without the API key; every way out stops the pod |
+| `start.sh` | **inside the container, on the pod** | after `boot.sh`'s steps | provision the models onto the volume → put ComfyUI's files in memory → `exec` ComfyUI |
 
 ```
 BUILD TIME (once, or when the image changes)
-  Dockerfile + start.sh  ──▶  CI builds on request  ──▶  GHCR (ghcr.io/alxb1t/isekai)
-  (start.sh is baked INTO the image as its start command)
+  Dockerfile + start.sh + gpunit's boot.sh  ──▶  CI builds on request  ──▶  GHCR
 
-PROVISION TIME (every session — this is up.sh / down.sh)
+RENDER TIME (every session — this is isekai render)
 
   YOUR MACHINE                     RUNPOD                              GHCR
   ────────────                     ──────                              ────
-  ./infra/up.sh
-    │ 0  GET /v2/pods: refuse beside a recorded or listed 'isekai' pod
-    │    GET /v2/network-volumes/{id}: refuse another data centre or too small a volume
-    │    GET /v2/catalog/gpus/{card}: skip a card under the VRAM floor
-    │ 1  POST /v2/pods ──────────▶ control plane
-    │    (image@digest, GPU type,       │ 2  place pod on a GPU host
-    │     volume, PUBLIC_KEY, port 22)  ▼
-    │    400 → next GPU type      GPU host (driver + toolkit ready)
+  python -m isekai render <runs> <flow>=<count|source> …
+    │ 0  assemble every prompt; nothing is rented yet
+    │ 1  gpunit.session(gpunit.toml): refuse beside a recorded or listed pod,
+    │    create the pod in the volume's data centre ──▶ control plane
+    │                                  │ 2  place the pod on a GPU host
     │                                  │ 3  pull image ───────────────▶ ghcr image
-    │                                  │ ◀──────────── ~14 GB ──────────┘
-    │                                  │ 4  run container → CMD = /start.sh:
-    │                                  │      • arm the stop timer (45 min)
-    │                                  │      • authorized_keys ← PUBLIC_KEY
-    │                                  │      • own host key, start sshd (:22)
-    │                                  │      • mount volume → /runpod-volume
-    │                                  │      • /opt/ComfyUI/models → /runpod-volume/isekai
+    │                                  │ 4  ENTRYPOINT boot.sh -- /start.sh:
+    │                                  │      • arm the stop (gpunit.toml's ceiling)
+    │                                  │      • own host key, start sshd (:22), print it
+    │                                  │      • /opt/ComfyUI/models → <volume>/isekai
     │                                  │      • provision from config/models.json (verified)
     │                                  │      • ComfyUI's files → /dev/shm (memory)
-    │                                  │      • run ComfyUI           (:8188)
-    │ 5  poll GET /v2/pods/{id} ──────▶│
-    │    ◀──── ssh.direct host:port ───┘
-    │ 6  read the fingerprint the pod's log printed, ssh-keyscan the pod,
-    │    keep the key in .runpod_known_hosts only if the two match
+    │                                  │      • exec ComfyUI           (:8188)
+    │ 5  check the host key against the printed fingerprint, open the tunnel
+    │ 6  wait for /system_stats, then generate each flow through 127.0.0.1:8188
     ▼
-  prints:  ssh ...   and   ssh -N -L 8188:localhost:8188 ...   (both strict, against that file)
-
-USE IT
-  ssh -L 8188:localhost:8188 ...    opens a private tunnel to the pod, checked against its key
-  python -m isekai generate --flow summon-anime-wai photo.jpg --server http://127.0.0.1:8188
-                       ──▶ localhost:8188 ──tunnel──▶ ComfyUI ──▶ GPU ──▶ anime.png
-
-TEAR DOWN
-  ./infra/down.sh  ──▶  DELETE /v2/pods/{id}, for the recorded pod and every
-                        other listed 'isekai' pod  ──▶  billing stops
+  every exit: the session deletes the pod and every listed pod of the project ──▶ billing stops
+  the pod itself: the stop fires at the ceiling, or when start.sh ends ──▶ pod stops
                                                    (volume + GHCR image persist)
-  the pod itself   ──▶  stop timer fires at 45 min, or the boot ends  ──▶  pod stops
 ```
 
 ## Cost

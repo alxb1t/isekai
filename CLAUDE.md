@@ -230,10 +230,9 @@ they decide.**
 ## Guardrails (invariants — hold for every role)
 
 - **Never commit a secret, or a *real* absolute path from the machine the run is on** — the RunPod API key,
-  the volume id, **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
-  artefact or a tool's output into tracked prose. `.runpod_pod_id` is gitignored for that reason, and
-  `.runpod_pod_image`, the image `up.sh` booted, beside it; no pod id is in `CHANGELOG.md`, and this rule
-  keeps it so.
+  **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
+  artefact or a tool's output into tracked prose. `.gpunit/`, where gpunit keeps a session's pod id and
+  keys, is gitignored for that reason; no pod id is in `CHANGELOG.md`, and this rule keeps it so.
   `.env` is gitignored and holds all of it; `.env.example` declares shape only. A path a fixture
   *constructs* is not the target of this rule; a rendered one, carrying a real username, is.
 - **Deps minimal + human-gated.** The declared list is short and every entry is on the path of a verb
@@ -247,18 +246,18 @@ they decide.**
   from memory.
 - **Some phases spend real money**, and the active change's `tasks.md` marks them (⚠️ GPU). The protocol
   names four things, because a rule that leaves any of them implicit is not a rule:
-  1. **Who creates the pod** — `infra/up.sh`, and nothing else; `infra/render.sh` runs it for a whole
-     render session. Announce before you run either.
-  2. **Who tears it down** — `infra/down.sh`, which `render.sh`'s trap runs on every exit once a pod is
-     recorded or a create was lost, and which leaves no `isekai` pod; the pod also stops itself 45 minutes
-     after it starts. **Teardown is the act**: it is
-     the call that stops the billing, and it belongs to the same session that created the pod.
-  3. **Who confirms** — the RunPod MCP, by checking the pod is gone. **Confirmation is not the act.** A
-     rule that only names the check has not said what stops the billing, and an unconfirmed teardown is
-     not one you may report as done. Record what the MCP returned. When the MCP confirms gone a pod
-     whose `down.sh` did not answer 204, delete `.runpod_pod_id`, `.runpod_pod_image`,
-     `.runpod_known_hosts` and `.runpod_pod_pending`: a leftover image record would lend its pin to a
-     later render.
+  1. **Who creates the pod** — `uv run python -m isekai render`, through gpunit, and nothing else. Announce
+     before you run it.
+  2. **Who tears it down** — the same `isekai render`: its gpunit session deletes the pod on every exit and
+     leaves no `gpunit-isekai` pod listed; the pod also stops itself 45 minutes after it starts. When the
+     session reports a failed teardown, `uv run --env-file .env gpunit down` is the act — gpunit reads no
+     `.env`. **Teardown is the act**: it is the call that stops the billing, and it belongs to the same
+     session that created the pod.
+  3. **Who confirms** — the RunPod MCP, by checking no `gpunit-isekai` pod is left. **Confirmation is not
+     the act.** A rule that only names the check has not said what stops the billing, and an unconfirmed
+     teardown is not one you may report as done. Record what the MCP returned. When the MCP confirms gone a
+     pod whose `gpunit down` did not delete it, delete `.gpunit/pod` and `.gpunit/pending`: gpunit keeps
+     its record until the pod is confirmed gone, and refuses the next session beside it.
   4. **What happens when the MCP is unreachable** — it must be authorized from an *interactive* session,
      so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
      unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.

@@ -1,6 +1,6 @@
 [project]
 name = "isekai"
-version = "0.34.2"
+version = "0.35.0"
 requires-python = ">=3.12"
 # **What running a flow needs, declared rather than optional.** This list was
 # empty until v0.22.3, held by the `-S` guard in `tests/test_pipeline_cli.py`,
@@ -35,6 +35,7 @@ requires-python = ">=3.12"
 #   Pillow      -- open, composite onto white, pad to a square, resize.
 #   fastapi     -- the review surface's server, bound to 127.0.0.1.
 #   uvicorn     -- what runs it.
+#   gpunit      -- `isekai render`'s GPU session, pinned by its tag.
 #
 # `fastapi[standard]` is deliberately not used: it would pull a much wider tree --
 # an HTTP client, a CLI, email validation, templating -- for one loopback server
@@ -45,6 +46,7 @@ dependencies = [
     "Pillow==12.3.0",
     "fastapi==0.141.1",
     "uvicorn==0.53.0",
+    "gpunit @ git+https://github.com/alxb1t/gpunit@v0.2.0",
 ]
 
 # Test and gate tooling only, and NOT runtime: `uv sync --locked` installs this

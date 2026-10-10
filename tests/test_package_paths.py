@@ -25,7 +25,6 @@ import pytest
 from evaluation import eval_models
 from isekai.boundary import provision
 from isekai.foundation import flow, run
-from isekai.interface import wiring
 from isekai.shared import field_map, vocabulary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -53,7 +52,6 @@ ANCHORS = (
         ("config", "reader.json"),
         id="provision.READER_MANIFEST_PATH",
     ),
-    pytest.param(wiring.POD_IMAGE, (".runpod_pod_image",), id="wiring.POD_IMAGE"),
     pytest.param(
         eval_models.EVAL_MANIFEST_PATH,
         ("evaluation", "eval_models.json"),

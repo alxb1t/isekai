@@ -163,7 +163,7 @@ def test_a_line_past_120_characters_is_caught(tmp_path: Path) -> None:
 
 # The trees whose comments carry no history. `ui/` and `evaluation/` keep theirs
 # until the work that reshapes each rewrites it.
-_COMMENT_TREES = ("isekai", "tools", "infra", "tests", "start.sh", "Dockerfile")
+_COMMENT_TREES = ("isekai", "tools", "tests", "start.sh", "Dockerfile")
 _DEFINITIONS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
 

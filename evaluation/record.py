@@ -17,7 +17,7 @@ def runs_in(directory: Path) -> list[Run]:
     if not directory.is_dir():
         raise Refusal(
             f"{directory} is not a directory; give the batch's runs directory, the "
-            "one `infra/render.sh` rendered into"
+            "one `python -m isekai render` rendered into"
         )
     return [
         Run(frame.parent.name, frame.parent)
