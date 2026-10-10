@@ -73,7 +73,8 @@ parse ─▶ order ─▶ pre-pod pass (assemble, sources) ─▶ busy port 8188
 ```
 
 `TeardownFailed` exits `1` with a refusal naming `uv run --env-file .env gpunit down`, since gpunit's CLI reads
-no `.env`. Refusals are `refused: …` lines.
+no `.env`; `Lost`'s names it beside `gpunit status`, and a gpunit refusal that names a bare `gpunit down` is followed
+by a note naming the same command. Refusals are `refused: …` lines; the note is not one.
 
 ### D2
 

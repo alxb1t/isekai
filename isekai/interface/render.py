@@ -304,7 +304,8 @@ def _rendered(
     except Lost:
         print(
             "refused: the provider's answer was lost; "
-            "`uv run --env-file .env gpunit status` shows what is left",
+            "`uv run --env-file .env gpunit status` shows what is left, "
+            "and `uv run --env-file .env gpunit down` deletes it",
             file=wired.err,
         )
         return LOST_EXIT
@@ -315,6 +316,14 @@ def _rendered(
             file=wired.err,
         )
         return 1
-    except Refused:
-        # gpunit has written its own `refused:` line through `say`.
+    except Refused as refused:
+        # gpunit has written its own `refused:` line through `say`. Where it names a
+        # bare `gpunit down`, the line after it is one that loads the key; a note,
+        # not a second refusal.
+        if "gpunit down" in str(refused):
+            print(
+                "gpunit reads no .env, where the key lives: "
+                "run `uv run --env-file .env gpunit down`",
+                file=wired.err,
+            )
         return 1

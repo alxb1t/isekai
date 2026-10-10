@@ -160,8 +160,9 @@ how a whole batch is checked before anything is rented; `render` does it first e
 sheet costs nothing rather than a boot.
 
 **If a teardown fails, the pod may still bill:** `render` says so and names `uv run --env-file .env gpunit down`,
-which deletes what the session left; `--env-file` hands it the key, since gpunit's CLI reads no `.env`. The RunPod
-MCP confirms no `gpunit-isekai` pod is left.
+which deletes what the session left; `--env-file` hands it the key, since gpunit's CLI reads no `.env`. A session
+refused beside a pod an earlier one left ends on the same command. The RunPod MCP confirms no `gpunit-isekai` pod is
+left.
 
 ### Afterwards
 

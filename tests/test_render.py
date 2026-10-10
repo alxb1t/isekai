@@ -540,9 +540,40 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
     # gpunit reads no .env, and the key lives only there: each remedy loads it.
     assert session(runs, f"{FLOW}=1", opener=raising(gpunit.Lost())) == 3
     assert "`uv run --env-file .env gpunit status` shows" in log(runs)
+    assert "`uv run --env-file .env gpunit down` deletes it" in log(runs)
     failed = gpunit.TeardownFailed("the teardown failed")
     assert session(runs, f"{FLOW}=1", opener=raising(failed)) == 1
     assert "run `uv run --env-file .env gpunit down`" in log(runs)
+
+
+@pytest.mark.spec_exempt("structural: gpunit's outcomes become the verb's exit")
+def test_a_refusal_beside_a_listed_pod_ends_on_a_gpunit_down_that_loads_the_key(
+    tmp_path: Path,
+) -> None:
+    def refusing(text: str) -> gpu.OpenSession:
+        @contextmanager
+        def block(
+            cwd: Path, environ: Mapping[str, str], say: Callable[[str], None]
+        ) -> Iterator[FakeSession]:
+            # What gpunit's `log.refuse` does through the sink it was handed.
+            say(f"2026-10-10T12:00:00Z refused: {text}")
+            raise gpunit.Refused(text)
+            yield FakeSession()
+
+        return block
+
+    listed = "a gpunit-isekai pod already exists: abc (RUNNING); run gpunit down"
+    runs = batch(tmp_path / "listed")
+    assert session(runs, f"{FLOW}=1", opener=refusing(listed)) == 1
+    lines = log(runs).splitlines()
+    assert lines[-1].endswith("run `uv run --env-file .env gpunit down`")
+    # A note, not a second refusal: the run-flows skill counts `refused:` lines.
+    assert sum("refused:" in line for line in lines) == 1
+
+    other = "no card in 'gpus' meets vram_gb and max_hourly"
+    runs = batch(tmp_path / "other")
+    assert session(runs, f"{FLOW}=1", opener=refusing(other)) == 1
+    assert "gpunit down" not in log(runs)
 
 
 @pytest.mark.spec_exempt("structural: one port, declared in gpunit.toml and here")
