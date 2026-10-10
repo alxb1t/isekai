@@ -4,7 +4,7 @@
 third-party package at module scope (D20).
 """
 
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Mapping
 from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any
@@ -22,11 +22,8 @@ def read_env(path: Path) -> dict[str, str]:
     """
     if not path.is_file():
         return {}
-    return dict(_pairs(path.read_text(encoding="utf-8").splitlines()))
-
-
-def _pairs(lines: list[str]) -> Iterator[tuple[str, str]]:
-    for line in lines:
+    pairs = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
         text = line.strip()
         if not text or text.startswith("#") or "=" not in text:
             continue
@@ -34,7 +31,8 @@ def _pairs(lines: list[str]) -> Iterator[tuple[str, str]]:
         value = value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
             value = value[1:-1]
-        yield key.strip(), value
+        pairs[key.strip()] = value
+    return pairs
 
 
 def open_session(

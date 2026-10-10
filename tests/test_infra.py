@@ -14,6 +14,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from gpunit.spec import parse_ceiling
 
 from isekai.boundary.provision import (
     MANIFEST_PATH,
@@ -26,7 +27,7 @@ from isekai.boundary.provision import (
 )
 from isekai.foundation.flow import Workflow
 from tools.derive_image_project import CLONE, pinned_commits, uv_required
-from tools.image_record import record
+from tools.image_record import COPY, record
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -429,8 +430,7 @@ def image_copies(dockerfile: str) -> dict[str, str]:
 
     e.g. `COPY start.sh /start.sh` -> {"/start.sh": "start.sh"}
     """
-    found = re.findall(r"^COPY\s+(?!--)(\S+)\s+(\S+)\s*$", dockerfile, re.M)
-    return {dest: source for source, dest in found}
+    return {dest: source for source, dest in COPY.findall(dockerfile)}
 
 
 def missing_copy_sources(dockerfile: str) -> list[str]:
@@ -993,6 +993,12 @@ def gpunit_tag(pyproject: str) -> str | None:
     return pinned[1] if pinned else None
 
 
+def boots_the_boot_script(dockerfile: str) -> bool:
+    """Return whether the image's one entrypoint is gpunit's boot script, then `--`."""
+    entry = [ln for ln in dockerfile.splitlines() if ln.startswith("ENTRYPOINT")]
+    return entry == [f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]']
+
+
 def boot_script_faults(dockerfile: str, pyproject: str) -> list[str]:
     """Return how the image's entrypoint departs from gpunit's boot script at its pin.
 
@@ -1008,8 +1014,7 @@ def boot_script_faults(dockerfile: str, pyproject: str) -> list[str]:
     faults = []
     if tag is None or not any(added.match(ln) for ln in lines):
         faults.append("the boot script is not added at gpunit's pin with a checksum")
-    entry = [ln for ln in lines if ln.startswith("ENTRYPOINT")]
-    if entry != [f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]']:
+    if not boots_the_boot_script(dockerfile):
         faults.append("the entrypoint is not the boot script followed by --")
     return faults
 
@@ -1560,13 +1565,13 @@ def unarmed_stop(spec: dict[str, object], dockerfile: str) -> list[str]:
     ["a ceiling within the session's", "gpunit's boot script as the entrypoint"]
     """
     faults = []
-    ceiling = re.fullmatch(r"([1-9][0-9]*)([smh])", str(spec.get("ceiling", "")))
-    unit = {"s": 1, "m": 60, "h": 3600}
-    seconds = int(ceiling[1]) * unit[ceiling[2]] if ceiling else 0
+    try:
+        seconds = parse_ceiling(str(spec.get("ceiling", "")))
+    except ValueError:
+        seconds = 0
     if not 0 < seconds <= SESSION_CEILING_SECONDS:
         faults.append("a ceiling within the session's")
-    entry = [ln for ln in dockerfile.splitlines() if ln.startswith("ENTRYPOINT")]
-    if entry != [f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]']:
+    if not boots_the_boot_script(dockerfile):
         faults.append("gpunit's boot script as the entrypoint")
     return faults
 

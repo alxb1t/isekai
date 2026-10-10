@@ -19,12 +19,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # A `COPY` from the build context: one source, one destination, no `--from`.
-COPY = re.compile(r"^COPY\s+(?!--)(\S+)\s+\S+\s*$", re.M)
+COPY = re.compile(r"^COPY\s+(?!--)(\S+)\s+(\S+)\s*$", re.M)
 
 
 def copied(dockerfile: str) -> list[str]:
     """Return each source a `COPY` takes from the build context, in order."""
-    return COPY.findall(dockerfile)
+    return [source for source, _ in COPY.findall(dockerfile)]
 
 
 def record(root: Path = ROOT) -> dict[str, str]:

@@ -27,7 +27,8 @@ from typing import TextIO
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REPOSITORY
+from isekai.foundation.run import FRAME_NAME, REPOSITORY
+from isekai.interface.compare_view import BATCH_PHOTOS
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.generate import read_runtime
 
@@ -90,28 +91,23 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
     against the source's latest approval instead; one placed before its source
     could never be, and is refused.
     """
+    counted = {r.flow: i for i, r in enumerate(requests) if r.by_count}
     deferred = []
     for i, request in enumerate(requests):
-        late = False
-        for j, source in enumerate(requests):
-            if request.by_count or source.flow != request.value:
-                continue
-            if not source.by_count:
-                continue
-            if j > i:
-                raise Refusal(
-                    f"'{request}' comes before its source '{source}'; "
-                    "put the source first"
-                )
-            late = True
-        deferred.append(late)
+        j = None if request.by_count else counted.get(request.value)
+        if j is not None and j > i:
+            raise Refusal(
+                f"'{request}' comes before its source '{requests[j]}'; "
+                "put the source first"
+            )
+        deferred.append(j is not None)
     return deferred
 
 
 def run_ids(runs: Path) -> list[str]:
     """Return every run under `runs`, by id."""
     return sorted(
-        child.name for child in runs.iterdir() if (child / "run.json").is_file()
+        child.name for child in runs.iterdir() if (child / FRAME_NAME).is_file()
     )
 
 
@@ -164,19 +160,26 @@ def await_endpoint(
             time.sleep(poll_s)
 
 
+@dataclass(frozen=True)
+class Seams:
+    """What a session reaches the outside world through; a test replaces any of them."""
+
+    open_session: gpu.OpenSession = gpu.open_session
+    # `None` reads this process's environment and the repository's `.env`.
+    environ: Mapping[str, str] | None = None
+    connect: Callable[[str], ComfyTransport] = ComfyClient
+    busy: Callable[[int], bool] = answers
+    kill: Callable[[], None] = terminate
+    ceiling_s: float = CEILING_S
+    wait_s: float = WAIT_S
+    poll_s: float = POLL_S
+
+
 def run_session(
     args: argparse.Namespace,
     wired: Wiring,
     generate: Generate,
-    *,
-    open_session: gpu.OpenSession = gpu.open_session,
-    environ: Mapping[str, str] | None = None,
-    connect: Callable[[str], ComfyTransport] = ComfyClient,
-    busy: Callable[[int], bool] = answers,
-    kill: Callable[[], None] = terminate,
-    ceiling_s: float = CEILING_S,
-    wait_s: float = WAIT_S,
-    poll_s: float = POLL_S,
+    seams: Seams = Seams(),
 ) -> int:
     """Run one render session and return its exit status.
 
@@ -195,51 +198,25 @@ def run_session(
             wired, out=_Tee(wired.out, log), err=_Tee(wired.err, log)
         )
         try:
-            return _session(
-                runs,
-                list(args.requests),
-                logged,
-                generate,
-                open_session=open_session,
-                environ=environ
-                if environ is not None
-                else os.environ | gpu.read_env(REPOSITORY / ".env"),
-                connect=connect,
-                busy=busy,
-                kill=kill,
-                ceiling_s=ceiling_s,
-                wait_s=wait_s,
-                poll_s=poll_s,
-            )
+            return _session(runs, list(args.requests), logged, generate, seams)
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
             return 1
 
 
 def _session(
-    runs: Path,
-    texts: list[str],
-    wired: Wiring,
-    generate: Generate,
-    *,
-    open_session: gpu.OpenSession,
-    environ: Mapping[str, str],
-    connect: Callable[[str], ComfyTransport],
-    busy: Callable[[int], bool],
-    kill: Callable[[], None],
-    ceiling_s: float,
-    wait_s: float,
-    poll_s: float,
+    runs: Path, texts: list[str], wired: Wiring, generate: Generate, seams: Seams
 ) -> int:
     requests = [parse_request(text) for text in texts]
     deferred = in_session_sources(requests)
     ids = run_ids(runs)
     flows = [arg for request in requests for arg in ("--flow", request.flow)]
     if not ids:
+        photos = shlex.quote(str(runs.parent / BATCH_PHOTOS))
         raise Refusal(
             f"{runs} holds no run; open them from the batch's photographs with: "
-            f"uv run python -m isekai tag {' '.join(flows)} --runs {runs} "
-            f"{runs.parent}/photos/*"
+            f"uv run python -m isekai tag {' '.join(flows)} --runs "
+            f"{shlex.quote(str(runs))} {photos}/*"
         )
     where = ["--runs", str(runs), *ids]
 
@@ -256,7 +233,7 @@ def _session(
         if generate(argv, free) != 0:
             return 1
 
-    if busy(PORT):
+    if seams.busy(PORT):
         raise Refusal(
             f"127.0.0.1:{PORT} already answers, and would be rendered against; "
             f"lsof -iTCP:{PORT} -sTCP:LISTEN shows what holds it"
@@ -267,29 +244,19 @@ def _session(
 
     def ceiling() -> None:
         print(
-            f"refused: the session reached its {ceiling_s:g}s ceiling; renders so "
-            f"far are kept, and in a new session `{again} {rest}` renders only "
+            f"refused: the session reached its {seams.ceiling_s:g}s ceiling; renders "
+            f"so far are kept, and in a new session `{again} {rest}` renders only "
             "the rest",
             file=wired.err,
         )
-        kill()
+        seams.kill()
 
     # Started before the session opens, so it counts from before the pod (D36).
-    watchdog = threading.Timer(ceiling_s, ceiling)
+    watchdog = threading.Timer(seams.ceiling_s, ceiling)
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(
-            requests,
-            where,
-            wired,
-            generate,
-            open_session=open_session,
-            environ=environ,
-            connect=connect,
-            wait_s=wait_s,
-            poll_s=poll_s,
-        )
+        return _rendered(requests, where, wired, generate, seams)
     finally:
         watchdog.cancel()
 
@@ -299,12 +266,7 @@ def _rendered(
     where: list[str],
     wired: Wiring,
     generate: Generate,
-    *,
-    open_session: gpu.OpenSession,
-    environ: Mapping[str, str],
-    connect: Callable[[str], ComfyTransport],
-    wait_s: float,
-    poll_s: float,
+    seams: Seams,
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
@@ -312,10 +274,13 @@ def _rendered(
         print(line, file=wired.err)
 
     try:
-        with open_session(REPOSITORY, environ, say) as session:
+        environ = seams.environ
+        if environ is None:
+            environ = os.environ | gpu.read_env(REPOSITORY / ".env")
+        with seams.open_session(REPOSITORY, environ, say) as session:
             server = f"http://127.0.0.1:{session.port(PORT)}"
-            client = connect(server)
-            await_endpoint(client, server, wait_s, poll_s)
+            client = seams.connect(server)
+            await_endpoint(client, server, seams.wait_s, seams.poll_s)
             live = dataclasses.replace(wired, client=client, image=session.image)
             # One flow failing does not cost the next its render; the exit says so.
             failed = False

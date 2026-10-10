@@ -6,6 +6,7 @@ record is the point, which runs the real `generate` on a fake transport.
 """
 
 import argparse
+import dataclasses
 import http.server
 import io
 import json
@@ -26,7 +27,7 @@ from isekai.foundation.artifacts import RENDER_FILE, read
 from isekai.foundation.flow import Schema
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
-from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.cli import _dispatch_argv, build_parser
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.review import approve, review
@@ -62,12 +63,10 @@ class FakeOpen:
     opened: int = 0
     closed: int = 0
     ended: BaseException | None = None
-    cwd: Path | None = None
 
     def __call__(
         self, cwd: Path, environ: Mapping[str, str], say: Callable[[str], None]
     ) -> AbstractContextManager[FakeSession]:
-        self.cwd = cwd
         return self._block()
 
     @contextmanager
@@ -131,26 +130,20 @@ def session(
     opener: gpu.OpenSession | None = None,
     client: ComfyTransport | None = None,
     wiring: Wiring | None = None,
-    connect: Callable[[str], ComfyTransport] | None = None,
-    environ: Mapping[str, str] | None = None,
-    busy: Callable[[int], bool] = lambda port: False,
-    kill: Callable[[], None] = lambda: None,
-    ceiling_s: float = render.CEILING_S,
-    wait_s: float = render.WAIT_S,
-    poll_s: float = render.POLL_S,
+    **seams: Any,  # noqa: ANN401 -- `render.Seams`'s fields, by name
 ) -> int:
+    defaults = render.Seams(
+        open_session=opener or FakeOpen(),
+        environ={},
+        connect=lambda server: client or FakeComfyClient(),
+        busy=lambda port: False,
+        kill=lambda: None,
+    )
     return render.run_session(
         argparse.Namespace(runs=runs, requests=list(requests)),
         wiring or wired(runs),
         generate if generate is not None else Calls(),
-        open_session=opener or FakeOpen(),
-        environ=environ or {},
-        connect=connect or (lambda server: client or FakeComfyClient()),
-        busy=busy,
-        kill=kill,
-        ceiling_s=ceiling_s,
-        wait_s=wait_s,
-        poll_s=poll_s,
+        dataclasses.replace(defaults, **seams),
     )
 
 
@@ -336,8 +329,8 @@ def test_the_watchdog_signals_nothing_once_its_session_has_ended(
     runs = batch(tmp_path)
     fired = threading.Event()
 
-    assert session(runs, f"{FLOW}=1", kill=fired.set, ceiling_s=0.2) == 0
-    assert not fired.wait(0.5)
+    assert session(runs, f"{FLOW}=1", kill=fired.set, ceiling_s=0.05) == 0
+    assert not fired.wait(0.15)
     assert "ceiling" not in log(runs)
 
 
@@ -350,11 +343,11 @@ def test_the_watchdog_signals_nothing_after_a_refused_session(tmp_path: Path) ->
     )
 
     status = session(
-        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, ceiling_s=0.2
+        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, ceiling_s=0.05
     )
 
     assert status == 1
-    assert not fired.wait(0.5)
+    assert not fired.wait(0.15)
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-the-session")
@@ -445,10 +438,7 @@ def test_each_render_records_the_image_the_session_names(
         err=io.StringIO(),
     )
 
-    def generate(argv: list[str], wired: Wiring) -> int:
-        return dispatch(build_parser().parse_args(argv), wired)
-
-    status = session(root, f"{FLOW}=1", generate=generate, wiring=wiring)
+    status = session(root, f"{FLOW}=1", generate=_dispatch_argv, wiring=wiring)
 
     assert status == 0, log(root)
     for run in runs:
@@ -557,6 +547,12 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
 def test_the_port_the_verb_reads_is_the_one_gpunit_toml_forwards() -> None:
     spec = tomllib.loads((REPOSITORY / "gpunit.toml").read_text())
     assert spec["ports"] == [render.PORT]
+
+
+@pytest.mark.spec_exempt("structural: one ceiling, declared in gpunit.toml and here")
+def test_the_watchdog_fires_a_minute_before_the_pods_own_stop() -> None:
+    spec = gpunit.load_spec(REPOSITORY / "gpunit.toml")
+    assert render.CEILING_S == spec.ceiling_s - 60
 
 
 @pytest.mark.spec_exempt("structural: the .env reader gpunit's environ is built from")

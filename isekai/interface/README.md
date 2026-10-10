@@ -35,7 +35,7 @@ at least once; a list of names cannot.
 | `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/batch.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
 | `render.py` | `cli.py` | `tests/test_render.py` |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py`, `tests/test_run_view.py` |
-| `compare_view.py` | `cli.py` | `tests/test_compare.py` |
+| `compare_view.py` | `cli.py`, `render.py` | `tests/test_compare.py` |
 | `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py` |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
