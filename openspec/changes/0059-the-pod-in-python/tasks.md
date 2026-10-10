@@ -11,7 +11,7 @@
 - [x] 4 — The browser check, and no bash left
 - [x] 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
 - [x] 6 — fetch tries again
-- [ ] 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session
+- [x] 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session
 
 ## 1 — fetch
 
@@ -70,7 +70,7 @@
 
 ## 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session
 
-- [ ] 7.1 **HUMAN · METERED** — push `v0.35.1_the_pod_in_python`; dispatch `build-image.yml` on it with tag `v0.35.1-rc3`; check its printed files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D8](design.md#d8) and [D9](design.md#d9).
+- [x] 7.1 **HUMAN · METERED** — push `v0.35.1_the_pod_in_python`; dispatch `build-image.yml` on it with tag `v0.35.1-rc3`; check its printed files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D8](design.md#d8) and [D9](design.md#d9).
   Verify: `grep -c '"tag": "v0.35.1-rc3"' config/image.json` prints `1`.
-- [ ] 7.2 **HUMAN · METERED** — run `uv run python -m isekai render` on a small batch; while it is open, read the pod over `uv run gpunit ssh` and the saved PNG as [D8](design.md#d8) lists, and write the readings to `.minions/0059_pod_proof_rc3.txt`, one a line; confirm through the RunPod MCP that no `gpunit-isekai` pod is left.
+- [x] 7.2 **HUMAN · METERED** — run `uv run python -m isekai render` on a small batch; while it is open, read the pod over `uv run gpunit ssh` and the saved PNG as [D8](design.md#d8) lists, and write the readings to `.minions/0059_pod_proof_rc3.txt`, one a line; confirm through the RunPod MCP that no `gpunit-isekai` pod is left.
   Verify: `grep -c -E 'tmpfs|--disable-metadata|TMPDIR=/dev/shm/comfyui/tmp|no text chunk' .minions/0059_pod_proof_rc3.txt` prints `4`, and `uv run gpunit status` prints `no session is recorded`.

@@ -21,6 +21,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   tracked (0059 D5).
 - The pod image is re-pinned to `v0.35.1-rc2`, `sha256:e6e91242…19cd0c6`; one `isekai render` session rendered
   both flows on it, the pod read showed memory-only ComfyUI with no metadata, and no pod was left (0059 D8).
+- The pod image is re-pinned to `v0.35.1-rc3`, `sha256:0f0a8e82…dbcf88ff`, carrying `fetch`'s retry; one
+  `isekai render` session rendered both flows on it, the pod read as on rc2, and no pod was left (0059 D8, D9).
 
 ### Removed
 
