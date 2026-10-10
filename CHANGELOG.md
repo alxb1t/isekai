@@ -19,7 +19,7 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   read; D35 names the host's swap, and the pins guide rebuilds before it re-records (0059 D1, D3, D7).
 - The gate's browser typecheck is `tools/typecheck_ui.py`, its refusals unchanged and under test; no bash is
   tracked (0059 D5).
-- The pod image is re-pinned to `v0.35.1-rc1`, `sha256:ca3b2351…780bab5`; one `isekai render` session rendered
+- The pod image is re-pinned to `v0.35.1-rc2`, `sha256:e6e91242…19cd0c6`; one `isekai render` session rendered
   both flows on it, the pod read showed memory-only ComfyUI with no metadata, and no pod was left (0059 D8).
 
 ### Removed
