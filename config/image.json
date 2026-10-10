@@ -1,7 +1,7 @@
 {
   "image": "ghcr.io/alxb1t/isekai",
-  "tag": "v0.35-rc1",
-  "digest": "sha256:85f4c1c73cdda4d67601192c93311a539fb1ada1aa26c4a1de2f42aa34ac441f",
+  "tag": "v0.35.1-rc1",
+  "digest": "sha256:ca3b2351889aed61d5c28f2310911913c11e041a969a405e40b014862780bab5",
   "files": {
     "Dockerfile": "3fa700b3799293657b585d179a800f8484ea57f17c6141d794eadd891a3ec7b4",
     "image/pyproject.toml": "a4cd426861f9e21f487af74e7df2c8d809683c86642f672e0f243d5fabafba45",
