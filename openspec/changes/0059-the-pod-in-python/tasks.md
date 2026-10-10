@@ -8,7 +8,7 @@
 - [x] 1 — fetch
 - [x] 2 — The start module
 - [x] 3 — The image on Python
-- [ ] 4 — The browser check, and no bash left
+- [x] 4 — The browser check, and no bash left
 - [ ] 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
 
 ## 1 — fetch
@@ -41,11 +41,11 @@
 
 ## 4 — The browser check, and no bash left
 
-- [ ] 4.1 Write `tools/typecheck_ui.py` per [D5](design.md#d5), with a test of each refusal; run it from `Makefile`'s `gate`; delete `tools/typecheck_ui.sh`; name it in `README.md`.
+- [x] 4.1 Write `tools/typecheck_ui.py` per [D5](design.md#d5), with a test of each refusal; run it from `Makefile`'s `gate`; delete `tools/typecheck_ui.sh`; name it in `README.md`.
   Verify: `make -n gate | grep -c 'uv run python -m tools.typecheck_ui'` prints `1`, and `grep -c 'typecheck_ui.sh' README.md Makefile | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
-- [ ] 4.2 Name `isekai render` in `tests/test_docs.py`'s docstring example (`0058·R2`), and drop the change citation from `.github/workflows/build-image.yml`'s header comment (`0058·R8`), per [D7](design.md#d7).
+- [x] 4.2 Name `isekai render` in `tests/test_docs.py`'s docstring example (`0058·R2`), and drop the change citation from `.github/workflows/build-image.yml`'s header comment (`0058·R8`), per [D7](design.md#d7).
   Verify: `grep -c 'up.sh' tests/test_docs.py` prints `0`, and `grep -c -E '00[0-9]{2} design' .github/workflows/build-image.yml` prints `0`.
-- [ ] 4.3 Confirm no bash is tracked.
+- [x] 4.3 Confirm no bash is tracked.
   Verify: `git ls-files '*.sh' | wc -l | tr -d ' '` prints `0`.
 
 ## 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session

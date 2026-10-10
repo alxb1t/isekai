@@ -336,7 +336,7 @@ make gate
 `make -n gate` prints its commands; the root `Makefile` declares them, and CI
 (`.github/workflows/ci.yml`) runs `make gate` too.
 
-Its browser half, `tools/typecheck_ui.sh`, runs `vue-tsc --noEmit` over `ui/` and needs
+Its browser half, `tools/typecheck_ui.py`, runs `vue-tsc --noEmit` over `ui/` and needs
 `ui/node_modules/`. It is **not** restored for you — run `npm install` in `ui/` once, as the
 review surface already asks.
 
@@ -389,7 +389,7 @@ isekai/
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
-│   └── typecheck_ui.sh        # the gate's browser half
+│   └── typecheck_ui.py        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── Makefile                   # `make gate`; `make derive` and `make drift` re-run the derivers

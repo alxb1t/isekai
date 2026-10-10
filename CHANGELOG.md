@@ -17,11 +17,14 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   memory checks, then ComfyUI — and also holds on an unread `/dev/shm` type and reports swap (0059 D1, D2, D4, D6).
 - The image runs `pod_start.py` beside `provision.py`, without `wget`; the build record refuses a `COPY` it cannot
   read; D35 names the host's swap, and the pins guide rebuilds before it re-records (0059 D1, D3, D7).
+- The gate's browser typecheck is `tools/typecheck_ui.py`, its refusals unchanged and under test; no bash is
+  tracked (0059 D5).
 
 ### Removed
 
 - `start.sh`, `tools/download_models.sh`, `provision.py`'s `plan` and `land` verbs and the tests that read the
   scripts' text: `tests/test_pod_start.py` and `fetch`'s tests hold the same keys by behaviour (0059 D3, D6).
+- `tools/typecheck_ui.sh`: `tools/typecheck_ui.py` replaces it (0059 D5).
 
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 

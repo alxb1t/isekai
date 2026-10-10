@@ -14,7 +14,7 @@ gate:
 	uv run ty check
 # strict types, in the browser: `vue-tsc --noEmit` over `ui/`, wrapped so a
 # missing `ui/node_modules/` refuses by name rather than exiting 127
-	bash tools/typecheck_ui.sh
+	uv run python -m tools.typecheck_ui
 # tests
 	uv run pytest
 
