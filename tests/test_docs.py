@@ -33,7 +33,6 @@ ROOT_FILES = frozenset(
         "Dockerfile",
         "Makefile",
         "gpunit.toml",
-        "start.sh",
         "pyproject.toml",
         "uv.lock",
         "CHANGELOG.md",

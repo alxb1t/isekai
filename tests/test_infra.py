@@ -6,28 +6,24 @@ check is a second thing to rename and a silent divergence waiting to happen.
 """
 
 import json
-import os
 import re
-import shlex
-import subprocess
 import tomllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 from gpunit.spec import parse_ceiling
 
+from isekai.boundary.pod_start import PROVISION
 from isekai.boundary.provision import (
     MANIFEST_PATH,
-    MODELS_NAMESPACE,
     MODELS_ROOT,
-    VOLUME_MOUNT,
     Manifest,
     annotator_files,
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
 from tools.derive_image_project import CLONE, pinned_commits, uv_required
-from tools.image_record import COPY, record
+from tools.image_record import COPY, copied, record
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -95,118 +91,6 @@ def test_the_annotator_checkpoints_are_the_two_the_preprocessors_fetch(
     }
 
 
-@pytest.fixture(scope="session")
-def start_sh() -> str:
-    """Read the shipped `start.sh` once for the whole session."""
-    return (REPO / "start.sh").read_text()
-
-
-@pytest.mark.spec(
-    "model-provisioning:namespace:annotator-checkpoints-resolve-onto-the-models-tree"
-)
-def test_the_pod_symlinks_the_models_directory_onto_this_project_namespace(
-    start_sh: str,
-) -> None:
-    assert MODELS_NAMESPACE.startswith(f"{VOLUME_MOUNT}/")
-    assert MODELS_NAMESPACE != VOLUME_MOUNT
-    assert 'ln -s "$MODELS_NAMESPACE" "$MODELS_ROOT"' in start_sh
-    project = MODELS_NAMESPACE.removeprefix(VOLUME_MOUNT)
-    assert f'MODELS_NAMESPACE="${{GPUNIT_VOLUME_PATH:-}}{project}"' in start_sh
-    assert f"MODELS_ROOT={MODELS_ROOT}" in start_sh
-
-
-@pytest.mark.spec_exempt(
-    "structural: nothing in this project reaches outside its own namespace"
-)
-def test_the_pod_startup_touches_nothing_outside_the_project_namespace(
-    start_sh: str,
-) -> None:
-    # The volume's path is read to name the namespace and to refuse an unset one.
-    reaches_out = [
-        line.strip()
-        for line in start_sh.splitlines()
-        if not line.lstrip().startswith("#")
-        and (re.search(r"\$\{?GPUNIT_VOLUME_PATH", line) or VOLUME_MOUNT in line)
-        and not line.startswith("MODELS_NAMESPACE=")
-        and '[ -z "${GPUNIT_VOLUME_PATH:-}" ]' not in line
-    ]
-    assert reaches_out == []
-
-
-@pytest.fixture(scope="session")
-def download_models_sh() -> str:
-    """Read the shipped `tools/download_models.sh` once for the whole session."""
-    return (REPO / "tools" / "download_models.sh").read_text()
-
-
-@pytest.mark.spec(
-    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
-)
-def test_the_driver_walks_every_source_the_plan_carries(
-    download_models_sh: str,
-) -> None:
-    assert "read -r -a fields" in download_models_sh
-    assert 'urls=("${fields[@]:2}")' in download_models_sh
-    assert 'for url in "${urls[@]}"' in download_models_sh
-    # the word split is gone, and so is the suppression that made it legal
-    assert "SC2086" not in download_models_sh
-    assert "for url in $urls" not in download_models_sh
-
-
-@pytest.mark.spec(
-    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
-)
-def test_the_driver_aborts_only_once_every_source_is_exhausted(
-    download_models_sh: str,
-) -> None:
-    lines = [line.strip() for line in download_models_sh.splitlines()]
-    # a transfer failure and a verification failure each continue the walk ...
-    assert lines.count("continue") == 2
-    # ... and the only abort on the fetch path is the one after the loop.
-    assert "ERROR: every source for $target failed" in download_models_sh
-    assert "landed=0" in download_models_sh
-
-
-def hold_calls(script: str) -> list[int]:
-    """Return the index of each line that calls `hold`."""
-    return [
-        i
-        for i, ln in enumerate(script.splitlines())
-        if ln.lstrip().startswith('hold "')
-    ]
-
-
-@pytest.mark.spec(
-    "model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open"
-)
-def test_a_provisioning_failure_does_not_take_the_container_down(
-    start_sh: str,
-) -> None:
-    provisioning = [
-        line for line in start_sh.splitlines() if "download_models.sh" in line
-    ]
-    assert len(provisioning) == 1
-    # It returns rather than exits, and the step it belongs to is itself guarded,
-    # so `set -e` cannot terminate the shell that owns sshd.
-    assert provisioning[0].rstrip().endswith("|| return 1")
-    assert "if ! provision; then" in start_sh
-    assert hold_calls(boot_step(start_sh, "provisioning"))
-
-
-@pytest.mark.spec(
-    "model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open"
-)
-def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
-    start_sh: str,
-) -> None:
-    lines = start_sh.splitlines()
-    hold = hold_calls(start_sh)[0]
-    serve = next(i for i, line in enumerate(lines) if "python main.py" in line)
-    assert hold < serve
-    # nothing on the volume is removed on the failure path
-    assert "rm " not in "\n".join(lines[hold - 6 : serve])
-
-
 # The pod entrypoint's provisioning step, and the two halves of the volume guard.
 #
 # These are text checks over the shipped shell, for the same reason the checks
@@ -217,130 +101,6 @@ def test_the_hold_replaces_the_inference_server_rather_than_preceding_it(
 
 # The repository's per-session spending ceiling, in seconds at the halt.
 SESSION_CEILING_SECONDS = 45 * 60
-
-
-def shell_function(script: str, name: str) -> str:
-    """Return the definition of `name` as the script writes it, or "" if absent.
-
-    e.g. `g` in a script holding `g() { :; }` -> "g() { :; }"
-    """
-    lines = script.splitlines()
-    start = next(
-        (i for i, ln in enumerate(lines) if ln.startswith(f"{name}() {{")), None
-    )
-    if start is None:
-        return ""
-    if lines[start].rstrip().endswith("}"):
-        return lines[start]
-    end = next(i for i in range(start, len(lines)) if lines[i] == "}")
-    return "\n".join(lines[start : end + 1])
-
-
-def provision_body(start_sh: str) -> str:
-    """Return the body of `start.sh`'s `provision` function.
-
-    The scenario is about provisioning as a whole rather than about one of its
-    steps, so what the test needs is which lines are *inside* the guarded unit.
-    """
-    return shell_function(start_sh, "provision")
-
-
-@pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
-def test_preparing_the_namespace_is_inside_the_guarded_provisioning_step(
-    start_sh: str,
-) -> None:
-    body = provision_body(start_sh)
-    # every step of preparing the namespace, and the fetch, in one unit ...
-    assert 'mkdir -p "$MODELS_NAMESPACE"' in body
-    assert 'ln -s "$MODELS_NAMESPACE" "$MODELS_ROOT"' in body
-    assert "download_models.sh" in body
-    # ... and no step of it can exit the shell that owns sshd.
-    assert "exit " not in body
-
-
-@pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
-def test_the_whole_provisioning_step_is_guarded_exactly_once(start_sh: str) -> None:
-    calls = [
-        line.strip()
-        for line in start_sh.splitlines()
-        if line.strip().startswith(("provision", "if ! provision"))
-        and not line.startswith("provision()")
-    ]
-    assert calls == ["if ! provision; then"]
-
-
-@pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
-def test_deleting_a_non_empty_mounted_models_tree_is_refused(start_sh: str) -> None:
-    body = provision_body(start_sh)
-    guard = next(line for line in body.splitlines() if "mountpoint -q" in line)
-    # the premise of the delete: the image's own tree on container disk. A
-    # non-empty mount here is somebody's real models tree.
-    assert 'mountpoint -q "$MODELS_ROOT"' in guard
-    assert 'ls -A "$MODELS_ROOT"' in guard
-    delete = next(i for i, line in enumerate(body.splitlines()) if "rm -rf" in line)
-    assert body.splitlines().index(guard) < delete
-
-
-@pytest.mark.spec("model-provisioning:reachability:the-hold-is-bounded-and-marked")
-def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
-    start_sh: str,
-) -> None:
-    bound = re.search(r"^HOLD_SECONDS=(\d+)$", start_sh, re.M)
-    assert bound is not None
-    assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
-    hold = shell_function(start_sh, "hold")
-    assert 'sleep "$HOLD_SECONDS"' in hold
-    # a hold that returns leaves the pod billing; its exit is the boot script's stop
-    assert hold.removesuffix("}").rstrip().endswith("exit 1")
-    # an indefinite hold bills until a human notices it
-    assert "tail -f /dev/null" not in start_sh
-
-
-@pytest.mark.spec("model-provisioning:reachability:the-hold-is-bounded-and-marked")
-def test_the_failure_marker_is_written_off_the_volume(start_sh: str) -> None:
-    marker = re.search(r"^FAILURE_MARKER=(\S+)$", start_sh, re.M)
-    assert marker is not None
-    # the volume is exactly the thing that may have failed
-    assert not marker.group(1).startswith(f"{VOLUME_MOUNT}/")
-    assert '> "$FAILURE_MARKER"' in start_sh
-
-
-@pytest.mark.spec(
-    "model-provisioning:reachability:provisioning-requires-the-network-volume"
-)
-def test_the_entrypoint_refuses_before_preparing_the_namespace(start_sh: str) -> None:
-    body = provision_body(start_sh).splitlines()
-    named = next(i for i, line in enumerate(body) if 'GPUNIT_VOLUME_ID:-}" ]' in line)
-    floor = next(i for i, line in enumerate(body) if "VOLUME_SIZE_FLOOR_KIB" in line)
-    prepares = next(
-        i for i, line in enumerate(body) if 'mkdir -p "$MODELS_NAMESPACE"' in line
-    )
-    assert named < prepares
-    assert floor < prepares
-    # a capacity floor, not `mountpoint`: RunPod mounts the pod's own volume
-    # disk at the same path when no network volume is attached, so the path is a
-    # mountpoint either way.
-    assert "df -k --output=size" in "\n".join(body)
-
-
-@pytest.mark.spec(
-    "model-provisioning:reachability:provisioning-requires-the-network-volume"
-)
-def test_the_volume_guard_measures_capacity_rather_than_fill_level(
-    start_sh: str,
-) -> None:
-    # What the guard proves is identity -- the 20 GB ephemeral container disk is
-    # not the network volume -- and capacity discriminates those two whatever the
-    # volume's fill level is. Free space does not: this project already put
-    # the models on a volume it shares with a second project, so a floor on
-    # availability degrades as the volume fills and would refuse a warm boot that
-    # needed to download nothing.
-    body = provision_body(start_sh)
-    assert "--output=avail" not in body
-    floor = re.search(r"^VOLUME_SIZE_FLOOR_KIB=", start_sh, re.M)
-    assert floor is not None
-    # and the message says what is measured
-    assert "free" not in body.lower()
 
 
 @pytest.mark.spec_exempt(
@@ -387,38 +147,6 @@ def test_the_count_catches_a_clone_with_a_flag_and_another_host(
         pinned_commits(pinned + unpinned)
 
 
-@pytest.mark.spec(
-    "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
-)
-def test_the_driver_joins_no_path_of_its_own(download_models_sh: str) -> None:
-    assert 'target="${MODELS_DIR}/${dest}"' not in download_models_sh
-    assert 'target="${fields[1]:-}"' in download_models_sh
-
-
-@pytest.mark.spec(
-    "model-provisioning:reachability:provisioning-requires-the-network-volume"
-)
-def test_the_capacity_floor_clears_the_container_disk_as_well(
-    start_sh: str, gpunit_spec: dict[str, object]
-) -> None:
-    # The one case this pod-side guard still exists for is the one the laptop
-    # cannot see: the id is set and the mount silently failed, so the volume's path
-    # resolves to the container overlay rather than to the volume (D27).
-    # That overlay's backing disk is the container `disk`, LARGER than the
-    # pod's own volume disk, so a floor that only clears the volume disk lets the
-    # overlay through and the models land on storage that dies at teardown.
-    floor = re.search(
-        r"^VOLUME_SIZE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)", start_sh, re.M
-    )
-    assert floor is not None
-    container_disk = gpunit_spec.get("disk_gb")
-    assert isinstance(container_disk, int)
-    # RunPod states those sizes in decimal GB, and decimal is the reading that
-    # makes the disk look BIGGEST in KiB, so it is the one the floor must clear.
-    largest_container_kib = container_disk * 1000**3 // 1024
-    assert int(floor.group(1)) * 1024 * 1024 > largest_container_kib
-
-
 # The image mirrors the repository's layout, and no boot proves a rebuilt image
 # before a pod uses it, so these hold its paths statically.
 
@@ -428,7 +156,7 @@ IMAGE_ROOT = "/opt/isekai"
 def image_copies(dockerfile: str) -> dict[str, str]:
     """Return each destination a `COPY` from the build context names, to its source.
 
-    e.g. `COPY start.sh /start.sh` -> {"/start.sh": "start.sh"}
+    e.g. `COPY config/models.json /m.json` -> {"/m.json": "config/models.json"}
     """
     return {dest: source for source, dest in COPY.findall(dockerfile)}
 
@@ -440,14 +168,6 @@ def missing_copy_sources(dockerfile: str) -> list[str]:
         for source in image_copies(dockerfile).values()
         if not (REPO / source).is_file()
     ]
-
-
-def uncopied_provisioner(dockerfile: str, start_sh: str) -> str | None:
-    """Return the provisioner the entrypoint runs, or None if the image copies it."""
-    found = re.search(rf"bash ({IMAGE_ROOT}/\S+/download_models\.sh)", start_sh)
-    assert found is not None
-    called = found.group(1)
-    return None if called in image_copies(dockerfile) else called
 
 
 def manifest_in_image() -> str:
@@ -463,26 +183,39 @@ def test_every_file_the_image_copies_exists(dockerfile: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_every_file_the_image_copies_exists")
 def test_the_check_catches_a_copy_of_a_file_that_is_gone() -> None:
-    broken = "FROM scratch\nCOPY start.sh /start.sh\nCOPY gone/models.json /x\n"
+    broken = "FROM scratch\nCOPY Dockerfile /d\nCOPY gone/models.json /x\n"
     assert missing_copy_sources(broken) == ["gone/models.json"]
 
 
-@pytest.mark.spec_exempt("structural: the entrypoint runs a script the image holds")
-def test_the_entrypoint_runs_the_provisioner_the_image_copies(
-    dockerfile: str, start_sh: str
-) -> None:
-    assert uncopied_provisioner(dockerfile, start_sh) is None
+def uncopied_command(dockerfile: str) -> list[str]:
+    """Return each file the image's command runs that the image does not copy.
+
+    The start runs `provision.py` from its own directory, so both land there.
+    e.g. `CMD ["python", "/o/s.py"]`, nothing copied -> ["/o/s.py", "/o/provision.py"]
+    """
+    command = re.search(r'^CMD \["python", "(\S+)"\]$', dockerfile, re.M)
+    if command is None:
+        return ["the command is not python running one file"]
+    start = PurePosixPath(command[1])
+    wanted = [str(start), str(start.parent / PROVISION.name)]
+    return [path for path in wanted if path not in image_copies(dockerfile)]
+
+
+@pytest.mark.spec_exempt("structural: the command runs files the image holds")
+def test_the_command_runs_the_start_the_image_copies(dockerfile: str) -> None:
+    assert uncopied_command(dockerfile) == []
 
 
 @pytest.mark.spec_exempt(
-    "structural: twin of test_the_entrypoint_runs_the_provisioner_the_image_copies"
+    "structural: twin of test_the_command_runs_the_start_the_image_copies"
 )
-def test_the_check_catches_an_entrypoint_calling_a_path_not_copied() -> None:
-    broken = f"COPY x/download_models.sh {IMAGE_ROOT}/x/download_models.sh\n"
-    start_sh = f"bash {IMAGE_ROOT}/y/download_models.sh || return 1\n"
-    assert (
-        uncopied_provisioner(broken, start_sh) == f"{IMAGE_ROOT}/y/download_models.sh"
-    )
+def test_the_check_catches_a_command_running_a_file_not_copied() -> None:
+    start = f"{IMAGE_ROOT}/isekai/boundary/pod_start.py"
+    alone = f'COPY a.py {start}\nCMD ["python", "{start}"]\n'
+    assert uncopied_command(alone) == [f"{IMAGE_ROOT}/isekai/boundary/provision.py"]
+    assert uncopied_command('CMD ["/serve.sh"]\n') == [
+        "the command is not python running one file"
+    ]
 
 
 @pytest.mark.spec_exempt(
@@ -545,7 +278,7 @@ def test_the_check_catches_a_workflow_that_builds_on_a_push() -> None:
 def record_faults(config: dict[str, object], derived: dict[str, str]) -> list[str]:
     """Return each file whose recorded SHA-256 is not the tree's, by path.
 
-    e.g. `start.sh` edited after the record -> ["start.sh"]
+    e.g. `config/models.json` edited after the record -> ["config/models.json"]
     """
     files = config.get("files")
     if not isinstance(files, dict):
@@ -557,7 +290,7 @@ def record_faults(config: dict[str, object], derived: dict[str, str]) -> list[st
 @pytest.mark.spec("pod-image:build:the-record-matches-the-tree")
 def test_the_build_record_agrees_with_the_tree() -> None:
     derived = record()
-    assert {"Dockerfile", "start.sh"} <= set(derived)
+    assert {"Dockerfile", "isekai/boundary/pod_start.py"} <= set(derived)
     assert record_faults(json.loads(IMAGE_CONFIG.read_text()), derived) == []
 
 
@@ -577,6 +310,24 @@ def test_the_record_check_catches_a_file_edited_after_the_record(
     (tmp_path / "b.sh").write_text("")
     assert record_faults(config, record(tmp_path)) == ["Dockerfile", "a.sh", "b.sh"]
     assert record_faults({}, record(tmp_path)) == ["config/image.json records no files"]
+
+
+@pytest.mark.spec("pod-image:build:the-record-matches-the-tree")
+@pytest.mark.parametrize(
+    "line",
+    ["COPY --chmod=755 a.py /a.py", "COPY a.py b.py /opt/", "COPY a.py \\"],
+)
+def test_the_record_refuses_a_copy_it_cannot_read(line: str) -> None:
+    with pytest.raises(ValueError, match=re.escape(repr(line))):
+        copied(f"FROM x\nCOPY ok.py /ok.py\n{line}\n")
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_record_refuses_a_copy_it_cannot_read"
+)
+def test_the_record_reads_a_plain_copy_and_skips_a_copy_from_an_image() -> None:
+    dockerfile = "FROM x\nCOPY --from=img@sha256:0 /uv /uvx /bin/\nCOPY a.py /a.py\n"
+    assert copied(dockerfile) == ["a.py"]
 
 
 def unprinted_record(workflow: str) -> list[str]:
@@ -873,43 +624,6 @@ def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
     assert uncovered_sdists(lock, no_cython) == ["insightface: cython"]
 
 
-# The line each step of `start.sh` begins with: provisioning, the download inside
-# it, the memory directories, and ComfyUI.
-BOOT_STEPS = (
-    "if ! provision; then",
-    'MODELS_DIR="$MODELS_ROOT" bash',
-    "mkdir -p /dev/shm/comfyui/input",
-    "exec python main.py",
-)
-
-
-def unstamped_steps(start_sh: str) -> list[str]:
-    """Return each boot step whose line is not preceded by a UTC timestamp."""
-    lines = [line.strip() for line in start_sh.splitlines()]
-    unstamped = []
-    for step in BOOT_STEPS:
-        at = next(i for i, line in enumerate(lines) if line.startswith(step))
-        if "date -u" not in lines[at - 1]:
-            unstamped.append(step)
-    return unstamped
-
-
-@pytest.mark.spec("pod-image:boot:each-step-is-timestamped")
-def test_each_boot_step_prints_a_utc_time_before_it_begins(start_sh: str) -> None:
-    assert unstamped_steps(start_sh) == []
-
-
-@pytest.mark.spec_exempt(
-    "structural: twin of test_each_boot_step_prints_a_utc_time_before_it_begins"
-)
-def test_the_check_catches_a_step_with_no_timestamp() -> None:
-    stamped = "\n".join(f'echo "$(date -u +%FT%TZ)"\n{step}' for step in BOOT_STEPS)
-    assert unstamped_steps(stamped) == []
-    assert unstamped_steps(
-        stamped.replace('echo "$(date -u +%FT%TZ)"\nexec python', "exec python")
-    ) == ["exec python main.py"]
-
-
 # The pod's own host key, and ComfyUI's writing kept in memory: text checks over
 # the shipped files, proved on a pod.
 
@@ -973,14 +687,6 @@ def test_the_check_catches_a_host_key_kept_or_made_again() -> None:
         ]
 
 
-def boot_step(start_sh: str, name: str) -> str:
-    """Return the `start.sh` step `name` opens, from its timestamp to its blank line."""
-    lines = start_sh.splitlines()
-    opens = next(i for i, line in enumerate(lines) if line.endswith(f'step: {name}"'))
-    closes = next(i for i, line in enumerate(lines[opens:], opens) if not line)
-    return "\n".join(lines[opens:closes])
-
-
 BOOT_SCRIPT = "/opt/gpunit/boot.sh"
 BOOT_SOURCE = "https://raw.githubusercontent.com/alxb1t/gpunit/{tag}/boot/boot.sh"
 
@@ -1002,7 +708,7 @@ def boots_the_boot_script(dockerfile: str) -> bool:
 def boot_script_faults(dockerfile: str, pyproject: str) -> list[str]:
     """Return how the image's entrypoint departs from gpunit's boot script at its pin.
 
-    e.g. a build file holding `CMD ["/start.sh"]` alone ->
+    e.g. a build file holding `CMD ["python", "serve.py"]` alone ->
     ["the boot script is not added ...", "the entrypoint is not ..."]
     """
     lines = [ln for ln in joined_lines(dockerfile) if not ln.lstrip().startswith("#")]
@@ -1043,260 +749,10 @@ def test_the_check_catches_a_boot_script_at_another_tag_or_unchecked() -> None:
         assert boot_script_faults(broken, pyproject) == [
             "the boot script is not added at gpunit's pin with a checksum"
         ]
-    assert boot_script_faults('CMD ["/start.sh"]\n', pyproject) == [
+    assert boot_script_faults('CMD ["python", "serve.py"]\n', pyproject) == [
         "the boot script is not added at gpunit's pin with a checksum",
         "the entrypoint is not the boot script followed by --",
     ]
-
-
-def serve_command(start_sh: str) -> str:
-    """Return the line that starts ComfyUI, its continuation lines joined into one."""
-    return next(
-        line
-        for line in joined_lines(start_sh)
-        if line.startswith("exec python main.py")
-    )
-
-
-def comfyui_directories(start_sh: str) -> dict[str, str]:
-    """Return each directory ComfyUI writes to, by kind, as its start line sets it.
-
-    e.g. `--temp-directory /dev/shm/comfyui` -> {"temp": "/dev/shm/comfyui/temp"}
-    """
-    found = dict(
-        re.findall(
-            r"--(input|output|temp|user)-directory (\S+)", serve_command(start_sh)
-        )
-    )
-    # ComfyUI writes its temp files to `temp` under the directory it is given.
-    if "temp" in found:
-        found["temp"] += "/temp"
-    return found
-
-
-def before_serve(start_sh: str) -> str:
-    """Return the start script up to the line that starts ComfyUI."""
-    return start_sh[: start_sh.index("python main.py")]
-
-
-def made_directories(start_sh: str) -> set[str]:
-    """Return each directory a `mkdir -p` makes before ComfyUI starts."""
-    return {
-        path
-        for line in before_serve(start_sh).splitlines()
-        if line.startswith("mkdir -p ")
-        for path in line.split()[2:]
-    }
-
-
-def unmade_directories(start_sh: str) -> list[str]:
-    """Return each directory ComfyUI writes to that no `mkdir -p` makes before it."""
-    made = made_directories(start_sh)
-    return sorted(set(comfyui_directories(start_sh).values()) - made)
-
-
-@pytest.mark.spec("pod-image:memory:comfyui-writes-to-memory")
-def test_comfyui_writes_to_memory(start_sh: str) -> None:
-    directories = comfyui_directories(start_sh)
-    assert sorted(directories) == ["input", "output", "temp", "user"]
-    assert all(path.startswith("/dev/shm/") for path in directories.values())
-    assert unmade_directories(start_sh) == []
-
-
-@pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_to_memory")
-def test_the_check_catches_a_directory_on_disk_or_not_made() -> None:
-    assert comfyui_directories("exec python main.py --port 8188\n") == {}
-    unmade = (
-        "mkdir -p /dev/shm/comfyui/input\n"
-        "exec python main.py --input-directory /dev/shm/comfyui/input \\\n"
-        "    --temp-directory /dev/shm/comfyui\n"
-    )
-    assert unmade_directories(unmade) == ["/dev/shm/comfyui/temp"]
-
-
-def memory_hold_faults(start_sh: str) -> list[str]:
-    """Return what the memory step lacks of a hold on too little free memory."""
-    step = boot_step(start_sh, "the memory directories")
-    faults = []
-    measured = re.search(r"df -k --output=(\S+) /dev/shm", step)
-    if measured is None:
-        faults.append("does not measure /dev/shm")
-    else:
-        columns = measured.group(1).split(",")
-        free = columns.index("avail") + 1 if "avail" in columns else 0
-        if f"free_kib=\"$(awk '{{print ${free}}}'" not in step:
-            faults.append("reads other than the free column")
-    if not re.search(
-        r'^if \[ "\$free_kib" -lt "\$SHM_FREE_FLOOR_KIB" \]; then$', step, re.M
-    ):
-        faults.append("compares against no floor")
-    if any(int(guess) for guess in re.findall(r"\bfree_kib=(\d+)", step)):
-        faults.append("defaults an unreadable figure to free memory")
-    if not re.search(r'SHM_FREE_FLOOR_KIB" \]; then\n\s*hold "ERROR: ', step):
-        faults.append("does not say why and hold")
-    return faults
-
-
-@pytest.mark.spec("pod-image:memory:too-little-memory-holds")
-def test_too_little_memory_holds_the_pod(start_sh: str) -> None:
-    floor = re.search(
-        r"^SHM_FREE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)$", start_sh, re.M
-    )
-    assert floor is not None
-    assert int(floor.group(1)) >= 1
-    assert memory_hold_faults(start_sh) == []
-    step = boot_step(start_sh, "the memory directories")
-    assert start_sh.index(step) < start_sh.index("python main.py")
-
-
-@pytest.mark.spec_exempt("structural: twin of test_too_little_memory_holds_the_pod")
-def test_the_check_catches_a_memory_step_that_never_holds() -> None:
-    holds = (
-        'echo "$(date -u +%FT%TZ) step: the memory directories"\n'
-        "mkdir -p /dev/shm/comfyui/input\n"
-        "shm_kib=\"$(df -k --output=size,avail /dev/shm | tail -n 1)\" || shm_kib=''\n"
-        'free_kib="$(awk \'{print $2}\' <<<"$shm_kib")"\n'
-        'case "$free_kib" in\n'
-        "    '' | *[!0-9]*) free_kib=0 ;;\n"
-        "esac\n"
-        'if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then\n'
-        '    hold "ERROR: too little"\n'
-        "fi\n\n"
-    )
-    assert memory_hold_faults(holds) == []
-    silent = holds.replace('    hold "ERROR: too little"\n', "    true\n")
-    assert memory_hold_faults(silent) == ["does not say why and hold"]
-    for inverted in ('[ "$free_kib" -ge', '! [ "$free_kib" -lt'):
-        assert memory_hold_faults(holds.replace('[ "$free_kib" -lt', inverted)) == [
-            "compares against no floor"
-        ]
-    size_column = holds.replace("{print $2}", "{print $1}")
-    assert memory_hold_faults(size_column) == ["reads other than the free column"]
-    guessed = holds.replace("free_kib=0 ;;", "free_kib=99999999 ;;")
-    assert memory_hold_faults(guessed) == [
-        "defaults an unreadable figure to free memory"
-    ]
-
-
-def spool_faults(start_sh: str) -> list[str]:
-    """Return what the start script lacks of a `TMPDIR` made in memory for ComfyUI."""
-    exported = re.search(r"^export TMPDIR=(\S+)$", before_serve(start_sh), re.M)
-    if exported is None:
-        return ["sets no TMPDIR"]
-    faults = []
-    if not exported.group(1).startswith("/dev/shm/"):
-        faults.append("spools outside /dev/shm")
-    if exported.group(1) not in made_directories(start_sh):
-        faults.append("spools to a directory not made")
-    return faults
-
-
-@pytest.mark.spec("pod-image:memory:uploads-spool-to-memory")
-def test_comfyui_spools_uploads_to_memory(start_sh: str) -> None:
-    assert spool_faults(start_sh) == []
-
-
-@pytest.mark.spec_exempt("structural: twin of test_comfyui_spools_uploads_to_memory")
-def test_the_check_catches_an_upload_spooled_to_disk() -> None:
-    made = "mkdir -p /dev/shm/comfyui/tmp\n"
-    serve = "python main.py\n"
-    assert spool_faults(made + serve) == ["sets no TMPDIR"]
-    assert spool_faults(made + serve + "export TMPDIR=/dev/shm/comfyui/tmp\n") == [
-        "sets no TMPDIR"
-    ]
-    assert spool_faults(made + "export TMPDIR=/tmp\n" + serve) == [
-        "spools outside /dev/shm",
-        "spools to a directory not made",
-    ]
-
-
-def run_memory_step(
-    step: str, tmp_path: Path, shm_type: str | None, df_row: str
-) -> subprocess.CompletedProcess[str]:
-    """Run the memory step on a `/dev/shm` of `shm_type` whose `df` row is `df_row`.
-
-    None is a `stat` that fails. A hold prints `held`; a start prints `started`.
-    """
-    hold = 'hold() { printf "%s\\n" "$@" >&2; echo held; exit 0; }'
-    stat = f"echo {shlex.quote(shm_type)}" if shm_type is not None else "return 1"
-    program = "\n".join(
-        [
-            "set -euo pipefail",
-            "HOLD_SECONDS=900 SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))",
-            "mkdir() { :; }",
-            f"stat() {{ {stat}; }}",
-            f"df() {{ printf '%s\\n' '1K-blocks Avail' {shlex.quote(df_row)}; }}",
-            hold,
-            step,
-            "echo started",
-        ]
-    )
-    return subprocess.run(
-        ["bash", "-c", program],
-        env={"PATH": os.environ["PATH"]},
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-
-
-ROOMY = "8388608 8388608"
-
-
-@pytest.mark.spec("pod-image:memory:a-disk-backed-shm-holds")
-def test_a_shm_that_is_not_memory_holds_the_pod(start_sh: str, tmp_path: Path) -> None:
-    step = boot_step(start_sh, "the memory directories")
-    assert run_memory_step(step, tmp_path, "tmpfs", ROOMY).stdout.endswith("started\n")
-    for shm_type in ("ext2/ext3", "overlayfs"):
-        done = run_memory_step(step, tmp_path, shm_type, ROOMY)
-        assert done.stdout.endswith("held\n")
-        assert shm_type in done.stderr
-    assert run_memory_step(step, tmp_path, None, ROOMY).stdout.endswith("held\n")
-
-
-@pytest.mark.spec_exempt(
-    "structural: twin of test_a_shm_that_is_not_memory_holds_the_pod"
-)
-def test_the_check_catches_a_shm_never_typed(start_sh: str, tmp_path: Path) -> None:
-    step = boot_step(start_sh, "the memory directories")
-    untyped = re.sub(r'\nif \[ "\$shm_type".*?\nfi', "", step, flags=re.S)
-    assert untyped != step
-    done = run_memory_step(untyped, tmp_path, "ext2/ext3", ROOMY)
-    assert done.stdout.endswith("started\n")
-
-
-@pytest.mark.spec("pod-image:memory:an-unread-figure-holds")
-def test_an_unread_figure_holds_the_pod(start_sh: str, tmp_path: Path) -> None:
-    step = boot_step(start_sh, "the memory directories")
-    for row in ("", "- -", "8388608 n/a"):
-        done = run_memory_step(step, tmp_path, "tmpfs", row)
-        assert done.stdout.endswith("held\n")
-        assert "could not read /dev/shm's free space" in done.stderr
-
-
-@pytest.mark.spec_exempt("structural: twin of test_an_unread_figure_holds_the_pod")
-def test_the_check_catches_an_unread_figure_taken_as_zero(
-    start_sh: str, tmp_path: Path
-) -> None:
-    # Held, but by the floor, saying the pod has too little memory: a guess.
-    step = boot_step(start_sh, "the memory directories")
-    guessed = re.sub(r"(\*\[!0-9\]\*\)).*?;;", r"\1 free_kib=0 ;;", step, flags=re.S)
-    assert guessed != step
-    done = run_memory_step(guessed, tmp_path, "tmpfs", "- -")
-    assert done.stdout.endswith("held\n")
-    assert "could not read /dev/shm's free space" not in done.stderr
-
-
-@pytest.mark.spec("pod-image:render-metadata:none-is-written")
-def test_comfyui_writes_no_metadata(start_sh: str) -> None:
-    assert "--disable-metadata" in serve_command(start_sh).split()
-
-
-@pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_no_metadata")
-def test_the_check_catches_the_flag_outside_the_start_line() -> None:
-    elsewhere = "# --disable-metadata\nexec python main.py --port 8188\n"
-    assert "--disable-metadata" not in serve_command(elsewhere).split()
 
 
 WORKFLOWS = sorted((REPO / ".github" / "workflows").glob("*.yml"))
@@ -1467,44 +923,6 @@ def test_the_spec_telemetry_check_catches_a_switch_in_env() -> None:
     assert telemetry_set_in_spec(spec) == ["DO_NOT_TRACK"]
 
 
-# Helpers that run pieces of the start script in strict bash.
-
-
-def _code(script: str) -> list[str]:
-    """Return the script's lines with comment lines blanked, so indices hold."""
-    return ["" if ln.lstrip().startswith("#") else ln for ln in script.splitlines()]
-
-
-def run_functions(
-    script: str,
-    names: tuple[str, ...],
-    stubs: str,
-    cwd: Path,
-    call: str | None = None,
-) -> subprocess.CompletedProcess[str]:
-    """Run `call`, or the last named function, in strict bash beside the stubs.
-
-    e.g. `call='f "a b"'` runs `f` with one argument.
-    """
-    program = "\n".join(
-        [
-            "set -euo pipefail",
-            stubs,
-            *(shell_function(script, n) for n in names),
-            call or names[-1],
-        ]
-    )
-    return subprocess.run(
-        ["bash", "-c", program],
-        cwd=cwd,
-        env={"PATH": os.environ["PATH"]},
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-
-
 TELEMETRY_SWITCHES = (
     "ORT_DISABLE_TELEMETRY",
     "HF_HUB_DISABLE_TELEMETRY",
@@ -1551,13 +969,6 @@ def test_the_telemetry_check_catches_a_switch_set_back(dockerfile: str) -> None:
     assert telemetry_left_on(set_back) == ["DO_NOT_TRACK"]
 
 
-def stub_command(bin_dir: Path, name: str, script: str) -> None:
-    """Write `script` as the executable `name` in `bin_dir`, found first on PATH."""
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    (bin_dir / name).write_text(script)
-    (bin_dir / name).chmod(0o755)
-
-
 def unarmed_stop(spec: dict[str, object], dockerfile: str) -> list[str]:
     """Return what the pod lacks of a stop armed at boot within the session's ceiling.
 
@@ -1585,124 +996,11 @@ def test_the_pod_arms_its_stop_first(
 
 @pytest.mark.spec_exempt("structural: twin of test_the_pod_arms_its_stop_first")
 def test_the_armed_stop_check_catches_a_long_ceiling_and_no_boot_script() -> None:
-    assert unarmed_stop({"ceiling": "1h"}, 'CMD ["/start.sh"]\n') == [
+    assert unarmed_stop({"ceiling": "1h"}, 'CMD ["python", "serve.py"]\n') == [
         "a ceiling within the session's",
         "gpunit's boot script as the entrypoint",
     ]
     assert unarmed_stop({"ceiling": "45"}, "") == [
         "a ceiling within the session's",
         "gpunit's boot script as the entrypoint",
-    ]
-
-
-def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
-    """Return how `start.sh` holds without ending in a non-zero exit.
-
-    Runs `hold` with `sleep` stubbed; each line outside it that waits out
-    `HOLD_SECONDS` is a hold that bypasses it.
-    """
-    body = shell_function(start_sh, "hold")
-    faults = [
-        f"holds outside hold(): {ln.strip()}"
-        for ln in _code(start_sh.replace(body, ""))
-        if "HOLD_SECONDS" in ln and not ln.startswith("HOLD_SECONDS=")
-    ]
-    stubs = 'HOLD_SECONDS=900\nsleep() { echo "slept $1"; }'
-    done = run_functions(
-        start_sh, ("hold",), stubs, tmp_path, call='hold "ERROR: why"; echo returned'
-    )
-    if done.stdout != "slept 900\n" or done.returncode == 0:
-        faults.append("hold() does not exit non-zero once it has waited")
-    if not done.stderr.startswith("ERROR: why\n"):
-        faults.append("hold() does not say why")
-    return faults
-
-
-@pytest.mark.spec("pod-image:stop:a-hold-ends-in-the-stop")
-def test_every_hold_ends_in_the_stop(start_sh: str, tmp_path: Path) -> None:
-    assert unstopped_holds(start_sh, tmp_path) == []
-    assert hold_calls(start_sh)
-
-
-@pytest.mark.spec_exempt("structural: twin of test_every_hold_ends_in_the_stop")
-def test_the_hold_check_catches_a_hold_that_returns(tmp_path: Path) -> None:
-    returns = (
-        "HOLD_SECONDS=900\n"
-        'hold() {\n    printf "%s\\n" "$@" >&2\n    sleep "$HOLD_SECONDS"\n}\n'
-        'if ! provision; then\n    exec sleep "$HOLD_SECONDS"\nfi\n'
-    )
-    assert unstopped_holds(returns, tmp_path) == [
-        'holds outside hold(): exec sleep "$HOLD_SECONDS"',
-        "hold() does not exit non-zero once it has waited",
-    ]
-
-
-def unstopped_ends(start_sh: str, tmp_path: Path) -> list[str]:
-    """Return each way a boot ends other than in ComfyUI's process or a failing exit.
-
-    Runs the start script's last step with ComfyUI stubbed: once for each way
-    ComfyUI can exit, and once for a step that fails before it. ComfyUI replaces
-    the script when both print one process id.
-    """
-    lines = start_sh.splitlines()
-    step = next(i for i, ln in enumerate(lines) if ln.endswith('step: ComfyUI"'))
-    tail = "\n".join(lines[step:])
-    stub_command(
-        tmp_path / "bin", "python", '#!/bin/sh\necho "ComfyUI $$"\nexit "$STATUS"\n'
-    )
-    cases = {
-        "a ComfyUI that exits": ("export STATUS=0", 0),
-        "a ComfyUI that fails": ("export STATUS=1", 1),
-        "a step that fails before ComfyUI": ("false", None),
-    }
-    faults = []
-    for case, (before, status) in cases.items():
-        program = "\n".join(
-            [
-                "set -euo pipefail",
-                f'export PATH="{tmp_path / "bin"}:$PATH"',
-                'echo "script $$"',
-                before,
-                tail,
-                "echo after",
-            ]
-        )
-        done = subprocess.run(
-            ["bash", "-c", program],
-            cwd=tmp_path,
-            env={"PATH": os.environ["PATH"]},
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        # The step's own timestamp line is not what is checked.
-        words = [ln.split() for ln in done.stdout.splitlines() if " step: " not in ln]
-        said = [word[0] for word in words]
-        pids = {word[1] for word in words if len(word) > 1}
-        if status is None:
-            ended = done.returncode != 0 and said == ["script"]
-        else:
-            replaced = said == ["script", "ComfyUI"] and len(pids) == 1
-            ended = replaced and done.returncode == status
-        if not ended:
-            faults.append(f"{case} does not end the boot")
-    return faults
-
-
-@pytest.mark.spec("pod-image:stop:a-boot-that-ends-stops-the-pod")
-def test_a_boot_that_ends_stops_the_pod(start_sh: str, tmp_path: Path) -> None:
-    assert unstopped_ends(start_sh, tmp_path) == []
-
-
-@pytest.mark.spec_exempt("structural: twin of test_a_boot_that_ends_stops_the_pod")
-def test_the_boot_end_check_catches_a_comfyui_run_as_a_child(
-    tmp_path: Path,
-) -> None:
-    child = (
-        'echo "$(date -u +%FT%TZ) step: ComfyUI"\npython main.py --port 8188 || true\n'
-    )
-    assert unstopped_ends(child, tmp_path) == [
-        "a ComfyUI that exits does not end the boot",
-        "a ComfyUI that fails does not end the boot",
     ]

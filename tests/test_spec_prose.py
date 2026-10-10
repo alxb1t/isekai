@@ -163,7 +163,7 @@ def test_a_line_past_120_characters_is_caught(tmp_path: Path) -> None:
 
 # The trees whose comments carry no history. `ui/` and `evaluation/` keep theirs
 # until the work that reshapes each rewrites it.
-_COMMENT_TREES = ("isekai", "tools", "tests", "start.sh", "Dockerfile")
+_COMMENT_TREES = ("isekai", "tools", "tests", "Dockerfile")
 _DEFINITIONS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
 
 
@@ -238,14 +238,14 @@ def test_history_in_a_comment_or_a_docstring_is_caught(
     (tmp_path / "reason.py").write_text(
         f'@pytest.mark.spec_exempt("{cited}")\ndef test() -> None: ...\n'
     )
-    (tmp_path / "start.sh").write_text(f"#!/bin/sh\n# kept, {cited}\n")
-    names = ["comment.py", "docstring.py", "reason.py", "start.sh"]
+    (tmp_path / "Dockerfile").write_text(f"FROM x\n# kept, {cited}\n")
+    names = ["comment.py", "docstring.py", "reason.py", "Dockerfile"]
 
     assert comment_history(tmp_path, names) == [
         "comment.py:1",
         "docstring.py:2",
         "reason.py:1",
-        "start.sh:2",
+        "Dockerfile:2",
     ]
 
 

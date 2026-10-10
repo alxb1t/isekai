@@ -15,6 +15,13 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   vocabulary, reader and evaluator remedies name it in place of the shell driver (0059 D3).
 - `isekai/boundary/pod_start.py` runs the pod's start as tested Python — the volume, the models link, `fetch`, the
   memory checks, then ComfyUI — and also holds on an unread `/dev/shm` type and reports swap (0059 D1, D2, D4, D6).
+- The image runs `pod_start.py` beside `provision.py`, without `wget`; the build record refuses a `COPY` it cannot
+  read; D35 names the host's swap, and the pins guide rebuilds before it re-records (0059 D1, D3, D7).
+
+### Removed
+
+- `start.sh`, `tools/download_models.sh`, `provision.py`'s `plan` and `land` verbs and the tests that read the
+  scripts' text: `tests/test_pod_start.py` and `fetch`'s tests hold the same keys by behaviour (0059 D3, D6).
 
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 

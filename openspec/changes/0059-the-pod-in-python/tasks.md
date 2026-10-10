@@ -7,7 +7,7 @@
 
 - [x] 1 — fetch
 - [x] 2 — The start module
-- [ ] 3 — The image on Python
+- [x] 3 — The image on Python
 - [ ] 4 — The browser check, and no bash left
 - [ ] 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
 
@@ -29,14 +29,14 @@
 
 ## 3 — The image on Python
 
-- [ ] 3.1 In `Dockerfile`, copy `isekai/boundary/pod_start.py` beside `provision.py`, set `CMD ["python", "/opt/isekai/isekai/boundary/pod_start.py"]`, drop the `start.sh` and `download_models.sh` copies and `chmod`, and `wget` from apt; delete `start.sh` and `tools/download_models.sh`; drop `plan`, `land` and `plan()` from `provision.py`, and `VOLUME_MOUNT` and `MODELS_NAMESPACE` (`0058·R9`); per [D1](design.md#d1), [D3](design.md#d3) and [D7](design.md#d7).
+- [x] 3.1 In `Dockerfile`, copy `isekai/boundary/pod_start.py` beside `provision.py`, set `CMD ["python", "/opt/isekai/isekai/boundary/pod_start.py"]`, drop the `start.sh` and `download_models.sh` copies and `chmod`, and `wget` from apt; delete `start.sh` and `tools/download_models.sh`; drop `plan`, `land` and `plan()` from `provision.py`, and `VOLUME_MOUNT` and `MODELS_NAMESPACE` (`0058·R9`); per [D1](design.md#d1), [D3](design.md#d3) and [D7](design.md#d7).
   Verify: `grep -c 'pod_start.py' Dockerfile` prints a number of at least `2`, and `grep -c -E 'start\.sh|download_models|wget' Dockerfile` prints `0`.
-- [ ] 3.2 Delete the tests and helpers of `tests/test_infra.py` that read `start.sh` or `download_models.sh`, and the constants it imports from `provision.py`; repoint `DRIVER_PATH` in `tests/test_vocabulary_manifest.py` and the path in `tests/test_resume.py` at `provision.py`;
+- [x] 3.2 Delete the tests and helpers of `tests/test_infra.py` that read `start.sh` or `download_models.sh`, and the constants it imports from `provision.py`; repoint `DRIVER_PATH` in `tests/test_vocabulary_manifest.py` and the path in `tests/test_resume.py` at `provision.py`;
   drop `start.sh` from `tests/test_docs.py`'s `ROOT_FILES` and `tests/test_spec_prose.py`'s `_COMMENT_TREES`.
   Verify: `grep -rc --include='*.py' -E 'start_sh|download_models|VOLUME_MOUNT' tests | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
-- [ ] 3.3 In `tools/image_record.py`, refuse a `COPY` it cannot read (`0058·R4`), with a test in `tests/test_infra.py`; re-derive `config/image.json`'s `files`; per [D7](design.md#d7).
+- [x] 3.3 In `tools/image_record.py`, refuse a `COPY` it cannot read (`0058·R4`), with a test in `tests/test_infra.py`; re-derive `config/image.json`'s `files`; per [D7](design.md#d7).
   Verify: `uv run python -m tools.image_record | python3 -c 'import json,sys; r=json.load(sys.stdin); print(r == json.load(open("config/image.json"))["files"])'` prints `True`.
-- [ ] 3.4 Repoint `docs/principles.md`'s *Held by* at `tests/test_pod_start.py`; add the host's swap to D35 in `docs/decisions.md`; rewrite `docs/pins.md`'s pod image recipe to rebuild before re-recording (`0058·R3`) and its reader line to `fetch`; name `fetch` and `pod_start.py` in `README.md`'s download lines and layout; per [D4](design.md#d4), [D6](design.md#d6) and [D7](design.md#d7).
+- [x] 3.4 Repoint `docs/principles.md`'s *Held by* at `tests/test_pod_start.py`; add the host's swap to D35 in `docs/decisions.md`; rewrite `docs/pins.md`'s pod image recipe to rebuild before re-recording (`0058·R3`) and its reader line to `fetch`; name `fetch` and `pod_start.py` in `README.md`'s download lines and layout; per [D4](design.md#d4), [D6](design.md#d6) and [D7](design.md#d7).
   Verify: `uv run pytest -q tests/test_principles.py tests/test_docs.py` exits 0, and `grep -c -E 'download_models|start\.sh' README.md docs/pins.md | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
 
 ## 4 — The browser check, and no bash left

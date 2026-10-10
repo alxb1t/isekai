@@ -283,11 +283,12 @@ told not to send is switched off, and its host key is checked against the finger
 - **Why:** a disk outlives the pod that wrote it, a report tells a third party that a machine is rendering,
   and a tunnel that trusts the first key it sees trusts whatever machine answers.
 - **Held by:**
-  - `tests/test_infra.py::test_comfyui_writes_to_memory`
-  - `tests/test_infra.py::test_too_little_memory_holds_the_pod`
-  - `tests/test_infra.py::test_comfyui_spools_uploads_to_memory`
-  - `tests/test_infra.py::test_a_shm_that_is_not_memory_holds_the_pod`
-  - `tests/test_infra.py::test_an_unread_figure_holds_the_pod`
+  - `tests/test_pod_start.py::test_comfyui_writes_to_memory`
+  - `tests/test_pod_start.py::test_too_little_memory_holds_the_pod`
+  - `tests/test_pod_start.py::test_comfyui_spools_uploads_to_memory`
+  - `tests/test_pod_start.py::test_a_shm_that_is_not_memory_holds_the_pod`
+  - `tests/test_pod_start.py::test_an_unread_figure_holds_the_pod`
+  - `tests/test_pod_start.py::test_no_line_for_the_memory_mount_holds_the_pod`
   - `tests/test_infra.py::test_the_image_carries_no_host_key`
   - `tests/test_infra.py::test_each_boot_runs_gpunits_boot_script_at_its_pin`
   - gpunit's `session:hostkey:*` scenarios, in its own suite: the host key is checked before anything connects

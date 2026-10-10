@@ -279,12 +279,11 @@ def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
 
     Lexical on purpose — `normpath` rather than `resolve` — because `MODELS_ROOT`
     on the pod IS a symlink onto the namespace, so resolving would report the
-    target through a path the driver was never handed.
+    target through a path `fetch` was never handed.
     """
     dest = entry["dest"]
-    # Whitespace is refused for the same reason `sources` refuses it: the plan
-    # this destination ends up in is a line- and tab-delimited protocol, so a
-    # `\n` inside one field does not stay one field.
+    # Whitespace is refused as `sources` refuses it: no pinned file name carries
+    # any, and a `\n` would split the log line that names the destination.
     if not dest or dest.startswith("~") or "\\" in dest or WHITESPACE.search(dest):
         return None
     normalized = PurePosixPath(posixpath.normpath(dest))
@@ -371,7 +370,7 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     run's to remove.
 
     An absent file is offered *every* source that survives the pre-flight, in the
-    manifest's order, so the driver can walk them. Only a source that positively
+    manifest's order, so `fetch` can walk them. Only a source that positively
     disagrees is dropped; a source that publishes nothing is kept, because the
     pre-flight is an optimisation and never a substitute for hashing the bytes that
     landed.
@@ -437,45 +436,6 @@ def land(entry: Entry, dest: Path, partial: Path) -> None:
     partial.replace(dest)
 
 
-def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
-    """Print one line per entry for the shell driver to act on; 0 if it may proceed.
-
-    `SKIP<TAB><target>` or `FETCH<TAB><target><TAB><url>[<TAB><url>...]`, where
-    the target is the destination already resolved under `models_dir` — a fetch
-    line carries every source that survived the pre-flight, in order, and the
-    driver walks them until one verifies. Every entry is decided before any line
-    is printed, so an abort anywhere stops the run before a single byte is
-    transferred rather than in the middle of a 6.9 GB download.
-    """
-    lines: list[str] = []
-    aborts: list[str] = []
-    for entry in manifest["entries"]:
-        decision = decide(entry, models_dir, fetcher)
-        if decision.action == "abort":
-            aborts.append(decision.reason)
-            continue
-        # The path `decide` already resolved, so the shell joins nothing and the
-        # containment rule has one site rather than one per assembly. It is still
-        # re-checked for a delimiter here: `resolve_dest` covers the manifest's
-        # half of the target, and `models_dir` — handed in by the shell — is the
-        # other half, so a record-splitting byte can arrive from either.
-        target = str(decision.target)
-        if "\n" in target or "\t" in target:
-            aborts.append(f"target {target!r} would not stay one plan record")
-            continue
-        if decision.action == "skip":
-            lines.append(f"SKIP\t{target}")
-        else:
-            lines.append("\t".join(["FETCH", target, *decision.urls]))
-    if aborts:
-        for reason in aborts:
-            print(f"ERROR: {reason}", file=sys.stderr)
-        return 1
-    for line in lines:
-        print(line)
-    return 0
-
-
 def fetch(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     """Land every entry the manifest declares under `models_dir`; 0 if all are there.
 
@@ -530,25 +490,8 @@ def _transfer(
     return False
 
 
-def _entry_for(
-    manifest: Manifest, models_dir: Path, target: str, source: Path
-) -> tuple[Entry, Path]:
-    """Return the entry whose resolved destination is `target`, and that path.
-
-    The driver is handed resolved targets and hands them straight back, so the
-    lookup resolves the manifest side rather than asking the shell to un-join what
-    it never joined — and returns the path it matched on, so `land` is handed a
-    destination this function has already contained.
-    """
-    for entry in manifest["entries"]:
-        resolved = resolve_dest(entry, models_dir)
-        if resolved is not None and str(resolved) == target:
-            return entry, resolved
-    raise SystemExit(f"ERROR: {target} is not declared in {source}")
-
-
 def manifest_argument(given: str | None) -> Path:
-    """Return the manifest a driver invocation names, defaulting to the graph's.
+    """Return the manifest a `fetch` invocation names, defaulting to the graph's.
 
     **Which manifest, not which policy.** Every manifest this repository keeps is
     held to the same pins, the same digests and the same containment rule, so the
@@ -561,7 +504,7 @@ def manifest_argument(given: str | None) -> Path:
 
 
 def _parser() -> argparse.ArgumentParser:
-    """Return the parser for `fetch`, and for the shell driver's `plan` and `land`."""
+    """Return the parser for `fetch`."""
     parser = argparse.ArgumentParser(prog="provision.py")
     verbs = parser.add_subparsers(dest="verb", required=True)
     fetch_verb = verbs.add_parser("fetch", help="land a manifest's files, verified")
@@ -572,35 +515,14 @@ def _parser() -> argparse.ArgumentParser:
         help="where the files land (default: the repository's models/)",
     )
     fetch_verb.add_argument("manifest", nargs="?", help="default: config/models.json")
-    plan_verb = verbs.add_parser("plan")
-    plan_verb.add_argument("models_dir", type=Path)
-    plan_verb.add_argument("manifest", nargs="?")
-    land_verb = verbs.add_parser("land")
-    land_verb.add_argument("models_dir", type=Path)
-    land_verb.add_argument("target")
-    land_verb.add_argument("partial", type=Path)
-    land_verb.add_argument("manifest", nargs="?")
     return parser
 
 
 def main(argv: list[str]) -> int:
-    """Run `fetch`, or the shell driver's `plan` and `land`."""
+    """Run `fetch`: `provision.py fetch [--models-dir DIR] [manifest]`."""
     args = _parser().parse_args(argv)
     source = manifest_argument(args.manifest)
-    if args.verb == "fetch":
-        return fetch(load_manifest(source), args.models_dir, HuggingFaceFetcher())
-    if args.verb == "plan":
-        return plan(load_manifest(source), args.models_dir, HuggingFaceFetcher())
-    entry, dest = _entry_for(
-        load_manifest(source), args.models_dir, args.target, source
-    )
-    try:
-        land(entry, dest, args.partial)
-    except DigestMismatch as mismatch:
-        print(f"ERROR: {mismatch}", file=sys.stderr)
-        return 1
-    print(f"saved (verified): {args.target}")
-    return 0
+    return fetch(load_manifest(source), args.models_dir, HuggingFaceFetcher())
 
 
 # What a model file is called, for the purpose of reading one out of the graph.
@@ -707,12 +629,6 @@ def undeclared_files(filenames: list[str], manifest: Manifest) -> list[str]:
 # ComfyUI's models root on the pod. Everything the manifest declares is a path
 # relative to this, and `folder_paths` resolves every node's models from it.
 MODELS_ROOT = "/opt/ComfyUI/models"
-
-# Where the network volume mounts, and this project's slice of it. The volume is
-# shared with another project under a different convention, so nothing here
-# reaches outside `MODELS_NAMESPACE`.
-VOLUME_MOUNT = "/runpod-volume"
-MODELS_NAMESPACE = f"{VOLUME_MOUNT}/isekai"
 
 # The preprocessor nodes whose checkpoints `comfyui_controlnet_aux` fetches into
 # its own `ckpts` directory -- container disk, unless AUX_ANNOTATOR_CKPTS_PATH

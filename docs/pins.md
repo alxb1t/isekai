@@ -59,11 +59,12 @@ One recipe per pin. Each is a commit inside a change, and each change says what 
 weekly. `make derive` runs the field map's deriver and then the same recipe, so it fails on a diff too — the
 diff is what to review.
 
-- **The pod image.** Push the branch, run `gh workflow run build-image.yml --ref <branch> -f tag=<vX.Y-rcN>`,
-  check the summary's build record equals `config/image.json`'s `files`, copy the tag and digest from it into
-  `config/image.json`, and the digest into `gpunit.toml`'s `image`; `tests/test_infra.py` holds the two equal.
-  An edit to a file the image copies turns that test red until the record is re-derived with
-  `uv run python -m tools.image_record`. A new digest is proved on a pod, in a metered phase,
+- **The pod image.** An edit to a file the image copies turns `tests/test_infra.py` red until
+  `config/image.json`'s `files` is re-derived with `uv run python -m tools.image_record`. That says the record
+  matches the tree, not that an image holds it, so the edit needs a rebuild, then a re-record: push the branch,
+  run `gh workflow run build-image.yml --ref <branch> -f tag=<vX.Y-rcN>`, check the summary's build record
+  equals `files`, copy the tag and digest from it into `config/image.json`, and the digest into `gpunit.toml`'s
+  `image`; `tests/test_infra.py` holds the two equal. A new digest is proved on a pod, in a metered phase,
   before it merges ([D28](decisions.md#d28--the-image-carries-code-the-volume-carries-weights)).
 - **gpunit.** Move its tag in `pyproject.toml` and run `uv lock`; move the boot script's tag and checksum in
   the `Dockerfile` (`curl -fsSL <url> | shasum -a 256`), then rebuild the image. `tests/test_infra.py` fails
@@ -83,7 +84,7 @@ diff is what to review.
   resolves one.
 - **A model manifest.** Move the revision constant in its deriver — `tools/derive_manifest.py`,
   `tools/derive_vocabulary.py`, `tools/derive_reader.py` — run `make derive`, and review the diff under
-  `config/`. For the reader, then run `bash tools/download_models.sh config/reader.json` and
+  `config/`. For the reader, then run `uv run python -m isekai.boundary.provision fetch config/reader.json` and
   `ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile`.
 - **A flow.** A variant is a new flow; an abandoned configuration is re-pinned — update `PINNED` in
   `tests/test_flow.py` and name the new digest in `CHANGELOG.md`
