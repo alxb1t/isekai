@@ -15,6 +15,7 @@ would be unreachable -- nothing writes a later one.
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
     generate  (4) assemble every prompt locally, then render
+    render    (4) one whole render session on a rented GPU, torn down on every exit
     show          print a run's artifacts, what produced each, and its failures
     ui        (3) serve the review surface for a batch of inputs
     compare       write a page of every run's photograph beside its renders
@@ -51,8 +52,9 @@ from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
 from isekai.interface.compare_view import write_page
+from isekai.interface.render import run_session
 from isekai.interface.run_view import report
-from isekai.interface.wiring import Wiring, booted_image, wiring
+from isekai.interface.wiring import Wiring, wiring
 from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import (
     prepare,
@@ -78,6 +80,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
     ("generate", "assemble the prompts for a run, then render them"),
+    ("render", "run a whole render session on a rented GPU, then tear it down"),
     ("show", "print a run's artifacts, versions, producers and failures"),
     ("ui", "serve the review surface for a batch of inputs"),
     ("compare", "write a page of each run's photograph beside its renders"),
@@ -154,8 +157,9 @@ def build_parser() -> argparse.ArgumentParser:
     }
 
     # `compare` takes a batch directory instead: its runs root is the batch's
-    # `runs/`, so a second way to name it could only disagree.
-    for name in (name for name in made if name != "compare"):
+    # `runs/`, so a second way to name it could only disagree. `render` takes
+    # its runs root first, and every run under it.
+    for name in (name for name in made if name not in ("compare", "render")):
         made[name].add_argument(
             "photos",
             nargs="*",
@@ -231,6 +235,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     # Every namespace keeps one shape; `compare` reads its runs from the batch.
     made["compare"].set_defaults(photos=[], runs=RUNS_ROOT)
+
+    made["render"].add_argument(
+        "runs",
+        type=Path,
+        help="the batch's runs/; every run under it is rendered",
+    )
+    made["render"].add_argument(
+        "requests",
+        nargs="+",
+        metavar="<flow>=<count|source>",
+        help="a flow and how many seeds it draws, or the flow whose seeds it takes",
+    )
+    made["render"].set_defaults(photos=[])
 
     # Mutually exclusive at parse time, so asking for both is refused before any
     # work begins rather than discovered on a rented machine. One verb explores
@@ -366,6 +383,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
         if verb == "compare":
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0
+        if verb == "render":
+            return run_session(args, wired, _dispatch_argv)
         flows = _flows_for(args, wired)
         if verb == "approve":
             _refuse_bad_source(args.source, "from", flows, wired)
@@ -393,6 +412,11 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     for message in refused:
         print(f"refused: {message}", file=wired.err)
     return 1 if refused else 0
+
+
+def _dispatch_argv(argv: list[str], wired: Wiring) -> int:
+    """Run one verb line on `wired`, as `render` runs `generate` for each flow."""
+    return dispatch(build_parser().parse_args(argv), wired)
 
 
 def _refuse_bad_source(
@@ -706,7 +730,6 @@ def _generate(
     client = wired.client
     if client is None or args.in_step_with is not None:
         return refused
-    image = booted_image()
     # One report per session, read only when a render will run.
     ran_on = _once(lambda: read_runtime(client))
 
@@ -716,7 +739,7 @@ def _generate(
             run,
             flows[flow],
             client,
-            image=image,
+            image=wired.image,
             runtime=ran_on,
             count=args.count,
             seeds=borrowed.get(run.id, args.seeds),

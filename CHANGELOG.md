@@ -13,6 +13,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `gpunit.toml` declares the render session's GPU — the pinned image, the cards, the floors, the ceiling and the
   volume — and `gpunit` joins the runtime dependencies; `.env` keeps the API key alone (0058 D6).
+- `isekai render <runs> <flow>=<count|source> …` runs a whole render session over `gpunit.session()`, with its
+  ordering, pre-pod pass, ceiling watchdog and batch log under unit test; a render records the session's image
+  (0058 D1–D5).
 
 ## [0.34.2] - 2026-10-09 · 0057-the-removed-key
 

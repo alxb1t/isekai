@@ -49,8 +49,8 @@ the default; a package earns its place when the contract needs more than one fil
   both scales: a front end composes components, and a front door composes its own modules.
 - **Held by:** review. The suite passes fakes through those parameters — `FakeReader`,
   `FakeComfyClient`.
-- **Known breaks:** `boundary/ollama.py`'s `MODEL_RECORDS` and `interface/wiring.py`'s `POD_IMAGE` are module
-  globals the suite patches, not parameters, so two roots in one process means patching global state.
+- **Known breaks:** `boundary/ollama.py`'s `MODEL_RECORDS` is a module global the suite patches, not a
+  parameter, so two roots in one process means patching global state.
 
 ### Only a front end composes
 

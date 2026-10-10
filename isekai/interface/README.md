@@ -16,6 +16,7 @@ neither is privileged and neither goes through the other.
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
+| `render.py` | the `render` verb: assembles every prompt, opens a GPU session through `boundary/gpu.py` under a ceiling watchdog, waits for the endpoint, runs `generate` per flow, and writes it all to the batch's log |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the batch directory. Reads, decides nothing |
 | `ui/__init__.py` | the `ui` verb: establishes the batch, prints the address, serves until stopped |
@@ -30,8 +31,9 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `cli.py` | `__main__.py` | `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `wiring.py` | `cli.py`, `ui/__init__.py`, `ui/batch.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
+| `cli.py` | `__main__.py` | `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/batch.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
+| `render.py` | `cli.py` | `tests/test_render.py` |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py`, `tests/test_run_view.py` |
 | `compare_view.py` | `cli.py` | `tests/test_compare.py` |
 | `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py` |

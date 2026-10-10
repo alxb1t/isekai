@@ -6,7 +6,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 ## Progress
 
 - [x] 1 — The configuration
-- [ ] 2 — The render verb
+- [x] 2 — The render verb
 - [ ] 3 — The pod
 - [ ] 4 — The scripts retired
 - [ ] 5 — The documents
@@ -26,13 +26,13 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 2 — The render verb
 
-- [ ] 2.1 Write `isekai/boundary/gpu.py` per [D2](design.md#d2), importing `gpunit` only inside `open_session`.
+- [x] 2.1 Write `isekai/boundary/gpu.py` per [D2](design.md#d2), importing `gpunit` only inside `open_session`.
   Verify: `grep -c '^import gpunit\|^from gpunit' isekai/boundary/gpu.py` prints `0`, and `grep -c 'def read_env\|def open_session' isekai/boundary/gpu.py` prints `2`.
-- [ ] 2.2 Add `image` to `Wiring` in `isekai/interface/wiring.py` and read it in `_generate` in `isekai/interface/cli.py`; delete `booted_image` and `POD_IMAGE`, with their uses in `tests/conftest.py`, `tests/test_package_paths.py`, `tests/fakes.py` and `tests/test_generate.py`; per [D5](design.md#d5).
-  Verify: `grep -rc --include='*.py' 'booted_image\|POD_IMAGE\|runpod_pod_image' isekai tests | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
-- [ ] 2.3 Write `isekai/interface/render.py` and register `render` in `isekai/interface/cli.py`, per [D1](design.md#d1), [D3](design.md#d3) and [D4](design.md#d4).
+- [x] 2.2 Add `image` to `Wiring` in `isekai/interface/wiring.py` and read it in `_generate` in `isekai/interface/cli.py`; delete `booted_image` and `POD_IMAGE`, with their uses in `tests/conftest.py`, `tests/test_package_paths.py`, `tests/fakes.py` and `tests/test_generate.py`; per [D5](design.md#d5).
+  Verify: `grep -rc --include='*.py' --exclude=test_infra.py 'booted_image\|POD_IMAGE\|runpod_pod_image' isekai tests | grep -v ':0$' | wc -l | tr -d ' '` prints `0`; 4.1 removes the scripts' tests that name them.
+- [x] 2.3 Write `isekai/interface/render.py` and register `render` in `isekai/interface/cli.py`, per [D1](design.md#d1), [D3](design.md#d3) and [D4](design.md#d4).
   Verify: `uv run python -m isekai render --help | grep -c '<flow>=<count|source>'` prints a number of at least `1`.
-- [ ] 2.4 Write `tests/test_render.py` on a fake `open_session`, binding every `pod-image:session:*` scenario of the change's `pod-image` spec, `pod-image:boot:no-override`, `pod-image:boot:the-booted-image-is-recorded`, and `image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first`.
+- [x] 2.4 Write `tests/test_render.py` on a fake `open_session`, binding every `pod-image:session:*` scenario of the change's `pod-image` spec, `pod-image:boot:no-override`, `pod-image:boot:the-booted-image-is-recorded`, and `image-generation:seeds-from:a-copy-behind-a-source-rendering-first-is-refused-first`.
   Verify: `grep -o 'pod-image:[a-z-]*:[a-z-]*' tests/test_render.py | sort -u | wc -l | tr -d ' '` prints `7`.
 
 ## 3 — The pod

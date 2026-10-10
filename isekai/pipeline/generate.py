@@ -562,8 +562,8 @@ def render(
     most -- and the decision is a directory listing, the same rule every other
     stage is held to.
 
-    `image` is the reference the pod booted, or None for an endpoint no pod-boot
-    record names, which the sidecar declares unpinned. `runtime` is called only
+    `image` is the reference the render session booted, or None for an endpoint
+    outside one, which the sidecar declares unpinned. `runtime` is called only
     when a seed will render, so a complete batch reads no report. `seeds_from`
     names the flow `seeds` were taken from, and the sidecar records it.
     """

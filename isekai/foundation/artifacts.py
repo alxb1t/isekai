@@ -290,7 +290,7 @@ class Render(TypedDict):
 
     `sheet` is the sheet the approval was made from; an older sidecar carries
     `sheet_version`, the approval's number, instead. `image` is absent when no
-    pod-boot record named one. `seeds_from` names the flow whose seeds were taken.
+    render session named one. `seeds_from` names the flow whose seeds were taken.
     """
 
     schema: SchemaBlock

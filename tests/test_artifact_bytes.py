@@ -19,7 +19,7 @@ from isekai.pipeline.generate import prompt_artifact, read_runtime, render
 from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import TAGGER_OPTIONS, FakeTagger, tag_hosted, tag_wd14
 from isekai.shared.vocabulary import Vocabulary
-from tests.fakes import POD_IMAGE, READER_ARTIFACTS, FakeComfyClient
+from tests.fakes import READER_ARTIFACTS, SESSION_IMAGE, FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FLOW, caption, fake_tagger, sheet
 
@@ -133,7 +133,7 @@ def _render(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
         run,
         FLOW,
         client,
-        image=POD_IMAGE,
+        image=SESSION_IMAGE,
         runtime=lambda: read_runtime(client),
         seeds=[42],
         poll=0,

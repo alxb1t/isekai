@@ -49,6 +49,7 @@ EXPECTED_VERBS = (
     "review",
     "approve",
     "generate",
+    "render",
     "show",
     "ui",
     "compare",
@@ -173,8 +174,9 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    # `ui` takes one too; `compare` takes a batch directory instead.
-    flag = {"show": [], "compare": ["batch"]}.get(verb, ["--flow", "summon-anime-wai"])
+    # `ui` takes one too; `compare` takes a batch directory, `render` its runs.
+    own = {"show": [], "compare": ["batch"], "render": ["runs", "summon-anime-wai=1"]}
+    flag = own.get(verb, ["--flow", "summon-anime-wai"])
 
     assert build_parser().parse_args([verb, *flag]).verb == verb
 
