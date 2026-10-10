@@ -187,8 +187,9 @@ provisioning fails ──▶ hold: SSH up, inference server not started, marker 
 
 The abort policy leaves a mismatched file on disk for a person to inspect, which holds only if they can get in: an
 entrypoint that exits takes its daemon with it and dies again on every boot. A pod holding open reports as running
-and healthy while it bills, so an unbounded hold outlasts the spending ceiling; a hold that ended in its process
-exiting would restart with the container and hold again.
+and healthy while it bills, so an unbounded hold outlasts the spending ceiling; a hold whose end did not stop the
+pod would restart with the container and hold again. Its exit is what stops it: gpunit's boot stops the pod when its
+command ends.
 
 #### Scenario: a provisioning abort holds the pod open instead of stopping it
 - **Key:** `model-provisioning:reachability:a-provisioning-abort-holds-the-pod-open`
@@ -208,8 +209,8 @@ exiting would restart with the container and hold again.
 - **Key:** `model-provisioning:reachability:the-hold-is-bounded-and-marked`
 - **Layers:** unit
 - **WHEN** the entrypoint holds the pod open after a provisioning failure
-- **THEN** the hold ends by stopping the pod, within a stated window shorter than the session's spending ceiling
-  allows
+- **THEN** the hold ends by the entrypoint exiting, which stops the pod, within a stated window shorter than the
+  session's spending ceiling allows
 - **AND** a marker recording the failure is written where the failure cannot have made it unwritable
 - **AND** the marker is not written onto the volume
 
@@ -218,9 +219,9 @@ exiting would restart with the container and hold again.
 - **Layers:** unit
 - **WHEN** the pod is created without the network volume it expects, or the models namespace would be prepared
   somewhere that is not that volume
-- **THEN** the pod is refused before it is created if the volume it expects is not named
+- **THEN** no session is opened unless the session's spec names the volume
 - **AND** the entrypoint refuses before preparing the namespace if what it finds is not that volume
-- **AND** the entrypoint is told which volume to expect rather than inferring it
+- **AND** the entrypoint is told which volume to expect, as `GPUNIT_VOLUME_ID`, rather than inferring it
 
 ### Requirement: Model artifacts resolve inside the project's own namespace
 

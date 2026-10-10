@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
+
 ### Added
 
 - `gpunit.toml` declares the render session's GPU — the pinned image, the cards, the floors, the ceiling and the
