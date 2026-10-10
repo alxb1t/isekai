@@ -142,9 +142,9 @@ def _reported() -> Iterator[None]:
         raise TransportFailure(
             "transient",
             f"the rendering endpoint could not be reached ({unreachable}); "
-            "bring a pod up with `bash infra/up.sh`, open the tunnel, and pass "
-            "its address with `--server` -- or drop `--server` to assemble the "
-            "prompts and stop",
+            "render inside a session with `python -m isekai render <runs> "
+            "<flow>=<count>`, which opens the tunnel and passes `--server` -- or "
+            "drop `--server` to assemble the prompts and stop",
         ) from unreachable
     except (ValueError, KeyError, TypeError) as answer:
         raise unread(answer) from answer

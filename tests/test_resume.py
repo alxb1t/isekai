@@ -618,7 +618,7 @@ def test_an_unreachable_endpoint_refuses_naming_the_tunnel_rather_than_a_socket(
 
     message = wired.err.getvalue()
     assert "could not be reached" in message
-    assert "infra/up.sh" in message
+    assert "python -m isekai render" in message
     assert "--server" in message
     assert "Traceback" not in message
     # Nothing is uploaded, submitted, polled or downloaded once the first request,

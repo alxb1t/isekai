@@ -25,6 +25,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 ### Removed
 
 - `tools/stop_pod.sh` and its tests: gpunit's boot script stops the pod (0058 D7, D8).
+- `infra/up.sh`, `down.sh`, `pods.sh` and `render.sh` and the tests that read them: `isekai render` and gpunit own
+  the session; the remedies, principles and pins guide name `isekai render` and `gpunit.toml` (0058 D8, D9).
 
 ## [0.34.2] - 2026-10-09 · 0057-the-removed-key
 

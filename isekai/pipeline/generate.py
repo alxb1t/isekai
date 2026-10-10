@@ -18,7 +18,7 @@ image, one integer -- a stronger guarantee than "one integer reproduces a run's
 whole sequence", because it reproduces an image rather than an ordering.
 
 **No session lifecycle.** This stage renders against the endpoint it is given;
-creating, tunnelling to and tearing down the pod is infra/render.sh's
+creating, tunnelling to and tearing down the pod is `isekai render`'s
 (docs/decisions.md D36).
 
 Stdlib only; the endpoint is behind the repository's existing `ComfyTransport`.
@@ -327,7 +327,7 @@ def source_seeds(
     if not seeds:
         raise Refusal(
             f"{run.id}: no render of {source} to take seeds from; run "
-            f"`bash infra/render.sh {_runs_root(run)} {source}=1"
+            f"`python -m isekai render {_runs_root(run)} {source}=1"
             f"{_dependents(flows, source)}` to render it first"
         )
     return int(groups[-1].name), seeds
@@ -376,13 +376,13 @@ def refuse_out_of_step(
             f"{run.id}` to copy the newer one"
         )
     raise Refusal(
-        f"{head}`bash infra/render.sh {_runs_root(run)} {source}=1"
+        f"{head}`python -m isekai render {_runs_root(run)} {source}=1"
         f"{_dependents([flow], source)}` to render {source} again first"
     )
 
 
 def _dependents(flows: Sequence[str], source: str) -> str:
-    """Return render.sh's specs for `flows` on `source`'s seeds, each after a space."""
+    """Return `render`'s requests for `flows` on `source`'s seeds, space-led."""
     return "".join(f" {flow}={source}" for flow in flows)
 
 

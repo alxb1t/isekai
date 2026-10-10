@@ -188,7 +188,7 @@ gap is recorded with its trigger, and every artifact it shapes says `pinned: fal
   `tests/test_infra.py::test_every_git_clone_in_the_image_is_pinned_to_a_commit`,
   `tests/test_infra.py::test_the_base_and_the_build_tool_are_named_by_digest`,
   `tests/test_infra.py::test_the_environment_is_installed_from_the_committed_lock`,
-  `tests/test_infra.py::test_the_pod_is_created_from_the_pinned_digest`,
+  `tests/test_infra.py::test_the_session_boots_the_digest_the_image_config_pins`,
   `tests/test_caption.py::test_a_model_built_from_other_files_refuses_naming_both_digests`, and the
   gate's first command, which installs the Python dependencies from the lock file. Review holds the CI
   actions, pinned by commit.
@@ -290,11 +290,9 @@ told not to send is switched off, and its host key is checked against the finger
   - `tests/test_infra.py::test_an_unread_figure_holds_the_pod`
   - `tests/test_infra.py::test_the_image_carries_no_host_key`
   - `tests/test_infra.py::test_each_boot_runs_gpunits_boot_script_at_its_pin`
-  - `tests/test_infra.py::test_a_matching_key_is_kept`
-  - `tests/test_infra.py::test_a_mismatch_is_refused`
-  - `tests/test_infra.py::test_a_scan_no_one_answers_is_refused_as_such`
-  - `tests/test_infra.py::test_no_fingerprint_is_refused`
+  - gpunit's `session:hostkey:*` scenarios, in its own suite: the host key is checked before anything connects
   - `tests/test_infra.py::test_the_pod_is_created_with_telemetry_off`
+  - `tests/test_infra.py::test_the_session_spec_sets_no_telemetry_switch`
 
 ## Measurement
 

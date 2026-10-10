@@ -8,7 +8,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 1 — The configuration
 - [x] 2 — The render verb
 - [x] 3 — The pod
-- [ ] 4 — The scripts retired
+- [x] 4 — The scripts retired
 - [ ] 5 — The documents
 - [ ] 6 — The build record
 - [ ] 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session
@@ -46,11 +46,11 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 4 — The scripts retired
 
-- [ ] 4.1 Delete `infra/up.sh`, `infra/down.sh`, `infra/pods.sh` and `infra/render.sh`, and the tests, twins and helpers of `tests/test_infra.py` that read them; drop `infra` from `tests/test_docs.py`'s `ROOTS` and `tests/test_spec_prose.py`'s `_COMMENT_TREES`.
+- [x] 4.1 Delete `infra/up.sh`, `infra/down.sh`, `infra/pods.sh` and `infra/render.sh`, and the tests, twins and helpers of `tests/test_infra.py` that read them; drop `infra` from `tests/test_docs.py`'s `ROOTS` and `tests/test_spec_prose.py`'s `_COMMENT_TREES`.
   Verify: `ls infra 2>&1 | grep -c 'No such file'` prints `1`, and `grep -c -E 'up_sh|down_sh|pods_sh|render_sh' tests/test_infra.py` prints `0`.
-- [ ] 4.2 Name `isekai render` in the remedies of `isekai/boundary/comfy/client.py`, `isekai/pipeline/generate.py` and `evaluation/record.py`, and in `evaluation/README.md`; update `tests/test_resume.py` and `tests/test_generate.py` to match; per [D9](design.md#d9).
+- [x] 4.2 Name `isekai render` in the remedies of `isekai/boundary/comfy/client.py`, `isekai/pipeline/generate.py` and `evaluation/record.py`, and in `evaluation/README.md`; update `tests/test_resume.py` and `tests/test_generate.py` to match; per [D9](design.md#d9).
   Verify: `grep -rc --include='*.py' --include='*.md' 'infra/' isekai evaluation tests | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
-- [ ] 4.3 Repoint `docs/principles.md`'s *Held by* to tests that exist, and `docs/pins.md`'s pod image row to `gpunit.toml` and `config/image.json`, per [D9](design.md#d9).
+- [x] 4.3 Repoint `docs/principles.md`'s *Held by* to tests that exist, and `docs/pins.md`'s pod image row to `gpunit.toml` and `config/image.json`, per [D9](design.md#d9).
   Verify: `uv run pytest -q tests/test_principles.py tests/test_docs.py` exits 0, and `grep -c 'infra/' docs/pins.md docs/principles.md | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
 
 ## 5 — The documents
