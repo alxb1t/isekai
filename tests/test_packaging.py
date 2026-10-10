@@ -28,6 +28,7 @@ RUNTIME_STACK = {
     "pillow": "the tagger's open, composite, pad and resize",
     "fastapi": "the review surface's server",
     "uvicorn": "what runs the review surface",
+    "gpunit": "the GPU session `isekai render` opens",
 }
 
 
@@ -46,9 +47,9 @@ def names(specs: list[str]) -> set[str]:
     """Return the package names in a PEP 508 requirement list, normalised.
 
     Spelled once, here, rather than at each call site. It handles the spec forms
-    this manifest uses -- a pin, a floor, an extras bracket -- and deliberately
-    not markers, `~=` or URLs: none appears in this project, and a parser wider
-    than its input is a claim about cases nothing tests.
+    this manifest uses -- a pin, a floor, an extras bracket, a `name @ url` --
+    and deliberately not markers or `~=`: neither appears in this project, and a
+    parser wider than its input is a claim about cases nothing tests.
     """
     return {re.split(r"[=<>!~ ;\[]", spec)[0].strip().lower() for spec in specs}
 

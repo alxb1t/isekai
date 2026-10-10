@@ -5,7 +5,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## Progress
 
-- [ ] 1 — The configuration
+- [x] 1 — The configuration
 - [ ] 2 — The render verb
 - [ ] 3 — The pod
 - [ ] 4 — The scripts retired
@@ -15,13 +15,13 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 1 — The configuration
 
-- [ ] 1.1 **HALT CHECK** — gpunit `v0.2.0` is on its remote, and isekai does not depend on it yet.
+- [x] 1.1 **HALT CHECK** — gpunit `v0.2.0` is on its remote, and isekai does not depend on it yet.
   Verify: `git ls-remote --tags https://github.com/alxb1t/gpunit v0.2.0 | grep -c 'refs/tags/v0.2.0$'` prints `1`, and `grep -c gpunit pyproject.toml` prints `0`.
-- [ ] 1.2 Add `gpunit` to `pyproject.toml`'s `dependencies` and lock it with `uv lock`; name it in `RUNTIME_STACK` in `tests/test_packaging.py`; per [D6](design.md#d6).
-  Verify: `grep -c 'gpunit @ git+https://github.com/alxb1t/gpunit@v0.2.0' pyproject.toml` prints `1`, and `grep -c 'name = "gpunit"' uv.lock` prints `1`.
-- [ ] 1.3 Write `gpunit.toml` per [D6](design.md#d6), the volume taken from `.env`'s `RUNPOD_VOLUME_ID`; add `.gpunit/` to `.gitignore`; cut `.env.example` to `RUNPOD_API_KEY`; drop the volume id from `CLAUDE.md`'s *Guardrails* secrets.
+- [x] 1.2 Add `gpunit` to `pyproject.toml`'s `dependencies` and lock it with `uv lock`; name it in `RUNTIME_STACK` in `tests/test_packaging.py`; per [D6](design.md#d6).
+  Verify: `grep -c 'gpunit @ git+https://github.com/alxb1t/gpunit@v0.2.0' pyproject.toml` prints `1`, and `grep -c '^name = "gpunit"' uv.lock` prints `1`.
+- [x] 1.3 Write `gpunit.toml` per [D6](design.md#d6), the volume taken from `.env`'s `RUNPOD_VOLUME_ID`; add `.gpunit/` to `.gitignore`; cut `.env.example` to `RUNPOD_API_KEY`; drop the volume id from `CLAUDE.md`'s *Guardrails* secrets.
   Verify: `uv run python -c 'import gpunit; s = gpunit.load_spec(__import__("pathlib").Path("gpunit.toml")); print(s.project, s.ceiling_s, s.ports[0].remote)'` prints `isekai 2700 8188`, and `grep -c 'RUNPOD_' .env.example` prints `1`.
-- [ ] 1.4 In `tests/test_infra.py`, add tests reading `gpunit.toml`: its `image` equals `config/image.json`'s reference and digest (`pod-image:boot:the-pinned-digest-is-booted`); its floors (`pod-image:placement:the-create-carries-the-floors`); its `volume` is set (`model-provisioning:reachability:provisioning-requires-the-network-volume`); its `[env]` sets no telemetry switch (`pod-image:telemetry:the-switches-are-off`).
+- [x] 1.4 In `tests/test_infra.py`, add tests reading `gpunit.toml`: its `image` equals `config/image.json`'s reference and digest (`pod-image:boot:the-pinned-digest-is-booted`); its floors (`pod-image:placement:the-create-carries-the-floors`); its `volume` is set (`model-provisioning:reachability:provisioning-requires-the-network-volume`); its `[env]` sets no telemetry switch (`pod-image:telemetry:the-switches-are-off`).
   Verify: `grep -c 'gpunit.toml' tests/test_infra.py` prints a number of at least `4`.
 
 ## 2 — The render verb

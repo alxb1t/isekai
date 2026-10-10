@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- `gpunit.toml` declares the render session's GPU — the pinned image, the cards, the floors, the ceiling and the
+  volume — and `gpunit` joins the runtime dependencies; `.env` keeps the API key alone (0058 D6).
+
 ## [0.34.2] - 2026-10-09 · 0057-the-removed-key
 
 ### Fixed

@@ -49,6 +49,9 @@ venv/
 .idea/
 .vscode/
 
+# gpunit's session state: the pod id, its host key and the session's SSH key.
+.gpunit/
+
 .runpod_pod_id
 .runpod_pod_image
 .runpod_known_hosts

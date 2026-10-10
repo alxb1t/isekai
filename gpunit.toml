@@ -1,0 +1,19 @@
+# The render session's GPU, read by gpunit when `isekai render` opens a session.
+# `image` is `config/image.json`'s reference and digest; a test holds them equal.
+project = "isekai"
+image = "ghcr.io/alxb1t/isekai@sha256:afacc1296a46b22f20ae2c14be846051ba9c704f4f09d33eb1019701ea3436ec"
+gpus = [
+    "NVIDIA RTX PRO 4500 Blackwell",
+    "NVIDIA L4",
+    "NVIDIA GeForce RTX 4090",
+    "NVIDIA A40",
+    "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+]
+vram_gb = 24
+ram_gb = 24
+cuda = "12.8"
+disk_gb = 30
+ports = [8188]
+ceiling = "45m"
+timeout = 420
+volume = "db7sc8cild"

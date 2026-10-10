@@ -230,7 +230,7 @@ they decide.**
 ## Guardrails (invariants — hold for every role)
 
 - **Never commit a secret, or a *real* absolute path from the machine the run is on** — the RunPod API key,
-  the volume id, **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
+  **a pod id**, the operator's home, or this repository's own root, transcribed out of a run
   artefact or a tool's output into tracked prose. `.runpod_pod_id` is gitignored for that reason, and
   `.runpod_pod_image`, the image `up.sh` booted, beside it; no pod id is in `CHANGELOG.md`, and this rule
   keeps it so.

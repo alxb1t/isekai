@@ -1307,6 +1307,121 @@ def test_the_check_catches_an_image_config_naming_only_a_tag() -> None:
     assert pinned_reference({"image": "ghcr.io/a/b", "digest": "latest"}) is None
 
 
+# `gpunit.toml` is the session's spec: the pin, the floors and the volume.
+
+GPUNIT_SPEC = REPO / "gpunit.toml"
+
+
+@pytest.fixture(scope="module")
+def gpunit_spec() -> dict[str, object]:
+    return tomllib.loads(GPUNIT_SPEC.read_text())
+
+
+def spec_image_faults(spec: dict[str, object], config: dict[str, str]) -> list[str]:
+    """Return how `gpunit.toml`'s `image` departs from `config/image.json`'s pin.
+
+    e.g. `image = "ghcr.io/a/b:latest"` -> ["not config/image.json's pin"]
+    """
+    pinned = pinned_reference(config)
+    if pinned is None:
+        return ["config/image.json pins no digest"]
+    return [] if spec.get("image") == pinned else ["not config/image.json's pin"]
+
+
+@pytest.mark.spec("pod-image:boot:the-pinned-digest-is-booted")
+def test_the_session_boots_the_digest_the_image_config_pins(
+    gpunit_spec: dict[str, object],
+) -> None:
+    assert spec_image_faults(gpunit_spec, json.loads(IMAGE_CONFIG.read_text())) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_session_boots_the_digest_the_image_config_pins"
+)
+def test_the_spec_image_check_catches_a_tag_and_another_digest() -> None:
+    config = {"image": "ghcr.io/a/b", "digest": "sha256:" + "0" * 64}
+    other: dict[str, object] = {"image": "ghcr.io/a/b@sha256:" + "1" * 64}
+    assert spec_image_faults({"image": "ghcr.io/a/b:latest"}, config) == [
+        "not config/image.json's pin"
+    ]
+    assert spec_image_faults(other, config) == ["not config/image.json's pin"]
+    assert spec_image_faults(other, {"image": "ghcr.io/a/b", "tag": "v1"}) == [
+        "config/image.json pins no digest"
+    ]
+
+
+def unfloored_spec(spec: dict[str, object]) -> list[str]:
+    """Return each floor `gpunit.toml` does not ask for.
+
+    e.g. a spec with `vram_gb = 24` alone -> ["host memory", "CUDA version"]
+    """
+    missing = []
+    for key, floor in (("vram_gb", "card memory"), ("ram_gb", "host memory")):
+        value = spec.get(key)
+        if not (isinstance(value, int) and value >= 24):
+            missing.append(floor)
+    # torch's cu128 build, which the Blackwell pod needs (CLAUDE.md).
+    if spec.get("cuda") != "12.8":
+        missing.append("CUDA version")
+    return missing
+
+
+@pytest.mark.spec("pod-image:placement:the-create-carries-the-floors")
+def test_the_session_spec_asks_for_the_floors(gpunit_spec: dict[str, object]) -> None:
+    assert unfloored_spec(gpunit_spec) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_session_spec_asks_for_the_floors"
+)
+def test_the_spec_floor_check_catches_a_spec_with_one() -> None:
+    assert unfloored_spec({"vram_gb": 24, "ram_gb": 16}) == [
+        "host memory",
+        "CUDA version",
+    ]
+
+
+def unnamed_volume(spec: dict[str, object]) -> bool:
+    """Return whether `gpunit.toml` names no network volume."""
+    volume = spec.get("volume")
+    return not (isinstance(volume, str) and volume.strip())
+
+
+@pytest.mark.spec(
+    "model-provisioning:reachability:provisioning-requires-the-network-volume"
+)
+def test_the_session_spec_names_the_volume(gpunit_spec: dict[str, object]) -> None:
+    assert not unnamed_volume(gpunit_spec)
+
+
+@pytest.mark.spec_exempt("structural: twin of test_the_session_spec_names_the_volume")
+def test_the_volume_check_catches_a_spec_with_none() -> None:
+    assert unnamed_volume({"project": "isekai"})
+    assert unnamed_volume({"volume": ""})
+
+
+def telemetry_set_in_spec(spec: dict[str, object]) -> list[str]:
+    """Return each telemetry switch `gpunit.toml`'s `[env]` sets a second time."""
+    env = spec.get("env", {})
+    assert isinstance(env, dict)
+    return [switch for switch in TELEMETRY_SWITCHES if switch in env]
+
+
+@pytest.mark.spec("pod-image:telemetry:the-switches-are-off")
+def test_the_session_spec_sets_no_telemetry_switch(
+    gpunit_spec: dict[str, object],
+) -> None:
+    assert telemetry_set_in_spec(gpunit_spec) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_session_spec_sets_no_telemetry_switch"
+)
+def test_the_spec_telemetry_check_catches_a_switch_in_env() -> None:
+    spec: dict[str, object] = {"env": {"DO_NOT_TRACK": "1", "TZ": "UTC"}}
+    assert telemetry_set_in_spec(spec) == ["DO_NOT_TRACK"]
+
+
 def image_overrides(up_sh: str) -> list[str]:
     """Return each line that sets the booted image from anything but the pin."""
     return [
