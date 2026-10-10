@@ -60,8 +60,10 @@ weekly. `make derive` runs the field map's deriver and then the same recipe, so 
 diff is what to review.
 
 - **The pod image.** Push the branch, run `gh workflow run build-image.yml --ref <branch> -f tag=<vX.Y-rcN>`,
-  copy the tag and digest from the job summary into `config/image.json`, and the digest into `gpunit.toml`'s
-  `image`; `tests/test_infra.py` holds the two equal. A new digest is proved on a pod, in a metered phase,
+  check the summary's build record equals `config/image.json`'s `files`, copy the tag and digest from it into
+  `config/image.json`, and the digest into `gpunit.toml`'s `image`; `tests/test_infra.py` holds the two equal.
+  An edit to a file the image copies turns that test red until the record is re-derived with
+  `uv run python -m tools.image_record`. A new digest is proved on a pod, in a metered phase,
   before it merges ([D28](decisions.md#d28--the-image-carries-code-the-volume-carries-weights)).
 - **gpunit.** Move its tag in `pyproject.toml` and run `uv lock`; move the boot script's tag and checksum in
   the `Dockerfile` (`curl -fsSL <url> | shasum -a 256`), then rebuild the image. `tests/test_infra.py` fails

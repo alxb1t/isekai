@@ -1,8 +1,8 @@
 name: build-image
 
 # Built on request only: every image that exists was asked for, and its digest is
-# in the run's summary. A pod boots that digest from `config/image.json`, never a
-# tag, so `latest` is refused rather than published (0033 design D2, D3).
+# in the run's summary. A pod boots that digest from `gpunit.toml`, never a tag,
+# so `latest` is refused rather than published (0033 design D2, D3).
 on:
   workflow_dispatch:
     inputs:
@@ -60,3 +60,13 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           echo "Image: ghcr.io/alxb1t/isekai:${TAG}@${DIGEST}" >> "$GITHUB_STEP_SUMMARY"
+
+      # What the image was built from: `config/image.json`'s `files` must equal it.
+      - name: Report the build record
+        run: |
+          set -euo pipefail
+          {
+            echo '```json'
+            python3 -m tools.image_record
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

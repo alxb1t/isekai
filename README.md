@@ -377,7 +377,7 @@ isekai/
 ├── gpunit.toml                # the render session's GPU: the pinned image, cards, floors, ceiling, volume
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
-│   ├── image.json             # the pod image's digest, the same gpunit.toml boots
+│   ├── image.json             # the pod image's digest, the same gpunit.toml boots, and its build record
 │   ├── reader.json            # the reader's model and projector, by digest, per alias
 │   ├── vocabulary.json        # the tag list AND the tagger it indexes — one revision, two digests
 │   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
@@ -386,6 +386,7 @@ isekai/
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
+│   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
 │   └── typecheck_ui.sh        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress

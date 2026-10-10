@@ -10,7 +10,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 3 — The pod
 - [x] 4 — The scripts retired
 - [x] 5 — The documents
-- [ ] 6 — The build record
+- [x] 6 — The build record
 - [ ] 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session
 
 ## 1 — The configuration
@@ -62,7 +62,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 6 — The build record
 
-- [ ] 6.1 Write `tools/image_record.py`, add its `files` to `config/image.json`, and run it from `build-image.yml` into the summary, per [D10](design.md#d10); in `tests/test_infra.py` bind `pod-image:build:the-record-matches-the-tree` and `pod-image:build:the-workflow-prints-the-record`.
+- [x] 6.1 Write `tools/image_record.py`, add its `files` to `config/image.json`, and run it from `build-image.yml` into the summary, per [D10](design.md#d10); in `tests/test_infra.py` bind `pod-image:build:the-record-matches-the-tree` and `pod-image:build:the-workflow-prints-the-record`.
   Verify: `uv run python -m tools.image_record | python3 -c 'import json,sys; r=json.load(sys.stdin); print(r == json.load(open("config/image.json"))["files"])'` prints `True`, and `grep -c 'tools.image_record' .github/workflows/build-image.yml` prints `1`.
 
 ## 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session

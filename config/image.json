@@ -1,5 +1,15 @@
 {
   "image": "ghcr.io/alxb1t/isekai",
   "tag": "v0.30-rc2",
-  "digest": "sha256:afacc1296a46b22f20ae2c14be846051ba9c704f4f09d33eb1019701ea3436ec"
+  "digest": "sha256:afacc1296a46b22f20ae2c14be846051ba9c704f4f09d33eb1019701ea3436ec",
+  "files": {
+    "Dockerfile": "392d1dc117e46983d2369db83b24f14764ff85137e1a6ad2960634a9c46555d7",
+    "image/pyproject.toml": "a4cd426861f9e21f487af74e7df2c8d809683c86642f672e0f243d5fabafba45",
+    "image/uv.lock": "1b0e870231afa0ba55addf0330cfb3ae75be2449fd06bf6d869b1f8530c5d424",
+    "image/.python-version": "f50159fad3f4319868eb38717b91d55843c41e9803014c8de05e116a6d0bcfdc",
+    "start.sh": "d9c3ea3d0d70cb33d4cbf61e6e6d03527106ea2fee6dec10fbfa0e0fdb653b0b",
+    "tools/download_models.sh": "3315bfb62fb4408db82ac0623f19cbd7a0bb2db239e4a82c36413e2f8f0c15ab",
+    "config/models.json": "c1c67049672f53c5d1ef54644bd37924637aa3ce83ae7997a7ed88e73f9687fc",
+    "isekai/boundary/provision.py": "115bb04ed68aaf8751100c722e00d7fb736e1ee83f732fcb69678ad4f10b6549"
+  }
 }

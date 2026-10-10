@@ -26,6 +26,7 @@ from isekai.boundary.provision import (
 )
 from isekai.foundation.flow import Workflow
 from tools.derive_image_project import CLONE, pinned_commits, uv_required
+from tools.image_record import record
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -539,6 +540,85 @@ def test_the_image_workflow_builds_only_on_a_manual_request() -> None:
 def test_the_check_catches_a_workflow_that_builds_on_a_push() -> None:
     workflow = "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\njobs:\n"
     assert workflow_triggers(workflow) == ["push", "workflow_dispatch"]
+
+
+def record_faults(config: dict[str, object], derived: dict[str, str]) -> list[str]:
+    """Return each file whose recorded SHA-256 is not the tree's, by path.
+
+    e.g. `start.sh` edited after the record -> ["start.sh"]
+    """
+    files = config.get("files")
+    if not isinstance(files, dict):
+        return ["config/image.json records no files"]
+    names = sorted({str(name) for name in files} | set(derived))
+    return [name for name in names if files.get(name) != derived.get(name)]
+
+
+@pytest.mark.spec("pod-image:build:the-record-matches-the-tree")
+def test_the_build_record_agrees_with_the_tree() -> None:
+    derived = record()
+    assert {"Dockerfile", "start.sh"} <= set(derived)
+    assert record_faults(json.loads(IMAGE_CONFIG.read_text()), derived) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_build_record_agrees_with_the_tree"
+)
+def test_the_record_check_catches_a_file_edited_after_the_record(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "Dockerfile").write_text("FROM x\nCOPY a.sh /a.sh\n")
+    (tmp_path / "a.sh").write_text("echo one\n")
+    config: dict[str, object] = {"files": record(tmp_path)}
+    assert record_faults(config, record(tmp_path)) == []
+    (tmp_path / "a.sh").write_text("echo two\n")
+    assert record_faults(config, record(tmp_path)) == ["a.sh"]
+    (tmp_path / "Dockerfile").write_text("FROM x\nCOPY a.sh /a.sh\nCOPY b.sh /b\n")
+    (tmp_path / "b.sh").write_text("")
+    assert record_faults(config, record(tmp_path)) == ["Dockerfile", "a.sh", "b.sh"]
+    assert record_faults({}, record(tmp_path)) == ["config/image.json records no files"]
+
+
+def unprinted_record(workflow: str) -> list[str]:
+    """Return what the image workflow lacks of printing the build record it checked out.
+
+    e.g. a workflow that never runs the tool -> ["never runs tools.image_record"]
+    """
+    lines = workflow.splitlines()
+    tool = re.compile(r"python3? -m tools\.image_record\b")
+    runs = next((i for i, ln in enumerate(lines) if tool.search(ln)), None)
+    if runs is None:
+        return ["never runs tools.image_record"]
+    faults = []
+    checkout = next(
+        (i for i, ln in enumerate(lines) if "actions/checkout@" in ln), None
+    )
+    if checkout is None or checkout > runs:
+        faults.append("runs it before the checkout")
+    if "GITHUB_STEP_SUMMARY" not in "\n".join(lines[runs : runs + 3]):
+        faults.append("does not write it to the summary")
+    return faults
+
+
+@pytest.mark.spec("pod-image:build:the-workflow-prints-the-record")
+def test_the_image_workflow_prints_the_build_record() -> None:
+    assert unprinted_record(BUILD_WORKFLOW.read_text()) == []
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_image_workflow_prints_the_build_record"
+)
+def test_the_print_check_catches_a_record_missing_late_or_unsummarised() -> None:
+    checkout = "      - uses: actions/checkout@0000 # v4\n"
+    printed = (
+        "      - run: |\n          {\n            python3 -m tools.image_record\n"
+        '          } >> "$GITHUB_STEP_SUMMARY"\n'
+    )
+    assert unprinted_record(checkout + printed) == []
+    assert unprinted_record(checkout) == ["never runs tools.image_record"]
+    assert unprinted_record(printed + checkout) == ["runs it before the checkout"]
+    stdout = "      - run: python3 -m tools.image_record\n"
+    assert unprinted_record(checkout + stdout) == ["does not write it to the summary"]
 
 
 def undigested_images(dockerfile: str) -> list[str]:

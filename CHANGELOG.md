@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `isekai render <runs> <flow>=<count|source> …` runs a whole render session over `gpunit.session()`, with its
   ordering, pre-pod pass, ceiling watchdog and batch log under unit test; a render records the session's image
   (0058 D1–D5).
+- `config/image.json` records the SHA-256 of the `Dockerfile` and every file it copies; `tools/image_record.py`
+  prints it into `build-image.yml`'s summary, and a test turns red when the tree drifts from it (0058 D10).
 
 ### Changed
 
