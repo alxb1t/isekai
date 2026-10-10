@@ -14,7 +14,7 @@ unchanged.**
 | this file | why, and what changes |
 | [design](design.md) | the start module, `fetch`, the parity table, the pod's proof |
 | [tasks](tasks.md) | the phases, in build order |
-| `specs/` | `pod-image` · `image-generation` |
+| `specs/` | `pod-image` · `image-generation` · `model-provisioning` |
 
 ## Why
 
@@ -41,6 +41,8 @@ keeps its key, and the pod itself is checked once more.
   docstring name `isekai render` (`0058·R2`); a workflow comment cites no design (`0058·R8`)
   ([D7](design.md#d7)).
 - **A metered proof** with the privacy check on the pod ([D8](design.md#d8)).
+- **`fetch` tries a broken transfer again** from the same source, as `wget` did, and the image is rebuilt on it
+  ([D9](design.md#d9)).
 
 ## Capabilities
 
@@ -54,6 +56,9 @@ None.
   - *Everything ComfyUI writes lives in the pod's memory* — an unreadable type holds; swap is reported.
 - `image-generation`:
   - *A flow renders on another flow's seeds when the operator names it* — the diagram names `isekai render`.
+- `model-provisioning`:
+  - *A transfer that fails advances to the next declared source* — a broken transfer is tried again, three
+    attempts a source.
 
 ## Impact
 
@@ -64,7 +69,8 @@ None.
   the tests.
 - **Behaviour:** the pod does what it did; the laptop's download remedy is a Python command.
 - **Dependencies:** none ([Dependencies](design.md#dependencies)).
-- **Spend:** one render session on a real pod, under the 45-minute ceiling, by hand ([D8](design.md#d8)).
+- **Spend:** one render session on each built image, `rc2` and `rc3`, each under the 45-minute ceiling, by hand
+  ([D8](design.md#d8), [D9](design.md#d9)).
 
 ## Not in this change
 

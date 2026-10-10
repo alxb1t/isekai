@@ -31,6 +31,9 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `4a53e8b
   `test_too_little_memory_holds_the_pod` (`:1141`), `test_comfyui_spools_uploads_to_memory` (`:1195`),
   `test_a_shm_that_is_not_memory_holds_the_pod` (`:1248`), `test_an_unread_figure_holds_the_pod` (`:1270`),
   `test_comfyui_writes_no_metadata` (`:1292`); named by `docs/principles.md:286-290`.
+- **After phase 5:** `HuggingFaceFetcher.get` makes one `urlopen` with a 60 s timeout, and `_transfer` moves to the
+  next source on any `OSError` (`provision.py:226`, `:478`). `wget` retried a broken transfer. Three entries of
+  1 GB or more in `config/models.json` have one source.
 
 ## Goals / Non-Goals
 
@@ -50,7 +53,8 @@ that reads the pod.
 | [D5](#d5) | `tools/typecheck_ui.py`, its refusals word for word | the gate's last bash | — |
 | [D6](#d6) | each privacy key held by a test of `pod_start`; the parity table below | the same guarantees, proven by behaviour | dropping a key |
 | [D7](#d7) | the riding cards, each in the phase that opens its file | their triggers fire here | a separate patch |
-| [D8](#d8) | the last phase builds, re-pins, reads the pod over `gpunit ssh`, renders once | only the pod shows what it gets | trusting the tests alone |
+| [D8](#d8) | a metered phase builds, re-pins, reads the pod over `gpunit ssh`, renders once | only the pod shows what it gets | trusting the tests alone |
+| [D9](#d9) | `fetch` tries a broken transfer again from the same source, three attempts, 10 s then 30 s apart; phase 7 rebuilds as `v0.35.1-rc3` | `wget` retried, and an entry with one source has nowhere to fall | resuming with `Range`; a cold-volume proof |
 
 ### D1
 
@@ -123,12 +127,29 @@ telemetry, the boot script — stay.
 
 ### D8
 
-A **HUMAN · METERED** phase, last. Push the branch; dispatch `build-image.yml` with tag `v0.35.1-rc2`; check the
+A **HUMAN · METERED** phase. Push the branch; dispatch `build-image.yml` with tag `v0.35.1-rc2`; check the
 summary's files equal `config/image.json`'s; re-pin `config/image.json` and `gpunit.toml`. Run `isekai render` on a
 small batch, and while the session is open, from a second terminal, `uv run gpunit ssh` to read: ComfyUI's command
 line, `/dev/shm`'s type, `TMPDIR` in ComfyUI's environment, and after the render `/opt/ComfyUI/output` empty. On the
 laptop, read the saved PNG's chunks: no `tEXt`, `iTXt` or `zTXt`. Write the readings to
-`.minions/0059_pod_proof.txt`. Confirm through the RunPod MCP that no `gpunit-isekai` pod is left.
+`.minions/0059_pod_proof.txt`. Confirm through the RunPod MCP that no `gpunit-isekai` pod is left. Phase 7
+repeats it on `v0.35.1-rc3` ([D9](#d9)).
+
+### D9
+
+`_transfer` tries each source up to `ATTEMPTS = 3` times. An `OSError` from `get` is a broken transfer: the partial
+is removed, `fetch` waits — 10 s, then 30 s — and transfers from the same source again. A `DigestMismatch` is
+permanent and moves to the next source at once. The wait is a parameter of `fetch`, defaulting to `time.sleep`, so a
+test passes one that records instead of sleeping.
+
+A retry starts from zero rather than resuming with a `Range` request: `land` verifies the whole file either way, and
+a resume is a second path through the real `get` that only a live server tests. The most a source adds is two waits
+and two 60 s stalls, under four minutes, inside the 45-minute ceiling.
+
+`provision.py` is a file the image copies, so the fix needs a new image. Phase 7 builds `v0.35.1-rc3`, re-pins it,
+and renders once on it, reading the pod as [D8](#d8) lists. That pod's volume is warm, so it runs no transfer; the
+real `get` runs once on the laptop instead, landing `config/vocabulary.json` into an empty directory. The retry
+itself is held offline, where a transfer can be broken on purpose.
 
 ## Dependencies
 
@@ -136,7 +157,10 @@ None.
 
 ## Risks / Trade-offs
 
-- **`urllib` instead of `wget`** → no progress bar; `fetch` prints each file's start and end.
+- **`urllib` instead of `wget`** → no progress bar; `fetch` prints each file's start and end. No resume: a broken
+  transfer starts again from zero ([D9](#d9)).
+- **A retry on a pod is never seen live** → held by a test with a transfer that breaks; the laptop runs the real
+  transfer once ([D9](#d9)).
 - **The image's Python is 3.12; the laptop's is the project's** → `pod_start` and `provision` are stdlib only and
   pass the gate's `ty` and tests on the laptop's.
 - **A copied file changes, so the record changes** → re-recorded in its phase; the human phase checks the build

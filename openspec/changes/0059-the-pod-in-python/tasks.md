@@ -1,7 +1,7 @@
 # Tasks — 0059 the pod in Python
 
-`fetch`, the start module, the image on them, the browser check, then the metered proof with the pod read, per
-[design](design.md). Every new test carries `@pytest.mark.spec` with the key its task names.
+`fetch`, the start module, the image on them, the browser check, then the metered proof with the pod read; then
+`fetch`'s retry and a second metered proof on the image rebuilt for it, per [design](design.md). Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## Progress
 
@@ -10,6 +10,8 @@
 - [x] 3 — The image on Python
 - [x] 4 — The browser check, and no bash left
 - [x] 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
+- [ ] 6 — fetch tries again
+- [ ] 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session
 
 ## 1 — fetch
 
@@ -54,3 +56,21 @@
   Verify: `grep -c '"tag": "v0.35.1-rc2"' config/image.json` prints `1`.
 - [x] 5.2 **HUMAN · METERED** — run `uv run python -m isekai render` on a small batch; while it is open, read the pod over `uv run gpunit ssh` and the saved PNG as [D8](design.md#d8) lists, and write the readings to `.minions/0059_pod_proof.txt`, one a line; confirm through the RunPod MCP that no `gpunit-isekai` pod is left.
   Verify: `grep -c -E 'tmpfs|--disable-metadata|TMPDIR=/dev/shm/comfyui/tmp|no text chunk' .minions/0059_pod_proof.txt` prints `4`, and `uv run gpunit status` prints `no session is recorded`.
+
+## 6 — fetch tries again
+
+- [ ] 6.1 **HALT CHECK** — `fetch` makes one attempt a source.
+  Verify: `grep -c '^ATTEMPTS' isekai/boundary/provision.py` prints `0`.
+- [ ] 6.2 In `isekai/boundary/provision.py`, try a broken transfer again from the same source, `ATTEMPTS = 3`, waiting 10 s then 30 s, through a wait `fetch` takes as a parameter; a digest mismatch is not tried again; per [D9](design.md#d9). In `tests/test_provision.py`, bind `model-provisioning:source-fallback:a-broken-transfer-is-tried-again` to a fake `Fetcher` that fails once then serves, and to one that fails every attempt and moves on; update the source lists the existing fallback tests expect for a source whose transfer breaks.
+  Verify: `grep -c 'source-fallback:a-broken-transfer-is-tried-again' tests/test_provision.py` prints a number of at least `2`, and `grep -c '^ATTEMPTS = 3$' isekai/boundary/provision.py` prints `1`.
+- [ ] 6.3 Re-derive `config/image.json`'s `files`, since `provision.py` changed; per [D7](design.md#d7).
+  Verify: `uv run python -m tools.image_record | python3 -c 'import json,sys; r=json.load(sys.stdin); print(r == json.load(open("config/image.json"))["files"])'` prints `True`.
+- [ ] 6.4 Land `config/vocabulary.json` with the real transfer into an empty directory, per [D9](design.md#d9).
+  Verify: `d=$(mktemp -d) && uv run python -m isekai.boundary.provision fetch --models-dir "$d" config/vocabulary.json | grep -c 'saved (verified)'` prints `2`.
+
+## 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session
+
+- [ ] 7.1 **HUMAN · METERED** — push `v0.35.1_the_pod_in_python`; dispatch `build-image.yml` on it with tag `v0.35.1-rc3`; check its printed files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D8](design.md#d8) and [D9](design.md#d9).
+  Verify: `grep -c '"tag": "v0.35.1-rc3"' config/image.json` prints `1`.
+- [ ] 7.2 **HUMAN · METERED** — run `uv run python -m isekai render` on a small batch; while it is open, read the pod over `uv run gpunit ssh` and the saved PNG as [D8](design.md#d8) lists, and write the readings to `.minions/0059_pod_proof_rc3.txt`, one a line; confirm through the RunPod MCP that no `gpunit-isekai` pod is left.
+  Verify: `grep -c -E 'tmpfs|--disable-metadata|TMPDIR=/dev/shm/comfyui/tmp|no text chunk' .minions/0059_pod_proof_rc3.txt` prints `4`, and `uv run gpunit status` prints `no session is recorded`.
