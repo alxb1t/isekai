@@ -537,10 +537,12 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
 
         return Raising()
 
+    # gpunit reads no .env, and the key lives only there: each remedy loads it.
     assert session(runs, f"{FLOW}=1", opener=raising(gpunit.Lost())) == 3
+    assert "`uv run --env-file .env gpunit status` shows" in log(runs)
     failed = gpunit.TeardownFailed("the teardown failed")
     assert session(runs, f"{FLOW}=1", opener=raising(failed)) == 1
-    assert "run `uv run gpunit down`" in log(runs)
+    assert "run `uv run --env-file .env gpunit down`" in log(runs)
 
 
 @pytest.mark.spec_exempt("structural: one port, declared in gpunit.toml and here")

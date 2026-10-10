@@ -72,7 +72,8 @@ parse ─▶ order ─▶ pre-pod pass (assemble, sources) ─▶ busy port 8188
    ─▶ cancel watchdog ─▶ exit: 0 · 1 a flow failed or refused · 3 Lost · 128+n Interrupted
 ```
 
-`TeardownFailed` exits `1` with a refusal naming `uv run gpunit down`. Refusals are `refused: …` lines.
+`TeardownFailed` exits `1` with a refusal naming `uv run --env-file .env gpunit down`, since gpunit's CLI reads
+no `.env`. Refusals are `refused: …` lines.
 
 ### D2
 
@@ -166,7 +167,8 @@ their twins and helpers. The `start.sh` and `Dockerfile` tests are rewritten for
 - `docs/pins.md`: the pod image row — `gpunit.toml` pins, `config/image.json` records; *Re-pinning* names both.
 - `README.md`: the lifecycle, ④–⑦, the layout, the provisioning flow; `isekai render` the one way onto a pod.
 - `CLAUDE.md`: the metered protocol — `isekai render` creates through gpunit, the session tears down, the MCP
-  confirms no `gpunit-isekai` pod, `uv run gpunit down` and `.gpunit/` replace `down.sh` and `.runpod_*`.
+  confirms no `gpunit-isekai` pod, `uv run --env-file .env gpunit down` and `.gpunit/` replace `down.sh` and
+  `.runpod_*`.
 - `.claude/skills/run-flows/SKILL.md`: `uv run python -m isekai render`, `refused:` counted anywhere on a line,
   `gpunit-isekai`.
 - The remedies: `isekai/boundary/comfy/client.py:145`, `isekai/pipeline/generate.py:330`, `:379`,

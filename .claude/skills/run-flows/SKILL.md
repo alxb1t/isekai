@@ -131,16 +131,16 @@ echo "refusals: $(grep -c 'refused:' "$BATCH/log.txt")"
 ```
 
 `render` tears down its own pod on every exit. A refusal naming a recorded or listed pod leaves that pod: tell the
-operator at once, and run `uv run gpunit down` only on their word. Confirm it is gone yourself: the RunPod MCP's
-`list-pods` shows no pod named `gpunit-isekai`. Report what it returned. A `refused:` line may follow a time, so
-the counts match it anywhere on a line.
+operator at once, and run `uv run --env-file .env gpunit down` only on their word — gpunit reads no `.env`. Confirm
+it is gone yourself: the RunPod MCP's `list-pods` shows no pod named `gpunit-isekai`. Report what it returned. A
+`refused:` line may follow a time, so the counts match it anywhere on a line.
 
 - **Exit 0**: report the render count.
 - **Non-zero**: read `grep 'refused:' .data/<batch>/log.txt` and
   `tail -15 .data/<batch>/log.txt | grep -v -e 'root@' -e '[Pp]od [a-z0-9]\{12,\}'`, and report them. A
   `ceiling` refusal keeps the renders so far; step 4 again renders only the rest, and needs a new go.
-- **The teardown failed** (its refusal names `uv run gpunit down`): tell the operator at once, and run it only on
-  their word. Once `list-pods` shows the pod gone and `gpunit down` still refuses, run
+- **The teardown failed** (its refusal names `uv run --env-file .env gpunit down`): tell the operator at once, and
+  run it only on their word. Once `list-pods` shows the pod gone and `gpunit down` still refuses, run
   `rm -f .gpunit/pod .gpunit/pending`. A pod still listed: tell the operator at once — it is billing.
 
 ## 5 — The comparison page

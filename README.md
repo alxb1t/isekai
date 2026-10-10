@@ -159,8 +159,9 @@ finishes: the pod's memory dies with it, and only the models volume persists.
 how a whole batch is checked before anything is rented; `render` does it first either way, so a malformed
 sheet costs nothing rather than a boot.
 
-**If a teardown fails, the pod may still bill:** `render` says so and names `uv run gpunit down`, which
-deletes what the session left. The RunPod MCP confirms no `gpunit-isekai` pod is left.
+**If a teardown fails, the pod may still bill:** `render` says so and names `uv run --env-file .env gpunit down`,
+which deletes what the session left; `--env-file` hands it the key, since gpunit's CLI reads no `.env`. The RunPod
+MCP confirms no `gpunit-isekai` pod is left.
 
 ### Afterwards
 

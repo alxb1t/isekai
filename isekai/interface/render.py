@@ -300,17 +300,18 @@ def _rendered(
     except KeyboardInterrupt as stopped:
         # gpunit's `Interrupted` carries the signal; a bare Ctrl-C is SIGINT.
         return 128 + int(getattr(stopped, "signal", signal.SIGINT))
+    # gpunit's CLI reads no .env, where the key lives, so each remedy loads it.
     except Lost:
         print(
-            "refused: the provider's answer was lost; `uv run gpunit status` shows "
-            "what is left",
+            "refused: the provider's answer was lost; "
+            "`uv run --env-file .env gpunit status` shows what is left",
             file=wired.err,
         )
         return LOST_EXIT
     except TeardownFailed:
         print(
             "refused: the session's teardown failed, and its pod may still bill; "
-            "run `uv run gpunit down`",
+            "run `uv run --env-file .env gpunit down`",
             file=wired.err,
         )
         return 1

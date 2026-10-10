@@ -250,8 +250,9 @@ they decide.**
      before you run it.
   2. **Who tears it down** — the same `isekai render`: its gpunit session deletes the pod on every exit and
      leaves no `gpunit-isekai` pod listed; the pod also stops itself 45 minutes after it starts. When the
-     session reports a failed teardown, `uv run gpunit down` is the act. **Teardown is the act**: it is
-     the call that stops the billing, and it belongs to the same session that created the pod.
+     session reports a failed teardown, `uv run --env-file .env gpunit down` is the act — gpunit reads no
+     `.env`. **Teardown is the act**: it is the call that stops the billing, and it belongs to the same
+     session that created the pod.
   3. **Who confirms** — the RunPod MCP, by checking no `gpunit-isekai` pod is left. **Confirmation is not
      the act.** A rule that only names the check has not said what stops the billing, and an unconfirmed
      teardown is not one you may report as done. Record what the MCP returned. When the MCP confirms gone a

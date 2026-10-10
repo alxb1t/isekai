@@ -280,4 +280,4 @@ holds a wrong disk on the pod (`model-provisioning:reachability:provisioning-req
 
 **Reason**: gpunit refuses a session beside a recorded, pending or listed pod of the project, sweeps every listed one
 at teardown, and reports a lost create (gpunit's `session:one:*`, `session:down:*`, `session:lost:*` and `library:*`).
-**Migration**: pods are named `gpunit-isekai`; `uv run gpunit down` tears down what a session left.
+**Migration**: pods are named `gpunit-isekai`; `uv run --env-file .env gpunit down` tears down what a session left.
