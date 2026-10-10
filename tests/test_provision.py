@@ -322,6 +322,30 @@ def test_an_http_layer_failure_advances_to_the_next_source(
     assert not target.with_name(f"{target.name}.partial").exists()
 
 
+class _BadStatusOpener:
+    """An opener whose HEAD request meets a malformed status line."""
+
+    def open(self, request: object, timeout: float) -> io.BytesIO:
+        raise http.client.BadStatusLine("garbage")
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_an_http_layer_failure_on_the_head_request_still_lands_the_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "urllib.request.build_opener", lambda *handlers: _BadStatusOpener()
+    )
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda url, timeout: io.BytesIO(PAYLOAD)
+    )
+    entry = _entry()
+    assert fetch(_manifest([entry]), tmp_path, HuggingFaceFetcher()) == 0
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
 @pytest.mark.spec(
     "model-provisioning:byte-verification:a-present-file-is-verified-not-skipped"
 )

@@ -210,7 +210,7 @@ class HuggingFaceFetcher:
                 header = response.headers.get("x-linked-etag") or ""
         except urllib.error.HTTPError as redirected:
             header = redirected.headers.get("x-linked-etag") or ""
-        except OSError:
+        except (OSError, http.client.HTTPException):
             return None
         candidate = header.strip().strip('"')
         return candidate if DIGEST.match(candidate) else None

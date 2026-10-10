@@ -30,8 +30,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Fixed
 
-- `fetch` moves to the next source on a transfer that fails at the HTTP layer; the build record reads a `COPY`
-  in any case or indent and refuses an `ADD` that is not a checksummed URL (0059 D3, D7).
+- `fetch` moves to the next source on a transfer that fails at the HTTP layer, and verifies after the download
+  when its pre-flight HEAD does; the build record reads a `COPY` in any case or indent and refuses an `ADD` that
+  is not a checksummed URL (0059 D3, D7).
 
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 
