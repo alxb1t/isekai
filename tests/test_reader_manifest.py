@@ -21,6 +21,7 @@ from isekai.boundary.provision import (
     sources_on_a_mutable_ref,
 )
 from isekai.foundation.flow import load_flow, tracked_flows
+from tests.fakes import fetched_by_main
 
 
 @pytest.fixture
@@ -78,16 +79,8 @@ def test_every_model_a_tracked_flow_declares_is_pinned(
 def test_the_provisioner_fetches_the_readers_files_when_pointed_at_its_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import isekai.boundary.provision as provision
-
-    handed: list[tuple[Manifest, Path]] = []
-
-    def recording(manifest: Manifest, models_dir: Path, fetcher: object) -> int:
-        handed.append((manifest, models_dir))
-        return 0
-
-    monkeypatch.setattr(provision, "fetch", recording)
     argv = ["fetch", "--models-dir", str(tmp_path), str(READER_MANIFEST_PATH)]
-    assert provision.main(argv) == 0
-
-    assert handed == [(load_manifest(READER_MANIFEST_PATH), tmp_path)]
+    assert fetched_by_main(monkeypatch, argv) == (
+        load_manifest(READER_MANIFEST_PATH),
+        tmp_path,
+    )

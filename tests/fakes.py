@@ -6,10 +6,11 @@ from urllib.request import Request
 
 import pytest
 
+from isekai.boundary import provision
 from isekai.boundary.comfy import Image, TransportFailure
 from isekai.boundary.comfy import client as comfy_client
 from isekai.boundary.ollama import LAYERS
-from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
+from isekai.boundary.provision import READER_MANIFEST_PATH, Manifest, load_manifest
 from isekai.foundation.artifacts import DigestRecord
 from isekai.foundation.flow import Workflow
 
@@ -101,6 +102,22 @@ class FakeComfyClient:
         if self.report_failure is not None:
             raise self.report_failure
         return self.report
+
+
+def fetched_by_main(
+    monkeypatch: pytest.MonkeyPatch, argv: list[str]
+) -> tuple[Manifest, Path]:
+    """Return the manifest and models root `provision.main(argv)` hands `fetch`."""
+    handed: list[tuple[Manifest, Path]] = []
+
+    def recording(manifest: Manifest, models_dir: Path, fetcher: object) -> int:
+        handed.append((manifest, models_dir))
+        return 0
+
+    monkeypatch.setattr(provision, "fetch", recording)
+    assert provision.main(argv) == 0
+    (call,) = handed
+    return call
 
 
 class FakeFetcher:

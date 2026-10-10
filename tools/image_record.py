@@ -26,13 +26,13 @@ COPY_LINE = re.compile(r"^COPY\b.*$", re.M)
 FROM_IMAGE = re.compile(r"^COPY\s+--from=")
 
 
-def copied(dockerfile: str) -> list[str]:
-    """Return each source a `COPY` takes from the build context, in order.
+def copies(dockerfile: str) -> list[tuple[str, str]]:
+    """Return each `(source, destination)` a `COPY` takes from the build context.
 
     Raise `ValueError` naming any other `COPY` line, so no copied file leaves the
     record unseen. e.g. "COPY --chmod=755 a.py /a.py" -> ValueError
     """
-    sources = []
+    pairs = []
     for line in COPY_LINE.findall(dockerfile):
         if FROM_IMAGE.match(line):
             continue
@@ -43,8 +43,13 @@ def copied(dockerfile: str) -> list[str]:
                 f"cannot read {line!r}: a COPY from the build context takes one "
                 "source, one destination and no flag"
             )
-        sources.append(found[1])
-    return sources
+        pairs.append((found[1], found[2]))
+    return pairs
+
+
+def copied(dockerfile: str) -> list[str]:
+    """Return each source a `COPY` takes from the build context, in order."""
+    return [source for source, _ in copies(dockerfile)]
 
 
 def record(root: Path = ROOT) -> dict[str, str]:

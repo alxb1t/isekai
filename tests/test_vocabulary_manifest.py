@@ -38,6 +38,7 @@ from isekai.boundary.provision import (
 from isekai.boundary.wd14 import verified_paths
 from isekai.foundation.refusal import Refusal
 from isekai.interface.wiring import load_vocabulary
+from tests.fakes import fetched_by_main
 
 VOCABULARY = "wd14/selected_tags.csv"
 TAGGER = "wd14/model.onnx"
@@ -196,15 +197,7 @@ def _fetched(
     monkeypatch: pytest.MonkeyPatch, argv: list[str]
 ) -> tuple[list[str], Path]:
     """Return the destinations `main` hands `fetch`, and the models root, for `argv`."""
-    handed: list[tuple[Manifest, Path]] = []
-
-    def recording(manifest: Manifest, models_dir: Path, fetcher: object) -> int:
-        handed.append((manifest, models_dir))
-        return 0
-
-    monkeypatch.setattr(provision, "fetch", recording)
-    assert provision.main(argv) == 0
-    ((manifest, models_dir),) = handed
+    manifest, models_dir = fetched_by_main(monkeypatch, argv)
     return [entry["dest"] for entry in manifest["entries"]], models_dir
 
 

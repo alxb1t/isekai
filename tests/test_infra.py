@@ -23,7 +23,7 @@ from isekai.boundary.provision import (
 )
 from isekai.foundation.flow import Workflow
 from tools.derive_image_project import CLONE, pinned_commits, uv_required
-from tools.image_record import COPY, copied, record
+from tools.image_record import copied, copies, record
 
 REPO = Path(__file__).resolve().parent.parent
 DOCKERFILE = REPO / "Dockerfile"
@@ -91,14 +91,6 @@ def test_the_annotator_checkpoints_are_the_two_the_preprocessors_fetch(
     }
 
 
-# The pod entrypoint's provisioning step, and the two halves of the volume guard.
-#
-# These are text checks over the shipped shell, for the same reason the checks
-# above are: the suite is offline and there is no pod to run the entrypoint on.
-# What they hold is the *shape* the scenarios name -- one guarded provisioning
-# step, a bounded hold, a marker off the volume, and a refusal on each side of
-# the boundary.
-
 # The repository's per-session spending ceiling, in seconds at the halt.
 SESSION_CEILING_SECONDS = 45 * 60
 
@@ -158,7 +150,7 @@ def image_copies(dockerfile: str) -> dict[str, str]:
 
     e.g. `COPY config/models.json /m.json` -> {"/m.json": "config/models.json"}
     """
-    return {dest: source for source, dest in COPY.findall(dockerfile)}
+    return {dest: source for source, dest in copies(dockerfile)}
 
 
 def missing_copy_sources(dockerfile: str) -> list[str]:

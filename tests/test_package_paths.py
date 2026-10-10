@@ -58,6 +58,11 @@ ANCHORS = (
         id="eval_models.EVAL_MANIFEST_PATH",
     ),
     pytest.param(
+        provision.DEFAULT_MODELS_DIR,
+        ("models",),
+        id="provision.DEFAULT_MODELS_DIR",
+    ),
+    pytest.param(
         vocabulary.DEFAULT_MODELS_DIR,
         ("models",),
         id="vocabulary.DEFAULT_MODELS_DIR",

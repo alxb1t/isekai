@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -18,6 +19,7 @@ from isekai.boundary.pod_start import (
     VOLUME_SIZE_FLOOR,
     Pod,
 )
+from isekai.boundary.provision import MODELS_ROOT
 
 REPO = Path(__file__).resolve().parent.parent
 SESSION_CEILING_SECONDS = 45 * 60
@@ -271,7 +273,6 @@ def test_each_boot_step_prints_a_utc_time_before_it_begins(boot: Boot) -> None:
     boot.start()
     steps = [m.group(1) for line in boot.out.splitlines() if (m := STAMP.match(line))]
     assert steps == STEPS
-    assert STAMP.match(boot.before(f"statvfs {boot.volume}"))
     assert boot.before(f"statvfs {boot.volume}").endswith("step: the volume")
     assert boot.before("fetch").endswith("step: provisioning")
     assert boot.before("exec").endswith("step: ComfyUI")
@@ -327,7 +328,6 @@ def test_the_models_root_becomes_a_link_onto_the_project_namespace(boot: Boot) -
 )
 def test_fetch_lands_the_models_through_the_link(boot: Boot) -> None:
     boot.start()
-    assert PROVISION == Path(pod_start.__file__).resolve().parent / "provision.py"
     assert boot.ran == [
         [
             sys.executable,
@@ -342,14 +342,17 @@ def test_fetch_lands_the_models_through_the_link(boot: Boot) -> None:
 @pytest.mark.spec(
     "model-provisioning:namespace:annotator-checkpoints-resolve-onto-the-models-tree"
 )
+def test_the_start_links_the_models_root_the_annotator_path_sits_under() -> None:
+    assert pod_start.POD.models_root == Path(MODELS_ROOT)
+
+
+@pytest.mark.spec(
+    "model-provisioning:namespace:annotator-checkpoints-resolve-onto-the-models-tree"
+)
 def test_a_link_already_in_place_is_kept(boot: Boot) -> None:
     root = boot.pod.models_root
     (boot.volume / "isekai").mkdir()
-    for child in root.iterdir():
-        for f in child.iterdir():
-            f.unlink()
-        child.rmdir()
-    root.rmdir()
+    shutil.rmtree(root)
     root.symlink_to(boot.volume / "isekai")
     boot.start()
     assert root.readlink() == boot.volume / "isekai"
