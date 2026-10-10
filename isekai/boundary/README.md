@@ -18,7 +18,8 @@ that quietly refactors is two changes wearing one name (`0024` design.md D6).
 | `comfy/multipart.py` | builds one multipart body; private to the package | nothing |
 | `gpu.py` | `read_env`, the `.env` file read into the session's environment, and `open_session`, gpunit's session on `gpunit.toml`; gpunit is imported inside it | the rented GPU, through gpunit |
 | `ollama.py` | one POST to a local runtime, the classification of what comes back, and the check that a model is built from the files `config/reader.json` pins | the hosted model, over HTTP to localhost; Ollama's model records on disk |
-| `provision.py` | plan → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy, and `resolve`, which returns a pinned artifact's path only once its bytes are verified | a download, on the pod |
+| `pod_start.py` | the pod's start, run as the image's command: the volume, the models link, `provision.py fetch`, the memory checks, then `exec` into ComfyUI; stdlib only | the pod's volume and memory, and `provision.py` as a process |
+| `provision.py` | decide → transfer → verify → land: the manifest reader, the byte check, the skip/abort/fetch policy, `fetch`, which walks each entry's sources, and `resolve`, which returns a pinned artifact's path only once its bytes are verified | a download, on the laptop and on the pod |
 | `wd14.py` | the local tagger: a digest-verified ONNX session, the label index whose file order names its neurons, and the scored list it emits | a 467 MB file on disk, and nothing else |
 
 ## Imported by
@@ -32,6 +33,7 @@ at least once; a list of names cannot.
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `gpu.py` | `interface/render.py` | `tests/test_render.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py`, `tests/test_tagging.py` |
+| `pod_start.py` | nothing; the image runs it as a file | `tests/test_pod_start.py` |
 | `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_cohort.py`, `tests/test_eval_manifest.py`, `tests/test_evaluation_cli.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_recall_cli.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
 | `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `evaluation/recall.py`, `tests/stages.py`, `tests/test_recall.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
 

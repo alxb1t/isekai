@@ -13,6 +13,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - `provision.py fetch` lands a manifest's files over `urllib`, walking each entry's sources under unit test; the
   vocabulary, reader and evaluator remedies name it in place of the shell driver (0059 D3).
+- `isekai/boundary/pod_start.py` runs the pod's start as tested Python — the volume, the models link, `fetch`, the
+  memory checks, then ComfyUI — and also holds on an unread `/dev/shm` type and reports swap (0059 D1, D2, D4, D6).
 
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 

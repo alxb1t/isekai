@@ -6,7 +6,7 @@
 ## Progress
 
 - [x] 1 — fetch
-- [ ] 2 — The start module
+- [x] 2 — The start module
 - [ ] 3 — The image on Python
 - [ ] 4 — The browser check, and no bash left
 - [ ] 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
@@ -22,9 +22,9 @@
 
 ## 2 — The start module
 
-- [ ] 2.1 Write `isekai/boundary/pod_start.py` per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4).
+- [x] 2.1 Write `isekai/boundary/pod_start.py` per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4).
   Verify: `grep -c '^def ' isekai/boundary/pod_start.py` prints a number of at least `5`, and `grep -c 'RUNPOD' isekai/boundary/pod_start.py` prints `0`.
-- [ ] 2.2 Write `tests/test_pod_start.py` binding every key of [D6](design.md#d6)'s successor column, the change's new `pod-image:memory:an-unread-type-holds` and `pod-image:memory:swap-is-reported` among them.
+- [x] 2.2 Write `tests/test_pod_start.py` binding every key of [D6](design.md#d6)'s successor column, the change's new `pod-image:memory:an-unread-type-holds` and `pod-image:memory:swap-is-reported` among them.
   Verify: `grep -o -E '(pod-image|model-provisioning):[a-z-]+:[a-z-]+' tests/test_pod_start.py | sort -u | wc -l | tr -d ' '` prints a number of at least `15`.
 
 ## 3 — The image on Python
