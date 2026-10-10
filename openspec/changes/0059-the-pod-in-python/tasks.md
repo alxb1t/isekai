@@ -50,7 +50,7 @@
 
 ## 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
 
-- [x] 5.1 **HUMAN · METERED** — push `v0.35.1_the_pod_in_python`; dispatch `build-image.yml` on it with tag `v0.35.1-rc1`; check its printed files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D8](design.md#d8).
-  Verify: `grep -c '"tag": "v0.35.1-rc1"' config/image.json` prints `1`.
+- [x] 5.1 **HUMAN · METERED** — push `v0.35.1_the_pod_in_python`; dispatch `build-image.yml` on it with tag `v0.35.1-rc2`; check its printed files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D8](design.md#d8).
+  Verify: `grep -c '"tag": "v0.35.1-rc2"' config/image.json` prints `1`.
 - [x] 5.2 **HUMAN · METERED** — run `uv run python -m isekai render` on a small batch; while it is open, read the pod over `uv run gpunit ssh` and the saved PNG as [D8](design.md#d8) lists, and write the readings to `.minions/0059_pod_proof.txt`, one a line; confirm through the RunPod MCP that no `gpunit-isekai` pod is left.
   Verify: `grep -c -E 'tmpfs|--disable-metadata|TMPDIR=/dev/shm/comfyui/tmp|no text chunk' .minions/0059_pod_proof.txt` prints `4`, and `uv run gpunit status` prints `no session is recorded`.

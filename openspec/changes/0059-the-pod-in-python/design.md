@@ -123,7 +123,7 @@ telemetry, the boot script — stay.
 
 ### D8
 
-A **HUMAN · METERED** phase, last. Push the branch; dispatch `build-image.yml` with tag `v0.35.1-rc1`; check the
+A **HUMAN · METERED** phase, last. Push the branch; dispatch `build-image.yml` with tag `v0.35.1-rc2`; check the
 summary's files equal `config/image.json`'s; re-pin `config/image.json` and `gpunit.toml`. Run `isekai render` on a
 small batch, and while the session is open, from a second terminal, `uv run gpunit ssh` to read: ComfyUI's command
 line, `/dev/shm`'s type, `TMPDIR` in ComfyUI's environment, and after the render `/opt/ComfyUI/output` empty. On the
