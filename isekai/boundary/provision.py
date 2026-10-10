@@ -19,8 +19,10 @@ import posixpath
 import re
 import shutil
 import sys
+import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from http.client import HTTPMessage
 from pathlib import Path, PurePosixPath
@@ -65,6 +67,11 @@ SOURCE_ORG = re.compile(r"^https://huggingface\.co/(?P<org>[^/]+)/")
 # rules out a newline in the middle of a value: a source carrying one would pass
 # the pin check and then arrive at the transfer as two arguments.
 WHITESPACE = re.compile(r"\s")
+
+# A broken transfer is transient, so it is tried again from the same source after
+# each wait in turn; bytes that do not verify would fail the same way (D21).
+ATTEMPTS = 3
+WAITS = (10, 30)
 
 
 class Entry(TypedDict):
@@ -220,7 +227,7 @@ class HuggingFaceFetcher:
 
         A failure at the HTTP layer -- a body cut mid-chunk, a malformed status
         line -- is not an `OSError`, so it is raised as one: the seam promises
-        `OSError`, and that is what moves `fetch` on to the next source.
+        `OSError`, and that is what `fetch` tries again.
         """
         try:
             with urllib.request.urlopen(url, timeout=60) as response:
@@ -445,13 +452,18 @@ def land(entry: Entry, dest: Path, partial: Path) -> None:
     partial.replace(dest)
 
 
-def fetch(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
+def fetch(
+    manifest: Manifest,
+    models_dir: Path,
+    fetcher: Fetcher,
+    wait: Callable[[float], None] = time.sleep,
+) -> int:
     """Land every entry the manifest declares under `models_dir`; 0 if all are there.
 
     Every entry is decided before a byte moves, so an abort anywhere stops the run
     before a 6.9 GB download rather than in the middle of one. Each fetched entry
-    walks its sources in order: a failed transfer or bytes that do not verify move
-    to the next, and only exhausting them all fails the run.
+    walks its sources in order: a transfer that breaks `ATTEMPTS` times or bytes
+    that do not verify move to the next, and only exhausting them all fails the run.
     """
     decisions = [
         (entry, decide(entry, models_dir, fetcher)) for entry in manifest["entries"]
@@ -468,7 +480,7 @@ def fetch(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
         assert target is not None  # only an abort carries no target
         if decision.action == "skip":
             print(f"skip (present, verified): {target}")
-        elif not _transfer(entry, target, decision.urls, fetcher):
+        elif not _transfer(entry, target, decision.urls, fetcher, wait):
             print(f"ERROR: every source for {target} failed", file=sys.stderr)
             return 1
     print(f"models ready under {models_dir}")
@@ -476,18 +488,17 @@ def fetch(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
 
 
 def _transfer(
-    entry: Entry, target: Path, urls: tuple[str, ...], fetcher: Fetcher
+    entry: Entry,
+    target: Path,
+    urls: tuple[str, ...],
+    fetcher: Fetcher,
+    wait: Callable[[float], None],
 ) -> bool:
     """Land `entry` at `target` from the first of `urls` that serves verified bytes."""
     partial = target.with_name(f"{target.name}.partial")
     target.parent.mkdir(parents=True, exist_ok=True)
     for url in urls:
-        print(f"downloading: {url}")
-        try:
-            fetcher.get(url, partial)
-        except OSError as failed:
-            partial.unlink(missing_ok=True)
-            print(f"WARNING: transfer failed from {url}: {failed}", file=sys.stderr)
+        if not _get(url, partial, fetcher, wait):
             continue
         try:
             land(entry, target, partial)
@@ -495,6 +506,28 @@ def _transfer(
             print(f"WARNING: bytes served by {url} did not verify", file=sys.stderr)
             continue
         print(f"saved (verified): {target}")
+        return True
+    return False
+
+
+def _get(
+    url: str, partial: Path, fetcher: Fetcher, wait: Callable[[float], None]
+) -> bool:
+    """Transfer `url` into `partial`, up to `ATTEMPTS` times; True if one completes."""
+    for attempt in range(1, ATTEMPTS + 1):
+        if attempt > 1:
+            wait(WAITS[attempt - 2])
+        print(f"downloading: {url}")
+        try:
+            fetcher.get(url, partial)
+        except OSError as failed:
+            partial.unlink(missing_ok=True)
+            print(
+                f"WARNING: transfer failed from {url}, "
+                f"attempt {attempt} of {ATTEMPTS}: {failed}",
+                file=sys.stderr,
+            )
+            continue
         return True
     return False
 

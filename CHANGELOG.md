@@ -33,6 +33,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `fetch` moves to the next source on a transfer that fails at the HTTP layer, and verifies after the download
   when its pre-flight HEAD does; the build record reads a `COPY` in any case or indent and refuses an `ADD` that
   is not a checksummed URL (0059 D3, D7).
+- `fetch` tries a broken transfer three times from the same source, 10 s then 30 s apart, before moving on: an
+  entry with one source had nowhere to fall. Bytes that do not verify still move on at once (0059 D9).
 
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 

@@ -10,7 +10,7 @@
 - [x] 3 — The image on Python
 - [x] 4 — The browser check, and no bash left
 - [x] 5 — ⚠️ **HUMAN · METERED** — build, re-pin, read the pod, one render session
-- [ ] 6 — fetch tries again
+- [x] 6 — fetch tries again
 - [ ] 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session
 
 ## 1 — fetch
@@ -59,13 +59,13 @@
 
 ## 6 — fetch tries again
 
-- [ ] 6.1 **HALT CHECK** — `fetch` makes one attempt a source.
+- [x] 6.1 **HALT CHECK** — `fetch` makes one attempt a source.
   Verify: `grep -c '^ATTEMPTS' isekai/boundary/provision.py` prints `0`.
-- [ ] 6.2 In `isekai/boundary/provision.py`, try a broken transfer again from the same source, `ATTEMPTS = 3`, waiting 10 s then 30 s, through a wait `fetch` takes as a parameter; a digest mismatch is not tried again; per [D9](design.md#d9). In `tests/test_provision.py`, bind `model-provisioning:source-fallback:a-broken-transfer-is-tried-again` to a fake `Fetcher` that fails once then serves, and to one that fails every attempt and moves on; update the source lists the existing fallback tests expect for a source whose transfer breaks.
+- [x] 6.2 In `isekai/boundary/provision.py`, try a broken transfer again from the same source, `ATTEMPTS = 3`, waiting 10 s then 30 s, through a wait `fetch` takes as a parameter; a digest mismatch is not tried again; per [D9](design.md#d9). In `tests/test_provision.py`, bind `model-provisioning:source-fallback:a-broken-transfer-is-tried-again` to a fake `Fetcher` that fails once then serves, and to one that fails every attempt and moves on; update the source lists the existing fallback tests expect for a source whose transfer breaks.
   Verify: `grep -c 'source-fallback:a-broken-transfer-is-tried-again' tests/test_provision.py` prints a number of at least `2`, and `grep -c '^ATTEMPTS = 3$' isekai/boundary/provision.py` prints `1`.
-- [ ] 6.3 Re-derive `config/image.json`'s `files`, since `provision.py` changed; per [D7](design.md#d7).
+- [x] 6.3 Re-derive `config/image.json`'s `files`, since `provision.py` changed; per [D7](design.md#d7).
   Verify: `uv run python -m tools.image_record | python3 -c 'import json,sys; r=json.load(sys.stdin); print(r == json.load(open("config/image.json"))["files"])'` prints `True`.
-- [ ] 6.4 Land `config/vocabulary.json` with the real transfer into an empty directory, per [D9](design.md#d9).
+- [x] 6.4 Land `config/vocabulary.json` with the real transfer into an empty directory, per [D9](design.md#d9).
   Verify: `d=$(mktemp -d) && uv run python -m isekai.boundary.provision fetch --models-dir "$d" config/vocabulary.json | grep -c 'saved (verified)'` prints `2`.
 
 ## 7 — ⚠️ **HUMAN · METERED** — rebuild as rc3, re-pin, read the pod, one render session

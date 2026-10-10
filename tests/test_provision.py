@@ -40,6 +40,10 @@ def _manifest(entries: list[Entry]) -> Manifest:
     return {"pinned": "2026-09-04", "publishers": [], "entries": entries}
 
 
+def _no_wait(seconds: float) -> None:
+    pass
+
+
 def _place(models_dir: Path, entry: Entry, payload: bytes) -> Path:
     dest = models_dir / entry["dest"]
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -238,8 +242,8 @@ def test_a_source_rejected_before_transfer_is_absent_from_the_offered_sources(
 )
 def test_fetch_walks_every_surviving_source_in_manifest_order(tmp_path: Path) -> None:
     fetcher = FakeFetcher()
-    assert fetch(_manifest([_entry()]), tmp_path, fetcher) == 1
-    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert fetch(_manifest([_entry()]), tmp_path, fetcher, _no_wait) == 1
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE] * 3
 
 
 @pytest.mark.spec(
@@ -248,8 +252,8 @@ def test_fetch_walks_every_surviving_source_in_manifest_order(tmp_path: Path) ->
 def test_a_failed_transfer_advances_to_the_next_source(tmp_path: Path) -> None:
     entry = _entry()
     fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD})
-    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
-    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert fetch(_manifest([entry]), tmp_path, fetcher, _no_wait) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE]
     assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
 
 
@@ -259,8 +263,10 @@ def test_a_failed_transfer_advances_to_the_next_source(tmp_path: Path) -> None:
 def test_bytes_that_do_not_verify_advance_to_the_next_source(tmp_path: Path) -> None:
     entry = _entry()
     fetcher = FakeFetcher(served={PRIMARY: b"tampered", ALTERNATE: PAYLOAD})
-    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
     assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert waits == []
     assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
 
 
@@ -272,12 +278,40 @@ def test_fetch_fails_only_once_every_source_is_exhausted(
 ) -> None:
     entry = _entry()
     fetcher = FakeFetcher(served={PRIMARY: b"tampered"})
-    assert fetch(_manifest([entry]), tmp_path, fetcher) == 1
-    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert fetch(_manifest([entry]), tmp_path, fetcher, _no_wait) == 1
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] + [ALTERNATE] * 3
     target = tmp_path / entry["dest"]
     assert not target.exists()
     assert not target.with_name(f"{target.name}.partial").exists()
     assert f"every source for {target} failed" in capsys.readouterr().err
+
+
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_a_transfer_that_breaks_once_lands_from_the_same_source(
+    tmp_path: Path,
+) -> None:
+    entry = _entry([PRIMARY])
+    fetcher = FakeFetcher(served={PRIMARY: PAYLOAD}, breaks={PRIMARY: 1})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, PRIMARY]
+    assert waits == [10]
+    target = tmp_path / entry["dest"]
+    assert target.read_bytes() == PAYLOAD
+    assert not target.with_name(f"{target.name}.partial").exists()
+
+
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_a_transfer_that_breaks_every_attempt_moves_to_the_next_source(
+    tmp_path: Path,
+) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE]
+    assert waits == [10, 30]
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
 
 
 class _OfflineHuggingFace(HuggingFaceFetcher):
@@ -316,7 +350,7 @@ def test_an_http_layer_failure_advances_to_the_next_source(
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
     entry = _entry()
-    assert fetch(_manifest([entry]), tmp_path, _OfflineHuggingFace()) == 0
+    assert fetch(_manifest([entry]), tmp_path, _OfflineHuggingFace(), _no_wait) == 0
     target = tmp_path / entry["dest"]
     assert target.read_bytes() == PAYLOAD
     assert not target.with_name(f"{target.name}.partial").exists()

@@ -128,16 +128,19 @@ class FakeFetcher:
     it would serve; a URL absent from the map publishes nothing, which is the case
     where pre-flight has to degrade to post-download verification rather than to
     trust. `served` maps a source URL to the bytes it serves; a URL absent from it
-    fails its transfer.
+    fails its transfer. `breaks` maps a served URL to how many of its first
+    transfers break before it serves.
     """
 
     def __init__(
         self,
         published: dict[str, str] | None = None,
         served: dict[str, bytes] | None = None,
+        breaks: dict[str, int] | None = None,
     ) -> None:
         self.published = published or {}
         self.served = served or {}
+        self.breaks = dict(breaks or {})
         # every URL asked about, in order — so a test can assert that a source
         # rejected before transfer was still pre-flighted.
         self.asked: list[str] = []
@@ -150,7 +153,8 @@ class FakeFetcher:
 
     def get(self, url: str, into: Path) -> None:
         self.fetched.append((url, into))
-        if url not in self.served:
+        if url not in self.served or self.breaks.get(url, 0) > 0:
+            self.breaks[url] = self.breaks.get(url, 0) - 1
             into.write_bytes(b"half a file")
             raise OSError(f"{url} did not answer")
         into.write_bytes(self.served[url])
