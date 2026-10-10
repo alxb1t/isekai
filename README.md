@@ -416,7 +416,6 @@ isekai/
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
 │   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
-│   ├── stop_pod.sh            # on the pod: stop it at its ceiling and after a hold
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   └── typecheck_ui.sh        # the gate's browser half

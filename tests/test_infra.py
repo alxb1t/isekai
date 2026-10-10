@@ -137,7 +137,8 @@ def test_the_pod_symlinks_the_models_directory_onto_this_project_namespace(
     assert MODELS_NAMESPACE.startswith(f"{VOLUME_MOUNT}/")
     assert MODELS_NAMESPACE != VOLUME_MOUNT
     assert 'ln -s "$MODELS_NAMESPACE" "$MODELS_ROOT"' in start_sh
-    assert f"MODELS_NAMESPACE={MODELS_NAMESPACE}" in start_sh
+    project = MODELS_NAMESPACE.removeprefix(VOLUME_MOUNT)
+    assert f'MODELS_NAMESPACE="${{GPUNIT_VOLUME_PATH:-}}{project}"' in start_sh
     assert f"MODELS_ROOT={MODELS_ROOT}" in start_sh
 
 
@@ -147,12 +148,14 @@ def test_the_pod_symlinks_the_models_directory_onto_this_project_namespace(
 def test_the_pod_startup_touches_nothing_outside_the_project_namespace(
     start_sh: str,
 ) -> None:
+    # The volume's path is read to name the namespace and to refuse an unset one.
     reaches_out = [
-        line
+        line.strip()
         for line in start_sh.splitlines()
         if not line.lstrip().startswith("#")
-        and VOLUME_MOUNT in line
-        and MODELS_NAMESPACE not in line
+        and (re.search(r"\$\{?GPUNIT_VOLUME_PATH", line) or VOLUME_MOUNT in line)
+        and not line.startswith("MODELS_NAMESPACE=")
+        and '[ -z "${GPUNIT_VOLUME_PATH:-}" ]' not in line
     ]
     assert reaches_out == []
 
@@ -314,8 +317,8 @@ def test_the_hold_ends_on_its_own_well_inside_the_session_ceiling(
     assert 0 < int(bound.group(1)) < SESSION_CEILING_SECONDS
     hold = shell_function(start_sh, "hold")
     assert 'sleep "$HOLD_SECONDS"' in hold
-    # a hold that returns leaves the pod billing
-    assert hold.removesuffix("}").rstrip().endswith('exec bash "$STOP_POD"')
+    # a hold that returns leaves the pod billing; its exit is the boot script's stop
+    assert hold.removesuffix("}").rstrip().endswith("exit 1")
     # an indefinite hold bills until a human notices it
     assert "tail -f /dev/null" not in start_sh
 
@@ -378,7 +381,7 @@ def test_the_timeout_teardown_resolves_from_the_root_the_script_moved_to(
 )
 def test_the_entrypoint_refuses_before_preparing_the_namespace(start_sh: str) -> None:
     body = provision_body(start_sh).splitlines()
-    named = next(i for i, line in enumerate(body) if 'RUNPOD_VOLUME_ID:-}" ]' in line)
+    named = next(i for i, line in enumerate(body) if 'GPUNIT_VOLUME_ID:-}" ]' in line)
     floor = next(i for i, line in enumerate(body) if "VOLUME_SIZE_FLOOR_KIB" in line)
     prepares = next(
         i for i, line in enumerate(body) if 'mkdir -p "$MODELS_NAMESPACE"' in line
@@ -467,10 +470,10 @@ def test_the_driver_joins_no_path_of_its_own(download_models_sh: str) -> None:
     "model-provisioning:reachability:provisioning-requires-the-network-volume"
 )
 def test_the_capacity_floor_clears_the_container_disk_as_well(
-    start_sh: str, up_sh: str
+    start_sh: str, gpunit_spec: dict[str, object]
 ) -> None:
-    # The one case this pod-side guard still exists for is the one `up.sh` cannot
-    # see: the id is set and the mount silently failed, so `/runpod-volume`
+    # The one case this pod-side guard still exists for is the one the laptop
+    # cannot see: the id is set and the mount silently failed, so the volume's path
     # resolves to the container overlay rather than to the volume (D27).
     # That overlay's backing disk is the container `disk`, LARGER than the
     # pod's own volume disk, so a floor that only clears the volume disk lets the
@@ -479,11 +482,11 @@ def test_the_capacity_floor_clears_the_container_disk_as_well(
         r"^VOLUME_SIZE_FLOOR_KIB=\$\(\((\d+) \* 1024 \* 1024\)\)", start_sh, re.M
     )
     assert floor is not None
-    container_disk = re.search(r"\bdisk:\s*(\d+)", up_sh)
-    assert container_disk is not None
+    container_disk = gpunit_spec.get("disk_gb")
+    assert isinstance(container_disk, int)
     # RunPod states those sizes in decimal GB, and decimal is the reading that
     # makes the disk look BIGGEST in KiB, so it is the one the floor must clear.
-    largest_container_kib = int(container_disk.group(1)) * 1000**3 // 1024
+    largest_container_kib = container_disk * 1000**3 // 1024
     assert int(floor.group(1)) * 1024 * 1024 > largest_container_kib
 
 
@@ -612,16 +615,25 @@ def test_the_check_catches_a_workflow_that_builds_on_a_push() -> None:
 
 
 def undigested_images(dockerfile: str) -> list[str]:
-    """Return each image the build starts from or copies from without a digest."""
+    """Return each image used without a digest, and each URL added without a checksum.
+
+    e.g. `ADD https://h/x /x` -> ["https://h/x"]
+    """
     named = re.findall(r"^FROM\s+(\S+)", dockerfile, re.M)
     named += re.findall(r"^COPY\s+--from=(\S+)", dockerfile, re.M)
-    return [image for image in named if not re.search(r"@sha256:[0-9a-f]{64}$", image)]
+    unpinned = [i for i in named if not re.search(r"@sha256:[0-9a-f]{64}$", i)]
+    for line in joined_lines(dockerfile):
+        added = re.match(r"ADD\s+((?:--\S+\s+)*)(https?://\S+)", line)
+        if added and not re.search(r"--checksum=sha256:[0-9a-f]{64}\s", added[1]):
+            unpinned.append(added[2])
+    return unpinned
 
 
 @pytest.mark.spec("pod-image:build:inputs-are-named-by-digest")
 def test_the_base_and_the_build_tool_are_named_by_digest(dockerfile: str) -> None:
     assert re.search(r"^FROM\s", dockerfile, re.M)
     assert re.search(r"^COPY\s+--from=", dockerfile, re.M)
+    assert re.search(r"^ADD\s+--checksum=", dockerfile, re.M)
     assert undigested_images(dockerfile) == []
 
 
@@ -629,10 +641,15 @@ def test_the_base_and_the_build_tool_are_named_by_digest(dockerfile: str) -> Non
     "structural: twin of test_the_base_and_the_build_tool_are_named_by_digest"
 )
 def test_the_check_catches_an_image_named_by_tag() -> None:
-    broken = "FROM ubuntu:22.04\nCOPY --from=ghcr.io/astral-sh/uv:latest /uv /\n"
+    broken = (
+        "FROM ubuntu:22.04\nCOPY --from=ghcr.io/astral-sh/uv:latest /uv /\n"
+        "ADD --chmod=755 \\\n    https://example.com/boot.sh /boot.sh\n"
+        f"ADD --checksum=sha256:{'0' * 64} https://example.com/kept.sh /kept.sh\n"
+    )
     assert undigested_images(broken) == [
         "ubuntu:22.04",
         "ghcr.io/astral-sh/uv:latest",
+        "https://example.com/boot.sh",
     ]
 
 
@@ -849,16 +866,13 @@ def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
     assert uncovered_sdists(lock, no_cython) == ["insightface: cython"]
 
 
-# The line each step of `start.sh` begins with: the stop timer, the SSH key, sshd,
-# provisioning, the download inside it, the memory directories, and ComfyUI.
+# The line each step of `start.sh` begins with: provisioning, the download inside
+# it, the memory directories, and ComfyUI.
 BOOT_STEPS = (
-    '( sleep "$POD_CEILING_SECONDS"',
-    "mkdir -p ~/.ssh",
-    "mkdir -p /run/sshd",
     "if ! provision; then",
     'MODELS_DIR="$MODELS_ROOT" bash',
     "mkdir -p /dev/shm/comfyui/input",
-    "python main.py",
+    "exec python main.py",
 )
 
 
@@ -874,12 +888,8 @@ def unstamped_steps(start_sh: str) -> list[str]:
 
 
 @pytest.mark.spec("pod-image:boot:each-step-is-timestamped")
-def test_each_boot_step_prints_a_utc_time_before_it_begins(
-    start_sh: str, up_sh: str
-) -> None:
+def test_each_boot_step_prints_a_utc_time_before_it_begins(start_sh: str) -> None:
     assert unstamped_steps(start_sh) == []
-    assert "created at $(date -u" in up_sh
-    assert "Port 22 mapped at $(date -u" in up_sh
 
 
 @pytest.mark.spec_exempt(
@@ -889,8 +899,8 @@ def test_the_check_catches_a_step_with_no_timestamp() -> None:
     stamped = "\n".join(f'echo "$(date -u +%FT%TZ)"\n{step}' for step in BOOT_STEPS)
     assert unstamped_steps(stamped) == []
     assert unstamped_steps(
-        stamped.replace('echo "$(date -u +%FT%TZ)"\npython', "python")
-    ) == ["python main.py"]
+        stamped.replace('echo "$(date -u +%FT%TZ)"\nexec python', "exec python")
+    ) == ["exec python main.py"]
 
 
 # The pod's own host key, and ComfyUI's writing kept in memory: text checks over
@@ -964,40 +974,75 @@ def boot_step(start_sh: str, name: str) -> str:
     return "\n".join(lines[opens:closes])
 
 
-def host_key_faults(start_sh: str) -> list[str]:
-    """Return what the sshd step lacks of a key made at boot, served alone, printed."""
-    step = boot_step(start_sh, "sshd")
+BOOT_SCRIPT = "/opt/gpunit/boot.sh"
+BOOT_SOURCE = "https://raw.githubusercontent.com/alxb1t/gpunit/{tag}/boot/boot.sh"
+
+
+def gpunit_tag(pyproject: str) -> str | None:
+    """Return the tag `pyproject.toml` pins gpunit at, or None if it pins none."""
+    pinned = re.search(
+        r'"gpunit @ git\+https://github\.com/alxb1t/gpunit@([\w.]+)"', pyproject
+    )
+    return pinned[1] if pinned else None
+
+
+def boot_script_faults(dockerfile: str, pyproject: str) -> list[str]:
+    """Return how the image's entrypoint departs from gpunit's boot script at its pin.
+
+    e.g. a build file holding `CMD ["/start.sh"]` alone ->
+    ["the boot script is not added ...", "the entrypoint is not ..."]
+    """
+    lines = [ln for ln in joined_lines(dockerfile) if not ln.lstrip().startswith("#")]
+    tag = gpunit_tag(pyproject)
+    source = re.escape(BOOT_SOURCE.format(tag=tag or "?"))
+    added = re.compile(
+        rf"^ADD --checksum=sha256:[0-9a-f]{{64}}\s+{source}\s+{BOOT_SCRIPT}$"
+    )
     faults = []
-    if "ssh-keygen -A" in step or "ssh-keygen -q -t ed25519" not in step:
-        faults.append("makes other than one Ed25519 key")
-    if not re.search(r'^/usr/sbin/sshd -o HostKey="\$key"$', step, re.M):
-        faults.append("serves other than its own key")
-    if 'echo "isekai host key: $(ssh-keygen -lf "$key.pub"' not in step:
-        faults.append("prints no fingerprint")
+    if tag is None or not any(added.match(ln) for ln in lines):
+        faults.append("the boot script is not added at gpunit's pin with a checksum")
+    entry = [ln for ln in lines if ln.startswith("ENTRYPOINT")]
+    if entry != [f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]']:
+        faults.append("the entrypoint is not the boot script followed by --")
     return faults
 
 
 @pytest.mark.spec("pod-image:host-key:each-boot-makes-and-prints-one")
-def test_each_boot_makes_and_prints_its_own_key(start_sh: str) -> None:
-    assert host_key_faults(start_sh) == []
+def test_each_boot_runs_gpunits_boot_script_at_its_pin(dockerfile: str) -> None:
+    pyproject = (REPO / "pyproject.toml").read_text()
+    assert gpunit_tag(pyproject) is not None
+    assert boot_script_faults(dockerfile, pyproject) == []
 
 
 @pytest.mark.spec_exempt(
-    "structural: twin of test_each_boot_makes_and_prints_its_own_key"
+    "structural: twin of test_each_boot_runs_gpunits_boot_script_at_its_pin"
 )
-def test_the_check_catches_an_sshd_serving_every_stock_key() -> None:
-    stock = 'echo "$(date -u +%FT%TZ) step: sshd"\nssh-keygen -A\n/usr/sbin/sshd\n\n'
-    assert host_key_faults(stock) == [
-        "makes other than one Ed25519 key",
-        "serves other than its own key",
-        "prints no fingerprint",
+def test_the_check_catches_a_boot_script_at_another_tag_or_unchecked() -> None:
+    pyproject = 'dependencies = ["gpunit @ git+https://github.com/alxb1t/gpunit@v9"]'
+    pinned = (
+        f"ADD --checksum=sha256:{'0' * 64} \\\n    "
+        f"{BOOT_SOURCE.format(tag='v9')} {BOOT_SCRIPT}\n"
+        f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]\n'
+    )
+    assert boot_script_faults(pinned, pyproject) == []
+    elsewhere = pinned.replace("/v9/", "/v8/")
+    unchecked = pinned.replace(f"--checksum=sha256:{'0' * 64} ", "")
+    for broken in (elsewhere, unchecked):
+        assert boot_script_faults(broken, pyproject) == [
+            "the boot script is not added at gpunit's pin with a checksum"
+        ]
+    assert boot_script_faults('CMD ["/start.sh"]\n', pyproject) == [
+        "the boot script is not added at gpunit's pin with a checksum",
+        "the entrypoint is not the boot script followed by --",
     ]
 
 
 def serve_command(start_sh: str) -> str:
     """Return the line that starts ComfyUI, its continuation lines joined into one."""
     return next(
-        line for line in joined_lines(start_sh) if line.startswith("python main.py")
+        line
+        for line in joined_lines(start_sh)
+        if line.startswith("exec python main.py")
     )
 
 
@@ -1048,10 +1093,10 @@ def test_comfyui_writes_to_memory(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_to_memory")
 def test_the_check_catches_a_directory_on_disk_or_not_made() -> None:
-    assert comfyui_directories("python main.py --port 8188\n") == {}
+    assert comfyui_directories("exec python main.py --port 8188\n") == {}
     unmade = (
         "mkdir -p /dev/shm/comfyui/input\n"
-        "python main.py --input-directory /dev/shm/comfyui/input \\\n"
+        "exec python main.py --input-directory /dev/shm/comfyui/input \\\n"
         "    --temp-directory /dev/shm/comfyui\n"
     )
     assert unmade_directories(unmade) == ["/dev/shm/comfyui/temp"]
@@ -1238,7 +1283,7 @@ def test_comfyui_writes_no_metadata(start_sh: str) -> None:
 
 @pytest.mark.spec_exempt("structural: twin of test_comfyui_writes_no_metadata")
 def test_the_check_catches_the_flag_outside_the_start_line() -> None:
-    elsewhere = "# --disable-metadata\npython main.py --port 8188\n"
+    elsewhere = "# --disable-metadata\nexec python main.py --port 8188\n"
     assert "--disable-metadata" not in serve_command(elsewhere).split()
 
 
@@ -1530,10 +1575,9 @@ def unsafe_api_calls(scripts: dict[str, str]) -> list[str]:
 
 
 @pytest.mark.spec_exempt("structural: how the scripts hand curl the key and a bound")
-def test_every_api_call_is_bounded_and_keeps_the_key_off_argv(stop_sh: str) -> None:
+def test_every_api_call_is_bounded_and_keeps_the_key_off_argv() -> None:
     scripts = {p.name: p.read_text() for p in (REPO / "infra").iterdir() if p.is_file()}
-    scripts["tools/stop_pod.sh"] = stop_sh
-    assert all("curl " in scripts[n] for n in ("up.sh", "down.sh", "tools/stop_pod.sh"))
+    assert all("curl " in scripts[n] for n in ("up.sh", "down.sh"))
     assert unsafe_api_calls(scripts) == []
 
 
@@ -2318,12 +2362,6 @@ def pods_sh() -> str:
     return (REPO / "infra" / "pods.sh").read_text()
 
 
-@pytest.fixture(scope="session")
-def stop_sh() -> str:
-    """Read the shipped `tools/stop_pod.sh` once for the whole session."""
-    return (REPO / "tools" / "stop_pod.sh").read_text()
-
-
 def create_body(up_sh: str) -> dict[str, object]:
     """Return the create request `up.sh` builds for a card named `card`."""
     lines = up_sh.splitlines()
@@ -2938,55 +2976,48 @@ def test_the_session_check_catches_a_record_read_after_the_trap(tmp_path: Path) 
     assert torn
 
 
-TIMER = '( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &'
+def unarmed_stop(spec: dict[str, object], dockerfile: str) -> list[str]:
+    """Return what the pod lacks of a stop armed at boot within the session's ceiling.
 
-
-def unarmed_stop(start_sh: str, dockerfile: str) -> list[str]:
-    """Return what `start.sh` lacks of a stop armed, in the background, at boot.
-
-    e.g. a script whose first step is the SSH key -> ["armed first", ...]
+    e.g. a `ceiling = "1h"` spec and a build file with no entrypoint ->
+    ["a ceiling within the session's", "gpunit's boot script as the entrypoint"]
     """
     faults = []
-    steps = [ln for ln in start_sh.splitlines() if re.search(r'step: [^"]+"$', ln)]
-    if not steps or not steps[0].endswith('step: the stop timer"'):
-        faults.append("armed first")
-    ceiling = re.search(r"^POD_CEILING_SECONDS=(\d+)$", start_sh, re.M)
-    if ceiling is None or not 0 < int(ceiling[1]) <= SESSION_CEILING_SECONDS:
+    ceiling = re.fullmatch(r"([1-9][0-9]*)([smh])", str(spec.get("ceiling", "")))
+    unit = {"s": 1, "m": 60, "h": 3600}
+    seconds = int(ceiling[1]) * unit[ceiling[2]] if ceiling else 0
+    if not 0 < seconds <= SESSION_CEILING_SECONDS:
         faults.append("a ceiling within the session's")
-    if TIMER not in start_sh.splitlines():
-        faults.append("in the background")
-    stop = re.search(r"^STOP_POD=(\S+)$", start_sh, re.M)
-    if stop is None or image_copies(dockerfile).get(stop[1]) != "tools/stop_pod.sh":
-        faults.append("a stop the image holds")
+    entry = [ln for ln in dockerfile.splitlines() if ln.startswith("ENTRYPOINT")]
+    if entry != [f'ENTRYPOINT ["{BOOT_SCRIPT}", "--"]']:
+        faults.append("gpunit's boot script as the entrypoint")
     return faults
 
 
 @pytest.mark.spec("pod-image:stop:armed-at-boot")
-def test_the_pod_arms_its_stop_first(start_sh: str, dockerfile: str) -> None:
-    assert unarmed_stop(start_sh, dockerfile) == []
+def test_the_pod_arms_its_stop_first(
+    gpunit_spec: dict[str, object], dockerfile: str
+) -> None:
+    assert unarmed_stop(gpunit_spec, dockerfile) == []
 
 
 @pytest.mark.spec_exempt("structural: twin of test_the_pod_arms_its_stop_first")
-def test_the_armed_stop_check_catches_a_late_foreground_timer(dockerfile: str) -> None:
-    late = (
-        'echo "$(date -u +%FT%TZ) step: the SSH key"\n'
-        "POD_CEILING_SECONDS=3600\nSTOP_POD=/opt/isekai/stop.sh\n"
-        'echo "$(date -u +%FT%TZ) step: the stop timer"\n'
-        'sleep "$POD_CEILING_SECONDS"; bash "$STOP_POD"\n'
-    )
-    assert unarmed_stop(late, dockerfile) == [
-        "armed first",
+def test_the_armed_stop_check_catches_a_long_ceiling_and_no_boot_script() -> None:
+    assert unarmed_stop({"ceiling": "1h"}, 'CMD ["/start.sh"]\n') == [
         "a ceiling within the session's",
-        "in the background",
-        "a stop the image holds",
+        "gpunit's boot script as the entrypoint",
+    ]
+    assert unarmed_stop({"ceiling": "45"}, "") == [
+        "a ceiling within the session's",
+        "gpunit's boot script as the entrypoint",
     ]
 
 
 def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
-    """Return how `start.sh` holds without ending in the stop.
+    """Return how `start.sh` holds without ending in a non-zero exit.
 
-    Runs `hold` with `sleep` and the stop's `bash` stubbed; each line outside it
-    that waits out `HOLD_SECONDS` is a hold that bypasses it.
+    Runs `hold` with `sleep` stubbed; each line outside it that waits out
+    `HOLD_SECONDS` is a hold that bypasses it.
     """
     body = shell_function(start_sh, "hold")
     faults = [
@@ -2994,20 +3025,12 @@ def unstopped_holds(start_sh: str, tmp_path: Path) -> list[str]:
         for ln in _code(start_sh.replace(body, ""))
         if "HOLD_SECONDS" in ln and not ln.startswith("HOLD_SECONDS=")
     ]
-    # `exec` finds only a file on PATH, so the stop's `bash` is one.
-    stub_command(tmp_path / "bin", "bash", '#!/bin/sh\necho "stopped $*"\n')
-    stubs = "\n".join(
-        [
-            f'export PATH="{tmp_path / "bin"}:$PATH"',
-            "HOLD_SECONDS=900 STOP_POD=/opt/isekai/tools/stop_pod.sh",
-            'sleep() { echo "slept $1"; }',
-        ]
-    )
+    stubs = 'HOLD_SECONDS=900\nsleep() { echo "slept $1"; }'
     done = run_functions(
         start_sh, ("hold",), stubs, tmp_path, call='hold "ERROR: why"; echo returned'
     )
-    if done.stdout != "slept 900\nstopped /opt/isekai/tools/stop_pod.sh\n":
-        faults.append("hold() does not stop the pod once it has waited")
+    if done.stdout != "slept 900\n" or done.returncode == 0:
+        faults.append("hold() does not exit non-zero once it has waited")
     if not done.stderr.startswith("ERROR: why\n"):
         faults.append("hold() does not say why")
     return faults
@@ -3020,167 +3043,46 @@ def test_every_hold_ends_in_the_stop(start_sh: str, tmp_path: Path) -> None:
 
 
 @pytest.mark.spec_exempt("structural: twin of test_every_hold_ends_in_the_stop")
-def test_the_hold_check_catches_a_hold_that_exits(tmp_path: Path) -> None:
-    exits = (
+def test_the_hold_check_catches_a_hold_that_returns(tmp_path: Path) -> None:
+    returns = (
         "HOLD_SECONDS=900\n"
         'hold() {\n    printf "%s\\n" "$@" >&2\n    sleep "$HOLD_SECONDS"\n}\n'
         'if ! provision; then\n    exec sleep "$HOLD_SECONDS"\nfi\n'
     )
-    assert unstopped_holds(exits, tmp_path) == [
+    assert unstopped_holds(returns, tmp_path) == [
         'holds outside hold(): exec sleep "$HOLD_SECONDS"',
-        "hold() does not stop the pod once it has waited",
-    ]
-
-
-TRIED_ONCE = (
-    "code=$(curl -s --max-time 30 -o /dev/null -w '%{http_code}' -X POST"
-    ' "$API/pods/$RUNPOD_POD_ID/action")\n'
-    '[ "$code" = "200" ]\n'
-)
-
-
-def stop_attempts(
-    script: str, codes: list[str], tmp_path: Path
-) -> tuple[int, list[str], list[str]]:
-    """Run the stop script against RunPod answering `codes`, one per attempt.
-
-    Return its exit code, each attempt's curl arguments, and each wait between them.
-    """
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    (tmp_path / "codes").write_text("".join(f"{c}\n" for c in codes))
-    stubs = "\n".join(
-        [
-            "export RUNPOD_API_KEY=test-key RUNPOD_POD_ID=pod-test",
-            'curl() { echo "$*" >> attempts;'
-            ' sed -n "$(wc -l < attempts | tr -d " ")p" codes; }',
-            'sleep() { echo "$1" >> slept; SECONDS=$((SECONDS + $1)); }',
-        ]
-    )
-    done = subprocess.run(
-        ["bash", "-c", f"{stubs}\n{script}"],
-        cwd=tmp_path,
-        env={"PATH": os.environ["PATH"]},
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-
-    def read(name: str) -> list[str]:
-        path = tmp_path / name
-        return path.read_text().splitlines() if path.exists() else []
-
-    return done.returncode, read("attempts"), read("slept")
-
-
-@pytest.mark.spec("pod-image:stop:a-failed-stop-is-retried")
-def test_a_failed_stop_is_retried_until_it_succeeds(
-    stop_sh: str, tmp_path: Path
-) -> None:
-    code, attempts, slept = stop_attempts(
-        stop_sh, ["500", "000", "200"], tmp_path / "ok"
-    )
-    assert (code, len(attempts), slept) == (0, 3, ["30", "60"])
-    for attempt in attempts:
-        assert (
-            '-d {"action":"stop"} https://api.runpod.io/v2/pods/pod-test/action'
-            in attempt
-        )
-    # An hour of failures: the wait doubles to five minutes, and nothing gives up.
-    code, attempts, slept = stop_attempts(
-        stop_sh, ["500"] * 20 + ["200"], tmp_path / "down"
-    )
-    assert (code, len(attempts)) == (0, 21)
-    assert slept == ["30", "60", "120", "240"] + ["300"] * 16
-
-
-@pytest.mark.spec_exempt(
-    "structural: twin of test_a_failed_stop_is_retried_until_it_succeeds"
-)
-def test_the_retry_check_catches_a_stop_tried_once(tmp_path: Path) -> None:
-    code, attempts, slept = stop_attempts(TRIED_ONCE, ["500", "200"], tmp_path)
-    assert (code, len(attempts), slept) == (1, 1, [])
-
-
-# The key leaves the environment and stays in the shell, for the stop at the end.
-KEY_HIDDEN = "export -n RUNPOD_API_KEY"
-
-
-def key_left_for_comfyui(start_sh: str) -> list[str]:
-    """Return how the key could still reach ComfyUI, or be gone before the timer."""
-    lines = before_serve(start_sh).splitlines()
-    unset = [i for i, ln in enumerate(lines) if ln == KEY_HIDDEN]
-    if not unset:
-        return ["never unset"]
-    faults = []
-    timer = next((i for i, ln in enumerate(lines) if ln == TIMER), None)
-    if timer is None or unset[0] < timer:
-        faults.append("unset before the timer forks")
-    if any(
-        "RUNPOD_API_KEY=" in ln or re.match(r"export .*RUNPOD_API_KEY", ln)
-        for ln in lines[unset[-1] + 1 :]
-    ):
-        faults.append("set again before ComfyUI")
-    return faults
-
-
-@pytest.mark.spec("pod-image:stop:comfyui-holds-no-key")
-def test_comfyui_starts_without_the_key(start_sh: str) -> None:
-    assert key_left_for_comfyui(start_sh) == []
-
-
-@pytest.mark.spec_exempt("structural: twin of test_comfyui_starts_without_the_key")
-def test_the_key_check_catches_a_key_kept_or_unset_too_early() -> None:
-    serve = "python main.py\n"
-    assert key_left_for_comfyui(f"{TIMER}\n{serve}") == ["never unset"]
-    assert key_left_for_comfyui(
-        f"{TIMER}\n{KEY_HIDDEN}\nexport RUNPOD_API_KEY\n{serve}"
-    ) == ["set again before ComfyUI"]
-    assert key_left_for_comfyui(f"{KEY_HIDDEN}\n{TIMER}\n{serve}") == [
-        "unset before the timer forks"
+        "hold() does not exit non-zero once it has waited",
     ]
 
 
 def unstopped_ends(start_sh: str, tmp_path: Path) -> list[str]:
-    """Return each way a boot ends without the stop, or with the key in ComfyUI.
+    """Return each way a boot ends other than in ComfyUI's process or a failing exit.
 
-    Runs the start script's traps, then its last step, with ComfyUI and the stop's
-    `bash` stubbed: once for each way ComfyUI can exit, and once for a step that
-    fails before it.
+    Runs the start script's last step with ComfyUI stubbed: once for each way
+    ComfyUI can exit, and once for a step that fails before it. ComfyUI replaces
+    the script when both print one process id.
     """
     lines = start_sh.splitlines()
-    traps = [ln for ln in _code(start_sh) if ln.startswith("trap ")]
-    # The line that takes the key from ComfyUI's environment, and what follows it.
-    hidden = next(
-        i for i, ln in enumerate(lines) if re.match(r"^\S.*RUNPOD_API_KEY$", ln)
-    )
-    tail = "\n".join(lines[hidden:])
-    # `exec` finds only a file on PATH, so the stop's `bash` is one.
-    bin_dir = tmp_path / "bin"
+    step = next(i for i, ln in enumerate(lines) if ln.endswith('step: ComfyUI"'))
+    tail = "\n".join(lines[step:])
     stub_command(
-        bin_dir, "bash", '#!/bin/sh\necho "stopped $1 with ${RUNPOD_API_KEY:-no} key"\n'
+        tmp_path / "bin", "python", '#!/bin/sh\necho "ComfyUI $$"\nexit "$STATUS"\n'
     )
-    stub_command(
-        bin_dir,
-        "python",
-        '#!/bin/sh\necho "ComfyUI has ${RUNPOD_API_KEY:-no} key"\nexit "$STATUS"\n',
-    )
-    stop = "stopped /opt/isekai/tools/stop_pod.sh with test-key key\n"
     cases = {
-        "a ComfyUI that exits": ("export STATUS=0", "ComfyUI has no key\n" + stop),
-        "a ComfyUI that fails": ("export STATUS=1", "ComfyUI has no key\n" + stop),
-        "a step that fails before ComfyUI": ("false", stop),
+        "a ComfyUI that exits": ("export STATUS=0", 0),
+        "a ComfyUI that fails": ("export STATUS=1", 1),
+        "a step that fails before ComfyUI": ("false", None),
     }
     faults = []
-    for case, (before, expected) in cases.items():
+    for case, (before, status) in cases.items():
         program = "\n".join(
             [
                 "set -euo pipefail",
-                f'export PATH="{bin_dir}:$PATH" RUNPOD_API_KEY=test-key',
-                "STOP_POD=/opt/isekai/tools/stop_pod.sh",
-                *traps,
+                f'export PATH="{tmp_path / "bin"}:$PATH"',
+                'echo "script $$"',
                 before,
                 tail,
+                "echo after",
             ]
         )
         done = subprocess.run(
@@ -3193,9 +3095,16 @@ def unstopped_ends(start_sh: str, tmp_path: Path) -> list[str]:
             check=False,
         )
         # The step's own timestamp line is not what is checked.
-        said = [ln for ln in done.stdout.splitlines(True) if " step: " not in ln]
-        if "".join(said) != expected:
-            faults.append(f"{case} does not end in the stop")
+        words = [ln.split() for ln in done.stdout.splitlines() if " step: " not in ln]
+        said = [word[0] for word in words]
+        pids = {word[1] for word in words if len(word) > 1}
+        if status is None:
+            ended = done.returncode != 0 and said == ["script"]
+        else:
+            replaced = said == ["script", "ComfyUI"] and len(pids) == 1
+            ended = replaced and done.returncode == status
+        if not ended:
+            faults.append(f"{case} does not end the boot")
     return faults
 
 
@@ -3205,18 +3114,15 @@ def test_a_boot_that_ends_stops_the_pod(start_sh: str, tmp_path: Path) -> None:
 
 
 @pytest.mark.spec_exempt("structural: twin of test_a_boot_that_ends_stops_the_pod")
-def test_the_boot_end_check_catches_a_comfyui_that_replaces_the_script(
+def test_the_boot_end_check_catches_a_comfyui_run_as_a_child(
     tmp_path: Path,
 ) -> None:
-    replaced = (
-        "unset RUNPOD_API_KEY\n\n"
-        'echo "$(date -u +%FT%TZ) step: ComfyUI"\n'
-        "exec python main.py --port 8188\n"
+    child = (
+        'echo "$(date -u +%FT%TZ) step: ComfyUI"\npython main.py --port 8188 || true\n'
     )
-    assert unstopped_ends(replaced, tmp_path) == [
-        "a ComfyUI that exits does not end in the stop",
-        "a ComfyUI that fails does not end in the stop",
-        "a step that fails before ComfyUI does not end in the stop",
+    assert unstopped_ends(child, tmp_path) == [
+        "a ComfyUI that exits does not end the boot",
+        "a ComfyUI that fails does not end the boot",
     ]
 
 

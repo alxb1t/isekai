@@ -17,6 +17,15 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   ordering, pre-pod pass, ceiling watchdog and batch log under unit test; a render records the session's image
   (0058 D1–D5).
 
+### Changed
+
+- The image boots gpunit's `boot.sh -- /start.sh`, added by checksum at gpunit's pin; `start.sh` drops its own
+  stop, key and sshd, reads `GPUNIT_VOLUME_*`, ends a hold by exiting, and `exec`s ComfyUI (0058 D7).
+
+### Removed
+
+- `tools/stop_pod.sh` and its tests: gpunit's boot script stops the pod (0058 D7, D8).
+
 ## [0.34.2] - 2026-10-09 · 0057-the-removed-key
 
 ### Fixed

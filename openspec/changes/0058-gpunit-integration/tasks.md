@@ -7,7 +7,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 - [x] 1 — The configuration
 - [x] 2 — The render verb
-- [ ] 3 — The pod
+- [x] 3 — The pod
 - [ ] 4 — The scripts retired
 - [ ] 5 — The documents
 - [ ] 6 — The build record
@@ -37,11 +37,11 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 3 — The pod
 
-- [ ] 3.1 In `Dockerfile`, add `boot.sh` from gpunit `v0.2.0` with its checksum, set the `ENTRYPOINT`, and drop the `stop_pod.sh` copy and `chmod`; per [D7](design.md#d7).
+- [x] 3.1 In `Dockerfile`, add `boot.sh` from gpunit `v0.2.0` with its checksum, set the `ENTRYPOINT`, and drop the `stop_pod.sh` copy and `chmod`; per [D7](design.md#d7).
   Verify: `grep -c '^ENTRYPOINT \["/opt/gpunit/boot.sh", "--"\]$' Dockerfile` prints `1`, and `grep -c 'stop_pod' Dockerfile` prints `0`.
-- [ ] 3.2 In `start.sh`, remove steps 1–3 and `STOP_POD`, read `GPUNIT_VOLUME_PATH` and `GPUNIT_VOLUME_ID`, end `hold()` in `exit 1`, remove `export -n RUNPOD_API_KEY`, and `exec` ComfyUI; delete `tools/stop_pod.sh`; per [D7](design.md#d7).
+- [x] 3.2 In `start.sh`, remove steps 1–3 and `STOP_POD`, read `GPUNIT_VOLUME_PATH` and `GPUNIT_VOLUME_ID`, end `hold()` in `exit 1`, remove `export -n RUNPOD_API_KEY`, and `exec` ComfyUI; delete `tools/stop_pod.sh`; per [D7](design.md#d7).
   Verify: `grep -c -E 'RUNPOD_|STOP_POD|/runpod-volume' start.sh` prints `0`, `grep -c '^exec python main.py' start.sh` prints `1`, and `ls tools/stop_pod.sh 2>&1 | grep -c 'No such file'` prints `1`.
-- [ ] 3.3 Rewrite the `start.sh`, `Dockerfile` and stop tests of `tests/test_infra.py` for [D7](design.md#d7) and the map in [D8](design.md#d8): `BOOT_STEPS`, `serve_command`, the stop helpers, the volume and namespace checks, the capacity floor against `gpunit.toml`'s `disk_gb`, the `ENTRYPOINT` and `ADD` test, the `ADD --checksum` case of the digest check; delete the tests of `tools/stop_pod.sh`.
+- [x] 3.3 Rewrite the `start.sh`, `Dockerfile` and stop tests of `tests/test_infra.py` for [D7](design.md#d7) and the map in [D8](design.md#d8): `BOOT_STEPS`, `serve_command`, the stop helpers, the volume and namespace checks, the capacity floor against `gpunit.toml`'s `disk_gb`, the `ENTRYPOINT` and `ADD` test, the `ADD --checksum` case of the digest check; delete the tests of `tools/stop_pod.sh`.
   Verify: `grep -c 'stop_pod' tests/test_infra.py` prints `0`, and `uv run pytest -q tests/test_infra.py` exits 0.
 
 ## 4 — The scripts retired

@@ -1,41 +1,19 @@
 #!/usr/bin/env bash
-# Pod entrypoint: enable full SSH (for the tunnel), then run ComfyUI.
+# Pod entrypoint, run by gpunit's boot script: provision the models, then serve
+# ComfyUI. The boot script has armed the pod's stop and started sshd, and stops
+# the pod when this script ends, however it ends (D36).
 
 set -euo pipefail
 
 # Each step prints the UTC time it begins, so the pod log says where a boot's
 # minutes go.
 
-# 1. The pod stops itself at its ceiling, whatever happens to the machine that
-#    created it (D36). A boot that ends, however it ends, stops the pod
-#    too: an exit would restart the container, and the restart arm a fresh ceiling.
-POD_CEILING_SECONDS=2700
-STOP_POD=/opt/isekai/tools/stop_pod.sh
-echo "$(date -u +%FT%TZ) step: the stop timer"
-( sleep "$POD_CEILING_SECONDS"; exec bash "$STOP_POD" ) &
-trap 'export RUNPOD_API_KEY; exec bash "$STOP_POD"' EXIT
-
-# 2. Install the SSH public key so we can log in with our private key.
-echo "$(date -u +%FT%TZ) step: the SSH key"
-mkdir -p ~/.ssh
-echo "${PUBLIC_KEY:-${SSH_PUBLIC_KEY:-}}" > ~/.ssh/authorized_keys
-chmod 700 ~/.ssh
-chmod 600 ~/.ssh/authorized_keys
-
-# 3. Start the SSH daemon. The image ships no host key, so the pod makes its own
-#    and serves with it alone; the printed line is what a client checks it against.
-echo "$(date -u +%FT%TZ) step: sshd"
-mkdir -p /run/sshd
-key=/etc/ssh/ssh_host_ed25519_key
-[ -f "$key" ] || ssh-keygen -q -t ed25519 -N '' -f "$key"
-/usr/sbin/sshd -o HostKey="$key"
-echo "isekai host key: $(ssh-keygen -lf "$key.pub" | awk '{print $2}')"
-
-# 4. Where this project's models live, and what a provisioning failure costs.
+# 1. Where this project's models live, and what a provisioning failure costs.
 #
-# The volume mounts at the parent of the namespace and nothing here touches
-# anything outside $MODELS_NAMESPACE — a second project lives on the same volume.
-MODELS_NAMESPACE=/runpod-volume/isekai
+# gpunit mounts the volume at GPUNIT_VOLUME_PATH, the parent of the namespace, and
+# nothing here touches anything outside $MODELS_NAMESPACE — a second project lives
+# on the same volume. An unset path is refused inside `provision`, where it holds.
+MODELS_NAMESPACE="${GPUNIT_VOLUME_PATH:-}/isekai"
 MODELS_ROOT=/opt/ComfyUI/models
 
 # The hold below bills while it holds, so it is bounded rather than indefinite.
@@ -43,13 +21,13 @@ MODELS_ROOT=/opt/ComfyUI/models
 # per-session ceiling that a 3600 s hold would more than double.
 HOLD_SECONDS=900
 
-# A hold that ended in its process exiting would boot again in a restarted
-# container, and hold again, forever; it ends in the stop.
+# A hold ends in this script exiting non-zero, which the boot script turns into
+# the pod's stop.
 hold() {  # hold <line>...: say why, stay reachable HOLD_SECONDS, then stop the pod
     printf '%s\n' "$@" >&2
     echo "Holding ${HOLD_SECONDS}s, then stopping the pod." >&2
     sleep "$HOLD_SECONDS"
-    exec bash "$STOP_POD"
+    exit 1
 }
 
 # The marker goes on container disk, never into the namespace: the namespace is
@@ -64,7 +42,7 @@ FAILURE_MARKER=/opt/isekai/provisioning-failed
 # disks this path can resolve to, and the floor clears BOTH:
 #
 #   * the pod's own volume disk, `volumeInGb: 20`  →  20e9 B  ≈ 18.6 GiB
-#   * the container overlay, `disk: 30` (infra/up.sh) → ≈ 27.9 GiB
+#   * the container overlay, `disk_gb = 30` (gpunit.toml) → ≈ 27.9 GiB
 #
 # The second is the case this pod-side check exists for at all — id set, mount
 # silently failed, so the path falls through to the overlay — and a floor sized
@@ -86,7 +64,7 @@ VOLUME_SIZE_FLOOR_KIB=$((40 * 1024 * 1024))
 # pod holds before it starts instead.
 SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))
 
-# 5. Provisioning: prepare this project's namespace on the volume, then ensure the
+# 2. Provisioning: prepare this project's namespace on the volume, then ensure the
 #    models are on it.
 #
 # Both steps live in one function because the reachability guarantee is about
@@ -94,12 +72,11 @@ SHM_FREE_FLOOR_KIB=$((1 * 1024 * 1024))
 # provisioning by any reading a human would give the word, and a failure there —
 # an unwritable volume, a link onto a path that could not be cleared — would
 # terminate the entrypoint exactly as a fetch failure would. Every step here
-# returns rather than exits, so nothing inside can kill the shell that owns the
-# sshd started at step 3.
+# returns rather than exits, so nothing inside can end the boot before the hold.
 provision() {
-    if [ -z "${RUNPOD_VOLUME_ID:-}" ]; then
-        echo "ERROR: RUNPOD_VOLUME_ID is empty — the pod was not told which" >&2
-        echo "network volume to expect. Refusing to provision." >&2
+    if [ -z "${GPUNIT_VOLUME_ID:-}" ] || [ -z "${GPUNIT_VOLUME_PATH:-}" ]; then
+        echo "ERROR: GPUNIT_VOLUME_ID or GPUNIT_VOLUME_PATH is empty — the pod was" >&2
+        echo "not told which network volume to expect. Refusing to provision." >&2
         return 1
     fi
 
@@ -117,7 +94,7 @@ provision() {
         echo "ERROR: measured $volume at a total size of ${size_kib} KiB, below" >&2
         echo "the ${VOLUME_SIZE_FLOOR_KIB} KiB floor — a disk that small is the" >&2
         echo "pod's own ephemeral storage, either its 20 GB volume disk or its" >&2
-        echo "30 GB container disk, not network volume ${RUNPOD_VOLUME_ID}." >&2
+        echo "30 GB container disk, not network volume ${GPUNIT_VOLUME_ID}." >&2
         echo "Refusing to download 16.5 GiB onto storage that dies at teardown." >&2
         return 1
     fi
@@ -152,12 +129,11 @@ provision() {
     MODELS_DIR="$MODELS_ROOT" bash /opt/isekai/tools/download_models.sh || return 1
 }
 
-# A provisioning abort must NOT take the container down. The abort policy leaves a
-# mismatched file on disk for a human to inspect, and under `set -e`
-# a non-zero exit here would kill PID 1 — taking the sshd started at step 3 with it
-# and dying again seconds into every subsequent boot, so there is no way in. Hold
-# the pod open in the foreground instead: reachable, ComfyUI not started, nothing
-# deleted.
+# A provisioning abort must NOT end the boot at once. The abort policy leaves a
+# mismatched file on disk for a human to inspect, and under `set -e` a non-zero
+# exit here would stop the pod before anyone could get in. Hold the pod open in
+# the foreground instead: reachable over the boot script's sshd, ComfyUI not
+# started, nothing deleted.
 #
 # Bounded, and marked. A pod holding open reports as running and healthy while it
 # bills, so the failure that outlasts a session's spending ceiling is the one
@@ -171,7 +147,7 @@ if ! provision; then
         "Marker: $FAILURE_MARKER"
 fi
 
-# 6. Everything ComfyUI writes goes to memory, which dies with the pod; the
+# 3. Everything ComfyUI writes goes to memory, which dies with the pod; the
 #    container disk may outlive it unwiped. An upload spools to
 #    TMPDIR first, and a /dev/shm that is not memory, or not read, holds.
 echo "$(date -u +%FT%TZ) step: the memory directories"
@@ -197,16 +173,11 @@ if [ "$free_kib" -lt "$SHM_FREE_FLOOR_KIB" ]; then
         "ComfyUI was not started."
 fi
 
-# ComfyUI needs no key, and code it runs can print its environment. The key
-# leaves the environment but stays in this shell, for the stop at its end.
-export -n RUNPOD_API_KEY
-
-# 7. ComfyUI in the foreground, as this script's child: when it exits, with
-#    success or not, the script ends and step 1's trap stops the pod.
-#    It writes its temp files to `temp` under the directory it is given. No render
-#    carries metadata, so none carries the prompt.
+# 4. ComfyUI replaces this script, so its exit is the boot's end and the boot
+#    script stops the pod. It writes its temp files to `temp` under the directory
+#    it is given. No render carries metadata, so none carries the prompt.
 echo "$(date -u +%FT%TZ) step: ComfyUI"
-python main.py --listen 0.0.0.0 --port 8188 \
+exec python main.py --listen 0.0.0.0 --port 8188 \
     --input-directory /dev/shm/comfyui/input \
     --output-directory /dev/shm/comfyui/output \
     --temp-directory /dev/shm/comfyui \

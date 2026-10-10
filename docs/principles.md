@@ -289,7 +289,7 @@ told not to send is switched off, and its host key is checked against the finger
   - `tests/test_infra.py::test_a_shm_that_is_not_memory_holds_the_pod`
   - `tests/test_infra.py::test_an_unread_figure_holds_the_pod`
   - `tests/test_infra.py::test_the_image_carries_no_host_key`
-  - `tests/test_infra.py::test_each_boot_makes_and_prints_its_own_key`
+  - `tests/test_infra.py::test_each_boot_runs_gpunits_boot_script_at_its_pin`
   - `tests/test_infra.py::test_a_matching_key_is_kept`
   - `tests/test_infra.py::test_a_mismatch_is_refused`
   - `tests/test_infra.py::test_a_scan_no_one_answers_is_refused_as_such`
