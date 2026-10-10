@@ -100,7 +100,7 @@ LAYERS: Mapping[Role, str] = {
 }
 
 # The command that fetches and verifies the pinned files a model is built from.
-PROVISION = "bash tools/download_models.sh config/reader.json"
+PROVISION = "uv run python -m isekai.boundary.provision fetch config/reader.json"
 
 # The command that builds a model from those files, as `ollama` names it.
 BUILD = "ollama create {model} -f config/joycaption.Modelfile"

@@ -251,7 +251,10 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
 
     message = str(refused.value)
     assert VOCABULARY in message
-    assert "tools/download_models.sh config/vocabulary.json" in message
+    assert (
+        "uv run python -m isekai.boundary.provision fetch config/vocabulary.json"
+        in message
+    )
 
 
 def _declaring_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

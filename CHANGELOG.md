@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- `provision.py fetch` lands a manifest's files over `urllib`, walking each entry's sources under unit test; the
+  vocabulary, reader and evaluator remedies name it in place of the shell driver (0059 D3).
+
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 
 ### Added

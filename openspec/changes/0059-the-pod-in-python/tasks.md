@@ -5,7 +5,7 @@
 
 ## Progress
 
-- [ ] 1 — fetch
+- [x] 1 — fetch
 - [ ] 2 — The start module
 - [ ] 3 — The image on Python
 - [ ] 4 — The browser check, and no bash left
@@ -13,11 +13,11 @@
 
 ## 1 — fetch
 
-- [ ] 1.1 **HALT CHECK** — three bash files are tracked, and `provision.py` has no `fetch`.
+- [x] 1.1 **HALT CHECK** — three bash files are tracked, and `provision.py` has no `fetch`.
   Verify: `git ls-files '*.sh' | wc -l | tr -d ' '` prints `3`, and `grep -c '^def fetch' isekai/boundary/provision.py` prints `0`.
-- [ ] 1.2 In `isekai/boundary/provision.py`, add `fetch` and `Fetcher.get`, and put `main` on argparse with `fetch`, `plan` and `land`, per [D3](design.md#d3); in `tests/test_provision.py` bind `model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source` to `fetch` on a fake `Fetcher`.
+- [x] 1.2 In `isekai/boundary/provision.py`, add `fetch` and `Fetcher.get`, and put `main` on argparse with `fetch`, `plan` and `land`, per [D3](design.md#d3); in `tests/test_provision.py` bind `model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source` to `fetch` on a fake `Fetcher`.
   Verify: `uv run python isekai/boundary/provision.py fetch --help | grep -c 'models-dir'` prints a number of at least `1`, and `grep -c 'source-fallback:a-failed-transfer' tests/test_provision.py` prints a number of at least `1`.
-- [ ] 1.3 Point the remedies at `fetch` in `isekai/shared/vocabulary.py`, `isekai/boundary/ollama.py` and the docstring of `provision.py`, and their assertions in `tests/test_caption.py` and `tests/test_vocabulary_manifest.py`, per [D3](design.md#d3).
+- [x] 1.3 Point the remedies at `fetch` in `isekai/shared/vocabulary.py`, `isekai/boundary/ollama.py` and the docstring of `provision.py`, and their assertions in `tests/test_caption.py` and `tests/test_vocabulary_manifest.py`, per [D3](design.md#d3).
   Verify: `grep -c 'download_models' isekai/shared/vocabulary.py isekai/boundary/ollama.py | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
 
 ## 2 — The start module

@@ -9,6 +9,7 @@ from isekai.boundary.provision import (
     Manifest,
     decide,
     digest_of,
+    fetch,
     land,
     plan,
     verify,
@@ -241,6 +242,68 @@ def test_the_plan_line_carries_the_whole_ordered_source_list(
     assert capsys.readouterr().out.splitlines() == [
         f"FETCH\t{target}\t{PRIMARY}\t{ALTERNATE}"
     ]
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_a_failed_transfer_advances_to_the_next_source(tmp_path: Path) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD})
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_bytes_that_do_not_verify_advance_to_the_next_source(tmp_path: Path) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={PRIMARY: b"tampered", ALTERNATE: PAYLOAD})
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_fetch_fails_only_once_every_source_is_exhausted(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={PRIMARY: b"tampered"})
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 1
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    target = tmp_path / entry["dest"]
+    assert not target.exists()
+    assert not target.with_name(f"{target.name}.partial").exists()
+    assert f"every source for {target} failed" in capsys.readouterr().err
+
+
+@pytest.mark.spec(
+    "model-provisioning:byte-verification:a-present-file-is-verified-not-skipped"
+)
+def test_fetch_moves_no_byte_for_a_present_and_verified_file(tmp_path: Path) -> None:
+    entry = _entry()
+    _place(tmp_path, entry, PAYLOAD)
+    fetcher = FakeFetcher()
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
+    assert fetcher.fetched == []
+
+
+@pytest.mark.spec(
+    "model-provisioning:byte-verification:a-present-file-that-fails-is-not-deleted"
+)
+def test_fetch_moves_no_byte_when_any_entry_aborts(tmp_path: Path) -> None:
+    bad = _entry()
+    placed = _place(tmp_path, bad, b"somebody else's bytes")
+    absent: Entry = {**_entry(), "dest": "controlnet/other.onnx"}
+    fetcher = FakeFetcher(served={PRIMARY: PAYLOAD})
+    assert fetch(_manifest([absent, bad]), tmp_path, fetcher) == 1
+    assert fetcher.fetched == []
+    assert placed.read_bytes() == b"somebody else's bytes"
 
 
 @pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")

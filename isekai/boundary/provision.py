@@ -3,18 +3,20 @@
 `config/models.json` decides which bytes this repository renders with, and this
 module owns every *decision* taken about it: whether the manifest says what a pin is
 supposed to say, and, for each entry, whether to skip it, abort the run or fetch it.
-The bytes move through `wget` on the pod; the only network call here is the cheap
-pre-flight HEAD behind the `Fetcher` seam, which a fake replaces so the whole suite
-stays offline.
+`fetch` carries those decisions out, on the laptop and on the pod alike. Every
+network call -- the pre-flight HEAD and the transfer -- goes through the `Fetcher`
+seam, which a fake replaces so the whole suite stays offline.
 
 On `python -m isekai`'s import graph through `ollama.py`, which reads the
 reader's manifest; it imports only the standard library.
 """
 
+import argparse
 import hashlib
 import json
 import posixpath
 import re
+import shutil
 import sys
 import urllib.error
 import urllib.request
@@ -39,6 +41,10 @@ VOCABULARY_MANIFEST_PATH = (
 READER_MANIFEST_PATH = (
     Path(__file__).resolve().parent.parent.parent / "config" / "reader.json"
 )
+
+# Where `fetch` lands files when told nowhere else: the repository's own models
+# root, anchored so it resolves from any working directory.
+DEFAULT_MODELS_DIR = Path(__file__).resolve().parent.parent.parent / "models"
 
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.
 DIGEST = re.compile(r"^[0-9a-f]{64}$")
@@ -148,17 +154,20 @@ class DigestMismatch(Exception):
 
 
 class Fetcher(Protocol):
-    """The pre-flight seam: what a source says it would serve, before it serves it.
+    """The network seam: what a source says it would serve, and the bytes it serves.
 
-    The bytes themselves do not move through here. `wget` in the shell moves them
-    and the shell hands the result back to `land`, so what passes through this seam
-    is the cheap question a ranged request can answer: does the source's *published*
-    digest already disagree with the manifest? A fake answers it from a dict, which
-    is what keeps the suite offline.
+    `published_digest` is the cheap question a HEAD request can answer: does the
+    source's *published* digest already disagree with the manifest? `get` moves the
+    bytes, which `land` then verifies. A fake answers both from dicts, which is
+    what keeps the suite offline.
     """
 
     def published_digest(self, url: str) -> str | None:
         """Return the SHA-256 the source publishes, or None if it publishes none."""
+        ...
+
+    def get(self, url: str, into: Path) -> None:
+        """Write the bytes the source serves to `into`; raise `OSError` on failure."""
         ...
 
 
@@ -204,6 +213,12 @@ class HuggingFaceFetcher:
             return None
         candidate = header.strip().strip('"')
         return candidate if DIGEST.match(candidate) else None
+
+    def get(self, url: str, into: Path) -> None:
+        """Stream the file, following the redirect to the CDN, into `into`."""
+        with urllib.request.urlopen(url, timeout=60) as response:
+            with into.open("wb") as handle:
+                shutil.copyfileobj(response, handle, 1 << 20)
 
 
 @dataclass(frozen=True)
@@ -461,6 +476,60 @@ def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
     return 0
 
 
+def fetch(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
+    """Land every entry the manifest declares under `models_dir`; 0 if all are there.
+
+    Every entry is decided before a byte moves, so an abort anywhere stops the run
+    before a 6.9 GB download rather than in the middle of one. Each fetched entry
+    walks its sources in order: a failed transfer or bytes that do not verify move
+    to the next, and only exhausting them all fails the run.
+    """
+    decisions = [
+        (entry, decide(entry, models_dir, fetcher)) for entry in manifest["entries"]
+    ]
+    aborts = [
+        decision.reason for _, decision in decisions if decision.action == "abort"
+    ]
+    if aborts:
+        for reason in aborts:
+            print(f"ERROR: {reason}", file=sys.stderr)
+        return 1
+    for entry, decision in decisions:
+        target = decision.target
+        assert target is not None  # only an abort carries no target
+        if decision.action == "skip":
+            print(f"skip (present, verified): {target}")
+        elif not _transfer(entry, target, decision.urls, fetcher):
+            print(f"ERROR: every source for {target} failed", file=sys.stderr)
+            return 1
+    print(f"models ready under {models_dir}")
+    return 0
+
+
+def _transfer(
+    entry: Entry, target: Path, urls: tuple[str, ...], fetcher: Fetcher
+) -> bool:
+    """Land `entry` at `target` from the first of `urls` that serves verified bytes."""
+    partial = target.with_name(f"{target.name}.partial")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    for url in urls:
+        print(f"downloading: {url}")
+        try:
+            fetcher.get(url, partial)
+        except OSError as failed:
+            partial.unlink(missing_ok=True)
+            print(f"WARNING: transfer failed from {url}: {failed}", file=sys.stderr)
+            continue
+        try:
+            land(entry, target, partial)
+        except DigestMismatch:
+            print(f"WARNING: bytes served by {url} did not verify", file=sys.stderr)
+            continue
+        print(f"saved (verified): {target}")
+        return True
+    return False
+
+
 def _entry_for(
     manifest: Manifest, models_dir: Path, target: str, source: Path
 ) -> tuple[Entry, Path]:
@@ -485,35 +554,53 @@ def manifest_argument(given: str | None) -> Path:
     held to the same pins, the same digests and the same containment rule, so the
     provisioner takes the file as an argument rather than growing a verb per
     consumer. It is what makes the vocabulary a *provisioned* artifact rather than
-    one that is merely verified: `bash tools/download_models.sh
+    one that is merely verified: `uv run python -m isekai.boundary.provision fetch
     config/vocabulary.json` fetches it through this exact path.
     """
     return MANIFEST_PATH if given is None else Path(given)
 
 
+def _parser() -> argparse.ArgumentParser:
+    """Return the parser for `fetch`, and for the shell driver's `plan` and `land`."""
+    parser = argparse.ArgumentParser(prog="provision.py")
+    verbs = parser.add_subparsers(dest="verb", required=True)
+    fetch_verb = verbs.add_parser("fetch", help="land a manifest's files, verified")
+    fetch_verb.add_argument(
+        "--models-dir",
+        type=Path,
+        default=DEFAULT_MODELS_DIR,
+        help="where the files land (default: the repository's models/)",
+    )
+    fetch_verb.add_argument("manifest", nargs="?", help="default: config/models.json")
+    plan_verb = verbs.add_parser("plan")
+    plan_verb.add_argument("models_dir", type=Path)
+    plan_verb.add_argument("manifest", nargs="?")
+    land_verb = verbs.add_parser("land")
+    land_verb.add_argument("models_dir", type=Path)
+    land_verb.add_argument("target")
+    land_verb.add_argument("partial", type=Path)
+    land_verb.add_argument("manifest", nargs="?")
+    return parser
+
+
 def main(argv: list[str]) -> int:
-    """Run the two commands the shell driver uses: `plan` and `land`."""
-    match argv:
-        case ["plan", models_dir, *rest] if len(rest) <= 1:
-            source = manifest_argument(rest[0] if rest else None)
-            return plan(load_manifest(source), Path(models_dir), HuggingFaceFetcher())
-        case ["land", models_dir, target, partial, *rest] if len(rest) <= 1:
-            source = manifest_argument(rest[0] if rest else None)
-            entry, dest = _entry_for(
-                load_manifest(source), Path(models_dir), target, source
-            )
-            try:
-                land(entry, dest, Path(partial))
-            except DigestMismatch as mismatch:
-                print(f"ERROR: {mismatch}", file=sys.stderr)
-                return 1
-            print(f"saved (verified): {target}")
-            return 0
-        case _:
-            raise SystemExit(
-                "usage: provision.py plan <models-dir> [manifest]\n"
-                "       provision.py land <models-dir> <target> <partial> [manifest]"
-            )
+    """Run `fetch`, or the shell driver's `plan` and `land`."""
+    args = _parser().parse_args(argv)
+    source = manifest_argument(args.manifest)
+    if args.verb == "fetch":
+        return fetch(load_manifest(source), args.models_dir, HuggingFaceFetcher())
+    if args.verb == "plan":
+        return plan(load_manifest(source), args.models_dir, HuggingFaceFetcher())
+    entry, dest = _entry_for(
+        load_manifest(source), args.models_dir, args.target, source
+    )
+    try:
+        land(entry, dest, args.partial)
+    except DigestMismatch as mismatch:
+        print(f"ERROR: {mismatch}", file=sys.stderr)
+        return 1
+    print(f"saved (verified): {args.target}")
+    return 0
 
 
 # What a model file is called, for the purpose of reading one out of the graph.
