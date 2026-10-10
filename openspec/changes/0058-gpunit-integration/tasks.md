@@ -11,7 +11,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 4 — The scripts retired
 - [x] 5 — The documents
 - [x] 6 — The build record
-- [ ] 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session
+- [x] 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session
 
 ## 1 — The configuration
 
@@ -67,5 +67,5 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 7 — ⚠️ **HUMAN · METERED** — build, re-pin, one render session
 
-- [ ] 7.1 **HUMAN · METERED** — push `v0.35_gpunit_integration`; dispatch `build-image.yml` on it with tag `v0.35-rc1`; check the summary's files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`'s `image`; render one flow on a small batch with `uv run python -m isekai render`; confirm through the RunPod MCP that no `gpunit-isekai` pod is left; per [D11](design.md#d11).
+- [x] 7.1 **HUMAN · METERED** — push `v0.35_gpunit_integration`; dispatch `build-image.yml` on it with tag `v0.35-rc1`; check the summary's files equal `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`'s `image`; render one flow on a small batch with `uv run python -m isekai render`; confirm through the RunPod MCP that no `gpunit-isekai` pod is left; per [D11](design.md#d11).
   Verify: `grep -c '"tag": "v0.35-rc1"' config/image.json` prints `1`, and `uv run gpunit status` prints `no session is recorded`.
