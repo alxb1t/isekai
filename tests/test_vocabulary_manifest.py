@@ -49,13 +49,6 @@ TAGGER = "wd14/model.onnx"
 REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
 REPOSITORY = "SmilingWolf/wd-swinv2-tagger-v3"
 
-# The one command that provisions anything in this repository. The vocabulary is
-# fetched by pointing it at the vocabulary's manifest rather than by a second
-# driver that would have to be kept in step with this one.
-DRIVER_PATH = (
-    Path(__file__).resolve().parent.parent / "isekai" / "boundary" / "provision.py"
-)
-
 # Extensions a model's weights arrive under. Exactly one entry here carries one,
 # and which one is asserted: the graph the tag list is the output layer of. A
 # second would mean this manifest had started answering somebody else's question.
@@ -222,7 +215,7 @@ def test_the_provisioner_still_fetches_the_graphs_stack_when_told_no_manifest(
 def test_the_provisioner_runs_as_a_file_and_takes_the_manifest() -> None:
     # The pod runs it by path, outside the package, so it must stand alone.
     shown = subprocess.run(
-        [sys.executable, str(DRIVER_PATH), "fetch", "--help"],
+        [sys.executable, str(Path(provision.__file__)), "fetch", "--help"],
         capture_output=True,
         text=True,
         check=True,

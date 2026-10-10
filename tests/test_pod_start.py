@@ -4,7 +4,6 @@ import shutil
 import subprocess
 import sys
 import time
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,9 +19,8 @@ from isekai.boundary.pod_start import (
     Pod,
 )
 from isekai.boundary.provision import MODELS_ROOT
+from tests.conftest import SESSION_CEILING_SECONDS
 
-REPO = Path(__file__).resolve().parent.parent
-SESSION_CEILING_SECONDS = 45 * 60
 STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z step: (.+)$")
 STEPS = ["the volume", "the namespace", "provisioning", "the memory", "ComfyUI"]
 
@@ -82,7 +80,7 @@ class Boot:
         self.ran: list[list[str]] = []
         self.slept: list[float] = []
         self.execs: list[Exec] = []
-        # what was printed before each effect, in order: (effect, stdout so far)
+        # the last line printed before each effect, in order: (effect, line)
         self.events: list[tuple[str, str]] = []
         self._capsys = capsys
         self.out = ""
@@ -97,7 +95,7 @@ class Boot:
         captured = self._capsys.readouterr()
         self.out += captured.out
         self.err += captured.err
-        self.events.append((effect, self.out))
+        self.events.append((effect, (self.out.splitlines() or [""])[-1]))
 
     def _statvfs(self, path: str | Path) -> SimpleNamespace:
         self._note(f"statvfs {path}")
@@ -129,8 +127,7 @@ class Boot:
 
     def before(self, effect: str) -> str:
         """Return the last line printed before the first effect named `effect`."""
-        out = next(text for name, text in self.events if name.startswith(effect))
-        return out.splitlines()[-1]
+        return next(line for name, line in self.events if name.startswith(effect))
 
 
 @pytest.fixture
@@ -141,8 +138,8 @@ def boot(
 
 
 def held(boot: Boot) -> bool:
-    """Return whether the start held: it slept the window and served nothing."""
-    return boot.slept == [HOLD_SECONDS] and boot.execs == []
+    """Run the start; return whether it held: exit 1, the window slept, no exec."""
+    return boot.start() == 1 and boot.slept == [HOLD_SECONDS] and boot.execs == []
 
 
 def flag(argv: list[str], name: str) -> str:
@@ -172,7 +169,6 @@ def test_comfyui_writes_to_memory(boot: Boot) -> None:
 @pytest.mark.spec("pod-image:memory:too-little-memory-holds")
 def test_too_little_memory_holds_the_pod(boot: Boot) -> None:
     boot.figures[str(boot.pod.shm)] = (SHM_FREE_FLOOR * 8, SHM_FREE_FLOOR - 1)
-    assert boot.start() == 1
     assert held(boot)
     assert f"{SHM_FREE_FLOOR - 1} B free" in boot.err
 
@@ -196,7 +192,6 @@ def test_comfyui_spools_uploads_to_memory(boot: Boot) -> None:
 @pytest.mark.spec("pod-image:memory:a-disk-backed-shm-holds")
 def test_a_shm_that_is_not_memory_holds_the_pod(boot: Boot) -> None:
     boot.pod.mounts.write_text(f"/dev/sda1 {boot.pod.shm} ext4 rw 0 0\n")
-    assert boot.start() == 1
     assert held(boot)
     assert "'ext4', not a tmpfs" in boot.err
 
@@ -207,14 +202,12 @@ def test_a_later_mount_shadows_an_earlier_one(boot: Boot) -> None:
     boot.pod.mounts.write_text(
         f"tmpfs {shm} tmpfs rw 0 0\n/dev/sda1 {shm} ext4 rw 0 0\n"
     )
-    assert boot.start() == 1
     assert held(boot)
 
 
 @pytest.mark.spec("pod-image:memory:an-unread-figure-holds")
 def test_an_unread_figure_holds_the_pod(boot: Boot) -> None:
     boot.figures[str(boot.pod.shm)] = None
-    assert boot.start() == 1
     assert held(boot)
     assert "could not read" in boot.err
     assert "free space" in boot.err
@@ -223,7 +216,6 @@ def test_an_unread_figure_holds_the_pod(boot: Boot) -> None:
 @pytest.mark.spec("pod-image:memory:an-unread-type-holds")
 def test_no_line_for_the_memory_mount_holds_the_pod(boot: Boot) -> None:
     boot.pod.mounts.write_text("overlay / overlay rw 0 0\n")
-    assert boot.start() == 1
     assert held(boot)
     assert "could not read" in boot.err
     assert "filesystem type" in boot.err
@@ -232,7 +224,6 @@ def test_no_line_for_the_memory_mount_holds_the_pod(boot: Boot) -> None:
 @pytest.mark.spec("pod-image:memory:an-unread-type-holds")
 def test_an_unreadable_mount_table_holds_the_pod(boot: Boot) -> None:
     boot.pod.mounts.unlink()
-    assert boot.start() == 1
     assert held(boot)
     assert "filesystem type" in boot.err
 
@@ -367,7 +358,6 @@ def test_a_failed_fetch_holds_the_pod_open_and_removes_nothing(boot: Boot) -> No
     kept.parent.mkdir(parents=True)
     kept.write_text("left for inspection")
     boot.fetch_code = 1
-    assert boot.start() == 1
     assert held(boot)
     assert kept.read_text() == "left for inspection"
     assert "fetch exited 1" in boot.err
@@ -380,7 +370,6 @@ def test_a_non_empty_mounted_models_tree_is_refused_not_deleted(
 ) -> None:
     root = boot.pod.models_root
     monkeypatch.setattr(os.path, "ismount", lambda path: Path(path) == root)
-    assert boot.start() == 1
     assert held(boot)
     assert boot.pod.marker.exists()
     assert (root / "configs" / "v1.yaml").exists()
@@ -390,7 +379,6 @@ def test_a_non_empty_mounted_models_tree_is_refused_not_deleted(
 @pytest.mark.spec("model-provisioning:reachability:namespace-setup-is-held-open-too")
 def test_a_namespace_that_cannot_be_made_holds_like_a_fetch(boot: Boot) -> None:
     (boot.volume / "isekai").write_text("a file where the namespace goes")
-    assert boot.start() == 1
     assert held(boot)
     assert boot.pod.marker.exists()
     assert boot.ran == []
@@ -425,7 +413,6 @@ def test_an_unnamed_volume_is_refused_before_the_namespace(
     boot: Boot, unset: str
 ) -> None:
     del boot.env[unset]
-    assert boot.start() == 1
     assert held(boot)
     assert not (boot.volume / "isekai").exists()
     assert boot.ran == []
@@ -436,7 +423,6 @@ def test_an_unnamed_volume_is_refused_before_the_namespace(
 )
 def test_a_volume_below_the_floor_is_refused_before_the_namespace(boot: Boot) -> None:
     boot.figures[str(boot.volume)] = (VOLUME_SIZE_FLOOR - 1, VOLUME_SIZE_FLOOR - 1)
-    assert boot.start() == 1
     assert held(boot)
     assert not (boot.volume / "isekai").exists()
     assert "total size" in boot.err
@@ -447,7 +433,6 @@ def test_a_volume_below_the_floor_is_refused_before_the_namespace(boot: Boot) ->
 )
 def test_an_unmeasured_volume_is_refused(boot: Boot) -> None:
     boot.figures[str(boot.volume)] = None
-    assert boot.start() == 1
     assert held(boot)
     assert not (boot.volume / "isekai").exists()
 
@@ -465,11 +450,12 @@ def test_the_volume_guard_measures_capacity_rather_than_fill_level(boot: Boot) -
 @pytest.mark.spec(
     "model-provisioning:reachability:provisioning-requires-the-network-volume"
 )
-def test_the_capacity_floor_clears_the_container_disk_as_well() -> None:
+def test_the_capacity_floor_clears_the_container_disk_as_well(
+    gpunit_spec: dict[str, object],
+) -> None:
     # The mount can fail silently onto the container overlay, the larger of the
     # pod's own disks (D27). RunPod's sizes are decimal, the reading that makes
     # the disk biggest, so it is the one the floor must clear.
-    spec = tomllib.loads((REPO / "gpunit.toml").read_text())
-    container_disk = spec.get("disk_gb")
+    container_disk = gpunit_spec.get("disk_gb")
     assert isinstance(container_disk, int)
     assert VOLUME_SIZE_FLOOR > container_disk * 1000**3

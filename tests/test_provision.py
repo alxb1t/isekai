@@ -44,6 +44,10 @@ def _no_wait(seconds: float) -> None:
     pass
 
 
+def _partial(target: Path) -> Path:
+    return target.with_name(f"{target.name}.partial")
+
+
 def _place(models_dir: Path, entry: Entry, payload: bytes) -> Path:
     dest = models_dir / entry["dest"]
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -282,7 +286,7 @@ def test_fetch_fails_only_once_every_source_is_exhausted(
     assert [url for url, _ in fetcher.fetched] == [PRIMARY] + [ALTERNATE] * 3
     target = tmp_path / entry["dest"]
     assert not target.exists()
-    assert not target.with_name(f"{target.name}.partial").exists()
+    assert not _partial(target).exists()
     assert f"every source for {target} failed" in capsys.readouterr().err
 
 
@@ -298,7 +302,7 @@ def test_a_transfer_that_breaks_once_lands_from_the_same_source(
     assert waits == [10]
     target = tmp_path / entry["dest"]
     assert target.read_bytes() == PAYLOAD
-    assert not target.with_name(f"{target.name}.partial").exists()
+    assert not _partial(target).exists()
 
 
 @pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
@@ -353,7 +357,7 @@ def test_an_http_layer_failure_advances_to_the_next_source(
     assert fetch(_manifest([entry]), tmp_path, _OfflineHuggingFace(), _no_wait) == 0
     target = tmp_path / entry["dest"]
     assert target.read_bytes() == PAYLOAD
-    assert not target.with_name(f"{target.name}.partial").exists()
+    assert not _partial(target).exists()
 
 
 class _BadStatusOpener:
@@ -451,7 +455,7 @@ def test_the_transfer_writes_beside_the_already_resolved_destination(
     fetcher = FakeFetcher(served={PRIMARY: PAYLOAD})
     assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
     target = tmp_path / entry["dest"]
-    assert fetcher.fetched == [(PRIMARY, target.with_name(f"{target.name}.partial"))]
+    assert fetcher.fetched == [(PRIMARY, _partial(target))]
 
 
 MALFORMED = [

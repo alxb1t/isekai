@@ -22,6 +22,7 @@ from isekai.boundary.provision import (
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
+from tests.conftest import SESSION_CEILING_SECONDS
 from tools.derive_image_project import CLONE, pinned_commits, uv_required
 from tools.image_record import copied, copies, record
 
@@ -89,10 +90,6 @@ def test_the_annotator_checkpoints_are_the_two_the_preprocessors_fetch(
         "yolox_l.onnx",
         "dw-ll_ucoco_384_bs5.torchscript.pt",
     }
-
-
-# The repository's per-session spending ceiling, in seconds at the halt.
-SESSION_CEILING_SECONDS = 45 * 60
 
 
 @pytest.mark.spec_exempt(
@@ -190,7 +187,8 @@ def uncopied_command(dockerfile: str) -> list[str]:
         return ["the command is not python running one file"]
     start = PurePosixPath(command[1])
     wanted = [str(start), str(start.parent / PROVISION.name)]
-    return [path for path in wanted if path not in image_copies(dockerfile)]
+    copied = image_copies(dockerfile)
+    return [path for path in wanted if path not in copied]
 
 
 @pytest.mark.spec_exempt("structural: the command runs files the image holds")
@@ -642,8 +640,7 @@ def test_the_check_catches_a_source_only_package_the_constraints_miss() -> None:
     assert uncovered_sdists(lock, no_cython) == ["insightface: cython"]
 
 
-# The pod's own host key, and ComfyUI's writing kept in memory: text checks over
-# the shipped files, proved on a pod.
+# The pod's own host key: text checks over the shipped files, proved on a pod.
 
 
 def joined_lines(text: str) -> list[str]:
@@ -827,13 +824,6 @@ def test_the_check_catches_an_image_config_naming_only_a_tag() -> None:
 
 
 # `gpunit.toml` is the session's spec: the pin, the floors and the volume.
-
-GPUNIT_SPEC = REPO / "gpunit.toml"
-
-
-@pytest.fixture(scope="module")
-def gpunit_spec() -> dict[str, object]:
-    return tomllib.loads(GPUNIT_SPEC.read_text())
 
 
 def spec_image_faults(spec: dict[str, object], config: dict[str, str]) -> list[str]:

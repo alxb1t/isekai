@@ -1,6 +1,7 @@
 import copy
 import json
 import os
+import tomllib
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -39,6 +40,17 @@ CSV = """tag_id,name,category,count
 18,hair,0,50000
 19,hatsune_miku,4,500000
 """
+
+# The repository's per-session spending ceiling, in seconds at the halt.
+SESSION_CEILING_SECONDS = 45 * 60
+
+
+@pytest.fixture(scope="session")
+def gpunit_spec() -> dict[str, object]:
+    """Return `gpunit.toml`, the session's spec: the pin, the floors and the volume."""
+    return tomllib.loads(
+        (Path(__file__).resolve().parent.parent / "gpunit.toml").read_text()
+    )
 
 
 @pytest.fixture(autouse=True)
