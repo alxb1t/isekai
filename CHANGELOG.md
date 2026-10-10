@@ -28,6 +28,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   scripts' text: `tests/test_pod_start.py` and `fetch`'s tests hold the same keys by behaviour (0059 D3, D6).
 - `tools/typecheck_ui.sh`: `tools/typecheck_ui.py` replaces it (0059 D5).
 
+### Fixed
+
+- `fetch` moves to the next source on a transfer that fails at the HTTP layer; the build record reads a `COPY`
+  in any case or indent and refuses an `ADD` that is not a checksummed URL (0059 D3, D7).
+
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 
 ### Added

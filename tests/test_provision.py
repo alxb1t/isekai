@@ -1,4 +1,7 @@
 import hashlib
+import http.client
+import io
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -6,6 +9,7 @@ import pytest
 from isekai.boundary.provision import (
     DigestMismatch,
     Entry,
+    HuggingFaceFetcher,
     Manifest,
     decide,
     digest_of,
@@ -274,6 +278,48 @@ def test_fetch_fails_only_once_every_source_is_exhausted(
     assert not target.exists()
     assert not target.with_name(f"{target.name}.partial").exists()
     assert f"every source for {target} failed" in capsys.readouterr().err
+
+
+class _OfflineHuggingFace(HuggingFaceFetcher):
+    """The real `get` over a patched `urlopen`, with no pre-flight HEAD request."""
+
+    def published_digest(self, url: str) -> str | None:
+        return None
+
+
+class _BrokenBody(io.BytesIO):
+    """A response whose body ends mid-chunk, as `http.client` reports it."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        raise http.client.IncompleteRead(b"partial")
+
+
+def _cut_body(url: str, timeout: float) -> io.BytesIO:
+    return _BrokenBody(b"")
+
+
+def _bad_status(url: str, timeout: float) -> io.BytesIO:
+    raise http.client.BadStatusLine("garbage")
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+@pytest.mark.parametrize("failure", [_cut_body, _bad_status])
+def test_an_http_layer_failure_advances_to_the_next_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Callable[[str, float], io.BytesIO],
+) -> None:
+    def urlopen(url: str, timeout: float) -> io.BytesIO:
+        return failure(url, timeout) if url == PRIMARY else io.BytesIO(PAYLOAD)
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    entry = _entry()
+    assert fetch(_manifest([entry]), tmp_path, _OfflineHuggingFace()) == 0
+    target = tmp_path / entry["dest"]
+    assert target.read_bytes() == PAYLOAD
+    assert not target.with_name(f"{target.name}.partial").exists()
 
 
 @pytest.mark.spec(

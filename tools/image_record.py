@@ -18,30 +18,61 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# A `COPY` from the build context: one source, one destination, no flag.
-COPY = re.compile(r"^COPY\s+(?!--)(\S+)\s+(\S+)\s*$", re.M)
+# A `COPY` from the build context: one source, one destination, no flag. An
+# instruction's name is case-insensitive and may follow whitespace.
+COPY = re.compile(r"^\s*COPY\s+(?!--)(\S+)\s+(\S+)\s*$", re.I)
 
-# Every `COPY` line, and the form that copies from another image, not the context.
-COPY_LINE = re.compile(r"^COPY\b.*$", re.M)
-FROM_IMAGE = re.compile(r"^COPY\s+--from=")
+# The forms that take nothing from the build context: a `COPY` from another
+# image, and an `ADD` of a URL whose checksum the `Dockerfile` itself pins.
+FROM_IMAGE = re.compile(r"^\s*COPY\s+--from=", re.I)
+CHECKSUMMED_URL = re.compile(
+    r"^\s*ADD\s+--checksum=sha256:[0-9a-f]{64}\s+https://\S+\s+\S+\s*$", re.I
+)
+TAKES_FILES = re.compile(r"^\s*(COPY|ADD)\s", re.I)
+
+
+def instructions(dockerfile: str) -> list[str]:
+    r"""Return each instruction as written, its continued lines joined by newlines.
+
+    A comment line inside a continuation is dropped, as Docker drops it.
+    e.g. "RUN a \\\n  b\nCOPY c /c\n" -> ["RUN a \\\n  b", "COPY c /c"]
+    """
+    found: list[str] = []
+    held: list[str] = []
+    for line in dockerfile.splitlines():
+        if held and line.lstrip().startswith("#"):
+            continue
+        held.append(line)
+        if not line.rstrip().endswith("\\"):
+            found.append("\n".join(held))
+            held = []
+    if held:
+        found.append("\n".join(held))
+    return found
 
 
 def copies(dockerfile: str) -> list[tuple[str, str]]:
     """Return each `(source, destination)` a `COPY` takes from the build context.
 
-    Raise `ValueError` naming any other `COPY` line, so no copied file leaves the
-    record unseen. e.g. "COPY --chmod=755 a.py /a.py" -> ValueError
+    Raise `ValueError` naming any other `COPY` or `ADD`, so no copied file leaves
+    the record unseen. e.g. "COPY --chmod=755 a.py /a.py" -> ValueError
     """
     pairs = []
-    for line in COPY_LINE.findall(dockerfile):
-        if FROM_IMAGE.match(line):
+    for written in instructions(dockerfile):
+        if not TAKES_FILES.match(written):
             continue
-        found = COPY.match(line)
+        joined = " ".join(
+            part.rstrip().removesuffix("\\") for part in written.split("\n")
+        )
+        if FROM_IMAGE.match(written) or CHECKSUMMED_URL.match(joined):
+            continue
+        found = COPY.match(written)
         # a continued line's next line holds the rest of its sources
-        if found is None or line.rstrip().endswith("\\"):
+        if found is None or "\n" in written or written.rstrip().endswith("\\"):
             raise ValueError(
-                f"cannot read {line!r}: a COPY from the build context takes one "
-                "source, one destination and no flag"
+                f"cannot read {written!r}: a COPY from the build context takes one "
+                "source, one destination and no flag, and an ADD only a URL with "
+                "--checksum"
             )
         pairs.append((found[1], found[2]))
     return pairs

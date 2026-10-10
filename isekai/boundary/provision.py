@@ -13,6 +13,7 @@ reader's manifest; it imports only the standard library.
 
 import argparse
 import hashlib
+import http.client
 import json
 import posixpath
 import re
@@ -215,10 +216,18 @@ class HuggingFaceFetcher:
         return candidate if DIGEST.match(candidate) else None
 
     def get(self, url: str, into: Path) -> None:
-        """Stream the file, following the redirect to the CDN, into `into`."""
-        with urllib.request.urlopen(url, timeout=60) as response:
-            with into.open("wb") as handle:
-                shutil.copyfileobj(response, handle, 1 << 20)
+        """Stream the file, following the redirect to the CDN, into `into`.
+
+        A failure at the HTTP layer -- a body cut mid-chunk, a malformed status
+        line -- is not an `OSError`, so it is raised as one: the seam promises
+        `OSError`, and that is what moves `fetch` on to the next source.
+        """
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                with into.open("wb") as handle:
+                    shutil.copyfileobj(response, handle, 1 << 20)
+        except http.client.HTTPException as failed:
+            raise OSError(f"{type(failed).__name__}: {failed}") from failed
 
 
 @dataclass(frozen=True)
