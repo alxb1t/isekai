@@ -298,6 +298,36 @@ def test_the_file_hands_mains_code_to_the_exit() -> None:
     assert source.rstrip().endswith('if __name__ == "__main__":\n    sys.exit(main())')
 
 
+# Loads a file by path without running its main; -S and -I leave the package and
+# every installed distribution off the path, as on the image.
+_LOAD_BARE = (
+    "import importlib.util, sys\n"
+    "spec = importlib.util.spec_from_file_location('pod_start', sys.argv[1])\n"
+    "spec.loader.exec_module(importlib.util.module_from_spec(spec))\n"
+)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_provisioner_runs_as_a_file_and_takes_the_manifest"
+)
+def test_the_start_loads_as_a_bare_file_with_the_standard_library_alone(
+    tmp_path: Path,
+) -> None:
+    bare = [sys.executable, "-S", "-I", "-c"]
+    package = subprocess.run(
+        [*bare, "import isekai"], cwd=tmp_path, capture_output=True, check=False
+    )
+    assert package.returncode != 0
+    loaded = subprocess.run(
+        [*bare, _LOAD_BARE, str(Path(pod_start.__file__))],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert loaded.returncode == 0, loaded.stderr
+
+
 # --- provisioning -------------------------------------------------------------
 
 

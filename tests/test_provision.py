@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from isekai.boundary.provision import (
+    ATTEMPTS,
+    WAITS,
     DigestMismatch,
     Entry,
     HuggingFaceFetcher,
@@ -316,6 +318,12 @@ def test_a_transfer_that_breaks_every_attempt_moves_to_the_next_source(
     assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE]
     assert waits == [10, 30]
     assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_every_attempt_after_the_first_has_its_wait() -> None:
+    # The budget is written twice; an attempt with no wait would raise mid-download.
+    assert len(WAITS) == ATTEMPTS - 1
 
 
 class _OfflineHuggingFace(HuggingFaceFetcher):

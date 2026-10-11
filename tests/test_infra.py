@@ -309,6 +309,7 @@ def test_the_record_check_catches_a_file_edited_after_the_record(
         "COPY --chmod=755 a.py /a.py",
         "COPY a.py b.py /opt/",
         "COPY a.py \\",
+        "COPY\\\n    a.py /a.py",
         "ADD a.py /a.py",
         "add a.py /a.py",
         "  ADD a.py /a.py",
@@ -328,6 +329,7 @@ def test_the_record_refuses_a_copy_it_cannot_read(line: str) -> None:
         ("copy a.py /a.py", ["a.py"]),
         ("  COPY a.py /a.py", ["a.py"]),
         ("\tCoPy a.py /a.py", ["a.py"]),
+        ("# a note \\\nCOPY a.py /a.py", ["a.py"]),
         ("ADD --checksum=sha256:" + "0" * 64 + " \\\n    https://x.org/b /b", []),
     ],
 )

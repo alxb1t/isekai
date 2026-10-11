@@ -33,8 +33,8 @@ at least once; a list of names cannot.
 | `comfy/multipart.py` | `comfy/client.py` | `tests/test_multipart.py` |
 | `gpu.py` | `interface/render.py` | `tests/test_render.py` |
 | `ollama.py` | `pipeline/caption.py`, `pipeline/tagging.py` | `tests/conftest.py`, `tests/fakes.py`, `tests/test_caption.py`, `tests/test_ollama.py`, `tests/test_pipeline_cli.py`, `tests/test_tagging.py` |
-| `pod_start.py` | nothing; the image runs it as a file | `tests/test_pod_start.py` |
-| `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_cohort.py`, `tests/test_eval_manifest.py`, `tests/test_evaluation_cli.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_recall_cli.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
+| `pod_start.py` | nothing; the image runs it as a file | `tests/test_infra.py`, `tests/test_pod_start.py` |
+| `provision.py` | `ollama.py`, `wd14.py`, `interface/wiring.py` | `evaluation/__main__.py`, `evaluation/cohort.py`, `evaluation/eval_models.py`, `evaluation/face.py`, `evaluation/recall.py`, `tests/conftest.py`, `tests/fakes.py`, `tests/test_cohort.py`, `tests/test_eval_manifest.py`, `tests/test_evaluation_cli.py`, `tests/test_flow.py`, `tests/test_infra.py`, `tests/test_manifest.py`, `tests/test_manifest_binding.py`, `tests/test_package_paths.py`, `tests/test_pod_start.py`, `tests/test_provision.py`, `tests/test_reader_manifest.py`, `tests/test_recall_cli.py`, `tests/test_sheet_schema.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py`, `tools/derive_manifest.py`, `tools/derive_reader.py`, `tools/derive_vocabulary.py`, `tools/manifest.py` |
 | `wd14.py` | `interface/cli.py`, `interface/wiring.py`, `pipeline/tagging.py` | `evaluation/face.py`, `evaluation/recall.py`, `tests/stages.py`, `tests/test_recall.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_vocabulary_manifest.py`, `tests/test_wd14.py` |
 
 > `provision.py` is on `python -m isekai`'s import graph, through `ollama.py`'s
@@ -46,8 +46,10 @@ at least once; a list of names cannot.
 > `onnxruntime`, `numpy`, `Pillow` -- is **function-local**, which keeps the `-S`
 > guard green. They are declared dependencies as of v0.22.3, so one moved to
 > module scope resolves silently; that guard and `tests/test_wd14.py`'s source
-> scan catch it. `wd14.py` reaches no network at all, which makes it the one file
-> here that is a boundary to a *file* rather than to a host. `onnxruntime` itself
+> scan catch it. `wd14.py` reaches no network at all, and with `pod_start.py` is one
+> of the two files here that open no connection: a boundary to a *file* rather than
+> to a host. `pod_start.py` reaches the network only through `provision.py fetch`,
+> run as a process. `onnxruntime` itself
 > connects to Microsoft when it loads, so `silence_onnxruntime()` sets its switch
 > first, for both sessions (0035 design D5).
 >

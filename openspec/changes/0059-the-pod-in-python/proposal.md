@@ -54,11 +54,15 @@ None.
 
 - `pod-image`:
   - *Everything ComfyUI writes lives in the pod's memory* — an unreadable type holds; swap is reported.
+  - *A boot prints when each step begins* and *No render carries metadata* — their scenarios start the pod rather
+    than read a script.
 - `image-generation`:
   - *A flow renders on another flow's seeds when the operator names it* — the diagram names `isekai render`.
 - `model-provisioning`:
   - *A transfer that fails advances to the next declared source* — a broken transfer is tried again, three
     attempts a source.
+  - *The tag vocabulary and the model it indexes are provisioned from one manifest* and *The reader's files are
+    provisioned from their own manifest, keyed by the model they build* — `fetch` in place of the driver.
 
 ## Impact
 

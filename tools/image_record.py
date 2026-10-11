@@ -28,19 +28,22 @@ FROM_IMAGE = re.compile(r"^\s*COPY\s+--from=", re.I)
 CHECKSUMMED_URL = re.compile(
     r"^\s*ADD\s+--checksum=sha256:[0-9a-f]{64}\s+https://\S+\s+\S+\s*$", re.I
 )
-TAKES_FILES = re.compile(r"^\s*(COPY|ADD)\s", re.I)
+# Matched against an instruction with its continuations joined, so a name wrapped
+# straight after itself is still seen.
+TAKES_FILES = re.compile(r"^\s*(COPY|ADD)(\s|$)", re.I)
 
 
 def instructions(dockerfile: str) -> list[str]:
     r"""Return each instruction as written, its continued lines joined by newlines.
 
-    A comment line inside a continuation is dropped, as Docker drops it.
+    A comment line is dropped before continuations are joined, as Docker drops it,
+    so a comment ending in a backslash continues nothing.
     e.g. "RUN a \\\n  b\nCOPY c /c\n" -> ["RUN a \\\n  b", "COPY c /c"]
     """
     found: list[str] = []
     held: list[str] = []
     for line in dockerfile.splitlines():
-        if held and line.lstrip().startswith("#"):
+        if line.lstrip().startswith("#"):
             continue
         held.append(line)
         if not line.rstrip().endswith("\\"):
@@ -59,12 +62,12 @@ def copies(dockerfile: str) -> list[tuple[str, str]]:
     """
     pairs = []
     for written in instructions(dockerfile):
-        if not TAKES_FILES.match(written):
-            continue
         joined = " ".join(
             part.rstrip().removesuffix("\\") for part in written.split("\n")
         )
-        if FROM_IMAGE.match(written) or CHECKSUMMED_URL.match(joined):
+        if not TAKES_FILES.match(joined):
+            continue
+        if FROM_IMAGE.match(joined) or CHECKSUMMED_URL.match(joined):
             continue
         found = COPY.match(written)
         # a continued line's next line holds the rest of its sources
