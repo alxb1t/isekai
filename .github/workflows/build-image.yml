@@ -2,7 +2,7 @@ name: build-image
 
 # Built on request only: every image that exists was asked for, and its digest is
 # in the run's summary. A pod boots that digest from `gpunit.toml`, never a tag,
-# so `latest` is refused rather than published (0033 design D2, D3).
+# so `latest` is refused rather than published.
 on:
   workflow_dispatch:
     inputs:

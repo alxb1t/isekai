@@ -346,7 +346,7 @@ request.** A request with no `Origin` header is let through — a known, low ris
 ### D27 · The models live on a network volume
 
 **The volume holds exactly the manifest. A pod refuses to start when what is mounted is below the
-capacity floor** — the floor is `start.sh`'s. A network volume reports its storage cluster's capacity,
+capacity floor** — the floor is `pod_start.py`'s. A network volume reports its storage cluster's capacity,
 far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
 quota, and a 20 GB volume passes. **A pod runs in its volume's data centre**: gpunit reads it from the
 volume `gpunit.toml` names and creates the pod there. Nothing checks the volume's size before the create;
@@ -391,7 +391,9 @@ the key would sit in the same memory.**
 - **Accepts:** gpunit's boot script holds the stop key, and ComfyUI runs without it; code ComfyUI runs can
   still read it from the boot script's `/proc` entry, since the image names no `USER`. Reopen when a node or
   model is not fully trusted, or the key's scope is account-wide.
-- **Made by:** `0041`, `0052`, `0058`.
+- **Accepts:** the host's swap is inside the same boundary: memory it swaps out reaches its disk. The pod's
+  start prints whether the container can swap, and holds for neither. Reopen when the provider offers swap off.
+- **Made by:** `0041`, `0052`, `0058`, `0059`.
 
 ### D36 · A render session is `isekai render`
 

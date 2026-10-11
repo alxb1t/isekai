@@ -98,8 +98,9 @@ python -m isekai caption --flow summon-anime-wai .inputs/me.jpg
 
 Two independent verbs. `tag` writes a scored tag list from the local WD14 tagger, then a raw one from
 the hosted model. **The local list is what fills the sheet**, so it needs
-`bash tools/download_models.sh config/vocabulary.json` to have been run. `caption` writes the prose, a
-reading aid with no machine consumer; skip it and the review surface shows *no caption* and this command.
+`uv run python -m isekai.boundary.provision fetch config/vocabulary.json` to have been run.
+`caption` writes the prose, a reading aid with no machine consumer; skip it and the review surface
+shows *no caption* and this command.
 
 If Ollama is not running, `tag` still writes the WD14 list and refuses only the hosted one, and
 `caption` refuses. Neither list is narrowed on disk; the review surface shows the WD14 list, and the
@@ -183,7 +184,7 @@ P=(.inputs/batch/*)     # every photograph in the batch
 R=.data/batch/runs      # this batch's runs, apart from any other
 
 # ① ② free: the stage verbs take every photograph and both flows at once
-bash tools/download_models.sh config/reader.json   # once; it skips files already verified
+uv run python -m isekai.boundary.provision fetch config/reader.json   # once; it skips files already verified
 uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
@@ -310,12 +311,12 @@ why each refusal names the command that does.
 **To run stage ①**, install [Ollama](https://ollama.com), then, from the repository root:
 
 ```sh
-bash tools/download_models.sh config/reader.json
+uv run python -m isekai.boundary.provision fetch config/reader.json
 ollama create joycaption-beta-one-q4k -f config/joycaption.Modelfile
 ```
 
 **The first fetches, the second builds.** `config/reader.json` pins the GGUF model and its vision
-projector by digest; the driver lands both in `models/joycaption/` and verifies them. `ollama create`
+projector by digest; `fetch` lands both in `models/joycaption/` and verifies them. `ollama create`
 builds the reader from the committed recipe, and the same alias answers the hosted tagger — which is
 exactly why the tag prompt is unframed: two calls to one model must not arrive framed differently.
 
@@ -335,12 +336,12 @@ make gate
 `make -n gate` prints its commands; the root `Makefile` declares them, and CI
 (`.github/workflows/ci.yml`) runs `make gate` too.
 
-Its browser half, `tools/typecheck_ui.sh`, runs `vue-tsc --noEmit` over `ui/` and needs
+Its browser half, `tools/typecheck_ui.py`, runs `vue-tsc --noEmit` over `ui/` and needs
 `ui/node_modules/`. It is **not** restored for you — run `npm install` in `ui/` once, as the
 review surface already asks.
 
 The suite reads the provisioned tag list, which is gitignored. Fetch it once with
-`bash tools/download_models.sh config/vocabulary.json`, or set `ISEKAI_VOCABULARY=absent` to
+`uv run python -m isekai.boundary.provision fetch config/vocabulary.json`, or set `ISEKAI_VOCABULARY=absent` to
 skip the checks that read it, as CI does.
 
 Every command green, or the work is not done. The suite is **fully offline and deterministic** —
@@ -360,7 +361,7 @@ isekai/
 │   ├── pipeline/              # the staged verbs: caption · tag · sheet · review · generate
 │   │                          #   tagging.py is `tag`: the two tag lists
 │   ├── shared/                # image header reader, vocabulary, field validation, atomic write
-│   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning
+│   ├── boundary/              # ComfyUI transport, the hosted models, the local tagger, provisioning, the pod's start
 │   └── interface/             # the parser & dispatch, the composition, the run's account, ui/
 ├── evaluation/                # the cohort evaluator and attribute recall, beside the package —
 │                              #   `uv run python -m evaluation <runs> --cohort <dir>`,
@@ -385,39 +386,38 @@ isekai/
 │   ├── field_map.json         # tag → sheet field; derived by tools/derive_field_map.py
 │   └── joycaption.Modelfile   # the local reader's recipe, for `ollama create`
 ├── tools/                     # operator tooling, run from the root: `python -m tools.<name>`
-│   ├── download_models.sh     # thin driver: plan → wget → verify & land; takes the manifest
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
-│   └── typecheck_ui.sh        # the gate's browser half
+│   └── typecheck_ui.py        # the gate's browser half
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── Makefile                   # `make gate`; `make derive` and `make drift` re-run the derivers
 ├── image/                     # the pod's Python environment: a locked uv project, derived
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
-├── start.sh                   # baked into the image; gpunit's boot.sh runs it
 ├── .github/workflows/         # CI: the gate; the weekly drift check; the image, on request
 ├── .claude/skills/            # run-flows, compare-renders: the flows, for an agent
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```
 
-## Provisioning flow — how `isekai render`, gpunit and `start.sh` fit together
+## Provisioning flow — how `isekai render`, gpunit and `pod_start.py` fit together
 
 They run in **different places at different times**. `isekai render` downloads and runs nothing itself: it
 opens a gpunit session, which makes **API calls** and checks the pod's SSH host key; **RunPod's GPU host**
-pulls the image and runs it, and inside the container gpunit's `boot.sh` runs the image's **`start.sh`**.
+pulls the image and runs it, and inside the container gpunit's `boot.sh` runs the image's
+**`isekai/boundary/pod_start.py`**.
 
 | Script | Runs **where** | Runs **when** | Does what |
 |---|---|---|---|
 | `python -m isekai render` | **on your machine** | when you want renders | assembles every prompt, opens a gpunit session on `gpunit.toml`, waits for ComfyUI through the tunnel, renders each flow, closes the session on every exit |
-| `boot.sh` (gpunit's) | **inside the container, on the pod** | every container boot (the image's entrypoint) | arm the stop at the ceiling → authorize the session's key → start `sshd` on a host key made at boot → print its fingerprint → run `start.sh` without the API key; every way out stops the pod |
-| `start.sh` | **inside the container, on the pod** | after `boot.sh`'s steps | provision the models onto the volume → put ComfyUI's files in memory → `exec` ComfyUI |
+| `boot.sh` (gpunit's) | **inside the container, on the pod** | every container boot (the image's entrypoint) | arm the stop at the ceiling → authorize the session's key → start `sshd` on a host key made at boot → print its fingerprint → run `pod_start.py` without the API key; every way out stops the pod |
+| `pod_start.py` | **inside the container, on the pod** | after `boot.sh`'s steps | prove the volume → provision the models onto it with `provision.py fetch` → put ComfyUI's files in memory → `exec` ComfyUI |
 
 ```
 BUILD TIME (once, or when the image changes)
-  Dockerfile + start.sh + gpunit's boot.sh  ──▶  CI builds on request  ──▶  GHCR
+  Dockerfile + pod_start.py + gpunit's boot.sh  ──▶  CI builds on request  ──▶  GHCR
 
 RENDER TIME (every session — this is isekai render)
 
@@ -429,7 +429,7 @@ RENDER TIME (every session — this is isekai render)
     │    create the pod in the volume's data centre ──▶ control plane
     │                                  │ 2  place the pod on a GPU host
     │                                  │ 3  pull image ───────────────▶ ghcr image
-    │                                  │ 4  ENTRYPOINT boot.sh -- /start.sh:
+    │                                  │ 4  ENTRYPOINT boot.sh -- pod_start.py:
     │                                  │      • arm the stop (gpunit.toml's ceiling)
     │                                  │      • own host key, start sshd (:22), print it
     │                                  │      • /opt/ComfyUI/models → <volume>/isekai
@@ -440,7 +440,7 @@ RENDER TIME (every session — this is isekai render)
     │ 6  wait for /system_stats, then generate each flow through 127.0.0.1:8188
     ▼
   every exit: the session deletes the pod and every listed pod of the project ──▶ billing stops
-  the pod itself: the stop fires at the ceiling, or when start.sh ends ──▶ pod stops
+  the pod itself: the stop fires at the ceiling, or when the start ends ──▶ pod stops
                                                    (volume + GHCR image persist)
 ```
 

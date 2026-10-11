@@ -3,21 +3,26 @@
 `config/models.json` decides which bytes this repository renders with, and this
 module owns every *decision* taken about it: whether the manifest says what a pin is
 supposed to say, and, for each entry, whether to skip it, abort the run or fetch it.
-The bytes move through `wget` on the pod; the only network call here is the cheap
-pre-flight HEAD behind the `Fetcher` seam, which a fake replaces so the whole suite
-stays offline.
+`fetch` carries those decisions out, on the laptop and on the pod alike. Every
+network call -- the pre-flight HEAD and the transfer -- goes through the `Fetcher`
+seam, which a fake replaces so the whole suite stays offline.
 
 On `python -m isekai`'s import graph through `ollama.py`, which reads the
 reader's manifest; it imports only the standard library.
 """
 
+import argparse
 import hashlib
+import http.client
 import json
 import posixpath
 import re
+import shutil
 import sys
+import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from http.client import HTTPMessage
 from pathlib import Path, PurePosixPath
@@ -40,6 +45,10 @@ READER_MANIFEST_PATH = (
     Path(__file__).resolve().parent.parent.parent / "config" / "reader.json"
 )
 
+# Where `fetch` lands files when told nowhere else: the repository's own models
+# root, anchored so it resolves from any working directory.
+DEFAULT_MODELS_DIR = Path(__file__).resolve().parent.parent.parent / "models"
+
 # A lowercase SHA-256, in full. Anything else is not a digest of anything.
 DIGEST = re.compile(r"^[0-9a-f]{64}$")
 
@@ -58,6 +67,11 @@ SOURCE_ORG = re.compile(r"^https://huggingface\.co/(?P<org>[^/]+)/")
 # rules out a newline in the middle of a value: a source carrying one would pass
 # the pin check and then arrive at the transfer as two arguments.
 WHITESPACE = re.compile(r"\s")
+
+# A broken transfer is transient, so it is tried again from the same source after
+# each wait in turn; bytes that do not verify would fail the same way (D21).
+ATTEMPTS = 3
+WAITS = (10, 30)
 
 
 class Entry(TypedDict):
@@ -148,17 +162,20 @@ class DigestMismatch(Exception):
 
 
 class Fetcher(Protocol):
-    """The pre-flight seam: what a source says it would serve, before it serves it.
+    """The network seam: what a source says it would serve, and the bytes it serves.
 
-    The bytes themselves do not move through here. `wget` in the shell moves them
-    and the shell hands the result back to `land`, so what passes through this seam
-    is the cheap question a ranged request can answer: does the source's *published*
-    digest already disagree with the manifest? A fake answers it from a dict, which
-    is what keeps the suite offline.
+    `published_digest` is the cheap question a HEAD request can answer: does the
+    source's *published* digest already disagree with the manifest? `get` moves the
+    bytes, which `land` then verifies. A fake answers both from dicts, which is
+    what keeps the suite offline.
     """
 
     def published_digest(self, url: str) -> str | None:
         """Return the SHA-256 the source publishes, or None if it publishes none."""
+        ...
+
+    def get(self, url: str, into: Path) -> None:
+        """Write the bytes the source serves to `into`; raise `OSError` on failure."""
         ...
 
 
@@ -200,10 +217,24 @@ class HuggingFaceFetcher:
                 header = response.headers.get("x-linked-etag") or ""
         except urllib.error.HTTPError as redirected:
             header = redirected.headers.get("x-linked-etag") or ""
-        except OSError:
+        except (OSError, http.client.HTTPException):
             return None
         candidate = header.strip().strip('"')
         return candidate if DIGEST.match(candidate) else None
+
+    def get(self, url: str, into: Path) -> None:
+        """Stream the file, following the redirect to the CDN, into `into`.
+
+        A failure at the HTTP layer -- a body cut mid-chunk, a malformed status
+        line -- is not an `OSError`, so it is raised as one: the seam promises
+        `OSError`, and that is what `fetch` tries again.
+        """
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                with into.open("wb") as handle:
+                    shutil.copyfileobj(response, handle, 1 << 20)
+        except http.client.HTTPException as failed:
+            raise OSError(f"{type(failed).__name__}: {failed}") from failed
 
 
 @dataclass(frozen=True)
@@ -264,12 +295,11 @@ def resolve_dest(entry: Entry, models_dir: Path) -> Path | None:
 
     Lexical on purpose — `normpath` rather than `resolve` — because `MODELS_ROOT`
     on the pod IS a symlink onto the namespace, so resolving would report the
-    target through a path the driver was never handed.
+    target through a path `fetch` was never handed.
     """
     dest = entry["dest"]
-    # Whitespace is refused for the same reason `sources` refuses it: the plan
-    # this destination ends up in is a line- and tab-delimited protocol, so a
-    # `\n` inside one field does not stay one field.
+    # Whitespace is refused as `sources` refuses it: no pinned file name carries
+    # any, and a `\n` would split the log line that names the destination.
     if not dest or dest.startswith("~") or "\\" in dest or WHITESPACE.search(dest):
         return None
     normalized = PurePosixPath(posixpath.normpath(dest))
@@ -356,7 +386,7 @@ def decide(entry: Entry, models_dir: Path, fetcher: Fetcher) -> Decision:
     run's to remove.
 
     An absent file is offered *every* source that survives the pre-flight, in the
-    manifest's order, so the driver can walk them. Only a source that positively
+    manifest's order, so `fetch` can walk them. Only a source that positively
     disagrees is dropped; a source that publishes nothing is kept, because the
     pre-flight is an optimisation and never a substitute for hashing the bytes that
     landed.
@@ -422,98 +452,119 @@ def land(entry: Entry, dest: Path, partial: Path) -> None:
     partial.replace(dest)
 
 
-def plan(manifest: Manifest, models_dir: Path, fetcher: Fetcher) -> int:
-    """Print one line per entry for the shell driver to act on; 0 if it may proceed.
+def fetch(
+    manifest: Manifest,
+    models_dir: Path,
+    fetcher: Fetcher,
+    wait: Callable[[float], None] = time.sleep,
+) -> int:
+    """Land every entry the manifest declares under `models_dir`; 0 if all are there.
 
-    `SKIP<TAB><target>` or `FETCH<TAB><target><TAB><url>[<TAB><url>...]`, where
-    the target is the destination already resolved under `models_dir` — a fetch
-    line carries every source that survived the pre-flight, in order, and the
-    driver walks them until one verifies. Every entry is decided before any line
-    is printed, so an abort anywhere stops the run before a single byte is
-    transferred rather than in the middle of a 6.9 GB download.
+    Every entry is decided before a byte moves, so an abort anywhere stops the run
+    before a 6.9 GB download rather than in the middle of one. Each fetched entry
+    walks its sources in order: a transfer that breaks `ATTEMPTS` times or bytes
+    that do not verify move to the next, and only exhausting them all fails the run.
     """
-    lines: list[str] = []
-    aborts: list[str] = []
-    for entry in manifest["entries"]:
-        decision = decide(entry, models_dir, fetcher)
-        if decision.action == "abort":
-            aborts.append(decision.reason)
-            continue
-        # The path `decide` already resolved, so the shell joins nothing and the
-        # containment rule has one site rather than one per assembly. It is still
-        # re-checked for a delimiter here: `resolve_dest` covers the manifest's
-        # half of the target, and `models_dir` — handed in by the shell — is the
-        # other half, so a record-splitting byte can arrive from either.
-        target = str(decision.target)
-        if "\n" in target or "\t" in target:
-            aborts.append(f"target {target!r} would not stay one plan record")
-            continue
-        if decision.action == "skip":
-            lines.append(f"SKIP\t{target}")
-        else:
-            lines.append("\t".join(["FETCH", target, *decision.urls]))
+    decisions = [
+        (entry, decide(entry, models_dir, fetcher)) for entry in manifest["entries"]
+    ]
+    aborts = [
+        decision.reason for _, decision in decisions if decision.action == "abort"
+    ]
     if aborts:
         for reason in aborts:
             print(f"ERROR: {reason}", file=sys.stderr)
         return 1
-    for line in lines:
-        print(line)
+    for entry, decision in decisions:
+        target = decision.target
+        assert target is not None  # only an abort carries no target
+        if decision.action == "skip":
+            print(f"skip (present, verified): {target}")
+        elif not _transfer(entry, target, decision.urls, fetcher, wait):
+            print(f"ERROR: every source for {target} failed", file=sys.stderr)
+            return 1
+    print(f"models ready under {models_dir}")
     return 0
 
 
-def _entry_for(
-    manifest: Manifest, models_dir: Path, target: str, source: Path
-) -> tuple[Entry, Path]:
-    """Return the entry whose resolved destination is `target`, and that path.
+def _transfer(
+    entry: Entry,
+    target: Path,
+    urls: tuple[str, ...],
+    fetcher: Fetcher,
+    wait: Callable[[float], None],
+) -> bool:
+    """Land `entry` at `target` from the first of `urls` that serves verified bytes."""
+    partial = target.with_name(f"{target.name}.partial")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    for url in urls:
+        if not _get(url, partial, fetcher, wait):
+            continue
+        try:
+            land(entry, target, partial)
+        except DigestMismatch:
+            print(f"WARNING: bytes served by {url} did not verify", file=sys.stderr)
+            continue
+        print(f"saved (verified): {target}")
+        return True
+    return False
 
-    The driver is handed resolved targets and hands them straight back, so the
-    lookup resolves the manifest side rather than asking the shell to un-join what
-    it never joined — and returns the path it matched on, so `land` is handed a
-    destination this function has already contained.
-    """
-    for entry in manifest["entries"]:
-        resolved = resolve_dest(entry, models_dir)
-        if resolved is not None and str(resolved) == target:
-            return entry, resolved
-    raise SystemExit(f"ERROR: {target} is not declared in {source}")
+
+def _get(
+    url: str, partial: Path, fetcher: Fetcher, wait: Callable[[float], None]
+) -> bool:
+    """Transfer `url` into `partial`, up to `ATTEMPTS` times; True if one completes."""
+    for attempt in range(1, ATTEMPTS + 1):
+        if attempt > 1:
+            wait(WAITS[attempt - 2])
+        print(f"downloading: {url}")
+        try:
+            fetcher.get(url, partial)
+        except OSError as failed:
+            partial.unlink(missing_ok=True)
+            print(
+                f"WARNING: transfer failed from {url}, "
+                f"attempt {attempt} of {ATTEMPTS}: {failed}",
+                file=sys.stderr,
+            )
+            continue
+        return True
+    return False
 
 
 def manifest_argument(given: str | None) -> Path:
-    """Return the manifest a driver invocation names, defaulting to the graph's.
+    """Return the manifest a `fetch` invocation names, defaulting to the graph's.
 
     **Which manifest, not which policy.** Every manifest this repository keeps is
     held to the same pins, the same digests and the same containment rule, so the
     provisioner takes the file as an argument rather than growing a verb per
     consumer. It is what makes the vocabulary a *provisioned* artifact rather than
-    one that is merely verified: `bash tools/download_models.sh
+    one that is merely verified: `uv run python -m isekai.boundary.provision fetch
     config/vocabulary.json` fetches it through this exact path.
     """
     return MANIFEST_PATH if given is None else Path(given)
 
 
+def _parser() -> argparse.ArgumentParser:
+    """Return the parser for `fetch`."""
+    parser = argparse.ArgumentParser(prog="provision.py")
+    verbs = parser.add_subparsers(dest="verb", required=True)
+    fetch_verb = verbs.add_parser("fetch", help="land a manifest's files, verified")
+    fetch_verb.add_argument(
+        "--models-dir",
+        type=Path,
+        default=DEFAULT_MODELS_DIR,
+        help="where the files land (default: the repository's models/)",
+    )
+    fetch_verb.add_argument("manifest", nargs="?", help="default: config/models.json")
+    return parser
+
+
 def main(argv: list[str]) -> int:
-    """Run the two commands the shell driver uses: `plan` and `land`."""
-    match argv:
-        case ["plan", models_dir, *rest] if len(rest) <= 1:
-            source = manifest_argument(rest[0] if rest else None)
-            return plan(load_manifest(source), Path(models_dir), HuggingFaceFetcher())
-        case ["land", models_dir, target, partial, *rest] if len(rest) <= 1:
-            source = manifest_argument(rest[0] if rest else None)
-            entry, dest = _entry_for(
-                load_manifest(source), Path(models_dir), target, source
-            )
-            try:
-                land(entry, dest, Path(partial))
-            except DigestMismatch as mismatch:
-                print(f"ERROR: {mismatch}", file=sys.stderr)
-                return 1
-            print(f"saved (verified): {target}")
-            return 0
-        case _:
-            raise SystemExit(
-                "usage: provision.py plan <models-dir> [manifest]\n"
-                "       provision.py land <models-dir> <target> <partial> [manifest]"
-            )
+    """Run `fetch`: `provision.py fetch [--models-dir DIR] [manifest]`."""
+    args = _parser().parse_args(argv)
+    source = manifest_argument(args.manifest)
+    return fetch(load_manifest(source), args.models_dir, HuggingFaceFetcher())
 
 
 # What a model file is called, for the purpose of reading one out of the graph.
@@ -620,12 +671,6 @@ def undeclared_files(filenames: list[str], manifest: Manifest) -> list[str]:
 # ComfyUI's models root on the pod. Everything the manifest declares is a path
 # relative to this, and `folder_paths` resolves every node's models from it.
 MODELS_ROOT = "/opt/ComfyUI/models"
-
-# Where the network volume mounts, and this project's slice of it. The volume is
-# shared with another project under a different convention, so nothing here
-# reaches outside `MODELS_NAMESPACE`.
-VOLUME_MOUNT = "/runpod-volume"
-MODELS_NAMESPACE = f"{VOLUME_MOUNT}/isekai"
 
 # The preprocessor nodes whose checkpoints `comfyui_controlnet_aux` fetches into
 # its own `ckpts` directory -- container disk, unless AUX_ANNOTATOR_CKPTS_PATH

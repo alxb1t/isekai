@@ -33,7 +33,6 @@ ROOT_FILES = frozenset(
         "Dockerfile",
         "Makefile",
         "gpunit.toml",
-        "start.sh",
         "pyproject.toml",
         "uv.lock",
         "CHANGELOG.md",
@@ -47,7 +46,7 @@ SPAN = re.compile(r"`([^`\s]+)`")
 def named_paths(text: str) -> list[str]:
     """Return every repository path `text` names in backticks, in order.
 
-    e.g. "boots `config/image.json` via `up.sh`" -> ["config/image.json"]
+    e.g. "boots `config/image.json` via `isekai render`" -> ["config/image.json"]
     """
     return [
         span

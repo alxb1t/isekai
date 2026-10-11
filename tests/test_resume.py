@@ -392,7 +392,7 @@ AVAILABLE: Sequence[str] = (
     "python -m isekai review --flow ",
     "python -m isekai approve --flow ",
     "python -m isekai generate --flow ",
-    "tools/download_models.sh",
+    "python -m isekai.boundary.provision fetch",
     # The two Ollama remedies.
     "ollama serve",
     "ollama create",

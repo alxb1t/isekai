@@ -6,10 +6,11 @@ from urllib.request import Request
 
 import pytest
 
+from isekai.boundary import provision
 from isekai.boundary.comfy import Image, TransportFailure
 from isekai.boundary.comfy import client as comfy_client
 from isekai.boundary.ollama import LAYERS
-from isekai.boundary.provision import READER_MANIFEST_PATH, load_manifest
+from isekai.boundary.provision import READER_MANIFEST_PATH, Manifest, load_manifest
 from isekai.foundation.artifacts import DigestRecord
 from isekai.foundation.flow import Workflow
 
@@ -103,25 +104,60 @@ class FakeComfyClient:
         return self.report
 
 
-class FakeFetcher:
-    """In-memory stand-in for the pre-flight seam: canned answers, no network.
+def fetched_by_main(
+    monkeypatch: pytest.MonkeyPatch, argv: list[str]
+) -> tuple[Manifest, Path]:
+    """Return the manifest and models root `provision.main(argv)` hands `fetch`."""
+    handed: list[tuple[Manifest, Path]] = []
 
-    Structurally satisfies `Fetcher`, so `decide` cannot tell it from the real
-    thing. `published` maps a source URL to the digest that source claims it
-    would serve; a URL absent from the map publishes nothing, which is the case
+    def recording(manifest: Manifest, models_dir: Path, fetcher: object) -> int:
+        handed.append((manifest, models_dir))
+        return 0
+
+    monkeypatch.setattr(provision, "fetch", recording)
+    assert provision.main(argv) == 0
+    (call,) = handed
+    return call
+
+
+class FakeFetcher:
+    """In-memory stand-in for the network seam: canned answers, no network.
+
+    Structurally satisfies `Fetcher`, so `decide` and `fetch` cannot tell it from
+    the real thing. `published` maps a source URL to the digest that source claims
+    it would serve; a URL absent from the map publishes nothing, which is the case
     where pre-flight has to degrade to post-download verification rather than to
-    trust.
+    trust. `served` maps a source URL to the bytes it serves; a URL absent from it
+    fails its transfer. `breaks` maps a served URL to how many of its first
+    transfers break before it serves.
     """
 
-    def __init__(self, published: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        published: dict[str, str] | None = None,
+        served: dict[str, bytes] | None = None,
+        breaks: dict[str, int] | None = None,
+    ) -> None:
         self.published = published or {}
+        self.served = served or {}
+        self.breaks = dict(breaks or {})
         # every URL asked about, in order — so a test can assert that a source
         # rejected before transfer was still pre-flighted.
         self.asked: list[str] = []
+        # every transfer attempted, in order, with the path it wrote to.
+        self.fetched: list[tuple[str, Path]] = []
 
     def published_digest(self, url: str) -> str | None:
         self.asked.append(url)
         return self.published.get(url)
+
+    def get(self, url: str, into: Path) -> None:
+        self.fetched.append((url, into))
+        if url not in self.served or self.breaks.get(url, 0) > 0:
+            self.breaks[url] = self.breaks.get(url, 0) - 1
+            into.write_bytes(b"half a file")
+            raise OSError(f"{url} did not answer")
+        into.write_bytes(self.served[url])
 
 
 # The alias every tracked flow names, and so the one a real adapter is tested on.

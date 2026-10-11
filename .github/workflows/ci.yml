@@ -22,7 +22,7 @@ jobs:
           version: "0.12.19"
           enable-cache: true
 
-      # The gate's fifth command is `bash tools/typecheck_ui.sh`, which runs
+      # The gate's browser typecheck, `uv run python -m tools.typecheck_ui`, runs
       # `vue-tsc --noEmit` and refuses by name without `ui/node_modules/`. On an
       # operator's machine that directory is restored by hand, deliberately --
       # `npm install` fetches third-party packages and nothing in this

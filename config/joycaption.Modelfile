@@ -13,7 +13,7 @@
 # `models/` is gitignored. `config/reader.json` pins both files by digest; fetch
 # and verify them into `models/joycaption/` with
 #
-#   bash tools/download_models.sh config/reader.json
+#   uv run python -m isekai.boundary.provision fetch config/reader.json
 #
 # and `caption` and `tag` refuse a model built from any other files.
 #

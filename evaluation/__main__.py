@@ -203,8 +203,8 @@ def _embedder(models: Path) -> Embed:
             "`evaluation/eval_models.json`"
         )
     fetch = (
-        f"MODELS_DIR={shlex.quote(str(models.resolve()))} bash "
-        "tools/download_models.sh evaluation/eval_models.json"
+        "uv run python -m isekai.boundary.provision fetch --models-dir "
+        f"{shlex.quote(str(models.resolve()))} evaluation/eval_models.json"
     )
     try:
         detector = Detector(resolve(DETECTOR, models, manifest))

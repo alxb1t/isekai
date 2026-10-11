@@ -14,7 +14,7 @@ ENV ORT_DISABLE_TELEMETRY=1 HF_HUB_DISABLE_TELEMETRY=1 DO_NOT_TRACK=1 NO_ALBUMEN
 # a later one would only hide them. Each pod makes its own.
 # Python is uv's; `build-essential` compiles insightface's extension.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        git curl wget ca-certificates openssh-server build-essential \
+        git curl ca-certificates openssh-server build-essential \
         libgl1 libglib2.0-0 \
     && rm -f /etc/ssh/ssh_host_* \
     && rm -rf /var/lib/apt/lists/*
@@ -58,13 +58,10 @@ RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
     && cd /opt/ComfyUI/custom_nodes/comfyui_controlnet_aux \
     && git checkout e8b689a513c3e6b63edc44066560ca5919c0576e
 
-# Provisioning is three tracked files, not one: the driver, the pinned manifest it
-# reads, and the module that owns every decision taken about it. Copying only the
-# script would put a downloader on the pod without the two things it depends on.
-# The layout is preserved because provision.py resolves the manifest relative to
-# itself -- `parent.parent.parent / "config"` -- so the
-# module's depth under /opt/isekai is load-bearing, and it must land at
-# isekai/boundary/ to match the package's tree.
+# The start is `pod_start.py`, the `provision.py` it runs from
+# its own directory, and the pinned manifest that one reads. The layout is preserved
+# because provision.py resolves the manifest relative to itself --
+# `parent.parent.parent / "config"` -- so both modules land at isekai/boundary/.
 # `comfyui_controlnet_aux` writes annotator checkpoints to `<node dir>/ckpts` --
 # the pod's container disk, which does not survive the pod. That is 386 MB
 # re-fetched from Hugging Face, unpinned, during the first render of every pod,
@@ -78,19 +75,18 @@ RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git \
 # the log.
 ENV AUX_ANNOTATOR_CKPTS_PATH=/opt/ComfyUI/models/annotator_ckpts
 
-COPY start.sh /start.sh
-COPY tools/download_models.sh /opt/isekai/tools/download_models.sh
 COPY config/models.json /opt/isekai/config/models.json
 COPY isekai/boundary/provision.py /opt/isekai/isekai/boundary/provision.py
+COPY isekai/boundary/pod_start.py /opt/isekai/isekai/boundary/pod_start.py
 
 # gpunit's boot script, at the tag `pyproject.toml` pins gpunit at: it arms the
 # pod's stop, serves sshd on a host key made at boot, prints its fingerprint, and
-# runs `start.sh` without the provider's key, stopping the pod when it ends.
+# runs the start without the provider's key, stopping the pod when it ends.
 ADD --checksum=sha256:18742fd46a9889af6212aa76667a43a653767d53f770e0739881869a1f3b03ad \
     https://raw.githubusercontent.com/alxb1t/gpunit/v0.2.0/boot/boot.sh /opt/gpunit/boot.sh
-RUN chmod +x /start.sh /opt/isekai/tools/download_models.sh /opt/gpunit/boot.sh
+RUN chmod +x /opt/gpunit/boot.sh
 
 EXPOSE 8188 22
 
 ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
-CMD ["/start.sh"]
+CMD ["python", "/opt/isekai/isekai/boundary/pod_start.py"]

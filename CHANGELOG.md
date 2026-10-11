@@ -9,6 +9,38 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-10-11 · 0059-the-pod-in-python
+
+### Changed
+
+- `provision.py fetch` lands a manifest's files over `urllib`, walking each entry's sources under unit test; the
+  vocabulary, reader and evaluator remedies name it in place of the shell driver (0059 D3).
+- `isekai/boundary/pod_start.py` runs the pod's start as tested Python — the volume, the models link, `fetch`, the
+  memory checks, then ComfyUI — and also holds on an unread `/dev/shm` type and reports swap (0059 D1, D2, D4, D6).
+- The image runs `pod_start.py` beside `provision.py`, without `wget`; the build record refuses a `COPY` it cannot
+  read; D35 names the host's swap, and the pins guide rebuilds before it re-records (0059 D1, D3, D7).
+- The gate's browser typecheck is `tools/typecheck_ui.py`, its refusals unchanged and under test; no bash is
+  tracked (0059 D5).
+- The pod image is re-pinned to `v0.35.1-rc3`, `sha256:0f0a8e82…dbcf88ff`, carrying `fetch`'s retry; one
+  `isekai render` session rendered both flows on it, the pod read showed memory-only ComfyUI with no metadata,
+  and no pod was left (0059 D8, D9).
+
+### Removed
+
+- `start.sh`, `tools/download_models.sh`, `provision.py`'s `plan` and `land` verbs and the tests that read the
+  scripts' text: `tests/test_pod_start.py` and `fetch`'s tests hold the same keys by behaviour (0059 D3, D6).
+- `tools/typecheck_ui.sh`: `tools/typecheck_ui.py` replaces it (0059 D5).
+
+### Fixed
+
+- `fetch` moves to the next source on a transfer that fails at the HTTP layer, and verifies after the download
+  when its pre-flight HEAD does; the build record reads a `COPY` in any case or indent and refuses an `ADD` that
+  is not a checksummed URL (0059 D3, D7).
+- `fetch` tries a broken transfer again from the same source before moving on: an entry with one source had
+  nowhere to fall. Bytes that do not verify still move on at once (0059 D9).
+- The build record refuses a `COPY` wrapped straight after its name, and reads one below a comment ending in a
+  backslash as Docker does, rather than leaving its file out of the record unseen (0059 D7).
+
 ## [0.35.0] - 2026-10-10 · 0058-gpunit-integration
 
 ### Added

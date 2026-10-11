@@ -21,7 +21,7 @@ from isekai.boundary.provision import (
     sources_on_a_mutable_ref,
 )
 from isekai.foundation.flow import load_flow, tracked_flows
-from tests.fakes import FakeFetcher
+from tests.fakes import fetched_by_main
 
 
 @pytest.fixture
@@ -76,17 +76,11 @@ def test_every_model_a_tracked_flow_declares_is_pinned(
 
 
 @pytest.mark.spec("model-provisioning:reader:driver-provisions-the-manifest")
-def test_the_provisioner_plans_the_readers_files_when_pointed_at_its_manifest(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_the_provisioner_fetches_the_readers_files_when_pointed_at_its_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import isekai.boundary.provision as provision
-
-    monkeypatch.setattr(provision, "HuggingFaceFetcher", FakeFetcher)
-
-    assert provision.main(["plan", str(tmp_path), str(READER_MANIFEST_PATH)]) == 0
-
-    planned = [line.split("\t")[1] for line in capsys.readouterr().out.splitlines()]
-    assert planned == [
-        str(tmp_path / entry["dest"])
-        for entry in load_manifest(READER_MANIFEST_PATH)["entries"]
-    ]
+    argv = ["fetch", "--models-dir", str(tmp_path), str(READER_MANIFEST_PATH)]
+    assert fetched_by_main(monkeypatch, argv) == (
+        load_manifest(READER_MANIFEST_PATH),
+        tmp_path,
+    )

@@ -564,7 +564,9 @@ def test_a_model_built_from_other_files_refuses_naming_both_digests(
     model, _projector = READER_ARTIFACTS.values()
     assert other in message
     assert model["sha256"] in message
-    assert "bash tools/download_models.sh config/reader.json" in message
+    assert (
+        "uv run python -m isekai.boundary.provision fetch config/reader.json" in message
+    )
     assert f"ollama create {READER} -f config/joycaption.Modelfile" in message
     assert transport.sent == []
     directory = run.directory(FLOW.id, CAPTIONS)

@@ -708,7 +708,7 @@ approval, and that check SHALL render nothing. It SHALL refuse, naming its file,
 producer or origin is damaged.
 
 ```
-render.sh <runs> S=1 T=S
+isekai render <runs> S=1 T=S
    free pass: assemble S and T
    free pass: T in step with S's latest approval?  no ──▶ refused, no pod
    pod: render S into its latest approval's group, then T on those seeds

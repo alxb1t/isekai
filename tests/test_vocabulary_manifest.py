@@ -38,7 +38,7 @@ from isekai.boundary.provision import (
 from isekai.boundary.wd14 import verified_paths
 from isekai.foundation.refusal import Refusal
 from isekai.interface.wiring import load_vocabulary
-from tests.fakes import FakeFetcher
+from tests.fakes import fetched_by_main
 
 VOCABULARY = "wd14/selected_tags.csv"
 TAGGER = "wd14/model.onnx"
@@ -48,11 +48,6 @@ TAGGER = "wd14/model.onnx"
 # against a value a human pinned and not against whatever the file happens to say.
 REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
 REPOSITORY = "SmilingWolf/wd-swinv2-tagger-v3"
-
-# The one command that provisions anything in this repository. The vocabulary is
-# fetched by pointing it at the vocabulary's manifest rather than by a second
-# driver that would have to be kept in step with this one.
-DRIVER_PATH = Path(__file__).resolve().parent.parent / "tools" / "download_models.sh"
 
 # Extensions a model's weights arrive under. Exactly one entry here carries one,
 # and which one is asserted: the graph the tag list is the output layer of. A
@@ -191,55 +186,42 @@ def test_a_label_index_and_a_model_at_two_revisions_fail_the_check(
 # --- provisioning -------------------------------------------------------------
 
 
-def _targets(captured: str) -> list[str]:
-    """Return the destination each plan line names, whatever it decided about it."""
-    return [line.split("\t")[1] for line in captured.splitlines()]
+def _fetched(
+    monkeypatch: pytest.MonkeyPatch, argv: list[str]
+) -> tuple[list[str], Path]:
+    """Return the destinations `main` hands `fetch`, and the models root, for `argv`."""
+    manifest, models_dir = fetched_by_main(monkeypatch, argv)
+    return [entry["dest"] for entry in manifest["entries"]], models_dir
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:driver-provisions-the-manifest")
-def test_the_provisioner_plans_the_vocabulary_when_pointed_at_its_manifest(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_the_provisioner_fetches_the_vocabulary_when_pointed_at_its_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import isekai.boundary.provision as provision
-
-    # The pre-flight is the only network call in the module; the fake is what the
-    # rest of this suite already drives it with.
-    monkeypatch.setattr(provision, "HuggingFaceFetcher", FakeFetcher)
-
-    assert provision.main(["plan", str(tmp_path), str(VOCABULARY_MANIFEST_PATH)]) == 0
-
-    assert _targets(capsys.readouterr().out) == [
-        str(tmp_path / VOCABULARY),
-        str(tmp_path / TAGGER),
-    ]
+    argv = ["fetch", "--models-dir", str(tmp_path), str(VOCABULARY_MANIFEST_PATH)]
+    assert _fetched(monkeypatch, argv) == ([VOCABULARY, TAGGER], tmp_path)
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:driver-provisions-the-manifest")
-def test_the_provisioner_still_plans_the_graphs_stack_when_told_no_manifest(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_the_provisioner_still_fetches_the_graphs_stack_when_told_no_manifest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import isekai.boundary.provision as provision
-
-    monkeypatch.setattr(provision, "HuggingFaceFetcher", FakeFetcher)
-
-    assert provision.main(["plan", str(tmp_path)]) == 0
-
-    planned = _targets(capsys.readouterr().out)
-    assert planned == [
-        str(tmp_path / entry["dest"])
-        for entry in load_manifest(MANIFEST_PATH)["entries"]
-    ]
-    assert str(tmp_path / VOCABULARY) not in planned
+    dests, _ = _fetched(monkeypatch, ["fetch", "--models-dir", str(tmp_path)])
+    assert dests == [entry["dest"] for entry in load_manifest(MANIFEST_PATH)["entries"]]
+    assert VOCABULARY not in dests
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:driver-provisions-the-manifest")
-def test_the_shell_driver_forwards_the_manifest_to_every_invocation() -> None:
-    script = DRIVER_PATH.read_text()
-    invocations = [line for line in script.splitlines() if '"$PROVISION"' in line]
-
-    assert invocations
-    assert all("MANIFEST" in line for line in invocations)
-    assert "config/vocabulary.json" in script
+def test_the_provisioner_runs_as_a_file_and_takes_the_manifest() -> None:
+    # The pod runs it by path, outside the package, so it must stand alone.
+    shown = subprocess.run(
+        [sys.executable, str(Path(provision.__file__)), "fetch", "--help"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "manifest" in shown.stdout
+    assert "--models-dir" in shown.stdout
 
 
 @pytest.mark.spec("model-provisioning:vocabulary:absent-vocabulary-names-the-command")
@@ -251,7 +233,10 @@ def test_an_unprovisioned_vocabulary_refuses_naming_the_command(
 
     message = str(refused.value)
     assert VOCABULARY in message
-    assert "tools/download_models.sh config/vocabulary.json" in message
+    assert (
+        "uv run python -m isekai.boundary.provision fetch config/vocabulary.json"
+        in message
+    )
 
 
 def _declaring_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
