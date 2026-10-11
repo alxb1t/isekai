@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-10-11 · 0059-the-pod-in-python
+
 ### Changed
 
 - `provision.py fetch` lands a manifest's files over `urllib`, walking each entry's sources under unit test; the

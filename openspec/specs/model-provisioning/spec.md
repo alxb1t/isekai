@@ -154,24 +154,42 @@ A multi-gigabyte download that ends in a mismatch costs the same as one that end
 
 ### Requirement: A transfer that fails advances to the next declared source
 
-Where an entry declares more than one source, provisioning SHALL try them in the manifest's order
-and abort only when every one of them has failed.
+Provisioning SHALL try an entry's sources in the manifest's order and abort only when every one of them has
+failed. It SHALL try a transfer that breaks off again from the same source, three attempts in all. A source has
+failed when its third attempt breaks off, or at once when the bytes it served fail verification.
 
 An alternate that is never reached buys no availability: a mirror that has gone away is the failure it exists for.
+A dropped connection is transient, and an entry with one source has no alternate to fall to; bytes that do not
+verify would fail the same way again ([D21](../../../docs/decisions.md#d21--retries-follow-what-can-fail)).
+
+```
+source ──▶ transfer ── breaks off, attempts left ──▶ wait ──▶ transfer again
+              │
+              ├── breaks off a third time ─┐
+              ├── bytes do not verify ─────┴──▶ next source ── none left ──▶ abort
+              └── bytes verify ──▶ land
+```
 
 #### Scenario: the plan carries every source that survives the pre-flight
 - **Key:** `model-provisioning:source-fallback:the-plan-carries-every-surviving-source`
 - **Layers:** unit
 - **WHEN** an entry is absent and more than one of its sources survives the pre-flight
-- **THEN** the plan carries all of them, in the manifest's order
-- **AND** a source the pre-flight rejected is absent from that list
+- **THEN** provisioning offers all of them, in the manifest's order
+- **AND** a source the pre-flight rejected is not among them
 
 #### Scenario: a failed transfer advances to the next source
 - **Key:** `model-provisioning:source-fallback:a-failed-transfer-advances-to-the-next-source`
 - **Layers:** unit
-- **WHEN** a transfer from one source fails, or the bytes it served fail verification
-- **THEN** the driver moves on to the next source the plan carries for that entry
-- **AND** the run aborts only once every source for the entry has been exhausted
+- **WHEN** a source has failed
+- **THEN** provisioning moves on to the next source for that entry
+- **AND** the run aborts only once every source for the entry has failed
+
+#### Scenario: a broken transfer is tried again from the same source
+- **Key:** `model-provisioning:source-fallback:a-broken-transfer-is-tried-again`
+- **Layers:** unit
+- **WHEN** a transfer breaks off before its source's third attempt
+- **THEN** provisioning waits and transfers from the same source again
+- **AND** the entry lands when a later attempt serves bytes that verify
 
 ### Requirement: A provisioning failure leaves the pod reachable
 
@@ -337,8 +355,8 @@ loads it, because a vocabulary no loaded model indexes outlives any particular t
 #### Scenario: the shipped driver fetches the vocabulary from its own manifest
 - **Key:** `model-provisioning:vocabulary:driver-provisions-the-manifest`
 - **Layers:** unit
-- **WHEN** the provisioning driver is pointed at the vocabulary manifest
-- **THEN** it plans and lands every entry that manifest declares
+- **WHEN** `fetch` is pointed at the vocabulary manifest
+- **THEN** it lands every entry that manifest declares
 - **AND** it does so through the same command every other artifact is provisioned by
 
 #### Scenario: an unprovisioned vocabulary refuses naming that command
@@ -358,8 +376,8 @@ loads it, because a vocabulary no loaded model indexes outlives any particular t
 
 The system SHALL declare the reader's model and projector files as pinned, digested entries in a manifest
 of their own, derived like every other manifest, and SHALL name, for each model a flow may declare, which
-entry is its model file and which its projector. The provisioning driver SHALL fetch and verify that
-manifest's entries exactly as it does every other's.
+entry is its model file and which its projector. Provisioning SHALL fetch and verify that manifest's entries
+exactly as it does every other's.
 
 A manifest makes the reader's files fetchable by the same command as every other artifact, and gives the pre-call
 check one place to read the pins from
@@ -381,5 +399,5 @@ check one place to read the pins from
 #### Scenario: the shipped driver provisions the reader's manifest
 - **Key:** `model-provisioning:reader:driver-provisions-the-manifest`
 - **Layers:** unit
-- **WHEN** the provisioning driver is pointed at the reader's manifest
-- **THEN** it plans and lands every entry that manifest declares, verified by digest
+- **WHEN** `fetch` is pointed at the reader's manifest
+- **THEN** it lands every entry that manifest declares, verified by digest
