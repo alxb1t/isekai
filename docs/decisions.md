@@ -348,17 +348,18 @@ request.** A request with no `Origin` header is let through — a known, low ris
 **The volume holds exactly the manifest. A pod refuses to start when what is mounted is below the
 capacity floor** — the floor is `pod_start.py`'s. A network volume reports its storage cluster's capacity,
 far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
-quota, and a 20 GB volume passes. **A pod runs in its volume's data centre**: gpunit reads it from the
-volume `gpunit.toml` names and creates the pod there. Nothing checks the volume's size before the create;
-the pod's floor is the size check.
+quota, and a 20 GB volume passes. **The volume lives for a working window**: `gpunit volume up` makes it
+from `gpunit.toml`'s `volume_gb` and `volume_ceiling`, in a data centre chosen from stock, and each pod of the
+window runs there; `gpunit volume down` or the ceiling deletes it. Nothing checks the volume's size before the
+create; the pod's floor is the size check.
 
-- **Why:** re-downloading every session costs more than the idle rent, and a volume filled only from the
-  manifest is clean by construction. A missing mount would fall through to the container disk: it would
+- **Why:** re-downloading every session costs more than a window's rent, the weights download once a window,
+  and no storage bills between windows. A volume filled only from the manifest is clean by construction. A missing mount would fall through to the container disk: it would
   render, bill, and lose everything at teardown. A volume cannot move between data centres, so a pod
   elsewhere boots without its models.
 - **Accepts:** a pin freezes bytes, not intent: most weights come only from third-party mirrors,
   trusted as the publisher's. Reopen when a publisher ships a first-party copy, or a mirror is compromised.
-- **Made by:** `0009`, `0011`, `0033`, `0041`, `0052`, `0058`.
+- **Made by:** `0009`, `0011`, `0033`, `0041`, `0052`, `0058`, `0060`.
 
 ### D28 · The image carries code, the volume carries weights
 

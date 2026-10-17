@@ -6,7 +6,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 ## Progress
 
 - [x] 1 — The pin
-- [ ] 2 — The window
+- [x] 2 — The window
 - [ ] 3 — The pod's cards
 - [ ] 4 — The skill and the protocol
 - [ ] 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
@@ -23,15 +23,15 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 2 — The window
 
-- [ ] 2.1 **HALT CHECK** — `gpunit.toml` names the kept volume.
+- [x] 2.1 **HALT CHECK** — `gpunit.toml` names the kept volume.
   Verify: `grep -c '^volume = "db7sc8cild"$' gpunit.toml` prints `1`.
-- [ ] 2.2 In `gpunit.toml`, replace `volume` with `volume_gb = 50` and `volume_ceiling = "4h"` under a comment, per [D2](design.md#d2).
+- [x] 2.2 In `gpunit.toml`, replace `volume` with `volume_gb = 50` and `volume_ceiling = "4h"` under a comment, per [D2](design.md#d2).
   Verify: `grep -c -E '^volume_gb = 50$|^volume_ceiling = "4h"$' gpunit.toml` prints `2`, and `uv run python -c 'from pathlib import Path; import gpunit; print(gpunit.load_spec(Path("gpunit.toml")).volume_gb)'` prints `50`.
-- [ ] 2.3 In `tests/test_infra.py`, replace `unnamed_volume` and its tests with `window_volume_faults`, its tests and their twin, binding `model-provisioning:reachability:provisioning-requires-the-network-volume` and `model-provisioning:reachability:the-window-volume-clears-the-floor`, per [D2](design.md#d2).
+- [x] 2.3 In `tests/test_infra.py`, replace `unnamed_volume` and its tests with `window_volume_faults`, its tests and their twin, binding `model-provisioning:reachability:provisioning-requires-the-network-volume` and `model-provisioning:reachability:the-window-volume-clears-the-floor`, per [D2](design.md#d2).
   Verify: `grep -c 'unnamed_volume' tests/test_infra.py` prints `0`, and `grep -c 'reachability:the-window-volume-clears-the-floor' tests/test_infra.py` prints a number of at least `1`.
-- [ ] 2.4 Describe the window in `README.md`, per [D3](design.md#d3).
+- [x] 2.4 Describe the window in `README.md`, per [D3](design.md#d3).
   Verify: `grep -c 'gpunit volume up' README.md` prints a number of at least `3`, and `grep -c -E 'persistent RunPod|volume stays|3\.50/mo' README.md` prints `0`.
-- [ ] 2.5 Rewrite D27 in `docs/decisions.md` for the window and add the gpunit rebuild's order to `docs/pins.md`'s gpunit recipe, per [D3](design.md#d3).
+- [x] 2.5 Rewrite D27 in `docs/decisions.md` for the window and add the gpunit rebuild's order to `docs/pins.md`'s gpunit recipe, per [D3](design.md#d3).
   Verify: `grep -c 'volume_ceiling' docs/decisions.md` prints a number of at least `1`, `grep -c 'before any render' docs/pins.md` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 3 — The pod's cards

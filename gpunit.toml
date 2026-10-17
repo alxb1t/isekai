@@ -16,4 +16,7 @@ disk_gb = 30
 ports = [8188]
 ceiling = "45m"
 timeout = 420
-volume = "db7sc8cild"
+# The models volume of a working window: `gpunit volume up` makes it, in a data
+# centre stock chooses, and `gpunit volume down` or its ceiling deletes it.
+volume_gb = 50
+volume_ceiling = "4h"
