@@ -69,7 +69,8 @@ SOURCE_ORG = re.compile(r"^https://huggingface\.co/(?P<org>[^/]+)/")
 WHITESPACE = re.compile(r"\s")
 
 # A broken transfer is transient, so it is tried again from the same source after
-# each wait in turn; bytes that do not verify would fail the same way (D21).
+# each wait in turn; a client error and bytes that do not verify would fail the
+# same way, so neither is tried again (D21).
 ATTEMPTS = 3
 WAITS = (10, 30)
 
@@ -520,6 +521,20 @@ def _get(
         print(f"downloading: {url}")
         try:
             fetcher.get(url, partial)
+        except urllib.error.HTTPError as failed:
+            partial.unlink(missing_ok=True)
+            if 400 <= failed.code < 500:
+                print(
+                    f"WARNING: {url} answered HTTP {failed.code}; not tried again",
+                    file=sys.stderr,
+                )
+                return False
+            print(
+                f"WARNING: transfer failed from {url}, "
+                f"attempt {attempt} of {ATTEMPTS}: {failed}",
+                file=sys.stderr,
+            )
+            continue
         except OSError as failed:
             partial.unlink(missing_ok=True)
             print(

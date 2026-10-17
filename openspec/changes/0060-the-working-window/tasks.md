@@ -7,7 +7,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 - [x] 1 — The pin
 - [x] 2 — The window
-- [ ] 3 — The pod's cards
+- [x] 3 — The pod's cards
 - [ ] 4 — The skill and the protocol
 - [ ] 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
 - [ ] 6 — ⚠️ **HUMAN · METERED** — one window: volume up, a first and a second render, volume down
@@ -36,15 +36,15 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 3 — The pod's cards
 
-- [ ] 3.1 **HALT CHECK** — the cards still hold: the stale `(D2)`, the defaulted swap, the type read by text, and every `HTTPError` retried.
+- [x] 3.1 **HALT CHECK** — the cards still hold: the stale `(D2)`, the defaulted swap, the type read by text, and every `HTTPError` retried.
   Verify: `grep -c '(D2)' isekai/boundary/pod_start.py` prints `1`, `grep -c 'def can_swap(pod: Pod) -> bool:' isekai/boundary/pod_start.py` prints `1`, `grep -c 'fields\[1\] == str(pod.shm)' isekai/boundary/pod_start.py` prints `1`, and `grep -c 'except urllib.error.HTTPError' isekai/boundary/provision.py` prints `1`.
-- [ ] 3.2 In `isekai/boundary/pod_start.py`, drop `(D2)` from `provision()`'s docstring (`0059·R8`) and report an unread swap table (`0059·R9`); add the test binding `pod-image:memory:an-unread-swap-is-reported` to `tests/test_pod_start.py`; per [D4](design.md#d4).
+- [x] 3.2 In `isekai/boundary/pod_start.py`, drop `(D2)` from `provision()`'s docstring (`0059·R8`) and report an unread swap table (`0059·R9`); add the test binding `pod-image:memory:an-unread-swap-is-reported` to `tests/test_pod_start.py`; per [D4](design.md#d4).
   Verify: `grep -c '(D2)' isekai/boundary/pod_start.py` prints `0`, `grep -c 'could not read whether the container can swap' isekai/boundary/pod_start.py` prints `1`, and `grep -c 'memory:an-unread-swap-is-reported' tests/test_pod_start.py` prints a number of at least `1`.
-- [ ] 3.3 Read `/dev/shm`'s type from `mountinfo` by device in `isekai/boundary/pod_start.py` (`0059·S3`); move `tests/test_pod_start.py`'s fixture and memory tests onto it, binding `pod-image:memory:the-type-is-read-by-device`; add that test to `docs/principles.md`'s *Held by*; per [D4](design.md#d4).
+- [x] 3.3 Read `/dev/shm`'s type from `mountinfo` by device in `isekai/boundary/pod_start.py` (`0059·S3`); move `tests/test_pod_start.py`'s fixture and memory tests onto it, binding `pod-image:memory:the-type-is-read-by-device`; add that test to `docs/principles.md`'s *Held by*; per [D4](design.md#d4).
   Verify: `grep -c 'fields\[1\] == str(pod.shm)' isekai/boundary/pod_start.py` prints `0`, `grep -c 'test_the_type_is_read_from_the_memory_directorys_device' docs/principles.md` prints `1`, and `uv run pytest -q tests/test_pod_start.py tests/test_principles.py` exits 0.
-- [ ] 3.4 In `isekai/boundary/provision.py`, move on at once from a source that answers 4xx, and reword the comment above `ATTEMPTS` (`0059·R16`); give `FakeFetcher` in `tests/fakes.py` its `refuses`; bind `model-provisioning:source-fallback:a-refusing-source-is-not-tried-again` in `tests/test_provision.py`; per [D4](design.md#d4).
+- [x] 3.4 In `isekai/boundary/provision.py`, move on at once from a source that answers 4xx, and reword the comment above `ATTEMPTS` (`0059·R16`); give `FakeFetcher` in `tests/fakes.py` its `refuses`; bind `model-provisioning:source-fallback:a-refusing-source-is-not-tried-again` in `tests/test_provision.py`; per [D4](design.md#d4).
   Verify: `grep -c 'except urllib.error.HTTPError' isekai/boundary/provision.py` prints `2`, `grep -c 'source-fallback:a-refusing-source-is-not-tried-again' tests/test_provision.py` prints a number of at least `1`, and `uv run pytest -q tests/test_provision.py` exits 0.
-- [ ] 3.5 Re-derive `config/image.json`'s `files`, since `pod_start.py` and `provision.py` changed, per [D4](design.md#d4).
+- [x] 3.5 Re-derive `config/image.json`'s `files`, since `pod_start.py` and `provision.py` changed, per [D4](design.md#d4).
   Verify: `uv run python -m tools.image_record | python3 -c 'import json,sys; r=json.load(sys.stdin); print(r == json.load(open("config/image.json"))["files"])'` prints `True`, and `grep -c -E 'c380d9c47cf1c9bb07a9d3a20f2af1c230e5562eaf3e46f7604d0f39e6b67a90|237a52eaa3c578ad23754a631925e4ad1f920ab30ad649a9b1b6370b147ae8fd' config/image.json` prints `0`.
 
 ## 4 — The skill and the protocol

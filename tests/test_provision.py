@@ -320,6 +320,32 @@ def test_a_transfer_that_breaks_every_attempt_moves_to_the_next_source(
     assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
 
 
+@pytest.mark.spec(
+    "model-provisioning:source-fallback:a-refusing-source-is-not-tried-again"
+)
+def test_a_source_that_answers_404_is_asked_once(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD}, refuses={PRIMARY: 404})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY, ALTERNATE]
+    assert waits == []
+    assert f"{PRIMARY} answered HTTP 404; not tried again" in capsys.readouterr().err
+    assert (tmp_path / entry["dest"]).read_bytes() == PAYLOAD
+
+
+@pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
+def test_a_source_that_answers_503_is_tried_again(tmp_path: Path) -> None:
+    entry = _entry()
+    fetcher = FakeFetcher(served={ALTERNATE: PAYLOAD}, refuses={PRIMARY: 503})
+    waits: list[float] = []
+    assert fetch(_manifest([entry]), tmp_path, fetcher, waits.append) == 0
+    assert [url for url, _ in fetcher.fetched] == [PRIMARY] * 3 + [ALTERNATE]
+    assert waits == [10, 30]
+
+
 @pytest.mark.spec("model-provisioning:source-fallback:a-broken-transfer-is-tried-again")
 def test_every_attempt_after_the_first_has_its_wait() -> None:
     # The budget is written twice; an attempt with no wait would raise mid-download.

@@ -1,7 +1,9 @@
 import json
 from collections.abc import Callable
+from email.message import Message
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 from urllib.request import Request
 
 import pytest
@@ -129,7 +131,8 @@ class FakeFetcher:
     where pre-flight has to degrade to post-download verification rather than to
     trust. `served` maps a source URL to the bytes it serves; a URL absent from it
     fails its transfer. `breaks` maps a served URL to how many of its first
-    transfers break before it serves.
+    transfers break before it serves. `refuses` maps a URL to the HTTP code it
+    answers every transfer with.
     """
 
     def __init__(
@@ -137,10 +140,12 @@ class FakeFetcher:
         published: dict[str, str] | None = None,
         served: dict[str, bytes] | None = None,
         breaks: dict[str, int] | None = None,
+        refuses: dict[str, int] | None = None,
     ) -> None:
         self.published = published or {}
         self.served = served or {}
         self.breaks = dict(breaks or {})
+        self.refuses = refuses or {}
         # every URL asked about, in order — so a test can assert that a source
         # rejected before transfer was still pre-flighted.
         self.asked: list[str] = []
@@ -153,6 +158,9 @@ class FakeFetcher:
 
     def get(self, url: str, into: Path) -> None:
         self.fetched.append((url, into))
+        if url in self.refuses:
+            into.write_bytes(b"an error page")
+            raise HTTPError(url, self.refuses[url], "refused", Message(), None)
         if url not in self.served or self.breaks.get(url, 0) > 0:
             self.breaks[url] = self.breaks.get(url, 0) - 1
             into.write_bytes(b"half a file")

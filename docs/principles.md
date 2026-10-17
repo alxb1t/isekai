@@ -287,6 +287,7 @@ told not to send is switched off, and its host key is checked against the finger
   - `tests/test_pod_start.py::test_too_little_memory_holds_the_pod`
   - `tests/test_pod_start.py::test_comfyui_spools_uploads_to_memory`
   - `tests/test_pod_start.py::test_a_shm_that_is_not_memory_holds_the_pod`
+  - `tests/test_pod_start.py::test_the_type_is_read_from_the_memory_directorys_device`
   - `tests/test_pod_start.py::test_an_unread_figure_holds_the_pod`
   - `tests/test_pod_start.py::test_no_line_for_the_memory_mount_holds_the_pod`
   - `tests/test_infra.py::test_the_image_carries_no_host_key`
