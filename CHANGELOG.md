@@ -22,6 +22,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   `gpunit volume down`; `CLAUDE.md`'s GPU protocol names the volume, its teardown and its ceiling (0060 D5).
 - The pod image is re-pinned to `v0.36-rc1`, `sha256:21b715d9…bd9a1d3f`, built from this branch with gpunit
   `v0.7.0`'s boot script and the pod's cards; its build record equals `config/image.json`'s `files` (0060 D6).
+- A window on `v0.36-rc1` rendered both flows on a pod; the operator judged it by eye, with no evidence file kept
+  and the volume left up for further work (0060 D7).
 
 ## [0.35.1] - 2026-10-11 · 0059-the-pod-in-python
 
