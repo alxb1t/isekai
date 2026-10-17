@@ -24,7 +24,8 @@ is shaped this way: [0035 design D1](../../../openspec/changes/archive/0035-the-
 - **Never start step 4 without the operator's go** in this session. It rents a GPU.
 - **Never report or write down** a pod id, a volume id or a pod's host and port — `log.txt` holds them, and
   step 4's filter drops them.
-- **Never run `gpunit volume down` on your own.** Step 5 asks first; a window nobody closes ends at its ceiling.
+- **Never run `gpunit volume down` on your own.** Step 5 asks first. The ceiling is not a teardown: past it, a
+  window nobody closes bills until gpunit's next command deletes its volume.
 
 ## 0 — Check
 
@@ -130,8 +131,12 @@ grep -o 'until [0-9TZ:-]*' "$BATCH/log.txt" | tail -1
 ```
 
 - **Exit 0**: go on to the render block.
-- **Exit 3**: the create's answer was lost, and a volume may bill. Tell the operator at once, and run
-  `uv run --env-file .env gpunit volume down` only on their word. Render nothing.
+- **Exit 3**: the create's answer was lost, and a volume may bill. Render nothing, and tell the operator at once.
+  No window is recorded, so `volume down` asks y/N on its input about each `gpunit-isekai` volume and, with no
+  answer, keeps it: do not run it yourself. Ask the operator to run `uv run --env-file .env gpunit volume down`
+  in an interactive terminal and answer its prompt. Then confirm it yourself: the RunPod MCP's
+  `list-network-volumes` shows no volume named `gpunit-isekai`. Report what it returned. A volume still listed:
+  tell the operator at once — it is billing.
 - **Any other non-zero**: report `grep 'refused:' .data/<batch>/log.txt`, and render nothing.
 
 Then run this block **in your shell tool's background mode**, not in the foreground, and wait for it to
@@ -169,13 +174,15 @@ uv run python -m isekai compare .data/<batch>
 
 Hand the operator the path it prints. Do not open the page.
 
-Then name the window's end — the last `until` line step 4 printed — and ask: *another batch?* On yes, stop: the
-next step 4 extends the window. On no, close it:
+Then name the window's end — the last `until` line step 4 printed — and ask: *another batch?* Tell the operator
+the end is not a teardown: past it, the volume bills until `volume down` or gpunit's next command deletes it. On
+yes, skip the close: the next step 4 extends the window. On no, close it:
 
 ```bash
 BATCH=.data/<batch>
 uv run --env-file .env gpunit volume down >> "$BATCH/log.txt" 2>&1; echo "exit $?"
 ```
 
-Confirm it yourself: the RunPod MCP's `list-network-volumes` shows no volume named `gpunit-isekai`. Report what it
-returned. A volume still listed: tell the operator at once — it is billing.
+Whichever the answer, confirm it yourself through the RunPod MCP's `list-network-volumes`, and report what it
+returned. After a no it shows no volume named `gpunit-isekai`; one still listed: tell the operator at once — it
+is billing. After a yes it shows the window's one volume, open until the operator closes it.

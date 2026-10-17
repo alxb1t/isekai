@@ -254,13 +254,14 @@ they decide.**
      session reports a failed teardown, `uv run --env-file .env gpunit down` is the act — gpunit reads no
      `.env`. **Teardown is the act**: it is the call that stops the billing, and it belongs to the same
      session that created the pod. The volume's is `uv run --env-file .env gpunit volume down`, on the
-     operator's word, or the 4-hour `volume_ceiling`.
+     operator's word, and nothing else: the 4-hour `volume_ceiling` is not a teardown — past it, the volume
+     bills until gpunit's next command deletes it.
   3. **Who confirms** — the RunPod MCP, by checking no `gpunit-isekai` pod is left. **Confirmation is not
      the act.** A rule that only names the check has not said what stops the billing, and an unconfirmed
      teardown is not one you may report as done. Record what the MCP returned. When the MCP confirms gone a
      pod whose `gpunit down` did not delete it, delete `.gpunit/pod` and `.gpunit/pending`: gpunit keeps
-     its record until the pod is confirmed gone, and refuses the next session beside it. After `volume down`,
-     `list-network-volumes` shows no `gpunit-isekai` volume.
+     its record until the pod is confirmed gone, and refuses the next session beside it. A window is closed
+     only when `list-network-volumes` shows no `gpunit-isekai` volume, whatever `volume down` printed.
   4. **What happens when the MCP is unreachable** — it must be authorized from an *interactive* session,
      so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
      unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.

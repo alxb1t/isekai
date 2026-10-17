@@ -350,11 +350,12 @@ capacity floor** — the floor is `pod_start.py`'s. A network volume reports its
 far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
 quota, and a 20 GB volume passes. **The volume lives for a working window**: `gpunit volume up` makes it
 from `gpunit.toml`'s `volume_gb` and `volume_ceiling`, in a data centre chosen from stock, and each pod of the
-window runs there; `gpunit volume down` or the ceiling deletes it. Nothing checks the volume's size before the
-create; the pod's floor is the size check.
+window runs there; `gpunit volume down` deletes it. The ceiling is not a teardown: past it, gpunit's next
+command deletes the volume, and it bills until one runs. Nothing checks the volume's size before the create;
+the pod's floor is the size check.
 
 - **Why:** re-downloading every session costs more than a window's rent, the weights download once a window,
-  and no storage bills between windows. A volume filled only from the manifest is clean by construction. A missing mount would fall through to the container disk: it would
+  and no storage bills once a window is closed. A volume filled only from the manifest is clean by construction. A missing mount would fall through to the container disk: it would
   render, bill, and lose everything at teardown. A volume cannot move between data centres, so a pod
   elsewhere boots without its models.
 - **Accepts:** a pin freezes bytes, not intent: most weights come only from third-party mirrors,

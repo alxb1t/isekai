@@ -43,6 +43,8 @@ POLL_S = 5.0
 LOST_EXIT = 3
 
 REQUEST = re.compile(r"([a-z0-9-]+)=([1-9][0-9]*|[a-z][a-z0-9-]*)")
+# The bare command a gpunit refusal names: a verb, or `volume` and its action.
+REMEDY = re.compile(r"run gpunit ([a-z]+(?: up| down)?)")
 
 # `generate`'s argv and the wiring it runs on -> its exit status.
 Generate = Callable[[list[str], Wiring], int]
@@ -318,12 +320,12 @@ def _rendered(
         return 1
     except Refused as refused:
         # gpunit has written its own `refused:` line through `say`. Where it names a
-        # bare `gpunit down`, the line after it is one that loads the key; a note,
-        # not a second refusal.
-        if "gpunit down" in str(refused):
+        # bare `gpunit <verb>`, the line after it is that command loading the key; a
+        # note, not a second refusal.
+        if remedy := REMEDY.search(str(refused)):
             print(
                 "gpunit reads no .env, where the key lives: "
-                "run `uv run --env-file .env gpunit down`",
+                f"run `uv run --env-file .env gpunit {remedy[1]}`",
                 file=wired.err,
             )
         return 1
