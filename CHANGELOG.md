@@ -18,6 +18,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   (0060 D2, D3).
 - The pod reads `/dev/shm`'s type from the mount its memory directory's device is, says when it cannot read its
   swap table, and moves on at once from a source that answers 4xx; `provision()`'s stale citation goes (0060 D4).
+- `run-flows` opens the window with `gpunit volume up` on the go, and asks *another batch?* before it runs
+  `gpunit volume down`; `CLAUDE.md`'s GPU protocol names the volume, its teardown and its ceiling (0060 D5).
 
 ## [0.35.1] - 2026-10-11 · 0059-the-pod-in-python
 

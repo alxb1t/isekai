@@ -222,7 +222,8 @@ the source or the runs ([0035 design D1](openspec/changes/archive/0035-the-flow-
   `.data/<batch>/compare.html` and prints only its path.
 
 The skill renders with the same verb, `uv run python -m isekai render`, and the RunPod MCP still confirms no
-`gpunit-isekai` pod is left.
+`gpunit-isekai` pod is left. It opens the working window with `gpunit volume up` on your go, and asks *another
+batch?* before it closes it with `gpunit volume down`.
 
 ### Correcting the sheets in a browser
 

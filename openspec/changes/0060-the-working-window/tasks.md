@@ -8,7 +8,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 - [x] 1 — The pin
 - [x] 2 — The window
 - [x] 3 — The pod's cards
-- [ ] 4 — The skill and the protocol
+- [x] 4 — The skill and the protocol
 - [ ] 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
 - [ ] 6 — ⚠️ **HUMAN · METERED** — one window: volume up, a first and a second render, volume down
 
@@ -49,9 +49,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 4 — The skill and the protocol
 
-- [ ] 4.1 In `.claude/skills/run-flows/SKILL.md`, write step 4's go, its `volume up` block and its outcomes, step 5's question and `volume down` block, and the *Never* line; name the window in `README.md`'s *The batch, run by an agent*; per [D5](design.md#d5).
+- [x] 4.1 In `.claude/skills/run-flows/SKILL.md`, write step 4's go, its `volume up` block and its outcomes, step 5's question and `volume down` block, and the *Never* line; name the window in `README.md`'s *The batch, run by an agent*; per [D5](design.md#d5).
   Verify: `grep -c 'gpunit volume up --yes' .claude/skills/run-flows/SKILL.md` prints a number of at least `1`, `grep -c 'list-network-volumes' .claude/skills/run-flows/SKILL.md` prints a number of at least `1`, and `uv run pytest -q tests/test_agent_skills.py` exits 0.
-- [ ] 4.2 Add the volume lines to `CLAUDE.md`'s GPU protocol, per [D5](design.md#d5)'s table.
+- [x] 4.2 Add the volume lines to `CLAUDE.md`'s GPU protocol, per [D5](design.md#d5)'s table.
   Verify: `grep -c 'gpunit volume' CLAUDE.md` prints a number of at least `2`, and `grep -c 'list-network-volumes' CLAUDE.md` prints `1`.
 
 ## 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
