@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- gpunit is pinned at `v0.7.0`, and the image adds its `boot.sh` from that tag by checksum: `v0.7.0` makes the
+  models volume a window and refuses an older boot script (0060 D1).
+
 ## [0.35.1] - 2026-10-11 · 0059-the-pod-in-python
 
 ### Changed

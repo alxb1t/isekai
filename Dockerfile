@@ -82,8 +82,8 @@ COPY isekai/boundary/pod_start.py /opt/isekai/isekai/boundary/pod_start.py
 # gpunit's boot script, at the tag `pyproject.toml` pins gpunit at: it arms the
 # pod's stop, serves sshd on a host key made at boot, prints its fingerprint, and
 # runs the start without the provider's key, stopping the pod when it ends.
-ADD --checksum=sha256:18742fd46a9889af6212aa76667a43a653767d53f770e0739881869a1f3b03ad \
-    https://raw.githubusercontent.com/alxb1t/gpunit/v0.2.0/boot/boot.sh /opt/gpunit/boot.sh
+ADD --checksum=sha256:517ade6bf20d9869baeb1f1ff1ab45d9ab63c2fa477127ff11dac89611bec842 \
+    https://raw.githubusercontent.com/alxb1t/gpunit/v0.7.0/boot/boot.sh /opt/gpunit/boot.sh
 RUN chmod +x /opt/gpunit/boot.sh
 
 EXPOSE 8188 22

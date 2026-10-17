@@ -5,7 +5,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## Progress
 
-- [ ] 1 — The pin
+- [x] 1 — The pin
 - [ ] 2 — The window
 - [ ] 3 — The pod's cards
 - [ ] 4 — The skill and the protocol
@@ -14,11 +14,11 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 1 — The pin
 
-- [ ] 1.1 **HALT CHECK** — gpunit is pinned at `v0.2.0`, and the `Dockerfile` adds its `boot.sh` from that tag.
+- [x] 1.1 **HALT CHECK** — gpunit is pinned at `v0.2.0`, and the `Dockerfile` adds its `boot.sh` from that tag.
   Verify: `grep -c 'gpunit@v0.2.0' pyproject.toml` prints `1`, and `grep -c 'gpunit/v0.2.0/boot/boot.sh' Dockerfile` prints `1`.
-- [ ] 1.2 Move gpunit's tag in `pyproject.toml` to `v0.7.0` and run `uv lock`, per [D1](design.md#d1).
+- [x] 1.2 Move gpunit's tag in `pyproject.toml` to `v0.7.0` and run `uv lock`, per [D1](design.md#d1).
   Verify: `grep -c 'gpunit@v0.7.0' pyproject.toml` prints `1`, `grep -c 'gpunit?rev=v0.7.0' uv.lock` prints a number of at least `1`, and `uv run pytest -q tests/test_render.py` exits 0.
-- [ ] 1.3 In `Dockerfile`, `ADD` `boot.sh` from `v0.7.0` with the checksum [D1](design.md#d1) gives; re-derive `config/image.json`'s `files` with `uv run python -m tools.image_record`.
+- [x] 1.3 In `Dockerfile`, `ADD` `boot.sh` from `v0.7.0` with the checksum [D1](design.md#d1) gives; re-derive `config/image.json`'s `files` with `uv run python -m tools.image_record`.
   Verify: `grep -c 'sha256:517ade6bf20d9869baeb1f1ff1ab45d9ab63c2fa477127ff11dac89611bec842' Dockerfile` prints `1`, and `uv run pytest -q tests/test_infra.py` exits 0.
 
 ## 2 — The window
