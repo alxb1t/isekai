@@ -14,7 +14,7 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `d503f84
   `session`, `Lost`, `Refused`, `TeardownFailed` and `Interrupted`, with the same signature.
 - **The boot script:** `Dockerfile:85-86` `ADD`s `boot.sh` from `v0.2.0` by checksum. gpunit refuses a `boot.sh`
   older than its `v0.6.0`, so the pinned image `v0.35.1-rc3` cannot boot under `v0.7.0`.
-- **The volume:** `gpunit.toml:19` is `volume = "db7sc8cild"`, which answers 404; the account lists no network
+- **The volume:** `gpunit.toml:19` names the kept volume, which answers 404; the account lists no network
   volume. `tests/test_infra.py:895-911` holds that `gpunit.toml` names one.
 - **The pins tests:** `tests/test_infra.py:707-746` holds the `boot.sh` tag equal to `pyproject.toml`'s;
   `:281-284` holds `config/image.json`'s `files` equal to the tree; `:842-846` holds the image equal to its digest.
@@ -36,7 +36,7 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `d503f84
 
 ## Goals / Non-Goals
 
-**Goals:** a render that works again, inside a window nobody pays for between batches; `0059·R8`, `R9`, `R16` and
+**Goals:** a render that works again, inside a window `volume down` closes; `0059·R8`, `R9`, `R16` and
 `S3` closed with a test each; one metered window that shows the second pod skipping every model.
 
 **Non-Goals:** a change to a flow, the sheet, the prompt or a model; `0058·R5`–`R7`; a volume deleted by hand; a
@@ -71,13 +71,14 @@ clone. The `Dockerfile` is a recorded file, so `config/image.json`'s `files` is 
 ### D2
 
 ```
-gpunit.toml   before: volume = "db7sc8cild"
+gpunit.toml   before: volume = "<the kept volume>"
               after:  volume_gb = 50
                       volume_ceiling = "4h"
 ```
 
 A comment above the pair says what it is: the models volume of a working window, made by `gpunit volume up` and
-ended by `gpunit volume down` or its ceiling. Stock chooses the data centre.
+deleted by `gpunit volume down`, the only teardown; past its ceiling, an overdue volume bills until a gpunit sweep
+deletes it. Stock chooses the data centre.
 
 In `tests/test_infra.py`, `window_volume_faults(spec)` replaces `unnamed_volume` and returns each fault by name:
 
@@ -104,8 +105,9 @@ In `tests/test_infra.py`, `window_volume_faults(spec)` replaces `unnamed_volume`
   done; *Setup*'s prerequisite 2 is the window volume `volume up` makes; *Cost* says about $0.02 for a 4 h window of
   50 GB, in place of `~$3.50/mo`; the provisioning diagram's last line names the window's volume.
 - **`docs/decisions.md` D27:** the volume lives for a working window — `volume up` makes it in a data centre chosen
-  from stock, each pod of the window runs there, `volume down` or the 4 h ceiling deletes it. *Why* gains: the
-  weights download once a window, and no storage bills between windows. *Made by* gains `0060`; the title, and so
+  from stock, each pod of the window runs there, `volume down` deletes it; the 4 h ceiling is not a teardown, and
+  past it an overdue volume bills until a gpunit sweep deletes it. *Why* gains: the weights download once a window,
+  and no storage bills once a window is closed. *Made by* gains `0060`; the title, and so
   its anchor, stays.
 - **`docs/pins.md`:** the gpunit recipe adds that a session refuses an image whose `boot.sh` is too old for its
   gpunit, so the rebuild comes before any render.
@@ -162,7 +164,8 @@ uv run --env-file .env gpunit volume down >> "$BATCH/log.txt" 2>&1; echo "exit $
 ```
 
 - Confirm through the RunPod MCP's `list-network-volumes` that no `gpunit-isekai` volume is left; report what it
-  returned. A window nobody closes ends at its ceiling.
+  returned. A window nobody closes does not end at its ceiling: past it, an overdue volume bills until a gpunit
+  sweep deletes it.
 - **The skill never runs `volume down` on its own.**
 - *Never* adds the volume id beside the pod id.
 - README's *The batch, run by an agent* says the skill opens the window and asks before closing it.
@@ -172,7 +175,7 @@ uv run --env-file .env gpunit volume down >> "$BATCH/log.txt" 2>&1; echo "exit $
 | item | gains |
 |---|---|
 | 1 who creates | `uv run --env-file .env gpunit volume up --yes` makes or extends the window's volume, announced with the render |
-| 2 who tears down | `uv run --env-file .env gpunit volume down`, on the operator's word, or the 4 h `volume_ceiling` |
+| 2 who tears down | `uv run --env-file .env gpunit volume down`, on the operator's word, and nothing else: past the 4 h `volume_ceiling`, an overdue volume bills until a gpunit sweep deletes it |
 | 3 who confirms | after `volume down`, `list-network-volumes` shows no `gpunit-isekai` volume |
 | the ceiling | the window: 4 hours and ~$0.02 |
 | the renders bullet | the models volume persists for its window |
@@ -220,8 +223,9 @@ from `list-pods` and `list-network-volumes` in `.minions/0060_window_proof.txt`.
 
 - **Stock moves inside a window** → every pod goes to the volume's data centre; a session refused for stock is
   answered by `volume down` and `volume up`, which re-downloads 14.43 GB.
-- **A window nobody closes bills to its ceiling** → 4 h is ~$0.02; gpunit deletes an overdue volume on its next
-  command. A volume no command reaches bills $0.07/GB a month until one does.
+- **A window nobody closes bills past its ceiling** → 4 h is ~$0.02; gpunit's next session, `up`, `status`,
+  `down`, `volume up` or `volume down` sweeps an overdue volume, if its delete succeeds. A volume no sweep reaches
+  bills $0.07/GB a month until one does.
 - **A 408 or 429 is a client error too** → it moves on at once; the next source, or the pod's hold, is the remedy.
 - **The floor and the window's size** → D27 says a network volume reports its cluster's capacity, so the pod's floor
   may never read `volume_gb`; the test holds `volume_gb` above the floor anyway, as Q2 chose.

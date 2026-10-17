@@ -25,7 +25,7 @@ is shaped this way: [0035 design D1](../../../openspec/changes/archive/0035-the-
 - **Never report or write down** a pod id, a volume id or a pod's host and port — `log.txt` holds them, and
   step 4's filter drops them.
 - **Never run `gpunit volume down` on your own.** Step 5 asks first. The ceiling is not a teardown: past it, a
-  window nobody closes bills until gpunit's next command deletes its volume.
+  window nobody closes bills until `volume down` deletes its volume.
 
 ## 0 — Check
 
@@ -175,7 +175,7 @@ uv run python -m isekai compare .data/<batch>
 Hand the operator the path it prints. Do not open the page.
 
 Then name the window's end — the last `until` line step 4 printed — and ask: *another batch?* Tell the operator
-the end is not a teardown: past it, the volume bills until `volume down` or gpunit's next command deletes it. On
+the end is not a teardown: past it, the volume bills until `volume down` deletes it. On
 yes, skip the close: the next step 4 extends the window. On no, close it:
 
 ```bash

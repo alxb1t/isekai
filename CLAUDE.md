@@ -255,7 +255,8 @@ they decide.**
      `.env`. **Teardown is the act**: it is the call that stops the billing, and it belongs to the same
      session that created the pod. The volume's is `uv run --env-file .env gpunit volume down`, on the
      operator's word, and nothing else: the 4-hour `volume_ceiling` is not a teardown — past it, the volume
-     bills until gpunit's next command deletes it.
+     bills until gpunit's next session, `up`, `status`, `down`, `volume up` or `volume down` sweeps it, if
+     that delete succeeds.
   3. **Who confirms** — the RunPod MCP, by checking no `gpunit-isekai` pod is left. **Confirmation is not
      the act.** A rule that only names the check has not said what stops the billing, and an unconfirmed
      teardown is not one you may report as done. Record what the MCP returned. When the MCP confirms gone a

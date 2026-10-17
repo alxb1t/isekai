@@ -6,7 +6,8 @@ backlog: [0059·R8, 0059·R9, 0059·R16, 0059·S3]
 # 0060 — the working window
 
 isekai moves to gpunit `v0.7.0` and renders inside a **working window**: `gpunit volume up` makes the models volume
-when a batch is rendered, and `gpunit volume down` ends it when the operator is done. Nothing bills between windows.
+when a batch is rendered, and `gpunit volume down`, the only teardown, ends it when the operator is done. Past its
+ceiling, an overdue volume bills until a gpunit sweep deletes it.
 
 | read | for |
 |---|---|
@@ -18,12 +19,12 @@ when a batch is rendered, and `gpunit volume down` ends it when the operator is 
 ```
 step 4 go ──▶ gpunit volume up --yes ──▶ isekai render (a pod; the first fills <volume>/isekai)
                  create, or extend          step 4 again: a new pod, every model skipped as verified
-step 5 ──▶ "another batch?" ── no ──▶ gpunit volume down          (or the volume's 4 h ceiling)
+step 5 ──▶ "another batch?" ── no ──▶ gpunit volume down          (the only teardown)
 ```
 
 ## Why
 
-**Pod work is broken.** `gpunit.toml`'s kept volume `db7sc8cild` answers 404 and the account lists no network
+**Pod work is broken.** `gpunit.toml`'s kept volume answers 404 and the account lists no network
 volume, so `isekai render` refuses before any create. A kept volume also bills every hour nobody renders.
 
 **gpunit `v0.7.0` makes the volume a window.** It creates `gpunit-isekai` for a stated ceiling and deletes it on
@@ -36,7 +37,7 @@ volume, so `isekai render` refuses before any create. A kept volume also bills e
 
 - **The pin:** gpunit `v0.7.0` in `pyproject.toml` and `uv.lock`; the `Dockerfile` `ADD`s `boot.sh` from `v0.7.0`
   with its checksum ([D1](design.md#d1)).
-- **The window:** `gpunit.toml`'s `volume = "db7sc8cild"` → `volume_gb = 50` and `volume_ceiling = "4h"`; the
+- **The window:** `gpunit.toml`'s kept `volume` → `volume_gb = 50` and `volume_ceiling = "4h"`; the
   volume test, README, D27 and the pins guide say so ([D2](design.md#d2), [D3](design.md#d3)).
 - **The pod's cards:** the docstring's stale `(D2)` goes (`0059·R8`); an unread swap table is said, never
   defaulted (`0059·R9`); a source that answers 4xx moves on at once (`0059·R16`); `/dev/shm`'s type is read from

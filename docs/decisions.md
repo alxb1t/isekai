@@ -350,8 +350,9 @@ capacity floor** — the floor is `pod_start.py`'s. A network volume reports its
 far above the floor, so the floor tells it from the pod's own disks; it does not measure the volume's
 quota, and a 20 GB volume passes. **The volume lives for a working window**: `gpunit volume up` makes it
 from `gpunit.toml`'s `volume_gb` and `volume_ceiling`, in a data centre chosen from stock, and each pod of the
-window runs there; `gpunit volume down` deletes it. The ceiling is not a teardown: past it, gpunit's next
-command deletes the volume, and it bills until one runs. Nothing checks the volume's size before the create;
+window runs there; `gpunit volume down` deletes it. The ceiling is not a teardown: past it, the volume bills
+until gpunit's next session, `up`, `status`, `down`, `volume up` or `volume down` sweeps it, if that delete
+succeeds. Nothing checks the volume's size before the create;
 the pod's floor is the size check.
 
 - **Why:** re-downloading every session costs more than a window's rent, the weights download once a window,

@@ -17,7 +17,8 @@ ports = [8188]
 ceiling = "45m"
 timeout = 420
 # The models volume of a working window: `gpunit volume up` makes it, in a data
-# centre stock chooses, and `gpunit volume down` deletes it. Past the ceiling,
-# gpunit's next command deletes it, and it bills until one runs.
+# centre stock chooses, and `gpunit volume down` deletes it. Past the ceiling, it
+# bills until gpunit's next session, up, status, down, volume up or volume down
+# sweeps it, if that delete succeeds.
 volume_gb = 50
 volume_ceiling = "4h"

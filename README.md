@@ -65,7 +65,7 @@ volume attached, a tunnel checked against the pod's host key — renders each fl
 exit, so billing stops. A pod left behind stops itself 45 minutes after it boots. The first pod of a window
 downloads the models onto the volume, and every later one skips them as verified. `gpunit volume down` ends the
 window, and nothing bills once it has. The 4-hour ceiling is not a teardown: past it, the volume bills until
-gpunit's next command deletes it.
+gpunit's next session, `up`, `status`, `down`, `volume up` or `volume down` sweeps it, if that delete succeeds.
 
 ## Architecture
 
@@ -458,7 +458,7 @@ RENDER TIME (every session — this is isekai render)
 On-demand and cheap: an RTX 4090 at ~$0.34–0.69/hr (per-second billing), a free public-repo
 container image on GHCR, and about $0.02 for the models volume over a 4-hour window of 50 GB; nothing bills
 once `gpunit volume down` closes the window. A window left open bills past its ceiling until gpunit's next
-command deletes the volume. A full working pipeline costs on the order of **$10 or less** to stand up.
+session, `up`, `status`, `down`, `volume up` or `volume down` sweeps the volume, if that delete succeeds. A full working pipeline costs on the order of **$10 or less** to stand up.
 
 ## License
 

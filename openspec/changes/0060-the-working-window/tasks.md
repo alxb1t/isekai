@@ -24,7 +24,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 ## 2 — The window
 
 - [x] 2.1 **HALT CHECK** — `gpunit.toml` names the kept volume.
-  Verify: `grep -c '^volume = "db7sc8cild"$' gpunit.toml` prints `1`.
+  Verify: `grep -c '^volume = "' gpunit.toml` prints `1`.
 - [x] 2.2 In `gpunit.toml`, replace `volume` with `volume_gb = 50` and `volume_ceiling = "4h"` under a comment, per [D2](design.md#d2).
   Verify: `grep -c -E '^volume_gb = 50$|^volume_ceiling = "4h"$' gpunit.toml` prints `2`, and `uv run python -c 'from pathlib import Path; import gpunit; print(gpunit.load_spec(Path("gpunit.toml")).volume_gb)'` prints `50`.
 - [x] 2.3 In `tests/test_infra.py`, replace `unnamed_volume` and its tests with `window_volume_faults`, its tests and their twin, binding `model-provisioning:reachability:provisioning-requires-the-network-volume` and `model-provisioning:reachability:the-window-volume-clears-the-floor`, per [D2](design.md#d2).
@@ -63,11 +63,13 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 **Closed by the operator's word, 2026-10-17, not by its `Verify:` checks**: the window rendered on a pod and the
 operator judged it working by eye. No evidence file was written, and the volume is kept for further work, so 6.3's
-`volume down` did not run.
+`volume down` did not run. **6.2 and 6.3 are closed on that word without their act**: no second pod was rendered
+and the volume was not taken down, so the cross-pod skip and the window's close are left to the next window to
+prove. The RunPod MCP's `list-pods`, read after the phase, lists no `gpunit-isekai` pod.
 
 - [x] 6.1 **HUMAN · METERED** — run `uv run --env-file .env gpunit volume up --yes`, then `uv run python -m isekai render` on a small approved batch; while it is open, write the pod's `saved (verified)` lines from the RunPod MCP's `stream-pod-logs` to `.minions/0060_window_first.txt`, no pod id; per [D7](design.md#d7).
   Verify: `grep -c 'saved (verified)' .minions/0060_window_first.txt` prints `12`.
-- [x] 6.2 **HUMAN · METERED** — run `uv run python -m isekai render` again on the same batch, a new pod; write its `skip (present, verified)` and `saved (verified)` lines to `.minions/0060_window_second.txt`, no pod id; per [D7](design.md#d7).
+- [x] 6.2 **HUMAN · METERED** — *closed on the operator's word without its act; the proof is the next window's.* Run `uv run python -m isekai render` again on the same batch, a new pod; write its `skip (present, verified)` and `saved (verified)` lines to `.minions/0060_window_second.txt`, no pod id; per [D7](design.md#d7).
   Verify: `grep -c 'skip (present, verified)' .minions/0060_window_second.txt` prints `12`, and `grep -c 'saved (verified)' .minions/0060_window_second.txt` prints `0`.
-- [x] 6.3 **HUMAN · METERED** — run `uv run --env-file .env gpunit volume down`; record `no gpunit-isekai pod` and `no gpunit-isekai volume` from the RunPod MCP's `list-pods` and `list-network-volumes` in `.minions/0060_window_proof.txt`; per [D7](design.md#d7).
+- [x] 6.3 **HUMAN · METERED** — *closed on the operator's word without its act; the proof is the next window's.* Run `uv run --env-file .env gpunit volume down`; record `no gpunit-isekai pod` and `no gpunit-isekai volume` from the RunPod MCP's `list-pods` and `list-network-volumes` in `.minions/0060_window_proof.txt`; per [D7](design.md#d7).
   Verify: `grep -c -E 'no gpunit-isekai pod|no gpunit-isekai volume' .minions/0060_window_proof.txt` prints `2`, and `test -e .gpunit/volume; echo $?` prints `1`.
