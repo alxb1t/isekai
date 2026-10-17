@@ -1,7 +1,7 @@
 # The render session's GPU, read by gpunit when `isekai render` opens a session.
 # `image` is `config/image.json`'s reference and digest; a test holds them equal.
 project = "isekai"
-image = "ghcr.io/alxb1t/isekai@sha256:0f0a8e82dbeb5d7059353ed289f5d414bd9977905de9f7c38923e2abbdcf88ff"
+image = "ghcr.io/alxb1t/isekai@sha256:21b715d99bdd2b5d2452275533366e43e7e2b6fcfd048d08a65e9e7ebd9a1d3f"
 gpus = [
     "NVIDIA RTX PRO 4500 Blackwell",
     "NVIDIA L4",
@@ -16,4 +16,9 @@ disk_gb = 30
 ports = [8188]
 ceiling = "45m"
 timeout = 420
-volume = "db7sc8cild"
+# The models volume of a working window: `gpunit volume up` makes it, in a data
+# centre stock chooses, and `gpunit volume down` deletes it. Past the ceiling, it
+# bills until gpunit's next session, up, status, down, volume up or volume down
+# sweeps it, if that delete succeeds.
+volume_gb = 50
+volume_ceiling = "4h"

@@ -25,6 +25,20 @@ STAMP = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z step: (.+)$")
 STEPS = ["the volume", "the namespace", "provisioning", "the memory", "ComfyUI"]
 
 
+def device(path: Path) -> str:
+    """Return the `major:minor` of the filesystem under `path`, as in `mountinfo`."""
+    dev = os.stat(path).st_dev
+    return f"{os.major(dev)}:{os.minor(dev)}"
+
+
+def mount_line(dev: str, point: Path | str, kind: str) -> str:
+    """Return one `mountinfo` line mounting `kind` at `point` from device `dev`.
+
+    e.g. ("0:5", "/dev/shm", "tmpfs") -> "36 25 0:5 / /dev/shm rw - tmpfs tmpfs rw"
+    """
+    return f"36 25 {dev} / {point} rw - {kind} {kind} rw\n"
+
+
 @dataclass
 class Exec:
     """One `os.execvpe`, with the directories that existed when it ran."""
@@ -55,12 +69,12 @@ class Boot:
             models_root=comfyui / "models",
             marker=tmp_path / "opt" / "provisioning-failed",
             shm=shm,
-            mounts=tmp_path / "mounts",
+            mountinfo=tmp_path / "mountinfo",
             swaps=tmp_path / "swaps",
             swap_max=tmp_path / "memory.swap.max",
         )
-        self.pod.mounts.write_text(
-            f"overlay / overlay rw 0 0\ntmpfs {shm} tmpfs rw 0 0\n"
+        self.pod.mountinfo.write_text(
+            mount_line("0:1", "/", "overlay") + mount_line(device(shm), shm, "tmpfs")
         )
         self.pod.swaps.write_text("Filename Type Size Used Priority\n")
         self.pod.swap_max.write_text("max\n")
@@ -191,18 +205,21 @@ def test_comfyui_spools_uploads_to_memory(boot: Boot) -> None:
 
 @pytest.mark.spec("pod-image:memory:a-disk-backed-shm-holds")
 def test_a_shm_that_is_not_memory_holds_the_pod(boot: Boot) -> None:
-    boot.pod.mounts.write_text(f"/dev/sda1 {boot.pod.shm} ext4 rw 0 0\n")
+    boot.pod.mountinfo.write_text(
+        mount_line(device(boot.pod.shm), boot.pod.shm, "ext4")
+    )
     assert held(boot)
     assert "'ext4', not a tmpfs" in boot.err
 
 
-@pytest.mark.spec("pod-image:memory:a-disk-backed-shm-holds")
-def test_a_later_mount_shadows_an_earlier_one(boot: Boot) -> None:
+@pytest.mark.spec("pod-image:memory:the-type-is-read-by-device")
+def test_the_type_is_read_from_the_memory_directorys_device(boot: Boot) -> None:
     shm = boot.pod.shm
-    boot.pod.mounts.write_text(
-        f"tmpfs {shm} tmpfs rw 0 0\n/dev/sda1 {shm} ext4 rw 0 0\n"
+    boot.pod.mountinfo.write_text(
+        mount_line(device(shm), "/data", "ext4") + mount_line("0:99", shm, "tmpfs")
     )
     assert held(boot)
+    assert "'ext4', not a tmpfs" in boot.err
 
 
 @pytest.mark.spec("pod-image:memory:an-unread-figure-holds")
@@ -215,7 +232,7 @@ def test_an_unread_figure_holds_the_pod(boot: Boot) -> None:
 
 @pytest.mark.spec("pod-image:memory:an-unread-type-holds")
 def test_no_line_for_the_memory_mount_holds_the_pod(boot: Boot) -> None:
-    boot.pod.mounts.write_text("overlay / overlay rw 0 0\n")
+    boot.pod.mountinfo.write_text(mount_line("0:99", boot.pod.shm, "tmpfs"))
     assert held(boot)
     assert "could not read" in boot.err
     assert "filesystem type" in boot.err
@@ -223,7 +240,7 @@ def test_no_line_for_the_memory_mount_holds_the_pod(boot: Boot) -> None:
 
 @pytest.mark.spec("pod-image:memory:an-unread-type-holds")
 def test_an_unreadable_mount_table_holds_the_pod(boot: Boot) -> None:
-    boot.pod.mounts.unlink()
+    boot.pod.mountinfo.unlink()
     assert held(boot)
     assert "filesystem type" in boot.err
 
@@ -244,6 +261,15 @@ def test_swap_is_reported_and_never_held_for(
     boot.pod.swap_max.write_text(cap)
     boot.start()
     assert f"swap: the container {reading}" in boot.out
+    assert len(boot.execs) == 1
+
+
+@pytest.mark.spec("pod-image:memory:an-unread-swap-is-reported")
+def test_an_unread_swap_table_is_reported_and_never_held_for(boot: Boot) -> None:
+    boot.pod.swaps.unlink()
+    boot.start()
+    assert "swap: could not read whether the container can swap" in boot.out
+    assert "the container cannot swap" not in boot.out
     assert len(boot.execs) == 1
 
 

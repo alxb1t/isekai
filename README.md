@@ -36,9 +36,9 @@ learning** are the point.
 - **Runtime:** [ComfyUI](https://github.com/comfyanonymous/ComfyUI) in a Docker container.
 - **Compute:** [RunPod](https://www.runpod.io/) GPU pod, **per-second** billing. The Docker
   image runs directly as the pod — no VM to provision.
-- **Weights:** kept on a persistent RunPod **network volume**, not baked into the image, and
-  provisioned from a **pinned, checksummed manifest** — every artifact is addressed by an
-  immutable revision and verified by SHA-256 before anything loads it. The volume is
+- **Weights:** kept on a RunPod **network volume** that lives for a working window, not baked
+  into the image, and provisioned from a **pinned, checksummed manifest** — every artifact is
+  addressed by an immutable revision and verified by SHA-256 before anything loads it. The volume is
   **namespaced per project**, so a volume shared with another project has no shared files.
 - **Interface:** a headless CLI (`python -m isekai`) that drives ComfyUI over its API. Its
   import rule is [docs D20](docs/decisions.md#d20--the-entry-point-loads-no-third-party-package).
@@ -55,14 +55,17 @@ Local (your machine)                          RunPod
         │                                     │   │   isekai/ ← this project    │    │
         │ ghcr.io/alxb1t/isekai (free)        │   └─────────────────────────────┘    │
         │ (RunPod pulls it as the pod)        └──────────────────────────────────────┘
-                                                     │  teardown → pod deleted; volume stays
+                                                     │  teardown → pod deleted; volume ends with its window
 ```
 
-**Lifecycle:** `python -m isekai render <runs> <flow>=<count|source> …` assembles every prompt, opens a
+**Lifecycle:** `uv run --env-file .env gpunit volume up` comes first: it opens a **working window**, making the
+models volume or extending a live one to its ceiling from now. Then `python -m isekai render <runs> <flow>=<count|source> …` assembles every prompt, opens a
 [gpunit](https://github.com/alxb1t/gpunit) session — a pod from the image `gpunit.toml` pins by digest, the
 volume attached, a tunnel checked against the pod's host key — renders each flow, and deletes the pod on every
-exit, so billing stops. A pod left behind stops itself 45 minutes after it boots. Only the pod is ephemeral and
-metered.
+exit, so billing stops. A pod left behind stops itself 45 minutes after it boots. The first pod of a window
+downloads the models onto the volume, and every later one skips them as verified. `gpunit volume down` ends the
+window, and nothing bills once it has. The 4-hour ceiling is not a teardown: past it, the volume bills until
+gpunit's next session, `up`, `status`, `down`, `volume up` or `volume down` sweeps it, if that delete succeeds.
 
 ## Architecture
 
@@ -142,7 +145,9 @@ there, stop it with Ctrl-C.
 ### ④ – ⑦ Render on a rented GPU — this is where it starts costing
 
 ```sh
+uv run --env-file .env gpunit volume up --yes   # open the window: the models volume, for 4 hours
 python -m isekai render .data/runs summon-anime-wai=1
+uv run --env-file .env gpunit volume down       # when the last batch is done
 ```
 
 One verb is the whole session: it assembles every prompt of every run under the runs root, rents the pod
@@ -154,7 +159,7 @@ included. **Billing is per second, from the pod's create to its deletion.** A re
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
 artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
 submitted, the image the session booted and the runtime it reported. Each render is downloaded as it
-finishes: the pod's memory dies with it, and only the models volume persists.
+finishes: the pod's memory dies with it, and only the models volume persists, for its window.
 
 `python -m isekai generate --flow … <photo>` without `--server` assembles every prompt and stops, which is
 how a whole batch is checked before anything is rented; `render` does it first either way, so a malformed
@@ -194,8 +199,10 @@ uv run python -m isekai ui --runs $R --flow summon-anime-wai  $(ls $R)
 uv run python -m isekai ui --runs $R --flow conjure-anime-wai $(ls $R)
 uv run python -m isekai show --runs $R $P
 
-# ④ – ⑦ metered: one pod renders both flows, and is deleted on every exit
+# ④ – ⑦ metered: the window's volume, then one pod renders both flows, and is deleted on every exit
+uv run --env-file .env gpunit volume up --yes
 uv run python -m isekai render $R conjure-anime-wai=2 summon-anime-wai=1
+uv run --env-file .env gpunit volume down   # once no other batch follows
 ```
 
 - **`ui` takes run ids, not photographs.** It reviews work that already exists, and `$(ls $R)` is every
@@ -216,7 +223,8 @@ the source or the runs ([0035 design D1](openspec/changes/archive/0035-the-flow-
   `.data/<batch>/compare.html` and prints only its path.
 
 The skill renders with the same verb, `uv run python -m isekai render`, and the RunPod MCP still confirms no
-`gpunit-isekai` pod is left.
+`gpunit-isekai` pod is left. It opens the working window with `gpunit volume up` on your go, and asks *another
+batch?* before it closes it with `gpunit volume down`.
 
 ### Correcting the sheets in a browser
 
@@ -282,7 +290,8 @@ reaches a model or a GPU** — its scope is stage ③ alone.
 **Prerequisites:**
 
 1. A **RunPod account** with an API key and a small prepaid balance.
-2. A **network volume**, named by `gpunit.toml`'s `volume`; gpunit creates each pod in its data centre.
+2. Nothing else: `uv run --env-file .env gpunit volume up` makes the window's **network volume** from
+   `gpunit.toml`'s `volume_gb` and `volume_ceiling`, and gpunit creates each pod of the window in its data centre.
 
 Then `cp .env.example .env` and fill in the API key; it is gitignored and holds every secret. gpunit makes
 each session's SSH key itself, under the gitignored `.gpunit/`.
@@ -441,14 +450,15 @@ RENDER TIME (every session — this is isekai render)
     ▼
   every exit: the session deletes the pod and every listed pod of the project ──▶ billing stops
   the pod itself: the stop fires at the ceiling, or when the start ends ──▶ pod stops
-                                                   (volume + GHCR image persist)
+                                    (the window's volume + GHCR image persist)
 ```
 
 ## Cost
 
 On-demand and cheap: an RTX 4090 at ~$0.34–0.69/hr (per-second billing), a free public-repo
-container image on GHCR, and ~$3.50/mo for the models volume (or $0 if re-downloaded per
-session). A full working pipeline costs on the order of **$10 or less** to stand up.
+container image on GHCR, and about $0.02 for the models volume over a 4-hour window of 50 GB; nothing bills
+once `gpunit volume down` closes the window. A window left open bills past its ceiling until gpunit's next
+session, `up`, `status`, `down`, `volume up` or `volume down` sweeps the volume, if that delete succeeds. A full working pipeline costs on the order of **$10 or less** to stand up.
 
 ## License
 

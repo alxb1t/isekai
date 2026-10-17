@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 import pytest
 from gpunit.spec import parse_ceiling
 
-from isekai.boundary.pod_start import PROVISION
+from isekai.boundary.pod_start import PROVISION, VOLUME_SIZE_FLOOR
 from isekai.boundary.provision import (
     MANIFEST_PATH,
     MODELS_ROOT,
@@ -892,23 +892,62 @@ def test_the_spec_floor_check_catches_a_spec_with_one() -> None:
     ]
 
 
-def unnamed_volume(spec: dict[str, object]) -> bool:
-    """Return whether `gpunit.toml` names no network volume."""
-    volume = spec.get("volume")
-    return not (isinstance(volume, str) and volume.strip())
+def window_volume_faults(spec: dict[str, object]) -> list[str]:
+    """Return each way `gpunit.toml` fails to declare a window volume.
+
+    e.g. `{"volume_gb": 1, "volume_ceiling": "4h"}` -> ["under the capacity floor"]
+    """
+    faults = []
+    if "volume" in spec:
+        faults.append("names a kept volume")
+    size = spec.get("volume_gb")
+    if not isinstance(size, int):
+        faults.append("no volume_gb")
+    # RunPod's sizes are decimal, as the container disk's floor test reads them.
+    elif size * 1000**3 < VOLUME_SIZE_FLOOR:
+        faults.append("under the capacity floor")
+    ceiling = spec.get("volume_ceiling")
+    if not (isinstance(ceiling, str) and ceiling.strip()):
+        faults.append("no volume_ceiling")
+    return faults
 
 
 @pytest.mark.spec(
     "model-provisioning:reachability:provisioning-requires-the-network-volume"
 )
-def test_the_session_spec_names_the_volume(gpunit_spec: dict[str, object]) -> None:
-    assert not unnamed_volume(gpunit_spec)
+def test_the_session_spec_declares_a_window_volume(
+    gpunit_spec: dict[str, object],
+) -> None:
+    faults = window_volume_faults(gpunit_spec)
+    assert "names a kept volume" not in faults
+    assert "no volume_gb" not in faults
+    assert "no volume_ceiling" not in faults
 
 
-@pytest.mark.spec_exempt("structural: twin of test_the_session_spec_names_the_volume")
-def test_the_volume_check_catches_a_spec_with_none() -> None:
-    assert unnamed_volume({"project": "isekai"})
-    assert unnamed_volume({"volume": ""})
+@pytest.mark.spec("model-provisioning:reachability:the-window-volume-clears-the-floor")
+def test_the_window_volume_clears_the_capacity_floor(
+    gpunit_spec: dict[str, object],
+) -> None:
+    assert "under the capacity floor" not in window_volume_faults(gpunit_spec)
+
+
+@pytest.mark.spec_exempt(
+    "structural: twin of test_the_session_spec_declares_a_window_volume"
+    " and test_the_window_volume_clears_the_capacity_floor"
+)
+def test_the_window_volume_check_catches_each_fault() -> None:
+    assert window_volume_faults({"volume": "abc"}) == [
+        "names a kept volume",
+        "no volume_gb",
+        "no volume_ceiling",
+    ]
+    assert window_volume_faults({"volume_gb": 50, "volume_ceiling": ""}) == [
+        "no volume_ceiling"
+    ]
+    assert window_volume_faults({"volume_gb": 1, "volume_ceiling": "4h"}) == [
+        "under the capacity floor"
+    ]
+    assert window_volume_faults({"volume_gb": 50, "volume_ceiling": "4h"}) == []
 
 
 def telemetry_set_in_spec(spec: dict[str, object]) -> list[str]:

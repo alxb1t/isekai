@@ -156,16 +156,19 @@ A multi-gigabyte download that ends in a mismatch costs the same as one that end
 
 Provisioning SHALL try an entry's sources in the manifest's order and abort only when every one of them has
 failed. It SHALL try a transfer that breaks off again from the same source, three attempts in all. A source has
-failed when its third attempt breaks off, or at once when the bytes it served fail verification.
+failed when its third attempt breaks off, at once when it answers with a client error, or at once when the bytes it
+served fail verification.
 
 An alternate that is never reached buys no availability: a mirror that has gone away is the failure it exists for.
-A dropped connection is transient, and an entry with one source has no alternate to fall to; bytes that do not
-verify would fail the same way again ([D21](../../../docs/decisions.md#d21--retries-follow-what-can-fail)).
+A dropped connection is transient, and an entry with one source has no alternate to fall to. A client error — a
+file gone, a request refused — and bytes that do not verify would fail the same way again
+([D21](../../../docs/decisions.md#d21--retries-follow-what-can-fail)).
 
 ```
 source ──▶ transfer ── breaks off, attempts left ──▶ wait ──▶ transfer again
               │
               ├── breaks off a third time ─┐
+              ├── answers a client error ──┤
               ├── bytes do not verify ─────┴──▶ next source ── none left ──▶ abort
               └── bytes verify ──▶ land
 ```
@@ -190,6 +193,13 @@ source ──▶ transfer ── breaks off, attempts left ──▶ wait ──
 - **WHEN** a transfer breaks off before its source's third attempt
 - **THEN** provisioning waits and transfers from the same source again
 - **AND** the entry lands when a later attempt serves bytes that verify
+
+#### Scenario: a source that answers a client error is not tried again
+- **Key:** `model-provisioning:source-fallback:a-refusing-source-is-not-tried-again`
+- **Layers:** unit
+- **WHEN** a source answers a transfer with a client error, as a 404
+- **THEN** provisioning moves on to the next source without waiting
+- **AND** that source is asked once
 
 ### Requirement: A provisioning failure leaves the pod reachable
 
@@ -237,9 +247,15 @@ command ends.
 - **Layers:** unit
 - **WHEN** the pod is created without the network volume it expects, or the models namespace would be prepared
   somewhere that is not that volume
-- **THEN** no session is opened unless the session's spec names the volume
+- **THEN** no session is opened unless the session's spec declares a window volume, by its size and its ceiling
 - **AND** the entrypoint refuses before preparing the namespace if what it finds is not that volume
 - **AND** the entrypoint is told which volume to expect, as `GPUNIT_VOLUME_ID`, rather than inferring it
+
+#### Scenario: the window volume clears the capacity floor
+- **Key:** `model-provisioning:reachability:the-window-volume-clears-the-floor`
+- **Layers:** unit
+- **WHEN** the session's spec is read
+- **THEN** its window volume's size, in decimal bytes, is at least the entrypoint's capacity floor
 
 ### Requirement: Model artifacts resolve inside the project's own namespace
 

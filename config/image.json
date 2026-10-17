@@ -1,14 +1,14 @@
 {
   "image": "ghcr.io/alxb1t/isekai",
-  "tag": "v0.35.1-rc3",
-  "digest": "sha256:0f0a8e82dbeb5d7059353ed289f5d414bd9977905de9f7c38923e2abbdcf88ff",
+  "tag": "v0.36-rc1",
+  "digest": "sha256:21b715d99bdd2b5d2452275533366e43e7e2b6fcfd048d08a65e9e7ebd9a1d3f",
   "files": {
-    "Dockerfile": "3fa700b3799293657b585d179a800f8484ea57f17c6141d794eadd891a3ec7b4",
+    "Dockerfile": "735153b8f478856e68d6138799b733091592379381cb1740ceb3a73e7a27158b",
     "image/pyproject.toml": "a4cd426861f9e21f487af74e7df2c8d809683c86642f672e0f243d5fabafba45",
     "image/uv.lock": "1b0e870231afa0ba55addf0330cfb3ae75be2449fd06bf6d869b1f8530c5d424",
     "image/.python-version": "f50159fad3f4319868eb38717b91d55843c41e9803014c8de05e116a6d0bcfdc",
     "config/models.json": "c1c67049672f53c5d1ef54644bd37924637aa3ce83ae7997a7ed88e73f9687fc",
-    "isekai/boundary/provision.py": "237a52eaa3c578ad23754a631925e4ad1f920ab30ad649a9b1b6370b147ae8fd",
-    "isekai/boundary/pod_start.py": "c380d9c47cf1c9bb07a9d3a20f2af1c230e5562eaf3e46f7604d0f39e6b67a90"
+    "isekai/boundary/provision.py": "a4e96130d6457fd67104706455b33cc37e3eddd75a47d04e6b8b5f8d53c1a449",
+    "isekai/boundary/pod_start.py": "7fa5363be97ba6d08373c2bbbb92b3e4d120c15bf0515ca12482242b74b8f042"
   }
 }

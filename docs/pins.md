@@ -68,7 +68,8 @@ diff is what to review.
   before it merges ([D28](decisions.md#d28--the-image-carries-code-the-volume-carries-weights)).
 - **gpunit.** Move its tag in `pyproject.toml` and run `uv lock`; move the boot script's tag and checksum in
   the `Dockerfile` (`curl -fsSL <url> | shasum -a 256`), then rebuild the image. `tests/test_infra.py` fails
-  while the two tags disagree.
+  while the two tags disagree. A session refuses an image whose `boot.sh` is too old for its gpunit, so the
+  rebuild comes before any render.
 - **The base or uv.** Resolve the new reference with `docker buildx imagetools inspect <ref>`, write it with its
   digest into the `Dockerfile`, then rebuild the image.
 - **The image's Python environment.** `make derive` runs `tools/derive_image_project.py`, which re-reads the

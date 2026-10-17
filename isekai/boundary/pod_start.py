@@ -43,7 +43,7 @@ class Pod:
     # On container disk: the volume is exactly the thing that may have failed.
     marker: Path = Path("/opt/isekai/provisioning-failed")
     shm: Path = Path("/dev/shm")
-    mounts: Path = Path("/proc/mounts")
+    mountinfo: Path = Path("/proc/self/mountinfo")
     swaps: Path = Path("/proc/swaps")
     swap_max: Path = Path("/sys/fs/cgroup/memory.swap.max")
 
@@ -129,7 +129,7 @@ def link_namespace(namespace: Path, models_root: Path) -> None:
 
 
 def provision(models_root: Path) -> None:
-    """Land and verify every model the manifest declares, through `fetch` (D2)."""
+    """Land and verify every model the manifest declares, through `fetch`."""
     command = [
         sys.executable,
         str(PROVISION),
@@ -143,29 +143,37 @@ def provision(models_root: Path) -> None:
 
 
 def shm_type(pod: Pod) -> str | None:
-    """Return the filesystem type `/proc/mounts` gives the memory mount, or None.
+    """Return the type of the mount the memory directory's device is, or None.
 
-    e.g. "tmpfs /dev/shm tmpfs rw,nosuid 0 0" -> "tmpfs". The last line wins: a
-    later mount over the same point shadows an earlier one.
+    e.g. "36 25 0:5 / /dev/shm rw - tmpfs tmpfs rw" on device 0:5 -> "tmpfs". The
+    device, not the mount point's text, says which filesystem is under the directory;
+    the last line wins, as a later mount shadows an earlier one.
     """
     try:
-        lines = pod.mounts.read_text().splitlines()
+        lines = pod.mountinfo.read_text().splitlines()
+        dev = os.stat(pod.memory).st_dev
     except OSError:
         return None
+    wanted = f"{os.major(dev)}:{os.minor(dev)}"
     found = None
     for line in lines:
         fields = line.split()
-        if len(fields) >= 3 and fields[1] == str(pod.shm):
-            found = fields[2]
+        if len(fields) >= 3 and fields[2] == wanted and "-" in fields[3:]:
+            after = fields[fields.index("-", 3) + 1 :]
+            if after:
+                found = after[0]
     return found
 
 
-def can_swap(pod: Pod) -> bool:
-    """Return whether the container can swap: a device is listed and not capped at 0."""
+def can_swap(pod: Pod) -> bool | None:
+    """Return whether the container can swap, or None when its swap table is unread.
+
+    It can when a device is listed and swap is not capped at 0.
+    """
     try:
         devices = pod.swaps.read_text().splitlines()[1:]
     except OSError:
-        return False
+        return None
     try:
         cap = pod.swap_max.read_text().strip()
     except OSError:
@@ -191,7 +199,11 @@ def prepare_memory(pod: Pod, env: dict[str, str]) -> None:
     except OSError:
         free = size = None
     print(f"{pod.shm} is {kind}; size {size} B, free {free} B")
-    print(f"swap: the container {'can' if can_swap(pod) else 'cannot'} swap")
+    swap = can_swap(pod)
+    if swap is None:
+        print("swap: could not read whether the container can swap")
+    else:
+        print(f"swap: the container {'can' if swap else 'cannot'} swap")
     if kind is None:
         raise Hold(
             f"ERROR: could not read {pod.shm}'s filesystem type.",

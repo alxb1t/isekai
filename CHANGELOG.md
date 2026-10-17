@@ -9,6 +9,24 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-17 · 0060-the-working-window
+
+### Changed
+
+- gpunit is pinned at `v0.7.0`, and the image adds its `boot.sh` from that tag by checksum: `v0.7.0` makes the
+  models volume a window and refuses an older boot script (0060 D1).
+- `gpunit.toml` declares a working window's volume, 50 GB for up to 4 hours, in place of a kept one that no
+  longer existed; a test holds the pair above the pod's floor, and README, D27 and the pins guide say so
+  (0060 D2, D3).
+- The pod reads `/dev/shm`'s type from the mount its memory directory's device is, says when it cannot read its
+  swap table, and moves on at once from a source that answers 4xx; `provision()`'s stale citation goes (0060 D4).
+- `run-flows` opens the window with `gpunit volume up` on the go, and asks *another batch?* before it runs
+  `gpunit volume down`; `CLAUDE.md`'s GPU protocol names the volume, its teardown and its ceiling (0060 D5).
+- The pod image is re-pinned to `v0.36-rc1`, `sha256:21b715d9…bd9a1d3f`, built from this branch with gpunit
+  `v0.7.0`'s boot script and the pod's cards; its build record equals `config/image.json`'s `files` (0060 D6).
+- A window on `v0.36-rc1` rendered both flows on a pod; the operator judged it by eye, with no evidence file kept
+  and the volume left up for further work (0060 D7).
+
 ## [0.35.1] - 2026-10-11 · 0059-the-pod-in-python
 
 ### Changed

@@ -247,26 +247,32 @@ they decide.**
 - **Some phases spend real money**, and the active change's `tasks.md` marks them (⚠️ GPU). The protocol
   names four things, because a rule that leaves any of them implicit is not a rule:
   1. **Who creates the pod** — `uv run python -m isekai render`, through gpunit, and nothing else. Announce
-     before you run it.
+     before you run it. `uv run --env-file .env gpunit volume up --yes` makes or extends the window's volume,
+     announced with the render.
   2. **Who tears it down** — the same `isekai render`: its gpunit session deletes the pod on every exit and
      leaves no `gpunit-isekai` pod listed; the pod also stops itself 45 minutes after it starts. When the
      session reports a failed teardown, `uv run --env-file .env gpunit down` is the act — gpunit reads no
      `.env`. **Teardown is the act**: it is the call that stops the billing, and it belongs to the same
-     session that created the pod.
+     session that created the pod. The volume's is `uv run --env-file .env gpunit volume down`, on the
+     operator's word, and nothing else: the 4-hour `volume_ceiling` is not a teardown — past it, the volume
+     bills until gpunit's next session, `up`, `status`, `down`, `volume up` or `volume down` sweeps it, if
+     that delete succeeds.
   3. **Who confirms** — the RunPod MCP, by checking no `gpunit-isekai` pod is left. **Confirmation is not
      the act.** A rule that only names the check has not said what stops the billing, and an unconfirmed
      teardown is not one you may report as done. Record what the MCP returned. When the MCP confirms gone a
      pod whose `gpunit down` did not delete it, delete `.gpunit/pod` and `.gpunit/pending`: gpunit keeps
-     its record until the pod is confirmed gone, and refuses the next session beside it.
+     its record until the pod is confirmed gone, and refuses the next session beside it. A window is closed
+     only when `list-network-volumes` shows no `gpunit-isekai` volume, whatever `volume down` printed.
   4. **What happens when the MCP is unreachable** — it must be authorized from an *interactive* session,
      so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
      unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.
 
-  **The ceiling is 45 minutes and ~$0.30 for a single pod session** — numbers, not "promptly", so a human
-  can hold you to it. Exceeding it is a halt, not a judgement call. And whichever route applies, the
-  authority to spend comes from a **phase `tasks.md` marks metered, or from the operator's
-  explicit go in the session, which quotes the ceiling** — never from the agent.
-- **GPU renders live in the pod's memory**; only the models volume persists. Download before
-  teardown or the output is gone.
+  **The ceiling is 45 minutes and ~$0.30 for a single pod session**, and 4 hours and ~$0.02 for the
+  window's volume — numbers, not "promptly", so a human can hold you to it. Exceeding it is a halt, not a
+  judgement call. And whichever route applies, the authority to spend comes from a **phase `tasks.md` marks
+  metered, or from the operator's explicit go in the session, which quotes the ceiling** — never from the
+  agent.
+- **GPU renders live in the pod's memory**; only the models volume persists, for its window. Download
+  before teardown or the output is gone.
 - **The Blackwell (sm_120) pod needs cu128 PyTorch** — cu124 gives "no kernel image". It is pinned in the
   image; keep it.

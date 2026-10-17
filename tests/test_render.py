@@ -547,7 +547,7 @@ def test_a_lost_create_exits_3_and_a_failed_teardown_names_gpunit_down(
 
 
 @pytest.mark.spec_exempt("structural: gpunit's outcomes become the verb's exit")
-def test_a_refusal_beside_a_listed_pod_ends_on_a_gpunit_down_that_loads_the_key(
+def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     tmp_path: Path,
 ) -> None:
     def refusing(text: str) -> gpu.OpenSession:
@@ -570,10 +570,26 @@ def test_a_refusal_beside_a_listed_pod_ends_on_a_gpunit_down_that_loads_the_key(
     # A note, not a second refusal: the run-flows skill counts `refused:` lines.
     assert sum("refused:" in line for line in lines) == 1
 
+    # The window's refusals name a bare `gpunit volume up` or `volume down`.
+    window = {
+        "no window volume is up; run gpunit volume up": "volume up",
+        "the volume ends at 2026-10-10T13:00:00Z; shorten the ceiling or run gpunit "
+        "volume up": "volume up",
+        "volume abc passed its ceiling at 2026-10-10T13:00:00Z and is kept; "
+        "run gpunit volume down": "volume down",
+    }
+    for index, (text, verb) in enumerate(window.items()):
+        runs = batch(tmp_path / f"window{index}")
+        assert session(runs, f"{FLOW}=1", opener=refusing(text)) == 1
+        lines = log(runs).splitlines()
+        assert lines[-1].endswith(f"run `uv run --env-file .env gpunit {verb}`")
+        assert sum("refused:" in line for line in lines) == 1
+
     other = "no card in 'gpus' meets vram_gb and max_hourly"
     runs = batch(tmp_path / "other")
     assert session(runs, f"{FLOW}=1", opener=refusing(other)) == 1
-    assert "gpunit down" not in log(runs)
+    assert "gpunit" not in log(runs).splitlines()[-1]
+    assert "--env-file" not in log(runs)
 
 
 @pytest.mark.spec_exempt("structural: one port, declared in gpunit.toml and here")
