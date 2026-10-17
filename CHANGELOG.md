@@ -9,6 +9,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-17 · 0060-the-working-window
+
 ### Changed
 
 - gpunit is pinned at `v0.7.0`, and the image adds its `boot.sh` from that tag by checksum: `v0.7.0` makes the
