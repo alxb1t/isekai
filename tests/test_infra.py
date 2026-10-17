@@ -903,12 +903,12 @@ def window_volume_faults(spec: dict[str, object]) -> list[str]:
     size = spec.get("volume_gb")
     if not isinstance(size, int):
         faults.append("no volume_gb")
+    # RunPod's sizes are decimal, as the container disk's floor test reads them.
+    elif size * 1000**3 < VOLUME_SIZE_FLOOR:
+        faults.append("under the capacity floor")
     ceiling = spec.get("volume_ceiling")
     if not (isinstance(ceiling, str) and ceiling.strip()):
         faults.append("no volume_ceiling")
-    # RunPod's sizes are decimal, as the container disk's floor test reads them.
-    if isinstance(size, int) and size * 1000**3 < VOLUME_SIZE_FLOOR:
-        faults.append("under the capacity floor")
     return faults
 
 
