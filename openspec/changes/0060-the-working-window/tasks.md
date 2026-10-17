@@ -9,7 +9,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 - [x] 2 — The window
 - [x] 3 — The pod's cards
 - [x] 4 — The skill and the protocol
-- [ ] 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
+- [x] 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
 - [ ] 6 — ⚠️ **HUMAN · METERED** — one window: volume up, a first and a second render, volume down
 
 ## 1 — The pin
@@ -56,7 +56,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 5 — ⚠️ **HUMAN** — rebuild as v0.36-rc1, re-pin
 
-- [ ] 5.1 **HUMAN** — push `v0.36_the_working_window`; run `gh workflow run build-image.yml --ref v0.36_the_working_window -f tag=v0.36-rc1`; check its build record equals `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D6](design.md#d6).
+- [x] 5.1 **HUMAN** — push `v0.36_the_working_window`; run `gh workflow run build-image.yml --ref v0.36_the_working_window -f tag=v0.36-rc1`; check its build record equals `config/image.json`'s `files`; write the tag and digest into `config/image.json` and the digest into `gpunit.toml`; per [D6](design.md#d6).
   Verify: `grep -c '"tag": "v0.36-rc1"' config/image.json` prints `1`, and `uv run pytest -q tests/test_infra.py` exits 0.
 
 ## 6 — ⚠️ **HUMAN · METERED** — one window: volume up, a first and a second render, volume down
