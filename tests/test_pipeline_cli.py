@@ -35,7 +35,7 @@ from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
-from tests.fakes import READER, stub_comfy
+from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, fake_wd14, sheet, write_wd14
 from tests.transports import FakeTransport
@@ -449,6 +449,31 @@ def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
     wired = wiring_from(runs=tmp_path / "runs")
 
     assert wired.reader is not None
+
+
+@pytest.mark.spec_exempt(
+    "structural: ISEKAI_WIRING names the factory wiring_from calls"
+)
+def test_a_named_factory_builds_the_wiring_after_the_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")
+    wired = wiring_from(runs=tmp_path / "runs")
+    assert isinstance(wired.client, FakeComfyClient)
+    assert wired.runs_root == tmp_path / "runs"
+    with pytest.raises(Refusal, match="--runs"):
+        wiring_from(runs=Path(__file__).resolve().parent.parent / "lib")
+
+
+@pytest.mark.spec_exempt("structural: twin -- ISEKAI_WIRING without a factory refuses")
+def test_a_named_wiring_without_a_factory_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring")
+    with pytest.raises(Refusal, match="<module>:<factory>"):
+        wiring_from(runs=tmp_path / "runs")
+    monkeypatch.delenv("ISEKAI_WIRING")
+    assert not isinstance(wiring_from(runs=tmp_path / "runs").client, FakeComfyClient)
 
 
 @pytest.mark.spec("cli:resolution:uncomposed-seam-refuses-by-name")

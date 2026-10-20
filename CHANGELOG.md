@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- A browser test harness: vitest for the page's composables and Playwright from pytest for the page, both in
+  the gate, with `make browsers` fetching Chromium; `ISEKAI_WIRING` serves the surface on the suite's doubles
+  (0061 D6, D7).
+
 ## [0.36.0] - 2026-10-17 · 0060-the-working-window
 
 ### Changed

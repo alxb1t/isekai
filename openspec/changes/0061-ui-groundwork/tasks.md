@@ -6,7 +6,7 @@ the key its task names.
 
 ## Progress
 
-- [ ] 1 — The harness
+- [x] 1 — The harness
 - [ ] 2 — The defects
 - [ ] 3 — The library
 - [ ] 4 — The shell
@@ -16,23 +16,23 @@ the key its task names.
 
 ## 1 — The harness
 
-- [ ] 1.1 **HALT CHECK** — `ui` still takes `--flow` exactly once, and no JS test runner is declared.
+- [x] 1.1 **HALT CHECK** — `ui` still takes `--flow` exactly once, and no JS test runner is declared.
   Verify: `grep -c 'action=_OneFlow' isekai/interface/cli.py` prints `1`, and `grep -c -E 'vitest|playwright' ui/package.json` prints `0`.
-- [ ] 1.2 Add the dev dependencies of [Dependencies](design.md#dependencies): `uv add --dev pytest-playwright==0.10.0`, then in `ui/` `npm install --save-exact --save-dev vitest@5.0.5`.
+- [x] 1.2 Add the dev dependencies of [Dependencies](design.md#dependencies): `uv add --dev pytest-playwright==0.10.0`, then in `ui/` `npm install --save-exact --save-dev vitest@5.0.5`.
   Verify: `grep -c 'pytest-playwright==0.10.0' pyproject.toml` prints `1`, and `grep -c '"vitest": "5.0.5"' ui/package.json` prints `1`.
-- [ ] 1.3 Add a `browsers` target to `Makefile` running `uv run playwright install chromium`, and a CI step running `make browsers` before `Gate` in `.github/workflows/ci.yml`, per [D7](design.md#d7).
+- [x] 1.3 Add a `browsers` target to `Makefile` running `uv run playwright install chromium`, and a CI step running `make browsers` before `Gate` in `.github/workflows/ci.yml`, per [D7](design.md#d7).
   Verify: `make -n browsers` prints `uv run playwright install chromium`, and `grep -c 'make browsers' .github/workflows/ci.yml` prints `1`.
-- [ ] 1.4 **HALT CHECK** — Chromium launches headless here, after `make browsers`.
+- [x] 1.4 **HALT CHECK** — Chromium launches headless here, after `make browsers`.
   Verify: `uv run python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); b = p.chromium.launch(); print(b.version); b.close(); p.stop()"` prints a version.
-- [ ] 1.5 Add `ui/vitest.config.ts`, the `test` script in `ui/package.json`, `ui/src/test/spec.ts` and `tools/test_ui.py`, which runs `npm run test` and refuses by name without `ui/node_modules/`; add `uv run python -m tools.test_ui` to `gate` after `tools.typecheck_ui`, per [D7](design.md#d7).
+- [x] 1.5 Add `ui/vitest.config.ts`, the `test` script in `ui/package.json`, `ui/src/test/spec.ts` and `tools/test_ui.py`, which runs `npm run test` and refuses by name without `ui/node_modules/`; add `uv run python -m tools.test_ui` to `gate` after `tools.typecheck_ui`, per [D7](design.md#d7).
   Verify: `make -n gate` prints `uv run python -m tools.test_ui`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.6 Teach `tests/test_spec_bindings.py` to read `spec("…")` from `ui/src/**/*.test.ts`, with a test that a vitest key with no living key is caught, per [D7](design.md#d7).
+- [x] 1.6 Teach `tests/test_spec_bindings.py` to read `spec("…")` from `ui/src/**/*.test.ts`, with a test that a vitest key with no living key is caught, per [D7](design.md#d7).
   Verify: `uv run pytest -q tests/test_spec_bindings.py` exits 0, and `grep -c 'test.ts' tests/test_spec_bindings.py` prints a number of at least `1`.
-- [ ] 1.7 In `isekai/interface/wiring.py`, make `wiring_from` import and call the factory `ISEKAI_WIRING` names when it is set, after `_check_run_root`; add `tests/e2e/wiring.py` with `fake`, per [D6](design.md#d6).
+- [x] 1.7 In `isekai/interface/wiring.py`, make `wiring_from` import and call the factory `ISEKAI_WIRING` names when it is set, after `_check_run_root`; add `tests/e2e/wiring.py` with `fake`, per [D6](design.md#d6).
   Verify: `grep -c 'ISEKAI_WIRING' isekai/interface/wiring.py` prints a number of at least `1`, `grep -rn 'from tests\|import tests' isekai` prints nothing, and `uv run pytest -q tests/test_pipeline_cli.py` exits 0.
-- [ ] 1.8 Add `tests/e2e/conftest.py`: a session fixture that writes fixture runs under `tmp_path` and starts today's `isekai ui --flow summon-anime-wai` on a free port with `ISEKAI_WIRING=tests.e2e.wiring:fake`, per [D7](design.md#d7).
+- [x] 1.8 Add `tests/e2e/conftest.py`: a session fixture that writes fixture runs under `tmp_path` and starts today's `isekai ui --flow summon-anime-wai` on a free port with `ISEKAI_WIRING=tests.e2e.wiring:fake`, per [D7](design.md#d7).
   Verify: `grep -c 'ISEKAI_WIRING' tests/e2e/conftest.py` prints a number of at least `1`.
-- [ ] 1.9 Add `tests/e2e/test_review.py` characterising today's page: a tag committed from the autocomplete (`ui:vocabulary:matches-are-ranked-by-post-count`), an approved input read-only (`ui:approval:approved-input-opens-read-only`), ⌥Space opening the cheatsheet (`ui:cheatsheet:every-declared-criterion-is-answered`).
+- [x] 1.9 Add `tests/e2e/test_review.py` characterising today's page: a tag committed from the autocomplete (`ui:vocabulary:matches-are-ranked-by-post-count`), an approved input read-only (`ui:approval:approved-input-opens-read-only`), ⌥Space opening the cheatsheet (`ui:cheatsheet:every-declared-criterion-is-answered`).
   Verify: `uv run pytest -q tests/e2e` exits 0, and `grep -c 'pytest.mark.spec' tests/e2e/test_review.py` prints a number of at least `3`.
 
 ## 2 — The defects
