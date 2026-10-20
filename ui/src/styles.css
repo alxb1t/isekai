@@ -1,6 +1,6 @@
-/* Vendored from `ui/design/design-system/styles.css`, which is read-only: a
-   design is corrected by re-running a session and replacing that folder, so the
-   app takes a copy rather than importing across the boundary.
+/* Vendored from the design system the first review surface was drawn in. The
+   imported folder is gone; this copy is the sheet, and `ui/design/spec.md` is
+   the design the app is built to.
 
    Two deltas from the imported sheet, and only two:
 
@@ -360,4 +360,5 @@ textarea.input { min-height: 90px; resize: vertical; }
   --accent-ink: #b3abf4;
   --tick-locked: #34364a;
   --chip-line: #2f3146;
+  --placeholder: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
 }

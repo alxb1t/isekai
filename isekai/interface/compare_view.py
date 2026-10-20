@@ -35,7 +35,7 @@ from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
 BATCH_RUNS = "runs"
-# Where the run-flows skill keeps a batch's photographs; named only in a refusal.
+# The folder of a batch's photographs, as the refusal below names it.
 BATCH_PHOTOS = "photos"
 
 _STYLE = """

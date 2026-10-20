@@ -1,7 +1,6 @@
-/* This application's own layout, kept apart from the vendored token sheet so the
-   copy of `ui/design/design-system/styles.css` stays a copy. Every colour,
-   space, radius and shadow below comes from that sheet's variables -- nothing
-   here invents a hex. */
+/* This application's own layout, kept apart from the token sheet in
+   `styles.css`. Every colour, space, radius and shadow below comes from that
+   sheet's variables -- nothing here invents a hex. */
 
 :root {
   /* Numbers, field keys, file paths, keystrokes and post counts. Load-bearing
@@ -196,7 +195,7 @@ body {
 
 .library__row--inert {
   cursor: default;
-  background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+  background: var(--placeholder);
 }
 
 .library__name {

@@ -27,6 +27,9 @@ import time:
   interface ──▶ interface/ui  cli.py, inside the `ui` handler — within the
                               group, and listed because collapsing it away
                               is what hid it before
+  interface ──▶ a named module  wiring.py, inside _named_wiring(), only when
+                              ISEKAI_WIRING names it — the browser tests'
+                              doubles (D41)
 ```
 
 Every lazy edge points down, as every module-level one does.
@@ -113,9 +116,9 @@ what carries data at run time.
 ```
 
 - **The CLI builds the components** through `interface/wiring.py` and hands them
-  to the review UI its `ui` verb starts (`cli.py`'s `_ui`). The UI builds none:
-  nothing under `interface/ui/` calls a builder in `wiring.py`, and no module
-  there imports `cli.py`. Review holds both.
+  to the UI its `ui` verb starts (`cli.py`'s `_ui`). The UI builds one batch's
+  wiring per request through `wiring_from`, so the runs-root guard holds for each
+  batch, and no module under `interface/ui/` imports `cli.py`. Review holds both.
 - **Each front end calls the stage functions directly.**
 - **A stage reads and writes its run directory.** No stage imports another stage;
   `tests/test_layers.py::test_no_stage_imports_another` holds this. Every run

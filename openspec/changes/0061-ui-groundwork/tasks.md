@@ -12,7 +12,7 @@ the key its task names.
 - [x] 4 — The shell
 - [x] 5 — The hub
 - [x] 6 — The queue
-- [ ] 7 — The docs and the deletions
+- [x] 7 — The docs and the deletions
 
 ## 1 — The harness
 
@@ -88,11 +88,11 @@ the key its task names.
 
 ## 7 — The docs and the deletions
 
-- [ ] 7.1 Copy `openspec/changes/0061-ui-groundwork/design-spec.md` to `ui/design/spec.md`, and delete every other file under `ui/design/`, per [D10](design.md#d10).
+- [x] 7.1 Copy `openspec/changes/0061-ui-groundwork/design-spec.md` to `ui/design/spec.md`, and delete every other file under `ui/design/`, per [D10](design.md#d10).
   Verify: `ls ui/design` prints `spec.md` alone.
-- [ ] 7.2 Rewrite in `docs/decisions.md` D4, D18, D19 and D24, and add D40 and D41, per [D10](design.md#d10).
+- [x] 7.2 Rewrite in `docs/decisions.md` D4, D18, D19 and D24, and add D40 and D41, per [D10](design.md#d10).
   Verify: `grep -c -E '^### D40 · A batch is a library folder holding|^### D41 · The test seam is a factory named in the environment' docs/decisions.md` prints `2`, and `grep -c 'Sec-Fetch-Site' docs/decisions.md` prints a number of at least `1`.
-- [ ] 7.3 Move `README.md`, `docs/data-flow.md`, `docs/modules.md`, `isekai/interface/ui/README.md`, `CLAUDE.md` and `.env.example` onto `isekai ui` and the library, per [D10](design.md#d10).
+- [x] 7.3 Move `README.md`, `docs/data-flow.md`, `docs/modules.md`, `isekai/interface/ui/README.md`, `CLAUDE.md` and `.env.example` onto `isekai ui` and the library, per [D10](design.md#d10).
   Verify: `grep -c -E 'ui --flow|ui <run-id>' README.md docs/data-flow.md` prints `0` for each file, `grep -c 'ISEKAI_LIBRARY' .env.example` prints `1`, and `uv run pytest -q tests/test_docs.py tests/test_spec_prose.py` exits 0.
-- [ ] 7.4 Delete `.claude/skills/run-flows/`, `.claude/skills/compare-renders/` and `tests/test_agent_skills.py`; reword the comments at `isekai/interface/compare_view.py:38` and `tests/test_render.py:570`; remove the skills from `README.md`, per [D9](design.md#d9).
+- [x] 7.4 Delete `.claude/skills/run-flows/`, `.claude/skills/compare-renders/` and `tests/test_agent_skills.py`; reword the comments at `isekai/interface/compare_view.py:38` and `tests/test_render.py:570`; remove the skills from `README.md`, per [D9](design.md#d9).
   Verify: `test -e .claude/skills/run-flows` exits 1, `test -e .claude/skills/compare-renders` exits 1, `test -e tests/test_agent_skills.py` exits 1, and `grep -rn 'run-flows\|compare-renders' README.md isekai tests` prints nothing.

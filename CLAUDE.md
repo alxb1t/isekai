@@ -6,8 +6,8 @@ open image models are run end to end, from container to rented GPU to CLI. Flows
 `summon-anime-wai` from a photograph, `conjure-anime-wai` from a corrected sheet alone,
 `control-anime-wai` as `summon` with its face dials at zero — on a
 WAI-illustrious-SDXL v17.0 base, driven by staged verbs an operator runs one at a time: `tag` and
-`caption` → `sheet` → `review`/`approve` → `generate`, with `show` reading a run and `ui` putting stage ③
-in a browser. Everything before `generate` is free and local; only the render costs money.
+`caption` → `sheet` → `review`/`approve` → `generate`, with `show` reading a run and `ui` serving the
+library of batches — each batch's hub and stage ③ — in a browser. Everything before `generate` is free and local; only the render costs money.
 
 > **That paragraph is the ceiling, and the ceiling is the point.** A fuller account — the verbs, what
 > each stage reads and writes, the run layout, the identity mechanisms and their dials — belongs in
@@ -50,9 +50,11 @@ That is a convention for those phases, not part of the gate; adding it to the ga
 
 **The suite runs offline and deterministically.** The ComfyUI transport is faked behind a `ComfyTransport`
 Protocol (`FakeComfyClient`), the suite reads the shipped graph itself rather than a fixture copy of it,
-and seed drawing takes an injected `random.Random`. No test hits a GPU or the network — which is why
-every scenario declares `Layers: unit` and none declares `e2e`. Diffusion quality and identity fidelity
-are verified **live on a pod, by eye**, never mocked and never asserted.
+and seed drawing takes an injected `random.Random`. No test hits a GPU or the network. A scenario only a
+browser shows declares `Layers: e2e` and runs under `tests/e2e/` — Playwright on Chromium, which
+`make browsers` fetches, against the real server on the suite's doubles through `ISEKAI_WIRING`; every
+other declares `Layers: unit`. Diffusion quality and identity fidelity are verified **live on a pod, by
+eye**, never mocked and never asserted.
 
 ---
 

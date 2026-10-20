@@ -3,7 +3,7 @@
 The server is the real `python -m isekai ui` in its own process, so the page is
 the built bundle and every request crosses the real guard. `ISEKAI_LIBRARY`
 points it at a library under `tmp_path`, and `ISEKAI_WIRING` swaps the seams for
-`tests/e2e/wiring.py`'s doubles (D19): no GPU, no Ollama.
+`tests/e2e/wiring.py`'s doubles (D41): no GPU, no Ollama.
 """
 
 import os

@@ -273,7 +273,7 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
     loaded `Flow` already answers for its own.
 
     `ISEKAI_WIRING`, set, names the factory that builds the wiring instead, after
-    the same guard (D19).
+    the same guard (D41).
     """
     _check_run_root(runs)
     named = os.environ.get("ISEKAI_WIRING")
@@ -294,7 +294,7 @@ def _named_wiring(named: str, runs: Path) -> Wiring:
     """Return what the factory `named` builds over `runs`.
 
     e.g. "tests.e2e.wiring:fake" -> `fake(runs=runs)`. The import happens here and
-    only when the variable is set, so production never names `tests/` (D19).
+    only when the variable is set, so production never names `tests/` (D41).
     """
     import importlib
 

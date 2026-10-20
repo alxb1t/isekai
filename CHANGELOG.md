@@ -29,6 +29,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - Review is a queue: *Review next* opens the first flow's unapproved sheets in the hub's order, Approve moves to
   the next and to the hub after the last, and opening a sheet with no draft writes one through `review`
   (0061 D5).
+- The design spec is `ui/design/spec.md`, replacing the imported design; D4, D18, D19 and D24 are restated
+  for the library, D40 and D41 added, and the README, `CLAUDE.md`, `docs/` and `.env.example` moved onto
+  `isekai ui` (0061 D10).
 
 ### Removed
 

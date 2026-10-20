@@ -1,7 +1,7 @@
 """The wiring the browser tests serve on: every seam a double, nothing reached.
 
 `ISEKAI_WIRING=tests.e2e.wiring:fake` names `fake` to `wiring_from`, which calls it
-after its run-root guard (D19). No GPU, no Ollama, no provisioned vocabulary.
+after its run-root guard (D41). No GPU, no Ollama, no provisioned vocabulary.
 """
 
 import io
