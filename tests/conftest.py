@@ -41,6 +41,9 @@ CSV = """tag_id,name,category,count
 19,hatsune_miku,4,500000
 """
 
+# The vocabulary every offline test reads, built from `CSV`.
+VOCABULARY = Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
+
 # The repository's per-session spending ceiling, in seconds at the halt.
 SESSION_CEILING_SECONDS = 45 * 60
 
@@ -147,7 +150,7 @@ def vocabulary() -> Vocabulary:
     Offline by construction: the provisioned 308 KB list is gitignored, so a suite
     that needed it would not run in CI at all.
     """
-    return Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
+    return VOCABULARY
 
 
 def require_vocabulary(path: Path) -> None:

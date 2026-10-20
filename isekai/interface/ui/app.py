@@ -37,7 +37,7 @@ GET  anything else                                 the bundle's index.html
 import shlex
 import threading
 from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -60,7 +60,6 @@ from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
     CAPTIONS,
-    ID_DIGEST_CHARS,
     REVIEW,
     RUNS_ROOT,
     SHEETS,
@@ -125,9 +124,6 @@ LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
 # page's own, a typed address or bookmark, and none at all from a non-browser.
 SAME_SITE = frozenset({"same-origin", "none", None})
 
-# The stages at which a cell has a sheet to review.
-REVIEWABLE = frozenset({"sheet", "draft", "approved", "rendered"})
-
 
 def authorities(host: str, port: int) -> frozenset[str]:
     """Return every `Host` value this server, bound to `host:port`, answers to.
@@ -147,11 +143,6 @@ class Held:
 
     run: Run
     flow: Flow
-
-    @property
-    def digest(self) -> str:
-        """Return the digest the URL names the run by."""
-        return self.run.id[:ID_DIGEST_CHARS]
 
     def directory(self, stage: str) -> Path:
         """Return one of this flow's stage directories inside the run."""
@@ -234,28 +225,7 @@ def create_app(
     @app.get("/api/library")
     def read_library() -> dict[str, Any]:
         """List the library's folders, batches by their newest file first."""
-        return {
-            "rows": [
-                {
-                    "name": row.name,
-                    "batch": row.batch,
-                    "sources": row.sources,
-                    "flows": [
-                        {
-                            "flow": one.flow,
-                            "approved": one.approved,
-                            "rendered": one.rendered,
-                            "of": one.of,
-                        }
-                        for one in row.flows
-                    ],
-                    "without_flow": row.without_flow,
-                    "newest": row.newest,
-                    "kind": row.kind,
-                }
-                for row in library.rows(root, wired.flows_dir)
-            ]
-        }
+        return {"rows": [asdict(row) for row in library.rows(root, wired.flows_dir)]}
 
     @app.get("/api/b/{batch}/hub")
     def read_hub(batch: str) -> dict[str, Any]:
@@ -273,17 +243,7 @@ def create_app(
                     "name": one.name,
                     "digest": one.digest,
                     **_size(one.run),
-                    "cells": {
-                        flow: {
-                            "stage": cell.stage,
-                            "renders": cell.renders,
-                            "refusal": cell.refusal,
-                            "status": review_state(one.run.directory(flow, REVIEW))
-                            if one.run and cell.stage in REVIEWABLE
-                            else None,
-                        }
-                        for flow, cell in one.cells.items()
-                    },
+                    "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
                 }
                 for one in grid.sources
             ],
@@ -353,9 +313,8 @@ def create_app(
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
         return {
-            "id": one.digest,
+            "id": one.run.digest,
             "run": one.run.id,
-            "batch": batch,
             "flow": one.flow.id,
             "schema": list(one.flow.schema.names),
             "vocabulary": len(shared.vocabulary()),

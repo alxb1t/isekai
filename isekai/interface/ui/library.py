@@ -31,11 +31,15 @@ from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
+    CAPTIONS,
+    FRAME_NAME,
     ID_DIGEST_CHARS,
     ID_SEPARATOR,
     OUTPUTS,
+    PROMPTS,
     REVIEW,
     SHEETS,
+    TAGS,
     WD14,
     Run,
     approved_versions,
@@ -44,7 +48,8 @@ from isekai.foundation.run import (
 )
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import rendered_seeds
-from isekai.pipeline.review import current_draft
+from isekai.pipeline.review import Status, current_draft
+from isekai.pipeline.review import state as review_state
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -53,14 +58,18 @@ RUNS = "runs"
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
-    "captions": "caption",
-    "wd14": "tag",
-    "tags": "tag",
-    "sheets": "sheet",
-    "review": "review",
-    "prompts": "prompt",
-    "outputs": "render",
+    CAPTIONS: "caption",
+    WD14: "tag",
+    TAGS: "tag",
+    SHEETS: "sheet",
+    REVIEW: "review",
+    PROMPTS: "prompt",
+    OUTPUTS: "render",
 }
+
+# A source's digest, by what its file's stat says: hashing every photograph on
+# every listing would read the whole library each time Home opens.
+_DIGESTS: dict[tuple[str, int, int, int], str] = {}
 
 
 def root(environ: Mapping[str, str] = os.environ) -> Path:
@@ -121,12 +130,14 @@ class Cell:
 
     `stage` is None where the run holds no directory for the flow, or there is no
     run. `refusal` is set, and `stage` is `unreadable`, where the file that decides
-    the stage cannot be read.
+    the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
+    answer, wherever the cell has a sheet.
     """
 
     stage: str | None
     renders: int = 0
     refusal: str | None = None
+    status: Status | None = None
 
 
 @dataclass(frozen=True)
@@ -139,8 +150,8 @@ class Source:
 
     @property
     def digest(self) -> str | None:
-        """Return the twelve-character digest the run is named by, or None."""
-        return self.run.id[:ID_DIGEST_CHARS] if self.run else None
+        """Return the digest the run is named by, or None."""
+        return self.run.digest if self.run else None
 
 
 @dataclass(frozen=True)
@@ -174,7 +185,8 @@ def rows(library: Path, flows_dir: Path) -> list[Row]:
     A folder that is not a batch is listed and never opened.
     """
     folders = listed(library)
-    batches = [_row(one, flows_dir) for one in folders if is_batch(one)]
+    suffixes = _suffixes(flows_dir)
+    batches = [_row(one, suffixes) for one in folders if is_batch(one)]
     batches.sort(key=lambda row: row.newest or 0.0, reverse=True)
     return batches + [Row(one.name, False) for one in folders if not is_batch(one)]
 
@@ -200,26 +212,35 @@ def run_named(folder: Path, digest: str) -> Run:
 
     e.g. "0d4b7e6fb2a8" -> runs/0d4b7e6fb2a8_ada
     """
-    runs = folder / RUNS
-    prefix = f"{digest}{ID_SEPARATOR}"
-    found = sorted(item.name for item in runs.glob(f"{prefix}*") if item.is_dir())
-    if len(digest) != ID_DIGEST_CHARS or not found:
+    found = _runs(folder / RUNS).get(digest)
+    if found is None:
         raise Refusal(
             f"{folder.name} holds no run named {digest!r}; go back to the batch's "
             "hub to choose one"
         )
-    return Run(found[0], runs / found[0])
+    return found
 
 
 def hub(folder: Path, flows_dir: Path) -> Hub:
     """Return batch `folder`'s grid, each cell's stage read from its run."""
-    flows = tuple(tracked_flows(flows_dir))
-    suffixes = {flow: load_flow(flow, flows_dir).output_suffix for flow in flows}
+    return _grid(folder, _suffixes(flows_dir))
+
+
+def _suffixes(flows_dir: Path) -> dict[str, str]:
+    """Return each tracked flow's render suffix, by flow, in the flows' order."""
+    return {
+        flow: load_flow(flow, flows_dir).output_suffix
+        for flow in tracked_flows(flows_dir)
+    }
+
+
+def _grid(folder: Path, suffixes: Mapping[str, str]) -> Hub:
+    """Return batch `folder`'s grid over the flows `suffixes` names."""
     runs = _runs(folder / RUNS)
     sources = tuple(
         _source(path, runs.get(_digest(path)), suffixes) for path in _sources(folder)
     )
-    return Hub(folder.name, flows, sources)
+    return Hub(folder.name, tuple(suffixes), sources)
 
 
 def stage(run: Run, flow: str, suffix: str) -> Cell:
@@ -233,19 +254,22 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
         return Cell(None)
     review = run.directory(flow, REVIEW)
     approved = approved_versions(review)
+    status = review_state(review)
     try:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
             renders = rendered_seeds(
                 run.directory(flow, OUTPUTS, f"{approved[-1]:03d}"), suffix
             )
-            return Cell("rendered", len(renders)) if renders else Cell("approved")
+            if renders:
+                return Cell("rendered", len(renders), status=status)
+            return Cell("approved", status=status)
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
-            return Cell("draft")
+            return Cell("draft", status=status)
         if (sheet := latest_artifact(run.directory(flow, SHEETS))) is not None:
             _check(sheet, SHEET_FILE)
-            return Cell("sheet")
+            return Cell("sheet", status=status)
         if (tags := latest_artifact(run.directory(flow, WD14))) is not None:
             _check(tags, WD14_FILE)
             return Cell("tagged")
@@ -271,17 +295,22 @@ def _sources(folder: Path) -> list[Path]:
 
 def _digest(path: Path) -> str:
     """Return the twelve-character digest a run of this file is named by."""
-    return digest_of(path.read_bytes())[:ID_DIGEST_CHARS]
+    info = path.stat()
+    key = (str(path), info.st_size, info.st_mtime_ns, info.st_ino)
+    if key not in _DIGESTS:
+        _DIGESTS[key] = digest_of(path.read_bytes())[:ID_DIGEST_CHARS]
+    return _DIGESTS[key]
 
 
 def _runs(runs: Path) -> dict[str, Run]:
-    """Return the runs under `runs`, by the digest their identifier begins with."""
+    """Return the runs under `runs` that hold a frame, by their identifier's digest."""
     if not runs.is_dir():
         return {}
     return {
         item.name[:ID_DIGEST_CHARS]: Run(item.name, item)
         for item in sorted(runs.iterdir())
-        if item.is_dir() and item.name[ID_DIGEST_CHARS:].startswith(ID_SEPARATOR)
+        if item.name[ID_DIGEST_CHARS:].startswith(ID_SEPARATOR)
+        and (item / FRAME_NAME).is_file()
     }
 
 
@@ -294,26 +323,23 @@ def _source(path: Path, run: Run | None, suffixes: Mapping[str, str]) -> Source:
     return Source(path.name, run, cells)
 
 
-def _row(folder: Path, flows_dir: Path) -> Row:
+def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
     """Return one batch's row: its counts per flow and its newest file."""
-    grid = hub(folder, flows_dir)
+    grid = _grid(folder, suffixes)
     newest, kind = _newest(folder)
-    present = [flow for flow in grid.flows if _has(grid.sources, flow)]
-    bare = [one for one in grid.sources if not any(one.cells[f].stage for f in present)]
+    counts = [_count(grid.sources, flow) for flow in grid.flows]
+    bare = [
+        one for one in grid.sources if all(c.stage is None for c in one.cells.values())
+    ]
     return Row(
         folder.name,
         True,
         sources=len(grid.sources),
-        flows=tuple(_count(grid.sources, flow) for flow in present),
+        flows=tuple(count for count in counts if count.of),
         without_flow=len(bare),
         newest=newest,
         kind=kind,
     )
-
-
-def _has(sources: Sequence[Source], flow: str) -> bool:
-    """Return whether any source's run holds `flow`."""
-    return any(one.cells[flow].stage is not None for one in sources)
 
 
 def _count(sources: Sequence[Source], flow: str) -> FlowCount:

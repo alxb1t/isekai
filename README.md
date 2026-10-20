@@ -391,6 +391,7 @@ isekai/
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
+│   ├── npm_ui.py              # the gate's browser half: run a ui/ script, or refuse
 │   ├── typecheck_ui.py        # the gate's browser half: the types
 │   └── test_ui.py             # the gate's browser half: vitest
 ├── docs/                      # the architecture: principles, decisions, modules, data flow

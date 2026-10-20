@@ -23,7 +23,7 @@ function when(at: number | null): string {
 }
 
 function open(row: LibraryRow): void {
-  if (row.batch) void router.push(`/b/${encodeURIComponent(row.name)}/hub`)
+  if (row.batch) void router.push({ name: 'hub', params: { batch: row.name } })
 }
 
 /* ↑↓ walk the batches, ↵ opens the focused one. */

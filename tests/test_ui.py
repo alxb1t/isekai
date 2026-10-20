@@ -246,12 +246,13 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
     npm.write_text(f"#!/bin/sh\n{script}")
     npm.chmod(0o755)
     monkeypatch.setattr(bundle, "BINARY", str(npm))
-    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 1)
+    # Long enough for the stand-in to start its child on a loaded machine.
+    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 3)
 
     with pytest.raises(Refusal) as refused:
         bundle.ensure_built(source)
 
-    assert "1 seconds" in str(refused.value)
+    assert "3 seconds" in str(refused.value)
     assert "by hand" in str(refused.value)
     assert _stops(int(child.read_text()))
 

@@ -10,11 +10,9 @@ const router = useRouter()
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
 const place = computed(() => batch.value ?? 'library')
-const screen = computed(() =>
-  route.path.includes('/review/') ? 'review' : route.path.endsWith('/hub') ? 'hub' : 'home',
-)
+const screen = computed(() => route.name)
 const key = computed(() =>
-  screen.value === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
+  route.name === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
 )
 
 /* ⌥0 the library and ⌥1 the batch's hub, from anywhere, text fields included.
@@ -23,10 +21,10 @@ function onKey(event: KeyboardEvent): void {
   if (!event.altKey) return
   if (event.code === 'Digit0') {
     event.preventDefault()
-    void router.push('/')
+    void router.push({ name: 'home' })
   } else if (event.code === 'Digit1' && batch.value) {
     event.preventDefault()
-    void router.push(`/b/${batch.value}/hub`)
+    void router.push({ name: 'hub', params: { batch: batch.value } })
   }
 }
 
@@ -41,7 +39,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <span class="appbar__place">{{ place }}</span>
       <template v-if="batch">
         <RouterLink
-          :to="`/b/${batch}/hub`"
+          :to="{ name: 'hub', params: { batch } }"
           class="appbar__tab"
           :class="{ 'appbar__tab--active': screen === 'hub' }"
           >Hub<span class="appbar__key">⌥1</span></RouterLink

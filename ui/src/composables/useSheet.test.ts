@@ -17,7 +17,6 @@ function detail(id: string, saved: number): InputDetail {
   return {
     id,
     run: `${id}_run`,
-    batch: 'b',
     flow: 'f',
     schema: ['hair'],
     vocabulary: 1,

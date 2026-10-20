@@ -117,7 +117,6 @@ export interface InputDetail {
   /* The run's digest, which the URL names it by. */
   id: string
   run: string
-  batch: string
   flow: string
   schema: string[]
   vocabulary: number

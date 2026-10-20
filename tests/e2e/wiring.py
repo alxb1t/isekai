@@ -11,12 +11,9 @@ from pathlib import Path
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
-from isekai.shared.vocabulary import Vocabulary, read_tags
-from tests.conftest import CSV
+from tests.conftest import VOCABULARY
 from tests.fakes import FakeComfyClient
 from tests.stages import FIELD_MAP, Always, fake_wd14
-
-VOCABULARY = Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
 
 
 def fake(*, runs: Path) -> Wiring:

@@ -95,7 +95,7 @@ ADDRESS = f"http://{HOST}:{PORT}"
 
 def _at(run: Run, tail: str = "") -> str:
     """Return the review path naming `run` in `FLOW`: `/api/b/<b>/review/<d>/<f>`."""
-    return f"/api/b/{BATCH}/review/{run.id[:12]}/{FLOW}{tail}"
+    return f"/api/b/{BATCH}/review/{run.digest}/{FLOW}{tail}"
 
 
 @pytest.fixture
@@ -267,10 +267,10 @@ def test_the_hub_and_the_input_name_the_flow_the_schema_and_the_vocabulary(
 
     assert hub["batch"] == BATCH
     assert FLOW in hub["flows"]
-    assert [one["digest"] for one in hub["sources"]] == [made.id[:12]]
+    assert [one["digest"] for one in hub["sources"]] == [made.digest]
     assert hub["sources"][0]["cells"][FLOW]["stage"] == "draft"
     assert body["flow"] == FLOW
-    assert body["id"] == made.id[:12]
+    assert body["id"] == made.digest
     assert body["schema"] == list(schema.names)
     assert body["vocabulary"] == len(vocabulary)
     assert body["width"] == 1200
@@ -287,7 +287,7 @@ def test_a_review_url_names_its_run_by_the_digest_its_identifier_begins_with(
     unknown = client.get(f"/api/b/{BATCH}/review/{'0' * 12}/{FLOW}")
     assert unknown.status_code == 409
     assert "no run named" in unknown.json()["refusal"]
-    elsewhere = client.get(f"/api/b/no-such-batch/review/{made.id[:12]}/{FLOW}")
+    elsewhere = client.get(f"/api/b/no-such-batch/review/{made.digest}/{FLOW}")
     assert "no batch named 'no-such-batch'" in elsewhere.json()["refusal"]
 
 

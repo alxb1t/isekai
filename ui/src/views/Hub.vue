@@ -57,7 +57,10 @@ function reviewable(source: HubSource, flow: string): boolean {
 
 function review(source: HubSource, flow: string): void {
   if (reviewable(source, flow))
-    void router.push(`/b/${props.batch}/review/${source.digest}/${flow}`)
+    void router.push({
+      name: 'review',
+      params: { batch: props.batch, digest: source.digest, flow },
+    })
 }
 
 function place(row: number, column: number): void {
@@ -126,7 +129,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   <section v-else-if="info" class="hub">
     <div class="hub__head">
       <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
-      <button v-if="next" class="btn btn-primary hub__next" type="button" @click="reviewNext">
+      <button v-if="next" class="btn btn-primary" type="button" @click="reviewNext">
         Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
       </button>
       <span v-else class="hub__reason">nothing left to review</span>
@@ -162,17 +165,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             <span class="hub__reason">assigned by a stage verb</span>
           </template>
           <template v-else>
-            <input class="hub__tick hub__tick--locked" type="checkbox" checked disabled />
+            <input class="hub__tick" type="checkbox" checked disabled />
             <span class="hub__track">
               <span
                 v-for="(segment, index) in SEGMENTS"
                 :key="segment"
                 class="hub__segment"
-                :class="{
-                  'hub__segment--done':
-                    cell(source, flow).stage !== 'unreadable' &&
-                    index < DONE[cell(source, flow).stage as Stage],
-                }"
+                :class="{ 'hub__segment--done': index < DONE[cell(source, flow).stage as Stage] }"
               />
             </span>
             <span class="hub__word mono">{{ word(cell(source, flow)) }}</span>

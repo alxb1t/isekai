@@ -63,6 +63,9 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      server had already moved past, and every autosave after it was refused with
      a banner blaming another tab that did not exist. */
   let generation = 0
+  /* An edit not yet on disk. Set by every edit, cleared when a save starts and
+     restored if it fails, so a flush with nothing to send sends nothing. */
+  let dirty = false
   let timer: ReturnType<typeof setTimeout> | undefined
   let current = ''
 
@@ -70,6 +73,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
 
   async function open(id: string): Promise<void> {
     current = id
+    dirty = false
     loading.value = true
     done.length = 0
     undone.length = 0
@@ -107,11 +111,14 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      approved input and a stale `saved` both answer 409. A caller that waits
      without reading the answer waits for nothing. `false` is also what a
      read-only sheet answers -- nothing was written, so nothing may be built
-     from it. */
+     from it. A sheet with no edit pending answers `true` and sends nothing:
+     the disk already holds it. */
   async function flush(): Promise<boolean> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (detail.value === null || detail.value.readonly) return false
+    if (!dirty) return true
+    dirty = false
     const id = current
     const payload = { ...fields.value }
     const asked = (generation += 1)
@@ -132,6 +139,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
       }
       return true
     } catch (reason) {
+      if (current === id) dirty = true
       if (current === id && asked === generation) refusal.value = (reason as Error).message
       return false
     } finally {
@@ -147,6 +155,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
 
   function apply(edit: Edit): void {
     fields.value = { ...fields.value, [edit.field]: edit.after }
+    dirty = true
     schedule()
   }
 

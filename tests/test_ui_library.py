@@ -171,21 +171,21 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     assert now() == Cell("tagged")
     schema = load_flow(SUMMON).schema
     sheet(run, schema, vocabulary)
-    assert now() == Cell("sheet")
+    assert now() == Cell("sheet", status="draft")
     review(run, SUMMON)
-    assert now() == Cell("draft")
+    assert now() == Cell("draft", status="draft")
     approve(run, SUMMON, schema, vocabulary)
-    assert now() == Cell("approved")
+    assert now() == Cell("approved", status="approved")
     rendered = run.directory(SUMMON, OUTPUTS, "001")
     rendered.mkdir(parents=True)
     for seed in (7, 8):
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
-    assert now() == Cell("rendered", 2)
+    assert now() == Cell("rendered", 2, status="approved")
 
     grid = library.hub(folder, FLOWS_DIR)
     (source,) = grid.sources
-    assert source.cells[SUMMON] == Cell("rendered", 2)
-    assert source.digest == run.id[:12]
+    assert source.cells[SUMMON] == Cell("rendered", 2, status="approved")
+    assert source.digest == run.digest
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")
@@ -223,7 +223,7 @@ def test_an_unreadable_run_file_marks_its_cell_alone(
     assert cells["ada.jpg"].stage == "unreadable"
     assert "001.draft.json" in str(cells["ada.jpg"].refusal)
     assert "version 99" in str(cells["ada.jpg"].refusal)
-    assert cells["bea.jpg"] == Cell("approved")
+    assert cells["bea.jpg"] == Cell("approved", status="approved")
 
 
 @pytest.mark.spec("ui:hub:the-hub-writes-nothing")
@@ -246,7 +246,7 @@ def test_a_run_is_found_by_its_digest_and_an_unknown_one_refused(
     folder = _batch(tmp_path, "b", "ada.jpg")
     run = _run(folder, "ada.jpg")
 
-    assert library.run_named(folder, run.id[:12]) == run
+    assert library.run_named(folder, run.digest) == run
     with pytest.raises(Refusal, match="no run named"):
         library.run_named(folder, "0" * 12)
     with pytest.raises(Refusal, match="no run named"):

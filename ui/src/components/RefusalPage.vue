@@ -10,7 +10,7 @@ defineProps<{ refusal: string }>()
     <div>
       <p class="refusal__reason">{{ refusal }}</p>
       <p class="refusal__fix">
-        <RouterLink to="/" class="refusal__back">Back to the library ⌥0</RouterLink>
+        <RouterLink to="/">Back to the library ⌥0</RouterLink>
       </p>
     </div>
   </section>

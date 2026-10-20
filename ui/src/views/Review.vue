@@ -42,7 +42,8 @@ const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
 /* The URL is the state: choosing another sheet is a navigation. */
 function select(digest: string): void {
-  if (digest !== props.digest) void router.push(`/b/${props.batch}/review/${digest}/${props.flow}`)
+  if (digest !== props.digest)
+    void router.push({ name: 'review', params: { ...props, digest } })
 }
 
 function stepBatch(direction: -1 | 1): void {
@@ -57,11 +58,8 @@ function stepBatch(direction: -1 | 1): void {
    inside a pane the plain arrows do that pane's own thing — scroll the caption,
    walk the rows, change the input.
 
-   **This overturns the design's keyboard model on one binding.** `ux-flow.md`
-   gives `Alt+←/→` to the batch. The operator asked for the axes to separate:
-   the rail is a vertical list, so vertical is the batch, and horizontal is the
-   one movement the design had no binding for at all — getting to the caption to
-   read it, and back to the field being typed. */
+   The rail is a vertical list, so vertical is the batch, and horizontal is
+   getting to the caption to read it, and back to the field being typed. */
 type Pane = 'rail' | 'source' | 'sheet'
 
 const PANES: Pane[] = ['rail', 'source', 'sheet']
@@ -113,7 +111,7 @@ const flow = computed(() => props.flow)
 /* The draft receipt outlives the draft file, within one sitting.
 
    `approve()` unlinks the draft, so after approving there is nothing on disk for
-   `GET /api/inputs/{id}` to report -- but the pairing is the whole of "saving is
+   the review payload to report -- but the pairing is the whole of "saving is
    not approving", stated without words: two files, two acts, two timestamps
    seconds apart. So what was saved is remembered here and kept beside the
    approved line. An input approved in an earlier sitting shows the approved
@@ -176,7 +174,7 @@ async function approve(): Promise<void> {
   if (!(await sheet.flush())) return
   if (!(await approval.approve({ batch: props.batch, digest: id, flow: props.flow }))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
-  // The sheet is re-read so it is read-only before the page moves on.
+  // The sheet is re-read so the page shows it approved, whatever follows.
   const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
@@ -186,7 +184,7 @@ async function approve(): Promise<void> {
   }
   const next = after(read.value, props.flow, id)
   if (next) select(next)
-  else void router.push(`/b/${props.batch}/hub`)
+  else void router.push({ name: 'hub', params: { batch: props.batch } })
 }
 
 /* The rail already knows every input's dimensions, so the source column draws
@@ -379,13 +377,12 @@ onBeforeRouteLeave(async () => {
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('beforeunload', onLeave)
-  try {
-    await batch.load()
-  } catch (reason) {
-    failure.value = (reason as Error).message
+  // Independent reads: the sheet needs only the route's digest.
+  const [read] = await Promise.allSettled([batch.load(), sheet.open(current.value)])
+  if (read.status === 'rejected') {
+    failure.value = (read.reason as Error).message
     return
   }
-  await sheet.open(current.value)
   // The rail first: it is where the operator decides what they are looking at.
   await nextTick()
   enter('rail')

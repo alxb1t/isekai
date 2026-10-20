@@ -55,7 +55,7 @@ class Served:
 
     def review(self, run: Run, batch: str | None = None) -> str:
         """Return the address of `run`'s review in `FLOW`, in `batch` or the main."""
-        return f"{self.url}/b/{batch or self.batch}/review/{run.id[:12]}/{FLOW}"
+        return f"{self.url}/b/{batch or self.batch}/review/{run.digest}/{FLOW}"
 
     def hub_of(self, batch: str) -> str:
         """Return the address of `batch`'s hub."""
