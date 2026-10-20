@@ -8,7 +8,7 @@ the key its task names.
 
 - [x] 1 — The harness
 - [x] 2 — The defects
-- [ ] 3 — The library
+- [x] 3 — The library
 - [ ] 4 — The shell
 - [ ] 5 — The hub
 - [ ] 6 — The queue
@@ -52,9 +52,9 @@ the key its task names.
 
 ## 3 — The library
 
-- [ ] 3.1 Add `isekai/interface/ui/library.py` — the library from `ISEKAI_LIBRARY`, created when absent, refused through `trackable` inside the tree; batches by `sources/`; each row's figures; each cell's stage — per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4). It imports no web framework.
+- [x] 3.1 Add `isekai/interface/ui/library.py` — the library from `ISEKAI_LIBRARY`, created when absent, refused through `trackable` inside the tree; batches by `sources/`; each row's figures; each cell's stage — per [D1](design.md#d1), [D2](design.md#d2) and [D4](design.md#d4). It imports no web framework.
   Verify: `grep -c -E 'fastapi|starlette' isekai/interface/ui/library.py` prints `0`, and `uv run python -c "import isekai.interface.ui.library"` exits 0.
-- [ ] 3.2 Add `tests/test_ui_library.py` binding `ui:library:an-absent-library-is-created`, `ui:library:a-library-git-can-reach-is-refused`, every `ui:batch-folder:*` key and every `ui:hub:*` key of [the ui delta](specs/ui/spec.md).
+- [x] 3.2 Add `tests/test_ui_library.py` binding `ui:library:an-absent-library-is-created`, `ui:library:a-library-git-can-reach-is-refused`, every `ui:batch-folder:*` key and every `ui:hub:*` key of [the ui delta](specs/ui/spec.md).
   Verify: `uv run pytest -q tests/test_ui_library.py` exits 0, and `grep -c 'ui:hub:the-hub-writes-nothing' tests/test_ui_library.py` prints `1`.
 
 ## 4 — The shell

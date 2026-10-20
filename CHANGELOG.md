@@ -14,6 +14,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A browser test harness: vitest for the page's composables and Playwright from pytest for the page, both in
   the gate, with `make browsers` fetching Chromium; `ISEKAI_WIRING` serves the surface on the suite's doubles
   (0061 D6, D7).
+- `isekai/interface/ui/library.py` reads the library: a folder holding `sources/` is a batch, each batch's row
+  carries its counts per flow and its newest file, and each source × flow cell its stage, all from listings
+  (0061 D1, D2, D4).
 
 ### Fixed
 
