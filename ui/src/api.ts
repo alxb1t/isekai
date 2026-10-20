@@ -29,8 +29,9 @@ function get<T>(url: string): Promise<T> {
   return request<T>(url)
 }
 
-function send<T>(url: string, method: string, body: unknown): Promise<T> {
+function send<T>(url: string, method: string, body: unknown, init: RequestInit = {}): Promise<T> {
   return request<T>(url, {
+    ...init,
     method,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -64,13 +65,14 @@ export function inputDetail(id: string): Promise<InputDetail> {
 /* `saved` is the receipt this page last received, echoed back as a precondition:
    the server compares it to the draft's own mtime and answers 409 on a mismatch.
    It is the only monotonic fact on disk -- the draft carries no timestamp, no
-   revision counter and no digest. */
+   revision counter and no digest. Kept alive, so the flush a leaving page starts
+   outlives the page. */
 export function saveDraft(
   id: string,
   fields: Record<string, string[]>,
   saved: number | null,
 ): Promise<{ draft: string; saved: number; budget: Budget }> {
-  return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields, saved })
+  return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields, saved }, { keepalive: true })
 }
 
 export function approve(

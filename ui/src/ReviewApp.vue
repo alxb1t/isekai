@@ -364,8 +364,7 @@ function onKey(event: KeyboardEvent): void {
   }
 }
 
-// The draft is flushed as the tab goes, best-effort: the browser may cancel
-// the request, so a close mid-debounce can lose the last edit.
+// The draft is flushed as the tab goes; the PUT is kept alive past the page.
 const onLeave = () => void sheet.flush()
 
 onMounted(async () => {

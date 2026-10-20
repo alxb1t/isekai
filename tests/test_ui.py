@@ -11,6 +11,7 @@ import io
 import os
 import random
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -304,15 +305,21 @@ def test_a_missing_bundle_is_built_before_the_surface_serves(
     (source / "node_modules").mkdir(parents=True)
     ran: list[list[str]] = []
 
-    def _build(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    class _Build:
         """Stand in for `npm run build`, writing what vite would write."""
-        ran.append(argv)
-        (source / "dist" / "assets").mkdir(parents=True)
-        (source / "dist" / "index.html").write_text("<!doctype html>")
-        return subprocess.CompletedProcess(argv, 0, "", "")
+
+        returncode = 0
+
+        def __init__(self, argv: list[str], **kwargs: object) -> None:
+            ran.append(argv)
+            (source / "dist" / "assets").mkdir(parents=True)
+            (source / "dist" / "index.html").write_text("<!doctype html>")
+
+        def communicate(self, timeout: float | None = None) -> tuple[str, str]:
+            return "", ""
 
     monkeypatch.setattr(bundle.shutil, "which", lambda _: "/usr/local/bin/npm")
-    monkeypatch.setattr(bundle.subprocess, "run", _build)
+    monkeypatch.setattr(bundle.subprocess, "Popen", _Build)
 
     built = bundle.ensure_built(source)
 
@@ -466,31 +473,43 @@ def test_a_fetched_dependency_tree_is_not_source(tmp_path: Path) -> None:
 def test_a_build_that_does_not_finish_is_stopped_and_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The ceiling is applied, not merely declared.
+    """The ceiling is applied, and it stops the build's whole process group.
 
-    Asserting `BUILD_TIMEOUT > 0` restates the constant and stays green if the
-    `timeout=` kwarg is dropped from the call, which is the only way this can
-    regress. `npm run build` can reach the network resolving a missing
-    dependency, and an `isekai ui` that hangs with no port bound and no output
-    is indistinguishable from one that died.
+    A real stand-in for `npm`, which starts a child the way `npm` starts `vite`:
+    killing the parent alone would leave that child building unseen.
     """
     source = tmp_path / "ui"
     (source / "node_modules").mkdir(parents=True)
-    passed: dict[str, object] = {}
-
-    def never_finishes(*args: object, **kwargs: object) -> object:
-        passed.update(kwargs)
-        raise subprocess.TimeoutExpired(cmd="npm run build", timeout=1)
-
-    monkeypatch.setattr(bundle.shutil, "which", lambda _: "/usr/bin/npm")
-    monkeypatch.setattr(bundle.subprocess, "run", never_finishes)
+    child = tmp_path / "child.pid"
+    npm = tmp_path / "npm"
+    script = f"sleep 60 >/dev/null 2>&1 &\necho $! > {child}\nwait\n"
+    npm.write_text(f"#!/bin/sh\n{script}")
+    npm.chmod(0o755)
+    monkeypatch.setattr(bundle, "BINARY", str(npm))
+    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 1)
 
     with pytest.raises(Refusal) as refused:
         bundle.ensure_built(source)
 
-    assert passed["timeout"] == bundle.BUILD_TIMEOUT
-    assert f"{bundle.BUILD_TIMEOUT} seconds" in str(refused.value)
+    assert "1 seconds" in str(refused.value)
     assert "by hand" in str(refused.value)
+    assert _stops(int(child.read_text()))
+
+
+def _stops(pid: int) -> bool:
+    """Return whether process `pid` is gone, or a zombie, within a few seconds."""
+    for _ in range(50):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        state = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
+        ).stdout.strip()
+        if state.startswith("Z") or not state:
+            return True
+        time.sleep(0.1)
+    return False
 
 
 @pytest.mark.spec_exempt("structural: when the on-demand build actually fires")

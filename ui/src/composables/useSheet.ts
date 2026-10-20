@@ -41,9 +41,11 @@ export function useSheet() {
 
   const done: Edit[] = []
   const undone: Edit[] = []
-  // Counted, not a flag: a second PUT can start before the first has answered,
-  // and the spinner must go when the last one lands rather than the first.
-  let inFlight = 0
+  /* One token per save, never reset: a second PUT can start before the first
+     has answered, and an input switch can land between them. `saving` is true
+     exactly while a token is held, whichever order the answers come in. */
+  const inFlight = new Set<number>()
+  let token = 0
   /* A slow earlier answer must never overwrite a newer one. Two saves can be in
      flight at once -- the debounce is what puts them there -- so the receipt of
      the first can land after the second's. The pattern is `useVocabulary`'s,
@@ -89,8 +91,6 @@ export function useSheet() {
     saved.value = body.saved
     refusal.value = null
     loading.value = false
-    inFlight = 0
-    saving.value = false
   }
 
   /* Returns the write it started, so `approve()` can wait for it. A `flush()`
@@ -112,7 +112,8 @@ export function useSheet() {
     const id = current
     const payload = { ...fields.value }
     const asked = (generation += 1)
-    inFlight += 1
+    const mine = (token += 1)
+    inFlight.add(mine)
     saving.value = true
     try {
       const receipt = await saveDraft(id, payload, saved.value)
@@ -131,8 +132,8 @@ export function useSheet() {
       if (current === id && asked === generation) refusal.value = (reason as Error).message
       return false
     } finally {
-      inFlight -= 1
-      if (inFlight === 0) saving.value = false
+      inFlight.delete(mine)
+      saving.value = inFlight.size > 0
     }
   }
 

@@ -192,6 +192,37 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     assert answered.json() == {"refusal": "not from this page"}
 
 
+@pytest.mark.spec("ui:address:a-cross-site-request-without-origin-is-refused")
+def test_a_cross_site_request_without_origin_is_refused(
+    client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # An image tag on another page probing for the photograph: no `Origin`, and
+    # the browser marks it `cross-site` all the same.
+    read: list[object] = []
+    monkeypatch.setattr(app_module, "FileResponse", lambda path: read.append(path))
+    answered = client.get(
+        f"/api/inputs/{made.id}/photo", headers={"sec-fetch-site": "cross-site"}
+    )
+
+    assert answered.status_code == 403
+    assert answered.json() == {"refusal": "not from this page"}
+    assert read == []
+
+
+@pytest.mark.spec_exempt("structural: twin -- this page's own requests are answered")
+def test_a_request_without_origin_from_this_page_or_no_browser_is_answered(
+    client: TestClient,
+) -> None:
+    for site in ("same-origin", "none"):
+        answered = client.get("/api/batch", headers={"sec-fetch-site": site})
+        assert answered.status_code == 200, site
+    assert client.get("/api/batch").status_code == 200
+    assert (
+        client.get("/api/batch", headers={"sec-fetch-site": "same-site"}).status_code
+        == 403
+    )
+
+
 @pytest.mark.spec("ui:address:every-loopback-spelling-is-answered")
 def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
     # `localhost` is what an operator types and `127.0.0.1` is what the startup
@@ -236,9 +267,11 @@ def test_a_missing_caption_is_served_with_the_command_that_writes_it(
     body = response.json()
     assert body["caption"] is None
     command = body["caption_command"]
-    assert command == f"python -m isekai caption --flow {FLOW} {made.id}"
-    parsed = build_parser().parse_args(command.split()[3:])
+    # The fixture's runs root is not the default, so the command works when
+    # pasted only if it names that root.
+    parsed = build_parser().parse_args(shlex.split(command)[3:])
     assert (parsed.verb, parsed.flows, parsed.photos) == ("caption", [FLOW], [made.id])
+    assert parsed.runs == made.path.parent
 
 
 @pytest.mark.spec_exempt("structural: the join the page reads per input")

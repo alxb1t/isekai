@@ -15,6 +15,13 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   the gate, with `make browsers` fetching Chromium; `ISEKAI_WIRING` serves the surface on the suite's doubles
   (0061 D6, D7).
 
+### Fixed
+
+- The review page's saving state holds a token per save, so an input switch can no longer silence it; the draft
+  `PUT` is kept alive, so an edit pending as the tab closes is sent (0061 D8).
+- A bundle build past its ceiling stops its whole process group; a request with no `Origin` is refused unless
+  `Sec-Fetch-Site` says it came from the page; a missing caption's command names its runs root (0061 D8).
+
 ## [0.36.0] - 2026-10-17 · 0060-the-working-window
 
 ### Changed

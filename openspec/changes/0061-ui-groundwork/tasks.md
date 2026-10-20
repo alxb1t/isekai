@@ -7,7 +7,7 @@ the key its task names.
 ## Progress
 
 - [x] 1 — The harness
-- [ ] 2 — The defects
+- [x] 2 — The defects
 - [ ] 3 — The library
 - [ ] 4 — The shell
 - [ ] 5 — The hub
@@ -37,17 +37,17 @@ the key its task names.
 
 ## 2 — The defects
 
-- [ ] 2.1 **HALT CHECK** — the defects still hold: the counter zeroed in `open()`, no `keepalive`, no process group, `Origin` checked only when sent, `caption_command` without `--runs`.
+- [x] 2.1 **HALT CHECK** — the defects still hold: the counter zeroed in `open()`, no `keepalive`, no process group, `Origin` checked only when sent, `caption_command` without `--runs`.
   Verify: `grep -c 'inFlight = 0' ui/src/composables/useSheet.ts` prints `1`, `grep -c 'keepalive' ui/src/api.ts` prints `0`, `grep -c 'start_new_session' isekai/interface/ui/bundle.py` prints `0`, `grep -c 'if origin is not None and origin not in origins' isekai/interface/ui/app.py` prints `1`, and `grep -c 'python -m isekai caption --flow {batch.flow.id} {held.run.id}' isekai/interface/ui/app.py` prints `1`.
-- [ ] 2.2 Fix 0018·R5 in `ui/src/composables/useSheet.ts` with a token per save, and add `ui/src/composables/useSheet.test.ts` binding `ui:save:a-stale-save-cannot-clear-saving`, per [D8](design.md#d8).
+- [x] 2.2 Fix 0018·R5 in `ui/src/composables/useSheet.ts` with a token per save, and add `ui/src/composables/useSheet.test.ts` binding `ui:save:a-stale-save-cannot-clear-saving`, per [D8](design.md#d8).
   Verify: `grep -c 'inFlight = 0' ui/src/composables/useSheet.ts` prints `0`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 2.3 Fix 0018·R12: `keepalive: true` on the draft `PUT` in `ui/src/api.ts`, with a test in `ui/src/composables/useSheet.test.ts` binding `ui:save:a-pending-edit-is-sent-on-leaving`, per [D8](design.md#d8).
+- [x] 2.3 Fix 0018·R12: `keepalive: true` on the draft `PUT` in `ui/src/api.ts`, with a test in `ui/src/composables/useSheet.test.ts` binding `ui:save:a-pending-edit-is-sent-on-leaving`, per [D8](design.md#d8).
   Verify: `grep -c 'keepalive: true' ui/src/api.ts` prints `1`, and `grep -c 'ui:save:a-pending-edit-is-sent-on-leaving' ui/src/composables/useSheet.test.ts` prints `1`.
-- [ ] 2.4 Fix 0023·R5 in `isekai/interface/ui/bundle.py` — `Popen` with `start_new_session=True`, `os.killpg` on timeout — and make the test bound to `ui:bundle:an-unfinished-build-is-stopped-and-named` in `tests/test_ui.py` see the group stopped, per [D8](design.md#d8).
+- [x] 2.4 Fix 0023·R5 in `isekai/interface/ui/bundle.py` — `Popen` with `start_new_session=True`, `os.killpg` on timeout — and make the test bound to `ui:bundle:an-unfinished-build-is-stopped-and-named` in `tests/test_ui.py` see the group stopped, per [D8](design.md#d8).
   Verify: `grep -c 'start_new_session=True' isekai/interface/ui/bundle.py` prints `1`, and `uv run pytest -q tests/test_ui.py` exits 0.
-- [ ] 2.5 Fix 0023·S1 in `_addressed_here` (`isekai/interface/ui/app.py`) and add a test in `tests/test_ui_api.py` binding `ui:address:a-cross-site-request-without-origin-is-refused`, per [D8](design.md#d8).
+- [x] 2.5 Fix 0023·S1 in `_addressed_here` (`isekai/interface/ui/app.py`) and add a test in `tests/test_ui_api.py` binding `ui:address:a-cross-site-request-without-origin-is-refused`, per [D8](design.md#d8).
   Verify: `grep -c 'Sec-Fetch-Site' isekai/interface/ui/app.py` prints a number of at least `1`, and `grep -c 'a-cross-site-request-without-origin-is-refused' tests/test_ui_api.py` prints `1`.
-- [ ] 2.6 Fix 0032·R1: build `caption_command` through `_remedy` in `isekai/interface/ui/app.py`, and extend the test bound to `ui:source:a-missing-caption-names-its-command` in `tests/test_ui_api.py` to a non-default runs root, per [D8](design.md#d8).
+- [x] 2.6 Fix 0032·R1: build `caption_command` through `_remedy` in `isekai/interface/ui/app.py`, and extend the test bound to `ui:source:a-missing-caption-names-its-command` in `tests/test_ui_api.py` to a non-default runs root, per [D8](design.md#d8).
   Verify: `grep -c 'python -m isekai caption --flow {batch.flow.id} {held.run.id}' isekai/interface/ui/app.py` prints `0`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
 
 ## 3 — The library

@@ -101,6 +101,10 @@ FORBIDDEN = 403
 # reserved, so allowing the alias the operator actually types costs nothing.
 LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
 
+# The `Sec-Fetch-Site` values a request without `Origin` is answered under: this
+# page's own, a typed address or bookmark, and none at all from a non-browser.
+SAME_SITE = frozenset({"same-origin", "none", None})
+
 
 def authorities(host: str, port: int) -> frozenset[str]:
     """Return every `Host` value this server, bound to `host:port`, answers to.
@@ -143,12 +147,17 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         resolves that domain to 127.0.0.1 and talks to this port with the
         browser's full cooperation. `Origin`, when the browser sends one,
         defeats the cross-site write: a `PUT` from another page carries its
-        origin and never this one's.
+        origin and never this one's. Without `Origin`, `Sec-Fetch-Site` decides:
+        an image tag on another site sends no `Origin` and is still marked
+        `cross-site` (D24). A client that is not a browser sends neither.
         """
         if request.headers.get("Host", "") not in allowed:
             return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
         origin = request.headers.get("Origin")
+        site = request.headers.get("Sec-Fetch-Site")
         if origin is not None and origin not in origins:
+            return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
+        if origin is None and site not in SAME_SITE:
             return JSONResponse({"refusal": "not from this page"}, FORBIDDEN)
         return await call_next(request)
 
@@ -277,9 +286,7 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
             # never spells a command.
-            "caption_command": None
-            if caption
-            else f"python -m isekai caption --flow {batch.flow.id} {held.run.id}",
+            "caption_command": None if caption else _command(batch, held, "caption"),
             # Both lists ride on this payload rather than on endpoints of their
             # own, and both are `null` where the artifact is absent -- which is
             # three legitimate states, none of them a failure.
@@ -477,10 +484,10 @@ def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     ]
 
 
-def _remedy(batch: Batch, held: Input, verb: str) -> str:
-    """Return the remedy naming the command that rewrites `verb`'s file for `held`.
+def _command(batch: Batch, held: Input, verb: str, *flags: str) -> str:
+    """Return the command that runs `verb` for `held`, as the operator pastes it.
 
-    e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
+    e.g. "caption" -> "python -m isekai caption --flow f r"
 
     The run's own root is named whenever it is not the default, or the pasted
     command would look under `.data/runs` for a run served from another root.
@@ -491,10 +498,16 @@ def _remedy(batch: Batch, held: Input, verb: str) -> str:
         if root.resolve() == RUNS_ROOT.resolve()
         else f" --runs {shlex.quote(str(root))}"
     )
-    return (
-        f"rewrite it with `python -m isekai {verb} --flow {batch.flow.id}{runs} "
-        f"--new-version {held.run.id}`"
-    )
+    words = " ".join((*flags, held.run.id))
+    return f"python -m isekai {verb} --flow {batch.flow.id}{runs} {words}"
+
+
+def _remedy(batch: Batch, held: Input, verb: str) -> str:
+    """Return the remedy naming the command that rewrites `verb`'s file for `held`.
+
+    e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
+    """
+    return f"rewrite it with `{_command(batch, held, verb, '--new-version')}`"
 
 
 def _is_tag_list(value: object) -> TypeGuard[list[str]]:
