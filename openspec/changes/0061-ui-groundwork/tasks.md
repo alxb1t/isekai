@@ -11,7 +11,7 @@ the key its task names.
 - [x] 3 — The library
 - [x] 4 — The shell
 - [x] 5 — The hub
-- [ ] 6 — The queue
+- [x] 6 — The queue
 - [ ] 7 — The docs and the deletions
 
 ## 1 — The harness
@@ -81,9 +81,9 @@ the key its task names.
 
 ## 6 — The queue
 
-- [ ] 6.1 Implement the queue per [D5](design.md#d5) in `ui/src/composables/useQueue.ts`, `ui/src/views/Hub.vue` and `ui/src/views/Review.vue`: *Review next*, the rail as the queue, Approve to the next sheet or the hub, the post-approve failure in the approve bar (0018·R8); in `isekai/interface/ui/app.py`, a draft through `review` on opening.
+- [x] 6.1 Implement the queue per [D5](design.md#d5) in `ui/src/composables/useQueue.ts`, `ui/src/views/Hub.vue` and `ui/src/views/Review.vue`: *Review next*, the rail as the queue, Approve to the next sheet or the hub, the post-approve failure in the approve bar (0018·R8); in `isekai/interface/ui/app.py`, a draft through `review` on opening.
   Verify: `test -e ui/src/composables/useQueue.ts` exits 0, `grep -c 'Review next' ui/src/views/Hub.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 6.2 Add `tests/e2e/test_queue.py` binding `ui:queue:approve-moves-to-the-next-sheet`, `ui:queue:after-the-last-sheet-the-hub-opens` and `ui:queue:a-failure-after-approval-is-shown`; bind `ui:queue:opening-a-sheet-writes-its-draft` in `tests/test_ui_api.py`.
+- [x] 6.2 Add `tests/e2e/test_queue.py` binding `ui:queue:approve-moves-to-the-next-sheet`, `ui:queue:after-the-last-sheet-the-hub-opens` and `ui:queue:a-failure-after-approval-is-shown`; bind `ui:queue:opening-a-sheet-writes-its-draft` in `tests/test_ui_api.py`.
   Verify: `uv run pytest -q tests/e2e/test_queue.py tests/test_ui_api.py` exits 0, and `grep -c 'ui:queue:' tests/e2e/test_queue.py` prints `3`.
 
 ## 7 — The docs and the deletions

@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { hub } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
+import { firstFlow, queue } from '../composables/useQueue'
 import type { HubCell, HubInfo, HubSource, Stage } from '../types'
 
 /* A batch's hub: its sources by its tracked flows, each cell's stage read from
@@ -29,6 +30,16 @@ const DONE: Record<Stage, number> = {
 }
 
 const flows = computed(() => info.value?.flows ?? [])
+
+/* Review next: the first unapproved sheet of the first flow that has any. */
+const next = computed(() => {
+  const held = info.value
+  const flow = held ? firstFlow(held) : null
+  if (!held || !flow) return null
+  const digest = queue(held, flow)[0]
+  const source = held.sources.find((one) => one.digest === digest)
+  return source ? { source, flow } : null
+})
 const sources = computed(() => info.value?.sources ?? [])
 
 function cell(source: HubSource, flow: string): HubCell {
@@ -66,20 +77,17 @@ function place(row: number, column: number): void {
   )
 }
 
-/* ↑↓←→ move between cells, ↵ opens the focused cell's Review, and ⌥2 opens the
-   focused cell's, or else the first that has a sheet. Matched on `event.code`,
-   because Option types a character on macOS. */
+function reviewNext(): void {
+  if (next.value) review(next.value.source, next.value.flow)
+}
+
+/* ↑↓←→ move between cells, ↵ opens the focused cell's Review, ⌥2 Review next.
+   Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
   const { row, column } = focus.value
   if (event.altKey && event.code === 'Digit2') {
     event.preventDefault()
-    const here = sources.value[row]
-    if (here && reviewable(here, flows.value[column])) review(here, flows.value[column])
-    else {
-      for (const source of sources.value)
-        for (const flow of flows.value)
-          if (reviewable(source, flow)) return review(source, flow)
-    }
+    reviewNext()
     return
   }
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -116,7 +124,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
-    <p class="hub__head mono">{{ sources.length }} sources × {{ flows.length }} flows</p>
+    <div class="hub__head">
+      <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
+      <button v-if="next" class="btn btn-primary hub__next" type="button" @click="reviewNext">
+        Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
+      </button>
+      <span v-else class="hub__reason">nothing left to review</span>
+    </div>
     <div
       ref="grid"
       class="hub__grid"
@@ -174,6 +188,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
       </template>
     </div>
-    <p class="hub__keys mono">↑↓←→ move · ↵ the cell's review · ⌥2 review · ⌥0 library</p>
+    <p class="hub__keys mono">↑↓←→ move · ↵ the cell's review · ⌥2 review next · ⌥0 library</p>
   </section>
 </template>

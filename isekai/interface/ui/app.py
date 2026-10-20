@@ -63,6 +63,7 @@ from isekai.foundation.run import (
     ID_DIGEST_CHARS,
     REVIEW,
     RUNS_ROOT,
+    SHEETS,
     TAGS,
     WD14,
     Run,
@@ -75,6 +76,7 @@ from isekai.pipeline.review import (
     TokenBudget,
     approve,
     current_draft,
+    review,
     save_draft,
     token_budget,
 )
@@ -330,6 +332,10 @@ def create_app(
         an earlier sitting open read-only rather than empty.
         """
         one = held(batch, digest, flow)
+        if latest_artifact(one.directory(SHEETS)) is not None:
+            # Opening a sheet takes its draft through the stage that owns it (D5);
+            # `review` writes nothing where a draft or an approval is there.
+            review(one.run, one.flow.id)
         draft = one.draft()
         approved = one.approved()
         state = review_state(one.directory(REVIEW))

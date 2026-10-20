@@ -668,6 +668,23 @@ body {
   border-top: 1px solid var(--color-neutral-900);
 }
 
+.approve-bar {
+  flex-wrap: wrap;
+}
+
+.approve-bar__refusal {
+  display: flex;
+  gap: 8px;
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.approve-bar__refusal .refusal__mark {
+  margin-top: 4px;
+}
+
 .approve-bar__note {
   font-size: 11px;
   color: var(--color-neutral-500);
@@ -885,6 +902,9 @@ body {
 }
 
 .hub__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin: 0 0 12px;
   font-size: 12px;
   color: var(--ink-2);

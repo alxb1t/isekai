@@ -142,16 +142,19 @@ def _clear_wd14(run: Run) -> None:
         path.unlink()
 
 
-def _client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
+def _client(
+    wired: Wiring, made: Run, tmp_path: Path, *, drafted: bool = True
+) -> TestClient:
     """Return a client over the app, with a stand-in for the built bundle.
 
-    `review()` takes the draft opening a sheet takes, and does nothing to an
-    approved one. The library is the folder holding the wiring's batch.
+    `drafted` takes the draft opening the sheet would, so a test may write
+    before it reads. The library is the folder holding the wiring's batch.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
     (dist / "index.html").write_text("<!doctype html>")
-    review(made, FLOW)
+    if drafted:
+        review(made, FLOW)
     app = create_app(
         wired.runs_root.parent.parent,
         wired,
@@ -296,6 +299,24 @@ def test_any_other_path_is_the_page_and_an_unknown_api_path_is_not_found(
     assert page.status_code == 200
     assert page.text == "<!doctype html>"
     assert client.get("/api/nothing-here").status_code == 404
+
+
+@pytest.mark.spec("ui:queue:opening-a-sheet-writes-its-draft")
+def test_opening_a_sheet_with_no_draft_writes_one_and_opening_again_writes_none(
+    wired: Wiring, made: Run, tmp_path: Path
+) -> None:
+    client = _client(wired, made, tmp_path, drafted=False)
+    directory = made.directory(FLOW, REVIEW)
+    assert not directory.exists()
+
+    body = client.get(_at(made)).json()
+
+    assert body["draft"] == "001.draft.json"
+    assert body["fields"]["hair_colour"]
+    written = (directory / "001.draft.json").stat().st_mtime_ns
+    client.get(_at(made))
+    assert sorted(path.name for path in directory.iterdir()) == ["001.draft.json"]
+    assert (directory / "001.draft.json").stat().st_mtime_ns == written
 
 
 @pytest.mark.spec("ui:source:a-missing-caption-names-its-command")

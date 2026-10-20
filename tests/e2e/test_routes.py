@@ -11,7 +11,8 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:
     page.goto(served.url)
-    expect(page.locator(".library__row[data-batch]")).to_be_focused()
+    expect(page.locator(".library__row[data-batch]").first).to_be_focused()
+    page.locator(".library__row", has_text=served.batch).focus()
     page.keyboard.press("Enter")
     expect(page).to_have_url(served.hub)
     expect(page.locator(".appbar__place")).to_have_text(served.batch)

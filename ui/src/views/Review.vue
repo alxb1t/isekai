@@ -13,7 +13,7 @@ import SheetForm from '../components/SheetForm.vue'
 import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
-import { useBatch } from '../composables/useBatch'
+import { after, queue, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import type { FieldCandidates } from '../types'
 
@@ -27,7 +27,12 @@ import type { FieldCandidates } from '../types'
    move between them are read by `TagInput`. */
 const props = defineProps<{ batch: string; digest: string; flow: string }>()
 const router = useRouter()
-const batch = useBatch(props.batch, props.flow)
+const batch = useQueue(props.batch, props.flow, () => props.digest)
+const failure = ref<string | null>(null)
+const done = computed(() => batch.info.value !== null && queue(batch.info.value, props.flow).length === 0)
+/* A refusal after the approval landed: the approval stands, and the bar says
+   what could not be read next. */
+const afterApproval = ref<string | null>(null)
 const sheet = useSheet({ batch: props.batch, flow: props.flow })
 const approval = useApproval()
 const current = computed(() => props.digest)
@@ -171,9 +176,17 @@ async function approve(): Promise<void> {
   if (!(await sheet.flush())) return
   if (!(await approval.approve({ batch: props.batch, digest: id, flow: props.flow }))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
-  await Promise.all([batch.load(), sheet.open(id)])
+  // The sheet is re-read so it is read-only before the page moves on.
+  const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
+  if (read.status === 'rejected') {
+    afterApproval.value = (read.reason as Error).message
+    return
+  }
+  const next = after(read.value, props.flow, id)
+  if (next) select(next)
+  else void router.push(`/b/${props.batch}/hub`)
 }
 
 /* The rail already knows every input's dimensions, so the source column draws
@@ -366,8 +379,12 @@ onBeforeRouteLeave(async () => {
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('beforeunload', onLeave)
-  await batch.load()
-  if (batch.failure.value) return
+  try {
+    await batch.load()
+  } catch (reason) {
+    failure.value = (reason as Error).message
+    return
+  }
   await sheet.open(current.value)
   // The rail first: it is where the operator decides what they are looking at.
   await nextTick()
@@ -388,6 +405,7 @@ watch(current, (id) => {
   focused.value = null
   selectedChip.value = null
   approval.forget()
+  afterApproval.value = null
   lastField.value = null
   lastDraft.value = null
   void sheet.open(id).then(() => enter(paneNow()))
@@ -395,7 +413,7 @@ watch(current, (id) => {
 </script>
 
 <template>
-  <RefusalPage v-if="batch.failure.value" :refusal="batch.failure.value" />
+  <RefusalPage v-if="failure" :refusal="failure" />
   <div v-else class="review">
     <AppHeader
       :flow="flow"
@@ -415,7 +433,7 @@ watch(current, (id) => {
           :vocabulary="vocabulary"
         />
         <span
-          v-else-if="batch.allApproved.value"
+          v-else-if="done"
           class="app-header__receipt--approved mono"
           style="font-size: 11.5px"
         >
@@ -482,6 +500,7 @@ watch(current, (id) => {
             :at="clock(approval.at.value)"
             :file="approvedReceipt"
             :working="approval.working.value"
+            :refusal="afterApproval"
             @approve="approve"
           />
         </template>

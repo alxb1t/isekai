@@ -31,6 +31,14 @@ REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
 
+# A batch per queue test, each source a sheet with no draft, so every test owns
+# the sheets it approves. Sizes differ so each source is its own run.
+QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
+    "queue-moves": (("cid", (700, 1000)), ("dot", (710, 1000))),
+    "queue-last": (("eve", (720, 1000)),),
+    "queue-fails": (("fay", (730, 1000)),),
+}
+
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
 
@@ -43,15 +51,20 @@ class Served:
     batch: str
     draft: Run
     approved: Run
+    queues: dict[str, tuple[Run, ...]]
 
-    def review(self, run: Run) -> str:
-        """Return the address of `run`'s review in `FLOW`."""
-        return f"{self.url}/b/{self.batch}/review/{run.id[:12]}/{FLOW}"
+    def review(self, run: Run, batch: str | None = None) -> str:
+        """Return the address of `run`'s review in `FLOW`, in `batch` or the main."""
+        return f"{self.url}/b/{batch or self.batch}/review/{run.id[:12]}/{FLOW}"
+
+    def hub_of(self, batch: str) -> str:
+        """Return the address of `batch`'s hub."""
+        return f"{self.url}/b/{batch}/hub"
 
     @property
     def hub(self) -> str:
-        """Return the address of the batch's hub."""
-        return f"{self.url}/b/{self.batch}/hub"
+        """Return the address of the main batch's hub."""
+        return self.hub_of(self.batch)
 
 
 def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
@@ -97,6 +110,10 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     review(draft, FLOW)
     review(approved, FLOW)
     approve(approved, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    queues = {}
+    for name, sources in QUEUES.items():
+        (lib / name / "sources").mkdir(parents=True)
+        queues[name] = tuple(_run(lib / name, one, size) for one, size in sources)
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
@@ -113,7 +130,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     )
     try:
         _wait(f"{url}/api/library", server)
-        yield Served(url, BATCH, draft, approved)
+        yield Served(url, BATCH, draft, approved, queues)
     finally:
         server.terminate()
         server.wait(timeout=10)
