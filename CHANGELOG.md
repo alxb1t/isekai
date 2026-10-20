@@ -23,6 +23,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - **BREAKING:** `isekai ui` takes no arguments and serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
   default; the page is a shell with Home, each batch's hub and Review, every screen at a URL naming its batch
   and its run's digest, on `vue-router` (0061 D1, D3).
+- The hub is a read-only grid of a batch's sources by its tracked flows: each cell's stage track and word, an
+  unreadable cell's refusal, arrow-key focus, and ↵ to the cell's Review; ⌥0 and ⌥1 reach Home and the hub
+  (0061 D4).
 
 ### Removed
 

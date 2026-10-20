@@ -10,7 +10,7 @@ the key its task names.
 - [x] 2 — The defects
 - [x] 3 — The library
 - [x] 4 — The shell
-- [ ] 5 — The hub
+- [x] 5 — The hub
 - [ ] 6 — The queue
 - [ ] 7 — The docs and the deletions
 
@@ -74,9 +74,9 @@ the key its task names.
 
 ## 5 — The hub
 
-- [ ] 5.1 Add `ui/src/views/Hub.vue` per [design spec §5](design-spec.md#5--the-journeys)'s J2 grid, read-only: stage tracks and words from `/api/b/{batch}/hub`, a disabled checkbox for no flow with its reason, `unreadable` cells, focus, ↵ to the cell's Review, ⌥0–⌥3 per §7.
+- [x] 5.1 Add `ui/src/views/Hub.vue` per [design spec §5](design-spec.md#5--the-journeys)'s J2 grid, read-only: stage tracks and words from `/api/b/{batch}/hub`, a disabled checkbox for no flow with its reason, `unreadable` cells, focus, ↵ to the cell's Review, ⌥0–⌥3 per §7.
   Verify: `grep -c "'/b/:batch/hub'" ui/src/router.ts` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 5.2 Extend `tests/e2e/test_routes.py`'s reload test with a step from Home to a batch's hub, then ↵ on a sheet cell to its Review.
+- [x] 5.2 Extend `tests/e2e/test_routes.py`'s reload test with a step from Home to a batch's hub, then ↵ on a sheet cell to its Review.
   Verify: `uv run pytest -q tests/e2e/test_routes.py` exits 0.
 
 ## 6 — The queue

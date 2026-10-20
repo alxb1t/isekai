@@ -10,12 +10,15 @@ from tests.e2e.conftest import Served
 def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     page: Page, served: Served
 ) -> None:
-    page.goto(served.hub)
+    page.goto(served.url)
+    expect(page.locator(".library__row[data-batch]")).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(served.hub)
     expect(page.locator(".appbar__place")).to_have_text(served.batch)
-    expect(page.get_by_text("ada.jpg")).to_be_visible()
+    expect(page.locator(".hub__name", has_text="ada.jpg")).to_be_visible()
     page.reload()
     expect(page).to_have_url(served.hub)
-    expect(page.get_by_text("ada.jpg")).to_be_visible()
+    expect(page.locator(".hub__name", has_text="ada.jpg")).to_be_visible()
 
     page.goto(served.review(served.approved))
     current = page.locator(".rail__card--current")
@@ -25,6 +28,14 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     expect(page).to_have_url(served.review(served.approved))
     expect(current).to_contain_text("bea.jpg")
     expect(page.locator(".approve-bar__fact")).to_contain_text("Approved")
+
+    page.goto(served.hub)
+    sheet = page.locator('.hub__cell[data-row="0"][data-stage="draft"]')
+    sheet.click()
+    expect(sheet).to_contain_text("↵ review")
+    page.keyboard.press("Enter")
+    expect(page).to_have_url(served.review(served.draft))
+    expect(page.locator(".rail__card--current")).to_contain_text("ada.jpg")
 
 
 @pytest.mark.spec("ui:routes:an-unknown-batch-is-refused")

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
    JobStrip (design spec §3). Review is keyed by batch and flow, so moving to
    another run keeps the view and its autosave; another flow is a new view. */
 const route = useRoute()
+const router = useRouter()
 
 const batch = computed(() => (typeof route.params.batch === 'string' ? route.params.batch : null))
 const place = computed(() => batch.value ?? 'library')
@@ -15,6 +16,22 @@ const screen = computed(() =>
 const key = computed(() =>
   screen.value === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
 )
+
+/* ⌥0 the library and ⌥1 the batch's hub, from anywhere, text fields included.
+   Matched on `event.code`: Option types a character on macOS. */
+function onKey(event: KeyboardEvent): void {
+  if (!event.altKey) return
+  if (event.code === 'Digit0') {
+    event.preventDefault()
+    void router.push('/')
+  } else if (event.code === 'Digit1' && batch.value) {
+    event.preventDefault()
+    void router.push(`/b/${batch.value}/hub`)
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKey))
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
