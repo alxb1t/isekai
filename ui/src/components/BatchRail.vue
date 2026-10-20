@@ -17,7 +17,7 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-defineEmits<{ select: [id: string]; manifest: [] }>()
+defineEmits<{ select: [id: string] }>()
 
 function mark(input: BatchInput): MarkKind {
   if (props.loading) return 'dashed'
@@ -57,12 +57,12 @@ function ready(id: string): void {
           <img
             class="rail__thumb"
             :src="photoUrl(input.id)"
-            :alt="input.id"
+            :alt="input.name"
             @load="ready(input.id)"
           />
         </div>
         <span class="rail__foot mono">
-          <span>{{ input.id.split('_').slice(1).join('_') || input.id }}</span>
+          <span>{{ input.name }}</span>
           <StatusMark :kind="mark(input)" :size="8" rail />
         </span>
       </button>
@@ -75,9 +75,6 @@ function ready(id: string): void {
       <span class="rail__legend-row"><StatusMark kind="hollow" :size="8" /> untouched</span>
     </div>
 
-    <!-- The only route to the manifest mid-batch, clickable at any time. -->
-    <button class="rail__run mono" type="button" @click="$emit('manifest')">
-      run · {{ approved }} of {{ inputs.length }} in the manifest
-    </button>
+    <span class="rail__run mono">{{ approved }} of {{ inputs.length }} approved</span>
   </nav>
 </template>

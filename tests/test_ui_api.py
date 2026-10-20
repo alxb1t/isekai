@@ -59,10 +59,10 @@ from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.ui import HOST  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
     RARE_BELOW,
+    Held,
     authorities,
     create_app,
 )
-from isekai.interface.ui.batch import Batch, Input, establish  # noqa: E402
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
@@ -83,6 +83,7 @@ from tests.images import jpeg_bytes  # noqa: E402
 from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-anime-wai"
+BATCH = "2026-10-19"
 
 # The address every client below is built against. The app refuses a request
 # not addressed to the loopback address it was bound to, so a test client has
@@ -92,9 +93,15 @@ PORT = 8765
 ADDRESS = f"http://{HOST}:{PORT}"
 
 
+def _at(run: Run, tail: str = "") -> str:
+    """Return the review path naming `run` in `FLOW`: `/api/b/<b>/review/<d>/<f>`."""
+    return f"/api/b/{BATCH}/review/{run.id[:12]}/{FLOW}{tail}"
+
+
 @pytest.fixture
 def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
-    """Return a ③-only wiring: no reader, no tagger, no transport."""
+    """Return a ③-only wiring over one batch of a library: no reader, no tagger."""
+    (tmp_path / "lib" / BATCH / "sources").mkdir(parents=True)
     return Wiring(
         reader=None,
         tagger=None,
@@ -102,7 +109,7 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
         client=None,
         vocabulary=lambda: vocabulary,
         field_map=lambda _: FIELD_MAP,
-        runs_root=tmp_path / "runs",
+        runs_root=tmp_path / "lib" / BATCH / "runs",
         rng=random.Random(0),
         out=io.StringIO(),
         err=io.StringIO(),
@@ -124,6 +131,11 @@ def made(wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary) 
     return run
 
 
+def _source(run: Run) -> None:
+    """Put the run's photograph under the batch's `sources/`, as an import would."""
+    (run.path.parent.parent / "sources" / "ada.jpg").write_bytes(run.photo.read_bytes())
+
+
 def _clear_wd14(run: Run) -> None:
     """Remove the tag list `stages.sheet` wrote, leaving the sheet in place."""
     for path in run.directory(FLOW, WD14).iterdir():
@@ -131,17 +143,24 @@ def _clear_wd14(run: Run) -> None:
 
 
 def _client(wired: Wiring, made: Run, tmp_path: Path) -> TestClient:
-    """Return a client over the surface, with a stand-in for the built bundle.
+    """Return a client over the app, with a stand-in for the built bundle.
 
-    A function as well as a fixture, because `establish()` resolves every
-    artifact path at startup -- so a test that writes a tag artifact has to write
-    it *before* the batch is established, which a fixture ordering cannot express.
+    `review()` takes the draft opening a sheet takes, and does nothing to an
+    approved one. The library is the folder holding the wiring's batch.
     """
     dist = tmp_path / "dist"
     dist.mkdir(exist_ok=True)
     (dist / "index.html").write_text("<!doctype html>")
-    batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    return TestClient(create_app(batch, host=HOST, port=PORT), base_url=ADDRESS)
+    review(made, FLOW)
+    app = create_app(
+        wired.runs_root.parent.parent,
+        wired,
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=PORT,
+    )
+    return TestClient(app, base_url=ADDRESS)
 
 
 @pytest.fixture
@@ -160,7 +179,7 @@ def test_a_request_addressed_to_the_bound_address_is_answered(
     # The `client` fixture speaks `ADDRESS`, so this is the ordinary path every
     # other test in this module rides: it is here to make the two refusals below
     # mean something other than "the middleware refuses everything".
-    assert client.get("/api/batch").status_code == 200
+    assert client.get("/api/library").status_code == 200
 
 
 @pytest.mark.spec("ui:address:another-host-is-refused")
@@ -169,7 +188,7 @@ def test_a_request_carrying_someone_elses_host_is_refused(
 ) -> None:
     # DNS rebinding: the attacker's domain resolves to 127.0.0.1, so the socket
     # is right and only the name is wrong.
-    answered = client.get("/api/batch", headers={"host": f"evil.example:{PORT}"})
+    answered = client.get("/api/library", headers={"host": f"evil.example:{PORT}"})
 
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not addressed here"}
@@ -183,7 +202,7 @@ def test_a_write_carrying_another_pages_origin_is_refused(
     # is where it is connecting, and the attacking page's `Origin` because that
     # is where the script came from.
     answered = client.put(
-        f"/api/inputs/{made.id}/draft",
+        _at(made, "/draft"),
         json={"fields": {}},
         headers={"origin": "http://evil.example"},
     )
@@ -200,9 +219,7 @@ def test_a_cross_site_request_without_origin_is_refused(
     # the browser marks it `cross-site` all the same.
     read: list[object] = []
     monkeypatch.setattr(app_module, "FileResponse", lambda path: read.append(path))
-    answered = client.get(
-        f"/api/inputs/{made.id}/photo", headers={"sec-fetch-site": "cross-site"}
-    )
+    answered = client.get(_at(made, "/photo"), headers={"sec-fetch-site": "cross-site"})
 
     assert answered.status_code == 403
     assert answered.json() == {"refusal": "not from this page"}
@@ -214,11 +231,11 @@ def test_a_request_without_origin_from_this_page_or_no_browser_is_answered(
     client: TestClient,
 ) -> None:
     for site in ("same-origin", "none"):
-        answered = client.get("/api/batch", headers={"sec-fetch-site": site})
+        answered = client.get("/api/library", headers={"sec-fetch-site": site})
         assert answered.status_code == 200, site
-    assert client.get("/api/batch").status_code == 200
+    assert client.get("/api/library").status_code == 200
     assert (
-        client.get("/api/batch", headers={"sec-fetch-site": "same-site"}).status_code
+        client.get("/api/library", headers={"sec-fetch-site": "same-site"}).status_code
         == 403
     )
 
@@ -238,30 +255,60 @@ def test_every_loopback_alias_of_the_bound_port_is_answered() -> None:
 
 
 @pytest.mark.spec_exempt("structural: the shape the page is drawn from")
-def test_the_batch_endpoint_names_the_flow_the_schema_and_the_vocabulary(
+def test_the_hub_and_the_input_name_the_flow_the_schema_and_the_vocabulary(
     client: TestClient, made: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    body = client.get("/api/batch").json()
+    _source(made)
+    hub = client.get(f"/api/b/{BATCH}/hub").json()
+    body = client.get(_at(made)).json()
 
+    assert hub["batch"] == BATCH
+    assert FLOW in hub["flows"]
+    assert [one["digest"] for one in hub["sources"]] == [made.id[:12]]
+    assert hub["sources"][0]["cells"][FLOW]["stage"] == "draft"
     assert body["flow"] == FLOW
+    assert body["id"] == made.id[:12]
     assert body["schema"] == list(schema.names)
     assert body["vocabulary"] == len(vocabulary)
-    assert body["approved"] == 0
-    assert [held["id"] for held in body["inputs"]] == [made.id]
-    assert body["inputs"][0]["width"] == 1200
+    assert body["width"] == 1200
+
+
+@pytest.mark.spec("ui:routes:a-run-is-named-by-its-digest")
+def test_a_review_url_names_its_run_by_the_digest_its_identifier_begins_with(
+    client: TestClient, made: Run
+) -> None:
+    body = client.get(_at(made)).json()
+
+    assert body["run"] == made.id
+    assert made.id.startswith(body["id"]) and len(body["id"]) == 12
+    unknown = client.get(f"/api/b/{BATCH}/review/{'0' * 12}/{FLOW}")
+    assert unknown.status_code == 409
+    assert "no run named" in unknown.json()["refusal"]
+    elsewhere = client.get(f"/api/b/no-such-batch/review/{made.id[:12]}/{FLOW}")
+    assert "no batch named 'no-such-batch'" in elsewhere.json()["refusal"]
+
+
+@pytest.mark.spec_exempt("structural: a screen's path loads the shell, an API's not")
+def test_any_other_path_is_the_page_and_an_unknown_api_path_is_not_found(
+    client: TestClient,
+) -> None:
+    page = client.get(f"/b/{BATCH}/review/0d4b7e6fb2a8/{FLOW}")
+    assert page.status_code == 200
+    assert page.text == "<!doctype html>"
+    assert client.get("/api/nothing-here").status_code == 404
 
 
 @pytest.mark.spec("ui:source:a-missing-caption-names-its-command")
 def test_a_missing_caption_is_served_with_the_command_that_writes_it(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    beside = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    beside = _client(wired, made, tmp_path).get(_at(made)).json()
     assert beside["caption"] == "Dark brown hair, brown eyes."
     assert beside["caption_command"] is None
 
     for path in made.directory(FLOW, CAPTIONS).iterdir():
         path.unlink()
-    response = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}")
+    response = _client(wired, made, tmp_path).get(_at(made))
 
     assert response.status_code == 200
     body = response.json()
@@ -278,7 +325,7 @@ def test_a_missing_caption_is_served_with_the_command_that_writes_it(
 def test_an_input_carries_its_caption_its_fields_and_its_budget(
     client: TestClient, made: Run, schema: Schema
 ) -> None:
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
 
     assert body["caption"] == "Dark brown hair, brown eyes."
     # Every field the schema declares, in schema order, never re-sorted -- the
@@ -297,7 +344,7 @@ def test_an_input_carries_its_caption_its_fields_and_its_budget(
     "from the budget"
 )
 def test_the_budget_carries_the_encoder_window(client: TestClient, made: Run) -> None:
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
 
     assert body["budget"]["window"] == ENCODER_WINDOW
 
@@ -370,28 +417,26 @@ def test_an_empty_fragment_returns_nothing_rather_than_everything(
 def test_a_draft_update_lands_on_disk_and_returns_a_receipt(
     client: TestClient, made: Run
 ) -> None:
-    fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
+    fields = client.get(_at(made)).json()["fields"]
     fields["hair_colour"] = ["blonde"]
 
-    body = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields}).json()
+    body = client.put(_at(made, "/draft"), json={"fields": fields}).json()
 
     assert body["draft"] == "001.draft.json"
     assert body["saved"] is not None
-    assert client.get(f"/api/inputs/{made.id}").json()["fields"]["hair_colour"] == [
-        "blonde"
-    ]
+    assert client.get(_at(made)).json()["fields"]["hair_colour"] == ["blonde"]
 
 
 @pytest.mark.spec("ui:approval:approved-input-refuses-a-draft-update")
 def test_a_draft_update_against_an_approved_input_is_refused_and_writes_nothing(
     client: TestClient, made: Run
 ) -> None:
-    fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
-    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    fields = client.get(_at(made)).json()["fields"]
+    assert client.post(_at(made, "/approve")).status_code == 200
     before = snapshot(made.path)
 
     # A stale tab in a second window is exactly this request.
-    response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
+    response = client.put(_at(made, "/draft"), json={"fields": fields})
 
     assert response.status_code == 409
     assert "is approved" in response.json()["refusal"]
@@ -409,14 +454,14 @@ def test_an_input_re_opened_with_a_new_version_is_editable_again(
     *approved and no later draft*, so the page shows the draft, offers the form
     and accepts the write.
     """
-    fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
-    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    fields = client.get(_at(made)).json()["fields"]
+    assert client.post(_at(made, "/approve")).status_code == 200
     # Approved and read-only, until the operator asks for a new version.
-    assert client.get(f"/api/inputs/{made.id}").json()["readonly"] is True
+    assert client.get(_at(made)).json()["readonly"] is True
 
     review(made, FLOW, new_version=True)
 
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
     assert body["readonly"] is False
     # The draft's sheet, not the approved artifact's -- and the approved
     # artifact is still named, because it has not gone anywhere.
@@ -424,7 +469,7 @@ def test_an_input_re_opened_with_a_new_version_is_editable_again(
     assert body["approved"] == "001.approved.json"
     assert body["fields"] == fields
 
-    response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
+    response = client.put(_at(made, "/draft"), json={"fields": fields})
 
     assert response.status_code == 200
     assert response.json()["draft"] == "002.draft.json"
@@ -443,29 +488,32 @@ def test_a_re_opened_input_reports_its_own_status_and_does_not_split_the_count(
 ) -> None:
     """The hazard a third status creates, pinned from the side the count is on.
 
-    Derived from the status string, `/api/batch["approved"]` would agree with
-    `Batch.approved_count`, which reads the directory, only while every input
-    holding an approved artifact also *reports* approved -- which stops being
-    true the moment a status exists meaning *has one, and is open again*. So the
-    payload's count reads the directory too.
+    Derived from the status string, the approved count would agree with the
+    directory only while every input holding an approved artifact also
+    *reports* approved -- which stops being true the moment a status exists
+    meaning *has one, and is open again*. So the count reads the directory.
     """
-    assert client.get("/api/batch").json()["inputs"][0]["status"] == "draft"
-    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
-    assert client.get("/api/batch").json()["inputs"][0]["status"] == "approved"
+    _source(made)
+
+    def status() -> str:
+        (one,) = client.get(f"/api/b/{BATCH}/hub").json()["sources"]
+        return str(one["cells"][FLOW]["status"])
+
+    assert status() == "draft"
+    assert client.post(_at(made, "/approve")).status_code == 200
+    assert status() == "approved"
 
     review(made, FLOW, new_version=True)
 
-    body = client.get("/api/batch").json()
-    assert body["inputs"][0]["status"] == "re-opened"
-    # Neither approved nor a plain draft -- and the count still says what the
-    # directory says, which is that an approved artifact is on disk.
+    assert status() == "re-opened"
+    (row,) = client.get("/api/library").json()["rows"]
+    (counted,) = [one for one in row["flows"] if one["flow"] == FLOW]
     # The scenario's second `THEN`, against the directory rather than against
-    # another of the server's own numbers: what is on disk is one approved
-    # artifact, and the payload says one.
-    assert body["approved"] == len(
+    # another of the server's own numbers.
+    assert counted["approved"] == len(
         list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
     )
-    assert body["approved"] == 1
+    assert counted["approved"] == 1
 
 
 @pytest.mark.spec("ui:draft-update:a-stale-precondition-is-refused")
@@ -479,28 +527,24 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     `st_mtime` is the precondition because nothing else exists on disk -- the
     draft carries no timestamp, no revision counter and no digest.
     """
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
     fields, saved = body["fields"], body["saved"]
 
     # The first of the two in-flight saves lands and moves the draft's mtime.
-    first = client.put(
-        f"/api/inputs/{made.id}/draft", json={"fields": fields, "saved": saved}
-    )
+    first = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
     assert first.status_code == 200
     assert first.json()["saved"] != saved
 
     # The second was written against what the page read before the first, which
     # is exactly the state a debounce produces.
-    second = client.put(
-        f"/api/inputs/{made.id}/draft", json={"fields": fields, "saved": saved}
-    )
+    second = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
 
     assert second.status_code == 409
     assert "changed since this page last read it" in second.json()["refusal"]
     # And the receipt the first save returned is the one that lets the page
     # carry on: echoing it back is accepted.
     third = client.put(
-        f"/api/inputs/{made.id}/draft",
+        _at(made, "/draft"),
         json={"fields": fields, "saved": first.json()["saved"]},
     )
     assert third.status_code == 200
@@ -513,12 +557,9 @@ def test_an_update_stating_no_precondition_is_still_accepted(
     # A payload carrying no `saved` states no precondition, and is written
     # without the check -- the mtime is already on the wire as the field every
     # response returns, so a client that echoes it gets the check.
-    fields = client.get(f"/api/inputs/{made.id}").json()["fields"]
+    fields = client.get(_at(made)).json()["fields"]
 
-    assert (
-        client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields}).status_code
-        == 200
-    )
+    assert client.put(_at(made, "/draft"), json={"fields": fields}).status_code == 200
 
 
 @pytest.mark.spec("ui:approval:a-stale-lower-draft-does-not-reopen")
@@ -527,14 +568,14 @@ def test_a_stale_lower_draft_does_not_reopen_an_approved_input(
 ) -> None:
     directory = made.directory(FLOW, REVIEW)
     stale = (directory / "001.draft.json").read_bytes()
-    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    assert client.post(_at(made, "/approve")).status_code == 200
     review(made, FLOW, new_version=True)
-    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    assert client.post(_at(made, "/approve")).status_code == 200
     # Below the approval: left by a crash, or restored by hand.
     (directory / "001.draft.json").write_bytes(stale)
     expected = read(directory / "002.approved.json", APPROVED_FILE)["fields"]
 
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
 
     assert body["readonly"] is True
     assert body["draft"] is None
@@ -550,22 +591,22 @@ def _overlap(
     The second starts while the first is between its check and its write, and
     is given the chance to pass the check before the first writes.
     """
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
     saved = body["saved"]
     checked = threading.Event()
     answers: dict[str, int] = {}
     threads: list[threading.Thread] = []
     precondition, save = app_module._precondition, app_module.save_draft
 
-    def check(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+    def check(one: Held, payload: Mapping[str, Any]) -> None:
         if threading.current_thread().name == "second":
             checked.set()
-        precondition(batch, held, payload)
+        precondition(one, payload)
 
     def put(name: str, hair: str) -> None:
         fields = {**body["fields"], "hair_colour": [hair]}
         answers[name] = client.put(
-            f"/api/inputs/{made.id}/draft", json={"fields": fields, "saved": saved}
+            _at(made, "/draft"), json={"fields": fields, "saved": saved}
         ).status_code
 
     def write(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
@@ -621,21 +662,21 @@ def _update_during_approval(
     a bounded wait that times out; `unlocked`, the check always runs. Both waits
     are bounded and asserted, so a regression fails rather than hangs.
     """
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
     checked, approved = threading.Event(), threading.Event()
     answers: list[int] = []
     precondition, approving = app_module._precondition, app_module.approve
     write = review_module.write
 
-    def check(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+    def check(one: Held, payload: Mapping[str, Any]) -> None:
         checked.set()
-        precondition(batch, held, payload)
+        precondition(one, payload)
 
     def put() -> None:
         fields = {**body["fields"], "hair_colour": ["blonde"]}
         answers.append(
             client.put(
-                f"/api/inputs/{made.id}/draft",
+                _at(made, "/draft"),
                 json={"fields": fields, "saved": body["saved"]},
             ).status_code
         )
@@ -666,7 +707,7 @@ def _update_during_approval(
     monkeypatch.setattr(app_module, "_precondition", check)
     monkeypatch.setattr(app_module, "approve", approve_)
     monkeypatch.setattr(review_module, "write", late)
-    assert client.post(f"/api/inputs/{made.id}/approve").status_code == 200
+    assert client.post(_at(made, "/approve")).status_code == 200
     update.join()
     return answers[0]
 
@@ -705,13 +746,9 @@ def test_an_input_approved_in_an_earlier_sitting_opens_read_only(
         for name, tags in read(approved, APPROVED_FILE)["fields"].items()
     }
 
-    dist = tmp_path / "dist"
-    dist.mkdir()
-    (dist / "index.html").write_text("<!doctype html>")
-    batch = establish(wired, FLOW, [made.id], bundle=lambda: dist)
-    reopened = TestClient(create_app(batch, host=HOST, port=PORT), base_url=ADDRESS)
+    reopened = _client(wired, made, tmp_path)
 
-    body = reopened.get(f"/api/inputs/{made.id}").json()
+    body = reopened.get(_at(made)).json()
 
     # Approval deletes the draft and reopening writes no replacement, so there is
     # nothing on disk for an edit to be written into.
@@ -745,7 +782,7 @@ def test_the_local_list_is_whole_and_the_hosted_list_is_filtered(
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
     )
 
-    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    body = _client(wired, made, tmp_path).get(_at(made)).json()
 
     # Whole: every tag the local tagger scored, because it is scored against the
     # vocabulary it emits and so every one of them is committable.
@@ -775,12 +812,11 @@ def test_the_hosted_panel_shows_each_tag_once_and_the_local_one_shows_every_row(
         FakeTagger(tags=("brown hair", "blue eyes", "brown hair")),
     )
 
-    # The two tag artifacts, and only those: `establish()` opens a draft for
-    # every input it is given, which is stage ③ starting normally rather than
-    # the panel writing anything.
+    # The two tag artifacts, and only those: opening the sheet takes a draft,
+    # which is stage ③ starting normally rather than the panel writing anything.
     before = {stage: snapshot(made.directory(FLOW, stage)) for stage in (WD14, TAGS)}
 
-    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    body = _client(wired, made, tmp_path).get(_at(made)).json()
 
     assert [one["tag"] for one in body["tags"]] == ["brown hair", "blue eyes"]
     # Unchanged, and asserted here rather than left to the test above: the two
@@ -808,7 +844,7 @@ def test_a_tag_withheld_from_the_page_is_still_in_the_artifact(
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
     )
 
-    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    body = _client(wired, made, tmp_path).get(_at(made)).json()
 
     assert "fashion photography" not in [one["tag"] for one in body["tags"]]
     assert written is not None
@@ -831,7 +867,7 @@ def test_membership_is_decided_server_side_and_the_count_travels_with_it(
         FakeTagger(tags=("brown hair", "fashion photography", "blue eyes")),
     )
 
-    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    body = _client(wired, made, tmp_path).get(_at(made)).json()
     marked = {one["tag"]: one for one in body["tags"]}
 
     assert marked["brown hair"]["posts"] == vocabulary.count("brown hair")
@@ -855,7 +891,7 @@ def test_an_input_with_neither_artifact_carries_null_and_still_serves(
     # lists are an aid, and a missing aid never blocks review.
     _clear_wd14(made)
 
-    response = client.get(f"/api/inputs/{made.id}")
+    response = client.get(_at(made))
 
     assert response.status_code == 200
     body = response.json()
@@ -873,7 +909,7 @@ def test_one_list_present_and_the_other_absent_is_also_silent(
     # blocked review.
     tag_wd14(made, FLOW, fake_tagger)
 
-    body = _client(wired, made, tmp_path).get(f"/api/inputs/{made.id}").json()
+    body = _client(wired, made, tmp_path).get(_at(made)).json()
 
     assert body["wd14"] is not None
     assert body["tags"] is None
@@ -886,7 +922,7 @@ def test_the_caption_reaches_the_page_whole_and_the_browser_splits_it(
     # The split is `ui/src/caption.ts`'s and the server does not do it: sending
     # prose to be split and back would be a round trip for a regex. What the
     # server owes is the prose, unmodified.
-    body = client.get(f"/api/inputs/{made.id}").json()
+    body = client.get(_at(made)).json()
 
     assert body["caption"] == "Dark brown hair, brown eyes."
 
@@ -898,7 +934,7 @@ def test_the_caption_reaches_the_page_whole_and_the_browser_splits_it(
 def test_every_criterion_the_flow_declares_is_answered_and_no_other(
     client: TestClient, schema: Schema
 ) -> None:
-    body = client.get("/api/fields").json()
+    body = client.get("/api/fields", params={"flow": FLOW}).json()
 
     assert tuple(body["fields"]) == schema.names
     # `summon-anime-wai` declares sixteen of the twenty-one the table carries; the
@@ -911,7 +947,7 @@ def test_every_criterion_the_flow_declares_is_answered_and_no_other(
 def test_a_criterion_the_table_holds_nothing_for_is_present_and_empty(
     client: TestClient,
 ) -> None:
-    body = client.get("/api/fields").json()
+    body = client.get("/api/fields", params={"flow": FLOW}).json()
 
     assert FIELD_MAP.group("age_band") == ()
     assert body["fields"]["age_band"] == []
@@ -922,7 +958,7 @@ def test_a_criterion_the_table_holds_nothing_for_is_present_and_empty(
 def test_candidates_are_ordered_by_descending_post_count(
     client: TestClient, vocabulary: Vocabulary
 ) -> None:
-    body = client.get("/api/fields").json()
+    body = client.get("/api/fields", params={"flow": FLOW}).json()
 
     group = body["fields"]["hair_silhouette"]
     assert len(group) > 1
@@ -947,7 +983,8 @@ def test_the_excluded_list_reaches_no_group_and_is_not_in_the_response(
     fields["accessories"] = Group(primary=(), also=())
     wired.field_map = lambda _: replace(withheld, fields=fields)
 
-    body = _client(wired, made, tmp_path).get("/api/fields").json()
+    client = _client(wired, made, tmp_path)
+    body = client.get("/api/fields", params={"flow": FLOW}).json()
 
     assert set(body) == {"fields"}
     assert "glasses" not in json.dumps(body)
@@ -975,7 +1012,7 @@ def _damage(path: Path, change: Callable[[dict[str, Any]], None]) -> None:
 
 
 def _approved(client: TestClient, run: Run) -> Path:
-    assert client.post(f"/api/inputs/{run.id}/approve").status_code == 200
+    assert client.post(_at(run, "/approve")).status_code == 200
     return _latest(REVIEW, APPROVED)(client, run)
 
 
@@ -1044,7 +1081,7 @@ def test_a_damaged_file_is_refused_by_name(
     damaged = find(client, made)
     _damage(damaged, change)
 
-    response = client.get(f"/api/inputs/{made.id}")
+    response = client.get(_at(made))
 
     assert response.status_code == 409
     refusal = response.json()["refusal"]
@@ -1064,7 +1101,7 @@ def test_a_damaged_file_is_refused_by_name(
             [made.id],
         )
         assert parsed.runs == made.path.parent
-    assert client.get("/api/batch").status_code == 200
+    assert client.get(f"/api/b/{BATCH}/hub").status_code == 200
 
 
 @pytest.mark.spec("ui:damage:a-damaged-file-is-refused-by-name")
@@ -1074,7 +1111,7 @@ def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
     monkeypatch.setattr(app_module, "RUNS_ROOT", made.path.parent)
     _damage(_latest(CAPTIONS)(client, made), _drop("prose"))
 
-    refusal = client.get(f"/api/inputs/{made.id}").json()["refusal"]
+    refusal = client.get(_at(made)).json()["refusal"]
 
     assert f"`python -m isekai caption --flow {FLOW} --new-version {made.id}`" in (
         refusal
@@ -1085,14 +1122,15 @@ def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
 def test_a_damage_remedy_under_a_root_holding_a_space_pastes_as_one_argument(
     wired: Wiring, made: Run, tmp_path: Path
 ) -> None:
-    root = tmp_path / "my runs"
+    root = tmp_path / "my lib" / BATCH / "runs"
+    (root.parent / "sources").mkdir(parents=True)
     root.mkdir()
     shutil.move(made.path, root / made.id)
     moved = Run(made.id, root / made.id)
     client = _client(replace(wired, runs_root=root), moved, tmp_path)
     _damage(_latest(CAPTIONS)(client, moved), _drop("prose"))
 
-    refusal = client.get(f"/api/inputs/{moved.id}").json()["refusal"]
+    refusal = client.get(_at(moved)).json()["refusal"]
 
     # Split as the shell splits it: an unquoted root would come apart at the space.
     command = refusal.split("`python -m isekai ")[1].split("`")[0]
@@ -1116,7 +1154,7 @@ def test_a_malformed_update_is_refused_naming_the_field(
 ) -> None:
     before = snapshot(made.path)
 
-    response = client.put(f"/api/inputs/{made.id}/draft", json={"fields": fields})
+    response = client.put(_at(made, "/draft"), json={"fields": fields})
 
     assert response.status_code == 409
     assert named in response.json()["refusal"]

@@ -44,7 +44,7 @@ import sys
 from collections.abc import Callable, Mapping, Sequence
 from functools import cache
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
@@ -82,7 +82,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("generate", "assemble the prompts for a run, then render them"),
     ("render", "run a whole render session on a rented GPU, then tear it down"),
     ("show", "print a run's artifacts, versions, producers and failures"),
-    ("ui", "serve the review surface for a batch of inputs"),
+    ("ui", "serve the app over the library of batches"),
     ("compare", "write a page of each run's photograph beside its renders"),
 )
 
@@ -117,33 +117,6 @@ def _count(value: str) -> int:
     return count
 
 
-class _OneFlow(argparse.Action):
-    """Accept `--flow` exactly once, refusing a repeat naming why.
-
-    `action="append"` is what every stage verb uses, because flows batch: they
-    render on one endpoint and a second boot costs what eight more renders
-    would. A serving verb does not batch, so that reason does not reach it -- and
-    argparse's own default for a plain option is to keep the last spelling
-    silently, which would open a surface for a flow the operator did not mean.
-    """
-
-    def __call__(
-        self,
-        parser: argparse.ArgumentParser,
-        namespace: argparse.Namespace,
-        values: str | Sequence[Any] | None,
-        option_string: str | None = None,
-    ) -> None:
-        """Set the flow, or refuse because one was already named."""
-        if getattr(namespace, self.dest, None) is not None:
-            parser.error(
-                "--flow may be given once here: the review surface serves one "
-                "flow at a time, because two would be two field orders and two "
-                "token budgets sharing one set of controls"
-            )
-        setattr(namespace, self.dest, values)
-
-
 def build_parser() -> argparse.ArgumentParser:
     """Return the pipeline's parser, with one subparser per verb."""
     parser = argparse.ArgumentParser(
@@ -158,8 +131,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     # `compare` takes a batch directory instead: its runs root is the batch's
     # `runs/`, so a second way to name it could only disagree. `render` takes
-    # its runs root first, and every run under it.
-    for name in (name for name in made if name not in ("compare", "render")):
+    # its runs root first, and every run under it. `ui` serves the library.
+    for name in (name for name in made if name not in ("compare", "render", "ui")):
         made[name].add_argument(
             "photos",
             nargs="*",
@@ -209,24 +182,15 @@ def build_parser() -> argparse.ArgumentParser:
             help="write the next numbered artifact instead of doing nothing",
         )
 
-    # Exactly one, and required. The surface shows one schema's fields in one
-    # fixed order, so a second flow would be a second page rather than a wider
-    # one -- and the limit belongs at the command the operator typed rather than
-    # at a screen that half-works.
-    made["ui"].add_argument(
-        "--flow",
-        action=_OneFlow,
-        dest="flow",
-        required=True,
-        metavar="FLOW",
-        help="the flow to review; required, and given exactly once",
-    )
+    # No flow, input or runs root: the app serves every batch of the library
+    # `ISEKAI_LIBRARY` names, and its page selects one (D1).
     made["ui"].add_argument(
         "--port",
         type=int,
         default=DEFAULT_PORT,
         help=f"the loopback port to serve on (default {DEFAULT_PORT})",
     )
+    made["ui"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["compare"].add_argument(
         "batch",
@@ -301,8 +265,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
-    """Serve the review surface for one flow, blocking until the operator stops it.
+def _ui(args: argparse.Namespace, wired: Wiring) -> int:
+    """Serve the app over the library, blocking until the operator stops it.
 
     **The import is inside this function, and it is load-bearing.**
     `tests/test_pipeline_cli.py` imports the entry point with `-S`, site-packages
@@ -313,7 +277,7 @@ def _ui(args: argparse.Namespace, wired: Wiring, targets: Sequence[str]) -> int:
     """
     from isekai.interface.ui import serve
 
-    return serve(wired, str(args.flow), targets, port=int(args.port))
+    return serve(wired, port=int(args.port))
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
@@ -375,11 +339,10 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     targets = list(args.photos)
     # Resolved before the first identifier is looked at, so an untracked flow or
     # a broken manifest refuses without opening a run -- and on `generate`,
-    # without renting anything. The serving verb resolves its own single flow
-    # inside `establish`, so it is answered before that.
+    # without renting anything. The serving verb takes no flow at all.
     try:
         if verb == "ui":
-            return _ui(args, wired, targets)
+            return _ui(args, wired)
         if verb == "compare":
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0

@@ -18,6 +18,17 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   carries its counts per flow and its newest file, and each source × flow cell its stage, all from listings
   (0061 D1, D2, D4).
 
+### Changed
+
+- **BREAKING:** `isekai ui` takes no arguments and serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
+  default; the page is a shell with Home, each batch's hub and Review, every screen at a URL naming its batch
+  and its run's digest, on `vue-router` (0061 D1, D3).
+
+### Removed
+
+- **BREAKING:** the `run-flows` and `compare-renders` skills, whose review step cannot follow the library; the
+  verbs and `isekai ui` cover a batch (0061 D9).
+
 ### Fixed
 
 - The review page's saving state holds a token per save, so an input switch can no longer silence it; the draft

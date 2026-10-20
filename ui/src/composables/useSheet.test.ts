@@ -16,6 +16,11 @@ let calls: Call[] = []
 function detail(id: string, saved: number): InputDetail {
   return {
     id,
+    run: `${id}_run`,
+    batch: 'b',
+    flow: 'f',
+    schema: ['hair'],
+    vocabulary: 1,
     width: 1,
     height: 1,
     caption: null,
@@ -66,35 +71,35 @@ afterEach(() => {
 })
 
 spec('ui:save:a-stale-save-cannot-clear-saving', async () => {
-  const sheet = useSheet()
+  const sheet = useSheet({ batch: 'b', flow: 'f' })
   const opened = sheet.open('a')
-  await answer('/api/inputs/a', detail('a', 10))
+  await answer('/api/b/b/review/a/f', detail('a', 10))
   await opened
   sheet.commit('hair', 'brown hair', null)
   void sheet.flush()
   expect(sheet.saving.value).toBe(true)
 
   const switched = sheet.open('b')
-  await answer('/api/inputs/b', detail('b', 20))
+  await answer('/api/b/b/review/b/f', detail('b', 20))
   await switched
   expect(sheet.saving.value).toBe(true)
 
-  await answer('/api/inputs/a/draft', receipt(11))
+  await answer('/api/b/b/review/a/f/draft', receipt(11))
   expect(sheet.saving.value).toBe(false)
   expect(sheet.saved.value).toBe(20)
 
   sheet.commit('hair', 'short hair', null)
   void sheet.flush()
   expect(sheet.saving.value).toBe(true)
-  await answer('/api/inputs/b/draft', receipt(21))
+  await answer('/api/b/b/review/b/f/draft', receipt(21))
   expect(sheet.saving.value).toBe(false)
   expect(sheet.saved.value).toBe(21)
 })
 
 spec('ui:save:a-pending-edit-is-sent-on-leaving', async () => {
-  const sheet = useSheet()
+  const sheet = useSheet({ batch: 'b', flow: 'f' })
   const opened = sheet.open('a')
-  await answer('/api/inputs/a', detail('a', 10))
+  await answer('/api/b/b/review/a/f', detail('a', 10))
   await opened
   sheet.commit('hair', 'brown hair', null)
   expect(calls).toHaveLength(0)
@@ -102,7 +107,7 @@ spec('ui:save:a-pending-edit-is-sent-on-leaving', async () => {
   void sheet.flush()
   expect(calls).toHaveLength(1)
   const [put] = calls
-  expect(put.url).toBe('/api/inputs/a/draft')
+  expect(put.url).toBe('/api/b/b/review/a/f/draft')
   expect(put.init?.method).toBe('PUT')
   expect(put.init?.keepalive).toBe(true)
   expect(JSON.parse(String(put.init?.body)).fields.hair).toEqual(['long hair', 'brown hair'])

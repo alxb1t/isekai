@@ -9,7 +9,7 @@ the key its task names.
 - [x] 1 — The harness
 - [x] 2 — The defects
 - [x] 3 — The library
-- [ ] 4 — The shell
+- [x] 4 — The shell
 - [ ] 5 — The hub
 - [ ] 6 — The queue
 - [ ] 7 — The docs and the deletions
@@ -59,17 +59,17 @@ the key its task names.
 
 ## 4 — The shell
 
-- [ ] 4.1 Add `vue-router` per [Dependencies](design.md#dependencies): in `ui/`, `npm install --save-exact vue-router@5.4.0`.
+- [x] 4.1 Add `vue-router` per [Dependencies](design.md#dependencies): in `ui/`, `npm install --save-exact vue-router@5.4.0`.
   Verify: `grep -c '"vue-router": "5.4.0"' ui/package.json` prints `1`.
-- [ ] 4.2 Switch the verb per [D1](design.md#d1): in `isekai/interface/cli.py` drop `photos`, `--runs`, `--flow` and `_OneFlow` from `ui`; `serve` in `isekai/interface/ui/__init__.py` serves the library; delete `isekai/interface/ui/batch.py`.
+- [x] 4.2 Switch the verb per [D1](design.md#d1): in `isekai/interface/cli.py` drop `photos`, `--runs`, `--flow` and `_OneFlow` from `ui`; `serve` in `isekai/interface/ui/__init__.py` serves the library; delete `isekai/interface/ui/batch.py`.
   Verify: `grep -c '_OneFlow' isekai/interface/cli.py` prints `0`, `test -e isekai/interface/ui/batch.py` exits 1, and `uv run python -m isekai ui --flow summon-anime-wai` exits 2.
-- [ ] 4.3 Rewrite `isekai/interface/ui/app.py` onto the API of [D3](design.md#d3) — every review route under `/api/b/{batch}/review/{digest}/{flow}`, `index.html` for any other `GET` — keeping its guard and `_remedy`.
+- [x] 4.3 Rewrite `isekai/interface/ui/app.py` onto the API of [D3](design.md#d3) — every review route under `/api/b/{batch}/review/{digest}/{flow}`, `index.html` for any other `GET` — keeping its guard and `_remedy`.
   Verify: `grep -c '/api/b/{batch}' isekai/interface/ui/app.py` prints a number of at least `5`, and `grep -c '"/api/batch"' isekai/interface/ui/app.py` prints `0`.
-- [ ] 4.4 Move `tests/test_ui_api.py` onto the new paths, and per the table in [Tests](design.md#tests) delete the `ui:startup:*` and `ui:batch:*` tests in `tests/test_ui.py` and the `cli:flow-selection:a-serving-verb-takes-one-flow` tests in `tests/test_pipeline_cli.py`; add a test there binding `ui:library:the-verb-takes-no-arguments`.
+- [x] 4.4 Move `tests/test_ui_api.py` onto the new paths, and per the table in [Tests](design.md#tests) delete the `ui:startup:*` and `ui:batch:*` tests in `tests/test_ui.py` and the `cli:flow-selection:a-serving-verb-takes-one-flow` tests in `tests/test_pipeline_cli.py`; add a test there binding `ui:library:the-verb-takes-no-arguments`.
   Verify: `grep -c -E 'ui:startup|ui:batch:|a-serving-verb-takes-one-flow' tests/test_ui.py tests/test_pipeline_cli.py` prints `0` for each file, and `uv run pytest -q tests/test_ui.py tests/test_ui_api.py tests/test_pipeline_cli.py` exits 0.
-- [ ] 4.5 Add `ui/src/router.ts` (`/`, `/b/:batch/hub`, `/b/:batch/review/:digest/:flow`), `ui/src/App.vue` with the shell — AppBar, JobStrip idle, the BillingBanner slot — the tokens of [design spec §2](design-spec.md#2--tokens) in `ui/src/styles.css`, `ui/src/views/Home.vue` per §5's J7·1, and the review surface as `ui/src/views/Review.vue`; delete `ui/src/ReviewApp.vue`.
+- [x] 4.5 Add `ui/src/router.ts` (`/`, `/b/:batch/hub`, `/b/:batch/review/:digest/:flow`), `ui/src/App.vue` with the shell — AppBar, JobStrip idle, the BillingBanner slot — the tokens of [design spec §2](design-spec.md#2--tokens) in `ui/src/styles.css`, `ui/src/views/Home.vue` per §5's J7·1, and the review surface as `ui/src/views/Review.vue`; delete `ui/src/ReviewApp.vue`.
   Verify: `test -e ui/src/ReviewApp.vue` exits 1, `grep -c "'/b/:batch/review/:digest/:flow'" ui/src/router.ts` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 4.6 Move `tests/e2e/conftest.py` to `isekai ui` over a fixture library with `ISEKAI_LIBRARY` set, point `tests/e2e/test_review.py` at the review URL, and add `tests/e2e/test_routes.py` binding `ui:routes:a-reload-lands-on-the-same-screen` and `ui:routes:an-unknown-batch-is-refused`; bind `ui:routes:a-run-is-named-by-its-digest` in `tests/test_ui_api.py`.
+- [x] 4.6 Move `tests/e2e/conftest.py` to `isekai ui` over a fixture library with `ISEKAI_LIBRARY` set, point `tests/e2e/test_review.py` at the review URL, and add `tests/e2e/test_routes.py` binding `ui:routes:a-reload-lands-on-the-same-screen` and `ui:routes:an-unknown-batch-is-refused`; bind `ui:routes:a-run-is-named-by-its-digest` in `tests/test_ui_api.py`.
   Verify: `uv run pytest -q tests/e2e` exits 0, and `grep -c 'ui:routes:' tests/e2e/test_routes.py` prints `2`.
 
 ## 5 — The hub

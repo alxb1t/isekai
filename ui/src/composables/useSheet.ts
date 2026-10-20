@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { inputDetail, saveDraft } from '../api'
+import type { Place } from '../api'
 import type { Budget, InputDetail } from '../types'
 
 /* Long enough that a burst of typing is one write rather than ten, short enough
@@ -27,8 +28,10 @@ interface Edit {
  * replacement is one step. It is cleared when the operator changes input,
  * because an undo that reached back into a different photograph would be a
  * surprise rather than a convenience.
+ *
+ * One instance serves one batch and one flow; `open` takes the run's digest.
  */
-export function useSheet() {
+export function useSheet(scope: Omit<Place, 'digest'>) {
   const detail = ref<InputDetail | null>(null)
   const fields = ref<Record<string, string[]>>({})
   const budget = ref<Budget | null>(null)
@@ -72,7 +75,7 @@ export function useSheet() {
     undone.length = 0
     let body: InputDetail
     try {
-      body = await inputDetail(id)
+      body = await inputDetail({ ...scope, digest: id })
     } catch (reason) {
       if (current !== id) return
       // A read that fails has to land somewhere, and the header line is where
@@ -116,7 +119,7 @@ export function useSheet() {
     inFlight.add(mine)
     saving.value = true
     try {
-      const receipt = await saveDraft(id, payload, saved.value)
+      const receipt = await saveDraft({ ...scope, digest: id }, payload, saved.value)
       if (current === id) {
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one. Taken

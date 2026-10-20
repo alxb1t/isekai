@@ -1,4 +1,4 @@
-/* The shapes the seven endpoints return. One file, because a type that disagreed
+/* The shapes the endpoints return. One file, because a type that disagreed
    with `app.py` would be wrong in every component at once. */
 
 export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
@@ -9,18 +9,68 @@ export type MarkKind = 'filled' | 'hollow' | 'dashed' | 'half' | 'ring'
 export type InputStatus = 'approved' | 're-opened' | 'draft'
 
 export interface BatchInput {
+  /* The run's digest. */
   id: string
+  name: string
   width: number
   height: number
   status: InputStatus
 }
 
-export interface BatchInfo {
+/* One flow's figures in a batch, out of the sources whose runs hold it. */
+export interface FlowCount {
   flow: string
-  schema: string[]
-  vocabulary: number
   approved: number
-  inputs: BatchInput[]
+  rendered: number
+  of: number
+}
+
+/* One folder of the library. A folder that is not a batch carries only its
+   name: it is listed and never opened. `newest` is the server's clock. */
+export interface LibraryRow {
+  name: string
+  batch: boolean
+  sources: number
+  flows: FlowCount[]
+  without_flow: number
+  newest: number | null
+  kind: string | null
+}
+
+export interface LibraryInfo {
+  rows: LibraryRow[]
+}
+
+/* A cell's stage, read from the run's directory; null is no flow. */
+export type Stage =
+  | 'assigned'
+  | 'tagged'
+  | 'sheet'
+  | 'draft'
+  | 'approved'
+  | 'rendered'
+  | 'unreadable'
+
+export interface HubCell {
+  stage: Stage | null
+  renders: number
+  refusal: string | null
+  /* Where stage ③ stands, where the cell has a sheet; null otherwise. */
+  status: InputStatus | null
+}
+
+export interface HubSource {
+  name: string
+  digest: string | null
+  width: number | null
+  height: number | null
+  cells: Record<string, HubCell>
+}
+
+export interface HubInfo {
+  batch: string
+  flows: string[]
+  sources: HubSource[]
 }
 
 /* `window` is how many tokens SDXL's text encoders read at a time. It is declared
@@ -64,7 +114,13 @@ export interface FieldCandidates {
 }
 
 export interface InputDetail {
+  /* The run's digest, which the URL names it by. */
   id: string
+  run: string
+  batch: string
+  flow: string
+  schema: string[]
+  vocabulary: number
   width: number
   height: number
   caption: string | null
@@ -94,13 +150,4 @@ export interface VocabEntry {
 export interface TagMatches {
   matches: VocabEntry[]
   total: number
-}
-
-/** One approved sheet, as the manifest lists it. */
-export interface ApprovedSheet {
-  id: string
-  name: string
-  tokens: number
-  window: number
-  at: string
 }

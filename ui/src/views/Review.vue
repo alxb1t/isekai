@@ -1,31 +1,51 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { fieldCandidates, inputDetail, photoUrl } from './api'
-import AppHeader from './components/AppHeader.vue'
-import ApproveBar from './components/ApproveBar.vue'
-import BatchRail from './components/BatchRail.vue'
-import CheatsheetOverlay from './components/CheatsheetOverlay.vue'
-import LoadingSkeleton from './components/LoadingSkeleton.vue'
-import PhotoOverlay from './components/PhotoOverlay.vue'
-import RunManifest from './components/RunManifest.vue'
-import SheetForm from './components/SheetForm.vue'
-import SourcePanel from './components/SourcePanel.vue'
-import TagInput from './components/TagInput.vue'
-import { useApproval } from './composables/useApproval'
-import { useBatch } from './composables/useBatch'
-import { useSheet } from './composables/useSheet'
-import type { ApprovedSheet, FieldCandidates } from './types'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { fieldCandidates, photoUrl as photoAt } from '../api'
+import AppHeader from '../components/AppHeader.vue'
+import ApproveBar from '../components/ApproveBar.vue'
+import BatchRail from '../components/BatchRail.vue'
+import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
+import LoadingSkeleton from '../components/LoadingSkeleton.vue'
+import PhotoOverlay from '../components/PhotoOverlay.vue'
+import RefusalPage from '../components/RefusalPage.vue'
+import SheetForm from '../components/SheetForm.vue'
+import SourcePanel from '../components/SourcePanel.vue'
+import TagInput from '../components/TagInput.vue'
+import { useApproval } from '../composables/useApproval'
+import { useBatch } from '../composables/useBatch'
+import { useSheet } from '../composables/useSheet'
+import type { FieldCandidates } from '../types'
 
-/* The root. It shows exactly one of the loading state, the review layout, or
-   the manifest; the photo overlay layers over any of them.
+/* Review: one batch in one flow, the run in the URL. It shows the loading state
+   or the review layout; the photo overlay layers over either. The router keys
+   this view by batch and flow, so a new digest is a new sheet in the same view.
 
    It owns the global keyboard model -- the bindings that cross components, so
    no component ends up owning two of them -- and the chip selection for the
    focused field, because the chips render in `FieldRow` while the keys that
    move between them are read by `TagInput`. */
-const batch = useBatch()
-const sheet = useSheet()
+const props = defineProps<{ batch: string; digest: string; flow: string }>()
+const router = useRouter()
+const batch = useBatch(props.batch, props.flow)
+const sheet = useSheet({ batch: props.batch, flow: props.flow })
 const approval = useApproval()
+const current = computed(() => props.digest)
+const photoUrl = (digest: string) => photoAt({ batch: props.batch, digest, flow: props.flow })
+const schema = computed(() => sheet.detail.value?.schema ?? [])
+const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
+
+/* The URL is the state: choosing another sheet is a navigation. */
+function select(digest: string): void {
+  if (digest !== props.digest) void router.push(`/b/${props.batch}/review/${digest}/${props.flow}`)
+}
+
+function stepBatch(direction: -1 | 1): void {
+  const inputs = batch.inputs.value
+  const at = inputs.findIndex((i) => i.id === props.digest)
+  if (at < 0 || inputs.length === 0) return
+  select(inputs[(at + direction + inputs.length) % inputs.length].id)
+}
 
 /* Three panes, left to right: the rail, the photograph and its caption, the
    sheet. `Alt+←/→` moves between them and `Alt+↑/↓` moves through the batch;
@@ -65,8 +85,6 @@ const candidates = ref<FieldCandidates | null>(null)
    closes the lens rather than clearing a fragment behind it and `←`/`→` do not
    fire twice — once for chip selection and once for the batch. */
 const suspended = computed(() => lens.value !== null)
-const manifest = ref(false)
-const sheets = ref<ApprovedSheet[]>([])
 const selectedChip = ref<number | null>(null)
 
 const clock = (at: number | null) =>
@@ -85,7 +103,7 @@ const minute = (at: number | null) =>
         minute: '2-digit',
       })
 
-const flow = computed(() => batch.info.value?.flow ?? '')
+const flow = computed(() => props.flow)
 
 /* The draft receipt outlives the draft file, within one sitting.
 
@@ -137,7 +155,7 @@ const kicker = computed(() => {
 })
 
 async function approve(): Promise<void> {
-  const id = batch.current.value
+  const id = current.value
   if (!id || sheet.readonly.value) return
   // Awaited, not merely started: the debounced write has to be ON DISK before
   // the approve `POST` goes out, or the artifact is built from the previous
@@ -151,14 +169,11 @@ async function approve(): Promise<void> {
   // read as "your approval is about to be wrong". `flush()` leaves the refusal
   // on the header line; stopping here is what makes it true.
   if (!(await sheet.flush())) return
-  if (!(await approval.approve(id))) return
+  if (!(await approval.approve({ batch: props.batch, digest: id, flow: props.flow }))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
-  await Promise.all([batch.refresh(), sheet.open(id)])
+  await Promise.all([batch.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
-  // Approving the last unapproved input opens the manifest, because at that
-  // moment there is no sheet left to review.
-  if (batch.allApproved.value) await openManifest()
 }
 
 /* The rail already knows every input's dimensions, so the source column draws
@@ -167,7 +182,7 @@ async function approve(): Promise<void> {
 const showing = computed(
   () =>
     sheet.detail.value ??
-    batch.inputs.value.find((input) => input.id === batch.current.value) ??
+    batch.inputs.value.find((input) => input.id === current.value) ??
     null,
 )
 
@@ -209,7 +224,7 @@ function enter(next: Pane): void {
   } else if (next === 'source') {
     source.value?.focus()
   } else {
-    const order = batch.info.value?.schema ?? []
+    const order = schema.value
     const field = lastField.value ?? order[0]
     if (field) document.querySelector<HTMLInputElement>(`input.fragment[data-field="${field}"]`)?.focus()
   }
@@ -220,35 +235,11 @@ function movePane(direction: -1 | 1): void {
   enter(PANES[Math.min(Math.max(at + direction, 0), PANES.length - 1)])
 }
 
-/* The manifest is the closing screen, and it is read from the directory rather
-   than remembered: every approved input is asked for its own token count and the
-   time its artifact was written. Reached by approving the last unapproved input,
-   or from the rail's `run` entry at any point in the batch. */
-async function openManifest(): Promise<void> {
-  // Every input holding an approved artifact, re-opened ones included: the
-  // rail's count reads the directory the same way, and a manifest listing
-  // fewer rows than the count beside it would be two answers to one question.
-  const approved = batch.inputs.value.filter((i) => i.status !== 'draft')
-  sheets.value = await Promise.all(
-    approved.map(async (input) => {
-      const body = await inputDetail(input.id)
-      return {
-        id: input.id,
-        name: body.approved ?? '',
-        tokens: body.budget.total,
-        window: body.budget.window,
-        at: clock(body.approved_at) ?? '',
-      } satisfies ApprovedSheet
-    }),
-  )
-  manifest.value = true
-}
-
 /* Walk the sheet with the vertical keys, clamped at both ends. A 16-row list
    that jumped from `count` to `background` on one ↑ would lose the operator's
    place rather than move it, which is the same reason the dropdown overlays. */
 function moveRow(direction: -1 | 1): void {
-  const order = batch.info.value?.schema ?? []
+  const order = schema.value
   const at = focused.value ? order.indexOf(focused.value) : -1
   if (at < 0) return
   const next = order[Math.min(Math.max(at + direction, 0), order.length - 1)]
@@ -260,7 +251,7 @@ function moveRow(direction: -1 | 1): void {
 function commit(field: string, tag: string): void {
   sheet.commit(field, tag, selectedChip.value)
   selectedChip.value = null
-  batch.markEdited(batch.current.value)
+  batch.markEdited(current.value)
 }
 
 function back(field: string): void {
@@ -269,7 +260,7 @@ function back(field: string): void {
   const at = selectedChip.value ?? count - 1
   sheet.remove(field, at)
   selectedChip.value = null
-  batch.markEdited(batch.current.value)
+  batch.markEdited(current.value)
 }
 
 /* Open a lens from wherever the focus is. `blur()` rather than a flag: the field
@@ -280,7 +271,7 @@ function back(field: string): void {
    on the photograph. */
 async function openLens(which: Lens): Promise<void> {
   if (which === 'cheatsheet' && !candidates.value) {
-    candidates.value = await fieldCandidates()
+    candidates.value = await fieldCandidates(props.flow)
   }
   if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
   lens.value = which
@@ -329,7 +320,7 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
     // The rail is a vertical list, so vertical is the batch.
     event.preventDefault()
-    batch.step(event.key === 'ArrowUp' ? -1 : 1)
+    stepBatch(event.key === 'ArrowUp' ? -1 : 1)
   } else if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
     event.preventDefault()
     movePane(event.key === 'ArrowLeft' ? -1 : 1)
@@ -342,7 +333,7 @@ function onKey(event: KeyboardEvent): void {
     if (here === 'rail') {
       // A list answers its own arrows.
       event.preventDefault()
-      batch.step(event.key === 'ArrowUp' ? -1 : 1)
+      stepBatch(event.key === 'ArrowUp' ? -1 : 1)
     } else if (here === 'source') {
       event.preventDefault()
       source.value?.scrollBy({ top: event.key === 'ArrowUp' ? -120 : 120 })
@@ -360,17 +351,24 @@ function onKey(event: KeyboardEvent): void {
     // Arrow keys still move through the batch, so the overlay doubles as a way
     // to compare inputs without closing it.
     event.preventDefault()
-    batch.step(event.key === 'ArrowLeft' ? -1 : 1)
+    stepBatch(event.key === 'ArrowLeft' ? -1 : 1)
   }
 }
 
 // The draft is flushed as the tab goes; the PUT is kept alive past the page.
 const onLeave = () => void sheet.flush()
 
+// Leaving for another screen flushes too; the draft is the operator's work.
+onBeforeRouteLeave(async () => {
+  await sheet.flush()
+})
+
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
   window.addEventListener('beforeunload', onLeave)
   await batch.load()
+  if (batch.failure.value) return
+  await sheet.open(current.value)
   // The rail first: it is where the operator decides what they are looking at.
   await nextTick()
   enter('rail')
@@ -381,7 +379,7 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', onLeave)
 })
 
-watch(batch.current, (id) => {
+watch(current, (id) => {
   if (!id) return
   // The pending write belongs to the input being left, not the one arriving.
   // Not awaited: `flush()` captures the id it is writing and `open()` guards on
@@ -397,23 +395,24 @@ watch(batch.current, (id) => {
 </script>
 
 <template>
-  <div class="shell">
+  <RefusalPage v-if="batch.failure.value" :refusal="batch.failure.value" />
+  <div v-else class="review">
     <AppHeader
       :flow="flow"
       :inputs="batch.inputs.value.length"
-      :approved="batch.info.value?.approved ?? 0"
+      :approved="batch.approved.value"
       :draft="receipt"
       :saved="minute(lastDraft?.saved ?? null)"
       :saving="sheet.saving.value"
       :approved-name="approvedReceipt"
       :approved-at="clock(approval.at.value)"
-      :refusal="approval.refusal.value ?? sheet.refusal.value ?? batch.failure.value"
+      :refusal="approval.refusal.value ?? sheet.refusal.value"
     >
       <template #status>
         <LoadingSkeleton
           v-if="batch.loading.value || sheet.loading.value"
-          :reading="batch.loading.value ? null : batch.current.value"
-          :vocabulary="batch.info.value?.vocabulary ?? 0"
+          :reading="batch.loading.value ? null : current"
+          :vocabulary="vocabulary"
         />
         <span
           v-else-if="batch.allApproved.value"
@@ -427,24 +426,14 @@ watch(batch.current, (id) => {
     <div v-if="batch.info.value" class="work">
       <BatchRail
         :inputs="batch.inputs.value"
-        :approved="batch.info.value?.approved ?? 0"
-        :current="batch.current.value"
+        :approved="batch.approved.value"
+        :current="current"
         :edited="batch.edited.value"
         :photo-url="photoUrl"
         :loading="batch.loading.value"
-        @select="(id) => ((manifest = false), batch.select(id))"
-        @manifest="openManifest"
+        @select="select"
       />
 
-      <RunManifest
-        v-if="manifest"
-        :flow="flow"
-        :sheets="sheets"
-        :total="batch.inputs.value.length"
-        @again="manifest = false"
-      />
-
-      <template v-else>
       <SourcePanel
         v-if="showing"
         ref="source"
@@ -460,7 +449,7 @@ watch(batch.current, (id) => {
         @open="openLens('photo')"
       />
       <SheetForm
-        :schema="batch.info.value?.schema ?? []"
+        :schema="schema"
         :fields="sheet.fields.value"
         :budget="sheet.budget.value"
         :readonly="sheet.readonly.value"
@@ -468,12 +457,12 @@ watch(batch.current, (id) => {
         :selected="selectedChip"
         :loading="sheet.loading.value"
         :kicker="kicker"
-        @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(batch.current.value))"
+        @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(current))"
       >
         <template #editor="{ field }">
           <TagInput
             v-if="!sheet.readonly.value && !sheet.loading.value"
-            :vocabulary="batch.info.value?.vocabulary ?? 0"
+            :vocabulary="vocabulary"
             :field="field"
             :focused="focused === field"
             :suspended="suspended"
@@ -497,7 +486,6 @@ watch(batch.current, (id) => {
           />
         </template>
       </SheetForm>
-      </template>
     </div>
 
     <PhotoOverlay

@@ -1,9 +1,9 @@
 """The HTTP surface, and the only module in this package that imports a web framework.
 
-Kept to one file deliberately. `batch.py` performs the whole startup refusal
-order and imports no web framework, so that order is exercised by the main suite
-whether or not a server is installed; only what genuinely needs one lives here,
-and `tests/test_ui_api.py` opens with an `importorskip` for it.
+Kept to one file deliberately. `library.py` reads the library and every stage and
+imports no web framework, so that reading is exercised by the main suite whether
+or not a server is installed; only what genuinely needs one lives here, and
+`tests/test_ui_api.py` opens with an `importorskip` for it.
 
 **What this module owns, and what it does not.** It owns HTTP routing and status
 codes, the join of caption, sheet, draft, approved and budget into one payload,
@@ -12,31 +12,32 @@ exists nowhere else in this repository -- and turning a `Refusal` into a
 response. The pipeline owns what a valid sheet is, each run file's shape and its
 filename, when approval is legal, and what a token costs.
 
-**Three write functions reach a run directory, all of stage ③'s**: `review()` at
-startup, `save_draft()` on autosave and `approve()` on the button. Nothing here
-builds an artifact body or an artifact filename, and `tests/test_ui.py`'s grep is
-what keeps that at three.
+**Three write functions reach a run directory, all of stage ③'s**: `review()`
+when a sheet is opened, `save_draft()` on autosave and `approve()` on the button.
+Nothing here builds an artifact body or an artifact filename, and
+`tests/test_ui.py`'s grep is what keeps that at three.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
-and `python -m isekai`'s import graph never reaches it at all. That matters
-because `fastapi` and `uvicorn` are declared dependencies, so nothing fails at
-import time if a module-scope import appears elsewhere -- the `-S` guard in
-`tests/test_pipeline_cli.py` is the only thing that would catch it.
-Nothing is suppressed for this module anywhere; `uv sync --locked` installs both
-packages and the import resolves in the environment the gate runs in.
+and `python -m isekai`'s import graph never reaches it at all.
 
-**The flow is in none of the paths.** The batch has exactly one and
-`/api/batch` names it; a URL here is a contract between a server and a Vue app in
-the same repository, so widening it later is a find-and-replace. The paths are
-`GET /api/batch`, `/api/tags`, `/api/fields`, `/api/inputs/{identifier}` and
-`/api/inputs/{identifier}/photo`, `PUT /api/inputs/{identifier}/draft` and
-`POST /api/inputs/{identifier}/approve`, with the built bundle mounted at `/`.
+**Every path inside a batch names the batch, and a run by its digest** (D3):
+
+```
+GET  /api/library
+GET  /api/b/{batch}/hub
+GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
+PUT  /api/b/{batch}/review/{digest}/{flow}/draft
+POST /api/b/{batch}/review/{digest}/{flow}/approve
+GET  /api/tags   ·   GET /api/fields?flow=
+GET  anything else                                 the bundle's index.html
+```
 """
 
 import shlex
 import threading
 from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -54,16 +55,33 @@ from isekai.foundation.artifacts import (
     read,
     require,
 )
+from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import RUNS_ROOT
-from isekai.interface.ui.batch import Batch, Input
+from isekai.foundation.run import (
+    APPROVED,
+    CAPTIONS,
+    ID_DIGEST_CHARS,
+    REVIEW,
+    RUNS_ROOT,
+    TAGS,
+    WD14,
+    Run,
+    latest_artifact,
+)
+from isekai.interface.ui import library
+from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     TokenBudget,
     approve,
+    current_draft,
     save_draft,
     token_budget,
 )
+from isekai.pipeline.review import state as review_state
+from isekai.shared.field_map import FieldMap
+from isekai.shared.image import dimensions_or_refuse
+from isekai.shared.vocabulary import Vocabulary
 
 # The dropdown's `· rare` marker. This number exists nowhere else in the
 # repository: the vocabulary ranks by post count and never calls anything rare,
@@ -84,8 +102,8 @@ DEFAULT_LIMIT = 10
 # A `Refusal` is the pipeline declining a well-formed request because of what is
 # on disk -- an approved input, a changed field set, a tag outside the vocabulary
 # -- which is a conflict with state rather than a malformed request. One code for
-# all of them, because the page shows the string verbatim in one header line and
-# never branches on the number.
+# all of them, because the page shows the string verbatim and never branches on
+# the number.
 REFUSED = 409
 
 # A request that did not come from this machine's own browser, addressed to this
@@ -105,6 +123,9 @@ LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1", "[::1]"})
 # page's own, a typed address or bookmark, and none at all from a non-browser.
 SAME_SITE = frozenset({"same-origin", "none", None})
 
+# The stages at which a cell has a sheet to review.
+REVIEWABLE = frozenset({"sheet", "draft", "approved", "rendered"})
+
 
 def authorities(host: str, port: int) -> frozenset[str]:
     """Return every `Host` value this server, bound to `host:port`, answers to.
@@ -118,17 +139,51 @@ def authorities(host: str, port: int) -> frozenset[str]:
     return frozenset(f"{name}:{port}" for name in names)
 
 
-def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
-    """Return the review surface's application, bound to one established batch.
+@dataclass(frozen=True)
+class Held:
+    """One run in one flow, as a review URL names it."""
 
-    `host` and `port` are the address the server binds, and they are parameters
-    rather than the module constant because they are what every request is
-    checked against: an app that inferred its own address could not be tested
-    for rejecting someone else's.
+    run: Run
+    flow: Flow
+
+    @property
+    def digest(self) -> str:
+        """Return the digest the URL names the run by."""
+        return self.run.id[:ID_DIGEST_CHARS]
+
+    def directory(self, stage: str) -> Path:
+        """Return one of this flow's stage directories inside the run."""
+        return self.run.directory(self.flow.id, stage)
+
+    def draft(self) -> Path | None:
+        """Return the current draft, or None; `current_draft` decides."""
+        return current_draft(self.directory(REVIEW))
+
+    def approved(self) -> Path | None:
+        """Return the approved artifact, or None while it is still a draft."""
+        return latest_artifact(self.directory(REVIEW), APPROVED)
+
+
+def create_app(
+    root: Path,
+    wired: Wiring,
+    *,
+    bundle: Path,
+    wire: Callable[[Path], Wiring],
+    host: str,
+    port: int,
+) -> FastAPI:
+    """Return the app's application, serving every batch of the library at `root`.
+
+    `wire` builds one batch's wiring from its runs root, and is called on every
+    request inside a batch, so the run-root guard holds for each (D19). `wired`
+    supplies what every batch shares: the flows, the vocabulary and the table.
+    `host` and `port` are the address every request is checked against.
     """
-    app = FastAPI(title="isekai review", docs_url=None, redoc_url=None)
+    app = FastAPI(title="isekai", docs_url=None, redoc_url=None)
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
+    shared = _Shared(wired)
 
     @app.middleware("http")
     async def _addressed_here(
@@ -136,20 +191,17 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
     ) -> Response:
         """Answer only a request addressed to this server, from this server's page.
 
-        **The first middleware in this repository, and it guards all seven
-        routes** -- which is why it is a middleware rather than a dependency:
-        the static mount is not a route and would not carry one, and a route
-        added later would have to remember to.
+        **A middleware rather than a dependency**, so it guards every route and
+        the bundle alike, and a route added later cannot forget it.
 
         This API is unauthenticated by design, so the browser's own origin rules
-        are the whole of its protection, and both halves of that are checked
-        here. `Host` defeats DNS rebinding, where a page on an attacker's domain
-        resolves that domain to 127.0.0.1 and talks to this port with the
-        browser's full cooperation. `Origin`, when the browser sends one,
-        defeats the cross-site write: a `PUT` from another page carries its
-        origin and never this one's. Without `Origin`, `Sec-Fetch-Site` decides:
-        an image tag on another site sends no `Origin` and is still marked
-        `cross-site` (D24). A client that is not a browser sends neither.
+        are the whole of its protection. `Host` defeats DNS rebinding, where a
+        page on an attacker's domain resolves that domain to 127.0.0.1 and talks
+        to this port with the browser's full cooperation. `Origin`, when the
+        browser sends one, defeats the cross-site write. Without `Origin`,
+        `Sec-Fetch-Site` decides: an image tag on another site sends no `Origin`
+        and is still marked `cross-site` (D24). A client that is not a browser
+        sends neither.
         """
         if request.headers.get("Host", "") not in allowed:
             return JSONResponse({"refusal": "not addressed here"}, FORBIDDEN)
@@ -166,23 +218,73 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         """Turn a `Refusal` into a response carrying its string, verbatim."""
         return JSONResponse({"refusal": str(refusal)}, status_code=REFUSED)
 
-    @app.get("/api/batch")
-    def read_batch() -> dict[str, Any]:
-        """Describe the batch: its flow, its schema, its inputs and their state."""
-        # **The count is every input holding an approved artifact**, which is
-        # what `Batch.approved_count` reads off the directory -- and `re-opened`
-        # holds one. Deriving it from `status == "approved"` is the trap: that
-        # agrees with the directory only while `draft` and `approved` are the only
-        # states, and `re-opened` ends the coincidence. Read off `state()`
-        # rather than by walking the directory a second time, so the count and
-        # the statuses cannot disagree by construction rather than by luck.
-        summaries = [_summary(batch, held) for held in batch.inputs]
+    def folder(batch: str) -> Path:
+        """Return a batch's folder, its runs root passed through the guard."""
+        found = library.batch(root, batch)
+        wire(found / library.RUNS)
+        return found
+
+    def held(batch: str, digest: str, flow: str) -> Held:
+        """Return the run and flow a review URL names, refusing either unknown."""
+        found = folder(batch)
+        return Held(library.run_named(found, digest), _flow(wired, flow))
+
+    @app.get("/api/library")
+    def read_library() -> dict[str, Any]:
+        """List the library's folders, batches by their newest file first."""
         return {
-            "flow": batch.flow.id,
-            "schema": list(batch.flow.schema.names),
-            "vocabulary": len(batch.vocabulary),
-            "approved": sum(1 for held in summaries if held["status"] != "draft"),
-            "inputs": summaries,
+            "rows": [
+                {
+                    "name": row.name,
+                    "batch": row.batch,
+                    "sources": row.sources,
+                    "flows": [
+                        {
+                            "flow": one.flow,
+                            "approved": one.approved,
+                            "rendered": one.rendered,
+                            "of": one.of,
+                        }
+                        for one in row.flows
+                    ],
+                    "without_flow": row.without_flow,
+                    "newest": row.newest,
+                    "kind": row.kind,
+                }
+                for row in library.rows(root, wired.flows_dir)
+            ]
+        }
+
+    @app.get("/api/b/{batch}/hub")
+    def read_hub(batch: str) -> dict[str, Any]:
+        """Describe a batch's grid: its sources by its tracked flows, each cell's stage.
+
+        Read from the run directories on every request, so it follows a verb run
+        in the terminal while the page is open.
+        """
+        grid = library.hub(folder(batch), wired.flows_dir)
+        return {
+            "batch": grid.name,
+            "flows": list(grid.flows),
+            "sources": [
+                {
+                    "name": one.name,
+                    "digest": one.digest,
+                    **_size(one.run),
+                    "cells": {
+                        flow: {
+                            "stage": cell.stage,
+                            "renders": cell.renders,
+                            "refusal": cell.refusal,
+                            "status": review_state(one.run.directory(flow, REVIEW))
+                            if one.run and cell.stage in REVIEWABLE
+                            else None,
+                        }
+                        for flow, cell in one.cells.items()
+                    },
+                }
+                for one in grid.sources
+            ],
         }
 
     @app.get("/api/tags")
@@ -193,16 +295,14 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
         put a second copy of the ranking rule in TypeScript, and `total` is the
         true match count so the dropdown can say how narrow the fragment got.
         """
+        vocabulary = shared.vocabulary()
         fragment = q.strip()
-        found = batch.vocabulary.search(fragment) if fragment else []
+        found = vocabulary.search(fragment) if fragment else []
         return {
-            # The count is bound where it is used, with no `is not None` guard:
-            # `count()` returns `int`, so one would drop no row and read as
-            # though some fragment match might have no count.
             "matches": [
                 {
                     "tag": tag,
-                    "posts": (posts := batch.vocabulary.count(tag)),
+                    "posts": (posts := vocabulary.count(tag)),
                     "rare": posts < RARE_BELOW,
                 }
                 for tag in found[: max(limit, 0)]
@@ -210,62 +310,29 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "total": len(found),
         }
 
-    # Built once, because neither input can move: the table and the vocabulary are
-    # frozen for the life of the app, so rebuilding ~3,000 rows per request would
-    # re-rank a constant. `/api/tags` is not built this way because its answer
-    # depends on the fragment.
-    candidates = {
-        "fields": {
-            name: [
-                {"tag": tag, "posts": batch.vocabulary.count(tag)}
-                for tag in batch.vocabulary.rank(batch.field_map.group(name))
-            ]
-            for name in batch.flow.schema.names
-        }
-    }
-
     @app.get("/api/fields")
-    def read_fields() -> dict[str, Any]:
-        """Answer every candidate tag for every criterion the acting flow declares.
+    def read_fields(flow: str) -> dict[str, Any]:
+        """Answer every candidate tag for every criterion `flow` declares.
 
-        **The whole table in one response, once.** ~40 KB for a couple of thousand
-        tags, so the overlay filters with no round trip per keystroke, and a
-        sitting that never opens the reference pays nothing because this is not on
-        `/api/batch`'s payload. Riding that one would tax every page load for a
-        surface that may never open; a `?field=` form would be a round trip per
-        field and would pre-build a per-field ranking that is deliberately
-        deferred.
-
-        **Ordered by post count and cut at nothing.** Through `Vocabulary.rank`,
-        which is the same call `/api/tags` ranks through, so no second ranking
-        enters the system rather than merely no second *rule*. A cutoff was
-        measured against the operator's own approved sheets and refused:
-        `>10,000` hides ten of the 113 tags he approved, and the ones he reaches
-        for -- `gold bracelet` 2,081, `train station` 2,180 -- are in the tail.
-
-        **A declared field the table holds nothing for is present and empty**, and
-        the excluded list is not served at all. An empty group is the honest answer
-        for a criterion the vocabulary cannot express, and a missing row is
-        indistinguishable from one nobody has authored yet; the excluded list is an
-        assertion about the table rather than material to browse, and showing the
-        tags that are never an answer is the opposite of what the reference is for.
+        **The whole table in one response, once per flow.** ~40 KB, so the
+        overlay filters with no round trip per keystroke, ordered by post count
+        through `Vocabulary.rank` and cut at nothing. A declared field the table
+        holds nothing for is present and empty; the excluded list is not served.
         """
-        return candidates
+        return shared.candidates(_flow(wired, flow))
 
-    @app.get("/api/inputs/{identifier}")
-    def read_input(identifier: str) -> dict[str, Any]:
-        """Return everything the page shows for one input, joined into one payload.
+    @app.get("/api/b/{batch}/review/{digest}/{flow}")
+    def read_input(batch: str, digest: str, flow: str) -> dict[str, Any]:
+        """Return everything Review shows for one run in one flow, in one payload.
 
         The fields come from the approved artifact while the input is approved and
         from the current draft otherwise, which is what makes an input approved in
         an earlier sitting open read-only rather than empty.
         """
-        held = batch.find(identifier)
-        draft = batch.draft_path(held)
-        approved = batch.approved_path(held)
-        state = batch.state(held)
-        # By state, never by which file happens to exist: a stale draft below
-        # the approval must not stand in for it.
+        one = held(batch, digest, flow)
+        draft = one.draft()
+        approved = one.approved()
+        state = review_state(one.directory(REVIEW))
         fields: dict[str, list[str]] = {}
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
@@ -274,100 +341,96 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             body = read(approved, APPROVED_FILE, remedy=remedy)
             fields = _fields(approved, body, remedy)
         elif draft is not None:
-            remedy = _remedy(batch, held, "review")
+            remedy = _remedy(one, "review")
             fields = _fields(draft, read(draft, DRAFT_FILE), remedy)
-        budget = token_budget(fields, batch.flow.schema, batch.flow)
-        caption = batch.caption_path(held)
+        budget = token_budget(fields, one.flow.schema, one.flow)
+        caption = latest_artifact(one.directory(CAPTIONS))
+        width, height = _dimensions(one.run)
         return {
-            "id": held.id,
-            "width": held.width,
-            "height": held.height,
-            "caption": _prose(batch, held, caption) if caption else None,
+            "id": one.digest,
+            "run": one.run.id,
+            "batch": batch,
+            "flow": one.flow.id,
+            "schema": list(one.flow.schema.names),
+            "vocabulary": len(shared.vocabulary()),
+            "width": width,
+            "height": height,
+            "caption": _prose(one, caption) if caption else None,
             # The one artifact a skipped verb leaves missing on a page under
             # review, so the page names what writes it. Built here: the browser
             # never spells a command.
-            "caption_command": None if caption else _command(batch, held, "caption"),
-            # Both lists ride on this payload rather than on endpoints of their
-            # own, and both are `null` where the artifact is absent -- which is
+            "caption_command": None if caption else _command(one, "caption"),
+            # Both lists are `null` where the artifact is absent -- which is
             # three legitimate states, none of them a failure.
-            "wd14": _wd14(batch, held),
-            "tags": _tags(batch, held),
+            "wd14": _wd14(one),
+            "tags": _tags(one, shared.vocabulary()),
             "fields": fields,
             # **Approval with nothing newer beside it is what makes a sheet
-            # read-only**, which is precisely `state() == "approved"`. Not the
-            # absence of a draft, which the rail never keys on; and not
-            # approval alone, which would make `review --new-version <run>`
-            # write a draft this page would not edit.
+            # read-only**, which is precisely `state() == "approved"`.
             "readonly": state == "approved",
             "draft": draft.name if draft else None,
             "approved": approved.name if approved else None,
             "saved": _saved(draft),
             # The approved artifact's own time, which the draft's cannot stand
-            # in for: `approve()` unlinks the draft, so once an input is
-            # approved `saved` has nothing left to report.
+            # in for: `approve()` unlinks the draft.
             "approved_at": _saved(approved),
             "budget": _budget(budget),
         }
 
-    @app.get("/api/inputs/{identifier}/photo")
-    def read_photo(identifier: str) -> FileResponse:
+    @app.get("/api/b/{batch}/review/{digest}/{flow}/photo")
+    def read_photo(batch: str, digest: str, flow: str) -> FileResponse:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
-        return FileResponse(batch.find(identifier).run.photo)
+        return FileResponse(held(batch, digest, flow).run.photo)
 
-    @app.put("/api/inputs/{identifier}/draft")
-    def put_draft(identifier: str, payload: dict[str, Any]) -> dict[str, Any]:
+    @app.put("/api/b/{batch}/review/{digest}/{flow}/draft")
+    def put_draft(
+        batch: str, digest: str, flow: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         """Replace the draft's values in place, through the one function that owns it.
 
-        The whole draft, every time. There is no Save control on the page and no
-        partial update here: a debounced `PUT` of everything is what makes the
-        receipt the page shows true.
+        The whole draft, every time: a debounced `PUT` of everything is what
+        makes the receipt the page shows true.
 
         **Two preconditions, and both answer `409`.** An input that is approved
-        **and holds no later draft** refuses an update at all: an approved sheet
-        is never edited in place, and approval is the end of a review. An input
-        re-opened with `review --new-version <run>` is not that state and is accepted,
-        which is what the verb writes the draft for. And an update whose `saved`
-        does not match the draft on disk refuses, because the page autosaves on a
-        debounce and two overlapping `PUT`s would be free to commit in the order
-        the server happens to finish them -- last write wins, where "last" is not
-        the operator's last keystroke. The check and the write
-        hold one lock, so of two updates stating one precondition, the later
-        fails it.
+        and holds no later draft refuses an update at all: approval is the end
+        of a review. And an update whose `saved` does not match the draft on
+        disk refuses, because two overlapping `PUT`s would otherwise commit in
+        the order the server finishes them. The check and the write hold one
+        lock, so of two updates stating one precondition, the later fails it.
         """
-        held = batch.find(identifier)
+        one = held(batch, digest, flow)
         # Before the lock: a malformed body refuses without waiting on a write.
         fields = _update(payload)
         with _DRAFT_UPDATE:
-            if batch.state(held) == "approved":
+            if review_state(one.directory(REVIEW)) == "approved":
                 raise Refusal(
-                    f"{identifier} is approved, and an approved sheet is never "
+                    f"{one.run.id} is approved, and an approved sheet is never "
                     "edited in place; approval is the end of a review -- correct "
-                    f"it with `python -m isekai review --flow {batch.flow.id} "
-                    f"--new-version {held.run.id}`, which writes a fresh draft "
-                    "beside the approved artifact, and reload: the input comes back "
-                    "re-opened and editable, with its approved artifact still "
-                    "named"
+                    f"it with `{_command(one, 'review', '--new-version')}`, which "
+                    "writes a fresh draft beside the approved artifact, and "
+                    "reload: the input comes back re-opened and editable, with "
+                    "its approved artifact still named"
                 )
-            _precondition(batch, held, payload)
-            written = save_draft(held.run, batch.flow.id, fields)
-        budget = token_budget(fields, batch.flow.schema, batch.flow)
+            _precondition(one, payload)
+            written = save_draft(one.run, one.flow.id, fields)
+        budget = token_budget(fields, one.flow.schema, one.flow)
         return {
             "draft": written.name,
             "saved": _saved(written),
             "budget": _budget(budget),
         }
 
-    @app.post("/api/inputs/{identifier}/approve")
-    def post_approve(identifier: str) -> dict[str, Any]:
+    @app.post("/api/b/{batch}/review/{digest}/{flow}/approve")
+    def post_approve(batch: str, digest: str, flow: str) -> dict[str, Any]:
         """Validate and approve the draft, through the only writer of an approval.
 
         Under the draft lock, so an update in flight either lands before the
         approval reads the draft or finds the input approved and is refused.
         """
-        held = batch.find(identifier)
+        one = held(batch, digest, flow)
         with _DRAFT_UPDATE:
             written, warnings = approve(
-                held.run, batch.flow.id, batch.flow.schema, batch.vocabulary
+                one.run, one.flow.id, one.flow.schema, shared.vocabulary()
             )
         return {
             "approved": written.name if written else None,
@@ -375,45 +438,117 @@ def create_app(batch: Batch, *, host: str, port: int) -> FastAPI:
             "at": _saved(written),
         }
 
-    # Mounted last, so every `/api/` path above wins. `html=True` is what makes a
-    # reload of any address serve the page rather than a 404.
-    app.mount("/", StaticFiles(directory=batch.bundle, html=True), name="bundle")
+    @app.get("/api/{rest:path}")
+    def no_route(rest: str) -> JSONResponse:
+        """Answer an unknown API path as not found, never with the page."""
+        return JSONResponse({"refusal": f"no route /api/{rest}"}, 404)
+
+    # Every other path is a screen of the app, so a reload or a deep link loads
+    # the shell and its router draws the screen (D3).
+    app.mount(
+        "/assets",
+        StaticFiles(directory=bundle / "assets", check_dir=False),
+        name="assets",
+    )
+
+    @app.get("/{rest:path}")
+    def page(rest: str) -> FileResponse:
+        """Return the bundle's `index.html`, whatever screen the path names."""
+        return FileResponse(bundle / "index.html")
+
     return app
 
 
-def _summary(batch: Batch, held: Input) -> dict[str, Any]:
-    """Describe one input for the rail: its size, and where it is in stage ③.
+class _Shared:
+    """What every batch shares, read once when first asked for.
 
-    The state is `Batch.state`'s and is not recomputed here. `draft` holds no
-    approved artifact; `approved` holds one and nothing newer; `re-opened` holds
-    one *and* a later draft, which is what `review --new-version <run>` writes and the
-    only state in which the form is offered over an approved input.
+    Read on first use rather than at start, so a missing vocabulary is a
+    refusal on the page that needs it rather than a server that never starts.
     """
-    return {
-        "id": held.id,
-        "width": held.width,
-        "height": held.height,
-        "status": batch.state(held),
-    }
+
+    def __init__(self, wired: Wiring) -> None:
+        """Hold the wiring the vocabulary and the table are read through."""
+        self._wired = wired
+        self._vocabulary: Vocabulary | None = None
+        self._field_map: FieldMap | None = None
+        self._candidates: dict[str, dict[str, Any]] = {}
+
+    def vocabulary(self) -> Vocabulary:
+        """Return the vocabulary, read once."""
+        if self._vocabulary is None:
+            self._vocabulary = self._wired.vocabulary()
+        return self._vocabulary
+
+    def field_map(self) -> FieldMap:
+        """Return the field map held against the vocabulary, read once."""
+        if self._field_map is None:
+            self._field_map = self._wired.field_map(self.vocabulary())
+        return self._field_map
+
+    def candidates(self, flow: Flow) -> dict[str, Any]:
+        """Return every candidate tag for every criterion `flow` declares, ranked."""
+        if flow.id not in self._candidates:
+            vocabulary, table = self.vocabulary(), self.field_map()
+            self._candidates[flow.id] = {
+                "fields": {
+                    name: [
+                        {"tag": tag, "posts": vocabulary.count(tag)}
+                        for tag in vocabulary.rank(table.group(name))
+                    ]
+                    for name in flow.schema.names
+                }
+            }
+        return self._candidates[flow.id]
 
 
-def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
+def _flow(wired: Wiring, flow: str) -> Flow:
+    """Return the tracked flow a URL names, refusing one this build does not track."""
+    tracked = tracked_flows(wired.flows_dir)
+    if flow not in tracked:
+        raise Refusal(
+            f"{flow}: not a flow this build tracks; the flows it tracks are "
+            f"{', '.join(tracked)} -- go back to the batch's hub to choose one"
+        )
+    return load_flow(flow, wired.flows_dir)
+
+
+def _dimensions(run: Run) -> tuple[int, int]:
+    """Return the photograph's size, as a `Refusal` rather than an exit."""
+    return dimensions_or_refuse(
+        run.photo,
+        "the page reads the photograph's own header to size itself and there is "
+        "nothing to fall back to -- re-export it as a JPEG or PNG",
+    )
+
+
+def _size(run: Run | None) -> dict[str, int | None]:
+    """Return a source's size for the hub, or nulls where it has no readable run."""
+    if run is None:
+        return {"width": None, "height": None}
+    try:
+        width, height = _dimensions(run)
+    except Refusal:
+        return {"width": None, "height": None}
+    return {"width": width, "height": height}
+
+
+def _wd14(one: Held) -> list[dict[str, Any]] | None:
     """Return the local tagger's scored list for the page, or None if absent.
 
     Stored sorted by confidence descending, and passed through in that order:
     the sort is what makes a wrong tag arrive pre-refuted by the right one above
     it, so re-ordering here would throw away the reason the number is shown.
     """
-    path = batch.wd14_path(held)
+    path = latest_artifact(one.directory(WD14))
     if path is None:
         return None
     found = read(path, WD14_FILE)
-    remedy = _remedy(batch, held, "tag")
+    remedy = _remedy(one, "tag")
     require(path, found, "tags", list, remedy)
     scored: list[dict[str, Any]] = []
-    for index, one in enumerate(found["tags"]):
-        entry = one if isinstance(one, dict) else {}
-        tag, confidence = entry.get("tag"), entry.get("confidence")
+    for index, entry in enumerate(found["tags"]):
+        item = entry if isinstance(entry, dict) else {}
+        tag, confidence = item.get("tag"), item.get("confidence")
         # `bool` is an `int`, and a flag is no confidence.
         if (
             not isinstance(tag, str)
@@ -428,86 +563,55 @@ def _wd14(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
     return scored
 
 
-def _tags(batch: Batch, held: Input) -> list[dict[str, Any]] | None:
+def _tags(one: Held, vocabulary: Vocabulary) -> list[dict[str, Any]] | None:
     """Return the hosted tagger's committable tags for the page, or None if absent.
 
-    **Filtered to what the vocabulary carries, and the filter is an acceptance
-    finding rather than a preference.** On an acceptance batch roughly nine in
-    ten of this model's tags were outside the vocabulary -- `fashion
-    photography`, `centered subject`, `detailed textures in lace fabric` -- and
-    could be committed to no field at all. The operator's verdict on the
-    unfiltered list was that only the marked ones carried value, so the rest are
-    attention spent on the busiest pane in the surface.
-
-    **Filtered on the way to the page and never on the way to disk.** The
-    artifact keeps every tag the model returned; that is `tagging`'s rule and
-    nothing here touches it. Narrowing the *record* would make it disagree with
-    what the model actually said, and being able to look behind the router is
-    why it exists.
-
-    Membership is decided here because `/api/tags` answers
-    a fragment query and has no membership form, so asking per tag would be one
-    round trip each, and the vocabulary is already held by this process.
-
-    The local tagger's list is **not** filtered, and the asymmetry is the whole
-    point -- it is scored against the vocabulary it emits, so every tag it
-    returns is committable by construction.
+    **Filtered to what the vocabulary carries, on the way to the page and never
+    on the way to disk.** Roughly nine in ten of this model's tags were outside
+    the vocabulary on an acceptance batch and could be committed to no field;
+    the artifact keeps every tag the model returned. Deduplicated here only:
+    `{tag, posts}` repeats carry no information and would be duplicate Vue keys.
+    The local tagger's list is not filtered -- it emits the vocabulary itself.
     """
-    path = batch.tags_path(held)
+    path = latest_artifact(one.directory(TAGS))
     if path is None:
         return None
     listed = read(path, TAGS_FILE).get("tags")
     if not _is_tag_list(listed):
         raise Refusal(
-            f"{path.name}: its `tags` is not a list of strings; "
-            f"{_remedy(batch, held, 'tag')}"
+            f"{path.name}: its `tags` is not a list of strings; {_remedy(one, 'tag')}"
         )
-    # One lookup per tag. `count()` normalises the spelling and
-    # hits the same mapping `__contains__` does, so asking both questions
-    # separately would normalise a forty-tag list eighty times for one answer --
-    # and they are not the same question: a tag the vocabulary carries with a
-    # count of zero is *in* it, so membership cannot be read off the number.
-    # Deduplicated, and **only here**. `OfferedTag` is `{tag, posts}` where
-    # `posts` is a pure function of `tag`, so a repeat is a byte-identical
-    # object carrying no information -- and it would be a duplicate Vue key.
-    # `tagging:output:the-list-is-stored-unnarrowed` forbids canonicalising,
-    # filtering against a vocabulary and re-ordering, none of which this is, and
-    # the artifact on disk is untouched either way. `_wd14` must **not** get the
-    # same treatment: `ScoredTag` is `{tag, confidence}`, where two rows can
-    # legitimately differ.
-    # `dict.fromkeys` preserves order, so the dedup is visible in the iterator
-    # rather than spread across a parallel set and a two-clause condition.
     return [
-        {"tag": name, "posts": batch.vocabulary.count(name)}
+        {"tag": name, "posts": vocabulary.count(name)}
         for name in dict.fromkeys(listed)
-        if name in batch.vocabulary
+        if name in vocabulary
     ]
 
 
-def _command(batch: Batch, held: Input, verb: str, *flags: str) -> str:
-    """Return the command that runs `verb` for `held`, as the operator pastes it.
+def _command(one: Held, verb: str, *flags: str) -> str:
+    """Return the command that runs `verb` for `one`, as the operator pastes it.
 
-    e.g. "caption" -> "python -m isekai caption --flow f r"
+    e.g. "caption" -> "python -m isekai caption --flow f --runs b/runs r"
 
     The run's own root is named whenever it is not the default, or the pasted
     command would look under `.data/runs` for a run served from another root.
     """
-    root = held.run.path.parent
+    root = one.run.path.parent
     runs = (
         ""
         if root.resolve() == RUNS_ROOT.resolve()
         else f" --runs {shlex.quote(str(root))}"
     )
-    words = " ".join((*flags, held.run.id))
-    return f"python -m isekai {verb} --flow {batch.flow.id}{runs} {words}"
+    words = " ".join((*flags, one.run.id))
+    return f"python -m isekai {verb} --flow {one.flow.id}{runs} {words}"
 
 
-def _remedy(batch: Batch, held: Input, verb: str) -> str:
-    """Return the remedy naming the command that rewrites `verb`'s file for `held`.
+def _remedy(one: Held, verb: str) -> str:
+    """Return the remedy naming the command that rewrites `verb`'s file for `one`.
 
     e.g. "tag" -> "rewrite it with `python -m isekai tag --flow f --new-version r`"
     """
-    return f"rewrite it with `{_command(batch, held, verb, '--new-version')}`"
+    return f"rewrite it with `{_command(one, verb, '--new-version')}`"
 
 
 def _is_tag_list(value: object) -> TypeGuard[list[str]]:
@@ -528,10 +632,10 @@ def _fields(path: Path, body: Mapping[str, Any], remedy: str) -> dict[str, list[
     return dict(body["fields"])
 
 
-def _prose(batch: Batch, held: Input, path: Path) -> str:
+def _prose(one: Held, path: Path) -> str:
     """Return a caption's prose, refusing by name a caption that has none."""
     body = read(path, CAPTION_FILE)
-    require(path, body, "prose", str, _remedy(batch, held, "caption"))
+    require(path, body, "prose", str, _remedy(one, "caption"))
     return body["prose"]
 
 
@@ -546,25 +650,20 @@ def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
     return fields
 
 
-def _precondition(batch: Batch, held: Input, payload: Mapping[str, Any]) -> None:
+def _precondition(one: Held, payload: Mapping[str, Any]) -> None:
     """Refuse an update written against a draft that has since moved on disk.
 
     **`st_mtime` is the precondition because nothing else exists.** The draft
-    carries no timestamp, no revision counter and no digest; `schema.version` is
-    the draft kind's *format* version, and `save_draft` never advances the
-    filename's `NNN` by design. A `revision` int in the body is the correct
-    answer and changes the draft's shape, so its version moves and `read`
-    refuses every draft already on disk -- that is not a patch. `put_draft`'s
-    lock orders the check and the write; this is what orders the sends.
+    carries no timestamp, no revision counter and no digest, and adding one
+    changes the draft's shape. `put_draft`'s lock orders the check and the
+    write; this is what orders the sends.
 
-    **A payload carrying no `saved` states no precondition**, and is allowed:
-    the mtime is already on the wire as the field every response returns, so a
-    client that echoes it gets the check and one that cannot goes unchecked.
+    **A payload carrying no `saved` states no precondition**, and is allowed.
     """
     offered = payload.get("saved")
     if offered is None:
         return
-    draft = batch.draft_path(held)
+    draft = one.draft()
     if draft is not None and _saved(draft) != offered:
         raise Refusal(
             f"{draft.name} changed since this page last read it; another tab or "

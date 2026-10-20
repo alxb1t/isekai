@@ -32,7 +32,7 @@ const fragment = ref('')
 const box = ref<HTMLInputElement | null>(null)
 
 /* The overlay takes the focus on open, because it owns an input of its own and
-   the field it was opened from must stop receiving keys. `ReviewApp` gives the
+   the field it was opened from must stop receiving keys. `Review` gives the
    field back on close. */
 onMounted(() => box.value?.focus())
 

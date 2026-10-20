@@ -11,7 +11,8 @@
    2. The four Inter weights the sheet asks for are vendored beside this file and
       declared below. Same family, same weights, no network.
 
-   Everything after the @font-face block is the imported sheet, byte for byte. */
+   Everything after the @font-face block and before the app's tokens at the end
+   is the imported sheet, byte for byte. */
 
 @font-face {
   font-family: 'Inter';
@@ -335,3 +336,28 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-body { font-size: 14px; opacity: 0.85; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
+/* The app's tokens, from `ui/design/spec.md` §2. The shell, Home and the hub
+   are drawn in these; the review surface keeps the sheet's above. */
+:root {
+  --ground: #161724;
+  --ground-deep: #11121c;
+  --ground-media: #0e0f17;
+  --raised: #1a1b29;
+  --raised-2: #1d1e30;
+  --line: #272939;
+  --line-soft: #22243a;
+  --line-control: #33354a;
+  --line-disabled: #2c2e42;
+  --focus: #6b6d80;
+  --ink: #e4e4ec;
+  --ink-1b: #c9cad6;
+  --ink-2: #a3a5b8;
+  --ink-3: #74768a;
+  --ink-muted: #8a8ca0;
+  --ink-disabled: #5d5f73;
+  --accent: #8d82e6;
+  --accent-dim: #5a5296;
+  --accent-ink: #b3abf4;
+  --tick-locked: #34364a;
+  --chip-line: #2f3146;
+}
