@@ -16,6 +16,8 @@ defineProps<{
   readonly: boolean
   focused: boolean
   selected?: number | null
+  /* On a revision, the approval's tags where this field differs from them. */
+  was?: string[] | null
 }>()
 
 defineEmits<{ remove: [index: number] }>()
@@ -34,7 +36,12 @@ function focusFragment(event: MouseEvent): void {
 </script>
 
 <template>
-  <div class="row" :class="{ 'row--focused': focused }" @click="focusFragment">
+  <div
+    class="row"
+    :class="{ 'row--focused': focused, 'row--changed': was }"
+    :data-changed="was ? fieldKey : undefined"
+    @click="focusFragment"
+  >
     <StatusMark
       :kind="state === 'pending' ? 'dashed' : state === 'filled' ? 'filled' : 'hollow'"
     />
@@ -59,5 +66,6 @@ function focusFragment(event: MouseEvent): void {
       <slot />
     </div>
     <span class="row__tokens mono">{{ tokens > 0 ? tokens : '' }}</span>
+    <span v-if="was" class="row__was mono">was {{ was.join(' · ') || 'empty' }}</span>
   </div>
 </template>

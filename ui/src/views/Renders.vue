@@ -3,16 +3,21 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { renders, thumbAt } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
-import type { RendersInfo } from '../types'
+import ReviseConfirm from '../components/ReviseConfirm.vue'
+import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
 
 /* Renders: a grid of sources by flows, each cell's approvals newest first with
    their images (design spec J5·1). ←→ move along a source's images, ↑↓ between
-   sources, and ↵ or a click opens an image's large view (§7). */
+   sources, and ↵ or a click opens an image's large view; space selects, and ⌥E
+   revises the selection (§7). A seed rendered under two versions is labelled ⇄. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
 const info = ref<RendersInfo | null>(null)
 const refusal = ref<string | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
+/* The selected images, each as `key` spells it. */
+const selected = ref(new Set<string>())
+const revising = ref(false)
 
 interface Spot {
   digest: string
@@ -51,6 +56,27 @@ function spot(row: number, flow: string, version: number, seed: string): string 
   return `${row}|${flow}|${version}|${seed}`
 }
 
+/* An image as the selection holds it. e.g. "0d4b…|summon-anime-wai|1|42" */
+const key = (one: Spot) => `${one.digest}|${one.flow}|${one.version}|${one.seed}`
+
+const chosen = computed<RevisedImage[]>(() =>
+  rows.value.flat().filter((one) => selected.value.has(key(one))),
+)
+
+function toggle(one: Spot): void {
+  const next = new Set(selected.value)
+  if (!next.delete(key(one))) next.add(key(one))
+  selected.value = next
+}
+
+/* The seeds a cell renders under more than one version. */
+function shared(versions: RenderVersion[]): Set<string> {
+  const seen = new Map<string, number>()
+  for (const version of versions)
+    for (const seed of version.rendered) seen.set(seed, (seen.get(seed) ?? 0) + 1)
+  return new Set([...seen].filter(([, count]) => count > 1).map(([seed]) => seed))
+}
+
 function move(rowStep: number, columnStep: number): void {
   const held = rows.value
   const filled = held.map((one, index) => (one.length ? index : -1)).filter((one) => one >= 0)
@@ -68,7 +94,22 @@ function move(rowStep: number, columnStep: number): void {
 }
 
 function onKey(event: KeyboardEvent): void {
+  if (revising.value) return
+  // Matched on `event.code`: ⌥E types a character.
+  if (event.altKey && event.code === 'KeyE') {
+    event.preventDefault()
+    if (chosen.value.length) revising.value = true
+    return
+  }
   if (event.altKey || event.metaKey || event.ctrlKey) return
+  if (event.key === ' ') {
+    const here = rows.value[focus.value.row]?.[focus.value.column]
+    if (here) {
+      event.preventDefault()
+      toggle(here)
+    }
+    return
+  }
   const steps: Record<string, [number, number]> = {
     ArrowUp: [-1, 0],
     ArrowDown: [1, 0],
@@ -119,6 +160,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="renders">
+    <div class="renders__bar">
+      <button
+        class="btn btn-secondary"
+        type="button"
+        data-revise
+        :disabled="!chosen.length"
+        @click="revising = true"
+      >
+        Revise {{ chosen.length || '' }}<span class="appbar__key">⌥E</span>
+      </button>
+      <span v-if="!chosen.length" class="renders__reason">No image selected</span>
+    </div>
     <div
       class="renders__grid"
       :style="{ gridTemplateColumns: `250px repeat(${info.flows.length}, 1fr)` }"
@@ -138,7 +191,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               v{{ version.version }} · {{ version.damaged }}
             </span>
             <span v-else class="renders__head mono">
-              v{{ version.version }} · approved {{ clock(version.at) }} · count
+              v{{ version.version }}<template v-if="version.kind">
+                · {{ version.kind }} of v{{ version.came_from }}</template
+              >
+              · approved {{ clock(version.at) }} · count
               {{ version.count }}<template v-if="version.seeds.length">
                 · seeds {{ version.seeds.join(', ') }}</template
               >
@@ -150,6 +206,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 class="renders__image"
                 :class="{
                   'renders__image--focused': focused === spot(row, flow, version.version, seed),
+                  'renders__image--selected':
+                    source.digest &&
+                    selected.has(`${source.digest}|${flow}|${version.version}|${seed}`),
                 }"
                 type="button"
                 :data-seed="seed"
@@ -160,11 +219,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   :src="thumb(source.digest, flow, version.version, seed)"
                   :alt="`${source.name} ${flow} v${version.version} seed ${seed}`"
                 />
+                <span
+                  v-if="shared(source.cells[flow] ?? []).has(seed)"
+                  class="renders__pair mono"
+                  >⇄ {{ seed }}</span
+                >
               </button>
             </span>
           </div>
         </div>
       </template>
     </div>
+    <ReviseConfirm
+      v-if="revising"
+      :batch="batch"
+      :images="chosen"
+      @close="revising = false"
+    />
   </section>
 </template>

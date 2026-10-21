@@ -9,6 +9,7 @@ import type {
   Billing,
   Budget,
   Committed,
+  Comparison,
   FieldCandidates,
   HubInfo,
   InputDetail,
@@ -18,6 +19,8 @@ import type {
   RenderDetail,
   Renders,
   RendersInfo,
+  ReviseRefused,
+  RevisedImage,
   TagMatches,
 } from './types'
 
@@ -156,6 +159,29 @@ export function approve(
   return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
+/* Deletes the waiting draft, as `review --discard` does; an approval refuses. */
+export function discardDraft(place: Place): Promise<{ discarded: string }> {
+  return send(`${at(place)}/discard`, 'POST', {})
+}
+
+/* Every image's draft, or none: a refusal answers each image, and is returned
+   rather than thrown so the page can offer to deselect the refused. */
+export async function revise(
+  batch: string,
+  images: RevisedImage[],
+): Promise<{ drafts: (RevisedImage & { draft: string })[] } | ReviseRefused> {
+  const response = await fetch(`/api/b/${encodeURIComponent(batch)}/revise`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ images }),
+  })
+  const body = (await response.json().catch(() => ({}))) as
+    | { drafts: (RevisedImage & { draft: string })[] }
+    | ReviseRefused
+  if (response.ok || 'images' in body) return body
+  throw new Error((body as { refusal?: string }).refusal ?? `revise answered ${response.status}`)
+}
+
 export function photoUrl(place: Place): string {
   return `${at(place)}/photo`
 }
@@ -216,4 +242,8 @@ export function imageAt(place: RenderPlace): string {
 
 export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
+}
+
+export function comparison(place: RenderPlace): Promise<Comparison> {
+  return get<Comparison>(`${renderAt(place)}/compare`)
 }

@@ -28,6 +28,7 @@ function detail(id: string, saved: number): InputDetail {
     tags: null,
     fields: { hair: ['long hair'] },
     renders: { count: 1, seeds: [] },
+    revision: null,
     readonly: false,
     draft: '001.draft.json',
     approved: null,

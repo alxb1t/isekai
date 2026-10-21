@@ -8,7 +8,7 @@ carries `@pytest.mark.spec` with the key its task names.
 - [x] 1 — Revise and discard
 - [x] 2 — The verbs
 - [x] 3 — The API
-- [ ] 4 — The UI
+- [x] 4 — The UI
 - [ ] 5 — The cards and the docs
 
 ## 1 — Revise and discard
@@ -30,9 +30,9 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## 4 — The UI
 
-- [ ] 4.1 Add Revise to `ui/src/views/RenderLarge.vue` and `ui/src/views/Renders.vue`, the revision's render and `was` lines to `ui/src/views/Review.vue`, `ui/src/views/Compare.vue` with its route in `ui/src/router.ts`, per [D7](design.md#d7) and the design spec's J5, J6.
+- [x] 4.1 Add Revise to `ui/src/views/RenderLarge.vue` and `ui/src/views/Renders.vue`, the revision's render and `was` lines to `ui/src/views/Review.vue`, `ui/src/views/Compare.vue` with its route in `ui/src/router.ts`, per [D7](design.md#d7) and the design spec's J5, J6.
   Verify: `grep -c "compare" ui/src/router.ts` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 4.2 Extend `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from` in `tests/e2e/test_render.py` along J5, with steps binding `ui:revise:revise-opens-review-on-the-revision` and `ui:compare:compare-shows-the-pair-and-the-change`.
+- [x] 4.2 Extend `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from` in `tests/e2e/test_render.py` along J5, with steps binding `ui:revise:revise-opens-review-on-the-revision` and `ui:compare:compare-shows-the-pair-and-the-change`.
   Verify: `uv run pytest -q tests/e2e/test_render.py` exits 0, and `grep -c -E 'ui:revise:|ui:compare:compare-shows' tests/e2e/test_render.py` prints `2`.
 
 ## 5 — The cards and the docs

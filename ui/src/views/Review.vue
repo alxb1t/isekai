@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { fieldCandidates, photoUrl as photoAt } from '../api'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { discardDraft, fieldCandidates, imageAt, photoUrl as photoAt } from '../api'
 import AppHeader from '../components/AppHeader.vue'
 import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
@@ -14,7 +14,7 @@ import SheetForm from '../components/SheetForm.vue'
 import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
-import { after, queue, useQueue } from '../composables/useQueue'
+import { after, queue, queued, reviewQueue, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
 import type { FieldCandidates } from '../types'
 
@@ -28,6 +28,7 @@ import type { FieldCandidates } from '../types'
    move between them are read by `TagInput`. */
 const props = defineProps<{ batch: string; digest: string; flow: string }>()
 const router = useRouter()
+const route = useRoute()
 const batch = useQueue(props.batch, props.flow, () => props.digest)
 const failure = ref<string | null>(null)
 const done = computed(() => batch.info.value !== null && queue(batch.info.value, props.flow).length === 0)
@@ -39,6 +40,17 @@ const approval = useApproval()
 const current = computed(() => props.digest)
 const photoUrl = (digest: string) => photoAt({ batch: props.batch, digest, flow: props.flow })
 const schema = computed(() => sheet.detail.value?.schema ?? [])
+/* A draft copied from an approval, while it is still a draft: the approval's
+   fields mark what changed, and its image sits beside the photograph (J5·4). */
+const revision = computed(() =>
+  sheet.readonly.value ? null : (sheet.detail.value?.revision ?? null),
+)
+const revised = computed(() => {
+  const held = revision.value
+  if (!held?.seed) return null
+  return imageAt({ ...props, version: held.version, seed: held.seed })
+})
+const discarding = ref<string | null>(null)
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
 /* The URL is the state: choosing another sheet is a navigation. */
@@ -155,8 +167,38 @@ const kicker = computed(() => {
   // arrived -- `readonly` defaults to true while `detail` is null, so testing
   // it first would call an unloaded sheet approved.
   if (!sheet.detail.value?.approved) return 'draft from the tagger'
-  return sheet.readonly.value ? 'approved' : 're-opened'
+  if (sheet.readonly.value) return 'approved'
+  const held = revision.value
+  if (held?.seed) return `revision of render ${held.seed}`
+  return held ? `revision of v${held.version}` : 're-opened'
 })
+
+/* Revise's queue, when Review was opened by it: the next of its drafts, else
+   the hub. Null without one, so the batch's own queue decides. */
+function nextRevised(): boolean {
+  const held = route.query.queue
+  if (typeof held !== 'string') return false
+  const [next, ...rest] = queued(held)
+  if (next)
+    void router.push({
+      name: 'review',
+      params: { batch: props.batch, digest: next.digest, flow: next.flow },
+      query: { queue: reviewQueue(rest) },
+    })
+  else void router.push({ name: 'hub', params: { batch: props.batch } })
+  return true
+}
+
+/* Delete this draft, as `review --discard` does, and go on as approving would. */
+async function discard(): Promise<void> {
+  try {
+    await discardDraft({ batch: props.batch, digest: current.value, flow: props.flow })
+  } catch (reason) {
+    discarding.value = (reason as Error).message
+    return
+  }
+  if (!nextRevised()) void router.push({ name: 'hub', params: { batch: props.batch } })
+}
 
 async function approve(): Promise<void> {
   const id = current.value
@@ -177,6 +219,7 @@ async function approve(): Promise<void> {
   if (!(await approval.approve(place, sheet.saved.value))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
   // The sheet is re-read so the page shows it approved, whatever follows.
+  if (nextRevised()) return
   const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
   focused.value = null
   selectedChip.value = null
@@ -464,6 +507,8 @@ watch(current, (id) => {
         :wd14="sheet.detail.value?.wd14 ?? null"
         :tags="sheet.detail.value?.tags ?? null"
         :loading="sheet.loading.value"
+        :render="revised"
+        :seed="revision?.seed ?? null"
         @open="openLens('photo')"
       />
       <SheetForm
@@ -475,6 +520,7 @@ watch(current, (id) => {
         :selected="selectedChip"
         :loading="sheet.loading.value"
         :kicker="kicker"
+        :previous="revision?.fields ?? null"
         @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(current))"
       >
         <template #editor="{ field }">
@@ -501,6 +547,14 @@ watch(current, (id) => {
             :readonly="sheet.readonly.value"
             @change="sheet.setRenders"
           />
+          <p v-if="revision" class="approve-bar__note mono">
+            <span v-if="discarding" class="approve-bar__refusal"
+              ><span class="refusal__mark" />{{ discarding }}</span
+            >
+            <button class="btn btn-secondary" type="button" data-discard @click="discard">
+              Discard revision
+            </button>
+          </p>
           <ApproveBar
             :approved="sheet.readonly.value"
             :at="clock(approval.at.value)"

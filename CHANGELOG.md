@@ -17,6 +17,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The app's API revises a selection of images all or none, discards a waiting draft, heads each version a
   revision or a re-roll of the one it came from, and compares a seed with its newest older version; an
   unedited revision of an image already rendered is refused (0065 D4, D5, D6, D7).
+- The app revises from an image's large view and over a selection in Renders, opens Review on each draft with
+  the render beside the photograph and a `was` line on every changed field, and Compare shows a seed's two
+  versions side by side (0065 D7).
 
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 

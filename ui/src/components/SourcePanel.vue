@@ -25,6 +25,9 @@ const props = defineProps<{
   wd14?: ScoredTag[] | null
   tags?: OfferedTag[] | null
   loading?: boolean
+  /* The image being revised, drawn beside the photograph on a revision (J5·4). */
+  render?: string | null
+  seed?: string | null
 }>()
 
 defineEmits<{ open: [] }>()
@@ -70,7 +73,21 @@ defineExpose({
         {{ loading ? 'reading…' : 'click or ⌥f to fill window' }}
       </span>
     </div>
+    <div v-if="render" class="source__pair">
+      <PhotoFrame
+        :src="photo"
+        :alt="id"
+        :loading="loading"
+        :ratio="`${width} / ${height}`"
+        @open="$emit('open')"
+      />
+      <figure class="source__revised" data-revised>
+        <span class="kicker">render being revised · {{ seed }}</span>
+        <img :src="render" :alt="`render ${seed}`" />
+      </figure>
+    </div>
     <PhotoFrame
+      v-else
       :src="photo"
       :alt="id"
       :loading="loading"

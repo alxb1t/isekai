@@ -3,10 +3,12 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { imageAt, renderDetail } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
+import ReviseConfirm from '../components/ReviseConfirm.vue'
 import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
-   sheet it was rendered from beside it — filled fields only, read-only. */
+   sheet it was rendered from beside it — filled fields only, read-only. ⌥E
+   revises it; C compares it with the newest older version of its seed (J5·8). */
 const props = defineProps<{
   batch: string
   digest: string
@@ -17,6 +19,7 @@ const props = defineProps<{
 const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
+const revising = ref(false)
 
 const place = computed(() => ({
   batch: props.batch,
@@ -26,11 +29,23 @@ const place = computed(() => ({
   seed: props.seed,
 }))
 
-/* esc goes back to Renders. */
+function compare(): void {
+  void router.push({ name: 'compare', params: { ...props } })
+}
+
+/* esc goes back to Renders. Matched on `event.code`: ⌥E types a character. */
 function onKey(event: KeyboardEvent): void {
-  if (event.key !== 'Escape') return
-  event.preventDefault()
-  void router.push({ name: 'renders', params: { batch: props.batch } })
+  if (revising.value) return
+  if (event.altKey && event.code === 'KeyE') {
+    event.preventDefault()
+    revising.value = true
+  } else if (event.code === 'KeyC' && !event.altKey && !event.metaKey && detail.value?.compare) {
+    event.preventDefault()
+    compare()
+  } else if (event.key === 'Escape') {
+    event.preventDefault()
+    void router.push({ name: 'renders', params: { batch: props.batch } })
+  }
 }
 
 onUnmounted(() => window.removeEventListener('keydown', onKey))
@@ -60,9 +75,29 @@ onMounted(async () => {
           <dd>{{ tags.join(' · ') }}</dd>
         </template>
       </dl>
-      <RouterLink class="btn btn-secondary" :to="{ name: 'renders', params: { batch } }"
-        >Back to Renders<span class="appbar__key">esc</span></RouterLink
-      >
+      <div class="large__actions">
+        <button class="btn btn-secondary" type="button" data-revise @click="revising = true">
+          Revise this image<span class="appbar__key">⌥E</span>
+        </button>
+        <button
+          v-if="detail.compare"
+          class="btn btn-secondary"
+          type="button"
+          data-compare
+          @click="compare"
+        >
+          Compare with v{{ detail.compare }}<span class="appbar__key">C</span>
+        </button>
+        <RouterLink class="btn btn-secondary" :to="{ name: 'renders', params: { batch } }"
+          >Back to Renders<span class="appbar__key">esc</span></RouterLink
+        >
+      </div>
     </aside>
+    <ReviseConfirm
+      v-if="revising"
+      :batch="batch"
+      :images="[{ digest, flow, version: place.version, seed }]"
+      @close="revising = false"
+    />
   </section>
 </template>

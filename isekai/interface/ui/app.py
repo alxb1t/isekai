@@ -581,6 +581,7 @@ def create_app(
         state = review_state(one.directory(REVIEW))
         fields: dict[str, list[str]] = {}
         renders = ONE_RENDER
+        revision = None
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
             # refuses the same damage, so only a hand repairs it.
@@ -593,6 +594,7 @@ def create_app(
             body = read(draft, DRAFT_FILE)
             fields = _fields(draft, body, remedy)
             renders = renders_of(draft, body, remedy)
+            revision = _revision(one, body.get("producer"), renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
@@ -617,6 +619,9 @@ def create_app(
             # Seeds as decimal strings: a 64-bit seed is past what a JavaScript
             # number holds exactly.
             "renders": _renders_out(renders),
+            # The approval a draft was copied from, its fields and the image
+            # being revised; null for a draft of a sheet.
+            "revision": revision,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
             "readonly": state == "approved",
@@ -970,6 +975,34 @@ def cell_event(
         }
 
     return cell
+
+
+def _revision(one: Held, producer: object, renders: Renders) -> dict[str, Any] | None:
+    """Describe the approval a draft was copied from, and the image it revises.
+
+    The image is the first listed seed rendered under that approval, or null.
+    e.g. from 1, seeds [7], outputs/001/7.png there -> {"version": 1, "seed": "7", …}
+    """
+    if not isinstance(producer, dict) or producer.get("source") != REVIEW:
+        return None
+    version = producer.get("from")
+    if not _whole(version):
+        return None
+    approval = approval_of(one.run, one.flow.id, version)
+    if not approval.is_file():
+        return None
+    remedy = f"restore it in {approval} by hand, then reload the page"
+    fields = _fields(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
+    rendered = [
+        seed
+        for seed in renders["seeds"]
+        if image_of(one.run, one.flow, version, seed).is_file()
+    ]
+    return {
+        "version": version,
+        "seed": str(rendered[0]) if rendered else None,
+        "fields": fields,
+    }
 
 
 def _side(

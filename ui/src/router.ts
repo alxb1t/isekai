@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from './views/Home.vue'
+import Compare from './views/Compare.vue'
 import Hub from './views/Hub.vue'
 import RenderLarge from './views/RenderLarge.vue'
 import Renders from './views/Renders.vue'
@@ -20,6 +21,12 @@ export const router = createRouter({
       path: '/b/:batch/renders/:digest/:flow/:version/:seed',
       name: 'render',
       component: RenderLarge,
+      props: true,
+    },
+    {
+      path: '/b/:batch/renders/:digest/:flow/:version/:seed/compare',
+      name: 'compare',
+      component: Compare,
       props: true,
     },
     { path: '/session', name: 'session', component: Session },

@@ -16,6 +16,8 @@ const props = defineProps<{
   focused: string | null
   selected: number | null
   loading?: boolean
+  /* The approval a revision was copied from, whose fields each row is read against. */
+  previous?: Record<string, string[]> | null
 }>()
 
 defineEmits<{ remove: [field: string, index: number] }>()
@@ -23,6 +25,14 @@ defineEmits<{ remove: [field: string, index: number] }>()
 const filled = computed(
   () => props.schema.filter((name) => (props.fields[name] ?? []).length > 0).length,
 )
+
+function was(name: string): string[] | null {
+  if (!props.previous) return null
+  const held = props.previous[name] ?? []
+  const now = props.fields[name] ?? []
+  const same = held.length === now.length && held.every((tag, index) => tag === now[index])
+  return same ? null : held
+}
 
 function state(name: string): 'filled' | 'empty' | 'pending' {
   if (props.loading) return 'pending'
@@ -50,6 +60,7 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
         :readonly="readonly"
         :focused="name === focused"
         :selected="name === focused ? selected : null"
+        :was="was(name)"
         @remove="(index) => $emit('remove', name, index)"
       >
         <slot name="editor" :field="name" />
