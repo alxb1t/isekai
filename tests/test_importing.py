@@ -19,6 +19,7 @@ from isekai.shared.image import metadata_in
 from tests.images import jpeg_segment, nef_bytes, photo_jpeg
 from tests.stages import bare_wiring
 
+REPO = Path(__file__).resolve().parent.parent
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "sources"
 LIMIT = 10 * 1024 * 1024
 ORIENTATION = 0x0112
@@ -151,6 +152,21 @@ def test_a_display_p3_jpeg_is_converted_to_srgb(tmp_path: Path) -> None:
     assert max(abs(a - b) for a, b in zip(got, want, strict=True)) <= 3
     assert max(abs(a - b) for a, b in zip(unconverted, want, strict=True)) > 3
 
+    # A PNG tagged Display P3, as a phone or desktop screenshot is.
+    out = io.BytesIO()
+    Image.new("RGB", (32, 32), (200, 80, 60)).save(out, "PNG", icc_profile=p3)
+    screenshot = _write(tmp_path, "screen.png", out.getvalue())
+
+    png = read(screenshot, stage(tmp_path / "library"), LIMIT)
+
+    (path,) = source.glob(f"*/{png.name}")
+    assert (png.name, png.state, png.carries) == ("screen.png", "converted", ())
+    with Image.open(path) as image:
+        assert "icc_profile" not in image.info
+        got = image.convert("RGB").getpixel((16, 16))
+    assert isinstance(got, tuple)
+    assert max(abs(a - b) for a, b in zip(got, want, strict=True)) <= 3
+
 
 @pytest.mark.spec("import:clean:a-heic-becomes-a-jpeg")
 def test_a_heic_becomes_a_jpeg_with_its_orientation_in_its_pixels(
@@ -189,6 +205,35 @@ def test_a_transparent_webp_becomes_a_png(tmp_path: Path) -> None:
     assert staged.name == "cut-out.png"
     with Image.open(staging / staged.name) as written:
         assert written.format == "PNG"
+
+    # The same cut-out exported with a Display P3 profile.
+    out = io.BytesIO()
+    image.save(out, "WEBP", lossless=True, icc_profile=_display_p3())
+    profiled = _write(tmp_path, "cut-out-p3.webp", out.getvalue())
+
+    converted = read(profiled, staging, LIMIT)
+
+    assert (converted.name, converted.state) == ("cut-out-p3.png", "converted")
+    assert converted.carries == ()
+    with Image.open(staging / converted.name) as written:
+        assert written.format == "PNG"
+        assert "icc_profile" not in written.info
+
+
+@pytest.mark.spec("import:clean:a-16-bit-image-keeps-its-tones")
+def test_a_16_bit_greyscale_tiff_keeps_its_tones(tmp_path: Path) -> None:
+    out = io.BytesIO()
+    Image.new("I;16", (32, 32), 20000).save(out, "TIFF")
+    scan = _write(tmp_path, "film-scan.tiff", out.getvalue())
+    staging = stage(tmp_path / "library")
+
+    staged = read(scan, staging, LIMIT)
+
+    assert (staged.name, staged.state) == ("film-scan.jpg", "converted")
+    with Image.open(staging / staged.name) as written:
+        grey = written.convert("L").getpixel((16, 16))
+    assert isinstance(grey, int)
+    assert abs(grey - 20000 // 257) <= 2
 
 
 # --- refusing ----------------------------------------------------------------
@@ -397,3 +442,21 @@ def test_an_unusable_batch_name_is_refused_and_staging_kept(
         commit(staging, library, name)
 
     assert (staging / "a.jpg").is_file()
+
+
+@pytest.mark.spec("import:stage:a-batch-git-can-reach-is-refused")
+def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
+    tmp_path: Path,
+) -> None:
+    inside = REPO / "batch-in-the-tree"
+    photo = _write(tmp_path, "portrait.jpg", photo_jpeg())
+    err = io.StringIO()
+    args = build_parser().parse_args(
+        ["import", "--batch", str(inside / "trip"), str(photo)]
+    )
+
+    code = dispatch(args, bare_wiring(err=err))
+
+    assert code == 1
+    assert "under .data/ or at a directory outside the repository" in err.getvalue()
+    assert not inside.exists()

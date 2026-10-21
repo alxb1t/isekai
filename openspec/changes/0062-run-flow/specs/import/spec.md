@@ -10,10 +10,12 @@ orientation, verified, and committed into the batch's `sources/` in one move.
 The system SHALL write into a batch's `sources/` only a JPEG or PNG carrying its pixels, its orientation and nothing
 else. A JPEG or PNG in sRGB or with no colour profile SHALL be stripped without re-encoding; one with another profile
 SHALL be converted to sRGB and re-encoded. Any other format that decodes to one image SHALL be converted to JPEG, or
-to PNG when it holds real transparency, with its orientation applied. A converted file SHALL keep its original stem.
+to PNG when it holds real transparency, with its orientation applied. A converted file SHALL keep its original stem,
+and a 16-bit greyscale image its tones, scaled to 8 bits.
 
 A library holds personal photographs, so a source keeps no location, camera or time, and neither does any run copied
-from it. A dropped profile without conversion shifts every colour, on screen and in the render.
+from it. A dropped profile without conversion shifts every colour, on screen and in the render, and a 16-bit value
+clipped to 8 bits turns a scan white.
 
 ```
 JPEG/PNG, sRGB or none ──▶ strip, lossless ─────────┐
@@ -28,10 +30,10 @@ HEIC WebP AVIF TIFF BMP GIF ─▶ decode ─▶ JPEG / PNG ┘
 - **THEN** the source carries no EXIF but its orientation
 - **AND** its decoded pixels equal the original's
 
-#### Scenario: a Display P3 JPEG is converted to sRGB
+#### Scenario: a Display P3 JPEG or PNG is converted to sRGB
 - **Key:** `import:clean:another-profile-is-converted-to-srgb`
 - **Layers:** unit
-- **WHEN** a JPEG with a Display P3 profile is imported
+- **WHEN** a JPEG or a PNG with a Display P3 profile is imported
 - **THEN** the source carries no profile
 - **AND** its pixels are the original's converted to sRGB
 
@@ -47,6 +49,13 @@ HEIC WebP AVIF TIFF BMP GIF ─▶ decode ─▶ JPEG / PNG ┘
 - **Layers:** unit
 - **WHEN** a WebP with transparent pixels is imported
 - **THEN** the source is a PNG with the same stem
+- **AND** it carries no profile, whether or not the WebP had one
+
+#### Scenario: a 16-bit greyscale image keeps its tones
+- **Key:** `import:clean:a-16-bit-image-keeps-its-tones`
+- **Layers:** unit
+- **WHEN** a 16-bit greyscale TIFF is imported
+- **THEN** the source is a JPEG whose pixels are the original's scaled to 8 bits
 
 ### Requirement: A file that cannot be a source is refused by name
 
@@ -118,10 +127,12 @@ The system SHALL read chosen files into a staging folder under the library's `.s
 and move every staged file into its `sources/` in one commit, SHALL delete the staging folder on cancel, and SHALL
 delete any staging folder left in the library when the surface starts. A file with the same bytes as a source
 already in the batch SHALL be skipped; a different file whose name is taken SHALL be written as `<stem>-2`. A batch
-name SHALL be refused when empty, holding `/`, starting with a dot, or taken.
+name SHALL be refused when empty, holding `/`, starting with a dot, or taken. A batch whose folder sits inside the
+repository's working tree and outside its ignored data root SHALL be refused before anything is staged.
 
 Nothing half-read reaches a batch, and a batch never looks complete while files are still arriving. Bytes, not
-names, decide sameness.
+names, decide sameness. A batch holds copies of photographs, so it stays where git cannot reach it
+([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
 
 #### Scenario: a commit moves every staged file into the batch
 - **Key:** `import:stage:a-commit-moves-every-file`
@@ -156,3 +167,10 @@ names, decide sameness.
 - **WHEN** a commit names a batch that is taken, empty, holds `/` or starts with a dot
 - **THEN** it is refused
 - **AND** the staging folder is kept
+
+#### Scenario: a batch git can reach is refused
+- **Key:** `import:stage:a-batch-git-can-reach-is-refused`
+- **Layers:** unit
+- **WHEN** `isekai import` names a batch inside the working tree and outside `.data/`
+- **THEN** it is refused, naming where a batch may go
+- **AND** nothing is written

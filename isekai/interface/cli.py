@@ -66,7 +66,7 @@ from isekai.foundation.run import (
 from isekai.interface.compare_view import write_page
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
-from isekai.interface.wiring import Wiring, wiring
+from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import (
     prepare,
@@ -336,6 +336,13 @@ def _import(args: argparse.Namespace, wired: Wiring) -> int:
     at a time.
     """
     batch = Path(args.batch).resolve()
+    if trackable(batch.parent):
+        raise Refusal(
+            f"--batch {batch} is inside this repository and outside its ignored "
+            ".data/ root; a batch holds copies of photographs, so it would be one "
+            "`git add` from being published -- point --batch under .data/ or at a "
+            "directory outside the repository"
+        )
     staging = stage(batch.parent)
     limit = upload_limit()
     staged: list[Staged] = []

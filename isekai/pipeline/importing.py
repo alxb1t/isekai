@@ -360,7 +360,7 @@ def _encode(image: "Image") -> bytes:
 
     from PIL import ImageCms, ImageOps
 
-    upright = ImageOps.exif_transpose(image)
+    upright = _eight_bit(ImageOps.exif_transpose(image))
     transparent = _is_transparent(upright)
     profile = image.info.get("icc_profile")
     mode = "RGBA" if transparent else "RGB"
@@ -381,12 +381,26 @@ def _encode(image: "Image") -> bytes:
                 "sRGB JPEG and add it again"
             ) from broken
     pixels = upright.convert(mode)
+    # The PNG writer falls back to the image's own profile, and the pixels are sRGB
+    # by now, so nothing of the decoded file's info reaches the encoder.
+    pixels.info.clear()
     out = io.BytesIO()
     if image.format == "PNG" or transparent:
         pixels.save(out, "PNG")
     else:
         pixels.save(out, "JPEG", quality=JPEG_QUALITY)
     return out.getvalue()
+
+
+def _eight_bit(image: "Image") -> "Image":
+    """Return a 16-bit greyscale `image` with its values scaled to 8 bits.
+
+    A conversion clips each value to 255, which turns a 16-bit scan white.
+    e.g. a value of 20000 -> 77
+    """
+    if image.mode.startswith("I"):
+        return image.point(lambda value: value / 257, "L")
+    return image
 
 
 def _is_srgb(image: "Image") -> bool:
