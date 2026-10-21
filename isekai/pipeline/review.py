@@ -43,6 +43,7 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    SIDECAR,
     Renders,
     ReviewApproved,
     ReviewDraft,
@@ -196,6 +197,30 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     _, carried = _approval(run, flow, version, "revise the image again")
     renders: Renders = {"count": 1, "seeds": [seed]}
     return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
+
+
+def refuse_revisions(selection: Sequence[tuple[Run, str, int]]) -> list[str | None]:
+    """Return why each revision of `selection` cannot be written, None where it can.
+
+    Checked whole before anything is written, so a selection is revised all or
+    not at all; a flow takes one revision at a time.
+    e.g. [(run, f, 1), (run, f, 2)] -> [None, "<run>/f: is in this selection twice…"]
+    """
+    seen: set[tuple[Path, str]] = set()
+    answers: list[str | None] = []
+    for run, flow, version in selection:
+        try:
+            if (run.path, flow) in seen:
+                raise Refusal(
+                    f"{run.id}/{flow}: is in this selection twice, and a flow takes "
+                    "one revision at a time; revise one image, then the other"
+                )
+            seen.add((run.path, flow))
+            refuse_revision(run, flow, version)
+            answers.append(None)
+        except Refusal as refused:
+            answers.append(str(refused))
+    return answers
 
 
 def refuse_revision(run: Run, flow: str, version: int) -> None:
@@ -589,11 +614,12 @@ def _refuse_unchanged(
     fields: Mapping[str, Sequence[str]],
     renders: Renders,
 ) -> None:
-    """Refuse a draft that would render only images its approval already has.
+    """Refuse a draft that would render only images its approval already makes.
 
-    That is a draft with its approval's fields, count and seeds, every image a
-    listed seed: rendering it pays for what exists. New seeds alone are a change.
-    e.g. 003 from 001, both `{count 1, seeds [7]}` -> names outputs/001/7.png
+    That is a draft with its approval's fields whose every image is a listed
+    seed its approval lists or rendered: rendering it pays for what exists. New
+    seeds alone are a change, and a count above its seeds draws new ones.
+    e.g. 002 from 001, fields equal, `{count 1, seeds [7]}`, 001 rendered 7 -> refused
     """
     if not isinstance(came_from, int):
         return
@@ -609,17 +635,20 @@ def _refuse_unchanged(
     same = isinstance(held, dict) and {
         name: list(tags) for name, tags in held.items()
     } == {name: list(tags) for name, tags in fields.items()}
-    # A count above its seeds draws new ones, so it reproduces nothing whole.
-    drawn = renders["count"] > len(renders["seeds"])
-    if not same or drawn or renders_of(origin, body, remedy) != renders:
+    group = run.directory(flow, OUTPUTS, f"{came_from:03d}")
+    made = set(renders_of(origin, body, remedy)["seeds"]) | {
+        seed for seed in renders["seeds"] if (group / f"{seed}{SIDECAR}").is_file()
+    }
+    seeds = renders["seeds"]
+    if not same or renders["count"] > len(seeds) or not set(seeds) <= made:
         return
-    group = f"{run.id}/{flow}/{OUTPUTS}/{came_from:03d}"
-    images = ", ".join(f"{group}/{seed}.png" for seed in renders["seeds"])
     raise Refusal(
-        f"{draft.name}: has the fields, count and seeds of {origin.name}, so it "
-        f"would render {images} again; edit a field, the count or "
-        f"the seeds in {draft}, then run `{stage_command(run, 'approve', flow)}` "
-        f"again, or run `{stage_command(run, STAGE, flow, options=DISCARD)}`"
+        f"{draft.name}: has the fields of {origin.name} and only its seeds "
+        f"{', '.join(map(str, seeds))}, so it would render the images of "
+        f"{run.id}/{flow}/{OUTPUTS}/{came_from:03d}/ again; edit a field, the "
+        f"count or the seeds in {draft}, then run "
+        f"`{stage_command(run, 'approve', flow)}` again, or run "
+        f"`{stage_command(run, STAGE, flow, options=DISCARD)}`"
     )
 
 

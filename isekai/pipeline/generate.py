@@ -40,6 +40,7 @@ from isekai.foundation.artifacts import (
     PROMPT_FILE,
     RENDER_FILE,
     SEED_BITS,
+    SIDECAR,
     Failure,
     Prompt,
     Renders,
@@ -299,10 +300,6 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
         assembled[flow] = prompt_artifact(run, flows[flow], flows[flow].schema)
 
     return assembled, refused + across(ready, assemble_one)
-
-
-# A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
-SIDECAR = ".render.json"
 
 
 def is_render(path: Path, suffix: str) -> bool:

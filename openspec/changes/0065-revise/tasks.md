@@ -7,7 +7,7 @@ carries `@pytest.mark.spec` with the key its task names.
 
 - [x] 1 — Revise and discard
 - [x] 2 — The verbs
-- [ ] 3 — The API
+- [x] 3 — The API
 - [ ] 4 — The UI
 - [ ] 5 — The cards and the docs
 
@@ -25,7 +25,7 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## 3 — The API
 
-- [ ] 3.1 Add the revise, discard and compare routes of [D7](design.md#d7) to `isekai/interface/ui/app.py`, and the version header of [D5](design.md#d5) to `read_renders`; bind `ui:compare:a-version-is-named-by-what-changed` and `ui:compare:a-seed-pairs-with-its-newest-older-version` in `tests/test_ui_api.py`.
+- [x] 3.1 Add the revise, discard and compare routes of [D7](design.md#d7) to `isekai/interface/ui/app.py`, and the version header of [D5](design.md#d5) to `read_renders`; bind `ui:compare:a-version-is-named-by-what-changed` and `ui:compare:a-seed-pairs-with-its-newest-older-version` in `tests/test_ui_api.py`.
   Verify: `grep -c '/compare' isekai/interface/ui/app.py` prints a number of at least `1`, and `grep -c 'ui:compare:' tests/test_ui_api.py` prints `2`.
 
 ## 4 — The UI

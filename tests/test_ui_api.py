@@ -82,6 +82,7 @@ from isekai.pipeline.review import (  # noqa: E402
     ENCODER_WINDOW,
     approve,
     review,
+    save_draft,
 )
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
@@ -1350,6 +1351,80 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     assert (newer["version"], newer["rendered"], newer["damaged"]) == (2, ["22"], None)
     assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
     assert older.name in damaged["damaged"]
+
+
+def _approved_again(
+    made: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    renders: Renders | None = None,
+    **fields: list[str],
+) -> None:
+    """Open the next draft of `made`, change `fields` and `renders`, and approve it."""
+    draft = review(made, FLOW, new_version=True)
+    assert draft is not None
+    held = read(draft, DRAFT_FILE)["fields"]
+    save_draft(made, FLOW, {**held, **fields}, renders)
+    approve(made, FLOW, schema, vocabulary)
+
+
+@pytest.mark.spec("ui:compare:a-version-is-named-by-what-changed")
+def test_a_version_is_headed_a_revision_or_a_re_roll_of_the_one_it_came_from(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [5]})
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders").json()
+
+    (source,) = body["sources"]
+    assert [
+        (one["version"], one["came_from"], one["kind"]) for one in source["cells"][FLOW]
+    ] == [(3, 2, "re-roll"), (2, 1, "revision"), (1, None, None)]
+
+
+@pytest.mark.spec("ui:compare:a-seed-pairs-with-its-newest-older-version")
+def test_a_seed_rendered_under_three_versions_compares_the_third_with_the_second(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    flow = load_flow(FLOW)
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    _source(made)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+
+    def rendered() -> None:
+        prepare(made, {FLOW: flow})
+        assert [one.seed for one in render(made, flow, comfy, seeds=[7], poll=0)] == [7]
+
+    rendered()
+    _approved_again(made, schema, vocabulary)
+    rendered()
+    _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    rendered()
+    client = _client(wired, made, tmp_path, drafted=False)
+    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v3/7"
+
+    view = client.get(large).json()
+    pair = client.get(f"{large}/compare").json()
+
+    assert view["compare"] == 2
+    assert (pair["before"]["version"], pair["after"]["version"]) == (2, 3)
+    assert [(one["field"], one["after"]) for one in pair["changed"]] == [
+        ("clothes", ["collared shirt"])
+    ]
 
 
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")

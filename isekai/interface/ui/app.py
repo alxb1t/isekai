@@ -13,10 +13,10 @@ response. The pipeline owns what a valid sheet is, each run file's shape and its
 filename, when approval is legal, and what a token costs.
 
 **A run directory is written only through the functions that own it**: stage
-③'s `review()` when a sheet is opened, `save_draft()` on autosave and
-`approve()` on the button, and the run's own `open_run()` and `assign()` on a
-tick. Nothing here builds an artifact body or an artifact filename, and
-`tests/test_ui.py`'s grep is what keeps it so.
+③'s `review()` when a sheet is opened, `save_draft()` on autosave,
+`approve()` on the button, `revise()` and `discard()` on theirs, and the run's
+own `open_run()` and `assign()` on a tick. Nothing here builds an artifact
+body or an artifact filename, and `tests/test_ui.py`'s grep is what keeps it so.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
@@ -35,9 +35,10 @@ DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
 GET  /events[?batch=|?staging=]                    Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
-POST /api/b/{batch}/review/{digest}/{flow}/approve
+POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
+POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
-     and its /image and /thumb
+     and its /image, /thumb and /compare
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -100,7 +101,10 @@ from isekai.pipeline.review import (
     TokenBudget,
     approve,
     current_draft,
+    discard,
+    refuse_revisions,
     review,
+    revise,
     save_draft,
     token_budget,
 )
@@ -692,6 +696,76 @@ def create_app(
             "at": _saved(written),
         }
 
+    @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
+    def post_discard(batch: str, digest: str, flow: str) -> dict[str, Any]:
+        """Delete the waiting draft, as `review --discard` does; an approval refuses."""
+        one = held(batch, digest, flow)
+        with _DRAFT_UPDATE:
+            gone = discard(one.run, one.flow.id)
+        return {"discarded": gone.name}
+
+    @app.post("/api/b/{batch}/revise", response_model=None)
+    def post_revise(
+        batch: str, payload: dict[str, Any]
+    ) -> dict[str, Any] | JSONResponse:
+        """Write a revision for every image named, or, when any is refused, none.
+
+        A refusal answers each image with its own refusal, or null where it could
+        be revised, so the page can offer to deselect the rest.
+        """
+        found = folder(batch)
+        named = _images(payload)
+        runs: list[Run | None] = []
+        answers: list[str | None] = []
+        for digest, flow, version, seed in named:
+            try:
+                run = library.run_named(found, digest)
+                image = image_of(run, offered(flow), version, seed)
+                if not image.is_file():
+                    raise Refusal(
+                        f"{image.name}: is not an image a render wrote; go back to "
+                        "the batch's Renders to choose one"
+                    )
+                runs.append(run)
+                answers.append(None)
+            except Refusal as refused:
+                runs.append(None)
+                answers.append(str(refused))
+        with _DRAFT_UPDATE:
+            checked = iter(
+                refuse_revisions(
+                    [
+                        (run, flow, version)
+                        for run, (_, flow, version, _) in zip(runs, named, strict=True)
+                        if run is not None
+                    ]
+                )
+            )
+            answers = [
+                next(checked) if run is not None else answer
+                for run, answer in zip(runs, answers, strict=True)
+            ]
+            if any(answer is not None for answer in answers):
+                return JSONResponse(
+                    {
+                        "refusal": "; ".join(a for a in answers if a is not None),
+                        "images": [
+                            {**_image_out(*one), "refusal": answer}
+                            for one, answer in zip(named, answers, strict=True)
+                        ],
+                    },
+                    REFUSED,
+                )
+            drafts = [
+                {
+                    **_image_out(digest, flow, version, seed),
+                    "draft": revise(run, flow, version, seed).name,
+                }
+                for run, (digest, flow, version, seed) in zip(runs, named, strict=True)
+                if run is not None
+            ]
+        return {"drafts": drafts}
+
     @app.get("/api/b/{batch}/renders")
     def read_renders(batch: str) -> dict[str, Any]:
         """Return each source's images by offered flow, approvals newest first."""
@@ -740,16 +814,48 @@ def create_app(
         batch: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
         """Return one render's large view: the approval's filled fields beside it."""
-        _, _, approval = rendered(batch, digest, flow, version, seed)
+        run, _, approval = rendered(batch, digest, flow, version, seed)
         remedy = f"restore it in {approval} by hand, then reload the page"
         body = read(approval, APPROVED_FILE, remedy=remedy)
         fields = _fields(approval, body, remedy)
+        number = _version(version)
+        suffix = offered(flow).output_suffix
         return {
             "flow": flow,
-            "version": _version(version),
+            "version": number,
             "seed": str(seed),
             "fields": {name: tags for name, tags in fields.items() if tags},
             "approved_at": _saved(approval),
+            # The newest older version that rendered this seed, or null.
+            "compare": library.paired(run, flow, number, seed, suffix),
+        }
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/compare")
+    def read_compare(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> dict[str, Any]:
+        """Return a seed's image under this version beside the newest older one."""
+        run, _, after = rendered(batch, digest, flow, version, seed)
+        number = _version(version)
+        one = offered(flow)
+        older = library.paired(run, flow, number, seed, one.output_suffix)
+        if older is None:
+            raise Refusal(
+                f"v{number} · {seed}: no older version of {flow} rendered this seed, "
+                "so there is nothing to compare; go back to its large view"
+            )
+        _, _, before = rendered(batch, digest, flow, f"v{older}", seed)
+        sides = [_side(one, number, after), _side(one, older, before)]
+        (now, now_fields), (was, was_fields) = sides
+        return {
+            "seed": str(seed),
+            "before": was,
+            "after": now,
+            "changed": [
+                {"field": name, "before": was_fields[name], "after": now_fields[name]}
+                for name in one.schema.names
+                if was_fields.get(name, []) != now_fields.get(name, [])
+            ],
         }
 
     @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/image")
@@ -864,6 +970,58 @@ def cell_event(
         }
 
     return cell
+
+
+def _side(
+    flow: Flow, version: int, approval: Path
+) -> tuple[dict[str, Any], dict[str, list[str]]]:
+    """Return one side of a comparison as the page shows it, and its fields."""
+    remedy = f"restore it in {approval} by hand, then reload the page"
+    body = read(approval, APPROVED_FILE, remedy=remedy)
+    fields = _fields(approval, body, remedy)
+    for name in flow.schema.names:
+        fields.setdefault(name, [])
+    return {
+        "version": version,
+        "approved_at": _saved(approval),
+        "renders": _renders_out(renders_of(approval, body, remedy)),
+        "tokens": token_budget(fields, flow.schema, flow).total,
+    }, fields
+
+
+def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
+    """Return a revision's images, refusing a list that is not of rendered images.
+
+    e.g. `{"images": [{"digest": "0d4b…", "flow": "f", "version": 1, "seed": "7"}]}`
+         -> `[("0d4b…", "f", 1, 7)]`
+    """
+    images = payload.get("images")
+    fix = (
+        "send each image's digest, flow, version and decimal seed -- nothing was "
+        "written"
+    )
+    if not isinstance(images, list) or not images:
+        raise Refusal(f"the revision names no images; {fix}")
+    named = []
+    for image in images:
+        if not (
+            isinstance(image, dict)
+            and isinstance(image.get("digest"), str)
+            and isinstance(image.get("flow"), str)
+            and _whole(image.get("version"))
+            and isinstance(image.get("seed"), str)
+            and _DECIMAL.fullmatch(image["seed"])
+        ):
+            raise Refusal(f"the revision's image {image!r} is not one; {fix}")
+        named.append(
+            (image["digest"], image["flow"], image["version"], int(image["seed"]))
+        )
+    return named
+
+
+def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
+    """Describe an image of a revision, its seed a decimal string."""
+    return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
 
 
 def _version_out(version: library.Version) -> dict[str, Any]:

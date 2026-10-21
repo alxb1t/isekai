@@ -53,7 +53,7 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import SEED_RANGE
+from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -72,7 +72,6 @@ from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import (
-    SIDECAR,
     STAGE_RENDER,
     Render,
     prepare,
@@ -93,7 +92,7 @@ from isekai.pipeline.importing import (
 from isekai.pipeline.review import (
     approve,
     discard,
-    refuse_revision,
+    refuse_revisions,
     review,
     revise,
 )
@@ -446,25 +445,25 @@ def _revise(images: Sequence[Path], wired: Wiring) -> int:
     fix meets no half-written selection.
     """
     refused: list[str] = []
-    selection: dict[tuple[Path, str], tuple[Path, Run, int, int]] = {}
+    selection: list[tuple[Path, Run, str, int, int]] = []
     for image in images:
         try:
-            run, flow, version, seed = _rendered(image)
-            first = selection.get((run.path, flow))
-            if first is not None:
-                raise Refusal(
-                    f"shares {run.id}/{flow} with {first[0]}, and a flow takes "
-                    "one revision at a time; revise one, then the other"
-                )
-            refuse_revision(run, flow, version)
-            selection[(run.path, flow)] = (image, run, version, seed)
-        except Refusal as unrevisable:
-            refused.append(f"{image}: {unrevisable}")
+            selection.append((image, *_rendered(image)))
+        except Refusal as unrendered:
+            refused.append(f"{image}: {unrendered}")
+    answers = refuse_revisions(
+        [(run, flow, version) for _, run, flow, version, _ in selection]
+    )
+    refused += [
+        f"{image}: {answer}"
+        for (image, *_), answer in zip(selection, answers, strict=True)
+        if answer is not None
+    ]
     if refused:
         for message in refused:
             print(f"refused: {message}", file=wired.err)
         return 1
-    for (_, flow), (_, run, version, seed) in selection.items():
+    for _, run, flow, version, seed in selection:
         written = revise(run, flow, version, seed)
         print(f"{run.id}: revise wrote {flow}/{written.name}", file=wired.out)
     return 0

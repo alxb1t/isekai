@@ -1170,16 +1170,21 @@ def test_a_waiting_draft_refuses_a_revision_and_nothing_is_written(
 
 
 @pytest.mark.spec("review:revise:an-unchanged-revision-is-refused")
+@pytest.mark.parametrize("listed", [[SEED], []], ids=["listed", "drawn-and-rendered"])
 def test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce(
-    run: Run, schema: Schema, vocabulary: Vocabulary
+    run: Run, schema: Schema, vocabulary: Vocabulary, listed: list[int]
 ) -> None:
-    _approved(run, schema, vocabulary, {"count": 1, "seeds": [SEED]})
+    # Drawn: the approval lists no seed, and the revised image is the one it drew.
+    _approved(run, schema, vocabulary, {"count": 1, "seeds": listed})
+    if not listed:
+        _image(run, 1, SEED)
     draft = revise(run, FLOW, 1, SEED)
 
     with pytest.raises(Refusal) as refused:
         approve(run, FLOW, schema, vocabulary)
 
-    assert f"{run.id}/{FLOW}/outputs/001/{SEED}.png" in str(refused.value)
+    assert f"seeds {SEED}," in str(refused.value)
+    assert f"{run.id}/{FLOW}/outputs/001/" in str(refused.value)
     assert draft.exists()
     assert approved_versions(run.directory(FLOW, "review")) == [1]
 

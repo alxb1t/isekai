@@ -14,6 +14,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   images (0065 D1, D3, D4).
 - `isekai revise <image.png> …` checks every image first, then writes a revision for each or none, and
   `isekai review --discard` deletes a flow's waiting draft (0065 D2, D3).
+- The app's API revises a selection of images all or none, discards a waiting draft, heads each version a
+  revision or a re-roll of the one it came from, and compares a seed with its newest older version; an
+  unedited revision of an image already rendered is refused (0065 D4, D5, D6, D7).
 
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 
