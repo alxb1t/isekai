@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { renderAt, renderDetail } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
 import type { RenderDetail } from '../types'
@@ -13,6 +14,7 @@ const props = defineProps<{
   version: string
   seed: string
 }>()
+const router = useRouter()
 const detail = ref<RenderDetail | null>(null)
 const refusal = ref<string | null>(null)
 
@@ -24,7 +26,16 @@ const place = computed(() => ({
   seed: props.seed,
 }))
 
+/* esc goes back to Renders. */
+function onKey(event: KeyboardEvent): void {
+  if (event.key !== 'Escape') return
+  event.preventDefault()
+  void router.push({ name: 'renders', params: { batch: props.batch } })
+}
+
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 onMounted(async () => {
+  window.addEventListener('keydown', onKey)
   try {
     detail.value = await renderDetail(place.value)
   } catch (reason) {
@@ -50,7 +61,7 @@ onMounted(async () => {
         </template>
       </dl>
       <RouterLink class="btn btn-secondary" :to="{ name: 'renders', params: { batch } }"
-        >Back to Renders<span class="appbar__key">⌥3</span></RouterLink
+        >Back to Renders<span class="appbar__key">esc</span></RouterLink
       >
     </aside>
   </section>

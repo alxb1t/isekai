@@ -30,6 +30,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   `ceiling` and `max_hourly`; the README and data flow describe rendering from the app (0063 D10).
 - Proved on a pod: two images rendered from the app inside a 20-minute limit, each recording its duration, and
   no pod or volume left after (0063 D11).
+- From the proof: Render is disabled on the hub with its reason, the session's clock stops at its end and its
+  tiles show the renders, Renders takes arrows and ↵, esc leaves the large view, and the log holds each line once (0063 D8, D9).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

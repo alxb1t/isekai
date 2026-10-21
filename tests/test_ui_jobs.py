@@ -282,7 +282,13 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
     folder, _ = _batch(tmp_path, "ada.jpg")
     record = tmp_path / "acts"
     volume, command = _order(record)
-    jobs = Jobs(events.Broadcast(), lambda: None, volume=volume, render=command)
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=command,
+        now=lambda: "ended",
+    )
 
     jobs.render("b", folder, limit=1500, total=1, keep_open=False, started="t")
     jobs.wait(WAIT)
@@ -292,7 +298,9 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
         "render 1500",
         "volume down",
     ]
-    assert (jobs.slot() or {})["state"] == "done"
+    slot = jobs.slot() or {}
+    assert slot["state"] == "done"
+    assert slot["session"]["ended"] == "ended"
 
 
 @pytest.mark.spec("ui:render-job:a-lost-opening-renders-nothing")

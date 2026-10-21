@@ -183,11 +183,21 @@ export interface Committed {
    `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
 export interface RenderSession {
   started: string
+  /* When the job ended; null while it runs. */
+  ended: string | null
   limit: number
   of: number
   keep_open: boolean
   steps: Record<string, string>
-  images: { n: number; of: number; run: string; flow: string }[]
+  images: {
+    n: number
+    of: number
+    run: string
+    digest: string
+    flow: string
+    version: number
+    seed: string
+  }[]
 }
 
 export interface JobSlot {

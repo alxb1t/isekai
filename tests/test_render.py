@@ -723,8 +723,15 @@ def test_a_session_reports_each_image_of_the_total_as_json(
     images = [line for line in lines if line["step"] == "image"]
     assert [(line["n"], line["of"]) for line in images] == [(1, 2), (2, 2)]
     assert {(line["run"], line["flow"]) for line in images} == {(made.id, FLOW)}
+    seeds = {path.stem for path in (made.path / FLOW / "outputs" / "002").glob("*.png")}
+    assert {(line["version"], line["seed"]) for line in images} == {
+        (2, seed) for seed in seeds
+    }
     assert lines[-1] == {"step": "teardown", "state": "done"}
-    assert f"{made.id}: rendered" in log(root)
+    # The prose is the caller's to log, so the session writes no line of it twice.
+    assert isinstance(wiring.err, io.StringIO)
+    assert f"{made.id}: rendered" in wiring.err.getvalue()
+    assert not (root.parent / "log.txt").exists()
 
 
 TIMING = render.Timing(

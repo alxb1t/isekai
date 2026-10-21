@@ -8,10 +8,12 @@
 With no request, every approval short of its count renders what it lacks. A count
 draws that many seeds; a source flow renders its latest seeds again. A source
 rendered by count in the same line goes first, in the same session. Output is shown
-and appended to the batch's log, `<runs>/../log.txt` (D36).
+and appended to the batch's log, `<runs>/../log.txt` (D36); with `--progress json`
+the prose goes to stderr alone, which the caller keeps, as the app's job does.
 """
 
 import argparse
+import contextlib
 import dataclasses
 import io
 import json
@@ -25,7 +27,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO, cast
+from typing import Any, TextIO, cast
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyTransport
@@ -199,10 +201,11 @@ class Steps:
         # A text stream as `_Tee` is; `TextIO` is a type no stream class subclasses.
         return cast("TextIO", _Images(self, total))
 
-    def image(self, run: str, flow: str, total: int) -> None:
-        """Print the next image's line, of `total`."""
+    def image(self, item: Mapping[str, Any], total: int) -> None:
+        """Print the next image's line, of `total`, naming its run, flow and seed."""
         self._n += 1
-        self.step("image", "done", n=self._n, of=total, run=run, flow=flow)
+        named = {key: item.get(key) for key in ("run", "flow", "version", "seed")}
+        self.step("image", "done", n=self._n, of=total, **named)
 
 
 class _Images(io.TextIOBase):
@@ -221,7 +224,7 @@ class _Images(io.TextIOBase):
         for line in filter(None, lines):
             item = json.loads(line)
             if item.get("stage") == "render" and item.get("state") == "done":
-                self._steps.image(item["run"], item["flow"], self._total)
+                self._steps.image(item, self._total)
         return len(text)
 
 
@@ -234,7 +237,8 @@ def run_session(
     """Run one render session and return its exit status.
 
     0 every flow rendered · 1 a flow failed or a refusal · 3 the create's answer
-    was lost · 128+n a signal ended it. Every refusal reaches the batch's log too.
+    was lost · 128+n a signal ended it. Every refusal reaches the batch's log too,
+    through the caller under `--progress json`.
     """
     seams = wired.session if seams is None else seams
     runs = Path(args.runs)
@@ -245,10 +249,17 @@ def run_session(
         )
         return 1
     steps = Steps(wired.out, getattr(args, "progress", None) == "json")
-    with (runs.parent / "log.txt").open("a", encoding="utf-8") as log:
-        # The JSON lines are the job's channel; the log keeps the prose.
-        out = wired.out if steps.enabled else _Tee(wired.out, log)
-        logged = dataclasses.replace(wired, out=out, err=_Tee(wired.err, log))
+    with contextlib.ExitStack() as held:
+        logged = wired
+        # Under `--progress json` stdout is the caller's channel and stderr its
+        # log; teeing here too would write every line twice.
+        if not steps.enabled:
+            log = held.enter_context(
+                (runs.parent / "log.txt").open("a", encoding="utf-8")
+            )
+            logged = dataclasses.replace(
+                wired, out=_Tee(wired.out, log), err=_Tee(wired.err, log)
+            )
         try:
             limit = getattr(args, "limit", None)
             return _session(

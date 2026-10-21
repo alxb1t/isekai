@@ -337,6 +337,18 @@ body {
   border: 1px solid var(--accent-dim);
 }
 
+.session__tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.renders__image--focused {
+  outline: 1px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .session__actions {
   display: flex;
   align-items: center;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { assign, hub, prepare, stopJob } from '../api'
+import { assign, hub, prepare, quoteRender, stopJob } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -21,6 +21,20 @@ const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
 /* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
 const rendering = ref(false)
+/* Why Render is disabled, from the server's quote; null while it is offered. */
+const renderBlocked = ref<string | null>(null)
+
+async function checkRender(): Promise<void> {
+  try {
+    renderBlocked.value = (await quoteRender(props.batch)).disabled
+  } catch (reason) {
+    renderBlocked.value = (reason as Error).message
+  }
+}
+
+function openRender(): void {
+  if (renderBlocked.value === null) rendering.value = true
+}
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
 const job = ref<JobSlot | null>(null)
@@ -246,7 +260,7 @@ function onKey(event: KeyboardEvent): void {
   }
   if (event.altKey && event.code === 'KeyR') {
     event.preventDefault()
-    rendering.value = true
+    openRender()
     return
   }
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
@@ -300,6 +314,7 @@ function listen(): void {
     if (ended) {
       running.value = {}
       void hub(props.batch).then((read) => (info.value = read))
+      void checkRender()
     }
   })
   stream.addEventListener('cell', (event) => {
@@ -322,6 +337,7 @@ onMounted(async () => {
     return
   }
   listen()
+  void checkRender()
   place(0, 0)
 })
 
@@ -335,7 +351,11 @@ onUnmounted(() => {
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
-    <RenderDialog v-if="rendering" :batch="batch" @close="rendering = false" />
+    <RenderDialog
+      v-if="rendering"
+      :batch="batch"
+      @close="(rendering = false), void checkRender()"
+    />
     <div class="hub__head">
       <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
       <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
@@ -351,7 +371,14 @@ onUnmounted(() => {
         Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
       </button>
       <span v-else class="hub__reason">nothing left to review</span>
-      <button class="btn btn-secondary" type="button" data-render @click="rendering = true">
+      <span v-if="renderBlocked" class="hub__reason" data-render-reason>{{ renderBlocked }}</span>
+      <button
+        class="btn btn-secondary"
+        type="button"
+        data-render
+        :disabled="renderBlocked !== null"
+        @click="openRender"
+      >
         Render…<span class="appbar__key">⌥R</span>
       </button>
     </div>

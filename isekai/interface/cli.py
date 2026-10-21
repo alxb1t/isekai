@@ -911,7 +911,11 @@ def _generate(
 
         def landed(made: Render) -> None:
             reporter.say(f"{run.id}: rendered {flow}/{made.image.name}")
-            reporter.item(run.id, flow, STAGE_RENDER, "done")
+            # The seed as a string: a 64-bit seed is past what a page's number holds.
+            version = int(made.image.parent.name)
+            reporter.item(
+                run.id, flow, STAGE_RENDER, "done", version=version, seed=str(made.seed)
+            )
 
         produced = render(
             run,
@@ -948,16 +952,26 @@ class _Reporter:
         print(line, file=self.err if self.progress else self.out)
 
     def item(
-        self, run: str, flow: str, stage: str, state: str, message: str | None = None
+        self,
+        run: str,
+        flow: str,
+        stage: str,
+        state: str,
+        message: str | None = None,
+        **more: str | int,
     ) -> None:
-        """Print one item's `start`, `done` or `refused` line, when asked for JSON."""
+        """Print one item's `start`, `done` or `refused` line, when asked for JSON.
+
+        `more` adds what the item names beyond its run and flow, as a render its seed.
+        """
         if not self.progress:
             return
-        line: dict[str, str] = {
+        line: dict[str, str | int] = {
             "run": run,
             "flow": flow,
             "stage": stage,
             "state": state,
+            **more,
         }
         if message is not None:
             line["message"] = message

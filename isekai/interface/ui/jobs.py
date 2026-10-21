@@ -27,8 +27,9 @@ from typing import Any
 
 from isekai.boundary.gpu import Volume
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REPOSITORY
+from isekai.foundation.run import ID_DIGEST_CHARS, REPOSITORY
 from isekai.interface.render import LOST_EXIT
+from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
@@ -140,6 +141,7 @@ class Jobs:
         volume: Volume | None = None,
         render: RenderCommand = render_command,
         raise_volume: Callable[[], None] = lambda: None,
+        now: Callable[[], str] = utc_now,
     ) -> None:
         """Hold an empty slot that publishes on `broadcast`.
 
@@ -152,6 +154,7 @@ class Jobs:
         self._volume = volume or Volume()
         self._render = render
         self._raise_volume = raise_volume
+        self._now = now
         self._lock = threading.Lock()
         self._job: _Job | None = None
         self._child: subprocess.Popen[str] | None = None
@@ -226,6 +229,7 @@ class Jobs:
                 "limit": limit,
                 "of": total,
                 "keep_open": keep_open,
+                "ended": None,
                 "steps": steps,
                 "images": [],
             }
@@ -350,6 +354,7 @@ class Jobs:
             with self._lock:
                 if job.state == "running":
                     job.state = "stopped" if self._stopping else "done"
+                job.session["ended"] = self._now()
             self._publish(job)
 
     def _render_child(self, job: _Job, folder: Path, limit: int) -> None:
@@ -378,9 +383,12 @@ class Jobs:
             reported = True
             with self._lock:
                 if line.get("step") == "image":
-                    job.session["images"].append(
-                        {key: line.get(key) for key in ("n", "of", "run", "flow")}
-                    )
+                    found = {
+                        key: line.get(key)
+                        for key in ("n", "of", "run", "flow", "version", "seed")
+                    }
+                    found["digest"] = str(found["run"])[:ID_DIGEST_CHARS]
+                    job.session["images"].append(found)
                 else:
                     job.session["steps"][str(line.get("step"))] = line.get("state")
             self._publish(job)

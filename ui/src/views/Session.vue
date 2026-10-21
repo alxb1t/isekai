@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { checkBilling, stopJob } from '../api'
+import { checkBilling, renderAt, stopJob } from '../api'
 import { useLive } from '../composables/useLive'
 
 /* The render session (design spec J4·2, J4·3), and the billing alert's way out
@@ -16,9 +16,19 @@ let ticker: ReturnType<typeof setInterval> | undefined
 const session = computed(() => (job.value?.kind === 'render' ? job.value.session : undefined))
 const running = computed(() => job.value?.kind === 'render' && job.value.state === 'running')
 const alert = computed(() => alerting(billing.value))
-const elapsed = computed(() =>
-  session.value ? (now.value - Date.parse(session.value.started)) / 1000 : 0,
-)
+/* Counted to the job's end once it has one, so a finished session's clock stops. */
+const elapsed = computed(() => {
+  const held = session.value
+  if (!held) return 0
+  const until = held.ended ? Date.parse(held.ended) : now.value
+  return (until - Date.parse(held.started)) / 1000
+})
+
+function thumb(index: number): string | null {
+  const image = session.value?.images[index]
+  if (!image || !job.value) return null
+  return `${renderAt({ batch: job.value.batch, ...image })}/thumb`
+}
 const done = computed(() => session.value?.images.length ?? 0)
 
 /* The five steps, always, each with its state. */
@@ -101,7 +111,9 @@ onUnmounted(() => clearInterval(ticker))
           :key="index"
           class="session__tile"
           :class="{ 'session__tile--done': index <= done }"
-        />
+        >
+          <img v-if="thumb(index - 1)" :src="thumb(index - 1) ?? ''" alt="" />
+        </span>
       </div>
       <p v-if="job?.state === 'failed'" class="session__refusal">
         <span class="refusal__mark" />{{ job.message }}
