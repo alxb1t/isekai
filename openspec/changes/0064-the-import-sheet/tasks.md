@@ -7,7 +7,7 @@ The read and the sheet, Home, then the cards, per [design](design.md). Every new
 
 - [x] 1 — The read and the sheet
 - [x] 2 — Home
-- [ ] 3 — The cards
+- [x] 3 — The cards
 
 ## 1 — The read and the sheet
 
@@ -33,7 +33,7 @@ The server and the sheet are one phase: the sheet's tests are red against a `202
 
 ## 3 — The cards
 
-- [ ] 3.1 Move the approval's step out of the test bound to `ui:draft-update:a-stale-precondition-is-refused` into a test bound to `ui:draft-update:a-stale-approval-is-refused` in `tests/test_ui_api.py`, per [D5](design.md#d5).
+- [x] 3.1 Move the approval's step out of the test bound to `ui:draft-update:a-stale-precondition-is-refused` into a test bound to `ui:draft-update:a-stale-approval-is-refused` in `tests/test_ui_api.py`, per [D5](design.md#d5).
   Verify: `grep -c 'ui:draft-update:a-stale-approval-is-refused' tests/test_ui_api.py` prints `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 3.2 Rewrite the docstring of `tests/test_ui_api.py` to name what it proves and the gate's pytest command, per [D5](design.md#d5).
+- [x] 3.2 Rewrite the docstring of `tests/test_ui_api.py` to name what it proves and the gate's pytest command, per [D5](design.md#d5).
   Verify: `grep -c -E 'four .ui. scenarios|gate command five' tests/test_ui_api.py` prints `0`.

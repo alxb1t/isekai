@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   and the staged file's preview (0064 D1, D2, D3).
 - Home's first start reads as the design draws it: the heading, the privacy line, then *New batch*; with a
   batch, *New batch* stays above the list (0064 D4).
+- An approval against a stale draft is proved by its own test, and `tests/test_ui_api.py`'s docstring names
+  what it proves and the gate's `uv run pytest` rather than counting (0064 D5).
 
 ## [0.39.0] - 2026-10-21 · 0063-render
 

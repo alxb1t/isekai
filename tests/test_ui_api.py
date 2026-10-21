@@ -1,17 +1,18 @@
 """The endpoints, against a running application.
 
-They are the library, a batch's hub, the tag search, the field candidates, and a
-run's review, photo, draft and approval.
+They are the address guard, the library, a batch's hub, the tag search, the field
+candidates, a run's review, photo, draft and approval, its renders, and the import's
+upload, stream and preview.
 
 **This module runs in the gate.** FastAPI is pinned in the `dev` dependency
-group, so `uv sync --locked` installs it and the four `ui` scenarios bound here
-and nowhere else are actually proved. `tests/test_ui.py` asserts the framework is
-present, so its absence is a failure rather than a silent skip.
+group, so `uv sync --locked` installs it and the `ui` scenarios bound here are
+proved. `tests/test_ui.py` asserts the framework is present, so its absence is a
+failure rather than a silent skip.
 
 The `importorskip` below is kept as a belt for an environment synced without the
 dev group: a module-level `from fastapi.testclient import TestClient` would fail
-*collection* there, which is gate command five going red over a missing test tool
-rather than a defect.
+*collection* there, which is the gate's `uv run pytest` going red over a missing
+test tool rather than a defect.
 
 This is deliberately not the evaluator tests' pattern. Those fake the embedder;
 here the thing under test *is* the HTTP surface, so there is nothing to fake
@@ -609,9 +610,20 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     )
     assert third.status_code == 200
 
-    # An approval states the same precondition, so a page that never displayed
-    # the draft on disk cannot approve it.
+
+@pytest.mark.spec("ui:draft-update:a-stale-approval-is-refused")
+def test_an_approval_written_against_a_stale_draft_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    # An approval states the draft update's precondition, so a page that never
+    # displayed the draft on disk cannot approve it.
+    body = client.get(_at(made)).json()
+    fields, saved = body["fields"], body["saved"]
+    moved = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
+    assert moved.json()["saved"] != saved
+
     stale = client.post(_at(made, "/approve"), json={"saved": saved})
+
     assert stale.status_code == 409
     assert "changed since this page last read it" in stale.json()["refusal"]
     assert not list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
