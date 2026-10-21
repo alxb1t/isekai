@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+- `review.revise` copies the approval an image was rendered under into the next draft, its seed listed, and
+  `review.discard` deletes a waiting draft; approval refuses a draft that would only re-render its approval's
+  images (0065 D1, D3, D4).
+
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 
 Gate: local 0m29s · CI 0m55s (ci at f76c6dc) · 0.39.0: local 0m30s · CI 1m5s

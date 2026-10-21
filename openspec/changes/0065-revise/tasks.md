@@ -5,7 +5,7 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## Progress
 
-- [ ] 1 — Revise and discard
+- [x] 1 — Revise and discard
 - [ ] 2 — The verbs
 - [ ] 3 — The API
 - [ ] 4 — The UI
@@ -13,9 +13,9 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## 1 — Revise and discard
 
-- [ ] 1.1 **HALT CHECK** — `review` copies the newest approval only, and nothing in the pipeline is called `revise`.
+- [x] 1.1 **HALT CHECK** — `review` copies the newest approval only, and nothing in the pipeline is called `revise`.
   Verify: `grep -c 'def revise' isekai/pipeline/review.py` prints `0`, and `grep -c 'copied = review_directory / artifact_name(approved\[-1\], APPROVED)' isekai/pipeline/review.py` prints `1`.
-- [ ] 1.2 Add `revise` and `discard` to `isekai/pipeline/review.py` per [D1](design.md#d1) and [D3](design.md#d3), and the unchanged refusal to `approve` per [D4](design.md#d4); bind every `review:revise:*` and `review:discard:*` key in `tests/test_review.py`.
+- [x] 1.2 Add `revise` and `discard` to `isekai/pipeline/review.py` per [D1](design.md#d1) and [D3](design.md#d3), and the unchanged refusal to `approve` per [D4](design.md#d4); bind every `review:revise:*` and `review:discard:*` key in `tests/test_review.py`.
   Verify: `uv run pytest -q tests/test_review.py` exits 0, and `grep -c -E 'review:(revise|discard):' tests/test_review.py` prints `6`.
 
 ## 2 — The verbs

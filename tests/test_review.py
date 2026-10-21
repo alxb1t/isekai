@@ -13,6 +13,7 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    Renders,
     read,
     renders_of,
 )
@@ -30,8 +31,10 @@ from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
     current_draft,
+    discard,
     estimate_tokens,
     review,
+    revise,
     save_draft,
     state,
     token_budget,
@@ -1104,3 +1107,118 @@ def test_a_seed_out_of_range_refuses_approval_naming_the_seed(
     assert f"renders seed {seed} is outside" in str(refused.value)
     assert draft.exists()
     assert approved_versions(run.directory(FLOW, "review")) == []
+
+
+# --- revise and discard -------------------------------------------------------
+
+SEED = 1840266731
+
+
+def _approved(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    renders: Renders | None = None,
+    **fields: list[str],
+) -> Path:
+    """Open the next draft, edit it, save `renders` if given, and approve it."""
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    _edit(draft, **fields)
+    if renders is not None:
+        save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], renders)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    return approved
+
+
+@pytest.mark.spec("review:revise:a-revision-copies-the-images-approval")
+def test_a_revision_copies_the_images_approval_and_keeps_its_seed(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    first = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    _approved(run, schema, vocabulary, clothes=["collared shirt"])
+
+    draft = revise(run, FLOW, 1, SEED)
+
+    assert draft.name == "003.draft.json"
+    body = read(draft, DRAFT_FILE)
+    assert body["fields"] == read(first, APPROVED_FILE)["fields"]
+    assert body["producer"] == {
+        "implementation": "review",
+        "from": 1,
+        "source": "review",
+    }
+    assert body["renders"] == {"count": 1, "seeds": [SEED]}
+
+
+@pytest.mark.spec("review:revise:a-waiting-draft-refuses")
+def test_a_waiting_draft_refuses_a_revision_and_nothing_is_written(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    assert review(run, FLOW, new_version=True) is not None
+    before = snapshot(run.directory(FLOW, "review"))
+
+    with pytest.raises(Refusal, match="002.draft.json waiting"):
+        revise(run, FLOW, 1, SEED)
+
+    assert snapshot(run.directory(FLOW, "review")) == before
+
+
+@pytest.mark.spec("review:revise:an-unchanged-revision-is-refused")
+def test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, {"count": 1, "seeds": [SEED]})
+    draft = revise(run, FLOW, 1, SEED)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert f"{run.id}/{FLOW}/outputs/001/{SEED}.png" in str(refused.value)
+    assert draft.exists()
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
+@pytest.mark.spec("review:revise:new-seeds-alone-are-a-change")
+def test_a_revision_whose_only_change_is_its_seeds_is_approved(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, {"count": 1, "seeds": [SEED]})
+    draft = revise(run, FLOW, 1, SEED)
+    save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], {"count": 1, "seeds": [7]})
+
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+
+    assert approved is not None
+    assert read(approved, APPROVED_FILE)["renders"] == {"count": 1, "seeds": [7]}
+
+
+@pytest.mark.spec("review:discard:a-draft-is-discarded")
+def test_discarding_deletes_the_waiting_draft_and_leaves_every_approval(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    frozen = approved.read_bytes()
+    waiting = review(run, FLOW, new_version=True)
+    assert waiting is not None
+
+    assert discard(run, FLOW) == waiting
+
+    assert not waiting.exists()
+    assert versions(run.directory(FLOW, "review")) == [1]
+    assert approved.read_bytes() == frozen
+
+
+@pytest.mark.spec("review:discard:an-approval-is-never-discarded")
+def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    before = snapshot(run.directory(FLOW, "review"))
+
+    with pytest.raises(Refusal, match="001.approved.json"):
+        discard(run, FLOW)
+
+    assert snapshot(run.directory(FLOW, "review")) == before
