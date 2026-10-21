@@ -688,3 +688,42 @@ def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
     assert code == 1
     assert "under .data/ or at a directory outside the repository" in err.getvalue()
     assert not inside.exists()
+
+
+# --- reading in turn ---------------------------------------------------------
+
+
+@pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
+def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = importing.read
+    calls: list[str] = []
+
+    def full_once(file: Path, staging: Path, limit: int) -> importing.Staged:
+        calls.append(file.name)
+        if len(calls) == 1:
+            raise OSError(28, "No space left on device")
+        return real(file, staging, limit)
+
+    monkeypatch.setattr(importing, "read", full_once)
+    published: list[dict[str, object]] = []
+    both_read = threading.Event()
+
+    def publish(event: dict[str, object]) -> None:
+        published.append(event)
+        if event["file"] == "b.jpg" and event["state"] not in {"waiting", "converting"}:
+            both_read.set()
+
+    reader = importing.Reader(stage(tmp_path / "library"), LIMIT, publish)
+    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    reader.put("b.jpg", photo_jpeg((0, 200, 0)))
+
+    both_read.wait(10.0)
+    reader.stop()
+    files = reader.files()
+    assert files["a.jpg"]["state"] == "refused"
+    assert "a.jpg: " in files["a.jpg"]["refusal"]
+    assert "No space left on device" in files["a.jpg"]["refusal"]
+    assert files["b.jpg"]["state"] == "ready"
+    reader.refuse_unread()

@@ -232,6 +232,10 @@ class Reader:
                 }
             except Refusal as refused:
                 result = {"state": "refused", "refusal": str(refused)}
+            except Exception as failed:
+                # Anything else, a full disk or a decoder's own error, refuses this
+                # file alone: the thread lives on to read the next.
+                result = {"state": "refused", "refusal": _failed(name, failed)}
             finally:
                 shutil.rmtree(held.parent, ignore_errors=True)
             self._set(name, result)
@@ -246,6 +250,14 @@ class Reader:
 
 # The states of a file the reader has not finished with.
 _UNREAD = frozenset({"waiting", "converting"})
+
+
+def _failed(name: str, failed: Exception) -> str:
+    """Return the refusal of `name`, whose reading raised `failed`."""
+    return (
+        f"{name}: reading it failed ({type(failed).__name__}: {failed}); free disk "
+        "space if it is full, then add it again, or export a JPEG copy and add that"
+    )
 
 
 class Imports:
