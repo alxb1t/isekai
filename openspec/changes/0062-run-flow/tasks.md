@@ -10,7 +10,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 - [x] 3 — Assign and the offered flows
 - [x] 4 — Progress
 - [x] 5 — The job and its stream
-- [ ] 6 — The sheet
+- [x] 6 — The sheet
 - [ ] 7 — The hub
 - [ ] 8 — The docs
 
@@ -69,11 +69,11 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 6 — The sheet
 
-- [ ] 6.1 Add the staging routes of [D9](design.md#d9) to `isekai/interface/ui/app.py`.
+- [x] 6.1 Add the staging routes of [D9](design.md#d9) to `isekai/interface/ui/app.py`.
   Verify: `grep -c '/api/staging' isekai/interface/ui/app.py` prints a number of at least `4`.
-- [ ] 6.2 Add `ui/src/components/ImportSheet.vue` per [D9](design.md#d9) and the design spec's J1 and J7, opened by New batch in `ui/src/views/Home.vue` and Add sources in `ui/src/views/Hub.vue`.
+- [x] 6.2 Add `ui/src/components/ImportSheet.vue` per [D9](design.md#d9) and the design spec's J1 and J7, opened by New batch in `ui/src/views/Home.vue` and Add sources in `ui/src/views/Hub.vue`.
   Verify: `grep -c 'XMLHttpRequest' ui/src/components/ImportSheet.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 6.3 Add `tests/e2e/test_import.py` binding every `ui:sheet:*` key.
+- [x] 6.3 Add `tests/e2e/test_import.py` binding every `ui:sheet:*` key.
   Verify: `uv run pytest -q tests/e2e/test_import.py` exits 0, and `grep -c 'ui:sheet:' tests/e2e/test_import.py` prints `3`.
 
 ## 7 — The hub

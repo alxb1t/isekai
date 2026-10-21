@@ -6,6 +6,7 @@
 
 import type {
   Budget,
+  Committed,
   FieldCandidates,
   HubInfo,
   InputDetail,
@@ -101,4 +102,27 @@ export function approve(
 
 export function photoUrl(place: Place): string {
   return `${at(place)}/photo`
+}
+
+/* An import: a staging folder the chosen files are read into, then committed
+   into a batch's `sources/` in one move, or cancelled. */
+export function openStaging(): Promise<{ id: string }> {
+  return send('/api/staging', 'POST', {})
+}
+
+export function cancelStaging(id: string): Promise<unknown> {
+  return request(`/api/staging/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export function commitStaging(
+  id: string,
+  batch: string,
+  asIs: string[],
+  add: boolean,
+): Promise<Committed> {
+  return send(`/api/staging/${encodeURIComponent(id)}/commit`, 'POST', {
+    batch,
+    as_is: asIs,
+    add,
+  })
 }

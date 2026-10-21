@@ -65,6 +65,8 @@ export interface HubSource {
   width: number | null
   height: number | null
   cells: Record<string, HubCell>
+  /* What the file carries beyond its pixels and orientation: empty once cleaned. */
+  carries: string[]
 }
 
 export interface HubInfo {
@@ -149,4 +151,22 @@ export interface VocabEntry {
 export interface TagMatches {
   matches: VocabEntry[]
   total: number
+}
+
+/* What reading one uploaded file left in staging. `chosen` is the file's own
+   name; `name` is what it is staged as -- converted, or `<stem>-2`. */
+export type StagedState = 'ready' | 'converted' | 'not cleaned' | 'skipped'
+
+export interface StagedFile {
+  chosen: string
+  name: string
+  state: StagedState
+  carries: string[]
+}
+
+export interface Committed {
+  batch: string
+  written: string[]
+  skipped: string[]
+  left_out: string[]
 }

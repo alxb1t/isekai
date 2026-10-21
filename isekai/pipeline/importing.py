@@ -14,6 +14,7 @@ import os
 import secrets
 import shutil
 import struct
+import tempfile
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,6 +71,14 @@ def upload_limit(config: Path = UI_CONFIG) -> int:
     return int(json.loads(config.read_text())["upload_limit_mb"]) * _MB
 
 
+def past_limit(name: str, size: int, limit: int) -> Refusal:
+    """Return the refusal for a file of `size` bytes past `limit`."""
+    return Refusal(
+        f"{name}: {-(-size // _MB)} MB is past the {limit // _MB} MB limit "
+        "`config/ui.json` sets; export a smaller copy and add it again"
+    )
+
+
 def stage(library: Path) -> Path:
     """Return a new, empty staging folder under `library`'s `.staging/`."""
     folder = library / STAGING / secrets.token_hex(8)
@@ -84,15 +93,11 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
     is taken by other bytes becomes `<stem>-2`.
     """
     name = file.name
-    if not name or name.startswith(".") or "/" in name:
-        raise Refusal(f"{name!r}: not a file name import takes; rename it and add it")
+    _refuse_name(name)
     try:
         size = file.stat().st_size
         if size > limit:
-            raise Refusal(
-                f"{name}: {-(-size // _MB)} MB is past the {limit // _MB} MB limit "
-                "`config/ui.json` sets; export a smaller copy and add it again"
-            )
+            raise past_limit(name, size, limit)
         with file.open("rb") as handle:
             _refuse_raw(name, handle.read(_SIGNATURE_BYTES))
     except OSError as unreadable:
@@ -118,6 +123,23 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
     if carries:
         return Staged(target.name, "not cleaned", tuple(carries))
     return Staged(target.name, "converted" if converted else "ready")
+
+
+def receive(name: str, body: bytes, staging: Path, limit: int) -> Staged:
+    """Read an uploaded file's bytes into `staging`, as `read` reads a file."""
+    _refuse_name(name)
+    if len(body) > limit:
+        raise past_limit(name, len(body), limit)
+    with tempfile.TemporaryDirectory(dir=staging, prefix=".upload-") as scratch:
+        upload = Path(scratch) / name
+        upload.write_bytes(body)
+        return read(upload, staging, limit)
+
+
+def _refuse_name(name: str) -> None:
+    """Refuse a name that is empty, starts with a dot, or holds a path separator."""
+    if not name or name.startswith(".") or "/" in name or "\\" in name:
+        raise Refusal(f"{name!r}: not a file name import takes; rename it and add it")
 
 
 def verify(path: Path) -> list[str]:

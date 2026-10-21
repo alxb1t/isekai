@@ -1,16 +1,32 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { library } from '../api'
+import ImportSheet from '../components/ImportSheet.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import type { LibraryRow } from '../types'
 
 /* Home: every folder of the library, batches by their newest file first, the
-   rest after them, inert (design spec J7·1). */
+   rest after them, inert (design spec J7·1). New batch opens the import sheet
+   over it (J1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
 const refusal = ref<string | null>(null)
 const list = ref<HTMLElement | null>(null)
+const importing = ref(false)
+
+function imported(batch: string): void {
+  importing.value = false
+  void router.push({ name: 'hub', params: { batch } })
+}
+
+/* ⌥N New batch. Matched on `event.code`: Option types a character on macOS. */
+function onNew(event: KeyboardEvent): void {
+  if (event.altKey && event.code === 'KeyN' && !importing.value) {
+    event.preventDefault()
+    importing.value = true
+  }
+}
 
 /* Today's files read as a time, older ones as a date. */
 function when(at: number | null): string {
@@ -38,6 +54,7 @@ function onKey(event: KeyboardEvent, row: LibraryRow): void {
 }
 
 onMounted(async () => {
+  window.addEventListener('keydown', onNew)
   try {
     rows.value = (await library()).rows
   } catch (reason) {
@@ -47,11 +64,19 @@ onMounted(async () => {
   await nextTick()
   list.value?.querySelector<HTMLElement>('[data-batch]')?.focus()
 })
+
+onUnmounted(() => window.removeEventListener('keydown', onNew))
 </script>
 
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="rows" class="home">
+    <div class="home__head">
+      <button class="btn btn-primary" type="button" @click="importing = true">
+        New batch<span class="appbar__key">⌥N</span>
+      </button>
+    </div>
+    <ImportSheet v-if="importing" @close="importing = false" @imported="imported" />
     <div v-if="rows.length === 0" class="home__empty">
       <p class="section-label">library · empty</p>
       <p>No batches yet.</p>

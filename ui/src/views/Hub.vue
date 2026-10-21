@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { hub } from '../api'
+import ImportSheet from '../components/ImportSheet.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { firstFlow, queue } from '../composables/useQueue'
 import type { HubCell, HubInfo, HubSource, Stage } from '../types'
@@ -15,6 +16,13 @@ const info = ref<HubInfo | null>(null)
 const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
+const adding = ref(false)
+
+/* Add sources commits into this batch, and the grid is read again. */
+async function added(): Promise<void> {
+  adding.value = false
+  info.value = await hub(props.batch)
+}
 
 /* The six segments of a stage track, and how many each stage has done. A draft
    shares the sheet's segment. */
@@ -88,9 +96,15 @@ function reviewNext(): void {
    Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
   const { row, column } = focus.value
+  if (adding.value) return
   if (event.altKey && event.code === 'Digit2') {
     event.preventDefault()
     reviewNext()
+    return
+  }
+  if (event.altKey && event.code === 'KeyA') {
+    event.preventDefault()
+    adding.value = true
     return
   }
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -127,8 +141,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
+    <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
     <div class="hub__head">
       <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
+      <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
+        Add sources…<span class="appbar__key">⌥A</span>
+      </button>
       <button v-if="next" class="btn btn-primary" type="button" @click="reviewNext">
         Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
       </button>

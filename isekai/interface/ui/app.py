@@ -28,6 +28,8 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+POST /api/staging   ·   PUT …/{id}/files/{name}
+DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
 GET  /events[?batch=]                              Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
@@ -37,6 +39,7 @@ GET  anything else                                 the bundle's index.html
 ```
 """
 
+import re
 import shlex
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
@@ -78,6 +81,7 @@ from isekai.foundation.run import (
 from isekai.interface.ui import events, library
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
+from isekai.pipeline import importing
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     TokenBudget,
@@ -196,6 +200,7 @@ def create_app(
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.jobs = jobs
     app.state.broadcast = broadcast
+    limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
     shared = _Shared(wired)
@@ -292,6 +297,66 @@ def create_app(
             except Refusal as one:
                 refused.append(str(one))
         return {"cells": cells, "refused": refused}
+
+    def staging(staged: str) -> Path:
+        """Return the staging folder an import's id names, refusing one not there."""
+        found = root / importing.STAGING / staged
+        if not _STAGING_ID.fullmatch(staged) or not found.is_dir():
+            raise Refusal(
+                f"no import {staged!r} is open; close the sheet and choose the "
+                "files again"
+            )
+        return found
+
+    @app.post("/api/staging")
+    def post_staging() -> dict[str, Any]:
+        """Open an import: a staging folder under the library's `.staging/`."""
+        return {"id": importing.stage(root).name}
+
+    @app.put("/api/staging/{staged}/files/{name}")
+    async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
+        """Read one uploaded file into staging: cleaned, verified, or refused by name.
+
+        The body is the file. One past the limit is refused by its declared
+        length before its body is read.
+        """
+        folder = staging(staged)
+        declared = request.headers.get("content-length")
+        if declared is not None and declared.isdigit() and int(declared) > limit:
+            raise importing.past_limit(name, int(declared), limit)
+        staged_file = importing.receive(name, await request.body(), folder, limit)
+        return {
+            "chosen": name,
+            "name": staged_file.name,
+            "state": staged_file.state,
+            "carries": list(staged_file.carries),
+        }
+
+    @app.delete("/api/staging/{staged}")
+    def delete_staging(staged: str) -> dict[str, Any]:
+        """Cancel an import: its staging folder is deleted, the library unchanged."""
+        importing.cancel(staging(staged))
+        return {}
+
+    @app.post("/api/staging/{staged}/commit")
+    def post_commit(staged: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Commit an import into a new batch, or with `add` into an open one."""
+        as_is = payload.get("as_is", [])
+        if not _is_tag_list(as_is):
+            raise Refusal("the request's `as_is` is not a list of file names")
+        done = importing.commit(
+            staging(staged),
+            root,
+            str(payload.get("batch", "")),
+            as_is,
+            add=payload.get("add") is True,
+        )
+        return {
+            "batch": done.batch.name,
+            "written": list(done.written),
+            "skipped": list(done.skipped),
+            "left_out": list(done.left_out),
+        }
 
     @app.post("/api/b/{batch}/prepare")
     def post_prepare(batch: str) -> dict[str, Any]:
@@ -553,6 +618,10 @@ class _Shared:
                 }
             }
         return self._candidates[flow.id]
+
+
+# A staging folder's name, as `importing.stage` makes it.
+_STAGING_ID = re.compile(r"[0-9a-f]{16}")
 
 
 def cell_event(

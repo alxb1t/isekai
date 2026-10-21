@@ -24,7 +24,7 @@ neither is privileged and neither goes through the other.
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
 | `ui/jobs.py` | Prepare as a job: one slot, `tag` → `caption` → `sheet` run as CLI children per flow, a probe of the model server first, Stop and server stop sending SIGINT |
 | `ui/events.py` | the event stream: a snapshot on connect, then each `job` and `cell` change, to every open page |
-| `ui/app.py` | the endpoints — `GET /api/library`, `/api/b/{batch}/hub`, `POST /api/b/{batch}/assign`, `/api/b/{batch}/review/{digest}/{flow}` with `/photo`, `PUT …/draft`, `POST …/approve`, `POST /api/b/{batch}/prepare`, `POST /api/job/stop`, `GET /events`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
+| `ui/app.py` | the endpoints — `GET /api/library`, `/api/b/{batch}/hub`, `POST /api/b/{batch}/assign`, `/api/b/{batch}/review/{digest}/{flow}` with `/photo`, `PUT …/draft`, `POST …/approve`, `POST /api/b/{batch}/prepare`, `POST /api/job/stop`, `GET /events`, the import's `POST /api/staging` with `PUT …/{id}/files/{name}`, `DELETE …/{id}` and `POST …/{id}/commit`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
 
 ## Imported by
 
