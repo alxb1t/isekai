@@ -5,7 +5,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## Progress
 
-- [ ] 1 — The copy
+- [x] 1 — The copy
 - [ ] 2 — Import
 - [ ] 3 — Assign and the offered flows
 - [ ] 4 — Progress
@@ -16,11 +16,11 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 1 — The copy
 
-- [ ] 1.1 **HALT CHECK** — the refusals end in *"then run this command again"*.
+- [x] 1.1 **HALT CHECK** — the refusals end in *"then run this command again"*.
   Verify: `grep -rn 'then run this command again' isekai | wc -l | tr -d ' '` prints `5`.
-- [ ] 1.2 End each of those refusals in `isekai/boundary/ollama.py` and `isekai/shared/vocabulary.py` with *"then try again"*, per [D11](design.md#d11).
+- [x] 1.2 End each of those refusals in `isekai/boundary/ollama.py` and `isekai/shared/vocabulary.py` with *"then try again"*, per [D11](design.md#d11).
   Verify: `grep -rn 'then run this command again' isekai` prints nothing, and `uv run pytest -q tests/test_ollama.py` exits 0.
-- [ ] 1.3 Add **D42 · A new draft starts from the last approval** to `docs/decisions.md`, per [D11](design.md#d11).
+- [x] 1.3 Add **D42 · A new draft starts from the last approval** to `docs/decisions.md`, per [D11](design.md#d11).
   Verify: `grep -c '^### D42 · A new draft starts from the last approval' docs/decisions.md` prints `1`.
 
 ## 2 — Import

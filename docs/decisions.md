@@ -83,6 +83,15 @@ the browser spends money.**
   behind a web page, and a write the review stage does not own would give a run file a second author.
 - **Made by:** `0018`, `0061`.
 
+### D42 · A new draft starts from the last approval
+
+**Where a flow has an approved sheet, a new draft is copied from that approval, never from the sheet the
+machine wrote.** The approval is left as it was.
+
+- **Why:** a correction starts from the last thing a person agreed with. Starting again from the machine's
+  sheet would throw away every edit the operator made before.
+- **Made by:** `0013`.
+
 ## Models
 
 ### D5 · One arm

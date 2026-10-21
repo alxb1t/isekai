@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- A refusal that asks the operator to fix something and retry ends *"then try again"*, so the page can show it
+  verbatim; D42 records that a new draft starts from the last approval (0062 D11).
+
 ## [0.37.0] - 2026-10-21 · 0061-ui-groundwork
 
 Gate: local 0m22s · CI 0m35s (ci at 45babd9) · 0.36.0: none

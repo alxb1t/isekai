@@ -114,7 +114,7 @@ def _rebuild(remedy: str) -> str:
     """Return the fix for a model not built from the pinned files: fetch, then build."""
     return (
         f"fetch the pinned files (`{PROVISION}`), then build the model "
-        f"(`{remedy}`), then run this command again"
+        f"(`{remedy}`), then try again"
     )
 
 
@@ -234,7 +234,7 @@ def ask(
             raise Refusal(
                 f"nothing is listening at {HOST}, and the reader and the "
                 "JoyCaption tagger need it; start the runtime (`ollama serve`), "
-                "then run this command again"
+                "then try again"
             ) from failed
         # Everything left reached a host and lost it. Transient rather than a
         # refusal: telling the operator to start a server that answered and then
@@ -333,7 +333,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
         raise Refusal(
             f"the model {model!r} this flow declares is pinned by no entry in "
             "config/reader.json; add it to `tools/derive_reader.py`, run "
-            "`uv run python -m tools.derive_reader`, then run this command again"
+            "`uv run python -m tools.derive_reader`, then try again"
         )
     pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
     unpinned = [built[role] for role in LAYERS if built[role] not in pins]
@@ -341,7 +341,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
         raise Refusal(
             f"config/reader.json builds {model!r} from {', '.join(unpinned)}, "
             "which no entry pins; fix `tools/derive_reader.py`, run "
-            "`uv run python -m tools.derive_reader`, then run this command again"
+            "`uv run python -m tools.derive_reader`, then try again"
         )
     name, _, tag = model.partition(":")
     record = root / name / (tag or "latest")
