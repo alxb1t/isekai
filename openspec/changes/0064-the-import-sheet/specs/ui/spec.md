@@ -4,8 +4,8 @@
 
 The system SHALL take sources through the browser's file dialog, sending each file in its own request, and SHALL show
 for each its upload's progress, then its reading, then whether it is ready, converted, refused or not cleaned, with
-the reason. Import SHALL stay disabled, with its reason, until every chosen file is read, and SHALL commit only the
-ready files and those the operator chose to import as they are.
+the reason, and a preview of each file read. Import SHALL stay disabled, with its reason, until every chosen file is
+read, and SHALL commit only the ready files and those the operator chose to import as they are.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns.
 
@@ -28,17 +28,18 @@ Each file's bar answers which one is slow; each reason sits on the file it conce
 - **WHEN** Import is pressed on a new batch
 - **THEN** the batch's hub opens with every source unassigned
 
-#### Scenario: a ready tile shows its preview
-- **Key:** `ui:sheet:a-ready-tile-shows-its-preview`
-- **Layers:** e2e
-- **WHEN** a chosen HEIC has been converted
-- **THEN** its tile shows the converted image's preview
+#### Scenario: a staged file serves its preview
+- **Key:** `ui:sheet:a-staged-file-serves-its-preview`
+- **Layers:** unit
+- **WHEN** a staged file's preview is asked for
+- **THEN** a downscaled JPEG of it is served
+- **AND** nothing of it is kept
 
-#### Scenario: a file's conversion shows on its tile
-- **Key:** `ui:sheet:a-conversion-shows-on-its-tile`
-- **Layers:** e2e
-- **WHEN** a file's upload has ended and it is being read
-- **THEN** its tile shows it waiting, then converting, until it is ready
+#### Scenario: the stream reports each file's reading
+- **Key:** `ui:sheet:the-stream-reports-each-files-reading`
+- **Layers:** unit
+- **WHEN** an uploaded file is read
+- **THEN** the import's stream reports it waiting, then converting, then its result
 
 #### Scenario: an upload is answered before it is read
 - **Key:** `ui:sheet:an-upload-is-answered-before-reading`

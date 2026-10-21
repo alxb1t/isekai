@@ -33,7 +33,7 @@ closed. **Non-Goals:** a requirement added, a format moved, the product changed 
 
 | id | decision | because | rejected |
 |---|---|---|---|
-| [D1](#d1) | `put_file` saves the body and answers `202 {"state": "waiting"}`; one reader thread per staging folder reads files in the order their bytes landed, publishing each state on `/events?staging=<id>` | the conversion reports itself; a batch of HEICs does not load every core | a read per request; a pool |
+| [D1](#d1) | `put_file` holds the body in a dot-named folder inside the staging folder and answers `202 {"state": "waiting"}`; one reader thread per staging folder, `importing`'s own, reads files in the order their bytes landed, publishing each state on `/events?staging=<id>` | the conversion reports itself; a batch of HEICs does not load every core; `commit` and `read` own the folder's undotted names | a read per request; a pool; the upload beside the staged files |
 | [D2](#d2) | a tile: `uploading n%` → `waiting` → `converting…` (indeterminate) → ready, refused or `⚠ not cleaned`; Import disabled while any tile uploads, waits or converts | the design's J1·3, J1·4 | a combined bar |
 | [D3](#d3) | `GET /api/staging/{id}/files/{name}/thumb` — a downscaled JPEG of the staged file, made on request, never cached | a staging preview lives and dies with its folder | `.cache/` |
 | [D4](#d4) | Home's first start: *No batches yet.*, the privacy line, then *New batch*; with a batch, *New batch* stays above the list | the design's J1·1, J7·1 | |
@@ -42,23 +42,24 @@ closed. **Non-Goals:** a requirement added, a format moved, the product changed 
 ### D1
 
 ```
-PUT bytes ──▶ staging/<id>/<name>.part ─▶ rename ─▶ 202 waiting ─▶ queue
+PUT bytes ──▶ staging/<id>/.upload-<token>/<name> ─▶ 202 waiting ─▶ queue
 reader:  queue ─▶ converting ─▶ importing.read ─▶ ready · refused · not cleaned ─▶ /events?staging=<id>
 ```
 
 The reader is started with the staging folder and stopped by its cancel, its commit or the surface's stop. `commit`
-refuses while any file waits or converts.
+refuses while any file waits or converts. The stream's snapshot carries every file's state, so a page that connects
+late misses none.
 
 ## Tests
 
 | layer | added | removed | where |
 |---|---|---|---|
-| unit | `ui:sheet:an-upload-is-answered-before-reading`; `ui:draft-update:a-stale-approval-is-refused` | none | `tests/test_ui_api.py` |
-| e2e | steps, not tests: `ui:sheet:a-conversion-shows-on-its-tile` and `ui:sheet:a-ready-tile-shows-its-preview` in the test bound to `ui:sheet:each-file-shows-its-progress`; Home's first-start order in the same file's first test | none | `tests/e2e/test_import.py` |
+| unit | `ui:sheet:an-upload-is-answered-before-reading`; `ui:sheet:the-stream-reports-each-files-reading`; `ui:sheet:a-staged-file-serves-its-preview`; `ui:draft-update:a-stale-approval-is-refused` | none | `tests/test_ui_api.py` |
+| e2e | steps, not tests: a tile converting, then showing its preview, in the test bound to `ui:sheet:each-file-shows-its-progress`; Home's first-start order in the same file's first test | none | `tests/e2e/test_import.py` |
 
-**End-to-end runs added:** none — new scenarios are steps in existing tests, on Chromium (T2). A preview and a moving
-tile are shown only by a browser (T1). The approval step moves out of the stale-precondition test into its own; that
-test keeps its assertions and its key.
+**End-to-end runs added:** none. The states and the preview are the server's, so each new scenario is a unit test
+(T1); the tile drawing them is a step in an existing browser test, under that test's key (T2). The approval step moves
+out of the stale-precondition test into its own; that test keeps its assertions and its key.
 
 ## Dependencies
 
