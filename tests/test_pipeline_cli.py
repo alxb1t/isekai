@@ -37,12 +37,14 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, fake_wd14, sheet, write_wd14
+from tests.stages import FIELD_MAP, Always, fake_wd14, runs_flag, sheet, write_wd14
 from tests.transports import FakeTransport
 
 ROOT = Path(__file__).resolve().parent.parent
 
 EXPECTED_VERBS = (
+    "import",
+    "assign",
     "caption",
     "tag",
     "sheet",
@@ -174,8 +176,10 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    # `compare` takes a batch directory, `render` its runs; `ui` takes nothing.
+    # `compare` takes a batch directory, `render` its runs, `import` a batch and
+    # its files; `ui` takes nothing.
     own = {
+        "import": ["--batch", "batch", "photo.jpg"],
         "show": [],
         "ui": [],
         "compare": ["batch"],
@@ -586,7 +590,7 @@ def test_sheet_prints_a_superseded_list_as_a_warning(
     assert wired.err.getvalue() == (
         f"warning: {run.id}/summon-anime-wai: sheet 001 was filled from "
         "wd14/001.json, and wd14/002.json is newer; run `python -m isekai sheet "
-        f"--flow summon-anime-wai --new-version {run.id}`\n"
+        f"--flow summon-anime-wai{runs_flag(run)} --new-version {run.id}`\n"
     )
     assert f"{run.id}: sheet is already complete" in wired.out.getvalue()
 

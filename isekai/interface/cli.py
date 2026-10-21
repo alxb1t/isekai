@@ -9,6 +9,8 @@ drift.
 so an upgrade command would be a dispatch table with no entries and its refusal
 would be unreachable -- nothing writes a later one.
 
+    import        clean photographs into a batch's sources/
+    assign        give a source a flow's empty directory, or take an empty one away
     caption   (1) a photograph in, prose out
     tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
@@ -20,11 +22,11 @@ would be unreachable -- nothing writes a later one.
     ui        (3) serve the review surface for a batch of inputs
     compare       write a page of every run's photograph beside its renders
 
-**`show` inspects a run, `ui` serves a surface, `compare` writes a page, and
-every other verb runs a stage.** The stage verbs take `--flow` repeatably; `ui`
-takes exactly one, because the surface is one schema's fields in one order;
-`show` and `compare` take none, because they report every flow the runs already
-hold. `show` reads a run and decides
+**`import` fills a batch, `assign` ticks a flow, `show` inspects a run, `ui`
+serves a surface, `compare` writes a page, and every other verb runs a stage.**
+The stage verbs and `assign` take `--flow` repeatably; `ui`, `show` and
+`compare` take none -- the surface serves every flow it offers, and the others
+report every flow the runs already hold. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
 so neither surface is privileged and neither goes through the other.
@@ -39,22 +41,32 @@ with site-packages off the path.
 """
 
 import argparse
+import json
 import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import TypeVar
+from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.foundation.run import (
+    FRAME_NAME,
+    RUNS_ROOT,
+    Run,
+    across,
+    assign,
+    find_run,
+    open_run,
+)
 from isekai.interface.compare_view import write_page
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
-from isekai.interface.wiring import Wiring, wiring
+from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import (
     prepare,
@@ -62,6 +74,15 @@ from isekai.pipeline.generate import (
     refuse_out_of_step,
     render,
     source_seeds,
+)
+from isekai.pipeline.importing import (
+    SOURCES,
+    Staged,
+    cancel,
+    commit,
+    read,
+    stage,
+    upload_limit,
 )
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
@@ -74,6 +95,8 @@ from isekai.shared.vocabulary import Vocabulary
 T = TypeVar("T")
 
 VERBS: tuple[tuple[str, str], ...] = (
+    ("import", "clean photographs and add them to a batch's sources/"),
+    ("assign", "give each source a flow's empty directory, or remove an empty one"),
     ("caption", "read a photograph into prose"),
     ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
@@ -132,7 +155,9 @@ def build_parser() -> argparse.ArgumentParser:
     # `compare` takes a batch directory instead: its runs root is the batch's
     # `runs/`, so a second way to name it could only disagree. `render` takes
     # its runs root first, and every run under it. `ui` serves the library.
-    for name in (name for name in made if name not in ("compare", "render", "ui")):
+    for name in (
+        name for name in made if name not in ("compare", "import", "render", "ui")
+    ):
         made[name].add_argument(
             "photos",
             nargs="*",
@@ -158,7 +183,7 @@ def build_parser() -> argparse.ArgumentParser:
     # its briefing, its schema, its graph and its dials. "Every tracked flow" is
     # not a selection, it is the absence of one -- and at the last verb it spends
     # money, at the first it burns a paid model call.
-    for name in ("caption", "tag", "sheet", "review", "approve", "generate"):
+    for name in ("assign", "caption", "tag", "sheet", "review", "approve", "generate"):
         made[name].add_argument(
             "--flow",
             action="append",
@@ -167,6 +192,11 @@ def build_parser() -> argparse.ArgumentParser:
             metavar="FLOW",
             help="a flow to act on; repeatable, and required",
         )
+    made["assign"].add_argument(
+        "--remove",
+        action="store_true",
+        help="delete each flow's directory instead, refusing one that holds work",
+    )
     # The one verb that reads another flow, and only the one the operator names.
     made["approve"].add_argument(
         "--from",
@@ -175,6 +205,14 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FLOW",
         help="copy this flow's latest approval under each --flow instead of a draft",
     )
+    # The job runner's channel: a line per item it can parse, the prose kept apart.
+    for name in ("caption", "tag", "sheet"):
+        made[name].add_argument(
+            "--progress",
+            choices=["json"],
+            default=None,
+            help="print a JSON line per item's start and end; prose goes to stderr",
+        )
     for name in ("caption", "tag", "sheet", "review"):
         made[name].add_argument(
             "--new-version",
@@ -191,6 +229,17 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"the loopback port to serve on (default {DEFAULT_PORT})",
     )
     made["ui"].set_defaults(photos=[], runs=RUNS_ROOT)
+
+    made["import"].add_argument(
+        "--batch",
+        type=Path,
+        required=True,
+        help="the batch directory; made when absent, else the files join its sources/",
+    )
+    made["import"].add_argument(
+        "files", nargs="+", type=Path, help="the photographs to clean and add"
+    )
+    made["import"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["compare"].add_argument(
         "batch",
@@ -280,8 +329,70 @@ def _ui(args: argparse.Namespace, wired: Wiring) -> int:
     return serve(wired, port=int(args.port))
 
 
+def _import(args: argparse.Namespace, wired: Wiring) -> int:
+    """Read each file into the batch's staging, commit what is clean, and report.
+
+    No file that is not cleaned is imported: that choice is the page's, one file
+    at a time.
+    """
+    batch = Path(args.batch).resolve()
+    if trackable(batch.parent):
+        raise Refusal(
+            f"--batch {batch} is inside this repository and outside its ignored "
+            ".data/ root; a batch holds copies of photographs, so it would be one "
+            "`git add` from being published -- point --batch under .data/ or at a "
+            "directory outside the repository"
+        )
+    staging = stage(batch.parent)
+    limit = upload_limit()
+    staged: list[Staged] = []
+    try:
+        refused = across(
+            list(args.files), lambda file: staged.append(read(file, staging, limit))
+        )
+        for item in staged:
+            print(_staged_line(item), file=wired.out)
+        if any(item.state in ("ready", "converted") for item in staged):
+            add = (batch / SOURCES).is_dir()
+            done = commit(staging, batch.parent, batch.name, add=add)
+            for name in done.skipped:
+                print(f"{name}: skipped, a source holds its bytes", file=wired.out)
+            if done.written:
+                print(
+                    f"{batch.name}: imported {', '.join(done.written)}", file=wired.out
+                )
+    except Refusal as uncommitted:
+        refused.append(str(uncommitted))
+    finally:
+        cancel(staging)
+    for message in refused:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if refused else 0
+
+
+def _staged_line(item: Staged) -> str:
+    """Return one file's result. e.g. "a.jpg: not cleaned, carries XMP; left out"."""
+    if item.state == "not cleaned":
+        return f"{item.name}: not cleaned, carries {', '.join(item.carries)}; left out"
+    if item.state == "skipped":
+        return f"{item.name}: skipped, its bytes are already read"
+    return f"{item.name}: {item.state}"
+
+
 def _run_for(identifier: str, wired: Wiring) -> Run:
-    """Return the run an argument names: a photograph to open, or a run to resume.
+    """Return the run an argument names: a photograph to open, or a run to resume."""
+    named = _named(identifier, wired)
+    return named if isinstance(named, Run) else open_run(named, wired.runs_root)
+
+
+def _existing_run(identifier: str, wired: Wiring) -> Run | None:
+    """Return the run an argument names, as `_run_for` does, but never open one."""
+    named = _named(identifier, wired)
+    return named if isinstance(named, Run) else find_run(named, wired.runs_root)
+
+
+def _named(identifier: str, wired: Wiring) -> Run | Path:
+    """Return the run an argument names by its id, or the photograph it names.
 
     A photograph is offered by path and an existing run by its id, and which one
     was meant is decided by what is on disk rather than by a flag.
@@ -296,7 +407,7 @@ def _run_for(identifier: str, wired: Wiring) -> Run:
             f"{wired.runs_root}; give the path to a JPEG or PNG, or the name of "
             f"a run directory under {wired.runs_root}"
         )
-    return open_run(photo, wired.runs_root)
+    return photo
 
 
 def _require_tracked(names: Sequence[str], wired: Wiring) -> None:
@@ -343,6 +454,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     try:
         if verb == "ui":
             return _ui(args, wired)
+        if verb == "import":
+            return _import(args, wired)
         if verb == "compare":
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0
@@ -495,6 +608,9 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     opening: list[Callable[[], LocalTagger]] = []
+    reporter = _Reporter(
+        wired.out, wired.err, getattr(args, "progress", None) == "json"
+    )
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -538,7 +654,15 @@ def _per_item(
         return opening[0]
 
     def work(identifier: str) -> None:
-        run = _run_for(identifier, wired)
+        if verb == "assign":
+            _assign(identifier, bool(args.remove), wired, list(flows), collected)
+            return
+        try:
+            run = _run_for(identifier, wired)
+        except Refusal as unopened:
+            for name in flows:
+                reporter.item(identifier, name, verb, "refused", str(unopened))
+            raise
         if verb == "show":
             for line in report(run, wired.flows_dir):
                 print(line, file=wired.out)
@@ -554,7 +678,7 @@ def _per_item(
                 # artifacts records would be false.
                 reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
                 _say(
-                    wired,
+                    reporter,
                     run,
                     "caption",
                     caption(
@@ -579,14 +703,14 @@ def _per_item(
                     written = tag_hosted(
                         run, name, tagger_for(flow), new_version=new_version
                     )
-                    _say(wired, run, "tags", written)
+                    _say(reporter, run, "tags", written)
 
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
                 # reaches no network (D1).
                 steps: tuple[Callable[[], None], ...] = (
                     lambda: _say(
-                        wired,
+                        reporter,
                         run,
                         "wd14",
                         tag_wd14(run, name, tagger(flow), new_version=new_version),
@@ -612,13 +736,15 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(wired, run, "sheet", written)
+                _say(reporter, run, "sheet", written)
 
             step = sheet_flow
         elif verb == "review":
 
             def review_flow(name: str) -> None:
-                _say(wired, run, "review", review(run, name, new_version=new_version))
+                _say(
+                    reporter, run, "review", review(run, name, new_version=new_version)
+                )
 
             step = review_flow
         elif verb == "approve":
@@ -633,16 +759,65 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(wired, run, "approve", written)
+                _say(reporter, run, "approve", written)
 
             step = approve_flow
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")
+
+        def reported(name: str) -> None:
+            """Run `step` for one flow between its `start` and its end."""
+            reporter.item(run.id, name, verb, "start")
+            before = len(collected)
+            try:
+                step(name)
+            except Refusal as refused:
+                reporter.item(run.id, name, verb, "refused", str(refused))
+                raise
+            # `tag` collects each tagger's refusal rather than raising it.
+            if len(collected) > before:
+                reporter.item(
+                    run.id, name, verb, "refused", "; ".join(collected[before:])
+                )
+            else:
+                reporter.item(run.id, name, verb, "done")
+
         # Each flow's refusal is collected on its own, so one flow's does not cost
         # the input its other flows.
-        collected.extend(across(list(flows), step))
+        collected.extend(across(list(flows), reported))
 
     return work
+
+
+def _assign(
+    identifier: str,
+    remove: bool,
+    wired: Wiring,
+    flows: Sequence[str],
+    collected: list[str],
+) -> None:
+    """Assign each flow to the run `identifier` names, or remove each empty one.
+
+    Removing opens no run: a source with none has no flow to remove.
+    """
+    run = _existing_run(identifier, wired) if remove else _run_for(identifier, wired)
+    if run is None:
+        for name in flows:
+            print(f"{identifier}: {name} is not assigned", file=wired.out)
+        return
+    collected.extend(
+        across(list(flows), lambda name: _assign_one(run, name, remove, wired))
+    )
+
+
+def _assign_one(run: Run, flow: str, remove: bool, wired: Wiring) -> None:
+    """Assign or remove one flow for `run`, and say which happened."""
+    changed = assign(run, flow, remove=remove)
+    if remove:
+        done = f"removed {flow}" if changed else f"{flow} is not assigned"
+    else:
+        done = f"assigned {flow}" if changed else f"{flow} is already assigned"
+    print(f"{run.id}: {done}", file=wired.out)
 
 
 def _generate(
@@ -717,12 +892,46 @@ def _generate(
     return refused + across(ready, render_one)
 
 
-def _say(wired: Wiring, run: Run, verb: str, written: Path | None) -> None:
+@dataclass(frozen=True)
+class _Reporter:
+    """Where a verb's lines go: prose to `out`, or with `progress` JSON to `out`.
+
+    e.g. {"run": "0d4b…_ada", "flow": "summon-anime-wai", "stage": "sheet",
+    "state": "done"}
+    """
+
+    out: TextIO
+    err: TextIO
+    progress: bool
+
+    def say(self, line: str) -> None:
+        """Print a line meant for a person: on stderr while JSON holds stdout."""
+        print(line, file=self.err if self.progress else self.out)
+
+    def item(
+        self, run: str, flow: str, stage: str, state: str, message: str | None = None
+    ) -> None:
+        """Print one item's `start`, `done` or `refused` line, when asked for JSON."""
+        if not self.progress:
+            return
+        line: dict[str, str] = {
+            "run": run,
+            "flow": flow,
+            "stage": stage,
+            "state": state,
+        }
+        if message is not None:
+            line["message"] = message
+        # Flushed: a job reads this from a pipe, line by line, as it happens.
+        print(json.dumps(line), file=self.out, flush=True)
+
+
+def _say(reporter: _Reporter, run: Run, verb: str, written: Path | None) -> None:
     """Report what a stage did, including that it was already complete."""
     if written is None:
-        print(f"{run.id}: {verb} is already complete", file=wired.out)
+        reporter.say(f"{run.id}: {verb} is already complete")
     else:
-        print(f"{run.id}: {verb} wrote {written.name}", file=wired.out)
+        reporter.say(f"{run.id}: {verb} wrote {written.name}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

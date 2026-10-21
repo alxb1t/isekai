@@ -32,6 +32,7 @@ Stdlib only, and on `python -m isekai`'s import graph.
 import hashlib
 import os
 import re
+import shlex
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -356,14 +357,7 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     left to do. Two photographs sharing a filename land in different runs, because
     the id is derived from content and the name is only the readable half.
     """
-    try:
-        body = photo.read_bytes()
-    except OSError as unreadable:
-        raise Refusal(
-            f"{photo.name}: cannot be read ({unreadable.strerror}); "
-            "check the path and the file's permissions, then offer it again"
-        ) from unreadable
-
+    body = _photo_bytes(photo)
     kind, suffix = media_type(body)
     digest = digest_of(body)
     existing = _run_for(digest, runs_root)
@@ -390,6 +384,45 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     }
     write(run.frame_path, RUN_FILE, frame)
     return run
+
+
+def find_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run | None:
+    """Return the run for `photo`'s bytes when there is one, creating nothing."""
+    return _run_for(digest_of(_photo_bytes(photo)), runs_root)
+
+
+def _photo_bytes(photo: Path) -> bytes:
+    """Return a photograph's bytes, refusing one that cannot be read."""
+    try:
+        return photo.read_bytes()
+    except OSError as unreadable:
+        raise Refusal(
+            f"{photo.name}: cannot be read ({unreadable.strerror}); "
+            "check the path and the file's permissions, then offer it again"
+        ) from unreadable
+
+
+def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
+    """Create `flow`'s empty directory in `run`; with `remove`, delete it while empty.
+
+    Return whether the run changed. A run holding a flow's directory is assigned
+    to it, so a tick is the layout's own fact; an untick never deletes work.
+    """
+    directory = run.directory(flow)
+    if not remove:
+        if directory.is_dir():
+            return False
+        directory.mkdir()
+        return True
+    if not directory.is_dir():
+        return False
+    if any(directory.iterdir()):
+        raise Refusal(
+            f"{run.id}: {flow} holds work, so it stays assigned; to unassign it, "
+            f"delete {run.id}/{flow}/ by hand"
+        )
+    directory.rmdir()
+    return True
 
 
 # --- numbering and completion -------------------------------------------------
@@ -612,9 +645,33 @@ class StageFailure(Exception):
         self.detail = detail
 
 
+# The option that asks a stage verb for the next version of its file.
+NEW_VERSION = ("--new-version",)
+
+
+def stage_command(run: Run, verb: str, *flows: str, options: Sequence[str] = ()) -> str:
+    """Return the command that runs `verb` on `run` for `flows`, as it is pasted.
+
+    e.g. (run, "tag", "f", options=NEW_VERSION)
+         -> "python -m isekai tag --flow f --new-version r"
+
+    The run's own root is named whenever it is not the default, or the pasted
+    command would look under `.data/runs` for a run that lives elsewhere.
+    """
+    root = run.path.parent
+    naming = "".join(f" --flow {flow}" for flow in flows)
+    runs = (
+        ""
+        if root.resolve() == RUNS_ROOT.resolve()
+        else f" --runs {shlex.quote(str(root))}"
+    )
+    words = " ".join((*options, run.id))
+    return f"python -m isekai {verb}{naming}{runs} {words}"
+
+
 def refusal_for(
     stage: str,
-    run_id: str,
+    run: Run,
     kind: Kind,
     detail: str,
     record: Path,
@@ -653,16 +710,16 @@ def refusal_for(
     """
     # `record_failure` names every record `NNN.error.…`.
     version = int(record.name[:3])
-    asked = "--new-version " if version > 1 else ""
-    command = f"`python -m isekai {verb} --flow {flow} {asked}{run_id}`"
+    asked = NEW_VERSION if version > 1 else ()
+    command = f"`{stage_command(run, verb, flow, options=asked)}`"
     where = f"{flow}/{area}/{record.name}"
     if exhausted(budget, record.parent, version):
         return Refusal(
-            f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
+            f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
             f"what it names and delete it, then run {command}"
         )
     return Refusal(
-        f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, and run "
+        f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, and run "
         f"{command} again once what it names is fixed"
     )
 

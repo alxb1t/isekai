@@ -26,7 +26,7 @@ import pytest
 from isekai.boundary.comfy import ComfyClient
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import BUDGETS, versions
+from isekai.foundation.run import BUDGETS, RUNS_ROOT, versions
 from isekai.interface.cli import build_parser, dispatch
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
@@ -298,8 +298,9 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     from isekai.foundation.run import open_run, record_failure
     from isekai.interface.compare_view import page
     from isekai.pipeline.caption import OllamaReader
-    from isekai.pipeline.generate import photo_resolution, prepare, prompt_artifact
+    from isekai.pipeline.generate import prepare, prompt_artifact
     from isekai.pipeline.review import approve, review, save_draft
+    from isekai.shared.image import photo_resolution
     from tests.stages import CAPTION_BRIEFING, caption, sheet
 
     photo = tmp_path / "bare.jpg"
@@ -455,11 +456,7 @@ def _unrunnable(messages: Sequence[str]) -> list[str]:
     names no run parses, does nothing and exits 0, so it is no remedy.
     e.g. "review --flow summon-anime-wai" -> listed
     """
-    printed = [
-        command
-        for message in messages
-        for command in re.findall(r"`python -m isekai ([^`]+)`", message)
-    ]
+    printed = _printed(messages)
     # A positive count, so a refactor that stops printing commands at all does
     # not turn the guard green by emptying it.
     assert printed
@@ -467,6 +464,15 @@ def _unrunnable(messages: Sequence[str]) -> list[str]:
         command
         for command in printed
         if not build_parser().parse_args(command.split()).photos
+    ]
+
+
+def _printed(messages: Sequence[str]) -> list[str]:
+    """Return every `python -m isekai` command `messages` print, after the module."""
+    return [
+        command
+        for message in messages
+        for command in re.findall(r"`python -m isekai ([^`]+)`", message)
     ]
 
 
@@ -481,7 +487,16 @@ def test_every_command_a_refusal_prints_is_one_this_build_accepts(
     that. This parses what is printed, so a remedy an operator pastes back is
     neither a usage error nor a command that does nothing.
     """
-    assert _unrunnable(_every_refusal(wired, tmp_path)) == []
+    messages = _every_refusal(wired, tmp_path)
+
+    assert _unrunnable(messages) == []
+    # Pasted, none looks in the default runs root, where no run here lives.
+    defaulted = [
+        command
+        for command in _printed(messages)
+        if build_parser().parse_args(command.split()).runs == RUNS_ROOT
+    ]
+    assert defaulted == []
 
 
 @pytest.mark.spec_exempt("twin: the guard above catches a command naming no run")

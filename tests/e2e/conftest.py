@@ -24,7 +24,7 @@ from isekai.foundation.run import Run, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.review import approve, review
 from tests.e2e.wiring import VOCABULARY
-from tests.images import jpeg_bytes
+from tests.images import jpeg_bytes, photo_jpeg
 from tests.stages import caption, sheet
 
 REPO = Path(__file__).resolve().parents[2]
@@ -38,6 +38,16 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-last": (("eve", (720, 1000)),),
     "queue-fails": (("fay", (730, 1000)),),
 }
+
+# A batch per hub test, so every test owns the cells it ticks and prepares. Its
+# sources are photographs with no run, except those `ASSIGNED` names.
+FRESH: dict[str, tuple[str, ...]] = {
+    "hub-tick": ("tick",),
+    "hub-prepare": ("pick", "skip"),
+}
+
+# The fresh sources whose run is already assigned to `FLOW`, as a tick leaves it.
+ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
@@ -114,6 +124,14 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     for name, sources in QUEUES.items():
         (lib / name / "sources").mkdir(parents=True)
         queues[name] = tuple(_run(lib / name, one, size) for one, size in sources)
+    for name, fresh in FRESH.items():
+        (lib / name / "sources").mkdir(parents=True)
+        for index, one in enumerate(fresh):
+            body = photo_jpeg((90, 60, 30 + index), (640, 800 + index))
+            photo = lib / name / "sources" / f"{one}.jpg"
+            photo.write_bytes(body)
+            if one in ASSIGNED.get(name, ()):
+                open_run(photo, lib / name / "runs").directory(FLOW).mkdir()
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"

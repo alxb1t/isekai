@@ -67,6 +67,16 @@ HOST = "http://127.0.0.1:11434"
 # adapters and their tests agree on it by construction.
 GENERATE = "/api/generate"
 
+# What the probe asks, and how long it waits: a running host answers at once.
+VERSION = "/api/version"
+PROBE_TIMEOUT = 5
+
+# The refusal for a host nothing answers at, from a call and from the probe alike.
+NOT_LISTENING = (
+    f"nothing is listening at {HOST}, and the reader and the JoyCaption tagger "
+    "need it; start the runtime (`ollama serve`), then try again"
+)
+
 # The opener every request goes through, and the empty mapping is the whole point
 # of it. `urllib.request.urlopen` uses a default opener whose `ProxyHandler` is
 # built from `getproxies()`, and urllib does **not** auto-bypass loopback -- only
@@ -114,7 +124,7 @@ def _rebuild(remedy: str) -> str:
     """Return the fix for a model not built from the pinned files: fetch, then build."""
     return (
         f"fetch the pinned files (`{PROVISION}`), then build the model "
-        f"(`{remedy}`), then run this command again"
+        f"(`{remedy}`), then try again"
     )
 
 
@@ -169,6 +179,20 @@ def post(path: str, body: bytes) -> tuple[int, bytes]:
             return response.status, response.read()
     except urllib.error.HTTPError as answered:
         return answered.code, answered.read()
+
+
+def probe() -> None:
+    """Return when the host answers, or refuse as a call to it would.
+
+    A job checks before it starts, so a host that is down costs nothing.
+    """
+    try:
+        with OPENER.open(f"{HOST}{VERSION}", timeout=PROBE_TIMEOUT):
+            return
+    except urllib.error.HTTPError:
+        return
+    except (OSError, http.client.HTTPException) as failed:
+        raise Refusal(NOT_LISTENING) from failed
 
 
 def ask(
@@ -231,11 +255,7 @@ def ask(
         if isinstance(failed, urllib.error.URLError):
             # urllib wraps what the *send* raised, so this is a connection that
             # was never made: no host, refused port, unresolvable name.
-            raise Refusal(
-                f"nothing is listening at {HOST}, and the reader and the "
-                "JoyCaption tagger need it; start the runtime (`ollama serve`), "
-                "then run this command again"
-            ) from failed
+            raise Refusal(NOT_LISTENING) from failed
         # Everything left reached a host and lost it. Transient rather than a
         # refusal: telling the operator to start a server that answered and then
         # died points away from the eviction that actually happened.
@@ -333,7 +353,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
         raise Refusal(
             f"the model {model!r} this flow declares is pinned by no entry in "
             "config/reader.json; add it to `tools/derive_reader.py`, run "
-            "`uv run python -m tools.derive_reader`, then run this command again"
+            "`uv run python -m tools.derive_reader`, then try again"
         )
     pins = {entry["dest"]: entry["sha256"] for entry in manifest["entries"]}
     unpinned = [built[role] for role in LAYERS if built[role] not in pins]
@@ -341,7 +361,7 @@ def _verified_build(model: str, root: Path) -> Mapping[str, DigestRecord]:
         raise Refusal(
             f"config/reader.json builds {model!r} from {', '.join(unpinned)}, "
             "which no entry pins; fix `tools/derive_reader.py`, run "
-            "`uv run python -m tools.derive_reader`, then run this command again"
+            "`uv run python -m tools.derive_reader`, then try again"
         )
     name, _, tag = model.partition(":")
     record = root / name / (tag or "latest")

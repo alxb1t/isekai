@@ -2,7 +2,8 @@
 
 A folder in the library is a batch when it holds `sources/` (D40), so no marker
 file can disagree with the disk. Its runs root is `<batch>/runs`, and every
-figure here is a listing read on each call: the hub writes nothing.
+figure here is a listing read on each call: the hub writes nothing. Its columns
+are the flows `config/ui.json` offers.
 
 ```
 ~/isekai/                      the library, `ISEKAI_LIBRARY`
@@ -10,11 +11,12 @@ figure here is a listing read on each call: the hub writes nothing.
   .staging/                    a dot-folder: never listed
 ```
 
-Stdlib only, so the whole of it is tested with no server involved.
+No web framework, so the whole of it is tested with no server involved.
 """
 
+import json
 import os
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -27,7 +29,7 @@ from isekai.foundation.artifacts import (
     Artifact,
     read,
 )
-from isekai.foundation.flow import load_flow, tracked_flows
+from isekai.foundation.flow import load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -48,13 +50,15 @@ from isekai.foundation.run import (
 )
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import rendered_seeds
+from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, current_draft
 from isekai.pipeline.review import state as review_state
+from isekai.shared.image import metadata_in
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
-SOURCES = "sources"
 RUNS = "runs"
+LOG = "log.txt"
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
@@ -67,9 +71,10 @@ _KINDS: Mapping[str, str] = {
     OUTPUTS: "render",
 }
 
-# A source's digest, by what its file's stat says: hashing every photograph on
-# every listing would read the whole library each time Home opens.
+# A source's digest, and what it carries, by what its file's stat says: reading
+# every photograph on every listing would read the whole library each time.
 _DIGESTS: dict[tuple[str, int, int, int], str] = {}
+_CARRIES: dict[tuple[str, int, int, int], tuple[str, ...]] = {}
 
 
 def root(environ: Mapping[str, str] = os.environ) -> Path:
@@ -142,11 +147,16 @@ class Cell:
 
 @dataclass(frozen=True)
 class Source:
-    """One file under `sources/`, its run if it has one, and a cell per flow."""
+    """One file under `sources/`, its run if it has one, and a cell per flow.
+
+    `carries` names what the file holds beyond its pixels and orientation: a
+    source imported as it is, which the hub marks not cleaned.
+    """
 
     name: str
     run: Run | None
     cells: Mapping[str, Cell] = field(default_factory=dict)
+    carries: tuple[str, ...] = ()
 
     @property
     def digest(self) -> str | None:
@@ -156,7 +166,7 @@ class Source:
 
 @dataclass(frozen=True)
 class Hub:
-    """A batch's grid: its sources by the tracked flows."""
+    """A batch's grid: its sources by the offered flows."""
 
     name: str
     flows: tuple[str, ...]
@@ -179,13 +189,27 @@ def listed(library: Path) -> list[Path]:
     )
 
 
-def rows(library: Path, flows_dir: Path) -> list[Row]:
+def offered(flows_dir: Path, config: Path = UI_CONFIG) -> tuple[str, ...]:
+    """Return the flows `config` offers, refusing one this build does not track."""
+    names = tuple(json.loads(config.read_text())["flows"])
+    for name in names:
+        try:
+            load_flow(name, flows_dir)
+        except Refusal as untracked:
+            raise Refusal(
+                f"config/ui.json offers {name}, which does not load: {untracked}; "
+                "fix its `flows`, then start `isekai ui` again"
+            ) from untracked
+    return names
+
+
+def rows(library: Path, flows: Sequence[str], flows_dir: Path) -> list[Row]:
     """Return Home's rows: batches by their newest file, newest first, then the rest.
 
     A folder that is not a batch is listed and never opened.
     """
     folders = listed(library)
-    suffixes = _suffixes(flows_dir)
+    suffixes = _suffixes(flows, flows_dir)
     batches = [_row(one, suffixes) for one in folders if is_batch(one)]
     batches.sort(key=lambda row: row.newest or 0.0, reverse=True)
     return batches + [Row(one.name, False) for one in folders if not is_batch(one)]
@@ -221,24 +245,58 @@ def run_named(folder: Path, digest: str) -> Run:
     return found
 
 
-def hub(folder: Path, flows_dir: Path) -> Hub:
-    """Return batch `folder`'s grid, each cell's stage read from its run."""
-    return _grid(folder, _suffixes(flows_dir))
+def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:
+    """Return batch `folder`'s grid over `flows`, each cell's stage from its run."""
+    return _grid(folder, _suffixes(flows, flows_dir))
 
 
-def _suffixes(flows_dir: Path) -> dict[str, str]:
-    """Return each tracked flow's render suffix, by flow, in the flows' order."""
+def unprepared(grid: Hub) -> dict[str, list[str]]:
+    """Return, per flow, the runs of every assigned cell that has no sheet yet.
+
+    e.g. {"summon-anime-wai": ["0d4b7e6fb2a8_ada"], "conjure-anime-wai": []}
+    """
     return {
-        flow: load_flow(flow, flows_dir).output_suffix
-        for flow in tracked_flows(flows_dir)
+        flow: [
+            one.run.id
+            for one in grid.sources
+            if one.run is not None and one.cells[flow].stage in ("assigned", "tagged")
+        ]
+        for flow in grid.flows
     }
 
 
-def _grid(folder: Path, suffixes: Mapping[str, str]) -> Hub:
-    """Return batch `folder`'s grid over the flows `suffixes` names."""
+def source_files(folder: Path) -> Callable[[str], Path]:
+    """Return what finds a file under batch `folder`'s `sources/` by name, or refuses.
+
+    The folder is listed once, however many names are asked for.
+    """
+    found = {path.name: path for path in _sources(folder)}
+
+    def named(name: str) -> Path:
+        if name not in found:
+            raise Refusal(
+                f"{folder.name} holds no source named {name!r}; reload the hub to "
+                "see its sources"
+            )
+        return found[name]
+
+    return named
+
+
+def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
+    """Return each of `flows`' render suffix, by flow, in the order given."""
+    return {flow: load_flow(flow, flows_dir).output_suffix for flow in flows}
+
+
+def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> Hub:
+    """Return batch `folder`'s grid over the flows `suffixes` names.
+
+    Without `marks`, no source is read for its not-cleaned mark: Home shows none.
+    """
     runs = _runs(folder / RUNS)
     sources = tuple(
-        _source(path, runs.get(_digest(path)), suffixes) for path in _sources(folder)
+        _source(path, runs.get(_digest(path)), suffixes, marks=marks)
+        for path in _sources(folder)
     )
     return Hub(folder.name, tuple(suffixes), sources)
 
@@ -293,13 +351,31 @@ def _sources(folder: Path) -> list[Path]:
     )
 
 
+def _key(path: Path) -> tuple[str, int, int, int]:
+    """Return what a file's stat says about whether it changed."""
+    info = path.stat()
+    return (str(path), info.st_size, info.st_mtime_ns, info.st_ino)
+
+
 def _digest(path: Path) -> str:
     """Return the twelve-character digest a run of this file is named by."""
-    info = path.stat()
-    key = (str(path), info.st_size, info.st_mtime_ns, info.st_ino)
+    key = _key(path)
     if key not in _DIGESTS:
         _DIGESTS[key] = digest_of(path.read_bytes())[:ID_DIGEST_CHARS]
     return _DIGESTS[key]
+
+
+def _carries(path: Path) -> tuple[str, ...]:
+    """Return what a source carries beyond its pixels and orientation.
+
+    Read from its bytes alone, so a clean source render would refuse is not
+    marked, and no source is decoded to list a batch.
+    e.g. a JPEG imported as it is -> ("EXIF", "XMP"); a cleaned one -> ()
+    """
+    key = _key(path)
+    if key not in _CARRIES:
+        _CARRIES[key] = tuple(metadata_in(path.read_bytes()))
+    return _CARRIES[key]
 
 
 def _runs(runs: Path) -> dict[str, Run]:
@@ -314,18 +390,20 @@ def _runs(runs: Path) -> dict[str, Run]:
     }
 
 
-def _source(path: Path, run: Run | None, suffixes: Mapping[str, str]) -> Source:
-    """Return one source, with its cell in every tracked flow."""
+def _source(
+    path: Path, run: Run | None, suffixes: Mapping[str, str], *, marks: bool
+) -> Source:
+    """Return one source, with its cell in every offered flow."""
     cells = {
         flow: stage(run, flow, suffix) if run else Cell(None)
         for flow, suffix in suffixes.items()
     }
-    return Source(path.name, run, cells)
+    return Source(path.name, run, cells, _carries(path) if marks else ())
 
 
 def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
     """Return one batch's row: its counts per flow and its newest file."""
-    grid = _grid(folder, suffixes)
+    grid = _grid(folder, suffixes, marks=False)
     newest, kind = _newest(folder)
     counts = [_count(grid.sources, flow) for flow in grid.flows]
     bare = [

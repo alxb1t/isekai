@@ -56,7 +56,8 @@ the default; a package earns its place when the contract needs more than one fil
 
 **Only a front end composes.** The CLI and the review UI are siblings, and each calls the stage
 directly. The CLI builds the components through `wiring.py` and hands them to the review UI when its
-`ui` verb starts it; the UI never calls the CLI.
+`ui` verb starts it; the UI never imports the CLI, and runs a stage only as the CLI's own verb, a
+child process ([D4](decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children)).
 
 **Composing is all a front end does** — a rule about the work itself, such as how a failure is
 classified or what state a sheet is in, belongs to the component that owns that work.

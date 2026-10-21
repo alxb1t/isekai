@@ -12,10 +12,11 @@ exists nowhere else in this repository -- and turning a `Refusal` into a
 response. The pipeline owns what a valid sheet is, each run file's shape and its
 filename, when approval is legal, and what a token costs.
 
-**Three write functions reach a run directory, all of stage ③'s**: `review()`
-when a sheet is opened, `save_draft()` on autosave and `approve()` on the button.
-Nothing here builds an artifact body or an artifact filename, and
-`tests/test_ui.py`'s grep is what keeps that at three.
+**A run directory is written only through the functions that own it**: stage
+③'s `review()` when a sheet is opened, `save_draft()` on autosave and
+`approve()` on the button, and the run's own `open_run()` and `assign()` on a
+tick. Nothing here builds an artifact body or an artifact filename, and
+`tests/test_ui.py`'s grep is what keeps it so.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
@@ -25,7 +26,11 @@ and `python -m isekai`'s import graph never reaches it at all.
 
 ```
 GET  /api/library
-GET  /api/b/{batch}/hub
+GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
+POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+POST /api/staging   ·   PUT …/{id}/files/{name}
+DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
+GET  /events[?batch=]                              Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve
@@ -34,16 +39,18 @@ GET  anything else                                 the bundle's index.html
 ```
 """
 
-import shlex
+import re
 import threading
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, TypeGuard
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from isekai.foundation.artifacts import (
@@ -61,15 +68,20 @@ from isekai.foundation.run import (
     APPROVED,
     CAPTIONS,
     REVIEW,
-    RUNS_ROOT,
     SHEETS,
     TAGS,
     WD14,
     Run,
+    assign,
+    find_run,
     latest_artifact,
+    open_run,
+    stage_command,
 )
-from isekai.interface.ui import library
+from isekai.interface.ui import events, library
+from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
+from isekai.pipeline import importing
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     TokenBudget,
@@ -161,6 +173,7 @@ def create_app(
     root: Path,
     wired: Wiring,
     *,
+    flows: Sequence[str],
     bundle: Path,
     wire: Callable[[Path], Wiring],
     host: str,
@@ -171,9 +184,22 @@ def create_app(
     `wire` builds one batch's wiring from its runs root, and is called on every
     request inside a batch, so the run-root guard holds for each (D19). `wired`
     supplies what every batch shares: the flows, the vocabulary and the table.
+    `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
     """
-    app = FastAPI(title="isekai", docs_url=None, redoc_url=None)
+    broadcast = events.Broadcast()
+    jobs = Jobs(broadcast, wired.probe)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        """Interrupt a running job and end every stream when the server stops."""
+        yield
+        jobs.shutdown()
+        broadcast.close()
+
+    app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.state.broadcast = broadcast
+    limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
     shared = _Shared(wired)
@@ -225,29 +251,155 @@ def create_app(
     @app.get("/api/library")
     def read_library() -> dict[str, Any]:
         """List the library's folders, batches by their newest file first."""
-        return {"rows": [asdict(row) for row in library.rows(root, wired.flows_dir)]}
+        rows = library.rows(root, flows, wired.flows_dir)
+        return {"rows": [asdict(row) for row in rows]}
 
     @app.get("/api/b/{batch}/hub")
     def read_hub(batch: str) -> dict[str, Any]:
-        """Describe a batch's grid: its sources by its tracked flows, each cell's stage.
+        """Describe a batch's grid: its sources by the offered flows, each cell's stage.
 
         Read from the run directories on every request, so it follows a verb run
         in the terminal while the page is open.
         """
-        grid = library.hub(folder(batch), wired.flows_dir)
+        return _hub(library.hub(folder(batch), flows, wired.flows_dir))
+
+    @app.post("/api/b/{batch}/assign")
+    def post_assign(batch: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Tick a flow for sources, or untick it, through the run's own `assign`.
+
+        Each source is answered on its own: one refused untick leaves the others
+        done, and its refusal comes back beside their cells.
+        """
+        found = folder(batch)
+        flow = str(payload.get("flow"))
+        if flow not in flows:
+            raise Refusal(
+                f"{flow!r}: not a flow this surface offers; the flows it offers "
+                f"are {', '.join(flows)} -- reload the hub"
+            )
+        names = payload.get("sources")
+        if not _is_tag_list(names):
+            raise Refusal("the request's `sources` is not a list of source names")
+        remove = payload.get("remove") is True
+        suffix = load_flow(flow, wired.flows_dir).output_suffix
+        runs = found / library.RUNS
+        named = library.source_files(found)
+        cells: dict[str, Any] = {}
+        refused: dict[str, str] = {}
+        for name in names:
+            try:
+                source = named(name)
+                run = find_run(source, runs) if remove else open_run(source, runs)
+                if run is not None:
+                    assign(run, flow, remove=remove)
+                cell = library.stage(run, flow, suffix) if run else library.Cell(None)
+                cells[name] = asdict(cell)
+            except Refusal as one:
+                refused[name] = str(one)
+        return {"cells": cells, "refused": refused}
+
+    def staging(staged: str) -> Path:
+        """Return the staging folder an import's id names, refusing one not there."""
+        found = root / importing.STAGING / staged
+        if not _STAGING_ID.fullmatch(staged) or not found.is_dir():
+            raise Refusal(
+                f"no import {staged!r} is open; close the sheet and choose the "
+                "files again"
+            )
+        return found
+
+    @app.post("/api/staging")
+    def post_staging() -> dict[str, Any]:
+        """Open an import: a staging folder under the library's `.staging/`."""
+        return {"id": importing.stage(root).name}
+
+    @app.put("/api/staging/{staged}/files/{name}")
+    async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
+        """Read one uploaded file into staging: cleaned, verified, or refused by name.
+
+        The body is the file. One past the limit is refused by its declared
+        length before its body is read.
+        """
+        folder = staging(staged)
+        declared = request.headers.get("content-length")
+        if declared is not None and declared.isdigit() and int(declared) > limit:
+            raise importing.past_limit(name, int(declared), limit)
+        body = await request.body()
+        # Decoding blocks; off the event loop, it holds up no other request.
+        staged_file = await run_in_threadpool(
+            importing.receive, name, body, folder, limit
+        )
         return {
-            "batch": grid.name,
-            "flows": list(grid.flows),
-            "sources": [
-                {
-                    "name": one.name,
-                    "digest": one.digest,
-                    **_size(one.run),
-                    "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
-                }
-                for one in grid.sources
-            ],
+            "name": staged_file.name,
+            "state": staged_file.state,
+            "carries": list(staged_file.carries),
         }
+
+    @app.delete("/api/staging/{staged}")
+    def delete_staging(staged: str) -> dict[str, Any]:
+        """Cancel an import: its staging folder is deleted, the library unchanged."""
+        importing.cancel(staging(staged))
+        return {}
+
+    @app.post("/api/staging/{staged}/commit")
+    def post_commit(staged: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Commit an import into a new batch, or with `add` into an open one."""
+        as_is = payload.get("as_is", [])
+        if not _is_tag_list(as_is):
+            raise Refusal("the request's `as_is` is not a list of file names")
+        done = importing.commit(
+            staging(staged),
+            root,
+            str(payload.get("batch", "")),
+            as_is,
+            add=payload.get("add") is True,
+        )
+        return {
+            "batch": done.batch.name,
+            "written": list(done.written),
+            "skipped": list(done.skipped),
+            "left_out": list(done.left_out),
+        }
+
+    @app.post("/api/b/{batch}/prepare")
+    def post_prepare(batch: str) -> dict[str, Any]:
+        """Start Prepare over every assigned cell with no sheet, as one job.
+
+        The local model server is asked first, so a job that could not run
+        starts nothing.
+        """
+        found = folder(batch)
+        grid = library.hub(found, flows, wired.flows_dir)
+        loaded = {flow: load_flow(flow, wired.flows_dir) for flow in flows}
+        steps = plan(
+            library.unprepared(grid), {flow: one.tagger for flow, one in loaded.items()}
+        )
+        cell = cell_event(found, grid, loaded)
+        return {"job": jobs.prepare(batch, found, steps, cell)}
+
+    @app.post("/api/job/stop")
+    def post_stop() -> dict[str, Any]:
+        """Interrupt the running stage; no later stage starts."""
+        return {"job": jobs.stop()}
+
+    @app.get("/events")
+    def read_events(batch: str | None = None) -> StreamingResponse:
+        """Stream the job slot and, for `batch`, its hub, then each change.
+
+        A reload or a second tab gets the whole truth at once.
+        """
+
+        def snapshot() -> dict[str, Any]:
+            found = {"job": jobs.slot()}
+            if batch is not None:
+                found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
+            return found
+
+        return StreamingResponse(
+            events.stream(broadcast, snapshot, batch=batch),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     @app.get("/api/tags")
     def read_tags(q: str = "", limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
@@ -471,6 +623,57 @@ class _Shared:
         return self._candidates[flow.id]
 
 
+# A staging folder's name, as `importing.stage` makes it.
+_STAGING_ID = re.compile(r"[0-9a-f]{16}")
+
+
+def cell_event(
+    found: Path, grid: library.Hub, loaded: Mapping[str, Flow]
+) -> Callable[[Mapping[str, Any]], dict[str, Any] | None]:
+    """Return what turns a progress line into a `cell` event, its stage read from disk.
+
+    A line naming a run or a flow the job did not start reads None.
+    """
+    batch = grid.name
+    sources = {one.run.id: one.name for one in grid.sources if one.run}
+    suffixes = {flow: one.output_suffix for flow, one in loaded.items()}
+
+    def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
+        run_id, flow = str(line.get("run")), str(line.get("flow"))
+        if run_id not in sources or flow not in suffixes:
+            return None
+        run = Run(run_id, found / library.RUNS / run_id)
+        return {
+            "batch": batch,
+            "source": sources[run_id],
+            "flow": flow,
+            "stage": line.get("stage"),
+            "state": line.get("state"),
+            "message": line.get("message"),
+            "cell": asdict(library.stage(run, flow, suffixes[flow])),
+        }
+
+    return cell
+
+
+def _hub(grid: library.Hub) -> dict[str, Any]:
+    """Describe a batch's grid as the page draws it."""
+    return {
+        "batch": grid.name,
+        "flows": list(grid.flows),
+        "sources": [
+            {
+                "name": one.name,
+                "digest": one.digest,
+                **_size(one.run),
+                "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
+                "carries": list(one.carries),
+            }
+            for one in grid.sources
+        ],
+    }
+
+
 def _flow(wired: Wiring, flow: str) -> Flow:
     """Return the tracked flow a URL names, refusing one this build does not track."""
     tracked = tracked_flows(wired.flows_dir)
@@ -562,18 +765,8 @@ def _command(one: Held, verb: str, *flags: str) -> str:
     """Return the command that runs `verb` for `one`, as the operator pastes it.
 
     e.g. "caption" -> "python -m isekai caption --flow f --runs b/runs r"
-
-    The run's own root is named whenever it is not the default, or the pasted
-    command would look under `.data/runs` for a run served from another root.
     """
-    root = one.run.path.parent
-    runs = (
-        ""
-        if root.resolve() == RUNS_ROOT.resolve()
-        else f" --runs {shlex.quote(str(root))}"
-    )
-    words = " ".join((*flags, one.run.id))
-    return f"python -m isekai {verb} --flow {one.flow.id}{runs} {words}"
+    return stage_command(one.run, verb, one.flow.id, options=flags)
 
 
 def _remedy(one: Held, verb: str) -> str:
@@ -668,4 +861,8 @@ def run(app: FastAPI, *, host: str, port: int) -> None:
     A thin wrapper so that `__init__.py` composes the surface without importing
     a web framework at module scope.
     """
-    uvicorn.run(app, host=host, port=port, log_level="warning")
+    # An open event stream never ends by itself, so a stop waits for it no more
+    # than a second before the job is interrupted and the streams closed.
+    uvicorn.run(
+        app, host=host, port=port, log_level="warning", timeout_graceful_shutdown=1
+    )

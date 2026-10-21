@@ -66,6 +66,7 @@ from tests.stages import (
     FakeSession,
     fake_tagger,
     fake_wd14,
+    runs_flag,
 )
 from tests.transports import FakeTransport
 
@@ -251,7 +252,7 @@ def test_the_refusal_names_the_verb_the_operator_would_actually_run(
         tag_hosted(run, FLOW, hosted(_answer("prose with no separator")))
 
     message = str(refused.value)
-    assert f"python -m isekai tag --flow {FLOW} {run.id}" in message
+    assert f"python -m isekai tag --flow {FLOW}{runs_flag(run)} {run.id}" in message
     assert f"{FLOW}/{TAGS}/" in message
 
 

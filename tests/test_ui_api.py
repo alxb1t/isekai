@@ -39,6 +39,7 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+import isekai.foundation.run as run_module  # noqa: E402
 import isekai.interface.ui.app as app_module  # noqa: E402
 import isekai.pipeline.review as review_module  # noqa: E402
 from isekai.foundation.artifacts import (
@@ -88,6 +89,8 @@ from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
+# The suite's own copy of the flows `config/ui.json` offers.
+OFFERED = (FLOW, "conjure-anime-wai")
 
 # The address every client below is built against. The app refuses a request
 # not addressed to the loopback address it was bound to, so a test client has
@@ -162,6 +165,7 @@ def _client(
     app = create_app(
         wired.runs_root.parent.parent,
         wired,
+        flows=OFFERED,
         bundle=dist,
         wire=lambda runs: replace(wired, runs_root=runs),
         host=HOST,
@@ -278,6 +282,22 @@ def test_the_hub_and_the_input_name_the_flow_the_schema_and_the_vocabulary(
     assert body["schema"] == list(schema.names)
     assert body["vocabulary"] == len(vocabulary)
     assert body["width"] == 1200
+
+
+@pytest.mark.spec("ui:hub:a-prepared-tick-stays")
+def test_unticking_a_cell_past_assigned_is_refused_and_changes_nothing(
+    client: TestClient, made: Run
+) -> None:
+    _source(made)
+    before = snapshot(made.path)
+
+    answered = client.post(
+        f"/api/b/{BATCH}/assign",
+        json={"sources": ["ada.jpg"], "flow": FLOW, "remove": True},
+    ).json()
+
+    assert f"{made.id}: {FLOW} holds work" in answered["refused"]["ada.jpg"]
+    assert snapshot(made.path) == before
 
 
 @pytest.mark.spec("ui:routes:a-run-is-named-by-its-digest")
@@ -1142,7 +1162,7 @@ def test_a_damaged_file_is_refused_by_name(
 def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
     client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(app_module, "RUNS_ROOT", made.path.parent)
+    monkeypatch.setattr(run_module, "RUNS_ROOT", made.path.parent)
     _damage(_latest(CAPTIONS)(client, made), _drop("prose"))
 
     refusal = client.get(_at(made)).json()["refusal"]

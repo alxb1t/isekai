@@ -7,7 +7,8 @@ when `validate` moved to `shared/fields.py`. Every stage is per flow: the flow
 supplies the briefing it reads, the schema it fills against and the directory it
 writes into.
 
-**The verbs are `caption` · `tag` · `sheet` · `review` · `approve` · `generate`.**
+**The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `generate`.**
+`importing.py` is `import`: it fills a batch's `sources/` and comes before every run.
 `review.py` holds two of them, and `tagging.py` is `tag`: its two functions write
 the two tag lists, each refusal collected on its own. `caption` and `tag` are
 independent, and neither reads the other's output
@@ -17,6 +18,7 @@ independent, and neither reads the other's output
 
 | file | does | costs |
 |---|---|---|
+| `importing.py` | reads a file into staging, cleans it to its pixels and orientation, verifies it, and commits the batch's `sources/` | free |
 | `caption.py` | ① `caption`: turns a photograph into descriptive prose | a model call |
 | `tagging.py` | ① `tag`: a scored tag list from a local ONNX session, then a raw one from a hosted model. **Neither is narrowed** — filtering is ②'s job | free, then a model call |
 | `sheet.py` | ② routes the local tag list into the flow's schema's fields, through the authored table | free |
@@ -30,6 +32,7 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
+| `importing.py` | `interface/cli.py`, `interface/ui/__init__.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/test_importing.py` |
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_view.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
 | `sheet.py` | `interface/cli.py` | `tests/stages.py`, `tests/test_sheet_stage.py` |

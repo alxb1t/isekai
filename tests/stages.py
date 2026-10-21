@@ -14,9 +14,11 @@ ordering *and* by the modules that compose a `Wiring`, and a double defined in
 one test module and reached from three is the coupling this file exists to avoid.
 """
 
+import io
 import random
+import shlex
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from isekai.boundary.comfy import ComfyTransport
@@ -35,6 +37,7 @@ from isekai.foundation.run import (
     Run,
     artifact_name,
 )
+from isekai.interface.wiring import Wiring
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import generate as generate_stage
 from isekai.pipeline import sheet as sheet_stage
@@ -45,6 +48,15 @@ from tests.fakes import FakeComfyClient
 FLOW = load_flow("summon-anime-wai")
 FLOW_DIGEST = manifest_digest(FLOW.id)
 CAPTION_BRIEFING = FLOW.caption_briefing_path
+
+
+def runs_flag(run: Run) -> str:
+    """Return the `--runs` a printed command names for `run`, led by a space.
+
+    A test's run lives outside the default root, so a command that finds it
+    names its root.
+    """
+    return f" --runs {shlex.quote(str(run.path.parent))}"
 
 
 def caption(
@@ -314,3 +326,25 @@ def render(
         poll=poll,
         deadline=deadline,
     )
+
+
+def _unread() -> Vocabulary:
+    raise AssertionError("the vocabulary was read")
+
+
+def bare_wiring(**fields: object) -> Wiring:
+    """Return a wiring with no model behind it, its streams captured.
+
+    Its vocabulary is never to be read; `fields` sets it, or any other field.
+    """
+    bare = Wiring(
+        reader=None,
+        tagger=None,
+        hosted_tagger=None,
+        client=None,
+        vocabulary=_unread,
+        field_map=lambda _: FIELD_MAP,
+        out=io.StringIO(),
+        err=io.StringIO(),
+    )
+    return replace(bare, **fields)

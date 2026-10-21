@@ -33,7 +33,7 @@ from isekai.pipeline.review import (
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import snapshot
 from tests.images import jpeg_bytes
-from tests.stages import caption, sheet
+from tests.stages import caption, runs_flag, sheet
 
 FLOW = "summon-anime-wai"
 
@@ -304,7 +304,11 @@ def test_a_sheet_missing_a_key_is_refused_before_it_is_copied(
 
     message = str(refused.value)
     assert message.startswith(f"001.json: records no `{key}` object")
-    assert f"`python -m isekai sheet --flow {FLOW} --new-version {run.id}`" in message
+    flag = runs_flag(run)
+    assert (
+        f"`python -m isekai sheet --flow {FLOW}{flag} --new-version {run.id}`"
+        in message
+    )
     assert versions(run.directory(FLOW, "review")) == []
 
 
@@ -478,8 +482,15 @@ def test_an_approval_of_another_kind_is_restored_by_hand_never_deleted(
 
 def _follow(message: str, run: Run, schema: Schema, vocabulary: Vocabulary) -> None:
     """Run the two commands a no-approval source-sheet refusal prints, in order."""
-    assert f"`python -m isekai sheet --flow {FLOW} --new-version {run.id}`" in message
-    assert f"`python -m isekai review --flow {FLOW} --new-version {run.id}`" in message
+    flag = runs_flag(run)
+    assert (
+        f"`python -m isekai sheet --flow {FLOW}{flag} --new-version {run.id}`"
+        in message
+    )
+    assert (
+        f"`python -m isekai review --flow {FLOW}{flag} --new-version {run.id}`"
+        in message
+    )
     sheet(run, schema, vocabulary, new_version=True)
     copied = review(run, FLOW, new_version=True)
     assert copied is not None
@@ -972,7 +983,8 @@ def test_a_source_with_no_approval_is_refused_naming_it_and_the_command(
 
     message = str(refused.value)
     assert FLOW in message
-    assert f"`python -m isekai approve --flow {FLOW} {run.id}`" in message
+    flag = runs_flag(run)
+    assert f"`python -m isekai approve --flow {FLOW}{flag} {run.id}`" in message
     assert not (run.path / CONTROL / "review").exists()
 
 

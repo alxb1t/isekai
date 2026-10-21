@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
+from isekai.boundary import ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.flow import FLOWS_DIR, Flow
@@ -97,6 +98,9 @@ class Wiring:
     # The image the render session booted; `None` outside one, so a render
     # against an endpoint the operator named declares itself unpinned (D28).
     image: str | None = None
+    # Whether the local model server answers, asked before a job starts; it
+    # refuses as a call to it would.
+    probe: Callable[[], None] = ollama.probe
 
 
 # **What the seams resolve on is the model, not an implementation string.** There

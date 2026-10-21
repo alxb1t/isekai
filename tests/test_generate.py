@@ -58,7 +58,6 @@ from isekai.pipeline.generate import (
     build_graph,
     draw_seeds,
     graph_digest,
-    photo_resolution,
     prepare,
     prompt_artifact,
     read_runtime,
@@ -67,7 +66,7 @@ from isekai.pipeline.generate import (
 )
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
-from isekai.shared.image import MAX_TARGET_LONG_SIDE
+from isekai.shared.image import MAX_TARGET_LONG_SIDE, photo_resolution
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import (
     FAKE_SYSTEM,
@@ -77,7 +76,15 @@ from tests.fakes import (
     url_of,
 )
 from tests.images import jpeg_bytes, jpeg_segment
-from tests.stages import FIELD_MAP, Always, caption, fake_wd14, render, sheet
+from tests.stages import (
+    FIELD_MAP,
+    Always,
+    caption,
+    fake_wd14,
+    render,
+    runs_flag,
+    sheet,
+)
 from tests.transports import RefusingConnection
 
 FLOW = "summon-anime-wai"
@@ -323,7 +330,8 @@ def test_a_named_unapproved_flow_is_refused_beside_an_approved_one(
     assert list(assembled) == [FLOW]
     assert len(refused) == 1
     assert "no approved sheet for summon-v2" in refused[0]
-    assert f"python -m isekai review --flow summon-v2 {run.id}" in refused[0]
+    flag = runs_flag(run)
+    assert f"python -m isekai review --flow summon-v2{flag} {run.id}" in refused[0]
     assert FLOW not in refused[0].replace(run.id, "")
 
 
@@ -824,7 +832,10 @@ def test_an_unassemblable_sheet_names_its_record_and_the_command(
 
     assert assembled == {} and len(refused) == 1
     assert f"delete {FLOW}/{PROMPTS}/001.error.1.permanent.json" in refused[0]
-    assert refused[0].endswith(f"`python -m isekai generate --flow {FLOW} {run.id}`")
+    flag = runs_flag(run)
+    assert refused[0].endswith(
+        f"`python -m isekai generate --flow {FLOW}{flag} {run.id}`"
+    )
 
 
 @pytest.mark.spec("run-directory:budget:one-failure-does-not-halt-the-batch")
@@ -1035,7 +1046,8 @@ def test_an_unwalkable_photograph_is_refused_at_assembly(
 
     assert assembled == {} and len(refused) == 1
     assert run.photo.name in refused[0]
-    assert f"python -m isekai generate --flow {FLOW} {run.id}" in refused[0]
+    flag = runs_flag(run)
+    assert f"python -m isekai generate --flow {FLOW}{flag} {run.id}" in refused[0]
     directory = run.path / FLOW / PROMPTS
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
     assert not (directory / "001.json").exists()
@@ -1055,7 +1067,8 @@ def test_a_prompt_already_on_disk_does_not_skip_the_assembly_walk(
 
     assert assembled == {} and len(refused) == 1
     assert run.photo.name in refused[0]
-    assert f"python -m isekai generate --flow {FLOW} {run.id}" in refused[0]
+    flag = runs_flag(run)
+    assert f"python -m isekai generate --flow {FLOW}{flag} {run.id}" in refused[0]
     directory = run.path / FLOW / PROMPTS
     assert [one.kind for one in attempts(directory, 1)] == ["permanent"]
     # A permanent failure is never retried: the next pass reads the record.
@@ -1922,7 +1935,8 @@ def test_a_copy_out_of_step_with_the_sources_renders_is_refused_before_any_endpo
     message = err.getvalue()
     assert f"{CONTROL}'s approval" in message
     assert "001" in message and "002" in message
-    assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
+    flag = runs_flag(run)
+    assert (f"approve --flow {CONTROL}{flag} --from {FLOW} {run.id}" in message) == (
         copy == "older"
     )
     # One session renders the source again and the flow on its seeds.
@@ -1993,7 +2007,8 @@ def test_a_copy_behind_a_source_that_renders_first_is_refused_before_any_endpoin
 
     message = err.getvalue()
     assert ("001" in message and "002" in message) == (copy == "behind")
-    assert (f"approve --flow {CONTROL} --from {FLOW} {run.id}" in message) == (
+    flag = runs_flag(run)
+    assert (f"approve --flow {CONTROL}{flag} --from {FLOW} {run.id}" in message) == (
         copy == "behind"
     )
     _assert_nothing_rented(client, run, CONTROL)

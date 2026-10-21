@@ -34,6 +34,18 @@ import time:
 
 Every lazy edge points down, as every module-level one does.
 
+**Where this version's pieces sit.** `import` is `pipeline/importing.py`, a stage
+no other stage imports; the CLI's `import` verb and the surface's staging routes
+both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
+not-cleaned mark.
+`assign` is `foundation/run.py`'s, because a tick is the run's layout, and the CLI
+verb and the hub's route both call it. `--progress json` is a reporter inside
+`cli.py`. **Prepare reaches the CLI by process, never by import**:
+`interface/ui/jobs.py` runs `python -m isekai tag | caption | sheet` as children,
+so the CLI stays the one path a stage runs through, and `interface/ui/events.py` streams
+what they report to the page as `/events`. `wiring.py` imports `boundary/ollama.py`
+for the probe a job asks first.
+
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
 stay lazy.** The `-S` guard goes red only when a chain of module-scope imports
 from the entry point reaches a wheel. The lazy edges above are between this
@@ -66,15 +78,16 @@ Rules the graph is holding rather than describing:
   v0.22.3 retired that: the local tagger runs on every `tag` for every tagged flow,
   so `uv sync` — which makes the environment match exactly what it is told and
   removes extras it is not told about — was stripping it on every gate run.
-  `onnxruntime`, `numpy`, `Pillow`, `fastapi`, `uvicorn` and `gpunit` are declared
-  dependencies now. **What survives is the claim the graph actually holds**, and
+  `onnxruntime`, `numpy`, `Pillow`, `pi-heif`, `fastapi`, `uvicorn` and `gpunit` are
+  declared dependencies now. **What survives is the claim the graph actually holds**, and
   it is worth more than the one it replaces: no wheel is reached on the import
   graph of `python -m isekai`, only on the path of the verb that needs it — which
   is why `isekai show` works on a checkout that has provisioned nothing.
 
   Each wheel-needing tree is reached from inside a function or behind a lazy
   import: `fastapi`/`uvicorn` from `interface/ui/app.py`; the tagger's stack
-  from `boundary/wd14.py`; `gpunit` from inside `boundary/gpu.py`'s `open_session`
+  from `boundary/wd14.py`; Pillow and `pi_heif` from inside the functions of
+  `pipeline/importing.py`; `gpunit` from inside `boundary/gpu.py`'s `open_session`
   and `interface/render.py`'s session block. The mechanisms differ, and the difference matters to
   anyone reading this as a rule to apply. `wd14.py` reaches its stack by an
   `import_module` call **inside a function**, so the module imports cleanly

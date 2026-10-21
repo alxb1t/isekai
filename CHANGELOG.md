@@ -9,6 +9,37 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-21 · 0062-run-flow
+
+Gate: local 0m29s · CI 1m0s (ci at ac379cf) · 0.37.0: local 0m22s · CI 0m35s
+
+### Added
+
+- `isekai import --batch <dir> <file…>` cleans photographs into a batch's `sources/`: no metadata but the
+  orientation, colour in sRGB, HEIC and other formats converted; a RAW, multi-image or oversized file is refused
+  by name, and each file is verified before it is committed (0062 D1, D2, D3).
+- `isekai assign --flow F <source…> [--remove]` ticks a flow as its empty directory in the run, and the hub's
+  `POST /api/b/{batch}/assign` runs the same function; an untick never deletes work (0062 D4).
+- `tag`, `caption` and `sheet` take `--progress json`: a JSON line per item's start, end or refusal on stdout,
+  the prose on stderr, so a job reads a format meant for it (0062 D6).
+- Prepare runs as a job: `POST /api/b/{batch}/prepare` checks the model server answers, then runs `tag`,
+  `caption` and `sheet` as CLI children per flow; Stop and a server stop interrupt it (0062 D7).
+- `GET /events` streams a snapshot of the job slot and the batch's hub, then each change as a stage reports it;
+  the server sweeps import's leftover staging at start (0062 D1, D8).
+- New batch on Home and Add sources on the hub open the import sheet: files chosen in the dialog upload one
+  request each with a bar each, show converted, refused or not cleaned, and Import waits for every file (0062 D9).
+- The hub ticks: space or a click assigns a flow, ⇧↑↓ selects rows for a column, and the Prepare bar runs what
+  changed, its cells moving live from `/events`; a prepared tick stays (0062 D10).
+- The docs describe `import`, `assign`, `--progress json`, Prepare and `/events`; D4 now reads that the UI runs
+  stages only as the CLI's children, and D43 records that a source holds pixels and orientation only (0062 D11).
+
+### Changed
+
+- The hub's columns and Home's counts are the flows `config/ui.json` offers, so `control-anime-wai` stays the
+  CLI's; a source still carrying metadata is marked not cleaned (0062 D5, D10).
+- A refusal that asks the operator to fix something and retry ends *"then try again"*, so the page can show it
+  verbatim; D42 records that a new draft starts from the last approval (0062 D11).
+
 ## [0.37.0] - 2026-10-21 · 0061-ui-groundwork
 
 Gate: local 0m22s · CI 0m35s (ci at 45babd9) · 0.36.0: none

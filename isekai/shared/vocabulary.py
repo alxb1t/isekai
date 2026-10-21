@@ -63,7 +63,7 @@ def undeclared(dest: str, manifest: Path) -> Refusal:
     return Refusal(
         f"{dest} is not declared in {manifest}; add it to "
         "`tools/derive_vocabulary.py`, run `uv run python -m "
-        "tools.derive_vocabulary`, then run this command again"
+        "tools.derive_vocabulary`, then try again"
     )
 
 

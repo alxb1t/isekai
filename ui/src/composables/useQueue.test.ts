@@ -14,6 +14,7 @@ function source(name: string, status: InputStatus) {
     width: 1,
     height: 1,
     cells: { f: { stage: null, renders: 0, refusal: null, status } },
+    carries: [],
   }
 }
 

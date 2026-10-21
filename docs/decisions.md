@@ -73,15 +73,26 @@ field. No model decides a sheet.**
 - **Why:** deleting it would make stage ③ a single point of failure for the whole pipeline.
 - **Made by:** `0018`.
 
-### D4 · The UI runs no stage
+### D4 · The UI runs stages only as the CLI's children
 
-**The browser writes nothing a stage does not already write in review: a draft, its edits and an
-approval, each through `review`'s own functions. No upload, no captioning, no render button. Nothing in
-the browser spends money.**
+**The browser runs a stage only as the CLI's own verb, a child of the server; nothing in it spends
+money.** Prepare is `tag`, `caption` and `sheet` run as children. Every other write goes through the
+function that owns it: a draft, its edits and an approval through `review`'s, a tick through the run's
+`assign`, a source through import. There is no render button.
 
-- **Why:** review is where a person decides quality. A button that spends would put the paid stage
-  behind a web page, and a write the review stage does not own would give a run file a second author.
-- **Made by:** `0018`, `0061`.
+- **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
+  and a write no stage owns would give a run file a second author. A button that spends would put the
+  paid stage behind a web page.
+- **Made by:** `0018`, `0061`, `0062`.
+
+### D42 · A new draft starts from the last approval
+
+**Where a flow has an approved sheet, a new draft is copied from that approval, never from the sheet the
+machine wrote.** The approval is left as it was.
+
+- **Why:** a correction starts from the last thing a person agreed with. Starting again from the machine's
+  sheet would throw away every edit the operator made before.
+- **Made by:** `0013`.
 
 ## Models
 
@@ -285,6 +296,17 @@ counts, each cell's stage — is a listing read on each request.**
 - **Why:** layout alone decides, so no marker file can disagree with the disk, and a stage is a
   directory listing already. The operator never types a path: the batch is in the URL.
 - **Made by:** `0061`.
+
+### D43 · A source holds pixels and orientation only
+
+**Import writes into `sources/` a JPEG or PNG carrying its pixels and its orientation, and nothing else:
+no location, camera or time, its colour in sRGB.** Each file is verified by the strip's own walk before
+it is committed; one that cannot be cleaned is left out unless the operator imports it as it is, and the
+hub marks it.
+
+- **Why:** a library holds personal photographs, and every run copies its source, so metadata kept at
+  import is metadata kept everywhere. A profile dropped without conversion shifts every colour.
+- **Made by:** `0062`.
 
 ## Code and environment
 

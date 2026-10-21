@@ -65,6 +65,8 @@ export interface HubSource {
   width: number | null
   height: number | null
   cells: Record<string, HubCell>
+  /* What the file carries beyond its pixels and orientation: empty once cleaned. */
+  carries: string[]
 }
 
 export interface HubInfo {
@@ -149,4 +151,49 @@ export interface VocabEntry {
 export interface TagMatches {
   matches: VocabEntry[]
   total: number
+}
+
+/* What reading one uploaded file left in staging. `name` is what it is staged
+   as: the file's own name, converted, or `<stem>-2`. */
+export type StagedState = 'ready' | 'converted' | 'not cleaned' | 'skipped'
+
+export interface StagedFile {
+  name: string
+  state: StagedState
+  carries: string[]
+}
+
+export interface Committed {
+  batch: string
+  written: string[]
+  skipped: string[]
+  left_out: string[]
+}
+
+/* The one job slot: Prepare running, or the last one's end. */
+export interface JobSlot {
+  kind: 'prepare'
+  batch: string
+  state: 'running' | 'done' | 'stopped' | 'failed'
+  flow: string | null
+  stage: string | null
+  /* Why a failed job ended, naming the batch's log; null otherwise. */
+  message: string | null
+}
+
+/* A stage's report about one cell, its stage read again from disk. */
+export interface CellEvent {
+  batch: string
+  source: string
+  flow: string
+  stage: string
+  state: 'start' | 'done' | 'refused'
+  message: string | null
+  cell: HubCell
+}
+
+export interface Assigned {
+  cells: Record<string, HubCell>
+  /* Each refused source's refusal, by its name. */
+  refused: Record<string, string>
 }

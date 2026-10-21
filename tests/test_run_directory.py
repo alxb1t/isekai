@@ -724,7 +724,7 @@ def test_a_record_that_refuses_the_next_run_names_its_deletion(
 
     refusal = refusal_for(
         "reader",
-        "aunt-ada",
+        Run("aunt-ada", RUNS_ROOT / "aunt-ada"),
         kinds[-1],
         "timed out",
         record,

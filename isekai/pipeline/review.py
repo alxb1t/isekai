@@ -53,6 +53,7 @@ from isekai.foundation.flow import Flow, Schema, assemble
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
+    NEW_VERSION,
     REVIEW,
     SHEETS,
     Run,
@@ -61,6 +62,7 @@ from isekai.foundation.run import (
     latest,
     latest_artifact,
     next_version,
+    stage_command,
     versions,
 )
 from isekai.shared.fields import validate
@@ -147,7 +149,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
     if source_sheet is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no sheet to review; run "
-            f"`python -m isekai sheet --flow {flow} {run.id}` first"
+            f"`{stage_command(run, 'sheet', flow)}` first"
         )
 
     again = _again(run, flow)
@@ -170,7 +172,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
         copied = sheets / artifact_name(source_sheet)
         carried = read(copied, SHEET_FILE)
         remedy = (
-            f"run `python -m isekai sheet --flow {flow} --new-version {run.id}`, "
+            f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, "
             f"then {again}"
         )
         came_from, source, sheet_version = source_sheet, SHEETS, source_sheet
@@ -237,7 +239,7 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
     if path is None:
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to update; a draft is opened by "
-            f"`python -m isekai review --flow {flow} {run.id}`, and an approved "
+            f"`{stage_command(run, STAGE, flow)}`, and an approved "
             "flow has none because approval is the end of it"
         )
 
@@ -337,7 +339,7 @@ def approve(
             return None, []
         raise Refusal(
             f"{run.id}: flow {flow} has no draft to approve; run "
-            f"`python -m isekai review --flow {flow} {run.id}` to take a copy, "
+            f"`{stage_command(run, STAGE, flow)}` to take a copy, "
             "edit it, then approve it"
         )
 
@@ -413,9 +415,8 @@ def _copy_approval(
     if not versions_held:
         raise Refusal(
             f"{run.id}: {flow} is copied from {source}, which has no approved "
-            f"sheet; run `python -m isekai review --flow {source} {run.id}`, edit "
-            f"the draft, then `python -m isekai approve --flow {source} {run.id}` "
-            "first"
+            f"sheet; run `{stage_command(run, STAGE, source)}`, edit the draft, "
+            f"then `{stage_command(run, 'approve', source)}` first"
         )
     approval = versions_held[-1]
     directory = run.directory(flow, REVIEW)
@@ -462,7 +463,7 @@ def _copy_approval(
 
 def _again(run: Run, flow: str) -> str:
     """Return the command that copies `flow`'s draft afresh under the next number."""
-    return f"`python -m isekai review --flow {flow} --new-version {run.id}`"
+    return f"`{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
 
 
 def _recopy(run: Run, flow: str, draft: Path) -> str:
@@ -487,7 +488,7 @@ def _resheet(run: Run, flow: str, draft: Path) -> str:
             f"{artifact_name(approved[-1], APPROVED)} records it"
         )
     return (
-        f"run `python -m isekai sheet --flow {flow} --new-version {run.id}`, then "
+        f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, then "
         f"{_again(run, flow)} to copy the new sheet; {draft.name} keeps your "
         "edits to carry across"
     )

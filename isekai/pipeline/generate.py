@@ -68,13 +68,9 @@ from isekai.foundation.run import (
     artifact_name,
     check_budget,
     record_failure,
+    stage_command,
 )
-from isekai.shared.image import (
-    MAX_TARGET_LONG_SIDE,
-    dimensions_or_refuse,
-    strip_metadata,
-    working_resolution,
-)
+from isekai.shared.image import photo_resolution, strip_metadata
 
 STAGE_ASSEMBLE = "assemble"
 STAGE_RENDER = "render"
@@ -139,11 +135,10 @@ def _unapproved(run: Run, flows: Sequence[str]) -> str:
     """Return the refusal for `flows` having no approved sheet, naming the way out."""
     # `--flow` is required and repeatable, so the remedy names every flow it
     # refuses rather than a command argparse would refuse.
-    naming = " ".join(f"--flow {one}" for one in flows)
     return (
         f"{run.id}: no approved sheet for {', '.join(flows)}, and only an approved "
-        f"sheet is rendered; run `python -m isekai review {naming} {run.id}`, edit "
-        f"the draft, then `python -m isekai approve {naming} {run.id}`"
+        f"sheet is rendered; run `{stage_command(run, 'review', *flows)}`, edit "
+        f"the draft, then `{stage_command(run, 'approve', *flows)}`"
     )
 
 
@@ -237,7 +232,7 @@ def _unassembled(
     return Refusal(
         f"{run.id}: flow {flow.id}'s approved sheet cannot be assembled -- "
         f"{broken}; fix it, delete {flow.id}/{PROMPTS}/{record.name}, then "
-        f"run `python -m isekai generate --flow {flow.id} {run.id}`"
+        f"run `{stage_command(run, 'generate', flow.id)}`"
     )
 
 
@@ -371,10 +366,8 @@ def refuse_out_of_step(
         f"{copied['approval']:03d}, and {latest} {group:03d}; run "
     )
     if copied["approval"] < group:
-        raise Refusal(
-            f"{head}`python -m isekai approve --flow {flow} --from {source} "
-            f"{run.id}` to copy the newer one"
-        )
+        again = stage_command(run, "approve", flow, options=("--from", source))
+        raise Refusal(f"{head}`{again}` to copy the newer one")
     raise Refusal(
         f"{head}`python -m isekai render {_runs_root(run)} {source}=1"
         f"{_dependents([flow], source)}` to render {source} again first"
@@ -389,38 +382,6 @@ def _dependents(flows: Sequence[str], source: str) -> str:
 def _runs_root(run: Run) -> str:
     """Return the runs directory of `run`, quoted for a shell."""
     return shlex.quote(str(run.path.parent))
-
-
-def photo_resolution(photo: Path) -> tuple[int, int]:
-    """Return the working resolution for `photo`, as a refusal rather than an exit.
-
-    The `sys.exit` that `image_dimensions` reports an unreadable header with is
-    turned into a `Refusal` by `shared.image.dimensions_or_refuse`, which owns
-    that wrap for every caller -- this one and the review surface's.
-
-    `MAX_TARGET_LONG_SIDE` is enforced here for the same reason and in the same
-    currency -- see its own comment in `isekai.shared.image` for what it bounds and why.
-    The one fact that belongs here rather than beside the constant: it bounds the
-    *working* target and not the hires one, because hires scales both axes by the
-    same factor and so does not change the aspect ratio, and bounding the hires
-    value would silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect.
-    """
-    width, height = working_resolution(
-        *dimensions_or_refuse(
-            photo,
-            "the render target is derived from the photograph's own header and "
-            "there is nothing to fall back to -- re-export the photograph as a "
-            "JPEG or PNG and open the run again",
-        )
-    )
-    if max(width, height) > MAX_TARGET_LONG_SIDE:
-        raise Refusal(
-            f"{photo.name}: a {width}x{height} target is past the "
-            f"{MAX_TARGET_LONG_SIDE} limit on the long side; the short-side rule "
-            "bounds one axis and this photograph's aspect ratio is extreme -- "
-            "crop it closer to the subject and open the run again"
-        )
-    return width, height
 
 
 # The dials each sampler takes from the manifest -- the hires pass declares its
@@ -604,7 +565,7 @@ def render(
             approval,
             APPROVED_FILE,
             remedy=f"restore it in {approval} by hand, then run "
-            f"`python -m isekai generate --flow {flow.id} {run.id}`",
+            f"`{stage_command(run, 'generate', flow.id)}`",
         )["sheet"]
     produced: list[Render] = []
     for seed in wanted:

@@ -4,7 +4,8 @@ The suite is offline and carries no imaging wheel, and the parser under test rea
 headers rather than pixels -- so a header with the right shape is a complete input
 for it. Building them here rather than tracking binary fixtures keeps the declared
 size and the bytes in one place, so a fixture cannot silently disagree with the
-dimensions a test asserts against.
+dimensions a test asserts against. Import decodes what it reads, so `photo_jpeg`
+is a whole photograph, written by Pillow, and `nef_bytes` a RAW's first bytes.
 """
 
 import struct
@@ -160,3 +161,25 @@ def oversized_png(width: int = 20000, height: int = 20000) -> bytes:
         + png_chunk(b"IDAT", b"")
         + png_chunk(b"IEND", b"")
     )
+
+
+def photo_jpeg(
+    colour: tuple[int, int, int] = (200, 80, 60),
+    size: tuple[int, int] = (32, 32),
+    **options: object,
+) -> bytes:
+    """Return a solid-colour JPEG that decodes, written at quality 95."""
+    import io
+
+    from PIL import Image
+
+    out = io.BytesIO()
+    Image.new("RGB", size, colour).save(out, "JPEG", quality=95, **options)
+    return out.getvalue()
+
+
+def nef_bytes() -> bytes:
+    """Return the first bytes of a NEF: a big-endian TIFF whose Make is Nikon's."""
+    make = b"NIKON CORPORATION\x00"
+    entry = struct.pack(">HHII", 0x010F, 2, len(make), 26)
+    return b"MM\x00*" + struct.pack(">IH", 8, 1) + entry + b"\x00" * 4 + make
