@@ -1306,4 +1306,5 @@ def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     assert second.content == first.content
     assert len(shrinks) == 1
     cached = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs" / "001"
-    assert (cached / "11.jpg").is_file()
+    (thumb_file,) = cached.glob("11.*.jpg")
+    assert thumb_file.read_bytes() == first.content

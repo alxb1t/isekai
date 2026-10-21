@@ -79,3 +79,44 @@ The surface shows a session as the verb reports it.
 - **WHEN** a session renders two images with `--progress json`
 - **THEN** standard output holds a line for image one of two and image two of two
 - **AND** a line for the teardown's end
+
+## MODIFIED Requirements
+
+### Requirement: The rendering verb takes many photographs and either a count or explicit seeds
+
+The system SHALL accept several run identifiers in one rendering invocation, SHALL accept either a
+count of renders per photograph or an explicit list of seeds but not both, and SHALL default to the
+count each photograph's newest approval states, one where it states none.
+
+Rendering is where the money is, and a boot costs more than a render, so one photograph per invocation is mostly
+overhead. Many identifiers let one boot serve a batch. With nothing asked for, the approval says how many, because
+that is the number a person agreed to; one is the default where it says nothing, because the cheap option is what
+happens then.
+
+#### Scenario: several photographs render in one invocation
+- **Key:** `cli:generate-signature:accepts-many-identifiers`
+- **Layers:** unit
+- **WHEN** several run identifiers are given
+- **THEN** all of them are prepared and rendered in one invocation
+- **AND** the endpoint is acquired once
+
+#### Scenario: the count defaults to one
+- **Key:** `cli:generate-signature:count-defaults-to-one`
+- **Layers:** unit
+- **WHEN** no count and no seed is given for a photograph whose approval states no count
+- **THEN** one render is produced for it per approved flow
+- **AND** its seed is drawn rather than fixed
+
+#### Scenario: the count defaults to the approval's
+- **Key:** `cli:generate-signature:count-defaults-to-the-approvals`
+- **Layers:** unit
+- **WHEN** no count and no seed is given for a photograph whose approval states a count of three
+- **THEN** three renders are produced for it
+- **AND** their seeds are drawn rather than fixed
+
+#### Scenario: a count and explicit seeds cannot be combined
+- **Key:** `cli:generate-signature:count-and-seed-are-exclusive`
+- **Layers:** unit
+- **WHEN** both a count and one or more seeds are given
+- **THEN** the invocation is refused at parse time
+- **AND** the message states that the two are alternatives

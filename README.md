@@ -279,7 +279,7 @@ Prepare reaches the local Ollama, and refuses before it starts when nothing answ
   *tracked* flow, which at catalogue scale is the absence of a selection rather than one. It
   repeats because flows batch: every flow named in one `generate` renders on one endpoint, and a
   second boot costs what eight more renders would.
-- `--count COUNT` — how many renders per photograph per flow (default 1, seeds drawn).
+- `--count COUNT` — how many renders per photograph per flow, seeds drawn (default: the approval's count, else 1).
 - `--seed SEEDS` — render exactly this seed; repeatable, and not combinable with `--count`.
 - `--seeds-from FLOW` — render each run on the seeds of that flow's latest render; not combinable with
   `--count` or `--seed`. A flow whose approval is a copy made from another approval than the one those

@@ -10,6 +10,7 @@ Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
            └ up ─▶ render --limit … --progress json ─▶ volume down, unless kept
 Stop, or the server stopping ─▶ SIGINT to the child ─▶ no later stage starts
+the server stopping mid-render ─▶ waits for the teardown and the window's close
 a child failing with no line reported ─▶ failed, naming log.txt ─▶ no later stage starts
 ```
 """
@@ -27,7 +28,7 @@ from typing import Any
 from isekai.boundary.gpu import Volume
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.interface.render import LOST_EXIT, progress_line
+from isekai.interface.render import LOST_EXIT, load_timing, progress_line
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
@@ -37,6 +38,10 @@ PREPARE = ("tag", "caption", "sheet")
 
 # What a refusal calls each kind of job.
 LABELS = {"prepare": "Prepare", "render": "Render"}
+
+# How long a stopping server gives a render's window to close once its pod is torn
+# down: one gpunit volume verb.
+VOLUME_S = 120.0
 
 # How a stage is started: the verb, the flow, the runs root and the runs.
 Command = Callable[[str, str, Path, Sequence[str]], list[str]]
@@ -162,6 +167,8 @@ class Jobs:
         self._child: subprocess.Popen[str] | None = None
         self._stopping = False
         self._thread: threading.Thread | None = None
+        # How long a running render is waited for when the server stops.
+        self._settle_s = 0.0
 
     def slot(self) -> dict[str, Any] | None:
         """Return the job in the slot, running or ended, or None."""
@@ -214,8 +221,11 @@ class Jobs:
         keep_open: bool,
     ) -> dict[str, Any]:
         """Start a render of `folder`'s runs within `limit` seconds, or refuse."""
+        # Read before the job starts, so a stopping server reads no file.
+        settle_s = load_timing().teardown_s + VOLUME_S
         with self._lock:
             self._refuse_running()
+            self._settle_s = settle_s
             steps = dict.fromkeys(("volume up", "pod", "teardown", "volume down"), "")
             if keep_open:
                 steps["volume down"] = "kept"
@@ -261,10 +271,19 @@ class Jobs:
             thread.join(timeout)
 
     def shutdown(self, timeout: float = 10.0) -> None:
-        """Interrupt a running job and wait for it: the server is stopping."""
+        """Interrupt a running job and wait for it: the server is stopping.
+
+        Prepare is waited for `timeout`. A render is waited for through its pod's
+        teardown and the window's close, so the server never exits leaving open a
+        window the operator did not keep.
+        """
         with self._lock:
-            if self._job is not None and self._job.state == "running":
+            job = self._job
+            running = job is not None and job.state == "running"
+            if running:
                 self._interrupt()
+        if running and job is not None and job.kind == "render":
+            timeout = max(timeout, self._settle_s)
         self.wait(timeout)
 
     def _interrupt(self) -> None:

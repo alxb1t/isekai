@@ -32,6 +32,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   no pod or volume left after (0063 D11).
 - From the proof: Render is disabled on the hub with its reason, the session's clock stops at its end and its
   tiles show the renders, Renders takes arrows and ↵, esc leaves the large view, and the log holds each line once (0063 D8, D9).
+- From review: `render` logs `generate`'s lines again; a stopped app closes the window after the teardown, and
+  Ctrl-C reaches no gpunit verb; a grown quote is refused; a thumbnail is named by its image (0063 D5, D8, D9).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

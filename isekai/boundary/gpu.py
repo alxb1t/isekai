@@ -121,7 +121,9 @@ Gpunit = Callable[[Sequence[str], Path], int]
 def run_gpunit(argv: Sequence[str], log: Path) -> int:
     """Run `gpunit <argv>` in the repository on its `.env`, appending to `log`.
 
-    gpunit reads no `.env`, where the key lives, so it is handed one.
+    gpunit reads no `.env`, where the key lives, so it is handed one. It runs in
+    its own session, so a Ctrl-C at the caller's terminal never cuts a create or
+    a delete halfway.
     """
     with log.open("a", encoding="utf-8") as appended:
         done = subprocess.run(
@@ -131,6 +133,7 @@ def run_gpunit(argv: Sequence[str], log: Path) -> int:
             stdout=appended,
             stderr=subprocess.STDOUT,
             check=False,
+            start_new_session=True,
         )
     return done.returncode
 

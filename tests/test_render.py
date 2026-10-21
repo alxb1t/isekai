@@ -396,6 +396,26 @@ def test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143(
     assert f"isekai render {runs} {FLOW}=1` renders only the rest" in log(runs)
 
 
+@pytest.mark.spec("pod-image:session:the-watchdog-ends-the-session")
+def test_the_watchdog_is_armed_at_the_pods_own_limit_before_the_session_opens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runs = batch(tmp_path)
+    opener = FakeOpen()
+    armed: list[tuple[float, int]] = []
+
+    class Timer(threading.Timer):
+        def start(self) -> None:
+            # The interval, and how many sessions were open when it started.
+            armed.append((self.interval, opener.opened))
+            super().start()
+
+    monkeypatch.setattr(render.threading, "Timer", Timer)
+
+    assert session(runs, f"{FLOW}=1", opener=opener) == 0
+    assert armed == [(opener.limits[0], 0)]
+
+
 @pytest.mark.spec("pod-image:boot:no-override")
 def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -509,6 +529,7 @@ def test_with_no_request_only_what_is_short_is_rendered(
     assert status == 0, log(root)
     assert images(lacking) == 2
     assert images(full) == 2
+    assert f"{lacking.id}: rendered" in log(root)
     assert f"{full.id}: rendered" not in log(root)
 
 

@@ -134,7 +134,7 @@ window. The dialog shows the estimate's price as *about* and the limit's as *at 
 
 ```
 POST /api/b/{batch}/render/quote    → per flow, left out, estimate, limit, price at most
-POST /api/b/{batch}/render          {keep_open} → the job; /session opens
+POST /api/b/{batch}/render          {keep_open, limit_s} → the job; /session opens; a longer limit now is refused
 POST /api/job/stop                  → SIGINT to the render child
 POST /api/billing/check             → gpunit status
 ```
@@ -145,8 +145,8 @@ view and the alerts follow the design spec's J4, J8b and J8c.
 ### D9
 
 `GET /api/b/{batch}/renders`, `…/renders/{digest}/{flow}/{version}/{seed}` and its `thumb`. A thumbnail is a JPEG of
-at most 512 px on its long side, written once under `~/isekai/.cache/<digest>/…`; sources' thumbnails take the same
-path. Views: `ui/src/views/Renders.vue`, `ui/src/views/RenderLarge.vue`, `ui/src/views/Session.vue`.
+at most 512 px on its long side, written once under `~/isekai/.cache/<digest>/…`, named by the image's own digest;
+sources' thumbnails take the same path. Views: `ui/src/views/Renders.vue`, `ui/src/views/RenderLarge.vue`, `ui/src/views/Session.vue`.
 
 ### D10
 

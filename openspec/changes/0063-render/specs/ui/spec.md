@@ -5,11 +5,14 @@
 The system SHALL open, for a batch, a dialog listing per offered flow the images that will render and what is left
 out, with the reason, the session's estimate and limit, and its price at most — the limit at the hourly maximum
 `gpunit.toml` names, with the volume at its configured rate. Its confirmation SHALL be the only act that rents; the
-dialog SHALL hold no URL. Render SHALL be disabled, with its reason, when nothing is short of its count, when a job
-runs, when a pod may still be billing, and when no RunPod key is in the surface's environment.
+dialog SHALL hold no URL. The confirmation SHALL carry the limit the dialog showed, and SHALL be refused, starting
+nothing, when the batch's quote taken again has a longer one. Render SHALL be disabled, with its reason, when nothing
+is short of its count, when a job runs, when a pod may still be billing, and when no RunPod key is in the surface's
+environment.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
-not a guess. A reload never reopens a confirmation that spends.
+not a guess. A reload never reopens a confirmation that spends, and an approval made while the dialog is open never
+stretches the session past the limit the operator saw.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -30,14 +33,24 @@ not a guess. A reload never reopens a confirmation that spends.
 - **WHEN** the dialog's Render is confirmed
 - **THEN** the session view opens at `/session`
 
+#### Scenario: a quote that has grown is refused
+- **Key:** `ui:render:a-grown-quote-is-refused`
+- **Layers:** unit
+- **WHEN** Render is confirmed with a limit shorter than the batch's quote now gives
+- **THEN** the confirmation is refused, naming that the quote changed
+- **AND** no job starts
+
 ### Requirement: The render job opens the volume, renders, and closes the volume unless kept
 
 The system SHALL run a render as one job: the volume window opened or extended, then the rendering verb with the
 session's limit and its progress, then the window closed unless the operator kept it open. A lost answer from the
 window's opening SHALL render nothing and raise the volume alert; a failed close SHALL raise it too. Stop SHALL
-interrupt the rendering verb, which tears its pod down.
+interrupt the rendering verb, which tears its pod down. The surface stopping SHALL do the same, and SHALL wait for
+the pod's teardown and the window's close before it exits; an interrupt at the surface's terminal SHALL reach no
+child of the job.
 
-The volume is the job's to open and to close, so no step depends on the operator remembering one.
+The volume is the job's to open and to close, so no step depends on the operator remembering one, and a surface that
+exits mid-render leaves no window billing that was not kept.
 
 #### Scenario: a render job opens, renders and closes
 - **Key:** `ui:render-job:opens-renders-and-closes`
@@ -51,6 +64,13 @@ The volume is the job's to open and to close, so no step depends on the operator
 - **WHEN** opening the window answers that the create's answer was lost
 - **THEN** the rendering verb does not run
 - **AND** the volume alert is raised
+
+#### Scenario: a surface stopped mid-render still closes the window
+- **Key:** `ui:render-job:a-stopped-surface-closes-the-window`
+- **Layers:** unit
+- **WHEN** the surface stops while a render job runs with keep open unticked
+- **THEN** the window is closed after the pod's teardown, before the surface exits
+- **AND** no gpunit verb shares the terminal's interrupt
 
 ### Requirement: Billing state is read from gpunit's own records
 
@@ -85,9 +105,11 @@ reaches nothing.
 
 The system SHALL show a batch's images as a grid of sources by offered flows, each cell's approval versions newest
 first with their images, and open an image's large view, with the sheet it was rendered from, from any of them. It
-SHALL serve each image's thumbnail from a cache in the library's `.cache/`, made on first request.
+SHALL serve each image's thumbnail from a cache in the library's `.cache/`, made on first request and named by the
+image's own bytes.
 
-The images come back to where the sheets were decided; a cache the library can lose costs only its rebuild.
+The images come back to where the sheets were decided; a cache the library can lose costs only its rebuild. Two
+batches can hold one source rendered at one seed, so only the bytes say which image a thumbnail shows.
 
 #### Scenario: versions are listed newest first
 - **Key:** `ui:renders:versions-newest-first`
@@ -100,6 +122,12 @@ The images come back to where the sheets were decided; a cache the library can l
 - **Layers:** unit
 - **WHEN** an image's thumbnail is asked for twice
 - **THEN** the second answer is read from `.cache/` without decoding the image
+
+#### Scenario: a thumbnail is its own image's
+- **Key:** `ui:renders:a-thumbnail-is-its-own-images`
+- **Layers:** unit
+- **WHEN** two batches hold different images of one source, flow, version and seed
+- **THEN** each image's thumbnail is made from that image
 
 #### Scenario: the large view shows its sheet
 - **Key:** `ui:renders:the-large-view-shows-its-sheet`

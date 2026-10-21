@@ -7,6 +7,7 @@ and the one slot are proved against a process that can be interrupted.
 import json
 import queue
 import random
+import subprocess
 import sys
 import threading
 import time
@@ -21,7 +22,7 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from isekai.boundary import ollama  # noqa: E402
+from isekai.boundary import gpu, ollama  # noqa: E402
 from isekai.boundary.gpu import Seams, Volume  # noqa: E402
 from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
@@ -329,6 +330,65 @@ def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
     assert slot["session"]["steps"]["volume up"] == "lost"
 
 
+@pytest.mark.spec("ui:render-job:a-stopped-surface-closes-the-window")
+def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, _ = _order(record)
+    # A render child that takes a while to tear its pod down once interrupted.
+    script = (
+        "import signal, sys, time\n"
+        "def down(*_):\n"
+        "    time.sleep(0.5)\n"
+        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
+        "    sys.exit(130)\n"
+        "signal.signal(signal.SIGINT, down)\n"
+        "open(sys.argv[1], 'a').write('render\\n')\n"
+        "time.sleep(30)\n"
+    )
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+    )
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    deadline = time.monotonic() + WAIT
+    while "render" not in (record.read_text() if record.exists() else ""):
+        assert time.monotonic() < deadline, "the render child never started"
+        time.sleep(0.01)
+
+    # A wait shorter than the teardown: a render is waited for past it.
+    jobs.shutdown(timeout=0.05)
+
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        "render",
+        "torn down",
+        "volume down",
+    ]
+
+
+@pytest.mark.spec("ui:render-job:a-stopped-surface-closes-the-window")
+def test_a_gpunit_verb_runs_in_its_own_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ran: list[tuple[list[str], dict[str, object]]] = []
+
+    def recorded(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        ran.append((argv, kwargs))
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(gpu.subprocess, "run", recorded)
+
+    assert Volume().down(tmp_path / "log.txt") == 0
+    ((argv, kwargs),) = ran
+    assert argv[1:] == ["-m", "gpunit", "volume", "down"]
+    assert kwargs.get("start_new_session") is True
+
+
 def _approved(
     folder: Path, name: str, flow: str, schema: Schema, vocabulary: Vocabulary
 ) -> Run:
@@ -413,3 +473,20 @@ def test_without_a_runpod_key_render_is_disabled_naming_the_fix(
     assert "add RUNPOD_API_KEY to .env" in quote["disabled"]
     assert started.status_code == 409
     assert "RUNPOD_API_KEY" in started.json()["refusal"]
+
+
+@pytest.mark.spec("ui:render:a-grown-quote-is-refused")
+def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    shown = client.post("/api/b/b/render/quote").json()["estimate"]["limit_s"]
+
+    started = client.post(
+        "/api/b/b/render", json={"keep_open": False, "limit_s": shown - 1}
+    )
+
+    assert started.status_code == 409
+    assert "the quote changed" in started.json()["refusal"]
+    assert client.post("/api/b/b/render/quote").json()["disabled"] is None

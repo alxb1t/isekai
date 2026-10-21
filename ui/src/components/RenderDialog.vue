@@ -26,7 +26,7 @@ async function confirm(): Promise<void> {
   if (!quote.value || quote.value.disabled || starting.value) return
   starting.value = true
   try {
-    await startRender(props.batch, keepOpen.value)
+    await startRender(props.batch, keepOpen.value, quote.value.estimate.limit_s)
     void router.push({ name: 'session' })
   } catch (reason) {
     refusal.value = (reason as Error).message

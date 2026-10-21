@@ -28,7 +28,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
-GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open} on the render
+GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
@@ -462,17 +462,32 @@ def create_app(
     ) -> dict[str, Any]:
         """Start the render job the quote describes, or refuse naming why not.
 
-        The quote is taken again here, so what renders is what is on disk now.
+        The quote is taken again here, so what renders is what is on disk now; a
+        limit longer than the one the dialog showed, `limit_s`, is refused, so
+        nothing rents past what the operator agreed to.
         """
+        body = payload or {}
         found, made, described = quoted(batch)
         if described["disabled"] is not None:
             raise Refusal(described["disabled"])
+        shown = body.get("limit_s")
+        if isinstance(shown, bool) or not isinstance(shown, int):
+            raise Refusal(
+                "the confirmation names no quoted limit; close Render and open it "
+                "again to read the quote"
+            )
+        if made.estimate.limit_s > shown:
+            raise Refusal(
+                f"the quote changed since it was shown: its limit is now "
+                f"{made.estimate.limit_s}s, not {shown}s; close Render and open it "
+                "again to read it"
+            )
         job = jobs.render(
             batch,
             found,
             limit=made.estimate.limit_s,
             total=sum(made.short.images.values()),
-            keep_open=bool((payload or {}).get("keep_open")),
+            keep_open=bool(body.get("keep_open")),
         )
         return {"job": job}
 

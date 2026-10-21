@@ -301,7 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--count",
         type=_count,
         default=None,
-        help="how many renders per photograph per flow (default 1, seeds drawn)",
+        help=(
+            "how many renders per photograph per flow, seeds drawn (default: the "
+            "approval's count, else 1)"
+        ),
     )
     render.add_argument(
         "--seed",

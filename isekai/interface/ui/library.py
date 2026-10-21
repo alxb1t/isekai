@@ -320,10 +320,13 @@ def thumbnail(library: Path, run: Run, image: Path) -> Path:
     """Return `image`'s thumbnail in the library's cache, made the first time only.
 
     A JPEG at most `THUMB_SIDE` on its long side, under `.cache/<digest>/` at the
-    image's path in the run. e.g. `…/outputs/001/42.png` -> `.cache/0d4b…/…/42.jpg`
+    image's path in the run, named by the image's own digest too: two batches can
+    hold one source rendered at one seed, and only the bytes tell them apart.
+    e.g. `…/outputs/001/42.png` -> `.cache/0d4b…/…/001/42.<image digest>.jpg`
     """
-    within = image.relative_to(run.path).with_suffix(".jpg")
-    cached = library / CACHE / run.digest / within
+    within = image.relative_to(run.path)
+    named = f"{within.stem}.{_digest(image)}.jpg"
+    cached = library / CACHE / run.digest / within.parent / named
     if cached.is_file():
         return cached
     write_atomically(cached, _shrunk(image))

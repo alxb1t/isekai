@@ -251,18 +251,20 @@ def run_session(
             file=wired.err,
         )
         return 1
-    steps = Steps(wired.out, getattr(args, "progress", None) == "json")
+    json_lines = getattr(args, "progress", None) == "json"
     with contextlib.ExitStack() as held:
         logged = wired
         # Under `--progress json` stdout is the caller's channel and stderr its
         # log; teeing here too would write every line twice.
-        if not steps.enabled:
+        if not json_lines:
             log = held.enter_context(
                 (runs.parent / "log.txt").open("a", encoding="utf-8")
             )
             logged = dataclasses.replace(
                 wired, out=_Tee(wired.out, log), err=_Tee(wired.err, log)
             )
+        # On the teed stream, so each `generate` line reaches the log as well.
+        steps = Steps(logged.out, json_lines)
         try:
             limit = getattr(args, "limit", None)
             return _session(

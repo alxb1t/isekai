@@ -405,14 +405,39 @@ def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
         )
 
 
-@pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
-def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
-    from isekai.interface.cli import build_parser
+def _generated(tmp_path: Path, vocabulary: Vocabulary, run: Run) -> list[int]:
+    """Run `generate` on `run` with no count and no seed; return the seeds rendered."""
+    from isekai.interface.cli import build_parser, dispatch
 
-    parsed = build_parser().parse_args(["generate", "--flow", FLOW])
+    client = FakeComfyClient()
+    wired = dataclasses.replace(
+        _seeded_session(tmp_path, vocabulary, client, io.StringIO()),
+        rng=random.Random(7),
+    )
+    argv = ["generate", "--flow", FLOW, "--server", "http://127.0.0.1:8188", run.id]
+    parsed = build_parser().parse_args(argv)
 
     assert parsed.count is None and parsed.seeds is None
-    assert len(seeds_for(parsed.count, parsed.seeds, random.Random(7))) == 1
+    assert dispatch(parsed, wired) == 0
+    return sorted(int(path.stem) for path in run.path.glob(f"{FLOW}/outputs/*/*.png"))
+
+
+@pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
+def test_the_parser_defaults_to_one_render_with_a_drawn_seed(
+    tmp_path: Path, vocabulary: Vocabulary, run: Run
+) -> None:
+    assert _generated(tmp_path, vocabulary, run) == draw_seeds(1, random.Random(7))
+
+
+@pytest.mark.spec("cli:generate-signature:count-defaults-to-the-approvals")
+def test_with_no_count_a_photograph_renders_its_approvals_count(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run
+) -> None:
+    reapprove(run, schema, vocabulary, {"count": 3, "seeds": []})
+
+    seeds = _generated(tmp_path, vocabulary, run)
+
+    assert seeds == sorted(draw_seeds(3, random.Random(7)))
 
 
 @pytest.mark.spec("cli:generate-signature:accepts-many-identifiers")

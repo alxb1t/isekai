@@ -95,8 +95,16 @@ export function quoteRender(batch: string): Promise<Quote> {
   return send(`/api/b/${encodeURIComponent(batch)}/render/quote`, 'POST', {})
 }
 
-export function startRender(batch: string, keepOpen: boolean): Promise<{ job: JobSlot }> {
-  return send(`/api/b/${encodeURIComponent(batch)}/render`, 'POST', { keep_open: keepOpen })
+/* Carries the limit the dialog showed: a quote grown since is refused. */
+export function startRender(
+  batch: string,
+  keepOpen: boolean,
+  limitS: number,
+): Promise<{ job: JobSlot }> {
+  return send(`/api/b/${encodeURIComponent(batch)}/render`, 'POST', {
+    keep_open: keepOpen,
+    limit_s: limitS,
+  })
 }
 
 /* Ask gpunit again; an alert clears only when its records say gone. */

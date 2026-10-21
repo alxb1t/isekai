@@ -292,3 +292,25 @@ def test_a_run_is_found_by_its_digest_and_an_unknown_one_refused(
         library.run_named(folder, "0" * 12)
     with pytest.raises(Refusal, match="no run named"):
         library.run_named(folder, run.id[:6])
+
+
+@pytest.mark.spec("ui:renders:a-thumbnail-is-its-own-images")
+def test_one_source_at_one_seed_in_two_batches_has_two_thumbnails(
+    tmp_path: Path,
+) -> None:
+    lib = tmp_path / "lib"
+    colours = {"b1": (200, 30, 30), "b2": (30, 30, 200)}
+    thumbs = {}
+    for name, colour in colours.items():
+        # One photograph, so both batches hold the run of one digest.
+        run = _run(_batch(lib, name, "ada.jpg"), "ada.jpg")
+        image = run.path / SUMMON / OUTPUTS / "001" / "42.png"
+        image.parent.mkdir(parents=True)
+        Image.new("RGB", (640, 800), colour).save(image)
+        thumbs[name] = library.thumbnail(lib, run, image)
+
+    for name, colour in colours.items():
+        with Image.open(thumbs[name]) as made:
+            pixel = made.convert("RGB").getpixel((10, 10))
+        assert isinstance(pixel, tuple)
+        assert (pixel[0] > pixel[2]) == (colour[0] > colour[2])
