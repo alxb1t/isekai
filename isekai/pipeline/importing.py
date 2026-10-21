@@ -149,7 +149,8 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
                 write_atomically(target, _reencode(body))
                 converted = True
                 carries = verify(target)
-        except Refusal:
+        except BaseException:
+            # Whatever stops the read, nothing of it stays staged behind its refusal.
             target.unlink(missing_ok=True)
             raise
     if carries:

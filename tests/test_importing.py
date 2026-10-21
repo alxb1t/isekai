@@ -697,33 +697,46 @@ def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
 def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    real = importing.read
+    real = importing.verify
     calls: list[str] = []
 
-    def full_once(file: Path, staging: Path, limit: int) -> importing.Staged:
-        calls.append(file.name)
+    def full_once(path: Path) -> list[str]:
+        # Raised once the first file is already written to staging.
+        calls.append(path.name)
         if len(calls) == 1:
             raise OSError(28, "No space left on device")
-        return real(file, staging, limit)
+        return real(path)
 
-    monkeypatch.setattr(importing, "read", full_once)
+    monkeypatch.setattr(importing, "verify", full_once)
     published: list[dict[str, object]] = []
     both_read = threading.Event()
+    read_again = threading.Event()
 
     def publish(event: dict[str, object]) -> None:
         published.append(event)
-        if event["file"] == "b.jpg" and event["state"] not in {"waiting", "converting"}:
+        if event["state"] in {"waiting", "converting"}:
+            return
+        if event["file"] == "b.jpg":
             both_read.set()
+        elif both_read.is_set():
+            read_again.set()
 
-    reader = importing.Reader(stage(tmp_path / "library"), LIMIT, publish)
+    staging = stage(tmp_path / "library")
+    reader = importing.Reader(staging, LIMIT, publish)
     reader.put("a.jpg", photo_jpeg((200, 0, 0)))
     reader.put("b.jpg", photo_jpeg((0, 200, 0)))
 
     both_read.wait(10.0)
-    reader.stop()
     files = reader.files()
     assert files["a.jpg"]["state"] == "refused"
     assert "a.jpg: " in files["a.jpg"]["refusal"]
     assert "No space left on device" in files["a.jpg"]["refusal"]
     assert files["b.jpg"]["state"] == "ready"
+    staged = sorted(p.name for p in staging.iterdir() if not p.name.startswith("."))
+    assert staged == ["b.jpg"]
+
+    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    read_again.wait(10.0)
+    reader.stop()
+    assert reader.files()["a.jpg"]["state"] == "ready"
     reader.refuse_unread()
