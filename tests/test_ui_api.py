@@ -89,6 +89,7 @@ from isekai.pipeline.tagging import (  # noqa: E402
     tag_wd14,
 )
 from isekai.shared.field_map import Group  # noqa: E402
+from isekai.shared.image import THUMB_SIDE  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
@@ -1518,5 +1519,5 @@ def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
 
     with Image.open(io.BytesIO(answered.content)) as shown:
         assert shown.format == "JPEG"
-        assert max(shown.size) == importing_module.PREVIEW_SIDE
+        assert max(shown.size) == THUMB_SIDE
     assert snapshot(tmp_path / "lib") == before

@@ -627,8 +627,8 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
         "portrait.jpg",
     ]
 
-    # Two uploads of one name read at once, as the sheet sends them: both are
-    # cleaned before either picks its name, and each write is slow.
+    # Two files of one name read at once: both are cleaned before either picks
+    # its name, and each write is slow.
     racing = stage(library)
     together = threading.Barrier(2)
     clean, write = importing._clean, importing.write_atomically
@@ -644,15 +644,13 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
 
     monkeypatch.setattr(importing, "_clean", cleaned_together)
     monkeypatch.setattr(importing, "write_atomically", slow)
-    bodies = (photo_jpeg((1, 1, 1)), photo_jpeg((250, 250, 250)))
+    files: list[Path] = []
+    for side, colour in (("one", (1, 1, 1)), ("two", (250, 250, 250))):
+        (tmp_path / side).mkdir()
+        files.append(_write(tmp_path / side, "IMG_0001.jpg", photo_jpeg(colour)))
 
     with ThreadPoolExecutor(2) as pool:
-        both = list(
-            pool.map(
-                lambda body: importing.receive("IMG_0001.jpg", body, racing, LIMIT),
-                bodies,
-            )
-        )
+        both = list(pool.map(lambda file: read(file, racing, LIMIT), files))
 
     assert sorted(one.name for one in both) == ["IMG_0001-2.jpg", "IMG_0001.jpg"]
     assert len({p.read_bytes() for p in racing.glob("IMG_0001*")}) == 2

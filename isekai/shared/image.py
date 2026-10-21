@@ -17,9 +17,15 @@ import sys
 import zlib
 from collections.abc import Callable
 from pathlib import Path
-from typing import BinaryIO, NamedTuple
+from typing import TYPE_CHECKING, BinaryIO, NamedTuple
 
 from isekai.foundation.refusal import Refusal
+
+if TYPE_CHECKING:
+    from PIL.Image import Image
+
+# A thumbnail's long side, in pixels: the library's and an import's preview alike.
+THUMB_SIDE = 512
 
 # The short side every render is normalised to, and the step both dimensions are
 # rounded to. 1024 is the SDXL family's trained scale; 64 is the latent stride, so
@@ -597,3 +603,12 @@ def _orientation_tiff(
         return b""
     entry = struct.pack(">HHIHH", _EXIF_ORIENTATION_TAG, 3, 1, orientation, 0)
     return b"MM\x00\x2a" + struct.pack(">IH", 8, 1) + entry + struct.pack(">I", 0)
+
+
+def thumbnail_jpeg(image: "Image") -> bytes:
+    """Return `image` as a JPEG at most `THUMB_SIDE` on its long side."""
+    small = image.convert("RGB")
+    small.thumbnail((THUMB_SIDE, THUMB_SIDE))
+    out = io.BytesIO()
+    small.save(out, "JPEG", quality=85)
+    return out.getvalue()

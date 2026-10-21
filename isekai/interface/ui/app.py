@@ -222,8 +222,7 @@ def create_app(
         yield
         billing.close()
         jobs.shutdown()
-        for one in list(readers.values()):
-            one.stop()
+        imports.close()
         broadcast.close()
 
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
@@ -233,9 +232,11 @@ def create_app(
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
     shared = _Shared(wired)
-    # Each open import's reader, by its staging id.
-    readers: dict[str, importing.Reader] = {}
-    readers_lock = threading.Lock()
+    imports = importing.Imports(
+        root,
+        limit,
+        lambda staged, state: broadcast.publish("file", {"staging": staged, **state}),
+    )
 
     @app.middleware("http")
     async def _addressed_here(
@@ -331,43 +332,10 @@ def create_app(
                 refused[name] = str(one)
         return {"cells": cells, "refused": refused}
 
-    def staging(staged: str) -> Path:
-        """Return the staging folder an import's id names, refusing one not there."""
-        found = root / importing.STAGING / staged
-        if not _STAGING_ID.fullmatch(staged) or not found.is_dir():
-            raise Refusal(
-                f"no import {staged!r} is open; close the sheet and choose the "
-                "files again"
-            )
-        return found
-
-    def reader(staged: str) -> importing.Reader:
-        """Return the reader of the import an id names, started on first use."""
-        found = staging(staged)
-        with readers_lock:
-            if staged not in readers:
-                readers[staged] = importing.Reader(
-                    found,
-                    limit,
-                    lambda state: broadcast.publish(
-                        "file", {"staging": staged, **state}
-                    ),
-                )
-            return readers[staged]
-
-    def close(staged: str) -> None:
-        """Stop the reader of the import an id names, if one is running."""
-        with readers_lock:
-            one = readers.pop(staged, None)
-        if one is not None:
-            one.stop()
-
     @app.post("/api/staging")
     def post_staging() -> dict[str, Any]:
         """Open an import: a staging folder under the library's `.staging/`."""
-        opened = importing.stage(root).name
-        reader(opened)
-        return {"id": opened}
+        return {"id": imports.open()}
 
     @app.put("/api/staging/{staged}/files/{name}", status_code=202)
     async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
@@ -376,7 +344,7 @@ def create_app(
         The body is the file. One past the limit is refused by its declared
         length before its body is read. Its reading is reported on the stream.
         """
-        held = reader(staged)
+        held = imports.reader(staged)
         declared = request.headers.get("content-length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise importing.past_limit(name, int(declared), limit)
@@ -387,7 +355,7 @@ def create_app(
     def read_staged_thumb(staged: str, name: str) -> Response:
         """Serve a staged file's preview, made now and kept nowhere."""
         return Response(
-            importing.preview(staging(staged), name),
+            importing.preview(imports.folder(staged), name),
             media_type="image/jpeg",
             headers={"Cache-Control": "no-store"},
         )
@@ -395,9 +363,7 @@ def create_app(
     @app.delete("/api/staging/{staged}")
     def delete_staging(staged: str) -> dict[str, Any]:
         """Cancel an import: its staging folder is deleted, the library unchanged."""
-        found = staging(staged)
-        close(staged)
-        importing.cancel(found)
+        imports.cancel(staged)
         return {}
 
     @app.post("/api/staging/{staged}/commit")
@@ -406,15 +372,12 @@ def create_app(
         as_is = payload.get("as_is", [])
         if not _is_tag_list(as_is):
             raise Refusal("the request's `as_is` is not a list of file names")
-        reader(staged).refuse_unread()
-        done = importing.commit(
-            staging(staged),
-            root,
+        done = imports.commit(
+            staged,
             str(payload.get("batch", "")),
             as_is,
             add=payload.get("add") is True,
         )
-        close(staged)
         return {
             "batch": done.batch.name,
             "written": list(done.written),
@@ -546,7 +509,7 @@ def create_app(
 
         A reload or a second tab gets the whole truth at once.
         """
-        held = reader(staging) if staging is not None else None
+        held = imports.reader(staging) if staging is not None else None
 
         def snapshot() -> dict[str, Any]:
             found = {"job": jobs.slot(), "billing": billing.state()}
@@ -868,9 +831,6 @@ class _Shared:
             }
         return self._candidates[flow.id]
 
-
-# A staging folder's name, as `importing.stage` makes it.
-_STAGING_ID = re.compile(r"[0-9a-f]{16}")
 
 # A number a request spells: ASCII digits alone, since `str.isdigit` also passes
 # a superscript `int` cannot read.

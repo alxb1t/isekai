@@ -79,18 +79,13 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
         Sources are copied into ~/isekai/. A photograph leaves this Mac only to be rendered:
         metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
       </p>
-      <div class="home__head">
-        <button class="btn btn-primary" type="button" @click="importing = true">
-          New batch<span class="appbar__key">⌥N</span>
-        </button>
-      </div>
     </div>
-    <template v-else>
-      <div class="home__head">
-        <button class="btn btn-primary" type="button" @click="importing = true">
-          New batch<span class="appbar__key">⌥N</span>
-        </button>
-      </div>
+    <div class="home__head">
+      <button class="btn btn-primary" type="button" @click="importing = true">
+        New batch<span class="appbar__key">⌥N</span>
+      </button>
+    </div>
+    <template v-if="rows.length > 0">
       <p class="section-label">
         library · {{ rows.filter((row) => row.batch).length }} batches · newest activity first
       </p>

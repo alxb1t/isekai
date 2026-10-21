@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { cancelStaging, commitStaging, openStaging } from '../api'
+import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
 import type { StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
@@ -144,15 +144,17 @@ function listen(id: string): void {
   })
 }
 
-/* Put a reported state on the first unread tile of that name. */
+/* Put a reported state on the first unread tile of that name. Its upload's
+   answer, not the stream, says it waits: the stream can report it first. */
 function apply(event: FileEvent): void {
+  if (event.state === 'waiting') return
   const one = tiles.value.find(
     (tile) =>
       tile.file.name === event.file && tile.phase !== 'queued' && tile.phase !== 'read' && tile.phase !== 'refused',
   )
   if (!one) return
-  if (event.state === 'waiting' || event.state === 'converting') {
-    if (one.phase !== 'uploading' || event.state === 'converting') one.phase = event.state
+  if (event.state === 'converting') {
+    one.phase = 'converting'
   } else if (event.state === 'refused') {
     one.phase = 'refused'
     one.refusal = event.refusal ?? `${event.file}: refused`
@@ -186,7 +188,7 @@ async function send(one: Tile): Promise<void> {
 function preview(one: Tile): string | null {
   const result = one.result
   if (staging.value === null || !result || result.state === 'skipped') return null
-  return `/api/staging/${encodeURIComponent(staging.value)}/files/${encodeURIComponent(result.name)}/thumb`
+  return stagedThumbAt(staging.value, result.name)
 }
 
 /* `HEIC → JPEG`, from the chosen name's suffix to the staged one's. */
