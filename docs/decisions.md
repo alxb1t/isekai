@@ -388,11 +388,15 @@ check, and is imported then and only then. The suite's doubles stay in `tests/`;
 
 ### D26 · Renders run on a rented GPU
 
-**A RunPod pod runs this project's own ComfyUI image, with PyTorch built for CUDA 12.8.**
+**A RunPod pod runs this project's own ComfyUI image, with PyTorch built for CUDA 12.8. A session's limit
+and price are its quote's, at most `gpunit.toml`'s `ceiling` and `max_hourly`**: the limit is the work's
+estimate from recorded durations, never below the provisioning hold plus five minutes, and gpunit refuses a
+card dearer than `max_hourly`.
 
 - **Why:** the render is the only work that needs a GPU, and renting by the second costs less than owning
-  one. The Blackwell GPU has no kernels in older CUDA builds.
-- **Made by:** the founding setup.
+  one. The Blackwell GPU has no kernels in older CUDA builds. A fixed limit caps a batch at what fits in it;
+  a limit from the work fits the work, and a price at the hourly maximum is a bound rather than a guess.
+- **Made by:** the founding setup, `0063`.
 
 ### D27 · The models live on a network volume
 
@@ -452,9 +456,11 @@ the key would sit in the same memory.**
 ### D36 · A render session is `isekai render`
 
 **It assembles every prompt before any pod exists, opens a gpunit session, waits for the endpoint through its
-tunnel, renders, and closes the session on every exit.** Three bounds hold it: the laptop's watchdog; the pod's
-own stop at `gpunit.toml`'s ceiling, armed by gpunit's boot script; and gpunit, which refuses a session beside a
-recorded or listed pod of the project and leaves none listed at teardown. One session runs at a time.
+tunnel, renders, and closes the session on every exit.** With no request it renders what each approval lacks of
+its count. Three bounds hold it: the laptop's watchdog at the session's limit; the pod's own stop at that limit,
+armed by gpunit's boot script and never past `gpunit.toml`'s ceiling; and gpunit, which refuses a session beside
+a recorded or listed pod of the project and leaves none listed at teardown. One session runs at a time; the
+app's Render runs it as a child, between `gpunit volume up` and `volume down`, with `--progress json`.
 
 - **Why:** the lifecycle is gpunit's, tested as a library; isekai keeps the order of its flows, its free pass
   and its log. A pod the laptop can no longer reach must still stop, so the pod stops itself.
@@ -462,4 +468,4 @@ recorded or listed pod of the project and leaves none listed at teardown. One se
   Reopen when a pod serves more than one batch.
 - **Accepts:** gpunit's signal handlers replace isekai's while the session is open, so isekai sets none.
   Reopen when isekai needs a handler of its own.
-- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`.
+- **Made by:** `0035`, `0043`, `0044`, `0052`, `0058`, `0063`.

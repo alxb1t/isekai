@@ -26,6 +26,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   opens `/session`, and the shell shows the billing band and the window's item (0063 D8).
 - The Renders view lists each source's approvals newest first with their images, and the large view shows an
   image beside its sheet; thumbnails are made once into the library's `.cache/` (0063 D9).
+- `CLAUDE.md`'s cost rule, D26 and D36 follow the quote: a session's limit and price, at most `gpunit.toml`'s
+  `ceiling` and `max_hourly`; the README and data flow describe rendering from the app (0063 D10).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

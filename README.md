@@ -59,10 +59,11 @@ Local (your machine)                          RunPod
 ```
 
 **Lifecycle:** `uv run --env-file .env gpunit volume up` comes first: it opens a **working window**, making the
-models volume or extending a live one to its ceiling from now. Then `python -m isekai render <runs> <flow>=<count|source> …` assembles every prompt, opens a
+models volume or extending a live one to its ceiling from now. Then `python -m isekai render <runs>` assembles every prompt, opens a
 [gpunit](https://github.com/alxb1t/gpunit) session — a pod from the image `gpunit.toml` pins by digest, the
 volume attached, a tunnel checked against the pod's host key — renders each flow, and deletes the pod on every
-exit, so billing stops. A pod left behind stops itself 45 minutes after it boots. The first pod of a window
+exit, so billing stops. A pod left behind stops itself at its session's limit, never past `gpunit.toml`'s
+3-hour ceiling. The first pod of a window
 downloads the models onto the volume, and every later one skips them as verified. `gpunit volume down` ends the
 window, and nothing bills once it has. The 4-hour ceiling is not a teardown: past it, the volume bills until
 gpunit's next session, `up`, `status`, `down`, `volume up` or `volume down` sweeps it, if that delete succeeds.
@@ -150,15 +151,20 @@ there, stop it with Ctrl-C.
 
 ```sh
 uv run --env-file .env gpunit volume up --yes   # open the window: the models volume, for 4 hours
-python -m isekai render .data/runs summon-anime-wai=1
+python -m isekai render .data/runs                # what each approval lacks of its count
 uv run --env-file .env gpunit volume down       # when the last batch is done
 ```
 
 One verb is the whole session: it assembles every prompt of every run under the runs root, rents the pod
 (④), tunnels to it (⑤), renders each flow (⑥), and deletes the pod (⑦) on every exit — an error or a Ctrl-C
-included. **Billing is per second, from the pod's create to its deletion.** A request is `<flow>=<count>`, or
-`<flow>=<source>` to render on another flow's latest seeds; everything it says is shown and appended to
-`<runs>/../log.txt`.
+included. **Billing is per second, from the pod's create to its deletion.** With no request it renders what
+each approval lacks of the count Review set, its listed seeds first, and names each unapproved flow it leaves
+out. A request is `<flow>=<count>`, or `<flow>=<source>` to render on another flow's latest seeds. The session
+stops at its limit — `--limit SECONDS`, or the work's estimate from recorded durations — and prints `session
+limit <seconds>s` as it opens; everything it says is shown and appended to `<runs>/../log.txt`.
+
+From the app, a batch's **Render** quotes what renders, the limit and the price at most, and its confirmation
+alone rents: the job opens the window, runs `render`, and closes the window unless it was kept open.
 
 Each image lands under the run directory, named for the seed that produced it, beside a provenance
 artifact recording the flow and its digest, the seed, the sheet, the digest of the graph actually
@@ -239,10 +245,12 @@ their newest file, and *New batch* imports photographs chosen in the file dialog
 upload bar. A batch's hub shows each photograph's stage in each flow `config/ui.json` offers: a tick
 runs `isekai assign`, and *Prepare* runs `tag`, `caption` and `sheet` over what changed as one job,
 the CLI's own verbs as children with `--progress json`, its cells moving live over `/events`. Review
-corrects one sheet, and Approve moves to the next. Every screen has its own URL, so a reload lands where
-it was. Stop it with Ctrl-C, which interrupts a running job, and go on to `render`. **Nothing on the page
-reaches a GPU or spends money**; Prepare reaches the local Ollama, and refuses before it starts when
-nothing answers there.
+corrects one sheet, its ④ setting how many images it renders and at which seeds, and Approve moves to the
+next. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
+act on the page that spends money**, and the session view shows it to *Nothing is billing.* Renders shows
+each source's images by flow and approval, and an image beside the sheet it came from. Every screen has
+its own URL, so a reload lands where it was. Stop it with Ctrl-C, which interrupts a running job.
+Prepare reaches the local Ollama, and refuses before it starts when nothing answers there.
 
 - Opening a sheet with no draft writes one through `review`, as the verb would.
 - It needs **node**, to build the bundle: `npm install` in `ui/` the first time. The bundle is built on

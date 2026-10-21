@@ -184,5 +184,17 @@ Everything before `generate` is free and local. Prompt assembly happens for the
 whole batch *before* an endpoint is acquired, so a malformed sheet costs nothing
 rather than a boot. Only the render reaches the rented GPU.
 
+An approval carries `renders`, a count and seeds set in Review's ④, and
+`render <runs>` with no request renders what each approval lacks of its count,
+its listed seeds first, leaving out each unapproved flow by name. Each render
+records its `duration`, and the next session's limit is estimated from them
+([D26](decisions.md#d26--renders-run-on-a-rented-gpu)). The app's Render runs the
+same verb as a job, quoted first:
+
+```
+dialog: quote ─▶ confirm ─▶ gpunit volume up ─▶ render --limit … --progress json
+          ─▶ gpunit volume down, unless kept ─▶ /session ─▶ Renders
+```
+
 `caption` and `tag` reach a model too, but a local one: Ollama over HTTP to this
 machine. It costs a warm model and no money.

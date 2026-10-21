@@ -13,7 +13,7 @@ task names.
 - [x] 5 — The job and billing
 - [x] 6 — The render UI
 - [x] 7 — The Renders view
-- [ ] 8 — The docs
+- [x] 8 — The docs
 - [ ] 9 — ⚠️ **HUMAN · METERED** — two images rendered from the UI
 
 ## 1 — The count and seeds
@@ -71,7 +71,7 @@ task names.
 
 ## 8 — The docs
 
-- [ ] 8.1 Rewrite the cost rule in `CLAUDE.md` and D26 and D36 in `docs/decisions.md`, per [D10](design.md#d10); describe the render from the UI in `README.md` and `docs/data-flow.md`.
+- [x] 8.1 Rewrite the cost rule in `CLAUDE.md` and D26 and D36 in `docs/decisions.md`, per [D10](design.md#d10); describe the render from the UI in `README.md` and `docs/data-flow.md`.
   Verify: `grep -c '45 minutes and ~\$0.30' CLAUDE.md` prints `0`, `grep -c 'max_hourly' CLAUDE.md docs/decisions.md` prints a number of at least `1` for each file, and `uv run pytest -q tests/test_docs.py tests/test_spec_prose.py` exits 0.
 
 ## 9 — ⚠️ HUMAN · METERED — two images rendered from the UI
