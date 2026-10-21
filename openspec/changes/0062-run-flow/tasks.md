@@ -12,7 +12,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 - [x] 5 — The job and its stream
 - [x] 6 — The sheet
 - [x] 7 — The hub
-- [ ] 8 — The docs
+- [x] 8 — The docs
 
 ## 1 — The copy
 
@@ -85,7 +85,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 8 — The docs
 
-- [ ] 8.1 Rewrite D4 and add **D43 · A source holds pixels and orientation only** in `docs/decisions.md`, per [D11](design.md#d11).
+- [x] 8.1 Rewrite D4 and add **D43 · A source holds pixels and orientation only** in `docs/decisions.md`, per [D11](design.md#d11).
   Verify: `grep -c '^### D43 · A source holds pixels and orientation only' docs/decisions.md` prints `1`, and `grep -c 'No upload, no captioning, no render button' docs/decisions.md` prints `0`.
-- [ ] 8.2 Describe `import`, `assign`, `--progress json`, Prepare and `/events` in `README.md`, `docs/data-flow.md`, `docs/modules.md` and `isekai/interface/ui/README.md`.
+- [x] 8.2 Describe `import`, `assign`, `--progress json`, Prepare and `/events` in `README.md`, `docs/data-flow.md`, `docs/modules.md` and `isekai/interface/ui/README.md`.
   Verify: `grep -c 'isekai assign' README.md docs/data-flow.md` prints a number of at least `1` for each file, and `uv run pytest -q tests/test_docs.py tests/test_spec_prose.py` exits 0.

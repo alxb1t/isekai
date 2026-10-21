@@ -26,6 +26,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   request each with a bar each, show converted, refused or not cleaned, and Import waits for every file (0062 D9).
 - The hub ticks: space or a click assigns a flow, ⇧↑↓ selects rows for a column, and the Prepare bar runs what
   changed, its cells moving live from `/events`; a prepared tick stays (0062 D10).
+- The docs describe `import`, `assign`, `--progress json`, Prepare and `/events`; D4 now reads that the UI runs
+  stages only as the CLI's children, and D43 records that a source holds pixels and orientation only (0062 D11).
 
 ### Changed
 

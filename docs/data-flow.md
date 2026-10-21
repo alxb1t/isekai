@@ -12,6 +12,13 @@ its neighbours.
 ## The verbs
 
 ```
+  a file the operator chose
+      │
+      ▼
+  import ── cleaned, verified ──▶ <batch>/sources/   pixels and orientation only
+      │
+  assign ── a flow ticked ──▶ runs/<input-id>/<flow-id>/   empty
+      │
   photograph
       │
       ├──▶ ① tag ──────▶ wd14/      scored tags, from a local ONNX session
@@ -32,6 +39,16 @@ its neighbours.
               ── then renders each prompt ──▶ outputs/   on a rented GPU
 ```
 
+**`import` is how a photograph enters a batch.** It reads each file into the
+library's `.staging/`, keeps its pixels and orientation and nothing else — a
+non-sRGB colour profile converted, a HEIC or WebP turned into a JPEG or PNG —
+verifies it by the strip's own walk, and commits the batch's `sources/` in one
+move ([D43](decisions.md#d43--a-source-holds-pixels-and-orientation-only)). A RAW,
+a file of several images, one past `config/ui.json`'s limit and one render would
+refuse are refused by name. **`isekai assign`** ticks a flow: it opens the source's
+run and gives it that flow's empty directory, which is the stage the hub calls
+*assigned*; `--remove` takes one away only while it is empty.
+
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a batch's runs the
 same way and writes one page into the batch directory, `compare.html`: each run's
@@ -45,8 +62,25 @@ take no `--flow`: `show` and `compare` report every flow the runs already hold �
 argument at all. It serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
 default, where a batch is a folder holding `sources/` with its runs root `runs/`
 beside it ([D40](decisions.md#d40--a-batch-is-a-library-folder-holding-sources)).
-Its page names the batch, the run's digest and the flow in every URL, and writes
-only what review writes: a draft when a sheet is opened, its edits, an approval.
+Its page names the batch, the run's digest and the flow in every URL. It writes
+through the functions that own each write — import's for a source, `assign` for
+a tick, review's for a draft, its edits and an approval — and runs a stage only as
+the CLI's own verb, a child of the server
+([D4](decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children)).
+
+**Prepare is a job of those children.** It asks Ollama first, then runs `tag`,
+`caption` and `sheet` per flow over every assigned cell with no sheet, each with
+`--progress json`: one JSON line per item's start and end on stdout, its prose
+appended to the batch's `log.txt`. One job runs at a time, and Stop or the server
+stopping sends the child SIGINT. **`/events`** is the page's channel: a snapshot of
+the job slot and the batch's hub on every connect, then a `cell` event per line,
+its stage read again from disk.
+
+```
+  Prepare ─▶ probe ─▶ tag ─▶ caption ─▶ sheet      children, --progress json
+                        │       │          │
+                        └───────┴──────────┴──▶ /events ─▶ the hub's cells
+```
 
 ## What a reader needs first
 
