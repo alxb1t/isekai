@@ -15,12 +15,6 @@ from tests.e2e.conftest import COMPARED, FLOW, RENDER, REVISED, SHOWN, Served
 
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
 def test_confirming_the_dialog_opens_the_session(page: Page, served: Served) -> None:
-    page.goto(served.hub_of(SHOWN))
-    expect(page.locator("[data-render]")).to_be_disabled()
-    expect(page.locator("[data-render-reason]")).to_contain_text(
-        "already has its Count"
-    )
-
     page.goto(served.hub_of(RENDER))
     page.locator("[data-render]").click()
     confirm = page.locator("[data-confirm]")

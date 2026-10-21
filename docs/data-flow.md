@@ -33,6 +33,7 @@ its neighbours.
   ③ review ── reads sheets/ ──▶ review/NNN.draft.json
      approve ── reads the draft ──▶ review/NNN.approved.json
       │   with --from, reads the source flow's approval instead
+     revise ── reads an image's approval ──▶ review/NNN.draft.json   its seed listed
       │           (or `ui`, the same stage in a browser)
       ▼
   ④ generate ── reads the approved sheet ──▶ prompts/   assembled, offline
@@ -48,6 +49,21 @@ a file of several images, one past `config/ui.json`'s limit, one past 50 MP and 
 render would refuse are refused by name. **`isekai assign`** ticks a flow: it opens the source's
 run and gives it that flow's empty directory, which is the stage the hub calls
 *assigned*; `--remove` takes one away only while it is empty.
+
+**`isekai revise <image.png> …`** sends a render back to ③. Each path names its
+run, flow, approval and seed, `outputs/<NNN>/<seed>.png`; the draft is copied from
+that approval, newest or not, with a count of one and the seed listed. Every image
+is checked first, and a selection is written whole or not at all; a flow's waiting
+draft refuses it, and `review --discard` deletes that draft. Approval refuses a
+revision that would only re-render images its approval already made. The app's
+Compare pairs a seed with the newest older version that rendered it:
+
+```
+outputs/001/7.png ─▶ revise ─▶ review/003.draft.json  {count 1, seeds [7]}
+                                │ edit · approve · render
+                                ▼
+                     outputs/003/7.png ─▶ Compare: 001 ⇄ 003, the changed fields
+```
 
 Beside them, `show` reads a run's artifacts, versions, producers and failure records,
 names what below a flow it does not read, and decides nothing — it writes no file and reaches no model. `compare` reads a batch's runs the

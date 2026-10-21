@@ -9,7 +9,7 @@ carries `@pytest.mark.spec` with the key its task names.
 - [x] 2 — The verbs
 - [x] 3 — The API
 - [x] 4 — The UI
-- [ ] 5 — The cards and the docs
+- [x] 5 — The cards and the docs
 
 ## 1 — Revise and discard
 
@@ -37,9 +37,9 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## 5 — The cards and the docs
 
-- [ ] 5.1 Drop the disabled-Render step from `test_confirming_the_dialog_opens_the_session` in `tests/e2e/test_render.py`, per [D8](design.md#d8) and the [Tests](design.md#tests) table.
+- [x] 5.1 Drop the disabled-Render step from `test_confirming_the_dialog_opens_the_session` in `tests/e2e/test_render.py`, per [D8](design.md#d8) and the [Tests](design.md#tests) table.
   Verify: `grep -c 'already has its Count' tests/e2e/test_render.py` prints `0`.
-- [ ] 5.2 In the stream test in `tests/test_ui_api.py`, close the helper's broadcast in a `finally`, re-raise its exception, and read the snapshot before uploading, per [D8](design.md#d8).
+- [x] 5.2 In the stream test in `tests/test_ui_api.py`, close the helper's broadcast in a `finally`, re-raise its exception, and read the snapshot before uploading, per [D8](design.md#d8).
   Verify: `grep -A2 'def upload_once_open' tests/test_ui_api.py | grep -c 'try:'` prints `1`, and `uv run pytest -q tests/test_ui_api.py` exits 0.
-- [ ] 5.3 Describe `isekai revise`, `review --discard` and Compare in `README.md` and `docs/data-flow.md`.
+- [x] 5.3 Describe `isekai revise`, `review --discard` and Compare in `README.md` and `docs/data-flow.md`.
   Verify: `grep -c 'isekai revise' README.md docs/data-flow.md` prints a number of at least `1` for each file, and `uv run pytest -q tests/test_docs.py tests/test_spec_prose.py` exits 0.

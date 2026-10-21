@@ -30,7 +30,6 @@ import random
 import shlex
 import shutil
 import threading
-import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -1539,25 +1538,42 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
 
 @pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
 def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
-    client: TestClient,
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     broadcast = _broadcast(client)
     staged = client.post("/api/staging").json()["id"]
     other = client.post("/api/staging").json()["id"]
     feed = broadcast.subscribe()
+    # The snapshot is read before its frame is made, so nothing uploads first.
+    snapshotted = threading.Event()
+    framed = events.frame
+
+    def frame(kind: str, data: dict[str, Any]) -> str:
+        if kind == "snapshot":
+            snapshotted.set()
+        return framed(kind, data)
+
+    monkeypatch.setattr(events, "frame", frame)
+    failures: list[BaseException] = []
 
     def upload_once_open() -> None:
-        deadline = time.monotonic() + WAIT
-        while len(broadcast._queues) < 2 and time.monotonic() < deadline:
-            time.sleep(0.01)
-        _upload(client, staged, "plain.heic", HEIC.read_bytes())
-        _upload(client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30)))
-        _until_read(feed, staged, {"plain.heic"})
-        _until_read(feed, other, {"elsewhere.jpg"})
-        broadcast.close()
+        try:
+            assert snapshotted.wait(WAIT), "the stream framed no snapshot"
+            _upload(client, staged, "plain.heic", HEIC.read_bytes())
+            _upload(client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30)))
+            _until_read(feed, staged, {"plain.heic"})
+            _until_read(feed, other, {"elsewhere.jpg"})
+        except BaseException as failed:  # re-raised on the test's own thread
+            failures.append(failed)
+        finally:
+            broadcast.close()
 
-    threading.Thread(target=upload_once_open, daemon=True).start()
+    helper = threading.Thread(target=upload_once_open, daemon=True)
+    helper.start()
     body = client.get(f"/events?staging={staged}").text
+    helper.join(WAIT)
+    if failures:
+        raise failures[0]
 
     frames = [
         (lines[0].removeprefix("event: "), json.loads(lines[1].removeprefix("data: ")))

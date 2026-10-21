@@ -20,6 +20,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The app revises from an image's large view and over a selection in Renders, opens Review on each draft with
   the render beside the photograph and a `was` line on every changed field, and Compare shows a seed's two
   versions side by side (0065 D7).
+- The stream test closes its helper's broadcast in a `finally`, re-raises the helper's failure and uploads
+  only after the snapshot is read; the e2e render test no longer re-proves a disabled Render; the README and
+  the data flow describe `isekai revise`, `review --discard` and Compare (0065 D8).
 
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 
