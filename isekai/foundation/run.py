@@ -32,6 +32,7 @@ Stdlib only, and on `python -m isekai`'s import graph.
 import hashlib
 import os
 import re
+import shlex
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -644,9 +645,33 @@ class StageFailure(Exception):
         self.detail = detail
 
 
+# The option that asks a stage verb for the next version of its file.
+NEW_VERSION = ("--new-version",)
+
+
+def stage_command(run: Run, verb: str, *flows: str, options: Sequence[str] = ()) -> str:
+    """Return the command that runs `verb` on `run` for `flows`, as it is pasted.
+
+    e.g. (run, "tag", "f", options=NEW_VERSION)
+         -> "python -m isekai tag --flow f --new-version r"
+
+    The run's own root is named whenever it is not the default, or the pasted
+    command would look under `.data/runs` for a run that lives elsewhere.
+    """
+    root = run.path.parent
+    naming = "".join(f" --flow {flow}" for flow in flows)
+    runs = (
+        ""
+        if root.resolve() == RUNS_ROOT.resolve()
+        else f" --runs {shlex.quote(str(root))}"
+    )
+    words = " ".join((*options, run.id))
+    return f"python -m isekai {verb}{naming}{runs} {words}"
+
+
 def refusal_for(
     stage: str,
-    run_id: str,
+    run: Run,
     kind: Kind,
     detail: str,
     record: Path,
@@ -685,16 +710,16 @@ def refusal_for(
     """
     # `record_failure` names every record `NNN.error.…`.
     version = int(record.name[:3])
-    asked = "--new-version " if version > 1 else ""
-    command = f"`python -m isekai {verb} --flow {flow} {asked}{run_id}`"
+    asked = NEW_VERSION if version > 1 else ()
+    command = f"`{stage_command(run, verb, flow, options=asked)}`"
     where = f"{flow}/{area}/{record.name}"
     if exhausted(budget, record.parent, version):
         return Refusal(
-            f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
+            f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, fix "
             f"what it names and delete it, then run {command}"
         )
     return Refusal(
-        f"{run_id}: the {stage} failed ({kind}) -- {detail}; see {where}, and run "
+        f"{run.id}: the {stage} failed ({kind}) -- {detail}; see {where}, and run "
         f"{command} again once what it names is fixed"
     )
 

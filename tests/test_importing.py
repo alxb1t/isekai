@@ -6,6 +6,9 @@ made once by macOS `sips` from a synthetic solid-colour PNG.
 
 import io
 import struct
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -55,7 +58,27 @@ def _icc_xyz(x: float, y: float, z: float) -> bytes:
 
 def _display_p3() -> bytes:
     """Return a Display P3 matrix/TRC profile, D50-adapted, gamma 2.2."""
-    text = b"Display P3"
+    return _matrix_profile(
+        b"Display P3",
+        (0.5151, 0.2412, -0.0011),
+        (0.2920, 0.6922, 0.0419),
+        (0.1571, 0.0666, 0.7841),
+        0x0233,
+    )
+
+
+def _matrix_profile(
+    text: bytes,
+    red: tuple[float, float, float],
+    green: tuple[float, float, float],
+    blue: tuple[float, float, float],
+    gamma: int,
+) -> bytes:
+    """Return a matrix/TRC profile described as `text`, one gamma on every channel.
+
+    The colorants are D50-adapted; `gamma` is a u8Fixed8 number, so 0x0100 is
+    linear light and 0x0233 is 2.2.
+    """
     desc = (
         b"desc\x00\x00\x00\x00"
         + struct.pack(">I", len(text) + 1)
@@ -65,13 +88,13 @@ def _display_p3() -> bytes:
         + b"\x00" * 3
         + b"\x00" * 67
     )
-    curve = b"curv\x00\x00\x00\x00" + struct.pack(">IH", 1, 0x0233) + b"\x00\x00"
+    curve = b"curv\x00\x00\x00\x00" + struct.pack(">IH", 1, gamma) + b"\x00\x00"
     tags = [
         (b"desc", desc),
         (b"wtpt", _icc_xyz(0.9642, 1.0, 0.8249)),
-        (b"rXYZ", _icc_xyz(0.5151, 0.2412, -0.0011)),
-        (b"gXYZ", _icc_xyz(0.2920, 0.6922, 0.0419)),
-        (b"bXYZ", _icc_xyz(0.1571, 0.0666, 0.7841)),
+        (b"rXYZ", _icc_xyz(*red)),
+        (b"gXYZ", _icc_xyz(*green)),
+        (b"bXYZ", _icc_xyz(*blue)),
         (b"rTRC", curve),
         (b"gTRC", curve),
         (b"bTRC", curve),
@@ -166,6 +189,29 @@ def test_a_display_p3_jpeg_is_converted_to_srgb(tmp_path: Path) -> None:
         got = image.convert("RGB").getpixel((16, 16))
     assert isinstance(got, tuple)
     assert max(abs(a - b) for a, b in zip(got, want, strict=True)) <= 3
+
+    # A linear-light profile whose name says sRGB, as GIMP's built-in linear one is.
+    linear = _matrix_profile(
+        b"GIMP built-in Linear sRGB",
+        (0.4361, 0.2225, 0.0139),
+        (0.3851, 0.7169, 0.0971),
+        (0.1431, 0.0606, 0.7141),
+        0x0100,
+    )
+    out = io.BytesIO()
+    Image.new("RGB", (32, 32), (50, 50, 50)).save(out, "PNG", icc_profile=linear)
+    exported = _write(tmp_path, "linear.png", out.getvalue())
+
+    lit = read(exported, stage(tmp_path / "library"), LIMIT)
+
+    (path,) = source.glob(f"*/{lit.name}")
+    assert (lit.name, lit.state) == ("linear.png", "converted")
+    with Image.open(path) as image:
+        assert "icc_profile" not in image.info
+        grey = image.convert("L").getpixel((16, 16))
+    # Linear 50/255 is 0.196 of full light, which sRGB encodes as 122.
+    assert isinstance(grey, int)
+    assert abs(grey - 122) <= 3
 
 
 @pytest.mark.spec("import:clean:a-heic-becomes-a-jpeg")
@@ -360,6 +406,13 @@ def test_a_file_whose_profile_cannot_be_read_is_refused_and_the_others_import(
     with pytest.raises(Refusal, match="broken.tiff: its colour profile cannot be read"):
         read(tiff, staging, LIMIT)
 
+    # A profile that reads but cannot describe the file's colours: Lab, on RGB.
+    lab = ImageCms.ImageCmsProfile(ImageCms.createProfile("LAB")).tobytes()
+    tagged = _write(tmp_path, "lab.jpg", photo_jpeg(icc_profile=lab))
+
+    with pytest.raises(Refusal, match="^lab.jpg: its colour profile cannot be"):
+        read(tagged, staging, LIMIT)
+
 
 @pytest.mark.spec("import:refuse:a-multi-image-file-is-refused")
 def test_an_animated_gif_is_refused(tmp_path: Path) -> None:
@@ -510,6 +563,7 @@ def test_staging_left_behind_is_swept_at_start(tmp_path: Path) -> None:
 @pytest.mark.spec("import:stage:same-bytes-skip-and-a-taken-name-is-renamed")
 def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     library = tmp_path / "library"
     sources = library / "trip" / "sources"
@@ -529,6 +583,36 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
         "portrait-2.jpg",
         "portrait.jpg",
     ]
+
+    # Two uploads of one name read at once, as the sheet sends them: both are
+    # cleaned before either picks its name, and each write is slow.
+    racing = stage(library)
+    together = threading.Barrier(2)
+    clean, write = importing._clean, importing.write_atomically
+
+    def cleaned_together(file: Path) -> tuple[bytes, bool]:
+        made = clean(file)
+        together.wait(timeout=5)
+        return made
+
+    def slow(path: Path, body: bytes) -> None:
+        time.sleep(0.05)
+        write(path, body)
+
+    monkeypatch.setattr(importing, "_clean", cleaned_together)
+    monkeypatch.setattr(importing, "write_atomically", slow)
+    bodies = (photo_jpeg((1, 1, 1)), photo_jpeg((250, 250, 250)))
+
+    with ThreadPoolExecutor(2) as pool:
+        both = list(
+            pool.map(
+                lambda body: importing.receive("IMG_0001.jpg", body, racing, LIMIT),
+                bodies,
+            )
+        )
+
+    assert sorted(one.name for one in both) == ["IMG_0001-2.jpg", "IMG_0001.jpg"]
+    assert len({p.read_bytes() for p in racing.glob("IMG_0001*")}) == 2
 
 
 @pytest.mark.spec("import:stage:an-unusable-name-is-refused")

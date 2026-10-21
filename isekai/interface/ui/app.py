@@ -40,7 +40,6 @@ GET  anything else                                 the bundle's index.html
 """
 
 import re
-import shlex
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
@@ -69,7 +68,6 @@ from isekai.foundation.run import (
     APPROVED,
     CAPTIONS,
     REVIEW,
-    RUNS_ROOT,
     SHEETS,
     TAGS,
     WD14,
@@ -78,6 +76,7 @@ from isekai.foundation.run import (
     find_run,
     latest_artifact,
     open_run,
+    stage_command,
 )
 from isekai.interface.ui import events, library
 from isekai.interface.ui.jobs import Jobs, plan
@@ -766,18 +765,8 @@ def _command(one: Held, verb: str, *flags: str) -> str:
     """Return the command that runs `verb` for `one`, as the operator pastes it.
 
     e.g. "caption" -> "python -m isekai caption --flow f --runs b/runs r"
-
-    The run's own root is named whenever it is not the default, or the pasted
-    command would look under `.data/runs` for a run served from another root.
     """
-    root = one.run.path.parent
-    runs = (
-        ""
-        if root.resolve() == RUNS_ROOT.resolve()
-        else f" --runs {shlex.quote(str(root))}"
-    )
-    words = " ".join((*flags, one.run.id))
-    return f"python -m isekai {verb} --flow {one.flow.id}{runs} {words}"
+    return stage_command(one.run, verb, one.flow.id, options=flags)
 
 
 def _remedy(one: Held, verb: str) -> str:

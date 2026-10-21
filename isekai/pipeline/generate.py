@@ -68,6 +68,7 @@ from isekai.foundation.run import (
     artifact_name,
     check_budget,
     record_failure,
+    stage_command,
 )
 from isekai.shared.image import photo_resolution, strip_metadata
 
@@ -134,11 +135,10 @@ def _unapproved(run: Run, flows: Sequence[str]) -> str:
     """Return the refusal for `flows` having no approved sheet, naming the way out."""
     # `--flow` is required and repeatable, so the remedy names every flow it
     # refuses rather than a command argparse would refuse.
-    naming = " ".join(f"--flow {one}" for one in flows)
     return (
         f"{run.id}: no approved sheet for {', '.join(flows)}, and only an approved "
-        f"sheet is rendered; run `python -m isekai review {naming} {run.id}`, edit "
-        f"the draft, then `python -m isekai approve {naming} {run.id}`"
+        f"sheet is rendered; run `{stage_command(run, 'review', *flows)}`, edit "
+        f"the draft, then `{stage_command(run, 'approve', *flows)}`"
     )
 
 
@@ -232,7 +232,7 @@ def _unassembled(
     return Refusal(
         f"{run.id}: flow {flow.id}'s approved sheet cannot be assembled -- "
         f"{broken}; fix it, delete {flow.id}/{PROMPTS}/{record.name}, then "
-        f"run `python -m isekai generate --flow {flow.id} {run.id}`"
+        f"run `{stage_command(run, 'generate', flow.id)}`"
     )
 
 
@@ -366,10 +366,8 @@ def refuse_out_of_step(
         f"{copied['approval']:03d}, and {latest} {group:03d}; run "
     )
     if copied["approval"] < group:
-        raise Refusal(
-            f"{head}`python -m isekai approve --flow {flow} --from {source} "
-            f"{run.id}` to copy the newer one"
-        )
+        again = stage_command(run, "approve", flow, options=("--from", source))
+        raise Refusal(f"{head}`{again}` to copy the newer one")
     raise Refusal(
         f"{head}`python -m isekai render {_runs_root(run)} {source}=1"
         f"{_dependents([flow], source)}` to render {source} again first"
@@ -567,7 +565,7 @@ def render(
             approval,
             APPROVED_FILE,
             remedy=f"restore it in {approval} by hand, then run "
-            f"`python -m isekai generate --flow {flow.id} {run.id}`",
+            f"`{stage_command(run, 'generate', flow.id)}`",
         )["sheet"]
     produced: list[Render] = []
     for seed in wanted:

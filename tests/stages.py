@@ -16,6 +16,7 @@ one test module and reached from three is the coupling this file exists to avoid
 
 import io
 import random
+import shlex
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -47,6 +48,15 @@ from tests.fakes import FakeComfyClient
 FLOW = load_flow("summon-anime-wai")
 FLOW_DIGEST = manifest_digest(FLOW.id)
 CAPTION_BRIEFING = FLOW.caption_briefing_path
+
+
+def runs_flag(run: Run) -> str:
+    """Return the `--runs` a printed command names for `run`, led by a space.
+
+    A test's run lives outside the default root, so a command that finds it
+    names its root.
+    """
+    return f" --runs {shlex.quote(str(run.path.parent))}"
 
 
 def caption(

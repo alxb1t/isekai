@@ -39,6 +39,7 @@ from tests.stages import (
     FIELD_MAP,
     FLOW_DIGEST,
     caption,
+    runs_flag,
     sheet,
     write_wd14,
 )
@@ -177,7 +178,10 @@ def test_a_tag_list_missing_a_key_is_refused_naming_it(
 
     message = str(refused.value)
     assert "-- 001.json: " in message and named in message
-    assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
+    assert (
+        f"`python -m isekai tag --flow {FLOW}{runs_flag(run)} --new-version {run.id}`"
+        in message
+    )
     assert versions(run.directory(FLOW, "sheets")) == []
 
 
@@ -224,12 +228,16 @@ def test_a_sheet_failure_is_recorded_as_permanent(
     message = str(refused.value)
     assert named in message
     # No sheet exists yet to edit: the list is what moves, so re-tagging is the fix.
-    assert f"`python -m isekai tag --flow {FLOW} --new-version {run.id}`" in message
+    assert (
+        f"`python -m isekai tag --flow {FLOW}{runs_flag(run)} --new-version {run.id}`"
+        in message
+    )
     assert "replace it with a tag" not in message
     assert f"see {FLOW}/sheets/001.error.1.permanent.json" in message
-    assert f"delete it, then run `python -m isekai sheet --flow {FLOW} {run.id}`" in (
-        message
-    )
+    assert (
+        f"delete it, then run `python -m isekai sheet --flow {FLOW}{runs_flag(run)} "
+        f"{run.id}`"
+    ) in message
     assert versions(directory) == []
 
 
@@ -248,8 +256,8 @@ def test_a_failed_next_sheet_names_the_command_that_writes_it(
 
     # Sheet 001 stays, so the bare command would report the sheet already complete.
     assert str(refused.value).endswith(
-        f"delete it, then run `python -m isekai sheet --flow {FLOW} --new-version "
-        f"{run.id}`"
+        f"delete it, then run `python -m isekai sheet --flow {FLOW}{runs_flag(run)} "
+        f"--new-version {run.id}`"
     )
 
 
@@ -450,7 +458,7 @@ def test_an_absent_tag_list_is_refused_naming_the_verb_that_writes_it(
         sheet(run, schema, vocabulary, tags=None)
 
     message = str(refused.value)
-    assert f"python -m isekai tag --flow {FLOW} {run.id}" in message
+    assert f"python -m isekai tag --flow {FLOW}{runs_flag(run)} {run.id}" in message
     assert versions(run.path / FLOW / "sheets") == []
 
 
@@ -597,8 +605,8 @@ def test_a_newer_tag_list_is_named(
         None,
         [
             f"{run.id}/{FLOW}: sheet 001 was filled from wd14/001.json, and "
-            f"wd14/002.json is newer; run `python -m isekai sheet --flow {FLOW} "
-            f"--new-version {run.id}`"
+            f"wd14/002.json is newer; run `python -m isekai sheet --flow {FLOW}"
+            f"{runs_flag(run)} --new-version {run.id}`"
         ],
     )
     assert written.read_bytes() == before

@@ -37,7 +37,7 @@ from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
 from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, fake_wd14, sheet, write_wd14
+from tests.stages import FIELD_MAP, Always, fake_wd14, runs_flag, sheet, write_wd14
 from tests.transports import FakeTransport
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -590,7 +590,7 @@ def test_sheet_prints_a_superseded_list_as_a_warning(
     assert wired.err.getvalue() == (
         f"warning: {run.id}/summon-anime-wai: sheet 001 was filled from "
         "wd14/001.json, and wd14/002.json is newer; run `python -m isekai sheet "
-        f"--flow summon-anime-wai --new-version {run.id}`\n"
+        f"--flow summon-anime-wai{runs_flag(run)} --new-version {run.id}`\n"
     )
     assert f"{run.id}: sheet is already complete" in wired.out.getvalue()
 

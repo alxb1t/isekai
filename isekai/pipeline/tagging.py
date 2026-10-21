@@ -302,7 +302,7 @@ def tag_wd14(
         )
         raise refusal_for(
             "tagger",
-            run.id,
+            run,
             "permanent",
             str(failed),
             record,
@@ -368,7 +368,7 @@ def tag_hosted(
         )
         raise refusal_for(
             "tagger",
-            run.id,
+            run,
             failed.kind,
             failed.detail,
             record,

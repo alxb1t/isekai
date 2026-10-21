@@ -16,6 +16,7 @@ import secrets
 import shutil
 import struct
 import tempfile
+import threading
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,6 +45,14 @@ _MB = 1024 * 1024
 
 # How far into a file the RAW signatures are looked for.
 _SIGNATURE_BYTES = 64 * 1024
+
+# Held from picking a staged name until the file under it is written and
+# verified, so two files read at once never take one name or both keep one body.
+_CLAIM = threading.Lock()
+
+# The largest difference, in 8-bit levels, a profile may make to a colour and
+# still be sRGB: a vendor's sRGB profile rounds a level apart from the built-in.
+_SRGB_TOLERANCE = 2
 
 State = Literal["ready", "converted", "not cleaned", "skipped"]
 
@@ -108,19 +117,20 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
         ) from unreadable
     body, converted = _clean(file)
     suffix = _suffix(body) if converted else Path(name).suffix
-    target = _free_name(staging, Path(name).stem, suffix, body)
-    if target is None:
-        return Staged(name, "skipped")
-    try:
-        write_atomically(target, body)
-        carries = verify(target)
-        if carries:
-            write_atomically(target, _reencode(body))
-            converted = True
+    with _CLAIM:
+        target = _free_name(staging, Path(name).stem, suffix, body)
+        if target is None:
+            return Staged(name, "skipped")
+        try:
+            write_atomically(target, body)
             carries = verify(target)
-    except Refusal:
-        target.unlink(missing_ok=True)
-        raise
+            if carries:
+                write_atomically(target, _reencode(body))
+                converted = True
+                carries = verify(target)
+        except Refusal:
+            target.unlink(missing_ok=True)
+            raise
     if carries:
         return Staged(target.name, "not cleaned", tuple(carries))
     return Staged(target.name, "converted" if converted else "ready")
@@ -391,8 +401,8 @@ def _converted(image: "Image", name: str) -> bytes:
             upright = converted or upright
         except ImageCms.PyCMSError as broken:
             raise Refusal(
-                f"its colour profile cannot be applied ({broken}); export it as "
-                "sRGB JPEG and add it again"
+                f"{name}: its colour profile cannot be applied ({broken}); export "
+                "it as sRGB JPEG and add it again"
             ) from broken
     pixels = upright.convert(mode)
     # The PNG writer falls back to the image's own profile, and the pixels are sRGB
@@ -428,27 +438,59 @@ def _eight_bit(image: "Image") -> "Image":
 
 
 def _is_srgb(image: "Image", name: str) -> bool:
-    """Return whether `image` has no colour profile, or an sRGB one.
+    """Return whether `image` has no colour profile, or one whose colours are sRGB's.
 
+    The profile's content decides, never its name: every level of a grid of
+    colours is taken through it to sRGB and must come back within
+    `_SRGB_TOLERANCE`. e.g. a linear-light profile named "Linear sRGB" -> False.
     Refuses `name` when the profile cannot be read.
     """
     import io
 
-    from PIL import ImageCms
+    from PIL import ImageChops, ImageCms
 
     profile = image.info.get("icc_profile")
     if not profile:
         return True
     try:
-        described = ImageCms.getProfileDescription(
-            ImageCms.ImageCmsProfile(io.BytesIO(profile))
-        )
+        read = ImageCms.ImageCmsProfile(io.BytesIO(profile))
     except (ImageCms.PyCMSError, OSError) as unreadable:
         raise Refusal(
             f"{name}: its colour profile cannot be read ({unreadable}); export it "
             "as sRGB JPEG and add it again"
         ) from unreadable
-    return "sRGB" in described
+    if read.profile.xcolor_space != "RGB ":
+        return False
+    grid = _colour_grid()
+    try:
+        through = ImageCms.profileToProfile(
+            grid,
+            read,
+            ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")),
+            renderingIntent=ImageCms.Intent.RELATIVE_COLORIMETRIC,
+        )
+    except ImageCms.PyCMSError:
+        return False
+    # `profileToProfile` returns None only when asked to convert in place.
+    if through is None:
+        return False
+    return max(ImageChops.difference(grid, through).tobytes()) <= _SRGB_TOLERANCE
+
+
+def _colour_grid() -> "Image":
+    """Return one pixel for each colour whose levels are each a multiple of 32, or 255.
+
+    A primary's own hue, a grey and a mix are all in it, so a profile that moves
+    any of the three moves a pixel.
+    """
+    import itertools
+
+    from PIL import Image
+
+    levels = (*range(0, 256, 32), 255)
+    colours = list(itertools.product(levels, repeat=3))
+    flat = bytes(level for colour in colours for level in colour)
+    return Image.frombytes("RGB", (len(colours), 1), flat)
 
 
 def _is_transparent(image: "Image") -> bool:

@@ -50,6 +50,7 @@ from isekai.foundation.artifacts import (
 from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
+    NEW_VERSION,
     SHEETS,
     WD14,
     Run,
@@ -58,6 +59,7 @@ from isekai.foundation.run import (
     latest,
     record_failure,
     refusal_for,
+    stage_command,
 )
 from isekai.shared.field_map import FieldMap, route
 from isekai.shared.field_map import identity as field_map_identity
@@ -175,7 +177,7 @@ def _superseded(run: Run, flow: str, directory: Path, kept: int) -> list[str]:
     return [
         f"{run.id}/{flow}: sheet {kept:03d} was filled from "
         f"{WD14}/{artifact_name(source)}, and {WD14}/{artifact_name(newest)} "
-        f"is newer; run `python -m isekai sheet --flow {flow} --new-version {run.id}`"
+        f"is newer; run `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     ]
 
 
@@ -200,15 +202,14 @@ def _from_tag_list(
     if source is None:
         raise Refusal(
             f"{run.id}: there is no tag list to fill a sheet for {flow} from; run "
-            f"`python -m isekai tag --flow {flow} {run.id}` first, "
-            f"which writes {flow}/{WD14}/"
+            f"`{stage_command(run, 'tag', flow)}` first, which writes {flow}/{WD14}/"
         )
 
     check_budget(STAGE, directory, version, run)
     # No sheet exists yet to edit, so every fix is a new tag list.
     remedy = (
-        f"run `python -m isekai tag --flow {flow} --new-version {run.id}`, "
-        f"then `python -m isekai sheet --flow {flow} --new-version {run.id}`"
+        f"run `{stage_command(run, 'tag', flow, options=NEW_VERSION)}`, "
+        f"then `{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
     )
     try:
         fields, made_by = _route(run, flow, source, schema, field_map, remedy)
@@ -219,7 +220,7 @@ def _from_tag_list(
             directory, version, "permanent", {"stage": STAGE, "detail": detail}
         )
         raise refusal_for(
-            STAGE, run.id, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
+            STAGE, run, "permanent", detail, record, SHEETS, STAGE, flow, STAGE
         ) from failed
     return fields, made_by
 

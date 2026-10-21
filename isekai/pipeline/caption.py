@@ -268,7 +268,7 @@ def caption(
         )
         raise refusal_for(
             "reader",
-            run.id,
+            run,
             failed.kind,
             failed.detail,
             record,

@@ -39,6 +39,7 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+import isekai.foundation.run as run_module  # noqa: E402
 import isekai.interface.ui.app as app_module  # noqa: E402
 import isekai.pipeline.review as review_module  # noqa: E402
 from isekai.foundation.artifacts import (
@@ -1161,7 +1162,7 @@ def test_a_damaged_file_is_refused_by_name(
 def test_a_damage_remedy_under_the_default_root_names_no_runs_flag(
     client: TestClient, made: Run, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(app_module, "RUNS_ROOT", made.path.parent)
+    monkeypatch.setattr(run_module, "RUNS_ROOT", made.path.parent)
     _damage(_latest(CAPTIONS)(client, made), _drop("prose"))
 
     refusal = client.get(_at(made)).json()["refusal"]
