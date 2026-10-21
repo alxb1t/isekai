@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-21 · 0061-ui-groundwork
+
+Gate: local 0m22s · CI 0m35s (ci at 45babd9) · 0.36.0: none
+
 ### Added
 
 - A browser test harness: vitest for the page's composables and Playwright from pytest for the page, both in
