@@ -2,6 +2,7 @@
 
 A file is read into a staging folder under the library's `.staging/`, cleaned of
 everything but its pixels and orientation, and verified by the strip's own walk.
+An upload waits in the folder until its `Reader` reads it, one file at a time.
 A commit moves the staged files into the batch's `sources/`; a cancel, or a sweep
 at start, deletes what was staged.
 
@@ -10,8 +11,10 @@ Pillow and `pi_heif` are imported inside the functions that decode, so
 """
 
 import contextlib
+import io
 import json
 import os
+import queue
 import re
 import secrets
 import shutil
@@ -19,10 +22,10 @@ import struct
 import tempfile
 import threading
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
@@ -38,6 +41,9 @@ SOURCES = "sources"
 
 # The quality a re-encoded JPEG is written at.
 JPEG_QUALITY = 95
+
+# The long side of a staged file's preview, in pixels.
+PREVIEW_SIDE = 512
 
 # A build folder inside a staging folder, named so no staged file can take it:
 # a staged name never starts with a dot.
@@ -156,6 +162,116 @@ def receive(name: str, body: bytes, staging: Path, limit: int) -> Staged:
         upload = Path(scratch) / name
         upload.write_bytes(body)
         return read(upload, staging, limit)
+
+
+class Reader:
+    """Read a staging folder's uploads one at a time, in the order they landed.
+
+    Each upload is held in a dot-named folder until its turn. Each change of a
+    file's state is published: `waiting`, `converting`, then a `Staged` state or
+    `refused`. e.g. `{"file": "a.heic", "state": "converted", "name": "a.jpg"}`
+    """
+
+    def __init__(
+        self, staging: Path, limit: int, publish: Callable[[dict[str, Any]], None]
+    ) -> None:
+        """Start the thread that reads what `put` holds."""
+        self._staging = staging
+        self._limit = limit
+        self._publish = publish
+        self._lock = threading.Lock()
+        self._files: dict[str, dict[str, Any]] = {}
+        self._queue: queue.Queue[tuple[str, Path] | None] = queue.Queue()
+        self._stopped = False
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def put(self, name: str, body: bytes) -> dict[str, Any]:
+        """Hold an uploaded file's bytes for reading; return its state, `waiting`."""
+        _refuse_name(name)
+        if self._stopped:
+            raise Refusal(
+                f"{name}: its import is closed; close the sheet and choose the "
+                "files again"
+            )
+        held = Path(tempfile.mkdtemp(dir=self._staging, prefix=".upload-")) / name
+        held.write_bytes(body)
+        with self._lock:
+            state = self._set(name, {"state": "waiting"})
+            self._queue.put((name, held))
+        return state
+
+    def files(self) -> dict[str, dict[str, Any]]:
+        """Return every file's state, by the name it was uploaded as."""
+        with self._lock:
+            return {name: dict(state) for name, state in self._files.items()}
+
+    def refuse_unread(self) -> None:
+        """Refuse while any file still waits or converts, naming how many are read."""
+        states = self.files().values()
+        unread = sum(one["state"] in _UNREAD for one in states)
+        if unread:
+            raise Refusal(
+                f"{len(states) - unread} of {len(states)} files are read; wait for "
+                "the rest, then import"
+            )
+
+    def stop(self) -> None:
+        """Stop reading once the file being read is done; the rest stay unread."""
+        self._stopped = True
+        self._queue.put(None)
+        self._thread.join()
+
+    def _run(self) -> None:
+        """Read each held upload in turn until stopped."""
+        while (item := self._queue.get()) is not None and not self._stopped:
+            name, held = item
+            self._update(name, {"state": "converting"})
+            try:
+                staged = read(held, self._staging, self._limit)
+                result = {
+                    "state": staged.state,
+                    "name": staged.name,
+                    "carries": list(staged.carries),
+                }
+            except Refusal as refused:
+                result = {"state": "refused", "refusal": str(refused)}
+            finally:
+                shutil.rmtree(held.parent, ignore_errors=True)
+            self._update(name, result)
+
+    def _update(self, name: str, state: dict[str, Any]) -> None:
+        """Record and publish one file's new state."""
+        with self._lock:
+            self._set(name, state)
+
+    def _set(self, name: str, state: dict[str, Any]) -> dict[str, Any]:
+        """Record and publish `state` for `name`; the caller holds the lock."""
+        self._files[name] = state
+        self._publish({"file": name, **state})
+        return state
+
+
+# The states of a file the reader has not finished with.
+_UNREAD = frozenset({"waiting", "converting"})
+
+
+def preview(staging: Path, name: str) -> bytes:
+    """Return a staged file as an upright JPEG at most `PREVIEW_SIDE` on its long side.
+
+    Made from the file each time and kept nowhere: it goes with its staging folder.
+    """
+    from PIL import ImageOps
+
+    _refuse_name(name)
+    staged = staging / name
+    if not staged.is_file():
+        raise Refusal(f"{name}: not staged in this import; choose it again")
+    small = ImageOps.exif_transpose(_decode(staged)).convert("RGB")
+    small.thumbnail((PREVIEW_SIDE, PREVIEW_SIDE))
+    out = io.BytesIO()
+    small.save(out, "JPEG", quality=85)
+    return out.getvalue()
 
 
 def _refuse_name(name: str) -> None:

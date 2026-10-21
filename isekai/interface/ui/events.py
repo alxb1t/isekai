@@ -5,7 +5,7 @@ A job publishes; each connection holds its own queue, so a slow page delays no
 other. No web framework, so the stream is tested with no server involved.
 
 ```
-connect ─▶ snapshot {job, billing, hub?} ─▶ job · cell · billing ─▶ … ─▶ (keep-alive)
+connect ─▶ snapshot {job, billing, hub?, files?} ─▶ job · cell · file · billing ─▶ …
 ```
 """
 
@@ -70,12 +70,14 @@ def stream(
     snapshot: Callable[[], dict[str, Any]],
     *,
     batch: str | None = None,
+    staging: str | None = None,
     heartbeat: float = HEARTBEAT,
 ) -> Iterator[str]:
-    """Yield the snapshot, then every event for `batch`, until the reader stops.
+    """Yield the snapshot, then every event for `batch` and `staging`, until stopped.
 
     Subscribed before the snapshot is read, so nothing between the two is lost.
-    A `cell` event of another batch is not sent; each `job` and `billing` event is.
+    A `cell` event of another batch, or a `file` event of another import, is not
+    sent; each `job` and `billing` event is.
     """
     found = broadcast.subscribe()
     try:
@@ -89,6 +91,8 @@ def stream(
             if kind == CLOSE:
                 return
             if kind == "cell" and data.get("batch") != batch:
+                continue
+            if kind == "file" and data.get("staging") != staging:
                 continue
             yield frame(kind, data)
     finally:

@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Changed
+
+- An upload is answered `202` once its bytes land; the import's reader reads its files one at a time and
+  reports each on `/events?staging=<id>`, so a tile shows uploading, waiting, converting, then its result
+  and the staged file's preview (0064 D1, D2, D3).
+
 ## [0.39.0] - 2026-10-21 · 0063-render
 
 Gate: local 0m30s · CI 1m5s (ci at 7a9a698) · 0.38.0: local 0m29s · CI 1m0s
