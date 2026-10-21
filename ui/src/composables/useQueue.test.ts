@@ -25,7 +25,6 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-
 spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
   // Two runs hold an approved artifact in `f`: `a` approved, `b` re-opened
   // over its approved one. `c` holds a draft alone.
@@ -42,4 +41,7 @@ spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
   const reopened = queue.inputs.value.find((input) => input.id === 'b')
   expect(reopened?.status).toBe('re-opened')
   expect(queue.approved.value).toBe(held)
+  // The count is out of every sheet in the flow, as the approved count is: the
+  // rail lists only `b` and `c`, so its length would read "2 of 2 approved".
+  expect(queue.sheets.value).toBe(3)
 })

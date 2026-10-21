@@ -172,7 +172,8 @@ async function approve(): Promise<void> {
   // read as "your approval is about to be wrong". `flush()` leaves the refusal
   // on the header line; stopping here is what makes it true.
   if (!(await sheet.flush())) return
-  if (!(await approval.approve({ batch: props.batch, digest: id, flow: props.flow }))) return
+  const place = { batch: props.batch, digest: id, flow: props.flow }
+  if (!(await approval.approve(place, sheet.saved.value))) return
   // Neither depends on the other's answer; both depend only on the POST landing.
   // The sheet is re-read so the page shows it approved, whatever follows.
   const [read] = await Promise.allSettled([batch.load(), sheet.open(id)])
@@ -414,7 +415,7 @@ watch(current, (id) => {
   <div v-else class="review">
     <AppHeader
       :flow="flow"
-      :inputs="batch.inputs.value.length"
+      :inputs="batch.sheets.value"
       :approved="batch.approved.value"
       :draft="receipt"
       :saved="minute(lastDraft?.saved ?? null)"
@@ -442,6 +443,7 @@ watch(current, (id) => {
       <BatchRail
         :inputs="batch.inputs.value"
         :approved="batch.approved.value"
+        :sheets="batch.sheets.value"
         :current="current"
         :edited="batch.edited.value"
         :photo-url="photoUrl"

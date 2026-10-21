@@ -90,10 +90,13 @@ export function saveDraft(
   return send(`${at(place)}/draft`, 'PUT', { fields, saved }, { keepalive: true })
 }
 
+/* `saved` is the precondition the draft's `PUT` states, so the page approves
+   only the draft it last read: one another tab moved since answers 409. */
 export function approve(
   place: Place,
+  saved: number | null,
 ): Promise<{ approved: string | null; warnings: string[]; at: number | null }> {
-  return send(`${at(place)}/approve`, 'POST', {})
+  return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
 export function photoUrl(place: Place): string {

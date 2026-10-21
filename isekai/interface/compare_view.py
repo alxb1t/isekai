@@ -35,8 +35,9 @@ from isekai.pipeline.generate import rendered_seeds
 
 PAGE_NAME = "compare.html"
 BATCH_RUNS = "runs"
-# The folder of a batch's photographs, as the refusal below names it.
-BATCH_PHOTOS = "photos"
+# The folder of a batch's photographs, as the refusal below names it: a batch
+# holds them in `sources/` (D40).
+BATCH_PHOTOS = "sources"
 
 _STYLE = """
 :root { color-scheme: dark; }

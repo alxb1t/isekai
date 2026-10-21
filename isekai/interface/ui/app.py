@@ -386,14 +386,19 @@ def create_app(
         }
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/approve")
-    def post_approve(batch: str, digest: str, flow: str) -> dict[str, Any]:
+    def post_approve(
+        batch: str, digest: str, flow: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Validate and approve the draft, through the only writer of an approval.
 
         Under the draft lock, so an update in flight either lands before the
         approval reads the draft or finds the input approved and is refused.
+        **It states the draft update's precondition**, so a page approves only
+        the draft it last read, never one another writer has since moved.
         """
         one = held(batch, digest, flow)
         with _DRAFT_UPDATE:
+            _precondition(one, payload or {})
             written, warnings = approve(
                 one.run, one.flow.id, one.flow.schema, shared.vocabulary()
             )
@@ -616,7 +621,7 @@ def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
 
 
 def _precondition(one: Held, payload: Mapping[str, Any]) -> None:
-    """Refuse an update written against a draft that has since moved on disk.
+    """Refuse an update or an approval written against a draft that has since moved.
 
     **`st_mtime` is the precondition because nothing else exists.** The draft
     carries no timestamp, no revision counter and no digest, and adding one

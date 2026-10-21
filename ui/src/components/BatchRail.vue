@@ -11,6 +11,9 @@ const props = defineProps<{
      number `AppHeader` is given. Computing a second answer here from the status
      strings would be one number with two derivations, kept in step by prose. */
   approved: number
+  /* Every sheet in the flow, the count `approved` is out of; the rail lists
+     only the queue and the open sheet. */
+  sheets: number
   current: string
   edited: Set<string>
   photoUrl: (id: string) => string
@@ -75,6 +78,6 @@ function ready(id: string): void {
       <span class="rail__legend-row"><StatusMark kind="hollow" :size="8" /> untouched</span>
     </div>
 
-    <span class="rail__run mono">{{ approved }} of {{ inputs.length }} approved</span>
+    <span class="rail__run mono">{{ approved }} of {{ sheets }} approved</span>
   </nav>
 </template>

@@ -6,6 +6,7 @@ Nothing in this file needs a web framework; the endpoints are in
 
 import importlib.util
 import os
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -233,7 +234,7 @@ def test_a_fetched_dependency_tree_is_not_source(tmp_path: Path) -> None:
 def test_a_build_that_does_not_finish_is_stopped_and_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The ceiling is applied, and it stops the build's whole process group.
+    """The ceiling is applied, and it and a Ctrl-C each stop the whole group.
 
     A real stand-in for `npm`, which starts a child the way `npm` starts `vite`:
     killing the parent alone would leave that child building unseen.
@@ -254,6 +255,27 @@ def test_a_build_that_does_not_finish_is_stopped_and_named(
 
     assert "3 seconds" in str(refused.value)
     assert "by hand" in str(refused.value)
+    assert _stops(int(child.read_text()))
+
+    # A Ctrl-C while it builds stops the group too: in its own session, the
+    # build never receives the terminal's SIGINT.
+    child.unlink()
+    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 60)
+
+    def interrupt(signum: int, frame: object) -> None:
+        if not child.is_file() or not child.read_text().strip():
+            signal.setitimer(signal.ITIMER_REAL, 0.05)
+            return
+        raise KeyboardInterrupt
+
+    previous = signal.signal(signal.SIGALRM, interrupt)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 0.05)
+        with pytest.raises(KeyboardInterrupt):
+            bundle.ensure_built(source)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
     assert _stops(int(child.read_text()))
 
 

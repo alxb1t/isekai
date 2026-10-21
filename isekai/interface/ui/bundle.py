@@ -121,7 +121,9 @@ def ensure_built(source: Path = SOURCE) -> Path:
         )
 
     # Its own session, so a timeout stops the whole group: `npm` runs `vite` as a
-    # child, and killing `npm` alone would leave the build running unseen.
+    # child, and killing `npm` alone would leave the build running unseen. The
+    # same session keeps the terminal's SIGINT from it, so a Ctrl-C stops the
+    # group here too.
     build = subprocess.Popen(
         [BINARY, "run", "build"],
         cwd=source,
@@ -133,14 +135,16 @@ def ensure_built(source: Path = SOURCE) -> Path:
     try:
         stdout, stderr = build.communicate(timeout=BUILD_TIMEOUT)
     except subprocess.TimeoutExpired as slow:
-        os.killpg(build.pid, signal.SIGKILL)
-        build.communicate()
+        _stop(build)
         raise Refusal(
             f"{BINARY} run build did not finish within {BUILD_TIMEOUT} seconds "
             f"and was stopped; run it in {source.name}/ by hand to see where it "
             "stops -- a build that reaches the network for a missing dependency "
             "is the usual cause"
         ) from slow
+    except BaseException:
+        _stop(build)
+        raise
     if build.returncode != 0:
         raise Refusal(
             f"building the browser bundle failed ({BINARY} run build exited "
@@ -152,3 +156,9 @@ def ensure_built(source: Path = SOURCE) -> Path:
             f"check {source.name}/vite.config.ts for where it puts its output"
         )
     return dist
+
+
+def _stop(build: subprocess.Popen[str]) -> None:
+    """Kill the build's whole process group and reap it."""
+    os.killpg(build.pid, signal.SIGKILL)
+    build.communicate()

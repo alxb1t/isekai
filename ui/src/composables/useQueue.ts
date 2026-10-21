@@ -73,6 +73,12 @@ export function useQueue(batch: string, flow: string, current: () => string) {
     }).length,
   )
 
+  /* Every sheet in the flow, the population `approved` is counted from: the
+     rail's length leaves the approved ones out. */
+  const sheets = computed(
+    () => (info.value?.sources ?? []).filter((source) => source.cells[flow]?.status).length,
+  )
+
   /** Re-read the hub; a refusal is thrown to the caller, who decides where it shows. */
   async function load(): Promise<HubInfo> {
     try {
@@ -88,5 +94,5 @@ export function useQueue(batch: string, flow: string, current: () => string) {
     edited.value = new Set(edited.value).add(id)
   }
 
-  return { info, inputs, approved, edited, loading, load, markEdited }
+  return { info, inputs, approved, sheets, edited, loading, load, markEdited }
 }

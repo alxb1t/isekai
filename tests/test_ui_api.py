@@ -1,4 +1,7 @@
-"""The seven endpoints, against a running application.
+"""The endpoints, against a running application.
+
+They are the library, a batch's hub, the tag search, the field candidates, and a
+run's review, photo, draft and approval.
 
 **This module runs in the gate.** FastAPI is pinned in the `dev` dependency
 group, so `uv sync --locked` installs it and the four `ui` scenarios bound here
@@ -14,7 +17,8 @@ This is deliberately not the evaluator tests' pattern. Those fake the embedder;
 here the thing under test *is* the HTTP surface, so there is nothing to fake
 that would leave anything worth asserting.
 
-Everything that can be asserted without a server is in `tests/test_ui.py`.
+Everything that can be asserted without a server is in `tests/test_ui.py` and
+`tests/test_ui_library.py`.
 """
 
 import contextlib
@@ -570,6 +574,13 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     )
     assert third.status_code == 200
 
+    # An approval states the same precondition, so a page that never displayed
+    # the draft on disk cannot approve it.
+    stale = client.post(_at(made, "/approve"), json={"saved": saved})
+    assert stale.status_code == 409
+    assert "changed since this page last read it" in stale.json()["refusal"]
+    assert not list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
+
 
 @pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")
 def test_an_update_stating_no_precondition_is_still_accepted(
@@ -690,7 +701,9 @@ def _update_during_approval(
     write = review_module.write
 
     def check(one: Held, payload: Mapping[str, Any]) -> None:
-        checked.set()
+        # The approval states a precondition too; only the update's is the signal.
+        if "fields" in payload:
+            checked.set()
         precondition(one, payload)
 
     def put() -> None:

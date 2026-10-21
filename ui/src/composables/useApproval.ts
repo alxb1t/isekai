@@ -22,10 +22,11 @@ export function useApproval() {
     refusal.value = null
   }
 
-  async function approve(place: Place): Promise<boolean> {
+  /** Approve the draft at `place`, as of the `saved` receipt the page holds. */
+  async function approve(place: Place, saved: number | null): Promise<boolean> {
     working.value = true
     try {
-      const receipt = await post(place)
+      const receipt = await post(place, saved)
       at.value = receipt.at
       refusal.value = null
       return true

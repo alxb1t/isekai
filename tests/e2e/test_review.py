@@ -8,8 +8,10 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import load_flow
-from isekai.foundation.run import Run
+from isekai.foundation.run import REVIEW, Run, latest_artifact
+from isekai.pipeline.review import DRAFT
 from tests.e2e.conftest import FLOW, Served
 
 
@@ -34,6 +36,15 @@ def test_a_tag_is_committed_from_the_ranked_autocomplete(
     field.press("Enter")
     row = page.locator(".row", has=field)
     expect(row.locator(".chip", has_text="blue eyes")).to_be_visible()
+
+    # Leaving inside the debounce sends the edit: the hub opens only once the
+    # route's leave guard has had the draft written.
+    page.keyboard.press("Alt+Digit1")
+    expect(page).to_have_url(served.hub)
+    draft = latest_artifact(served.draft.directory(FLOW, REVIEW), DRAFT)
+    assert draft is not None
+    fields = read(draft, DRAFT_FILE)["fields"]
+    assert any("blue eyes" in tags for tags in fields.values())
 
 
 @pytest.mark.spec("ui:approval:approved-input-opens-read-only")
