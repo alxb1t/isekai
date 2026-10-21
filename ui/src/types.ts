@@ -115,6 +115,13 @@ export interface FieldCandidates {
   fields: Record<string, OfferedTag[]>
 }
 
+/* How many images an approval renders, and the seeds it renders first. Seeds
+   are decimal strings: a 64-bit seed is past what a number holds exactly. */
+export interface Renders {
+  count: number
+  seeds: string[]
+}
+
 export interface InputDetail {
   /* The run's digest, which the URL names it by. */
   id: string
@@ -134,6 +141,7 @@ export interface InputDetail {
   wd14: ScoredTag[] | null
   tags: OfferedTag[] | null
   fields: Record<string, string[]>
+  renders: Renders
   readonly: boolean
   draft: string | null
   approved: string | null

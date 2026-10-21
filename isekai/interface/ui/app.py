@@ -57,9 +57,12 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     CAPTION_FILE,
     DRAFT_FILE,
+    ONE_RENDER,
     TAGS_FILE,
     WD14_FILE,
+    Renders,
     read,
+    renders_of,
     require,
 )
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
@@ -452,15 +455,19 @@ def create_app(
         approved = one.approved()
         state = review_state(one.directory(REVIEW))
         fields: dict[str, list[str]] = {}
+        renders = ONE_RENDER
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
             # refuses the same damage, so only a hand repairs it.
             remedy = f"restore it in {approved} by hand, then reload the page"
             body = read(approved, APPROVED_FILE, remedy=remedy)
             fields = _fields(approved, body, remedy)
+            renders = renders_of(approved, body, remedy)
         elif draft is not None:
             remedy = _remedy(one, "review")
-            fields = _fields(draft, read(draft, DRAFT_FILE), remedy)
+            body = read(draft, DRAFT_FILE)
+            fields = _fields(draft, body, remedy)
+            renders = renders_of(draft, body, remedy)
         budget = token_budget(fields, one.flow.schema, one.flow)
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
@@ -482,6 +489,9 @@ def create_app(
             "wd14": _wd14(one),
             "tags": _tags(one, shared.vocabulary()),
             "fields": fields,
+            # Seeds as decimal strings: a 64-bit seed is past what a JavaScript
+            # number holds exactly.
+            "renders": _renders_out(renders),
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
             "readonly": state == "approved",
@@ -518,6 +528,7 @@ def create_app(
         one = held(batch, digest, flow)
         # Before the lock: a malformed body refuses without waiting on a write.
         fields = _update(payload)
+        renders = _renders_in(payload)
         with _DRAFT_UPDATE:
             if review_state(one.directory(REVIEW)) == "approved":
                 raise Refusal(
@@ -529,7 +540,7 @@ def create_app(
                     "its approved artifact still named"
                 )
             _precondition(one, payload)
-            written = save_draft(one.run, one.flow.id, fields)
+            written = save_draft(one.run, one.flow.id, fields, renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         return {
             "draft": written.name,
@@ -811,6 +822,31 @@ def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
     if (name := _untagged(fields)) is not None:
         raise Refusal(f"the update's {name} is not a list of tags; {fix}")
     return fields
+
+
+def _renders_in(payload: Mapping[str, Any]) -> Renders | None:
+    """Return an update's `renders`, its seeds parsed from decimal strings, or None.
+
+    e.g. `{"count": 2, "seeds": ["18402"]}` -> `{"count": 2, "seeds": [18402]}`
+    """
+    held = payload.get("renders")
+    if held is None:
+        return None
+    fix = "send a count and a list of decimal seeds -- nothing was saved"
+    if not isinstance(held, dict) or not isinstance(held.get("seeds", []), list):
+        raise Refusal(f"the update's `renders` is not a count and its seeds; {fix}")
+    seeds = held.get("seeds", [])
+    if not all(isinstance(seed, str) and seed.isdigit() for seed in seeds):
+        raise Refusal(f"the update's renders seeds are not decimal numbers; {fix}")
+    return {"count": held.get("count"), "seeds": [int(seed) for seed in seeds]}
+
+
+def _renders_out(renders: Renders) -> dict[str, Any]:
+    """Describe `renders` for the page, each seed as its decimal string."""
+    return {
+        "count": renders["count"],
+        "seeds": [str(seed) for seed in renders["seeds"]],
+    }
 
 
 def _precondition(one: Held, payload: Mapping[str, Any]) -> None:

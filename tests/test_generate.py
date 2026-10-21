@@ -24,7 +24,13 @@ import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
 from isekai.boundary.comfy import ComfyClient, TransportFailure, unread
 from isekai.boundary.comfy.client import TIMEOUT
-from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, Runtime, read
+from isekai.foundation.artifacts import (
+    DRAFT_FILE,
+    PROMPT_FILE,
+    RENDER_FILE,
+    Runtime,
+    read,
+)
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -64,7 +70,7 @@ from isekai.pipeline.generate import (
     rendered_seeds,
     seeds_for,
 )
-from isekai.pipeline.review import approve, review
+from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE, photo_resolution
 from isekai.shared.vocabulary import Vocabulary
@@ -636,6 +642,61 @@ def test_raising_the_count_renders_only_the_difference(
     assert len(rendered_seeds(directory, flow.output_suffix)) == 3
     for name, body in stamps.items():
         assert (directory / name).read_bytes() == body
+
+
+def _approved_renders(
+    run: Run, schema: Schema, vocabulary: Vocabulary, count: int, seeds: list[int]
+) -> Path:
+    """Approve `run` again with `count` and `seeds`, and return its outputs group."""
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    fields = read(draft, DRAFT_FILE)["fields"]
+    save_draft(run, FLOW, fields, {"count": count, "seeds": seeds})
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    return run.path / FLOW / OUTPUTS / f"{int(approved.name[:3]):03d}"
+
+
+@pytest.mark.spec("image-generation:approved-count:listed-seeds-first")
+def test_an_approvals_listed_seeds_render_first_and_the_rest_are_drawn(
+    run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group = _approved_renders(run, schema, vocabulary, 3, [1])
+    prepare(run, {FLOW: flow})
+
+    produced = render(run, flow, FakeComfyClient(), rng=random.Random(7), poll=0)
+
+    seeds = [made.seed for made in produced]
+    assert seeds[0] == 1
+    assert len(seeds) == len(set(seeds)) == 3
+    assert all(seed.bit_length() > 32 for seed in seeds[1:])
+    assert rendered_seeds(group, flow.output_suffix) == sorted(seeds)
+
+
+@pytest.mark.spec("image-generation:approved-count:no-count-renders-one")
+def test_an_approval_with_no_count_renders_one_drawn_seed(run: Run, flow: Flow) -> None:
+    prepare(run, {FLOW: flow})
+
+    produced = render(run, flow, FakeComfyClient(), rng=random.Random(7), poll=0)
+
+    assert [made.seed for made in produced] == draw_seeds(1, random.Random(7))
+
+
+@pytest.mark.spec("image-generation:approved-count:only-the-shortfall-renders")
+def test_an_approval_short_of_its_count_renders_only_what_it_lacks(
+    run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group = _approved_renders(run, schema, vocabulary, 3, [])
+    prepare(run, {FLOW: flow})
+    client = FakeComfyClient()
+    render(run, flow, client, seeds=[42], poll=0)
+
+    produced = render(run, flow, client, rng=random.Random(7), poll=0)
+
+    assert len(produced) == 2
+    assert 42 not in [made.seed for made in produced]
+    assert len(rendered_seeds(group, flow.output_suffix)) == 3
+    assert render(run, flow, client, rng=random.Random(9), poll=0) == []
 
 
 @pytest.mark.spec("image-generation:seeds:outputs-carry-the-approval")

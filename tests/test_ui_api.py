@@ -47,6 +47,7 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     TAGS_FILE,
     Artifact,
+    Renders,
     read,
 )
 from isekai.foundation.flow import Schema  # noqa: E402
@@ -661,7 +662,12 @@ def _overlap(
             _at(made, "/draft"), json={"fields": fields, "saved": saved}
         ).status_code
 
-    def write(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
+    def write(
+        run: Run,
+        flow: str,
+        fields: Mapping[str, Sequence[str]],
+        renders: Renders | None = None,
+    ) -> Path:
         if not threads:
             second = threading.Thread(
                 target=put, args=("second", "black hair"), name="second"
@@ -669,7 +675,7 @@ def _overlap(
             threads.append(second)
             second.start()
             checked.wait(timeout=0.5)
-        return save(run, flow, fields)
+        return save(run, flow, fields, renders)
 
     monkeypatch.setattr(app_module, "_precondition", check)
     monkeypatch.setattr(app_module, "save_draft", write)

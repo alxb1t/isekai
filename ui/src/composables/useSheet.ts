@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { inputDetail, saveDraft } from '../api'
 import type { Place } from '../api'
-import type { Budget, InputDetail } from '../types'
+import type { Budget, InputDetail, Renders } from '../types'
 
 /* Long enough that a burst of typing is one write rather than ten, short enough
    that the receipt is true by the time the operator looks up from the row. */
@@ -34,6 +34,8 @@ interface Edit {
 export function useSheet(scope: Omit<Place, 'digest'>) {
   const detail = ref<InputDetail | null>(null)
   const fields = ref<Record<string, string[]>>({})
+  /* ④: saved with the fields in the one `PUT`, and outside the undo stack. */
+  const renders = ref<Renders>({ count: 1, seeds: [] })
   const budget = ref<Budget | null>(null)
   const saved = ref<number | null>(null)
   /* A save is in flight. The receipt is the only thing on the page that talks
@@ -94,6 +96,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     generation += 1
     detail.value = body
     fields.value = { ...body.fields }
+    renders.value = { count: body.renders.count, seeds: [...body.renders.seeds] }
     budget.value = body.budget
     saved.value = body.saved
     refusal.value = null
@@ -121,12 +124,13 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     dirty = false
     const id = current
     const payload = { ...fields.value }
+    const asking = { count: renders.value.count, seeds: [...renders.value.seeds] }
     const asked = (generation += 1)
     const mine = (token += 1)
     inFlight.add(mine)
     saving.value = true
     try {
-      const receipt = await saveDraft({ ...scope, digest: id }, payload, saved.value)
+      const receipt = await saveDraft({ ...scope, digest: id }, payload, asking, saved.value)
       if (current === id) {
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one. Taken
@@ -183,6 +187,13 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     record(field, tags)
   }
 
+  /* Replace ④'s count and seeds, saved like any edit. */
+  function setRenders(next: Renders): void {
+    renders.value = { count: next.count, seeds: [...next.seeds] }
+    dirty = true
+    schedule()
+  }
+
   function undo(): void {
     const edit = done.pop()
     if (!edit) return
@@ -200,6 +211,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
   return {
     detail,
     fields,
+    renders,
     budget,
     saved,
     saving,
@@ -209,6 +221,7 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
     open,
     commit,
     remove,
+    setRenders,
     undo,
     redo,
     flush,

@@ -6,7 +6,7 @@ task names.
 
 ## Progress
 
-- [ ] 1 — The count and seeds
+- [x] 1 — The count and seeds
 - [ ] 2 — What is short
 - [ ] 3 — The limit
 - [ ] 4 — Progress
@@ -18,13 +18,13 @@ task names.
 
 ## 1 — The count and seeds
 
-- [ ] 1.1 **HALT CHECK** — the draft has no `renders` field, and `gpunit.toml`'s ceiling is `45m`.
+- [x] 1.1 **HALT CHECK** — the draft has no `renders` field, and `gpunit.toml`'s ceiling is `45m`.
   Verify: `grep -c 'renders' isekai/foundation/artifacts.py` prints `0`, and `grep -c '^ceiling = "45m"' gpunit.toml` prints `1`.
-- [ ] 1.2 Add `renders` to `ReviewDraft` and `ReviewApproved` in `isekai/foundation/artifacts.py`, carry it through `isekai/pipeline/review.py`, and refuse approval as [D1](design.md#d1) says; bind every `review:renders:*` key in `tests/test_review.py`.
+- [x] 1.2 Add `renders` to `ReviewDraft` and `ReviewApproved` in `isekai/foundation/artifacts.py`, carry it through `isekai/pipeline/review.py`, and refuse approval as [D1](design.md#d1) says; bind every `review:renders:*` key in `tests/test_review.py`.
   Verify: `uv run pytest -q tests/test_review.py` exits 0, and `grep -c 'review:renders:' tests/test_review.py` prints `3`.
-- [ ] 1.3 Make `render` in `isekai/pipeline/generate.py` take the approval's seeds first and draw the rest of its count, per [D1](design.md#d1); bind every `image-generation:approved-count:*` key in `tests/test_generate.py`.
+- [x] 1.3 Make `render` in `isekai/pipeline/generate.py` take the approval's seeds first and draw the rest of its count, per [D1](design.md#d1); bind every `image-generation:approved-count:*` key in `tests/test_generate.py`.
   Verify: `uv run pytest -q tests/test_generate.py` exits 0, and `grep -c 'image-generation:approved-count:' tests/test_generate.py` prints `3`.
-- [ ] 1.4 Add the ④ Renders block — the count stepper and the seeds list — to `ui/src/views/Review.vue`, writing through the draft `PUT`, per the design spec's J3·2.
+- [x] 1.4 Add the ④ Renders block — the count stepper and the seeds list — to `ui/src/views/Review.vue`, writing through the draft `PUT`, per the design spec's J3·2.
   Verify: `grep -c 'renders' ui/src/views/Review.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
 
 ## 2 — What is short

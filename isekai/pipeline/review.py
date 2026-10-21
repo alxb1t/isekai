@@ -43,9 +43,11 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    Renders,
     ReviewApproved,
     ReviewDraft,
     read,
+    renders_of,
     require,
     write,
 )
@@ -168,6 +170,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
             f"it was approved from as `sheet` in {copied}, then run {again} again",
         )
         came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
+        kept = carried.get("renders")
     else:
         copied = sheets / artifact_name(source_sheet)
         carried = read(copied, SHEET_FILE)
@@ -176,6 +179,7 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
             f"then {again}"
         )
         came_from, source, sheet_version = source_sheet, SHEETS, source_sheet
+        kept = None
 
     require(copied, carried, "vocabulary", dict, remedy)
     require(copied, carried, "fields", dict, remedy)
@@ -190,11 +194,13 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
         "fields": carried["fields"],
     }
     # Carried where the source records them, so the approval can name the
-    # schema and table its fields came through.
+    # schema and table its fields came through, and a correction keeps its count.
     if "schema_document" in carried:
         draft["schema_document"] = carried["schema_document"]
     if "field_map" in carried:
         draft["field_map"] = carried["field_map"]
+    if kept is not None:
+        draft["renders"] = kept
     write(path, DRAFT_FILE, draft)
     return path
 
@@ -214,8 +220,16 @@ def estimate_tokens(fields: Mapping[str, Sequence[str]], schema: Schema) -> int:
     return words + separators + 2
 
 
-def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
+def save_draft(
+    run: Run,
+    flow: str,
+    fields: Mapping[str, Sequence[str]],
+    renders: Renders | None = None,
+) -> Path:
     """Replace the current draft's field values in place, and return its path.
+
+    `renders`, when given, replaces the draft's count and seeds, refused as
+    approval would refuse it.
 
     The one owner of a draft update. The draft's shape is otherwise built only at
     creation, and a second writer arriving without a single owner is how two shapes
@@ -259,6 +273,9 @@ def save_draft(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path
         **body,
         "fields": {name: list(fields[name]) for name in body["fields"]},
     }
+    if renders is not None:
+        fix = "nothing was saved; send a count of at least one and its seeds"
+        updated["renders"] = renders_of(path, {"renders": renders}, fix)
     write(path, DRAFT_FILE, updated)
     return path
 
@@ -368,6 +385,12 @@ def approve(
     remedy = _recopy(run, flow, draft)
     for key, shape in (("sheet", int), ("producer", dict), ("vocabulary", dict)):
         require(draft, body, key, shape, remedy)
+    renders = renders_of(
+        draft,
+        body,
+        f"correct `renders` in {draft}, then run "
+        f"`{stage_command(run, 'approve', flow)}` again",
+    )
     sheet_version, producer = body["sheet"], body["producer"]
     sheet_path = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body: ReviewApproved = {
@@ -386,6 +409,10 @@ def approve(
         approved_body["schema_document"] = body["schema_document"]
     if "field_map" in body:
         approved_body["field_map"] = body["field_map"]
+    # Written only where the draft states it, so an older draft's approval is
+    # byte for byte what it always was.
+    if "renders" in body:
+        approved_body["renders"] = renders
 
     path = directory / artifact_name(version, APPROVED)
     if path.exists():

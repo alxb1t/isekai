@@ -41,8 +41,10 @@ from isekai.foundation.artifacts import (
     RENDER_FILE,
     Failure,
     Prompt,
+    Renders,
     Runtime,
     read,
+    renders_of,
     require,
     write,
 )
@@ -129,6 +131,22 @@ def seeds_for(
     wanted = 1 if count is None else count
     shortfall = max(wanted - len(already), 0)
     return draw_seeds(shortfall, rng, already)
+
+
+def approved_seeds(
+    renders: Renders, rng: random.Random, already: Sequence[int] = ()
+) -> list[int]:
+    """Return what an approval still lacks: its listed seeds first, then drawn ones.
+
+    A listed seed renders as it is; only the rest of the count is drawn. Nothing
+    renders once `already` reaches the count.
+    e.g. count 3, seeds [1], already [] -> [1, <drawn>, <drawn>]
+    """
+    room = max(renders["count"] - len(already), 0)
+    done = set(already)
+    listed = [seed for seed in dict.fromkeys(renders["seeds"]) if seed not in done]
+    listed = listed[:room]
+    return listed + draw_seeds(room - len(listed), rng, [*already, *listed])
 
 
 def _unapproved(run: Run, flows: Sequence[str]) -> str:
@@ -523,16 +541,24 @@ def render(
     most -- and the decision is a directory listing, the same rule every other
     stage is held to.
 
-    `image` is the reference the render session booted, or None for an endpoint
-    outside one, which the sidecar declares unpinned. `runtime` is called only
-    when a seed will render, so a complete batch reads no report. `seeds_from`
-    names the flow `seeds` were taken from, and the sidecar records it.
+    With neither `count` nor `seeds`, the approval says what renders: its
+    `renders` block, read by `approved_seeds`. `image` is the reference the
+    render session booted, or None for an endpoint outside one, which the sidecar
+    declares unpinned. `runtime` is called only when a seed will render, so a
+    complete batch reads no report. `seeds_from` names the flow `seeds` were
+    taken from, and the sidecar records it.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
     directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
     already = rendered_seeds(directory, flow.output_suffix)
-    wanted = seeds_for(count, seeds, rng or random.Random(), already)
+    source = rng or random.Random()
+    if count is None and seeds is None:
+        remedy = f"restore it in {approval} by hand"
+        body = read(approval, APPROVED_FILE, remedy=remedy)
+        wanted = approved_seeds(renders_of(approval, body, remedy), source, already)
+    else:
+        wanted = seeds_for(count, seeds, source, already)
     if not wanted:
         return []
 

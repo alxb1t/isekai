@@ -9,6 +9,7 @@ import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
 import PhotoOverlay from '../components/PhotoOverlay.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import RendersBlock from '../components/RendersBlock.vue'
 import SheetForm from '../components/SheetForm.vue'
 import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
@@ -494,6 +495,12 @@ watch(current, (id) => {
           />
         </template>
         <template #footer>
+          <RendersBlock
+            v-if="!sheet.loading.value"
+            :renders="sheet.renders.value"
+            :readonly="sheet.readonly.value"
+            @change="sheet.setRenders"
+          />
           <ApproveBar
             :approved="sheet.readonly.value"
             :at="clock(approval.at.value)"

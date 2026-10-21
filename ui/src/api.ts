@@ -13,6 +13,7 @@ import type {
   InputDetail,
   JobSlot,
   LibraryInfo,
+  Renders,
   TagMatches,
 } from './types'
 
@@ -107,9 +108,10 @@ export function inputDetail(place: Place): Promise<InputDetail> {
 export function saveDraft(
   place: Place,
   fields: Record<string, string[]>,
+  renders: Renders,
   saved: number | null,
 ): Promise<{ draft: string; saved: number; budget: Budget }> {
-  return send(`${at(place)}/draft`, 'PUT', { fields, saved }, { keepalive: true })
+  return send(`${at(place)}/draft`, 'PUT', { fields, renders, saved }, { keepalive: true })
 }
 
 /* `saved` is the precondition the draft's `PUT` states, so the page approves
