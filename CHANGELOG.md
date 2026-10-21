@@ -28,6 +28,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   image beside its sheet; thumbnails are made once into the library's `.cache/` (0063 D9).
 - `CLAUDE.md`'s cost rule, D26 and D36 follow the quote: a session's limit and price, at most `gpunit.toml`'s
   `ceiling` and `max_hourly`; the README and data flow describe rendering from the app (0063 D10).
+- Proved on a pod: two images rendered from the app inside a 20-minute limit, each recording its duration, and
+  no pod or volume left after (0063 D11).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

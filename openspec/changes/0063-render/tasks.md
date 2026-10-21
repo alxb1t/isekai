@@ -14,7 +14,7 @@ task names.
 - [x] 6 — The render UI
 - [x] 7 — The Renders view
 - [x] 8 — The docs
-- [ ] 9 — ⚠️ **HUMAN · METERED** — two images rendered from the UI
+- [x] 9 — ⚠️ **HUMAN · METERED** — two images rendered from the UI
 
 ## 1 — The count and seeds
 
@@ -76,9 +76,9 @@ task names.
 
 ## 9 — ⚠️ HUMAN · METERED — two images rendered from the UI
 
-- [ ] 9.1 Start the surface: `uv run --env-file .env python -m isekai ui`, open `http://127.0.0.1:8517/`, and in a batch from `ls ~/isekai` approve two sheets with count 1.
+- [x] 9.1 Start the surface: `uv run --env-file .env python -m isekai ui`, open `http://127.0.0.1:8517/`, and in a batch from `ls ~/isekai` approve two sheets with count 1.
   Verify: `ls ~/isekai/<the batch>/runs/*/*/review/*.approved.json` lists at least two files.
-- [ ] 9.2 Press Render on that batch's hub; read the quote; confirm only on the operator's go.
+- [x] 9.2 Press Render on that batch's hub; read the quote; confirm only on the operator's go.
   Verify: `grep -c 'session limit' ~/isekai/<the batch>/log.txt` prints a number of at least `1`, and the session view ends on *Nothing is billing.*
-- [ ] 9.3 Confirm both images and their durations on disk, and that nothing is left on RunPod.
+- [x] 9.3 Confirm both images and their durations on disk, and that nothing is left on RunPod.
   Verify: `grep -l '"duration"' ~/isekai/<the batch>/runs/*/*/outputs/*/*.render.json` lists two files, and the RunPod MCP's `list-pods` and `list-network-volumes` show no `gpunit-isekai` pod and no `gpunit-isekai` volume.
