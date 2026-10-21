@@ -2,8 +2,7 @@
 
 **The design the UI is built to**: rules, tokens, the shell, routes, the journeys, the states, keys and live state,
 and which part each version of the UI arc builds — import and assign, render, revise. Drawn in Claude Design and
-checked against the repo at `45babd9`. This change builds the groundwork row of [§10](#10--which-version-builds-what),
-less the event stream, and moves this file to `ui/design/spec.md`.
+checked against the repo at `45babd9`. [§10](#10--which-version-builds-what) says which version builds what.
 
 Vue 3 single-file components, plain CSS, no component library — the stack `ui/` already uses.
 
@@ -419,7 +418,7 @@ endings once, for both surfaces. The key is `RUNPOD_API_KEY` in `.env` (`.env.ex
 
 | version | builds |
 |---|---|
-| **ui groundwork** | the shell — AppBar, JobStrip, BillingBanner's slot; tokens; routes with the batch (§4); `isekai ui` with no arguments over `ISEKAI_LIBRARY`; Home and the library (J7·1, Home's states); the hub grid as a listing, focus, keys (§7), the cheatsheet; Review inside the shell with its queue; SSE `/events` with the snapshot; vitest and Playwright, the fakes behind `ISEKAI_WIRING=fake` |
-| **run flow** | New batch and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot |
+| **ui groundwork** | the shell — AppBar, JobStrip, BillingBanner's slot; tokens; routes with the batch (§4); `isekai ui` with no arguments over `ISEKAI_LIBRARY`; Home and the library (J7·1, Home's states); the hub grid as a listing, focus, keys (§7), the cheatsheet; Review inside the shell with its queue; vitest and Playwright, the fakes behind `ISEKAI_WIRING=<module>:<factory>` |
+| **run flow** | New batch and Add sources (J1, J7) — the upload, staging, `isekai import` and conversion; `isekai assign`; ticking, multi-select, the PrepareBar and Prepare as a job (J2, J8a); `--progress json` on the stage verbs; the job slot; SSE `/events` with the snapshot |
 | **render** | the Render dialog, the session, done (J4); ④ editable, Count and Seeds through approve; `render <runs>` rendering what is short; the scaled limit and recorded durations; Renders, the large view; the billing alerts and the volume item (J8b, J8c); `--progress json` on `render` |
-| **revise** | `isekai revise`, the confirm and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6); the `run-flows` step |
+| **revise** | `isekai revise`, the confirm and its refusal; Review of a revision (J5·4–J5·6); `review --discard`; compare (J5·8, J5·9); re-roll (J6) |

@@ -43,7 +43,7 @@
   src: url('./assets/fonts/inter-latin-700-normal.woff2') format('woff2');
 }
 
-/* Nocturne — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
+/* Nocturne — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here. */
 
 :root {
   --color-bg: #161826;
@@ -135,8 +135,7 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
 
 /* ══════════════════════════════════════════════════════════════════════════
    Components — built with the tokens above. Plain CSS
-   on plain HTML: no JavaScript, no build step. Each class is documented in
-   readme.md and demonstrated in foundations/ and components/.
+   on plain HTML: no JavaScript, no build step.
    ══════════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }

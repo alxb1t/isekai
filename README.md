@@ -377,8 +377,8 @@ isekai/
 │   └── caption.briefing.md    # the standing instructions the photograph is read under
 ├── flows/control-anime-wai/   # summon's files with the face dials at 0, held equal by a test
 ├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
-│   ├── src/                   # the app; styles.css is a copy of design/, Inter vendored beside it
-│   └── design/                # the imported design handoff — read-only, never edited
+│   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
+│   └── design/                # spec.md, the design the app is built to
 ├── gpunit.toml                # the render session's GPU: the pinned image, cards, floors, ceiling, volume
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
