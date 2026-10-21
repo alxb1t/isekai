@@ -236,6 +236,11 @@ class Run:
     path: Path
 
     @property
+    def digest(self) -> str:
+        """Return the digest prefix the identifier begins with, the run's short name."""
+        return self.id[:ID_DIGEST_CHARS]
+
+    @property
     def frame_path(self) -> Path:
         """Return the path of the run's frame."""
         return self.path / FRAME_NAME

@@ -1,263 +1,25 @@
-"""The review surface's startup: what it refuses, and what it never writes down.
+"""The app's server-side parts that need no server: the bundle and the invariant.
 
-Every test here is stdlib-only and in the main suite, because `batch.py` imports
-no web framework -- which is the whole reason the startup refusal order lives
-there rather than in `app.py`. Nothing in this file needs a web framework; the
-endpoints that do are in `tests/test_ui_api.py`.
+Nothing in this file needs a web framework; the endpoints are in
+`tests/test_ui_api.py`, and the library is in `tests/test_ui_library.py`.
 """
 
 import importlib.util
-import io
 import os
-import random
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
 
-from isekai.foundation.flow import Schema
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import REVIEW, Run, open_run
 from isekai.interface.ui import bundle
-from isekai.interface.ui.batch import establish
-from isekai.interface.wiring import Wiring
-from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.review import approve, review
-from isekai.shared.vocabulary import Vocabulary
-from tests.conftest import snapshot
-from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, caption, sheet
-
-FLOW = "summon-anime-wai"
-
-# The bundle seam. `establish` takes it as an argument rather than reaching for
-# `bundle.ensure_built`, so the suite never runs npm and never needs node.
-BUNDLE = Path("ui/dist")
-
-
-def _bundle() -> Path:
-    """Stand in for a built browser bundle, without a toolchain in sight."""
-    return BUNDLE
-
-
-@pytest.fixture
-def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
-    """Return a ③-only wiring: no reader, no tagger, no transport."""
-    return Wiring(
-        reader=None,
-        tagger=None,
-        hosted_tagger=None,
-        client=None,
-        vocabulary=lambda: vocabulary,
-        field_map=lambda _: FIELD_MAP,
-        runs_root=tmp_path / "runs",
-        rng=random.Random(0),
-        out=io.StringIO(),
-        err=io.StringIO(),
-    )
-
 
 # Every file in `ui/` that is neither `src/` nor an ignored root. `_is_fresh`
 # watches them by exclusion rather than by name, so `tsconfig.json` -- which
 # `vite` reads and which no allowlist here ever named -- is in this list.
 _CONFIGS = ("vite.config.ts", "tsconfig.json", "package.json", "package-lock.json")
-
-# A run id is a digest of the photograph, so two inputs need two photographs --
-# identical bytes would collapse a "batch of three" into one run directory and
-# quietly make every multi-input assertion here vacuous.
-_SIZES = {"ada": (1200, 900), "grace": (1100, 900), "ida": (1000, 900)}
-
-
-def _input(
-    wired: Wiring,
-    tmp_path: Path,
-    name: str,
-    schema: Schema,
-    vocabulary: Vocabulary,
-    *,
-    with_sheet: bool = True,
-) -> Run:
-    """Open a run carrying a caption and, unless told otherwise, a filled sheet."""
-    photo = tmp_path / f"{name}.jpg"
-    photo.write_bytes(jpeg_bytes(*_SIZES[name]))
-    made = open_run(photo, wired.runs_root)
-    caption(made, FakeReader(prose="Dark brown hair, brown eyes."))
-    if with_sheet:
-        sheet(
-            made,
-            schema,
-            vocabulary,
-        )
-    return made
-
-
-# --- the refusal order, all of it before a port is bound ----------------------
-
-
-@pytest.mark.spec("ui:startup:untracked-flow-is-refused")
-def test_a_flow_this_build_does_not_track_is_refused_naming_the_ones_it_does(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    made = _input(wired, tmp_path, "ada", schema, vocabulary)
-
-    with pytest.raises(Refusal) as refused:
-        establish(wired, "summon-v9", [made.id], bundle=_bundle)
-
-    assert FLOW in str(refused.value)
-
-
-@pytest.mark.spec("ui:startup:input-without-a-sheet-is-refused")
-def test_an_input_with_no_sheet_is_refused_by_name_and_told_what_to_run(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    bare = _input(wired, tmp_path, "ada", schema, vocabulary, with_sheet=False)
-
-    with pytest.raises(Refusal) as refused:
-        establish(wired, FLOW, [bare.id], bundle=_bundle)
-
-    message = str(refused.value)
-    assert bare.id in message
-    # The remedy has to be a command this build can actually run -- and
-    # `review.py`'s matters most: startup calls `review()` once per input, so
-    # this is the surface's likeliest message.
-    assert f"python -m isekai sheet --flow {FLOW}" in message
-
-
-@pytest.mark.spec("ui:startup:refusals-are-reported-together")
-def test_every_input_that_cannot_be_prepared_is_named_in_one_refusal(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    first = _input(wired, tmp_path, "ada", schema, vocabulary, with_sheet=False)
-    ready = _input(wired, tmp_path, "grace", schema, vocabulary)
-    second = _input(wired, tmp_path, "ida", schema, vocabulary, with_sheet=False)
-
-    with pytest.raises(Refusal) as refused:
-        establish(wired, FLOW, [first.id, ready.id, second.id], bundle=_bundle)
-
-    message = str(refused.value)
-    # Ten photographs with two missing sheets must name both and start nothing,
-    # rather than making the operator find them one restart at a time.
-    assert first.id in message
-    assert second.id in message
-
-
-@pytest.mark.spec("ui:startup:refusals-are-reported-together")
-def test_every_unreadable_photograph_is_named_rather_than_killing_the_batch(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    """Two of them, because the scenario asserts *every* one is named.
-
-    `image_dimensions()` reports an unreadable header with `sys.exit()`, a
-    `BaseException` that `across` -- which catches `Refusal` -- walks straight
-    past. With one bad photograph the batch would die naming nothing; with two,
-    the first would kill it before the second was ever looked at.
-    """
-    first = _input(wired, tmp_path, "ada", schema, vocabulary)
-    ready = _input(wired, tmp_path, "grace", schema, vocabulary)
-    second = _input(wired, tmp_path, "ida", schema, vocabulary)
-    # A run admits a photograph on its magic bytes alone, so a truncated JPEG
-    # opens a run cleanly and only the header read ever finds it.
-    for broken in (first, second):
-        broken.photo.write_bytes(b"\xff\xd8\xff")
-
-    with pytest.raises(Refusal) as refused:
-        establish(wired, FLOW, [first.id, ready.id, second.id], bundle=_bundle)
-
-    message = str(refused.value)
-    assert first.id in message
-    assert second.id in message
-    assert "re-export it" in message
-
-
-@pytest.mark.spec("ui:startup:refusals-are-reported-together")
-def test_an_identifier_that_is_not_a_run_is_refused_without_creating_one(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    _input(wired, tmp_path, "ada", schema, vocabulary)
-    before = snapshot(wired.runs_root)
-
-    with pytest.raises(Refusal) as refused:
-        establish(wired, FLOW, ["not-a-run-at-all"], bundle=_bundle)
-
-    assert "not-a-run-at-all" in str(refused.value)
-    assert snapshot(wired.runs_root) == before
-
-
-@pytest.mark.spec("ui:startup:a-draft-is-opened-for-each-input")
-def test_starting_the_surface_takes_a_draft_and_starting_again_takes_no_second(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    made = _input(wired, tmp_path, "ada", schema, vocabulary)
-    directory = made.directory(FLOW, REVIEW)
-    assert not directory.exists()
-
-    batch = establish(wired, FLOW, [made.id], bundle=_bundle)
-
-    assert (directory / "001.draft.json").is_file()
-    assert batch.draft_path(batch.inputs[0]) == directory / "001.draft.json"
-
-    establish(wired, FLOW, [made.id], bundle=_bundle)
-
-    assert [path.name for path in sorted(directory.iterdir())] == ["001.draft.json"]
-
-
-# --- the batch is the argument list, and it is never written down -------------
-
-
-@pytest.mark.spec("ui:batch:no-batch-artifact-is-written")
-def test_establishing_a_batch_writes_nothing_that_describes_the_batch(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    first = _input(wired, tmp_path, "ada", schema, vocabulary)
-    second = _input(wired, tmp_path, "grace", schema, vocabulary)
-
-    establish(wired, FLOW, [first.id, second.id], bundle=_bundle)
-
-    written = set(snapshot(wired.runs_root))
-    # The only thing startup writes is a draft per input, inside that input's own
-    # run. Nothing anywhere says the two belong together.
-    assert {name for name in written if "draft" in name} == {
-        f"{first.id}/{FLOW}/{REVIEW}/001.draft.json",
-        f"{second.id}/{FLOW}/{REVIEW}/001.draft.json",
-    }
-    assert not any(
-        "batch" in name or "session" in name or "surface" in name for name in written
-    )
-
-
-@pytest.mark.spec("ui:batch:approved-count-comes-from-disk")
-def test_the_approved_count_follows_the_directory_not_the_batch_in_memory(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    first = _input(wired, tmp_path, "ada", schema, vocabulary)
-    second = _input(wired, tmp_path, "grace", schema, vocabulary)
-    batch = establish(wired, FLOW, [first.id, second.id], bundle=_bundle)
-
-    assert batch.approved_count == 0
-
-    # Approved by the verb, beside the running surface. A cached count would go
-    # stale here; a directory cannot.
-    approve(first, FLOW, schema, vocabulary)
-
-    assert batch.approved_count == 1
-    assert batch.approved_path(batch.find(first.id)) is not None
-    assert batch.approved_path(batch.find(second.id)) is None
-
-
-@pytest.mark.spec("ui:batch:no-batch-artifact-is-written")
-def test_an_input_outside_the_batch_is_refused_by_name(
-    wired: Wiring, tmp_path: Path, schema: Schema, vocabulary: Vocabulary
-) -> None:
-    held = _input(wired, tmp_path, "ada", schema, vocabulary)
-    outside = _input(wired, tmp_path, "grace", schema, vocabulary)
-    review(outside, FLOW)
-    batch = establish(wired, FLOW, [held.id], bundle=_bundle)
-
-    with pytest.raises(Refusal) as refused:
-        batch.find(outside.id)
-
-    assert held.id in str(refused.value)
-
 
 # --- the invariant that stands in for a structural guarantee ------------------
 
@@ -304,15 +66,21 @@ def test_a_missing_bundle_is_built_before_the_surface_serves(
     (source / "node_modules").mkdir(parents=True)
     ran: list[list[str]] = []
 
-    def _build(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    class _Build:
         """Stand in for `npm run build`, writing what vite would write."""
-        ran.append(argv)
-        (source / "dist" / "assets").mkdir(parents=True)
-        (source / "dist" / "index.html").write_text("<!doctype html>")
-        return subprocess.CompletedProcess(argv, 0, "", "")
+
+        returncode = 0
+
+        def __init__(self, argv: list[str], **kwargs: object) -> None:
+            ran.append(argv)
+            (source / "dist" / "assets").mkdir(parents=True)
+            (source / "dist" / "index.html").write_text("<!doctype html>")
+
+        def communicate(self, timeout: float | None = None) -> tuple[str, str]:
+            return "", ""
 
     monkeypatch.setattr(bundle.shutil, "which", lambda _: "/usr/local/bin/npm")
-    monkeypatch.setattr(bundle.subprocess, "run", _build)
+    monkeypatch.setattr(bundle.subprocess, "Popen", _Build)
 
     built = bundle.ensure_built(source)
 
@@ -466,31 +234,65 @@ def test_a_fetched_dependency_tree_is_not_source(tmp_path: Path) -> None:
 def test_a_build_that_does_not_finish_is_stopped_and_named(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The ceiling is applied, not merely declared.
+    """The ceiling is applied, and it and a Ctrl-C each stop the whole group.
 
-    Asserting `BUILD_TIMEOUT > 0` restates the constant and stays green if the
-    `timeout=` kwarg is dropped from the call, which is the only way this can
-    regress. `npm run build` can reach the network resolving a missing
-    dependency, and an `isekai ui` that hangs with no port bound and no output
-    is indistinguishable from one that died.
+    A real stand-in for `npm`, which starts a child the way `npm` starts `vite`:
+    killing the parent alone would leave that child building unseen.
     """
     source = tmp_path / "ui"
     (source / "node_modules").mkdir(parents=True)
-    passed: dict[str, object] = {}
-
-    def never_finishes(*args: object, **kwargs: object) -> object:
-        passed.update(kwargs)
-        raise subprocess.TimeoutExpired(cmd="npm run build", timeout=1)
-
-    monkeypatch.setattr(bundle.shutil, "which", lambda _: "/usr/bin/npm")
-    monkeypatch.setattr(bundle.subprocess, "run", never_finishes)
+    child = tmp_path / "child.pid"
+    npm = tmp_path / "npm"
+    script = f"sleep 60 >/dev/null 2>&1 &\necho $! > {child}\nwait\n"
+    npm.write_text(f"#!/bin/sh\n{script}")
+    npm.chmod(0o755)
+    monkeypatch.setattr(bundle, "BINARY", str(npm))
+    # Long enough for the stand-in to start its child on a loaded machine.
+    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 3)
 
     with pytest.raises(Refusal) as refused:
         bundle.ensure_built(source)
 
-    assert passed["timeout"] == bundle.BUILD_TIMEOUT
-    assert f"{bundle.BUILD_TIMEOUT} seconds" in str(refused.value)
+    assert "3 seconds" in str(refused.value)
     assert "by hand" in str(refused.value)
+    assert _stops(int(child.read_text()))
+
+    # A Ctrl-C while it builds stops the group too: in its own session, the
+    # build never receives the terminal's SIGINT.
+    child.unlink()
+    monkeypatch.setattr(bundle, "BUILD_TIMEOUT", 60)
+
+    def interrupt(signum: int, frame: object) -> None:
+        if not child.is_file() or not child.read_text().strip():
+            signal.setitimer(signal.ITIMER_REAL, 0.05)
+            return
+        raise KeyboardInterrupt
+
+    previous = signal.signal(signal.SIGALRM, interrupt)
+    try:
+        signal.setitimer(signal.ITIMER_REAL, 0.05)
+        with pytest.raises(KeyboardInterrupt):
+            bundle.ensure_built(source)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous)
+    assert _stops(int(child.read_text()))
+
+
+def _stops(pid: int) -> bool:
+    """Return whether process `pid` is gone, or a zombie, within a few seconds."""
+    for _ in range(50):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        state = subprocess.run(
+            ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
+        ).stdout.strip()
+        if state.startswith("Z") or not state:
+            return True
+        time.sleep(0.1)
+    return False
 
 
 @pytest.mark.spec_exempt("structural: when the on-demand build actually fires")

@@ -1,7 +1,7 @@
 # The gate: this recipe is its one declaration. CI and the MinionsFactory skills
 # run `make gate`; `make -n gate` prints what it runs.
 
-.PHONY: gate drift derive
+.PHONY: gate browsers drift derive
 
 gate:
 # environment, from the tracked lock; not a quality axis, hence first
@@ -15,8 +15,16 @@ gate:
 # strict types, in the browser: `vue-tsc --noEmit` over `ui/`, wrapped so a
 # missing `ui/node_modules/` refuses by name rather than exiting 127
 	uv run python -m tools.typecheck_ui
+# the browser's unit tests: `vitest run` over `ui/src/**/*.test.ts`, wrapped
+# the same way
+	uv run python -m tools.test_ui
 # tests
 	uv run pytest
+
+# Fetch the Chromium the browser tests in `tests/e2e/` drive. Not part of the
+# gate, because it downloads a browser; CI runs it before the gate.
+browsers:
+	uv run playwright install chromium
 
 # Re-derive every fetched file and fail on a diff: a pinned source moved. Not part
 # of the gate, because the manifests fetch from the network; `drift.yml` runs it

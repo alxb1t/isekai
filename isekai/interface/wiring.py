@@ -16,6 +16,7 @@ Stdlib only, and on `python -m isekai`'s import graph.
 
 import argparse
 import dataclasses
+import os
 import random
 import sys
 from collections.abc import Callable
@@ -270,8 +271,14 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
     is I/O and the stages are the part that must stay testable without any. A
     schema is not composed here at all: it sits inside the flow that uses it, so a
     loaded `Flow` already answers for its own.
+
+    `ISEKAI_WIRING`, set, names the factory that builds the wiring instead, after
+    the same guard (D41).
     """
     _check_run_root(runs)
+    named = os.environ.get("ISEKAI_WIRING")
+    if named:
+        return _named_wiring(named, runs)
     return Wiring(
         reader=reader_for,
         tagger=tagger_for,
@@ -281,6 +288,24 @@ def wiring_from(*, runs: Path, server: str | None = None) -> Wiring:
         field_map=load_field_map,
         runs_root=runs,
     )
+
+
+def _named_wiring(named: str, runs: Path) -> Wiring:
+    """Return what the factory `named` builds over `runs`.
+
+    e.g. "tests.e2e.wiring:fake" -> `fake(runs=runs)`. The import happens here and
+    only when the variable is set, so production never names `tests/` (D41).
+    """
+    import importlib
+
+    module, colon, factory = named.partition(":")
+    if not colon:
+        raise Refusal(
+            f"ISEKAI_WIRING={named} names no factory; give it as "
+            "<module>:<factory>, or unset it to use the real wiring"
+        )
+    built: Wiring = getattr(importlib.import_module(module), factory)(runs=runs)
+    return built
 
 
 def wiring(args: argparse.Namespace) -> Wiring:

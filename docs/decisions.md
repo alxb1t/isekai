@@ -73,13 +73,15 @@ field. No model decides a sheet.**
 - **Why:** deleting it would make stage ③ a single point of failure for the whole pipeline.
 - **Made by:** `0018`.
 
-### D4 · The review UI is stage ③ alone
+### D4 · The UI runs no stage
 
-**No upload, no captioning, no generate button. Nothing in the browser spends money.**
+**The browser writes nothing a stage does not already write in review: a draft, its edits and an
+approval, each through `review`'s own functions. No upload, no captioning, no render button. Nothing in
+the browser spends money.**
 
 - **Why:** review is where a person decides quality. A button that spends would put the paid stage
-  behind a web page.
-- **Made by:** `0018`.
+  behind a web page, and a write the review stage does not own would give a run file a second author.
+- **Made by:** `0018`, `0061`.
 
 ## Models
 
@@ -256,11 +258,12 @@ again resumes the same run.**
 ### D18 · Runs stay out of what git tracks
 
 **Everything a run produces lives in its runs root — `.data/runs` by default, which git ignores. A runs
-root inside the repository must sit under `.data/`; one outside it may sit anywhere.**
+root inside the repository must sit under `.data/`; one outside it may sit anywhere. The library
+`isekai ui` serves, `ISEKAI_LIBRARY`, is held to the same rule, and so is each batch's `runs/` in it.**
 
 - **Why:** a run holds a copy of the photograph, so a person's likeness is in it by construction.
   Anywhere else inside the repository, those files would be one `git add` from being published.
-- **Made by:** `0014`, `0018`.
+- **Made by:** `0014`, `0018`, `0061`.
 
 ### D32 · A run file's version moves only when an old file could be misread
 
@@ -273,15 +276,27 @@ reader after it.
   render's `sheet` replaced `sheet_version` rather than redefining it.
 - **Made by:** `0033`.
 
+### D40 · A batch is a library folder holding `sources/`
+
+**A folder in the library is a batch when it holds `sources/`; its runs root is `runs/` beside it. No
+file records a batch, and a dot-folder is never listed. Every figure the UI shows of a batch — its
+counts, each cell's stage — is a listing read on each request.**
+
+- **Why:** layout alone decides, so no marker file can disagree with the disk, and a stage is a
+  directory listing already. The operator never types a path: the batch is in the URL.
+- **Made by:** `0061`.
+
 ## Code and environment
 
 ### D19 · One place builds the components
 
-**`wiring.py` builds the components, and the CLI and the review UI both use it.**
+**`wiring.py` builds the components, and the CLI and the UI both use it; the UI builds one batch's
+wiring through `wiring_from` on every request inside it. `ISEKAI_WIRING` is the one way past the real
+components, and it still passes the runs-root check ([D41](#d41--the-test-seam-is-a-factory-named-in-the-environment)).**
 
 - **Why:** the runs-root check ([D18](#d18--runs-stay-out-of-what-git-tracks)) and the choice of
   reader, tagger and transport happen in one place, so neither front end can skip them.
-- **Made by:** `0015`, `0018`.
+- **Made by:** `0015`, `0018`, `0061`.
 
 ### D20 · The entry point loads no third-party package
 
@@ -318,12 +333,14 @@ package to the runtime list, and one it ever needs goes into an `[eval]` extra, 
 
 ### D24 · The review UI serves only this machine
 
-**The review UI serves only on the local loopback address, and checks `Host` and `Origin` on every
-request.** A request with no `Origin` header is let through — a known, low risk.
+**The UI serves only on the local loopback address, and checks `Host` and `Origin` on every request.
+A request with no `Origin` is answered only when `Sec-Fetch-Site` is `same-origin` or `none`, or absent
+as it is from a client that is not a browser.**
 
 - **Why:** the page shows personal photographs and writes approvals. Nothing off the machine, and no
-  other site open in the browser, may reach it.
-- **Made by:** `0018`, `0023`.
+  other site open in the browser, may reach it. A browser marks every request with `Sec-Fetch-Site`, so
+  an image tag on another site, which sends no `Origin`, is still refused.
+- **Made by:** `0018`, `0023`, `0061`.
 
 ### D25 · Option shortcuts match the physical key
 
@@ -332,6 +349,18 @@ request.** A request with no `Origin` header is let through — a known, low ris
 - **Why:** on macOS, Option types characters — `Option+Space` would put an invisible non-breaking space
   into a tag field — and Space also presses a focused button.
 - **Made by:** `0021`.
+
+### D41 · The test seam is a factory named in the environment
+
+**`ISEKAI_WIRING=<module>:<factory>` replaces the components `wiring_from` builds, after its runs-root
+check, and is imported then and only then. The suite's doubles stay in `tests/`; the browser tests name
+`tests.e2e.wiring:fake`.**
+
+- **Why:** the browser tests drive the real server in its own process, where no fake can be passed as
+  a parameter, and CI has no vocabulary, models or GPU. Naming the factory keeps production from
+  importing `tests/`, and the import inside the function keeps the entry point's graph unchanged
+  ([D20](#d20--the-entry-point-loads-no-third-party-package)).
+- **Made by:** `0061`.
 
 ## Infrastructure
 

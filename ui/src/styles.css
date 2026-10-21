@@ -1,6 +1,6 @@
-/* Vendored from `ui/design/design-system/styles.css`, which is read-only: a
-   design is corrected by re-running a session and replacing that folder, so the
-   app takes a copy rather than importing across the boundary.
+/* Vendored from the design system the first review surface was drawn in. The
+   imported folder is gone; this copy is the sheet, and `ui/design/spec.md` is
+   the design the app is built to.
 
    Two deltas from the imported sheet, and only two:
 
@@ -11,7 +11,8 @@
    2. The four Inter weights the sheet asks for are vendored beside this file and
       declared below. Same family, same weights, no network.
 
-   Everything after the @font-face block is the imported sheet, byte for byte. */
+   Everything after the @font-face block and before the app's tokens at the end
+   is the imported sheet, byte for byte. */
 
 @font-face {
   font-family: 'Inter';
@@ -42,7 +43,7 @@
   src: url('./assets/fonts/inter-latin-700-normal.woff2') format('woff2');
 }
 
-/* Nocturne — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here and see readme.md. */
+/* Nocturne — design-system tokens and component classes. This file is the source of truth for the system's look; retune it here. */
 
 :root {
   --color-bg: #161826;
@@ -134,8 +135,7 @@ h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-headi
 
 /* ══════════════════════════════════════════════════════════════════════════
    Components — built with the tokens above. Plain CSS
-   on plain HTML: no JavaScript, no build step. Each class is documented in
-   readme.md and demonstrated in foundations/ and components/.
+   on plain HTML: no JavaScript, no build step.
    ══════════════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -335,3 +335,29 @@ textarea.input { min-height: 90px; resize: vertical; }
 .dialog-body { font-size: 14px; opacity: 0.85; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
+/* The app's tokens, from `ui/design/spec.md` §2. The shell, Home and the hub
+   are drawn in these; the review surface keeps the sheet's above. */
+:root {
+  --ground: #161724;
+  --ground-deep: #11121c;
+  --ground-media: #0e0f17;
+  --raised: #1a1b29;
+  --raised-2: #1d1e30;
+  --line: #272939;
+  --line-soft: #22243a;
+  --line-control: #33354a;
+  --line-disabled: #2c2e42;
+  --focus: #6b6d80;
+  --ink: #e4e4ec;
+  --ink-1b: #c9cad6;
+  --ink-2: #a3a5b8;
+  --ink-3: #74768a;
+  --ink-muted: #8a8ca0;
+  --ink-disabled: #5d5f73;
+  --accent: #8d82e6;
+  --accent-dim: #5a5296;
+  --accent-ink: #b3abf4;
+  --tick-locked: #34364a;
+  --chip-line: #2f3146;
+  --placeholder: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+}

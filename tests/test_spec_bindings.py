@@ -3,6 +3,7 @@
 Each living key has a test, each `spec` marker names a key the living spec or an
 open delta holds, and each test carries exactly one of `spec` and `spec_exempt`.
 Keys are read with a regex, markers with `ast`: no marker is built at runtime.
+A vitest test under `ui/src/` binds through `spec("<key>", …)`, read with a regex.
 """
 
 import ast
@@ -17,6 +18,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 _KEY = re.compile(r"^- \*\*Key:\*\* `([^`]+)`", re.M)
 _MARKERS = ("spec", "spec_exempt")
+_VITEST_SPEC = re.compile(r"\bspec\(\s*(?:(['\"])([^'\"\n]+)\1\s*,)?")
+# A test declared past `spec` binds nothing: vitest's own `test`, `it` and their
+# modifiers, at the start of a line.
+_VITEST_BARE = re.compile(r"^\s*(?:test|it)(?:\.\w+)*\(", re.M)
 
 Marker = tuple[str, str | None]
 Test = tuple[str, str, list[Marker]]
@@ -124,6 +129,28 @@ def marked_tests(root: Path) -> list[Test]:
     ]
 
 
+def vitest_tests(root: Path) -> list[Test]:
+    """Return each vitest test under `ui/src/` with its binding, as `marked_tests` does.
+
+    e.g. `spec("a:b:c", …)` on line 7 of `ui/src/x.test.ts`
+    -> ("ui/src/x.test.ts", "line 7", [("spec", "a:b:c")]).
+    A key that is not one string literal reads as None, and so does a bare `test(`.
+    """
+    found: list[Test] = []
+    for path in sorted((root / "ui" / "src").rglob("*.test.ts")):
+        file, text = path.relative_to(root).as_posix(), path.read_text()
+
+        def line(at: int, text: str = text) -> str:
+            return f"line {text.count(chr(10), 0, at) + 1}"
+
+        found += [
+            (file, line(m.start()), [("spec", m.group(2))])
+            for m in _VITEST_SPEC.finditer(text)
+        ]
+        found += [(file, line(m.end()), []) for m in _VITEST_BARE.finditer(text)]
+    return found
+
+
 def stray(root: Path) -> list[str]:
     """Return every `spec*` marker not on a collected test's decorators, as `file:line`.
 
@@ -186,8 +213,8 @@ def required() -> set[str]:
 
 @pytest.fixture(scope="module")
 def tests() -> list[Test]:
-    """Parse the repository's tests once for the module."""
-    return marked_tests(REPO_ROOT)
+    """Parse the repository's tests, pytest's and vitest's, once for the module."""
+    return marked_tests(REPO_ROOT) + vitest_tests(REPO_ROOT)
 
 
 @pytest.mark.spec_exempt("structural: every living key has a test")
@@ -439,3 +466,32 @@ def test_a_renamed_requirement_keeps_its_keys_until_a_modified_one_re_keys_them(
         "cap:kept:kept",
         "cap:went:gone",
     }
+
+
+_VITEST = """\
+import { spec } from '../test/spec'
+
+spec('cap:kept:kept', () => {})
+
+spec("cap:gone:typo", async () => {})
+
+spec(KEY, () => {})
+
+test('bare', () => {})
+"""
+
+
+@pytest.mark.spec_exempt("structural: twin of test_every_marker_names_a_key")
+def test_a_vitest_key_with_no_living_key_is_caught(tmp_path: Path) -> None:
+    root = _tree(tmp_path)
+    (root / "ui" / "src" / "composables").mkdir(parents=True)
+    (root / "ui" / "src" / "composables" / "x.test.ts").write_text(_VITEST)
+    found = vitest_tests(root)
+    assert unknown(nameable(root), found) == [
+        "ui/src/composables/x.test.ts::line 5 -> cap:gone:typo"
+    ]
+    assert unbound({"cap:kept:kept"}, found) == []
+    assert unmarked(found) == [
+        "ui/src/composables/x.test.ts::line 7",
+        "ui/src/composables/x.test.ts::line 9",
+    ]

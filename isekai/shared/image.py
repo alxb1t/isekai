@@ -332,12 +332,12 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
     a `SystemExit` is a `BaseException`, so `across` walks straight past it and
     the remaining photographs die with it.
 
-    **One wrap, for `generate.photo_resolution` and `ui/batch.py` alike**, so the
+    **One wrap, for `generate.photo_resolution` and `ui/app.py` alike**, so the
     identical failure has one wording. It lives here rather than at either caller
     because the hazard is a property of `image_dimensions` and every future caller
     inherits it; `remedy` is a parameter because what to do about it is not --
-    the render path says *open the run again* and the review surface says *start
-    the surface again*.
+    the render path says *open the run again* and the review surface says
+    *re-export it*.
     """
     try:
         return image_dimensions(str(photo))

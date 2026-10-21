@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { inputDetail, saveDraft } from '../api'
+import type { Place } from '../api'
 import type { Budget, InputDetail } from '../types'
 
 /* Long enough that a burst of typing is one write rather than ten, short enough
@@ -27,8 +28,10 @@ interface Edit {
  * replacement is one step. It is cleared when the operator changes input,
  * because an undo that reached back into a different photograph would be a
  * surprise rather than a convenience.
+ *
+ * One instance serves one batch and one flow; `open` takes the run's digest.
  */
-export function useSheet() {
+export function useSheet(scope: Omit<Place, 'digest'>) {
   const detail = ref<InputDetail | null>(null)
   const fields = ref<Record<string, string[]>>({})
   const budget = ref<Budget | null>(null)
@@ -41,9 +44,11 @@ export function useSheet() {
 
   const done: Edit[] = []
   const undone: Edit[] = []
-  // Counted, not a flag: a second PUT can start before the first has answered,
-  // and the spinner must go when the last one lands rather than the first.
-  let inFlight = 0
+  /* One token per save, never reset: a second PUT can start before the first
+     has answered, and an input switch can land between them. `saving` is true
+     exactly while a token is held, whichever order the answers come in. */
+  const inFlight = new Set<number>()
+  let token = 0
   /* A slow earlier answer must never overwrite a newer one. Two saves can be in
      flight at once -- the debounce is what puts them there -- so the receipt of
      the first can land after the second's. The pattern is `useVocabulary`'s,
@@ -58,6 +63,9 @@ export function useSheet() {
      server had already moved past, and every autosave after it was refused with
      a banner blaming another tab that did not exist. */
   let generation = 0
+  /* An edit not yet on disk. Set by every edit, cleared when a save starts and
+     restored if it fails, so a flush with nothing to send sends nothing. */
+  let dirty = false
   let timer: ReturnType<typeof setTimeout> | undefined
   let current = ''
 
@@ -65,12 +73,13 @@ export function useSheet() {
 
   async function open(id: string): Promise<void> {
     current = id
+    dirty = false
     loading.value = true
     done.length = 0
     undone.length = 0
     let body: InputDetail
     try {
-      body = await inputDetail(id)
+      body = await inputDetail({ ...scope, digest: id })
     } catch (reason) {
       if (current !== id) return
       // A read that fails has to land somewhere, and the header line is where
@@ -89,8 +98,6 @@ export function useSheet() {
     saved.value = body.saved
     refusal.value = null
     loading.value = false
-    inFlight = 0
-    saving.value = false
   }
 
   /* Returns the write it started, so `approve()` can wait for it. A `flush()`
@@ -104,18 +111,22 @@ export function useSheet() {
      approved input and a stale `saved` both answer 409. A caller that waits
      without reading the answer waits for nothing. `false` is also what a
      read-only sheet answers -- nothing was written, so nothing may be built
-     from it. */
+     from it. A sheet with no edit pending answers `true` and sends nothing:
+     the disk already holds it. */
   async function flush(): Promise<boolean> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (detail.value === null || detail.value.readonly) return false
+    if (!dirty) return true
+    dirty = false
     const id = current
     const payload = { ...fields.value }
     const asked = (generation += 1)
-    inFlight += 1
+    const mine = (token += 1)
+    inFlight.add(mine)
     saving.value = true
     try {
-      const receipt = await saveDraft(id, payload, saved.value)
+      const receipt = await saveDraft({ ...scope, digest: id }, payload, saved.value)
       if (current === id) {
         // The server's clock, never the browser's: a receipt the client wrote
         // for itself is a claim about a save rather than a record of one. Taken
@@ -128,11 +139,12 @@ export function useSheet() {
       }
       return true
     } catch (reason) {
+      if (current === id) dirty = true
       if (current === id && asked === generation) refusal.value = (reason as Error).message
       return false
     } finally {
-      inFlight -= 1
-      if (inFlight === 0) saving.value = false
+      inFlight.delete(mine)
+      saving.value = inFlight.size > 0
     }
   }
 
@@ -143,6 +155,7 @@ export function useSheet() {
 
   function apply(edit: Edit): void {
     fields.value = { ...fields.value, [edit.field]: edit.after }
+    dirty = true
     schedule()
   }
 

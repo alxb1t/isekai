@@ -1,7 +1,6 @@
-/* This application's own layout, kept apart from the vendored token sheet so the
-   copy of `ui/design/design-system/styles.css` stays a copy. Every colour,
-   space, radius and shadow below comes from that sheet's variables -- nothing
-   here invents a hex. */
+/* This application's own layout, kept apart from the token sheet in
+   `styles.css`. Every colour, space, radius and shadow below comes from that
+   sheet's variables -- nothing here invents a hex. */
 
 :root {
   /* Numbers, field keys, file paths, keystrokes and post counts. Load-bearing
@@ -34,10 +33,204 @@ body {
 
 /* — the shell — */
 
-.shell {
+/* The app's frame: the AppBar, the BillingBanner's slot, the route's screen and
+   the JobStrip, top to bottom (design spec §3). */
+.app {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.app__screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.appbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 40px;
+  flex: none;
+  padding: 0 16px;
+  background: var(--ground-deep);
+  border-bottom: 1px solid var(--line);
+}
+
+.appbar__mark {
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.appbar__place {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.appbar__tab {
+  font-size: 13px;
+  color: var(--ink-2);
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.appbar__tab--active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.appbar__key {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-left: 6px;
+}
+
+.jobstrip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  flex: none;
+  padding: 0 16px;
+  background: var(--ground-deep);
+  border-top: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.jobstrip__dot {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--ink-3);
+  border-radius: 50%;
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* A refusal: the accent square, the reason in ink, the fix in ink-2 (§1). */
+.refusal {
+  display: flex;
+  gap: 10px;
+  padding: 48px;
+}
+
+.refusal__mark {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  background: var(--accent);
+}
+
+.refusal__reason {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.refusal__fix {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.refusal__fix a {
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* — Home — */
+
+.home {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+.home__empty {
+  max-width: 560px;
+  color: var(--ink-2);
+}
+
+.library {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.library__row {
+  display: grid;
+  grid-template-columns: 220px 120px 1fr 200px;
+  gap: 16px;
+  align-items: start;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+
+.library__row:focus {
+  outline: none;
+  background: var(--raised-2);
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+
+.library__row--inert {
+  cursor: default;
+  background: var(--placeholder);
+}
+
+.library__name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.library__meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.library__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.library__chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--chip-line);
+  border-radius: 4px;
+  color: var(--ink-1b);
+}
+
+.library__when {
+  text-align: right;
+}
+
+.library__reason {
+  color: var(--ink-muted);
+  font-size: 12px;
 }
 
 .work {
@@ -212,18 +405,6 @@ body {
   border-top: 1px solid var(--color-neutral-900);
   font-size: 10.5px;
   color: var(--color-neutral-500);
-  background: none;
-  border-left: 0;
-  border-right: 0;
-  border-bottom: 0;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  width: 100%;
-}
-
-.rail__run:hover {
-  color: var(--color-accent-300);
 }
 
 /* — source column — */
@@ -486,6 +667,23 @@ body {
   border-top: 1px solid var(--color-neutral-900);
 }
 
+.approve-bar {
+  flex-wrap: wrap;
+}
+
+.approve-bar__refusal {
+  display: flex;
+  gap: 8px;
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.approve-bar__refusal .refusal__mark {
+  margin-top: 4px;
+}
+
 .approve-bar__note {
   font-size: 11px;
   color: var(--color-neutral-500);
@@ -694,51 +892,124 @@ body {
   color: var(--color-neutral-500);
 }
 
-/* — run manifest — */
+/* — the hub — */
 
-.manifest {
+.hub {
   flex: 1;
-  min-width: 0;
-  padding: var(--space-8) var(--space-8) var(--space-8) 34px;
   overflow-y: auto;
+  padding: 16px 24px;
 }
 
-.manifest__title {
-  font-size: 25px;
-  margin: 0 0 var(--space-2);
-}
-
-.manifest__where {
-  font-size: 12px;
-  color: var(--color-accent-300);
-  margin-bottom: var(--space-8);
-}
-
-.manifest__table {
-  max-width: 640px;
-}
-
-.manifest__right {
-  text-align: right;
-}
-
-.manifest__over {
-  color: var(--color-accent-300);
-}
-
-.manifest__note {
-  margin-top: var(--space-8);
-  font-size: 14px;
-}
-
-.manifest__aside {
-  font-size: 12px;
-  color: var(--color-neutral-500);
-}
-
-.manifest__foot {
+.hub__head {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-8);
+  justify-content: space-between;
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.hub__grid {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+
+.hub__label {
+  padding: 8px;
+  font-size: 11px;
+  color: var(--ink-3);
+  border-bottom: 1px solid var(--line);
+}
+
+.hub__source,
+.hub__cell {
+  min-height: 84px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.hub__cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  gap: 8px;
+  border-left: 1px solid var(--line);
+  outline: none;
+}
+
+.hub__cell--focused {
+  background: var(--raised-2);
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+
+.hub__source {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub__name {
+  font-size: 13px;
+}
+
+.hub__file {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.hub__tick {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--tick-locked);
+}
+
+.hub__reason {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.hub__track {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.hub__segment {
+  width: 13px;
+  height: 4px;
+  background: var(--line-disabled);
+}
+
+.hub__segment--done {
+  background: var(--accent);
+}
+
+.hub__word {
+  font-size: 12px;
+}
+
+.hub__action {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.hub__refusal {
+  display: flex;
+  gap: 8px;
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.hub__refusal .refusal__mark {
+  margin-top: 4px;
+}
+
+.hub__keys {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--ink-3);
 }

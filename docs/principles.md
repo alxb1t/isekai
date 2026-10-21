@@ -69,7 +69,8 @@ classified or what state a sheet is in, belongs to the component that owns that 
   `interface/ui/app.py` decides what makes a draft, an approved sheet, a caption or a tag list damaged,
   and which remedy each names — work that belongs to the review, caption and tagging stages that own
   those files. `interface/cli.py`'s `_once` decides that a transient transport failure is not kept for
-  the session — the render stage's rule.
+  the session — the render stage's rule. `interface/ui/library.py`'s `stage` ranks a run's stages and
+  decides which damaged file marks a cell — the run directory's and the stages' work.
 
 ### The code is layered
 

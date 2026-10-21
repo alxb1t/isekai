@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { approve as post } from '../api'
+import type { Place } from '../api'
 
 /**
  * Approval: one `POST`, and the pipeline decides.
@@ -21,10 +22,11 @@ export function useApproval() {
     refusal.value = null
   }
 
-  async function approve(id: string): Promise<boolean> {
+  /** Approve the draft at `place`, as of the `saved` receipt the page holds. */
+  async function approve(place: Place, saved: number | null): Promise<boolean> {
     working.value = true
     try {
-      const receipt = await post(id)
+      const receipt = await post(place, saved)
       at.value = receipt.at
       refusal.value = null
       return true

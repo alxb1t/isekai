@@ -35,7 +35,7 @@ from isekai.pipeline.caption import FakeReader, OllamaReader
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary, read_tags
 from tests.conftest import CSV
-from tests.fakes import READER, stub_comfy
+from tests.fakes import READER, FakeComfyClient, stub_comfy
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, fake_wd14, sheet, write_wd14
 from tests.transports import FakeTransport
@@ -174,8 +174,13 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    # `ui` takes one too; `compare` takes a batch directory, `render` its runs.
-    own = {"show": [], "compare": ["batch"], "render": ["runs", "summon-anime-wai=1"]}
+    # `compare` takes a batch directory, `render` its runs; `ui` takes nothing.
+    own = {
+        "show": [],
+        "ui": [],
+        "compare": ["batch"],
+        "render": ["runs", "summon-anime-wai=1"],
+    }
     flag = own.get(verb, ["--flow", "summon-anime-wai"])
 
     assert build_parser().parse_args([verb, *flag]).verb == verb
@@ -286,30 +291,21 @@ def test_naming_two_flows_in_one_invocation_keeps_both() -> None:
     assert parsed.flows == ["summon-anime-wai", "summon-anime-wai-2"]
 
 
-@pytest.mark.spec("cli:flow-selection:a-serving-verb-takes-one-flow")
-def test_a_serving_verb_refuses_a_second_flow_rather_than_keeping_the_last(
-    capsys: pytest.CaptureFixture[str],
+@pytest.mark.spec("ui:library:the-verb-takes-no-arguments")
+@pytest.mark.parametrize(
+    "extra",
+    [["--flow", "summon-anime-wai"], ["0d4b7e6fb2a8_ada"], ["--runs", "elsewhere"]],
+    ids=["a-flow", "an-input", "a-runs-root"],
+)
+def test_the_serving_verb_refuses_a_flow_an_input_or_a_runs_root(
+    extra: list[str], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # The stage verbs repeat the flag because flows batch onto one endpoint. A
-    # serving verb does not batch: two flows would be two field orders and two
-    # token budgets sharing one set of controls, so the limit is stated at the
-    # command the operator typed rather than at a screen that half-works.
     with pytest.raises(SystemExit) as exited:
-        build_parser().parse_args(
-            ["ui", "--flow", "summon-anime-wai", "--flow", "conjure-anime-wai"]
-        )
+        build_parser().parse_args(["ui", *extra])
 
     assert exited.value.code == 2
-    assert "one flow at a time" in capsys.readouterr().err
-
-
-@pytest.mark.spec("cli:flow-selection:a-serving-verb-takes-one-flow")
-def test_a_serving_verb_takes_the_one_flow_it_is_given() -> None:
-    parsed = build_parser().parse_args(["ui", "--flow", "summon-anime-wai"])
-
-    assert parsed.flow == "summon-anime-wai"
-    # Not the stage verbs' list -- there is nothing here for `_flows_for` to read.
-    assert not hasattr(parsed, "flows")
+    assert "unrecognized arguments" in capsys.readouterr().err
+    assert build_parser().parse_args(["ui", "--port", "9000"]).port == 9000
 
 
 @pytest.mark.spec("cli:flow-selection:the-flag-is-repeatable")
@@ -449,6 +445,31 @@ def test_composing_a_wiring_contacts_no_host_and_looks_up_no_binary(
     wired = wiring_from(runs=tmp_path / "runs")
 
     assert wired.reader is not None
+
+
+@pytest.mark.spec_exempt(
+    "structural: ISEKAI_WIRING names the factory wiring_from calls"
+)
+def test_a_named_factory_builds_the_wiring_after_the_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring:fake")
+    wired = wiring_from(runs=tmp_path / "runs")
+    assert isinstance(wired.client, FakeComfyClient)
+    assert wired.runs_root == tmp_path / "runs"
+    with pytest.raises(Refusal, match="--runs"):
+        wiring_from(runs=Path(__file__).resolve().parent.parent / "lib")
+
+
+@pytest.mark.spec_exempt("structural: twin -- ISEKAI_WIRING without a factory refuses")
+def test_a_named_wiring_without_a_factory_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("ISEKAI_WIRING", "tests.e2e.wiring")
+    with pytest.raises(Refusal, match="<module>:<factory>"):
+        wiring_from(runs=tmp_path / "runs")
+    monkeypatch.delenv("ISEKAI_WIRING")
+    assert not isinstance(wiring_from(runs=tmp_path / "runs").client, FakeComfyClient)
 
 
 @pytest.mark.spec("cli:resolution:uncomposed-seam-refuses-by-name")

@@ -9,6 +9,48 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-21 · 0061-ui-groundwork
+
+Gate: local 0m22s · CI 0m35s (ci at 45babd9) · 0.36.0: none
+
+### Added
+
+- A browser test harness: vitest for the page's composables and Playwright from pytest for the page, both in
+  the gate, with `make browsers` fetching Chromium; `ISEKAI_WIRING` serves the surface on the suite's doubles
+  (0061 D6, D7).
+- `isekai/interface/ui/library.py` reads the library: a folder holding `sources/` is a batch, each batch's row
+  carries its counts per flow and its newest file, and each source × flow cell its stage, all from listings
+  (0061 D1, D2, D4).
+
+### Changed
+
+- **BREAKING:** `isekai ui` takes no arguments and serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
+  default; the page is a shell with Home, each batch's hub and Review, every screen at a URL naming its batch
+  and its run's digest, on `vue-router` (0061 D1, D3).
+- The hub is a read-only grid of a batch's sources by its tracked flows: each cell's stage track and word, an
+  unreadable cell's refusal, arrow-key focus, and ↵ to the cell's Review; ⌥0 and ⌥1 reach Home and the hub
+  (0061 D4).
+- Review is a queue: *Review next* opens the first flow's unapproved sheets in the hub's order, Approve moves to
+  the next and to the hub after the last, and opening a sheet with no draft writes one through `review`
+  (0061 D5).
+- The design spec is `ui/design/spec.md`, replacing the imported design; D4, D18, D19 and D24 are restated
+  for the library, D40 and D41 added, and the README, `CLAUDE.md`, `docs/` and `.env.example` moved onto
+  `isekai ui` (0061 D10).
+
+### Removed
+
+- **BREAKING:** the `run-flows` and `compare-renders` skills, whose review step cannot follow the library; the
+  verbs and `isekai ui` cover a batch (0061 D9).
+
+### Fixed
+
+- The review page's saving state holds a token per save, so an input switch can no longer silence it; the draft
+  `PUT` is kept alive, so an edit pending as the tab closes is sent (0061 D8).
+- A bundle build past its ceiling stops its whole process group; a request with no `Origin` is refused unless
+  `Sec-Fetch-Site` says it came from the page; a missing caption's command names its runs root (0061 D8).
+- A refusal reading the next state after an approval shows in the approve bar instead of being dropped
+  (0061 D8).
+
 ## [0.36.0] - 2026-10-17 · 0060-the-working-window
 
 ### Changed

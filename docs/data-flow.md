@@ -40,11 +40,13 @@ photograph beside each flow's renders, linked and never embedded.
 Every stage verb takes `--flow`, required and repeatable, because the flow
 supplies the briefing a stage reads, the schema it fills against and the
 directory it writes into. `show`, `compare` and `ui`, which are not stage verbs,
-differ, and in different directions: `show` and `compare` take no `--flow` at
-all, because they report every flow the runs already hold and so name none by
-design — `compare` takes the batch directory instead of `--runs`; `ui`'s is
-required and exactly one, because the surface shows a single schema's fields in a
-fixed order and a second flow would be a second page.
+take no `--flow`: `show` and `compare` report every flow the runs already hold —
+`compare` takes the batch directory instead of `--runs` — and `ui` takes no
+argument at all. It serves the library `ISEKAI_LIBRARY` names, `~/isekai` by
+default, where a batch is a folder holding `sources/` with its runs root `runs/`
+beside it ([D40](decisions.md#d40--a-batch-is-a-library-folder-holding-sources)).
+Its page names the batch, the run's digest and the flow in every URL, and writes
+only what review writes: a draft when a sheet is opened, its edits, an approval.
 
 ## What a reader needs first
 

@@ -1,17 +1,24 @@
-/* The seven endpoints, in one module.
+/* The endpoints, in one module.
 
    A URL here is a contract between this app and `isekai/interface/ui/app.py` in
-   the same repository, which is why the flow is in none of the paths: the batch
-   has exactly one and `/api/batch` names it. Widening that later is a
-   find-and-replace, not a migration. */
+   the same repository. Every path inside a batch names the batch, and a run by
+   the twelve-character digest its identifier begins with. */
 
 import type {
-  BatchInfo,
   Budget,
   FieldCandidates,
+  HubInfo,
   InputDetail,
+  LibraryInfo,
   TagMatches,
 } from './types'
+
+/** One run in one flow of one batch: what a review URL names. */
+export interface Place {
+  batch: string
+  digest: string
+  flow: string
+}
 
 /* One place where a `Refusal` stops being HTTP and becomes an error carrying the
    pipeline's own string. `app.py` answers every refusal the same way, so this
@@ -29,8 +36,9 @@ function get<T>(url: string): Promise<T> {
   return request<T>(url)
 }
 
-function send<T>(url: string, method: string, body: unknown): Promise<T> {
+function send<T>(url: string, method: string, body: unknown, init: RequestInit = {}): Promise<T> {
   return request<T>(url, {
+    ...init,
     method,
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -42,43 +50,55 @@ export function tags(fragment: string, limit: number): Promise<TagMatches> {
   return get<TagMatches>(`/api/tags?${query}`)
 }
 
-export function batch(): Promise<BatchInfo> {
-  return get<BatchInfo>('/api/batch')
+export function library(): Promise<LibraryInfo> {
+  return get<LibraryInfo>('/api/library')
 }
 
-/* The whole table, once, the first time the reference is opened. Tens of
-   kilobytes, so the filter is instant with no round trip per keystroke — and a
-   sitting that never opens it pays nothing, because this is not on `/api/batch`'s
-   payload. */
-export function fieldCandidates(): Promise<FieldCandidates> {
-  return get<FieldCandidates>('/api/fields')
+export function hub(batch: string): Promise<HubInfo> {
+  return get<HubInfo>(`/api/b/${encodeURIComponent(batch)}/hub`)
 }
 
-export function inputDetail(id: string): Promise<InputDetail> {
-  return get<InputDetail>(`/api/inputs/${encodeURIComponent(id)}`)
+/* The whole table for one flow, once, the first time the reference is opened.
+   Tens of kilobytes, so the filter is instant with no round trip per keystroke. */
+export function fieldCandidates(flow: string): Promise<FieldCandidates> {
+  return get<FieldCandidates>(`/api/fields?${new URLSearchParams({ flow })}`)
+}
+
+function at(place: Place): string {
+  const [batch, digest, flow] = [place.batch, place.digest, place.flow].map(encodeURIComponent)
+  return `/api/b/${batch}/review/${digest}/${flow}`
+}
+
+export function inputDetail(place: Place): Promise<InputDetail> {
+  return get<InputDetail>(at(place))
 }
 
 /* The whole draft, every time. There is no Save control on the page and no
    partial update here: a debounced PUT of everything is what makes the receipt
-   the page shows true. */
-/* `saved` is the receipt this page last received, echoed back as a precondition:
+   the page shows true.
+
+   `saved` is the receipt this page last received, echoed back as a precondition:
    the server compares it to the draft's own mtime and answers 409 on a mismatch.
    It is the only monotonic fact on disk -- the draft carries no timestamp, no
-   revision counter and no digest. */
+   revision counter and no digest. Kept alive, so the flush a leaving page starts
+   outlives the page. */
 export function saveDraft(
-  id: string,
+  place: Place,
   fields: Record<string, string[]>,
   saved: number | null,
 ): Promise<{ draft: string; saved: number; budget: Budget }> {
-  return send(`/api/inputs/${encodeURIComponent(id)}/draft`, 'PUT', { fields, saved })
+  return send(`${at(place)}/draft`, 'PUT', { fields, saved }, { keepalive: true })
 }
 
+/* `saved` is the precondition the draft's `PUT` states, so the page approves
+   only the draft it last read: one another tab moved since answers 409. */
 export function approve(
-  id: string,
+  place: Place,
+  saved: number | null,
 ): Promise<{ approved: string | null; warnings: string[]; at: number | null }> {
-  return send(`/api/inputs/${encodeURIComponent(id)}/approve`, 'POST', {})
+  return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
-export function photoUrl(id: string): string {
-  return `/api/inputs/${encodeURIComponent(id)}/photo`
+export function photoUrl(place: Place): string {
+  return `${at(place)}/photo`
 }

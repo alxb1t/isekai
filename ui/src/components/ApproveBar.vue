@@ -18,6 +18,8 @@ defineProps<{
   at: string | null
   file: string | null
   working: boolean
+  /* What could not be read after the approval landed; the approval stands. */
+  refusal?: string | null
 }>()
 
 defineEmits<{ approve: [] }>()
@@ -25,6 +27,9 @@ defineEmits<{ approve: [] }>()
 
 <template>
   <footer class="approve-bar">
+    <p v-if="refusal" class="approve-bar__refusal mono">
+      <span class="refusal__mark" />{{ refusal }}
+    </p>
     <span v-if="approved" class="approve-bar__note mono">
       This input is approved and read-only. It is
       <span class="app-header__receipt--approved">{{ file }}</span

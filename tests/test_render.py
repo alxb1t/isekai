@@ -567,7 +567,7 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     assert session(runs, f"{FLOW}=1", opener=refusing(listed)) == 1
     lines = log(runs).splitlines()
     assert lines[-1].endswith("run `uv run --env-file .env gpunit down`")
-    # A note, not a second refusal: the run-flows skill counts `refused:` lines.
+    # A note, not a second refusal: one failure prints one `refused:` line.
     assert sum("refused:" in line for line in lines) == 1
 
     # The window's refusals name a bare `gpunit volume up` or `volume down`.

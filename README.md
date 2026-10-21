@@ -128,8 +128,12 @@ photograph again or the run's id — which one you meant is decided by what is o
 In a browser, which is the recommended path:
 
 ```sh
-python -m isekai ui <run-id> --flow summon-anime-wai
+python -m isekai ui     # serves ~/isekai, or the library ISEKAI_LIBRARY names
 ```
+
+It serves a library rather than a run you name: a batch is a folder in it holding `sources/`, with its
+runs in `runs/` beside it. A run reaches the browser when its runs root is a batch's — the batch below
+shows how.
 
 Or by hand, which stays a fully working path:
 
@@ -185,8 +189,9 @@ The same steps for a directory of photographs and `summon` and `conjure`, one co
 for zsh, where `P=(…)` is an array of every file in the directory; in bash, use `"${P[@]}"` for `$P`.
 
 ```sh
-P=(.inputs/batch/*)     # every photograph in the batch
-R=.data/batch/runs      # this batch's runs, apart from any other
+B=~/isekai/2026-10-19   # a batch: a folder of the library holding sources/
+P=($B/sources/*)        # every photograph in the batch
+R=$B/runs               # this batch's runs, beside its sources
 
 # ① ② free: the stage verbs take every photograph and both flows at once
 uv run python -m isekai.boundary.provision fetch config/reader.json   # once; it skips files already verified
@@ -194,9 +199,8 @@ uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure
 uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 
-# ③ free: one page per flow, over every run in the batch
-uv run python -m isekai ui --runs $R --flow summon-anime-wai  $(ls $R)
-uv run python -m isekai ui --runs $R --flow conjure-anime-wai $(ls $R)
+# ③ free: the library in a browser -- the batch's hub, then Review next
+uv run python -m isekai ui
 uv run python -m isekai show --runs $R $P
 
 # ④ – ⑦ metered: the window's volume, then one pod renders both flows, and is deleted on every exit
@@ -205,26 +209,11 @@ uv run python -m isekai render $R conjure-anime-wai=2 summon-anime-wai=1
 uv run --env-file .env gpunit volume down   # once no other batch follows
 ```
 
-- **`ui` takes run ids, not photographs.** It reviews work that already exists, and `$(ls $R)` is every
-  run this batch made — which is why the batch has a runs root of its own. `--flow` is given exactly
-  once, so each flow is its own page: approve every sheet, stop it with Ctrl-C, run the next.
+- **`ui` takes no arguments.** It serves every batch of the library; the batch's hub shows each
+  photograph's stage in each flow, and *Review next* walks one flow's unapproved sheets, then the next
+  flow's. Stop it with Ctrl-C.
 - **`render` takes a count per flow**, and renders every run under `$R`.
 - **`show` takes no `--flow`**: it reports every flow a run holds.
-
-### The batch, run by an agent
-
-Two skills in `.claude/skills/` let an agent run the batch above for you, from exact commands, without reading
-the source or the runs ([0035 design D1](openspec/changes/archive/0035-the-flow-skills/design.md#d1)):
-
-- **`run-flows`** takes `.data/<batch>/photos/` through ① ②, starts both `ui`
-  pages and stops until you say "approved", counts the approvals, stops for your go, renders, and ends with the
-  comparison page. `tests/test_agent_skills.py` fails when a command it names stops parsing.
-- **`compare-renders`** is its last step alone: `uv run python -m isekai compare .data/<batch>` writes
-  `.data/<batch>/compare.html` and prints only its path.
-
-The skill renders with the same verb, `uv run python -m isekai render`, and the RunPod MCP still confirms no
-`gpunit-isekai` pod is left. It opens the working window with `gpunit volume up` on your go, and asks *another
-batch?* before it closes it with `gpunit volume down`.
 
 ### Correcting the sheets in a browser
 
@@ -233,15 +222,17 @@ knows the vocabulary — canonical spelling, the post count behind every tag, an
 against the encoder's 77-token window, none of which a text editor can tell you:
 
 ```sh
-python -m isekai ui <run-id> [<run-id> …] --flow summon-anime-wai
+python -m isekai ui
 ```
 
-It resolves the batch, refuses everything it can refuse, prints a URL and blocks; correct and approve
-each sheet in the browser, then stop it with Ctrl-C and go on to `generate`. **Nothing on the page
-reaches a model or a GPU** — its scope is stage ③ alone.
+It opens the library — `~/isekai`, or the directory `ISEKAI_LIBRARY` names, created when absent and
+refused inside this repository outside `.data/` — prints a URL and blocks. Home lists the batches by
+their newest file; a batch's hub shows each photograph's stage in each flow; Review corrects one sheet,
+and Approve moves to the next. Every screen has its own URL, so a reload lands where it was. Stop it
+with Ctrl-C and go on to `render`. **Nothing on the page reaches a model or a GPU** — its scope is
+stage ③ alone.
 
-- `--flow` is **required and takes exactly one** here, unlike on the stage verbs: the surface shows one
-  schema's fields in one fixed order, so a second flow would be a second page rather than a wider one.
+- Opening a sheet with no draft writes one through `review`, as the verb would.
 - It needs **node**, to build the bundle: `npm install` in `ui/` the first time. The bundle is built on
   demand, and a missing toolchain refuses naming what installs it. Nothing else has to be installed —
   the server is a declared dependency of this project, as is the local tagger's stack.
@@ -345,9 +336,11 @@ make gate
 `make -n gate` prints its commands; the root `Makefile` declares them, and CI
 (`.github/workflows/ci.yml`) runs `make gate` too.
 
-Its browser half, `tools/typecheck_ui.py`, runs `vue-tsc --noEmit` over `ui/` and needs
-`ui/node_modules/`. It is **not** restored for you — run `npm install` in `ui/` once, as the
-review surface already asks.
+Its browser half, `tools/typecheck_ui.py` and `tools/test_ui.py`, runs `vue-tsc --noEmit` and
+vitest over `ui/` and needs `ui/node_modules/`. It is **not** restored for you — run `npm install` in
+`ui/` once, as `isekai ui` already asks. The browser tests in `tests/e2e/` drive Chromium through
+Playwright; fetch it once with `make browsers`. They serve the app on the suite's doubles through
+`ISEKAI_WIRING`, so they reach no model either.
 
 The suite reads the provisioned tag list, which is gitignored. Fetch it once with
 `uv run python -m isekai.boundary.provision fetch config/vocabulary.json`, or set `ISEKAI_VOCABULARY=absent` to
@@ -383,9 +376,9 @@ isekai/
 │   ├── schema.json            # the sheet's field list, in prompt order
 │   └── caption.briefing.md    # the standing instructions the photograph is read under
 ├── flows/control-anime-wai/   # summon's files with the face dials at 0, held equal by a test
-├── ui/                        # the review surface: Vue 3 + Vite; dist/ and node_modules/ ignored
-│   ├── src/                   # the app; styles.css is a copy of design/, Inter vendored beside it
-│   └── design/                # the imported design handoff — read-only, never edited
+├── ui/                        # the app: Vue 3 + Vite + vue-router; design/spec.md; dist/ and node_modules/ ignored
+│   ├── src/                   # the app; styles.css is the vendored stylesheet, Inter beside it
+│   └── design/                # spec.md, the design the app is built to
 ├── gpunit.toml                # the render session's GPU: the pinned image, cards, floors, ceiling, volume
 ├── config/                    # the files the pipeline reads
 │   ├── models.json            # the pinned, checksummed manifest — what the stack IS
@@ -398,7 +391,9 @@ isekai/
 │   ├── derive_*.py            # re-derive the manifests, the field map and image/: `make derive`
 │   ├── manifest.py            # what every manifest deriver is made of
 │   ├── image_record.py        # the build record: each copied file's SHA-256, for config/image.json
-│   └── typecheck_ui.py        # the gate's browser half
+│   ├── npm_ui.py              # the gate's browser half: run a ui/ script, or refuse
+│   ├── typecheck_ui.py        # the gate's browser half: the types
+│   └── test_ui.py             # the gate's browser half: vitest
 ├── docs/                      # the architecture: principles, decisions, modules, data flow
 ├── openspec/                  # living specs + changes — authoritative for scope & progress
 ├── Makefile                   # `make gate`; `make derive` and `make drift` re-run the derivers
@@ -406,7 +401,6 @@ isekai/
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── .github/workflows/         # CI: the gate; the weekly drift check; the image, on request
-├── .claude/skills/            # run-flows, compare-renders: the flows, for an agent
 ├── CLAUDE.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```
