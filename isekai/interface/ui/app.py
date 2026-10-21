@@ -28,6 +28,8 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+POST /api/b/{batch}/render{/quote,}                {keep_open} on the render
+POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
 GET  /events[?batch=]                              Server-Sent Events
@@ -53,6 +55,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from isekai.boundary.gpu import keyed
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     CAPTION_FILE,
@@ -75,13 +78,16 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    approved_versions,
     assign,
     find_run,
     latest_artifact,
     open_run,
     stage_command,
 )
+from isekai.interface import render
 from isekai.interface.ui import events, library
+from isekai.interface.ui.billing import Billing, utc_now
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
@@ -127,6 +133,10 @@ REFUSED = 409
 # conflict, the request is simply not one this surface answers, so it carries no
 # string for the page and never reaches a handler.
 FORBIDDEN = 403
+
+# Where gpunit's status answers are appended, in the library: a dot-file is listed
+# as no batch.
+GPUNIT_LOG = ".gpunit.log"
 
 # The names a loopback listener answers to. `Host: evil.example` resolving to
 # 127.0.0.1 is the whole of the DNS-rebinding attack against an unauthenticated
@@ -191,17 +201,25 @@ def create_app(
     `host` and `port` are the address every request is checked against.
     """
     broadcast = events.Broadcast()
-    jobs = Jobs(broadcast, wired.probe)
+    jobs = Jobs(
+        broadcast,
+        wired.probe,
+        volume=wired.volume,
+        raise_volume=lambda: billing.raise_volume(),
+    )
+    billing = Billing(wired.volume, root / GPUNIT_LOG, broadcast, jobs.rendering)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         """Interrupt a running job and end every stream when the server stops."""
         yield
+        billing.close()
         jobs.shutdown()
         broadcast.close()
 
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.broadcast = broadcast
+    app.state.billing = billing
     limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
@@ -385,6 +403,66 @@ def create_app(
         """Interrupt the running stage; no later stage starts."""
         return {"job": jobs.stop()}
 
+    def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
+        """Return a batch's folder, its quote, and the quote as the dialog shows it."""
+        found = folder(batch)
+        runs = found / library.RUNS
+        made = render.quote(runs, wire(runs))
+        return found, made, _quote(found, made, _disabled(made), wired.flows_dir)
+
+    def _disabled(made: render.Quote) -> str | None:
+        """Return why Render is disabled for `made`, or None."""
+        running = jobs.running()
+        if running is not None:
+            kind = "A render session" if running == "render" else "Prepare"
+            return f"{kind} is running."
+        if billing.state()["pod"]:
+            return "A pod may still be billing."
+        if not keyed(wired.session):
+            return (
+                "No RunPod key: add RUNPOD_API_KEY to .env, then start "
+                "`uv run --env-file .env python -m isekai ui` again."
+            )
+        if made.short.refused:
+            return made.short.refused[0]
+        if not made.short.lines:
+            return "Every approved source × flow already has its Count of images."
+        return None
+
+    @app.post("/api/b/{batch}/render/quote")
+    def post_quote(batch: str) -> dict[str, Any]:
+        """Quote what a render of the batch renders, its limit and its price at most.
+
+        It rents nothing; only the render's own `POST` does.
+        """
+        return quoted(batch)[2]
+
+    @app.post("/api/b/{batch}/render")
+    def post_render(
+        batch: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Start the render job the quote describes, or refuse naming why not.
+
+        The quote is taken again here, so what renders is what is on disk now.
+        """
+        found, made, described = quoted(batch)
+        if described["disabled"] is not None:
+            raise Refusal(described["disabled"])
+        job = jobs.render(
+            batch,
+            found,
+            limit=made.estimate.limit_s,
+            total=sum(made.short.images.values()),
+            keep_open=bool((payload or {}).get("keep_open")),
+            started=utc_now(),
+        )
+        return {"job": job}
+
+    @app.post("/api/billing/check")
+    def post_check() -> dict[str, Any]:
+        """Ask gpunit again; an alert clears only when its records say gone."""
+        return {"billing": billing.check()}
+
     @app.get("/events")
     def read_events(batch: str | None = None) -> StreamingResponse:
         """Stream the job slot and, for `batch`, its hub, then each change.
@@ -393,7 +471,7 @@ def create_app(
         """
 
         def snapshot() -> dict[str, Any]:
-            found = {"job": jobs.slot()}
+            found = {"job": jobs.slot(), "billing": billing.state()}
             if batch is not None:
                 found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
             return found
@@ -665,6 +743,62 @@ def cell_event(
         }
 
     return cell
+
+
+def _quote(
+    found: Path, made: render.Quote, disabled: str | None, flows_dir: Path
+) -> dict[str, Any]:
+    """Describe a quote as the Render dialog shows it, each run by its source."""
+    runs = {
+        one.run.id: (one.name, one.run)
+        for one in library.hub(found, (), flows_dir).sources
+        if one.run is not None
+    }
+
+    def source(run_id: str, flow: str) -> dict[str, Any]:
+        name, run = runs.get(
+            run_id, (run_id, Run(run_id, found / library.RUNS / run_id))
+        )
+        versions = approved_versions(run.directory(flow, REVIEW))
+        return {
+            "name": name,
+            "digest": run.digest,
+            "version": versions[-1] if versions else None,
+        }
+
+    flows = [
+        {
+            "flow": line.flow,
+            "images": line.images,
+            "sources": [
+                {**source(run_id, flow), "images": images}
+                for run_id, flow, images in made.short.wanted
+                if flow == line.flow
+            ],
+        }
+        for line in made.short.lines
+    ]
+    return {
+        "flows": flows,
+        "left_out": [
+            {**source(run_id, flow), "flow": flow, "reason": reason}
+            for run_id, flow, reason in made.short.left_out
+        ],
+        "estimate": {
+            "seconds": made.estimate.seconds,
+            "limit_s": made.estimate.limit_s,
+            "per_image": dict(made.estimate.per_image),
+            "boot_s": made.timing.boot_s,
+            "teardown_s": made.timing.teardown_s,
+            "limit_factor": made.timing.limit_factor,
+        },
+        "price": {
+            "about": made.about,
+            "at_most": made.at_most,
+            "keep_open": made.keep_open,
+        },
+        "disabled": disabled,
+    }
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:

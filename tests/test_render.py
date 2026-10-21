@@ -22,7 +22,7 @@ import gpunit
 import pytest
 
 from isekai.boundary import gpu
-from isekai.boundary.comfy import ComfyTransport, TransportFailure
+from isekai.boundary.comfy import ComfyClient, ComfyTransport, TransportFailure
 from isekai.foundation.artifacts import DRAFT_FILE, RENDER_FILE, read
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import REPOSITORY, Run, open_run
@@ -319,7 +319,7 @@ def test_the_report_reaches_the_loopback_with_a_proxy_exported(
             runs,
             f"{FLOW}=1",
             opener=opener,
-            connect=render.ComfyClient,
+            connect=ComfyClient,
             wait_s=0,
         )
     finally:

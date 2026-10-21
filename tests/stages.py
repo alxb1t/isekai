@@ -23,6 +23,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from isekai.boundary.comfy import ComfyTransport
+from isekai.boundary.gpu import Volume
 from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
     WD14_FILE,
@@ -335,10 +336,21 @@ def _unread() -> Vocabulary:
     raise AssertionError("the vocabulary was read")
 
 
+def _no_gpunit(argv: Sequence[str], log: Path) -> int:
+    raise AssertionError(f"a test reaches no gpunit: gpunit {' '.join(argv)}")
+
+
+# gpunit's records for a test that sets none: a directory that never exists, so
+# no test reads the operator's own `.gpunit/`.
+NO_RECORDS = Path(__file__).resolve().parent / "no-gpunit-records"
+NO_GPUNIT = Volume(run=_no_gpunit, records=NO_RECORDS)
+
+
 def bare_wiring(**fields: object) -> Wiring:
     """Return a wiring with no model behind it, its streams captured.
 
-    Its vocabulary is never to be read; `fields` sets it, or any other field.
+    Its vocabulary is never to be read and it reaches no gpunit; `fields` sets
+    either, or any other field.
     """
     bare = Wiring(
         reader=None,
@@ -349,5 +361,6 @@ def bare_wiring(**fields: object) -> Wiring:
         field_map=lambda _: FIELD_MAP,
         out=io.StringIO(),
         err=io.StringIO(),
+        volume=NO_GPUNIT,
     )
     return replace(bare, **fields)

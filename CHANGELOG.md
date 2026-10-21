@@ -18,6 +18,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   `max_hourly = 0.90` (0063 D3, D4).
 - `isekai render --progress json` prints a JSON line per step: the pod, each image of the total, the teardown;
   the prose goes to stderr (0063 D5).
+- The render job: `POST /api/b/{batch}/render/quote` quotes what renders and its price at most, and
+  `POST …/render` opens the volume, runs `render --limit … --progress json` and closes it unless kept (0063 D6, D8).
+- Billing is read from gpunit's `.gpunit/` records: the pod alert, the window's item, the band; `POST
+  /api/billing/check` asks gpunit again (0063 D7).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

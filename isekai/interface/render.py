@@ -16,11 +16,9 @@ import dataclasses
 import io
 import json
 import math
-import os
 import re
 import shlex
 import signal
-import socket
 import statistics
 import threading
 import time
@@ -30,7 +28,8 @@ from pathlib import Path
 from typing import TextIO, cast
 
 from isekai.boundary import gpu
-from isekai.boundary.comfy import ComfyClient, ComfyTransport
+from isekai.boundary.comfy import ComfyTransport
+from isekai.boundary.gpu import Seams
 from isekai.boundary.pod_start import HOLD_SECONDS
 from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
@@ -62,9 +61,6 @@ RENDER_CONFIG = REPOSITORY / "config" / "render.json"
 RECENT = 20
 # A pod held for diagnosis stops after its hold ends, never before.
 FLOOR_S = HOLD_SECONDS + 300
-# How long ComfyUI gets to answer through the tunnel, and how often it is asked.
-WAIT_S = 300
-POLL_S = 5.0
 # gpunit's exit for a create whose answer was lost.
 LOST_EXIT = 3
 
@@ -133,7 +129,9 @@ def in_session_sources(requests: Sequence[Request]) -> list[bool]:
 
 
 def run_ids(runs: Path) -> list[str]:
-    """Return every run under `runs`, by id."""
+    """Return every run under `runs`, by id; a batch not yet assigned has none."""
+    if not runs.is_dir():
+        return []
     return sorted(
         child.name for child in runs.iterdir() if (child / FRAME_NAME).is_file()
     )
@@ -154,20 +152,6 @@ class _Tee(io.TextIOBase):
         return len(text)
 
 
-def answers(port: int) -> bool:
-    """Return whether something on this machine already answers on `port`."""
-    try:
-        with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-            return True
-    except OSError:
-        return False
-
-
-def terminate() -> None:
-    """Send this process `SIGTERM`; inside a session, gpunit tears down on it."""
-    os.kill(os.getpid(), signal.SIGTERM)
-
-
 def await_endpoint(
     client: ComfyTransport, server: str, wait_s: float, poll_s: float
 ) -> None:
@@ -186,22 +170,6 @@ def await_endpoint(
                     f"{server}/system_stats did not answer within {wait_s:g}s"
                 ) from None
             time.sleep(poll_s)
-
-
-@dataclass(frozen=True)
-class Seams:
-    """What a session reaches the outside world through; a test replaces any of them."""
-
-    open_session: gpu.OpenSession = gpu.open_session
-    # `None` reads this process's environment and the repository's `.env`.
-    environ: Mapping[str, str] | None = None
-    connect: Callable[[str], ComfyTransport] = ComfyClient
-    busy: Callable[[int], bool] = answers
-    kill: Callable[[], None] = terminate
-    # `None` runs the watchdog at the session's limit.
-    watchdog_s: float | None = None
-    wait_s: float = WAIT_S
-    poll_s: float = POLL_S
 
 
 class Steps:
@@ -261,13 +229,14 @@ def run_session(
     args: argparse.Namespace,
     wired: Wiring,
     generate: Generate,
-    seams: Seams = Seams(),
+    seams: Seams | None = None,
 ) -> int:
     """Run one render session and return its exit status.
 
     0 every flow rendered · 1 a flow failed or a refusal · 3 the create's answer
     was lost · 128+n a signal ended it. Every refusal reaches the batch's log too.
     """
+    seams = wired.session if seams is None else seams
     runs = Path(args.runs)
     if not runs.is_dir():
         print(
@@ -337,10 +306,11 @@ def load_timing(path: Path = RENDER_CONFIG) -> Timing:
 
 @dataclass(frozen=True)
 class Estimate:
-    """A session's estimate and its limit, in seconds."""
+    """A session's estimate and limit, and each flow's time per image, in seconds."""
 
     seconds: float
     limit_s: int
+    per_image: Mapping[str, float]
 
 
 def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
@@ -361,15 +331,18 @@ def estimate(
 
     The limit is the estimate times the factor, at least `FLOOR_S` and at most
     `ceiling_s`.
-
     e.g. 4 images at a recorded median of 90 s, boot 180, teardown 120, factor 1.5
-         -> Estimate(660.0, 1200), the floor
+         -> Estimate(660.0, 1200, …), the floor
     """
+    per_image = {
+        flow: float(statistics.median(recorded.get(flow) or [timing.per_image_s]))
+        for flow in images
+    }
     seconds = timing.boot_s + timing.teardown_s
     for flow, count in images.items():
-        seconds += count * statistics.median(recorded.get(flow) or [timing.per_image_s])
+        seconds += count * per_image[flow]
     limit = min(ceiling_s, max(FLOOR_S, math.ceil(seconds * timing.limit_factor)))
-    return Estimate(seconds, limit)
+    return Estimate(seconds, limit, per_image)
 
 
 def _limit(asked: int | None, ceiling_s: int) -> None:
@@ -390,12 +363,19 @@ def _limit(asked: int | None, ceiling_s: int) -> None:
 
 @dataclass(frozen=True)
 class Short:
-    """What a batch lacks of its approvals: its lines, what is left out, and why not."""
+    """What a batch lacks of its approvals, what is left out, and what is damaged."""
 
     lines: list[Line]
+    # (run, flow, images), e.g. ("0d4b…_ada", "summon-anime-wai", 2)
+    wanted: list[tuple[str, str, int]]
     # (run, flow, reason), e.g. ("0d4b…_ada", "summon-anime-wai", "a draft")
     left_out: list[tuple[str, str, str]]
     refused: list[str]
+
+    @property
+    def images(self) -> dict[str, int]:
+        """Return how many images each flow renders."""
+        return {line.flow: line.images for line in self.lines}
 
 
 def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
@@ -405,8 +385,7 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
     out. A damaged approval is refused, so the session refuses before renting.
     """
     tracked = tracked_flows(wired.flows_dir)
-    wanted: dict[str, list[str]] = {}
-    images: dict[str, int] = {}
+    wanted: list[tuple[str, str, int]] = []
     left_out: list[tuple[str, str, str]] = []
     refused: list[str] = []
     for run_id in ids:
@@ -421,13 +400,54 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
                 refused.append(str(damaged))
                 continue
             if lacking:
-                wanted.setdefault(flow, []).append(run_id)
-                images[flow] = images.get(flow, 0) + lacking
-    lines = [
-        Line(flow, ("--flow", flow), ("--runs", str(runs), *held), images[flow])
-        for flow, held in sorted(wanted.items())
-    ]
-    return Short(lines, left_out, refused)
+                wanted.append((run_id, flow, lacking))
+    lines = []
+    for flow in sorted({flow for _, flow, _ in wanted}):
+        held = [(run_id, n) for run_id, named, n in wanted if named == flow]
+        where = ("--runs", str(runs), *(run_id for run_id, _ in held))
+        lines.append(Line(flow, ("--flow", flow), where, sum(n for _, n in held)))
+    return Short(lines, wanted, left_out, refused)
+
+
+@dataclass(frozen=True)
+class Quote:
+    """What a render of a batch would do, how long it may take, and its price."""
+
+    short: Short
+    estimate: Estimate
+    timing: Timing
+    # Dollars: the estimate's price, the limit's, and the window kept open after.
+    about: float
+    at_most: float
+    keep_open: float
+
+
+def quote(runs: Path, wired: Wiring) -> Quote:
+    """Return the quote for rendering what `runs` is short of, as the session would.
+
+    The price is at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card
+    above, with the volume at `config/render.json`'s rate (D4).
+    """
+    bound = gpu.bounds(REPOSITORY)
+    if bound.max_hourly is None or bound.volume_ceiling_s is None:
+        raise Refusal(
+            "gpunit.toml sets no max_hourly or volume_ceiling, so no price is a "
+            "bound; restore them with `git checkout -- gpunit.toml`"
+        )
+    timing = load_timing()
+    ids = run_ids(runs)
+    found = short(runs, ids, wired)
+    recorded = {flow: recent(runs, ids, flow) for flow in found.images}
+    estimated = estimate(found.images, recorded, timing, bound.ceiling_s)
+    hourly = bound.max_hourly + timing.volume_rate
+    return Quote(
+        found,
+        estimated,
+        timing,
+        about=estimated.seconds / 3600 * hourly,
+        at_most=estimated.limit_s / 3600 * hourly,
+        keep_open=bound.volume_ceiling_s / 3600 * timing.volume_rate,
+    )
 
 
 def _unready(run: Run, flow: str) -> str:
@@ -577,9 +597,7 @@ def _rendered(
         print(line, file=wired.err)
 
     try:
-        environ = seams.environ
-        if environ is None:
-            environ = os.environ | gpu.read_env(REPOSITORY / ".env")
+        environ = gpu.environ_of(seams)
         steps.step("pod", "starting")
         with seams.open_session(REPOSITORY, environ, say, limit) as session:
             server = f"http://127.0.0.1:{session.port(PORT)}"

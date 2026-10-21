@@ -1,4 +1,4 @@
-"""Prepare as a job: the pipeline's own verbs, run as children, one job at a time.
+"""Prepare and Render as jobs: the pipeline's own verbs, run as children, one at a time.
 
 The CLI is the one path, so a job is exactly what the verbs do. Each child runs
 in its own session and reports through `--progress json`; its prose is appended
@@ -7,6 +7,8 @@ to the batch's `log.txt`. A job outlives the page that started it.
 ```
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
             └ answers ─▶ per flow: tag ─▶ caption ─▶ sheet ─▶ done
+Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
+           └ up ─▶ render --limit … --progress json ─▶ volume down, unless kept
 Stop, or the server stopping ─▶ SIGINT to the child ─▶ no later stage starts
 a child failing with no line reported ─▶ failed, naming log.txt ─▶ no later stage starts
 ```
@@ -23,8 +25,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from isekai.boundary.gpu import Volume
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
+from isekai.interface.render import LOST_EXIT
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
@@ -49,6 +53,25 @@ def isekai_command(verb: str, flow: str, runs: Path, ids: Sequence[str]) -> list
         "--progress",
         "json",
         *ids,
+    ]
+
+
+# How a render is started: the session's limit and the batch's runs root.
+RenderCommand = Callable[[int, Path], list[str]]
+
+
+def render_command(limit: int, runs: Path) -> list[str]:
+    """Return the render verb line. e.g. `python -m isekai render --limit 1200 …`."""
+    return [
+        sys.executable,
+        "-m",
+        "isekai",
+        "render",
+        "--limit",
+        str(limit),
+        "--progress",
+        "json",
+        str(runs),
     ]
 
 
@@ -79,20 +102,30 @@ def plan(todo: Mapping[str, Sequence[str]], tagged: Mapping[str, bool]) -> list[
 class _Job:
     batch: str
     steps: tuple[Step, ...]
+    kind: str = "prepare"
     state: str = "running"
     flow: str | None = None
     stage: str | None = None
     message: str | None = None
+    # A render's session as the page draws it: its steps, its images, its limit.
+    session: dict[str, Any] | None = None
 
     def describe(self) -> dict[str, Any]:
-        return {
-            "kind": "prepare",
+        described = {
+            "kind": self.kind,
             "batch": self.batch,
             "state": self.state,
             "flow": self.flow,
             "stage": self.stage,
             "message": self.message,
         }
+        if self.session is not None:
+            described["session"] = {
+                **self.session,
+                "steps": dict(self.session["steps"]),
+                "images": list(self.session["images"]),
+            }
+        return described
 
 
 class Jobs:
@@ -104,11 +137,21 @@ class Jobs:
         probe: Callable[[], None],
         *,
         command: Command = isekai_command,
+        volume: Volume | None = None,
+        render: RenderCommand = render_command,
+        raise_volume: Callable[[], None] = lambda: None,
     ) -> None:
-        """Hold an empty slot that publishes on `broadcast`."""
+        """Hold an empty slot that publishes on `broadcast`.
+
+        `volume` opens and closes a render's window; `raise_volume` raises the
+        volume alert when either goes unanswered.
+        """
         self._broadcast = broadcast
         self._probe = probe
         self._command = command
+        self._volume = volume or Volume()
+        self._render = render
+        self._raise_volume = raise_volume
         self._lock = threading.Lock()
         self._job: _Job | None = None
         self._child: subprocess.Popen[str] | None = None
@@ -150,12 +193,58 @@ class Jobs:
         self._publish(job)
         return job.describe()
 
+    def rendering(self) -> bool:
+        """Return whether a render job runs."""
+        with self._lock:
+            job = self._job
+            return job is not None and job.kind == "render" and job.state == "running"
+
+    def running(self) -> str | None:
+        """Return the running job's kind, or None."""
+        with self._lock:
+            job = self._job
+            return job.kind if job is not None and job.state == "running" else None
+
+    def render(
+        self,
+        batch: str,
+        folder: Path,
+        *,
+        limit: int,
+        total: int,
+        keep_open: bool,
+        started: str,
+    ) -> dict[str, Any]:
+        """Start a render of `folder`'s runs within `limit` seconds, or refuse."""
+        with self._lock:
+            self._refuse_running()
+            steps = dict.fromkeys(("volume up", "pod", "teardown", "volume down"), "")
+            if keep_open:
+                steps["volume down"] = "kept"
+            session = {
+                "started": started,
+                "limit": limit,
+                "of": total,
+                "keep_open": keep_open,
+                "steps": steps,
+                "images": [],
+            }
+            job = _Job(batch, (), kind="render", session=session)
+            self._job, self._stopping = job, False
+            self._thread = threading.Thread(
+                target=self._run_render, args=(job, folder, limit), daemon=True
+            )
+            self._thread.start()
+        self._publish(job)
+        return job.describe()
+
     def _refuse_running(self) -> None:
         """Refuse while a job runs, naming it."""
         job = self._job
         if job is not None and job.state == "running":
+            kind = "Render" if job.kind == "render" else "Prepare"
             raise Refusal(
-                f"a job is running: Prepare on {job.batch}; wait for it to end, or "
+                f"a job is running: {kind} on {job.batch}; wait for it to end, or "
                 "Stop it, then try again"
             )
 
@@ -228,6 +317,90 @@ class Jobs:
                 if job.state == "running":
                     job.state = "stopped" if self._stopping else "done"
             self._publish(job)
+
+    def _run_render(self, job: _Job, folder: Path, limit: int) -> None:
+        """Open the window, run the render verb, and close the window unless kept."""
+        assert job.session is not None
+        steps = job.session["steps"]
+        log = folder / LOG
+        opened = False
+        try:
+            self._mark(job, "volume up", "running")
+            code = self._volume.up(log)
+            if code != 0:
+                self._mark(job, "volume up", "lost" if code == LOST_EXIT else "failed")
+                if code == LOST_EXIT:
+                    self._raise_volume()
+                job.state = "failed"
+                job.message = (
+                    f"gpunit volume up did not open the window (exit {code}); read "
+                    f"{job.batch}/{LOG}, and nothing was rendered"
+                )
+                return
+            opened = True
+            self._mark(job, "volume up", "done")
+            self._render_child(job, folder, limit)
+        finally:
+            if opened and steps["volume down"] != "kept":
+                self._mark(job, "volume down", "running")
+                code = self._volume.down(log)
+                self._mark(job, "volume down", "done" if code == 0 else "failed")
+                if code != 0:
+                    self._raise_volume()
+            with self._lock:
+                if job.state == "running":
+                    job.state = "stopped" if self._stopping else "done"
+            self._publish(job)
+
+    def _render_child(self, job: _Job, folder: Path, limit: int) -> None:
+        """Run the render verb, reading its steps; start none once Stop was asked."""
+        assert job.session is not None
+        with self._lock:
+            if self._stopping:
+                return
+            argv = self._render(limit, folder / RUNS)
+            with (folder / LOG).open("a") as log:
+                self._child = subprocess.Popen(
+                    argv,
+                    stdout=subprocess.PIPE,
+                    stderr=log,
+                    cwd=REPOSITORY,
+                    text=True,
+                    start_new_session=True,
+                )
+            child = self._child
+        assert child.stdout is not None
+        reported = False
+        for raw in child.stdout:
+            line = _line(raw)
+            if line is None:
+                continue
+            reported = True
+            with self._lock:
+                if line.get("step") == "image":
+                    job.session["images"].append(
+                        {key: line.get(key) for key in ("n", "of", "run", "flow")}
+                    )
+                else:
+                    job.session["steps"][str(line.get("step"))] = line.get("state")
+            self._publish(job)
+        code = child.wait()
+        with self._lock:
+            self._child = None
+            if code != 0 and not self._stopping:
+                job.state = "failed"
+                job.message = (
+                    f"render ended with exit {code}"
+                    + ("" if reported else " before reporting")
+                    + f"; read {job.batch}/{LOG}"
+                )
+
+    def _mark(self, job: _Job, step: str, state: str) -> None:
+        """Set one step of a render's session, and tell the page."""
+        assert job.session is not None
+        with self._lock:
+            job.session["steps"][step] = state
+        self._publish(job)
 
     def _start(
         self, job: _Job, step: Step, folder: Path

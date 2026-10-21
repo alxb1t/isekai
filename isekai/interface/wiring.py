@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
-from isekai.boundary import ollama
+from isekai.boundary import gpu, ollama
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.boundary.wd14 import LocalTagger, open_session
 from isekai.foundation.flow import FLOWS_DIR, Flow
@@ -101,6 +101,10 @@ class Wiring:
     # Whether the local model server answers, asked before a job starts; it
     # refuses as a call to it would.
     probe: Callable[[], None] = ollama.probe
+    # What a render session rents through, and the window volume around it, so a
+    # render child and the render job run on doubles under `ISEKAI_WIRING` (D6).
+    session: gpu.Seams = dataclasses.field(default_factory=gpu.Seams)
+    volume: gpu.Volume = dataclasses.field(default_factory=gpu.Volume)
 
 
 # **What the seams resolve on is the model, not an implementation string.** There

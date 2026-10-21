@@ -86,7 +86,7 @@ from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
+from tests.stages import FIELD_MAP, NO_GPUNIT, caption, fake_tagger, sheet  # noqa: E402
 
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
@@ -121,6 +121,7 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
         rng=random.Random(0),
         out=io.StringIO(),
         err=io.StringIO(),
+        volume=NO_GPUNIT,
     )
 
 

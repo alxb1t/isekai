@@ -10,7 +10,7 @@ task names.
 - [x] 2 — What is short
 - [x] 3 — The limit
 - [x] 4 — Progress
-- [ ] 5 — The job and billing
+- [x] 5 — The job and billing
 - [ ] 6 — The render UI
 - [ ] 7 — The Renders view
 - [ ] 8 — The docs
@@ -48,11 +48,11 @@ task names.
 
 ## 5 — The job and billing
 
-- [ ] 5.1 Add `session` and `volume` to `Wiring` in `isekai/interface/wiring.py` with real defaults, and doubles in `tests/e2e/wiring.py`, per [D6](design.md#d6).
+- [x] 5.1 Add `session` and `volume` to `Wiring` in `isekai/interface/wiring.py` with real defaults, and doubles in `tests/e2e/wiring.py`, per [D6](design.md#d6).
   Verify: `grep -c 'volume=' tests/e2e/wiring.py` prints a number of at least `1`, and `uv run pytest -q tests/test_pipeline_cli.py` exits 0.
-- [ ] 5.2 Add `isekai/interface/ui/billing.py` per [D7](design.md#d7), and `Jobs.render` in `isekai/interface/ui/jobs.py` with the quote, render and check routes in `isekai/interface/ui/app.py`, per [D8](design.md#d8).
+- [x] 5.2 Add `isekai/interface/ui/billing.py` per [D7](design.md#d7), and `Jobs.render` in `isekai/interface/ui/jobs.py` with the quote, render and check routes in `isekai/interface/ui/app.py`, per [D8](design.md#d8).
   Verify: `uv run python -c "import isekai.interface.ui.billing"` exits 0, and `grep -c '/render/quote' isekai/interface/ui/app.py` prints `1`.
-- [ ] 5.3 Add `tests/test_ui_billing.py` binding every `ui:billing:*` key, and in `tests/test_ui_jobs.py` bind every `ui:render-job:*` key, `ui:render:the-dialog-lists-what-renders` and `ui:render:without-a-key-render-is-disabled`.
+- [x] 5.3 Add `tests/test_ui_billing.py` binding every `ui:billing:*` key, and in `tests/test_ui_jobs.py` bind every `ui:render-job:*` key, `ui:render:the-dialog-lists-what-renders` and `ui:render:without-a-key-render-is-disabled`.
   Verify: `uv run pytest -q tests/test_ui_billing.py tests/test_ui_jobs.py` exits 0, and `grep -c 'ui:billing:' tests/test_ui_billing.py` prints `3`.
 
 ## 6 — The render UI

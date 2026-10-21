@@ -11,7 +11,7 @@ import sys
 import threading
 import time
 import urllib.error
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
 
@@ -22,18 +22,22 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from isekai.boundary import ollama  # noqa: E402
-from isekai.foundation.flow import FLOWS_DIR, load_flow  # noqa: E402
+from isekai.boundary.gpu import Seams, Volume  # noqa: E402
+from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, open_run  # noqa: E402
+from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import Jobs, Step  # noqa: E402
+from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
 from tests.stages import bare_wiring, sheet, write_wd14  # noqa: E402
 
 FLOW = "summon-anime-wai"
+CONTROL = "control-anime-wai"
 OFFERED = (FLOW, "conjure-anime-wai")
 PORT = 8766
 WAIT = 20.0
@@ -248,3 +252,156 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
+
+
+# --- render ---------------------------------------------------------------------
+
+
+def _order(record: Path) -> tuple[Volume, Callable[[int, Path], list[str]]]:
+    """Return a gpunit double and a render command, each appending its act to `record`.
+
+    The render child is a real process, so the order is read from one file.
+    """
+
+    def run(argv: Sequence[str], log: Path) -> int:
+        with record.open("a") as acts:
+            print(" ".join(argv), file=acts)
+        return LOST_EXIT if "up" in argv and "lost" in record.name else 0
+
+    def command(limit: int, runs: Path) -> list[str]:
+        script = "import sys; open(sys.argv[1], 'a').write(f'render {sys.argv[2]}\\n')"
+        return [sys.executable, "-c", script, str(record), str(limit)]
+
+    return Volume(run=run, records=record.parent / ".gpunit"), command
+
+
+@pytest.mark.spec("ui:render-job:opens-renders-and-closes")
+def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, command = _order(record)
+    jobs = Jobs(events.Broadcast(), lambda: None, volume=volume, render=command)
+
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False, started="t")
+    jobs.wait(WAIT)
+
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        "render 1500",
+        "volume down",
+    ]
+    assert (jobs.slot() or {})["state"] == "done"
+
+
+@pytest.mark.spec("ui:render-job:a-lost-opening-renders-nothing")
+def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "lost-acts"
+    volume, command = _order(record)
+    raised: list[bool] = []
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=command,
+        raise_volume=lambda: raised.append(True),
+    )
+
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False, started="t")
+    jobs.wait(WAIT)
+
+    assert record.read_text().splitlines() == ["volume up --yes"]
+    assert raised == [True]
+    slot = jobs.slot() or {}
+    assert slot["state"] == "failed"
+    assert slot["session"]["steps"]["volume up"] == "lost"
+
+
+def _approved(
+    folder: Path, name: str, flow: str, schema: Schema, vocabulary: Vocabulary
+) -> Run:
+    """Return a run of `name` under `folder` approved in `flow` for one image."""
+    source = folder / "sources" / name
+    source.write_bytes(jpeg_bytes(600 + len(name), 800))
+    run = open_run(source, folder / "runs")
+    sheet(run, schema, vocabulary, flow=flow)
+    review(run, flow)
+    approve(run, flow, schema, vocabulary)
+    return run
+
+
+def _quoting(
+    tmp_path: Path, vocabulary: Vocabulary, environ: dict[str, str]
+) -> tuple[Path, TestClient]:
+    """Return a batch folder and a client whose session is handed `environ`."""
+    folder = tmp_path / "lib" / "b"
+    (folder / "sources").mkdir(parents=True)
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary,
+        runs_root=folder / "runs",
+        session=Seams(environ=environ),
+    )
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    app = create_app(
+        folder.parent,
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=PORT,
+    )
+    return folder, TestClient(app, base_url=f"http://{HOST}:{PORT}")
+
+
+@pytest.mark.spec("ui:render:the-dialog-lists-what-renders")
+def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    _approved(folder, "beatrix.jpg", CONTROL, schema, vocabulary)
+    drafted = open_run(folder / "sources" / "ada.jpg", folder / "runs")
+    sheet(drafted, schema, vocabulary, flow=CONTROL)
+    review(drafted, CONTROL)
+
+    quote = client.post("/api/b/b/render/quote").json()
+
+    assert [(one["flow"], one["images"]) for one in quote["flows"]] == [
+        (CONTROL, 1),
+        (FLOW, 1),
+    ]
+    assert quote["flows"][1]["sources"][0]["name"] == "ada.jpg"
+    assert quote["left_out"] == [
+        {
+            "name": "ada.jpg",
+            "digest": drafted.digest,
+            "version": None,
+            "flow": CONTROL,
+            "reason": "a draft",
+        }
+    ]
+    assert quote["estimate"]["limit_s"] >= quote["estimate"]["seconds"]
+    assert 0 < quote["price"]["about"] < quote["price"]["at_most"]
+    assert quote["disabled"] is None
+
+
+@pytest.mark.spec("ui:render:without-a-key-render-is-disabled")
+def test_without_a_runpod_key_render_is_disabled_naming_the_fix(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+
+    quote = client.post("/api/b/b/render/quote").json()
+    started = client.post("/api/b/b/render", json={"keep_open": False})
+
+    assert "add RUNPOD_API_KEY to .env" in quote["disabled"]
+    assert started.status_code == 409
+    assert "RUNPOD_API_KEY" in started.json()["refusal"]
