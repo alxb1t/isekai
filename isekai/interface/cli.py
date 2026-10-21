@@ -373,7 +373,19 @@ def _staged_line(item: Staged) -> str:
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
-    """Return the run an argument names: a photograph to open, or a run to resume.
+    """Return the run an argument names: a photograph to open, or a run to resume."""
+    named = _named(identifier, wired)
+    return named if isinstance(named, Run) else open_run(named, wired.runs_root)
+
+
+def _existing_run(identifier: str, wired: Wiring) -> Run | None:
+    """Return the run an argument names, as `_run_for` does, but never open one."""
+    named = _named(identifier, wired)
+    return named if isinstance(named, Run) else find_run(named, wired.runs_root)
+
+
+def _named(identifier: str, wired: Wiring) -> Run | Path:
+    """Return the run an argument names by its id, or the photograph it names.
 
     A photograph is offered by path and an existing run by its id, and which one
     was meant is decided by what is on disk rather than by a flag.
@@ -388,7 +400,7 @@ def _run_for(identifier: str, wired: Wiring) -> Run:
             f"{wired.runs_root}; give the path to a JPEG or PNG, or the name of "
             f"a run directory under {wired.runs_root}"
         )
-    return open_run(photo, wired.runs_root)
+    return photo
 
 
 def _require_tracked(names: Sequence[str], wired: Wiring) -> None:
@@ -786,28 +798,19 @@ def _assign(
         for name in flows:
             print(f"{identifier}: {name} is not assigned", file=wired.out)
         return
-    found = run
-
-    def one(name: str) -> None:
-        changed = assign(found, name, remove=remove)
-        if remove:
-            done = f"removed {name}" if changed else f"{name} is not assigned"
-        else:
-            done = f"assigned {name}" if changed else f"{name} is already assigned"
-        print(f"{found.id}: {done}", file=wired.out)
-
-    collected.extend(across(list(flows), one))
+    collected.extend(
+        across(list(flows), lambda name: _assign_one(run, name, remove, wired))
+    )
 
 
-def _existing_run(identifier: str, wired: Wiring) -> Run | None:
-    """Return the run an argument names, as `_run_for` does, but never open one."""
-    directory = wired.runs_root / identifier
-    if (directory / FRAME_NAME).is_file():
-        return Run(identifier, directory)
-    photo = Path(identifier)
-    if not photo.is_file():
-        return _run_for(identifier, wired)
-    return find_run(photo, wired.runs_root)
+def _assign_one(run: Run, flow: str, remove: bool, wired: Wiring) -> None:
+    """Assign or remove one flow for `run`, and say which happened."""
+    changed = assign(run, flow, remove=remove)
+    if remove:
+        done = f"removed {flow}" if changed else f"{flow} is not assigned"
+    else:
+        done = f"assigned {flow}" if changed else f"{flow} is already assigned"
+    print(f"{run.id}: {done}", file=wired.out)
 
 
 def _generate(

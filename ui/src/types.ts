@@ -153,12 +153,11 @@ export interface TagMatches {
   total: number
 }
 
-/* What reading one uploaded file left in staging. `chosen` is the file's own
-   name; `name` is what it is staged as -- converted, or `<stem>-2`. */
+/* What reading one uploaded file left in staging. `name` is what it is staged
+   as: the file's own name, converted, or `<stem>-2`. */
 export type StagedState = 'ready' | 'converted' | 'not cleaned' | 'skipped'
 
 export interface StagedFile {
-  chosen: string
   name: string
   state: StagedState
   carries: string[]
@@ -184,7 +183,6 @@ export interface JobSlot {
 export interface CellEvent {
   batch: string
   source: string
-  digest: string
   flow: string
   stage: string
   state: 'start' | 'done' | 'refused'

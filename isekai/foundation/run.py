@@ -356,14 +356,7 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     left to do. Two photographs sharing a filename land in different runs, because
     the id is derived from content and the name is only the readable half.
     """
-    try:
-        body = photo.read_bytes()
-    except OSError as unreadable:
-        raise Refusal(
-            f"{photo.name}: cannot be read ({unreadable.strerror}); "
-            "check the path and the file's permissions, then offer it again"
-        ) from unreadable
-
+    body = _photo_bytes(photo)
     kind, suffix = media_type(body)
     digest = digest_of(body)
     existing = _run_for(digest, runs_root)
@@ -394,14 +387,18 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
 
 def find_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run | None:
     """Return the run for `photo`'s bytes when there is one, creating nothing."""
+    return _run_for(digest_of(_photo_bytes(photo)), runs_root)
+
+
+def _photo_bytes(photo: Path) -> bytes:
+    """Return a photograph's bytes, refusing one that cannot be read."""
     try:
-        body = photo.read_bytes()
+        return photo.read_bytes()
     except OSError as unreadable:
         raise Refusal(
             f"{photo.name}: cannot be read ({unreadable.strerror}); "
             "check the path and the file's permissions, then offer it again"
         ) from unreadable
-    return _run_for(digest_of(body), runs_root)
 
 
 def assign(run: Run, flow: str, *, remove: bool = False) -> bool:

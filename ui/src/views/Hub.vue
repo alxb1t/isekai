@@ -78,8 +78,13 @@ const changes = computed(() =>
 )
 const bar = computed(() => busy.value || changes.value.length > 0 || barRefusal.value !== null)
 
+/* A cell's key in the maps of refusals and running stages. */
+function at(name: string, flow: string): string {
+  return `${name}|${flow}`
+}
+
 function key(source: HubSource, flow: string): string {
-  return `${source.name}|${flow}`
+  return at(source.name, flow)
 }
 
 function cell(source: HubSource, flow: string): HubCell {
@@ -123,22 +128,22 @@ function review(source: HubSource, flow: string): void {
 }
 
 function apply(name: string, flow: string, found: HubCell): void {
-  const source = info.value?.sources.find((one) => one.name === name)
+  const source = sources.value.find((one) => one.name === name)
   if (source) source.cells = { ...source.cells, [flow]: found }
 }
 
 /* Tick or untick `flow` for `targets`, each answered on its own. */
 async function tick(targets: HubSource[], flow: string, remove: boolean): Promise<void> {
-  const names = targets.filter((one) => locked(cell(one, flow)) === false).map((one) => one.name)
+  const names = targets.filter((one) => !locked(cell(one, flow))).map((one) => one.name)
   if (names.length === 0) return
   try {
     const answered = await assign(props.batch, names, flow, remove)
     for (const [name, found] of Object.entries(answered.cells)) {
       apply(name, flow, found)
-      delete refusals.value[`${name}|${flow}`]
+      delete refusals.value[at(name, flow)]
     }
     for (const [name, message] of Object.entries(answered.refused))
-      refusals.value[`${name}|${flow}`] = message
+      refusals.value[at(name, flow)] = message
   } catch (reason) {
     barRefusal.value = (reason as Error).message
   }
@@ -288,12 +293,12 @@ function listen(): void {
   })
   stream.addEventListener('cell', (event) => {
     const data = JSON.parse((event as MessageEvent<string>).data) as CellEvent
-    const at = `${data.source}|${data.flow}`
+    const here = at(data.source, data.flow)
     apply(data.source, data.flow, data.cell)
-    if (data.state === 'start') running.value[at] = data.stage
-    else delete running.value[at]
-    if (data.state === 'refused' && data.message) refusals.value[at] = data.message
-    else if (data.state === 'done') delete refusals.value[at]
+    if (data.state === 'start') running.value[here] = data.stage
+    else delete running.value[here]
+    if (data.state === 'refused' && data.message) refusals.value[here] = data.message
+    else if (data.state === 'done') delete refusals.value[here]
   })
 }
 

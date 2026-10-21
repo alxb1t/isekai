@@ -9,6 +9,7 @@ Pillow and `pi_heif` are imported inside the functions that decode, so
 `python -m isekai`'s import graph reaches no wheel (D20).
 """
 
+import contextlib
 import json
 import os
 import secrets
@@ -128,8 +129,6 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
 def receive(name: str, body: bytes, staging: Path, limit: int) -> Staged:
     """Read an uploaded file's bytes into `staging`, as `read` reads a file."""
     _refuse_name(name)
-    if len(body) > limit:
-        raise past_limit(name, len(body), limit)
     with tempfile.TemporaryDirectory(dir=staging, prefix=".upload-") as scratch:
         upload = Path(scratch) / name
         upload.write_bytes(body)
@@ -194,15 +193,9 @@ def commit(
 def cancel(staging: Path) -> None:
     """Delete a staging folder and everything read into it."""
     shutil.rmtree(staging, ignore_errors=True)
-    _drop_empty(staging.parent)
-
-
-def _drop_empty(root: Path) -> None:
-    """Remove `.staging/` once no staging folder is left in it."""
-    try:
-        root.rmdir()
-    except OSError:
-        pass
+    # `.staging/` goes once no staging folder is left in it.
+    with contextlib.suppress(OSError):
+        staging.parent.rmdir()
 
 
 def sweep(library: Path) -> None:
@@ -246,7 +239,9 @@ def _free_name(folder: Path, stem: str, suffix: str, body: bytes) -> Path | None
     """
     if folder.is_dir():
         for present in folder.iterdir():
-            if present.is_file() and present.read_bytes() == body:
+            # The size first, so only a file that could match is read.
+            same = present.is_file() and present.stat().st_size == len(body)
+            if same and present.read_bytes() == body:
                 return None
     target = folder / f"{stem}{suffix}"
     count = 1
@@ -345,7 +340,7 @@ def _clean(file: Path) -> tuple[bytes, bool]:
             return strip_metadata(file), False
         except Refusal:
             pass
-    return _encode(image, png=image.format == "PNG"), True
+    return _encode(image), True
 
 
 def _suffix(body: bytes) -> str:
@@ -356,11 +351,11 @@ def _suffix(body: bytes) -> str:
 def _reencode(body: bytes) -> bytes:
     """Return `body` encoded again from its decoded pixels, in its own format."""
     image = _decode(body)
-    return _encode(image, png=image.format == "PNG")
+    return _encode(image)
 
 
-def _encode(image: "Image", *, png: bool) -> bytes:
-    """Return `image` upright, in sRGB, as PNG when asked or transparent, else JPEG."""
+def _encode(image: "Image") -> bytes:
+    """Return `image` upright, in sRGB, as PNG when it was one or is transparent."""
     import io
 
     from PIL import ImageCms, ImageOps
@@ -387,7 +382,7 @@ def _encode(image: "Image", *, png: bool) -> bytes:
             ) from broken
     pixels = upright.convert(mode)
     out = io.BytesIO()
-    if png or transparent:
+    if image.format == "PNG" or transparent:
         pixels.save(out, "PNG")
     else:
         pixels.save(out, "JPEG", quality=JPEG_QUALITY)

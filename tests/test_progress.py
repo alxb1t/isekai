@@ -8,10 +8,9 @@ import pytest
 
 from isekai.foundation.run import Run, open_run
 from isekai.interface.cli import build_parser, dispatch
-from isekai.interface.wiring import Wiring
 from isekai.shared.vocabulary import Vocabulary
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, write_wd14
+from tests.stages import bare_wiring, write_wd14
 
 FLOW = "summon-anime-wai"
 
@@ -25,16 +24,8 @@ def _run(tmp_path: Path, name: str, height: int) -> Run:
 def _sheet(tmp_path: Path, vocabulary: Vocabulary, *argv: str) -> tuple[int, str, str]:
     """Run `sheet` over `argv`; return its exit code, stdout and stderr."""
     out, err = io.StringIO(), io.StringIO()
-    wired = Wiring(
-        reader=None,
-        tagger=None,
-        hosted_tagger=None,
-        client=None,
-        vocabulary=lambda: vocabulary,
-        field_map=lambda _: FIELD_MAP,
-        runs_root=tmp_path / "runs",
-        out=out,
-        err=err,
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary, runs_root=tmp_path / "runs", out=out, err=err
     )
     args = build_parser().parse_args(
         ["sheet", "--flow", FLOW, "--runs", str(tmp_path / "runs"), *argv]

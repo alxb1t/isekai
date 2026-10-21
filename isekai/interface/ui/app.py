@@ -50,6 +50,7 @@ from typing import Any, TypeGuard
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -198,7 +199,6 @@ def create_app(
         broadcast.close()
 
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
-    app.state.jobs = jobs
     app.state.broadcast = broadcast
     limit = importing.upload_limit()
     allowed = authorities(host, port)
@@ -284,11 +284,12 @@ def create_app(
         remove = payload.get("remove") is True
         suffix = load_flow(flow, wired.flows_dir).output_suffix
         runs = found / library.RUNS
+        named = library.source_files(found)
         cells: dict[str, Any] = {}
         refused: dict[str, str] = {}
         for name in names:
             try:
-                source = library.source_file(found, name)
+                source = named(name)
                 run = find_run(source, runs) if remove else open_run(source, runs)
                 if run is not None:
                     assign(run, flow, remove=remove)
@@ -324,9 +325,12 @@ def create_app(
         declared = request.headers.get("content-length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise importing.past_limit(name, int(declared), limit)
-        staged_file = importing.receive(name, await request.body(), folder, limit)
+        body = await request.body()
+        # Decoding blocks; off the event loop, it holds up no other request.
+        staged_file = await run_in_threadpool(
+            importing.receive, name, body, folder, limit
+        )
         return {
-            "chosen": name,
             "name": staged_file.name,
             "state": staged_file.state,
             "carries": list(staged_file.carries),
@@ -631,22 +635,23 @@ def cell_event(
 
     A line naming a run or a flow the job did not start reads None.
     """
+    batch = grid.name
     sources = {one.run.id: one.name for one in grid.sources if one.run}
+    suffixes = {flow: one.output_suffix for flow, one in loaded.items()}
 
     def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
         run_id, flow = str(line.get("run")), str(line.get("flow"))
-        if run_id not in sources or flow not in loaded:
+        if run_id not in sources or flow not in suffixes:
             return None
         run = Run(run_id, found / library.RUNS / run_id)
         return {
-            "batch": grid.name,
+            "batch": batch,
             "source": sources[run_id],
-            "digest": run.digest,
             "flow": flow,
             "stage": line.get("stage"),
             "state": line.get("state"),
             "message": line.get("message"),
-            "cell": asdict(library.stage(run, flow, loaded[flow].output_suffix)),
+            "cell": asdict(library.stage(run, flow, suffixes[flow])),
         }
 
     return cell

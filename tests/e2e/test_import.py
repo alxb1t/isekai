@@ -3,32 +3,25 @@
 One upload is held at the network so the page can be seen while it is in flight.
 """
 
-import io
 import re
-import struct
 from pathlib import Path
 
 import pytest
-from PIL import Image
 from playwright.sync_api import Page, Route, expect
 
 from tests.e2e.conftest import Served
+from tests.images import nef_bytes, photo_jpeg
 
 HEIC = Path(__file__).resolve().parents[1] / "fixtures" / "sources" / "plain.heic"
 
 
 def _jpeg(path: Path, colour: tuple[int, int, int]) -> Path:
-    out = io.BytesIO()
-    Image.new("RGB", (64, 80), colour).save(out, "JPEG", quality=95)
-    path.write_bytes(out.getvalue())
+    path.write_bytes(photo_jpeg(colour, (64, 80)))
     return path
 
 
 def _nef(path: Path) -> Path:
-    """Write the first bytes of a NEF: a big-endian TIFF whose Make is Nikon's."""
-    make = b"NIKON CORPORATION\x00"
-    entry = struct.pack(">HHII", 0x010F, 2, len(make), 26)
-    path.write_bytes(b"MM\x00*" + struct.pack(">IH", 8, 1) + entry + b"\x00" * 4 + make)
+    path.write_bytes(nef_bytes())
     return path
 
 

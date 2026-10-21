@@ -4,7 +4,6 @@ Each child is a real process: a short Python script stands in for a verb, so Sto
 and the one slot are proved against a process that can be interrupted.
 """
 
-import io
 import json
 import queue
 import random
@@ -29,11 +28,10 @@ from isekai.foundation.run import Run, open_run  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import Jobs, Step  # noqa: E402
-from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import FIELD_MAP, write_wd14  # noqa: E402
+from tests.stages import bare_wiring, write_wd14  # noqa: E402
 
 FLOW = "summon-anime-wai"
 OFFERED = (FLOW, "conjure-anime-wai")
@@ -160,17 +158,10 @@ def test_a_stream_opened_for_a_batch_starts_with_the_slot_and_its_hub(
     tmp_path: Path, vocabulary: Vocabulary
 ) -> None:
     folder, (run,) = _batch(tmp_path, "ada.jpg")
-    wired = Wiring(
-        reader=None,
-        tagger=None,
-        hosted_tagger=None,
-        client=None,
+    wired = bare_wiring(
         vocabulary=lambda: vocabulary,
-        field_map=lambda _: FIELD_MAP,
         runs_root=folder / "runs",
         rng=random.Random(0),
-        out=io.StringIO(),
-        err=io.StringIO(),
         probe=lambda: None,
     )
     dist = tmp_path / "dist"

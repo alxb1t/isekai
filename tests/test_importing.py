@@ -13,12 +13,11 @@ from PIL import Image, ImageCms
 
 from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import build_parser, dispatch
-from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
 from isekai.pipeline.importing import cancel, commit, read, stage, sweep, verify
 from isekai.shared.image import metadata_in
-from isekai.shared.vocabulary import Vocabulary
-from tests.stages import FIELD_MAP
+from tests.images import jpeg_segment, nef_bytes, photo_jpeg
+from tests.stages import bare_wiring
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "sources"
 LIMIT = 10 * 1024 * 1024
@@ -26,20 +25,9 @@ ORIENTATION = 0x0112
 XMP = b"http://ns.adobe.com/xap/1.0/\x00<x:xmpmeta/>"
 
 
-def _jpeg(
-    colour: tuple[int, int, int] = (200, 80, 60),
-    size: tuple[int, int] = (32, 32),
-    **options: object,
-) -> bytes:
-    out = io.BytesIO()
-    Image.new("RGB", size, colour).save(out, "JPEG", quality=95, **options)
-    return out.getvalue()
-
-
 def _with_xmp(jpeg: bytes) -> bytes:
     """Return `jpeg` with an XMP segment after its SOI."""
-    segment = b"\xff\xe1" + struct.pack(">H", len(XMP) + 2) + XMP
-    return jpeg[:2] + segment + jpeg[2:]
+    return jpeg[:2] + jpeg_segment(0xE1, XMP) + jpeg[2:]
 
 
 def _write(folder: Path, name: str, body: bytes) -> Path:
@@ -109,21 +97,10 @@ def _display_p3() -> bytes:
     return header + body
 
 
-def _nef() -> bytes:
-    """Return the first bytes of a NEF: a big-endian TIFF whose Make is Nikon's."""
-    make = b"NIKON CORPORATION\x00"
-    entry = struct.pack(">HHII", 0x010F, 2, len(make), 26)
-    return b"MM\x00*" + struct.pack(">IH", 8, 1) + entry + b"\x00" * 4 + make
-
-
 def _pixels(path: Path | bytes) -> bytes:
     source = io.BytesIO(path) if isinstance(path, bytes) else path
     with Image.open(source) as image:
         return image.convert("RGB").tobytes()
-
-
-def _unreached() -> Vocabulary:
-    raise AssertionError("import read the vocabulary")
 
 
 # --- cleaning ----------------------------------------------------------------
@@ -132,7 +109,7 @@ def _unreached() -> Vocabulary:
 @pytest.mark.spec("import:clean:a-jpegs-exif-is-stripped")
 def test_a_jpegs_exif_is_stripped_and_its_pixels_kept(tmp_path: Path) -> None:
     srgb = ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
-    original = _jpeg(exif=_camera_exif(), icc_profile=srgb)
+    original = photo_jpeg(exif=_camera_exif(), icc_profile=srgb)
     photo = _write(tmp_path, "portrait.jpg", original)
     staging = stage(tmp_path / "library")
 
@@ -149,7 +126,7 @@ def test_a_jpegs_exif_is_stripped_and_its_pixels_kept(tmp_path: Path) -> None:
 @pytest.mark.spec("import:clean:another-profile-is-converted-to-srgb")
 def test_a_display_p3_jpeg_is_converted_to_srgb(tmp_path: Path) -> None:
     p3 = _display_p3()
-    original = _jpeg(icc_profile=p3)
+    original = photo_jpeg(icc_profile=p3)
     photo = _write(tmp_path, "wide.jpg", original)
     with Image.open(io.BytesIO(original)) as decoded:
         expected = ImageCms.profileToProfile(
@@ -219,20 +196,11 @@ def test_a_transparent_webp_becomes_a_png(tmp_path: Path) -> None:
 
 @pytest.mark.spec("import:refuse:a-raw-photograph-is-refused")
 def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> None:
-    nef = _write(tmp_path, "DSC_0001.NEF", _nef())
-    jpeg = _write(tmp_path, "portrait.jpg", _jpeg())
+    nef = _write(tmp_path, "DSC_0001.NEF", nef_bytes())
+    jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
     batch = tmp_path / "library" / "trip"
     err = io.StringIO()
-    wired = Wiring(
-        reader=None,
-        tagger=None,
-        hosted_tagger=None,
-        client=None,
-        vocabulary=_unreached,
-        field_map=lambda _: FIELD_MAP,
-        out=io.StringIO(),
-        err=err,
-    )
+    wired = bare_wiring(err=err)
     args = build_parser().parse_args(
         ["import", "--batch", str(batch), str(nef), str(jpeg)]
     )
@@ -301,7 +269,7 @@ def test_a_file_still_carrying_xmp_is_re_encoded_and_passes(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _strip_misses_xmp(monkeypatch)
-    photo = _write(tmp_path, "portrait.jpg", _with_xmp(_jpeg()))
+    photo = _write(tmp_path, "portrait.jpg", _with_xmp(photo_jpeg()))
     staging = stage(tmp_path / "library")
 
     staged = read(photo, staging, LIMIT)
@@ -318,8 +286,8 @@ def test_a_file_that_cannot_be_cleaned_is_named_and_left_out(
     _reencode_keeps_xmp(monkeypatch)
     library = tmp_path / "library"
     staging = stage(library)
-    dirty = read(_write(tmp_path, "dirty.jpg", _with_xmp(_jpeg())), staging, LIMIT)
-    clean = read(_write(tmp_path, "clean.jpg", _jpeg((1, 2, 3))), staging, LIMIT)
+    dirty = read(_write(tmp_path, "dirty.jpg", _with_xmp(photo_jpeg())), staging, LIMIT)
+    clean = read(_write(tmp_path, "clean.jpg", photo_jpeg((1, 2, 3))), staging, LIMIT)
 
     done = commit(staging, library, "trip")
 
@@ -339,7 +307,7 @@ def test_an_uncleanable_file_chosen_as_it_is_imports(
     _reencode_keeps_xmp(monkeypatch)
     library = tmp_path / "library"
     staging = stage(library)
-    read(_write(tmp_path, "dirty.jpg", _with_xmp(_jpeg())), staging, LIMIT)
+    read(_write(tmp_path, "dirty.jpg", _with_xmp(photo_jpeg())), staging, LIMIT)
 
     commit(staging, library, "trip", as_is=["dirty.jpg"])
 
@@ -355,7 +323,7 @@ def test_a_commit_moves_every_staged_file_into_the_batch(tmp_path: Path) -> None
     library = tmp_path / "library"
     staging = stage(library)
     for name, colour in (("a.jpg", (1, 1, 1)), ("b.jpg", (2, 2, 2))):
-        read(_write(tmp_path, name, _jpeg(colour)), staging, LIMIT)
+        read(_write(tmp_path, name, photo_jpeg(colour)), staging, LIMIT)
 
     done = commit(staging, library, "trip")
 
@@ -372,7 +340,7 @@ def test_a_cancel_deletes_the_staging_folder(tmp_path: Path) -> None:
     library = tmp_path / "library"
     library.mkdir()
     staging = stage(library)
-    read(_write(tmp_path, "a.jpg", _jpeg()), staging, LIMIT)
+    read(_write(tmp_path, "a.jpg", photo_jpeg()), staging, LIMIT)
 
     cancel(staging)
 
@@ -384,7 +352,7 @@ def test_a_cancel_deletes_the_staging_folder(tmp_path: Path) -> None:
 def test_staging_left_behind_is_swept_at_start(tmp_path: Path) -> None:
     library = tmp_path / "library"
     left = stage(library)
-    _write(left, "a.jpg", _jpeg())
+    _write(left, "a.jpg", photo_jpeg())
 
     sweep(library)
 
@@ -398,12 +366,12 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
     library = tmp_path / "library"
     sources = library / "trip" / "sources"
     sources.mkdir(parents=True)
-    _write(sources, "portrait.jpg", _jpeg((5, 5, 5)))
+    _write(sources, "portrait.jpg", photo_jpeg((5, 5, 5)))
     staging = stage(library)
-    read(_write(tmp_path, "again.jpg", _jpeg((5, 5, 5))), staging, LIMIT)
+    read(_write(tmp_path, "again.jpg", photo_jpeg((5, 5, 5))), staging, LIMIT)
     other = tmp_path / "other"
     other.mkdir()
-    read(_write(other, "portrait.jpg", _jpeg((9, 9, 9))), staging, LIMIT)
+    read(_write(other, "portrait.jpg", photo_jpeg((9, 9, 9))), staging, LIMIT)
 
     done = commit(staging, library, "trip", add=True)
 
@@ -423,7 +391,7 @@ def test_an_unusable_batch_name_is_refused_and_staging_kept(
     library = tmp_path / "library"
     (library / "taken").mkdir(parents=True)
     staging = stage(library)
-    read(_write(tmp_path, "a.jpg", _jpeg()), staging, LIMIT)
+    read(_write(tmp_path, "a.jpg", photo_jpeg()), staging, LIMIT)
 
     with pytest.raises(Refusal):
         commit(staging, library, name)

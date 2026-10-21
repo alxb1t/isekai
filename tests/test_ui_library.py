@@ -14,7 +14,8 @@ from isekai.interface.ui import library
 from isekai.interface.ui.library import Cell, FlowCount
 from isekai.pipeline.review import approve, review
 from isekai.shared.vocabulary import Vocabulary
-from tests.images import jpeg_bytes
+from tests.conftest import tree
+from tests.images import jpeg_bytes, photo_jpeg
 from tests.stages import sheet, write_wd14
 
 REPO = Path(__file__).resolve().parent.parent
@@ -46,14 +47,6 @@ def _approved(run: Run, vocabulary: Vocabulary) -> None:
     sheet(run, schema, vocabulary)
     review(run, SUMMON)
     approve(run, SUMMON, schema, vocabulary)
-
-
-def _tree(folder: Path) -> dict[str, bytes | None]:
-    """Return every path under `folder` with a file's bytes, or None for a folder."""
-    return {
-        str(path.relative_to(folder)): path.read_bytes() if path.is_file() else None
-        for path in sorted(folder.rglob("*"))
-    }
 
 
 @pytest.mark.spec("ui:library:an-absent-library-is-created")
@@ -149,12 +142,12 @@ def test_listing_and_opening_a_batch_writes_no_file(
 ) -> None:
     folder = _batch(tmp_path, "b", "ada.jpg", "bea.jpg")
     _approved(_run(folder, "ada.jpg"), vocabulary)
-    before = _tree(tmp_path)
+    before = tree(tmp_path)
 
     library.rows(tmp_path, OFFERED, FLOWS_DIR)
     library.hub(library.batch(tmp_path, "b"), OFFERED, FLOWS_DIR)
 
-    assert _tree(tmp_path) == before
+    assert tree(tmp_path) == before
 
 
 @pytest.mark.spec("ui:hub:a-cells-stage-comes-from-its-run")
@@ -233,9 +226,8 @@ def test_a_source_still_carrying_metadata_is_marked_not_cleaned(
     exif = Image.Exif()
     exif[0x010F] = "Canon"
     for name, options in (("clean.jpg", {}), ("as-is.jpg", {"exif": exif.tobytes()})):
-        Image.new("RGB", (64, 48), (90, 60, 30)).save(
-            folder / "sources" / name, "JPEG", **options
-        )
+        body = photo_jpeg((90, 60, 30), (64, 48), **options)
+        (folder / "sources" / name).write_bytes(body)
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
 
@@ -273,11 +265,11 @@ def test_reading_the_hub_writes_nothing(tmp_path: Path, vocabulary: Vocabulary) 
     ada = _run(folder, "ada.jpg")
     sheet(ada, load_flow(SUMMON).schema, vocabulary)
     _run(folder, "bea.jpg")
-    before = _tree(folder)
+    before = tree(folder)
 
     library.hub(folder, OFFERED, FLOWS_DIR)
 
-    assert _tree(folder) == before
+    assert tree(folder) == before
 
 
 @pytest.mark.spec_exempt("structural: a run is found by its digest, or refused")

@@ -170,6 +170,14 @@ def require_vocabulary(path: Path) -> None:
     )
 
 
+def tree(directory: Path) -> dict[str, bytes | None]:
+    """Return every path under `directory` with a file's bytes, or None for a folder."""
+    return {
+        str(path.relative_to(directory)): path.read_bytes() if path.is_file() else None
+        for path in sorted(directory.rglob("*"))
+    }
+
+
 def snapshot(directory: Path) -> dict[str, bytes]:
     """Return every file under `directory`, by relative name, with its bytes."""
     return {

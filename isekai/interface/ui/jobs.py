@@ -25,6 +25,7 @@ from typing import Any
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
 from isekai.interface.ui.events import Broadcast
+from isekai.interface.ui.library import LOG, RUNS
 
 # The stages Prepare runs for each flow, in order.
 PREPARE = ("tag", "caption", "sheet")
@@ -92,10 +93,7 @@ class _Job:
 
 
 class Jobs:
-    """The one job slot, and the child running in it.
-
-    `cell` turns a progress line into the event the page applies, or None.
-    """
+    """The one job slot, and the child running in it."""
 
     def __init__(
         self,
@@ -126,14 +124,15 @@ class Jobs:
         steps: Sequence[Step],
         cell: Callable[[dict[str, Any]], dict[str, Any] | None],
     ) -> dict[str, Any]:
-        """Start Prepare over `steps`, or refuse: a job running, or no answer."""
+        """Start Prepare over `steps`, or refuse: a job running, or no answer.
+
+        `cell` turns a progress line into the event the page applies, or None.
+        """
+        self._refuse_running()
+        # Outside the lock: a host that is slow to answer holds up no snapshot.
+        self._probe()
         with self._lock:
-            if self._job is not None and self._job.state == "running":
-                raise Refusal(
-                    f"a job is running: Prepare on {self._job.batch}; wait for it "
-                    "to end, or Stop it, then try again"
-                )
-            self._probe()
+            self._refuse_running()
             if not steps:
                 raise Refusal(
                     f"{batch} has no assigned cell without a sheet; tick a flow for "
@@ -148,7 +147,16 @@ class Jobs:
         self._publish(job)
         return job.describe()
 
-    def stop(self) -> dict[str, Any] | None:
+    def _refuse_running(self) -> None:
+        """Refuse while a job runs, naming it."""
+        job = self._job
+        if job is not None and job.state == "running":
+            raise Refusal(
+                f"a job is running: Prepare on {job.batch}; wait for it to end, or "
+                "Stop it, then try again"
+            )
+
+    def stop(self) -> dict[str, Any]:
         """Interrupt the running stage and start no other, or refuse: none runs."""
         with self._lock:
             if self._job is None or self._job.state != "running":
@@ -213,9 +221,9 @@ class Jobs:
         with self._lock:
             if self._stopping:
                 return None
-            argv = self._command(step.verb, step.flow, folder / "runs", step.runs)
+            argv = self._command(step.verb, step.flow, folder / RUNS, step.runs)
             job.flow, job.stage = step.flow, step.verb
-            with (folder / "log.txt").open("a") as log:
+            with (folder / LOG).open("a") as log:
                 # Its own session, so a Ctrl-C at the terminal reaches the server
                 # alone, and the server decides what the child is sent.
                 self._child = subprocess.Popen(

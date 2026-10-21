@@ -18,14 +18,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from PIL import Image
 
 from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.review import approve, review
 from tests.e2e.wiring import VOCABULARY
-from tests.images import jpeg_bytes
+from tests.images import jpeg_bytes, photo_jpeg
 from tests.stages import caption, sheet
 
 REPO = Path(__file__).resolve().parents[2]
@@ -125,8 +124,8 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     for name, fresh in FRESH.items():
         (lib / name / "sources").mkdir(parents=True)
         for index, one in enumerate(fresh):
-            image = Image.new("RGB", (640, 800 + index), (90, 60, 30 + index))
-            image.save(lib / name / "sources" / f"{one}.jpg", "JPEG")
+            body = photo_jpeg((90, 60, 30 + index), (640, 800 + index))
+            (lib / name / "sources" / f"{one}.jpg").write_bytes(body)
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"

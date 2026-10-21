@@ -16,7 +16,7 @@ No web framework, so the whole of it is tested with no server involved.
 
 import json
 import os
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -50,14 +50,14 @@ from isekai.foundation.run import (
 )
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import rendered_seeds
-from isekai.pipeline.importing import UI_CONFIG, verify
+from isekai.pipeline.importing import SOURCES, UI_CONFIG, verify
 from isekai.pipeline.review import Status, current_draft
 from isekai.pipeline.review import state as review_state
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
-SOURCES = "sources"
 RUNS = "runs"
+LOG = "log.txt"
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
@@ -264,15 +264,22 @@ def unprepared(grid: Hub) -> dict[str, list[str]]:
     }
 
 
-def source_file(folder: Path, name: str) -> Path:
-    """Return the file under batch `folder`'s `sources/` named `name`, or refuse."""
-    found = {path.name: path for path in _sources(folder)}.get(name)
-    if found is None:
-        raise Refusal(
-            f"{folder.name} holds no source named {name!r}; reload the hub to see "
-            "its sources"
-        )
-    return found
+def source_files(folder: Path) -> Callable[[str], Path]:
+    """Return what finds a file under batch `folder`'s `sources/` by name, or refuses.
+
+    The folder is listed once, however many names are asked for.
+    """
+    found = {path.name: path for path in _sources(folder)}
+
+    def named(name: str) -> Path:
+        if name not in found:
+            raise Refusal(
+                f"{folder.name} holds no source named {name!r}; reload the hub to "
+                "see its sources"
+            )
+        return found[name]
+
+    return named
 
 
 def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
@@ -280,11 +287,15 @@ def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
     return {flow: load_flow(flow, flows_dir).output_suffix for flow in flows}
 
 
-def _grid(folder: Path, suffixes: Mapping[str, str]) -> Hub:
-    """Return batch `folder`'s grid over the flows `suffixes` names."""
+def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> Hub:
+    """Return batch `folder`'s grid over the flows `suffixes` names.
+
+    Without `marks`, no source is decoded for its not-cleaned mark: Home shows none.
+    """
     runs = _runs(folder / RUNS)
     sources = tuple(
-        _source(path, runs.get(_digest(path)), suffixes) for path in _sources(folder)
+        _source(path, runs.get(_digest(path)), suffixes, marks=marks)
+        for path in _sources(folder)
     )
     return Hub(folder.name, tuple(suffixes), sources)
 
@@ -379,18 +390,20 @@ def _runs(runs: Path) -> dict[str, Run]:
     }
 
 
-def _source(path: Path, run: Run | None, suffixes: Mapping[str, str]) -> Source:
+def _source(
+    path: Path, run: Run | None, suffixes: Mapping[str, str], *, marks: bool
+) -> Source:
     """Return one source, with its cell in every offered flow."""
     cells = {
         flow: stage(run, flow, suffix) if run else Cell(None)
         for flow, suffix in suffixes.items()
     }
-    return Source(path.name, run, cells, _carries(path))
+    return Source(path.name, run, cells, _carries(path) if marks else ())
 
 
 def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
     """Return one batch's row: its counts per flow and its newest file."""
-    grid = _grid(folder, suffixes)
+    grid = _grid(folder, suffixes, marks=False)
     newest, kind = _newest(folder)
     counts = [_count(grid.sources, flow) for flow in grid.flows]
     bare = [
