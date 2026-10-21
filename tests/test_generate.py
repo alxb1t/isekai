@@ -58,7 +58,6 @@ from isekai.pipeline.generate import (
     build_graph,
     draw_seeds,
     graph_digest,
-    photo_resolution,
     prepare,
     prompt_artifact,
     read_runtime,
@@ -67,7 +66,7 @@ from isekai.pipeline.generate import (
 )
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
-from isekai.shared.image import MAX_TARGET_LONG_SIDE
+from isekai.shared.image import MAX_TARGET_LONG_SIDE, photo_resolution
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import (
     FAKE_SYSTEM,

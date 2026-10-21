@@ -43,6 +43,7 @@ from tests.transports import FakeTransport
 ROOT = Path(__file__).resolve().parent.parent
 
 EXPECTED_VERBS = (
+    "import",
     "caption",
     "tag",
     "sheet",
@@ -174,8 +175,10 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.spec("cli:pipeline-surface:verbs-are-subcommands")
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
-    # `compare` takes a batch directory, `render` its runs; `ui` takes nothing.
+    # `compare` takes a batch directory, `render` its runs, `import` a batch and
+    # its files; `ui` takes nothing.
     own = {
+        "import": ["--batch", "batch", "photo.jpg"],
         "show": [],
         "ui": [],
         "compare": ["batch"],

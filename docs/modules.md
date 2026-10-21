@@ -66,15 +66,16 @@ Rules the graph is holding rather than describing:
   v0.22.3 retired that: the local tagger runs on every `tag` for every tagged flow,
   so `uv sync` — which makes the environment match exactly what it is told and
   removes extras it is not told about — was stripping it on every gate run.
-  `onnxruntime`, `numpy`, `Pillow`, `fastapi`, `uvicorn` and `gpunit` are declared
-  dependencies now. **What survives is the claim the graph actually holds**, and
+  `onnxruntime`, `numpy`, `Pillow`, `pi-heif`, `fastapi`, `uvicorn` and `gpunit` are
+  declared dependencies now. **What survives is the claim the graph actually holds**, and
   it is worth more than the one it replaces: no wheel is reached on the import
   graph of `python -m isekai`, only on the path of the verb that needs it — which
   is why `isekai show` works on a checkout that has provisioned nothing.
 
   Each wheel-needing tree is reached from inside a function or behind a lazy
   import: `fastapi`/`uvicorn` from `interface/ui/app.py`; the tagger's stack
-  from `boundary/wd14.py`; `gpunit` from inside `boundary/gpu.py`'s `open_session`
+  from `boundary/wd14.py`; Pillow and `pi_heif` from inside the functions of
+  `pipeline/importing.py`; `gpunit` from inside `boundary/gpu.py`'s `open_session`
   and `interface/render.py`'s session block. The mechanisms differ, and the difference matters to
   anyone reading this as a rule to apply. `wd14.py` reaches its stack by an
   `import_module` call **inside a function**, so the module imports cleanly

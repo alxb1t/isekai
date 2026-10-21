@@ -6,7 +6,8 @@ touches no ComfyUI graph: the flow's manifest names the node that takes the
 target, and the caller writes it there.
 
 Also strips a photograph's metadata for upload: a byte walk over the same
-segments and chunks, keeping what decodes and never re-encoding.
+segments and chunks, keeping what decodes and never re-encoding. The same walk
+names what a file carries beyond its pixels, which is how import verifies a source.
 """
 
 import io
@@ -34,10 +35,9 @@ DIMENSION_STEP = 64
 # aspect ratio, and would squash the photo the way the orientation rule exists to
 # prevent.
 #
-# Two of the three are enforced here, where the header is read. The third bounds
-# a *computed target* rather than a header field, so it is enforced where a target
-# is computed for a render -- `generate.photo_resolution`, which is also the only
-# caller that can turn it into a per-photograph refusal instead of a dead batch.
+# Two of the three are enforced where the header is read. The third bounds a
+# *computed target* rather than a header field, so `photo_resolution` enforces it,
+# as a per-photograph refusal instead of a dead batch.
 #
 #   4096 is 4:1 at a 1024 short side -- past any real photo, and 1024x4096 is
 #   already a heavy SDXL allocation.
@@ -332,7 +332,7 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
     a `SystemExit` is a `BaseException`, so `across` walks straight past it and
     the remaining photographs die with it.
 
-    **One wrap, for `generate.photo_resolution` and `ui/app.py` alike**, so the
+    **One wrap, for `photo_resolution` and `ui/app.py` alike**, so the
     identical failure has one wording. It lives here rather than at either caller
     because the hazard is a property of `image_dimensions` and every future caller
     inherits it; `remedy` is a parameter because what to do about it is not --
@@ -343,6 +343,35 @@ def dimensions_or_refuse(photo: Path, remedy: str) -> tuple[int, int]:
         return image_dimensions(str(photo))
     except SystemExit as unreadable:
         raise Refusal(f"{unreadable}; {remedy}") from unreadable
+
+
+def photo_resolution(photo: Path) -> tuple[int, int]:
+    """Return the working resolution for `photo`, as a refusal rather than an exit.
+
+    Render's header check: generation and import both refuse what it refuses.
+    `dimensions_or_refuse` turns an unreadable header into a `Refusal`, and
+    `MAX_TARGET_LONG_SIDE` is enforced here -- see its comment for what it bounds.
+    The one fact that belongs here rather than beside the constant: it bounds the
+    *working* target and not the hires one, because hires scales both axes by the
+    same factor and so does not change the aspect ratio, and bounding the hires
+    value would silently tighten 4:1 to 2.67:1 for a reason unrelated to aspect.
+    """
+    width, height = working_resolution(
+        *dimensions_or_refuse(
+            photo,
+            "the render target is derived from the photograph's own header and "
+            "there is nothing to fall back to -- re-export the photograph as a "
+            "JPEG or PNG and open the run again",
+        )
+    )
+    if max(width, height) > MAX_TARGET_LONG_SIDE:
+        raise Refusal(
+            f"{photo.name}: a {width}x{height} target is past the "
+            f"{MAX_TARGET_LONG_SIDE} limit on the long side; the short-side rule "
+            "bounds one axis and this photograph's aspect ratio is extreme -- "
+            "crop it closer to the subject and open the run again"
+        )
+    return width, height
 
 
 # What a stripped photograph keeps. An allowlist rather than a
@@ -378,9 +407,9 @@ def strip_metadata(photo: Path) -> bytes:
     try:
         data = photo.read_bytes()
         if data.startswith(_PNG_SIGNATURE):
-            return _strip_png(data)
+            return _strip_png(data, [])
         if data.startswith(b"\xff\xd8"):
-            return _strip_jpeg(data)
+            return _strip_jpeg(data, [])
         reason = "it is neither a JPEG nor a PNG"
     except OSError as unreadable:
         reason = f"it cannot be read ({unreadable.strerror})"
@@ -392,8 +421,66 @@ def strip_metadata(photo: Path) -> bytes:
     )
 
 
-def _strip_jpeg(data: bytes) -> bytes:
-    """Return a JPEG's kept segments and scans, ending at its first EOI."""
+def metadata_in(data: bytes) -> list[str]:
+    """Return what a JPEG or PNG carries beyond its pixels and orientation, by name.
+
+    The strip's own walk, reporting what it drops; an empty list is a clean file.
+    e.g. a camera JPEG -> ["EXIF", "XMP", "a colour profile"]
+    """
+    found: list[str] = []
+    try:
+        if data.startswith(_PNG_SIGNATURE):
+            _strip_png(data, found)
+        elif data.startswith(b"\xff\xd8"):
+            _strip_jpeg(data, found)
+        else:
+            found.append("a format that is neither JPEG nor PNG")
+    except _Unwalkable as unwalkable:
+        found.append(f"blocks the walk cannot read ({unwalkable})")
+    return list(dict.fromkeys(found))
+
+
+# What a dropped JPEG segment is, by its marker and the signature its payload
+# opens with. A segment none of these name is reported by its marker.
+_JPEG_BLOCK_NAMES: tuple[tuple[int, bytes, str], ...] = (
+    (0xE1, b"Exif\x00\x00", "EXIF"),
+    (0xE1, b"http://ns.adobe.com/x", "XMP"),
+    (0xE2, b"ICC_PROFILE\x00", "a colour profile"),
+    (0xE2, b"MPF\x00", "more images (MPF)"),
+    (0xED, b"Photoshop 3.0\x00", "IPTC"),
+    (0xFE, b"", "a comment"),
+)
+
+
+def _jpeg_block(code: int, payload: bytes) -> str:
+    """Return the name of a JPEG segment the strip drops."""
+    for marker, signature, name in _JPEG_BLOCK_NAMES:
+        if code == marker and payload.startswith(signature):
+            return name
+    return f"APP{code - 0xE0}"
+
+
+def _png_block(kind: bytes, payload: bytes) -> str:
+    """Return the name of a PNG chunk the strip drops."""
+    if kind == b"iCCP":
+        return "a colour profile"
+    if kind == _PNG_EXIF_CHUNK:
+        return "EXIF"
+    if kind == b"iTXt" and payload.startswith(b"XML:com.adobe.xmp\x00"):
+        return "XMP"
+    if kind in (b"tEXt", b"zTXt", b"iTXt"):
+        return "text"
+    return kind.decode("latin-1")
+
+
+def _strip_jpeg(data: bytes, found: list[str]) -> bytes:
+    """Return a JPEG's kept segments and scans, ending at its first EOI.
+
+    Appends to `found` the name of every block it drops.
+    """
+    tiff = _orientation_tiff(_jpeg_dimensions, data)
+    # The orientation alone, as the strip writes it back, is not metadata.
+    orientation = b"Exif\x00\x00" + tiff if tiff else None
     kept = [data[:2]]
     at = 2
     while at < len(data):
@@ -430,24 +517,37 @@ def _strip_jpeg(data: bytes) -> bytes:
             elif end - at - 2 >= fixed:
                 fields = data[at + 2 : at + 2 + fixed]
                 if code == 0xE0:
+                    if fields[-2:] != b"\x00\x00":
+                        found.append("a thumbnail")
                     fields = fields[:-2] + b"\x00\x00"
+                if end - at - 2 > fixed:
+                    found.append(f"bytes past the APP{code - 0xE0} fields")
                 kept.append(data[start:at] + struct.pack(">H", fixed + 2) + fields)
+            else:
+                found.append(f"a short APP{code - 0xE0}")
         elif code not in _JPEG_DROPPED:
             # Dropping a marker the walk does not know could change the pixels.
             raise _Unwalkable(f"it carries marker 0x{code:02X}, which is not known")
+        elif data[at + 2 : end] != orientation:
+            found.append(_jpeg_block(code, data[at + 2 : end]))
         at = end
+    if at < len(data):
+        found.append("bytes after the image's end")
 
-    tiff = _orientation_tiff(_jpeg_dimensions, data)
-    if tiff:
-        exif = b"Exif\x00\x00" + tiff
+    if orientation:
+        exif = orientation
         # JFIF must stay first, so the orientation goes in behind it.
         exif_at = 2 if kept[1:2] and kept[1][1] == 0xE0 else 1
         kept.insert(exif_at, b"\xff\xe1" + struct.pack(">H", len(exif) + 2) + exif)
     return b"".join(kept)
 
 
-def _strip_png(data: bytes) -> bytes:
-    """Return a PNG's kept chunks, ending at IEND. CRCs are copied, never checked."""
+def _strip_png(data: bytes, found: list[str]) -> bytes:
+    """Return a PNG's kept chunks, ending at IEND. CRCs are copied, never checked.
+
+    Appends to `found` the name of every chunk it drops.
+    """
+    tiff = _orientation_tiff(_png_dimensions, data)
     kept = [_PNG_SIGNATURE]
     at = len(_PNG_SIGNATURE)
     while at < len(data):
@@ -463,11 +563,14 @@ def _strip_png(data: bytes) -> bytes:
         elif not kind[0] & 0x20:
             # An uppercase first letter marks a chunk the decoder cannot skip.
             raise _Unwalkable(f"it carries critical chunk {kind!r}, which is not known")
+        elif not (kind == _PNG_EXIF_CHUNK and tiff and data[at + 8 : end - 4] == tiff):
+            found.append(_png_block(kind, data[at + 8 : end - 4]))
         at = end
         if kind == b"IEND":
             break
+    if at < len(data):
+        found.append("bytes after the image's end")
 
-    tiff = _orientation_tiff(_png_dimensions, data)
     if tiff:
         chunk = struct.pack(">I", len(tiff)) + _PNG_EXIF_CHUNK + tiff
         kept.insert(2, chunk + struct.pack(">I", zlib.crc32(chunk[4:])))

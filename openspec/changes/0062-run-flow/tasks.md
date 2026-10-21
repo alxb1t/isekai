@@ -6,7 +6,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 ## Progress
 
 - [x] 1 — The copy
-- [ ] 2 — Import
+- [x] 2 — Import
 - [ ] 3 — Assign and the offered flows
 - [ ] 4 — Progress
 - [ ] 5 — The job and its stream
@@ -25,17 +25,17 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 2 — Import
 
-- [ ] 2.1 Add `pi-heif` per [Dependencies](design.md#dependencies): `uv add pi-heif==1.4.0`.
+- [x] 2.1 Add `pi-heif` per [Dependencies](design.md#dependencies): `uv add pi-heif==1.4.0`.
   Verify: `grep -c 'pi-heif==1.4.0' pyproject.toml` prints `1`.
-- [ ] 2.2 Add `tests/fixtures/sources/plain.heic`: `sips -s format heic` on a 64×64 solid-colour PNG Pillow writes.
+- [x] 2.2 Add `tests/fixtures/sources/plain.heic`: `sips -s format heic` on a 64×64 solid-colour PNG Pillow writes.
   Verify: `file tests/fixtures/sources/plain.heic` names a HEIF image.
-- [ ] 2.3 **HALT CHECK** — `pi-heif` decodes the fixture.
+- [x] 2.3 **HALT CHECK** — `pi-heif` decodes the fixture.
   Verify: `uv run python -c "import pi_heif; from PIL import Image; pi_heif.register_heif_opener(); print(Image.open('tests/fixtures/sources/plain.heic').size)"` prints `(64, 64)`.
-- [ ] 2.4 Add `config/ui.json` with `upload_limit_mb` 200, and `isekai/pipeline/importing.py` — `read`, `verify`, `commit`, `cancel`, `sweep` — per [D1](design.md#d1), [D2](design.md#d2) and [D3](design.md#d3).
+- [x] 2.4 Add `config/ui.json` with `upload_limit_mb` 200, and `isekai/pipeline/importing.py` — `read`, `verify`, `commit`, `cancel`, `sweep` — per [D1](design.md#d1), [D2](design.md#d2) and [D3](design.md#d3).
   Verify: `grep -c '"upload_limit_mb": 200' config/ui.json` prints `1`, and `uv run python -c "import isekai.pipeline.importing"` exits 0.
-- [ ] 2.5 Add the `import` verb to `isekai/interface/cli.py` per [D1](design.md#d1).
+- [x] 2.5 Add the `import` verb to `isekai/interface/cli.py` per [D1](design.md#d1).
   Verify: `uv run python -m isekai import --help` exits 0.
-- [ ] 2.6 Add `tests/test_importing.py` binding every key of [the import delta](specs/import/spec.md).
+- [x] 2.6 Add `tests/test_importing.py` binding every key of [the import delta](specs/import/spec.md).
   Verify: `uv run pytest -q tests/test_importing.py` exits 0, and `grep -c 'import:stage:leftover-staging-is-swept' tests/test_importing.py` prints `1`.
 
 ## 3 — Assign and the offered flows

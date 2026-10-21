@@ -298,8 +298,9 @@ def _every_refusal(wired: Wiring, tmp_path: Path) -> list[str]:
     from isekai.foundation.run import open_run, record_failure
     from isekai.interface.compare_view import page
     from isekai.pipeline.caption import OllamaReader
-    from isekai.pipeline.generate import photo_resolution, prepare, prompt_artifact
+    from isekai.pipeline.generate import prepare, prompt_artifact
     from isekai.pipeline.review import approve, review, save_draft
+    from isekai.shared.image import photo_resolution
     from tests.stages import CAPTION_BRIEFING, caption, sheet
 
     photo = tmp_path / "bare.jpg"

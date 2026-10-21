@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Added
+
+- `isekai import --batch <dir> <file…>` cleans photographs into a batch's `sources/`: no metadata but the
+  orientation, colour in sRGB, HEIC and other formats converted; a RAW, multi-image or oversized file is refused
+  by name, and each file is verified before it is committed (0062 D1, D2, D3).
+
 ### Changed
 
 - A refusal that asks the operator to fix something and retry ends *"then try again"*, so the page can show it

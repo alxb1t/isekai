@@ -15,7 +15,7 @@ does is reach a boundary or decide a stage's order.
 |---|---|
 | `field_map.py` | answers *which identity criterion does this tag belong to* — one authored table, read `tag → field` to route and `field → tags` to browse |
 | `fields.py` | answers *is this filled sheet exactly the schema's fields of canonical tags* |
-| `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, and strips a photograph's metadata for upload |
+| `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, refusing what render cannot take; strips a photograph's metadata for upload, and names what a file carries beyond its pixels |
 | `vocabulary.py` | answers *is this a real tag* and *how strong is it* |
 
 ## Imported by
@@ -27,7 +27,7 @@ at least once; a list of names cannot.
 |---|---|---|
 | `field_map.py` | `interface/cli.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/sheet.py` | `tools/derive_field_map.py`, `tests/stages.py`, `tests/test_field_map.py`, `tests/test_package_paths.py`, `tests/test_ui_api.py` |
 | `fields.py` | `pipeline/review.py`, `pipeline/sheet.py` | `tests/test_sheet_schema.py` |
-| `image.py` | `interface/ui/app.py`, `pipeline/generate.py` | `tests/test_generate.py`, `tests/test_image.py` |
+| `image.py` | `interface/ui/app.py`, `pipeline/generate.py`, `pipeline/importing.py` | `tests/test_generate.py`, `tests/test_image.py`, `tests/test_importing.py`, `tests/test_resume.py` |
 | `vocabulary.py` | `boundary/wd14.py`, `interface/cli.py`, `interface/ui/app.py`, `interface/wiring.py`, `pipeline/review.py`, `pipeline/sheet.py`, `field_map.py`, `fields.py` | `evaluation/__main__.py`, `evaluation/face.py`, `evaluation/recall.py`, `tests/conftest.py`, `tests/stages.py`, `tests/test_artifact_bytes.py`, `tests/test_compare.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_schema.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tools/derive_field_map.py` |
 
 > Files and importers only. What a component *is* is

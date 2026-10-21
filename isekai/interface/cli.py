@@ -9,6 +9,7 @@ drift.
 so an upgrade command would be a dispatch table with no entries and its refusal
 would be unreachable -- nothing writes a later one.
 
+    import        clean photographs into a batch's sources/
     caption   (1) a photograph in, prose out
     tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
@@ -20,11 +21,11 @@ would be unreachable -- nothing writes a later one.
     ui        (3) serve the review surface for a batch of inputs
     compare       write a page of every run's photograph beside its renders
 
-**`show` inspects a run, `ui` serves a surface, `compare` writes a page, and
-every other verb runs a stage.** The stage verbs take `--flow` repeatably; `ui`
-takes exactly one, because the surface is one schema's fields in one order;
-`show` and `compare` take none, because they report every flow the runs already
-hold. `show` reads a run and decides
+**`import` fills a batch, `show` inspects a run, `ui` serves a surface,
+`compare` writes a page, and every other verb runs a stage.** The stage verbs
+take `--flow` repeatably; `ui` takes exactly one, because the surface is one
+schema's fields in one order; `show` and `compare` take none, because they
+report every flow the runs already hold. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
 so neither surface is privileged and neither goes through the other.
@@ -63,6 +64,15 @@ from isekai.pipeline.generate import (
     render,
     source_seeds,
 )
+from isekai.pipeline.importing import (
+    SOURCES,
+    Staged,
+    cancel,
+    commit,
+    read,
+    stage,
+    upload_limit,
+)
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
@@ -74,6 +84,7 @@ from isekai.shared.vocabulary import Vocabulary
 T = TypeVar("T")
 
 VERBS: tuple[tuple[str, str], ...] = (
+    ("import", "clean photographs and add them to a batch's sources/"),
     ("caption", "read a photograph into prose"),
     ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
@@ -132,7 +143,9 @@ def build_parser() -> argparse.ArgumentParser:
     # `compare` takes a batch directory instead: its runs root is the batch's
     # `runs/`, so a second way to name it could only disagree. `render` takes
     # its runs root first, and every run under it. `ui` serves the library.
-    for name in (name for name in made if name not in ("compare", "render", "ui")):
+    for name in (
+        name for name in made if name not in ("compare", "import", "render", "ui")
+    ):
         made[name].add_argument(
             "photos",
             nargs="*",
@@ -191,6 +204,17 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"the loopback port to serve on (default {DEFAULT_PORT})",
     )
     made["ui"].set_defaults(photos=[], runs=RUNS_ROOT)
+
+    made["import"].add_argument(
+        "--batch",
+        type=Path,
+        required=True,
+        help="the batch directory; made when absent, else the files join its sources/",
+    )
+    made["import"].add_argument(
+        "files", nargs="+", type=Path, help="the photographs to clean and add"
+    )
+    made["import"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     made["compare"].add_argument(
         "batch",
@@ -280,6 +304,49 @@ def _ui(args: argparse.Namespace, wired: Wiring) -> int:
     return serve(wired, port=int(args.port))
 
 
+def _import(args: argparse.Namespace, wired: Wiring) -> int:
+    """Read each file into the batch's staging, commit what is clean, and report.
+
+    No file that is not cleaned is imported: that choice is the page's, one file
+    at a time.
+    """
+    batch = Path(args.batch).resolve()
+    staging = stage(batch.parent)
+    limit = upload_limit()
+    staged: list[Staged] = []
+    try:
+        refused = across(
+            list(args.files), lambda file: staged.append(read(file, staging, limit))
+        )
+        for item in staged:
+            print(_staged_line(item), file=wired.out)
+        if any(item.state in ("ready", "converted") for item in staged):
+            add = (batch / SOURCES).is_dir()
+            done = commit(staging, batch.parent, batch.name, add=add)
+            for name in done.skipped:
+                print(f"{name}: skipped, a source holds its bytes", file=wired.out)
+            if done.written:
+                print(
+                    f"{batch.name}: imported {', '.join(done.written)}", file=wired.out
+                )
+    except Refusal as uncommitted:
+        refused.append(str(uncommitted))
+    finally:
+        cancel(staging)
+    for message in refused:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if refused else 0
+
+
+def _staged_line(item: Staged) -> str:
+    """Return one file's result. e.g. "a.jpg: not cleaned, carries XMP; left out"."""
+    if item.state == "not cleaned":
+        return f"{item.name}: not cleaned, carries {', '.join(item.carries)}; left out"
+    if item.state == "skipped":
+        return f"{item.name}: skipped, its bytes are already read"
+    return f"{item.name}: {item.state}"
+
+
 def _run_for(identifier: str, wired: Wiring) -> Run:
     """Return the run an argument names: a photograph to open, or a run to resume.
 
@@ -343,6 +410,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
     try:
         if verb == "ui":
             return _ui(args, wired)
+        if verb == "import":
+            return _import(args, wired)
         if verb == "compare":
             print(write_page(args.batch, wired.flows_dir), file=wired.out)
             return 0
