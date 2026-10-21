@@ -54,7 +54,7 @@ the image.
 | id | decision | because | rejected |
 |---|---|---|---|
 | [D1](#d1) | `renders: {count, seeds}` in the draft and the approval, `NotRequired`; `render` takes an approval's seeds first and draws the rest; a typed seed is used as it is | one number, one image; old drafts read as count 1 | hashing a short seed; a version bump |
-| [D2](#d2) | `render <runs>` with no request: every approval short of its count; a run without the flow skipped; a started, unapproved flow refused before renting | render what is approved and not made | rendering every tracked flow |
+| [D2](#d2) | `render <runs>` with no request: every approval short of its count; a run without the flow skipped; an unapproved flow left out, named on stderr | render what is approved and not made; a draft waits for its approval | rendering every tracked flow; refusing the batch for one draft |
 | [D3](#d3) | the limit: `--limit`, or the estimate — boot + images × the median of the flow's last 20 durations + teardown, × 1.5 — floored at `HOLD_SECONDS` + 300 s, capped by `gpunit.toml`'s `ceiling = "3h"`; passed to gpunit as `ceiling_s` and run by isekai's timer | a limit from the work; the hold must end before the pod stops | a fixed 45 minutes; shortening the hold in the image |
 | [D4](#d4) | `max_hourly = 0.90` in `gpunit.toml`; the quote is the limit at that rate plus the volume at `config/render.json`'s rate | gpunit refuses a dearer card, so the price is a bound | a `pod_rate` guess; `2.60` |
 | [D5](#d5) | `render --progress json`: `volume`, `pod`, `image n of N`, `teardown`, each with its state | the session view reads the verb's report | parsing `log.txt` |
@@ -80,7 +80,7 @@ field. `render` takes `seeds_for` the approval: its seeds not yet rendered, then
 
 ```
 for each run under <runs>, each flow its directory holds:
-  no approval ──▶ refuse before renting
+  no approval ──▶ left out, named on stderr
   newest approval has n images, count c, n < c ──▶ render c − n, its seeds first
 ```
 

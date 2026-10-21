@@ -34,7 +34,15 @@ from isekai.boundary.comfy import ComfyClient, ComfyTransport
 from isekai.boundary.pod_start import HOLD_SECONDS
 from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, REPOSITORY, Run
+from isekai.foundation.run import (
+    FRAME_NAME,
+    REPOSITORY,
+    REVIEW,
+    SHEETS,
+    Run,
+    approved_versions,
+    latest_artifact,
+)
 from isekai.interface.compare_view import BATCH_PHOTOS
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.generate import (
@@ -44,6 +52,7 @@ from isekai.pipeline.generate import (
     rendered_seeds,
     shortfall,
 )
+from isekai.pipeline.review import current_draft
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.
 PORT = 8188
@@ -379,25 +388,37 @@ def _limit(asked: int | None, ceiling_s: int) -> None:
         )
 
 
-def short(
-    runs: Path, ids: Sequence[str], wired: Wiring
-) -> tuple[list[Line], list[str]]:
-    """Return a line per flow with approvals short of their count, and the refusals.
+@dataclass(frozen=True)
+class Short:
+    """What a batch lacks of its approvals: its lines, what is left out, and why not."""
 
-    A run without a flow's directory is skipped; one holding it unapproved is
-    refused, so the session can refuse before anything is rented.
+    lines: list[Line]
+    # (run, flow, reason), e.g. ("0d4b…_ada", "summon-anime-wai", "a draft")
+    left_out: list[tuple[str, str, str]]
+    refused: list[str]
+
+
+def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
+    """Return a line per flow with approvals short of their count, and what is not.
+
+    A run without a flow's directory is skipped; one holding it unapproved is left
+    out. A damaged approval is refused, so the session refuses before renting.
     """
     tracked = tracked_flows(wired.flows_dir)
     wanted: dict[str, list[str]] = {}
     images: dict[str, int] = {}
+    left_out: list[tuple[str, str, str]] = []
     refused: list[str] = []
     for run_id in ids:
         run = Run(run_id, runs / run_id)
         for flow in (name for name in run.flows if name in tracked):
+            if not approved_versions(run.directory(flow, REVIEW)):
+                left_out.append((run_id, flow, _unready(run, flow)))
+                continue
             try:
                 lacking = shortfall(run, load_flow(flow, wired.flows_dir))
-            except Refusal as unready:
-                refused.append(str(unready))
+            except Refusal as damaged:
+                refused.append(str(damaged))
                 continue
             if lacking:
                 wanted.setdefault(flow, []).append(run_id)
@@ -406,7 +427,16 @@ def short(
         Line(flow, ("--flow", flow), ("--runs", str(runs), *held), images[flow])
         for flow, held in sorted(wanted.items())
     ]
-    return lines, refused
+    return Short(lines, left_out, refused)
+
+
+def _unready(run: Run, flow: str) -> str:
+    """Return why `flow` is not approved in `run`, as the dialog names it."""
+    if current_draft(run.directory(flow, REVIEW)) is not None:
+        return "a draft"
+    if latest_artifact(run.directory(flow, SHEETS)) is not None:
+        return "a sheet not yet reviewed"
+    return "not yet prepared"
 
 
 def _session(
@@ -442,11 +472,14 @@ def _session(
         if generate([*verb, *flows, *where], free) != 0:
             return 1
     else:
-        lines, refused = short(runs, ids, wired)
-        for message in refused:
+        found = short(runs, ids, wired)
+        for message in found.refused:
             print(f"refused: {message}", file=wired.err)
-        if refused:
+        if found.refused:
             return 1
+        for run_id, flow, reason in found.left_out:
+            print(f"left out: {run_id}: {flow} is {reason}", file=wired.err)
+        lines = found.lines
         if not lines:
             print("nothing is short of its count; nothing was rented", file=wired.err)
             return 0

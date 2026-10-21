@@ -531,11 +531,11 @@ def test_with_no_request_a_run_without_the_flow_is_skipped(
     assert bare.id not in log(root)
 
 
-@pytest.mark.spec("cli:render-short:an-unapproved-started-flow-refuses")
-def test_with_no_request_a_started_unapproved_flow_refuses_before_renting(
+@pytest.mark.spec("cli:render-short:an-unapproved-flow-is-left-out")
+def test_with_no_request_an_unapproved_flow_is_left_out_and_named(
     tmp_path: Path, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    approved(tmp_path, schema, vocabulary, "ada")
+    lacking = counted(tmp_path, schema, vocabulary, "ada", 1)
     photo = tmp_path / "bea.jpg"
     photo.write_bytes(jpeg_bytes(1200, 932))
     started = open_run(photo, tmp_path / "b" / "runs")
@@ -543,11 +543,13 @@ def test_with_no_request_a_started_unapproved_flow_refuses_before_renting(
     sheet(started, schema, vocabulary)
     review(started, FLOW)
     root = tmp_path / "b" / "runs"
-    opener = FakeOpen()
 
-    assert session(root, opener=opener) == 1
-    assert opener.opened == 0
-    assert f"refused: {started.id}: no approved sheet for {FLOW}" in log(root)
+    status = session(root, generate=_dispatch_argv, wiring=real(root, vocabulary))
+
+    assert status == 0, log(root)
+    assert images(lacking) == 2
+    assert not (started.path / FLOW / "outputs").exists()
+    assert f"left out: {started.id}: {FLOW} is a draft" in log(root)
 
 
 @pytest.mark.spec(

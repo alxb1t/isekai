@@ -4,11 +4,11 @@
 
 The system SHALL, when the rendering verb names a runs root and no request, render for every run and every flow its
 directory holds whose newest approval holds fewer images than its count; SHALL skip a run that has no directory for a
-flow; and SHALL refuse, before anything is rented, a run that has a flow's directory and no approval for it. A request
-`<flow>=<count|source>` SHALL keep its meaning.
+flow; and SHALL leave out a flow a run holds without an approval, naming the run and the flow on standard error. A
+request `<flow>=<count|source>` SHALL keep its meaning.
 
 The operator approves what to render, so the verb renders what is approved and not yet made. A source may hold only
-some flows; an approval missing where work was started is the case worth stopping for.
+some flows, and a draft still being corrected waits for its approval rather than holding up the rest.
 
 #### Scenario: what is short is rendered
 - **Key:** `cli:render-short:what-is-short-is-rendered`
@@ -23,12 +23,12 @@ some flows; an approval missing where work was started is the case worth stoppin
 - **WHEN** a run holds no directory for a flow another run is approved in
 - **THEN** that run is not rendered for the flow and is not refused
 
-#### Scenario: a started flow without approval refuses before renting
-- **Key:** `cli:render-short:an-unapproved-started-flow-refuses`
+#### Scenario: an unapproved flow is left out
+- **Key:** `cli:render-short:an-unapproved-flow-is-left-out`
 - **Layers:** unit
-- **WHEN** a run holds a flow's directory and no approval for it
-- **THEN** the invocation is refused naming the run and the flow
-- **AND** no session is opened
+- **WHEN** a run holds a flow's directory and no approval for it, and another run's approval is short
+- **THEN** the other run is rendered and the first is not
+- **AND** standard error names the run and the flow left out
 
 ### Requirement: A render session's limit is estimated from its work, at most the configured ceiling
 

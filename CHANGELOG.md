@@ -11,8 +11,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - A draft and its approval carry `renders`, a count and seeds, edited in Review's ④; approval refuses a count
   below its seeds or a seed outside the sampler's range, and `render` takes the listed seeds first (0063 D1).
-- `isekai render <runs>` with no request renders what each approval lacks of its count, skips a run without the
-  flow, and refuses a started, unapproved flow before anything is rented (0063 D2).
+- `isekai render <runs>` with no request renders what each approval lacks of its count; a run without the flow
+  is skipped, and an unapproved flow is left out and named, so a draft holds up nothing (0063 D2).
 - A session's limit is `--limit` or an estimate from recorded durations, at least the hold plus five minutes;
   gpunit stops the pod at it, and a render records its `duration`. `gpunit.toml`: `ceiling = "3h"`,
   `max_hourly = 0.90` (0063 D3, D4).
