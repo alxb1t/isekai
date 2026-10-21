@@ -12,11 +12,13 @@ Pillow and `pi_heif` are imported inside the functions that decode, so
 import contextlib
 import json
 import os
+import re
 import secrets
 import shutil
 import struct
 import tempfile
 import threading
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,6 +51,17 @@ _SIGNATURE_BYTES = 64 * 1024
 # Held from picking a staged name until the file under it is written and
 # verified, so two files read at once never take one name or both keep one body.
 _CLAIM = threading.Lock()
+
+# A staging folder's name: `_STAGING_BYTES` random bytes, in hex.
+_STAGING_BYTES = 8
+_STAGING_ID = re.compile(f"[0-9a-f]{{{2 * _STAGING_BYTES}}}")
+
+# How long a staging folder goes unwritten before a sweep takes it as left.
+_LEFT_AFTER = 60 * 60
+
+# The most pixels import decodes: a photograph's sensor is far below it, and a small
+# file declaring more would take gigabytes once decoded and copied.
+MAX_PIXELS = 50_000_000
 
 # The largest difference, in 8-bit levels, a profile may make to a colour and
 # still be sRGB: a vendor's sRGB profile rounds a level apart from the built-in.
@@ -91,7 +104,7 @@ def past_limit(name: str, size: int, limit: int) -> Refusal:
 
 def stage(library: Path) -> Path:
     """Return a new, empty staging folder under `library`'s `.staging/`."""
-    folder = library / STAGING / secrets.token_hex(8)
+    folder = library / STAGING / secrets.token_hex(_STAGING_BYTES)
     folder.mkdir(parents=True)
     return folder
 
@@ -209,8 +222,22 @@ def cancel(staging: Path) -> None:
 
 
 def sweep(library: Path) -> None:
-    """Delete every staging folder left in `library` by an import that did not end."""
-    shutil.rmtree(library / STAGING, ignore_errors=True)
+    """Delete every staging folder left in `library` by an import that did not end.
+
+    A folder goes only when `stage` could have named it and nothing has written
+    to it within `_LEFT_AFTER`; a fresher one belongs to an import still open,
+    perhaps in another process.
+    """
+    folder = library / STAGING
+    if not folder.is_dir():
+        return
+    left_before = time.time() - _LEFT_AFTER
+    for one in folder.iterdir():
+        with contextlib.suppress(OSError):
+            if _STAGING_ID.fullmatch(one.name) and one.stat().st_mtime < left_before:
+                shutil.rmtree(one)
+    with contextlib.suppress(OSError):
+        folder.rmdir()
 
 
 def _refuse_batch_name(name: str, batch: Path, *, add: bool) -> None:
@@ -315,6 +342,12 @@ def _decode(source: Path | bytes) -> "Image":
     name = source.name if isinstance(source, Path) else "the cleaned file"
     try:
         image = Image.open(source if isinstance(source, Path) else io.BytesIO(source))
+        width, height = image.size
+        if width * height > MAX_PIXELS:
+            raise Refusal(
+                f"{name}: {width}x{height} is past the {MAX_PIXELS // 1_000_000} MP "
+                "limit import decodes; export a smaller copy and add it again"
+            )
         # A JPEG's MPF images are a gain map or a depth map behind the photograph,
         # and the strip drops them; any other second frame is a second picture.
         if image.format != "MPO" and getattr(image, "n_frames", 1) > 1:

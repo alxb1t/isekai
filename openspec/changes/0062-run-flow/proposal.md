@@ -58,6 +58,8 @@ until it ends.
 ### Modified Capabilities
 
 - `cli`:
+  - MODIFIED *A stage verb requires the flows it acts on, and takes more than one* — the serving verb serves the
+    flows its configuration offers.
   - ADDED *Assigning a flow writes its run and the flow's empty directory, and nothing else*.
   - ADDED *A stage verb reports its progress as JSON lines when asked*.
 - `ui`:

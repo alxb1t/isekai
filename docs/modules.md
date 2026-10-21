@@ -36,7 +36,8 @@ Every lazy edge points down, as every module-level one does.
 
 **Where this version's pieces sit.** `import` is `pipeline/importing.py`, a stage
 no other stage imports; the CLI's `import` verb and the surface's staging routes
-both compose it, and `ui/library.py` reads its `verify` for the not-cleaned mark.
+both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for the
+not-cleaned mark.
 `assign` is `foundation/run.py`'s, because a tick is the run's layout, and the CLI
 verb and the hub's route both call it. `--progress json` is a reporter inside
 `cli.py`. **Prepare reaches the CLI by process, never by import**:

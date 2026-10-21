@@ -151,9 +151,10 @@ Each file's bar answers which one is slow; each reason sits on the file it conce
 
 The system SHALL run Prepare as one job over every assigned cell with no sheet: for each flow, the tagging, reading
 and sheet stages, each one invocation of the pipeline's own verb over that flow's cells. Only one job SHALL run at a
-time; a job SHALL keep running when its page closes; Stop SHALL interrupt the current stage and start no other; and
-stopping the surface SHALL interrupt a running job. Before any stage starts, the surface SHALL check that the local
-model server answers, and SHALL refuse with its message, starting nothing, when it does not.
+time; a job SHALL keep running when its page closes; Stop SHALL interrupt the current stage and start no other;
+stopping the surface SHALL interrupt a running job; and a stage that fails having reported nothing SHALL end the job
+as failed, naming the batch's log, and start no other. Before any stage starts, the surface SHALL check that the
+local model server answers, and SHALL refuse with its message, starting nothing, when it does not.
 
 The pipeline's verb is the one path, so Prepare is exactly what the verbs do. A refusal before the start leaves every
 cell assigned, so pressing Prepare again is the whole fix.
@@ -184,6 +185,13 @@ cell assigned, so pressing Prepare again is the whole fix.
 - **WHEN** Stop is asked for during a stage
 - **THEN** that stage is interrupted and no later stage starts
 - **AND** cells already at sheet stay at sheet
+
+#### Scenario: a stage that fails before it reports ends the job
+- **Key:** `ui:prepare:a-silent-failure-ends-the-job`
+- **Layers:** unit
+- **WHEN** a stage exits in failure having reported no item
+- **THEN** the job ends as failed, naming the batch's log
+- **AND** no later stage starts
 
 ### Requirement: The page is told of a job as it runs
 

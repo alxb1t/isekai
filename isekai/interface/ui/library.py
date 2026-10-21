@@ -50,9 +50,10 @@ from isekai.foundation.run import (
 )
 from isekai.interface.wiring import trackable
 from isekai.pipeline.generate import rendered_seeds
-from isekai.pipeline.importing import SOURCES, UI_CONFIG, verify
+from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, current_draft
 from isekai.pipeline.review import state as review_state
+from isekai.shared.image import metadata_in
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -290,7 +291,7 @@ def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
 def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> Hub:
     """Return batch `folder`'s grid over the flows `suffixes` names.
 
-    Without `marks`, no source is decoded for its not-cleaned mark: Home shows none.
+    Without `marks`, no source is read for its not-cleaned mark: Home shows none.
     """
     runs = _runs(folder / RUNS)
     sources = tuple(
@@ -365,16 +366,15 @@ def _digest(path: Path) -> str:
 
 
 def _carries(path: Path) -> tuple[str, ...]:
-    """Return what a source carries beyond its pixels and orientation, or why not.
+    """Return what a source carries beyond its pixels and orientation.
 
+    Read from its bytes alone, so a clean source render would refuse is not
+    marked, and no source is decoded to list a batch.
     e.g. a JPEG imported as it is -> ("EXIF", "XMP"); a cleaned one -> ()
     """
     key = _key(path)
     if key not in _CARRIES:
-        try:
-            _CARRIES[key] = tuple(verify(path))
-        except Refusal as refused:
-            _CARRIES[key] = (str(refused),)
+        _CARRIES[key] = tuple(metadata_in(path.read_bytes()))
     return _CARRIES[key]
 
 

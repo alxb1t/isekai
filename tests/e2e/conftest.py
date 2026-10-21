@@ -39,12 +39,15 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-fails": (("fay", (730, 1000)),),
 }
 
-# A batch per hub test, its sources photographs with no run yet, so every test
-# owns the cells it ticks and prepares.
+# A batch per hub test, so every test owns the cells it ticks and prepares. Its
+# sources are photographs with no run, except those `ASSIGNED` names.
 FRESH: dict[str, tuple[str, ...]] = {
     "hub-tick": ("tick",),
     "hub-prepare": ("pick", "skip"),
 }
+
+# The fresh sources whose run is already assigned to `FLOW`, as a tick leaves it.
+ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
@@ -125,7 +128,10 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
         (lib / name / "sources").mkdir(parents=True)
         for index, one in enumerate(fresh):
             body = photo_jpeg((90, 60, 30 + index), (640, 800 + index))
-            (lib / name / "sources" / f"{one}.jpg").write_bytes(body)
+            photo = lib / name / "sources" / f"{one}.jpg"
+            photo.write_bytes(body)
+            if one in ASSIGNED.get(name, ()):
+                open_run(photo, lib / name / "runs").directory(FLOW).mkdir()
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"

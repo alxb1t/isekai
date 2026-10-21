@@ -286,6 +286,7 @@ function listen(): void {
     const slot = JSON.parse((event as MessageEvent<string>).data) as JobSlot
     const ended = job.value?.state === 'running' && slot.state !== 'running'
     job.value = slot
+    if (slot.state === 'failed') barRefusal.value = slot.message
     if (ended) {
       running.value = {}
       void hub(props.batch).then((read) => (info.value = read))

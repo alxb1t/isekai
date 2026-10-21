@@ -44,8 +44,8 @@ library's `.staging/`, keeps its pixels and orientation and nothing else — a
 non-sRGB colour profile converted, a HEIC or WebP turned into a JPEG or PNG —
 verifies it by the strip's own walk, and commits the batch's `sources/` in one
 move ([D43](decisions.md#d43--a-source-holds-pixels-and-orientation-only)). A RAW,
-a file of several images, one past `config/ui.json`'s limit and one render would
-refuse are refused by name. **`isekai assign`** ticks a flow: it opens the source's
+a file of several images, one past `config/ui.json`'s limit, one past 50 MP and one
+render would refuse are refused by name. **`isekai assign`** ticks a flow: it opens the source's
 run and gives it that flow's empty directory, which is the stage the hub calls
 *assigned*; `--remove` takes one away only while it is empty.
 

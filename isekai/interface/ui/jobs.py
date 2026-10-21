@@ -8,6 +8,7 @@ to the batch's `log.txt`. A job outlives the page that started it.
 Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
             └ answers ─▶ per flow: tag ─▶ caption ─▶ sheet ─▶ done
 Stop, or the server stopping ─▶ SIGINT to the child ─▶ no later stage starts
+a child failing with no line reported ─▶ failed, naming log.txt ─▶ no later stage starts
 ```
 """
 
@@ -81,6 +82,7 @@ class _Job:
     state: str = "running"
     flow: str | None = None
     stage: str | None = None
+    message: str | None = None
 
     def describe(self) -> dict[str, Any]:
         return {
@@ -89,6 +91,7 @@ class _Job:
             "state": self.state,
             "flow": self.flow,
             "stage": self.stage,
+            "message": self.message,
         }
 
 
@@ -201,17 +204,29 @@ class Jobs:
                     break
                 self._publish(job)
                 assert child.stdout is not None
+                reported = False
                 for raw in child.stdout:
                     event = _line(raw)
+                    reported = reported or event is not None
                     found = cell(event) if event is not None else None
                     if found is not None:
                         self._broadcast.publish("cell", found)
-                child.wait()
+                code = child.wait()
                 with self._lock:
                     self._child = None
+                    # A child that fails before its first line said nothing the
+                    # page can show; its reason is in the log.
+                    if code != 0 and not reported and not self._stopping:
+                        job.state = "failed"
+                        job.message = (
+                            f"{step.verb} on {step.flow} ended before reporting "
+                            f"(exit {code}); read {job.batch}/{LOG}, then try again"
+                        )
+                        break
         finally:
             with self._lock:
-                job.state = "stopped" if self._stopping else "done"
+                if job.state == "running":
+                    job.state = "stopped" if self._stopping else "done"
             self._publish(job)
 
     def _start(

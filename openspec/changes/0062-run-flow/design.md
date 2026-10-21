@@ -64,11 +64,11 @@ in the UI; tags shared across flows.
 read(file, staging)  ──▶ staging/<name>        decode · clean · verify · re-encode once
 verify(path)         ──▶ what it still carries, or nothing
 commit(staging, library, name, as_is)  ──▶ <library>/<name>/sources/ in one rename; staging deleted
-cancel(staging) · sweep(library)  ──▶ staging deleted; every .staging/<id>/ deleted at start
+cancel(staging) · sweep(library)  ──▶ staging deleted; every .staging/<id>/ unwritten for an hour deleted at start
 ```
 
-`read` refuses per file, by name: over the limit, RAW (by signature: CR2, NEF, DNG, ARW), not decodable, more than one
-frame, and what `photo_resolution` refuses. A same-bytes source is skipped; a taken name becomes `<stem>-2`. The batch
+`read` refuses per file, by name: over the limit, RAW (by signature: CR2, NEF, DNG, ARW), past 50 MP by its header,
+not decodable, more than one frame, and what `photo_resolution` refuses. A same-bytes source is skipped; a taken name becomes `<stem>-2`. The batch
 name is checked as the [import spec](specs/import/spec.md) says. `isekai import --batch <dir> <file…>` reads into the
 batch's own staging, commits, and reports each file; it imports no uncleaned file.
 
@@ -142,7 +142,7 @@ bar. New batch on Home and Add sources on the hub open it; Add sources commits i
 
 A tick or an untick posts to `/api/b/{batch}/assign`; the cell reads `assigned` from the answer. Assigned cells with no
 sheet feed the bar, `n changes · Prepare ⌘↵`, and `Discard` unticks them all. `Hub.vue` opens `/events?batch=` and
-applies each `cell` event. A source still carrying metadata — `verify` on its file — shows `⚠ not cleaned`.
+applies each `cell` event. A source still carrying metadata — `metadata_in` on its bytes — shows `⚠ not cleaned`.
 
 ### D11
 
@@ -157,8 +157,9 @@ approval** and **D43 · A source holds pixels and orientation only**.
 | unit, pytest | every `unit` scenario of the [import](specs/import/spec.md), [cli](specs/cli/spec.md) and [ui](specs/ui/spec.md) deltas | none | `tests/test_importing.py`, `tests/test_assign.py`, `tests/test_progress.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py`, `tests/test_ui_api.py` |
 | e2e, Playwright | `ui:sheet:*`, `ui:hub:a-tick-assigns-the-flow`, `ui:prepare:prepare-runs-the-assigned-cells` | none | `tests/e2e/test_import.py`, `tests/e2e/test_prepare.py` |
 
-**Fixtures:** a HEIC made once with macOS `sips` from a synthetic solid-colour PNG, committed as
-`tests/fixtures/sources/plain.heic`; the other formats are built by Pillow in the tests.
+**Fixtures:** two HEICs made once with macOS `sips`, committed under `tests/fixtures/sources/`: `plain.heic` from a
+synthetic solid-colour PNG, and `irot.heic` from a synthetic JPEG with an EXIF orientation, which `sips` writes as an
+`irot` beside the EXIF. The other formats are built by Pillow in the tests.
 
 **End-to-end runs added:** the e2e scenarios above, each once, on Chromium. Each needs a browser (T1): a file dialog
 and its bars, a tick surviving a reload, cells moving live. The import scenarios share one test file's server; the

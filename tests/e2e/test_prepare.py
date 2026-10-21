@@ -43,7 +43,8 @@ def test_a_tick_assigns_the_flow_and_survives_a_reload(
 def test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other(
     page: Page, served: Served
 ) -> None:
-    _tick(page, served, "hub-prepare", "pick")
+    page.goto(served.hub_of("hub-prepare"))
+    expect(_cell(page, "pick")).to_have_attribute("data-stage", "assigned")
 
     page.get_by_role("button", name="1 change · Prepare").click()
 

@@ -61,8 +61,8 @@ HEIC WebP AVIF TIFF BMP GIF ─▶ decode ─▶ JPEG / PNG ┘
 
 The system SHALL refuse, naming the file, the reason and a fix: a RAW photograph; a file that does not decode, or
 decodes to an image that cannot be converted; a file whose colour profile cannot be read; a file holding more than one
-image; a file over the size limit the configuration sets; and a photograph render's header check would refuse. A
-refusal SHALL leave the other chosen files to import.
+image; a file over the size limit the configuration sets; an image past the pixel count import decodes, before it is
+decoded; and a photograph render's header check would refuse. A refusal SHALL leave the other chosen files to import.
 
 A photograph render would refuse fails here, before anything is rented. One bad file costs only itself.
 
@@ -99,6 +99,12 @@ A photograph render would refuse fails here, before anything is rented. One bad 
 - **WHEN** a file larger than the configured limit is offered
 - **THEN** it is refused naming the limit
 - **AND** nothing of it is written
+
+#### Scenario: an image past the pixel limit is refused before it is decoded
+- **Key:** `import:refuse:an-image-past-the-pixel-limit-is-refused`
+- **Layers:** unit
+- **WHEN** a small file whose header declares more pixels than import decodes is imported
+- **THEN** it is refused naming the limit, before its pixels are decoded
 
 #### Scenario: a photograph render would refuse is refused at import
 - **Key:** `import:refuse:what-render-would-refuse-is-refused`
@@ -140,13 +146,15 @@ let it in with the operator, one file at a time.
 
 The system SHALL read chosen files into a staging folder under the library's `.staging/`, SHALL create the batch
 and move every staged file into its `sources/` in one commit, SHALL delete the staging folder on cancel, and SHALL
-delete any staging folder left in the library when the surface starts. A file with the same bytes as a source
-already in the batch SHALL be skipped; a different file whose name is taken SHALL be written as `<stem>-2`. A batch
-name SHALL be refused when empty, holding `/`, starting with a dot, or taken. A batch whose folder sits inside the
-repository's working tree and outside its ignored data root SHALL be refused before anything is staged.
+delete, when the surface starts, each staging folder an import left in the library, keeping any written to within
+the last hour and any folder import did not make. A file with the same bytes as a source already in the batch SHALL
+be skipped; a different file whose name is taken SHALL be written as `<stem>-2`. A batch name SHALL be refused when
+empty, holding `/`, starting with a dot, or taken. A batch whose folder sits inside the repository's working tree
+and outside its ignored data root SHALL be refused before anything is staged.
 
-Nothing half-read reaches a batch, and a batch never looks complete while files are still arriving. Bytes, not
-names, decide sameness. A batch holds copies of photographs, so it stays where git cannot reach it
+Nothing half-read reaches a batch, and a batch never looks complete while files are still arriving. A staging folder
+still being written belongs to an import open elsewhere, and a folder import did not make is not its to delete.
+Bytes, not names, decide sameness. A batch holds copies of photographs, so it stays where git cannot reach it
 ([D18](../../../docs/decisions.md#d18--runs-stay-out-of-what-git-tracks)).
 
 #### Scenario: a commit moves every staged file into the batch
@@ -166,8 +174,9 @@ names, decide sameness. A batch holds copies of photographs, so it stays where g
 #### Scenario: staging left behind is swept at start
 - **Key:** `import:stage:leftover-staging-is-swept`
 - **Layers:** unit
-- **WHEN** the surface starts with a folder under `.staging/`
+- **WHEN** the surface starts with a staging folder an import left under `.staging/`
 - **THEN** that folder is deleted
+- **AND** a folder import did not make, or one an import is still writing, is kept
 
 #### Scenario: the same bytes are skipped and a taken name is renamed
 - **Key:** `import:stage:same-bytes-skip-and-a-taken-name-is-renamed`

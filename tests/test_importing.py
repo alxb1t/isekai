@@ -1,10 +1,13 @@
 """Import: a file read, cleaned, verified and committed into a batch's `sources/`.
 
-Every image is built by Pillow here, except the HEIC, which is a committed fixture
-made once by macOS `sips` from a synthetic solid-colour PNG.
+Every image is built by Pillow here, except the HEICs, committed fixtures each made
+once by macOS `sips`: `plain.heic` from a synthetic solid-colour PNG, `irot.heic`
+from a synthetic JPEG with an EXIF orientation of 6, which `sips` writes as an
+`irot` beside the EXIF.
 """
 
 import io
+import os
 import struct
 import threading
 import time
@@ -12,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
-from PIL import Image, ImageCms
+from PIL import Image, ImageCms, ImageFile
 
 from isekai.foundation.refusal import Refusal
 from isekai.interface.cli import build_parser, dispatch
@@ -232,6 +235,19 @@ def test_a_heic_becomes_a_jpeg_with_its_orientation_in_its_pixels(
     with Image.open(staging / heic.name) as image:
         assert (image.format, image.size) == ("JPEG", (64, 64))
         assert ORIENTATION not in image.getexif()
+
+    # Stored 64x32 with a red square top left, and an `irot` and an EXIF
+    # orientation that each turn it a quarter clockwise: turned once, the square
+    # is top right of a 32x64 picture.
+    turned = read(FIXTURES / "irot.heic", staging, LIMIT)
+
+    with Image.open(staging / turned.name) as image:
+        assert (turned.name, image.size) == ("irot.jpg", (32, 64))
+        assert ORIENTATION not in image.getexif()
+        upright = image.convert("RGB")
+        square, ground = upright.getpixel((24, 8)), upright.getpixel((8, 8))
+    assert isinstance(square, tuple) and isinstance(ground, tuple)
+    assert square[0] > 200 and ground[0] < 50
     with Image.open(staging / rotated.name) as image:
         assert (rotated.name, image.size) == ("turned.jpg", (20, 40))
         assert ORIENTATION not in image.getexif()
@@ -438,6 +454,25 @@ def test_a_file_over_the_limit_is_refused_before_it_is_read(tmp_path: Path) -> N
     assert list(staging.iterdir()) == []
 
 
+@pytest.mark.spec("import:refuse:an-image-past-the-pixel-limit-is-refused")
+def test_an_image_past_the_pixel_limit_is_refused_before_it_is_decoded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out = io.BytesIO()
+    Image.new("1", (8000, 8000)).save(out, "PNG")
+    vast = _write(tmp_path, "vast.png", out.getvalue())
+    staging = stage(tmp_path / "library")
+
+    def decoded(self: ImageFile.ImageFile) -> None:
+        raise AssertionError("the pixels were decoded")
+
+    monkeypatch.setattr(ImageFile.ImageFile, "load", decoded)
+    with pytest.raises(Refusal, match="vast.png: 8000x8000 is past the 50 MP limit"):
+        read(vast, staging, LIMIT)
+
+    assert list(staging.iterdir()) == []
+
+
 @pytest.mark.spec("import:refuse:what-render-would-refuse-is-refused")
 def test_a_photograph_render_would_refuse_is_refused_at_import(
     tmp_path: Path,
@@ -554,10 +589,18 @@ def test_staging_left_behind_is_swept_at_start(tmp_path: Path) -> None:
     library = tmp_path / "library"
     left = stage(library)
     _write(left, "a.jpg", photo_jpeg())
+    long_ago = time.time() - 2 * 60 * 60
+    os.utime(left, (long_ago, long_ago))
+    open_elsewhere = stage(library)
+    foreign = library / ".staging" / "notes"
+    foreign.mkdir()
+    os.utime(foreign, (long_ago, long_ago))
 
     sweep(library)
 
     assert not left.exists()
+    assert open_elsewhere.is_dir()
+    assert foreign.is_dir()
 
 
 @pytest.mark.spec("import:stage:same-bytes-skip-and-a-taken-name-is-renamed")

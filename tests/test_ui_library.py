@@ -234,6 +234,14 @@ def test_a_source_still_carrying_metadata_is_marked_not_cleaned(
     carries = {one.name: one.carries for one in grid.sources}
     assert carries == {"as-is.jpg": ("EXIF",), "clean.jpg": ()}
 
+    # A clean source render would refuse for its shape carries nothing.
+    banner = folder / "sources" / "banner.jpg"
+    banner.write_bytes(photo_jpeg((90, 60, 30), (500, 100)))
+
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+
+    assert {one.name: one.carries for one in grid.sources}["banner.jpg"] == ()
+
 
 @pytest.mark.spec("ui:hub:an-unreadable-file-marks-its-cell")
 def test_an_unreadable_run_file_marks_its_cell_alone(

@@ -31,7 +31,7 @@ from isekai.interface.ui.jobs import Jobs, Step  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import bare_wiring, write_wd14  # noqa: E402
+from tests.stages import bare_wiring, sheet, write_wd14  # noqa: E402
 
 FLOW = "summon-anime-wai"
 OFFERED = (FLOW, "conjure-anime-wai")
@@ -128,15 +128,18 @@ def test_prepare_is_refused_with_the_readers_message_and_starts_nothing(
 
 
 @pytest.mark.spec("ui:prepare:stop-interrupts-the-job")
-def test_stop_interrupts_the_stage_and_starts_no_later_one(tmp_path: Path) -> None:
+def test_stop_interrupts_the_stage_and_starts_no_later_one(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
     folder, (run, done) = _batch(tmp_path, "ada.jpg", "bea.jpg")
-    write_wd14(done)
+    sheet(done, load_flow(FLOW).schema, vocabulary)
     before = snapshot(done.path)
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
     script = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
     jobs = Jobs(broadcast, lambda: None, command=script)
-    jobs.prepare("b", folder, _steps(run), lambda line: dict(line))
+    steps = [Step(FLOW, verb, (run.id, done.id)) for verb in ("tag", "caption")]
+    jobs.prepare("b", folder, steps, lambda line: dict(line))
     _until(found, "cell")
 
     jobs.stop()
@@ -149,8 +152,27 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(tmp_path: Path) -> No
         "state": "stopped",
         "flow": FLOW,
         "stage": "tag",
+        "message": None,
     }
     assert snapshot(done.path) == before
+
+
+@pytest.mark.spec("ui:prepare:a-silent-failure-ends-the-job")
+def test_a_stage_that_fails_before_it_reports_ends_the_job_naming_the_log(
+    tmp_path: Path,
+) -> None:
+    folder, (run,) = _batch(tmp_path, "ada.jpg")
+    script = _Script({"tag": "import sys; sys.exit('no module named onnxruntime')"})
+    jobs = Jobs(events.Broadcast(), lambda: None, command=script)
+
+    jobs.prepare("b", folder, _steps(run), lambda line: None)
+    jobs.wait(WAIT)
+
+    assert script.asked == ["tag"]
+    slot = jobs.slot()
+    assert slot is not None
+    assert (slot["state"], slot["stage"]) == ("failed", "tag")
+    assert "b/log.txt" in slot["message"]
 
 
 @pytest.mark.spec("ui:events:a-connection-starts-with-a-snapshot")

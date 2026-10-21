@@ -174,9 +174,11 @@ export interface Committed {
 export interface JobSlot {
   kind: 'prepare'
   batch: string
-  state: 'running' | 'done' | 'stopped'
+  state: 'running' | 'done' | 'stopped' | 'failed'
   flow: string | null
   stage: string | null
+  /* Why a failed job ended, naming the batch's log; null otherwise. */
+  message: string | null
 }
 
 /* A stage's report about one cell, its stage read again from disk. */
