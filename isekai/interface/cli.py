@@ -53,18 +53,18 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
-from isekai.foundation.artifacts import SEED_RANGE, SIDECAR
+from isekai.foundation.artifacts import SEED_RANGE
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     FRAME_NAME,
-    OUTPUTS,
     RUNS_ROOT,
     Run,
     across,
     assign,
     find_run,
     open_run,
+    rendered_at,
 )
 from isekai.interface.compare_view import write_page
 from isekai.interface.render import run_session
@@ -90,6 +90,7 @@ from isekai.pipeline.importing import (
     upload_limit,
 )
 from isekai.pipeline.review import (
+    Revision,
     approve,
     discard,
     refuse_revisions,
@@ -439,66 +440,27 @@ def _staged_line(item: Staged) -> str:
 
 
 def _revise(images: Sequence[Path], wired: Wiring) -> int:
-    """Write a revision for every image, or, when any is refused, none.
-
-    Every image is checked before the first draft is written, so a retry after a
-    fix meets no half-written selection.
-    """
+    """Write a revision for every image, or, when any is refused, none."""
     refused: list[str] = []
-    selection: list[tuple[Path, Run, str, int, int]] = []
+    located: list[tuple[Path, Revision]] = []
     for image in images:
         try:
-            selection.append((image, *_rendered(image)))
+            located.append((image, rendered_at(image)))
         except Refusal as unrendered:
             refused.append(f"{image}: {unrendered}")
-    answers = refuse_revisions(
-        [(run, flow, version) for _, run, flow, version, _ in selection]
-    )
+    answers = refuse_revisions([one for _, one in located])
     refused += [
         f"{image}: {answer}"
-        for (image, *_), answer in zip(selection, answers, strict=True)
+        for (image, _), answer in zip(located, answers, strict=True)
         if answer is not None
     ]
-    if refused:
-        for message in refused:
-            print(f"refused: {message}", file=wired.err)
-        return 1
-    for _, run, flow, version, seed in selection:
-        written = revise(run, flow, version, seed)
-        print(f"{run.id}: revise wrote {flow}/{written.name}", file=wired.out)
-    return 0
-
-
-def _rendered(image: Path) -> tuple[Run, str, int, int]:
-    """Return the run, flow, approval and seed a rendered image's path names.
-
-    e.g. runs/0d4b…_ada/summon-anime-wai/outputs/001/1840266731.png
-         -> (that run, "summon-anime-wai", 1, 1840266731)
-    """
-    group = image.absolute().parent
-    flow_directory = group.parent.parent
-    run_directory = flow_directory.parent
-    if not (
-        image.is_file()
-        and _ascii_digits(image.stem)
-        and int(image.stem) in SEED_RANGE
-        and (group / f"{image.stem}{SIDECAR}").is_file()
-        and len(group.name) == 3
-        and _ascii_digits(group.name)
-        and group.parent.name == OUTPUTS
-        and (run_directory / FRAME_NAME).is_file()
-    ):
-        raise Refusal(
-            "is not an image a render wrote; give the path of one, "
-            f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.png beside its <seed>{SIDECAR}"
-        )
-    run = Run(run_directory.name, run_directory)
-    return run, flow_directory.name, int(group.name), int(image.stem)
-
-
-def _ascii_digits(text: str) -> bool:
-    """Return whether `text` is digits `int` reads: `str.isdigit` also takes `²`."""
-    return text.isascii() and text.isdigit()
+    if not refused:
+        for _, one in located:
+            draft = revise(*one)
+            print(f"revise wrote {draft.relative_to(draft.parents[3])}", file=wired.out)
+    for message in refused:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if refused else 0
 
 
 def _run_for(identifier: str, wired: Wiring) -> Run:
@@ -584,7 +546,7 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
         if verb == "render":
             return run_session(args, wired, _dispatch_argv)
         if verb == "revise":
-            return _revise(list(args.images), wired)
+            return _revise(args.images, wired)
         flows = _flows_for(args, wired)
         if verb == "approve":
             _refuse_bad_source(args.source, "from", flows, wired)

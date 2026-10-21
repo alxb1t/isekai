@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { revise } from '../api'
 import { reviewQueue } from '../composables/useQueue'
-import type { RevisedImage } from '../types'
+import type { RefusedImage, RevisedImage } from '../types'
 
 /* The Revise confirm (design spec J5·3): each image, the version it copies and
    the seed it prefills. All or nothing: a refusal lists every image, and offers
@@ -11,7 +11,7 @@ import type { RevisedImage } from '../types'
 const props = defineProps<{ batch: string; images: RevisedImage[] }>()
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
-const refused = ref<(RevisedImage & { refusal: string | null })[] | null>(null)
+const refused = ref<RefusedImage[] | null>(null)
 const failure = ref<string | null>(null)
 const writing = ref(false)
 

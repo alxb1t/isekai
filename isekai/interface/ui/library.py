@@ -49,14 +49,16 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    approval_of,
     approved_versions,
     digest_of,
+    group_of,
     latest_artifact,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import approval_of, group_of, rendered_seeds
+from isekai.pipeline.generate import rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
-from isekai.pipeline.review import Status, current_draft
+from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
 from isekai.shared.image import metadata_in, thumbnail_jpeg
 
@@ -323,7 +325,7 @@ def versions(run: Run, flow: str, suffix: str) -> list[Version]:
             found.append(Version(number, at, None, (), rendered, str(body)))
             continue
         approved, held = body
-        came_from, kind = _origin(approved, bodies)
+        origin, kind = _origin(approved, bodies)
         found.append(
             Version(
                 number,
@@ -331,7 +333,7 @@ def versions(run: Run, flow: str, suffix: str) -> list[Version]:
                 held["count"],
                 tuple(held["seeds"]),
                 rendered,
-                came_from=came_from,
+                came_from=origin,
                 kind=kind,
             )
         )
@@ -344,18 +346,15 @@ def _origin(
 ) -> tuple[int | None, Literal["revision", "re-roll"] | None]:
     """Return the approval `body` was copied from in its flow, and what changed.
 
-    A copy from another flow, or an approval of a sheet, names none.
-    e.g. producer `{"from": 1, "source": "review"}`, fields unchanged -> (1, "re-roll")
+    e.g. copied from 1, fields unchanged -> (1, "re-roll")
     """
-    producer = body.get("producer")
-    if not isinstance(producer, dict) or "copied_from" in producer:
+    version = came_from(body)
+    origin = bodies.get(version) if version is not None else None
+    if origin is None or isinstance(origin, Refusal):
         return None, None
-    came_from = producer.get("from")
-    origin = bodies.get(came_from) if producer.get("source") == REVIEW else None
-    if origin is None or isinstance(origin, Refusal) or not isinstance(came_from, int):
-        return None, None
+    # A hand can drop `fields`, so neither side is assumed to hold one.
     changed = origin[0].get("fields") != body.get("fields")
-    return came_from, "revision" if changed else "re-roll"
+    return version, "revision" if changed else "re-roll"
 
 
 def paired(run: Run, flow: str, version: int, seed: int, suffix: str) -> int | None:

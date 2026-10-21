@@ -1142,6 +1142,7 @@ def test_a_revision_copies_the_images_approval_and_keeps_its_seed(
     first = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
     _approved(run, schema, vocabulary, clothes=["collared shirt"])
 
+    _image(run, 1, SEED)
     draft = revise(run, FLOW, 1, SEED)
 
     assert draft.name == "003.draft.json"
@@ -1174,10 +1175,9 @@ def test_a_waiting_draft_refuses_a_revision_and_nothing_is_written(
 def test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce(
     run: Run, schema: Schema, vocabulary: Vocabulary, listed: list[int]
 ) -> None:
-    # Drawn: the approval lists no seed, and the revised image is the one it drew.
+    # Drawn: the approval lists no seed, and the revised image is one it drew.
     _approved(run, schema, vocabulary, {"count": 1, "seeds": listed})
-    if not listed:
-        _image(run, 1, SEED)
+    _image(run, 1, SEED)
     draft = revise(run, FLOW, 1, SEED)
 
     with pytest.raises(Refusal) as refused:
@@ -1194,6 +1194,7 @@ def test_a_revision_whose_only_change_is_its_seeds_is_approved(
     run: Run, schema: Schema, vocabulary: Vocabulary
 ) -> None:
     _approved(run, schema, vocabulary, {"count": 1, "seeds": [SEED]})
+    _image(run, 1, SEED)
     draft = revise(run, FLOW, 1, SEED)
     save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], {"count": 1, "seeds": [7]})
 

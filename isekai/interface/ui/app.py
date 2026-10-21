@@ -68,6 +68,7 @@ from isekai.foundation.artifacts import (
     TAGS_FILE,
     WD14_FILE,
     Renders,
+    ReviewApproved,
     read,
     renders_of,
     require,
@@ -82,6 +83,7 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    approval_of,
     approved_versions,
     assign,
     find_run,
@@ -95,11 +97,13 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import approval_of, image_of
+from isekai.pipeline.generate import image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
+    Revision,
     TokenBudget,
     approve,
+    came_from,
     current_draft,
     discard,
     refuse_revisions,
@@ -594,7 +598,7 @@ def create_app(
             body = read(draft, DRAFT_FILE)
             fields = _fields(draft, body, remedy)
             renders = renders_of(draft, body, remedy)
-            revision = _revision(one, body.get("producer"), renders)
+            revision = _revision(one, body, renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
@@ -720,36 +724,18 @@ def create_app(
         """
         found = folder(batch)
         named = _images(payload)
-        runs: list[Run | None] = []
         answers: list[str | None] = []
+        located: list[Revision] = []
         for digest, flow, version, seed in named:
             try:
-                run = library.run_named(found, digest)
-                image = image_of(run, offered(flow), version, seed)
-                if not image.is_file():
-                    raise Refusal(
-                        f"{image.name}: is not an image a render wrote; go back to "
-                        "the batch's Renders to choose one"
-                    )
-                runs.append(run)
+                located.append((library.run_named(found, digest), flow, version, seed))
                 answers.append(None)
             except Refusal as refused:
-                runs.append(None)
                 answers.append(str(refused))
         with _DRAFT_UPDATE:
-            checked = iter(
-                refuse_revisions(
-                    [
-                        (run, flow, version)
-                        for run, (_, flow, version, _) in zip(runs, named, strict=True)
-                        if run is not None
-                    ]
-                )
-            )
-            answers = [
-                next(checked) if run is not None else answer
-                for run, answer in zip(runs, answers, strict=True)
-            ]
+            # Each image the batch holds takes its answer from the review stage.
+            checked = iter(refuse_revisions(located))
+            answers = [next(checked) if a is None else a for a in answers]
             if any(answer is not None for answer in answers):
                 return JSONResponse(
                     {
@@ -762,12 +748,8 @@ def create_app(
                     REFUSED,
                 )
             drafts = [
-                {
-                    **_image_out(digest, flow, version, seed),
-                    "draft": revise(run, flow, version, seed).name,
-                }
-                for run, (digest, flow, version, seed) in zip(runs, named, strict=True)
-                if run is not None
+                {**_image_out(*one), "draft": revise(*revision).name}
+                for one, revision in zip(named, located, strict=True)
             ]
         return {"drafts": drafts}
 
@@ -820,9 +802,7 @@ def create_app(
     ) -> dict[str, Any]:
         """Return one render's large view: the approval's filled fields beside it."""
         run, _, approval = rendered(batch, digest, flow, version, seed)
-        remedy = f"restore it in {approval} by hand, then reload the page"
-        body = read(approval, APPROVED_FILE, remedy=remedy)
-        fields = _fields(approval, body, remedy)
+        _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
         return {
@@ -849,9 +829,8 @@ def create_app(
                 f"v{number} · {seed}: no older version of {flow} rendered this seed, "
                 "so there is nothing to compare; go back to its large view"
             )
-        _, _, before = rendered(batch, digest, flow, f"v{older}", seed)
-        sides = [_side(one, number, after), _side(one, older, before)]
-        (now, now_fields), (was, was_fields) = sides
+        now, now_fields = _side(one, number, after)
+        was, was_fields = _side(one, older, approval_of(run, flow, older))
         return {
             "seed": str(seed),
             "before": was,
@@ -859,7 +838,7 @@ def create_app(
             "changed": [
                 {"field": name, "before": was_fields[name], "after": now_fields[name]}
                 for name in one.schema.names
-                if was_fields.get(name, []) != now_fields.get(name, [])
+                if was_fields[name] != now_fields[name]
             ],
         }
 
@@ -977,41 +956,48 @@ def cell_event(
     return cell
 
 
-def _revision(one: Held, producer: object, renders: Renders) -> dict[str, Any] | None:
+def _approved(approval: Path) -> tuple[ReviewApproved, dict[str, list[str]]]:
+    """Read an approval the page shows, and its fields; only a hand repairs one."""
+    remedy = f"restore it in {approval} by hand, then reload the page"
+    body = read(approval, APPROVED_FILE, remedy=remedy)
+    return body, _fields(approval, body, remedy)
+
+
+def _revision(
+    one: Held, body: Mapping[str, Any], renders: Renders
+) -> dict[str, Any] | None:
     """Describe the approval a draft was copied from, and the image it revises.
 
     The image is the first listed seed rendered under that approval, or null.
     e.g. from 1, seeds [7], outputs/001/7.png there -> {"version": 1, "seed": "7", …}
     """
-    if not isinstance(producer, dict) or producer.get("source") != REVIEW:
-        return None
-    version = producer.get("from")
-    if not _whole(version):
+    version = came_from(body)
+    if version is None:
         return None
     approval = approval_of(one.run, one.flow.id, version)
     if not approval.is_file():
         return None
-    remedy = f"restore it in {approval} by hand, then reload the page"
-    fields = _fields(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
-    rendered = [
-        seed
-        for seed in renders["seeds"]
-        if image_of(one.run, one.flow, version, seed).is_file()
-    ]
+    seed = next(
+        (
+            seed
+            for seed in renders["seeds"]
+            if image_of(one.run, one.flow, version, seed).is_file()
+        ),
+        None,
+    )
     return {
         "version": version,
-        "seed": str(rendered[0]) if rendered else None,
-        "fields": fields,
+        "seed": None if seed is None else str(seed),
+        "fields": _approved(approval)[1],
     }
 
 
 def _side(
     flow: Flow, version: int, approval: Path
 ) -> tuple[dict[str, Any], dict[str, list[str]]]:
-    """Return one side of a comparison as the page shows it, and its fields."""
+    """Return one side of a comparison as the page shows it, and every field."""
+    body, fields = _approved(approval)
     remedy = f"restore it in {approval} by hand, then reload the page"
-    body = read(approval, APPROVED_FILE, remedy=remedy)
-    fields = _fields(approval, body, remedy)
     for name in flow.schema.names:
         fields.setdefault(name, [])
     return {

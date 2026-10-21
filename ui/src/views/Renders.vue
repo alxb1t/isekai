@@ -69,8 +69,16 @@ function toggle(one: Spot): void {
   selected.value = next
 }
 
-/* The seeds a cell renders under more than one version. */
-function shared(versions: RenderVersion[]): Set<string> {
+/* The seeds each cell renders under more than one version, by `digest|flow`. */
+const shared = computed(() => {
+  const found = new Map<string, Set<string>>()
+  for (const source of info.value?.sources ?? [])
+    for (const [flow, versions] of Object.entries(source.cells))
+      found.set(`${source.digest}|${flow}`, repeated(versions))
+  return found
+})
+
+function repeated(versions: RenderVersion[]): Set<string> {
   const seen = new Map<string, number>()
   for (const version of versions)
     for (const seed of version.rendered) seen.set(seed, (seen.get(seed) ?? 0) + 1)
@@ -208,7 +216,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   'renders__image--focused': focused === spot(row, flow, version.version, seed),
                   'renders__image--selected':
                     source.digest &&
-                    selected.has(`${source.digest}|${flow}|${version.version}|${seed}`),
+                    selected.has(
+                      key({ digest: source.digest, flow, version: version.version, seed }),
+                    ),
                 }"
                 type="button"
                 :data-seed="seed"
@@ -220,7 +230,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   :alt="`${source.name} ${flow} v${version.version} seed ${seed}`"
                 />
                 <span
-                  v-if="shared(source.cells[flow] ?? []).has(seed)"
+                  v-if="shared.get(`${source.digest}|${flow}`)?.has(seed)"
                   class="renders__pair mono"
                   >⇄ {{ seed }}</span
                 >

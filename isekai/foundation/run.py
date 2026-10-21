@@ -41,6 +41,7 @@ from typing import Literal, TypeVar
 from isekai.foundation.artifacts import (
     ERROR_FILE,
     RUN_FILE,
+    SEED_RANGE,
     DigestRecord,
     ErrorRecord,
     Failure,
@@ -458,6 +459,47 @@ def next_version(directory: Path) -> int:
 def artifact_name(version: int, label: str | None = None) -> str:
     """Return the filename an artifact takes, with its optional approval label."""
     return f"{version:03d}.json" if label is None else f"{version:03d}.{label}.json"
+
+
+def approval_of(run: Run, flow: str, version: int) -> Path:
+    """Return the path of `flow`'s approval numbered `version` in `run`."""
+    return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
+
+
+def group_of(run: Run, flow: str, version: int) -> Path:
+    """Return the outputs group the approval numbered `version` renders into."""
+    return run.directory(flow, OUTPUTS, f"{version:03d}")
+
+
+# A version or a seed as a filename spells it: ASCII digits alone, since
+# `str.isdigit` also passes a superscript `int` cannot read.
+_DIGITS = re.compile(r"[0-9]+")
+
+
+def rendered_at(image: Path) -> tuple[Run, str, int, int]:
+    """Return the run, flow, approval and seed a rendered image's path names.
+
+    e.g. runs/0d4b…_ada/summon-anime-wai/outputs/001/1840266731.png
+         -> (that run, "summon-anime-wai", 1, 1840266731)
+    """
+    group = image.absolute().parent
+    flow_directory = group.parent.parent
+    run_directory = flow_directory.parent
+    if not (
+        image.is_file()
+        and _DIGITS.fullmatch(image.stem)
+        and int(image.stem) in SEED_RANGE
+        and len(group.name) == 3
+        and _DIGITS.fullmatch(group.name)
+        and group.parent.name == OUTPUTS
+        and (run_directory / FRAME_NAME).is_file()
+    ):
+        raise Refusal(
+            "is not an image a render wrote; give the path of one, "
+            f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.png"
+        )
+    run = Run(run_directory.name, run_directory)
+    return run, flow_directory.name, int(group.name), int(image.stem)
 
 
 def latest_artifact(directory: Path, label: str | None = None) -> Path | None:

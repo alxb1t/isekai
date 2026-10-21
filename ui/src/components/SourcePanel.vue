@@ -26,8 +26,7 @@ const props = defineProps<{
   tags?: OfferedTag[] | null
   loading?: boolean
   /* The image being revised, drawn beside the photograph on a revision (J5·4). */
-  render?: string | null
-  seed?: string | null
+  revised?: { src: string; seed: string } | null
 }>()
 
 defineEmits<{ open: [] }>()
@@ -73,7 +72,7 @@ defineExpose({
         {{ loading ? 'reading…' : 'click or ⌥f to fill window' }}
       </span>
     </div>
-    <div v-if="render" class="source__pair">
+    <div :class="{ source__pair: revised }">
       <PhotoFrame
         :src="photo"
         :alt="id"
@@ -81,19 +80,11 @@ defineExpose({
         :ratio="`${width} / ${height}`"
         @open="$emit('open')"
       />
-      <figure class="source__revised" data-revised>
-        <span class="kicker">render being revised · {{ seed }}</span>
-        <img :src="render" :alt="`render ${seed}`" />
+      <figure v-if="revised" class="source__revised" data-revised>
+        <span class="kicker">render being revised · {{ revised.seed }}</span>
+        <img :src="revised.src" :alt="`render ${revised.seed}`" />
       </figure>
     </div>
-    <PhotoFrame
-      v-else
-      :src="photo"
-      :alt="id"
-      :loading="loading"
-      :ratio="`${width} / ${height}`"
-      @open="$emit('open')"
-    />
     <CaptionPanel :prose="caption" :command="captionCommand" :loading="loading" />
     <section v-if="scored.length" class="caption">
       <div class="source__head">

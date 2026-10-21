@@ -291,11 +291,20 @@ export interface RevisedImage {
   seed: string
 }
 
-/* A revision the server refused: each image with its refusal, or null where it
-   could be revised. Nothing was written. */
+/* An image a revision wrote a draft for, by the draft's name. */
+export interface RevisedDraft extends RevisedImage {
+  draft: string
+}
+
+/* An image of a refused revision: its refusal, or null where it could be revised. */
+export interface RefusedImage extends RevisedImage {
+  refusal: string | null
+}
+
+/* A revision the server refused, answering each image. Nothing was written. */
 export interface ReviseRefused {
   refusal: string
-  images: (RevisedImage & { refusal: string | null })[]
+  images: RefusedImage[]
 }
 
 /* One side of a comparison. */

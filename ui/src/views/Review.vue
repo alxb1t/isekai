@@ -48,7 +48,7 @@ const revision = computed(() =>
 const revised = computed(() => {
   const held = revision.value
   if (!held?.seed) return null
-  return imageAt({ ...props, version: held.version, seed: held.seed })
+  return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
 })
 const discarding = ref<string | null>(null)
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
@@ -173,8 +173,8 @@ const kicker = computed(() => {
   return held ? `revision of v${held.version}` : 're-opened'
 })
 
-/* Revise's queue, when Review was opened by it: the next of its drafts, else
-   the hub. Null without one, so the batch's own queue decides. */
+/* Revise's queue, when Review was opened by it: open the next of its drafts,
+   else the hub, and return true. False without one: the batch's queue decides. */
 function nextRevised(): boolean {
   const held = route.query.queue
   if (typeof held !== 'string') return false
@@ -507,8 +507,7 @@ watch(current, (id) => {
         :wd14="sheet.detail.value?.wd14 ?? null"
         :tags="sheet.detail.value?.tags ?? null"
         :loading="sheet.loading.value"
-        :render="revised"
-        :seed="revision?.seed ?? null"
+        :revised="revised"
         @open="openLens('photo')"
       />
       <SheetForm
