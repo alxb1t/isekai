@@ -1,16 +1,27 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { cancelStaging, commitStaging, openStaging } from '../api'
+import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
 import type { StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
-   browser's dialog, each sent in its own request with its own bar, read and
-   cleaned by the server, then imported in one move. With `batch`, the files
-   join that batch; without it, the sheet names a new one. */
+   browser's dialog, each sent in its own request with its own bar, then read and
+   cleaned by the server one at a time, each step reported on the import's stream,
+   then imported in one move. With `batch`, the files join that batch; without
+   it, the sheet names a new one. */
 const props = defineProps<{ batch?: string }>()
 const emit = defineEmits<{ close: []; imported: [batch: string] }>()
 
-type Phase = 'waiting' | 'uploading' | 'reading' | 'read' | 'refused'
+/* `queued` before its upload starts; `waiting` and `converting` are the server's. */
+type Phase = 'queued' | 'uploading' | 'waiting' | 'converting' | 'read' | 'refused'
+
+/* One file's state, as the import's stream reports it. */
+interface FileEvent {
+  file: string
+  state: 'waiting' | 'converting' | 'refused' | StagedFile['state']
+  name?: string
+  carries?: string[]
+  refusal?: string
+}
 
 interface Tile {
   key: number
@@ -22,13 +33,10 @@ interface Tile {
   asIs: boolean
 }
 
-/* One file, one request, its body the file itself. `XMLHttpRequest` rather than
-   `fetch`, because only it reports an upload's progress. */
-function uploadFile(
-  id: string,
-  file: File,
-  onProgress: (fraction: number) => void,
-): Promise<StagedFile> {
+/* One file, one request, its body the file itself, answered once its bytes land.
+   `XMLHttpRequest` rather than `fetch`, because only it reports an upload's
+   progress. */
+function uploadFile(id: string, file: File, onProgress: (fraction: number) => void): Promise<void> {
   const url = `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(file.name)}`
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -37,13 +45,13 @@ function uploadFile(
       if (event.lengthComputable) onProgress(event.loaded / event.total)
     }
     xhr.onload = () => {
-      let body: { refusal?: string } & Partial<StagedFile> = {}
+      let body: { refusal?: string } = {}
       try {
         body = JSON.parse(xhr.responseText) as typeof body
       } catch {
         body = {}
       }
-      if (xhr.status >= 200 && xhr.status < 300) resolve(body as StagedFile)
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
       else reject(new Error(body.refusal ?? `${file.name}: the server answered ${xhr.status}`))
     }
     xhr.onerror = () => reject(new Error(`${file.name}: the upload did not reach the server`))
@@ -61,9 +69,11 @@ const name = ref(new Date().toISOString().slice(0, 10))
 const refusal = ref<string | null>(null)
 let committed = false
 let counter = 0
+let stream: EventSource | null = null
 const opening = openStaging().then(
   (opened) => {
     staging.value = opened.id
+    listen(opened.id)
     return opened.id
   },
   (reason: Error) => {
@@ -102,7 +112,7 @@ function choose(event: Event): void {
     tiles.value.push({
       key: counter++,
       file,
-      phase: 'waiting',
+      phase: 'queued',
       progress: 0,
       result: null,
       refusal: null,
@@ -113,11 +123,45 @@ function choose(event: Event): void {
   pump()
 }
 
-/* Start the next waiting uploads, up to `PARALLEL` at once. */
+/* Start the next queued uploads, up to `PARALLEL` at once. */
 function pump(): void {
-  const running = tiles.value.filter((one) => one.phase === 'uploading' || one.phase === 'reading')
-  const waiting = tiles.value.filter((one) => one.phase === 'waiting')
-  for (const one of waiting.slice(0, Math.max(PARALLEL - running.length, 0))) void send(one)
+  const running = tiles.value.filter((one) => one.phase === 'uploading')
+  const queued = tiles.value.filter((one) => one.phase === 'queued')
+  for (const one of queued.slice(0, Math.max(PARALLEL - running.length, 0))) void send(one)
+}
+
+/* The import's stream: every file's state on connect, then each change. */
+function listen(id: string): void {
+  stream = new EventSource(`/events?${new URLSearchParams({ staging: id })}`)
+  stream.addEventListener('snapshot', (event) => {
+    const data = JSON.parse((event as MessageEvent<string>).data) as {
+      files?: Record<string, Omit<FileEvent, 'file'>>
+    }
+    for (const [file, state] of Object.entries(data.files ?? {})) apply({ file, ...state })
+  })
+  stream.addEventListener('file', (event) => {
+    apply(JSON.parse((event as MessageEvent<string>).data) as FileEvent)
+  })
+}
+
+/* Put a reported state on the first unread tile of that name. Its upload's
+   answer, not the stream, says it waits: the stream can report it first. */
+function apply(event: FileEvent): void {
+  if (event.state === 'waiting') return
+  const one = tiles.value.find(
+    (tile) =>
+      tile.file.name === event.file && tile.phase !== 'queued' && tile.phase !== 'read' && tile.phase !== 'refused',
+  )
+  if (!one) return
+  if (event.state === 'converting') {
+    one.phase = 'converting'
+  } else if (event.state === 'refused') {
+    one.phase = 'refused'
+    one.refusal = event.refusal ?? `${event.file}: refused`
+  } else {
+    one.phase = 'read'
+    one.result = { name: event.name ?? event.file, state: event.state, carries: event.carries ?? [] }
+  }
 }
 
 async function send(one: Tile): Promise<void> {
@@ -129,16 +173,22 @@ async function send(one: Tile): Promise<void> {
     return
   }
   try {
-    one.result = await uploadFile(id, one.file, (fraction) => {
+    await uploadFile(id, one.file, (fraction) => {
       one.progress = fraction
-      if (fraction >= 1) one.phase = 'reading'
     })
-    one.phase = 'read'
+    if (one.phase === 'uploading') one.phase = 'waiting'
   } catch (reason) {
     one.phase = 'refused'
     one.refusal = (reason as Error).message
   }
   pump()
+}
+
+/* A read file's preview, served from staging; a skipped file has none of its own. */
+function preview(one: Tile): string | null {
+  const result = one.result
+  if (staging.value === null || !result || result.state === 'skipped') return null
+  return stagedThumbAt(staging.value, result.name)
 }
 
 /* `HEIC → JPEG`, from the chosen name's suffix to the staged one's. */
@@ -176,6 +226,7 @@ async function importAll(): Promise<void> {
 }
 
 async function cancel(): Promise<void> {
+  stream?.close()
   if (staging.value !== null && !committed) {
     committed = true
     await cancelStaging(staging.value).catch(() => undefined)
@@ -201,6 +252,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
+  stream?.close()
   if (staging.value !== null && !committed) void cancelStaging(staging.value).catch(() => undefined)
 })
 </script>
@@ -241,15 +293,21 @@ onUnmounted(() => {
               :data-phase="one.phase"
               :data-state="one.result?.state ?? ''"
             >
+              <img v-if="preview(one)" class="import__preview" :src="preview(one) ?? ''" alt="" />
               <span class="import__name mono">{{ one.result?.name ?? one.file.name }}</span>
               <span class="import__size mono">{{ size(one.file.size) }}</span>
-              <span v-if="one.phase === 'waiting'" class="import__word mono">waiting</span>
-              <span v-else-if="one.phase === 'uploading'" class="import__bar">
-                <span class="import__fill" :style="{ width: `${Math.round(one.progress * 100)}%` }" />
-              </span>
-              <span v-else-if="one.phase === 'reading'" class="import__word import__word--running mono"
-                >converting…</span
-              >
+              <span v-if="one.phase === 'queued'" class="import__word mono">queued</span>
+              <template v-else-if="one.phase === 'uploading'">
+                <span class="import__bar">
+                  <span class="import__fill" :style="{ width: `${Math.round(one.progress * 100)}%` }" />
+                </span>
+                <span class="import__word mono">uploading {{ Math.round(one.progress * 100) }}%</span>
+              </template>
+              <span v-else-if="one.phase === 'waiting'" class="import__word mono">waiting</span>
+              <template v-else-if="one.phase === 'converting'">
+                <span class="import__bar import__bar--running"><span class="import__fill" /></span>
+                <span class="import__word import__word--running mono">converting…</span>
+              </template>
               <template v-else-if="one.result">
                 <span v-if="badge(one)" class="import__badge mono">{{ badge(one) }}</span>
                 <span v-if="one.result.state === 'skipped'" class="import__word mono">already chosen</span>

@@ -1,6 +1,8 @@
 """The import sheet in a browser: files chosen in the dialog, each with its own upload.
 
-One upload is held at the network so the page can be seen while it is in flight.
+One upload is held at the network so the page can be seen while it is in flight. The
+import's first stream connection is held too, then answered with one `converting`
+frame: a real conversion is over before a page can be seen drawing it.
 """
 
 import re
@@ -40,14 +42,39 @@ def _hold(page: Page, name: str) -> list[Route]:
     return held
 
 
-def _release(page: Page, held: list[Route]) -> None:
-    """Let the held upload go, once the page has sent it."""
+def _hold_stream(page: Page) -> list[Route]:
+    """Hold the import's first stream connection; every later one reaches the server."""
+    held: list[Route] = []
+
+    def first(route: Route) -> None:
+        if held:
+            route.continue_()
+        else:
+            held.append(route)
+
+    page.route(re.compile(r"/events\?staging="), first)
+    return held
+
+
+def _sent(page: Page, held: list[Route]) -> Route:
+    """Return the held request, once the page has sent it."""
     for _ in range(100):
         if held:
-            held[0].continue_()
-            return
+            return held[0]
         page.wait_for_timeout(50)
-    raise AssertionError("the held upload was never sent")
+    raise AssertionError("the held request was never sent")
+
+
+def _release(page: Page, held: list[Route]) -> None:
+    """Let the held upload go, once the page has sent it."""
+    _sent(page, held).continue_()
+
+
+# A stream that reports the HEIC converting, then ends; `retry` reconnects it at once.
+CONVERTING = (
+    "retry: 50\nevent: snapshot\n"
+    'data: {"files": {"plain.heic": {"state": "converting"}}}\n\n'
+)
 
 
 def _tile(page: Page, name: str):  # noqa: ANN202
@@ -58,7 +85,15 @@ def _tile(page: Page, name: str):  # noqa: ANN202
 def test_each_chosen_file_shows_its_upload_then_its_result(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
+    page.route("**/api/library", lambda route: route.fulfill(json={"rows": []}))
+    page.goto(served.url)
+    privacy = page.get_by_text("A photograph leaves this Mac only to be rendered")
+    first = page.get_by_role("button", name="New batch")
+    below, above = first.bounding_box(), privacy.bounding_box()
+    assert below is not None and above is not None
+    assert below["y"] >= above["y"] + above["height"]
     held = _hold(page, "held.jpg")
+    stream = _hold_stream(page)
     files = [
         _jpeg(tmp_path / "held.jpg", (10, 20, 30)),
         HEIC,
@@ -67,11 +102,20 @@ def test_each_chosen_file_shows_its_upload_then_its_result(
 
     _choose(page, served, files)
 
-    expect(_tile(page, "held.jpg")).to_have_attribute(
-        "data-phase", re.compile("uploading|reading")
+    heic = _tile(page, "plain.heic")
+    expect(_tile(page, "held.jpg")).to_have_attribute("data-phase", "uploading")
+    expect(heic).to_have_attribute("data-phase", "waiting")
+    _sent(page, stream).fulfill(
+        status=200, content_type="text/event-stream", body=CONVERTING
     )
-    expect(_tile(page, "plain.heic")).to_have_attribute("data-state", "converted")
-    expect(_tile(page, "plain.heic")).to_contain_text("HEIC → JPEG")
+    expect(heic).to_have_attribute("data-phase", "converting")
+    expect(heic).to_contain_text("converting…")
+    expect(heic).to_have_attribute("data-state", "converted")
+    expect(heic).to_contain_text("HEIC → JPEG")
+    preview = heic.locator(".import__preview")
+    expect(preview).to_have_attribute("src", re.compile(r"/files/plain\.jpg/thumb$"))
+    expect(preview).to_have_js_property("complete", True)
+    assert preview.evaluate("image => image.naturalWidth") > 0
     refused = page.locator('.import__refused[data-file="DSC_2291.NEF"]')
     expect(refused).to_contain_text("a NEF RAW photograph")
     expect(refused).to_contain_text("export it as JPEG")

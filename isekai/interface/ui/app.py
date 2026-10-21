@@ -30,9 +30,9 @@ GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
 GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
 POST /api/billing/check
-POST /api/staging   ·   PUT …/{id}/files/{name}
+POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
-GET  /events[?batch=]                              Server-Sent Events
+GET  /events[?batch=|?staging=]                    Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve
@@ -222,6 +222,7 @@ def create_app(
         yield
         billing.close()
         jobs.shutdown()
+        imports.close()
         broadcast.close()
 
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
@@ -231,6 +232,11 @@ def create_app(
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
     shared = _Shared(wired)
+    imports = importing.Imports(
+        root,
+        limit,
+        lambda staged, state: broadcast.publish("file", {"staging": staged, **state}),
+    )
 
     @app.middleware("http")
     async def _addressed_here(
@@ -326,47 +332,38 @@ def create_app(
                 refused[name] = str(one)
         return {"cells": cells, "refused": refused}
 
-    def staging(staged: str) -> Path:
-        """Return the staging folder an import's id names, refusing one not there."""
-        found = root / importing.STAGING / staged
-        if not _STAGING_ID.fullmatch(staged) or not found.is_dir():
-            raise Refusal(
-                f"no import {staged!r} is open; close the sheet and choose the "
-                "files again"
-            )
-        return found
-
     @app.post("/api/staging")
     def post_staging() -> dict[str, Any]:
         """Open an import: a staging folder under the library's `.staging/`."""
-        return {"id": importing.stage(root).name}
+        return {"id": imports.open()}
 
-    @app.put("/api/staging/{staged}/files/{name}")
+    @app.put("/api/staging/{staged}/files/{name}", status_code=202)
     async def put_file(staged: str, name: str, request: Request) -> dict[str, Any]:
-        """Read one uploaded file into staging: cleaned, verified, or refused by name.
+        """Hold one uploaded file for its import's reader, and answer `waiting`.
 
         The body is the file. One past the limit is refused by its declared
-        length before its body is read.
+        length before its body is read. Its reading is reported on the stream.
         """
-        folder = staging(staged)
+        held = imports.reader(staged)
         declared = request.headers.get("content-length")
         if declared is not None and declared.isdigit() and int(declared) > limit:
             raise importing.past_limit(name, int(declared), limit)
         body = await request.body()
-        # Decoding blocks; off the event loop, it holds up no other request.
-        staged_file = await run_in_threadpool(
-            importing.receive, name, body, folder, limit
+        return {"file": name, **await run_in_threadpool(held.put, name, body)}
+
+    @app.get("/api/staging/{staged}/files/{name}/thumb")
+    def read_staged_thumb(staged: str, name: str) -> Response:
+        """Serve a staged file's preview, made now and kept nowhere."""
+        return Response(
+            importing.preview(imports.folder(staged), name),
+            media_type="image/jpeg",
+            headers={"Cache-Control": "no-store"},
         )
-        return {
-            "name": staged_file.name,
-            "state": staged_file.state,
-            "carries": list(staged_file.carries),
-        }
 
     @app.delete("/api/staging/{staged}")
     def delete_staging(staged: str) -> dict[str, Any]:
         """Cancel an import: its staging folder is deleted, the library unchanged."""
-        importing.cancel(staging(staged))
+        imports.cancel(staged)
         return {}
 
     @app.post("/api/staging/{staged}/commit")
@@ -375,9 +372,8 @@ def create_app(
         as_is = payload.get("as_is", [])
         if not _is_tag_list(as_is):
             raise Refusal("the request's `as_is` is not a list of file names")
-        done = importing.commit(
-            staging(staged),
-            root,
+        done = imports.commit(
+            staged,
             str(payload.get("batch", "")),
             as_is,
             add=payload.get("add") is True,
@@ -506,20 +502,25 @@ def create_app(
         return {"billing": billing.check()}
 
     @app.get("/events")
-    def read_events(batch: str | None = None) -> StreamingResponse:
-        """Stream the job slot and, for `batch`, its hub, then each change.
+    def read_events(
+        batch: str | None = None, staging: str | None = None
+    ) -> StreamingResponse:
+        """Stream the job slot, `batch`'s hub and `staging`'s files, then each change.
 
         A reload or a second tab gets the whole truth at once.
         """
+        held = imports.reader(staging) if staging is not None else None
 
         def snapshot() -> dict[str, Any]:
             found = {"job": jobs.slot(), "billing": billing.state()}
             if batch is not None:
                 found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
+            if held is not None:
+                found["files"] = held.files()
             return found
 
         return StreamingResponse(
-            events.stream(broadcast, snapshot, batch=batch),
+            events.stream(broadcast, snapshot, batch=batch, staging=staging),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache"},
         )
@@ -830,9 +831,6 @@ class _Shared:
             }
         return self._candidates[flow.id]
 
-
-# A staging folder's name, as `importing.stage` makes it.
-_STAGING_ID = re.compile(r"[0-9a-f]{16}")
 
 # A number a request spells: ASCII digits alone, since `str.isdigit` also passes
 # a superscript `int` cannot read.

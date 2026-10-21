@@ -15,7 +15,7 @@ does is reach a boundary or decide a stage's order.
 |---|---|
 | `field_map.py` | answers *which identity criterion does this tag belong to* — one authored table, read `tag → field` to route and `field → tags` to browse |
 | `fields.py` | answers *is this filled sheet exactly the schema's fields of canonical tags* |
-| `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, refusing what render cannot take; strips a photograph's metadata for upload, and names what a file carries beyond its pixels |
+| `image.py` | reads a JPEG or PNG header and derives the render target the image's own dimensions imply, refusing what render cannot take; strips a photograph's metadata for upload, names what a file carries beyond its pixels, and makes a thumbnail |
 | `vocabulary.py` | answers *is this a real tag* and *how strong is it* |
 
 ## Imported by

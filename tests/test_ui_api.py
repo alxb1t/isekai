@@ -1,17 +1,18 @@
 """The endpoints, against a running application.
 
-They are the library, a batch's hub, the tag search, the field candidates, and a
-run's review, photo, draft and approval.
+They are the address guard, the library, a batch's hub, the tag search, the field
+candidates, a run's review, photo, draft and approval, its renders, and the import's
+upload, stream and preview.
 
 **This module runs in the gate.** FastAPI is pinned in the `dev` dependency
-group, so `uv sync --locked` installs it and the four `ui` scenarios bound here
-and nowhere else are actually proved. `tests/test_ui.py` asserts the framework is
-present, so its absence is a failure rather than a silent skip.
+group, so `uv sync --locked` installs it and the `ui` scenarios bound here are
+proved. `tests/test_ui.py` asserts the framework is present, so its absence is a
+failure rather than a silent skip.
 
 The `importorskip` below is kept as a belt for an environment synced without the
 dev group: a module-level `from fastapi.testclient import TestClient` would fail
-*collection* there, which is gate command five going red over a missing test tool
-rather than a defect.
+*collection* there, which is the gate's `uv run pytest` going red over a missing
+test tool rather than a defect.
 
 This is deliberately not the evaluator tests' pattern. Those fake the embedder;
 here the thing under test *is* the HTTP surface, so there is nothing to fake
@@ -24,10 +25,12 @@ Everything that can be asserted without a server is in `tests/test_ui.py` and
 import contextlib
 import io
 import json
+import queue
 import random
 import shlex
 import shutil
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -37,10 +40,12 @@ import pytest
 
 pytest.importorskip("fastapi")
 
+from fastapi import FastAPI  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 import isekai.foundation.run as run_module  # noqa: E402
 import isekai.interface.ui.app as app_module  # noqa: E402
+import isekai.pipeline.importing as importing_module  # noqa: E402
 import isekai.pipeline.review as review_module  # noqa: E402
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -62,7 +67,7 @@ from isekai.foundation.run import (  # noqa: E402
     open_run,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
-from isekai.interface.ui import HOST, library  # noqa: E402
+from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
     RARE_BELOW,
     Held,
@@ -84,6 +89,7 @@ from isekai.pipeline.tagging import (  # noqa: E402
     tag_wd14,
 )
 from isekai.shared.field_map import Group  # noqa: E402
+from isekai.shared.image import THUMB_SIDE  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
@@ -605,9 +611,20 @@ def test_an_update_written_against_a_stale_draft_is_refused(
     )
     assert third.status_code == 200
 
-    # An approval states the same precondition, so a page that never displayed
-    # the draft on disk cannot approve it.
+
+@pytest.mark.spec("ui:draft-update:a-stale-approval-is-refused")
+def test_an_approval_written_against_a_stale_draft_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    # An approval states the draft update's precondition, so a page that never
+    # displayed the draft on disk cannot approve it.
+    body = client.get(_at(made)).json()
+    fields, saved = body["fields"], body["saved"]
+    moved = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
+    assert moved.json()["saved"] != saved
+
     stale = client.post(_at(made, "/approve"), json={"saved": saved})
+
     assert stale.status_code == 409
     assert "changed since this page last read it" in stale.json()["refusal"]
     assert not list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
@@ -1367,3 +1384,140 @@ def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
 
     assert answered.status_code == 409
     assert "names no version" in answered.json()["refusal"]
+
+
+# --- the import sheet ---------------------------------------------------------
+
+HEIC = Path(__file__).resolve().parent / "fixtures" / "sources" / "plain.heic"
+
+# How long a test waits on the reader before it fails rather than hangs.
+WAIT = 10.0
+
+_READ = frozenset({"ready", "converted", "not cleaned", "skipped", "refused"})
+
+
+def _broadcast(client: TestClient) -> events.Broadcast:
+    """Return the stream every event of `client`'s app is published on."""
+    app = client.app
+    assert isinstance(app, FastAPI)
+    return app.state.broadcast
+
+
+def _upload(
+    client: TestClient, staged: str, name: str, body: bytes
+) -> tuple[int, dict[str, Any]]:
+    """Return the status and body answering an upload of `body` as `name`."""
+    answer = client.put(f"/api/staging/{staged}/files/{name}", content=body)
+    return answer.status_code, answer.json()
+
+
+def _until_read(
+    feed: "queue.Queue[events.Event]", staged: str, names: set[str]
+) -> list[Any]:
+    """Return import `staged`'s `file` events, in order, until every name is read."""
+    seen: list[Any] = []
+    left = set(names)
+    while left:
+        kind, data = feed.get(timeout=WAIT)
+        if kind == "file" and data["staging"] == staged:
+            seen.append(data)
+            if data["state"] in _READ:
+                left.discard(data["file"])
+    return seen
+
+
+@pytest.mark.spec("ui:sheet:an-upload-is-answered-before-reading")
+def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    released = threading.Event()
+    reading: list[str] = []
+    inside: list[int] = [0, 0]  # now, most at once
+    real = importing_module.read
+
+    def held(file: Path, staging: Path, limit: int) -> importing_module.Staged:
+        inside[0] += 1
+        inside[1] = max(inside)
+        released.wait(WAIT)
+        reading.append(file.name)
+        try:
+            return real(file, staging, limit)
+        finally:
+            inside[0] -= 1
+
+    monkeypatch.setattr(importing_module, "read", held)
+    staged = client.post("/api/staging").json()["id"]
+    feed = _broadcast(client).subscribe()
+
+    answers = [
+        _upload(client, staged, name, photo_jpeg(colour, (40, 30)))
+        for name, colour in (("first.jpg", (200, 0, 0)), ("second.jpg", (0, 200, 0)))
+    ]
+
+    assert [status for status, _ in answers] == [202, 202]
+    assert [body["state"] for _, body in answers] == ["waiting", "waiting"]
+    released.set()
+    _until_read(feed, staged, {"first.jpg", "second.jpg"})
+    assert reading == ["first.jpg", "second.jpg"]
+    assert inside[1] == 1
+
+
+@pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
+def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
+    client: TestClient,
+) -> None:
+    broadcast = _broadcast(client)
+    staged = client.post("/api/staging").json()["id"]
+    other = client.post("/api/staging").json()["id"]
+    feed = broadcast.subscribe()
+
+    def upload_once_open() -> None:
+        deadline = time.monotonic() + WAIT
+        while len(broadcast._queues) < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        _upload(client, staged, "plain.heic", HEIC.read_bytes())
+        _upload(client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30)))
+        _until_read(feed, staged, {"plain.heic"})
+        _until_read(feed, other, {"elsewhere.jpg"})
+        broadcast.close()
+
+    threading.Thread(target=upload_once_open, daemon=True).start()
+    body = client.get(f"/events?staging={staged}").text
+
+    frames = [
+        (lines[0].removeprefix("event: "), json.loads(lines[1].removeprefix("data: ")))
+        for lines in (block.split("\n") for block in body.split("\n\n"))
+        if lines[0].startswith("event: ")
+    ]
+    assert frames[0][0] == "snapshot"
+    assert frames[0][1]["files"] == {}
+    files = [data for kind, data in frames if kind == "file"]
+    assert [(one["file"], one["state"]) for one in files] == [
+        ("plain.heic", "waiting"),
+        ("plain.heic", "converting"),
+        ("plain.heic", "converted"),
+    ]
+    assert files[-1]["name"] == "plain.jpg"
+
+
+@pytest.mark.spec("ui:sheet:a-staged-file-serves-its-preview")
+def test_a_staged_files_preview_is_a_downscaled_jpeg_kept_nowhere(
+    client: TestClient, tmp_path: Path
+) -> None:
+    feed = _broadcast(client).subscribe()
+    staged = client.post("/api/staging").json()["id"]
+    _upload(client, staged, "wide.jpg", photo_jpeg((30, 60, 90), (1600, 1200)))
+    (read,) = _until_read(feed, staged, {"wide.jpg"})[-1:]
+    before = snapshot(tmp_path / "lib")
+
+    answered = client.get(f"/api/staging/{staged}/files/{read['name']}/thumb")
+
+    assert answered.status_code == 200
+    assert answered.headers["content-type"] == "image/jpeg"
+    assert answered.headers["cache-control"] == "no-store"
+    from PIL import Image
+
+    with Image.open(io.BytesIO(answered.content)) as shown:
+        assert shown.format == "JPEG"
+        assert max(shown.size) == THUMB_SIDE
+    assert snapshot(tmp_path / "lib") == before

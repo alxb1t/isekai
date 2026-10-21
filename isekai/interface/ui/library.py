@@ -15,7 +15,6 @@ are the flows `config/ui.json` offers.
 No web framework, so the whole of it is tested with no server involved.
 """
 
-import io
 import json
 import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -57,7 +56,7 @@ from isekai.pipeline.generate import approval_of, group_of, rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, current_draft
 from isekai.pipeline.review import state as review_state
-from isekai.shared.image import metadata_in
+from isekai.shared.image import metadata_in, thumbnail_jpeg
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -65,8 +64,6 @@ RUNS = "runs"
 LOG = "log.txt"
 # The library's thumbnails, a dot-folder so it is listed as no batch.
 CACHE = ".cache"
-# A thumbnail's long side, in pixels.
-THUMB_SIDE = 512
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
@@ -341,16 +338,12 @@ def _shrunk(image: Path) -> bytes:
 
     try:
         with Image.open(image) as opened:
-            small = opened.convert("RGB")
-            small.thumbnail((THUMB_SIDE, THUMB_SIDE))
+            return thumbnail_jpeg(opened)
     except OSError as unread:
         raise Refusal(
             f"{image.name}: is not an image this build can read ({unread}); delete "
             f"{image} and its .render.json, then render it again"
         ) from unread
-    out = io.BytesIO()
-    small.save(out, "JPEG", quality=85)
-    return out.getvalue()
 
 
 def source_files(folder: Path) -> Callable[[str], Path]:

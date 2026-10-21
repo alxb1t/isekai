@@ -11,10 +11,11 @@ hub ─ Review next ─▶ Review ─▶ approve
 hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶ volume down ─▶ /events ─▶ the session
 ```
 
-- **Import.** The sheet sends each chosen file in its own `PUT`, a bar each. The server reads it into
-  the library's `.staging/` through `pipeline/importing.py`, which cleans it to its pixels and
-  orientation and verifies it; Import commits the batch's `sources/` in one move. A staging folder left
-  behind is swept when the server starts.
+- **Import.** The sheet sends each chosen file in its own `PUT`, a bar each, answered once its bytes
+  land. The import's reader in `pipeline/importing.py` then reads the files into the library's
+  `.staging/` one at a time, cleaning each to its pixels and orientation and verifying it, and
+  `/events?staging=<id>` reports each tile's step; a read tile shows its preview. Import commits the
+  batch's `sources/` in one move. A staging folder left behind is swept when the server starts.
 - **A tick** is `POST /api/b/{batch}/assign`, the same `assign` `isekai assign` runs: a flow's empty
   directory in the source's run. An untick past assigned is refused, so a tick never deletes work.
 - **Prepare** is one job in one slot (`jobs.py`). It asks Ollama first, then runs `isekai tag`,

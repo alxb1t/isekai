@@ -627,8 +627,8 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
         "portrait.jpg",
     ]
 
-    # Two uploads of one name read at once, as the sheet sends them: both are
-    # cleaned before either picks its name, and each write is slow.
+    # Two files of one name read at once: both are cleaned before either picks
+    # its name, and each write is slow.
     racing = stage(library)
     together = threading.Barrier(2)
     clean, write = importing._clean, importing.write_atomically
@@ -644,15 +644,13 @@ def test_the_same_bytes_are_skipped_and_a_taken_name_is_renamed(
 
     monkeypatch.setattr(importing, "_clean", cleaned_together)
     monkeypatch.setattr(importing, "write_atomically", slow)
-    bodies = (photo_jpeg((1, 1, 1)), photo_jpeg((250, 250, 250)))
+    files: list[Path] = []
+    for side, colour in (("one", (1, 1, 1)), ("two", (250, 250, 250))):
+        (tmp_path / side).mkdir()
+        files.append(_write(tmp_path / side, "IMG_0001.jpg", photo_jpeg(colour)))
 
     with ThreadPoolExecutor(2) as pool:
-        both = list(
-            pool.map(
-                lambda body: importing.receive("IMG_0001.jpg", body, racing, LIMIT),
-                bodies,
-            )
-        )
+        both = list(pool.map(lambda file: read(file, racing, LIMIT), files))
 
     assert sorted(one.name for one in both) == ["IMG_0001-2.jpg", "IMG_0001.jpg"]
     assert len({p.read_bytes() for p in racing.glob("IMG_0001*")}) == 2
@@ -690,3 +688,55 @@ def test_a_batch_inside_the_working_tree_is_refused_and_nothing_written(
     assert code == 1
     assert "under .data/ or at a directory outside the repository" in err.getvalue()
     assert not inside.exists()
+
+
+# --- reading in turn ---------------------------------------------------------
+
+
+@pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
+def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = importing.verify
+    calls: list[str] = []
+
+    def full_once(path: Path) -> list[str]:
+        # Raised once the first file is already written to staging.
+        calls.append(path.name)
+        if len(calls) == 1:
+            raise OSError(28, "No space left on device")
+        return real(path)
+
+    monkeypatch.setattr(importing, "verify", full_once)
+    published: list[dict[str, object]] = []
+    both_read = threading.Event()
+    read_again = threading.Event()
+
+    def publish(event: dict[str, object]) -> None:
+        published.append(event)
+        if event["state"] in {"waiting", "converting"}:
+            return
+        if event["file"] == "b.jpg":
+            both_read.set()
+        elif both_read.is_set():
+            read_again.set()
+
+    staging = stage(tmp_path / "library")
+    reader = importing.Reader(staging, LIMIT, publish)
+    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    reader.put("b.jpg", photo_jpeg((0, 200, 0)))
+
+    both_read.wait(10.0)
+    files = reader.files()
+    assert files["a.jpg"]["state"] == "refused"
+    assert "a.jpg: " in files["a.jpg"]["refusal"]
+    assert "No space left on device" in files["a.jpg"]["refusal"]
+    assert files["b.jpg"]["state"] == "ready"
+    staged = sorted(p.name for p in staging.iterdir() if not p.name.startswith("."))
+    assert staged == ["b.jpg"]
+
+    reader.put("a.jpg", photo_jpeg((200, 0, 0)))
+    read_again.wait(10.0)
+    reader.stop()
+    assert reader.files()["a.jpg"]["state"] == "ready"
+    reader.refuse_unread()

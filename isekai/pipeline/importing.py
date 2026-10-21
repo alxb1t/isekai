@@ -2,6 +2,7 @@
 
 A file is read into a staging folder under the library's `.staging/`, cleaned of
 everything but its pixels and orientation, and verified by the strip's own walk.
+An upload waits in the folder until its `Reader` reads it, one file at a time.
 A commit moves the staged files into the batch's `sources/`; a cancel, or a sweep
 at start, deletes what was staged.
 
@@ -12,6 +13,7 @@ Pillow and `pi_heif` are imported inside the functions that decode, so
 import contextlib
 import json
 import os
+import queue
 import re
 import secrets
 import shutil
@@ -19,15 +21,21 @@ import struct
 import tempfile
 import threading
 import time
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
-from isekai.shared.image import metadata_in, photo_resolution, strip_metadata
+from isekai.shared.image import (
+    THUMB_SIDE,
+    metadata_in,
+    photo_resolution,
+    strip_metadata,
+    thumbnail_jpeg,
+)
 
 if TYPE_CHECKING:
     from PIL.Image import Image
@@ -141,7 +149,8 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
                 write_atomically(target, _reencode(body))
                 converted = True
                 carries = verify(target)
-        except Refusal:
+        except BaseException:
+            # Whatever stops the read, nothing of it stays staged behind its refusal.
             target.unlink(missing_ok=True)
             raise
     if carries:
@@ -149,13 +158,208 @@ def read(file: Path, staging: Path, limit: int) -> Staged:
     return Staged(target.name, "converted" if converted else "ready")
 
 
-def receive(name: str, body: bytes, staging: Path, limit: int) -> Staged:
-    """Read an uploaded file's bytes into `staging`, as `read` reads a file."""
+class Reader:
+    """Read a staging folder's uploads one at a time, in the order they landed.
+
+    Each upload is held in a dot-named folder until its turn. Each change of a
+    file's state is published: `waiting`, `converting`, then a `Staged` state or
+    `refused`. e.g. `{"file": "a.heic", "state": "converted", "name": "a.jpg"}`
+    """
+
+    def __init__(
+        self, staging: Path, limit: int, publish: Callable[[dict[str, Any]], None]
+    ) -> None:
+        """Start the thread that reads what `put` holds."""
+        self._staging = staging
+        self._limit = limit
+        self._publish = publish
+        self._lock = threading.Lock()
+        self._files: dict[str, dict[str, Any]] = {}
+        self._queue: queue.Queue[tuple[str, Path] | None] = queue.Queue()
+        self._stopped = False
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def put(self, name: str, body: bytes) -> dict[str, Any]:
+        """Hold an uploaded file's bytes for reading; return its state, `waiting`."""
+        _refuse_name(name)
+        if self._stopped:
+            raise Refusal(
+                f"{name}: its import is closed; close the sheet and choose the "
+                "files again"
+            )
+        held = Path(tempfile.mkdtemp(dir=self._staging, prefix=".upload-")) / name
+        held.write_bytes(body)
+        state = self._set(name, {"state": "waiting"})
+        self._queue.put((name, held))
+        return state
+
+    def files(self) -> dict[str, dict[str, Any]]:
+        """Return every file's state, by the name it was uploaded as."""
+        with self._lock:
+            return {name: dict(state) for name, state in self._files.items()}
+
+    def refuse_unread(self) -> None:
+        """Refuse while any file still waits or converts, naming how many are read."""
+        states = self.files().values()
+        unread = sum(one["state"] in _UNREAD for one in states)
+        if unread:
+            raise Refusal(
+                f"{len(states) - unread} of {len(states)} files are read; wait for "
+                "the rest, then import"
+            )
+
+    def halt(self) -> None:
+        """Ask the thread to stop once the file being read is done."""
+        self._stopped = True
+        self._queue.put(None)
+
+    def stop(self) -> None:
+        """Stop reading and wait for the file being read; the rest stay unread."""
+        self.halt()
+        self._thread.join()
+
+    def _run(self) -> None:
+        """Read each held upload in turn until stopped."""
+        while (item := self._queue.get()) is not None and not self._stopped:
+            name, held = item
+            self._set(name, {"state": "converting"})
+            try:
+                staged = read(held, self._staging, self._limit)
+                result = {
+                    "state": staged.state,
+                    "name": staged.name,
+                    "carries": list(staged.carries),
+                }
+            except Refusal as refused:
+                result = {"state": "refused", "refusal": str(refused)}
+            except Exception as failed:
+                # Anything else, a full disk or a decoder's own error, refuses this
+                # file alone: the thread lives on to read the next.
+                result = {"state": "refused", "refusal": _failed(name, failed)}
+            finally:
+                shutil.rmtree(held.parent, ignore_errors=True)
+            self._set(name, result)
+
+    def _set(self, name: str, state: dict[str, Any]) -> dict[str, Any]:
+        """Record and publish `state` for `name`."""
+        with self._lock:
+            self._files[name] = state
+        self._publish({"file": name, **state})
+        return state
+
+
+# The states of a file the reader has not finished with.
+_UNREAD = frozenset({"waiting", "converting"})
+
+
+def _failed(name: str, failed: Exception) -> str:
+    """Return the refusal of `name`, whose reading raised `failed`."""
+    return (
+        f"{name}: reading it failed ({type(failed).__name__}: {failed}); free disk "
+        "space if it is full, then add it again, or export a JPEG copy and add that"
+    )
+
+
+class Imports:
+    """Every open import of a library, each a staging folder and its reader.
+
+    A reader starts when its import opens and stops before a commit or a
+    cancel touches the folder.
+    """
+
+    def __init__(
+        self, library: Path, limit: int, publish: Callable[[str, dict[str, Any]], None]
+    ) -> None:
+        """Hold no import yet; `publish` takes an import's id and a file's state."""
+        self._library = library
+        self._limit = limit
+        self._publish = publish
+        self._lock = threading.Lock()
+        self._open: dict[str, tuple[Path, Reader]] = {}
+
+    def open(self) -> str:
+        """Open an import: a new staging folder and its reader; return its id."""
+        folder = stage(self._library)
+        staged = folder.name
+        reader = Reader(folder, self._limit, lambda one: self._publish(staged, one))
+        with self._lock:
+            self._open[staged] = (folder, reader)
+        return staged
+
+    def folder(self, staged: str) -> Path:
+        """Return the staging folder of the open import `staged`, or refuse."""
+        return self._named(staged)[0]
+
+    def reader(self, staged: str) -> Reader:
+        """Return the reader of the open import `staged`, or refuse."""
+        return self._named(staged)[1]
+
+    def commit(
+        self, staged: str, name: str, as_is: Iterable[str] = (), *, add: bool = False
+    ) -> Committed:
+        """Commit import `staged` as `commit` does, once every file is read."""
+        folder, reader = self._named(staged)
+        reader.refuse_unread()
+        done = commit(folder, self._library, name, as_is, add=add)
+        self._close(staged)
+        return done
+
+    def cancel(self, staged: str) -> None:
+        """Stop import `staged`'s reader, then delete its staging folder."""
+        folder = self._close(staged)
+        cancel(folder)
+
+    def close(self) -> None:
+        """Stop every reader, each finishing the file it is reading."""
+        with self._lock:
+            readers = [reader for _, reader in self._open.values()]
+            self._open.clear()
+        for reader in readers:
+            reader.halt()
+        for reader in readers:
+            reader.stop()
+
+    def _named(self, staged: str) -> tuple[Path, Reader]:
+        """Return the folder and reader of the open import `staged`, or refuse."""
+        with self._lock:
+            found = self._open.get(staged)
+        if found is None:
+            raise Refusal(
+                f"no import {staged!r} is open; close the sheet and choose the "
+                "files again"
+            )
+        return found
+
+    def _close(self, staged: str) -> Path:
+        """Forget import `staged` and stop its reader; return its folder."""
+        folder, reader = self._named(staged)
+        with self._lock:
+            self._open.pop(staged, None)
+        reader.stop()
+        return folder
+
+
+def preview(staging: Path, name: str) -> bytes:
+    """Return a staged file upright, as `thumbnail_jpeg` makes it.
+
+    Made from the file each time and kept nowhere: it goes with its staging folder.
+    """
+    from PIL import Image, ImageOps
+
     _refuse_name(name)
-    with tempfile.TemporaryDirectory(dir=staging, prefix=".upload-") as scratch:
-        upload = Path(scratch) / name
-        upload.write_bytes(body)
-        return read(upload, staging, limit)
+    staged = staging / name
+    if not staged.is_file():
+        raise Refusal(f"{name}: not staged in this import; choose it again")
+    try:
+        with Image.open(staged) as opened:
+            # A JPEG decodes at the smallest scale that still covers the side.
+            opened.draft("RGB", (THUMB_SIDE, THUMB_SIDE))
+            return thumbnail_jpeg(ImageOps.exif_transpose(opened))
+    except OSError as unread:
+        raise Refusal(
+            f"{name}: its preview cannot be made ({unread}); choose it again"
+        ) from unread
 
 
 def _refuse_name(name: str) -> None:

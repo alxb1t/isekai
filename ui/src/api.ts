@@ -183,6 +183,11 @@ export function commitStaging(
   })
 }
 
+/* A staged file's preview, by the name it is staged as. */
+export function stagedThumbAt(id: string, name: string): string {
+  return `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}/thumb`
+}
+
 export function renders(batch: string): Promise<RendersInfo> {
   return get<RendersInfo>(`/api/b/${encodeURIComponent(batch)}/renders`)
 }

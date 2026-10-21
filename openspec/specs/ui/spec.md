@@ -356,8 +356,8 @@ answered.
 
 ### Requirement: A draft update states the version of the draft it replaces
 
-The system SHALL refuse a draft update whose stated precondition does not match the draft on disk, and
-SHALL accept an update that states no precondition.
+The system SHALL refuse a draft update, or an approval, whose stated precondition does not match the draft on
+disk, and SHALL accept an update that states no precondition.
 
 The surface autosaves on a debounce, so two updates can be in flight at once, and the server runs them
 in a threadpool — which leaves the order they commit in decided by whichever finishes first rather than
@@ -387,6 +387,13 @@ state, and a client that cannot read one must still be able to write.
 - **WHEN** two draft updates stating the same precondition are in flight at once
 - **THEN** one is accepted and the other is refused
 - **AND** the draft on disk is the accepted update's
+
+#### Scenario: an approval against a stale draft is refused
+- **Key:** `ui:draft-update:a-stale-approval-is-refused`
+- **Layers:** unit
+- **WHEN** an approval states a precondition that does not match the draft on disk
+- **THEN** it is refused
+- **AND** nothing is approved
 
 ### Requirement: The bundle is rebuilt when anything it is built from has moved
 
@@ -734,8 +741,8 @@ tick survives a reload. The mark is read from the source itself, so no file reco
 
 The system SHALL take sources through the browser's file dialog, sending each file in its own request, and SHALL show
 for each its upload's progress, then its reading, then whether it is ready, converted, refused or not cleaned, with
-the reason. Import SHALL stay disabled, with its reason, until every chosen file is read, and SHALL commit only the
-ready files and those the operator chose to import as they are.
+the reason, and a preview of each file read. Import SHALL stay disabled, with its reason, until every chosen file is
+read, and SHALL commit only the ready files and those the operator chose to import as they are.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns.
 
@@ -757,6 +764,26 @@ Each file's bar answers which one is slow; each reason sits on the file it conce
 - **Layers:** e2e
 - **WHEN** Import is pressed on a new batch
 - **THEN** the batch's hub opens with every source unassigned
+
+#### Scenario: a staged file serves its preview
+- **Key:** `ui:sheet:a-staged-file-serves-its-preview`
+- **Layers:** unit
+- **WHEN** a staged file's preview is asked for
+- **THEN** a downscaled JPEG of it is served
+- **AND** nothing of it is kept
+
+#### Scenario: the stream reports each file's reading
+- **Key:** `ui:sheet:the-stream-reports-each-files-reading`
+- **Layers:** unit
+- **WHEN** an uploaded file is read
+- **THEN** the import's stream reports it waiting, then converting, then its result
+
+#### Scenario: an upload is answered before it is read
+- **Key:** `ui:sheet:an-upload-is-answered-before-reading`
+- **Layers:** unit
+- **WHEN** a file's bytes have all arrived
+- **THEN** its request is answered before the file is read
+- **AND** the files are read one at a time, in the order their uploads ended
 
 ### Requirement: Prepare runs what changed as one job, and refuses before it starts when Ollama does not answer
 

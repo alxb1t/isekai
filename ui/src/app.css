@@ -1559,6 +1559,32 @@ body {
   background: var(--accent);
 }
 
+/* A conversion reports no fraction, so its bar moves without one. */
+.import__bar--running {
+  overflow: hidden;
+}
+
+.import__bar--running .import__fill {
+  width: 30%;
+  animation: import-running 1.2s ease-in-out infinite;
+}
+
+@keyframes import-running {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+.import__preview {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
 .import__refused {
   display: flex;
   gap: 8px;
