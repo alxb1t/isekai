@@ -85,6 +85,13 @@ def _tile(page: Page, name: str):  # noqa: ANN202
 def test_each_chosen_file_shows_its_upload_then_its_result(
     page: Page, served: Served, tmp_path: Path
 ) -> None:
+    page.route("**/api/library", lambda route: route.fulfill(json={"rows": []}))
+    page.goto(served.url)
+    privacy = page.get_by_text("A photograph leaves this Mac only to be rendered")
+    first = page.get_by_role("button", name="New batch")
+    below, above = first.bounding_box(), privacy.bounding_box()
+    assert below is not None and above is not None
+    assert below["y"] >= above["y"] + above["height"]
     held = _hold(page, "held.jpg")
     stream = _hold_stream(page)
     files = [

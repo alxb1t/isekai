@@ -8,7 +8,7 @@ import type { LibraryRow } from '../types'
 
 /* Home: every folder of the library, batches by their newest file first, the
    rest after them, inert (design spec J7·1). New batch opens the import sheet
-   over it (J1). */
+   over it (J1); on a first start it follows the privacy line (J1·1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
 const refusal = ref<string | null>(null)
@@ -71,11 +71,6 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
 <template>
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="rows" class="home">
-    <div class="home__head">
-      <button class="btn btn-primary" type="button" @click="importing = true">
-        New batch<span class="appbar__key">⌥N</span>
-      </button>
-    </div>
     <ImportSheet v-if="importing" @close="importing = false" @imported="imported" />
     <div v-if="rows.length === 0" class="home__empty">
       <p class="section-label">library · empty</p>
@@ -84,8 +79,18 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
         Sources are copied into ~/isekai/. A photograph leaves this Mac only to be rendered:
         metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
       </p>
+      <div class="home__head">
+        <button class="btn btn-primary" type="button" @click="importing = true">
+          New batch<span class="appbar__key">⌥N</span>
+        </button>
+      </div>
     </div>
     <template v-else>
+      <div class="home__head">
+        <button class="btn btn-primary" type="button" @click="importing = true">
+          New batch<span class="appbar__key">⌥N</span>
+        </button>
+      </div>
       <p class="section-label">
         library · {{ rows.filter((row) => row.batch).length }} batches · newest activity first
       </p>

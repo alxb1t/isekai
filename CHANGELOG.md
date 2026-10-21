@@ -14,6 +14,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - An upload is answered `202` once its bytes land; the import's reader reads its files one at a time and
   reports each on `/events?staging=<id>`, so a tile shows uploading, waiting, converting, then its result
   and the staged file's preview (0064 D1, D2, D3).
+- Home's first start reads as the design draws it: the heading, the privacy line, then *New batch*; with a
+  batch, *New batch* stays above the list (0064 D4).
 
 ## [0.39.0] - 2026-10-21 · 0063-render
 

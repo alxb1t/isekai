@@ -6,7 +6,7 @@ The read and the sheet, Home, then the cards, per [design](design.md). Every new
 ## Progress
 
 - [x] 1 — The read and the sheet
-- [ ] 2 — Home
+- [x] 2 — Home
 - [ ] 3 — The cards
 
 ## 1 — The read and the sheet
@@ -28,7 +28,7 @@ The server and the sheet are one phase: the sheet's tests are red against a `202
 
 ## 2 — Home
 
-- [ ] 2.1 Order Home's first start in `ui/src/views/Home.vue` as [D4](design.md#d4) says, and add a step to the first test in `tests/e2e/test_import.py` that sees *New batch* below the privacy line on an empty library.
+- [x] 2.1 Order Home's first start in `ui/src/views/Home.vue` as [D4](design.md#d4) says, and add a step to the first test in `tests/e2e/test_import.py` that sees *New batch* below the privacy line on an empty library.
   Verify: `uv run pytest -q tests/e2e/test_import.py` exits 0.
 
 ## 3 — The cards
