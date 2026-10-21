@@ -75,15 +75,17 @@ field. No model decides a sheet.**
 
 ### D4 · The UI runs stages only as the CLI's children
 
-**The browser runs a stage only as the CLI's own verb, a child of the server; nothing in it spends
-money.** Prepare is `tag`, `caption` and `sheet` run as children. Every other write goes through the
-function that owns it: a draft, its edits and an approval through `review`'s, a tick through the run's
-`assign`, a source through import. There is no render button.
+**The browser runs a stage only as the CLI's own verb, a child of the server; the one act in it that
+spends is Render's confirmation, after its quote.** Prepare is `tag`, `caption` and `sheet` run as
+children, and Render is `render` between gpunit's `volume up` and `volume down`. Every other write goes
+through the function that owns it: a draft, its edits and an approval through `review`'s, a tick through
+the run's `assign`, a source through import.
 
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
-  and a write no stage owns would give a run file a second author. A button that spends would put the
-  paid stage behind a web page.
-- **Made by:** `0018`, `0061`, `0062`.
+  and a write no stage owns would give a run file a second author. Spend behind a web page is bounded by
+  what the operator read: the confirmation carries the quote it showed, and a quote grown since is
+  refused.
+- **Made by:** `0018`, `0061`, `0062`, `0063`.
 
 ### D42 · A new draft starts from the last approval
 

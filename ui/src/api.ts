@@ -95,15 +95,17 @@ export function quoteRender(batch: string): Promise<Quote> {
   return send(`/api/b/${encodeURIComponent(batch)}/render/quote`, 'POST', {})
 }
 
-/* Carries the limit the dialog showed: a quote grown since is refused. */
+/* Carries the limit and the images the dialog showed: a quote grown since is refused. */
 export function startRender(
   batch: string,
   keepOpen: boolean,
   limitS: number,
+  images: number,
 ): Promise<{ job: JobSlot }> {
   return send(`/api/b/${encodeURIComponent(batch)}/render`, 'POST', {
     keep_open: keepOpen,
     limit_s: limitS,
+    images,
   })
 }
 

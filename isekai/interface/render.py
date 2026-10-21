@@ -58,7 +58,7 @@ from isekai.pipeline.review import current_draft
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.
 PORT = 8188
-# The figures a session's estimate takes where nothing is recorded (D3).
+# The figures a session's estimate takes where nothing is recorded (D26).
 RENDER_CONFIG = REPOSITORY / "config" / "render.json"
 # How many of a flow's newest recorded durations its time per image is the median of.
 RECENT = 20
@@ -491,7 +491,7 @@ def quote(runs: Path, wired: Wiring) -> Quote:
     """Return the quote for rendering what `runs` is short of, as the session would.
 
     The price is at `gpunit.toml`'s `max_hourly`, which gpunit refuses a card
-    above, with the volume at `config/render.json`'s rate (D4).
+    above, with the volume at `config/render.json`'s rate (D26).
     """
     bound = gpu.bounds(REPOSITORY)
     if bound.max_hourly is None or bound.volume_ceiling_s is None:
@@ -651,10 +651,12 @@ def _rendered(
     def say(line: str) -> None:
         print(line, file=wired.err)
 
+    opened = False
     try:
         environ = gpu.environ_of(seams)
         steps.step("pod", "starting")
         with seams.open_session(REPOSITORY, environ, say, limit) as session:
+            opened = True
             server = f"http://127.0.0.1:{session.port(PORT)}"
             client = seams.connect(server)
             await_endpoint(client, server, seams.wait_s, seams.poll_s)
@@ -712,3 +714,9 @@ def _rendered(
                 file=wired.err,
             )
         return 1
+    except Exception:
+        # A refusal inside the session, an endpoint that never answered among them,
+        # leaves through gpunit's teardown, which a failure would have raised.
+        if opened:
+            steps.step("teardown", "done")
+        raise

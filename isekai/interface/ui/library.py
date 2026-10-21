@@ -63,7 +63,7 @@ VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
 RUNS = "runs"
 LOG = "log.txt"
-# The library's thumbnails, a dot-folder so it is listed as no batch (D9).
+# The library's thumbnails, a dot-folder so it is listed as no batch.
 CACHE = ".cache"
 # A thumbnail's long side, in pixels.
 THUMB_SIDE = 512
@@ -283,36 +283,36 @@ class Version:
     """One approval of a source in a flow, and the seeds rendered under it.
 
     `at` is when the approval was written; `count` and `seeds` are its renders.
+    `damaged` is the refusal of an approval no hand can read, whose count is None.
     """
 
     version: int
     at: float
-    count: int
+    count: int | None
     seeds: tuple[int, ...]
     rendered: tuple[int, ...]
+    damaged: str | None = None
 
 
 def versions(run: Run, flow: str, suffix: str) -> list[Version]:
     """Return `run`'s approvals in `flow`, newest first, each with its rendered seeds.
 
-    An approval no hand can read is refused naming the file, as Review refuses it.
+    An approval no hand can read is marked damaged with its refusal, naming the
+    file, and every other version is still read: one file costs only its own.
     """
     directory = run.directory(flow, REVIEW)
     found = []
     for number in reversed(approved_versions(directory)):
         path = approval_of(run, flow, number)
         remedy = f"restore it in {path} by hand, then reload the page"
-        held = renders_of(path, read(path, APPROVED_FILE, remedy=remedy), remedy)
-        group = group_of(run, flow, number)
-        found.append(
-            Version(
-                number,
-                path.stat().st_mtime,
-                held["count"],
-                tuple(held["seeds"]),
-                tuple(rendered_seeds(group, suffix)),
-            )
-        )
+        rendered = tuple(rendered_seeds(group_of(run, flow, number), suffix))
+        at = path.stat().st_mtime
+        try:
+            held = renders_of(path, read(path, APPROVED_FILE, remedy=remedy), remedy)
+        except Refusal as refused:
+            found.append(Version(number, at, None, (), rendered, str(refused)))
+            continue
+        found.append(Version(number, at, held["count"], tuple(held["seeds"]), rendered))
     return found
 
 

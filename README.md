@@ -249,7 +249,9 @@ corrects one sheet, its ④ setting how many images it renders and at which seed
 next. **Render** opens a dialog quoting what renders and its price at most; **its confirmation is the one
 act on the page that spends money**, and the session view shows it to *Nothing is billing.* Renders shows
 each source's images by flow and approval, and an image beside the sheet it came from. Every screen has
-its own URL, so a reload lands where it was. Stop it with Ctrl-C, which interrupts a running job.
+its own URL, so a reload lands where it was. Stop it with Ctrl-C, which interrupts a running job; mid-render
+it says so and waits, up to the teardown's estimate and one volume verb, for the pod's teardown and the
+window's close — killing it then can leave the window open, and a wait that runs out names `gpunit volume down`.
 Prepare reaches the local Ollama, and refuses before it starts when nothing answers there.
 
 - Opening a sheet with no draft writes one through `review`, as the verb would.
@@ -440,7 +442,7 @@ pulls the image and runs it, and inside the container gpunit's `boot.sh` runs th
 | Script | Runs **where** | Runs **when** | Does what |
 |---|---|---|---|
 | `python -m isekai render` | **on your machine** | when you want renders | assembles every prompt, opens a gpunit session on `gpunit.toml`, waits for ComfyUI through the tunnel, renders each flow, closes the session on every exit |
-| `boot.sh` (gpunit's) | **inside the container, on the pod** | every container boot (the image's entrypoint) | arm the stop at the ceiling → authorize the session's key → start `sshd` on a host key made at boot → print its fingerprint → run `pod_start.py` without the API key; every way out stops the pod |
+| `boot.sh` (gpunit's) | **inside the container, on the pod** | every container boot (the image's entrypoint) | arm the stop at the session's limit → authorize the session's key → start `sshd` on a host key made at boot → print its fingerprint → run `pod_start.py` without the API key; every way out stops the pod |
 | `pod_start.py` | **inside the container, on the pod** | after `boot.sh`'s steps | prove the volume → provision the models onto it with `provision.py fetch` → put ComfyUI's files in memory → `exec` ComfyUI |
 
 ```
@@ -458,7 +460,7 @@ RENDER TIME (every session — this is isekai render)
     │                                  │ 2  place the pod on a GPU host
     │                                  │ 3  pull image ───────────────▶ ghcr image
     │                                  │ 4  ENTRYPOINT boot.sh -- pod_start.py:
-    │                                  │      • arm the stop (gpunit.toml's ceiling)
+    │                                  │      • arm the stop (the session's limit, at most gpunit.toml's ceiling)
     │                                  │      • own host key, start sshd (:22), print it
     │                                  │      • /opt/ComfyUI/models → <volume>/isekai
     │                                  │      • provision from config/models.json (verified)
@@ -468,7 +470,7 @@ RENDER TIME (every session — this is isekai render)
     │ 6  wait for /system_stats, then generate each flow through 127.0.0.1:8188
     ▼
   every exit: the session deletes the pod and every listed pod of the project ──▶ billing stops
-  the pod itself: the stop fires at the ceiling, or when the start ends ──▶ pod stops
+  the pod itself: the stop fires at the session's limit, or when the start ends ──▶ pod stops
                                     (the window's volume + GHCR image persist)
 ```
 

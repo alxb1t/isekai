@@ -10,7 +10,8 @@ Prepare ─▶ probe ─ no answer ─▶ refused, nothing runs
 Render ─▶ volume up ─ lost ─▶ the volume alert, nothing renders
            └ up ─▶ render --limit … --progress json ─▶ volume down, unless kept
 Stop, or the server stopping ─▶ SIGINT to the child ─▶ no later stage starts
-the server stopping mid-render ─▶ waits for the teardown and the window's close
+the server stopping mid-render ─▶ says so, then waits for the teardown and the
+                                  window's close ─ runs out ─▶ names `volume down`
 a child failing with no line reported ─▶ failed, naming log.txt ─▶ no later stage starts
 ```
 """
@@ -23,7 +24,7 @@ import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 from isekai.boundary.gpu import Volume
 from isekai.foundation.refusal import Refusal
@@ -42,6 +43,15 @@ LABELS = {"prepare": "Prepare", "render": "Render"}
 # How long a stopping server gives a render's window to close once its pod is torn
 # down: one gpunit volume verb.
 VOLUME_S = 120.0
+
+# What closes a window a stopping server could not wait for; gpunit reads no .env.
+VOLUME_DOWN = "uv run --env-file .env gpunit volume down"
+
+
+def settle_s() -> float:
+    """Return how long a stopping server waits for a render: its teardown and a verb."""
+    return load_timing().teardown_s + VOLUME_S
+
 
 # How a stage is started: the verb, the flow, the runs root and the runs.
 Command = Callable[[str, str, Path, Sequence[str]], list[str]]
@@ -149,11 +159,14 @@ class Jobs:
         render: RenderCommand = render_command,
         raise_volume: Callable[[], None] = lambda: None,
         now: Callable[[], str] = utc_now,
+        settle: Callable[[], float] = settle_s,
+        err: TextIO | None = None,
     ) -> None:
         """Hold an empty slot that publishes on `broadcast`.
 
         `volume` opens and closes a render's window; `raise_volume` raises the
-        volume alert when either goes unanswered.
+        volume alert when either goes unanswered. `settle` is how long a stopping
+        server waits for a render, and `err` the terminal it says so on.
         """
         self._broadcast = broadcast
         self._probe = probe
@@ -162,6 +175,8 @@ class Jobs:
         self._render = render
         self._raise_volume = raise_volume
         self._now = now
+        self._settle = settle
+        self._err = err if err is not None else sys.stderr
         self._lock = threading.Lock()
         self._job: _Job | None = None
         self._child: subprocess.Popen[str] | None = None
@@ -222,10 +237,10 @@ class Jobs:
     ) -> dict[str, Any]:
         """Start a render of `folder`'s runs within `limit` seconds, or refuse."""
         # Read before the job starts, so a stopping server reads no file.
-        settle_s = load_timing().teardown_s + VOLUME_S
+        settle = self._settle()
         with self._lock:
             self._refuse_running()
-            self._settle_s = settle_s
+            self._settle_s = settle
             steps = dict.fromkeys(("volume up", "pod", "teardown", "volume down"), "")
             if keep_open:
                 steps["volume down"] = "kept"
@@ -274,17 +289,38 @@ class Jobs:
         """Interrupt a running job and wait for it: the server is stopping.
 
         Prepare is waited for `timeout`. A render is waited for through its pod's
-        teardown and the window's close, so the server never exits leaving open a
-        window the operator did not keep.
+        teardown and the window's close, at most its teardown estimate and one
+        volume verb, saying so on the terminal: a stop that looks hung invites the
+        kill that would leave the window open. A wait that runs out with the window
+        not closed names the command that closes it.
         """
         with self._lock:
             job = self._job
             running = job is not None and job.state == "running"
             if running:
                 self._interrupt()
-        if running and job is not None and job.kind == "render":
-            timeout = max(timeout, self._settle_s)
+        if not (running and job is not None and job.kind == "render"):
+            self.wait(timeout)
+            return
+        timeout = max(timeout, self._settle_s)
+        self._say(
+            f"stopping mid-render: waiting up to {timeout:.0f}s for the pod's "
+            "teardown and the window's close"
+        )
         self.wait(timeout)
+        assert job.session is not None
+        thread = self._thread
+        with self._lock:
+            kept = job.session["steps"]["volume down"] == "kept"
+        if thread is not None and thread.is_alive() and not kept:
+            self._say(
+                "the wait ran out, and the window may still be open: close it with "
+                f"`{VOLUME_DOWN}`"
+            )
+
+    def _say(self, line: str) -> None:
+        """Print one line on the server's terminal."""
+        print(f"isekai: {line}", file=self._err, flush=True)
 
     def _interrupt(self) -> None:
         """Send the child SIGINT, as a Ctrl-C would; hold the lock."""
@@ -357,6 +393,16 @@ class Jobs:
             opened = True
             self._mark(job, "volume up", "done")
             self._render_child(job, folder, limit)
+        except OSError as error:
+            # A verb that could not be started, or a log that could not be opened:
+            # nothing rendered, and the page says so rather than showing an end.
+            with self._lock:
+                self._child = None
+                job.state = "failed"
+                job.message = (
+                    f"the render job could not run ({error}); read {job.batch}/{LOG}, "
+                    "then try again"
+                )
         finally:
             if opened and steps["volume down"] != "kept":
                 self._mark(job, "volume down", "running")

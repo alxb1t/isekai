@@ -134,7 +134,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             class="renders__version"
             :data-version="version.version"
           >
-            <span class="renders__head mono">
+            <span v-if="version.damaged" class="renders__head mono" data-damaged>
+              v{{ version.version }} · {{ version.damaged }}
+            </span>
+            <span v-else class="renders__head mono">
               v{{ version.version }} · approved {{ clock(version.at) }} · count
               {{ version.count }}<template v-if="version.seeds.length">
                 · seeds {{ version.seeds.join(', ') }}</template

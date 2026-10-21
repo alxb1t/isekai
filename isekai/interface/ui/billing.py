@@ -1,4 +1,4 @@
-"""What may be billing, read from gpunit's own records under `.gpunit/` (D7).
+"""What may be billing, read from gpunit's own records under `.gpunit/`.
 
 gpunit records each pod and window volume it creates; reading those records adds
 no state to disagree with them. gpunit is asked for its status only at start,

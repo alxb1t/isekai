@@ -755,6 +755,33 @@ def test_a_session_reports_each_image_of_the_total_as_json(
     assert not (root.parent / "log.txt").exists()
 
 
+@pytest.mark.spec("cli:render-progress:a-refused-session-reports-its-teardown")
+def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+    wiring = wired(runs)
+    silent = FakeComfyClient(
+        report_failure=TransportFailure("transient", "connection refused")
+    )
+    seams = render.Seams(
+        open_session=FakeOpen(),
+        environ={},
+        connect=lambda server: silent,
+        busy=lambda port: False,
+        kill=lambda: None,
+        wait_s=0,
+    )
+    asked = argparse.Namespace(runs=runs, requests=[f"{FLOW}=1"], progress="json")
+
+    status = render.run_session(asked, wiring, Calls(), seams)
+
+    assert status == 1
+    assert isinstance(wiring.out, io.StringIO)
+    lines = [json.loads(line) for line in wiring.out.getvalue().splitlines()]
+    assert lines[-1] == {"step": "teardown", "state": "done"}
+
+
 TIMING = render.Timing(
     boot_s=600, per_image_s=60, teardown_s=120, limit_factor=1.5, volume_rate=0.005
 )

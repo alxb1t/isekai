@@ -167,8 +167,9 @@ One batch of two images, rendered from the UI on the operator's go, quoted first
 | e2e, Playwright | `ui:render:the-confirmation-starts-the-render`, `ui:renders:the-large-view-shows-its-sheet` | none | `tests/e2e/test_render.py` |
 
 **End-to-end runs added:** the two above, once each, on Chromium: a confirmation that opens `/session`, and a large
-view opened from the grid — both only a browser shows (T1). The large view is a step after the session's end in the
-same test (T2).
+view opened from the grid — both only a browser shows (T1). The large view is its own test, on a source the fixture
+rendered: as a step after the session it would bind a second key to one test, and a second render there finds
+nothing short (T2). That nothing short disables Render is proved on the route, in `tests/test_ui_jobs.py`.
 
 `tests/test_render.py:604`'s assertion on `CEILING_S` is rewritten to the limit, still bound to its key.
 

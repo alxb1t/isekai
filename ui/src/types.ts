@@ -243,13 +243,15 @@ export interface Assigned {
 }
 
 /* One approval of a source in a flow: when, its count and seeds, and the seeds
-   rendered under it, each a decimal string as in `Renders`. */
+   rendered under it, each a decimal string as in `Renders`. An approval no hand
+   can read carries its refusal in `damaged`, and no count. */
 export interface RenderVersion {
   version: number
   at: number
-  count: number
+  count: number | null
   seeds: string[]
   rendered: string[]
+  damaged: string | null
 }
 
 export interface RendersInfo {

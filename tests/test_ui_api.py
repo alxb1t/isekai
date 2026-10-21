@@ -71,7 +71,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.generate import prepare  # noqa: E402
+from isekai.pipeline.generate import approval_of, prepare  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
@@ -1308,3 +1308,62 @@ def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     cached = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs" / "001"
     (thumb_file,) = cached.glob("11.*.jpg")
     assert thumb_file.read_bytes() == first.content
+
+
+@pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
+def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    older = approval_of(made, FLOW, 1)
+    body = json.loads(older.read_text())
+    older.write_text(json.dumps({**body, "renders": {"count": 0}}))
+
+    answered = client.get(f"/api/b/{BATCH}/renders")
+
+    assert answered.status_code == 200
+    (source,) = answered.json()["sources"]
+    newer, damaged = source["cells"][FLOW]
+    assert (newer["version"], newer["rendered"], newer["damaged"]) == (2, ["22"], None)
+    assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
+    assert older.name in damaged["damaged"]
+
+
+@pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
+def test_a_seed_of_digits_outside_ascii_is_refused_naming_the_seeds(
+    client: TestClient, made: Run
+) -> None:
+    before = snapshot(made.path)
+
+    response = client.put(
+        _at(made, "/draft"),
+        json={"fields": {}, "renders": {"count": 1, "seeds": ["²"]}},
+    )
+
+    assert response.status_code == 409
+    assert "renders seeds" in response.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:renders:an-address-naming-no-version-is-refused")
+def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    answered = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v²/11")
+
+    assert answered.status_code == 409
+    assert "names no version" in answered.json()["refusal"]

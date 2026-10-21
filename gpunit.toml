@@ -15,10 +15,10 @@ cuda = "12.8"
 disk_gb = 30
 ports = [8188]
 # The hard maximum on a session; each session stops at its own limit, the work's
-# estimate, which `isekai render` hands gpunit as its ceiling (D3).
+# estimate, which `isekai render` hands gpunit as its ceiling (D26).
 ceiling = "3h"
 timeout = 420
-# gpunit refuses a card dearer than this per hour, so a quote at it is a bound (D4).
+# gpunit refuses a card dearer than this per hour, so a quote at it is a bound (D26).
 max_hourly = 0.90
 # The models volume of a working window: `gpunit volume up` makes it, in a data
 # centre stock chooses, and `gpunit volume down` deletes it. Past the ceiling, it

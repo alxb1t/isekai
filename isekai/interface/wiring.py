@@ -102,7 +102,7 @@ class Wiring:
     # refuses as a call to it would.
     probe: Callable[[], None] = ollama.probe
     # What a render session rents through, and the window volume around it, so a
-    # render child and the render job run on doubles under `ISEKAI_WIRING` (D6).
+    # render child and the render job run on doubles under `ISEKAI_WIRING` (D41).
     session: gpu.Seams = dataclasses.field(default_factory=gpu.Seams)
     volume: gpu.Volume = dataclasses.field(default_factory=gpu.Volume)
 

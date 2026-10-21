@@ -72,6 +72,9 @@ classified or what state a sheet is in, belongs to the component that owns that 
   those files. `interface/cli.py`'s `_once` decides that a transient transport failure is not kept for
   the session — the render stage's rule. `interface/ui/library.py`'s `stage` ranks a run's stages and
   decides which damaged file marks a cell — the run directory's and the stages' work.
+  `interface/render.py`'s `short` decides what each approval lacks of its count, and its `estimate`
+  how long a session's work takes; the review UI imports both for Render's quote — the render stage's
+  work, shared between two front ends.
 
 ### The code is layered
 

@@ -69,9 +69,11 @@ spend. A pod held for diagnosis must stop after its hold ends, not before.
 
 The system SHALL, when the rendering verb is given `--progress json`, print one JSON object per line on standard
 output as the session opens its pod, renders each image and tears its pod down, each naming its step, its state and,
-for an image, its number of the total; it SHALL print its human lines on standard error instead.
+for an image, its number of the total, and SHALL report the teardown of a session that ends in a refusal; it SHALL
+print its human lines on standard error instead.
 
-The surface shows a session as the verb reports it.
+The surface shows a session as the verb reports it, so a session that never reported its teardown would read as one
+still billing.
 
 #### Scenario: a session reports each image of the total
 - **Key:** `cli:render-progress:each-image-of-the-total`
@@ -79,6 +81,12 @@ The surface shows a session as the verb reports it.
 - **WHEN** a session renders two images with `--progress json`
 - **THEN** standard output holds a line for image one of two and image two of two
 - **AND** a line for the teardown's end
+
+#### Scenario: a refused session reports its teardown
+- **Key:** `cli:render-progress:a-refused-session-reports-its-teardown`
+- **Layers:** unit
+- **WHEN** a session's endpoint never answers, with `--progress json`
+- **THEN** its last line on standard output is the teardown's end
 
 ## MODIFIED Requirements
 

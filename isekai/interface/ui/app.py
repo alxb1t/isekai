@@ -28,7 +28,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
-GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s}
+GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
@@ -210,6 +210,7 @@ def create_app(
         wired.probe,
         volume=wired.volume,
         raise_volume=lambda: billing.raise_volume(),
+        err=wired.err,
     )
     billing = Billing(
         wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running() == "render"
@@ -463,30 +464,38 @@ def create_app(
         """Start the render job the quote describes, or refuse naming why not.
 
         The quote is taken again here, so what renders is what is on disk now; a
-        limit longer than the one the dialog showed, `limit_s`, is refused, so
-        nothing rents past what the operator agreed to.
+        limit longer than the one the dialog showed, `limit_s`, or another number
+        of images than its `images`, is refused, so nothing renders past what the
+        operator agreed to.
         """
         body = payload or {}
         found, made, described = quoted(batch)
         if described["disabled"] is not None:
             raise Refusal(described["disabled"])
-        shown = body.get("limit_s")
-        if isinstance(shown, bool) or not isinstance(shown, int):
-            raise Refusal(
-                "the confirmation names no quoted limit; close Render and open it "
-                "again to read the quote"
-            )
+        shown, listed = body.get("limit_s"), body.get("images")
+        reopen = "close Render and open it again to read"
+        if not _whole(shown):
+            raise Refusal(f"the confirmation names no quoted limit; {reopen} the quote")
         if made.estimate.limit_s > shown:
             raise Refusal(
                 f"the quote changed since it was shown: its limit is now "
-                f"{made.estimate.limit_s}s, not {shown}s; close Render and open it "
-                "again to read it"
+                f"{made.estimate.limit_s}s, not {shown}s; {reopen} it"
+            )
+        if not _whole(listed):
+            raise Refusal(
+                f"the confirmation names no quoted images; {reopen} the quote"
+            )
+        total = sum(made.short.images.values())
+        if total != listed:
+            raise Refusal(
+                f"the quote changed since it was shown: it now renders {total} "
+                f"images, not {listed}; {reopen} it"
             )
         job = jobs.render(
             batch,
             found,
             limit=made.estimate.limit_s,
-            total=sum(made.short.images.values()),
+            total=total,
             keep_open=bool(body.get("keep_open")),
         )
         return {"job": job}
@@ -825,6 +834,10 @@ class _Shared:
 # A staging folder's name, as `importing.stage` makes it.
 _STAGING_ID = re.compile(r"[0-9a-f]{16}")
 
+# A number a request spells: ASCII digits alone, since `str.isdigit` also passes
+# a superscript `int` cannot read.
+_DECIMAL = re.compile(r"[0-9]+")
+
 
 def cell_event(
     found: Path, grid: library.Hub, loaded: Mapping[str, Flow]
@@ -869,13 +882,18 @@ def _decimal(seeds: Sequence[int]) -> list[str]:
     return [str(seed) for seed in seeds]
 
 
+def _whole(value: object) -> TypeGuard[int]:
+    """Return whether a request's value is a whole number, a JSON `true` not one."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
 def _version(text: str) -> int:
     """Return the approval number a URL's version names.
 
     e.g. "v2" -> 2
     """
     digits = text.removeprefix("v")
-    if not digits.isdigit():
+    if not _DECIMAL.fullmatch(digits):
         raise Refusal(
             f"{text!r} names no version; a version is v and the approval's number, "
             "e.g. v1 -- go back to the batch's Renders to choose one"
@@ -1106,7 +1124,7 @@ def _renders_in(payload: Mapping[str, Any]) -> Renders | None:
     if not isinstance(held, dict) or not isinstance(held.get("seeds", []), list):
         raise Refusal(f"the update's `renders` is not a count and its seeds; {fix}")
     seeds = held.get("seeds", [])
-    if not all(isinstance(seed, str) and seed.isdigit() for seed in seeds):
+    if not all(isinstance(seed, str) and _DECIMAL.fullmatch(seed) for seed in seeds):
         raise Refusal(f"the update's renders seeds are not decimal numbers; {fix}")
     return {"count": held.get("count"), "seeds": [int(seed) for seed in seeds]}
 
