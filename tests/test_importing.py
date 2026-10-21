@@ -235,6 +235,37 @@ def test_a_16_bit_greyscale_tiff_keeps_its_tones(tmp_path: Path) -> None:
     assert isinstance(grey, int)
     assert abs(grey - 20000 // 257) <= 2
 
+    # The same scan in Motorola byte order, which Pillow opens as `I;16B`.
+    out = io.BytesIO()
+    _sixteen_bit("I;16B", 20000).save(out, "TIFF")
+    mac = _write(tmp_path, "mac-scan.tiff", out.getvalue())
+    staging = stage(tmp_path / "library")
+
+    staged = read(mac, staging, LIMIT)
+
+    assert (staged.name, staged.state) == ("mac-scan.jpg", "converted")
+    with Image.open(staging / staged.name) as written:
+        grey = written.convert("L").getpixel((16, 16))
+    assert isinstance(grey, int)
+    assert abs(grey - 20000 // 257) <= 2
+
+    # Every mode Pillow holds 16-bit greyscale in, including the two no file opens as.
+    for mode in ("I;16", "I;16L", "I;16B", "I;16N", "I"):
+        scaled = importing._eight_bit(_sixteen_bit(mode, 20000))
+        grey = scaled.getpixel((16, 16))
+        assert (mode, scaled.mode) == (mode, "L")
+        assert isinstance(grey, int)
+        assert abs(grey - 20000 // 257) <= 1, mode
+
+
+def _sixteen_bit(mode: str, value: int) -> Image.Image:
+    """Return a 32x32 greyscale image in `mode` whose every pixel holds `value`."""
+    layout = {"I;16B": ">", "I;16N": "="}.get(mode, "<")
+    width = "i" if mode == "I" else "H"
+    return Image.frombytes(
+        mode, (32, 32), struct.pack(f"{layout}{32 * 32}{width}", *[value] * 32 * 32)
+    )
+
 
 # --- refusing ----------------------------------------------------------------
 
@@ -256,6 +287,48 @@ def test_a_raw_photograph_is_refused_and_the_others_import(tmp_path: Path) -> No
     assert "DSC_0001.NEF: a NEF RAW photograph" in err.getvalue()
     assert "export it as JPEG" in err.getvalue()
     assert [path.name for path in (batch / "sources").iterdir()] == ["portrait.jpg"]
+
+
+@pytest.mark.spec("import:refuse:an-unconvertible-file-is-refused")
+def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    out = io.BytesIO()
+    _sixteen_bit("I;16B", 20000).save(out, "TIFF")
+    scan = _write(tmp_path, "mac-scan.tiff", out.getvalue())
+    jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
+    batch = tmp_path / "library" / "trip"
+    args = build_parser().parse_args(
+        ["import", "--batch", str(batch), str(scan), str(jpeg)]
+    )
+
+    code = dispatch(args, bare_wiring())
+
+    assert code == 0
+    assert sorted(path.name for path in (batch / "sources").iterdir()) == [
+        "mac-scan.jpg",
+        "portrait.jpg",
+    ]
+
+    # The same pair, with the scan's conversion failing as Pillow fails on a mode
+    # it has no operation for.
+    def unsupported(image: Image.Image) -> Image.Image:
+        raise ValueError("point operation not supported for this mode")
+
+    monkeypatch.setattr(importing, "_eight_bit", unsupported)
+    other = tmp_path / "library" / "other"
+    err = io.StringIO()
+    args = build_parser().parse_args(
+        ["import", "--batch", str(other), str(scan), str(jpeg)]
+    )
+
+    code = dispatch(args, bare_wiring(err=err))
+
+    assert code == 1
+    assert "refused: mac-scan.tiff: cannot be converted" in err.getvalue()
+    assert "export it as an 8-bit JPEG and add it again" in err.getvalue()
+    assert [path.name for path in (other / "sources").iterdir()] == ["portrait.jpg"]
 
 
 @pytest.mark.spec("import:refuse:a-multi-image-file-is-refused")

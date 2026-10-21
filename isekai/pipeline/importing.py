@@ -340,7 +340,7 @@ def _clean(file: Path) -> tuple[bytes, bool]:
             return strip_metadata(file), False
         except Refusal:
             pass
-    return _encode(image), True
+    return _encode(image, file.name), True
 
 
 def _suffix(body: bytes) -> str:
@@ -351,11 +351,25 @@ def _suffix(body: bytes) -> str:
 def _reencode(body: bytes) -> bytes:
     """Return `body` encoded again from its decoded pixels, in its own format."""
     image = _decode(body)
-    return _encode(image)
+    return _encode(image, "the cleaned file")
 
 
-def _encode(image: "Image") -> bytes:
-    """Return `image` upright, in sRGB, as PNG when it was one or is transparent."""
+def _encode(image: "Image", name: str) -> bytes:
+    """Return `image` upright, in sRGB, as PNG when it was one or is transparent.
+
+    Refuses `name` when Pillow cannot convert or encode the image's mode.
+    """
+    try:
+        return _converted(image)
+    except (OSError, ValueError) as unconvertible:
+        raise Refusal(
+            f"{name}: cannot be converted to JPEG or PNG ({unconvertible}); export "
+            "it as an 8-bit JPEG and add it again"
+        ) from unconvertible
+
+
+def _converted(image: "Image") -> bytes:
+    """Return `image` upright, in sRGB, encoded as `_encode` describes."""
     import io
 
     from PIL import ImageCms, ImageOps
@@ -392,14 +406,24 @@ def _encode(image: "Image") -> bytes:
     return out.getvalue()
 
 
+# The raw layout each 16-bit greyscale mode is read back into 32-bit `I` with:
+# `point` scales only `I` and `I;16`, and `convert` clips an `I;16N` to 255.
+_SIXTEEN_BIT = {"I;16": "I;16", "I;16L": "I;16", "I;16B": "I;16B", "I;16N": "I;16N"}
+
+
 def _eight_bit(image: "Image") -> "Image":
     """Return a 16-bit greyscale `image` with its values scaled to 8 bits.
 
     A conversion clips each value to 255, which turns a 16-bit scan white.
     e.g. a value of 20000 -> 77
     """
-    if image.mode.startswith("I"):
-        return image.point(lambda value: value / 257, "L")
+    from PIL import Image
+
+    if image.mode in _SIXTEEN_BIT:
+        raw = _SIXTEEN_BIT[image.mode]
+        image = Image.frombytes("I", image.size, image.tobytes(), "raw", raw)
+    if image.mode == "I":
+        return image.point(lambda value: value / 257).convert("L")
     return image
 
 

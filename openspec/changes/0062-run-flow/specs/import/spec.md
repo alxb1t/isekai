@@ -54,14 +54,15 @@ HEIC WebP AVIF TIFF BMP GIF ─▶ decode ─▶ JPEG / PNG ┘
 #### Scenario: a 16-bit greyscale image keeps its tones
 - **Key:** `import:clean:a-16-bit-image-keeps-its-tones`
 - **Layers:** unit
-- **WHEN** a 16-bit greyscale TIFF is imported
+- **WHEN** a 16-bit greyscale TIFF is imported, in either byte order
 - **THEN** the source is a JPEG whose pixels are the original's scaled to 8 bits
 
 ### Requirement: A file that cannot be a source is refused by name
 
-The system SHALL refuse, naming the file, the reason and a fix: a RAW photograph; a file that does not decode; a file
-holding more than one image; a file over the size limit the configuration sets; and a photograph render's header
-check would refuse. A refusal SHALL leave the other chosen files to import.
+The system SHALL refuse, naming the file, the reason and a fix: a RAW photograph; a file that does not decode, or
+decodes to an image that cannot be converted; a file holding more than one image; a file over the size limit the
+configuration sets; and a photograph render's header check would refuse. A refusal SHALL leave the other chosen files
+to import.
 
 A photograph render would refuse fails here, before anything is rented. One bad file costs only itself.
 
@@ -70,6 +71,13 @@ A photograph render would refuse fails here, before anything is rented. One bad 
 - **Layers:** unit
 - **WHEN** a NEF file is imported
 - **THEN** it is refused, naming the file and the fix of exporting it as JPEG
+- **AND** the other files chosen with it import
+
+#### Scenario: a file that cannot be converted is refused
+- **Key:** `import:refuse:an-unconvertible-file-is-refused`
+- **Layers:** unit
+- **WHEN** a file whose image cannot be converted is imported beside others
+- **THEN** it is refused, naming the file and the fix of exporting it as an 8-bit JPEG
 - **AND** the other files chosen with it import
 
 #### Scenario: an animated GIF is refused
