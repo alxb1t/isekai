@@ -448,7 +448,7 @@ def _revise(images: Sequence[Path], wired: Wiring) -> int:
             located.append((image, rendered_at(image)))
         except Refusal as unrendered:
             refused.append(f"{image}: {unrendered}")
-    answers = refuse_revisions([one for _, one in located])
+    answers = refuse_revisions(located)
     refused += [
         f"{image}: {answer}"
         for (image, _), answer in zip(located, answers, strict=True)

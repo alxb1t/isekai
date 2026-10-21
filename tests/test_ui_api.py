@@ -62,8 +62,10 @@ from isekai.foundation.run import (  # noqa: E402
     TAGS,
     WD14,
     Run,
+    approval_of,
     latest_artifact,
     open_run,
+    versions,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
@@ -75,7 +77,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.generate import approval_of, prepare  # noqa: E402
+from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
@@ -645,6 +647,7 @@ def test_a_discard_written_against_a_stale_draft_is_refused(
 
     assert stale.status_code == 409
     assert "changed since this page last read it" in stale.json()["refusal"]
+    assert stale.json()["refusal"].endswith("then discard again")
     assert (made.directory(FLOW, REVIEW) / "001.draft.json").is_file()
 
 
@@ -669,6 +672,47 @@ def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
     assert tracked["refusal"] is None
     assert untracked["refusal"].startswith("nope: not a flow this build tracks")
     assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:revise:an-image-no-run-can-hold-is-refused")
+@pytest.mark.parametrize(
+    ("version", "seed"), [(10**300, "7"), (1, "9" * 300)], ids=["version", "seed"]
+)
+def test_a_revision_of_a_version_or_seed_no_run_can_hold_is_refused(
+    client: TestClient, made: Run, version: int, seed: str
+) -> None:
+    # Spelled as a file name, either number is longer than the system allows.
+    _approved(client, made)
+    before = snapshot(made.path)
+
+    answered = client.post(
+        f"/api/b/{BATCH}/revise",
+        json={
+            "images": [
+                {"digest": made.digest, "flow": FLOW, "version": version, "seed": seed}
+            ]
+        },
+    )
+
+    assert answered.status_code == 409
+    assert "is not one; send each image's digest" in answered.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:revise:a-discard-deletes-the-draft-the-page-read")
+def test_a_discard_stating_the_draft_on_disk_deletes_it_and_no_approval(
+    client: TestClient, made: Run
+) -> None:
+    approved = _approved(client, made)
+    frozen = approved.read_bytes()
+    review(made, FLOW, new_version=True)
+    saved = client.get(_at(made)).json()["saved"]
+
+    answered = client.post(_at(made, "/discard"), json={"saved": saved})
+
+    assert answered.json() == {"discarded": "002.draft.json"}
+    assert versions(made.directory(FLOW, REVIEW)) == [1]
+    assert approved.read_bytes() == frozen
 
 
 @pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")

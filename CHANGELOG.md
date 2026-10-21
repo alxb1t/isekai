@@ -26,6 +26,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A revision reads every image's approval before writing any draft, so an unreadable one writes nothing; the
   app refuses an image of a flow this build does not track, and its Discard deletes only the draft the page
   last read (0065 D2, D7).
+- Revise knows a run by its directory's identity, refuses a version or seed no run can hold, and ends each
+  refusal with a command; the app's Discard asks before it deletes and lands a pending save first, and Ctrl+C
+  on a large view no longer opens Compare (0065 D2, D7).
 
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 

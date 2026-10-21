@@ -1312,3 +1312,15 @@ def test_one_refused_image_leaves_every_run_without_a_revision(
     assert status == 1
     assert f"refused: {blocked}: 001.approved.json: is not valid JSON" in err
     assert versions(run.directory(FLOW, "review")) == [1]
+
+    # One run reached by two spellings is one run, and its flow one revision.
+    spelled = run.path.parent.parent / "spelled"
+    spelled.symlink_to(run.path.parent)
+    _image(run, 1, 7)
+    twin = spelled / run.id / FLOW / "outputs" / "001" / "7.png"
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), twin)
+
+    assert status == 1
+    assert f"refused: {twin}: {run.id}/{FLOW}: is in this selection twice" in err
+    assert versions(run.directory(FLOW, "review")) == [1]

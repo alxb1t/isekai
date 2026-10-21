@@ -34,6 +34,7 @@ refusal is a message to them rather than state for a later resume to reason abou
 Stdlib only.
 """
 
+import shlex
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -201,56 +202,72 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
 Revision = tuple[Run, str, int, int]
 
 
-def refuse_revisions(selection: Sequence[Revision]) -> list[str | None]:
-    """Return why each revision of `selection` cannot be written, None where it can.
+def refuse_revisions(selection: Sequence[tuple[Path, Revision]]) -> list[str | None]:
+    """Return why each image of `selection` cannot be revised, None where it can.
 
     Checked whole before anything is written, so a selection is revised all or
-    not at all; a flow takes one revision at a time.
-    e.g. [(run, f, 1, 7), (run, f, 2, 8)] -> [None, "<run>/f: is in …twice…"]
+    not at all; a flow takes one revision at a time, and its run is known by the
+    identity of its directory, never by the text of its path.
+    e.g. [(a.png, (run, f, 1, 7)), (b.png, (run, f, 2, 8))]
+         -> [None, "<run>/f: is in this selection twice, …"]
     """
-    seen: set[tuple[Path, str]] = set()
+    seen: dict[tuple[int, int, str], int] = {}
     refused: list[str | None] = []
-    for run, flow, version, seed in selection:
+    for index, (image, (run, flow, version, seed)) in enumerate(selection):
         try:
-            if (run.path, flow) in seen:
+            held = run.path.stat()
+            first = seen.setdefault((held.st_dev, held.st_ino, flow), index)
+            if first != index:
                 raise Refusal(
                     f"{run.id}/{flow}: is in this selection twice, and a flow takes "
-                    "one revision at a time; revise one image, then the other"
+                    "one revision at a time; run "
+                    f"`{_revise_command(selection[first][0])}` alone, "
+                    "and revise this image once that draft is approved"
                 )
-            seen.add((run.path, flow))
-            refuse_revision(run, flow, version, seed)
+            refuse_revision(run, flow, version, seed, f"run `{_revise_command(image)}`")
             refused.append(None)
         except Refusal as refusal:
             refused.append(str(refusal))
     return refused
 
 
-def refuse_revision(run: Run, flow: str, version: int, seed: int) -> ReviewApproved:
+def _revise_command(image: Path) -> str:
+    """Return the command that revises `image`, as it is pasted.
+
+    e.g. r/f/outputs/001/7.png -> "python -m isekai revise r/f/outputs/001/7.png"
+    """
+    return f"python -m isekai revise {shlex.quote(str(image))}"
+
+
+def refuse_revision(
+    run: Run, flow: str, version: int, seed: int, again: str = "revise the image again"
+) -> ReviewApproved:
     """Return the approval `revise` copies for `seed`, refusing what it cannot write.
 
     A waiting draft is the operator's, so a revision never replaces it. The
     approval is read here, so a selection is checked whole before anything is
-    written.
+    written. `again` is what to do once the refusal's cause is fixed.
     """
     waiting = current_draft(run.directory(flow, REVIEW))
     if waiting is not None:
         raise Refusal(
             f"{run.id}: flow {flow} has {waiting.name} waiting, and a revision "
             "never replaces a draft; approve it, or run "
-            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then revise again"
+            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
         )
     copied = approval_of(run, flow, version)
     if not copied.exists():
         raise Refusal(
             f"{run.id}: flow {flow} has no {copied.name} to revise from; restore "
-            f"{copied}, then revise the image again"
+            f"{copied}, then {again}"
         )
     if not (group_of(run, flow, version) / f"{seed}{SIDECAR}").is_file():
         raise Refusal(
             f"{run.id}: flow {flow} rendered no seed {seed} under {copied.name}; "
-            "choose an image a render wrote, from the batch's Renders"
+            f"run `{stage_command(run, 'show')}` to list the seeds its renders "
+            "wrote, and revise one of those"
         )
-    return _approval(run, flow, version, "revise the image again")
+    return _approval(run, flow, version, again)
 
 
 def discard(run: Run, flow: str) -> Path:

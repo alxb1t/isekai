@@ -65,6 +65,7 @@ from isekai.foundation.artifacts import (
     CAPTION_FILE,
     DRAFT_FILE,
     ONE_RENDER,
+    SEED_RANGE,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -87,6 +88,7 @@ from isekai.foundation.run import (
     approved_versions,
     assign,
     find_run,
+    is_version,
     latest_artifact,
     open_run,
     stage_command,
@@ -716,7 +718,7 @@ def create_app(
         """
         one = held(batch, digest, flow)
         with _DRAFT_UPDATE:
-            _precondition(one, payload or {})
+            _precondition(one, payload or {}, "discard again")
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
@@ -732,12 +734,14 @@ def create_app(
         found = folder(batch)
         named = _images(payload)
         answers: list[str | None] = []
-        located: list[Revision] = []
+        located: list[tuple[Path, Revision]] = []
         for digest, flow, version, seed in named:
             try:
                 # A flow this build does not track names no directory of a run.
-                offered(flow)
-                located.append((library.run_named(found, digest), flow, version, seed))
+                one = offered(flow)
+                run = library.run_named(found, digest)
+                image = image_of(run, one, version, seed)
+                located.append((image, (run, flow, version, seed)))
                 answers.append(None)
             except Refusal as refused:
                 answers.append(str(refused))
@@ -758,7 +762,7 @@ def create_app(
                 )
             drafts = [
                 {**_image_out(*one), "draft": revise(*revision).name}
-                for one, revision in zip(named, located, strict=True)
+                for one, (_, revision) in zip(named, located, strict=True)
             ]
         return {"drafts": drafts}
 
@@ -1036,9 +1040,9 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
             isinstance(image, dict)
             and isinstance(image.get("digest"), str)
             and isinstance(image.get("flow"), str)
-            and _whole(image.get("version"))
+            and _numbered(image.get("version"))
             and isinstance(image.get("seed"), str)
-            and _DECIMAL.fullmatch(image["seed"])
+            and _seed_of(image["seed"])
         ):
             raise Refusal(f"the revision's image {image!r} is not one; {fix}")
         named.append(
@@ -1064,6 +1068,30 @@ def _version_out(version: library.Version) -> dict[str, Any]:
 def _decimal(seeds: Sequence[int]) -> list[str]:
     """Return seeds as decimal strings: a 64-bit seed is past a page's number."""
     return [str(seed) for seed in seeds]
+
+
+def _numbered(value: object) -> TypeGuard[int]:
+    """Return whether a request's value is a version a run's file names can spell.
+
+    e.g. 2 -> True, 1000 -> False
+    """
+    return _whole(value) and is_version(value)
+
+
+# The most digits a seed is spelled in, so a longer one is refused unread.
+_SEED_DIGITS = len(str(SEED_RANGE[-1]))
+
+
+def _seed_of(text: str) -> bool:
+    """Return whether a request's text is a decimal seed a render can draw.
+
+    e.g. "1840266731" -> True, "9" * 300 -> False
+    """
+    return (
+        len(text) <= _SEED_DIGITS
+        and _DECIMAL.fullmatch(text) is not None
+        and int(text) in SEED_RANGE
+    )
 
 
 def _whole(value: object) -> TypeGuard[int]:
@@ -1321,8 +1349,12 @@ def _renders_out(renders: Renders) -> dict[str, Any]:
     }
 
 
-def _precondition(one: Held, payload: Mapping[str, Any]) -> None:
-    """Refuse an update or an approval written against a draft that has since moved.
+def _precondition(
+    one: Held, payload: Mapping[str, Any], again: str = "make the correction again"
+) -> None:
+    """Refuse an update, an approval or a discard against a draft that has moved.
+
+    `again` is what the page does once it has read the draft on disk.
 
     **`st_mtime` is the precondition because nothing else exists.** The draft
     carries no timestamp, no revision counter and no digest, and adding one
@@ -1339,7 +1371,7 @@ def _precondition(one: Held, payload: Mapping[str, Any]) -> None:
         raise Refusal(
             f"{draft.name} changed since this page last read it; another tab or "
             "another save got there first -- reload the input to see what is on "
-            "disk, then make the correction again"
+            f"disk, then {again}"
         )
 
 

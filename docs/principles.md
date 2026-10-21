@@ -74,7 +74,11 @@ classified or what state a sheet is in, belongs to the component that owns that 
   decides which damaged file marks a cell — the run directory's and the stages' work.
   `interface/render.py`'s `short` decides what each approval lacks of its count, and its `estimate`
   how long a session's work takes; the review UI imports both for Render's quote — the render stage's
-  work, shared between two front ends.
+  work, shared between two front ends. `interface/ui/library.py`'s `_origin` decides whether a version
+  is a revision or a re-roll by its own comparison of fields rather than the review stage's
+  `same_fields`, and its `paired` decides which older version a seed compares with;
+  `interface/ui/app.py`'s `_revision` decides which image a draft revises — the review stage's work,
+  each needing the rendered seeds the render stage lists, which the review stage may not import.
 
 ### The code is layered
 

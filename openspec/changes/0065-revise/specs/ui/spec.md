@@ -5,10 +5,12 @@
 The system SHALL offer Revise from an image's large view and over a selection in the Renders grid, SHALL show what it
 will write before writing, and SHALL then open Review on the drafts it wrote, one after another, returning to the hub
 after the last. It SHALL write a selection's drafts all or none, refusing by name an image of a flow this build does
-not track. On a revision, Review SHALL show the image being revised beside the photograph and mark each field that
-differs from its approval.
+not track, and refusing a selection that names a version or a seed no run can hold. On a revision, Review SHALL show
+the image being revised beside the photograph, mark each field that differs from its approval, and offer to discard
+the draft, deleting it only once the operator confirms.
 
-The comparison that matters on a revision is the render against the photograph, read against the sheet.
+The comparison that matters on a revision is the render against the photograph, read against the sheet. A discard
+deletes the operator's edits, so one click never does.
 
 #### Scenario: Revise opens Review on the revision
 - **Key:** `ui:revise:revise-opens-review-on-the-revision`
@@ -22,6 +24,20 @@ The comparison that matters on a revision is the render against the photograph, 
 - **WHEN** Revise is asked for a selection holding an image of a flow this build does not track
 - **THEN** that image is refused naming its flow
 - **AND** no draft is written for any image
+
+#### Scenario: an image no run can hold is refused
+- **Key:** `ui:revise:an-image-no-run-can-hold-is-refused`
+- **Layers:** unit
+- **WHEN** Revise is asked for an image whose version or seed no run can hold
+- **THEN** the selection is refused
+- **AND** no draft is written
+
+#### Scenario: a discard deletes the draft the page read
+- **Key:** `ui:revise:a-discard-deletes-the-draft-the-page-read`
+- **Layers:** unit
+- **WHEN** a discard states the draft on disk
+- **THEN** that draft is deleted
+- **AND** every approval is unchanged
 
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 

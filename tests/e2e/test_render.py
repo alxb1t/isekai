@@ -74,6 +74,11 @@ def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
     row = page.locator(".row", has_text="hair_colour")
     row.locator(".chip__x").first.click()
     expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
+    page.locator("[data-discard]").click()
+    asking = page.locator("[data-discard-confirm]")
+    expect(asking).to_contain_text("Delete this draft and its edits?")
+    asking.get_by_role("button", name="Keep").click()
+    expect(asking).to_have_count(0)
     page.get_by_role("button", name="Approve sheet").click()
     expect(page).to_have_url(served.hub_of(REVISED))
 

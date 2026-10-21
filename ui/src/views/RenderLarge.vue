@@ -39,7 +39,13 @@ function onKey(event: KeyboardEvent): void {
   if (event.altKey && event.code === 'KeyE') {
     event.preventDefault()
     revising.value = true
-  } else if (event.code === 'KeyC' && !event.altKey && !event.metaKey && detail.value?.compare) {
+  } else if (
+    event.code === 'KeyC' &&
+    !event.altKey &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    detail.value?.compare
+  ) {
     event.preventDefault()
     compare()
   } else if (event.key === 'Escape') {

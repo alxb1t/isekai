@@ -461,6 +461,14 @@ def artifact_name(version: int, label: str | None = None) -> str:
     return f"{version:03d}.json" if label is None else f"{version:03d}.{label}.json"
 
 
+def is_version(number: int) -> bool:
+    """Return whether `number` is one an artifact's name can spell.
+
+    e.g. 2 -> True, 0 -> False, 1000 -> False
+    """
+    return number > 0 and ARTIFACT.fullmatch(artifact_name(number)) is not None
+
+
 def approval_of(run: Run, flow: str, version: int) -> Path:
     """Return the path of `flow`'s approval numbered `version` in `run`."""
     return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
@@ -485,6 +493,7 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
     group = image.absolute().parent
     flow_directory = group.parent.parent
     run_directory = flow_directory.parent
+    run = Run(run_directory.name, run_directory)
     if not (
         image.is_file()
         and _DIGITS.fullmatch(image.stem)
@@ -494,11 +503,17 @@ def rendered_at(image: Path) -> tuple[Run, str, int, int]:
         and group.parent.name == OUTPUTS
         and (run_directory / FRAME_NAME).is_file()
     ):
+        # A path inside a run names the run whose renders it can list.
+        listed = (
+            f"run `{stage_command(run, 'show')}` to list the seeds its renders "
+            "wrote, and give the path of one"
+            if (run_directory / FRAME_NAME).is_file()
+            else "give the path of one"
+        )
         raise Refusal(
-            "is not an image a render wrote; give the path of one, "
+            f"is not an image a render wrote; {listed}, "
             f"<run>/<flow>/{OUTPUTS}/<NNN>/<seed>.png"
         )
-    run = Run(run_directory.name, run_directory)
     return run, flow_directory.name, int(group.name), int(image.stem)
 
 

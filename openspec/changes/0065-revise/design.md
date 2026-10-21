@@ -42,7 +42,7 @@ nothing. **Non-Goals:** a new render grammar; revise from the hub; `control`.
 | [D4](#d4) | `approve` refuses a draft with its `producer.from` approval's fields whose every image is of a seed that approval lists or rendered, naming the images | an unchanged revision is paid for twice | a warning |
 | [D5](#d5) | the header reads `producer.from`: a revision when fields differ, a re-roll when only `renders` do | the origin is on disk already | a `revision_of` field |
 | [D6](#d6) | Compare pairs a seed with the newest older version holding it; it shows both images, the changed fields, the `renders` change and the tokens | the design's J5·8–J5·9 | ↵ opening compare |
-| [D7](#d7) | routes and views: `POST /api/b/{batch}/revise`, `POST …/review/{digest}/{flow}/discard`, `GET …/renders/{digest}/{flow}/{version}/{seed}/compare`; Revise in `RenderLarge.vue` and `Renders.vue`; `Compare.vue`; Review of a revision | the design's J5, J6, 7a, 7b | |
+| [D7](#d7) | routes and views: `POST /api/b/{batch}/revise`, `POST …/review/{digest}/{flow}/discard`, `GET …/renders/{digest}/{flow}/{version}/{seed}/compare`; Revise in `RenderLarge.vue` and `Renders.vue`; `Compare.vue` showing the pair; Review of a revision marking its fields, with a Discard that asks first | the design's J5, J6, 7a, 7b — less J5·9's ← → and Revise-again keys and J6's marking of ④'s changes, which no requirement asks for | |
 | [D8](#d8) | drop `tests/e2e/test_render.py:18-21`; close the stream test's helper in a `finally`, re-raise its exception, and read the snapshot before uploading | the cards' fixes | |
 
 ### D1
@@ -70,11 +70,13 @@ large view of v3 ──▶ "Compare with v2  C" ──▶ …/v3/<s>/compare
 | layer | added | removed | where |
 |---|---|---|---|
 | unit | every `unit` scenario of the [review](specs/review/spec.md), [cli](specs/cli/spec.md) and [ui](specs/ui/spec.md) deltas | none | `tests/test_review.py`, `tests/test_ui_api.py` |
-| e2e | `ui:revise:revise-opens-review-on-the-revision`, `ui:compare:compare-shows-the-pair-and-the-change`, as steps of one test along J5 | the disabled-Render step of `test_confirming_the_dialog_opens_the_session` | `tests/e2e/test_render.py` |
+| e2e | `ui:revise:revise-opens-review-on-the-revision`, `ui:compare:compare-shows-the-pair-and-the-change`, one test each | the disabled-Render step of `test_confirming_the_dialog_opens_the_session` | `tests/e2e/test_render.py` |
 
-**End-to-end runs added:** one test, on Chromium, extending `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from`
-along J5 — Revise, Review, Approve, a render on the fake session, Compare (T2); its steps are one journey (T3), shown
-only by a browser (T1).
+**End-to-end runs added:** two tests, on Chromium, each on its own fixture batch — Revise, Review, Discard's ask,
+Approve; and Compare on a seed rendered under two versions — each shown only by a browser (T1). They are not one
+journey along J5, as first planned: a test carries one scenario's marker, so two e2e scenarios are two tests; the
+server is shared by the session, so a test that approves a revision would move a batch another test reads; and a
+journey reaching Compare would run a render on the fake session where the fixture writes the second version on disk.
 
 | removed or merged | its assertions and scenario ids now carried by |
 |---|---|

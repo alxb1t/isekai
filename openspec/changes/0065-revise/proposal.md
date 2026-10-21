@@ -60,6 +60,7 @@ None.
 - `ui`:
   - ADDED *Revise starts from an image, and opens its drafts as a queue*.
   - ADDED *A version says what it was, and Compare shows a seed's two versions*.
+  - MODIFIED *A draft update states the version of the draft it replaces*.
 
 ## Impact
 

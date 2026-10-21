@@ -51,6 +51,8 @@ const revised = computed(() => {
   return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
 })
 const discarding = ref<string | null>(null)
+/* Discard deletes the operator's edits, so it asks once before it does. */
+const confirmingDiscard = ref(false)
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
 /* The URL is the state: choosing another sheet is a navigation. */
@@ -189,8 +191,12 @@ function nextRevised(): boolean {
   return true
 }
 
-/* Delete this draft, as `review --discard` does, and go on as approving would. */
+/* Delete this draft, as `review --discard` does, and go on as approving would.
+   A save still in flight lands first, so the discard states the draft it moved
+   to rather than racing it. */
 async function discard(): Promise<void> {
+  confirmingDiscard.value = false
+  if (!(await sheet.flush())) return
   try {
     await discardDraft(
       { batch: props.batch, digest: current.value, flow: props.flow },
@@ -451,6 +457,8 @@ watch(current, (id) => {
   selectedChip.value = null
   approval.forget()
   afterApproval.value = null
+  discarding.value = null
+  confirmingDiscard.value = false
   lastField.value = null
   lastDraft.value = null
   void sheet.open(id).then(() => enter(paneNow()))
@@ -553,8 +561,21 @@ watch(current, (id) => {
             <span v-if="discarding" class="approve-bar__refusal"
               ><span class="refusal__mark" />{{ discarding }}</span
             >
-            <button class="btn btn-secondary" type="button" data-discard @click="discard">
-              Discard revision
+            <span v-if="confirmingDiscard" data-discard-confirm>
+              Delete this draft and its edits?
+              <button class="btn btn-secondary" type="button" @click="confirmingDiscard = false">
+                Keep
+              </button>
+              <button class="btn btn-secondary" type="button" @click="discard">Delete</button>
+            </span>
+            <button
+              v-else
+              class="btn btn-secondary"
+              type="button"
+              data-discard
+              @click="confirmingDiscard = true"
+            >
+              Discard draft
             </button>
           </p>
           <ApproveBar
