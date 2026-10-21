@@ -129,6 +129,17 @@ def _seed(value: str) -> int:
     return seed
 
 
+def _seconds(value: str) -> int:
+    """Parse a session limit: a whole number of seconds above zero."""
+    try:
+        seconds = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a whole number") from None
+    if seconds < 1:
+        raise argparse.ArgumentTypeError("a session limit below 1s ends at once")
+    return seconds
+
+
 def _count(value: str) -> int:
     """Parse a render count: a positive integer. Every one of them costs money."""
     try:
@@ -261,6 +272,16 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "a flow and how many seeds it draws, or the flow whose seeds it takes; "
             "with none, every approval short of its count renders what it lacks"
+        ),
+    )
+    made["render"].add_argument(
+        "--limit",
+        type=_seconds,
+        default=None,
+        metavar="SECONDS",
+        help=(
+            "end the session after this many seconds, at most gpunit.toml's "
+            "ceiling; without it, the limit is estimated from the work"
         ),
     )
     made["render"].set_defaults(photos=[])

@@ -17,6 +17,7 @@ one test module and reached from three is the coupling this file exists to avoid
 import io
 import random
 import shlex
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -309,6 +310,7 @@ def render(
     rng: random.Random | None = None,
     poll: float = 1.0,
     deadline: float = generate_stage.RENDER_DEADLINE,
+    clock: Callable[[], float] = time.monotonic,
 ) -> list[generate_stage.Render]:
     """Call the render stage on an endpoint no pod-boot record names, at `RUNTIME`.
 
@@ -325,6 +327,7 @@ def render(
         rng=rng,
         poll=poll,
         deadline=deadline,
+        clock=clock,
     )
 
 

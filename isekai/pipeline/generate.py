@@ -312,17 +312,36 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     )
 
 
-def shortfall(run: Run, flow: Flow) -> int:
+def shortfall(run: Run, flow: Flow, count: int | None = None) -> int:
     """Return how many images `flow`'s newest approval still lacks of its count.
 
-    Read from the approval's `renders` and a listing of its outputs group; an
-    unapproved flow is refused naming the way out.
+    `count` stands in for the approval's own, as `--count` does. Read from the
+    approval's `renders` and a listing of its outputs group; an unapproved flow
+    is refused naming the way out.
     """
     version, approval = approved_artifact(run, flow.id)
-    remedy = f"restore it in {approval} by hand"
-    renders = renders_of(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
+    if count is None:
+        remedy = f"restore it in {approval} by hand"
+        body = read(approval, APPROVED_FILE, remedy=remedy)
+        count = renders_of(approval, body, remedy)["count"]
     group = run.directory(flow.id, OUTPUTS, f"{version:03d}")
-    return max(renders["count"] - len(rendered_seeds(group, flow.output_suffix)), 0)
+    return max(count - len(rendered_seeds(group, flow.output_suffix)), 0)
+
+
+def durations(run: Run, flow: str) -> list[tuple[float, float]]:
+    """Return each render of `flow` that records its duration: (written at, seconds).
+
+    A render written before durations were recorded carries none, and is left out.
+    """
+    timed: list[tuple[float, float]] = []
+    for group in render_groups(run, flow):
+        for sidecar in sorted(group.iterdir()):
+            if not is_sidecar(sidecar):
+                continue
+            seconds = read(sidecar, RENDER_FILE).get("duration")
+            if isinstance(seconds, int | float) and not isinstance(seconds, bool):
+                timed.append((sidecar.stat().st_mtime, float(seconds)))
+    return timed
 
 
 def render_groups(run: Run, flow: str) -> list[Path]:
@@ -545,6 +564,7 @@ def render(
     rng: random.Random | None = None,
     poll: float = 1.0,
     deadline: float = RENDER_DEADLINE,
+    clock: Callable[[], float] = time.monotonic,
 ) -> list[Render]:
     """Render `flow`'s approved sheet for this run, one image per seed.
 
@@ -559,7 +579,8 @@ def render(
     render session booted, or None for an endpoint outside one, which the sidecar
     declares unpinned. `runtime` is called only when a seed will render, so a
     complete batch reads no report. `seeds_from` names the flow `seeds` were
-    taken from, and the sidecar records it.
+    taken from, and the sidecar records it. `clock` times each render for its
+    `duration`.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
@@ -614,7 +635,9 @@ def render(
         # leaves resume nothing on disk to reason about.
         try:
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
+            started = clock()
             body = _submit(client, graph, poll, deadline)
+            took = round(clock() - started, 1)
         except Refusal as failed:
             raise _recorded(run, flow, directory, version, failed, seed) from failed
         # The sidecar first, so an image always has its provenance: a crash
@@ -638,6 +661,7 @@ def render(
             **({"image": image} if image is not None else {}),
             "pinned": image is not None,
             "runtime": ran_on,
+            "duration": took,
             **({"seeds_from": seeds_from} if seeds_from is not None else {}),
         }
         write(provenance, RENDER_FILE, sidecar)

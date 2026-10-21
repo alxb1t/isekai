@@ -14,11 +14,14 @@ and appended to the batch's log, `<runs>/../log.txt` (D36).
 import argparse
 import dataclasses
 import io
+import json
+import math
 import os
 import re
 import shlex
 import signal
 import socket
+import statistics
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -28,17 +31,28 @@ from typing import TextIO
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
+from isekai.boundary.pod_start import HOLD_SECONDS
 from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import FRAME_NAME, REPOSITORY, Run
 from isekai.interface.compare_view import BATCH_PHOTOS
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.generate import read_runtime, shortfall
+from isekai.pipeline.generate import (
+    durations,
+    read_runtime,
+    render_groups,
+    rendered_seeds,
+    shortfall,
+)
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.
 PORT = 8188
-# CLAUDE.md's 45 minutes, less one for the teardown.
-CEILING_S = 2640
+# The figures a session's estimate takes where nothing is recorded (D3).
+RENDER_CONFIG = REPOSITORY / "config" / "render.json"
+# How many of a flow's newest recorded durations its time per image is the median of.
+RECENT = 20
+# A pod held for diagnosis stops after its hold ends, never before.
+FLOOR_S = HOLD_SECONDS + 300
 # How long ComfyUI gets to answer through the tunnel, and how often it is asked.
 WAIT_S = 300
 POLL_S = 5.0
@@ -175,7 +189,8 @@ class Seams:
     connect: Callable[[str], ComfyTransport] = ComfyClient
     busy: Callable[[int], bool] = answers
     kill: Callable[[], None] = terminate
-    ceiling_s: float = CEILING_S
+    # `None` runs the watchdog at the session's limit.
+    watchdog_s: float | None = None
     wait_s: float = WAIT_S
     poll_s: float = POLL_S
 
@@ -203,7 +218,8 @@ def run_session(
             wired, out=_Tee(wired.out, log), err=_Tee(wired.err, log)
         )
         try:
-            return _session(runs, list(args.requests), logged, generate, seams)
+            limit = getattr(args, "limit", None)
+            return _session(runs, list(args.requests), limit, logged, generate, seams)
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
             return 1
@@ -211,10 +227,100 @@ def run_session(
 
 @dataclass(frozen=True)
 class Line:
-    """One `generate` line of a session: its flow and mode, and the runs it takes."""
+    """One `generate` line of a session, and how many images it renders."""
 
+    flow: str
     head: tuple[str, ...]
     where: tuple[str, ...]
+    images: int
+
+
+@dataclass(frozen=True)
+class Timing:
+    """`config/render.json`: a session's figures where nothing is recorded.
+
+    Seconds for the boot, an image and the teardown; the limit's factor over the
+    estimate; and the volume's rate per hour.
+    """
+
+    boot_s: float
+    per_image_s: float
+    teardown_s: float
+    limit_factor: float
+    volume_rate: float
+
+
+def load_timing(path: Path = RENDER_CONFIG) -> Timing:
+    """Return the figures `path` declares, refusing a file that lacks one."""
+    restore = f"restore it with `git checkout -- {path.relative_to(REPOSITORY)}`"
+    try:
+        body = json.loads(path.read_text())
+    except (OSError, ValueError) as unread:
+        raise Refusal(f"{path}: cannot be read ({unread}); {restore}") from unread
+    names = [field.name for field in dataclasses.fields(Timing)]
+    missing = [
+        name
+        for name in names
+        if not isinstance(body, dict)
+        or isinstance(body.get(name), bool)
+        or not isinstance(body.get(name), int | float)
+    ]
+    if missing:
+        raise Refusal(f"{path}: records no {', '.join(missing)} number; {restore}")
+    return Timing(**{name: float(body[name]) for name in names})
+
+
+@dataclass(frozen=True)
+class Estimate:
+    """A session's estimate and its limit, in seconds."""
+
+    seconds: float
+    limit_s: int
+
+
+def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
+    """Return the durations of `flow`'s newest recorded renders under `runs`."""
+    timed = [
+        pair for run_id in ids for pair in durations(Run(run_id, runs / run_id), flow)
+    ]
+    return [seconds for _, seconds in sorted(timed, reverse=True)[:RECENT]]
+
+
+def estimate(
+    images: Mapping[str, int],
+    recorded: Mapping[str, Sequence[float]],
+    timing: Timing,
+    ceiling_s: int,
+) -> Estimate:
+    """Return a session's estimate and its limit, both in seconds.
+
+    The limit is the estimate times the factor, at least `FLOOR_S` and at most
+    `ceiling_s`.
+
+    e.g. 4 images at a recorded median of 90 s, boot 180, teardown 120, factor 1.5
+         -> Estimate(660.0, 1200), the floor
+    """
+    seconds = timing.boot_s + timing.teardown_s
+    for flow, count in images.items():
+        seconds += count * statistics.median(recorded.get(flow) or [timing.per_image_s])
+    limit = min(ceiling_s, max(FLOOR_S, math.ceil(seconds * timing.limit_factor)))
+    return Estimate(seconds, limit)
+
+
+def _limit(asked: int | None, ceiling_s: int) -> None:
+    """Refuse a `--limit` above `ceiling_s` or below the floor, naming the bound."""
+    if asked is None:
+        return
+    if asked > ceiling_s:
+        raise Refusal(
+            f"--limit {asked}s is above gpunit.toml's ceiling of {ceiling_s}s; give "
+            f"at most --limit {ceiling_s}, or none to have it estimated"
+        )
+    if asked < FLOOR_S:
+        raise Refusal(
+            f"--limit {asked}s ends before a pod held for diagnosis stops, at "
+            f"{FLOOR_S}s; give at least --limit {FLOOR_S}, or none to have it estimated"
+        )
 
 
 def short(
@@ -227,27 +333,39 @@ def short(
     """
     tracked = tracked_flows(wired.flows_dir)
     wanted: dict[str, list[str]] = {}
+    images: dict[str, int] = {}
     refused: list[str] = []
     for run_id in ids:
         run = Run(run_id, runs / run_id)
         for flow in (name for name in run.flows if name in tracked):
             try:
-                if shortfall(run, load_flow(flow, wired.flows_dir)):
-                    wanted.setdefault(flow, []).append(run_id)
+                lacking = shortfall(run, load_flow(flow, wired.flows_dir))
             except Refusal as unready:
                 refused.append(str(unready))
+                continue
+            if lacking:
+                wanted.setdefault(flow, []).append(run_id)
+                images[flow] = images.get(flow, 0) + lacking
     lines = [
-        Line(("--flow", flow), ("--runs", str(runs), *held))
+        Line(flow, ("--flow", flow), ("--runs", str(runs), *held), images[flow])
         for flow, held in sorted(wanted.items())
     ]
     return lines, refused
 
 
 def _session(
-    runs: Path, texts: list[str], wired: Wiring, generate: Generate, seams: Seams
+    runs: Path,
+    texts: list[str],
+    asked: int | None,
+    wired: Wiring,
+    generate: Generate,
+    seams: Seams,
 ) -> int:
     requests = [parse_request(text) for text in texts]
     deferred = in_session_sources(requests)
+    ceiling_s = gpu.ceiling_s(REPOSITORY)
+    _limit(asked, ceiling_s)
+    timing = load_timing()
     ids = run_ids(runs)
     flows = [arg for request in requests for arg in ("--flow", request.flow)]
     if not ids and requests:
@@ -263,7 +381,6 @@ def _session(
     # anything is rented.
     free = dataclasses.replace(wired, client=None, image=None)
     if requests:
-        lines = [Line(("--flow", r.flow, r.mode, r.value), where) for r in requests]
         if generate(["generate", *flows, *where], free) != 0:
             return 1
     else:
@@ -285,6 +402,10 @@ def _session(
         argv = ["generate", "--flow", request.flow, check, request.value, *where]
         if generate(argv, free) != 0:
             return 1
+    if requests:
+        lines = [
+            _requested(request, runs, ids, requests, wired) for request in requests
+        ]
 
     if seams.busy(PORT):
         raise Refusal(
@@ -292,30 +413,67 @@ def _session(
             f"lsof -iTCP:{PORT} -sTCP:LISTEN shows what holds it"
         )
 
+    if asked is None:
+        images: dict[str, int] = {}
+        for line in lines:
+            images[line.flow] = images.get(line.flow, 0) + line.images
+        recorded = {flow: recent(runs, ids, flow) for flow in images}
+        limit = estimate(images, recorded, timing, ceiling_s).limit_s
+    else:
+        limit = asked
     again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
     rest = "".join(f" {text}" for text in texts)
 
-    def ceiling() -> None:
+    def reached() -> None:
         print(
-            f"refused: the session reached its {seams.ceiling_s:g}s ceiling; renders "
-            f"so far are kept, and in a new session `{again}{rest}` renders only "
-            "the rest",
+            f"refused: the session reached its {limit}s limit; renders so far are "
+            f"kept, and in a new session `{again}{rest}` renders only the rest",
             file=wired.err,
         )
         seams.kill()
 
+    print(f"session limit {limit}s", file=wired.err)
     # Started before the session opens, so it counts from before the pod (D36).
-    watchdog = threading.Timer(seams.ceiling_s, ceiling)
+    watchdog = threading.Timer(
+        limit if seams.watchdog_s is None else seams.watchdog_s, reached
+    )
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(lines, wired, generate, seams)
+        return _rendered(lines, limit, wired, generate, seams)
     finally:
         watchdog.cancel()
 
 
+def _requested(
+    request: Request,
+    runs: Path,
+    ids: Sequence[str],
+    requests: Sequence[Request],
+    wired: Wiring,
+) -> Line:
+    """Return a request's line, with the most images it renders across `ids`.
+
+    A count renders at most that many per run; a source renders its latest seeds,
+    or its own count where it renders first in this session.
+    """
+    counts = {r.flow: int(r.value) for r in requests if r.by_count}
+    if request.by_count:
+        images = counts[request.flow] * len(ids)
+    elif request.value in counts:
+        images = counts[request.value] * len(ids)
+    else:
+        suffix = load_flow(request.value, wired.flows_dir).output_suffix
+        images = 0
+        for run_id in ids:
+            groups = render_groups(Run(run_id, runs / run_id), request.value)
+            images += len(rendered_seeds(groups[-1], suffix)) if groups else 0
+    head = ("--flow", request.flow, request.mode, request.value)
+    return Line(request.flow, head, ("--runs", str(runs), *ids), images)
+
+
 def _rendered(
-    lines: list[Line], wired: Wiring, generate: Generate, seams: Seams
+    lines: list[Line], limit: int, wired: Wiring, generate: Generate, seams: Seams
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
@@ -326,7 +484,7 @@ def _rendered(
         environ = seams.environ
         if environ is None:
             environ = os.environ | gpu.read_env(REPOSITORY / ".env")
-        with seams.open_session(REPOSITORY, environ, say) as session:
+        with seams.open_session(REPOSITORY, environ, say, limit) as session:
             server = f"http://127.0.0.1:{session.port(PORT)}"
             client = seams.connect(server)
             await_endpoint(client, server, seams.wait_s, seams.poll_s)

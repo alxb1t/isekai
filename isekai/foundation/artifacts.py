@@ -307,6 +307,7 @@ class Render(TypedDict):
     `sheet` is the sheet the approval was made from; an older sidecar carries
     `sheet_version`, the approval's number, instead. `image` is absent when no
     render session named one. `seeds_from` names the flow whose seeds were taken.
+    `duration` is the seconds from submission to the image's arrival.
     """
 
     schema: SchemaBlock
@@ -322,6 +323,7 @@ class Render(TypedDict):
     image: NotRequired[str]
     pinned: NotRequired[bool]
     runtime: NotRequired[Runtime]
+    duration: NotRequired[float]
     seeds_from: NotRequired[str]
 
 

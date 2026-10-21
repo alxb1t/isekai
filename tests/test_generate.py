@@ -699,6 +699,21 @@ def test_an_approval_short_of_its_count_renders_only_what_it_lacks(
     assert render(run, flow, client, rng=random.Random(9), poll=0) == []
 
 
+@pytest.mark.spec("image-generation:duration:a-render-carries-its-duration")
+def test_a_render_records_the_seconds_from_submission_to_its_image(
+    run: Run, flow: Flow
+) -> None:
+    prepare(run, {FLOW: flow})
+    ticks = iter([100.0, 161.25, 200.0, 290.0])
+
+    produced = render(
+        run, flow, FakeComfyClient(), seeds=[1, 2], poll=0, clock=ticks.__next__
+    )
+
+    durations = [read(made.provenance, RENDER_FILE)["duration"] for made in produced]
+    assert durations == [61.2, 90.0]
+
+
 @pytest.mark.spec("image-generation:seeds:outputs-carry-the-approval")
 def test_the_same_seed_against_two_approved_versions_does_not_overwrite(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary

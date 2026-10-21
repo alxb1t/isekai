@@ -5,14 +5,20 @@ reason the suite reads the shipped graph: a byte-identical copy with no drift
 check is a second thing to rename and a silent divergence waiting to happen.
 """
 
+import argparse
+import io
 import json
 import re
 import tomllib
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
+import gpunit
 import pytest
-from gpunit.spec import parse_ceiling
+from gpunit.spec import Spec, parse_ceiling
 
+from isekai.boundary import gpu
 from isekai.boundary.pod_start import PROVISION, VOLUME_SIZE_FLOOR
 from isekai.boundary.provision import (
     MANIFEST_PATH,
@@ -22,7 +28,11 @@ from isekai.boundary.provision import (
     manifest_dest,
 )
 from isekai.foundation.flow import Workflow
-from tests.conftest import SESSION_CEILING_SECONDS
+from isekai.foundation.run import REPOSITORY
+from isekai.interface import render
+from isekai.interface.wiring import Wiring
+from tests.conftest import SESSION_CEILING_SECONDS, VOCABULARY
+from tests.stages import FIELD_MAP
 from tools.derive_image_project import CLONE, pinned_commits, uv_required
 from tools.image_record import copied, copies, record
 
@@ -1021,7 +1031,7 @@ def test_the_telemetry_check_catches_a_switch_set_back(dockerfile: str) -> None:
 def unarmed_stop(spec: dict[str, object], dockerfile: str) -> list[str]:
     """Return what the pod lacks of a stop armed at boot within the session's ceiling.
 
-    e.g. a `ceiling = "1h"` spec and a build file with no entrypoint ->
+    e.g. a `ceiling = "4h"` spec and a build file with no entrypoint ->
     ["a ceiling within the session's", "gpunit's boot script as the entrypoint"]
     """
     faults = []
@@ -1036,6 +1046,64 @@ def unarmed_stop(spec: dict[str, object], dockerfile: str) -> list[str]:
     return faults
 
 
+def outlived(spec: dict[str, object]) -> bool:
+    """Return whether the longest session and its timeout end inside a fresh window.
+
+    e.g. `ceiling = "4h"`, `timeout = 420`, `volume_ceiling = "4h"` -> False
+    """
+    longest = parse_ceiling(str(spec["ceiling"])) + int(str(spec["timeout"]))
+    return longest < parse_ceiling(str(spec["volume_ceiling"]))
+
+
+@pytest.mark.spec("pod-image:stop:the-window-outlasts-the-longest-session")
+def test_a_fresh_window_outlasts_the_longest_session(
+    gpunit_spec: dict[str, object],
+) -> None:
+    assert outlived(gpunit_spec)
+    # The twin: a ceiling as long as the window leaves no room for the timeout.
+    assert not outlived({**gpunit_spec, "ceiling": gpunit_spec["volume_ceiling"]})
+
+
+@pytest.mark.spec("pod-image:stop:a-sessions-ceiling-is-its-limit")
+def test_a_sessions_ceiling_is_its_limit_and_one_over_the_maximum_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    received: list[Spec] = []
+
+    @contextmanager
+    def recorded(spec: Spec, **_: object) -> Iterator[None]:
+        received.append(spec)
+        yield None
+
+    monkeypatch.setattr(gpunit, "session", recorded)
+    with gpu.open_session(REPOSITORY, {}, print, 1500):
+        pass
+    runs = tmp_path / "b" / "runs"
+    (runs / "r1").mkdir(parents=True)
+    (runs / "r1" / "run.json").write_text("{}")
+    over = argparse.Namespace(
+        runs=runs, requests=["summon-anime-wai=1"], limit=SESSION_CEILING_SECONDS + 1
+    )
+    nothing = Wiring(
+        reader=None,
+        tagger=None,
+        hosted_tagger=None,
+        client=None,
+        vocabulary=lambda: VOCABULARY,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=runs,
+        out=io.StringIO(),
+        err=io.StringIO(),
+    )
+
+    status = render.run_session(over, nothing, lambda argv, wired: 0)
+
+    assert [spec.ceiling_s for spec in received] == [1500]
+    assert status == 1
+    assert len(received) == 1
+    assert "above gpunit.toml's ceiling" in (runs.parent / "log.txt").read_text()
+
+
 @pytest.mark.spec("pod-image:stop:armed-at-boot")
 def test_the_pod_arms_its_stop_first(
     gpunit_spec: dict[str, object], dockerfile: str
@@ -1045,7 +1113,7 @@ def test_the_pod_arms_its_stop_first(
 
 @pytest.mark.spec_exempt("structural: twin of test_the_pod_arms_its_stop_first")
 def test_the_armed_stop_check_catches_a_long_ceiling_and_no_boot_script() -> None:
-    assert unarmed_stop({"ceiling": "1h"}, 'CMD ["python", "serve.py"]\n') == [
+    assert unarmed_stop({"ceiling": "4h"}, 'CMD ["python", "serve.py"]\n') == [
         "a ceiling within the session's",
         "gpunit's boot script as the entrypoint",
     ]

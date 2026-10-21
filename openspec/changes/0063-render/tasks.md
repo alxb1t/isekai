@@ -8,7 +8,7 @@ task names.
 
 - [x] 1 — The count and seeds
 - [x] 2 — What is short
-- [ ] 3 — The limit
+- [x] 3 — The limit
 - [ ] 4 — Progress
 - [ ] 5 — The job and billing
 - [ ] 6 — The render UI
@@ -34,11 +34,11 @@ task names.
 
 ## 3 — The limit
 
-- [ ] 3.1 Add `config/render.json` per [D3](design.md#d3), and `duration` to the render record in `isekai/foundation/artifacts.py` and `isekai/pipeline/generate.py`; bind `image-generation:duration:a-render-carries-its-duration` in `tests/test_generate.py`.
+- [x] 3.1 Add `config/render.json` per [D3](design.md#d3), and `duration` to the render record in `isekai/foundation/artifacts.py` and `isekai/pipeline/generate.py`; bind `image-generation:duration:a-render-carries-its-duration` in `tests/test_generate.py`.
   Verify: `grep -c '"limit_factor": 1.5' config/render.json` prints `1`, and `grep -c 'image-generation:duration:' tests/test_generate.py` prints `1`.
-- [ ] 3.2 Add `--limit` and the estimate to `isekai/interface/render.py`, remove `CEILING_S`, and pass the limit to `gpu.open_session` as the `Spec`'s `ceiling_s` in `isekai/boundary/gpu.py`, and print `session limit <seconds>s` on stderr as it opens, per [D3](design.md#d3); rewrite `tests/test_render.py:604`'s assertion to the limit; bind every `cli:render-limit:*` key in `tests/test_render.py`.
+- [x] 3.2 Add `--limit` and the estimate to `isekai/interface/render.py`, remove `CEILING_S`, and pass the limit to `gpu.open_session` as the `Spec`'s `ceiling_s` in `isekai/boundary/gpu.py`, and print `session limit <seconds>s` on stderr as it opens, per [D3](design.md#d3); rewrite `tests/test_render.py:604`'s assertion to the limit; bind every `cli:render-limit:*` key in `tests/test_render.py`.
   Verify: `grep -c 'CEILING_S' isekai/interface/render.py` prints `0`, `grep -c 'cli:render-limit:' tests/test_render.py` prints `4`, and `uv run pytest -q tests/test_render.py` exits 0.
-- [ ] 3.3 Set `ceiling = "3h"` and `max_hourly = 0.90` in `gpunit.toml`, `SESSION_CEILING_SECONDS = 3 * 60 * 60` in `tests/conftest.py`, and bind `pod-image:stop:a-sessions-ceiling-is-its-limit` and `pod-image:stop:the-window-outlasts-the-longest-session` in `tests/test_infra.py`, per [D3](design.md#d3) and [D4](design.md#d4).
+- [x] 3.3 Set `ceiling = "3h"` and `max_hourly = 0.90` in `gpunit.toml`, `SESSION_CEILING_SECONDS = 3 * 60 * 60` in `tests/conftest.py`, and bind `pod-image:stop:a-sessions-ceiling-is-its-limit` and `pod-image:stop:the-window-outlasts-the-longest-session` in `tests/test_infra.py`, per [D3](design.md#d3) and [D4](design.md#d4).
   Verify: `grep -c -E '^ceiling = "3h"$|^max_hourly = 0.90$' gpunit.toml` prints `2`, and `uv run pytest -q tests/test_infra.py tests/test_pod_start.py` exits 0.
 
 ## 4 — Progress

@@ -65,10 +65,16 @@ class FakeOpen:
     opened: int = 0
     closed: int = 0
     ended: BaseException | None = None
+    limits: list[int] = field(default_factory=list)
 
     def __call__(
-        self, cwd: Path, environ: Mapping[str, str], say: Callable[[str], None]
+        self,
+        cwd: Path,
+        environ: Mapping[str, str],
+        say: Callable[[str], None],
+        limit_s: int,
     ) -> AbstractContextManager[FakeSession]:
+        self.limits.append(limit_s)
         return self._block()
 
     @contextmanager
@@ -331,9 +337,9 @@ def test_the_watchdog_signals_nothing_once_its_session_has_ended(
     runs = batch(tmp_path)
     fired = threading.Event()
 
-    assert session(runs, f"{FLOW}=1", kill=fired.set, ceiling_s=0.05) == 0
+    assert session(runs, f"{FLOW}=1", kill=fired.set, watchdog_s=0.05) == 0
     assert not fired.wait(0.15)
-    assert "ceiling" not in log(runs)
+    assert "reached its" not in log(runs)
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-with-its-session")
@@ -345,7 +351,7 @@ def test_the_watchdog_signals_nothing_after_a_refused_session(tmp_path: Path) ->
     )
 
     status = session(
-        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, ceiling_s=0.05
+        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, watchdog_s=0.05
     )
 
     assert status == 1
@@ -373,12 +379,12 @@ def test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143(
         generate=Calls(held),
         opener=opener,
         kill=fired.set,
-        ceiling_s=0.05,
+        watchdog_s=0.05,
     )
 
     assert status == 143
     assert (opener.opened, opener.closed) == (1, 1)
-    assert "refused: the session reached its 0.05s ceiling" in log(runs)
+    assert f"refused: the session reached its {render.FLOOR_S}s limit" in log(runs)
     assert f"isekai render {runs} {FLOW}=1` renders only the rest" in log(runs)
 
 
@@ -404,7 +410,9 @@ def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
     )
 
     assert status == 0
-    assert [spec for spec, _ in opened] == [REPOSITORY / "gpunit.toml"] * 2
+    toml = gpunit.load_spec(REPOSITORY / "gpunit.toml")
+    limited = dataclasses.replace(toml, ceiling_s=render.FLOOR_S)
+    assert [spec for spec, _ in opened] == [limited] * 2
     assert {key for _, kwargs in opened for key in kwargs} == {"environ", "cwd", "say"}
     assert {wired.image for wired in calls.wirings if wired.client} == {SESSION_IMAGE}
     with pytest.raises(SystemExit):
@@ -645,7 +653,10 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     def refusing(text: str) -> gpu.OpenSession:
         @contextmanager
         def block(
-            cwd: Path, environ: Mapping[str, str], say: Callable[[str], None]
+            cwd: Path,
+            environ: Mapping[str, str],
+            say: Callable[[str], None],
+            limit_s: int,
         ) -> Iterator[FakeSession]:
             # What gpunit's `log.refuse` does through the sink it was handed.
             say(f"2026-10-10T12:00:00Z refused: {text}")
@@ -684,6 +695,73 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     assert "--env-file" not in log(runs)
 
 
+TIMING = render.Timing(
+    boot_s=600, per_image_s=60, teardown_s=120, limit_factor=1.5, volume_rate=0.005
+)
+
+
+@pytest.mark.spec("cli:render-limit:the-estimate-comes-from-durations")
+def test_the_estimate_takes_the_median_of_recorded_durations(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    made = approved(tmp_path, schema, vocabulary, "ada")
+    flow = load_flow(FLOW)
+    prepare(made, {FLOW: flow})
+    ticks = iter([0.0, 80.0, 0.0, 90.0, 0.0, 400.0])
+    stage_render(made, flow, FakeComfyClient(), seeds=[1, 2, 3], clock=ticks.__next__)
+    recorded = {FLOW: render.recent(made.path.parent, [made.id], FLOW)}
+
+    got = render.estimate({FLOW: 4}, recorded, TIMING, 3 * 60 * 60)
+
+    assert sorted(recorded[FLOW]) == [80.0, 90.0, 400.0]
+    assert got.seconds == 600 + 4 * 90 + 120
+    assert got.limit_s == (600 + 4 * 90 + 120) * 1.5
+
+
+@pytest.mark.spec("cli:render-limit:the-configured-figure-without-records")
+def test_with_no_recorded_duration_the_configured_time_per_image_is_used() -> None:
+    got = render.estimate({FLOW: 10}, {FLOW: []}, TIMING, 3 * 60 * 60)
+
+    assert got.seconds == 600 + 10 * 60 + 120
+    assert got.limit_s == (600 + 10 * 60 + 120) * 1.5
+
+
+@pytest.mark.spec("cli:render-limit:a-short-session-takes-the-floor")
+def test_a_short_sessions_limit_is_the_hold_plus_five_minutes(tmp_path: Path) -> None:
+    runs = batch(tmp_path)
+    opener = FakeOpen()
+
+    got = render.estimate({FLOW: 1}, {}, render.load_timing(), 3 * 60 * 60)
+
+    assert got.seconds * 1.5 < render.HOLD_SECONDS + 300
+    assert got.limit_s == render.HOLD_SECONDS + 300
+    assert session(runs, f"{FLOW}=1", opener=opener) == 0
+    assert opener.limits == [render.HOLD_SECONDS + 300]
+    assert f"session limit {render.HOLD_SECONDS + 300}s" in log(runs)
+
+
+@pytest.mark.spec("cli:render-limit:above-the-ceiling-is-refused")
+def test_a_limit_above_gpunit_tomls_ceiling_is_refused_before_renting(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+    opener = FakeOpen()
+    calls = Calls()
+    ceiling = gpunit.load_spec(REPOSITORY / "gpunit.toml").ceiling_s
+    over = argparse.Namespace(runs=runs, requests=[f"{FLOW}=1"], limit=ceiling + 1)
+
+    status = render.run_session(
+        over,
+        wired(runs),
+        calls,
+        dataclasses.replace(render.Seams(), open_session=opener),
+    )
+
+    assert status == 1
+    assert (opener.opened, calls.lines) == (0, [])
+    assert f"above gpunit.toml's ceiling of {ceiling}s" in log(runs)
+
+
 @pytest.mark.spec_exempt("structural: one port, declared in gpunit.toml and here")
 def test_the_port_the_verb_reads_is_the_one_gpunit_toml_forwards() -> None:
     spec = tomllib.loads((REPOSITORY / "gpunit.toml").read_text())
@@ -691,9 +769,14 @@ def test_the_port_the_verb_reads_is_the_one_gpunit_toml_forwards() -> None:
 
 
 @pytest.mark.spec_exempt("structural: one ceiling, declared in gpunit.toml and here")
-def test_the_watchdog_fires_a_minute_before_the_pods_own_stop() -> None:
+def test_the_limit_never_passes_gpunit_tomls_ceiling() -> None:
     spec = gpunit.load_spec(REPOSITORY / "gpunit.toml")
-    assert render.CEILING_S == spec.ceiling_s - 60
+    timing = render.load_timing()
+
+    whole_day = render.estimate({FLOW: 24 * 60}, {}, timing, spec.ceiling_s)
+
+    assert gpu.ceiling_s(REPOSITORY) == spec.ceiling_s
+    assert whole_day.limit_s == spec.ceiling_s
 
 
 @pytest.mark.spec_exempt("structural: the .env reader gpunit's environ is built from")
