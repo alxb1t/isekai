@@ -180,7 +180,7 @@ intro's `ui` clause), `docs/data-flow.md` (the `ui` paragraph), `docs/modules.md
 | layer | added | removed | where |
 |---|---|---|---|
 | unit, pytest | a test per new `unit` scenario in [the ui delta](specs/ui/spec.md) and per new scenario under a modified requirement | the startup and batch tests in `tests/test_ui.py`; `tests/test_agent_skills.py` | `tests/test_ui.py`, `tests/test_ui_library.py`, `tests/test_ui_api.py` |
-| unit, vitest | `ui:save:*` | — | `ui/src/composables/*.test.ts` |
+| unit, vitest | `ui:save:*`; `ui:approval:a-re-opened-input-is-not-counted-approved`, the count Review shows, beside its pytest test of the hub's status and the library's count | — | `ui/src/composables/*.test.ts` |
 | e2e, Playwright | `ui:routes:*`, `ui:queue:*` (less the draft), a characterisation of today's surface | — | `tests/e2e/` |
 
 **End-to-end runs added:** the `e2e` scenarios of the ui delta, each once, on Chromium. Each is end-to-end because
