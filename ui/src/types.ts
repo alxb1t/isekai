@@ -179,14 +179,56 @@ export interface Committed {
 }
 
 /* The one job slot: Prepare running, or the last one's end. */
+/* A render's session as the job reports it: each step's state by name —
+   `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
+export interface RenderSession {
+  started: string
+  limit: number
+  of: number
+  keep_open: boolean
+  steps: Record<string, string>
+  images: { n: number; of: number; run: string; flow: string }[]
+}
+
 export interface JobSlot {
-  kind: 'prepare'
+  kind: 'prepare' | 'render'
   batch: string
   state: 'running' | 'done' | 'stopped' | 'failed'
   flow: string | null
   stage: string | null
   /* Why a failed job ended, naming the batch's log; null otherwise. */
   message: string | null
+  session?: RenderSession
+}
+
+/* What gpunit's records say may be billing: a pod with no session running, and
+   the window volume — `open` until its end, `band` past it or unanswered. */
+export interface Billing {
+  pod: boolean
+  volume: { state: 'open' | 'band'; ends: string | null } | null
+}
+
+export interface QuoteSource {
+  name: string
+  digest: string
+  version: number | null
+}
+
+/* The Render dialog's quote: per flow what renders, what is left out and why,
+   the estimate and limit in seconds, and the price in dollars. */
+export interface Quote {
+  flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
+  left_out: (QuoteSource & { flow: string; reason: string })[]
+  estimate: {
+    seconds: number
+    limit_s: number
+    per_image: Record<string, number>
+    boot_s: number
+    teardown_s: number
+    limit_factor: number
+  }
+  price: { about: number; at_most: number; keep_open: number }
+  disabled: string | null
 }
 
 /* A stage's report about one cell, its stage read again from disk. */

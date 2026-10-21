@@ -6,6 +6,7 @@
 
 import type {
   Assigned,
+  Billing,
   Budget,
   Committed,
   FieldCandidates,
@@ -13,6 +14,7 @@ import type {
   InputDetail,
   JobSlot,
   LibraryInfo,
+  Quote,
   Renders,
   TagMatches,
 } from './types'
@@ -79,6 +81,20 @@ export function prepare(batch: string): Promise<{ job: JobSlot }> {
 
 export function stopJob(): Promise<{ job: JobSlot | null }> {
   return send('/api/job/stop', 'POST', {})
+}
+
+/* The quote rents nothing; only `startRender` does. */
+export function quoteRender(batch: string): Promise<Quote> {
+  return send(`/api/b/${encodeURIComponent(batch)}/render/quote`, 'POST', {})
+}
+
+export function startRender(batch: string, keepOpen: boolean): Promise<{ job: JobSlot }> {
+  return send(`/api/b/${encodeURIComponent(batch)}/render`, 'POST', { keep_open: keepOpen })
+}
+
+/* Ask gpunit again; an alert clears only when its records say gone. */
+export function checkBilling(): Promise<{ billing: Billing }> {
+  return send('/api/billing/check', 'POST', {})
 }
 
 /* The whole table for one flow, once, the first time the reference is opened.

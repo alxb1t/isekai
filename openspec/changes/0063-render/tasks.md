@@ -11,7 +11,7 @@ task names.
 - [x] 3 — The limit
 - [x] 4 — Progress
 - [x] 5 — The job and billing
-- [ ] 6 — The render UI
+- [x] 6 — The render UI
 - [ ] 7 — The Renders view
 - [ ] 8 — The docs
 - [ ] 9 — ⚠️ **HUMAN · METERED** — two images rendered from the UI
@@ -57,9 +57,9 @@ task names.
 
 ## 6 — The render UI
 
-- [ ] 6.1 Add the Render dialog to `ui/src/views/Hub.vue`, `ui/src/views/Session.vue` at `/session`, and the alert band and quiet volume item to `ui/src/App.vue`, per the design spec's J4, J8b and J8c.
+- [x] 6.1 Add the Render dialog to `ui/src/views/Hub.vue`, `ui/src/views/Session.vue` at `/session`, and the alert band and quiet volume item to `ui/src/App.vue`, per the design spec's J4, J8b and J8c.
   Verify: `grep -c "'/session'" ui/src/router.ts` prints `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 6.2 Add `tests/e2e/test_render.py` binding `ui:render:the-confirmation-starts-the-render`.
+- [x] 6.2 Add `tests/e2e/test_render.py` binding `ui:render:the-confirmation-starts-the-render`.
   Verify: `uv run pytest -q tests/e2e/test_render.py` exits 0.
 
 ## 7 — The Renders view

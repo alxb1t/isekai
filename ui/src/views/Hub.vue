@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { assign, hub, prepare, stopJob } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
+import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { firstFlow, queue } from '../composables/useQueue'
 import type { CellEvent, HubCell, HubInfo, HubSource, JobSlot, Stage } from '../types'
@@ -18,6 +19,8 @@ const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
+/* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
+const rendering = ref(false)
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
 const job = ref<JobSlot | null>(null)
@@ -56,7 +59,9 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
-const busy = computed(() => job.value?.state === 'running')
+const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
+/* A render holds the one slot: Prepare waits, with its reason. */
+const blocked = computed(() => job.value?.state === 'running' && job.value.kind === 'render')
 
 /* Review next: the first unapproved sheet of the first flow that has any. */
 const next = computed(() => {
@@ -168,7 +173,7 @@ function toggle(row: number, column: number): void {
 }
 
 async function runPrepare(): Promise<void> {
-  if (busy.value || changes.value.length === 0) return
+  if (busy.value || blocked.value || changes.value.length === 0) return
   barRefusal.value = null
   try {
     job.value = (await prepare(props.batch)).job
@@ -227,7 +232,7 @@ function select(step: number): void {
    cell's Review, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
    selection. Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
-  if (adding.value) return
+  if (adding.value || rendering.value) return
   const { row, column } = focus.value
   if (event.altKey && event.code === 'Digit2') {
     event.preventDefault()
@@ -237,6 +242,11 @@ function onKey(event: KeyboardEvent): void {
   if (event.altKey && event.code === 'KeyA') {
     event.preventDefault()
     adding.value = true
+    return
+  }
+  if (event.altKey && event.code === 'KeyR') {
+    event.preventDefault()
+    rendering.value = true
     return
   }
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
@@ -286,7 +296,7 @@ function listen(): void {
     const slot = JSON.parse((event as MessageEvent<string>).data) as JobSlot
     const ended = job.value?.state === 'running' && slot.state !== 'running'
     job.value = slot
-    if (slot.state === 'failed') barRefusal.value = slot.message
+    if (slot.state === 'failed' && slot.kind === 'prepare') barRefusal.value = slot.message
     if (ended) {
       running.value = {}
       void hub(props.batch).then((read) => (info.value = read))
@@ -325,6 +335,7 @@ onUnmounted(() => {
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
+    <RenderDialog v-if="rendering" :batch="batch" @close="rendering = false" />
     <div class="hub__head">
       <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
       <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
@@ -340,6 +351,9 @@ onUnmounted(() => {
         Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
       </button>
       <span v-else class="hub__reason">nothing left to review</span>
+      <button class="btn btn-secondary" type="button" data-render @click="rendering = true">
+        Render…<span class="appbar__key">⌥R</span>
+      </button>
     </div>
     <div
       ref="grid"
@@ -433,7 +447,7 @@ onUnmounted(() => {
     </div>
     <p class="hub__keys mono">
       ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's review · ⌥A add sources ·
-      ⌥2 review next · ⌥0 library
+      ⌥2 review next · ⌥R render · ⌥0 library
     </p>
     <div v-if="bar" class="prepare-bar">
       <template v-if="busy">
@@ -450,10 +464,11 @@ onUnmounted(() => {
           {{ changes.map((one) => `${one.source.name} × ${one.flow}`).join(' · ') }}
         </span>
         <button class="btn btn-secondary" type="button" @click="discard">Discard</button>
+        <span v-if="blocked" class="hub__reason">A render is running</span>
         <button
           class="btn btn-primary"
           type="button"
-          :disabled="changes.length === 0"
+          :disabled="changes.length === 0 || blocked"
           @click="runPrepare"
         >
           {{ changes.length }} {{ changes.length === 1 ? 'change' : 'changes' }} · Prepare<span

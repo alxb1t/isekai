@@ -5,7 +5,7 @@ A job publishes; each connection holds its own queue, so a slow page delays no
 other. No web framework, so the stream is tested with no server involved.
 
 ```
-connect ─▶ snapshot {job, hub?} ─▶ job {…} ─▶ cell {…} ─▶ … ─▶ (keep-alive)
+connect ─▶ snapshot {job, billing, hub?} ─▶ job · cell · billing ─▶ … ─▶ (keep-alive)
 ```
 """
 
@@ -75,7 +75,7 @@ def stream(
     """Yield the snapshot, then every event for `batch`, until the reader stops.
 
     Subscribed before the snapshot is read, so nothing between the two is lost.
-    A `cell` event of another batch is not sent; every `job` event is.
+    A `cell` event of another batch is not sent; each `job` and `billing` event is.
     """
     found = broadcast.subscribe()
     try:

@@ -22,6 +22,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   `POST …/render` opens the volume, runs `render --limit … --progress json` and closes it unless kept (0063 D6, D8).
 - Billing is read from gpunit's `.gpunit/` records: the pod alert, the window's item, the band; `POST
   /api/billing/check` asks gpunit again (0063 D7).
+- The hub's Render opens a dialog quoting what renders, the limit and the price at most; its confirmation
+  opens `/session`, and the shell shows the billing band and the window's item (0063 D8).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 
