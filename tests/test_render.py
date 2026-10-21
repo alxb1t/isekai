@@ -485,7 +485,9 @@ def counted(
     approve(run, FLOW, schema, vocabulary)
     flow = load_flow(FLOW)
     prepare(run, {FLOW: flow})
-    stage_render(run, flow, FakeComfyClient(), seeds=list(range(1, made + 1)), poll=0)
+    if made:
+        seeds = list(range(1, made + 1))
+        stage_render(run, flow, FakeComfyClient(), seeds=seeds, poll=0)
     return run
 
 
@@ -693,6 +695,34 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     assert session(runs, f"{FLOW}=1", opener=refusing(other)) == 1
     assert "gpunit" not in log(runs).splitlines()[-1]
     assert "--env-file" not in log(runs)
+
+
+@pytest.mark.spec("cli:render-progress:each-image-of-the-total")
+def test_a_session_reports_each_image_of_the_total_as_json(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    made = counted(tmp_path, schema, vocabulary, "ada", 0)
+    root = tmp_path / "b" / "runs"
+    wiring = real(root, vocabulary)
+    asked = argparse.Namespace(runs=root, requests=[], progress="json")
+    seams = render.Seams(
+        open_session=FakeOpen(),
+        environ={},
+        connect=lambda server: FakeComfyClient(),
+        busy=lambda port: False,
+        kill=lambda: None,
+    )
+
+    status = render.run_session(asked, wiring, _dispatch_argv, seams)
+
+    assert status == 0, log(root)
+    assert isinstance(wiring.out, io.StringIO)
+    lines = [json.loads(line) for line in wiring.out.getvalue().splitlines()]
+    images = [line for line in lines if line["step"] == "image"]
+    assert [(line["n"], line["of"]) for line in images] == [(1, 2), (2, 2)]
+    assert {(line["run"], line["flow"]) for line in images} == {(made.id, FLOW)}
+    assert lines[-1] == {"step": "teardown", "state": "done"}
+    assert f"{made.id}: rendered" in log(root)
 
 
 TIMING = render.Timing(

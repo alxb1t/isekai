@@ -27,7 +27,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, cast
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
@@ -195,6 +195,59 @@ class Seams:
     poll_s: float = POLL_S
 
 
+class Steps:
+    """A session's JSON lines on `out`, one per step, when `enabled`.
+
+    e.g. {"step": "image", "n": 2, "of": 4, "run": "…", "flow": "…", "state": "done"}
+    """
+
+    def __init__(self, out: TextIO, enabled: bool) -> None:
+        """Print to `out`, or nothing unless `enabled`."""
+        self.out = out
+        self.enabled = enabled
+        self.flag: tuple[str, ...] = ("--progress", "json") if enabled else ()
+        self._n = 0
+
+    def step(self, step: str, state: str, **more: object) -> None:
+        """Print one step's line."""
+        if self.enabled:
+            # Flushed: a job reads this from a pipe, line by line, as it happens.
+            line = {"step": step, **more, "state": state}
+            print(json.dumps(line), file=self.out, flush=True)
+
+    def child(self, total: int = 0) -> TextIO:
+        """Return where a `generate` line writes: its image lines become steps."""
+        if not self.enabled:
+            return self.out
+        # A text stream as `_Tee` is; `TextIO` is a type no stream class subclasses.
+        return cast("TextIO", _Images(self, total))
+
+    def image(self, run: str, flow: str, total: int) -> None:
+        """Print the next image's line, of `total`."""
+        self._n += 1
+        self.step("image", "done", n=self._n, of=total, run=run, flow=flow)
+
+
+class _Images(io.TextIOBase):
+    """Read `generate`'s JSON lines, and print each landed image as a step."""
+
+    def __init__(self, steps: Steps, total: int) -> None:
+        """Count images against `total`."""
+        self._steps = steps
+        self._total = total
+        self._held = ""
+
+    def write(self, text: str) -> int:
+        """Take `text`, and print a step for each whole render line in it."""
+        self._held += text
+        *lines, self._held = self._held.split("\n")
+        for line in filter(None, lines):
+            item = json.loads(line)
+            if item.get("stage") == "render" and item.get("state") == "done":
+                self._steps.image(item["run"], item["flow"], self._total)
+        return len(text)
+
+
 def run_session(
     args: argparse.Namespace,
     wired: Wiring,
@@ -213,13 +266,16 @@ def run_session(
             file=wired.err,
         )
         return 1
+    steps = Steps(wired.out, getattr(args, "progress", None) == "json")
     with (runs.parent / "log.txt").open("a", encoding="utf-8") as log:
-        logged = dataclasses.replace(
-            wired, out=_Tee(wired.out, log), err=_Tee(wired.err, log)
-        )
+        # The JSON lines are the job's channel; the log keeps the prose.
+        out = wired.out if steps.enabled else _Tee(wired.out, log)
+        logged = dataclasses.replace(wired, out=out, err=_Tee(wired.err, log))
         try:
             limit = getattr(args, "limit", None)
-            return _session(runs, list(args.requests), limit, logged, generate, seams)
+            return _session(
+                runs, list(args.requests), limit, logged, generate, seams, steps
+            )
         except Refusal as refused:
             print(f"refused: {refused}", file=logged.err)
             return 1
@@ -360,6 +416,7 @@ def _session(
     wired: Wiring,
     generate: Generate,
     seams: Seams,
+    steps: Steps,
 ) -> int:
     requests = [parse_request(text) for text in texts]
     deferred = in_session_sources(requests)
@@ -379,9 +436,10 @@ def _session(
 
     # Free work first: every prompt is assembled, and every source checked, before
     # anything is rented.
-    free = dataclasses.replace(wired, client=None, image=None)
+    free = dataclasses.replace(wired, client=None, image=None, out=steps.child())
+    verb = ["generate", *steps.flag]
     if requests:
-        if generate(["generate", *flows, *where], free) != 0:
+        if generate([*verb, *flows, *where], free) != 0:
             return 1
     else:
         lines, refused = short(runs, ids, wired)
@@ -393,13 +451,13 @@ def _session(
             print("nothing is short of its count; nothing was rented", file=wired.err)
             return 0
         for line in lines:
-            if generate(["generate", *line.head, *line.where], free) != 0:
+            if generate([*verb, *line.head, *line.where], free) != 0:
                 return 1
     for request, late in zip(requests, deferred, strict=True):
         if request.by_count:
             continue
         check = "--in-step-with" if late else "--seeds-from"
-        argv = ["generate", "--flow", request.flow, check, request.value, *where]
+        argv = [*verb, "--flow", request.flow, check, request.value, *where]
         if generate(argv, free) != 0:
             return 1
     if requests:
@@ -440,7 +498,7 @@ def _session(
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(lines, limit, wired, generate, seams)
+        return _rendered(lines, limit, wired, generate, seams, steps)
     finally:
         watchdog.cancel()
 
@@ -473,7 +531,12 @@ def _requested(
 
 
 def _rendered(
-    lines: list[Line], limit: int, wired: Wiring, generate: Generate, seams: Seams
+    lines: list[Line],
+    limit: int,
+    wired: Wiring,
+    generate: Generate,
+    seams: Seams,
+    steps: Steps,
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
@@ -484,22 +547,38 @@ def _rendered(
         environ = seams.environ
         if environ is None:
             environ = os.environ | gpu.read_env(REPOSITORY / ".env")
+        steps.step("pod", "starting")
         with seams.open_session(REPOSITORY, environ, say, limit) as session:
             server = f"http://127.0.0.1:{session.port(PORT)}"
             client = seams.connect(server)
             await_endpoint(client, server, seams.wait_s, seams.poll_s)
-            live = dataclasses.replace(wired, client=client, image=session.image)
+            steps.step("pod", "ready")
+            out = steps.child(sum(line.images for line in lines))
+            live = dataclasses.replace(
+                wired, client=client, image=session.image, out=out
+            )
             # One flow failing does not cost the next its render; the exit says so.
             failed = False
             for line in lines:
-                argv = ["generate", *line.head, "--server", server, *line.where]
+                argv = [
+                    "generate",
+                    *steps.flag,
+                    *line.head,
+                    "--server",
+                    server,
+                    *line.where,
+                ]
                 failed |= generate(argv, live) != 0
-            return int(failed)
+        steps.step("teardown", "done")
+        return int(failed)
     except KeyboardInterrupt as stopped:
+        # gpunit deletes the pod on every exit, an interrupt included.
+        steps.step("teardown", "done")
         # gpunit's `Interrupted` carries the signal; a bare Ctrl-C is SIGINT.
         return 128 + int(getattr(stopped, "signal", signal.SIGINT))
     # gpunit's CLI reads no .env, where the key lives, so each remedy loads it.
     except Lost:
+        steps.step("pod", "lost")
         print(
             "refused: the provider's answer was lost; "
             "`uv run --env-file .env gpunit status` shows what is left, "
@@ -508,6 +587,7 @@ def _rendered(
         )
         return LOST_EXIT
     except TeardownFailed:
+        steps.step("teardown", "failed")
         print(
             "refused: the session's teardown failed, and its pod may still bill; "
             "run `uv run --env-file .env gpunit down`",
@@ -515,6 +595,7 @@ def _rendered(
         )
         return 1
     except Refused as refused:
+        steps.step("pod", "refused")
         # gpunit has written its own `refused:` line through `say`. Where it names a
         # bare `gpunit <verb>`, the line after it is that command loading the key; a
         # note, not a second refusal.

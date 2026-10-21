@@ -9,7 +9,7 @@ task names.
 - [x] 1 — The count and seeds
 - [x] 2 — What is short
 - [x] 3 — The limit
-- [ ] 4 — Progress
+- [x] 4 — Progress
 - [ ] 5 — The job and billing
 - [ ] 6 — The render UI
 - [ ] 7 — The Renders view
@@ -43,7 +43,7 @@ task names.
 
 ## 4 — Progress
 
-- [ ] 4.1 Add `--progress json` to `render` per [D5](design.md#d5), and bind `cli:render-progress:each-image-of-the-total` in `tests/test_render.py`.
+- [x] 4.1 Add `--progress json` to `render` per [D5](design.md#d5), and bind `cli:render-progress:each-image-of-the-total` in `tests/test_render.py`.
   Verify: `uv run python -m isekai render --help` prints `--progress`, and `grep -c 'cli:render-progress:' tests/test_render.py` prints `1`.
 
 ## 5 — The job and billing

@@ -13,9 +13,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   below its seeds or a seed outside the sampler's range, and `render` takes the listed seeds first (0063 D1).
 - `isekai render <runs>` with no request renders what each approval lacks of its count, skips a run without the
   flow, and refuses a started, unapproved flow before anything is rented (0063 D2).
-- A render session's limit is `--limit`, or the work's estimate from recorded durations and `config/render.json`,
-  never below the provisioning hold plus five minutes; gpunit stops the pod at it, and each render records its
-  `duration`. `gpunit.toml`'s ceiling is `3h` and `max_hourly` `0.90` (0063 D3, D4).
+- A session's limit is `--limit` or an estimate from recorded durations, at least the hold plus five minutes;
+  gpunit stops the pod at it, and a render records its `duration`. `gpunit.toml`: `ceiling = "3h"`,
+  `max_hourly = 0.90` (0063 D3, D4).
+- `isekai render --progress json` prints a JSON line per step: the pod, each image of the total, the teardown;
+  the prose goes to stderr (0063 D5).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

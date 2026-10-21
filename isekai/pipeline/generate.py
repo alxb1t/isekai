@@ -565,6 +565,7 @@ def render(
     poll: float = 1.0,
     deadline: float = RENDER_DEADLINE,
     clock: Callable[[], float] = time.monotonic,
+    on_image: Callable[[Render], None] | None = None,
 ) -> list[Render]:
     """Render `flow`'s approved sheet for this run, one image per seed.
 
@@ -580,7 +581,7 @@ def render(
     declares unpinned. `runtime` is called only when a seed will render, so a
     complete batch reads no report. `seeds_from` names the flow `seeds` were
     taken from, and the sidecar records it. `clock` times each render for its
-    `duration`.
+    `duration`, and `on_image` is told of each image as it lands.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
@@ -671,6 +672,8 @@ def render(
         # the one stage that costs money on every pass.
         write_atomically(output, body)
         produced.append(Render(seed, output, provenance))
+        if on_image is not None:
+            on_image(produced[-1])
     return produced
 
 
