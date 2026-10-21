@@ -1302,3 +1302,13 @@ def test_one_refused_image_leaves_every_run_without_a_revision(
     assert f"{blocked}" in err
     assert "002.draft.json waiting" in err
     assert versions(run.directory(FLOW, "review")) == [1]
+
+    # The waiting draft goes, and the approval it was copied from is broken.
+    discard(other, FLOW)
+    (other.directory(FLOW, "review") / "001.approved.json").write_text("{")
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), blocked)
+
+    assert status == 1
+    assert f"refused: {blocked}: 001.approved.json: is not valid JSON" in err
+    assert versions(run.directory(FLOW, "review")) == [1]

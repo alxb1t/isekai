@@ -171,9 +171,11 @@ export function approve(
   return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
-/* Deletes the waiting draft, as `review --discard` does; an approval refuses. */
-export function discardDraft(place: Place): Promise<{ discarded: string }> {
-  return send(`${at(place)}/discard`, 'POST', {})
+/* Deletes the waiting draft, as `review --discard` does; an approval refuses.
+   `saved` is the draft's precondition, so the page deletes only the draft it
+   last read: one another tab moved since answers 409. */
+export function discardDraft(place: Place, saved: number | null): Promise<{ discarded: string }> {
+  return send(`${at(place)}/discard`, 'POST', { saved })
 }
 
 /* Every image's draft, or none: a refusal answers each image, and is returned

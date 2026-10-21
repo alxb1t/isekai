@@ -23,6 +23,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - The stream test closes its helper's broadcast in a `finally`, re-raises the helper's failure and uploads
   only after the snapshot is read; the e2e render test no longer re-proves a disabled Render; the README and
   the data flow describe `isekai revise`, `review --discard` and Compare (0065 D8).
+- A revision reads every image's approval before writing any draft, so an unreadable one writes nothing; the
+  app refuses an image of a flow this build does not track, and its Discard deletes only the draft the page
+  last read (0065 D2, D7).
 
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 

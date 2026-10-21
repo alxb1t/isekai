@@ -192,8 +192,7 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
     composition. Refused as `refuse_revision` refuses.
     e.g. (run, f, 1, 1840266731) -> review/003.draft.json, seeds [1840266731]
     """
-    refuse_revision(run, flow, version, seed)
-    carried = _approval(run, flow, version, "revise the image again")
+    carried = refuse_revision(run, flow, version, seed)
     renders: Renders = {"count": 1, "seeds": [seed]}
     return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
 
@@ -226,11 +225,12 @@ def refuse_revisions(selection: Sequence[Revision]) -> list[str | None]:
     return refused
 
 
-def refuse_revision(run: Run, flow: str, version: int, seed: int) -> None:
-    """Refuse a revision of `seed` under approval `version` that `revise` cannot write.
+def refuse_revision(run: Run, flow: str, version: int, seed: int) -> ReviewApproved:
+    """Return the approval `revise` copies for `seed`, refusing what it cannot write.
 
-    A waiting draft is the operator's, so a revision never replaces it. Reads
-    filenames alone, so a selection is checked whole before anything is written.
+    A waiting draft is the operator's, so a revision never replaces it. The
+    approval is read here, so a selection is checked whole before anything is
+    written.
     """
     waiting = current_draft(run.directory(flow, REVIEW))
     if waiting is not None:
@@ -250,6 +250,7 @@ def refuse_revision(run: Run, flow: str, version: int, seed: int) -> None:
             f"{run.id}: flow {flow} rendered no seed {seed} under {copied.name}; "
             "choose an image a render wrote, from the batch's Renders"
         )
+    return _approval(run, flow, version, "revise the image again")
 
 
 def discard(run: Run, flow: str) -> Path:

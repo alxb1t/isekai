@@ -192,7 +192,10 @@ function nextRevised(): boolean {
 /* Delete this draft, as `review --discard` does, and go on as approving would. */
 async function discard(): Promise<void> {
   try {
-    await discardDraft({ batch: props.batch, digest: current.value, flow: props.flow })
+    await discardDraft(
+      { batch: props.batch, digest: current.value, flow: props.flow },
+      sheet.saved.value,
+    )
   } catch (reason) {
     discarding.value = (reason as Error).message
     return

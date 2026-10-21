@@ -630,6 +630,47 @@ def test_an_approval_written_against_a_stale_draft_is_refused(
     assert not list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
 
 
+@pytest.mark.spec("ui:draft-update:a-stale-discard-is-refused")
+def test_a_discard_written_against_a_stale_draft_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    # Another tab moved the draft after this page read it, so this page's
+    # discard would delete edits it never showed.
+    body = client.get(_at(made)).json()
+    fields, saved = body["fields"], body["saved"]
+    moved = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
+    assert moved.json()["saved"] != saved
+
+    stale = client.post(_at(made, "/discard"), json={"saved": saved})
+
+    assert stale.status_code == 409
+    assert "changed since this page last read it" in stale.json()["refusal"]
+    assert (made.directory(FLOW, REVIEW) / "001.draft.json").is_file()
+
+
+@pytest.mark.spec("ui:revise:an-untracked-flow-refuses-its-image")
+def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
+    client: TestClient, made: Run
+) -> None:
+    _approved(client, made)
+    group = made.directory(FLOW, "outputs", "001")
+    group.mkdir(parents=True)
+    (group / "7.render.json").write_text("{}\n")
+    image = {"digest": made.digest, "version": 1, "seed": "7"}
+    before = snapshot(made.path)
+
+    answered = client.post(
+        f"/api/b/{BATCH}/revise",
+        json={"images": [{**image, "flow": FLOW}, {**image, "flow": "nope"}]},
+    )
+
+    assert answered.status_code == 409
+    tracked, untracked = answered.json()["images"]
+    assert tracked["refusal"] is None
+    assert untracked["refusal"].startswith("nope: not a flow this build tracks")
+    assert snapshot(made.path) == before
+
+
 @pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")
 def test_an_update_stating_no_precondition_is_still_accepted(
     client: TestClient, made: Run

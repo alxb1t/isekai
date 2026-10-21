@@ -706,10 +706,17 @@ def create_app(
         }
 
     @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
-    def post_discard(batch: str, digest: str, flow: str) -> dict[str, Any]:
-        """Delete the waiting draft, as `review --discard` does; an approval refuses."""
+    def post_discard(
+        batch: str, digest: str, flow: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Delete the waiting draft, as `review --discard` does; an approval refuses.
+
+        **It states the draft update's precondition**, so a page deletes only the
+        draft it last read, never one another tab has since edited.
+        """
         one = held(batch, digest, flow)
         with _DRAFT_UPDATE:
+            _precondition(one, payload or {})
             gone = discard(one.run, one.flow.id)
         return {"discarded": gone.name}
 
@@ -728,6 +735,8 @@ def create_app(
         located: list[Revision] = []
         for digest, flow, version, seed in named:
             try:
+                # A flow this build does not track names no directory of a run.
+                offered(flow)
                 located.append((library.run_named(found, digest), flow, version, seed))
                 answers.append(None)
             except Refusal as refused:

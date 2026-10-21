@@ -25,22 +25,22 @@ sheet on the same composition; the seed stays editable, so a re-roll is the same
 
 ### Requirement: Approval refuses a revision that would reproduce its images
 
-The system SHALL refuse approval of a draft copied from an approval when neither its fields nor its count and seeds
-differ from that approval's, naming the images it would reproduce.
+The system SHALL refuse approval of a draft copied from an approval when its fields are that approval's and every
+image it would render is of a seed that approval lists or rendered, naming the images it would reproduce.
 
-An unchanged revision renders images that already exist, so refusing costs nothing and rendering costs money. New
-seeds alone are a change.
+An unchanged revision renders images that already exist, so refusing costs nothing and rendering costs money. A seed
+the approval neither lists nor rendered is a change, and so is a count above the listed seeds, which draws new ones.
 
 #### Scenario: an unchanged revision is refused
 - **Key:** `review:revise:an-unchanged-revision-is-refused`
 - **Layers:** unit
-- **WHEN** approval is asked for a revision with its approval's fields, count and seeds
+- **WHEN** approval is asked for a revision with its approval's fields and only seeds that approval lists or rendered
 - **THEN** it is refused naming the images it would reproduce
 
 #### Scenario: new seeds alone are a change
 - **Key:** `review:revise:new-seeds-alone-are-a-change`
 - **Layers:** unit
-- **WHEN** approval is asked for a revision whose only difference is its seeds
+- **WHEN** approval is asked for a revision whose only difference is a seed its approval neither lists nor rendered
 - **THEN** it is approved
 
 ### Requirement: An unapproved draft can be discarded
