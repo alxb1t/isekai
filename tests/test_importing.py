@@ -331,6 +331,36 @@ def test_a_file_that_cannot_be_converted_is_refused_and_the_others_import(
     assert [path.name for path in (other / "sources").iterdir()] == ["portrait.jpg"]
 
 
+@pytest.mark.spec("import:refuse:an-unreadable-profile-is-refused")
+def test_a_file_whose_profile_cannot_be_read_is_refused_and_the_others_import(
+    tmp_path: Path,
+) -> None:
+    garbage = b"x" * 200
+    broken = _write(tmp_path, "broken.jpg", photo_jpeg(icc_profile=garbage))
+    jpeg = _write(tmp_path, "portrait.jpg", photo_jpeg())
+    batch = tmp_path / "library" / "trip"
+    err = io.StringIO()
+    args = build_parser().parse_args(
+        ["import", "--batch", str(batch), str(broken), str(jpeg)]
+    )
+
+    code = dispatch(args, bare_wiring(err=err))
+
+    assert code == 1
+    assert "refused: broken.jpg: its colour profile cannot be read" in err.getvalue()
+    assert "export it as sRGB JPEG and add it again" in err.getvalue()
+    assert [path.name for path in (batch / "sources").iterdir()] == ["portrait.jpg"]
+
+    # A format that is always converted reads the profile on the way to sRGB.
+    out = io.BytesIO()
+    Image.new("RGB", (64, 80), (200, 80, 60)).save(out, "TIFF", icc_profile=garbage)
+    tiff = _write(tmp_path, "broken.tiff", out.getvalue())
+    staging = stage(tmp_path / "library")
+
+    with pytest.raises(Refusal, match="broken.tiff: its colour profile cannot be read"):
+        read(tiff, staging, LIMIT)
+
+
 @pytest.mark.spec("import:refuse:a-multi-image-file-is-refused")
 def test_an_animated_gif_is_refused(tmp_path: Path) -> None:
     frames = [

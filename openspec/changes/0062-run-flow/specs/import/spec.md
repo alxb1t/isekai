@@ -60,9 +60,9 @@ HEIC WebP AVIF TIFF BMP GIF ─▶ decode ─▶ JPEG / PNG ┘
 ### Requirement: A file that cannot be a source is refused by name
 
 The system SHALL refuse, naming the file, the reason and a fix: a RAW photograph; a file that does not decode, or
-decodes to an image that cannot be converted; a file holding more than one image; a file over the size limit the
-configuration sets; and a photograph render's header check would refuse. A refusal SHALL leave the other chosen files
-to import.
+decodes to an image that cannot be converted; a file whose colour profile cannot be read; a file holding more than one
+image; a file over the size limit the configuration sets; and a photograph render's header check would refuse. A
+refusal SHALL leave the other chosen files to import.
 
 A photograph render would refuse fails here, before anything is rented. One bad file costs only itself.
 
@@ -78,6 +78,13 @@ A photograph render would refuse fails here, before anything is rented. One bad 
 - **Layers:** unit
 - **WHEN** a file whose image cannot be converted is imported beside others
 - **THEN** it is refused, naming the file and the fix of exporting it as an 8-bit JPEG
+- **AND** the other files chosen with it import
+
+#### Scenario: a file whose colour profile cannot be read is refused
+- **Key:** `import:refuse:an-unreadable-profile-is-refused`
+- **Layers:** unit
+- **WHEN** a JPEG whose colour profile cannot be read is imported beside others
+- **THEN** it is refused, naming the file and the fix of exporting it as sRGB JPEG
 - **AND** the other files chosen with it import
 
 #### Scenario: an animated GIF is refused

@@ -335,7 +335,7 @@ def _clean(file: Path) -> tuple[bytes, bool]:
     and encoded again.
     """
     image = _decode(file)
-    if image.format in ("JPEG", "MPO", "PNG") and _is_srgb(image):
+    if image.format in ("JPEG", "MPO", "PNG") and _is_srgb(image, file.name):
         try:
             return strip_metadata(file), False
         except Refusal:
@@ -360,7 +360,7 @@ def _encode(image: "Image", name: str) -> bytes:
     Refuses `name` when Pillow cannot convert or encode the image's mode.
     """
     try:
-        return _converted(image)
+        return _converted(image, name)
     except (OSError, ValueError) as unconvertible:
         raise Refusal(
             f"{name}: cannot be converted to JPEG or PNG ({unconvertible}); export "
@@ -368,7 +368,7 @@ def _encode(image: "Image", name: str) -> bytes:
         ) from unconvertible
 
 
-def _converted(image: "Image") -> bytes:
+def _converted(image: "Image", name: str) -> bytes:
     """Return `image` upright, in sRGB, encoded as `_encode` describes."""
     import io
 
@@ -378,7 +378,7 @@ def _converted(image: "Image") -> bytes:
     transparent = _is_transparent(upright)
     profile = image.info.get("icc_profile")
     mode = "RGBA" if transparent else "RGB"
-    if profile and not _is_srgb(image):
+    if profile and not _is_srgb(image, name):
         if upright.mode not in ("RGB", "RGBA", "CMYK", "L"):
             upright = upright.convert(mode)
         try:
@@ -427,8 +427,11 @@ def _eight_bit(image: "Image") -> "Image":
     return image
 
 
-def _is_srgb(image: "Image") -> bool:
-    """Return whether `image` has no colour profile, or an sRGB one."""
+def _is_srgb(image: "Image", name: str) -> bool:
+    """Return whether `image` has no colour profile, or an sRGB one.
+
+    Refuses `name` when the profile cannot be read.
+    """
     import io
 
     from PIL import ImageCms
@@ -440,8 +443,11 @@ def _is_srgb(image: "Image") -> bool:
         described = ImageCms.getProfileDescription(
             ImageCms.ImageCmsProfile(io.BytesIO(profile))
         )
-    except ImageCms.PyCMSError:
-        return False
+    except (ImageCms.PyCMSError, OSError) as unreadable:
+        raise Refusal(
+            f"{name}: its colour profile cannot be read ({unreadable}); export it "
+            "as sRGB JPEG and add it again"
+        ) from unreadable
     return "sRGB" in described
 
 
