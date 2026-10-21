@@ -392,6 +392,41 @@ def open_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run:
     return run
 
 
+def find_run(photo: Path, runs_root: Path = RUNS_ROOT) -> Run | None:
+    """Return the run for `photo`'s bytes when there is one, creating nothing."""
+    try:
+        body = photo.read_bytes()
+    except OSError as unreadable:
+        raise Refusal(
+            f"{photo.name}: cannot be read ({unreadable.strerror}); "
+            "check the path and the file's permissions, then offer it again"
+        ) from unreadable
+    return _run_for(digest_of(body), runs_root)
+
+
+def assign(run: Run, flow: str, *, remove: bool = False) -> bool:
+    """Create `flow`'s empty directory in `run`; with `remove`, delete it while empty.
+
+    Return whether the run changed. A run holding a flow's directory is assigned
+    to it, so a tick is the layout's own fact; an untick never deletes work.
+    """
+    directory = run.directory(flow)
+    if not remove:
+        if directory.is_dir():
+            return False
+        directory.mkdir()
+        return True
+    if not directory.is_dir():
+        return False
+    if any(directory.iterdir()):
+        raise Refusal(
+            f"{run.id}: {flow} holds work, so it stays assigned; to unassign it, "
+            f"delete {run.id}/{flow}/ by hand"
+        )
+    directory.rmdir()
+    return True
+
+
 # --- numbering and completion -------------------------------------------------
 
 

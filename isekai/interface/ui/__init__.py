@@ -34,6 +34,7 @@ def serve(wired: Wiring, *, port: int) -> int:
     would be publishing them to the network the operator happens to be on.
     """
     root = library.open_library(library.root())
+    flows = library.offered(wired.flows_dir)
     bundle = ensure_built()
 
     # Imported here, not at module scope: this is the only line that needs a web
@@ -46,6 +47,7 @@ def serve(wired: Wiring, *, port: int) -> int:
     app = create_app(
         root,
         wired,
+        flows=flows,
         bundle=bundle,
         wire=lambda runs: wiring_from(runs=runs),
         host=HOST,

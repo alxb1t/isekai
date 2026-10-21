@@ -32,7 +32,7 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `importing.py` | `interface/cli.py` | `tests/test_importing.py` |
+| `importing.py` | `interface/cli.py`, `interface/ui/library.py` | `tests/test_importing.py` |
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_view.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
 | `sheet.py` | `interface/cli.py` | `tests/stages.py`, `tests/test_sheet_stage.py` |

@@ -44,6 +44,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 EXPECTED_VERBS = (
     "import",
+    "assign",
     "caption",
     "tag",
     "sheet",

@@ -12,10 +12,11 @@ exists nowhere else in this repository -- and turning a `Refusal` into a
 response. The pipeline owns what a valid sheet is, each run file's shape and its
 filename, when approval is legal, and what a token costs.
 
-**Three write functions reach a run directory, all of stage ③'s**: `review()`
-when a sheet is opened, `save_draft()` on autosave and `approve()` on the button.
-Nothing here builds an artifact body or an artifact filename, and
-`tests/test_ui.py`'s grep is what keeps that at three.
+**A run directory is written only through the functions that own it**: stage
+③'s `review()` when a sheet is opened, `save_draft()` on autosave and
+`approve()` on the button, and the run's own `open_run()` and `assign()` on a
+tick. Nothing here builds an artifact body or an artifact filename, and
+`tests/test_ui.py`'s grep is what keeps it so.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
@@ -25,7 +26,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 
 ```
 GET  /api/library
-GET  /api/b/{batch}/hub
+GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve
@@ -36,7 +37,7 @@ GET  anything else                                 the bundle's index.html
 
 import shlex
 import threading
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, TypeGuard
@@ -66,7 +67,10 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    assign,
+    find_run,
     latest_artifact,
+    open_run,
 )
 from isekai.interface.ui import library
 from isekai.interface.wiring import Wiring
@@ -161,6 +165,7 @@ def create_app(
     root: Path,
     wired: Wiring,
     *,
+    flows: Sequence[str],
     bundle: Path,
     wire: Callable[[Path], Wiring],
     host: str,
@@ -171,6 +176,7 @@ def create_app(
     `wire` builds one batch's wiring from its runs root, and is called on every
     request inside a batch, so the run-root guard holds for each (D19). `wired`
     supplies what every batch shares: the flows, the vocabulary and the table.
+    `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
     """
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None)
@@ -225,16 +231,17 @@ def create_app(
     @app.get("/api/library")
     def read_library() -> dict[str, Any]:
         """List the library's folders, batches by their newest file first."""
-        return {"rows": [asdict(row) for row in library.rows(root, wired.flows_dir)]}
+        rows = library.rows(root, flows, wired.flows_dir)
+        return {"rows": [asdict(row) for row in rows]}
 
     @app.get("/api/b/{batch}/hub")
     def read_hub(batch: str) -> dict[str, Any]:
-        """Describe a batch's grid: its sources by its tracked flows, each cell's stage.
+        """Describe a batch's grid: its sources by the offered flows, each cell's stage.
 
         Read from the run directories on every request, so it follows a verb run
         in the terminal while the page is open.
         """
-        grid = library.hub(folder(batch), wired.flows_dir)
+        grid = library.hub(folder(batch), flows, wired.flows_dir)
         return {
             "batch": grid.name,
             "flows": list(grid.flows),
@@ -244,10 +251,45 @@ def create_app(
                     "digest": one.digest,
                     **_size(one.run),
                     "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
+                    "carries": list(one.carries),
                 }
                 for one in grid.sources
             ],
         }
+
+    @app.post("/api/b/{batch}/assign")
+    def post_assign(batch: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Tick a flow for sources, or untick it, through the run's own `assign`.
+
+        Each source is answered on its own: one refused untick leaves the others
+        done, and its refusal comes back beside their cells.
+        """
+        found = folder(batch)
+        flow = str(payload.get("flow"))
+        if flow not in flows:
+            raise Refusal(
+                f"{flow!r}: not a flow this surface offers; the flows it offers "
+                f"are {', '.join(flows)} -- reload the hub"
+            )
+        names = payload.get("sources")
+        if not _is_tag_list(names):
+            raise Refusal("the request's `sources` is not a list of source names")
+        remove = payload.get("remove") is True
+        suffix = load_flow(flow, wired.flows_dir).output_suffix
+        runs = found / library.RUNS
+        cells: dict[str, Any] = {}
+        refused: list[str] = []
+        for name in names:
+            try:
+                source = library.source_file(found, name)
+                run = find_run(source, runs) if remove else open_run(source, runs)
+                if run is not None:
+                    assign(run, flow, remove=remove)
+                cell = library.stage(run, flow, suffix) if run else library.Cell(None)
+                cells[name] = asdict(cell)
+            except Refusal as one:
+                refused.append(str(one))
+        return {"cells": cells, "refused": refused}
 
     @app.get("/api/tags")
     def read_tags(q: str = "", limit: int = DEFAULT_LIMIT) -> dict[str, Any]:

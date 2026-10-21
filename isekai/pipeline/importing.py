@@ -3,7 +3,7 @@
 A file is read into a staging folder under the library's `.staging/`, cleaned of
 everything but its pixels and orientation, and verified by the strip's own walk.
 A commit moves the staged files into the batch's `sources/`; a cancel, or a sweep
-at start, deletes what was staged. Why each step is this way: 0062 design D1-D3.
+at start, deletes what was staged.
 
 Pillow and `pi_heif` are imported inside the functions that decode, so
 `python -m isekai`'s import graph reaches no wheel (D20).

@@ -10,6 +10,7 @@ so an upgrade command would be a dispatch table with no entries and its refusal
 would be unreachable -- nothing writes a later one.
 
     import        clean photographs into a batch's sources/
+    assign        give a source a flow's empty directory, or take an empty one away
     caption   (1) a photograph in, prose out
     tag       (1) a photograph in; the WD14 tags, then the hosted tags, out
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
@@ -21,10 +22,10 @@ would be unreachable -- nothing writes a later one.
     ui        (3) serve the review surface for a batch of inputs
     compare       write a page of every run's photograph beside its renders
 
-**`import` fills a batch, `show` inspects a run, `ui` serves a surface,
-`compare` writes a page, and every other verb runs a stage.** The stage verbs
-take `--flow` repeatably; `ui` takes exactly one, because the surface is one
-schema's fields in one order; `show` and `compare` take none, because they
+**`import` fills a batch, `assign` ticks a flow, `show` inspects a run, `ui`
+serves a surface, `compare` writes a page, and every other verb runs a stage.**
+The stage verbs and `assign` take `--flow` repeatably; `ui`, `show` and
+`compare` take none -- the surface serves every flow it offers, and the others
 report every flow the runs already hold. `show` reads a run and decides
 nothing, and `ui` is the second front end rather than a client of the first --
 it calls `wiring` and the stage functions directly, exactly as this module does,
@@ -51,7 +52,15 @@ from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, RUNS_ROOT, Run, across, open_run
+from isekai.foundation.run import (
+    FRAME_NAME,
+    RUNS_ROOT,
+    Run,
+    across,
+    assign,
+    find_run,
+    open_run,
+)
 from isekai.interface.compare_view import write_page
 from isekai.interface.render import run_session
 from isekai.interface.run_view import report
@@ -85,6 +94,7 @@ T = TypeVar("T")
 
 VERBS: tuple[tuple[str, str], ...] = (
     ("import", "clean photographs and add them to a batch's sources/"),
+    ("assign", "give each source a flow's empty directory, or remove an empty one"),
     ("caption", "read a photograph into prose"),
     ("tag", "score a photograph with WD14, then list the JoyCaption tags"),
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
@@ -171,7 +181,7 @@ def build_parser() -> argparse.ArgumentParser:
     # its briefing, its schema, its graph and its dials. "Every tracked flow" is
     # not a selection, it is the absence of one -- and at the last verb it spends
     # money, at the first it burns a paid model call.
-    for name in ("caption", "tag", "sheet", "review", "approve", "generate"):
+    for name in ("assign", "caption", "tag", "sheet", "review", "approve", "generate"):
         made[name].add_argument(
             "--flow",
             action="append",
@@ -180,6 +190,11 @@ def build_parser() -> argparse.ArgumentParser:
             metavar="FLOW",
             help="a flow to act on; repeatable, and required",
         )
+    made["assign"].add_argument(
+        "--remove",
+        action="store_true",
+        help="delete each flow's directory instead, refusing one that holds work",
+    )
     # The one verb that reads another flow, and only the one the operator names.
     made["approve"].add_argument(
         "--from",
@@ -607,6 +622,9 @@ def _per_item(
         return opening[0]
 
     def work(identifier: str) -> None:
+        if verb == "assign":
+            _assign(identifier, bool(args.remove), wired, list(flows), collected)
+            return
         run = _run_for(identifier, wired)
         if verb == "show":
             for line in report(run, wired.flows_dir):
@@ -712,6 +730,46 @@ def _per_item(
         collected.extend(across(list(flows), step))
 
     return work
+
+
+def _assign(
+    identifier: str,
+    remove: bool,
+    wired: Wiring,
+    flows: Sequence[str],
+    collected: list[str],
+) -> None:
+    """Assign each flow to the run `identifier` names, or remove each empty one.
+
+    Removing opens no run: a source with none has no flow to remove.
+    """
+    run = _existing_run(identifier, wired) if remove else _run_for(identifier, wired)
+    if run is None:
+        for name in flows:
+            print(f"{identifier}: {name} is not assigned", file=wired.out)
+        return
+    found = run
+
+    def one(name: str) -> None:
+        changed = assign(found, name, remove=remove)
+        if remove:
+            done = f"removed {name}" if changed else f"{name} is not assigned"
+        else:
+            done = f"assigned {name}" if changed else f"{name} is already assigned"
+        print(f"{found.id}: {done}", file=wired.out)
+
+    collected.extend(across(list(flows), one))
+
+
+def _existing_run(identifier: str, wired: Wiring) -> Run | None:
+    """Return the run an argument names, as `_run_for` does, but never open one."""
+    directory = wired.runs_root / identifier
+    if (directory / FRAME_NAME).is_file():
+        return Run(identifier, directory)
+    photo = Path(identifier)
+    if not photo.is_file():
+        return _run_for(identifier, wired)
+    return find_run(photo, wired.runs_root)
 
 
 def _generate(

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
@@ -19,6 +20,9 @@ from tests.stages import sheet, write_wd14
 REPO = Path(__file__).resolve().parent.parent
 SUMMON = "summon-anime-wai"
 CONJURE = "conjure-anime-wai"
+CONTROL = "control-anime-wai"
+# The suite's own copy of the flows `config/ui.json` offers.
+OFFERED = (SUMMON, CONJURE)
 
 
 def _batch(lib: Path, name: str, *sources: str) -> Path:
@@ -77,7 +81,7 @@ def test_a_folder_with_sources_is_a_batch_and_one_without_is_not(
     _batch(tmp_path, "2026-10-19", "ada.jpg")
     (tmp_path / "old exports").mkdir()
 
-    rows = library.rows(tmp_path, FLOWS_DIR)
+    rows = library.rows(tmp_path, OFFERED, FLOWS_DIR)
 
     assert [(row.name, row.batch) for row in rows] == [
         ("2026-10-19", True),
@@ -93,7 +97,7 @@ def test_a_dot_folder_is_not_listed(tmp_path: Path) -> None:
     _batch(tmp_path, ".staging", "ada.jpg")
     _batch(tmp_path, "kept", "ada.jpg")
 
-    assert [row.name for row in library.rows(tmp_path, FLOWS_DIR)] == ["kept"]
+    assert [row.name for row in library.rows(tmp_path, OFFERED, FLOWS_DIR)] == ["kept"]
     with pytest.raises(Refusal):
         library.batch(tmp_path, ".staging")
 
@@ -109,12 +113,12 @@ def test_a_flows_counts_are_out_of_the_sources_that_have_it(
     bea.directory(CONJURE).mkdir()
     _run(folder, "cid.jpg")
 
-    (row,) = library.rows(tmp_path, FLOWS_DIR)
+    (row,) = library.rows(tmp_path, OFFERED, FLOWS_DIR)
 
     assert row.sources == 4
     assert row.flows == (
-        FlowCount(CONJURE, approved=0, rendered=0, of=1),
         FlowCount(SUMMON, approved=1, rendered=0, of=2),
+        FlowCount(CONJURE, approved=0, rendered=0, of=1),
     )
     assert row.without_flow == 2
 
@@ -132,7 +136,7 @@ def test_batches_are_ordered_by_their_newest_file(tmp_path: Path) -> None:
     os.utime(new / "sources" / "bea.jpg", (500, 500))
     os.utime(later / "7.png", (3_000, 3_000))
 
-    rows = library.rows(tmp_path, FLOWS_DIR)
+    rows = library.rows(tmp_path, OFFERED, FLOWS_DIR)
 
     assert [row.name for row in rows] == ["z-new", "m-mid", "a-old"]
     assert (rows[0].newest, rows[0].kind) == (3_000, "render")
@@ -147,8 +151,8 @@ def test_listing_and_opening_a_batch_writes_no_file(
     _approved(_run(folder, "ada.jpg"), vocabulary)
     before = _tree(tmp_path)
 
-    library.rows(tmp_path, FLOWS_DIR)
-    library.hub(library.batch(tmp_path, "b"), FLOWS_DIR)
+    library.rows(tmp_path, OFFERED, FLOWS_DIR)
+    library.hub(library.batch(tmp_path, "b"), OFFERED, FLOWS_DIR)
 
     assert _tree(tmp_path) == before
 
@@ -182,24 +186,61 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
     assert now() == Cell("rendered", 2, status="approved")
 
-    grid = library.hub(folder, FLOWS_DIR)
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
     (source,) = grid.sources
     assert source.cells[SUMMON] == Cell("rendered", 2, status="approved")
     assert source.digest == run.digest
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")
-def test_an_untracked_flows_directory_is_ignored(tmp_path: Path) -> None:
+def test_a_flow_the_surface_does_not_offer_is_ignored(tmp_path: Path) -> None:
     folder = _batch(tmp_path, "b", "ada.jpg")
     run = _run(folder, "ada.jpg")
-    (run.directory("retired-anime-wai", "sheets")).mkdir(parents=True)
+    (run.directory(CONTROL, "sheets")).mkdir(parents=True)
 
-    grid = library.hub(folder, FLOWS_DIR)
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
 
-    assert "retired-anime-wai" not in grid.flows
+    assert CONTROL not in grid.flows
     (source,) = grid.sources
-    assert "retired-anime-wai" not in source.cells
+    assert CONTROL not in source.cells
     assert all(cell == Cell(None) for cell in source.cells.values())
+
+
+@pytest.mark.spec("ui:batch-folder:an-unoffered-flow-has-no-count")
+def test_a_flow_the_configuration_does_not_offer_has_no_count(
+    tmp_path: Path,
+) -> None:
+    lib = tmp_path / "lib"
+    folder = _batch(lib, "b", "ada.jpg")
+    _run(folder, "ada.jpg").directory(CONTROL).mkdir()
+    config = tmp_path / "ui.json"
+    config.write_text(json.dumps({"flows": list(OFFERED)}))
+
+    (row,) = library.rows(lib, library.offered(FLOWS_DIR, config), FLOWS_DIR)
+
+    assert row.flows == ()
+    assert row.without_flow == 1
+    config.write_text(json.dumps({"flows": [SUMMON, "retired-anime-wai"]}))
+    with pytest.raises(Refusal, match="config/ui.json offers retired-anime-wai"):
+        library.offered(FLOWS_DIR, config)
+
+
+@pytest.mark.spec("ui:hub:an-uncleaned-source-is-marked")
+def test_a_source_still_carrying_metadata_is_marked_not_cleaned(
+    tmp_path: Path,
+) -> None:
+    folder = _batch(tmp_path, "b")
+    exif = Image.Exif()
+    exif[0x010F] = "Canon"
+    for name, options in (("clean.jpg", {}), ("as-is.jpg", {"exif": exif.tobytes()})):
+        Image.new("RGB", (64, 48), (90, 60, 30)).save(
+            folder / "sources" / name, "JPEG", **options
+        )
+
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+
+    carries = {one.name: one.carries for one in grid.sources}
+    assert carries == {"as-is.jpg": ("EXIF",), "clean.jpg": ()}
 
 
 @pytest.mark.spec("ui:hub:an-unreadable-file-marks-its-cell")
@@ -217,7 +258,7 @@ def test_an_unreadable_run_file_marks_its_cell_alone(
     bea = _run(folder, "bea.jpg")
     _approved(bea, vocabulary)
 
-    grid = library.hub(folder, FLOWS_DIR)
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
 
     cells = {one.name: one.cells[SUMMON] for one in grid.sources}
     assert cells["ada.jpg"].stage == "unreadable"
@@ -234,7 +275,7 @@ def test_reading_the_hub_writes_nothing(tmp_path: Path, vocabulary: Vocabulary) 
     _run(folder, "bea.jpg")
     before = _tree(folder)
 
-    library.hub(folder, FLOWS_DIR)
+    library.hub(folder, OFFERED, FLOWS_DIR)
 
     assert _tree(folder) == before
 

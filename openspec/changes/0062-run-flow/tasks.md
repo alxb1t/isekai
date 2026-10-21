@@ -7,7 +7,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 - [x] 1 — The copy
 - [x] 2 — Import
-- [ ] 3 — Assign and the offered flows
+- [x] 3 — Assign and the offered flows
 - [ ] 4 — Progress
 - [ ] 5 — The job and its stream
 - [ ] 6 — The sheet
@@ -40,13 +40,13 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 3 — Assign and the offered flows
 
-- [ ] 3.1 Add the `assign` verb to `isekai/interface/cli.py` per [D4](design.md#d4), and `tests/test_assign.py` binding every `cli:assign:*` key.
+- [x] 3.1 Add the `assign` verb to `isekai/interface/cli.py` per [D4](design.md#d4), and `tests/test_assign.py` binding every `cli:assign:*` key.
   Verify: `uv run pytest -q tests/test_assign.py` exits 0, and `grep -c 'cli:assign:removing-a-prepared-flow-is-refused' tests/test_assign.py` prints `1`.
-- [ ] 3.2 Add `flows` to `config/ui.json`, and make `_suffixes` in `isekai/interface/ui/library.py` take the offered flows, per [D5](design.md#d5).
+- [x] 3.2 Add `flows` to `config/ui.json`, and make `_suffixes` in `isekai/interface/ui/library.py` take the offered flows, per [D5](design.md#d5).
   Verify: `grep -c '"summon-anime-wai", "conjure-anime-wai"' config/ui.json` prints `1`, and `grep -c 'tracked_flows(flows_dir)' isekai/interface/ui/library.py` prints `0`.
-- [ ] 3.3 Add `POST /api/b/{batch}/assign` to `isekai/interface/ui/app.py`, and the `not cleaned` mark to `library.py`'s source, per [D4](design.md#d4) and [D10](design.md#d10).
+- [x] 3.3 Add `POST /api/b/{batch}/assign` to `isekai/interface/ui/app.py`, and the `not cleaned` mark to `library.py`'s source, per [D4](design.md#d4) and [D10](design.md#d10).
   Verify: `grep -c '/api/b/{batch}/assign' isekai/interface/ui/app.py` prints `1`.
-- [ ] 3.4 In `tests/test_ui_library.py` and `tests/test_ui_api.py`, bind `ui:batch-folder:an-unoffered-flow-has-no-count`, `ui:hub:a-prepared-tick-stays` and `ui:hub:an-uncleaned-source-is-marked`, and move the `ui:hub:an-untracked-flow-is-ignored` test onto a flow the configuration does not offer.
+- [x] 3.4 In `tests/test_ui_library.py` and `tests/test_ui_api.py`, bind `ui:batch-folder:an-unoffered-flow-has-no-count`, `ui:hub:a-prepared-tick-stays` and `ui:hub:an-uncleaned-source-is-marked`, and move the `ui:hub:an-untracked-flow-is-ignored` test onto a flow the configuration does not offer.
   Verify: `uv run pytest -q tests/test_ui_library.py tests/test_ui_api.py` exits 0, and `grep -c 'ui:hub:an-uncleaned-source-is-marked' tests/test_ui_library.py` prints `1`.
 
 ## 4 — Progress

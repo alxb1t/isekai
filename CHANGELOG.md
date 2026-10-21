@@ -14,9 +14,13 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `isekai import --batch <dir> <file…>` cleans photographs into a batch's `sources/`: no metadata but the
   orientation, colour in sRGB, HEIC and other formats converted; a RAW, multi-image or oversized file is refused
   by name, and each file is verified before it is committed (0062 D1, D2, D3).
+- `isekai assign --flow F <source…> [--remove]` ticks a flow as its empty directory in the run, and the hub's
+  `POST /api/b/{batch}/assign` runs the same function; an untick never deletes work (0062 D4).
 
 ### Changed
 
+- The hub's columns and Home's counts are the flows `config/ui.json` offers, so `control-anime-wai` stays the
+  CLI's; a source still carrying metadata is marked not cleaned (0062 D5, D10).
 - A refusal that asks the operator to fix something and retry ends *"then try again"*, so the page can show it
   verbatim; D42 records that a new draft starts from the last approval (0062 D11).
 
