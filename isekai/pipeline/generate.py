@@ -312,6 +312,19 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     )
 
 
+def shortfall(run: Run, flow: Flow) -> int:
+    """Return how many images `flow`'s newest approval still lacks of its count.
+
+    Read from the approval's `renders` and a listing of its outputs group; an
+    unapproved flow is refused naming the way out.
+    """
+    version, approval = approved_artifact(run, flow.id)
+    remedy = f"restore it in {approval} by hand"
+    renders = renders_of(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
+    group = run.directory(flow.id, OUTPUTS, f"{version:03d}")
+    return max(renders["count"] - len(rendered_seeds(group, flow.output_suffix)), 0)
+
+
 def render_groups(run: Run, flow: str) -> list[Path]:
     """Return a flow's render groups: the outputs directories named by digits."""
     return [

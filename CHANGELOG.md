@@ -11,6 +11,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 - A draft and its approval carry `renders`, a count and seeds, edited in Review's ④; approval refuses a count
   below its seeds or a seed outside the sampler's range, and `render` takes the listed seeds first (0063 D1).
+- `isekai render <runs>` with no request renders what each approval lacks of its count, skips a run without the
+  flow, and refuses a started, unapproved flow before anything is rented (0063 D2).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

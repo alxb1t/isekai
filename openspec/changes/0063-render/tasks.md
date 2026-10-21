@@ -7,7 +7,7 @@ task names.
 ## Progress
 
 - [x] 1 — The count and seeds
-- [ ] 2 — What is short
+- [x] 2 — What is short
 - [ ] 3 — The limit
 - [ ] 4 — Progress
 - [ ] 5 — The job and billing
@@ -29,7 +29,7 @@ task names.
 
 ## 2 — What is short
 
-- [ ] 2.1 Make `render <runs>` with no request render what is short, skip a run without the flow, and refuse a started, unapproved flow before renting, in `isekai/interface/render.py` and `isekai/interface/cli.py`, per [D2](design.md#d2); bind every `cli:render-short:*` key in `tests/test_render.py`.
+- [x] 2.1 Make `render <runs>` with no request render what is short, skip a run without the flow, and refuse a started, unapproved flow before renting, in `isekai/interface/render.py` and `isekai/interface/cli.py`, per [D2](design.md#d2); bind every `cli:render-short:*` key in `tests/test_render.py`.
   Verify: `uv run pytest -q tests/test_render.py` exits 0, and `grep -c 'cli:render-short:' tests/test_render.py` prints `3`.
 
 ## 3 — The limit

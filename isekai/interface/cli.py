@@ -256,9 +256,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     made["render"].add_argument(
         "requests",
-        nargs="+",
+        nargs="*",
         metavar="<flow>=<count|source>",
-        help="a flow and how many seeds it draws, or the flow whose seeds it takes",
+        help=(
+            "a flow and how many seeds it draws, or the flow whose seeds it takes; "
+            "with none, every approval short of its count renders what it lacks"
+        ),
     )
     made["render"].set_defaults(photos=[])
 

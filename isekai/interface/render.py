@@ -1,10 +1,12 @@
 """`isekai render`: one whole render session on a rented GPU, torn down on every exit.
 
-    python -m isekai render <runs> <flow>=<count|source> ...
-    e.g. python -m isekai render .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
+    python -m isekai render <runs> [<flow>=<count|source> ...]
+    e.g. python -m isekai render .data/b1/runs
+         python -m isekai render .data/b1/runs summon-anime-wai=1 conjure-anime-wai=1
          python -m isekai render .data/b1/runs control-anime-wai=summon-anime-wai
 
-A count draws that many seeds; a source flow renders its latest seeds again. A source
+With no request, every approval short of its count renders what it lacks. A count
+draws that many seeds; a source flow renders its latest seeds again. A source
 rendered by count in the same line goes first, in the same session. Output is shown
 and appended to the batch's log, `<runs>/../log.txt` (D36).
 """
@@ -26,11 +28,12 @@ from typing import TextIO
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport
+from isekai.foundation.flow import load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import FRAME_NAME, REPOSITORY
+from isekai.foundation.run import FRAME_NAME, REPOSITORY, Run
 from isekai.interface.compare_view import BATCH_PHOTOS
 from isekai.interface.wiring import Wiring
-from isekai.pipeline.generate import read_runtime
+from isekai.pipeline.generate import read_runtime, shortfall
 
 # The port `gpunit.toml` forwards, on both sides; a test holds the two equal.
 PORT = 8188
@@ -206,6 +209,40 @@ def run_session(
             return 1
 
 
+@dataclass(frozen=True)
+class Line:
+    """One `generate` line of a session: its flow and mode, and the runs it takes."""
+
+    head: tuple[str, ...]
+    where: tuple[str, ...]
+
+
+def short(
+    runs: Path, ids: Sequence[str], wired: Wiring
+) -> tuple[list[Line], list[str]]:
+    """Return a line per flow with approvals short of their count, and the refusals.
+
+    A run without a flow's directory is skipped; one holding it unapproved is
+    refused, so the session can refuse before anything is rented.
+    """
+    tracked = tracked_flows(wired.flows_dir)
+    wanted: dict[str, list[str]] = {}
+    refused: list[str] = []
+    for run_id in ids:
+        run = Run(run_id, runs / run_id)
+        for flow in (name for name in run.flows if name in tracked):
+            try:
+                if shortfall(run, load_flow(flow, wired.flows_dir)):
+                    wanted.setdefault(flow, []).append(run_id)
+            except Refusal as unready:
+                refused.append(str(unready))
+    lines = [
+        Line(("--flow", flow), ("--runs", str(runs), *held))
+        for flow, held in sorted(wanted.items())
+    ]
+    return lines, refused
+
+
 def _session(
     runs: Path, texts: list[str], wired: Wiring, generate: Generate, seams: Seams
 ) -> int:
@@ -213,20 +250,34 @@ def _session(
     deferred = in_session_sources(requests)
     ids = run_ids(runs)
     flows = [arg for request in requests for arg in ("--flow", request.flow)]
-    if not ids:
+    if not ids and requests:
         photos = shlex.quote(str(runs.parent / BATCH_PHOTOS))
         raise Refusal(
             f"{runs} holds no run; open them from the batch's photographs with: "
             f"uv run python -m isekai tag {' '.join(flows)} --runs "
             f"{shlex.quote(str(runs))} {photos}/*"
         )
-    where = ["--runs", str(runs), *ids]
+    where = ("--runs", str(runs), *ids)
 
     # Free work first: every prompt is assembled, and every source checked, before
     # anything is rented.
     free = dataclasses.replace(wired, client=None, image=None)
-    if generate(["generate", *flows, *where], free) != 0:
-        return 1
+    if requests:
+        lines = [Line(("--flow", r.flow, r.mode, r.value), where) for r in requests]
+        if generate(["generate", *flows, *where], free) != 0:
+            return 1
+    else:
+        lines, refused = short(runs, ids, wired)
+        for message in refused:
+            print(f"refused: {message}", file=wired.err)
+        if refused:
+            return 1
+        if not lines:
+            print("nothing is short of its count; nothing was rented", file=wired.err)
+            return 0
+        for line in lines:
+            if generate(["generate", *line.head, *line.where], free) != 0:
+                return 1
     for request, late in zip(requests, deferred, strict=True):
         if request.by_count:
             continue
@@ -242,12 +293,12 @@ def _session(
         )
 
     again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
-    rest = " ".join(texts)
+    rest = "".join(f" {text}" for text in texts)
 
     def ceiling() -> None:
         print(
             f"refused: the session reached its {seams.ceiling_s:g}s ceiling; renders "
-            f"so far are kept, and in a new session `{again} {rest}` renders only "
+            f"so far are kept, and in a new session `{again}{rest}` renders only "
             "the rest",
             file=wired.err,
         )
@@ -258,17 +309,13 @@ def _session(
     watchdog.daemon = True
     watchdog.start()
     try:
-        return _rendered(requests, where, wired, generate, seams)
+        return _rendered(lines, wired, generate, seams)
     finally:
         watchdog.cancel()
 
 
 def _rendered(
-    requests: list[Request],
-    where: list[str],
-    wired: Wiring,
-    generate: Generate,
-    seams: Seams,
+    lines: list[Line], wired: Wiring, generate: Generate, seams: Seams
 ) -> int:
     from gpunit import Lost, Refused, TeardownFailed
 
@@ -286,17 +333,8 @@ def _rendered(
             live = dataclasses.replace(wired, client=client, image=session.image)
             # One flow failing does not cost the next its render; the exit says so.
             failed = False
-            for request in requests:
-                argv = [
-                    "generate",
-                    "--flow",
-                    request.flow,
-                    request.mode,
-                    request.value,
-                    "--server",
-                    server,
-                    *where,
-                ]
+            for line in lines:
+                argv = ["generate", *line.head, "--server", server, *line.where]
                 failed |= generate(argv, live) != 0
             return int(failed)
     except KeyboardInterrupt as stopped:

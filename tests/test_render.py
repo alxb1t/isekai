@@ -23,19 +23,21 @@ import pytest
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyTransport, TransportFailure
-from isekai.foundation.artifacts import RENDER_FILE, read
-from isekai.foundation.flow import Schema
+from isekai.foundation.artifacts import DRAFT_FILE, RENDER_FILE, read
+from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
 from isekai.interface.cli import _dispatch_argv, build_parser
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
-from isekai.pipeline.review import approve, review
+from isekai.pipeline.generate import prepare
+from isekai.pipeline.review import approve, review, save_draft
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FAKE_SYSTEM, SESSION_IMAGE, FakeComfyClient
 from tests.images import jpeg_bytes
 from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
+from tests.stages import render as stage_render
 
 FLOW = "summon-anime-wai"
 LOCAL_PORT = 50123
@@ -446,6 +448,96 @@ def test_each_render_records_the_image_the_session_names(
         record = read(sidecar, RENDER_FILE)
         assert record.get("image") == SESSION_IMAGE
         assert record.get("pinned") is True
+
+
+def real(root: Path, vocabulary: Vocabulary) -> Wiring:
+    """Return a wiring the real `generate` runs on, over `root`."""
+    return Wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        client=None,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: FIELD_MAP,
+        runs_root=root,
+        out=io.StringIO(),
+        err=io.StringIO(),
+    )
+
+
+def counted(
+    root: Path, schema: Schema, vocabulary: Vocabulary, name: str, made: int
+) -> Run:
+    """Return a run approved for two images of `FLOW`, `made` of them rendered."""
+    run = approved(root, schema, vocabulary, name)
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    fields = read(draft, DRAFT_FILE)["fields"]
+    save_draft(run, FLOW, fields, {"count": 2, "seeds": []})
+    approve(run, FLOW, schema, vocabulary)
+    flow = load_flow(FLOW)
+    prepare(run, {FLOW: flow})
+    stage_render(run, flow, FakeComfyClient(), seeds=list(range(1, made + 1)), poll=0)
+    return run
+
+
+def images(run: Run) -> int:
+    """Return how many images `run`'s newest approval of `FLOW` holds."""
+    return len(list((run.path / FLOW / "outputs" / "002").glob("*.png")))
+
+
+@pytest.mark.spec("cli:render-short:what-is-short-is-rendered")
+def test_with_no_request_only_what_is_short_is_rendered(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    lacking = counted(tmp_path, schema, vocabulary, "ada", 1)
+    full = counted(tmp_path, schema, vocabulary, "beatrix", 2)
+    root = tmp_path / "b" / "runs"
+
+    status = session(root, generate=_dispatch_argv, wiring=real(root, vocabulary))
+
+    assert status == 0, log(root)
+    assert images(lacking) == 2
+    assert images(full) == 2
+    assert f"{full.id}: rendered" not in log(root)
+
+
+@pytest.mark.spec("cli:render-short:a-run-without-the-flow-is-skipped")
+def test_with_no_request_a_run_without_the_flow_is_skipped(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    held = approved(tmp_path, schema, vocabulary, "ada")
+    photo = tmp_path / "bea.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 932))
+    bare = open_run(photo, tmp_path / "b" / "runs")
+    root = tmp_path / "b" / "runs"
+    calls = Calls()
+
+    assert session(root, generate=calls) == 0, log(root)
+    assert calls.rendered() == [
+        ["generate", "--flow", FLOW, "--server", f"http://127.0.0.1:{LOCAL_PORT}"]
+        + ["--runs", str(root), held.id]
+    ]
+    assert bare.id not in log(root)
+
+
+@pytest.mark.spec("cli:render-short:an-unapproved-started-flow-refuses")
+def test_with_no_request_a_started_unapproved_flow_refuses_before_renting(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved(tmp_path, schema, vocabulary, "ada")
+    photo = tmp_path / "bea.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 932))
+    started = open_run(photo, tmp_path / "b" / "runs")
+    caption(started, FakeReader(prose="Brown hair, brown eyes."))
+    sheet(started, schema, vocabulary)
+    review(started, FLOW)
+    root = tmp_path / "b" / "runs"
+    opener = FakeOpen()
+
+    assert session(root, opener=opener) == 1
+    assert opener.opened == 0
+    assert f"refused: {started.id}: no approved sheet for {FLOW}" in log(root)
 
 
 @pytest.mark.spec(
