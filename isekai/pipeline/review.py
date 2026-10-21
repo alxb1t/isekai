@@ -189,8 +189,20 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
 
     The draft starts from the sheet the image was rendered under, newest or not,
     with a count of one and the image's seed, so an edit lands on the same
-    composition. Refused while a draft waits: that draft is the operator's.
+    composition. Refused as `refuse_revision` refuses.
     e.g. (run, f, 1, 1840266731) -> review/003.draft.json, seeds [1840266731]
+    """
+    refuse_revision(run, flow, version)
+    _, carried = _approval(run, flow, version, "revise the image again")
+    renders: Renders = {"count": 1, "seeds": [seed]}
+    return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
+
+
+def refuse_revision(run: Run, flow: str, version: int) -> None:
+    """Refuse a revision of approval `version` that `revise` could not write.
+
+    A waiting draft is the operator's, so a revision never replaces it. Reads
+    filenames alone, so a selection is checked whole before anything is written.
     """
     directory = run.directory(flow, REVIEW)
     waiting = current_draft(directory)
@@ -206,9 +218,6 @@ def revise(run: Run, flow: str, version: int, seed: int) -> Path:
             f"{run.id}: flow {flow} has no {copied.name} to revise from; restore "
             f"{copied}, then revise the image again"
         )
-    _, carried = _approval(run, flow, version, "revise the image again")
-    renders: Renders = {"count": 1, "seeds": [seed]}
-    return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
 
 
 def discard(run: Run, flow: str) -> Path:

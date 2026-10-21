@@ -12,6 +12,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - `review.revise` copies the approval an image was rendered under into the next draft, its seed listed, and
   `review.discard` deletes a waiting draft; approval refuses a draft that would only re-render its approval's
   images (0065 D1, D3, D4).
+- `isekai revise <image.png> …` checks every image first, then writes a revision for each or none, and
+  `isekai review --discard` deletes a flow's waiting draft (0065 D2, D3).
 
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 

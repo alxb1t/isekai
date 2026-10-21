@@ -4,6 +4,7 @@ The load-bearing assertion in this file is negative: after every path through
 this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 """
 
+import io
 import json
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from isekai.foundation.run import (
     open_run,
     versions,
 )
+from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import (
@@ -1222,3 +1225,74 @@ def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
         discard(run, FLOW)
 
     assert snapshot(run.directory(FLOW, "review")) == before
+
+
+def _image(run: Run, version: int, seed: int) -> Path:
+    """Write what a render leaves for `seed` under approval `version`."""
+    group = run.directory(FLOW, "outputs", f"{version:03d}")
+    group.mkdir(parents=True, exist_ok=True)
+    (group / f"{seed}.render.json").write_text("{}\n")
+    image = group / f"{seed}.png"
+    image.write_bytes(b"png")
+    return image
+
+
+def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:
+    """Run `isekai revise` on `images`, returning its status and its stderr."""
+    err = io.StringIO()
+    wired = Wiring(
+        reader=None,
+        tagger=None,
+        hosted_tagger=None,
+        client=None,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: pytest.fail("revise reads no field map"),
+        out=io.StringIO(),
+        err=err,
+    )
+    parsed = build_parser().parse_args(["revise", *map(str, images)])
+    return dispatch(parsed, wired), err.getvalue()
+
+
+def _second_run(run: Run, schema: Schema, vocabulary: Vocabulary) -> Run:
+    """Return another run beside `run`, with its own sheet for `FLOW`."""
+    photo = run.path.parent.parent / "uncle-bo.jpg"
+    photo.write_bytes(jpeg_bytes(1000, 800))
+    made = open_run(photo, run.path.parent)
+    caption(made, FakeReader(prose="Black hair, grey eyes."))
+    sheet(made, schema, vocabulary)
+    return made
+
+
+@pytest.mark.spec("cli:revise:every-image-is-revised")
+def test_the_verb_revises_each_image_in_its_own_run(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    other = _second_run(run, schema, vocabulary)
+    for each in (run, other):
+        _approved(each, schema, vocabulary, hair_silhouette=["long hair"])
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), _image(other, 1, 7))
+
+    assert (status, err) == (0, "")
+    for each, seed in ((run, SEED), (other, 7)):
+        draft = read(each.directory(FLOW, "review") / "002.draft.json", DRAFT_FILE)
+        assert draft["renders"] == {"count": 1, "seeds": [seed]}
+
+
+@pytest.mark.spec("cli:revise:one-refusal-writes-nothing")
+def test_one_refused_image_leaves_every_run_without_a_revision(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    other = _second_run(run, schema, vocabulary)
+    for each in (run, other):
+        _approved(each, schema, vocabulary, hair_silhouette=["long hair"])
+    assert review(other, FLOW, new_version=True) is not None
+    blocked = _image(other, 1, 7)
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), blocked)
+
+    assert status == 1
+    assert f"{blocked}" in err
+    assert "002.draft.json waiting" in err
+    assert versions(run.directory(FLOW, "review")) == [1]

@@ -6,7 +6,7 @@ carries `@pytest.mark.spec` with the key its task names.
 ## Progress
 
 - [x] 1 — Revise and discard
-- [ ] 2 — The verbs
+- [x] 2 — The verbs
 - [ ] 3 — The API
 - [ ] 4 — The UI
 - [ ] 5 — The cards and the docs
@@ -20,7 +20,7 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## 2 — The verbs
 
-- [ ] 2.1 Add the `revise` verb and `review --discard` to `isekai/interface/cli.py` per [D2](design.md#d2) and [D3](design.md#d3); bind every `cli:revise:*` key in `tests/test_review.py`.
+- [x] 2.1 Add the `revise` verb and `review --discard` to `isekai/interface/cli.py` per [D2](design.md#d2) and [D3](design.md#d3); bind every `cli:revise:*` key in `tests/test_review.py`.
   Verify: `uv run python -m isekai revise --help` exits 0, and `grep -c 'cli:revise:' tests/test_review.py` prints `2`.
 
 ## 3 — The API

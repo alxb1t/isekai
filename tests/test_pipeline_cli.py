@@ -50,6 +50,7 @@ EXPECTED_VERBS = (
     "sheet",
     "review",
     "approve",
+    "revise",
     "generate",
     "render",
     "show",
@@ -177,9 +178,10 @@ def test_the_verbs_are_the_ones_the_change_declares() -> None:
 @pytest.mark.parametrize("verb", EXPECTED_VERBS)
 def test_each_verb_is_reachable_as_a_subcommand(verb: str) -> None:
     # `compare` takes a batch directory, `render` its runs, `import` a batch and
-    # its files; `ui` takes nothing.
+    # its files, `revise` images; `ui` takes nothing.
     own = {
         "import": ["--batch", "batch", "photo.jpg"],
+        "revise": ["outputs/001/7.png"],
         "show": [],
         "ui": [],
         "compare": ["batch"],
