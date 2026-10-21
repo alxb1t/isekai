@@ -16,6 +16,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   by name, and each file is verified before it is committed (0062 D1, D2, D3).
 - `isekai assign --flow F <source…> [--remove]` ticks a flow as its empty directory in the run, and the hub's
   `POST /api/b/{batch}/assign` runs the same function; an untick never deletes work (0062 D4).
+- `tag`, `caption` and `sheet` take `--progress json`: a JSON line per item's start, end or refusal on stdout,
+  the prose on stderr, so a job reads a format meant for it (0062 D6).
 
 ### Changed
 

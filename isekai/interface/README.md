@@ -14,7 +14,7 @@ neither is privileged and neither goes through the other.
 
 | file | does |
 |---|---|
-| `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together; `import` and `assign` compose `pipeline/importing.py` and the run's own `assign` |
+| `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together, or with `--progress json` a JSON line per item; `import` and `assign` compose `pipeline/importing.py` and the run's own `assign` |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
 | `render.py` | the `render` verb: assembles every prompt, opens a GPU session through `boundary/gpu.py` under a ceiling watchdog, waits for the endpoint, runs `generate` per flow, and writes it all to the batch's log |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
@@ -31,8 +31,8 @@ at least once; a list of names cannot.
 
 | file | inside `isekai/` | outside |
 |---|---|---|
-| `cli.py` | `__main__.py` | `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_importing.py`, `tests/test_pipeline_cli.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
-| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/e2e/wiring.py`, `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_importing.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
+| `cli.py` | `__main__.py` | `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_importing.py`, `tests/test_pipeline_cli.py`, `tests/test_progress.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
+| `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/e2e/wiring.py`, `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_importing.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_progress.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
 | `render.py` | `cli.py` | `tests/test_render.py` |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py`, `tests/test_run_view.py` |
 | `compare_view.py` | `cli.py`, `render.py` | `tests/test_compare.py` |

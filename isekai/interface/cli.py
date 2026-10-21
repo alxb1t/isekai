@@ -41,12 +41,14 @@ with site-packages off the path.
 """
 
 import argparse
+import json
 import shlex
 import sys
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
-from typing import TypeVar
+from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
@@ -203,6 +205,14 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FLOW",
         help="copy this flow's latest approval under each --flow instead of a draft",
     )
+    # The job runner's channel: a line per item it can parse, the prose kept apart.
+    for name in ("caption", "tag", "sheet"):
+        made[name].add_argument(
+            "--progress",
+            choices=["json"],
+            default=None,
+            help="print a JSON line per item's start and end; prose goes to stderr",
+        )
     for name in ("caption", "tag", "sheet", "review"):
         made[name].add_argument(
             "--new-version",
@@ -579,6 +589,9 @@ def _per_item(
     """
     new_version = bool(getattr(args, "new_version", False))
     opening: list[Callable[[], LocalTagger]] = []
+    reporter = _Reporter(
+        wired.out, wired.err, getattr(args, "progress", None) == "json"
+    )
 
     @cache
     def vocabulary() -> Vocabulary:
@@ -625,7 +638,12 @@ def _per_item(
         if verb == "assign":
             _assign(identifier, bool(args.remove), wired, list(flows), collected)
             return
-        run = _run_for(identifier, wired)
+        try:
+            run = _run_for(identifier, wired)
+        except Refusal as unopened:
+            for name in flows:
+                reporter.item(identifier, name, verb, "refused", str(unopened))
+            raise
         if verb == "show":
             for line in report(run, wired.flows_dir):
                 print(line, file=wired.out)
@@ -641,7 +659,7 @@ def _per_item(
                 # artifacts records would be false.
                 reader = _seam(wired.reader, "reader", "reads the photograph")(flow)
                 _say(
-                    wired,
+                    reporter,
                     run,
                     "caption",
                     caption(
@@ -666,14 +684,14 @@ def _per_item(
                     written = tag_hosted(
                         run, name, tagger_for(flow), new_version=new_version
                     )
-                    _say(wired, run, "tags", written)
+                    _say(reporter, run, "tags", written)
 
                 # Each tagger's refusal is collected on its own, so neither costs
                 # the other its list. WD14 first: it is the sheet's input and
                 # reaches no network (D1).
                 steps: tuple[Callable[[], None], ...] = (
                     lambda: _say(
-                        wired,
+                        reporter,
                         run,
                         "wd14",
                         tag_wd14(run, name, tagger(flow), new_version=new_version),
@@ -699,13 +717,15 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(wired, run, "sheet", written)
+                _say(reporter, run, "sheet", written)
 
             step = sheet_flow
         elif verb == "review":
 
             def review_flow(name: str) -> None:
-                _say(wired, run, "review", review(run, name, new_version=new_version))
+                _say(
+                    reporter, run, "review", review(run, name, new_version=new_version)
+                )
 
             step = review_flow
         elif verb == "approve":
@@ -720,14 +740,32 @@ def _per_item(
                 )
                 for warning in warnings:
                     print(f"warning: {warning}", file=wired.err)
-                _say(wired, run, "approve", written)
+                _say(reporter, run, "approve", written)
 
             step = approve_flow
         else:
             raise Refusal(f"{verb!r} is not a stage this build runs")
+
+        def reported(name: str) -> None:
+            """Run `step` for one flow between its `start` and its end."""
+            reporter.item(run.id, name, verb, "start")
+            before = len(collected)
+            try:
+                step(name)
+            except Refusal as refused:
+                reporter.item(run.id, name, verb, "refused", str(refused))
+                raise
+            # `tag` collects each tagger's refusal rather than raising it.
+            if len(collected) > before:
+                reporter.item(
+                    run.id, name, verb, "refused", "; ".join(collected[before:])
+                )
+            else:
+                reporter.item(run.id, name, verb, "done")
+
         # Each flow's refusal is collected on its own, so one flow's does not cost
         # the input its other flows.
-        collected.extend(across(list(flows), step))
+        collected.extend(across(list(flows), reported))
 
     return work
 
@@ -844,12 +882,46 @@ def _generate(
     return refused + across(ready, render_one)
 
 
-def _say(wired: Wiring, run: Run, verb: str, written: Path | None) -> None:
+@dataclass(frozen=True)
+class _Reporter:
+    """Where a verb's lines go: prose to `out`, or with `progress` JSON to `out`.
+
+    e.g. {"run": "0d4b…_ada", "flow": "summon-anime-wai", "stage": "sheet",
+    "state": "done"}
+    """
+
+    out: TextIO
+    err: TextIO
+    progress: bool
+
+    def say(self, line: str) -> None:
+        """Print a line meant for a person: on stderr while JSON holds stdout."""
+        print(line, file=self.err if self.progress else self.out)
+
+    def item(
+        self, run: str, flow: str, stage: str, state: str, message: str | None = None
+    ) -> None:
+        """Print one item's `start`, `done` or `refused` line, when asked for JSON."""
+        if not self.progress:
+            return
+        line: dict[str, str] = {
+            "run": run,
+            "flow": flow,
+            "stage": stage,
+            "state": state,
+        }
+        if message is not None:
+            line["message"] = message
+        # Flushed: a job reads this from a pipe, line by line, as it happens.
+        print(json.dumps(line), file=self.out, flush=True)
+
+
+def _say(reporter: _Reporter, run: Run, verb: str, written: Path | None) -> None:
     """Report what a stage did, including that it was already complete."""
     if written is None:
-        print(f"{run.id}: {verb} is already complete", file=wired.out)
+        reporter.say(f"{run.id}: {verb} is already complete")
     else:
-        print(f"{run.id}: {verb} wrote {written.name}", file=wired.out)
+        reporter.say(f"{run.id}: {verb} wrote {written.name}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

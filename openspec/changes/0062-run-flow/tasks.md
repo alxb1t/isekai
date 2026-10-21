@@ -8,7 +8,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 - [x] 1 — The copy
 - [x] 2 — Import
 - [x] 3 — Assign and the offered flows
-- [ ] 4 — Progress
+- [x] 4 — Progress
 - [ ] 5 — The job and its stream
 - [ ] 6 — The sheet
 - [ ] 7 — The hub
@@ -51,9 +51,9 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 4 — Progress
 
-- [ ] 4.1 Add `--progress json` to `tag`, `caption` and `sheet` in `isekai/interface/cli.py`, through one reporter behind `_say`, per [D6](design.md#d6).
+- [x] 4.1 Add `--progress json` to `tag`, `caption` and `sheet` in `isekai/interface/cli.py`, through one reporter behind `_say`, per [D6](design.md#d6).
   Verify: `uv run python -m isekai tag --help` prints `--progress`.
-- [ ] 4.2 Add `tests/test_progress.py` binding every `cli:progress:*` key.
+- [x] 4.2 Add `tests/test_progress.py` binding every `cli:progress:*` key.
   Verify: `uv run pytest -q tests/test_progress.py` exits 0, and `grep -c 'cli:progress:' tests/test_progress.py` prints `3`.
 
 ## 5 — The job and its stream
