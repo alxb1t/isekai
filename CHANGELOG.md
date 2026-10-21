@@ -18,6 +18,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   `POST /api/b/{batch}/assign` runs the same function; an untick never deletes work (0062 D4).
 - `tag`, `caption` and `sheet` take `--progress json`: a JSON line per item's start, end or refusal on stdout,
   the prose on stderr, so a job reads a format meant for it (0062 D6).
+- Prepare runs as a job: `POST /api/b/{batch}/prepare` checks the model server answers, then runs `tag`,
+  `caption` and `sheet` as CLI children per flow; Stop and a server stop interrupt it (0062 D7).
+- `GET /events` streams a snapshot of the job slot and the batch's hub, then each change as a stage reports it;
+  the server sweeps import's leftover staging at start (0062 D1, D8).
 
 ### Changed
 

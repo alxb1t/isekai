@@ -249,6 +249,21 @@ def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:
     return _grid(folder, _suffixes(flows, flows_dir))
 
 
+def unprepared(grid: Hub) -> dict[str, list[str]]:
+    """Return, per flow, the runs of every assigned cell that has no sheet yet.
+
+    e.g. {"summon-anime-wai": ["0d4b7e6fb2a8_ada"], "conjure-anime-wai": []}
+    """
+    return {
+        flow: [
+            one.run.id
+            for one in grid.sources
+            if one.run is not None and one.cells[flow].stage in ("assigned", "tagged")
+        ]
+        for flow in grid.flows
+    }
+
+
 def source_file(folder: Path, name: str) -> Path:
     """Return the file under batch `folder`'s `sources/` named `name`, or refuse."""
     found = {path.name: path for path in _sources(folder)}.get(name)

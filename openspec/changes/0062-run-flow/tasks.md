@@ -9,7 +9,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 - [x] 2 — Import
 - [x] 3 — Assign and the offered flows
 - [x] 4 — Progress
-- [ ] 5 — The job and its stream
+- [x] 5 — The job and its stream
 - [ ] 6 — The sheet
 - [ ] 7 — The hub
 - [ ] 8 — The docs
@@ -58,13 +58,13 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 5 — The job and its stream
 
-- [ ] 5.1 Add `probe` to `isekai/boundary/ollama.py` and a `probe` field to `Wiring` in `isekai/interface/wiring.py`, with an answering double in `tests/e2e/wiring.py`, per [D7](design.md#d7).
+- [x] 5.1 Add `probe` to `isekai/boundary/ollama.py` and a `probe` field to `Wiring` in `isekai/interface/wiring.py`, with an answering double in `tests/e2e/wiring.py`, per [D7](design.md#d7).
   Verify: `grep -c 'def probe' isekai/boundary/ollama.py` prints `1`, and `grep -c 'probe=' tests/e2e/wiring.py` prints a number of at least `1`.
-- [ ] 5.2 Add `isekai/interface/ui/jobs.py` — one slot, Prepare's children, Stop, SIGINT on server stop — and its routes in `app.py`, per [D7](design.md#d7); `serve` in `isekai/interface/ui/__init__.py` calls `importing.sweep` before binding.
+- [x] 5.2 Add `isekai/interface/ui/jobs.py` — one slot, Prepare's children, Stop, SIGINT on server stop — and its routes in `app.py`, per [D7](design.md#d7); `serve` in `isekai/interface/ui/__init__.py` calls `importing.sweep` before binding.
   Verify: `uv run python -c "import isekai.interface.ui.jobs"` exits 0, and `grep -c 'sweep(' isekai/interface/ui/__init__.py` prints `1`.
-- [ ] 5.3 Add `GET /events` to `isekai/interface/ui/app.py` per [D8](design.md#d8).
+- [x] 5.3 Add `GET /events` to `isekai/interface/ui/app.py` per [D8](design.md#d8).
   Verify: `grep -c '"/events"' isekai/interface/ui/app.py` prints `1`.
-- [ ] 5.4 Add `tests/test_ui_jobs.py` binding `ui:prepare:one-job-at-a-time`, `ui:prepare:refused-when-ollama-does-not-answer`, `ui:prepare:stop-interrupts-the-job`, `ui:events:a-connection-starts-with-a-snapshot` and `ui:events:a-stages-report-reaches-the-stream`.
+- [x] 5.4 Add `tests/test_ui_jobs.py` binding `ui:prepare:one-job-at-a-time`, `ui:prepare:refused-when-ollama-does-not-answer`, `ui:prepare:stop-interrupts-the-job`, `ui:events:a-connection-starts-with-a-snapshot` and `ui:events:a-stages-report-reaches-the-stream`.
   Verify: `uv run pytest -q tests/test_ui_jobs.py` exits 0, and `grep -c 'ui:events:' tests/test_ui_jobs.py` prints `2`.
 
 ## 6 — The sheet

@@ -28,4 +28,5 @@ def fake(*, runs: Path) -> Wiring:
         runs_root=runs,
         rng=random.Random(0),
         err=io.StringIO(),
+        probe=lambda: None,
     )

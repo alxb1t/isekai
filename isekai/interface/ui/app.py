@@ -27,6 +27,8 @@ and `python -m isekai`'s import graph never reaches it at all.
 ```
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
+POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+GET  /events[?batch=]                              Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve
@@ -37,14 +39,15 @@ GET  anything else                                 the bundle's index.html
 
 import shlex
 import threading
-from collections.abc import Awaitable, Callable, Mapping, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
+from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, TypeGuard
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from isekai.foundation.artifacts import (
@@ -72,7 +75,8 @@ from isekai.foundation.run import (
     latest_artifact,
     open_run,
 )
-from isekai.interface.ui import library
+from isekai.interface.ui import events, library
+from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
@@ -179,7 +183,19 @@ def create_app(
     `flows` are the hub's columns, the flows the surface offers.
     `host` and `port` are the address every request is checked against.
     """
-    app = FastAPI(title="isekai", docs_url=None, redoc_url=None)
+    broadcast = events.Broadcast()
+    jobs = Jobs(broadcast, wired.probe)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        """Interrupt a running job and end every stream when the server stops."""
+        yield
+        jobs.shutdown()
+        broadcast.close()
+
+    app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
+    app.state.jobs = jobs
+    app.state.broadcast = broadcast
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
     shared = _Shared(wired)
@@ -241,21 +257,7 @@ def create_app(
         Read from the run directories on every request, so it follows a verb run
         in the terminal while the page is open.
         """
-        grid = library.hub(folder(batch), flows, wired.flows_dir)
-        return {
-            "batch": grid.name,
-            "flows": list(grid.flows),
-            "sources": [
-                {
-                    "name": one.name,
-                    "digest": one.digest,
-                    **_size(one.run),
-                    "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
-                    "carries": list(one.carries),
-                }
-                for one in grid.sources
-            ],
-        }
+        return _hub(library.hub(folder(batch), flows, wired.flows_dir))
 
     @app.post("/api/b/{batch}/assign")
     def post_assign(batch: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -290,6 +292,46 @@ def create_app(
             except Refusal as one:
                 refused.append(str(one))
         return {"cells": cells, "refused": refused}
+
+    @app.post("/api/b/{batch}/prepare")
+    def post_prepare(batch: str) -> dict[str, Any]:
+        """Start Prepare over every assigned cell with no sheet, as one job.
+
+        The local model server is asked first, so a job that could not run
+        starts nothing.
+        """
+        found = folder(batch)
+        grid = library.hub(found, flows, wired.flows_dir)
+        loaded = {flow: load_flow(flow, wired.flows_dir) for flow in flows}
+        steps = plan(
+            library.unprepared(grid), {flow: one.tagger for flow, one in loaded.items()}
+        )
+        cell = cell_event(found, grid, loaded)
+        return {"job": jobs.prepare(batch, found, steps, cell)}
+
+    @app.post("/api/job/stop")
+    def post_stop() -> dict[str, Any]:
+        """Interrupt the running stage; no later stage starts."""
+        return {"job": jobs.stop()}
+
+    @app.get("/events")
+    def read_events(batch: str | None = None) -> StreamingResponse:
+        """Stream the job slot and, for `batch`, its hub, then each change.
+
+        A reload or a second tab gets the whole truth at once.
+        """
+
+        def snapshot() -> dict[str, Any]:
+            found = {"job": jobs.slot()}
+            if batch is not None:
+                found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
+            return found
+
+        return StreamingResponse(
+            events.stream(broadcast, snapshot, batch=batch),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache"},
+        )
 
     @app.get("/api/tags")
     def read_tags(q: str = "", limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
@@ -513,6 +555,51 @@ class _Shared:
         return self._candidates[flow.id]
 
 
+def cell_event(
+    found: Path, grid: library.Hub, loaded: Mapping[str, Flow]
+) -> Callable[[Mapping[str, Any]], dict[str, Any] | None]:
+    """Return what turns a progress line into a `cell` event, its stage read from disk.
+
+    A line naming a run or a flow the job did not start reads None.
+    """
+    sources = {one.run.id: one.name for one in grid.sources if one.run}
+
+    def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
+        run_id, flow = str(line.get("run")), str(line.get("flow"))
+        if run_id not in sources or flow not in loaded:
+            return None
+        run = Run(run_id, found / library.RUNS / run_id)
+        return {
+            "batch": grid.name,
+            "source": sources[run_id],
+            "digest": run.digest,
+            "flow": flow,
+            "state": line.get("state"),
+            "message": line.get("message"),
+            "cell": asdict(library.stage(run, flow, loaded[flow].output_suffix)),
+        }
+
+    return cell
+
+
+def _hub(grid: library.Hub) -> dict[str, Any]:
+    """Describe a batch's grid as the page draws it."""
+    return {
+        "batch": grid.name,
+        "flows": list(grid.flows),
+        "sources": [
+            {
+                "name": one.name,
+                "digest": one.digest,
+                **_size(one.run),
+                "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
+                "carries": list(one.carries),
+            }
+            for one in grid.sources
+        ],
+    }
+
+
 def _flow(wired: Wiring, flow: str) -> Flow:
     """Return the tracked flow a URL names, refusing one this build does not track."""
     tracked = tracked_flows(wired.flows_dir)
@@ -710,4 +797,8 @@ def run(app: FastAPI, *, host: str, port: int) -> None:
     A thin wrapper so that `__init__.py` composes the surface without importing
     a web framework at module scope.
     """
-    uvicorn.run(app, host=host, port=port, log_level="warning")
+    # An open event stream never ends by itself, so a stop waits for it no more
+    # than a second before the job is interrupted and the streams closed.
+    uvicorn.run(
+        app, host=host, port=port, log_level="warning", timeout_graceful_shutdown=1
+    )

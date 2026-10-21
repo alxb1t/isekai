@@ -19,10 +19,12 @@ neither is privileged and neither goes through the other.
 | `render.py` | the `render` verb: assembles every prompt, opens a GPU session through `boundary/gpu.py` under a ceiling watchdog, waits for the endpoint, runs `generate` per flow, and writes it all to the batch's log |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the batch directory. Reads, decides nothing |
-| `ui/__init__.py` | the `ui` verb: opens the library `ISEKAI_LIBRARY` names, prints the address, serves until stopped |
+| `ui/__init__.py` | the `ui` verb: opens the library `ISEKAI_LIBRARY` names, sweeps import's staging, reads the offered flows, prints the address, serves until stopped |
 | `ui/library.py` | the library, its batches and each source × offered flow's stage, all read from folders, and each source's not-cleaned mark. **Imports no web framework**, which keeps it testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
-| `ui/app.py` | the endpoints — `GET /api/library`, `/api/b/{batch}/hub`, `POST /api/b/{batch}/assign`, `/api/b/{batch}/review/{digest}/{flow}` with `/photo`, `PUT …/draft`, `POST …/approve`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
+| `ui/jobs.py` | Prepare as a job: one slot, `tag` → `caption` → `sheet` run as CLI children per flow, a probe of the model server first, Stop and server stop sending SIGINT |
+| `ui/events.py` | the event stream: a snapshot on connect, then each `job` and `cell` change, to every open page |
+| `ui/app.py` | the endpoints — `GET /api/library`, `/api/b/{batch}/hub`, `POST /api/b/{batch}/assign`, `/api/b/{batch}/review/{digest}/{flow}` with `/photo`, `PUT …/draft`, `POST …/approve`, `POST /api/b/{batch}/prepare`, `POST /api/job/stop`, `GET /events`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
 
 ## Imported by
 
@@ -36,7 +38,7 @@ at least once; a list of names cannot.
 | `render.py` | `cli.py` | `tests/test_render.py` |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py`, `tests/test_run_view.py` |
 | `compare_view.py` | `cli.py`, `render.py` | `tests/test_compare.py` |
-| `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_library.py` |
+| `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
 > tests pin it.

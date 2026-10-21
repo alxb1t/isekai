@@ -22,6 +22,7 @@ free.
 from isekai.interface.ui import library
 from isekai.interface.ui.bundle import ensure_built
 from isekai.interface.wiring import Wiring, wiring_from
+from isekai.pipeline.importing import sweep
 
 HOST = "127.0.0.1"
 
@@ -34,6 +35,8 @@ def serve(wired: Wiring, *, port: int) -> int:
     would be publishing them to the network the operator happens to be on.
     """
     root = library.open_library(library.root())
+    # An import that did not end leaves only staging, which nothing reads again.
+    sweep(root)
     flows = library.offered(wired.flows_dir)
     bundle = ensure_built()
 
