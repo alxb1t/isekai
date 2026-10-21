@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from PIL import Image
 
 from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, open_run
@@ -37,6 +38,13 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
     "queue-moves": (("cid", (700, 1000)), ("dot", (710, 1000))),
     "queue-last": (("eve", (720, 1000)),),
     "queue-fails": (("fay", (730, 1000)),),
+}
+
+# A batch per hub test, its sources photographs with no run yet, so every test
+# owns the cells it ticks and prepares.
+FRESH: dict[str, tuple[str, ...]] = {
+    "hub-tick": ("tick",),
+    "hub-prepare": ("pick", "skip"),
 }
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
@@ -114,6 +122,11 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     for name, sources in QUEUES.items():
         (lib / name / "sources").mkdir(parents=True)
         queues[name] = tuple(_run(lib / name, one, size) for one, size in sources)
+    for name, fresh in FRESH.items():
+        (lib / name / "sources").mkdir(parents=True)
+        for index, one in enumerate(fresh):
+            image = Image.new("RGB", (640, 800 + index), (90, 60, 30 + index))
+            image.save(lib / name / "sources" / f"{one}.jpg", "JPEG")
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"

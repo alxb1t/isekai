@@ -5,11 +5,13 @@
    the twelve-character digest its identifier begins with. */
 
 import type {
+  Assigned,
   Budget,
   Committed,
   FieldCandidates,
   HubInfo,
   InputDetail,
+  JobSlot,
   LibraryInfo,
   TagMatches,
 } from './types'
@@ -57,6 +59,25 @@ export function library(): Promise<LibraryInfo> {
 
 export function hub(batch: string): Promise<HubInfo> {
   return get<HubInfo>(`/api/b/${encodeURIComponent(batch)}/hub`)
+}
+
+/* A tick or an untick, for each named source; an untick past assigned is refused
+   on its own, beside the cells that changed. */
+export function assign(
+  batch: string,
+  sources: string[],
+  flow: string,
+  remove: boolean,
+): Promise<Assigned> {
+  return send(`/api/b/${encodeURIComponent(batch)}/assign`, 'POST', { sources, flow, remove })
+}
+
+export function prepare(batch: string): Promise<{ job: JobSlot }> {
+  return send(`/api/b/${encodeURIComponent(batch)}/prepare`, 'POST', {})
+}
+
+export function stopJob(): Promise<{ job: JobSlot | null }> {
+  return send('/api/job/stop', 'POST', {})
 }
 
 /* The whole table for one flow, once, the first time the reference is opened.

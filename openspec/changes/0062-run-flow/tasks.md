@@ -11,7 +11,7 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 - [x] 4 — Progress
 - [x] 5 — The job and its stream
 - [x] 6 — The sheet
-- [ ] 7 — The hub
+- [x] 7 — The hub
 - [ ] 8 — The docs
 
 ## 1 — The copy
@@ -78,9 +78,9 @@ The copy, import, `assign`, progress, the job and its stream, the sheet, the hub
 
 ## 7 — The hub
 
-- [ ] 7.1 In `ui/src/views/Hub.vue`, add ticking, multi-select, the Prepare bar and live cells from `/events`, per [D10](design.md#d10) and the design spec's J2 and J8a.
+- [x] 7.1 In `ui/src/views/Hub.vue`, add ticking, multi-select, the Prepare bar and live cells from `/events`, per [D10](design.md#d10) and the design spec's J2 and J8a.
   Verify: `grep -c 'EventSource' ui/src/views/Hub.vue` prints a number of at least `1`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 7.2 Add `tests/e2e/test_prepare.py` binding `ui:hub:a-tick-assigns-the-flow`, and extend it with a step binding `ui:prepare:prepare-runs-the-assigned-cells`.
+- [x] 7.2 Add `tests/e2e/test_prepare.py` binding `ui:hub:a-tick-assigns-the-flow`, and extend it with a step binding `ui:prepare:prepare-runs-the-assigned-cells`.
   Verify: `uv run pytest -q tests/e2e/test_prepare.py` exits 0, and `grep -c -E 'ui:hub:a-tick-assigns-the-flow|ui:prepare:prepare-runs-the-assigned-cells' tests/e2e/test_prepare.py` prints `2`.
 
 ## 8 — The docs

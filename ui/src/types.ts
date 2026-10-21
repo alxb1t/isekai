@@ -170,3 +170,30 @@ export interface Committed {
   skipped: string[]
   left_out: string[]
 }
+
+/* The one job slot: Prepare running, or the last one's end. */
+export interface JobSlot {
+  kind: 'prepare'
+  batch: string
+  state: 'running' | 'done' | 'stopped'
+  flow: string | null
+  stage: string | null
+}
+
+/* A stage's report about one cell, its stage read again from disk. */
+export interface CellEvent {
+  batch: string
+  source: string
+  digest: string
+  flow: string
+  stage: string
+  state: 'start' | 'done' | 'refused'
+  message: string | null
+  cell: HubCell
+}
+
+export interface Assigned {
+  cells: Record<string, HubCell>
+  /* Each refused source's refusal, by its name. */
+  refused: Record<string, string>
+}

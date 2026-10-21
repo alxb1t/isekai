@@ -285,7 +285,7 @@ def create_app(
         suffix = load_flow(flow, wired.flows_dir).output_suffix
         runs = found / library.RUNS
         cells: dict[str, Any] = {}
-        refused: list[str] = []
+        refused: dict[str, str] = {}
         for name in names:
             try:
                 source = library.source_file(found, name)
@@ -295,7 +295,7 @@ def create_app(
                 cell = library.stage(run, flow, suffix) if run else library.Cell(None)
                 cells[name] = asdict(cell)
             except Refusal as one:
-                refused.append(str(one))
+                refused[name] = str(one)
         return {"cells": cells, "refused": refused}
 
     def staging(staged: str) -> Path:
@@ -643,6 +643,7 @@ def cell_event(
             "source": sources[run_id],
             "digest": run.digest,
             "flow": flow,
+            "stage": line.get("stage"),
             "state": line.get("state"),
             "message": line.get("message"),
             "cell": asdict(library.stage(run, flow, loaded[flow].output_suffix)),

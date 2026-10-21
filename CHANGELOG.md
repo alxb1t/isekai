@@ -24,6 +24,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   the server sweeps import's leftover staging at start (0062 D1, D8).
 - New batch on Home and Add sources on the hub open the import sheet: files chosen in the dialog upload one
   request each with a bar each, show converted, refused or not cleaned, and Import waits for every file (0062 D9).
+- The hub ticks: space or a click assigns a flow, ⇧↑↓ selects rows for a column, and the Prepare bar runs what
+  changed, its cells moving live from `/events`; a prepared tick stays (0062 D10).
 
 ### Changed
 

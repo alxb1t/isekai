@@ -295,8 +295,7 @@ def test_unticking_a_cell_past_assigned_is_refused_and_changes_nothing(
         json={"sources": ["ada.jpg"], "flow": FLOW, "remove": True},
     ).json()
 
-    (refusal,) = answered["refused"]
-    assert f"{made.id}: {FLOW} holds work" in refusal
+    assert f"{made.id}: {FLOW} holds work" in answered["refused"]["ada.jpg"]
     assert snapshot(made.path) == before
 
 
