@@ -40,6 +40,7 @@ from isekai.foundation.artifacts import (
     PROMPT_FILE,
     RENDER_FILE,
     SEED_BITS,
+    SIDECAR,
     Failure,
     Prompt,
     Renders,
@@ -61,15 +62,16 @@ from isekai.foundation.flow import (
 )
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
-    APPROVED,
     OUTPUTS,
     PROMPTS,
     REVIEW,
     Run,
     across,
+    approval_of,
     approved_versions,
     artifact_name,
     check_budget,
+    group_of,
     record_failure,
     stage_command,
 )
@@ -171,16 +173,6 @@ def _approved_renders(approval: Path) -> Renders:
     """Return an approval's `renders`; only a hand repairs a damaged one."""
     remedy = f"restore it in {approval} by hand"
     return renders_of(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
-
-
-def approval_of(run: Run, flow: str, version: int) -> Path:
-    """Return the path of `flow`'s approval numbered `version` in `run`."""
-    return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
-
-
-def group_of(run: Run, flow: str, version: int) -> Path:
-    """Return the outputs group the approval numbered `version` renders into."""
-    return run.directory(flow, OUTPUTS, f"{version:03d}")
 
 
 def image_of(run: Run, flow: Flow, version: int, seed: int) -> Path:
@@ -299,10 +291,6 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
         assembled[flow] = prompt_artifact(run, flows[flow], flows[flow].schema)
 
     return assembled, refused + across(ready, assemble_one)
-
-
-# A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
-SIDECAR = ".render.json"
 
 
 def is_render(path: Path, suffix: str) -> bool:

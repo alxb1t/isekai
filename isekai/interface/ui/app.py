@@ -13,10 +13,10 @@ response. The pipeline owns what a valid sheet is, each run file's shape and its
 filename, when approval is legal, and what a token costs.
 
 **A run directory is written only through the functions that own it**: stage
-③'s `review()` when a sheet is opened, `save_draft()` on autosave and
-`approve()` on the button, and the run's own `open_run()` and `assign()` on a
-tick. Nothing here builds an artifact body or an artifact filename, and
-`tests/test_ui.py`'s grep is what keeps it so.
+③'s `review()` when a sheet is opened, `save_draft()` on autosave,
+`approve()` on the button, `revise()` and `discard()` on theirs, and the run's
+own `open_run()` and `assign()` on a tick. Nothing here builds an artifact
+body or an artifact filename, and `tests/test_ui.py`'s grep is what keeps it so.
 
 **uvicorn is imported here too, and not in `__init__.py`.** `serve()` there
 calls this module's `run()` instead, so the server is reached from this one file
@@ -35,9 +35,10 @@ DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
 GET  /events[?batch=|?staging=]                    Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
-POST /api/b/{batch}/review/{digest}/{flow}/approve
+POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
+POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
-     and its /image and /thumb
+     and its /image, /thumb and /compare
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -64,9 +65,11 @@ from isekai.foundation.artifacts import (
     CAPTION_FILE,
     DRAFT_FILE,
     ONE_RENDER,
+    SEED_RANGE,
     TAGS_FILE,
     WD14_FILE,
     Renders,
+    ReviewApproved,
     read,
     renders_of,
     require,
@@ -81,9 +84,11 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    approval_of,
     approved_versions,
     assign,
     find_run,
+    is_version,
     latest_artifact,
     open_run,
     stage_command,
@@ -94,13 +99,18 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import approval_of, image_of
+from isekai.pipeline.generate import image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
+    Revision,
     TokenBudget,
     approve,
+    came_from,
     current_draft,
+    discard,
+    refuse_revisions,
     review,
+    revise,
     save_draft,
     token_budget,
 )
@@ -577,6 +587,7 @@ def create_app(
         state = review_state(one.directory(REVIEW))
         fields: dict[str, list[str]] = {}
         renders = ONE_RENDER
+        revision = None
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
             # refuses the same damage, so only a hand repairs it.
@@ -589,6 +600,7 @@ def create_app(
             body = read(draft, DRAFT_FILE)
             fields = _fields(draft, body, remedy)
             renders = renders_of(draft, body, remedy)
+            revision = _revision(one, body, renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
@@ -613,6 +625,9 @@ def create_app(
             # Seeds as decimal strings: a 64-bit seed is past what a JavaScript
             # number holds exactly.
             "renders": _renders_out(renders),
+            # The approval a draft was copied from, its fields and the image
+            # being revised; null for a draft of a sheet.
+            "revision": revision,
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
             "readonly": state == "approved",
@@ -692,6 +707,65 @@ def create_app(
             "at": _saved(written),
         }
 
+    @app.post("/api/b/{batch}/review/{digest}/{flow}/discard")
+    def post_discard(
+        batch: str, digest: str, flow: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Delete the waiting draft, as `review --discard` does; an approval refuses.
+
+        **It states the draft update's precondition**, so a page deletes only the
+        draft it last read, never one another tab has since edited.
+        """
+        one = held(batch, digest, flow)
+        with _DRAFT_UPDATE:
+            _precondition(one, payload or {}, "discard again")
+            gone = discard(one.run, one.flow.id)
+        return {"discarded": gone.name}
+
+    @app.post("/api/b/{batch}/revise", response_model=None)
+    def post_revise(
+        batch: str, payload: dict[str, Any]
+    ) -> dict[str, Any] | JSONResponse:
+        """Write a revision for every image named, or, when any is refused, none.
+
+        A refusal answers each image with its own refusal, or null where it could
+        be revised, so the page can offer to deselect the rest.
+        """
+        found = folder(batch)
+        named = _images(payload)
+        answers: list[str | None] = []
+        located: list[tuple[Path, Revision]] = []
+        for digest, flow, version, seed in named:
+            try:
+                # A flow this build does not track names no directory of a run.
+                one = offered(flow)
+                run = library.run_named(found, digest)
+                image = image_of(run, one, version, seed)
+                located.append((image, (run, flow, version, seed)))
+                answers.append(None)
+            except Refusal as refused:
+                answers.append(str(refused))
+        with _DRAFT_UPDATE:
+            # Each image the batch holds takes its answer from the review stage.
+            checked = iter(refuse_revisions(located))
+            answers = [next(checked) if a is None else a for a in answers]
+            if any(answer is not None for answer in answers):
+                return JSONResponse(
+                    {
+                        "refusal": "; ".join(a for a in answers if a is not None),
+                        "images": [
+                            {**_image_out(*one), "refusal": answer}
+                            for one, answer in zip(named, answers, strict=True)
+                        ],
+                    },
+                    REFUSED,
+                )
+            drafts = [
+                {**_image_out(*one), "draft": revise(*revision).name}
+                for one, (_, revision) in zip(named, located, strict=True)
+            ]
+        return {"drafts": drafts}
+
     @app.get("/api/b/{batch}/renders")
     def read_renders(batch: str) -> dict[str, Any]:
         """Return each source's images by offered flow, approvals newest first."""
@@ -740,16 +814,45 @@ def create_app(
         batch: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
         """Return one render's large view: the approval's filled fields beside it."""
-        _, _, approval = rendered(batch, digest, flow, version, seed)
-        remedy = f"restore it in {approval} by hand, then reload the page"
-        body = read(approval, APPROVED_FILE, remedy=remedy)
-        fields = _fields(approval, body, remedy)
+        run, _, approval = rendered(batch, digest, flow, version, seed)
+        _, fields = _approved(approval)
+        number = _version(version)
+        suffix = offered(flow).output_suffix
         return {
             "flow": flow,
-            "version": _version(version),
+            "version": number,
             "seed": str(seed),
             "fields": {name: tags for name, tags in fields.items() if tags},
             "approved_at": _saved(approval),
+            # The newest older version that rendered this seed, or null.
+            "compare": library.paired(run, flow, number, seed, suffix),
+        }
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/compare")
+    def read_compare(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> dict[str, Any]:
+        """Return a seed's image under this version beside the newest older one."""
+        run, _, after = rendered(batch, digest, flow, version, seed)
+        number = _version(version)
+        one = offered(flow)
+        older = library.paired(run, flow, number, seed, one.output_suffix)
+        if older is None:
+            raise Refusal(
+                f"v{number} · {seed}: no older version of {flow} rendered this seed, "
+                "so there is nothing to compare; go back to its large view"
+            )
+        now, now_fields = _side(one, number, after)
+        was, was_fields = _side(one, older, approval_of(run, flow, older))
+        return {
+            "seed": str(seed),
+            "before": was,
+            "after": now,
+            "changed": [
+                {"field": name, "before": was_fields[name], "after": now_fields[name]}
+                for name in one.schema.names
+                if was_fields[name] != now_fields[name]
+            ],
         }
 
     @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/image")
@@ -866,6 +969,93 @@ def cell_event(
     return cell
 
 
+def _approved(approval: Path) -> tuple[ReviewApproved, dict[str, list[str]]]:
+    """Read an approval the page shows, and its fields; only a hand repairs one."""
+    remedy = f"restore it in {approval} by hand, then reload the page"
+    body = read(approval, APPROVED_FILE, remedy=remedy)
+    return body, _fields(approval, body, remedy)
+
+
+def _revision(
+    one: Held, body: Mapping[str, Any], renders: Renders
+) -> dict[str, Any] | None:
+    """Describe the approval a draft was copied from, and the image it revises.
+
+    The image is the first listed seed rendered under that approval, or null.
+    e.g. from 1, seeds [7], outputs/001/7.png there -> {"version": 1, "seed": "7", …}
+    """
+    version = came_from(body)
+    if version is None:
+        return None
+    approval = approval_of(one.run, one.flow.id, version)
+    if not approval.is_file():
+        return None
+    seed = next(
+        (
+            seed
+            for seed in renders["seeds"]
+            if image_of(one.run, one.flow, version, seed).is_file()
+        ),
+        None,
+    )
+    return {
+        "version": version,
+        "seed": None if seed is None else str(seed),
+        "fields": _approved(approval)[1],
+    }
+
+
+def _side(
+    flow: Flow, version: int, approval: Path
+) -> tuple[dict[str, Any], dict[str, list[str]]]:
+    """Return one side of a comparison as the page shows it, and every field."""
+    body, fields = _approved(approval)
+    remedy = f"restore it in {approval} by hand, then reload the page"
+    for name in flow.schema.names:
+        fields.setdefault(name, [])
+    return {
+        "version": version,
+        "approved_at": _saved(approval),
+        "renders": _renders_out(renders_of(approval, body, remedy)),
+        "tokens": token_budget(fields, flow.schema, flow).total,
+    }, fields
+
+
+def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
+    """Return a revision's images, refusing a list that is not of rendered images.
+
+    e.g. `{"images": [{"digest": "0d4b…", "flow": "f", "version": 1, "seed": "7"}]}`
+         -> `[("0d4b…", "f", 1, 7)]`
+    """
+    images = payload.get("images")
+    fix = (
+        "send each image's digest, flow, version and decimal seed -- nothing was "
+        "written"
+    )
+    if not isinstance(images, list) or not images:
+        raise Refusal(f"the revision names no images; {fix}")
+    named = []
+    for image in images:
+        if not (
+            isinstance(image, dict)
+            and isinstance(image.get("digest"), str)
+            and isinstance(image.get("flow"), str)
+            and _numbered(image.get("version"))
+            and isinstance(image.get("seed"), str)
+            and _seed_of(image["seed"])
+        ):
+            raise Refusal(f"the revision's image {image!r} is not one; {fix}")
+        named.append(
+            (image["digest"], image["flow"], image["version"], int(image["seed"]))
+        )
+    return named
+
+
+def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
+    """Describe an image of a revision, its seed a decimal string."""
+    return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
+
+
 def _version_out(version: library.Version) -> dict[str, Any]:
     """Describe an approval's version, each seed a decimal string as `renders` is."""
     return {
@@ -878,6 +1068,30 @@ def _version_out(version: library.Version) -> dict[str, Any]:
 def _decimal(seeds: Sequence[int]) -> list[str]:
     """Return seeds as decimal strings: a 64-bit seed is past a page's number."""
     return [str(seed) for seed in seeds]
+
+
+def _numbered(value: object) -> TypeGuard[int]:
+    """Return whether a request's value is a version a run's file names can spell.
+
+    e.g. 2 -> True, 1000 -> False
+    """
+    return _whole(value) and is_version(value)
+
+
+# The most digits a seed is spelled in, so a longer one is refused unread.
+_SEED_DIGITS = len(str(SEED_RANGE[-1]))
+
+
+def _seed_of(text: str) -> bool:
+    """Return whether a request's text is a decimal seed a render can draw.
+
+    e.g. "1840266731" -> True, "9" * 300 -> False
+    """
+    return (
+        len(text) <= _SEED_DIGITS
+        and _DECIMAL.fullmatch(text) is not None
+        and int(text) in SEED_RANGE
+    )
 
 
 def _whole(value: object) -> TypeGuard[int]:
@@ -1135,8 +1349,12 @@ def _renders_out(renders: Renders) -> dict[str, Any]:
     }
 
 
-def _precondition(one: Held, payload: Mapping[str, Any]) -> None:
-    """Refuse an update or an approval written against a draft that has since moved.
+def _precondition(
+    one: Held, payload: Mapping[str, Any], again: str = "make the correction again"
+) -> None:
+    """Refuse an update, an approval or a discard against a draft that has moved.
+
+    `again` is what the page does once it has read the draft on disk.
 
     **`st_mtime` is the precondition because nothing else exists.** The draft
     carries no timestamp, no revision counter and no digest, and adding one
@@ -1153,7 +1371,7 @@ def _precondition(one: Held, payload: Mapping[str, Any]) -> None:
         raise Refusal(
             f"{draft.name} changed since this page last read it; another tab or "
             "another save got there first -- reload the input to see what is on "
-            "disk, then make the correction again"
+            f"disk, then {again}"
         )
 
 

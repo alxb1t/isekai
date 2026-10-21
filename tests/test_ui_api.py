@@ -30,7 +30,6 @@ import random
 import shlex
 import shutil
 import threading
-import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -63,8 +62,10 @@ from isekai.foundation.run import (  # noqa: E402
     TAGS,
     WD14,
     Run,
+    approval_of,
     latest_artifact,
     open_run,
+    versions,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
@@ -76,12 +77,13 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
-from isekai.pipeline.generate import approval_of, prepare  # noqa: E402
+from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
     approve,
     review,
+    save_draft,
 )
 from isekai.pipeline.tagging import (  # noqa: E402
     FakeTagger,
@@ -628,6 +630,89 @@ def test_an_approval_written_against_a_stale_draft_is_refused(
     assert stale.status_code == 409
     assert "changed since this page last read it" in stale.json()["refusal"]
     assert not list(made.directory(FLOW, REVIEW).glob("*.approved.json"))
+
+
+@pytest.mark.spec("ui:draft-update:a-stale-discard-is-refused")
+def test_a_discard_written_against_a_stale_draft_is_refused(
+    client: TestClient, made: Run
+) -> None:
+    # Another tab moved the draft after this page read it, so this page's
+    # discard would delete edits it never showed.
+    body = client.get(_at(made)).json()
+    fields, saved = body["fields"], body["saved"]
+    moved = client.put(_at(made, "/draft"), json={"fields": fields, "saved": saved})
+    assert moved.json()["saved"] != saved
+
+    stale = client.post(_at(made, "/discard"), json={"saved": saved})
+
+    assert stale.status_code == 409
+    assert "changed since this page last read it" in stale.json()["refusal"]
+    assert stale.json()["refusal"].endswith("then discard again")
+    assert (made.directory(FLOW, REVIEW) / "001.draft.json").is_file()
+
+
+@pytest.mark.spec("ui:revise:an-untracked-flow-refuses-its-image")
+def test_a_revision_of_an_untracked_flow_is_refused_and_nothing_is_written(
+    client: TestClient, made: Run
+) -> None:
+    _approved(client, made)
+    group = made.directory(FLOW, "outputs", "001")
+    group.mkdir(parents=True)
+    (group / "7.render.json").write_text("{}\n")
+    image = {"digest": made.digest, "version": 1, "seed": "7"}
+    before = snapshot(made.path)
+
+    answered = client.post(
+        f"/api/b/{BATCH}/revise",
+        json={"images": [{**image, "flow": FLOW}, {**image, "flow": "nope"}]},
+    )
+
+    assert answered.status_code == 409
+    tracked, untracked = answered.json()["images"]
+    assert tracked["refusal"] is None
+    assert untracked["refusal"].startswith("nope: not a flow this build tracks")
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:revise:an-image-no-run-can-hold-is-refused")
+@pytest.mark.parametrize(
+    ("version", "seed"), [(10**300, "7"), (1, "9" * 300)], ids=["version", "seed"]
+)
+def test_a_revision_of_a_version_or_seed_no_run_can_hold_is_refused(
+    client: TestClient, made: Run, version: int, seed: str
+) -> None:
+    # Spelled as a file name, either number is longer than the system allows.
+    _approved(client, made)
+    before = snapshot(made.path)
+
+    answered = client.post(
+        f"/api/b/{BATCH}/revise",
+        json={
+            "images": [
+                {"digest": made.digest, "flow": FLOW, "version": version, "seed": seed}
+            ]
+        },
+    )
+
+    assert answered.status_code == 409
+    assert "is not one; send each image's digest" in answered.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:revise:a-discard-deletes-the-draft-the-page-read")
+def test_a_discard_stating_the_draft_on_disk_deletes_it_and_no_approval(
+    client: TestClient, made: Run
+) -> None:
+    approved = _approved(client, made)
+    frozen = approved.read_bytes()
+    review(made, FLOW, new_version=True)
+    saved = client.get(_at(made)).json()["saved"]
+
+    answered = client.post(_at(made, "/discard"), json={"saved": saved})
+
+    assert answered.json() == {"discarded": "002.draft.json"}
+    assert versions(made.directory(FLOW, REVIEW)) == [1]
+    assert approved.read_bytes() == frozen
 
 
 @pytest.mark.spec("ui:draft-update:no-precondition-is-accepted")
@@ -1352,6 +1437,80 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     assert older.name in damaged["damaged"]
 
 
+def _approved_again(
+    made: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    renders: Renders | None = None,
+    **fields: list[str],
+) -> None:
+    """Open the next draft of `made`, change `fields` and `renders`, and approve it."""
+    draft = review(made, FLOW, new_version=True)
+    assert draft is not None
+    held = read(draft, DRAFT_FILE)["fields"]
+    save_draft(made, FLOW, {**held, **fields}, renders)
+    approve(made, FLOW, schema, vocabulary)
+
+
+@pytest.mark.spec("ui:compare:a-version-is-named-by-what-changed")
+def test_a_version_is_headed_a_revision_or_a_re_roll_of_the_one_it_came_from(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [5]})
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders").json()
+
+    (source,) = body["sources"]
+    assert [
+        (one["version"], one["came_from"], one["kind"]) for one in source["cells"][FLOW]
+    ] == [(3, 2, "re-roll"), (2, 1, "revision"), (1, None, None)]
+
+
+@pytest.mark.spec("ui:compare:a-seed-pairs-with-its-newest-older-version")
+def test_a_seed_rendered_under_three_versions_compares_the_third_with_the_second(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    flow = load_flow(FLOW)
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    _source(made)
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+
+    def rendered() -> None:
+        prepare(made, {FLOW: flow})
+        assert [one.seed for one in render(made, flow, comfy, seeds=[7], poll=0)] == [7]
+
+    rendered()
+    _approved_again(made, schema, vocabulary)
+    rendered()
+    _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    rendered()
+    client = _client(wired, made, tmp_path, drafted=False)
+    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v3/7"
+
+    view = client.get(large).json()
+    pair = client.get(f"{large}/compare").json()
+
+    assert view["compare"] == 2
+    assert (pair["before"]["version"], pair["after"]["version"]) == (2, 3)
+    assert [(one["field"], one["after"]) for one in pair["changed"]] == [
+        ("clothes", ["collared shirt"])
+    ]
+
+
 @pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
 def test_a_seed_of_digits_outside_ascii_is_refused_naming_the_seeds(
     client: TestClient, made: Run
@@ -1464,25 +1623,42 @@ def test_an_upload_is_answered_before_it_is_read_and_files_are_read_in_turn(
 
 @pytest.mark.spec("ui:sheet:the-stream-reports-each-files-reading")
 def test_the_imports_stream_reports_a_file_waiting_converting_then_converted(
-    client: TestClient,
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     broadcast = _broadcast(client)
     staged = client.post("/api/staging").json()["id"]
     other = client.post("/api/staging").json()["id"]
     feed = broadcast.subscribe()
+    # The snapshot is read before its frame is made, so nothing uploads first.
+    snapshotted = threading.Event()
+    framed = events.frame
+
+    def frame(kind: str, data: dict[str, Any]) -> str:
+        if kind == "snapshot":
+            snapshotted.set()
+        return framed(kind, data)
+
+    monkeypatch.setattr(events, "frame", frame)
+    failures: list[BaseException] = []
 
     def upload_once_open() -> None:
-        deadline = time.monotonic() + WAIT
-        while len(broadcast._queues) < 2 and time.monotonic() < deadline:
-            time.sleep(0.01)
-        _upload(client, staged, "plain.heic", HEIC.read_bytes())
-        _upload(client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30)))
-        _until_read(feed, staged, {"plain.heic"})
-        _until_read(feed, other, {"elsewhere.jpg"})
-        broadcast.close()
+        try:
+            assert snapshotted.wait(WAIT), "the stream framed no snapshot"
+            _upload(client, staged, "plain.heic", HEIC.read_bytes())
+            _upload(client, other, "elsewhere.jpg", photo_jpeg((9, 9, 9), (40, 30)))
+            _until_read(feed, staged, {"plain.heic"})
+            _until_read(feed, other, {"elsewhere.jpg"})
+        except BaseException as failed:  # re-raised on the test's own thread
+            failures.append(failed)
+        finally:
+            broadcast.close()
 
-    threading.Thread(target=upload_once_open, daemon=True).start()
+    helper = threading.Thread(target=upload_once_open, daemon=True)
+    helper.start()
     body = client.get(f"/events?staging={staged}").text
+    helper.join(WAIT)
+    if failures:
+        raise failures[0]
 
     frames = [
         (lines[0].removeprefix("event: "), json.loads(lines[1].removeprefix("data: ")))

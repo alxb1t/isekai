@@ -9,6 +9,7 @@ import type {
   Billing,
   Budget,
   Committed,
+  Comparison,
   FieldCandidates,
   HubInfo,
   InputDetail,
@@ -18,6 +19,9 @@ import type {
   RenderDetail,
   Renders,
   RendersInfo,
+  ReviseRefused,
+  RevisedDraft,
+  RevisedImage,
   TagMatches,
 } from './types'
 
@@ -31,10 +35,16 @@ export interface Place {
 /* One place where a `Refusal` stops being HTTP and becomes an error carrying the
    pipeline's own string. `app.py` answers every refusal the same way, so this
    unwraps it the same way for every verb. */
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  url: string,
+  init?: RequestInit,
+  answers?: (body: object) => boolean,
+): Promise<T> {
   const response = await fetch(url, init)
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { refusal?: string }
+    // A refusal that answers the request, as a revision's per-image one does.
+    if (answers?.(body)) return body as T
     throw new Error(body.refusal ?? `${url} answered ${response.status}`)
   }
   return (await response.json()) as T
@@ -44,13 +54,18 @@ function get<T>(url: string): Promise<T> {
   return request<T>(url)
 }
 
-function send<T>(url: string, method: string, body: unknown, init: RequestInit = {}): Promise<T> {
-  return request<T>(url, {
-    ...init,
-    method,
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
+function send<T>(
+  url: string,
+  method: string,
+  body: unknown,
+  init: RequestInit = {},
+  answers?: (body: object) => boolean,
+): Promise<T> {
+  return request<T>(
+    url,
+    { ...init, method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
+    answers,
+  )
 }
 
 export function tags(fragment: string, limit: number): Promise<TagMatches> {
@@ -156,6 +171,24 @@ export function approve(
   return send(`${at(place)}/approve`, 'POST', { saved })
 }
 
+/* Deletes the waiting draft, as `review --discard` does; an approval refuses.
+   `saved` is the draft's precondition, so the page deletes only the draft it
+   last read: one another tab moved since answers 409. */
+export function discardDraft(place: Place, saved: number | null): Promise<{ discarded: string }> {
+  return send(`${at(place)}/discard`, 'POST', { saved })
+}
+
+/* Every image's draft, or none: a refusal answers each image, and is returned
+   rather than thrown so the page can offer to deselect the refused. */
+export function revise(
+  batch: string,
+  images: RevisedImage[],
+): Promise<{ drafts: RevisedDraft[] } | ReviseRefused> {
+  return send(`/api/b/${encodeURIComponent(batch)}/revise`, 'POST', { images }, {}, (body) =>
+    'images' in body,
+  )
+}
+
 export function photoUrl(place: Place): string {
   return `${at(place)}/photo`
 }
@@ -216,4 +249,8 @@ export function imageAt(place: RenderPlace): string {
 
 export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
   return get<RenderDetail>(renderAt(place))
+}
+
+export function comparison(place: RenderPlace): Promise<Comparison> {
+  return get<Comparison>(`${renderAt(place)}/compare`)
 }

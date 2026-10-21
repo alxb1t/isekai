@@ -4,6 +4,7 @@ The load-bearing assertion in this file is negative: after every path through
 this stage, `<flow>/sheets/` is byte-identical to what stage (2) wrote.
 """
 
+import io
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    Renders,
     read,
     renders_of,
 )
@@ -24,14 +26,18 @@ from isekai.foundation.run import (
     open_run,
     versions,
 )
+from isekai.interface.cli import build_parser, dispatch
+from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prompt_artifact
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     approve,
     current_draft,
+    discard,
     estimate_tokens,
     review,
+    revise,
     save_draft,
     state,
     token_budget,
@@ -1104,3 +1110,217 @@ def test_a_seed_out_of_range_refuses_approval_naming_the_seed(
     assert f"renders seed {seed} is outside" in str(refused.value)
     assert draft.exists()
     assert approved_versions(run.directory(FLOW, "review")) == []
+
+
+# --- revise and discard -------------------------------------------------------
+
+SEED = 1840266731
+
+
+def _approved(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    renders: Renders | None = None,
+    **fields: list[str],
+) -> Path:
+    """Open the next draft, edit it, save `renders` if given, and approve it."""
+    draft = review(run, FLOW, new_version=True)
+    assert draft is not None
+    _edit(draft, **fields)
+    if renders is not None:
+        save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], renders)
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    return approved
+
+
+@pytest.mark.spec("review:revise:a-revision-copies-the-images-approval")
+def test_a_revision_copies_the_images_approval_and_keeps_its_seed(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    first = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    _approved(run, schema, vocabulary, clothes=["collared shirt"])
+
+    _image(run, 1, SEED)
+    draft = revise(run, FLOW, 1, SEED)
+
+    assert draft.name == "003.draft.json"
+    body = read(draft, DRAFT_FILE)
+    assert body["fields"] == read(first, APPROVED_FILE)["fields"]
+    assert body["producer"] == {
+        "implementation": "review",
+        "from": 1,
+        "source": "review",
+    }
+    assert body["renders"] == {"count": 1, "seeds": [SEED]}
+
+
+@pytest.mark.spec("review:revise:a-waiting-draft-refuses")
+def test_a_waiting_draft_refuses_a_revision_and_nothing_is_written(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    assert review(run, FLOW, new_version=True) is not None
+    before = snapshot(run.directory(FLOW, "review"))
+
+    with pytest.raises(Refusal, match="002.draft.json waiting"):
+        revise(run, FLOW, 1, SEED)
+
+    assert snapshot(run.directory(FLOW, "review")) == before
+
+
+@pytest.mark.spec("review:revise:an-unchanged-revision-is-refused")
+@pytest.mark.parametrize("listed", [[SEED], []], ids=["listed", "drawn-and-rendered"])
+def test_an_unchanged_revision_is_refused_naming_the_images_it_would_reproduce(
+    run: Run, schema: Schema, vocabulary: Vocabulary, listed: list[int]
+) -> None:
+    # Drawn: the approval lists no seed, and the revised image is one it drew.
+    _approved(run, schema, vocabulary, {"count": 1, "seeds": listed})
+    _image(run, 1, SEED)
+    draft = revise(run, FLOW, 1, SEED)
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert f"seeds {SEED}," in str(refused.value)
+    assert f"{run.id}/{FLOW}/outputs/001/" in str(refused.value)
+    assert draft.exists()
+    assert approved_versions(run.directory(FLOW, "review")) == [1]
+
+
+@pytest.mark.spec("review:revise:new-seeds-alone-are-a-change")
+def test_a_revision_whose_only_change_is_its_seeds_is_approved(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, {"count": 1, "seeds": [SEED]})
+    _image(run, 1, SEED)
+    draft = revise(run, FLOW, 1, SEED)
+    save_draft(run, FLOW, read(draft, DRAFT_FILE)["fields"], {"count": 1, "seeds": [7]})
+
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+
+    assert approved is not None
+    assert read(approved, APPROVED_FILE)["renders"] == {"count": 1, "seeds": [7]}
+
+
+@pytest.mark.spec("review:discard:a-draft-is-discarded")
+def test_discarding_deletes_the_waiting_draft_and_leaves_every_approval(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    approved = _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    frozen = approved.read_bytes()
+    waiting = review(run, FLOW, new_version=True)
+    assert waiting is not None
+
+    assert discard(run, FLOW) == waiting
+
+    assert not waiting.exists()
+    assert versions(run.directory(FLOW, "review")) == [1]
+    assert approved.read_bytes() == frozen
+
+
+@pytest.mark.spec("review:discard:an-approval-is-never-discarded")
+def test_discarding_an_approved_flow_is_refused_and_changes_nothing(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    _approved(run, schema, vocabulary, hair_silhouette=["long hair"])
+    before = snapshot(run.directory(FLOW, "review"))
+
+    with pytest.raises(Refusal, match="001.approved.json"):
+        discard(run, FLOW)
+
+    assert snapshot(run.directory(FLOW, "review")) == before
+
+
+def _image(run: Run, version: int, seed: int) -> Path:
+    """Write what a render leaves for `seed` under approval `version`."""
+    group = run.directory(FLOW, "outputs", f"{version:03d}")
+    group.mkdir(parents=True, exist_ok=True)
+    (group / f"{seed}.render.json").write_text("{}\n")
+    image = group / f"{seed}.png"
+    image.write_bytes(b"png")
+    return image
+
+
+def _revise_verb(vocabulary: Vocabulary, *images: Path) -> tuple[int, str]:
+    """Run `isekai revise` on `images`, returning its status and its stderr."""
+    err = io.StringIO()
+    wired = Wiring(
+        reader=None,
+        tagger=None,
+        hosted_tagger=None,
+        client=None,
+        vocabulary=lambda: vocabulary,
+        field_map=lambda _: pytest.fail("revise reads no field map"),
+        out=io.StringIO(),
+        err=err,
+    )
+    parsed = build_parser().parse_args(["revise", *map(str, images)])
+    return dispatch(parsed, wired), err.getvalue()
+
+
+def _second_run(run: Run, schema: Schema, vocabulary: Vocabulary) -> Run:
+    """Return another run beside `run`, with its own sheet for `FLOW`."""
+    photo = run.path.parent.parent / "uncle-bo.jpg"
+    photo.write_bytes(jpeg_bytes(1000, 800))
+    made = open_run(photo, run.path.parent)
+    caption(made, FakeReader(prose="Black hair, grey eyes."))
+    sheet(made, schema, vocabulary)
+    return made
+
+
+@pytest.mark.spec("cli:revise:every-image-is-revised")
+def test_the_verb_revises_each_image_in_its_own_run(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    other = _second_run(run, schema, vocabulary)
+    for each in (run, other):
+        _approved(each, schema, vocabulary, hair_silhouette=["long hair"])
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), _image(other, 1, 7))
+
+    assert (status, err) == (0, "")
+    for each, seed in ((run, SEED), (other, 7)):
+        draft = read(each.directory(FLOW, "review") / "002.draft.json", DRAFT_FILE)
+        assert draft["renders"] == {"count": 1, "seeds": [seed]}
+
+
+@pytest.mark.spec("cli:revise:one-refusal-writes-nothing")
+def test_one_refused_image_leaves_every_run_without_a_revision(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    other = _second_run(run, schema, vocabulary)
+    for each in (run, other):
+        _approved(each, schema, vocabulary, hair_silhouette=["long hair"])
+    assert review(other, FLOW, new_version=True) is not None
+    blocked = _image(other, 1, 7)
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), blocked)
+
+    assert status == 1
+    assert f"{blocked}" in err
+    assert "002.draft.json waiting" in err
+    assert versions(run.directory(FLOW, "review")) == [1]
+
+    # The waiting draft goes, and the approval it was copied from is broken.
+    discard(other, FLOW)
+    (other.directory(FLOW, "review") / "001.approved.json").write_text("{")
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), blocked)
+
+    assert status == 1
+    assert f"refused: {blocked}: 001.approved.json: is not valid JSON" in err
+    assert versions(run.directory(FLOW, "review")) == [1]
+
+    # One run reached by two spellings is one run, and its flow one revision.
+    spelled = run.path.parent.parent / "spelled"
+    spelled.symlink_to(run.path.parent)
+    _image(run, 1, 7)
+    twin = spelled / run.id / FLOW / "outputs" / "001" / "7.png"
+
+    status, err = _revise_verb(vocabulary, _image(run, 1, SEED), twin)
+
+    assert status == 1
+    assert f"refused: {twin}: {run.id}/{FLOW}: is in this selection twice" in err
+    assert versions(run.directory(FLOW, "review")) == [1]

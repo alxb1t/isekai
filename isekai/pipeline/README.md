@@ -7,9 +7,9 @@ when `validate` moved to `shared/fields.py`. Every stage is per flow: the flow
 supplies the briefing it reads, the schema it fills against and the directory it
 writes into.
 
-**The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `generate`.**
+**The verbs are `import` · `caption` · `tag` · `sheet` · `review` · `approve` · `revise` · `generate`.**
 `importing.py` is `import`: it fills a batch's `sources/` and comes before every run.
-`review.py` holds two of them, and `tagging.py` is `tag`: its two functions write
+`review.py` holds `review`, `approve` and `revise`, and `tagging.py` is `tag`: its two functions write
 the two tag lists, each refusal collected on its own. `caption` and `tag` are
 independent, and neither reads the other's output
 ([D1](../../docs/decisions.md#d1--stage--is-two-independent-verbs)).

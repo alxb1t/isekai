@@ -19,11 +19,12 @@ from pathlib import Path
 
 import pytest
 
+from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
-from isekai.pipeline.review import approve, review
+from isekai.pipeline.review import approve, review, save_draft
 from tests.e2e.wiring import VOCABULARY
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, photo_jpeg
@@ -55,6 +56,11 @@ ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 RENDER = "render"
 # The batch the Renders view is read from: one source already rendered once.
 SHOWN = "shown"
+# The batch a revision is written in: one source rendered once at seed 7.
+REVISED = "revised"
+# The batch Compare reads: one source with seed 7 rendered under v1 and under v2,
+# which changes `clothes`.
+COMPARED = "compared"
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
@@ -71,6 +77,8 @@ class Served:
     queues: dict[str, tuple[Run, ...]]
     rendered: Run
     shown: Run
+    revised: Run
+    compared: Run
 
     def review(self, run: Run, batch: str | None = None) -> str:
         """Return the address of `run`'s review in `FLOW`, in `batch` or the main."""
@@ -94,6 +102,23 @@ def _run(folder: Path, name: str, size: tuple[int, int]) -> Run:
     caption(run, FakeReader(prose="Dark brown hair, brown eyes."))
     sheet(run, load_flow(FLOW).schema, VOCABULARY)
     return run
+
+
+def _rendered_at_seven(folder: Path, name: str, size: tuple[int, int]) -> Run:
+    """Return a run of a new source approved once and rendered at seed 7."""
+    (folder / "sources").mkdir(parents=True)
+    run = _run(folder, name, size)
+    review(run, FLOW)
+    approve(run, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    _render_seven(run)
+    return run
+
+
+def _render_seven(run: Run) -> None:
+    """Render `run`'s newest approval at seed 7, on the fake transport."""
+    prepare(run, {FLOW: load_flow(FLOW)})
+    image = photo_jpeg((90, 60, 30), (640, 800))
+    render(run, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[7], poll=0)
 
 
 def _free_port() -> int:
@@ -146,13 +171,15 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     rendered = _run(lib / RENDER, "gia", (740, 1000))
     review(rendered, FLOW)
     approve(rendered, FLOW, load_flow(FLOW).schema, VOCABULARY)
-    (lib / SHOWN / "sources").mkdir(parents=True)
-    shown = _run(lib / SHOWN, "hal", (750, 1000))
-    review(shown, FLOW)
-    approve(shown, FLOW, load_flow(FLOW).schema, VOCABULARY)
-    prepare(shown, {FLOW: load_flow(FLOW)})
-    image = photo_jpeg((90, 60, 30), (640, 800))
-    render(shown, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[7], poll=0)
+    shown = _rendered_at_seven(lib / SHOWN, "hal", (750, 1000))
+    revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
+    compared = _rendered_at_seven(lib / COMPARED, "jo", (780, 1000))
+    again = review(compared, FLOW, new_version=True)
+    assert again is not None
+    fields = read(again, DRAFT_FILE)["fields"]
+    save_draft(compared, FLOW, {**fields, "clothes": ["collared shirt"]})
+    approve(compared, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    _render_seven(compared)
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
@@ -169,7 +196,9 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     )
     try:
         _wait(f"{url}/api/library", server)
-        yield Served(url, BATCH, draft, approved, queues, rendered, shown)
+        yield Served(
+            url, BATCH, draft, approved, queues, rendered, shown, revised, compared
+        )
     finally:
         server.terminate()
         server.wait(timeout=10)

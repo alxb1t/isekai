@@ -34,6 +34,7 @@ refusal is a message to them rather than state for a later resume to reason abou
 Stdlib only.
 """
 
+import shlex
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,9 +44,11 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     DRAFT_FILE,
     SHEET_FILE,
+    SIDECAR,
     Renders,
     ReviewApproved,
     ReviewDraft,
+    Sheet,
     read,
     renders_of,
     require,
@@ -59,8 +62,10 @@ from isekai.foundation.run import (
     REVIEW,
     SHEETS,
     Run,
+    approval_of,
     approved_versions,
     artifact_name,
+    group_of,
     latest,
     latest_artifact,
     next_version,
@@ -73,6 +78,9 @@ from isekai.shared.vocabulary import Vocabulary
 STAGE = "review"
 
 DRAFT = "draft"
+
+# The option that deletes a flow's waiting draft.
+DISCARD = ("--discard",)
 
 # SDXL's text encoders read 77 tokens at a time; past that the prompt is chunked
 # and the chunks are averaged, which is not the same prompt. Sheets already run
@@ -154,37 +162,168 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
             f"`{stage_command(run, 'sheet', flow)}` first"
         )
 
-    again = _again(run, flow)
     approved = approved_versions(review_directory)
     if approved:
-        copied = review_directory / artifact_name(approved[-1], APPROVED)
-        # An approved artifact is never replaced, so only a hand repairs it.
-        remedy = f"restore it in {copied}, then run {again} again"
-        carried = read(copied, APPROVED_FILE, remedy=remedy)
-        require(
-            copied,
+        carried = _approval(run, flow, approved[-1], f"run {_again(run, flow)} again")
+        return _write_draft(
+            run,
+            flow,
+            approved[-1],
+            REVIEW,
             carried,
-            "sheet",
-            int,
-            f"a draft copied from it cannot name its sheet; add the sheet version "
-            f"it was approved from as `sheet` in {copied}, then run {again} again",
+            carried["sheet"],
+            carried.get("renders"),
         )
-        came_from, source, sheet_version = approved[-1], REVIEW, carried["sheet"]
-        kept = carried.get("renders")
-    else:
-        copied = sheets / artifact_name(source_sheet)
-        carried = read(copied, SHEET_FILE)
-        remedy = (
-            f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, "
-            f"then {again}"
-        )
-        came_from, source, sheet_version = source_sheet, SHEETS, source_sheet
-        kept = None
-
+    copied = sheets / artifact_name(source_sheet)
+    carried = read(copied, SHEET_FILE)
+    remedy = (
+        f"run `{stage_command(run, 'sheet', flow, options=NEW_VERSION)}`, "
+        f"then {_again(run, flow)}"
+    )
     require(copied, carried, "vocabulary", dict, remedy)
     require(copied, carried, "fields", dict, remedy)
-    version = next_version(review_directory)
-    path = review_directory / artifact_name(version, DRAFT)
+    return _write_draft(run, flow, source_sheet, SHEETS, carried, source_sheet)
+
+
+def revise(run: Run, flow: str, version: int, seed: int) -> Path:
+    """Copy the approval numbered `version` into the next draft, listing `seed`.
+
+    The draft starts from the sheet the image was rendered under, newest or not,
+    with a count of one and the image's seed, so an edit lands on the same
+    composition. Refused as `refuse_revision` refuses.
+    e.g. (run, f, 1, 1840266731) -> review/003.draft.json, seeds [1840266731]
+    """
+    carried = refuse_revision(run, flow, version, seed)
+    renders: Renders = {"count": 1, "seeds": [seed]}
+    return _write_draft(run, flow, version, REVIEW, carried, carried["sheet"], renders)
+
+
+# An image to revise: its run, its flow, its approval's number and its seed.
+Revision = tuple[Run, str, int, int]
+
+
+def refuse_revisions(selection: Sequence[tuple[Path, Revision]]) -> list[str | None]:
+    """Return why each image of `selection` cannot be revised, None where it can.
+
+    Checked whole before anything is written, so a selection is revised all or
+    not at all; a flow takes one revision at a time, and its run is known by the
+    identity of its directory, never by the text of its path.
+    e.g. [(a.png, (run, f, 1, 7)), (b.png, (run, f, 2, 8))]
+         -> [None, "<run>/f: is in this selection twice, …"]
+    """
+    seen: dict[tuple[int, int, str], int] = {}
+    refused: list[str | None] = []
+    for index, (image, (run, flow, version, seed)) in enumerate(selection):
+        try:
+            held = run.path.stat()
+            first = seen.setdefault((held.st_dev, held.st_ino, flow), index)
+            if first != index:
+                raise Refusal(
+                    f"{run.id}/{flow}: is in this selection twice, and a flow takes "
+                    "one revision at a time; run "
+                    f"`{_revise_command(selection[first][0])}` alone, "
+                    "and revise this image once that draft is approved"
+                )
+            refuse_revision(run, flow, version, seed, f"run `{_revise_command(image)}`")
+            refused.append(None)
+        except Refusal as refusal:
+            refused.append(str(refusal))
+    return refused
+
+
+def _revise_command(image: Path) -> str:
+    """Return the command that revises `image`, as it is pasted.
+
+    e.g. r/f/outputs/001/7.png -> "python -m isekai revise r/f/outputs/001/7.png"
+    """
+    return f"python -m isekai revise {shlex.quote(str(image))}"
+
+
+def refuse_revision(
+    run: Run, flow: str, version: int, seed: int, again: str = "revise the image again"
+) -> ReviewApproved:
+    """Return the approval `revise` copies for `seed`, refusing what it cannot write.
+
+    A waiting draft is the operator's, so a revision never replaces it. The
+    approval is read here, so a selection is checked whole before anything is
+    written. `again` is what to do once the refusal's cause is fixed.
+    """
+    waiting = current_draft(run.directory(flow, REVIEW))
+    if waiting is not None:
+        raise Refusal(
+            f"{run.id}: flow {flow} has {waiting.name} waiting, and a revision "
+            "never replaces a draft; approve it, or run "
+            f"`{stage_command(run, STAGE, flow, options=DISCARD)}`, then {again}"
+        )
+    copied = approval_of(run, flow, version)
+    if not copied.exists():
+        raise Refusal(
+            f"{run.id}: flow {flow} has no {copied.name} to revise from; restore "
+            f"{copied}, then {again}"
+        )
+    if not (group_of(run, flow, version) / f"{seed}{SIDECAR}").is_file():
+        raise Refusal(
+            f"{run.id}: flow {flow} rendered no seed {seed} under {copied.name}; "
+            f"run `{stage_command(run, 'show')}` to list the seeds its renders "
+            "wrote, and revise one of those"
+        )
+    return _approval(run, flow, version, again)
+
+
+def discard(run: Run, flow: str) -> Path:
+    """Delete `flow`'s highest draft while it is unapproved, and return its path.
+
+    An approval is never deleted, so a highest number that is approved refuses.
+    """
+    directory = run.directory(flow, REVIEW)
+    draft = current_draft(directory)
+    if draft is not None:
+        draft.unlink()
+        return draft
+    approved = approved_versions(directory)
+    if approved:
+        raise Refusal(
+            f"{run.id}: flow {flow}'s highest number is "
+            f"{artifact_name(approved[-1], APPROVED)}, and an approval is never "
+            f"discarded; run {_again(run, flow)} to open a draft from it"
+        )
+    raise Refusal(
+        f"{run.id}: flow {flow} has no draft to discard; run "
+        f"`{stage_command(run, STAGE, flow)}` to take a copy"
+    )
+
+
+def _approval(run: Run, flow: str, version: int, retry: str) -> ReviewApproved:
+    """Read the approval numbered `version`, refusing one a draft cannot copy."""
+    copied = approval_of(run, flow, version)
+    # An approved artifact is never replaced, so only a hand repairs it.
+    remedy = f"restore it in {copied}, then {retry}"
+    carried = read(copied, APPROVED_FILE, remedy=remedy)
+    require(
+        copied,
+        carried,
+        "sheet",
+        int,
+        f"a draft copied from it cannot name its sheet; add the sheet version "
+        f"it was approved from as `sheet` in {copied}, then {retry}",
+    )
+    require(copied, carried, "vocabulary", dict, remedy)
+    require(copied, carried, "fields", dict, remedy)
+    return carried
+
+
+def _write_draft(
+    run: Run,
+    flow: str,
+    came_from: int,
+    source: str,
+    carried: Sheet | ReviewApproved,
+    sheet_version: int,
+    renders: Renders | None = None,
+) -> Path:
+    """Write the next draft of `flow` from `carried`, and return its path."""
+    review_directory = run.directory(flow, REVIEW)
+    path = review_directory / artifact_name(next_version(review_directory), DRAFT)
     draft: ReviewDraft = {
         "schema": DRAFT_FILE.schema,
         "producer": {"implementation": STAGE, "from": came_from, "source": source},
@@ -199,8 +338,8 @@ def review(run: Run, flow: str, *, new_version: bool = False) -> Path | None:
         draft["schema_document"] = carried["schema_document"]
     if "field_map" in carried:
         draft["field_map"] = carried["field_map"]
-    if kept is not None:
-        draft["renders"] = kept
+    if renders is not None:
+        draft["renders"] = renders
     write(path, DRAFT_FILE, draft)
     return path
 
@@ -392,6 +531,9 @@ def approve(
         f"`{stage_command(run, 'approve', flow)}` again",
     )
     sheet_version, producer = body["sheet"], body["producer"]
+    origin = came_from(body)
+    if origin is not None:
+        _refuse_unchanged(run, flow, draft, origin, fields, renders)
     sheet_path = run.directory(flow, SHEETS) / artifact_name(sheet_version)
     approved_body: ReviewApproved = {
         "schema": APPROVED_FILE.schema,
@@ -488,6 +630,48 @@ def _copy_approval(
     return target
 
 
+def _refuse_unchanged(
+    run: Run,
+    flow: str,
+    draft: Path,
+    version: int,
+    fields: Mapping[str, Sequence[str]],
+    renders: Renders,
+) -> None:
+    """Refuse a draft that would render only images its approval already makes.
+
+    That is a draft with its approval's fields whose every image is a listed
+    seed its approval lists or rendered: rendering it pays for what exists. New
+    seeds alone are a change, and a count above its seeds draws new ones.
+    e.g. 002 from 001, fields equal, `{count 1, seeds [7]}`, 001 rendered 7 -> refused
+    """
+    origin = approval_of(run, flow, version)
+    remedy = f"restore {origin}, then run `{stage_command(run, 'approve', flow)}` again"
+    if not origin.exists():
+        raise Refusal(
+            f"{draft.name}: was copied from {origin}, which is not there, so "
+            f"whether it changes anything cannot be computed; {remedy}"
+        )
+    body = read(origin, APPROVED_FILE, remedy=remedy)
+    seeds = renders["seeds"]
+    group = group_of(run, flow, version)
+    made = set(renders_of(origin, body, remedy)["seeds"]) | {
+        seed for seed in seeds if (group / f"{seed}{SIDECAR}").is_file()
+    }
+    held = body.get("fields")
+    same = isinstance(held, Mapping) and same_fields(held, fields)
+    if not same or renders["count"] > len(seeds) or not set(seeds) <= made:
+        return
+    raise Refusal(
+        f"{draft.name}: has the fields of {origin.name} and only its seeds "
+        f"{', '.join(map(str, seeds))}, so it would render the images of "
+        f"{run.id}/{group.relative_to(run.path)}/ again; edit a field, the "
+        f"count or the seeds in {draft}, then run "
+        f"`{stage_command(run, 'approve', flow)}` again, or run "
+        f"`{stage_command(run, STAGE, flow, options=DISCARD)}`"
+    )
+
+
 def _again(run: Run, flow: str) -> str:
     """Return the command that copies `flow`'s draft afresh under the next number."""
     return f"`{stage_command(run, STAGE, flow, options=NEW_VERSION)}`"
@@ -538,7 +722,28 @@ def _differs(
         )
     body = read(source, SHEET_FILE, remedy=remedy)
     require(source, body, "fields", dict, remedy)
-    original = body["fields"]
-    return {name: list(tags) for name, tags in original.items()} != {
-        name: list(tags) for name, tags in fields.items()
+    return not same_fields(body["fields"], fields)
+
+
+def same_fields(
+    one: Mapping[str, Sequence[str]], other: Mapping[str, Sequence[str]]
+) -> bool:
+    """Return whether two `fields` objects hold the same tags, field by field."""
+    return {name: list(tags) for name, tags in one.items()} == {
+        name: list(tags) for name, tags in other.items()
     }
+
+
+def came_from(body: Mapping[str, object]) -> int | None:
+    """Return the approval of its own flow a draft or approval was copied from.
+
+    A copy of a sheet, or of another flow's approval, names none.
+    e.g. producer `{"from": 1, "source": "review"}` -> 1
+    """
+    producer = body.get("producer")
+    if not isinstance(producer, Mapping) or "copied_from" in producer:
+        return None
+    version = producer.get("from")
+    if producer.get("source") != REVIEW or isinstance(version, bool):
+        return None
+    return version if isinstance(version, int) else None

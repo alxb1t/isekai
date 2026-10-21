@@ -358,6 +358,8 @@ DRAFT_FILE: Artifact[ReviewDraft] = Artifact("review", 1)
 APPROVED_FILE: Artifact[ReviewApproved] = Artifact("review", DRAFT_FILE.version)
 PROMPT_FILE: Artifact[Prompt] = Artifact("prompt", 1)
 RENDER_FILE: Artifact[Render] = Artifact("render", 1)
+# A render's sidecar is `<seed>` and this; its image is `<seed>` and the flow's suffix.
+SIDECAR = ".render.json"
 
 # The version this build reads of each kind, by name: for a reader that learns
 # the kind from the file rather than being told it, as `show` does.

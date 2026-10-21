@@ -90,11 +90,12 @@ the run's `assign`, a source through import.
 ### D42 · A new draft starts from the last approval
 
 **Where a flow has an approved sheet, a new draft is copied from that approval, never from the sheet the
-machine wrote.** The approval is left as it was.
+machine wrote.** The approval is left as it was. A revision of an image is copied from the approval the
+image was rendered under, newest or not.
 
 - **Why:** a correction starts from the last thing a person agreed with. Starting again from the machine's
   sheet would throw away every edit the operator made before.
-- **Made by:** `0013`.
+- **Made by:** `0013`, `0065`.
 
 ## Models
 

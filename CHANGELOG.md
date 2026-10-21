@@ -9,6 +9,33 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-21 · 0065-revise
+
+Gate: local 0m34s · CI 1m12s (ci at abf4e5e) · 0.39.1: local 0m29s · CI 0m55s
+
+### Added
+
+- `review.revise` copies the approval an image was rendered under into the next draft, its seed listed, and
+  `review.discard` deletes a waiting draft; approval refuses a draft that would only re-render its approval's
+  images (0065 D1, D3, D4).
+- `isekai revise <image.png> …` checks every image first, then writes a revision for each or none, and
+  `isekai review --discard` deletes a flow's waiting draft (0065 D2, D3).
+- The app's API revises a selection of images all or none, discards a waiting draft, heads each version a
+  revision or a re-roll of the one it came from, and compares a seed with its newest older version; an
+  unedited revision of an image already rendered is refused (0065 D4, D5, D6, D7).
+- The app revises from an image's large view and over a selection in Renders, opens Review on each draft with
+  the render beside the photograph and a `was` line on every changed field, and Compare shows a seed's two
+  versions side by side (0065 D7).
+- The stream test closes its helper's broadcast in a `finally`, re-raises the helper's failure and uploads
+  only after the snapshot is read; the e2e render test no longer re-proves a disabled Render; the README and
+  the data flow describe `isekai revise`, `review --discard` and Compare (0065 D8).
+- A revision reads every image's approval before writing any draft, so an unreadable one writes nothing; the
+  app refuses an image of a flow this build does not track, and its Discard deletes only the draft the page
+  last read (0065 D2, D7).
+- Revise knows a run by its directory's identity, refuses a version or seed no run can hold, and ends each
+  refusal with a command; the app's Discard asks before it deletes and lands a pending save first, and Ctrl+C
+  on a large view no longer opens Compare (0065 D2, D7).
+
 ## [0.39.1] - 2026-10-21 · 0064-the-import-sheet
 
 Gate: local 0m29s · CI 0m55s (ci at f76c6dc) · 0.39.0: local 0m30s · CI 1m5s

@@ -20,7 +20,7 @@ import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
@@ -28,6 +28,8 @@ from isekai.foundation.artifacts import (
     SHEET_FILE,
     WD14_FILE,
     Artifact,
+    Renders,
+    ReviewApproved,
     read,
     renders_of,
 )
@@ -47,14 +49,16 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    approval_of,
     approved_versions,
     digest_of,
+    group_of,
     latest_artifact,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import approval_of, group_of, rendered_seeds
+from isekai.pipeline.generate import rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
-from isekai.pipeline.review import Status, current_draft
+from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
 from isekai.shared.image import metadata_in, thumbnail_jpeg
 
@@ -281,6 +285,8 @@ class Version:
 
     `at` is when the approval was written; `count` and `seeds` are its renders.
     `damaged` is the refusal of an approval no hand can read, whose count is None.
+    `came_from` is the approval it was copied from, and `kind` says what changed:
+    a `revision` changes a field, a `re-roll` only the count or the seeds.
     """
 
     version: int
@@ -289,6 +295,8 @@ class Version:
     seeds: tuple[int, ...]
     rendered: tuple[int, ...]
     damaged: str | None = None
+    came_from: int | None = None
+    kind: Literal["revision", "re-roll"] | None = None
 
 
 def versions(run: Run, flow: str, suffix: str) -> list[Version]:
@@ -297,20 +305,69 @@ def versions(run: Run, flow: str, suffix: str) -> list[Version]:
     An approval no hand can read is marked damaged with its refusal, naming the
     file, and every other version is still read: one file costs only its own.
     """
-    directory = run.directory(flow, REVIEW)
-    found = []
-    for number in reversed(approved_versions(directory)):
+    # Every approval is read before any is described: a version's header reads
+    # the one it came from.
+    bodies: dict[int, tuple[ReviewApproved, Renders] | Refusal] = {}
+    for number in approved_versions(run.directory(flow, REVIEW)):
         path = approval_of(run, flow, number)
         remedy = f"restore it in {path} by hand, then reload the page"
+        try:
+            body = read(path, APPROVED_FILE, remedy=remedy)
+            bodies[number] = body, renders_of(path, body, remedy)
+        except Refusal as refused:
+            bodies[number] = refused
+    found = []
+    for number, body in reversed(bodies.items()):
+        path = approval_of(run, flow, number)
         rendered = tuple(rendered_seeds(group_of(run, flow, number), suffix))
         at = path.stat().st_mtime
-        try:
-            held = renders_of(path, read(path, APPROVED_FILE, remedy=remedy), remedy)
-        except Refusal as refused:
-            found.append(Version(number, at, None, (), rendered, str(refused)))
+        if isinstance(body, Refusal):
+            found.append(Version(number, at, None, (), rendered, str(body)))
             continue
-        found.append(Version(number, at, held["count"], tuple(held["seeds"]), rendered))
+        approved, held = body
+        origin, kind = _origin(approved, bodies)
+        found.append(
+            Version(
+                number,
+                at,
+                held["count"],
+                tuple(held["seeds"]),
+                rendered,
+                came_from=origin,
+                kind=kind,
+            )
+        )
     return found
+
+
+def _origin(
+    body: ReviewApproved,
+    bodies: Mapping[int, tuple[ReviewApproved, Renders] | Refusal],
+) -> tuple[int | None, Literal["revision", "re-roll"] | None]:
+    """Return the approval `body` was copied from in its flow, and what changed.
+
+    e.g. copied from 1, fields unchanged -> (1, "re-roll")
+    """
+    version = came_from(body)
+    origin = bodies.get(version) if version is not None else None
+    if origin is None or isinstance(origin, Refusal):
+        return None, None
+    # A hand can drop `fields`, so neither side is assumed to hold one.
+    changed = origin[0].get("fields") != body.get("fields")
+    return version, "revision" if changed else "re-roll"
+
+
+def paired(run: Run, flow: str, version: int, seed: int, suffix: str) -> int | None:
+    """Return the newest approval below `version` that rendered `seed`, or None.
+
+    e.g. seed 7 rendered under 1, 2 and 3 -> 3 pairs with 2
+    """
+    for number in reversed(approved_versions(run.directory(flow, REVIEW))):
+        if number < version and seed in rendered_seeds(
+            group_of(run, flow, number), suffix
+        ):
+            return number
+    return None
 
 
 def thumbnail(library: Path, run: Run, image: Path) -> Path:

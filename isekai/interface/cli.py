@@ -16,6 +16,7 @@ would be unreachable -- nothing writes a later one.
     sheet     (2) the WD14 tag list in, a sheet of canonical tags out
     review    (3) the machine's sheet copied somewhere a human may edit it
     approve   (3) validate the edited sheet and rename it
+    revise    (3) a rendered image's approval copied into a draft, its seed kept
     generate  (4) assemble every prompt locally, then render
     render    (4) one whole render session on a rented GPU, torn down on every exit
     show          print a run's artifacts, what produced each, and its failures
@@ -63,6 +64,7 @@ from isekai.foundation.run import (
     assign,
     find_run,
     open_run,
+    rendered_at,
 )
 from isekai.interface.compare_view import write_page
 from isekai.interface.render import run_session
@@ -87,7 +89,14 @@ from isekai.pipeline.importing import (
     stage,
     upload_limit,
 )
-from isekai.pipeline.review import approve, review
+from isekai.pipeline.review import (
+    Revision,
+    approve,
+    discard,
+    refuse_revisions,
+    review,
+    revise,
+)
 from isekai.pipeline.sheet import sheet
 from isekai.pipeline.tagging import tag_hosted, tag_wd14
 from isekai.shared.field_map import FieldMap
@@ -105,6 +114,7 @@ VERBS: tuple[tuple[str, str], ...] = (
     ("sheet", "fill a sheet of canonical tags from the WD14 tag list"),
     ("review", "copy a sheet somewhere a human may edit it"),
     ("approve", "validate an edited sheet and mark it approved"),
+    ("revise", "copy the approval a rendered image came from into a draft"),
     ("generate", "assemble the prompts for a run, then render them"),
     ("render", "run a whole render session on a rented GPU, then tear it down"),
     ("show", "print a run's artifacts, versions, producers and failures"),
@@ -166,9 +176,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     # `compare` takes a batch directory instead: its runs root is the batch's
     # `runs/`, so a second way to name it could only disagree. `render` takes
-    # its runs root first, and every run under it. `ui` serves the library.
+    # its runs root first, and every run under it. `ui` serves the library, and
+    # `revise` takes images, whose paths name their runs.
     for name in (
-        name for name in made if name not in ("compare", "import", "render", "ui")
+        name
+        for name in made
+        if name not in ("compare", "import", "render", "revise", "ui")
     ):
         made[name].add_argument(
             "photos",
@@ -237,6 +250,19 @@ def build_parser() -> argparse.ArgumentParser:
             action="store_true",
             help="write the next numbered artifact instead of doing nothing",
         )
+    made["review"].add_argument(
+        "--discard",
+        action="store_true",
+        help="delete each flow's waiting draft instead, refusing an approval",
+    )
+
+    made["revise"].add_argument(
+        "images",
+        nargs="+",
+        type=Path,
+        help="rendered images, each <run>/<flow>/outputs/<NNN>/<seed>.png",
+    )
+    made["revise"].set_defaults(photos=[], runs=RUNS_ROOT)
 
     # No flow, input or runs root: the app serves every batch of the library
     # `ISEKAI_LIBRARY` names, and its page selects one (D1).
@@ -413,6 +439,30 @@ def _staged_line(item: Staged) -> str:
     return f"{item.name}: {item.state}"
 
 
+def _revise(images: Sequence[Path], wired: Wiring) -> int:
+    """Write a revision for every image, or, when any is refused, none."""
+    refused: list[str] = []
+    located: list[tuple[Path, Revision]] = []
+    for image in images:
+        try:
+            located.append((image, rendered_at(image)))
+        except Refusal as unrendered:
+            refused.append(f"{image}: {unrendered}")
+    answers = refuse_revisions(located)
+    refused += [
+        f"{image}: {answer}"
+        for (image, _), answer in zip(located, answers, strict=True)
+        if answer is not None
+    ]
+    if not refused:
+        for _, one in located:
+            draft = revise(*one)
+            print(f"revise wrote {draft.relative_to(draft.parents[3])}", file=wired.out)
+    for message in refused:
+        print(f"refused: {message}", file=wired.err)
+    return 1 if refused else 0
+
+
 def _run_for(identifier: str, wired: Wiring) -> Run:
     """Return the run an argument names: a photograph to open, or a run to resume."""
     named = _named(identifier, wired)
@@ -495,6 +545,8 @@ def dispatch(args: argparse.Namespace, wired: Wiring) -> int:
             return 0
         if verb == "render":
             return run_session(args, wired, _dispatch_argv)
+        if verb == "revise":
+            return _revise(args.images, wired)
         flows = _flows_for(args, wired)
         if verb == "approve":
             _refuse_bad_source(args.source, "from", flows, wired)
@@ -776,6 +828,10 @@ def _per_item(
         elif verb == "review":
 
             def review_flow(name: str) -> None:
+                if args.discard:
+                    gone = discard(run, name)
+                    reporter.say(f"{run.id}: review discarded {name}/{gone.name}")
+                    return
                 _say(
                     reporter, run, "review", review(run, name, new_version=new_version)
                 )

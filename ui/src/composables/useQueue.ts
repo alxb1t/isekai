@@ -96,3 +96,25 @@ export function useQueue(batch: string, flow: string, current: () => string) {
 
   return { info, inputs, approved, sheets, edited, loading, load, markEdited }
 }
+
+/* Revise's queue rides in Review's `queue` query: the drafts left after the one
+   open, each `digest:flow`. Present, even empty, it ends at the hub. */
+export interface Queued {
+  digest: string
+  flow: string
+}
+
+/** Return the query that carries `drafts`. e.g. [{a, f}, {b, f}] -> "a:f,b:f" */
+export function reviewQueue(drafts: Queued[]): string {
+  return drafts.map((one) => `${one.digest}:${one.flow}`).join(',')
+}
+
+/** Return the drafts a `queue` query carries. e.g. "a:f,b:f" -> [{a, f}, {b, f}] */
+export function queued(query: string): Queued[] {
+  return query
+    ? query.split(',').map((one) => {
+        const [digest, flow] = one.split(':')
+        return { digest, flow }
+      })
+    : []
+}

@@ -142,12 +142,21 @@ export interface InputDetail {
   tags: OfferedTag[] | null
   fields: Record<string, string[]>
   renders: Renders
+  /* The approval a draft was copied from, its fields, and the seed of the image
+     being revised; null for a draft of a sheet. */
+  revision: Revision | null
   readonly: boolean
   draft: string | null
   approved: string | null
   saved: number | null
   approved_at: number | null
   budget: Budget
+}
+
+export interface Revision {
+  version: number
+  seed: string | null
+  fields: Record<string, string[]>
 }
 
 export interface VocabEntry {
@@ -252,6 +261,10 @@ export interface RenderVersion {
   seeds: string[]
   rendered: string[]
   damaged: string | null
+  /* The version this one was copied from, and what changed: a field, or only
+     the count and seeds. Null for an approval of a sheet. */
+  came_from: number | null
+  kind: 'revision' | 're-roll' | null
 }
 
 export interface RendersInfo {
@@ -266,4 +279,45 @@ export interface RenderDetail {
   seed: string
   fields: Record<string, string[]>
   approved_at: number | null
+  /* The newest older version that rendered this seed, or null. */
+  compare: number | null
+}
+
+/* One image a revision names, its seed a decimal string. */
+export interface RevisedImage {
+  digest: string
+  flow: string
+  version: number
+  seed: string
+}
+
+/* An image a revision wrote a draft for, by the draft's name. */
+export interface RevisedDraft extends RevisedImage {
+  draft: string
+}
+
+/* An image of a refused revision: its refusal, or null where it could be revised. */
+export interface RefusedImage extends RevisedImage {
+  refusal: string | null
+}
+
+/* A revision the server refused, answering each image. Nothing was written. */
+export interface ReviseRefused {
+  refusal: string
+  images: RefusedImage[]
+}
+
+/* One side of a comparison. */
+export interface CompareSide {
+  version: number
+  approved_at: number | null
+  renders: Renders
+  tokens: number
+}
+
+export interface Comparison {
+  seed: string
+  before: CompareSide
+  after: CompareSide
+  changed: { field: string; before: string[]; after: string[] }[]
 }
