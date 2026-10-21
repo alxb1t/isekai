@@ -48,6 +48,9 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.code === 'Digit1' && batch.value) {
     event.preventDefault()
     void router.push({ name: 'hub', params: { batch: batch.value } })
+  } else if (event.code === 'Digit3' && batch.value) {
+    event.preventDefault()
+    void router.push({ name: 'renders', params: { batch: batch.value } })
   } else if (event.code === 'Digit4') {
     event.preventDefault()
     void router.push({ name: 'session' })
@@ -79,6 +82,12 @@ onUnmounted(() => {
         >
         <span class="appbar__tab" :class="{ 'appbar__tab--active': screen === 'review' }"
           >Review<span class="appbar__key">⌥2</span></span
+        >
+        <RouterLink
+          :to="{ name: 'renders', params: { batch } }"
+          class="appbar__tab"
+          :class="{ 'appbar__tab--active': screen === 'renders' || screen === 'render' }"
+          >Renders<span class="appbar__key">⌥3</span></RouterLink
         >
       </template>
     </header>

@@ -36,6 +36,8 @@ GET  /events[?batch=]                              Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve
+GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
+     and its /image and /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -91,6 +93,7 @@ from isekai.interface.ui.billing import Billing, utc_now
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
+from isekai.pipeline.generate import approval_of, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     TokenBudget,
@@ -649,6 +652,89 @@ def create_app(
             "at": _saved(written),
         }
 
+    @app.get("/api/b/{batch}/renders")
+    def read_renders(batch: str) -> dict[str, Any]:
+        """Return each source's images by offered flow, approvals newest first."""
+        found = folder(batch)
+        grid = library.hub(found, flows, wired.flows_dir)
+        suffixes = {
+            flow: load_flow(flow, wired.flows_dir).output_suffix for flow in flows
+        }
+        return {
+            "batch": grid.name,
+            "flows": list(grid.flows),
+            "sources": [
+                {
+                    "name": one.name,
+                    "digest": one.digest,
+                    "cells": {
+                        flow: [
+                            _version_out(version)
+                            for version in library.versions(
+                                one.run, flow, suffixes[flow]
+                            )
+                        ]
+                        if one.run is not None
+                        else []
+                        for flow in grid.flows
+                    },
+                }
+                for one in grid.sources
+            ],
+        }
+
+    def rendered(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> tuple[Run, Path, Path]:
+        """Return a render's run, its image and the approval it was rendered from."""
+        found = folder(batch)
+        run = library.run_named(found, digest)
+        one = _flow(wired, flow)
+        number = _version(version)
+        approval = approval_of(run, flow, number)
+        image = image_of(run, one, number, seed)
+        if not image.is_file():
+            raise Refusal(
+                f"{image.name}: its record is there, its image is gone; render it "
+                f"again with `python -m isekai render {found / library.RUNS}`"
+            )
+        return run, image, approval
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}")
+    def read_render(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> dict[str, Any]:
+        """Return one render's large view: the approval's filled fields beside it."""
+        run, _, approval = rendered(batch, digest, flow, version, seed)
+        remedy = f"restore it in {approval} by hand, then reload the page"
+        body = read(approval, APPROVED_FILE, remedy=remedy)
+        fields = _fields(approval, body, remedy)
+        return {
+            "flow": flow,
+            "version": _version(version),
+            "seed": str(seed),
+            "run": run.id,
+            "fields": {name: tags for name, tags in fields.items() if tags},
+            "approved_at": _saved(approval),
+        }
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/image")
+    def read_render_image(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> FileResponse:
+        """Serve the render's bytes, whole."""
+        return FileResponse(rendered(batch, digest, flow, version, seed)[1])
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/thumb")
+    def read_render_thumb(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> FileResponse:
+        """Serve the render's thumbnail, made in the library's cache the first time."""
+        run, image, _ = rendered(batch, digest, flow, version, seed)
+        return FileResponse(
+            library.thumbnail(root, run, image), media_type="image/jpeg"
+        )
+
     @app.get("/api/{rest:path}")
     def no_route(rest: str) -> JSONResponse:
         """Answer an unknown API path as not found, never with the page."""
@@ -743,6 +829,29 @@ def cell_event(
         }
 
     return cell
+
+
+def _version_out(version: library.Version) -> dict[str, Any]:
+    """Describe an approval's version, each seed a decimal string as `renders` is."""
+    return {
+        **asdict(version),
+        "seeds": [str(seed) for seed in version.seeds],
+        "rendered": [str(seed) for seed in version.rendered],
+    }
+
+
+def _version(text: str) -> int:
+    """Return the approval number a URL's version names.
+
+    e.g. "v2" -> 2
+    """
+    digits = text.removeprefix("v")
+    if not digits.isdigit():
+        raise Refusal(
+            f"{text!r} names no version; a version is v and the approval's number, "
+            "e.g. v1 -- go back to the batch's Renders to choose one"
+        )
+    return int(digits)
 
 
 def _quote(

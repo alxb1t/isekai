@@ -24,6 +24,8 @@ hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶
   what renders, what is left out and why, the estimate, the limit and the price at most. Only
   `POST …/render` rents: `gpunit volume up --yes`, then `isekai render --limit … --progress json`,
   then `volume down` unless the window is kept.
+- **Renders** reads each source's approvals newest first with their images; the large view shows an
+  image beside the approval's filled fields. A thumbnail is made once, into the library's `.cache/`.
 - **Billing** (`billing.py`) is read from gpunit's records in `.gpunit/`: a pod alert, the window's quiet
   item, or the band. gpunit is asked at start, every half minute while a session runs or an alert is
   open, and on Check again.

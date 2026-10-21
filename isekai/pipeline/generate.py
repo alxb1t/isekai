@@ -169,6 +169,21 @@ def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
     return approved[-1], directory / artifact_name(approved[-1], APPROVED)
 
 
+def approval_of(run: Run, flow: str, version: int) -> Path:
+    """Return the path of `flow`'s approval numbered `version` in `run`."""
+    return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
+
+
+def group_of(run: Run, flow: str, version: int) -> Path:
+    """Return the outputs group the approval numbered `version` renders into."""
+    return run.directory(flow, OUTPUTS, f"{version:03d}")
+
+
+def image_of(run: Run, flow: Flow, version: int, seed: int) -> Path:
+    """Return where the image of `seed` under approval `version` is written."""
+    return group_of(run, flow.id, version) / f"{seed}{flow.output_suffix}"
+
+
 def approved_flows(run: Run) -> list[str]:
     """Return every flow this run has an approved artifact for, by identifier.
 

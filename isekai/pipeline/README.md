@@ -36,8 +36,8 @@ at least once; a list of names cannot.
 | `caption.py` | `interface/cli.py`, `interface/wiring.py` | `tests/stages.py`, `tests/test_caption.py`, `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_sheet_stage.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
 | `tagging.py` | `interface/cli.py`, `interface/wiring.py` | `tests/test_generate.py`, `tests/test_pipeline_cli.py`, `tests/test_resume.py`, `tests/test_run_view.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
 | `sheet.py` | `interface/cli.py` | `tests/stages.py`, `tests/test_sheet_stage.py` |
-| `review.py` | `interface/cli.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py` |
-| `generate.py` | `interface/cli.py`, `interface/run_view.py`, `interface/ui/library.py` | `tests/test_generate.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_run_view.py` |
+| `review.py` | `interface/cli.py`, `interface/render.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/e2e/conftest.py`, `tests/e2e/test_review.py`, `tests/test_artifact_bytes.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
+| `generate.py` | `interface/cli.py`, `interface/compare_view.py`, `interface/render.py`, `interface/run_view.py`, `interface/ui/app.py`, `interface/ui/library.py` | `tests/e2e/conftest.py`, `tests/test_artifact_bytes.py`, `tests/test_generate.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_review.py`, `tests/test_run_directory.py`, `tests/test_run_view.py`, `tests/test_ui_api.py` |
 
 > Files and importers only. What a component *is* is
 > [`docs/principles.md`](../../docs/principles.md)'s, and the choices in force are

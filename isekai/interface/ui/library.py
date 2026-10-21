@@ -9,11 +9,13 @@ are the flows `config/ui.json` offers.
 ~/isekai/                      the library, `ISEKAI_LIBRARY`
   <batch>/ sources/ runs/ log.txt
   .staging/                    a dot-folder: never listed
+  .cache/<digest>/…            thumbnails, made on first request
 ```
 
 No web framework, so the whole of it is tested with no server involved.
 """
 
+import io
 import json
 import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -28,7 +30,9 @@ from isekai.foundation.artifacts import (
     WD14_FILE,
     Artifact,
     read,
+    renders_of,
 )
+from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.flow import load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -49,7 +53,7 @@ from isekai.foundation.run import (
     latest_artifact,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import rendered_seeds
+from isekai.pipeline.generate import approval_of, group_of, rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, current_draft
 from isekai.pipeline.review import state as review_state
@@ -59,6 +63,10 @@ VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
 RUNS = "runs"
 LOG = "log.txt"
+# The library's thumbnails, a dot-folder so it is listed as no batch (D9).
+CACHE = ".cache"
+# A thumbnail's long side, in pixels.
+THUMB_SIDE = 512
 
 # What a run directory's stage folder says was written last, for Home's row.
 _KINDS: Mapping[str, str] = {
@@ -263,6 +271,78 @@ def unprepared(grid: Hub) -> dict[str, list[str]]:
         ]
         for flow in grid.flows
     }
+
+
+@dataclass(frozen=True)
+class Version:
+    """One approval of a source in a flow, and the seeds rendered under it.
+
+    `at` is when the approval was written; `count` and `seeds` are its renders.
+    """
+
+    version: int
+    at: float
+    count: int
+    seeds: tuple[int, ...]
+    rendered: tuple[int, ...]
+
+
+def versions(run: Run, flow: str, suffix: str) -> list[Version]:
+    """Return `run`'s approvals in `flow`, newest first, each with its rendered seeds.
+
+    An approval no hand can read is refused naming the file, as Review refuses it.
+    """
+    directory = run.directory(flow, REVIEW)
+    found = []
+    for number in reversed(approved_versions(directory)):
+        path = approval_of(run, flow, number)
+        remedy = f"restore it in {path} by hand, then reload the page"
+        held = renders_of(path, read(path, APPROVED_FILE, remedy=remedy), remedy)
+        group = group_of(run, flow, number)
+        found.append(
+            Version(
+                number,
+                path.stat().st_mtime,
+                held["count"],
+                tuple(held["seeds"]),
+                tuple(rendered_seeds(group, suffix)),
+            )
+        )
+    return found
+
+
+def thumbnail(library: Path, run: Run, image: Path) -> Path:
+    """Return `image`'s thumbnail in the library's cache, made the first time only.
+
+    A JPEG at most `THUMB_SIDE` on its long side, under `.cache/<digest>/` at the
+    image's path in the run. e.g. `…/outputs/001/42.png` -> `.cache/0d4b…/…/42.jpg`
+    """
+    within = image.relative_to(run.path).with_suffix(".jpg")
+    cached = library / CACHE / run.digest / within
+    if cached.is_file():
+        return cached
+    write_atomically(cached, _shrunk(image))
+    return cached
+
+
+def _shrunk(image: Path) -> bytes:
+    """Return `image` as a JPEG at most `THUMB_SIDE` on its long side."""
+    # Here, not at module scope: Pillow is a wheel, and this module is read by
+    # tests of the hub that never make a thumbnail.
+    from PIL import Image
+
+    try:
+        with Image.open(image) as opened:
+            small = opened.convert("RGB")
+            small.thumbnail((THUMB_SIDE, THUMB_SIDE))
+    except OSError as unread:
+        raise Refusal(
+            f"{image.name}: is not an image this build can read ({unread}); delete "
+            f"{image} and its .render.json, then render it again"
+        ) from unread
+    out = io.BytesIO()
+    small.save(out, "JPEG", quality=85)
+    return out.getvalue()
 
 
 def source_files(folder: Path) -> Callable[[str], Path]:

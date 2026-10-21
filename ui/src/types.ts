@@ -247,3 +247,29 @@ export interface Assigned {
   /* Each refused source's refusal, by its name. */
   refused: Record<string, string>
 }
+
+/* One approval of a source in a flow: when, its count and seeds, and the seeds
+   rendered under it, each a decimal string as in `Renders`. */
+export interface RenderVersion {
+  version: number
+  at: number
+  count: number
+  seeds: string[]
+  rendered: string[]
+}
+
+export interface RendersInfo {
+  batch: string
+  flows: string[]
+  sources: { name: string; digest: string | null; cells: Record<string, RenderVersion[]> }[]
+}
+
+/* An image's large view: the approval it was rendered from, filled fields only. */
+export interface RenderDetail {
+  flow: string
+  version: number
+  seed: string
+  run: string
+  fields: Record<string, string[]>
+  approved_at: number | null
+}

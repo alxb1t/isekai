@@ -24,6 +24,8 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   /api/billing/check` asks gpunit again (0063 D7).
 - The hub's Render opens a dialog quoting what renders, the limit and the price at most; its confirmation
   opens `/session`, and the shell shows the billing band and the window's item (0063 D8).
+- The Renders view lists each source's approvals newest first with their images, and the large view shows an
+  image beside its sheet; thumbnails are made once into the library's `.cache/` (0063 D9).
 
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 

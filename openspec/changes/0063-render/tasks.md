@@ -12,7 +12,7 @@ task names.
 - [x] 4 — Progress
 - [x] 5 — The job and billing
 - [x] 6 — The render UI
-- [ ] 7 — The Renders view
+- [x] 7 — The Renders view
 - [ ] 8 — The docs
 - [ ] 9 — ⚠️ **HUMAN · METERED** — two images rendered from the UI
 
@@ -64,9 +64,9 @@ task names.
 
 ## 7 — The Renders view
 
-- [ ] 7.1 Add the renders and thumbnail routes to `isekai/interface/ui/app.py`, the cache under `.cache/` in `isekai/interface/ui/library.py`, and `ui/src/views/Renders.vue` with `ui/src/views/RenderLarge.vue`, per [D9](design.md#d9).
+- [x] 7.1 Add the renders and thumbnail routes to `isekai/interface/ui/app.py`, the cache under `.cache/` in `isekai/interface/ui/library.py`, and `ui/src/views/Renders.vue` with `ui/src/views/RenderLarge.vue`, per [D9](design.md#d9).
   Verify: `grep -c '/renders' isekai/interface/ui/app.py` prints a number of at least `2`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 7.2 Bind `ui:renders:versions-newest-first` and `ui:renders:a-thumbnail-is-made-once` in `tests/test_ui_api.py`, and extend `tests/e2e/test_render.py` with a step binding `ui:renders:the-large-view-shows-its-sheet`.
+- [x] 7.2 Bind `ui:renders:versions-newest-first` and `ui:renders:a-thumbnail-is-made-once` in `tests/test_ui_api.py`, and extend `tests/e2e/test_render.py` with a step binding `ui:renders:the-large-view-shows-its-sheet`.
   Verify: `uv run pytest -q tests/test_ui_api.py tests/e2e/test_render.py` exits 0, and `grep -c 'ui:renders:' tests/test_ui_api.py` prints `2`.
 
 ## 8 — The docs

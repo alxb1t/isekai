@@ -17,6 +17,7 @@ from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.tagging import FakeTagger
 from tests.conftest import VOCABULARY
 from tests.fakes import SESSION_IMAGE, FakeComfyClient
+from tests.images import photo_jpeg
 from tests.stages import FIELD_MAP, NO_RECORDS, Always, fake_wd14
 
 
@@ -46,12 +47,14 @@ def _gpunit(argv: Sequence[str], log: Path) -> int:
     return 0
 
 
-# A render on these rents nothing and answers at once; the key is a stand-in, so
-# Render is offered.
+# A render on these rents nothing and answers at once with an image that decodes;
+# the key is a stand-in, so Render is offered.
 SESSION = Seams(
     open_session=_opened,
     environ={"RUNPOD_API_KEY": "e2e"},
-    connect=lambda server: FakeComfyClient(),
+    connect=lambda server: FakeComfyClient(
+        view_bytes=photo_jpeg((90, 60, 30), (640, 800))
+    ),
     busy=lambda port: False,
     kill=lambda: None,
 )

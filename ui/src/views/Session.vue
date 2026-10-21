@@ -116,8 +116,9 @@ onUnmounted(() => clearInterval(ticker))
           <RouterLink
             v-if="job"
             class="btn btn-primary"
-            :to="{ name: 'hub', params: { batch: job.batch } }"
-            >Back to the hub<span class="appbar__key">⌥1</span></RouterLink
+            data-renders
+            :to="{ name: 'renders', params: { batch: job.batch } }"
+            >View in Renders<span class="appbar__key">⌥3</span></RouterLink
           >
         </template>
       </footer>

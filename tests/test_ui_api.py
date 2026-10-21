@@ -50,7 +50,7 @@ from isekai.foundation.artifacts import (
     Renders,
     read,
 )
-from isekai.foundation.flow import Schema  # noqa: E402
+from isekai.foundation.flow import Schema, load_flow  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     APPROVED,
     CAPTIONS,
@@ -62,7 +62,7 @@ from isekai.foundation.run import (  # noqa: E402
     open_run,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
-from isekai.interface.ui import HOST  # noqa: E402
+from isekai.interface.ui import HOST, library  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
     RARE_BELOW,
     Held,
@@ -71,6 +71,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
+from isekai.pipeline.generate import prepare  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
@@ -85,8 +86,16 @@ from isekai.pipeline.tagging import (  # noqa: E402
 from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
-from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import FIELD_MAP, NO_GPUNIT, caption, fake_tagger, sheet  # noqa: E402
+from tests.fakes import FakeComfyClient  # noqa: E402
+from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
+from tests.stages import (  # noqa: E402
+    FIELD_MAP,
+    NO_GPUNIT,
+    caption,
+    fake_tagger,
+    render,
+    sheet,
+)
 
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
@@ -1220,3 +1229,81 @@ def test_a_malformed_update_is_refused_naming_the_field(
     assert response.status_code == 409
     assert named in response.json()["refusal"]
     assert snapshot(made.path) == before
+
+
+# --- Renders ------------------------------------------------------------------
+
+
+def _rendered_twice(
+    made: Run, schema: Schema, vocabulary: Vocabulary
+) -> tuple[list[int], list[int]]:
+    """Approve `made` twice, rendering under each, and return each version's seeds.
+
+    Each image is a real one, so a thumbnail can be made of it.
+    """
+    flow = load_flow(FLOW)
+    client = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+    first = [one.seed for one in render(made, flow, client, seeds=[11], poll=0)]
+    review(made, FLOW, new_version=True)
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+    second = [one.seed for one in render(made, flow, client, seeds=[22], poll=0)]
+    return first, second
+
+
+@pytest.mark.spec("ui:renders:versions-newest-first")
+def test_a_cells_approvals_are_listed_newest_first_with_their_images(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders").json()
+
+    (source,) = body["sources"]
+    cell = source["cells"][FLOW]
+    assert [(one["version"], one["rendered"]) for one in cell] == [
+        (2, ["22"]),
+        (1, ["11"]),
+    ]
+
+
+@pytest.mark.spec("ui:renders:a-thumbnail-is-made-once")
+def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    shrinks: list[Path] = []
+    shrink = library._shrunk
+
+    def counted(image: Path) -> bytes:
+        shrinks.append(image)
+        return shrink(image)
+
+    monkeypatch.setattr(library, "_shrunk", counted)
+    thumb = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/11/thumb"
+
+    first = client.get(thumb)
+    second = client.get(thumb)
+
+    assert first.status_code == second.status_code == 200
+    assert first.headers["content-type"] == "image/jpeg"
+    assert second.content == first.content
+    assert len(shrinks) == 1
+    cached = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs" / "001"
+    assert (cached / "11.jpg").is_file()

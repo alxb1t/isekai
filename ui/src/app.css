@@ -365,6 +365,106 @@ body {
   align-items: flex-start;
 }
 
+/* — Renders and the large view (J5·1, J5·2) — */
+
+.renders {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.renders__grid {
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+}
+
+.renders__grid > * {
+  padding: 10px;
+  background: var(--ground);
+}
+
+.renders__name {
+  font-size: 13px;
+}
+
+.renders__version {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.renders__head {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.renders__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.renders__image {
+  width: 96px;
+  height: 128px;
+  padding: 0;
+  border: 1px solid var(--line-control);
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+  cursor: pointer;
+}
+
+.renders__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.large {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.large__media {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background: var(--ground-media);
+}
+
+.large__media img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.large__sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 360px;
+  padding: 20px;
+  overflow: auto;
+  border-left: 1px solid var(--line);
+}
+
+.large__fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.large__fields dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
 .review {
   display: flex;
   flex-direction: column;

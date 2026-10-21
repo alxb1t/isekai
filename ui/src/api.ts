@@ -15,7 +15,9 @@ import type {
   JobSlot,
   LibraryInfo,
   Quote,
+  RenderDetail,
   Renders,
+  RendersInfo,
   TagMatches,
 } from './types'
 
@@ -164,4 +166,26 @@ export function commitStaging(
     as_is: asIs,
     add,
   })
+}
+
+export function renders(batch: string): Promise<RendersInfo> {
+  return get<RendersInfo>(`/api/b/${encodeURIComponent(batch)}/renders`)
+}
+
+/* One image of a source in a flow: `version` is the approval's number. */
+export interface RenderPlace {
+  batch: string
+  digest: string
+  flow: string
+  version: number
+  seed: string
+}
+
+export function renderAt(place: RenderPlace): string {
+  const [batch, ...rest] = [place.batch, place.digest, place.flow, `v${place.version}`, place.seed]
+  return `/api/b/${encodeURIComponent(batch)}/renders/${rest.map(encodeURIComponent).join('/')}`
+}
+
+export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
+  return get<RenderDetail>(renderAt(place))
 }
