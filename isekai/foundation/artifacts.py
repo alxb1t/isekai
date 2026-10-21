@@ -16,7 +16,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Generic, NewType, NotRequired, TypedDict, TypeVar
+from typing import Any, Generic, NewType, NotRequired, TypedDict, TypeGuard, TypeVar
 
 from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
@@ -246,6 +246,21 @@ class Sheet(TypedDict):
     flow_digest: NotRequired[str]
 
 
+class Renders(TypedDict):
+    """How many images an approval renders, and the seeds it renders first."""
+
+    count: int
+    seeds: list[int]
+
+
+# A draft or approval without `renders` reads as this: one drawn seed.
+ONE_RENDER: Renders = {"count": 1, "seeds": []}
+
+# What the sampler takes: an unsigned 64-bit integer.
+SEED_BITS = 64
+SEED_RANGE = range(2**SEED_BITS)
+
+
 class ReviewDraft(TypedDict):
     """The operator's editable copy of a sheet."""
 
@@ -257,6 +272,7 @@ class ReviewDraft(TypedDict):
     fields: dict[str, list[str]]
     schema_document: NotRequired[SchemaDocument]
     field_map: NotRequired[FieldMapRecord]
+    renders: NotRequired[Renders]
 
 
 class ReviewApproved(TypedDict):
@@ -270,6 +286,7 @@ class ReviewApproved(TypedDict):
     fields: dict[str, list[str]]
     schema_document: NotRequired[SchemaDocument]
     field_map: NotRequired[FieldMapRecord]
+    renders: NotRequired[Renders]
 
 
 class Prompt(TypedDict):
@@ -291,6 +308,7 @@ class Render(TypedDict):
     `sheet` is the sheet the approval was made from; an older sidecar carries
     `sheet_version`, the approval's number, instead. `image` is absent when no
     render session named one. `seeds_from` names the flow whose seeds were taken.
+    `duration` is the seconds from submission to the image's arrival.
     """
 
     schema: SchemaBlock
@@ -306,6 +324,7 @@ class Render(TypedDict):
     image: NotRequired[str]
     pinned: NotRequired[bool]
     runtime: NotRequired[Runtime]
+    duration: NotRequired[float]
     seeds_from: NotRequired[str]
 
 
@@ -425,3 +444,47 @@ def require(
     if not isinstance(body.get(key), shape):
         noun = _NOUNS.get(shape, "value")
         raise Refusal(f"{path.name}: records no `{key}` {noun}; {remedy}")
+
+
+def renders_of(path: Path, body: Mapping[str, object], remedy: str) -> Renders:
+    """Return a draft's or approval's `renders`, refusing a value no render takes.
+
+    An absent block is one drawn seed, as every review before it rendered. The
+    count may not fall below the seeds it lists, and a seed is the sampler's.
+    e.g. `{"count": 1, "seeds": [1, 2]}` -> "…: its renders count 1 is below …"
+    """
+    held = body.get("renders")
+    if held is None:
+        return {"count": ONE_RENDER["count"], "seeds": list(ONE_RENDER["seeds"])}
+    if not isinstance(held, dict):
+        raise Refusal(f"{path.name}: its `renders` is not an object; {remedy}")
+    count, seeds = held.get("count"), held.get("seeds", [])
+    if not _whole(count):
+        raise Refusal(
+            f"{path.name}: its renders count {count!r} is not a number; {remedy}"
+        )
+    if not isinstance(seeds, list):
+        raise Refusal(f"{path.name}: its renders seeds is not a list; {remedy}")
+    listed: list[int] = []
+    for seed in seeds:
+        if not _whole(seed) or seed not in SEED_RANGE:
+            raise Refusal(
+                f"{path.name}: its renders seed {seed!r} is outside 0 to "
+                f"{SEED_RANGE.stop - 1}, the range a render accepts; {remedy}"
+            )
+        listed.append(seed)
+    if count < 1:
+        raise Refusal(
+            f"{path.name}: its renders count {count} renders nothing; {remedy}"
+        )
+    if count < len(listed):
+        raise Refusal(
+            f"{path.name}: its renders count {count} is below the {len(listed)} "
+            f"seeds it lists; {remedy}"
+        )
+    return {"count": count, "seeds": listed}
+
+
+def _whole(value: object) -> TypeGuard[int]:
+    """Return whether `value` is an int that is not a flag."""
+    return isinstance(value, int) and not isinstance(value, bool)

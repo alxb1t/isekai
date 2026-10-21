@@ -24,7 +24,12 @@ import isekai.foundation.run as run_module
 import isekai.pipeline.generate as generate_module
 from isekai.boundary.comfy import ComfyClient, TransportFailure, unread
 from isekai.boundary.comfy.client import TIMEOUT
-from isekai.foundation.artifacts import PROMPT_FILE, RENDER_FILE, Runtime, read
+from isekai.foundation.artifacts import (
+    PROMPT_FILE,
+    RENDER_FILE,
+    Runtime,
+    read,
+)
 from isekai.foundation.flow import (
     CAPTION_BRIEFING_NAME,
     GRAPH_NAME,
@@ -81,6 +86,7 @@ from tests.stages import (
     Always,
     caption,
     fake_wd14,
+    reapprove,
     render,
     runs_flag,
     sheet,
@@ -399,14 +405,39 @@ def test_the_parser_refuses_a_count_and_a_seed_together() -> None:
         )
 
 
-@pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
-def test_the_parser_defaults_to_one_render_with_a_drawn_seed() -> None:
-    from isekai.interface.cli import build_parser
+def _generated(tmp_path: Path, vocabulary: Vocabulary, run: Run) -> list[int]:
+    """Run `generate` on `run` with no count and no seed; return the seeds rendered."""
+    from isekai.interface.cli import build_parser, dispatch
 
-    parsed = build_parser().parse_args(["generate", "--flow", FLOW])
+    client = FakeComfyClient()
+    wired = dataclasses.replace(
+        _seeded_session(tmp_path, vocabulary, client, io.StringIO()),
+        rng=random.Random(7),
+    )
+    argv = ["generate", "--flow", FLOW, "--server", "http://127.0.0.1:8188", run.id]
+    parsed = build_parser().parse_args(argv)
 
     assert parsed.count is None and parsed.seeds is None
-    assert len(seeds_for(parsed.count, parsed.seeds, random.Random(7))) == 1
+    assert dispatch(parsed, wired) == 0
+    return sorted(int(path.stem) for path in run.path.glob(f"{FLOW}/outputs/*/*.png"))
+
+
+@pytest.mark.spec("cli:generate-signature:count-defaults-to-one")
+def test_the_parser_defaults_to_one_render_with_a_drawn_seed(
+    tmp_path: Path, vocabulary: Vocabulary, run: Run
+) -> None:
+    assert _generated(tmp_path, vocabulary, run) == draw_seeds(1, random.Random(7))
+
+
+@pytest.mark.spec("cli:generate-signature:count-defaults-to-the-approvals")
+def test_with_no_count_a_photograph_renders_its_approvals_count(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary, run: Run
+) -> None:
+    reapprove(run, schema, vocabulary, {"count": 3, "seeds": []})
+
+    seeds = _generated(tmp_path, vocabulary, run)
+
+    assert seeds == sorted(draw_seeds(3, random.Random(7)))
 
 
 @pytest.mark.spec("cli:generate-signature:accepts-many-identifiers")
@@ -636,6 +667,63 @@ def test_raising_the_count_renders_only_the_difference(
     assert len(rendered_seeds(directory, flow.output_suffix)) == 3
     for name, body in stamps.items():
         assert (directory / name).read_bytes() == body
+
+
+@pytest.mark.spec("image-generation:approved-count:listed-seeds-first")
+def test_an_approvals_listed_seeds_render_first_and_the_rest_are_drawn(
+    run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group = reapprove(run, schema, vocabulary, {"count": 3, "seeds": [1]})
+    prepare(run, {FLOW: flow})
+
+    produced = render(run, flow, FakeComfyClient(), rng=random.Random(7), poll=0)
+
+    seeds = [made.seed for made in produced]
+    assert seeds[0] == 1
+    assert len(seeds) == len(set(seeds)) == 3
+    assert all(seed.bit_length() > 32 for seed in seeds[1:])
+    assert rendered_seeds(group, flow.output_suffix) == sorted(seeds)
+
+
+@pytest.mark.spec("image-generation:approved-count:no-count-renders-one")
+def test_an_approval_with_no_count_renders_one_drawn_seed(run: Run, flow: Flow) -> None:
+    prepare(run, {FLOW: flow})
+
+    produced = render(run, flow, FakeComfyClient(), rng=random.Random(7), poll=0)
+
+    assert [made.seed for made in produced] == draw_seeds(1, random.Random(7))
+
+
+@pytest.mark.spec("image-generation:approved-count:only-the-shortfall-renders")
+def test_an_approval_short_of_its_count_renders_only_what_it_lacks(
+    run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    group = reapprove(run, schema, vocabulary, {"count": 3, "seeds": []})
+    prepare(run, {FLOW: flow})
+    client = FakeComfyClient()
+    render(run, flow, client, seeds=[42], poll=0)
+
+    produced = render(run, flow, client, rng=random.Random(7), poll=0)
+
+    assert len(produced) == 2
+    assert 42 not in [made.seed for made in produced]
+    assert len(rendered_seeds(group, flow.output_suffix)) == 3
+    assert render(run, flow, client, rng=random.Random(9), poll=0) == []
+
+
+@pytest.mark.spec("image-generation:duration:a-render-carries-its-duration")
+def test_a_render_records_the_seconds_from_submission_to_its_image(
+    run: Run, flow: Flow
+) -> None:
+    prepare(run, {FLOW: flow})
+    ticks = iter([100.0, 161.25, 200.0, 290.0])
+
+    produced = render(
+        run, flow, FakeComfyClient(), seeds=[1, 2], poll=0, clock=ticks.__next__
+    )
+
+    durations = [read(made.provenance, RENDER_FILE)["duration"] for made in produced]
+    assert durations == [61.2, 90.0]
 
 
 @pytest.mark.spec("image-generation:seeds:outputs-carry-the-approval")

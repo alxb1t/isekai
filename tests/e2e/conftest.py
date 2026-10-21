@@ -22,10 +22,12 @@ import pytest
 from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, open_run
 from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review
 from tests.e2e.wiring import VOCABULARY
+from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, photo_jpeg
-from tests.stages import caption, sheet
+from tests.stages import caption, render, sheet
 
 REPO = Path(__file__).resolve().parents[2]
 FLOW = "summon-anime-wai"
@@ -49,6 +51,11 @@ FRESH: dict[str, tuple[str, ...]] = {
 # The fresh sources whose run is already assigned to `FLOW`, as a tick leaves it.
 ASSIGNED: dict[str, tuple[str, ...]] = {"hub-prepare": ("pick",)}
 
+# The batch a render test owns: one source approved for one image.
+RENDER = "render"
+# The batch the Renders view is read from: one source already rendered once.
+SHOWN = "shown"
+
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
 
@@ -62,6 +69,8 @@ class Served:
     draft: Run
     approved: Run
     queues: dict[str, tuple[Run, ...]]
+    rendered: Run
+    shown: Run
 
     def review(self, run: Run, batch: str | None = None) -> str:
         """Return the address of `run`'s review in `FLOW`, in `batch` or the main."""
@@ -133,6 +142,18 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             if one in ASSIGNED.get(name, ()):
                 open_run(photo, lib / name / "runs").directory(FLOW).mkdir()
 
+    (lib / RENDER / "sources").mkdir(parents=True)
+    rendered = _run(lib / RENDER, "gia", (740, 1000))
+    review(rendered, FLOW)
+    approve(rendered, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    (lib / SHOWN / "sources").mkdir(parents=True)
+    shown = _run(lib / SHOWN, "hal", (750, 1000))
+    review(shown, FLOW)
+    approve(shown, FLOW, load_flow(FLOW).schema, VOCABULARY)
+    prepare(shown, {FLOW: load_flow(FLOW)})
+    image = photo_jpeg((90, 60, 30), (640, 800))
+    render(shown, load_flow(FLOW), FakeComfyClient(view_bytes=image), seeds=[7], poll=0)
+
     port = _free_port()
     url = f"http://127.0.0.1:{port}"
     server = subprocess.Popen(
@@ -148,7 +169,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     )
     try:
         _wait(f"{url}/api/library", server)
-        yield Served(url, BATCH, draft, approved, queues)
+        yield Served(url, BATCH, draft, approved, queues, rendered, shown)
     finally:
         server.terminate()
         server.wait(timeout=10)

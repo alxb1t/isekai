@@ -115,6 +115,13 @@ export interface FieldCandidates {
   fields: Record<string, OfferedTag[]>
 }
 
+/* How many images an approval renders, and the seeds it renders first. Seeds
+   are decimal strings: a 64-bit seed is past what a number holds exactly. */
+export interface Renders {
+  count: number
+  seeds: string[]
+}
+
 export interface InputDetail {
   /* The run's digest, which the URL names it by. */
   id: string
@@ -134,6 +141,7 @@ export interface InputDetail {
   wd14: ScoredTag[] | null
   tags: OfferedTag[] | null
   fields: Record<string, string[]>
+  renders: Renders
   readonly: boolean
   draft: string | null
   approved: string | null
@@ -171,14 +179,50 @@ export interface Committed {
 }
 
 /* The one job slot: Prepare running, or the last one's end. */
+/* A render's session as the job reports it: each step's state by name —
+   `volume up`, `pod`, `teardown`, `volume down` — and each image as it lands. */
+export interface RenderSession {
+  started: string
+  /* When the job ended; null while it runs. */
+  ended: string | null
+  limit: number
+  of: number
+  steps: Record<string, string>
+  images: { digest: string; flow: string; version: number; seed: string }[]
+}
+
 export interface JobSlot {
-  kind: 'prepare'
+  kind: 'prepare' | 'render'
   batch: string
   state: 'running' | 'done' | 'stopped' | 'failed'
   flow: string | null
   stage: string | null
   /* Why a failed job ended, naming the batch's log; null otherwise. */
   message: string | null
+  session?: RenderSession
+}
+
+/* What gpunit's records say may be billing: a pod with no session running, and
+   the window volume — `open` until its end, `band` past it or unanswered. */
+export interface Billing {
+  pod: boolean
+  volume: { state: 'open' | 'band'; ends: string | null } | null
+}
+
+export interface QuoteSource {
+  name: string
+  digest: string
+  version: number | null
+}
+
+/* The Render dialog's quote: per flow what renders, what is left out and why,
+   the estimate and limit in seconds, and the price in dollars. */
+export interface Quote {
+  flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
+  left_out: (QuoteSource & { flow: string; reason: string })[]
+  estimate: { seconds: number; limit_s: number; boot_s: number; teardown_s: number }
+  price: { about: number; at_most: number; keep_open: number }
+  disabled: string | null
 }
 
 /* A stage's report about one cell, its stage read again from disk. */
@@ -196,4 +240,30 @@ export interface Assigned {
   cells: Record<string, HubCell>
   /* Each refused source's refusal, by its name. */
   refused: Record<string, string>
+}
+
+/* One approval of a source in a flow: when, its count and seeds, and the seeds
+   rendered under it, each a decimal string as in `Renders`. An approval no hand
+   can read carries its refusal in `damaged`, and no count. */
+export interface RenderVersion {
+  version: number
+  at: number
+  count: number | null
+  seeds: string[]
+  rendered: string[]
+  damaged: string | null
+}
+
+export interface RendersInfo {
+  flows: string[]
+  sources: { name: string; digest: string | null; cells: Record<string, RenderVersion[]> }[]
+}
+
+/* An image's large view: the approval it was rendered from, filled fields only. */
+export interface RenderDetail {
+  flow: string
+  version: number
+  seed: string
+  fields: Record<string, string[]>
+  approved_at: number | null
 }

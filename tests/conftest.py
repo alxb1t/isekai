@@ -44,8 +44,8 @@ CSV = """tag_id,name,category,count
 # The vocabulary every offline test reads, built from `CSV`.
 VOCABULARY = Vocabulary("wd14/selected_tags.csv", "f" * 40, "a" * 64, read_tags(CSV))
 
-# The repository's per-session spending ceiling, in seconds at the halt.
-SESSION_CEILING_SECONDS = 45 * 60
+# The hard maximum on a render session, in seconds; each session's is its limit.
+SESSION_CEILING_SECONDS = 3 * 60 * 60
 
 
 @pytest.fixture(scope="session")

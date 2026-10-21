@@ -1,0 +1,7 @@
+{
+  "boot_s": 180,
+  "per_image_s": 60,
+  "teardown_s": 120,
+  "limit_factor": 1.5,
+  "volume_rate": 0.005
+}

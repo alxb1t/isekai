@@ -9,6 +9,48 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-21 · 0063-render
+
+Gate: local 0m30s · CI 1m5s (ci at 7a9a698) · 0.38.0: local 0m29s · CI 1m0s
+
+### Added
+
+- A draft and its approval carry `renders`, a count and seeds, edited in Review's ④; approval refuses a count
+  below its seeds or a seed out of range; `render` takes the listed seeds first, and `generate` with no
+  `--count` renders the approval's count (0063 D1).
+- `isekai render <runs>` with no request renders what each approval lacks of its count; a run without the flow
+  is skipped, and an unapproved flow is left out and named, so a draft holds up nothing (0063 D2).
+- A session's limit is `--limit` or an estimate from recorded durations, at least the hold plus five minutes;
+  gpunit stops the pod at it, and a render records its `duration`. `gpunit.toml` gains a ceiling long enough
+  for a large batch, and an hourly maximum that bounds the price (0063 D3, D4).
+- `isekai render --progress json` prints a JSON line per step: the pod, each image of the total, the teardown;
+  the prose goes to stderr (0063 D5).
+- The render job: `POST /api/b/{batch}/render/quote` quotes what renders and its price at most, and
+  `POST …/render` opens the volume, runs `render --limit … --progress json` and closes it unless kept (0063 D6, D8).
+- Billing is read from gpunit's `.gpunit/` records: the pod alert, the window's item, the band; `POST
+  /api/billing/check` asks gpunit again (0063 D7).
+- The hub's Render opens a dialog quoting what renders, the limit and the price at most; its confirmation
+  opens `/session`, and the shell shows the billing band and the window's item (0063 D8).
+- The Renders view lists each source's approvals newest first with their images, and the large view shows an
+  image beside its sheet; thumbnails are made once into the library's `.cache/` (0063 D9).
+- Proved on a pod: two images rendered from the app inside their quoted limit, each recording its duration, and
+  no pod or volume left after (0063 D11).
+
+### Changed
+
+- `CLAUDE.md`'s cost rule, D26 and D36 follow the quote: a session's limit and price, at most `gpunit.toml`'s
+  `ceiling` and `max_hourly`; the README and data flow describe rendering from the app (0063 D10).
+
+### Fixed
+
+- From the proof: Render is disabled on the hub with its reason, the session's clock stops at its end and its
+  tiles show the renders, Renders takes arrows and ↵, esc leaves the large view, and the log holds each line once (0063 D8, D9).
+- From review: `render` logs `generate`'s lines again; a stopped app closes the window after the teardown, and
+  Ctrl-C reaches no gpunit verb; a grown quote is refused; a thumbnail is named by its image (0063 D5, D8, D9).
+- From the second review: a confirmation carries the images it quoted, a stopping app says it waits and names
+  `gpunit volume down` if the wait runs out, a damaged approval costs Renders only its version, and a render job
+  or session that fails mid-way reports it (0063 D5, D8, D9).
+
 ## [0.38.0] - 2026-10-21 · 0062-run-flow
 
 Gate: local 0m29s · CI 1m0s (ci at ac379cf) · 0.37.0: local 0m22s · CI 0m35s

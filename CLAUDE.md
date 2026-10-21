@@ -7,7 +7,7 @@ open image models are run end to end, from container to rented GPU to CLI. Flows
 `control-anime-wai` as `summon` with its face dials at zero — on a
 WAI-illustrious-SDXL v17.0 base, driven by staged verbs an operator runs one at a time: `tag` and
 `caption` → `sheet` → `review`/`approve` → `generate`, with `show` reading a run and `ui` serving the
-library of batches — each batch's hub and stage ③ — in a browser. Everything before `generate` is free and local; only the render costs money.
+library of batches — each batch's hub, stage ③, its render and its images — in a browser. Everything before `generate` is free and local; only the render costs money.
 
 > **That paragraph is the ceiling, and the ceiling is the point.** A fuller account — the verbs, what
 > each stage reads and writes, the run layout, the identity mechanisms and their dials — belongs in
@@ -248,11 +248,12 @@ they decide.**
   from memory.
 - **Some phases spend real money**, and the active change's `tasks.md` marks them (⚠️ GPU). The protocol
   names four things, because a rule that leaves any of them implicit is not a rule:
-  1. **Who creates the pod** — `uv run python -m isekai render`, through gpunit, and nothing else. Announce
-     before you run it. `uv run --env-file .env gpunit volume up --yes` makes or extends the window's volume,
+  1. **Who creates the pod** — `uv run python -m isekai render`, through gpunit, and nothing else; the app's
+     Render runs that verb as its child. Announce before you run it. `uv run --env-file .env gpunit volume up --yes` makes or extends the window's volume,
      announced with the render.
   2. **Who tears it down** — the same `isekai render`: its gpunit session deletes the pod on every exit and
-     leaves no `gpunit-isekai` pod listed; the pod also stops itself 45 minutes after it starts. When the
+     leaves no `gpunit-isekai` pod listed; the pod also stops itself at its session's limit, never past
+     `gpunit.toml`'s `ceiling`. When the
      session reports a failed teardown, `uv run --env-file .env gpunit down` is the act — gpunit reads no
      `.env`. **Teardown is the act**: it is the call that stops the billing, and it belongs to the same
      session that created the pod. The volume's is `uv run --env-file .env gpunit volume down`, on the
@@ -269,11 +270,12 @@ they decide.**
      so it can be disconnected exactly when this rule is read. Then the **explicit human "go" is back,
      unchanged**, and holds for the whole session: announce, wait for the "go", spend, tear down, report.
 
-  **The ceiling is 45 minutes and ~$0.30 for a single pod session**, and 4 hours and ~$0.02 for the
-  window's volume — numbers, not "promptly", so a human can hold you to it. Exceeding it is a halt, not a
-  judgement call. And whichever route applies, the authority to spend comes from a **phase `tasks.md` marks
-  metered, or from the operator's explicit go in the session, which quotes the ceiling** — never from the
-  agent.
+  **A session's limit and price are its quote's, at most `gpunit.toml`'s `ceiling` and `max_hourly`**, and
+  4 hours and ~$0.02 for the window's volume — numbers, not "promptly", so a human can hold you to it.
+  `isekai render` prints `session limit <seconds>s` as it opens, and the app's Render dialog quotes both.
+  Exceeding the quote is a halt, not a judgement call. And whichever route applies, the authority to spend
+  comes from a **phase `tasks.md` marks metered, or from the operator's explicit go in the session, which
+  quotes the limit and the price** — never from the agent.
 - **GPU renders live in the pod's memory**; only the models volume persists, for its window. Download
   before teardown or the output is gone.
 - **The Blackwell (sm_120) pod needs cu128 PyTorch** — cu124 gives "no kernel image". It is pinned in the

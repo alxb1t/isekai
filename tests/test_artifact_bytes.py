@@ -137,6 +137,7 @@ def _render(run: Run, schema: Schema, vocabulary: Vocabulary) -> Path:
         runtime=lambda: read_runtime(client),
         seeds=[42],
         poll=0,
+        clock=iter([10.0, 72.5]).__next__,
     )
     return made.provenance
 

@@ -40,10 +40,11 @@ both compose it, and `ui/library.py` reads `shared/image.py`'s `metadata_in` for
 not-cleaned mark.
 `assign` is `foundation/run.py`'s, because a tick is the run's layout, and the CLI
 verb and the hub's route both call it. `--progress json` is a reporter inside
-`cli.py`. **Prepare reaches the CLI by process, never by import**:
-`interface/ui/jobs.py` runs `python -m isekai tag | caption | sheet` as children,
-so the CLI stays the one path a stage runs through, and `interface/ui/events.py` streams
-what they report to the page as `/events`. `wiring.py` imports `boundary/ollama.py`
+`cli.py`. **Prepare and Render reach the CLI by process, never by import**:
+`interface/ui/jobs.py` runs `python -m isekai tag | caption | sheet`, and
+`python -m isekai render` between `python -m gpunit volume up` and `volume down`,
+as children, so the CLI stays the one path a stage runs through, and
+`interface/ui/events.py` streams what they report to the page as `/events`. `wiring.py` imports `boundary/ollama.py`
 for the probe a job asks first.
 
 **`tests/test_layers.py` holds where the lazy edges point; review holds that they
@@ -88,7 +89,7 @@ Rules the graph is holding rather than describing:
   import: `fastapi`/`uvicorn` from `interface/ui/app.py`; the tagger's stack
   from `boundary/wd14.py`; Pillow and `pi_heif` from inside the functions of
   `pipeline/importing.py`; `gpunit` from inside `boundary/gpu.py`'s `open_session`
-  and `interface/render.py`'s session block. The mechanisms differ, and the difference matters to
+  and `bounds`, and `interface/render.py`'s session block. The mechanisms differ, and the difference matters to
   anyone reading this as a rule to apply. `wd14.py` reaches its stack by an
   `import_module` call **inside a function**, so the module imports cleanly
   without the wheel. `app.py` does not: it imports

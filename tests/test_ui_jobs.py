@@ -4,14 +4,16 @@ Each child is a real process: a short Python script stands in for a verb, so Sto
 and the one slot are proved against a process that can be interrupted.
 """
 
+import io
 import json
 import queue
 import random
+import subprocess
 import sys
 import threading
 import time
 import urllib.error
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
 
@@ -21,19 +23,25 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from isekai.boundary import ollama  # noqa: E402
-from isekai.foundation.flow import FLOWS_DIR, load_flow  # noqa: E402
+from isekai.boundary import gpu, ollama  # noqa: E402
+from isekai.boundary.gpu import Seams, Volume  # noqa: E402
+from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, open_run  # noqa: E402
+from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
-from isekai.interface.ui.jobs import Jobs, Step  # noqa: E402
+from isekai.interface.ui.jobs import Jobs, Step, settle_s  # noqa: E402
+from isekai.pipeline.generate import prepare  # noqa: E402
+from isekai.pipeline.review import approve, review  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
-from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import bare_wiring, sheet, write_wd14  # noqa: E402
+from tests.fakes import FakeComfyClient  # noqa: E402
+from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
+from tests.stages import bare_wiring, render, sheet, write_wd14  # noqa: E402
 
 FLOW = "summon-anime-wai"
+CONTROL = "control-anime-wai"
 OFFERED = (FLOW, "conjure-anime-wai")
 PORT = 8766
 WAIT = 20.0
@@ -248,3 +256,329 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
+
+
+# --- render ---------------------------------------------------------------------
+
+
+def _order(record: Path) -> tuple[Volume, Callable[[int, Path], list[str]]]:
+    """Return a gpunit double and a render command, each appending its act to `record`.
+
+    The render child is a real process, so the order is read from one file.
+    """
+
+    def run(argv: Sequence[str], log: Path) -> int:
+        with record.open("a") as acts:
+            print(" ".join(argv), file=acts)
+        return LOST_EXIT if "up" in argv and "lost" in record.name else 0
+
+    def command(limit: int, runs: Path) -> list[str]:
+        script = "import sys; open(sys.argv[1], 'a').write(f'render {sys.argv[2]}\\n')"
+        return [sys.executable, "-c", script, str(record), str(limit)]
+
+    return Volume(run=run, records=record.parent / ".gpunit"), command
+
+
+@pytest.mark.spec("ui:render-job:opens-renders-and-closes")
+def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, command = _order(record)
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=command,
+        now=lambda: "ended",
+    )
+
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.wait(WAIT)
+
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        "render 1500",
+        "volume down",
+    ]
+    slot = jobs.slot() or {}
+    assert slot["state"] == "done"
+    assert slot["session"]["ended"] == "ended"
+
+
+@pytest.mark.spec("ui:render-job:a-lost-opening-renders-nothing")
+def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "lost-acts"
+    volume, command = _order(record)
+    raised: list[bool] = []
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=command,
+        raise_volume=lambda: raised.append(True),
+    )
+
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.wait(WAIT)
+
+    assert record.read_text().splitlines() == ["volume up --yes"]
+    assert raised == [True]
+    slot = jobs.slot() or {}
+    assert slot["state"] == "failed"
+    assert slot["session"]["steps"]["volume up"] == "lost"
+
+
+@pytest.mark.spec("ui:render-job:a-stopped-surface-closes-the-window")
+def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, _ = _order(record)
+    # A render child that takes a while to tear its pod down once interrupted.
+    script = (
+        "import signal, sys, time\n"
+        "def down(*_):\n"
+        "    time.sleep(0.5)\n"
+        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
+        "    sys.exit(130)\n"
+        "signal.signal(signal.SIGINT, down)\n"
+        "open(sys.argv[1], 'a').write('render\\n')\n"
+        "time.sleep(30)\n"
+    )
+    err = io.StringIO()
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        err=err,
+    )
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    deadline = time.monotonic() + WAIT
+    while "render" not in (record.read_text() if record.exists() else ""):
+        assert time.monotonic() < deadline, "the render child never started"
+        time.sleep(0.01)
+
+    # A wait shorter than the teardown: a render is waited for past it.
+    jobs.shutdown(timeout=0.05)
+
+    assert record.read_text().splitlines() == [
+        "volume up --yes",
+        "render",
+        "torn down",
+        "volume down",
+    ]
+    # Said as the wait begins, so a stop that takes minutes does not look hung.
+    assert f"waiting up to {settle_s():.0f}s" in err.getvalue()
+
+
+@pytest.mark.spec("ui:render-job:an-outlasted-stop-names-the-fix")
+def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, _ = _order(record)
+    # A render child whose teardown outlasts the wait the server gives it.
+    script = (
+        "import signal, sys, time\n"
+        "signal.signal(signal.SIGINT, lambda *_: (time.sleep(1), sys.exit(130)))\n"
+        "open(sys.argv[1], 'a').write('render\\n')\n"
+        "time.sleep(30)\n"
+    )
+    err = io.StringIO()
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        settle=lambda: 0.05,
+        err=err,
+    )
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    deadline = time.monotonic() + WAIT
+    while "render" not in (record.read_text() if record.exists() else ""):
+        assert time.monotonic() < deadline, "the render child never started"
+        time.sleep(0.01)
+
+    try:
+        jobs.shutdown(timeout=0.05)
+
+        assert "uv run --env-file .env gpunit volume down" in err.getvalue()
+    finally:
+        jobs.wait(WAIT)
+
+
+@pytest.mark.spec("ui:render-job:a-verb-that-cannot-start-fails-the-job")
+def test_a_render_verb_that_cannot_start_fails_the_job_and_closes_the_window(
+    tmp_path: Path,
+) -> None:
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+    volume, _ = _order(record)
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=volume,
+        render=lambda limit, runs: [str(tmp_path / "no-such-interpreter")],
+    )
+
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
+    jobs.wait(WAIT)
+
+    assert record.read_text().splitlines() == ["volume up --yes", "volume down"]
+    slot = jobs.slot() or {}
+    assert slot["state"] == "failed"
+    assert "b/log.txt" in slot["message"]
+
+
+@pytest.mark.spec("ui:render-job:a-stopped-surface-closes-the-window")
+def test_a_gpunit_verb_runs_in_its_own_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ran: list[tuple[list[str], dict[str, object]]] = []
+
+    def recorded(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        ran.append((argv, kwargs))
+        return subprocess.CompletedProcess(argv, 0)
+
+    monkeypatch.setattr(gpu.subprocess, "run", recorded)
+
+    assert Volume().down(tmp_path / "log.txt") == 0
+    ((argv, kwargs),) = ran
+    assert argv[1:] == ["-m", "gpunit", "volume", "down"]
+    assert kwargs.get("start_new_session") is True
+
+
+def _approved(
+    folder: Path, name: str, flow: str, schema: Schema, vocabulary: Vocabulary
+) -> Run:
+    """Return a run of `name` under `folder` approved in `flow` for one image."""
+    source = folder / "sources" / name
+    source.write_bytes(jpeg_bytes(600 + len(name), 800))
+    run = open_run(source, folder / "runs")
+    sheet(run, schema, vocabulary, flow=flow)
+    review(run, flow)
+    approve(run, flow, schema, vocabulary)
+    return run
+
+
+def _quoting(
+    tmp_path: Path, vocabulary: Vocabulary, environ: dict[str, str]
+) -> tuple[Path, TestClient]:
+    """Return a batch folder and a client whose session is handed `environ`."""
+    folder = tmp_path / "lib" / "b"
+    (folder / "sources").mkdir(parents=True)
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary,
+        runs_root=folder / "runs",
+        session=Seams(environ=environ),
+    )
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    app = create_app(
+        folder.parent,
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=PORT,
+    )
+    return folder, TestClient(app, base_url=f"http://{HOST}:{PORT}")
+
+
+@pytest.mark.spec("ui:render:the-dialog-lists-what-renders")
+def test_the_quote_lists_each_flows_images_what_is_left_out_and_the_price(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    _approved(folder, "beatrix.jpg", CONTROL, schema, vocabulary)
+    drafted = open_run(folder / "sources" / "ada.jpg", folder / "runs")
+    sheet(drafted, schema, vocabulary, flow=CONTROL)
+    review(drafted, CONTROL)
+
+    quote = client.post("/api/b/b/render/quote").json()
+
+    assert [(one["flow"], one["images"]) for one in quote["flows"]] == [
+        (CONTROL, 1),
+        (FLOW, 1),
+    ]
+    assert quote["flows"][1]["sources"][0]["name"] == "ada.jpg"
+    assert quote["left_out"] == [
+        {
+            "name": "ada.jpg",
+            "digest": drafted.digest,
+            "version": None,
+            "flow": CONTROL,
+            "reason": "a draft",
+        }
+    ]
+    assert quote["estimate"]["limit_s"] >= quote["estimate"]["seconds"]
+    assert 0 < quote["price"]["about"] < quote["price"]["at_most"]
+    assert quote["disabled"] is None
+
+
+@pytest.mark.spec("ui:render:without-a-key-render-is-disabled")
+def test_without_a_runpod_key_render_is_disabled_naming_the_fix(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+
+    quote = client.post("/api/b/b/render/quote").json()
+    started = client.post("/api/b/b/render", json={"keep_open": False})
+
+    assert "add RUNPOD_API_KEY to .env" in quote["disabled"]
+    assert started.status_code == 409
+    assert "RUNPOD_API_KEY" in started.json()["refusal"]
+
+
+@pytest.mark.spec("ui:render:nothing-short-disables-render")
+def test_with_every_count_rendered_render_is_disabled_naming_why(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    run = _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    flow = load_flow(FLOW)
+    prepare(run, {FLOW: flow})
+    image = photo_jpeg((90, 60, 30), (640, 800))
+    render(run, flow, FakeComfyClient(view_bytes=image), seeds=[7], poll=0)
+
+    offer = client.get("/api/b/b/render").json()
+
+    assert "already has its Count" in offer["disabled"]
+
+
+@pytest.mark.spec("ui:render:a-grown-quote-is-refused")
+def test_a_confirmation_shorter_than_the_quote_now_gives_is_refused(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    shown = client.post("/api/b/b/render/quote").json()["estimate"]["limit_s"]
+
+    started = client.post(
+        "/api/b/b/render", json={"keep_open": False, "limit_s": shown - 1}
+    )
+
+    assert started.status_code == 409
+    assert "the quote changed" in started.json()["refusal"]
+    assert client.post("/api/b/b/render/quote").json()["disabled"] is None
+
+    # An approval made while the dialog is open adds an image the limit may not show.
+    _approved(folder, "beatrix.jpg", FLOW, schema, vocabulary)
+    grown = client.post(
+        "/api/b/b/render", json={"keep_open": False, "limit_s": shown, "images": 1}
+    )
+
+    assert grown.status_code == 409
+    assert "2 images, not 1" in grown.json()["refusal"]

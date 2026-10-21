@@ -22,20 +22,30 @@ import gpunit
 import pytest
 
 from isekai.boundary import gpu
-from isekai.boundary.comfy import ComfyTransport, TransportFailure
+from isekai.boundary.comfy import ComfyClient, ComfyTransport, TransportFailure
 from isekai.foundation.artifacts import RENDER_FILE, read
-from isekai.foundation.flow import Schema
+from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
 from isekai.interface.cli import _dispatch_argv, build_parser
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
+from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FAKE_SYSTEM, SESSION_IMAGE, FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
+from tests.stages import (
+    FIELD_MAP,
+    Always,
+    bare_wiring,
+    caption,
+    fake_wd14,
+    reapprove,
+    sheet,
+)
+from tests.stages import render as stage_render
 
 FLOW = "summon-anime-wai"
 LOCAL_PORT = 50123
@@ -63,10 +73,16 @@ class FakeOpen:
     opened: int = 0
     closed: int = 0
     ended: BaseException | None = None
+    limits: list[int] = field(default_factory=list)
 
     def __call__(
-        self, cwd: Path, environ: Mapping[str, str], say: Callable[[str], None]
+        self,
+        cwd: Path,
+        environ: Mapping[str, str],
+        say: Callable[[str], None],
+        limit_s: int,
     ) -> AbstractContextManager[FakeSession]:
+        self.limits.append(limit_s)
         return self._block()
 
     @contextmanager
@@ -311,7 +327,7 @@ def test_the_report_reaches_the_loopback_with_a_proxy_exported(
             runs,
             f"{FLOW}=1",
             opener=opener,
-            connect=render.ComfyClient,
+            connect=ComfyClient,
             wait_s=0,
         )
     finally:
@@ -329,9 +345,9 @@ def test_the_watchdog_signals_nothing_once_its_session_has_ended(
     runs = batch(tmp_path)
     fired = threading.Event()
 
-    assert session(runs, f"{FLOW}=1", kill=fired.set, ceiling_s=0.05) == 0
+    assert session(runs, f"{FLOW}=1", kill=fired.set, watchdog_s=0.05) == 0
     assert not fired.wait(0.15)
-    assert "ceiling" not in log(runs)
+    assert "reached its" not in log(runs)
 
 
 @pytest.mark.spec("pod-image:session:the-watchdog-ends-with-its-session")
@@ -343,7 +359,7 @@ def test_the_watchdog_signals_nothing_after_a_refused_session(tmp_path: Path) ->
     )
 
     status = session(
-        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, ceiling_s=0.05
+        runs, f"{FLOW}=1", client=silent, wait_s=0, kill=fired.set, watchdog_s=0.05
     )
 
     assert status == 1
@@ -371,13 +387,33 @@ def test_the_ceiling_writes_its_refusal_and_ends_the_session_with_143(
         generate=Calls(held),
         opener=opener,
         kill=fired.set,
-        ceiling_s=0.05,
+        watchdog_s=0.05,
     )
 
     assert status == 143
     assert (opener.opened, opener.closed) == (1, 1)
-    assert "refused: the session reached its 0.05s ceiling" in log(runs)
+    assert f"refused: the session reached its {render.FLOOR_S}s limit" in log(runs)
     assert f"isekai render {runs} {FLOW}=1` renders only the rest" in log(runs)
+
+
+@pytest.mark.spec("pod-image:session:the-watchdog-ends-the-session")
+def test_the_watchdog_is_armed_at_the_pods_own_limit_before_the_session_opens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runs = batch(tmp_path)
+    opener = FakeOpen()
+    armed: list[tuple[float, int]] = []
+
+    class Timer(threading.Timer):
+        def start(self) -> None:
+            # The interval, and how many sessions were open when it started.
+            armed.append((self.interval, opener.opened))
+            super().start()
+
+    monkeypatch.setattr(render.threading, "Timer", Timer)
+
+    assert session(runs, f"{FLOW}=1", opener=opener) == 0
+    assert armed == [(opener.limits[0], 0)]
 
 
 @pytest.mark.spec("pod-image:boot:no-override")
@@ -402,7 +438,9 @@ def test_the_session_is_opened_on_the_repositorys_gpunit_toml_alone(
     )
 
     assert status == 0
-    assert [spec for spec, _ in opened] == [REPOSITORY / "gpunit.toml"] * 2
+    toml = gpunit.load_spec(REPOSITORY / "gpunit.toml")
+    limited = dataclasses.replace(toml, ceiling_s=render.FLOOR_S)
+    assert [spec for spec, _ in opened] == [limited] * 2
     assert {key for _, kwargs in opened for key in kwargs} == {"environ", "cwd", "say"}
     assert {wired.image for wired in calls.wirings if wired.client} == {SESSION_IMAGE}
     with pytest.raises(SystemExit):
@@ -446,6 +484,93 @@ def test_each_render_records_the_image_the_session_names(
         record = read(sidecar, RENDER_FILE)
         assert record.get("image") == SESSION_IMAGE
         assert record.get("pinned") is True
+
+
+def real(root: Path, vocabulary: Vocabulary) -> Wiring:
+    """Return a wiring the real `generate` runs on, over `root`."""
+    return bare_wiring(
+        reader=Always(FakeReader(prose="unused")),
+        tagger=fake_wd14(),
+        hosted_tagger=Always(FakeTagger()),
+        vocabulary=lambda: vocabulary,
+        runs_root=root,
+    )
+
+
+def counted(
+    root: Path, schema: Schema, vocabulary: Vocabulary, name: str, made: int
+) -> Run:
+    """Return a run approved for two images of `FLOW`, `made` of them rendered."""
+    run = approved(root, schema, vocabulary, name)
+    reapprove(run, schema, vocabulary, {"count": 2, "seeds": []})
+    flow = load_flow(FLOW)
+    prepare(run, {FLOW: flow})
+    if made:
+        seeds = list(range(1, made + 1))
+        stage_render(run, flow, FakeComfyClient(), seeds=seeds, poll=0)
+    return run
+
+
+def images(run: Run) -> int:
+    """Return how many images `run`'s newest approval of `FLOW` holds."""
+    return len(list((run.path / FLOW / "outputs" / "002").glob("*.png")))
+
+
+@pytest.mark.spec("cli:render-short:what-is-short-is-rendered")
+def test_with_no_request_only_what_is_short_is_rendered(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    lacking = counted(tmp_path, schema, vocabulary, "ada", 1)
+    full = counted(tmp_path, schema, vocabulary, "beatrix", 2)
+    root = tmp_path / "b" / "runs"
+
+    status = session(root, generate=_dispatch_argv, wiring=real(root, vocabulary))
+
+    assert status == 0, log(root)
+    assert images(lacking) == 2
+    assert images(full) == 2
+    assert f"{lacking.id}: rendered" in log(root)
+    assert f"{full.id}: rendered" not in log(root)
+
+
+@pytest.mark.spec("cli:render-short:a-run-without-the-flow-is-skipped")
+def test_with_no_request_a_run_without_the_flow_is_skipped(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    held = approved(tmp_path, schema, vocabulary, "ada")
+    photo = tmp_path / "bea.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 932))
+    bare = open_run(photo, tmp_path / "b" / "runs")
+    root = tmp_path / "b" / "runs"
+    calls = Calls()
+
+    assert session(root, generate=calls) == 0, log(root)
+    assert calls.rendered() == [
+        ["generate", "--flow", FLOW, "--server", f"http://127.0.0.1:{LOCAL_PORT}"]
+        + ["--runs", str(root), held.id]
+    ]
+    assert bare.id not in log(root)
+
+
+@pytest.mark.spec("cli:render-short:an-unapproved-flow-is-left-out")
+def test_with_no_request_an_unapproved_flow_is_left_out_and_named(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    lacking = counted(tmp_path, schema, vocabulary, "ada", 1)
+    photo = tmp_path / "bea.jpg"
+    photo.write_bytes(jpeg_bytes(1200, 932))
+    started = open_run(photo, tmp_path / "b" / "runs")
+    caption(started, FakeReader(prose="Brown hair, brown eyes."))
+    sheet(started, schema, vocabulary)
+    review(started, FLOW)
+    root = tmp_path / "b" / "runs"
+
+    status = session(root, generate=_dispatch_argv, wiring=real(root, vocabulary))
+
+    assert status == 0, log(root)
+    assert images(lacking) == 2
+    assert not (started.path / FLOW / "outputs").exists()
+    assert f"left out: {started.id}: {FLOW} is a draft" in log(root)
 
 
 @pytest.mark.spec(
@@ -553,7 +678,10 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     def refusing(text: str) -> gpu.OpenSession:
         @contextmanager
         def block(
-            cwd: Path, environ: Mapping[str, str], say: Callable[[str], None]
+            cwd: Path,
+            environ: Mapping[str, str],
+            say: Callable[[str], None],
+            limit_s: int,
         ) -> Iterator[FakeSession]:
             # What gpunit's `log.refuse` does through the sink it was handed.
             say(f"2026-10-10T12:00:00Z refused: {text}")
@@ -592,6 +720,135 @@ def test_a_refusal_naming_a_bare_gpunit_command_ends_on_one_that_loads_the_key(
     assert "--env-file" not in log(runs)
 
 
+@pytest.mark.spec("cli:render-progress:each-image-of-the-total")
+def test_a_session_reports_each_image_of_the_total_as_json(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    made = counted(tmp_path, schema, vocabulary, "ada", 0)
+    root = tmp_path / "b" / "runs"
+    wiring = real(root, vocabulary)
+    asked = argparse.Namespace(runs=root, requests=[], progress="json")
+    seams = render.Seams(
+        open_session=FakeOpen(),
+        environ={},
+        connect=lambda server: FakeComfyClient(),
+        busy=lambda port: False,
+        kill=lambda: None,
+    )
+
+    status = render.run_session(asked, wiring, _dispatch_argv, seams)
+
+    assert status == 0, log(root)
+    assert isinstance(wiring.out, io.StringIO)
+    lines = [json.loads(line) for line in wiring.out.getvalue().splitlines()]
+    images = [line for line in lines if line["step"] == "image"]
+    assert [(line["n"], line["of"]) for line in images] == [(1, 2), (2, 2)]
+    assert {(line["run"], line["flow"]) for line in images} == {(made.id, FLOW)}
+    seeds = {path.stem for path in (made.path / FLOW / "outputs" / "002").glob("*.png")}
+    assert {(line["version"], line["seed"]) for line in images} == {
+        (2, seed) for seed in seeds
+    }
+    assert lines[-1] == {"step": "teardown", "state": "done"}
+    # The prose is the caller's to log, so the session writes no line of it twice.
+    assert isinstance(wiring.err, io.StringIO)
+    assert f"{made.id}: rendered" in wiring.err.getvalue()
+    assert not (root.parent / "log.txt").exists()
+
+
+@pytest.mark.spec("cli:render-progress:a-refused-session-reports-its-teardown")
+def test_a_session_whose_endpoint_never_answers_reports_its_teardown(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+    wiring = wired(runs)
+    silent = FakeComfyClient(
+        report_failure=TransportFailure("transient", "connection refused")
+    )
+    seams = render.Seams(
+        open_session=FakeOpen(),
+        environ={},
+        connect=lambda server: silent,
+        busy=lambda port: False,
+        kill=lambda: None,
+        wait_s=0,
+    )
+    asked = argparse.Namespace(runs=runs, requests=[f"{FLOW}=1"], progress="json")
+
+    status = render.run_session(asked, wiring, Calls(), seams)
+
+    assert status == 1
+    assert isinstance(wiring.out, io.StringIO)
+    lines = [json.loads(line) for line in wiring.out.getvalue().splitlines()]
+    assert lines[-1] == {"step": "teardown", "state": "done"}
+
+
+TIMING = render.Timing(
+    boot_s=600, per_image_s=60, teardown_s=120, limit_factor=1.5, volume_rate=0.005
+)
+
+
+@pytest.mark.spec("cli:render-limit:the-estimate-comes-from-durations")
+def test_the_estimate_takes_the_median_of_recorded_durations(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    made = approved(tmp_path, schema, vocabulary, "ada")
+    flow = load_flow(FLOW)
+    prepare(made, {FLOW: flow})
+    ticks = iter([0.0, 80.0, 0.0, 90.0, 0.0, 400.0])
+    stage_render(made, flow, FakeComfyClient(), seeds=[1, 2, 3], clock=ticks.__next__)
+    recorded = {FLOW: render.recent(made.path.parent, [made.id], FLOW)}
+
+    got = render.estimate({FLOW: 4}, recorded, TIMING, 3 * 60 * 60)
+
+    assert sorted(recorded[FLOW]) == [80.0, 90.0, 400.0]
+    assert got.seconds == 600 + 4 * 90 + 120
+    assert got.limit_s == (600 + 4 * 90 + 120) * 1.5
+
+
+@pytest.mark.spec("cli:render-limit:the-configured-figure-without-records")
+def test_with_no_recorded_duration_the_configured_time_per_image_is_used() -> None:
+    got = render.estimate({FLOW: 10}, {FLOW: []}, TIMING, 3 * 60 * 60)
+
+    assert got.seconds == 600 + 10 * 60 + 120
+    assert got.limit_s == (600 + 10 * 60 + 120) * 1.5
+
+
+@pytest.mark.spec("cli:render-limit:a-short-session-takes-the-floor")
+def test_a_short_sessions_limit_is_the_hold_plus_five_minutes(tmp_path: Path) -> None:
+    runs = batch(tmp_path)
+    opener = FakeOpen()
+
+    got = render.estimate({FLOW: 1}, {}, render.load_timing(), 3 * 60 * 60)
+
+    assert got.seconds * 1.5 < render.HOLD_SECONDS + 300
+    assert got.limit_s == render.HOLD_SECONDS + 300
+    assert session(runs, f"{FLOW}=1", opener=opener) == 0
+    assert opener.limits == [render.HOLD_SECONDS + 300]
+    assert f"session limit {render.HOLD_SECONDS + 300}s" in log(runs)
+
+
+@pytest.mark.spec("cli:render-limit:above-the-ceiling-is-refused")
+def test_a_limit_above_gpunit_tomls_ceiling_is_refused_before_renting(
+    tmp_path: Path,
+) -> None:
+    runs = batch(tmp_path)
+    opener = FakeOpen()
+    calls = Calls()
+    ceiling = gpunit.load_spec(REPOSITORY / "gpunit.toml").ceiling_s
+    over = argparse.Namespace(runs=runs, requests=[f"{FLOW}=1"], limit=ceiling + 1)
+
+    status = render.run_session(
+        over,
+        wired(runs),
+        calls,
+        dataclasses.replace(render.Seams(), open_session=opener),
+    )
+
+    assert status == 1
+    assert (opener.opened, calls.lines) == (0, [])
+    assert f"above gpunit.toml's ceiling of {ceiling}s" in log(runs)
+
+
 @pytest.mark.spec_exempt("structural: one port, declared in gpunit.toml and here")
 def test_the_port_the_verb_reads_is_the_one_gpunit_toml_forwards() -> None:
     spec = tomllib.loads((REPOSITORY / "gpunit.toml").read_text())
@@ -599,9 +856,14 @@ def test_the_port_the_verb_reads_is_the_one_gpunit_toml_forwards() -> None:
 
 
 @pytest.mark.spec_exempt("structural: one ceiling, declared in gpunit.toml and here")
-def test_the_watchdog_fires_a_minute_before_the_pods_own_stop() -> None:
+def test_the_limit_never_passes_gpunit_tomls_ceiling() -> None:
     spec = gpunit.load_spec(REPOSITORY / "gpunit.toml")
-    assert render.CEILING_S == spec.ceiling_s - 60
+    timing = render.load_timing()
+
+    whole_day = render.estimate({FLOW: 24 * 60}, {}, timing, spec.ceiling_s)
+
+    assert gpu.bounds(REPOSITORY).ceiling_s == spec.ceiling_s
+    assert whole_day.limit_s == spec.ceiling_s
 
 
 @pytest.mark.spec_exempt("structural: the .env reader gpunit's environ is built from")

@@ -39,10 +39,13 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     PROMPT_FILE,
     RENDER_FILE,
+    SEED_BITS,
     Failure,
     Prompt,
+    Renders,
     Runtime,
     read,
+    renders_of,
     require,
     write,
 )
@@ -75,8 +78,6 @@ from isekai.shared.image import photo_resolution, strip_metadata
 STAGE_ASSEMBLE = "assemble"
 STAGE_RENDER = "render"
 
-# A seed is what the sampler takes: an unsigned 64-bit integer.
-SEED_BITS = 64
 
 # Seconds a queued prompt may take before the render gives up on it: a ComfyUI
 # restarted in place loses the prompt, and the pod bills while the poll waits.
@@ -131,6 +132,22 @@ def seeds_for(
     return draw_seeds(shortfall, rng, already)
 
 
+def approved_seeds(
+    renders: Renders, rng: random.Random, already: Sequence[int] = ()
+) -> list[int]:
+    """Return what an approval still lacks: its listed seeds first, then drawn ones.
+
+    A listed seed renders as it is; only the rest of the count is drawn. Nothing
+    renders once `already` reaches the count.
+    e.g. count 3, seeds [1], already [] -> [1, <drawn>, <drawn>]
+    """
+    room = max(renders["count"] - len(already), 0)
+    done = set(already)
+    listed = [seed for seed in dict.fromkeys(renders["seeds"]) if seed not in done]
+    listed = listed[:room]
+    return listed + draw_seeds(room - len(listed), rng, [*already, *listed])
+
+
 def _unapproved(run: Run, flows: Sequence[str]) -> str:
     """Return the refusal for `flows` having no approved sheet, naming the way out."""
     # `--flow` is required and repeatable, so the remedy names every flow it
@@ -144,11 +161,31 @@ def _unapproved(run: Run, flows: Sequence[str]) -> str:
 
 def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
     """Return the highest approved artifact for `flow`, or refuse naming the way out."""
-    directory = run.directory(flow, REVIEW)
-    approved = approved_versions(directory)
+    approved = approved_versions(run.directory(flow, REVIEW))
     if not approved:
         raise Refusal(_unapproved(run, [flow]))
-    return approved[-1], directory / artifact_name(approved[-1], APPROVED)
+    return approved[-1], approval_of(run, flow, approved[-1])
+
+
+def _approved_renders(approval: Path) -> Renders:
+    """Return an approval's `renders`; only a hand repairs a damaged one."""
+    remedy = f"restore it in {approval} by hand"
+    return renders_of(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
+
+
+def approval_of(run: Run, flow: str, version: int) -> Path:
+    """Return the path of `flow`'s approval numbered `version` in `run`."""
+    return run.directory(flow, REVIEW) / artifact_name(version, APPROVED)
+
+
+def group_of(run: Run, flow: str, version: int) -> Path:
+    """Return the outputs group the approval numbered `version` renders into."""
+    return run.directory(flow, OUTPUTS, f"{version:03d}")
+
+
+def image_of(run: Run, flow: Flow, version: int, seed: int) -> Path:
+    """Return where the image of `seed` under approval `version` is written."""
+    return group_of(run, flow.id, version) / f"{seed}{flow.output_suffix}"
 
 
 def approved_flows(run: Run) -> list[str]:
@@ -292,6 +329,36 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     return sorted(
         int(path.stem) for path in directory.iterdir() if is_render(path, suffix)
     )
+
+
+def shortfall(run: Run, flow: Flow) -> int:
+    """Return how many images `flow`'s newest approval still lacks of its count.
+
+    Read from the approval's `renders` and a listing of its outputs group; an
+    unapproved flow is refused naming the way out.
+    """
+    version, approval = approved_artifact(run, flow.id)
+    count = _approved_renders(approval)["count"]
+    group = group_of(run, flow.id, version)
+    return max(count - len(rendered_seeds(group, flow.output_suffix)), 0)
+
+
+def sidecars(run: Run, flow: str) -> list[Path]:
+    """Return every render sidecar of `flow` in `run`, from listings alone."""
+    return [
+        path
+        for group in render_groups(run, flow)
+        for path in sorted(group.iterdir())
+        if is_sidecar(path)
+    ]
+
+
+def duration(sidecar: Path) -> float | None:
+    """Return the seconds a render records, or None for one written before durations."""
+    seconds = read(sidecar, RENDER_FILE).get("duration")
+    if isinstance(seconds, int | float) and not isinstance(seconds, bool):
+        return float(seconds)
+    return None
 
 
 def render_groups(run: Run, flow: str) -> list[Path]:
@@ -514,6 +581,8 @@ def render(
     rng: random.Random | None = None,
     poll: float = 1.0,
     deadline: float = RENDER_DEADLINE,
+    clock: Callable[[], float] = time.monotonic,
+    on_image: Callable[[Render], None] | None = None,
 ) -> list[Render]:
     """Render `flow`'s approved sheet for this run, one image per seed.
 
@@ -523,16 +592,23 @@ def render(
     most -- and the decision is a directory listing, the same rule every other
     stage is held to.
 
-    `image` is the reference the render session booted, or None for an endpoint
-    outside one, which the sidecar declares unpinned. `runtime` is called only
-    when a seed will render, so a complete batch reads no report. `seeds_from`
-    names the flow `seeds` were taken from, and the sidecar records it.
+    With neither `count` nor `seeds`, the approval says what renders: its
+    `renders` block, read by `approved_seeds`. `image` is the reference the
+    render session booted, or None for an endpoint outside one, which the sidecar
+    declares unpinned. `runtime` is called only when a seed will render, so a
+    complete batch reads no report. `seeds_from` names the flow `seeds` were
+    taken from, and the sidecar records it. `clock` times each render for its
+    `duration`, and `on_image` is told of each image as it lands.
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
-    directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
+    directory = group_of(run, flow.id, version)
     already = rendered_seeds(directory, flow.output_suffix)
-    wanted = seeds_for(count, seeds, rng or random.Random(), already)
+    source = rng or random.Random()
+    if count is None and seeds is None:
+        wanted = approved_seeds(_approved_renders(approval), source, already)
+    else:
+        wanted = seeds_for(count, seeds, source, already)
     if not wanted:
         return []
 
@@ -575,7 +651,9 @@ def render(
         # leaves resume nothing on disk to reason about.
         try:
             graph = build_graph(flow, run.photo, image_name, prompt, seed)
+            started = clock()
             body = _submit(client, graph, poll, deadline)
+            took = round(clock() - started, 1)
         except Refusal as failed:
             raise _recorded(run, flow, directory, version, failed, seed) from failed
         # The sidecar first, so an image always has its provenance: a crash
@@ -599,6 +677,7 @@ def render(
             **({"image": image} if image is not None else {}),
             "pinned": image is not None,
             "runtime": ran_on,
+            "duration": took,
             **({"seeds_from": seeds_from} if seeds_from is not None else {}),
         }
         write(provenance, RENDER_FILE, sidecar)
@@ -608,6 +687,8 @@ def render(
         # the one stage that costs money on every pass.
         write_atomically(output, body)
         produced.append(Render(seed, output, provenance))
+        if on_image is not None:
+            on_image(produced[-1])
     return produced
 
 

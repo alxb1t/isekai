@@ -9,7 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from isekai.foundation.artifacts import APPROVED_FILE, DRAFT_FILE, SHEET_FILE, read
+from isekai.foundation.artifacts import (
+    APPROVED_FILE,
+    DRAFT_FILE,
+    SHEET_FILE,
+    read,
+    renders_of,
+)
 from isekai.foundation.flow import Flow, Schema, assemble, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -1030,3 +1036,71 @@ def test_a_target_not_copied_from_the_sources_latest_is_copied_again(
     assert body["producer"]["copied_from"] == {"flow": FLOW, "approval": 2}
     assert body["fields"] == read(newer, APPROVED_FILE)["fields"]
     assert held.read_bytes() == frozen
+
+
+# --- ④ renders: how many images, and which seeds -------------------------------
+
+
+def _with_renders(run: Run, count: int, seeds: list[int]) -> Path:
+    """Open a draft and save it with `count` and `seeds`, as Review's ④ does."""
+    draft = review(run, FLOW)
+    assert draft is not None
+    fields = read(draft, DRAFT_FILE)["fields"]
+    return save_draft(run, FLOW, fields, {"count": count, "seeds": seeds})
+
+
+@pytest.mark.spec("review:renders:an-old-draft-reads-as-one")
+def test_a_draft_without_renders_reads_as_one_drawn_image(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = review(run, FLOW)
+    assert draft is not None
+    body = read(draft, DRAFT_FILE)
+    assert "renders" not in body
+
+    assert renders_of(draft, body, "unused") == {"count": 1, "seeds": []}
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    assert "renders" not in read(approved, APPROVED_FILE)
+
+
+@pytest.mark.spec("review:renders:a-count-below-its-seeds-is-refused")
+def test_a_count_below_its_seeds_refuses_approval_naming_the_count(
+    run: Run, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    draft = _with_renders(run, 1, [])
+    fields = read(draft, DRAFT_FILE)["fields"]
+    with pytest.raises(Refusal, match="renders count 1 is below the 2 seeds"):
+        save_draft(run, FLOW, fields, {"count": 1, "seeds": [7, 8]})
+    _damage(draft, "renders", {"count": 1, "seeds": [7, 8]})
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert "renders count 1 is below the 2 seeds" in str(refused.value)
+    assert draft.exists()
+    assert approved_versions(run.directory(FLOW, "review")) == []
+    save_draft(run, FLOW, fields, {"count": 3, "seeds": [7, 8]})
+    approved, _ = approve(run, FLOW, schema, vocabulary)
+    assert approved is not None
+    assert read(approved, APPROVED_FILE)["renders"] == {"count": 3, "seeds": [7, 8]}
+    again = review(run, FLOW, new_version=True)
+    assert again is not None
+    assert read(again, DRAFT_FILE)["renders"] == {"count": 3, "seeds": [7, 8]}
+
+
+@pytest.mark.spec("review:renders:a-seed-out-of-range-is-refused")
+@pytest.mark.parametrize("seed", [-1, 2**64])
+def test_a_seed_out_of_range_refuses_approval_naming_the_seed(
+    run: Run, schema: Schema, vocabulary: Vocabulary, seed: int
+) -> None:
+    # By hand: the draft's own update refuses the seed as approval does.
+    draft = _with_renders(run, 1, [])
+    _damage(draft, "renders", {"count": 1, "seeds": [seed]})
+
+    with pytest.raises(Refusal) as refused:
+        approve(run, FLOW, schema, vocabulary)
+
+    assert f"renders seed {seed} is outside" in str(refused.value)
+    assert draft.exists()
+    assert approved_versions(run.directory(FLOW, "review")) == []

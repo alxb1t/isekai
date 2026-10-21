@@ -47,9 +47,10 @@ from isekai.foundation.artifacts import (
     DRAFT_FILE,
     TAGS_FILE,
     Artifact,
+    Renders,
     read,
 )
-from isekai.foundation.flow import Schema  # noqa: E402
+from isekai.foundation.flow import Schema, load_flow  # noqa: E402
 from isekai.foundation.run import (  # noqa: E402
     APPROVED,
     CAPTIONS,
@@ -61,7 +62,7 @@ from isekai.foundation.run import (  # noqa: E402
     open_run,
 )
 from isekai.interface.cli import build_parser  # noqa: E402
-from isekai.interface.ui import HOST  # noqa: E402
+from isekai.interface.ui import HOST, library  # noqa: E402
 from isekai.interface.ui.app import (  # noqa: E402
     RARE_BELOW,
     Held,
@@ -70,6 +71,7 @@ from isekai.interface.ui.app import (  # noqa: E402
 )
 from isekai.interface.wiring import Wiring  # noqa: E402
 from isekai.pipeline.caption import FakeReader  # noqa: E402
+from isekai.pipeline.generate import approval_of, prepare  # noqa: E402
 from isekai.pipeline.review import (  # noqa: E402
     DRAFT,
     ENCODER_WINDOW,
@@ -84,8 +86,16 @@ from isekai.pipeline.tagging import (  # noqa: E402
 from isekai.shared.field_map import Group  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
-from tests.images import jpeg_bytes  # noqa: E402
-from tests.stages import FIELD_MAP, caption, fake_tagger, sheet  # noqa: E402
+from tests.fakes import FakeComfyClient  # noqa: E402
+from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
+from tests.stages import (  # noqa: E402
+    FIELD_MAP,
+    NO_GPUNIT,
+    caption,
+    fake_tagger,
+    render,
+    sheet,
+)
 
 FLOW = "summon-anime-wai"
 BATCH = "2026-10-19"
@@ -120,6 +130,7 @@ def wired(tmp_path: Path, vocabulary: Vocabulary) -> Wiring:
         rng=random.Random(0),
         out=io.StringIO(),
         err=io.StringIO(),
+        volume=NO_GPUNIT,
     )
 
 
@@ -661,7 +672,12 @@ def _overlap(
             _at(made, "/draft"), json={"fields": fields, "saved": saved}
         ).status_code
 
-    def write(run: Run, flow: str, fields: Mapping[str, Sequence[str]]) -> Path:
+    def write(
+        run: Run,
+        flow: str,
+        fields: Mapping[str, Sequence[str]],
+        renders: Renders | None = None,
+    ) -> Path:
         if not threads:
             second = threading.Thread(
                 target=put, args=("second", "black hair"), name="second"
@@ -669,7 +685,7 @@ def _overlap(
             threads.append(second)
             second.start()
             checked.wait(timeout=0.5)
-        return save(run, flow, fields)
+        return save(run, flow, fields, renders)
 
     monkeypatch.setattr(app_module, "_precondition", check)
     monkeypatch.setattr(app_module, "save_draft", write)
@@ -1213,3 +1229,141 @@ def test_a_malformed_update_is_refused_naming_the_field(
     assert response.status_code == 409
     assert named in response.json()["refusal"]
     assert snapshot(made.path) == before
+
+
+# --- Renders ------------------------------------------------------------------
+
+
+def _rendered_twice(
+    made: Run, schema: Schema, vocabulary: Vocabulary
+) -> tuple[list[int], list[int]]:
+    """Approve `made` twice, rendering under each, and return each version's seeds.
+
+    Each image is a real one, so a thumbnail can be made of it.
+    """
+    flow = load_flow(FLOW)
+    client = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    review(made, FLOW)
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+    first = [one.seed for one in render(made, flow, client, seeds=[11], poll=0)]
+    review(made, FLOW, new_version=True)
+    approve(made, FLOW, schema, vocabulary)
+    prepare(made, {FLOW: flow})
+    second = [one.seed for one in render(made, flow, client, seeds=[22], poll=0)]
+    return first, second
+
+
+@pytest.mark.spec("ui:renders:versions-newest-first")
+def test_a_cells_approvals_are_listed_newest_first_with_their_images(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders").json()
+
+    (source,) = body["sources"]
+    cell = source["cells"][FLOW]
+    assert [(one["version"], one["rendered"]) for one in cell] == [
+        (2, ["22"]),
+        (1, ["11"]),
+    ]
+
+
+@pytest.mark.spec("ui:renders:a-thumbnail-is-made-once")
+def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    shrinks: list[Path] = []
+    shrink = library._shrunk
+
+    def counted(image: Path) -> bytes:
+        shrinks.append(image)
+        return shrink(image)
+
+    monkeypatch.setattr(library, "_shrunk", counted)
+    thumb = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/11/thumb"
+
+    first = client.get(thumb)
+    second = client.get(thumb)
+
+    assert first.status_code == second.status_code == 200
+    assert first.headers["content-type"] == "image/jpeg"
+    assert second.content == first.content
+    assert len(shrinks) == 1
+    cached = tmp_path / "lib" / ".cache" / made.digest / FLOW / "outputs" / "001"
+    (thumb_file,) = cached.glob("11.*.jpg")
+    assert thumb_file.read_bytes() == first.content
+
+
+@pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
+def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+    older = approval_of(made, FLOW, 1)
+    body = json.loads(older.read_text())
+    older.write_text(json.dumps({**body, "renders": {"count": 0}}))
+
+    answered = client.get(f"/api/b/{BATCH}/renders")
+
+    assert answered.status_code == 200
+    (source,) = answered.json()["sources"]
+    newer, damaged = source["cells"][FLOW]
+    assert (newer["version"], newer["rendered"], newer["damaged"]) == (2, ["22"], None)
+    assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
+    assert older.name in damaged["damaged"]
+
+
+@pytest.mark.spec("ui:damage:a-malformed-update-is-refused-naming-the-field")
+def test_a_seed_of_digits_outside_ascii_is_refused_naming_the_seeds(
+    client: TestClient, made: Run
+) -> None:
+    before = snapshot(made.path)
+
+    response = client.put(
+        _at(made, "/draft"),
+        json={"fields": {}, "renders": {"count": 1, "seeds": ["²"]}},
+    )
+
+    assert response.status_code == 409
+    assert "renders seeds" in response.json()["refusal"]
+    assert snapshot(made.path) == before
+
+
+@pytest.mark.spec("ui:renders:an-address-naming-no-version-is-refused")
+def test_a_version_of_digits_outside_ascii_is_refused_not_failed(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    answered = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v²/11")
+
+    assert answered.status_code == 409
+    assert "names no version" in answered.json()["refusal"]

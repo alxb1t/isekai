@@ -6,6 +6,7 @@
 
 import type {
   Assigned,
+  Billing,
   Budget,
   Committed,
   FieldCandidates,
@@ -13,6 +14,10 @@ import type {
   InputDetail,
   JobSlot,
   LibraryInfo,
+  Quote,
+  RenderDetail,
+  Renders,
+  RendersInfo,
   TagMatches,
 } from './types'
 
@@ -80,6 +85,35 @@ export function stopJob(): Promise<{ job: JobSlot | null }> {
   return send('/api/job/stop', 'POST', {})
 }
 
+/* Why Render is disabled for a batch, or null; it prices nothing. */
+export function renderOffer(batch: string): Promise<{ disabled: string | null }> {
+  return get(`/api/b/${encodeURIComponent(batch)}/render`)
+}
+
+/* The quote rents nothing; only `startRender` does. */
+export function quoteRender(batch: string): Promise<Quote> {
+  return send(`/api/b/${encodeURIComponent(batch)}/render/quote`, 'POST', {})
+}
+
+/* Carries the limit and the images the dialog showed: a quote grown since is refused. */
+export function startRender(
+  batch: string,
+  keepOpen: boolean,
+  limitS: number,
+  images: number,
+): Promise<{ job: JobSlot }> {
+  return send(`/api/b/${encodeURIComponent(batch)}/render`, 'POST', {
+    keep_open: keepOpen,
+    limit_s: limitS,
+    images,
+  })
+}
+
+/* Ask gpunit again; an alert clears only when its records say gone. */
+export function checkBilling(): Promise<{ billing: Billing }> {
+  return send('/api/billing/check', 'POST', {})
+}
+
 /* The whole table for one flow, once, the first time the reference is opened.
    Tens of kilobytes, so the filter is instant with no round trip per keystroke. */
 export function fieldCandidates(flow: string): Promise<FieldCandidates> {
@@ -107,9 +141,10 @@ export function inputDetail(place: Place): Promise<InputDetail> {
 export function saveDraft(
   place: Place,
   fields: Record<string, string[]>,
+  renders: Renders,
   saved: number | null,
 ): Promise<{ draft: string; saved: number; budget: Budget }> {
-  return send(`${at(place)}/draft`, 'PUT', { fields, saved }, { keepalive: true })
+  return send(`${at(place)}/draft`, 'PUT', { fields, renders, saved }, { keepalive: true })
 }
 
 /* `saved` is the precondition the draft's `PUT` states, so the page approves
@@ -146,4 +181,34 @@ export function commitStaging(
     as_is: asIs,
     add,
   })
+}
+
+export function renders(batch: string): Promise<RendersInfo> {
+  return get<RendersInfo>(`/api/b/${encodeURIComponent(batch)}/renders`)
+}
+
+/* One image of a source in a flow: `version` is the approval's number. */
+export interface RenderPlace {
+  batch: string
+  digest: string
+  flow: string
+  version: number
+  seed: string
+}
+
+export function renderAt(place: RenderPlace): string {
+  const [batch, ...rest] = [place.batch, place.digest, place.flow, `v${place.version}`, place.seed]
+  return `/api/b/${encodeURIComponent(batch)}/renders/${rest.map(encodeURIComponent).join('/')}`
+}
+
+export function thumbAt(place: RenderPlace): string {
+  return `${renderAt(place)}/thumb`
+}
+
+export function imageAt(place: RenderPlace): string {
+  return `${renderAt(place)}/image`
+}
+
+export function renderDetail(place: RenderPlace): Promise<RenderDetail> {
+  return get<RenderDetail>(renderAt(place))
 }

@@ -16,15 +16,16 @@ neither is privileged and neither goes through the other.
 |---|---|
 | `cli.py` | parses a verb, resolves the flows it was given against `flows/`, dispatches per flow, and reports every refusal together, or with `--progress json` a JSON line per item; `import` and `assign` compose `pipeline/importing.py` and the run's own `assign` |
 | `wiring.py` | composes the modules — resolves the reader and the two taggers per flow, verifies the vocabulary before it is read, and builds the transport and the vocabulary and field-map thunks, with or without a parser |
-| `render.py` | the `render` verb: assembles every prompt, opens a GPU session through `boundary/gpu.py` under a ceiling watchdog, waits for the endpoint, runs `generate` per flow, and writes it all to the batch's log |
+| `render.py` | the `render` verb: finds what each approval lacks or takes the requests, assembles every prompt, estimates the session's limit and its quote, opens a GPU session through `boundary/gpu.py` stopping at that limit, waits for the endpoint, runs `generate` per flow, reports each step with `--progress json`, and writes the prose to the batch's log |
 | `run_view.py` | the `show` verb: a run's artifacts, active versions, producers and failure records, and the names below a flow it does not read. Decides nothing |
 | `compare_view.py` | the `compare` verb: one page of every run's photograph beside each flow's renders, written into the batch directory. Reads, decides nothing |
 | `ui/__init__.py` | the `ui` verb: opens the library `ISEKAI_LIBRARY` names, sweeps import's staging, reads the offered flows, prints the address, serves until stopped |
-| `ui/library.py` | the library, its batches and each source × offered flow's stage, all read from folders, and each source's not-cleaned mark. **Imports no web framework**, which keeps it testable in the main suite |
+| `ui/library.py` | the library, its batches and each source × offered flow's stage, all read from folders, each source's not-cleaned mark, each approval's rendered seeds, and the thumbnails in the library's `.cache/`. **Imports no web framework**, which keeps it testable in the main suite |
 | `ui/bundle.py` | builds the browser bundle when it is absent; refuses naming `npm install` rather than fetching |
-| `ui/jobs.py` | Prepare as a job: one slot, `tag` → `caption` → `sheet` run as CLI children per flow, a probe of the model server first, Stop and server stop sending SIGINT |
-| `ui/events.py` | the event stream: a snapshot on connect, then each `job` and `cell` change, to every open page |
-| `ui/app.py` | the endpoints — `GET /api/library`, `/api/b/{batch}/hub`, `POST /api/b/{batch}/assign`, `/api/b/{batch}/review/{digest}/{flow}` with `/photo`, `PUT …/draft`, `POST …/approve`, `POST /api/b/{batch}/prepare`, `POST /api/job/stop`, `GET /events`, the import's `POST /api/staging` with `PUT …/{id}/files/{name}`, `DELETE …/{id}` and `POST …/{id}/commit`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
+| `ui/jobs.py` | Prepare and Render as jobs in one slot: `tag` → `caption` → `sheet` run as CLI children per flow after a probe of the model server; `gpunit volume up` → `render` → `volume down` unless kept; Stop and server stop sending SIGINT |
+| `ui/billing.py` | what may be billing, read from gpunit's records in `.gpunit/`: the pod alert, the window's quiet item and the band; gpunit asked at start, every half minute while needed, and on Check again |
+| `ui/events.py` | the event stream: a snapshot on connect, then each `job`, `cell` and `billing` change, to every open page |
+| `ui/app.py` | the endpoints — `GET /api/library`, `/api/b/{batch}/hub`, `POST /api/b/{batch}/assign`, `/api/b/{batch}/review/{digest}/{flow}` with `/photo`, `PUT …/draft`, `POST …/approve`, `POST /api/b/{batch}/prepare`, `GET /api/b/{batch}/render`, `POST /api/b/{batch}/render/quote`, `POST /api/b/{batch}/render`, `POST /api/job/stop`, `POST /api/billing/check`, `GET /api/b/{batch}/renders` with `…/renders/{digest}/{flow}/{version}/{seed}` and its `/image` and `/thumb`, `GET /events`, the import's `POST /api/staging` with `PUT …/{id}/files/{name}`, `DELETE …/{id}` and `POST …/{id}/commit`, `/api/tags`, `/api/fields`, and the bundle's `index.html` for every other path — and the only module in the package that imports FastAPI or uvicorn |
 
 ## Imported by
 
@@ -35,10 +36,10 @@ at least once; a list of names cannot.
 |---|---|---|
 | `cli.py` | `__main__.py` | `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_generate.py`, `tests/test_importing.py`, `tests/test_pipeline_cli.py`, `tests/test_progress.py`, `tests/test_render.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui_api.py` |
 | `wiring.py` | `cli.py`, `render.py`, `ui/__init__.py`, `ui/app.py`, `ui/library.py` | `evaluation/record.py`, `tools/derive_field_map.py`, `tests/conftest.py`, `tests/e2e/wiring.py`, `tests/stages.py`, `tests/test_assign.py`, `tests/test_compare.py`, `tests/test_evaluation_cli.py`, `tests/test_field_map.py`, `tests/test_generate.py`, `tests/test_package_paths.py`, `tests/test_pipeline_cli.py`, `tests/test_recall_cli.py`, `tests/test_resume.py`, `tests/test_run_directory.py`, `tests/test_tagging.py`, `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_vocabulary.py`, `tests/test_vocabulary_manifest.py` |
-| `render.py` | `cli.py` | `tests/test_render.py` |
+| `render.py` | `cli.py`, `ui/app.py`, `ui/jobs.py` | `tests/test_infra.py`, `tests/test_render.py`, `tests/test_ui_jobs.py` |
 | `run_view.py` | `cli.py` | `evaluation/__main__.py`, `evaluation/recall.py`, `tests/test_run_view.py` |
 | `compare_view.py` | `cli.py`, `render.py` | `tests/test_compare.py` |
-| `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
+| `ui/` | `cli.py` | `tests/test_ui.py`, `tests/test_ui_api.py`, `tests/test_ui_billing.py`, `tests/test_ui_jobs.py`, `tests/test_ui_library.py` |
 
 > The file is `run_view.py`; the **verb is still `show`**, and the entry-point
 > tests pin it.

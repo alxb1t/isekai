@@ -28,12 +28,16 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
+GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s, images}
+POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
 GET  /events[?batch=]                              Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve
+GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
+     and its /image and /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -44,6 +48,7 @@ import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -53,13 +58,17 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from isekai.boundary.gpu import keyed
 from isekai.foundation.artifacts import (
     APPROVED_FILE,
     CAPTION_FILE,
     DRAFT_FILE,
+    ONE_RENDER,
     TAGS_FILE,
     WD14_FILE,
+    Renders,
     read,
+    renders_of,
     require,
 )
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
@@ -72,16 +81,20 @@ from isekai.foundation.run import (
     TAGS,
     WD14,
     Run,
+    approved_versions,
     assign,
     find_run,
     latest_artifact,
     open_run,
     stage_command,
 )
+from isekai.interface import render
 from isekai.interface.ui import events, library
+from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
+from isekai.pipeline.generate import approval_of, image_of
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     TokenBudget,
@@ -124,6 +137,10 @@ REFUSED = 409
 # conflict, the request is simply not one this surface answers, so it carries no
 # string for the page and never reaches a handler.
 FORBIDDEN = 403
+
+# Where gpunit's status answers are appended, in the library: a dot-file is listed
+# as no batch.
+GPUNIT_LOG = ".gpunit.log"
 
 # The names a loopback listener answers to. `Host: evil.example` resolving to
 # 127.0.0.1 is the whole of the DNS-rebinding attack against an unauthenticated
@@ -188,17 +205,28 @@ def create_app(
     `host` and `port` are the address every request is checked against.
     """
     broadcast = events.Broadcast()
-    jobs = Jobs(broadcast, wired.probe)
+    jobs = Jobs(
+        broadcast,
+        wired.probe,
+        volume=wired.volume,
+        raise_volume=lambda: billing.raise_volume(),
+        err=wired.err,
+    )
+    billing = Billing(
+        wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running() == "render"
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         """Interrupt a running job and end every stream when the server stops."""
         yield
+        billing.close()
         jobs.shutdown()
         broadcast.close()
 
     app = FastAPI(title="isekai", docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.broadcast = broadcast
+    app.state.billing = billing
     limit = importing.upload_limit()
     allowed = authorities(host, port)
     origins = frozenset(f"http://{one}" for one in allowed)
@@ -382,6 +410,101 @@ def create_app(
         """Interrupt the running stage; no later stage starts."""
         return {"job": jobs.stop()}
 
+    @cache
+    def offered(flow: str) -> Flow:
+        """Return a tracked flow by name, loaded once: a flow is pinned while served."""
+        return _flow(wired, flow)
+
+    def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
+        """Return a batch's folder, its quote, and the quote as the dialog shows it."""
+        found = folder(batch)
+        runs = found / library.RUNS
+        made = render.quote(runs, wire(runs))
+        disabled = _held() or made.short.blocked
+        return found, made, _quote(found, made, disabled, wired.flows_dir)
+
+    def _held() -> str | None:
+        """Return what holds Render back whatever the batch: a job, a pod, no key."""
+        running = jobs.running()
+        if running is not None:
+            kind = "A render session" if running == "render" else "Prepare"
+            return f"{kind} is running."
+        if billing.state()["pod"]:
+            return "A pod may still be billing."
+        if not keyed(wired.session):
+            return (
+                "No RunPod key: add RUNPOD_API_KEY to .env, then start "
+                "`uv run --env-file .env python -m isekai ui` again."
+            )
+        return None
+
+    @app.get("/api/b/{batch}/render")
+    def read_render_offer(batch: str) -> dict[str, Any]:
+        """Return why Render is disabled for the batch, or null; it prices nothing."""
+        held = _held()
+        if held is not None:
+            return {"disabled": held}
+        runs = folder(batch) / library.RUNS
+        return {
+            "disabled": render.short(runs, render.run_ids(runs), wire(runs)).blocked
+        }
+
+    @app.post("/api/b/{batch}/render/quote")
+    def post_quote(batch: str) -> dict[str, Any]:
+        """Quote what a render of the batch renders, its limit and its price at most.
+
+        It rents nothing; only the render's own `POST` does.
+        """
+        return quoted(batch)[2]
+
+    @app.post("/api/b/{batch}/render")
+    def post_render(
+        batch: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Start the render job the quote describes, or refuse naming why not.
+
+        The quote is taken again here, so what renders is what is on disk now; a
+        limit longer than the one the dialog showed, `limit_s`, or another number
+        of images than its `images`, is refused, so nothing renders past what the
+        operator agreed to.
+        """
+        body = payload or {}
+        found, made, described = quoted(batch)
+        if described["disabled"] is not None:
+            raise Refusal(described["disabled"])
+        shown, listed = body.get("limit_s"), body.get("images")
+        reopen = "close Render and open it again to read"
+        if not _whole(shown):
+            raise Refusal(f"the confirmation names no quoted limit; {reopen} the quote")
+        if made.estimate.limit_s > shown:
+            raise Refusal(
+                f"the quote changed since it was shown: its limit is now "
+                f"{made.estimate.limit_s}s, not {shown}s; {reopen} it"
+            )
+        if not _whole(listed):
+            raise Refusal(
+                f"the confirmation names no quoted images; {reopen} the quote"
+            )
+        total = sum(made.short.images.values())
+        if total != listed:
+            raise Refusal(
+                f"the quote changed since it was shown: it now renders {total} "
+                f"images, not {listed}; {reopen} it"
+            )
+        job = jobs.render(
+            batch,
+            found,
+            limit=made.estimate.limit_s,
+            total=total,
+            keep_open=bool(body.get("keep_open")),
+        )
+        return {"job": job}
+
+    @app.post("/api/billing/check")
+    def post_check() -> dict[str, Any]:
+        """Ask gpunit again; an alert clears only when its records say gone."""
+        return {"billing": billing.check()}
+
     @app.get("/events")
     def read_events(batch: str | None = None) -> StreamingResponse:
         """Stream the job slot and, for `batch`, its hub, then each change.
@@ -390,7 +513,7 @@ def create_app(
         """
 
         def snapshot() -> dict[str, Any]:
-            found = {"job": jobs.slot()}
+            found = {"job": jobs.slot(), "billing": billing.state()}
             if batch is not None:
                 found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
             return found
@@ -452,15 +575,19 @@ def create_app(
         approved = one.approved()
         state = review_state(one.directory(REVIEW))
         fields: dict[str, list[str]] = {}
+        renders = ONE_RENDER
         if state == "approved" and approved is not None:
             # No command rewrites an approved sheet: `review` copies it and
             # refuses the same damage, so only a hand repairs it.
             remedy = f"restore it in {approved} by hand, then reload the page"
             body = read(approved, APPROVED_FILE, remedy=remedy)
             fields = _fields(approved, body, remedy)
+            renders = renders_of(approved, body, remedy)
         elif draft is not None:
             remedy = _remedy(one, "review")
-            fields = _fields(draft, read(draft, DRAFT_FILE), remedy)
+            body = read(draft, DRAFT_FILE)
+            fields = _fields(draft, body, remedy)
+            renders = renders_of(draft, body, remedy)
         budget = token_budget(fields, one.flow.schema, one.flow)
         caption = latest_artifact(one.directory(CAPTIONS))
         width, height = _dimensions(one.run)
@@ -482,6 +609,9 @@ def create_app(
             "wd14": _wd14(one),
             "tags": _tags(one, shared.vocabulary()),
             "fields": fields,
+            # Seeds as decimal strings: a 64-bit seed is past what a JavaScript
+            # number holds exactly.
+            "renders": _renders_out(renders),
             # **Approval with nothing newer beside it is what makes a sheet
             # read-only**, which is precisely `state() == "approved"`.
             "readonly": state == "approved",
@@ -518,6 +648,7 @@ def create_app(
         one = held(batch, digest, flow)
         # Before the lock: a malformed body refuses without waiting on a write.
         fields = _update(payload)
+        renders = _renders_in(payload)
         with _DRAFT_UPDATE:
             if review_state(one.directory(REVIEW)) == "approved":
                 raise Refusal(
@@ -529,7 +660,7 @@ def create_app(
                     "its approved artifact still named"
                 )
             _precondition(one, payload)
-            written = save_draft(one.run, one.flow.id, fields)
+            written = save_draft(one.run, one.flow.id, fields, renders)
         budget = token_budget(fields, one.flow.schema, one.flow)
         return {
             "draft": written.name,
@@ -559,6 +690,83 @@ def create_app(
             "warnings": warnings,
             "at": _saved(written),
         }
+
+    @app.get("/api/b/{batch}/renders")
+    def read_renders(batch: str) -> dict[str, Any]:
+        """Return each source's images by offered flow, approvals newest first."""
+        suffixes = {flow: offered(flow).output_suffix for flow in flows}
+        return {
+            "flows": list(flows),
+            "sources": [
+                {
+                    "name": one.name,
+                    "digest": one.digest,
+                    "cells": {
+                        flow: [
+                            _version_out(version)
+                            for version in library.versions(
+                                one.run, flow, suffixes[flow]
+                            )
+                        ]
+                        if one.run is not None
+                        else []
+                        for flow in flows
+                    },
+                }
+                for one in library.sources(folder(batch))
+            ],
+        }
+
+    def rendered(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> tuple[Run, Path, Path]:
+        """Return a render's run, its image and the approval it was rendered from."""
+        found = folder(batch)
+        run = library.run_named(found, digest)
+        one = offered(flow)
+        number = _version(version)
+        approval = approval_of(run, flow, number)
+        image = image_of(run, one, number, seed)
+        if not image.is_file():
+            raise Refusal(
+                f"{image.name}: its record is there, its image is gone; render it "
+                f"again with `python -m isekai render {found / library.RUNS}`"
+            )
+        return run, image, approval
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}")
+    def read_render(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> dict[str, Any]:
+        """Return one render's large view: the approval's filled fields beside it."""
+        _, _, approval = rendered(batch, digest, flow, version, seed)
+        remedy = f"restore it in {approval} by hand, then reload the page"
+        body = read(approval, APPROVED_FILE, remedy=remedy)
+        fields = _fields(approval, body, remedy)
+        return {
+            "flow": flow,
+            "version": _version(version),
+            "seed": str(seed),
+            "fields": {name: tags for name, tags in fields.items() if tags},
+            "approved_at": _saved(approval),
+        }
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/image")
+    def read_render_image(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> FileResponse:
+        """Serve the render's bytes, whole."""
+        return FileResponse(rendered(batch, digest, flow, version, seed)[1])
+
+    @app.get("/api/b/{batch}/renders/{digest}/{flow}/{version}/{seed}/thumb")
+    def read_render_thumb(
+        batch: str, digest: str, flow: str, version: str, seed: int
+    ) -> FileResponse:
+        """Serve the render's thumbnail, made in the library's cache the first time."""
+        run, image, _ = rendered(batch, digest, flow, version, seed)
+        return FileResponse(
+            library.thumbnail(root, run, image), media_type="image/jpeg"
+        )
 
     @app.get("/api/{rest:path}")
     def no_route(rest: str) -> JSONResponse:
@@ -626,6 +834,10 @@ class _Shared:
 # A staging folder's name, as `importing.stage` makes it.
 _STAGING_ID = re.compile(r"[0-9a-f]{16}")
 
+# A number a request spells: ASCII digits alone, since `str.isdigit` also passes
+# a superscript `int` cannot read.
+_DECIMAL = re.compile(r"[0-9]+")
+
 
 def cell_event(
     found: Path, grid: library.Hub, loaded: Mapping[str, Flow]
@@ -654,6 +866,93 @@ def cell_event(
         }
 
     return cell
+
+
+def _version_out(version: library.Version) -> dict[str, Any]:
+    """Describe an approval's version, each seed a decimal string as `renders` is."""
+    return {
+        **asdict(version),
+        "seeds": _decimal(version.seeds),
+        "rendered": _decimal(version.rendered),
+    }
+
+
+def _decimal(seeds: Sequence[int]) -> list[str]:
+    """Return seeds as decimal strings: a 64-bit seed is past a page's number."""
+    return [str(seed) for seed in seeds]
+
+
+def _whole(value: object) -> TypeGuard[int]:
+    """Return whether a request's value is a whole number, a JSON `true` not one."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _version(text: str) -> int:
+    """Return the approval number a URL's version names.
+
+    e.g. "v2" -> 2
+    """
+    digits = text.removeprefix("v")
+    if not _DECIMAL.fullmatch(digits):
+        raise Refusal(
+            f"{text!r} names no version; a version is v and the approval's number, "
+            "e.g. v1 -- go back to the batch's Renders to choose one"
+        )
+    return int(digits)
+
+
+def _quote(
+    found: Path, made: render.Quote, disabled: str | None, flows_dir: Path
+) -> dict[str, Any]:
+    """Describe a quote as the Render dialog shows it, each run by its source."""
+    runs = {
+        one.run.id: (one.name, one.run)
+        for one in library.hub(found, (), flows_dir).sources
+        if one.run is not None
+    }
+
+    def source(run_id: str, flow: str) -> dict[str, Any]:
+        name, run = runs.get(
+            run_id, (run_id, Run(run_id, found / library.RUNS / run_id))
+        )
+        versions = approved_versions(run.directory(flow, REVIEW))
+        return {
+            "name": name,
+            "digest": run.digest,
+            "version": versions[-1] if versions else None,
+        }
+
+    flows = [
+        {
+            "flow": line.flow,
+            "images": line.images,
+            "sources": [
+                {**source(run_id, flow), "images": images}
+                for run_id, flow, images in made.short.wanted
+                if flow == line.flow
+            ],
+        }
+        for line in made.short.lines
+    ]
+    return {
+        "flows": flows,
+        "left_out": [
+            {**source(run_id, flow), "flow": flow, "reason": reason}
+            for run_id, flow, reason in made.short.left_out
+        ],
+        "estimate": {
+            "seconds": made.estimate.seconds,
+            "limit_s": made.estimate.limit_s,
+            "boot_s": made.timing.boot_s,
+            "teardown_s": made.timing.teardown_s,
+        },
+        "price": {
+            "about": made.about,
+            "at_most": made.at_most,
+            "keep_open": made.keep_open,
+        },
+        "disabled": disabled,
+    }
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:
@@ -811,6 +1110,31 @@ def _update(payload: Mapping[str, Any]) -> dict[str, list[str]]:
     if (name := _untagged(fields)) is not None:
         raise Refusal(f"the update's {name} is not a list of tags; {fix}")
     return fields
+
+
+def _renders_in(payload: Mapping[str, Any]) -> Renders | None:
+    """Return an update's `renders`, its seeds parsed from decimal strings, or None.
+
+    e.g. `{"count": 2, "seeds": ["18402"]}` -> `{"count": 2, "seeds": [18402]}`
+    """
+    held = payload.get("renders")
+    if held is None:
+        return None
+    fix = "send a count and a list of decimal seeds -- nothing was saved"
+    if not isinstance(held, dict) or not isinstance(held.get("seeds", []), list):
+        raise Refusal(f"the update's `renders` is not a count and its seeds; {fix}")
+    seeds = held.get("seeds", [])
+    if not all(isinstance(seed, str) and _DECIMAL.fullmatch(seed) for seed in seeds):
+        raise Refusal(f"the update's renders seeds are not decimal numbers; {fix}")
+    return {"count": held.get("count"), "seeds": [int(seed) for seed in seeds]}
+
+
+def _renders_out(renders: Renders) -> dict[str, Any]:
+    """Describe `renders` for the page, each seed as its decimal string."""
+    return {
+        "count": renders["count"],
+        "seeds": _decimal(renders["seeds"]),
+    }
 
 
 def _precondition(one: Held, payload: Mapping[str, Any]) -> None:

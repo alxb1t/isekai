@@ -52,6 +52,7 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
+from isekai.foundation.artifacts import SEED_RANGE
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -69,6 +70,8 @@ from isekai.interface.run_view import report
 from isekai.interface.wiring import Wiring, trackable, wiring
 from isekai.pipeline.caption import caption
 from isekai.pipeline.generate import (
+    STAGE_RENDER,
+    Render,
     prepare,
     read_runtime,
     refuse_out_of_step,
@@ -122,22 +125,31 @@ def _seed(value: str) -> int:
         seed = int(value)
     except ValueError:
         raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-    if not 0 <= seed < 2**64:
+    if seed not in SEED_RANGE:
         raise argparse.ArgumentTypeError(
             f"{seed} is outside the sampler's unsigned 64-bit range"
         )
     return seed
 
 
-def _count(value: str) -> int:
-    """Parse a render count: a positive integer. Every one of them costs money."""
-    try:
-        count = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-    if count < 1:
-        raise argparse.ArgumentTypeError("a render count below 1 renders nothing")
-    return count
+def _positive(below_one: str) -> Callable[[str], int]:
+    """Return a parser of a positive integer, refusing one below 1 with `below_one`."""
+
+    def parse(value: str) -> int:
+        try:
+            whole = int(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
+        if whole < 1:
+            raise argparse.ArgumentTypeError(below_one)
+        return whole
+
+    return parse
+
+
+# A render count: every one of them costs money.
+_count = _positive("a render count below 1 renders nothing")
+_seconds = _positive("a session limit below 1s ends at once")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -206,13 +218,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="copy this flow's latest approval under each --flow instead of a draft",
     )
     # The job runner's channel: a line per item it can parse, the prose kept apart.
-    for name in ("caption", "tag", "sheet"):
+    for name in ("caption", "tag", "sheet", "generate"):
         made[name].add_argument(
             "--progress",
             choices=["json"],
             default=None,
             help="print a JSON line per item's start and end; prose goes to stderr",
         )
+    made["render"].add_argument(
+        "--progress",
+        choices=["json"],
+        default=None,
+        help="print a JSON line per step of the session; prose goes to stderr",
+    )
     for name in ("caption", "tag", "sheet", "review"):
         made[name].add_argument(
             "--new-version",
@@ -256,9 +274,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     made["render"].add_argument(
         "requests",
-        nargs="+",
+        nargs="*",
         metavar="<flow>=<count|source>",
-        help="a flow and how many seeds it draws, or the flow whose seeds it takes",
+        help=(
+            "a flow and how many seeds it draws, or the flow whose seeds it takes; "
+            "with none, every approval short of its count renders what it lacks"
+        ),
+    )
+    made["render"].add_argument(
+        "--limit",
+        type=_seconds,
+        default=None,
+        metavar="SECONDS",
+        help=(
+            "end the session after this many seconds, at most gpunit.toml's "
+            "ceiling; without it, the limit is estimated from the work"
+        ),
     )
     made["render"].set_defaults(photos=[])
 
@@ -270,7 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--count",
         type=_count,
         default=None,
-        help="how many renders per photograph per flow (default 1, seeds drawn)",
+        help=(
+            "how many renders per photograph per flow, seeds drawn (default: the "
+            "approval's count, else 1)"
+        ),
     )
     render.add_argument(
         "--seed",
@@ -835,6 +869,9 @@ def _generate(
     machine and then discover the third sheet was broken.
     """
     ready: list[tuple[Run, str]] = []
+    reporter = _Reporter(
+        wired.out, wired.err, getattr(args, "progress", None) == "json"
+    )
     # The seeds each run takes from the source flow, when one is named.
     borrowed: dict[str, list[int]] = {}
     source_suffix = (
@@ -861,7 +898,7 @@ def _generate(
             for flow in assembled:
                 refuse_out_of_step(run, flow, args.in_step_with)
         for flow, path in assembled.items():
-            print(f"{run.id}: assembled {flow}/{path.name}", file=wired.out)
+            reporter.say(f"{run.id}: assembled {flow}/{path.name}")
             ready.append((run, flow))
 
     refused = across(list(targets), assemble_one) + broken
@@ -873,6 +910,21 @@ def _generate(
 
     def render_one(pair: tuple[Run, str]) -> None:
         run, flow = pair
+
+        def landed(made: Render) -> None:
+            reporter.say(f"{run.id}: rendered {flow}/{made.image.name}")
+            # The seed as a string: a 64-bit seed is past what a page's number holds.
+            version = int(made.image.parent.name)
+            reporter.item(
+                run.id,
+                flow,
+                STAGE_RENDER,
+                "done",
+                digest=run.digest,
+                version=version,
+                seed=str(made.seed),
+            )
+
         produced = render(
             run,
             flows[flow],
@@ -883,11 +935,10 @@ def _generate(
             seeds=borrowed.get(run.id, args.seeds),
             seeds_from=args.seeds_from,
             rng=wired.rng,
+            on_image=landed,
         )
-        for made in produced:
-            print(f"{run.id}: rendered {flow}/{made.image.name}", file=wired.out)
         if not produced:
-            print(f"{run.id}: {flow} is already rendered", file=wired.out)
+            reporter.say(f"{run.id}: {flow} is already rendered")
 
     return refused + across(ready, render_one)
 
@@ -909,16 +960,26 @@ class _Reporter:
         print(line, file=self.err if self.progress else self.out)
 
     def item(
-        self, run: str, flow: str, stage: str, state: str, message: str | None = None
+        self,
+        run: str,
+        flow: str,
+        stage: str,
+        state: str,
+        message: str | None = None,
+        **more: str | int,
     ) -> None:
-        """Print one item's `start`, `done` or `refused` line, when asked for JSON."""
+        """Print one item's `start`, `done` or `refused` line, when asked for JSON.
+
+        `more` adds what the item names beyond its run and flow, as a render its seed.
+        """
         if not self.progress:
             return
-        line: dict[str, str] = {
+        line: dict[str, str | int] = {
             "run": run,
             "flow": flow,
             "stage": stage,
             "state": state,
+            **more,
         }
         if message is not None:
             line["message"] = message

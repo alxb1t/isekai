@@ -17,18 +17,23 @@ one test module and reached from three is the coupling this file exists to avoid
 import io
 import random
 import shlex
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 from isekai.boundary.comfy import ComfyTransport
+from isekai.boundary.gpu import Volume
 from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
+    DRAFT_FILE,
     WD14_FILE,
     DanbooruTag,
     DigestRecord,
+    Renders,
     Runtime,
     Wd14,
+    read,
     write,
 )
 from isekai.foundation.flow import Flow, Schema, load_flow, manifest_digest
@@ -40,6 +45,7 @@ from isekai.foundation.run import (
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import generate as generate_stage
+from isekai.pipeline import review as review_stage
 from isekai.pipeline import sheet as sheet_stage
 from isekai.shared.field_map import FieldMap, Group
 from isekai.shared.vocabulary import Vocabulary
@@ -309,6 +315,7 @@ def render(
     rng: random.Random | None = None,
     poll: float = 1.0,
     deadline: float = generate_stage.RENDER_DEADLINE,
+    clock: Callable[[], float] = time.monotonic,
 ) -> list[generate_stage.Render]:
     """Call the render stage on an endpoint no pod-boot record names, at `RUNTIME`.
 
@@ -325,6 +332,7 @@ def render(
         rng=rng,
         poll=poll,
         deadline=deadline,
+        clock=clock,
     )
 
 
@@ -332,10 +340,41 @@ def _unread() -> Vocabulary:
     raise AssertionError("the vocabulary was read")
 
 
+def reapprove(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    renders: Renders,
+    flow: str = FLOW.id,
+) -> Path:
+    """Approve `run` again in `flow` with `renders`, as Review's ④ sets them.
+
+    Returns the new approval's outputs group, where its renders land.
+    """
+    draft = review_stage.review(run, flow, new_version=True)
+    assert draft is not None
+    fields = read(draft, DRAFT_FILE)["fields"]
+    review_stage.save_draft(run, flow, fields, renders)
+    approved, _ = review_stage.approve(run, flow, schema, vocabulary)
+    assert approved is not None
+    return generate_stage.group_of(run, flow, int(approved.name[:3]))
+
+
+def _no_gpunit(argv: Sequence[str], log: Path) -> int:
+    raise AssertionError(f"a test reaches no gpunit: gpunit {' '.join(argv)}")
+
+
+# gpunit's records for a test that sets none: a directory that never exists, so
+# no test reads the operator's own `.gpunit/`.
+NO_RECORDS = Path(__file__).resolve().parent / "no-gpunit-records"
+NO_GPUNIT = Volume(run=_no_gpunit, records=NO_RECORDS)
+
+
 def bare_wiring(**fields: object) -> Wiring:
     """Return a wiring with no model behind it, its streams captured.
 
-    Its vocabulary is never to be read; `fields` sets it, or any other field.
+    Its vocabulary is never to be read and it reaches no gpunit; `fields` sets
+    either, or any other field.
     """
     bare = Wiring(
         reader=None,
@@ -346,5 +385,6 @@ def bare_wiring(**fields: object) -> Wiring:
         field_map=lambda _: FIELD_MAP,
         out=io.StringIO(),
         err=io.StringIO(),
+        volume=NO_GPUNIT,
     )
     return replace(bare, **fields)
