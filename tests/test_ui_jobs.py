@@ -290,7 +290,7 @@ def test_a_render_job_opens_the_window_renders_at_the_limit_and_closes_it(
         now=lambda: "ended",
     )
 
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False, started="t")
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
     jobs.wait(WAIT)
 
     assert record.read_text().splitlines() == [
@@ -319,7 +319,7 @@ def test_a_lost_window_opening_renders_nothing_and_raises_the_volume_alert(
         raise_volume=lambda: raised.append(True),
     )
 
-    jobs.render("b", folder, limit=1500, total=1, keep_open=False, started="t")
+    jobs.render("b", folder, limit=1500, total=1, keep_open=False)
     jobs.wait(WAIT)
 
     assert record.read_text().splitlines() == ["volume up --yes"]

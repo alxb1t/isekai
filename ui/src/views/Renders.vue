@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { renderAt, renders } from '../api'
+import { renders, thumbAt } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
 import type { RendersInfo } from '../types'
 
@@ -92,7 +92,7 @@ const clock = (at: number) =>
   new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
 
 function thumb(digest: string, flow: string, version: number, seed: string): string {
-  return `${renderAt({ batch: props.batch, digest, flow, version, seed })}/thumb`
+  return thumbAt({ batch: props.batch, digest, flow, version, seed })
 }
 
 function open(digest: string, flow: string, version: number, seed: string): void {

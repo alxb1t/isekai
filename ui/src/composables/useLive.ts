@@ -7,10 +7,13 @@ const job = ref<JobSlot | null>(null)
 const billing = ref<Billing | null>(null)
 /* The first snapshot has arrived: until it does, nothing is known. */
 const loaded = ref(false)
+/* Now, in milliseconds, a second at a time: one clock for every running timer. */
+const now = ref(Date.now())
 let stream: EventSource | null = null
 
 function connect(): void {
   if (stream) return
+  setInterval(() => (now.value = Date.now()), 1000)
   stream = new EventSource('/events')
   stream.addEventListener('snapshot', (event) => {
     const data = JSON.parse((event as MessageEvent<string>).data) as {
@@ -42,5 +45,5 @@ function clock(seconds: number): string {
 }
 
 export function useLive() {
-  return { job, billing, loaded, connect, alerting, clock }
+  return { job, billing, loaded, now, connect, alerting, clock }
 }

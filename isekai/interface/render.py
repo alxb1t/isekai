@@ -33,7 +33,7 @@ from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyTransport
 from isekai.boundary.gpu import Seams
 from isekai.boundary.pod_start import HOLD_SECONDS
-from isekai.foundation.flow import load_flow, tracked_flows
+from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     FRAME_NAME,
@@ -47,11 +47,12 @@ from isekai.foundation.run import (
 from isekai.interface.compare_view import BATCH_PHOTOS
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.generate import (
-    durations,
+    duration,
     read_runtime,
     render_groups,
     rendered_seeds,
     shortfall,
+    sidecars,
 )
 from isekai.pipeline.review import current_draft
 
@@ -204,7 +205,9 @@ class Steps:
     def image(self, item: Mapping[str, Any], total: int) -> None:
         """Print the next image's line, of `total`, naming its run, flow and seed."""
         self._n += 1
-        named = {key: item.get(key) for key in ("run", "flow", "version", "seed")}
+        named = {
+            key: item.get(key) for key in ("run", "digest", "flow", "version", "seed")
+        }
         self.step("image", "done", n=self._n, of=total, **named)
 
 
@@ -221,9 +224,9 @@ class _Images(io.TextIOBase):
         """Take `text`, and print a step for each whole render line in it."""
         self._held += text
         *lines, self._held = self._held.split("\n")
-        for line in filter(None, lines):
-            item = json.loads(line)
-            if item.get("stage") == "render" and item.get("state") == "done":
+        for line in lines:
+            item = progress_line(line)
+            if item and item.get("stage") == "render" and item.get("state") == "done":
                 self._steps.image(item, self._total)
         return len(text)
 
@@ -317,19 +320,28 @@ def load_timing(path: Path = RENDER_CONFIG) -> Timing:
 
 @dataclass(frozen=True)
 class Estimate:
-    """A session's estimate and limit, and each flow's time per image, in seconds."""
+    """A session's estimate and its limit, in seconds."""
 
     seconds: float
     limit_s: int
-    per_image: Mapping[str, float]
 
 
 def recent(runs: Path, ids: Sequence[str], flow: str) -> list[float]:
-    """Return the durations of `flow`'s newest recorded renders under `runs`."""
-    timed = [
-        pair for run_id in ids for pair in durations(Run(run_id, runs / run_id), flow)
+    """Return the durations of `flow`'s newest recorded renders under `runs`.
+
+    Newest first by when each was written, so only those `RECENT` takes are read.
+    """
+    found = [
+        path for run_id in ids for path in sidecars(Run(run_id, runs / run_id), flow)
     ]
-    return [seconds for _, seconds in sorted(timed, reverse=True)[:RECENT]]
+    found.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    taken: list[float] = []
+    for path in found:
+        if (seconds := duration(path)) is not None:
+            taken.append(seconds)
+            if len(taken) == RECENT:
+                break
+    return taken
 
 
 def estimate(
@@ -343,17 +355,37 @@ def estimate(
     The limit is the estimate times the factor, at least `FLOOR_S` and at most
     `ceiling_s`.
     e.g. 4 images at a recorded median of 90 s, boot 180, teardown 120, factor 1.5
-         -> Estimate(660.0, 1200, …), the floor
+         -> Estimate(660.0, 1200), the floor
     """
-    per_image = {
-        flow: float(statistics.median(recorded.get(flow) or [timing.per_image_s]))
-        for flow in images
-    }
     seconds = timing.boot_s + timing.teardown_s
     for flow, count in images.items():
-        seconds += count * per_image[flow]
+        seconds += count * statistics.median(recorded.get(flow) or [timing.per_image_s])
     limit = min(ceiling_s, max(FLOOR_S, math.ceil(seconds * timing.limit_factor)))
-    return Estimate(seconds, limit, per_image)
+    return Estimate(seconds, limit)
+
+
+def _estimated(
+    runs: Path,
+    ids: Sequence[str],
+    images: Mapping[str, int],
+    timing: Timing,
+    ceiling_s: int,
+) -> Estimate:
+    """Return the estimate for `images` from what `runs` has recorded.
+
+    The quote and the session both take it here, so the two cannot disagree.
+    """
+    recorded = {flow: recent(runs, ids, flow) for flow in images}
+    return estimate(images, recorded, timing, ceiling_s)
+
+
+def progress_line(raw: str) -> dict[str, Any] | None:
+    """Return a `--progress json` line as a mapping, or None for any other line."""
+    try:
+        found = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return found if isinstance(found, dict) else None
 
 
 def _limit(asked: int | None, ceiling_s: int) -> None:
@@ -386,7 +418,24 @@ class Short:
     @property
     def images(self) -> dict[str, int]:
         """Return how many images each flow renders."""
-        return {line.flow: line.images for line in self.lines}
+        return _images(self.lines)
+
+    @property
+    def blocked(self) -> str | None:
+        """Return why nothing would render, or None while something would."""
+        if self.refused:
+            return self.refused[0]
+        if not self.lines:
+            return "Every approved source × flow already has its Count of images."
+        return None
+
+
+def _images(lines: Sequence[Line]) -> dict[str, int]:
+    """Return how many images `lines` render, by flow."""
+    found: dict[str, int] = {}
+    for line in lines:
+        found[line.flow] = found.get(line.flow, 0) + line.images
+    return found
 
 
 def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
@@ -396,6 +445,7 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
     out. A damaged approval is refused, so the session refuses before renting.
     """
     tracked = tracked_flows(wired.flows_dir)
+    loaded: dict[str, Flow] = {}
     wanted: list[tuple[str, str, int]] = []
     left_out: list[tuple[str, str, str]] = []
     refused: list[str] = []
@@ -405,8 +455,10 @@ def short(runs: Path, ids: Sequence[str], wired: Wiring) -> Short:
             if not approved_versions(run.directory(flow, REVIEW)):
                 left_out.append((run_id, flow, _unready(run, flow)))
                 continue
+            if flow not in loaded:
+                loaded[flow] = load_flow(flow, wired.flows_dir)
             try:
-                lacking = shortfall(run, load_flow(flow, wired.flows_dir))
+                lacking = shortfall(run, loaded[flow])
             except Refusal as damaged:
                 refused.append(str(damaged))
                 continue
@@ -448,8 +500,7 @@ def quote(runs: Path, wired: Wiring) -> Quote:
     timing = load_timing()
     ids = run_ids(runs)
     found = short(runs, ids, wired)
-    recorded = {flow: recent(runs, ids, flow) for flow in found.images}
-    estimated = estimate(found.images, recorded, timing, bound.ceiling_s)
+    estimated = _estimated(runs, ids, found.images, timing, bound.ceiling_s)
     hourly = bound.max_hourly + timing.volume_rate
     return Quote(
         found,
@@ -481,7 +532,7 @@ def _session(
 ) -> int:
     requests = [parse_request(text) for text in texts]
     deferred = in_session_sources(requests)
-    ceiling_s = gpu.ceiling_s(REPOSITORY)
+    ceiling_s = gpu.bounds(REPOSITORY).ceiling_s
     _limit(asked, ceiling_s)
     timing = load_timing()
     ids = run_ids(runs)
@@ -502,6 +553,15 @@ def _session(
     if requests:
         if generate([*verb, *flows, *where], free) != 0:
             return 1
+        for request, late in zip(requests, deferred, strict=True):
+            if request.by_count:
+                continue
+            check = "--in-step-with" if late else "--seeds-from"
+            argv = [*verb, "--flow", request.flow, check, request.value, *where]
+            if generate(argv, free) != 0:
+                return 1
+        counts = {r.flow: int(r.value) for r in requests if r.by_count}
+        lines = [_requested(request, runs, ids, counts, wired) for request in requests]
     else:
         found = short(runs, ids, wired)
         for message in found.refused:
@@ -517,17 +577,6 @@ def _session(
         for line in lines:
             if generate([*verb, *line.head, *line.where], free) != 0:
                 return 1
-    for request, late in zip(requests, deferred, strict=True):
-        if request.by_count:
-            continue
-        check = "--in-step-with" if late else "--seeds-from"
-        argv = [*verb, "--flow", request.flow, check, request.value, *where]
-        if generate(argv, free) != 0:
-            return 1
-    if requests:
-        lines = [
-            _requested(request, runs, ids, requests, wired) for request in requests
-        ]
 
     if seams.busy(PORT):
         raise Refusal(
@@ -535,14 +584,7 @@ def _session(
             f"lsof -iTCP:{PORT} -sTCP:LISTEN shows what holds it"
         )
 
-    if asked is None:
-        images: dict[str, int] = {}
-        for line in lines:
-            images[line.flow] = images.get(line.flow, 0) + line.images
-        recorded = {flow: recent(runs, ids, flow) for flow in images}
-        limit = estimate(images, recorded, timing, ceiling_s).limit_s
-    else:
-        limit = asked
+    limit = asked or _estimated(runs, ids, _images(lines), timing, ceiling_s).limit_s
     again = shlex.join(["uv", "run", "python", "-m", "isekai", "render", str(runs)])
     rest = "".join(f" {text}" for text in texts)
 
@@ -571,15 +613,15 @@ def _requested(
     request: Request,
     runs: Path,
     ids: Sequence[str],
-    requests: Sequence[Request],
+    counts: Mapping[str, int],
     wired: Wiring,
 ) -> Line:
     """Return a request's line, with the most images it renders across `ids`.
 
-    A count renders at most that many per run; a source renders its latest seeds,
-    or its own count where it renders first in this session.
+    `counts` is each by-count request's count, by flow. A count renders at most
+    that many per run; a source renders its latest seeds, or its own count where
+    it renders first in this session.
     """
-    counts = {r.flow: int(r.value) for r in requests if r.by_count}
     if request.by_count:
         images = counts[request.flow] * len(ids)
     elif request.value in counts:

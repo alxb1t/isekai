@@ -14,7 +14,6 @@ a child failing with no line reported ─▶ failed, naming log.txt ─▶ no la
 ```
 """
 
-import json
 import os
 import signal
 import subprocess
@@ -27,14 +26,17 @@ from typing import Any
 
 from isekai.boundary.gpu import Volume
 from isekai.foundation.refusal import Refusal
-from isekai.foundation.run import ID_DIGEST_CHARS, REPOSITORY
-from isekai.interface.render import LOST_EXIT
+from isekai.foundation.run import REPOSITORY
+from isekai.interface.render import LOST_EXIT, progress_line
 from isekai.interface.ui.billing import utc_now
 from isekai.interface.ui.events import Broadcast
 from isekai.interface.ui.library import LOG, RUNS
 
 # The stages Prepare runs for each flow, in order.
 PREPARE = ("tag", "caption", "sheet")
+
+# What a refusal calls each kind of job.
+LABELS = {"prepare": "Prepare", "render": "Render"}
 
 # How a stage is started: the verb, the flow, the runs root and the runs.
 Command = Callable[[str, str, Path, Sequence[str]], list[str]]
@@ -196,12 +198,6 @@ class Jobs:
         self._publish(job)
         return job.describe()
 
-    def rendering(self) -> bool:
-        """Return whether a render job runs."""
-        with self._lock:
-            job = self._job
-            return job is not None and job.kind == "render" and job.state == "running"
-
     def running(self) -> str | None:
         """Return the running job's kind, or None."""
         with self._lock:
@@ -216,7 +212,6 @@ class Jobs:
         limit: int,
         total: int,
         keep_open: bool,
-        started: str,
     ) -> dict[str, Any]:
         """Start a render of `folder`'s runs within `limit` seconds, or refuse."""
         with self._lock:
@@ -225,10 +220,9 @@ class Jobs:
             if keep_open:
                 steps["volume down"] = "kept"
             session = {
-                "started": started,
+                "started": self._now(),
                 "limit": limit,
                 "of": total,
-                "keep_open": keep_open,
                 "ended": None,
                 "steps": steps,
                 "images": [],
@@ -246,9 +240,9 @@ class Jobs:
         """Refuse while a job runs, naming it."""
         job = self._job
         if job is not None and job.state == "running":
-            kind = "Render" if job.kind == "render" else "Prepare"
             raise Refusal(
-                f"a job is running: {kind} on {job.batch}; wait for it to end, or "
+                f"a job is running: {LABELS[job.kind]} on {job.batch}; wait for it "
+                "to end, or "
                 "Stop it, then try again"
             )
 
@@ -299,7 +293,7 @@ class Jobs:
                 assert child.stdout is not None
                 reported = False
                 for raw in child.stdout:
-                    event = _line(raw)
+                    event = progress_line(raw)
                     reported = reported or event is not None
                     found = cell(event) if event is not None else None
                     if found is not None:
@@ -363,32 +357,22 @@ class Jobs:
         with self._lock:
             if self._stopping:
                 return
-            argv = self._render(limit, folder / RUNS)
-            with (folder / LOG).open("a") as log:
-                self._child = subprocess.Popen(
-                    argv,
-                    stdout=subprocess.PIPE,
-                    stderr=log,
-                    cwd=REPOSITORY,
-                    text=True,
-                    start_new_session=True,
-                )
-            child = self._child
+            child = self._spawn(self._render(limit, folder / RUNS), folder)
         assert child.stdout is not None
         reported = False
         for raw in child.stdout:
-            line = _line(raw)
+            line = progress_line(raw)
             if line is None:
                 continue
             reported = True
             with self._lock:
                 if line.get("step") == "image":
-                    found = {
-                        key: line.get(key)
-                        for key in ("n", "of", "run", "flow", "version", "seed")
-                    }
-                    found["digest"] = str(found["run"])[:ID_DIGEST_CHARS]
-                    job.session["images"].append(found)
+                    job.session["images"].append(
+                        {
+                            key: line.get(key)
+                            for key in ("digest", "flow", "version", "seed")
+                        }
+                    )
                 else:
                     job.session["steps"][str(line.get("step"))] = line.get("state")
             self._publish(job)
@@ -419,29 +403,27 @@ class Jobs:
                 return None
             argv = self._command(step.verb, step.flow, folder / RUNS, step.runs)
             job.flow, job.stage = step.flow, step.verb
-            with (folder / LOG).open("a") as log:
-                # Its own session, so a Ctrl-C at the terminal reaches the server
-                # alone, and the server decides what the child is sent.
-                self._child = subprocess.Popen(
-                    argv,
-                    stdout=subprocess.PIPE,
-                    stderr=log,
-                    cwd=REPOSITORY,
-                    text=True,
-                    start_new_session=True,
-                )
-            return self._child
+            return self._spawn(argv, folder)
+
+    def _spawn(self, argv: list[str], folder: Path) -> subprocess.Popen[str]:
+        """Start `argv` as the slot's child, its prose appended to the batch's log.
+
+        Hold the lock.
+        """
+        with (folder / LOG).open("a") as log:
+            # Its own session, so a Ctrl-C at the terminal reaches the server
+            # alone, and the server decides what the child is sent.
+            self._child = subprocess.Popen(
+                argv,
+                stdout=subprocess.PIPE,
+                stderr=log,
+                cwd=REPOSITORY,
+                text=True,
+                start_new_session=True,
+            )
+        return self._child
 
     def _publish(self, job: _Job) -> None:
         with self._lock:
             described = job.describe()
         self._broadcast.publish("job", described)
-
-
-def _line(raw: str) -> dict[str, Any] | None:
-    """Return a progress line as a mapping, or None for a line that is not one."""
-    try:
-        found = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    return found if isinstance(found, dict) else None

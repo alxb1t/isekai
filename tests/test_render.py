@@ -23,7 +23,7 @@ import pytest
 
 from isekai.boundary import gpu
 from isekai.boundary.comfy import ComfyClient, ComfyTransport, TransportFailure
-from isekai.foundation.artifacts import DRAFT_FILE, RENDER_FILE, read
+from isekai.foundation.artifacts import RENDER_FILE, read
 from isekai.foundation.flow import Schema, load_flow
 from isekai.foundation.run import REPOSITORY, Run, open_run
 from isekai.interface import render
@@ -31,12 +31,20 @@ from isekai.interface.cli import _dispatch_argv, build_parser
 from isekai.interface.wiring import Wiring
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
-from isekai.pipeline.review import approve, review, save_draft
+from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.vocabulary import Vocabulary
 from tests.fakes import FAKE_SYSTEM, SESSION_IMAGE, FakeComfyClient
 from tests.images import jpeg_bytes
-from tests.stages import FIELD_MAP, Always, caption, fake_wd14, sheet
+from tests.stages import (
+    FIELD_MAP,
+    Always,
+    bare_wiring,
+    caption,
+    fake_wd14,
+    reapprove,
+    sheet,
+)
 from tests.stages import render as stage_render
 
 FLOW = "summon-anime-wai"
@@ -460,16 +468,12 @@ def test_each_render_records_the_image_the_session_names(
 
 def real(root: Path, vocabulary: Vocabulary) -> Wiring:
     """Return a wiring the real `generate` runs on, over `root`."""
-    return Wiring(
+    return bare_wiring(
         reader=Always(FakeReader(prose="unused")),
         tagger=fake_wd14(),
         hosted_tagger=Always(FakeTagger()),
-        client=None,
         vocabulary=lambda: vocabulary,
-        field_map=lambda _: FIELD_MAP,
         runs_root=root,
-        out=io.StringIO(),
-        err=io.StringIO(),
     )
 
 
@@ -478,11 +482,7 @@ def counted(
 ) -> Run:
     """Return a run approved for two images of `FLOW`, `made` of them rendered."""
     run = approved(root, schema, vocabulary, name)
-    draft = review(run, FLOW, new_version=True)
-    assert draft is not None
-    fields = read(draft, DRAFT_FILE)["fields"]
-    save_draft(run, FLOW, fields, {"count": 2, "seeds": []})
-    approve(run, FLOW, schema, vocabulary)
+    reapprove(run, schema, vocabulary, {"count": 2, "seeds": []})
     flow = load_flow(FLOW)
     prepare(run, {FLOW: flow})
     if made:
@@ -814,7 +814,7 @@ def test_the_limit_never_passes_gpunit_tomls_ceiling() -> None:
 
     whole_day = render.estimate({FLOW: 24 * 60}, {}, timing, spec.ceiling_s)
 
-    assert gpu.ceiling_s(REPOSITORY) == spec.ceiling_s
+    assert gpu.bounds(REPOSITORY).ceiling_s == spec.ceiling_s
     assert whole_day.limit_s == spec.ceiling_s
 
 

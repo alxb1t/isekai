@@ -26,11 +26,14 @@ from isekai.boundary.comfy import ComfyTransport
 from isekai.boundary.gpu import Volume
 from isekai.boundary.wd14 import FLOOR, LocalTagger, read_labels
 from isekai.foundation.artifacts import (
+    DRAFT_FILE,
     WD14_FILE,
     DanbooruTag,
     DigestRecord,
+    Renders,
     Runtime,
     Wd14,
+    read,
     write,
 )
 from isekai.foundation.flow import Flow, Schema, load_flow, manifest_digest
@@ -42,6 +45,7 @@ from isekai.foundation.run import (
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import caption as caption_stage
 from isekai.pipeline import generate as generate_stage
+from isekai.pipeline import review as review_stage
 from isekai.pipeline import sheet as sheet_stage
 from isekai.shared.field_map import FieldMap, Group
 from isekai.shared.vocabulary import Vocabulary
@@ -334,6 +338,26 @@ def render(
 
 def _unread() -> Vocabulary:
     raise AssertionError("the vocabulary was read")
+
+
+def reapprove(
+    run: Run,
+    schema: Schema,
+    vocabulary: Vocabulary,
+    renders: Renders,
+    flow: str = FLOW.id,
+) -> Path:
+    """Approve `run` again in `flow` with `renders`, as Review's ④ sets them.
+
+    Returns the new approval's outputs group, where its renders land.
+    """
+    draft = review_stage.review(run, flow, new_version=True)
+    assert draft is not None
+    fields = read(draft, DRAFT_FILE)["fields"]
+    review_stage.save_draft(run, flow, fields, renders)
+    approved, _ = review_stage.approve(run, flow, schema, vocabulary)
+    assert approved is not None
+    return generate_stage.group_of(run, flow, int(approved.name[:3]))
 
 
 def _no_gpunit(argv: Sequence[str], log: Path) -> int:

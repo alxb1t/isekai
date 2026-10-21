@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { checkBilling, renderAt, stopJob } from '../api'
+import { checkBilling, stopJob, thumbAt } from '../api'
 import { useLive } from '../composables/useLive'
 
 /* The render session (design spec J4·2, J4·3), and the billing alert's way out
    (J8b). It exists only while a render's session is in the slot or an alert is
    open; otherwise it is Home. No spend is shown after the quote. */
 const router = useRouter()
-const { job, billing, loaded, alerting, clock } = useLive()
+const { job, billing, loaded, now, alerting, clock } = useLive()
 const refusal = ref<string | null>(null)
-const now = ref(Date.now())
-let ticker: ReturnType<typeof setInterval> | undefined
 
 const session = computed(() => (job.value?.kind === 'render' ? job.value.session : undefined))
 const running = computed(() => job.value?.kind === 'render' && job.value.state === 'running')
@@ -27,7 +25,7 @@ const elapsed = computed(() => {
 function thumb(index: number): string | null {
   const image = session.value?.images[index]
   if (!image || !job.value) return null
-  return `${renderAt({ batch: job.value.batch, ...image })}/thumb`
+  return thumbAt({ batch: job.value.batch, ...image })
 }
 const done = computed(() => session.value?.images.length ?? 0)
 
@@ -78,8 +76,6 @@ watch(
   { immediate: true },
 )
 
-onMounted(() => (ticker = setInterval(() => (now.value = Date.now()), 1000)))
-onUnmounted(() => clearInterval(ticker))
 </script>
 
 <template>

@@ -187,17 +187,8 @@ export interface RenderSession {
   ended: string | null
   limit: number
   of: number
-  keep_open: boolean
   steps: Record<string, string>
-  images: {
-    n: number
-    of: number
-    run: string
-    digest: string
-    flow: string
-    version: number
-    seed: string
-  }[]
+  images: { digest: string; flow: string; version: number; seed: string }[]
 }
 
 export interface JobSlot {
@@ -229,14 +220,7 @@ export interface QuoteSource {
 export interface Quote {
   flows: { flow: string; images: number; sources: (QuoteSource & { images: number })[] }[]
   left_out: (QuoteSource & { flow: string; reason: string })[]
-  estimate: {
-    seconds: number
-    limit_s: number
-    per_image: Record<string, number>
-    boot_s: number
-    teardown_s: number
-    limit_factor: number
-  }
+  estimate: { seconds: number; limit_s: number; boot_s: number; teardown_s: number }
   price: { about: number; at_most: number; keep_open: number }
   disabled: string | null
 }
@@ -269,7 +253,6 @@ export interface RenderVersion {
 }
 
 export interface RendersInfo {
-  batch: string
   flows: string[]
   sources: { name: string; digest: string | null; cells: Record<string, RenderVersion[]> }[]
 }
@@ -279,7 +262,6 @@ export interface RenderDetail {
   flow: string
   version: number
   seed: string
-  run: string
   fields: Record<string, string[]>
   approved_at: number | null
 }

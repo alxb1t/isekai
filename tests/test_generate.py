@@ -25,7 +25,6 @@ import isekai.pipeline.generate as generate_module
 from isekai.boundary.comfy import ComfyClient, TransportFailure, unread
 from isekai.boundary.comfy.client import TIMEOUT
 from isekai.foundation.artifacts import (
-    DRAFT_FILE,
     PROMPT_FILE,
     RENDER_FILE,
     Runtime,
@@ -70,7 +69,7 @@ from isekai.pipeline.generate import (
     rendered_seeds,
     seeds_for,
 )
-from isekai.pipeline.review import approve, review, save_draft
+from isekai.pipeline.review import approve, review
 from isekai.pipeline.tagging import FakeTagger
 from isekai.shared.image import MAX_TARGET_LONG_SIDE, photo_resolution
 from isekai.shared.vocabulary import Vocabulary
@@ -87,6 +86,7 @@ from tests.stages import (
     Always,
     caption,
     fake_wd14,
+    reapprove,
     render,
     runs_flag,
     sheet,
@@ -644,24 +644,11 @@ def test_raising_the_count_renders_only_the_difference(
         assert (directory / name).read_bytes() == body
 
 
-def _approved_renders(
-    run: Run, schema: Schema, vocabulary: Vocabulary, count: int, seeds: list[int]
-) -> Path:
-    """Approve `run` again with `count` and `seeds`, and return its outputs group."""
-    draft = review(run, FLOW, new_version=True)
-    assert draft is not None
-    fields = read(draft, DRAFT_FILE)["fields"]
-    save_draft(run, FLOW, fields, {"count": count, "seeds": seeds})
-    approved, _ = approve(run, FLOW, schema, vocabulary)
-    assert approved is not None
-    return run.path / FLOW / OUTPUTS / f"{int(approved.name[:3]):03d}"
-
-
 @pytest.mark.spec("image-generation:approved-count:listed-seeds-first")
 def test_an_approvals_listed_seeds_render_first_and_the_rest_are_drawn(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    group = _approved_renders(run, schema, vocabulary, 3, [1])
+    group = reapprove(run, schema, vocabulary, {"count": 3, "seeds": [1]})
     prepare(run, {FLOW: flow})
 
     produced = render(run, flow, FakeComfyClient(), rng=random.Random(7), poll=0)
@@ -686,7 +673,7 @@ def test_an_approval_with_no_count_renders_one_drawn_seed(run: Run, flow: Flow) 
 def test_an_approval_short_of_its_count_renders_only_what_it_lacks(
     run: Run, flow: Flow, schema: Schema, vocabulary: Vocabulary
 ) -> None:
-    group = _approved_renders(run, schema, vocabulary, 3, [])
+    group = reapprove(run, schema, vocabulary, {"count": 3, "seeds": []})
     prepare(run, {FLOW: flow})
     client = FakeComfyClient()
     render(run, flow, client, seeds=[42], poll=0)

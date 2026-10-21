@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLive } from './composables/useLive'
 
@@ -8,9 +8,7 @@ import { useLive } from './composables/useLive'
    another run keeps the view and its autosave; another flow is a new view. */
 const route = useRoute()
 const router = useRouter()
-const { job, billing, alerting, clock, connect } = useLive()
-const now = ref(Date.now())
-let ticker: ReturnType<typeof setInterval> | undefined
+const { job, billing, now, alerting, clock, connect } = useLive()
 
 const alert = computed(() => alerting(billing.value))
 const running = computed(() => job.value?.state === 'running')
@@ -60,12 +58,8 @@ function onKey(event: KeyboardEvent): void {
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   connect()
-  ticker = setInterval(() => (now.value = Date.now()), 1000)
 })
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKey)
-  clearInterval(ticker)
-})
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>

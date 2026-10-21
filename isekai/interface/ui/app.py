@@ -28,7 +28,7 @@ and `python -m isekai`'s import graph never reaches it at all.
 GET  /api/library
 GET  /api/b/{batch}/hub   ·   POST …/assign        {sources, flow, remove}
 POST /api/b/{batch}/prepare   ·   POST /api/job/stop
-POST /api/b/{batch}/render{/quote,}                {keep_open} on the render
+GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open} on the render
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
@@ -48,6 +48,7 @@ import threading
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
+from functools import cache
 from pathlib import Path
 from typing import Any, TypeGuard
 
@@ -89,7 +90,7 @@ from isekai.foundation.run import (
 )
 from isekai.interface import render
 from isekai.interface.ui import events, library
-from isekai.interface.ui.billing import Billing, utc_now
+from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
@@ -210,7 +211,9 @@ def create_app(
         volume=wired.volume,
         raise_volume=lambda: billing.raise_volume(),
     )
-    billing = Billing(wired.volume, root / GPUNIT_LOG, broadcast, jobs.rendering)
+    billing = Billing(
+        wired.volume, root / GPUNIT_LOG, broadcast, lambda: jobs.running() == "render"
+    )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -406,15 +409,21 @@ def create_app(
         """Interrupt the running stage; no later stage starts."""
         return {"job": jobs.stop()}
 
+    @cache
+    def offered(flow: str) -> Flow:
+        """Return a tracked flow by name, loaded once: a flow is pinned while served."""
+        return _flow(wired, flow)
+
     def quoted(batch: str) -> tuple[Path, render.Quote, dict[str, Any]]:
         """Return a batch's folder, its quote, and the quote as the dialog shows it."""
         found = folder(batch)
         runs = found / library.RUNS
         made = render.quote(runs, wire(runs))
-        return found, made, _quote(found, made, _disabled(made), wired.flows_dir)
+        disabled = _held() or made.short.blocked
+        return found, made, _quote(found, made, disabled, wired.flows_dir)
 
-    def _disabled(made: render.Quote) -> str | None:
-        """Return why Render is disabled for `made`, or None."""
+    def _held() -> str | None:
+        """Return what holds Render back whatever the batch: a job, a pod, no key."""
         running = jobs.running()
         if running is not None:
             kind = "A render session" if running == "render" else "Prepare"
@@ -426,11 +435,18 @@ def create_app(
                 "No RunPod key: add RUNPOD_API_KEY to .env, then start "
                 "`uv run --env-file .env python -m isekai ui` again."
             )
-        if made.short.refused:
-            return made.short.refused[0]
-        if not made.short.lines:
-            return "Every approved source × flow already has its Count of images."
         return None
+
+    @app.get("/api/b/{batch}/render")
+    def read_render_offer(batch: str) -> dict[str, Any]:
+        """Return why Render is disabled for the batch, or null; it prices nothing."""
+        held = _held()
+        if held is not None:
+            return {"disabled": held}
+        runs = folder(batch) / library.RUNS
+        return {
+            "disabled": render.short(runs, render.run_ids(runs), wire(runs)).blocked
+        }
 
     @app.post("/api/b/{batch}/render/quote")
     def post_quote(batch: str) -> dict[str, Any]:
@@ -457,7 +473,6 @@ def create_app(
             limit=made.estimate.limit_s,
             total=sum(made.short.images.values()),
             keep_open=bool((payload or {}).get("keep_open")),
-            started=utc_now(),
         )
         return {"job": job}
 
@@ -655,14 +670,9 @@ def create_app(
     @app.get("/api/b/{batch}/renders")
     def read_renders(batch: str) -> dict[str, Any]:
         """Return each source's images by offered flow, approvals newest first."""
-        found = folder(batch)
-        grid = library.hub(found, flows, wired.flows_dir)
-        suffixes = {
-            flow: load_flow(flow, wired.flows_dir).output_suffix for flow in flows
-        }
+        suffixes = {flow: offered(flow).output_suffix for flow in flows}
         return {
-            "batch": grid.name,
-            "flows": list(grid.flows),
+            "flows": list(flows),
             "sources": [
                 {
                     "name": one.name,
@@ -676,10 +686,10 @@ def create_app(
                         ]
                         if one.run is not None
                         else []
-                        for flow in grid.flows
+                        for flow in flows
                     },
                 }
-                for one in grid.sources
+                for one in library.sources(folder(batch))
             ],
         }
 
@@ -689,7 +699,7 @@ def create_app(
         """Return a render's run, its image and the approval it was rendered from."""
         found = folder(batch)
         run = library.run_named(found, digest)
-        one = _flow(wired, flow)
+        one = offered(flow)
         number = _version(version)
         approval = approval_of(run, flow, number)
         image = image_of(run, one, number, seed)
@@ -705,7 +715,7 @@ def create_app(
         batch: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
         """Return one render's large view: the approval's filled fields beside it."""
-        run, _, approval = rendered(batch, digest, flow, version, seed)
+        _, _, approval = rendered(batch, digest, flow, version, seed)
         remedy = f"restore it in {approval} by hand, then reload the page"
         body = read(approval, APPROVED_FILE, remedy=remedy)
         fields = _fields(approval, body, remedy)
@@ -713,7 +723,6 @@ def create_app(
             "flow": flow,
             "version": _version(version),
             "seed": str(seed),
-            "run": run.id,
             "fields": {name: tags for name, tags in fields.items() if tags},
             "approved_at": _saved(approval),
         }
@@ -835,9 +844,14 @@ def _version_out(version: library.Version) -> dict[str, Any]:
     """Describe an approval's version, each seed a decimal string as `renders` is."""
     return {
         **asdict(version),
-        "seeds": [str(seed) for seed in version.seeds],
-        "rendered": [str(seed) for seed in version.rendered],
+        "seeds": _decimal(version.seeds),
+        "rendered": _decimal(version.rendered),
     }
+
+
+def _decimal(seeds: Sequence[int]) -> list[str]:
+    """Return seeds as decimal strings: a 64-bit seed is past a page's number."""
+    return [str(seed) for seed in seeds]
 
 
 def _version(text: str) -> int:
@@ -896,10 +910,8 @@ def _quote(
         "estimate": {
             "seconds": made.estimate.seconds,
             "limit_s": made.estimate.limit_s,
-            "per_image": dict(made.estimate.per_image),
             "boot_s": made.timing.boot_s,
             "teardown_s": made.timing.teardown_s,
-            "limit_factor": made.timing.limit_factor,
         },
         "price": {
             "about": made.about,
@@ -1088,7 +1100,7 @@ def _renders_out(renders: Renders) -> dict[str, Any]:
     """Describe `renders` for the page, each seed as its decimal string."""
     return {
         "count": renders["count"],
-        "seeds": [str(seed) for seed in renders["seeds"]],
+        "seeds": _decimal(renders["seeds"]),
     }
 
 

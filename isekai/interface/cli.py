@@ -52,6 +52,7 @@ from typing import TextIO, TypeVar
 
 from isekai.boundary.comfy import TransportFailure
 from isekai.boundary.wd14 import LocalTagger
+from isekai.foundation.artifacts import SEED_RANGE
 from isekai.foundation.flow import Flow, load_flow, tracked_flows
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
@@ -124,33 +125,31 @@ def _seed(value: str) -> int:
         seed = int(value)
     except ValueError:
         raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-    if not 0 <= seed < 2**64:
+    if seed not in SEED_RANGE:
         raise argparse.ArgumentTypeError(
             f"{seed} is outside the sampler's unsigned 64-bit range"
         )
     return seed
 
 
-def _seconds(value: str) -> int:
-    """Parse a session limit: a whole number of seconds above zero."""
-    try:
-        seconds = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not a whole number") from None
-    if seconds < 1:
-        raise argparse.ArgumentTypeError("a session limit below 1s ends at once")
-    return seconds
+def _positive(below_one: str) -> Callable[[str], int]:
+    """Return a parser of a positive integer, refusing one below 1 with `below_one`."""
+
+    def parse(value: str) -> int:
+        try:
+            whole = int(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
+        if whole < 1:
+            raise argparse.ArgumentTypeError(below_one)
+        return whole
+
+    return parse
 
 
-def _count(value: str) -> int:
-    """Parse a render count: a positive integer. Every one of them costs money."""
-    try:
-        count = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
-    if count < 1:
-        raise argparse.ArgumentTypeError("a render count below 1 renders nothing")
-    return count
+# A render count: every one of them costs money.
+_count = _positive("a render count below 1 renders nothing")
+_seconds = _positive("a session limit below 1s ends at once")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -914,7 +913,13 @@ def _generate(
             # The seed as a string: a 64-bit seed is past what a page's number holds.
             version = int(made.image.parent.name)
             reporter.item(
-                run.id, flow, STAGE_RENDER, "done", version=version, seed=str(made.seed)
+                run.id,
+                flow,
+                STAGE_RENDER,
+                "done",
+                digest=run.digest,
+                version=version,
+                seed=str(made.seed),
             )
 
         produced = render(

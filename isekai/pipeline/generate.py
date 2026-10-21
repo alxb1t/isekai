@@ -39,6 +39,7 @@ from isekai.foundation.artifacts import (
     APPROVED_FILE,
     PROMPT_FILE,
     RENDER_FILE,
+    SEED_BITS,
     Failure,
     Prompt,
     Renders,
@@ -77,8 +78,6 @@ from isekai.shared.image import photo_resolution, strip_metadata
 STAGE_ASSEMBLE = "assemble"
 STAGE_RENDER = "render"
 
-# A seed is what the sampler takes: an unsigned 64-bit integer.
-SEED_BITS = 64
 
 # Seconds a queued prompt may take before the render gives up on it: a ComfyUI
 # restarted in place loses the prompt, and the pod bills while the poll waits.
@@ -162,11 +161,16 @@ def _unapproved(run: Run, flows: Sequence[str]) -> str:
 
 def approved_artifact(run: Run, flow: str) -> tuple[int, Path]:
     """Return the highest approved artifact for `flow`, or refuse naming the way out."""
-    directory = run.directory(flow, REVIEW)
-    approved = approved_versions(directory)
+    approved = approved_versions(run.directory(flow, REVIEW))
     if not approved:
         raise Refusal(_unapproved(run, [flow]))
-    return approved[-1], directory / artifact_name(approved[-1], APPROVED)
+    return approved[-1], approval_of(run, flow, approved[-1])
+
+
+def _approved_renders(approval: Path) -> Renders:
+    """Return an approval's `renders`; only a hand repairs a damaged one."""
+    remedy = f"restore it in {approval} by hand"
+    return renders_of(approval, read(approval, APPROVED_FILE, remedy=remedy), remedy)
 
 
 def approval_of(run: Run, flow: str, version: int) -> Path:
@@ -327,36 +331,34 @@ def rendered_seeds(directory: Path, suffix: str) -> list[int]:
     )
 
 
-def shortfall(run: Run, flow: Flow, count: int | None = None) -> int:
+def shortfall(run: Run, flow: Flow) -> int:
     """Return how many images `flow`'s newest approval still lacks of its count.
 
-    `count` stands in for the approval's own, as `--count` does. Read from the
-    approval's `renders` and a listing of its outputs group; an unapproved flow
-    is refused naming the way out.
+    Read from the approval's `renders` and a listing of its outputs group; an
+    unapproved flow is refused naming the way out.
     """
     version, approval = approved_artifact(run, flow.id)
-    if count is None:
-        remedy = f"restore it in {approval} by hand"
-        body = read(approval, APPROVED_FILE, remedy=remedy)
-        count = renders_of(approval, body, remedy)["count"]
-    group = run.directory(flow.id, OUTPUTS, f"{version:03d}")
+    count = _approved_renders(approval)["count"]
+    group = group_of(run, flow.id, version)
     return max(count - len(rendered_seeds(group, flow.output_suffix)), 0)
 
 
-def durations(run: Run, flow: str) -> list[tuple[float, float]]:
-    """Return each render of `flow` that records its duration: (written at, seconds).
+def sidecars(run: Run, flow: str) -> list[Path]:
+    """Return every render sidecar of `flow` in `run`, from listings alone."""
+    return [
+        path
+        for group in render_groups(run, flow)
+        for path in sorted(group.iterdir())
+        if is_sidecar(path)
+    ]
 
-    A render written before durations were recorded carries none, and is left out.
-    """
-    timed: list[tuple[float, float]] = []
-    for group in render_groups(run, flow):
-        for sidecar in sorted(group.iterdir()):
-            if not is_sidecar(sidecar):
-                continue
-            seconds = read(sidecar, RENDER_FILE).get("duration")
-            if isinstance(seconds, int | float) and not isinstance(seconds, bool):
-                timed.append((sidecar.stat().st_mtime, float(seconds)))
-    return timed
+
+def duration(sidecar: Path) -> float | None:
+    """Return the seconds a render records, or None for one written before durations."""
+    seconds = read(sidecar, RENDER_FILE).get("duration")
+    if isinstance(seconds, int | float) and not isinstance(seconds, bool):
+        return float(seconds)
+    return None
 
 
 def render_groups(run: Run, flow: str) -> list[Path]:
@@ -600,13 +602,11 @@ def render(
     """
     version, approval = approved_artifact(run, flow.id)
     prompt = read(run.directory(flow.id, PROMPTS) / artifact_name(version), PROMPT_FILE)
-    directory = run.directory(flow.id, OUTPUTS, f"{version:03d}")
+    directory = group_of(run, flow.id, version)
     already = rendered_seeds(directory, flow.output_suffix)
     source = rng or random.Random()
     if count is None and seeds is None:
-        remedy = f"restore it in {approval} by hand"
-        body = read(approval, APPROVED_FILE, remedy=remedy)
-        wanted = approved_seeds(renders_of(approval, body, remedy), source, already)
+        wanted = approved_seeds(_approved_renders(approval), source, already)
     else:
         wanted = seeds_for(count, seeds, source, already)
     if not wanted:

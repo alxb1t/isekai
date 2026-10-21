@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { assign, hub, prepare, quoteRender, stopJob } from '../api'
+import { assign, hub, prepare, renderOffer, stopJob } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { useLive } from '../composables/useLive'
 import { firstFlow, queue } from '../composables/useQueue'
-import type { CellEvent, HubCell, HubInfo, HubSource, JobSlot, Stage } from '../types'
+import type { CellEvent, HubCell, HubInfo, HubSource, Stage } from '../types'
 
 /* A batch's hub: its sources by the offered flows, each cell's stage read from
    the run's directory (design spec J2). A tick assigns a flow through the
@@ -26,7 +27,7 @@ const renderBlocked = ref<string | null>(null)
 
 async function checkRender(): Promise<void> {
   try {
-    renderBlocked.value = (await quoteRender(props.batch)).disabled
+    renderBlocked.value = (await renderOffer(props.batch)).disabled
   } catch (reason) {
     renderBlocked.value = (reason as Error).message
   }
@@ -37,7 +38,8 @@ function openRender(): void {
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
-const job = ref<JobSlot | null>(null)
+/* The job slot and billing are the shell's live state; this stream brings cells. */
+const { job, billing } = useLive()
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 /* Each cell's refusal from a tick or from the job, by `source|flow`. */
@@ -299,23 +301,8 @@ function onKey(event: KeyboardEvent): void {
 function listen(): void {
   stream = new EventSource(`/events?${new URLSearchParams({ batch: props.batch })}`)
   stream.addEventListener('snapshot', (event) => {
-    const data = JSON.parse((event as MessageEvent<string>).data) as {
-      job: JobSlot | null
-      hub?: HubInfo
-    }
-    job.value = data.job
+    const data = JSON.parse((event as MessageEvent<string>).data) as { hub?: HubInfo }
     if (data.hub) info.value = data.hub
-  })
-  stream.addEventListener('job', (event) => {
-    const slot = JSON.parse((event as MessageEvent<string>).data) as JobSlot
-    const ended = job.value?.state === 'running' && slot.state !== 'running'
-    job.value = slot
-    if (slot.state === 'failed' && slot.kind === 'prepare') barRefusal.value = slot.message
-    if (ended) {
-      running.value = {}
-      void hub(props.batch).then((read) => (info.value = read))
-      void checkRender()
-    }
   })
   stream.addEventListener('cell', (event) => {
     const data = JSON.parse((event as MessageEvent<string>).data) as CellEvent
@@ -327,6 +314,19 @@ function listen(): void {
     else if (data.state === 'done') delete refusals.value[here]
   })
 }
+
+/* A job that ends changes the cells and what Render offers. */
+watch(job, (slot, before) => {
+  if (slot?.state === 'failed' && slot.kind === 'prepare') barRefusal.value = slot.message
+  if (before?.state === 'running' && slot?.state !== 'running') {
+    running.value = {}
+    void hub(props.batch).then((read) => (info.value = read))
+    void checkRender()
+  }
+})
+
+/* A pod alert raised or cleared changes what Render offers. */
+watch(billing, () => void checkRender())
 
 onMounted(async () => {
   window.addEventListener('keydown', onKey)

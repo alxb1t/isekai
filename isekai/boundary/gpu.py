@@ -70,11 +70,6 @@ def bounds(cwd: Path) -> Bounds:
     return Bounds(spec.ceiling_s, spec.max_hourly, spec.volume_ceiling_s)
 
 
-def ceiling_s(cwd: Path) -> int:
-    """Return the hard maximum `cwd`'s `gpunit.toml` sets on a session, in seconds."""
-    return bounds(cwd).ceiling_s
-
-
 def open_session(
     cwd: Path, environ: Mapping[str, str], say: Callable[[str], None], limit_s: int
 ) -> AbstractContextManager[Any]:
@@ -128,12 +123,11 @@ def run_gpunit(argv: Sequence[str], log: Path) -> int:
 
     gpunit reads no `.env`, where the key lives, so it is handed one.
     """
-    environ = os.environ | read_env(REPOSITORY / ".env")
     with log.open("a", encoding="utf-8") as appended:
         done = subprocess.run(
             [sys.executable, "-m", "gpunit", *argv],
             cwd=REPOSITORY,
-            env=environ,
+            env=_dotenv(),
             stdout=appended,
             stderr=subprocess.STDOUT,
             check=False,
@@ -165,11 +159,14 @@ class Volume:
         return self.run(["status", "--json"], log)
 
 
+def _dotenv() -> dict[str, str]:
+    """Return this process's environment with the repository's `.env` over it."""
+    return os.environ | read_env(REPOSITORY / ".env")
+
+
 def environ_of(seams: Seams) -> Mapping[str, str]:
     """Return the environment a session on `seams` is handed."""
-    if seams.environ is None:
-        return os.environ | read_env(REPOSITORY / ".env")
-    return seams.environ
+    return _dotenv() if seams.environ is None else seams.environ
 
 
 def keyed(seams: Seams) -> bool:

@@ -85,6 +85,11 @@ export function stopJob(): Promise<{ job: JobSlot | null }> {
   return send('/api/job/stop', 'POST', {})
 }
 
+/* Why Render is disabled for a batch, or null; it prices nothing. */
+export function renderOffer(batch: string): Promise<{ disabled: string | null }> {
+  return get(`/api/b/${encodeURIComponent(batch)}/render`)
+}
+
 /* The quote rents nothing; only `startRender` does. */
 export function quoteRender(batch: string): Promise<Quote> {
   return send(`/api/b/${encodeURIComponent(batch)}/render/quote`, 'POST', {})
@@ -184,6 +189,14 @@ export interface RenderPlace {
 export function renderAt(place: RenderPlace): string {
   const [batch, ...rest] = [place.batch, place.digest, place.flow, `v${place.version}`, place.seed]
   return `/api/b/${encodeURIComponent(batch)}/renders/${rest.map(encodeURIComponent).join('/')}`
+}
+
+export function thumbAt(place: RenderPlace): string {
+  return `${renderAt(place)}/thumb`
+}
+
+export function imageAt(place: RenderPlace): string {
+  return `${renderAt(place)}/image`
 }
 
 export function renderDetail(place: RenderPlace): Promise<RenderDetail> {

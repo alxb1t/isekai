@@ -257,7 +257,8 @@ class Renders(TypedDict):
 ONE_RENDER: Renders = {"count": 1, "seeds": []}
 
 # What the sampler takes: an unsigned 64-bit integer.
-SEED_RANGE = range(2**64)
+SEED_BITS = 64
+SEED_RANGE = range(2**SEED_BITS)
 
 
 class ReviewDraft(TypedDict):

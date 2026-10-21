@@ -258,6 +258,11 @@ def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:
     return _grid(folder, _suffixes(flows, flows_dir))
 
 
+def sources(folder: Path) -> tuple[Source, ...]:
+    """Return batch `folder`'s sources and their runs, reading no stage and no mark."""
+    return _grid(folder, {}, marks=False).sources
+
+
 def unprepared(grid: Hub) -> dict[str, list[str]]:
     """Return, per flow, the runs of every assigned cell that has no sheet yet.
 

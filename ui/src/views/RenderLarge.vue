@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { renderAt, renderDetail } from '../api'
+import { imageAt, renderDetail } from '../api'
 import RefusalPage from '../components/RefusalPage.vue'
 import type { RenderDetail } from '../types'
 
@@ -48,7 +48,7 @@ onMounted(async () => {
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="detail" class="large">
     <div class="large__media">
-      <img :src="`${renderAt(place)}/image`" :alt="`seed ${detail.seed}`" />
+      <img :src="imageAt(place)" :alt="`seed ${detail.seed}`" />
     </div>
     <aside class="large__sheet" data-sheet>
       <span class="section-label">
