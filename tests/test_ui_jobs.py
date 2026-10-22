@@ -16,7 +16,7 @@ import urllib.error
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TextIO
 
 import pytest
 
@@ -377,6 +377,7 @@ def test_reconnect_keeps_prepare_progress(
     monkeypatch.setattr(jobs, "_command", _Script({"sheet": script}))
     monkeypatch.setattr(jobs, "_now", lambda: STARTED)
     subscribe = broadcast.subscribe
+    updates = subscribe()
 
     def finite_subscription() -> queue.Queue[events.Event]:
         found = subscribe()
@@ -385,27 +386,14 @@ def test_reconnect_keeps_prepare_progress(
 
     monkeypatch.setattr(broadcast, "subscribe", finite_subscription)
     client = TestClient(app, base_url=f"http://{HOST}:{PORT}")
-    seen = threading.Event()
-
-    def cell(line: dict[str, Any]) -> dict[str, Any]:
-        seen.set()
-        return line
-
     try:
         initial = jobs.prepare(
-            "b", folder, [Step(FLOW, "sheet", (run.id, later.id))], cell
+            "b", folder, [Step(FLOW, "sheet", (run.id, later.id))], dict
         )
         assert initial["progress"]["started"] == STARTED
         monkeypatch.setattr(jobs, "_now", lambda: "2026-10-22T10:05:00Z")
-        assert seen.wait(WAIT)
-        # The callback precedes publishing the updated slot.
-        deadline = time.monotonic() + WAIT
-        while time.monotonic() < deadline:
-            current = jobs.slot()
-            assert current is not None
-            if current["progress"]["done"] == 1:
-                break
-            time.sleep(0.01)
+        while _until(updates, "job")[1]["progress"]["done"] != 1:
+            pass
         for _ in range(2):
             body = client.get("/events?batch=b")
             first_frame = body.text.split("\n")[1].removeprefix("data: ")
@@ -416,6 +404,7 @@ def test_reconnect_keeps_prepare_progress(
             }
         assert jobs.running() == "prepare"
     finally:
+        broadcast.unsubscribe(updates)
         release.touch()
         jobs.shutdown()
 

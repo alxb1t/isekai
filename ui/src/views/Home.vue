@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { library } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
@@ -12,6 +12,7 @@ import type { LibraryRow } from '../types'
    over it (J1); on a first start it follows the privacy line (J1·1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
+const batchCount = computed(() => rows.value?.filter((row) => row.batch).length ?? 0)
 const refusal = ref<string | null>(null)
 const list = ref<HTMLElement | null>(null)
 const importing = ref(false)
@@ -88,8 +89,7 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
     </div>
     <template v-if="rows.length > 0">
       <p class="section-label">
-        library · {{ rows.filter((row) => row.batch).length }}
-        {{ noun(rows.filter((row) => row.batch).length, 'batch', 'batches') }} · newest activity first
+        library · {{ batchCount }} {{ noun(batchCount, 'batch', 'batches') }} · newest activity first
       </p>
       <div ref="list" class="library">
         <template v-for="row in rows" :key="row.name">
