@@ -27,7 +27,7 @@ BULLET_LIMIT = 300
 MAY_CITE = frozenset(
     {
         "CHANGELOG.md",
-        "CLAUDE.md",
+        "AGENTS.md",
         "docs/pins.md",
         "tests/test_flow.py",
         "tests/test_docs.py",
@@ -160,7 +160,7 @@ def test_nothing_cites_the_changelog() -> None:
 def test_the_citation_check_reports_a_file_naming_the_changelog(tmp_path: Path) -> None:
     (tmp_path / "evaluation").mkdir()
     (tmp_path / "evaluation" / "README.md").write_text("a gap `CHANGELOG.md` names")
-    (tmp_path / "CLAUDE.md").write_text("`CHANGELOG.md` follows Keep a Changelog")
+    (tmp_path / "AGENTS.md").write_text("`CHANGELOG.md` follows Keep a Changelog")
     (tmp_path / "openspec" / "changes" / "0001-x").mkdir(parents=True)
     (tmp_path / "openspec" / "changes" / "0001-x" / "design.md").write_text(
         "CHANGELOG.md:12"
@@ -169,7 +169,7 @@ def test_the_citation_check_reports_a_file_naming_the_changelog(tmp_path: Path) 
 
     paths = [
         "evaluation/README.md",
-        "CLAUDE.md",
+        "AGENTS.md",
         "openspec/changes/0001-x/design.md",
         "photo.png",
     ]

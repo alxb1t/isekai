@@ -26,7 +26,8 @@ in particular.
 run. `conjure` takes no photograph and makes no identity claim
 ([docs D10](docs/decisions.md#d10--the-face-and-the-pose-are-carried-by-the-graph)).
 
-**The principles are imported below, so every session has them.**
+**The principles are [`docs/principles.md`](docs/principles.md), and every session reads them** — Claude
+Code imports them through the line below; any other agent opens the file before acting.
 
 @docs/principles.md
 

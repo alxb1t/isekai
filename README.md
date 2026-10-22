@@ -393,7 +393,7 @@ Every command green, or the work is not done. The suite is **fully offline and d
 the ComfyUI transport is faked behind a Protocol and no test touches a GPU or the network.
 Image quality and identity fidelity are judged live on a pod, by eye.
 
-`CLAUDE.md` carries the process and the change contract; `docs/` is the architecture;
+`AGENTS.md` carries the process and the change contract; `docs/` is the architecture;
 `openspec/specs/` is the living, test-backed spec, and `openspec/changes/` is the work in flight.
 
 ## Repository layout
@@ -444,7 +444,7 @@ isekai/
 ├── Dockerfile                 # ComfyUI + CUDA PyTorch (cu128; no models baked in)
 ├── docker-compose.yml         # run the image on any GPU host / local testing
 ├── .github/workflows/         # CI: the gate; the weekly drift check; the image, on request
-├── CLAUDE.md                  # repo facts + the change contract, for agents
+├── AGENTS.md                  # repo facts + the change contract, for agents
 └── .env.example               # shape only — no secrets, no paths
 ```
 
