@@ -8,7 +8,7 @@ import { useLive } from './composables/useLive'
    another run keeps the view and its autosave; another flow is a new view. */
 const route = useRoute()
 const router = useRouter()
-const { job, billing, now, alerting, clock, connect } = useLive()
+const { job, billing, now, alerting, clock, connect, prepareTotals } = useLive()
 
 const alert = computed(() => alerting(billing.value))
 const running = computed(() => job.value?.state === 'running')
@@ -16,7 +16,7 @@ const running = computed(() => job.value?.state === 'running')
 const hour = (at: string | null) =>
   at ? new Date(at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
 
-/* The strip's totals: a render's image n of N and its time against its limit. */
+/* The strip and Prepare bar share accepted-cell totals and the live clock. */
 const totals = computed(() => {
   const held = job.value
   if (!held) return ''
@@ -25,7 +25,7 @@ const totals = computed(() => {
     const elapsed = (now.value - Date.parse(session.started)) / 1000
     return `image ${session.images.length} of ${session.of} · ${clock(elapsed)} of ≤${clock(session.limit)}`
   }
-  if (held.state === 'running') return [held.stage, held.flow].filter(Boolean).join(' · ')
+  if (held.state === 'running') return prepareTotals(held)
   return `last: ${held.kind} · ${held.state}`
 })
 

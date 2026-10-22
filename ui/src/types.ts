@@ -208,6 +208,7 @@ export interface JobSlot {
   stage: string | null
   /* Why a failed job ended, naming the batch's log; null otherwise. */
   message: string | null
+  progress?: { started: string; of: number; done: number }
   session?: RenderSession
 }
 

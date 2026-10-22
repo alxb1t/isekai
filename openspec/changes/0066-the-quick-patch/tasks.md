@@ -7,7 +7,7 @@ Each phase is independently buildable. The tests and their retained assertions a
 
 - [x] 1 — Prose
 - [x] 2 — Layout
-- [ ] 3 — Progress
+- [x] 3 — Progress
 - [ ] 4 — Shutdown
 
 ## 1 — Prose
@@ -32,15 +32,15 @@ Each phase is independently buildable. The tests and their retained assertions a
 
 ## 3 — Progress
 
-- [ ] 3.1 Add [D3](design.md#d3)'s accepted-cell progress to `isekai/interface/ui/jobs.py`; add `test_prepare_totals_count_cells_once` and extend the stopped-slot equality in `tests/test_ui_jobs.py`.
+- [x] 3.1 Add [D3](design.md#d3)'s accepted-cell progress to `isekai/interface/ui/jobs.py`; add `test_prepare_totals_count_cells_once` and extend the stopped-slot equality in `tests/test_ui_jobs.py`.
   Verify: `uv run pytest -q tests/test_ui_jobs.py::test_prepare_totals_count_cells_once tests/test_ui_jobs.py::test_stop_interrupts_the_stage_and_starts_no_later_one` passes.
-- [ ] 3.2 Preserve progress in the snapshot assembled by `isekai/interface/ui/app.py`; add `test_reconnect_keeps_prepare_progress` in `tests/test_ui_jobs.py`, per [D3](design.md#d3).
+- [x] 3.2 Preserve progress in the snapshot assembled by `isekai/interface/ui/app.py`; add `test_reconnect_keeps_prepare_progress` in `tests/test_ui_jobs.py`, per [D3](design.md#d3).
   Verify: `uv run pytest -q tests/test_ui_jobs.py::test_reconnect_keeps_prepare_progress` proves the original start time and fixed total survive reconnect after completion advances.
-- [ ] 3.3 Extend `ui/src/types.ts` and `ui/src/composables/useLive.ts`; draw the shared Prepare formatter in `ui/src/App.vue` and `ui/src/views/Hub.vue`, per [D3](design.md#d3).
+- [x] 3.3 Extend `ui/src/types.ts` and `ui/src/composables/useLive.ts`; draw the shared Prepare formatter in `ui/src/App.vue` and `ui/src/views/Hub.vue`, per [D3](design.md#d3).
   Verify: both views read the shared formatter and clock; neither uses nullable stage/flow fields as Prepare totals.
-- [ ] 3.4 Add the bounded reader/release-file fixture to `tests/e2e/wiring.py` and `tests/e2e/conftest.py`; extend the running Prepare test in `tests/e2e/test_prepare.py`, per [Tests](design.md#tests).
+- [x] 3.4 Add the bounded reader/release-file fixture to `tests/e2e/wiring.py` and `tests/e2e/conftest.py`; extend the running Prepare test in `tests/e2e/test_prepare.py`, per [Tests](design.md#tests).
   Verify: `uv run pytest -q tests/e2e/test_prepare.py::test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other` passes totals, ticking-time, reload and retained cell assertions.
-- [ ] 3.5 Make `ui/design/spec.md`'s JobStrip and running PrepareBar use [D3](design.md#d3)'s cell totals and elapsed time consistently.
+- [x] 3.5 Make `ui/design/spec.md`'s JobStrip and running PrepareBar use [D3](design.md#d3)'s cell totals and elapsed time consistently.
   Verify: both descriptions state the fixed accepted-cell total and sheet-completed count; the additional motion remains undeclared by this patch.
 
 ## 4 — Shutdown

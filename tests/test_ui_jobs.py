@@ -16,6 +16,7 @@ import urllib.error
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
+from typing import Any, TextIO
 
 import pytest
 
@@ -30,6 +31,7 @@ from isekai.foundation.refusal import Refusal  # noqa: E402
 from isekai.foundation.run import Run, open_run  # noqa: E402
 from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
+from isekai.interface.ui import app as app_module  # noqa: E402
 from isekai.interface.ui.app import cell_event, create_app  # noqa: E402
 from isekai.interface.ui.jobs import Jobs, Step, settle_s  # noqa: E402
 from isekai.pipeline.generate import prepare  # noqa: E402
@@ -145,7 +147,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
     broadcast = events.Broadcast()
     found = broadcast.subscribe()
     script = _Script({"tag": _line("start") + "; import time; time.sleep(30)"})
-    jobs = Jobs(broadcast, lambda: None, command=script)
+    jobs = Jobs(broadcast, lambda: None, command=script, now=lambda: STARTED)
     steps = [Step(FLOW, verb, (run.id, done.id)) for verb in ("tag", "caption")]
     jobs.prepare("b", folder, steps, lambda line: dict(line))
     _until(found, "cell")
@@ -161,6 +163,7 @@ def test_stop_interrupts_the_stage_and_starts_no_later_one(
         "flow": FLOW,
         "stage": "tag",
         "message": None,
+        "progress": {"started": STARTED, "of": 2, "done": 0},
     }
     assert snapshot(done.path) == before
 
@@ -256,6 +259,165 @@ def test_a_stage_reporting_an_item_done_sends_that_cells_new_stage(
     data = json.loads(frames[-1].split("\n")[1].removeprefix("data: "))
     assert (data["source"], data["flow"], data["state"]) == ("ada.jpg", FLOW, "done")
     assert data["cell"]["stage"] == "tagged"
+
+
+STARTED = "2026-10-22T10:00:00Z"
+
+
+@pytest.mark.spec("ui:prepare:totals-count-cells-not-stages")
+def test_prepare_totals_count_cells_once(tmp_path: Path) -> None:
+    folder, (run, refused) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    other = OFFERED[1]
+    lines = [
+        (run.id, FLOW, "tag", "done", "tagged"),
+        (run.id, FLOW, "caption", "done", "sheet"),
+        (refused.id, FLOW, "sheet", "refused", "sheet"),
+        ("unknown", FLOW, "sheet", "done", "sheet"),
+        (refused.id, other, "sheet", "done", "sheet"),
+        (refused.id, FLOW, "sheet", "done", "tagged"),
+        (run.id, FLOW, "sheet", "done", "sheet"),
+        (run.id, FLOW, "sheet", "done", "sheet"),
+        (run.id, other, "sheet", "done", "rendered"),
+    ]
+    reports = [
+        {
+            "run": run_id,
+            "flow": flow,
+            "stage": stage,
+            "state": state,
+            "cell": {"stage": reached},
+        }
+        for run_id, flow, stage, state, reached in lines
+    ]
+    script = "import json; " + "; ".join(
+        f"print(json.dumps({line!r}), flush=True)" for line in reports
+    )
+    broadcast = events.Broadcast()
+    found = broadcast.subscribe()
+    jobs = Jobs(
+        broadcast, lambda: None, command=_Script({"sheet": script}), now=lambda: STARTED
+    )
+    jobs.prepare(
+        "b",
+        folder,
+        [Step(FLOW, "sheet", (run.id, refused.id)), Step(other, "sheet", (run.id,))],
+        dict,
+    )
+    jobs.wait(WAIT)
+    slot = jobs.slot()
+    assert slot is not None
+    assert slot["progress"] == {"started": STARTED, "of": 3, "done": 2}
+    updates = []
+    while not found.empty():
+        kind, data = found.get_nowait()
+        if kind == "job":
+            updates.append(data["progress"]["done"])
+    assert 1 in updates and 2 in updates
+    slot["progress"]["done"] = 99
+    copied = jobs.slot()
+    assert copied is not None
+    assert copied["progress"]["done"] == 2
+
+
+@pytest.mark.spec("ui:events:a-reconnect-keeps-prepare-progress")
+def test_reconnect_keeps_prepare_progress(
+    tmp_path: Path, vocabulary: Vocabulary, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder, (run, later) = _batch(tmp_path, "ada.jpg", "bea.jpg")
+    wired = bare_wiring(
+        vocabulary=lambda: vocabulary,
+        runs_root=folder / "runs",
+        rng=random.Random(0),
+        probe=lambda: None,
+    )
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html>")
+    made: list[Jobs] = []
+
+    def make_jobs(
+        broadcast: events.Broadcast,
+        probe: Callable[[], None],
+        *,
+        volume: Volume,
+        raise_volume: Callable[[], None],
+        err: TextIO,
+    ) -> Jobs:
+        job = Jobs(broadcast, probe, volume=volume, raise_volume=raise_volume, err=err)
+        made.append(job)
+        return job
+
+    monkeypatch.setattr(app_module, "Jobs", make_jobs)
+    app = create_app(
+        folder.parent,
+        wired,
+        flows=OFFERED,
+        bundle=dist,
+        wire=lambda runs: replace(wired, runs_root=runs),
+        host=HOST,
+        port=PORT,
+    )
+    jobs = made[0]
+    broadcast: events.Broadcast = app.state.broadcast
+    release = tmp_path / "release"
+    first = {
+        "run": run.id,
+        "flow": FLOW,
+        "stage": "sheet",
+        "state": "done",
+        "cell": {"stage": "sheet"},
+    }
+    script = (
+        "import json, pathlib, time; "
+        f"print(json.dumps({first!r}), flush=True); "
+        f"release = pathlib.Path({str(release)!r}); deadline = time.monotonic() + 20; "
+        "\nwhile not release.exists() and time.monotonic() < deadline:"
+        "\n time.sleep(.01)"
+    )
+    monkeypatch.setattr(jobs, "_command", _Script({"sheet": script}))
+    monkeypatch.setattr(jobs, "_now", lambda: STARTED)
+    subscribe = broadcast.subscribe
+
+    def finite_subscription() -> queue.Queue[events.Event]:
+        found = subscribe()
+        found.put((events.CLOSE, {}))
+        return found
+
+    monkeypatch.setattr(broadcast, "subscribe", finite_subscription)
+    client = TestClient(app, base_url=f"http://{HOST}:{PORT}")
+    seen = threading.Event()
+
+    def cell(line: dict[str, Any]) -> dict[str, Any]:
+        seen.set()
+        return line
+
+    try:
+        initial = jobs.prepare(
+            "b", folder, [Step(FLOW, "sheet", (run.id, later.id))], cell
+        )
+        assert initial["progress"]["started"] == STARTED
+        monkeypatch.setattr(jobs, "_now", lambda: "2026-10-22T10:05:00Z")
+        assert seen.wait(WAIT)
+        # The callback precedes publishing the updated slot.
+        deadline = time.monotonic() + WAIT
+        while time.monotonic() < deadline:
+            current = jobs.slot()
+            assert current is not None
+            if current["progress"]["done"] == 1:
+                break
+            time.sleep(0.01)
+        for _ in range(2):
+            body = client.get("/events?batch=b")
+            first_frame = body.text.split("\n")[1].removeprefix("data: ")
+            assert json.loads(first_frame)["job"]["progress"] == {
+                "started": STARTED,
+                "of": 2,
+                "done": 1,
+            }
+        assert jobs.running() == "prepare"
+    finally:
+        release.touch()
+        jobs.shutdown()
 
 
 # --- render ---------------------------------------------------------------------

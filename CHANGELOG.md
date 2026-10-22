@@ -11,6 +11,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Fixed
 
+- Prepare shows sheet-completed cells against its accepted total and a ticking elapsed time in the
+  strip and bar; reconnects preserve the counts and original start (0066 D3).
+
 - Use singular count labels at one and leave a consistent gap between hub header controls so
   small batches read correctly and the controls stay spaced (0066 D7).
 

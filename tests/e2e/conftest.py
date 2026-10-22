@@ -79,6 +79,7 @@ class Served:
     shown: Run
     revised: Run
     compared: Run
+    prepare_release: Path
 
     def review(self, run: Run, batch: str | None = None) -> str:
         """Return the address of `run`'s review in `FLOW`, in `batch` or the main."""
@@ -197,7 +198,16 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     try:
         _wait(f"{url}/api/library", server)
         yield Served(
-            url, BATCH, draft, approved, queues, rendered, shown, revised, compared
+            url,
+            BATCH,
+            draft,
+            approved,
+            queues,
+            rendered,
+            shown,
+            revised,
+            compared,
+            lib / "hub-prepare" / ".prepare-release",
         )
     finally:
         server.terminate()

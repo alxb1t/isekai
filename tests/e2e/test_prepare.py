@@ -4,6 +4,8 @@ Prepare's stages are the real verbs, run as the server's children on the
 suite's doubles, so a cell reaches its sheet exactly as it would by hand.
 """
 
+import re
+
 import pytest
 from playwright.sync_api import Locator, Page, expect
 
@@ -48,6 +50,22 @@ def test_prepare_takes_the_assigned_cells_to_their_sheet_and_no_other(
     expect(_cell(page, "pick")).to_have_attribute("data-stage", "assigned")
 
     page.get_by_role("button", name="1 change · Prepare").click()
+
+    try:
+        strip = page.locator(".jobstrip__totals")
+        bar = page.locator(".prepare-bar__cells")
+        expect(strip).to_have_text(re.compile(r"0 of 1 cell done · \d+:\d+"))
+        initial = strip.inner_text()
+        expect(bar).to_have_text(f"Prepare · {initial}")
+        expect(strip).not_to_have_text(initial, timeout=3000)
+        before_reload = strip.inner_text()
+        page.reload()
+        expect(strip).to_have_text(re.compile(r"0 of 1 cell done · \d+:\d+"))
+        elapsed = strip.inner_text().rsplit(" · ", 1)[1]
+        assert elapsed >= before_reload.rsplit(" · ", 1)[1]
+        expect(bar).to_have_text(re.compile(r"Prepare · 0 of 1 cell done · \d+:\d+"))
+    finally:
+        served.prepare_release.touch()
 
     expect(_cell(page, "pick")).to_have_attribute(
         "data-stage", "sheet", timeout=PREPARED

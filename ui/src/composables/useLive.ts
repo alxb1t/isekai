@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { Billing, JobSlot } from '../types'
+import { noun } from '../words'
 
 /* The job slot and billing, live, for every screen: one `/events` stream the
    shell opens once. A snapshot on every connect, then each change. */
@@ -44,6 +45,13 @@ function clock(seconds: number): string {
   return `${minutes}:${String(whole % 60).padStart(2, '0')}`
 }
 
+function prepareTotals(held: JobSlot | null): string {
+  const progress = held?.progress
+  if (!progress) return ''
+  const elapsed = (now.value - Date.parse(progress.started)) / 1000
+  return `${progress.done} of ${progress.of} ${noun(progress.of, 'cell')} done · ${clock(elapsed)}`
+}
+
 export function useLive() {
-  return { job, billing, loaded, now, connect, alerting, clock }
+  return { job, billing, loaded, now, connect, alerting, clock, prepareTotals }
 }
