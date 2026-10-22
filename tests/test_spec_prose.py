@@ -1,6 +1,6 @@
 """Every spec and every comment reads without history, and no spec line passes 120.
 
-The spec guard holds `CLAUDE.md`'s *How a spec reads* where a test can, over the
+The spec guard holds `AGENTS.md`'s *How a spec reads* where a test can, over the
 effective spec — the living `spec.md` with each active delta's blocks in place,
 which is what a release will fold. The comment guard holds its *A comment says what
 and why*, over the comments, docstrings and `spec_exempt` reasons of the code.

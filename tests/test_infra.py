@@ -881,7 +881,7 @@ def unfloored_spec(spec: dict[str, object]) -> list[str]:
         value = spec.get(key)
         if not (isinstance(value, int) and value >= 24):
             missing.append(floor)
-    # torch's cu128 build, which the Blackwell pod needs (CLAUDE.md).
+    # torch's cu128 build, which the Blackwell pod needs (AGENTS.md).
     if spec.get("cuda") != "12.8":
         missing.append("CUDA version")
     return missing
