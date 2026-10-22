@@ -59,5 +59,8 @@ def serve(wired: Wiring, *, port: int) -> int:
     )
     # gpunit is asked once now, then only while a session runs or an alert is open.
     app.state.billing.watch()
-    run(app, host=HOST, port=port)
+    try:
+        run(app, host=HOST, port=port)
+    except KeyboardInterrupt:
+        return 130
     return 0

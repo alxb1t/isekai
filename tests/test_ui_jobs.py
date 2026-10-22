@@ -538,6 +538,8 @@ def test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown(
     ]
     # Said as the wait begins, so a stop that takes minutes does not look hung.
     assert f"waiting up to {settle_s():.0f}s" in err.getvalue()
+    assert "gpunit volume down" not in err.getvalue()
+    assert "wait ran out" not in err.getvalue()
 
 
 @pytest.mark.spec("ui:render-job:an-outlasted-stop-names-the-fix")
@@ -573,8 +575,71 @@ def test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window(
         jobs.shutdown(timeout=0.05)
 
         assert "uv run --env-file .env gpunit volume down" in err.getvalue()
+        assert "wait ran out" in err.getvalue()
     finally:
         jobs.wait(WAIT)
+
+
+def _stop_with_window(tmp_path: Path, *, keep_open: bool) -> tuple[str, list[str]]:
+    """Return terminal output and recorded teardown acts after a stopped render."""
+    folder, _ = _batch(tmp_path, "ada.jpg")
+    record = tmp_path / "acts"
+
+    def volume(argv: Sequence[str], log: Path) -> int:
+        with record.open("a") as acts:
+            print(" ".join(argv), file=acts)
+        return 1 if "down" in argv else 0
+
+    script = (
+        "import signal, sys, time\n"
+        "def down(*_):\n"
+        "    open(sys.argv[1], 'a').write('torn down\\n')\n"
+        "    sys.exit(130)\n"
+        "signal.signal(signal.SIGINT, down)\n"
+        "open(sys.argv[1], 'a').write('render\\n')\n"
+        "time.sleep(30)\n"
+    )
+    err = io.StringIO()
+    jobs = Jobs(
+        events.Broadcast(),
+        lambda: None,
+        volume=Volume(run=volume, records=tmp_path / ".gpunit"),
+        render=lambda limit, runs: [sys.executable, "-c", script, str(record)],
+        settle=lambda: 2,
+        err=err,
+    )
+    jobs.render("b", folder, limit=1500, total=1, keep_open=keep_open)
+    try:
+        deadline = time.monotonic() + WAIT
+        while "render" not in (record.read_text() if record.exists() else ""):
+            assert time.monotonic() < deadline, "render did not start"
+            time.sleep(0.01)
+        jobs.shutdown(timeout=2)
+        assert jobs.running() is None
+        assert jobs._thread is not None and not jobs._thread.is_alive()
+        return err.getvalue(), record.read_text().splitlines()
+    finally:
+        if jobs.running():
+            jobs.stop()
+        jobs.wait(WAIT)
+
+
+@pytest.mark.spec("ui:render-job:a-failed-close-at-stop-names-the-fix")
+def test_failed_close_at_stop_names_the_fix(tmp_path: Path) -> None:
+    terminal, acts = _stop_with_window(tmp_path, keep_open=False)
+    assert acts == ["volume up --yes", "render", "torn down", "volume down"]
+    assert "uv run --env-file .env gpunit volume down" in terminal
+    assert "wait ran out" not in terminal
+    assert "close failed" in terminal
+
+
+@pytest.mark.spec("ui:render-job:a-kept-window-needs-no-close-remedy")
+def test_kept_window_at_stop_needs_no_remedy(tmp_path: Path) -> None:
+    terminal, acts = _stop_with_window(tmp_path, keep_open=True)
+    assert acts == ["volume up --yes", "render", "torn down"]
+    assert "waiting up to" in terminal
+    assert "gpunit volume down" not in terminal
+    assert "wait ran out" not in terminal
 
 
 @pytest.mark.spec("ui:render-job:a-verb-that-cannot-start-fails-the-job")

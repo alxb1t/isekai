@@ -11,6 +11,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Fixed
 
+- End event streams before the server’s shutdown wait and return quietly on Ctrl-C after cleanup;
+  print the volume recovery command when a close fails after its worker ends (0066 D4, D5).
+
 - Prepare shows sheet-completed cells against its accepted total and a ticking elapsed time in the
   strip and bar; reconnects preserve the counts and original start (0066 D3).
 

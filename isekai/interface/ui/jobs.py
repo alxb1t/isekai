@@ -324,12 +324,14 @@ class Jobs:
         )
         self.wait(timeout)
         assert job.session is not None
-        thread = self._thread
         with self._lock:
-            kept = job.session["steps"]["volume down"] == "kept"
-        if thread is not None and thread.is_alive() and not kept:
+            closed = job.session["steps"]["volume down"]
+        if closed not in {"done", "kept"}:
+            reason = (
+                "the window close failed" if closed == "failed" else "the wait ran out"
+            )
             self._say(
-                "the wait ran out, and the window may still be open: close it with "
+                f"{reason}, and the window may still be open: close it with "
                 f"`{VOLUME_DOWN}`"
             )
 

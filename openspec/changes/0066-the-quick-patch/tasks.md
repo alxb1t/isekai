@@ -8,7 +8,7 @@ Each phase is independently buildable. The tests and their retained assertions a
 - [x] 1 — Prose
 - [x] 2 — Layout
 - [x] 3 — Progress
-- [ ] 4 — Shutdown
+- [x] 4 — Shutdown
 
 ## 1 — Prose
 
@@ -45,9 +45,9 @@ Each phase is independently buildable. The tests and their retained assertions a
 
 ## 4 — Shutdown
 
-- [ ] 4.1 Add [D4](design.md#d4)'s stop state and signal hook in `isekai/interface/ui/events.py` and `app.py`; add `test_closed_broadcast_ends_existing_and_late_streams` in `tests/test_ui.py`.
+- [x] 4.1 Add [D4](design.md#d4)'s stop state and signal hook in `isekai/interface/ui/events.py` and `app.py`; add `test_closed_broadcast_ends_existing_and_late_streams` in `tests/test_ui.py`.
   Verify: `uv run pytest -q tests/test_ui.py::test_closed_broadcast_ends_existing_and_late_streams` proves prompt wake-up and late-subscription termination; the signal hook delegates to uvicorn.
-- [ ] 4.2 Handle the surviving interrupt in `isekai/interface/ui/__init__.py`; add `test_sigint_ends_streams_without_cancellation_output` and `test_serve_returns_130_for_keyboard_interrupt` to `tests/test_ui.py`, per [D4](design.md#d4) and [Tests](design.md#tests).
+- [x] 4.2 Handle the surviving interrupt in `isekai/interface/ui/__init__.py`; add `test_sigint_ends_streams_without_cancellation_output` and `test_serve_returns_130_for_keyboard_interrupt` to `tests/test_ui.py`, per [D4](design.md#d4) and [Tests](design.md#tests).
   Verify: `uv run pytest -q tests/test_ui.py::test_sigint_ends_streams_without_cancellation_output tests/test_ui.py::test_serve_returns_130_for_keyboard_interrupt` passes with quiet status 130.
-- [ ] 4.3 Base terminal recovery on close state in `isekai/interface/ui/jobs.py`; add failed-close/kept-window tests and extend successful-stop/timeout assertions in `tests/test_ui_jobs.py`, per [D5](design.md#d5).
+- [x] 4.3 Base terminal recovery on close state in `isekai/interface/ui/jobs.py`; add failed-close/kept-window tests and extend successful-stop/timeout assertions in `tests/test_ui_jobs.py`, per [D5](design.md#d5).
   Verify: `uv run pytest -q tests/test_ui_jobs.py::test_failed_close_at_stop_names_the_fix tests/test_ui_jobs.py::test_kept_window_at_stop_needs_no_remedy tests/test_ui_jobs.py::test_a_surface_stopped_mid_render_closes_the_window_after_the_teardown tests/test_ui_jobs.py::test_a_stop_whose_wait_runs_out_names_the_command_that_closes_the_window` passes.
