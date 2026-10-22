@@ -5,18 +5,18 @@ Each phase is independently buildable. The tests and their retained assertions a
 
 ## Progress
 
-- [ ] 1 — Prose
+- [x] 1 — Prose
 - [ ] 2 — Layout
 - [ ] 3 — Progress
 - [ ] 4 — Shutdown
 
 ## 1 — Prose
 
-- [ ] 1.1 **HALT CHECK** Confirm the installed server seam required by [D4](design.md#d4).
+- [x] 1.1 **HALT CHECK** Confirm the installed server seam required by [D4](design.md#d4).
   Verify: `uv run python -c 'import uvicorn; assert callable(uvicorn.Server.handle_exit); assert callable(uvicorn.Server.run)'` exits 0.
-- [ ] 1.2 Correct the child-process descriptions in `isekai/interface/ui/__init__.py` and the Known breaks in `docs/principles.md`, per [D6](design.md#d6).
+- [x] 1.2 Correct the child-process descriptions in `isekai/interface/ui/__init__.py` and the Known breaks in `docs/principles.md`, per [D6](design.md#d6).
   Verify: the docstring names Prepare and Render; the Known breaks name `short`, `quote`, `run_ids` and reserve the rendered-seed reason for `paired` and `_revision`.
-- [ ] 1.3 Clarify [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) in `docs/decisions.md` with [D2](design.md#d2)'s confirmation boundary.
+- [x] 1.3 Clarify [D4](../../../docs/decisions.md#d4--the-ui-runs-stages-only-as-the-clis-children) in `docs/decisions.md` with [D2](design.md#d2)'s confirmation boundary.
   Verify: `rg -n -F 'The quote compares image total and limit, not source or approval identity.' docs/decisions.md` finds that sentence in D4.
 
 ## 2 — Layout

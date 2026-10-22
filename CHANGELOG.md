@@ -9,6 +9,11 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+### Fixed
+
+- Correct the UI child-process and shared-work descriptions, and state the Render quote’s image-total
+  and limit boundary so its confirmation claim matches the check (0066 D2, D6).
+
 ## [0.40.0] - 2026-10-21 · 0065-revise
 
 Gate: local 0m34s · CI 1m12s (ci at abf4e5e) · 0.39.1: local 0m29s · CI 0m55s

@@ -84,7 +84,7 @@ the run's `assign`, a source through import.
 - **Why:** the CLI is the one path, so a stage the page starts is exactly the stage the terminal runs,
   and a write no stage owns would give a run file a second author. Spend behind a web page is bounded by
   what the operator read: the confirmation carries the quote it showed, and a quote grown since is
-  refused.
+  refused. The quote compares image total and limit, not source or approval identity.
 - **Made by:** `0018`, `0061`, `0062`, `0063`.
 
 ### D42 · A new draft starts from the last approval
