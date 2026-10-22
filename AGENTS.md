@@ -26,8 +26,8 @@ in particular.
 run. `conjure` takes no photograph and makes no identity claim
 ([docs D10](docs/decisions.md#d10--the-face-and-the-pose-are-carried-by-the-graph)).
 
-**The principles are [`docs/principles.md`](docs/principles.md), and every session reads them** — Claude
-Code imports them through the line below; any other agent opens the file before acting.
+**Read [`docs/principles.md`](docs/principles.md) before your first edit** — the rules every component
+follows. A tool that expands `@` imports loads it through the line below; any other opens the file.
 
 @docs/principles.md
 
@@ -186,6 +186,9 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
   costs a line in `tests/test_flow.py`'s `PINNED` and a `CHANGELOG.md` entry carrying its digest —
   the designed price of the freeze. A re-pin states what moved, and a test fails on any pinned digest
   no entry carries. The comment above `PINNED` states the rule, never its history.
+- **`AGENTS.md` is the one instruction file, for every coding agent** — Claude Code, Codex, Qwen Code.
+  A rule for agents goes here; the repository keeps no `CLAUDE.md`, `QWEN.md` or other per-tool copy,
+  because Claude Code reads a `CLAUDE.md` *instead of* this file, and a second copy drifts.
 - **`openspec/`** — the living specs and the changes. Authoritative for what is being built and how far
   along it is.
 - **`.minions/`** — MinionsFactory's run artefacts, gitignored whole.
@@ -224,7 +227,7 @@ files and who imports them, `isekai/README.md` sits over them, and the graph is 
 
 ## The architecture — read before changing it
 
-The rules every component follows are [`docs/principles.md`](docs/principles.md)'s, imported above; the
+The rules every component follows are [`docs/principles.md`](docs/principles.md)'s, named above; the
 choices in force are [`docs/decisions.md`](docs/decisions.md)'s. **Read both before changing anything
 they decide.**
 
