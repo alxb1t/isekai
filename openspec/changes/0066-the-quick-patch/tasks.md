@@ -6,7 +6,7 @@ Each phase is independently buildable. The tests and their retained assertions a
 ## Progress
 
 - [x] 1 — Prose
-- [ ] 2 — Layout
+- [x] 2 — Layout
 - [ ] 3 — Progress
 - [ ] 4 — Shutdown
 
@@ -21,13 +21,13 @@ Each phase is independently buildable. The tests and their retained assertions a
 
 ## 2 — Layout
 
-- [ ] 2.1 Add `ui/src/words.ts` and `ui/src/words.test.ts` for [D7](design.md#d7)'s `noun` helper, including the explicit `batches` plural.
+- [x] 2.1 Add `ui/src/words.ts` and `ui/src/words.test.ts` for [D7](design.md#d7)'s `noun` helper, including the explicit `batches` plural.
   Verify: `npm --prefix ui test -- src/words.test.ts` passes the count-label scenario for zero, one and plural counts.
-- [ ] 2.2 Use `noun` in `ui/src/views/Home.vue`, `Hub.vue` and `ui/src/components/AppHeader.vue`, `ImportSheet.vue`, `RenderDialog.vue`, `SheetHeader.vue`.
+- [x] 2.2 Use `noun` in `ui/src/views/Home.vue`, `Hub.vue` and `ui/src/components/AppHeader.vue`, `ImportSheet.vue`, `RenderDialog.vue`, `SheetHeader.vue`.
   Verify: their count expressions use `noun` for batch, source, flow, input, file, image and field labels; `batch` supplies `batches` explicitly.
-- [ ] 2.3 Set the header gap and remove the redundant Add sources margin in `ui/src/app.css`; extend the tick/reload test in `tests/e2e/test_prepare.py`, per [D7](design.md#d7).
+- [x] 2.3 Set the header gap and remove the redundant Add sources margin in `ui/src/app.css`; extend the tick/reload test in `tests/e2e/test_prepare.py`, per [D7](design.md#d7).
   Verify: `uv run pytest -q tests/e2e/test_prepare.py::test_a_tick_assigns_the_flow_and_survives_a_reload` passes its added computed-gap assertion and retained assertions.
-- [ ] 2.4 State the singular-count rule and the hub header's 12 px gap in `ui/design/spec.md`.
+- [x] 2.4 State the singular-count rule and the hub header's 12 px gap in `ui/design/spec.md`.
   Verify: the design names both rules while its disabled-reason rule and navigation remain unchanged.
 
 ## 3 — Progress

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noun } from '../words'
 import type { Budget } from '../types'
 import TokenBudget from './TokenBudget.vue'
 
@@ -20,7 +21,7 @@ defineProps<{
     <div>
       <span class="kicker">③ sheet — {{ kicker }}</span>
       <p class="sheet-header__line">
-        {{ fields }} fields, schema order.
+        {{ fields }} {{ noun(fields, 'field') }}, schema order.
         <template v-if="!loading">
           {{ filled }} filled · {{ fields - filled }} empty.
         </template>

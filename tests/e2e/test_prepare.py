@@ -32,6 +32,7 @@ def test_a_tick_assigns_the_flow_and_survives_a_reload(
     page: Page, served: Served
 ) -> None:
     _tick(page, served, "hub-tick", "tick")
+    expect(page.locator(".hub__head")).to_have_css("gap", "12px")
 
     page.reload()
 

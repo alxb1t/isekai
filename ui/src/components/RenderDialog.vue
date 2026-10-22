@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noun } from '../words'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { quoteRender, startRender } from '../api'
@@ -71,7 +72,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <template v-if="quote">
         <p v-for="one in quote.flows" :key="one.flow" class="render-dialog__flow mono">
           <span class="render-dialog__name">{{ one.flow }}</span>
-          {{ one.images }} image{{ one.images === 1 ? '' : 's' }}
+          {{ one.images }} {{ noun(one.images, 'image') }}
           <span v-for="source in one.sources" :key="source.digest">
             · {{ source.name }} v{{ source.version }} ×{{ source.images }}</span
           >
@@ -85,7 +86,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <dl class="render-dialog__table mono">
           <dt class="section-label">Estimate</dt>
           <dd>
-            boot {{ clock(quote.estimate.boot_s) }} · {{ total }} images ·
+            boot {{ clock(quote.estimate.boot_s) }} · {{ total }} {{ noun(total, 'image') }} ·
             teardown {{ clock(quote.estimate.teardown_s) }}
           </dd>
           <dd class="render-dialog__figure">{{ minutes(quote.estimate.seconds) }}</dd>

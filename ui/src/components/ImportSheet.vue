@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noun } from '../words'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
 import type { StagedFile } from '../types'
@@ -266,7 +267,8 @@ onUnmounted(() => {
           reading {{ read.length }} of {{ tiles.length }}
         </span>
         <span v-else class="import__count mono">
-          {{ tiles.length }} files chosen · {{ ready.length }} sources · {{ refused.length }} refused
+          {{ tiles.length }} {{ noun(tiles.length, 'file') }} chosen ·
+          {{ ready.length }} {{ noun(ready.length, 'source') }} · {{ refused.length }} refused
         </span>
         <button class="btn btn-secondary import__add" type="button" @click="picker?.click()">
           Add files…

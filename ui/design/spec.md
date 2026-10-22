@@ -25,6 +25,7 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
 7. **No money after the Render quote**.
 8. **The URL is real**. Overlays keep the URL of the page beneath. The Render dialog has no URL.
 9. **A refusal's text is the CLI's, verbatim**. The UI invents no command.
+10. **Count labels use the singular noun at one and the plural otherwise**: `1 source`, `0 sources`, `3 sources`.
 
 ## 2 · Tokens
 
@@ -157,6 +158,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
 ```
 
+- **The hub header** leaves a 12 px gap between its items. Add sources keeps its right alignment.
 - **A cell:** unassigned, a bare 14px checkbox and nothing else. Otherwise the checkbox, the stage track — six
   13×4 segments, gap 3: assigned · tag · caption · sheet · approved · rendered; done `accent`, running `accent-dim`,
   the rest `line-disabled`; a draft shares the sheet segment — and the stage word in mono 12: `assigned`,

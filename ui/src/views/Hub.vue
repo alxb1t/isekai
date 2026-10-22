@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { assign, hub, prepare, renderOffer, stopJob } from '../api'
@@ -357,7 +358,10 @@ onUnmounted(() => {
       @close="(rendering = false), void checkRender()"
     />
     <div class="hub__head">
-      <span class="mono">{{ sources.length }} sources × {{ flows.length }} flows</span>
+      <span class="mono">
+        {{ sources.length }} {{ noun(sources.length, 'source') }} ×
+        {{ flows.length }} {{ noun(flows.length, 'flow') }}
+      </span>
       <button class="btn btn-secondary hub__add" type="button" @click="adding = true">
         Add sources…<span class="appbar__key">⌥A</span>
       </button>

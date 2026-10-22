@@ -11,6 +11,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ### Fixed
 
+- Use singular count labels at one and leave a consistent gap between hub header controls so
+  small batches read correctly and the controls stay spaced (0066 D7).
+
 - Correct the UI child-process and shared-work descriptions, and state the Render quote’s image-total
   and limit boundary so its confirmation claim matches the check (0066 D2, D6).
 
