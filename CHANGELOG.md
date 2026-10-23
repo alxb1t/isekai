@@ -20,6 +20,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   and no file name shows. A revision's photograph and render share one header row at one height; Discard asks
   from the approve bar (0070 D5, D6, D9).
 
+- ④ is one slot per image, a seed or random, in a panel right of the sheet rows; a typed seed sets its slot at
+  once, and a seed listed twice is refused, by the slot and by approval (0070 D7).
+
 ## [0.43.0] - 2026-10-23 · 0069-the-keys
 
 Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.42.0: local 0m36s · CI 7m25s

@@ -1,32 +1,67 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { fewer, more, renders as read, set, slots, type Slot } from '../slots'
 import type { Renders } from '../types'
-import TagChip from './TagChip.vue'
 
-/* ④ Renders: how many images the approval renders, and the seeds it renders
-   first (design spec J3·2). Count never falls below the seeds listed; the rest
-   of Count is drawn. Both are approved with the sheet. */
+/* ④ Renders: one slot per image, each a seed or random (design spec J3). The
+   slots are held here, so a seed typed into the third slot stays there while
+   the draft lists it first; they are read again only when the draft moves. */
 const props = defineProps<{ renders: Renders; readonly: boolean }>()
 const emit = defineEmits<{ change: [renders: Renders] }>()
 
-const typed = ref('')
-const floor = computed(() => Math.max(1, props.renders.seeds.length))
+const held = ref<Slot[]>(slots(props.renders))
+/* A refused entry, by slot: the slot keeps what was typed and says why. */
+const refused = ref<Record<number, string>>({})
+const panel = ref<HTMLElement | null>(null)
 
-function setCount(count: number): void {
-  emit('change', { count: Math.max(count, floor.value), seeds: props.renders.seeds })
+function same(one: Renders, other: Renders): boolean {
+  return (
+    one.count === other.count &&
+    one.seeds.length === other.seeds.length &&
+    one.seeds.every((seed, index) => seed === other.seeds[index])
+  )
 }
 
-function addSeed(): void {
-  const seed = typed.value.trim()
-  if (!/^\d+$/.test(seed) || props.renders.seeds.includes(seed)) return
-  const seeds = [...props.renders.seeds, seed]
-  emit('change', { count: Math.max(props.renders.count, seeds.length), seeds })
-  typed.value = ''
+watch(
+  () => props.renders,
+  (next) => {
+    if (same(read(held.value), next)) return
+    held.value = slots(next)
+    refused.value = {}
+  },
+)
+
+function change(next: Slot[]): void {
+  held.value = next
+  emit('change', read(next))
 }
 
-function removeSeed(index: number): void {
-  const seeds = props.renders.seeds.filter((_, at) => at !== index)
-  emit('change', { count: props.renders.count, seeds })
+function type(at: number, typed: string): void {
+  const next = set(held.value, at, typed)
+  if (typeof next === 'string') {
+    refused.value = { ...refused.value, [at]: next }
+    return
+  }
+  const { [at]: _, ...rest } = refused.value
+  refused.value = rest
+  change(next)
+}
+
+/* `j` `k` or ↓ ↑ walk the count and the slots; a slot takes digits alone, so
+   the letters never type into one. */
+function walk(event: KeyboardEvent): void {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return
+  const step = { j: 1, ArrowDown: 1, k: -1, ArrowUp: -1 }[event.key]
+  if (!step || !panel.value) return
+  const stops = [
+    panel.value.querySelector<HTMLElement>('[data-renders-count]'),
+    ...panel.value.querySelectorAll<HTMLElement>('[data-slot]'),
+  ].filter((one): one is HTMLElement => one !== null)
+  const at = stops.findIndex((one) => one.contains(document.activeElement))
+  const next = stops[Math.min(Math.max(at + step, 0), stops.length - 1)]
+  event.preventDefault()
+  event.stopPropagation()
+  next?.focus()
 }
 
 const draws = computed(() => {
@@ -40,54 +75,51 @@ const draws = computed(() => {
 </script>
 
 <template>
-  <section class="renders-block" tabindex="-1">
-    <div class="renders-block__row">
-      <span class="section-label">④ Renders</span>
-      <span class="renders-block__label">count</span>
-      <span class="renders-block__count mono">
-        <button
-          v-if="!readonly"
-          class="btn btn-secondary renders-block__step"
-          type="button"
-          aria-label="fewer"
-          :disabled="renders.count <= floor"
-          @click="setCount(renders.count - 1)"
-        >
-          −
-        </button>
-        <span class="renders-block__value" data-renders-count>{{ renders.count }}</span>
-        <button
-          v-if="!readonly"
-          class="btn btn-secondary renders-block__step"
-          type="button"
-          aria-label="more"
-          @click="setCount(renders.count + 1)"
-        >
-          +
-        </button>
-      </span>
-      <span class="renders-block__label">seeds</span>
-      <span class="renders-block__seeds">
-        <TagChip
-          v-for="(seed, index) in renders.seeds"
-          :key="seed"
-          class="mono"
-          :tag="seed"
-          :readonly="readonly"
-          @remove="removeSeed(index)"
-        />
+  <section ref="panel" class="renders-block" tabindex="-1" @keydown="walk">
+    <span class="section-label">④ Renders</span>
+    <div class="renders-block__count mono">
+      <span class="renders-block__label">images</span>
+      <button
+        v-if="!readonly"
+        class="btn btn-secondary renders-block__step"
+        type="button"
+        aria-label="fewer"
+        data-renders-count
+        :disabled="held.length <= 1"
+        @click="change(fewer(held))"
+      >
+        −
+      </button>
+      <span class="renders-block__value" data-renders-value>{{ held.length }}</span>
+      <button
+        v-if="!readonly"
+        class="btn btn-secondary renders-block__step"
+        type="button"
+        aria-label="more"
+        @click="change(more(held))"
+      >
+        +
+      </button>
+    </div>
+    <ol class="renders-block__slots">
+      <li v-for="(slot, at) in held" :key="at" class="renders-block__slot">
+        <span class="renders-block__label mono">{{ at + 1 }}</span>
+        <span v-if="readonly" class="mono">{{ slot ?? 'random' }}</span>
         <input
-          v-if="!readonly"
-          v-model="typed"
+          v-else
           class="input mono renders-block__seed"
           inputmode="numeric"
-          placeholder="+ seed"
-          aria-label="add a seed"
-          @keydown.enter.exact.prevent="addSeed"
-          @keydown.esc="typed = ''"
+          placeholder="random"
+          :aria-label="`seed of image ${at + 1}`"
+          :value="slot ?? ''"
+          data-slot
+          @input="type(at, ($event.target as HTMLInputElement).value)"
         />
-      </span>
-    </div>
+        <span v-if="refused[at]" class="renders-block__refusal mono"
+          ><span class="refusal__mark" />{{ refused[at] }}</span
+        >
+      </li>
+    </ol>
     <p class="section-label renders-block__draws">The next render draws {{ draws }}</p>
   </section>
 </template>

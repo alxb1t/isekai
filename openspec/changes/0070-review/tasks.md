@@ -8,7 +8,7 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 - [x] 1 — The address
 - [x] 2 — The rail and Approve
 - [x] 3 — The layout
-- [ ] 4 — ④ as slots
+- [x] 4 — ④ as slots
 - [ ] 5 — The dialogs
 
 ## 1 — The address
@@ -69,18 +69,18 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 ## 4 — ④ as slots
 
-- [ ] 4.1 **HALT CHECK** — a repeated seed passes `renders_of`.
+- [x] 4.1 **HALT CHECK** — a repeated seed passes `renders_of`.
   Verify: `grep -c 'twice' isekai/foundation/artifacts.py` prints `0`.
-- [ ] 4.2 Refuse a seed listed twice in `renders_of` in `isekai/foundation/artifacts.py`; bind
+- [x] 4.2 Refuse a seed listed twice in `renders_of` in `isekai/foundation/artifacts.py`; bind
   `review:renders:a-repeated-seed-is-refused` in `tests/test_review.py`.
   Verify: `uv run pytest -q tests/test_review.py` exits 0, and `grep -c 'a-repeated-seed-is-refused' tests/test_review.py` prints `1`.
-- [ ] 4.3 Add `ui/src/slots.ts` per [D7](design.md#d7), bound to `ui:review:each-image-has-a-slot` in a new
+- [x] 4.3 Add `ui/src/slots.ts` per [D7](design.md#d7), bound to `ui:review:each-image-has-a-slot` in a new
   `ui/src/slots.test.ts`.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'each-image-has-a-slot' ui/src/slots.test.ts` prints `1`.
-- [ ] 4.4 Draw ④ as slots right of the sheet rows in `ui/src/components/RendersBlock.vue`, `ui/src/views/Review.vue`
+- [x] 4.4 Draw ④ as slots right of the sheet rows in `ui/src/components/RendersBlock.vue`, `ui/src/views/Review.vue`
   and `ui/src/app.css`, with its keys, per [D7](design.md#d7).
   Verify: `grep -c 'add a seed' ui/src/components/RendersBlock.vue` prints `0`, and `uv run pytest -q tests/e2e/test_render.py` exits 0.
-- [ ] 4.5 Draw ④ to the right of the sheet in `ui/design/spec.md` J3 and J5·5, one slot per image.
+- [x] 4.5 Draw ④ to the right of the sheet in `ui/design/spec.md` J3 and J5·5, one slot per image.
   Verify: `grep -c 'one slot per image' ui/design/spec.md` prints a number of at least `1`.
 
 ## 5 — The dialogs

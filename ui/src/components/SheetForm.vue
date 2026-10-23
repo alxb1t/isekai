@@ -41,8 +41,9 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
 <template>
   <section class="form">
     <SheetHeader :kicker="kicker" :budget="budget" :saving="saving" :saved="saved" />
-    <div class="rows">
-      <FieldRow
+    <div class="form__body">
+      <div class="rows">
+        <FieldRow
         v-for="name in schema"
         :key="name"
         :field-key="name"
@@ -55,8 +56,11 @@ function state(name: string): 'filled' | 'empty' | 'pending' {
         :was="was(name)"
         @remove="(index) => $emit('remove', name, index)"
       >
-        <slot name="editor" :field="name" />
-      </FieldRow>
+          <slot name="editor" :field="name" />
+        </FieldRow>
+      </div>
+      <!-- ④, right of the rows. -->
+      <slot name="aside" />
     </div>
     <slot name="footer" />
   </section>

@@ -207,20 +207,22 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
 | J3·4 the next sheet in the rail | ⇧J | `…/review/<16_01's run>/summon-anime-wai` |
 
 ```
-rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59                             28 / 77 tokens
-●    │ [photograph]              │ hair_colour   [blonde hair ×]
-◐    │ ② CAPTION  231 words      │ eye_colour    [blue eyes ×]
-○    │ one sentence a block …    │ …16 fields, 34px rows
-     │                           │ ④ RENDERS   count [− 1 +]   seeds [ + seed ]
-     │                           │   THE NEXT RENDER DRAWS 1 image · random seed
-     │                           │ [ Mark 7 empty fields intentional ]            [ Approve sheet ⌘↵ ]
+rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59      28 / 77 tokens │ ④ RENDERS
+●    │ [photograph]              │ hair_colour   [blonde hair ×]                     │ images [−] 2 [+]
+◐    │ ② CAPTION  231 words      │ eye_colour    [blue eyes ×]                       │ 1 [144     ]
+○    │ one sentence a block …    │ …16 fields, 34px rows                             │ 2 [random  ]
+     │                           │                                                   │ THE NEXT RENDER DRAWS
+     │                           │                                                   │ 2 images · seed 144 + 1 random
+     │                           │ [ Mark 7 empty fields intentional ]                       [ Approve sheet ⌘↵ ]
 ```
 
 - The surface is today's review surface inside the shell: rail, ① source and ② caption, ③ sheet, approve bar. The
   sheet's kicker carries its receipt, never a path; there is no other header.
-- **④ Renders**: Count (a stepper, default 1, never below the number of seeds listed) and Seeds (a list,
-  default empty). Listed seeds render first; the rest of Count are drawn. Both are approved with the sheet. The line
-  `THE NEXT RENDER DRAWS …` states the result.
+- **④ Renders**, a 230 px panel right of the sheet rows: one slot per image, its seed or `random`, and a stepper
+  for how many — `−` drops the last random slot, else the last seed; never below one. A typed digit sets its slot
+  at once; a seed already in another slot is refused in the slot. Listed seeds render first; the rest are drawn.
+  Both are approved with the sheet. `Tab` walks `−`, `+` and the slots; `j` `k` move between the count and the
+  slots. The line `THE NEXT RENDER DRAWS …` states the result.
 - **The rail**: the flow's name heads it, and it lists every sheet of the flow not yet rendered — unapproved, or
   approved and short of its images — and the one open, each marked ○ untouched, ◐ edited, ● approved, ◌ re-opened;
   its footer counts the approved among them. Revise opens the first draft it wrote; the rest wait in the rail.
@@ -289,9 +291,9 @@ J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731
       [photograph]               [render, accent hairline]       one height, top-aligned
       ② CAPTION  collapsed on a revision
       ③ SHEET — REVISION OF RENDER 1840266731 · saved 15:52
-      eye_colour  • [blue eyes ×]      was light · blue eyes
-      ④ RENDERS  count [− 1 +]   seeds prefilled [1840266731 ×] [ + seed ]
-                 THE NEXT RENDER DRAWS 1 image · seed 1840266731
+      eye_colour  • [blue eyes ×]      was light · blue eyes   │ ④ RENDERS  images [−] 1 [+]
+                                                              │ 1 [1840266731]  prefilled, one slot per image
+                                                              │ THE NEXT RENDER DRAWS 1 image · seed 1840266731
                                         [ Discard draft ]  [ Approve sheet ⌘↵ ]
 
 J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10

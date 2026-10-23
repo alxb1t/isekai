@@ -495,13 +495,16 @@ watch(current, (id) => {
             @row="moveRow"
           />
         </template>
-        <template #footer>
+        <template #aside>
           <RendersBlock
             v-if="!sheet.loading.value"
+            :key="current"
             :renders="sheet.renders.value"
             :readonly="sheet.readonly.value"
             @change="sheet.setRenders"
           />
+        </template>
+        <template #footer>
           <ApproveBar
             :key="current"
             :approved="sheet.readonly.value"

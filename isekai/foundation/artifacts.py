@@ -452,7 +452,8 @@ def renders_of(path: Path, body: Mapping[str, object], remedy: str) -> Renders:
     """Return a draft's or approval's `renders`, refusing a value no render takes.
 
     An absent block is one drawn seed, as every review before it rendered. The
-    count may not fall below the seeds it lists, and a seed is the sampler's.
+    count may not fall below the seeds it lists, a seed is the sampler's, and a
+    seed listed twice would render one image twice.
     e.g. `{"count": 1, "seeds": [1, 2]}` -> "…: its renders count 1 is below …"
     """
     held = body.get("renders")
@@ -473,6 +474,10 @@ def renders_of(path: Path, body: Mapping[str, object], remedy: str) -> Renders:
             raise Refusal(
                 f"{path.name}: its renders seed {seed!r} is outside 0 to "
                 f"{SEED_RANGE.stop - 1}, the range a render accepts; {remedy}"
+            )
+        if seed in listed:
+            raise Refusal(
+                f"{path.name}: its renders seed {seed} is listed twice; {remedy}"
             )
         listed.append(seed)
     if count < 1:
