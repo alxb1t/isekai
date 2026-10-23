@@ -19,11 +19,20 @@ export function firstFlow(info: HubInfo): string | null {
   return info.flows.find((flow) => queue(info, flow).length > 0) ?? null
 }
 
-/** Return the queue's head: the first unapproved sheet of the first flow that has any. */
+/**
+ * Return the sheet a batch's Review opens on, or null for none.
+ *
+ * The first unapproved sheet of the first flow that has one, else the first
+ * approved sheet whose newest approval lacks images, flow by flow.
+ */
 export function head(info: HubInfo): { digest: string; flow: string } | null {
   const flow = firstFlow(info)
-  const digest = flow ? queue(info, flow)[0] : undefined
-  return flow && digest ? { digest, flow } : null
+  if (flow) return { digest: queue(info, flow)[0], flow }
+  for (const one of info.flows) {
+    const source = info.sources.find((held) => held.digest && (held.cells[one]?.short ?? 0) > 0)
+    if (source?.digest) return { digest: source.digest, flow: one }
+  }
+  return null
 }
 
 /**

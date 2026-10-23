@@ -330,7 +330,7 @@ def create_app(
         if not _is_tag_list(names):
             raise Refusal("the request's `sources` is not a list of source names")
         remove = payload.get("remove") is True
-        suffix = load_flow(flow, wired.flows_dir).output_suffix
+        loaded = load_flow(flow, wired.flows_dir)
         runs = found / library.RUNS
         named = library.source_files(found)
         cells: dict[str, Any] = {}
@@ -341,7 +341,7 @@ def create_app(
                 run = find_run(source, runs) if remove else open_run(source, runs)
                 if run is not None:
                     assign(run, flow, remove=remove)
-                cell = library.stage(run, flow, suffix) if run else library.Cell(None)
+                cell = library.stage(run, loaded) if run else library.Cell(None)
                 cells[name] = _cell_out(cell)
             except Refusal as one:
                 refused[name] = str(one)
@@ -1018,11 +1018,10 @@ def cell_event(
     """
     batch = grid.name
     sources = {one.run.id: one.name for one in grid.sources if one.run}
-    suffixes = {flow: one.output_suffix for flow, one in loaded.items()}
 
     def cell(line: Mapping[str, Any]) -> dict[str, Any] | None:
         run_id, flow = str(line.get("run")), str(line.get("flow"))
-        if run_id not in sources or flow not in suffixes:
+        if run_id not in sources or flow not in loaded:
             return None
         run = Run(run_id, found / library.RUNS / run_id)
         return {
@@ -1032,7 +1031,7 @@ def cell_event(
             "stage": line.get("stage"),
             "state": line.get("state"),
             "message": line.get("message"),
-            "cell": _cell_out(library.stage(run, flow, suffixes[flow])),
+            "cell": _cell_out(library.stage(run, loaded[flow])),
         }
 
     return cell

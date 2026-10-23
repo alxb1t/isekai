@@ -220,7 +220,7 @@ uv run python -m isekai tag     --runs $R --flow summon-anime-wai --flow conjure
 uv run python -m isekai caption --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 uv run python -m isekai sheet   --runs $R --flow summon-anime-wai --flow conjure-anime-wai $P
 
-# ③ free: the library in a browser -- the batch's hub, then Review next
+# ③ free: the library in a browser -- the batch's hub, then Review
 uv run python -m isekai ui
 uv run python -m isekai show --runs $R $P
 
@@ -235,8 +235,8 @@ uv run --env-file .env gpunit volume down   # once no other batch follows
 - **`isekai assign` ticks a flow**: it gives each source's run that flow's empty directory, and
   `--remove` takes away one that holds no work yet.
 - **`ui` takes no arguments.** It serves every batch of the library; the batch's hub shows each
-  photograph's stage in each flow, and *Review next* walks one flow's unapproved sheets, then the next
-  flow's. Stop it with Ctrl-C.
+  photograph's stage in each flow, and the *Review* tab opens the batch's head: the first unapproved
+  sheet of the first flow that has one. Stop it with Ctrl-C.
 - **`render` takes a count per flow**, and renders every run under `$R`.
 - **`show` takes no `--flow`**: it reports every flow a run holds.
 

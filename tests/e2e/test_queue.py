@@ -28,7 +28,6 @@ def test_approving_the_last_sheet_opens_the_hub(page: Page, served: Served) -> N
     page.goto(served.review(only, "queue-last"))
     _approve(page)
     expect(page).to_have_url(served.hub_of("queue-last"))
-    expect(page.get_by_text("nothing left to review")).to_be_visible()
 
 
 @pytest.mark.spec("ui:queue:a-failure-after-approval-is-shown")

@@ -5,7 +5,7 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 ## Progress
 
-- [ ] 1 — The address
+- [x] 1 — The address
 - [ ] 2 — The rail and Approve
 - [ ] 3 — The layout
 - [ ] 4 — ④ as slots
@@ -13,18 +13,18 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 ## 1 — The address
 
-- [ ] 1.1 **HALT CHECK** — Review has no batch-level route, and the hub offers *Review next*.
+- [x] 1.1 **HALT CHECK** — Review has no batch-level route, and the hub offers *Review next*.
   Verify: `grep -c "path: '/b/:batch/review'," ui/src/router.ts` prints `0`, and `grep -c 'Review next' ui/src/views/Hub.vue` prints `2`.
-- [ ] 1.2 Add `short` to `Cell` in `isekai/interface/ui/library.py` per [D2](design.md#d2), and to `HubCell` in
+- [x] 1.2 Add `short` to `Cell` in `isekai/interface/ui/library.py` per [D2](design.md#d2), and to `HubCell` in
   `ui/src/types.ts`; bind `ui:review:a-cell-counts-what-it-lacks` in `tests/test_ui_library.py`.
   Verify: `uv run pytest -q tests/test_ui_library.py` exits 0, and `grep -c 'ui:review:a-cell-counts-what-it-lacks' tests/test_ui_library.py` prints `1`.
-- [ ] 1.3 Add `head` to `ui/src/composables/useQueue.ts`, bound to `ui:review:a-batch-opens-its-head` in
+- [x] 1.3 Add `head` to `ui/src/composables/useQueue.ts`, bound to `ui:review:a-batch-opens-its-head` in
   `ui/src/composables/useQueue.test.ts`; add `ui/src/views/ReviewHead.vue` and its route per [D1](design.md#d1).
   Verify: `grep -c "name: 'review-head'" ui/src/router.ts` prints `1`, and `uv run python -m tools.test_ui` exits 0.
-- [ ] 1.4 Point the Review tab and `⇧R` in `ui/src/App.vue` at `review-head`, the tab counting the unapproved; drop
+- [x] 1.4 Point the Review tab and `⇧R` in `ui/src/App.vue` at `review-head`, the tab counting the unapproved; drop
   *Review next* and *nothing left to review* from `ui/src/views/Hub.vue`.
   Verify: `grep -c 'Review next\|nothing left to review' ui/src/views/Hub.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 1.5 Add `/b/<batch>/review` to `ui/design/spec.md` §4 and drop *Review next* from its J2 header; say Review
+- [x] 1.5 Add `/b/<batch>/review` to `ui/design/spec.md` §4 and drop *Review next* from its J2 header; say Review
   opens the batch's head in `README.md` and in the flow diagram of `isekai/interface/ui/README.md`.
   Verify: `grep -c 'Review next' README.md isekai/interface/ui/README.md` prints `0` for each file.
 

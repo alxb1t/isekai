@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import KeyHint from './components/KeyHint.vue'
 import KeyList from './components/KeyList.vue'
 import { useKeys } from './composables/useKeys'
-import { head } from './composables/useQueue'
+import { queue } from './composables/useQueue'
 import { useBatchStore } from './stores/batch'
 import { shifted, useKeyStore } from './stores/keys'
 import { alerting, useLiveStore } from './stores/live'
@@ -50,7 +50,11 @@ const key = computed(() =>
   route.name === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
 )
 
-const queued = computed(() => (batchStore.hub ? head(batchStore.hub) : null))
+/* The Review tab counts the batch's unapproved sheets, every flow's. */
+const unapproved = computed(() => {
+  const held = batchStore.hub
+  return held ? held.flows.reduce((sum, flow) => sum + queue(held, flow).length, 0) : 0
+})
 const listing = ref(false)
 
 const onBatch = () => batch.value !== null
@@ -62,16 +66,7 @@ function open(name: string): void {
 useKeys('everywhere', [
   { id: 'library', keys: [shifted('KeyL')], label: 'library', run: () => open('home') },
   { id: 'hub', keys: [shifted('KeyH')], label: 'hub', run: () => open('hub'), when: onBatch },
-  {
-    id: 'review',
-    keys: [shifted('KeyR')],
-    label: "review the queue's head",
-    run: () => {
-      if (queued.value && batch.value)
-        void router.push({ name: 'review', params: { batch: batch.value, ...queued.value } })
-    },
-    when: () => queued.value !== null,
-  },
+  { id: 'review', keys: [shifted('KeyR')], label: 'review', run: () => open('review-head'), when: onBatch },
   {
     id: 'renders',
     keys: [shifted('KeyI')],
@@ -106,8 +101,13 @@ onUnmounted(() => window.removeEventListener('keydown', keys.press))
           :class="{ 'appbar__tab--active': screen === 'hub' }"
           >Hub<KeyHint command="hub" /></RouterLink
         >
-        <span class="appbar__tab" :class="{ 'appbar__tab--active': screen === 'review' }"
-          >Review<KeyHint command="review" /></span
+        <RouterLink
+          :to="{ name: 'review-head', params: { batch } }"
+          class="appbar__tab"
+          :class="{ 'appbar__tab--active': screen === 'review' || screen === 'review-head' }"
+          data-review-tab
+          >Review<span v-if="unapproved" class="appbar__count">{{ unapproved }}</span
+          ><KeyHint command="review" /></RouterLink
         >
         <RouterLink
           :to="{ name: 'renders', params: { batch } }"

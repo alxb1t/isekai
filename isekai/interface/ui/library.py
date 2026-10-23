@@ -35,7 +35,7 @@ from isekai.foundation.artifacts import (
     renders_of,
 )
 from isekai.foundation.atomic_write import write_atomically
-from isekai.foundation.flow import load_flow
+from isekai.foundation.flow import Flow, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import (
     APPROVED,
@@ -57,7 +57,7 @@ from isekai.foundation.run import (
     latest_artifact,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import is_render, rendered_seeds
+from isekai.pipeline.generate import is_render, rendered_seeds, shortfall
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
@@ -169,7 +169,9 @@ class Cell:
     run. `refusal` is set, and `stage` is `unreadable`, where the file that decides
     the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
     answer, wherever the cell has a sheet. `newest` is the last-written image of
-    the newest version holding any, or None.
+    the newest version holding any, or None. `short` is how many images the newest
+    approval lacks of its count, `shortfall`'s answer; None while unapproved, and
+    0 where its count is refused.
     """
 
     stage: str | None
@@ -177,6 +179,7 @@ class Cell:
     refusal: str | None = None
     status: Status | None = None
     newest: Rendered | None = None
+    short: int | None = None
 
 
 @dataclass(frozen=True)
@@ -245,8 +248,8 @@ def rows(library: Path, flows: Sequence[str], flows_dir: Path) -> list[Row]:
     A folder that is not a batch is listed and never opened.
     """
     folders = listed(library)
-    suffixes = _suffixes(flows, flows_dir)
-    batches = [_row(one, suffixes) for one in folders if is_batch(one)]
+    loaded = _loaded(flows, flows_dir)
+    batches = [_row(one, loaded) for one in folders if is_batch(one)]
     batches.sort(key=lambda row: row.newest or 0.0, reverse=True)
     return batches + [Row(one.name, False) for one in folders if not is_batch(one)]
 
@@ -283,7 +286,7 @@ def run_named(folder: Path, digest: str) -> Run:
 
 def hub(folder: Path, flows: Sequence[str], flows_dir: Path) -> Hub:
     """Return batch `folder`'s grid over `flows`, each cell's stage from its run."""
-    return _grid(folder, _suffixes(flows, flows_dir))
+    return _grid(folder, _loaded(flows, flows_dir))
 
 
 def sources(folder: Path) -> tuple[Source, ...]:
@@ -492,33 +495,34 @@ def source_files(folder: Path) -> Callable[[str], Path]:
     return named
 
 
-def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
-    """Return each of `flows`' render suffix, by flow, in the order given."""
-    return {flow: load_flow(flow, flows_dir).output_suffix for flow in flows}
+def _loaded(flows: Sequence[str], flows_dir: Path) -> dict[str, Flow]:
+    """Return each of `flows`, loaded, by name, in the order given."""
+    return {flow: load_flow(flow, flows_dir) for flow in flows}
 
 
-def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> Hub:
-    """Return batch `folder`'s grid over the flows `suffixes` names.
+def _grid(folder: Path, flows: Mapping[str, Flow], *, marks: bool = True) -> Hub:
+    """Return batch `folder`'s grid over `flows`.
 
     Without `marks`, no source is read for its not-cleaned mark or its size: Home
     shows neither.
     """
     runs = _runs(folder / RUNS)
     sources = tuple(
-        _source(path, runs.get(_digest(path)), suffixes, marks=marks)
+        _source(path, runs.get(_digest(path)), flows, marks=marks)
         for path in _sources(folder)
     )
-    return Hub(folder.name, tuple(suffixes), sources)
+    return Hub(folder.name, tuple(flows), sources)
 
 
-def stage(run: Run, flow: str, suffix: str, *, newest: bool = True) -> Cell:
-    """Return `run`'s stage in `flow`, the furthest its directory holds.
+def stage(run: Run, loaded: Flow, *, newest: bool = True) -> Cell:
+    """Return `run`'s stage in flow `loaded`, the furthest its directory holds.
 
     rendered ×n > approved > draft > sheet > tagged > assigned > no flow. The
     file that decides it is read, so a format this build does not know marks
     the cell rather than the batch. Without `newest`, no image's time is read
     and the cell names no newest image: Home shows none.
     """
+    flow, suffix = loaded.id, loaded.output_suffix
     if not run.directory(flow).is_dir():
         return Cell(None)
     review = run.directory(flow, REVIEW)
@@ -535,9 +539,12 @@ def stage(run: Run, flow: str, suffix: str, *, newest: bool = True) -> Cell:
                 named = _newest_image(run, flow, approved, suffix, written)
             else:
                 renders = len(rendered_seeds(group, suffix))
+            short = _short(run, loaded)
             if renders:
-                return Cell("rendered", renders, status=status, newest=named)
-            return Cell("approved", status=status, newest=named)
+                return Cell(
+                    "rendered", renders, status=status, newest=named, short=short
+                )
+            return Cell("approved", status=status, newest=named, short=short)
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
             return Cell("draft", status=status)
@@ -550,6 +557,14 @@ def stage(run: Run, flow: str, suffix: str, *, newest: bool = True) -> Cell:
     except Refusal as refused:
         return Cell("unreadable", refusal=str(refused))
     return Cell("assigned")
+
+
+def _short(run: Run, loaded: Flow) -> int:
+    """Return what `loaded`'s newest approval lacks of its count, 0 if it is refused."""
+    try:
+        return shortfall(run, loaded)
+    except Refusal:
+        return 0
 
 
 def _newest_image(
@@ -660,21 +675,21 @@ def _runs(runs: Path) -> dict[str, Run]:
 
 
 def _source(
-    path: Path, run: Run | None, suffixes: Mapping[str, str], *, marks: bool
+    path: Path, run: Run | None, flows: Mapping[str, Flow], *, marks: bool
 ) -> Source:
     """Return one source, with its cell in every offered flow."""
     cells = {
-        flow: stage(run, flow, suffix, newest=marks) if run else Cell(None)
-        for flow, suffix in suffixes.items()
+        flow: stage(run, loaded, newest=marks) if run else Cell(None)
+        for flow, loaded in flows.items()
     }
     if not marks:
         return Source(path.name, run, cells)
     return Source(path.name, run, cells, _carries(path), _size(path))
 
 
-def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
+def _row(folder: Path, flows: Mapping[str, Flow]) -> Row:
     """Return one batch's row: its counts per flow and its newest file."""
-    grid = _grid(folder, suffixes, marks=False)
+    grid = _grid(folder, flows, marks=False)
     newest, kind = _newest(folder)
     counts = [_count(grid.sources, flow) for flow in grid.flows]
     bare = [

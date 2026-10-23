@@ -65,7 +65,7 @@ timer mono 40px/500.
 ## 3 · The shell
 
 ```
-┌ isekai  2026-09-17   Hub ⇧H  Review ⇧R  Renders ⇧I      flow [all|summon|conjure] ⇧F   ? keys      ┐ AppBar 40
+┌ isekai  2026-09-17   Hub ⇧H  Review 3 ⇧R  Renders ⇧I    flow [all|summon|conjure] ⇧F   ? keys      ┐ AppBar 40
 ├─ BillingBanner (only when something may be billing; filled accent, cannot be dismissed) ───────────┤
 │                                                                                                     │
 │                                   <the route's screen>                                              │
@@ -75,7 +75,8 @@ timer mono 40px/500.
 ```
 
 - **AppBar**, `ground-deep`, bottom border `line`. The wordmark goes Home. The place is mono 12px `ink-2`: `library`
-  on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The flow
+  on Home, else the batch name. Tabs only inside a batch; the active one has a 2px accent underline. The Review
+  tab counts the batch's unapproved sheets in mono 11 `accent`, and opens the batch's Review. The flow
   switcher is a segmented control; Review drops `all`.
 - **BillingBanner**, a filled accent band, text `#0f1018` at 600. Three variants: the volume past its window, a pod
   that may be billing, a volume that may be billing. esc never closes it.
@@ -91,6 +92,7 @@ timer mono 40px/500.
 |---|---|---|
 | `/` | Home | the New batch sheet |
 | `/b/<batch>/hub` | Hub | the Add sources sheet, the Prepare bar, the Render dialog |
+| `/b/<batch>/review` | Review's head, replaced by its sheet's URL | — |
 | `/b/<batch>/review/<run>/<flow>` | Review | the cheatsheet, the photo overlay |
 | `/b/<batch>/renders` | Renders grid | the Revise confirm |
 | `/b/<batch>/renders/<run>/<flow>/<version>/<seed>` | large view | the Revise confirm |
@@ -100,6 +102,8 @@ timer mono 40px/500.
 - `<run>` is the run's **12-hex digest** (`0d4b7e6fb2a8`), unique by construction; the screen shows the short name
  .
 - `<version>` is `v` + the approval's number (`v2` is `review/002.approved.json`, rendered into `outputs/002/`).
+- `/b/<batch>/review` opens the first unapproved sheet of the first flow that has one, in the hub's order; else
+  the first approved sheet short of its images, read-only; else *No sheet waits for review* and the way to the hub.
 - `/session` exists only while a session runs or an alert is unresolved; otherwise it redirects to Home.
 
 ## 5 · The journeys
@@ -146,10 +150,10 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 | J2·1 one cell assigned; the bar `1 change · Prepare ⌘↵` | arrow to 00003 × conjure, space | `…/b/2026-10-19/hub` |
 | J2·2 three rows selected, summon ticked for all; `4 changes` | ⇧↓ ⇧↓, space on the summon header | same |
 | J2·3 Prepare running: progress in the cells, totals in the job strip | ⌘↵ Prepare | same |
-| J2·4 done: no bar, the accent on Review next | the last cell finishes | same |
+| J2·4 done: no bar; the Review tab counts the new sheets | the last cell finishes | same |
 
 ```
-6 sources × 2 flows                          [ Add sources… ⇧A ]  [ Review next · 16_01 conjure ⇧R ]
+6 sources × 2 flows                          [ Add sources… ⇧A ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 [▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
     00003.png · 832×1216│                                  │
@@ -180,7 +184,7 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
   including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
   hub opened after the failure too. Disabled: its reason (`A render is running · 06:41`). There is no done state: the
-  receipt goes to the job strip, the accent to Review next. Running, a 2 px `accent` line slides along the bar's top
+  receipt goes to the job strip, the count to the Review tab. Running, a 2 px `accent` line slides along the bar's top
   edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
   `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
 - **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
@@ -197,7 +201,7 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
 
 | frame | trigger | URL |
 |---|---|---|
-| J3·1 the first sheet in summon's queue | ⇧R Review next | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
+| J3·1 the batch's head, the first sheet in summon | ⇧R Review | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J3·2 a field edited, the empties marked, Count 2 | edit · Mark 6 empty fields intentional · count + | same |
 | J3·3 the next unapproved sheet in summon | ⌘↵ Approve | `…/review/<16_01's run>/summon-anime-wai` |
 | J3·4 the hub, the Render bar, `3 images ready to render`, takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
@@ -375,13 +379,13 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 | New batch | cancel | the staging folder is deleted; the library is unchanged |
 | Hub | loading | placeholder rows, `reading 2 of 6` |
 | Hub | a damaged run | the cell reads `unreadable`, with the CLI's refusal (path, line and column) and its fix; the rest of the grid works |
-| Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30`; the accent on Review next |
+| Hub | a render running | Render disabled `A render session is running · 06:41 of ≤10:30` |
 | Hub | Prepare disabled | the bar keeps its cells, reason `A render is running · 06:41` |
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
 | Hub | the batch is gone | a full-page refusal, `Back to the library ⇧L` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
 | Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
-| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, Review next |
+| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, the Review tab's count |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
 | Renders | Revise disabled | `No image selected` · `Prepare is running · 01:42` |
 

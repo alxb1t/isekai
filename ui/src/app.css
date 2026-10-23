@@ -1989,3 +1989,18 @@ body {
   margin: 0;
   color: var(--ink-2);
 }
+
+.review-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 48px;
+}
+
+.appbar__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-left: 6px;
+}
