@@ -236,6 +236,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </div>
         <div v-for="flow in info.flows" :key="flow" class="renders__cell">
           <span class="renders__images">
+            <!-- A damaged version's striped tile leads its images, which stay drawn
+                 because `rows` moves the focus across them. -->
             <template v-for="version in oldest[row][flow]" :key="version.version">
               <span
                 v-if="version.damaged"
@@ -247,7 +249,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               </span>
               <button
                 v-for="seed in version.rendered"
-                v-else
                 :key="seed"
                 class="renders__image"
                 :class="{

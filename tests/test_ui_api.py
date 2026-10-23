@@ -95,7 +95,7 @@ from isekai.shared.image import THUMB_SIDE  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
-from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
+from tests.images import jpeg_bytes, photo_jpeg, png_bytes  # noqa: E402
 from tests.stages import (  # noqa: E402
     FIELD_MAP,
     NO_GPUNIT,
@@ -1471,6 +1471,23 @@ def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
     whole = client.get(f"/api/b/{BATCH}/sources/turned.jpg")
     assert whole.content == (sources / "turned.jpg").read_bytes()
     assert client.get(f"/api/b/{BATCH}/sources/absent.jpg/thumb").status_code == 409
+
+
+@pytest.mark.spec("ui:renders:a-photograph-is-served-as-its-bytes")
+def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
+    client: TestClient, made: Run, tmp_path: Path
+) -> None:
+    sources = tmp_path / "lib" / BATCH / "sources"
+    (sources / "portrait.html").write_bytes(png_bytes(40, 30))
+
+    whole = client.get(f"/api/b/{BATCH}/sources/portrait.html")
+    photo = client.get(_at(made, "/photo"))
+
+    assert whole.status_code == 200
+    assert whole.headers["content-type"] == "image/png"
+    assert whole.headers["x-content-type-options"] == "nosniff"
+    assert photo.headers["content-type"] == "image/jpeg"
+    assert photo.headers["x-content-type-options"] == "nosniff"
 
 
 @pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")

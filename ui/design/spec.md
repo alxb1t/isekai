@@ -294,10 +294,10 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 
 - **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
   cell is one wrapped row of thumbnails, oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
-  seed is shared across versions. A damaged version is a striped tile, its refusal under the cell. Last comes the
-  ready tile, `ready · n images`, while the newest version lacks images of its Count, the render stage's own count.
-  The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the approval time, the
-  Count and the seeds — is in the large view.
+  seed is shared across versions. A damaged version is a striped tile before its images, its refusal under the
+  cell. Last comes the ready tile, `ready · n images`, while the newest version lacks images of its Count, the render
+  stage's own count. The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the
+  approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
   (filled fields only, read-only), the photograph a key away (⌥C). `Esc` and its back button go back to
   where it was opened: the hub, or else Renders. `Compare with v1  C` appears when another version

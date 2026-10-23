@@ -102,6 +102,9 @@ _SIGNATURES: tuple[tuple[bytes, str, str], ...] = (
     (b"\xff\xd8\xff", "image/jpeg", ".jpg"),
 )
 
+# The most leading bytes `media_type` reads, so a caller may hand it a file's head.
+SIGNATURE_BYTES = max(len(signature) for signature, _, _ in _SIGNATURES)
+
 # The frame: what the run is, written once when the run is created.
 FRAME_NAME = "run.json"
 

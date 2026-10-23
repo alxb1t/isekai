@@ -27,6 +27,9 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 - A running Prepare or Render bar draws a sliding accent line and its running segment pulses; reduced motion
   stops both and the import bar's fill (0067 D9).
 
+- A damaged version's images stay drawn beside its striped tile, as the grid's focus moves across them; a hub read
+  survives an oddly named or vanished render; a photograph is served as its bytes' image type, `nosniff` (0067 D8).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

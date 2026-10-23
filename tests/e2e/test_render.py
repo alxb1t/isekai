@@ -10,7 +10,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e.conftest import COMPARED, FLOW, RENDER, REVISED, SHOWN, Served
+from tests.e2e.conftest import (
+    COMPARED,
+    DAMAGED,
+    FLOW,
+    RENDER,
+    REVISED,
+    SHOWN,
+    Served,
+)
 
 
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
@@ -68,6 +76,18 @@ def test_a_source_opens_in_the_viewer(page: Page, served: Served) -> None:
     page.keyboard.press("Escape")
     expect(viewer).to_have_count(0)
     expect(page).to_have_url(grid)
+
+
+@pytest.mark.spec("ui:renders:a-damaged-versions-images-are-drawn")
+def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
+    page: Page, served: Served
+) -> None:
+    page.goto(f"{served.url}/b/{DAMAGED}/renders")
+
+    expect(page.locator("[data-damaged]")).to_be_visible()
+    image = page.locator("[data-version='1'][data-seed='7']")
+    expect(image.locator("img")).to_have_js_property("complete", True)
+    expect(image).to_have_class(re.compile("renders__image--focused"))
 
 
 @pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")

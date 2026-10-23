@@ -269,14 +269,16 @@ marked with its version, and open an image's large view, with the
 sheet it was rendered from, from any of them. A cell whose newest approval lacks images of its count SHALL carry the
 number it lacks, as the render stage counts it. Each source SHALL show its photograph's thumbnail, upright, opening
 the photograph in a viewer. `Esc` on a large view SHALL return to the screen it was opened from. It SHALL mark an
-approval it cannot read as damaged, naming the file, and show every other image; and SHALL refuse an address whose
-version is not `v` and ASCII digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the
-library's `.cache/`, made on first request and named by the image's own bytes.
+approval it cannot read as damaged, naming the file, and show every image, that version's own among them; and SHALL
+refuse an address whose version is not `v` and ASCII digits. It SHALL serve each thumbnail, a render's or a source's,
+from a cache in the library's `.cache/`, made on first request and named by the image's own bytes. It SHALL serve a
+photograph, a source or a run's copy, as the image its bytes are, whatever its name ends in.
 
 The images come back to where the sheets were decided, in the order they were made; a cache the library can lose
 costs only its rebuild. Two batches can hold one source rendered at one seed, so only the bytes say which image a
 thumbnail shows. One damaged file costs only its own version, never the batch's page. The count a cell lacks is the
-render stage's own, so the page and the render agree on what is ready.
+render stage's own, so the page and the render agree on what is ready. A source keeps the name it arrived with, and
+one ending `.html` served by its name would run as a page on the surface's own origin.
 
 #### Scenario: versions are listed newest first
 - **Key:** `ui:renders:versions-newest-first`
@@ -334,6 +336,20 @@ render stage's own, so the page and the render agree on what is ready.
 - **WHEN** a source's thumbnail is clicked in the Renders view
 - **THEN** its photograph opens in a dialog, fitted to the window
 - **AND** `Esc` closes the dialog and leaves the address unchanged
+
+#### Scenario: a damaged version's images are drawn
+- **Key:** `ui:renders:a-damaged-versions-images-are-drawn`
+- **Layers:** e2e
+- **WHEN** the Renders view opens on a cell whose one approval is damaged
+- **THEN** that version's images are drawn beside its damaged mark
+- **AND** the first of them holds the focus
+
+#### Scenario: a photograph is served as the image its bytes are
+- **Key:** `ui:renders:a-photograph-is-served-as-its-bytes`
+- **Layers:** unit
+- **WHEN** a source whose name ends `.html` holds a PNG and is asked for whole
+- **THEN** it is served as `image/png`, and the browser is told not to guess another type
+- **AND** a run's photograph is served the same way
 
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 

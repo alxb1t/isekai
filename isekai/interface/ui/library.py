@@ -15,6 +15,7 @@ are the flows `config/ui.json` offers.
 No web framework, so the whole of it is tested with no server involved.
 """
 
+import contextlib
 import json
 import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -56,7 +57,7 @@ from isekai.foundation.run import (
     latest_artifact,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import rendered_seeds
+from isekai.pipeline.generate import is_render, rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
@@ -506,7 +507,7 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
             renders = rendered_seeds(group_of(run, flow, approved[-1]), suffix)
-            newest = _newest_image(run, flow, approved, renders, suffix)
+            newest = _newest_image(run, flow, approved, suffix)
             if renders:
                 return Cell("rendered", len(renders), status=status, newest=newest)
             return Cell("approved", status=status, newest=newest)
@@ -525,22 +526,34 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
 
 
 def _newest_image(
-    run: Run, flow: str, approved: Sequence[int], newest: Sequence[int], suffix: str
+    run: Run, flow: str, approved: Sequence[int], suffix: str
 ) -> Rendered | None:
     """Return the last-written image of the newest version holding any, or None.
 
-    `newest` is the seeds already listed under the newest approval.
     e.g. v2 rendered nothing, v1 holds 7 then 9 -> Rendered(1, 9)
     """
     for version in reversed(approved):
-        group = group_of(run, flow, version)
-        seeds = newest if version == approved[-1] else rendered_seeds(group, suffix)
-        if seeds:
-            last = max(
-                seeds, key=lambda seed: (group / f"{seed}{suffix}").stat().st_mtime
-            )
-            return Rendered(version, last)
+        if written := _written(group_of(run, flow, version), suffix):
+            return Rendered(version, max(written, key=written.__getitem__))
     return None
+
+
+def _written(group: Path, suffix: str) -> dict[int, float]:
+    """Return when each render in `group` was written, by seed.
+
+    The time is the listed file's own, never one of a name rebuilt from its seed:
+    `007.png` lists as seed 7, and no `7.png` need exist. A file deleted after
+    the listing is no longer an image, so it is left out.
+    """
+    if not group.is_dir():
+        return {}
+    written: dict[int, float] = {}
+    for path in group.iterdir():
+        if is_render(path, suffix):
+            with contextlib.suppress(FileNotFoundError):
+                at = path.stat().st_mtime
+                written[int(path.stem)] = max(at, written.get(int(path.stem), at))
+    return written
 
 
 def _check(path: Path | None, kind: Artifact[Any]) -> None:

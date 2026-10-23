@@ -84,6 +84,7 @@ from isekai.foundation.run import (
     CAPTIONS,
     REVIEW,
     SHEETS,
+    SIGNATURE_BYTES,
     TAGS,
     WD14,
     Run,
@@ -93,6 +94,7 @@ from isekai.foundation.run import (
     find_run,
     is_version,
     latest_artifact,
+    media_type,
     open_run,
     stage_command,
 )
@@ -648,7 +650,7 @@ def create_app(
     @app.get("/api/b/{batch}/review/{digest}/{flow}/photo")
     def read_photo(batch: str, digest: str, flow: str) -> FileResponse:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
-        return FileResponse(held(batch, digest, flow).run.photo)
+        return _photograph(held(batch, digest, flow).run.photo)
 
     @app.put("/api/b/{batch}/review/{digest}/{flow}/draft")
     def put_draft(
@@ -897,7 +899,7 @@ def create_app(
     @app.get("/api/b/{batch}/sources/{name}")
     def read_source(batch: str, name: str) -> FileResponse:
         """Serve a source's bytes, whole, with or without a run."""
-        return FileResponse(library.source_files(folder(batch))(name))
+        return _photograph(library.source_files(folder(batch))(name))
 
     @app.get("/api/b/{batch}/sources/{name}/thumb")
     def read_source_thumb(batch: str, name: str) -> FileResponse:
@@ -1214,6 +1216,20 @@ def _quote(
         },
         "disabled": disabled,
     }
+
+
+def _photograph(path: Path) -> FileResponse:
+    """Serve the photograph at `path` as the image its bytes are, never its name's.
+
+    A source keeps the name it arrived with, and one ending `.html` served by its
+    suffix would run as a page on this surface's own origin; `nosniff` keeps the
+    browser from guessing past the declared type.
+    """
+    with path.open("rb") as handle:
+        kind, _ = media_type(handle.read(SIGNATURE_BYTES))
+    return FileResponse(
+        path, media_type=kind, headers={"X-Content-Type-Options": "nosniff"}
+    )
 
 
 def _hub(grid: library.Hub) -> dict[str, Any]:

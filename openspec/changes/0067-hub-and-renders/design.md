@@ -53,7 +53,7 @@ derivation per number. **Non-Goals:** Pinia; the key registry; Review's screens;
 | [D5](#d5) | a large view opened from a hub cell is pushed with `state: { from: 'hub' }`; `Esc` and the back button go to `history.state.from`, else Renders | the URL stays the image's | a query parameter |
 | [D6](#d6) | the offer returns `{disabled, images}`, `images` summed from `render.short`; `ui/src/components/RenderBar.vue` on the hub and Renders; `ui/src/bars.ts` `bar(…)` decides `prepare`, `render` or none; the header's Render button and `data-render-reason` go; running, the bar shows the strip's totals and a link to `/session` | the render stage counts once; one forward action | a count in the browser |
 | [D7](#d7) | `read_renders` gives each source `ready: {flow: n}` from `shortfall` on the newest approval; a refused `shortfall` is `0`, its version already marked damaged | the page and the render agree | `count - len(rendered)` in the browser |
-| [D8](#d8) | `library.versions` stays newest first and `ui/src/views/Renders.vue` draws each cell reversed; a cell is one wrapped row of thumbnails, each with a `vN` badge and `⇄` when its seed is shared, a damaged version a striped tile with its refusal under the cell, the ready tile last; `read_render` gains `came_from`, `kind`, `count` and `seeds`, drawn in the large view's label | the payload's order is a living scenario; the heading lives with the sheet | reordering the payload |
+| [D8](#d8) | `library.versions` stays newest first and `ui/src/views/Renders.vue` draws each cell reversed; a cell is one wrapped row of thumbnails, each with a `vN` badge and `⇄` when its seed is shared, a damaged version a striped tile before its images with its refusal under the cell, the ready tile last; `read_render` gains `came_from`, `kind`, `count` and `seeds`, drawn in the large view's label | the payload's order is a living scenario; the heading lives with the sheet | reordering the payload |
 | [D9](#d9) | `.running` on a bar draws a 2 px accent line sliding along its top edge; the running segment pulses `accent-dim` ↔ `accent`; `prefers-reduced-motion` stops both and the import fill | the settled motion; the clock still ticks | animated dots |
 | [D10](#d10) | `0062·R12`: `bars.ts` `failed(slot, batch)` read with `immediate`; `0064·R6`: the first-start step moves into its own test; `0061·R18`: the comment names `useQueue`'s count | the cards' fixes | |
 
@@ -89,14 +89,16 @@ else none
 
 | layer | added | edited | where |
 |---|---|---|---|
-| unit · pytest | `ui:batch-folder:a-row-names-its-first-sources`, `ui:hub:a-source-is-sized-from-its-file`, `ui:hub:a-cell-names-its-newest-image`, `ui:renders:a-source-thumbnail-is-upright`, `ui:renders:a-cell-counts-what-is-ready` | `ui:render:nothing-short-disables-render`, `ui:compare:a-version-is-named-by-what-changed` | `tests/test_ui_library.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py` |
+| unit · pytest | `ui:batch-folder:a-row-names-its-first-sources`, `ui:hub:a-source-is-sized-from-its-file`, `ui:hub:a-cell-names-its-newest-image`, `ui:renders:a-source-thumbnail-is-upright`, `ui:renders:a-cell-counts-what-is-ready`, `ui:renders:a-photograph-is-served-as-its-bytes` | `ui:render:nothing-short-disables-render`, `ui:compare:a-version-is-named-by-what-changed` | `tests/test_ui_library.py`, `tests/test_ui_api.py`, `tests/test_ui_jobs.py` |
 | unit · vitest | `ui:hub:a-click-follows-the-cells-stage`, `ui:render:prepare-takes-the-bar-first`, `ui:events:a-hub-opened-after-a-failure-shows-it` | none | `ui/src/cells.test.ts`, `ui/src/bars.test.ts` |
-| e2e | `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`, `ui:hub:a-rendered-cell-opens-its-newest-image`, `ui:renders:a-source-opens-in-the-viewer` | the grid selector in `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from`; the hub steps in `test_a_reload_lands_on_the_same_hub_and_the_same_review` | `tests/e2e/test_import.py`, `tests/e2e/test_render.py`, `tests/e2e/test_routes.py` |
+| e2e | `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`, `ui:hub:a-rendered-cell-opens-its-newest-image`, `ui:renders:a-source-opens-in-the-viewer`, `ui:renders:a-damaged-versions-images-are-drawn` | the grid selector in `test_an_image_opened_from_the_grid_shows_the_approval_it_came_from`; the hub steps in `test_a_reload_lands_on_the_same_hub_and_the_same_review` | `tests/e2e/test_import.py`, `tests/e2e/test_render.py`, `tests/e2e/test_routes.py` |
 
-**End-to-end runs added:** three tests, on Chromium only (T4), each shown only by a browser (T1). First start owns an
+**End-to-end runs added:** four tests, on Chromium only (T4), each shown only by a browser (T1). First start owns an
 empty library, which no other test reaches. The rendered cell and the viewer each start on the `SHOWN` batch's hub
-or grid; a test carries one scenario's marker, so neither is a step in the large-view test (T2). Which bar shows and
-what a click does are vitest units, not browser tests (T1).
+or grid; a test carries one scenario's marker, so neither is a step in the large-view test (T2). The damaged version
+owns the `DAMAGED` batch, because a damaged approval in `SHOWN` would mark its hub cell unreadable and refuse its
+large view; whether the grid draws what the focus moves across is a template's, which only a browser renders. Which
+bar shows and what a click does are vitest units, not browser tests (T1).
 
 **Removed or merged:** none. The first-start step leaves `test_each_chosen_file_shows_its_upload_then_its_result`
 for its own test, which carries `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`.

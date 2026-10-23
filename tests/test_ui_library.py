@@ -224,6 +224,11 @@ def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
     assert cell.stage == "approved"
     assert cell.renders == 0
     assert cell.newest == Rendered(1, 5)
+    # A zero-padded name lists as seed 42, though no `42` file exists.
+    padded = older / f"0042{suffix}"
+    padded.write_bytes(b"png")
+    os.utime(padded, (500, 500))
+    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")
