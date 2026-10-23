@@ -8,13 +8,22 @@ import { computed, ref, shallowRef } from 'vue'
 /** Where a command is offered: everywhere, on the screen, or in an overlay over it. */
 export type Scope = 'everywhere' | 'screen' | 'overlay'
 
-/** A physical key, by `event.code`, and the modifiers it is pressed with. Mod is ⌘ on macOS, Ctrl elsewhere. */
+/** A physical key, by `event.code`, and its modifiers. Mod is ⌘ on macOS, Ctrl elsewhere. */
 export interface Key {
   code: string
   shift?: boolean
   mod?: boolean
   ctrl?: boolean
 }
+
+/** Return a key pressed with ⇧. */
+export const shifted = (code: string): Key => ({ code, shift: true })
+
+/** Return keys pressed with no modifier. e.g. plain('KeyJ', 'ArrowDown') */
+export const plain = (...codes: string[]): Key[] => codes.map((code) => ({ code }))
+
+/** Return a key pressed with Mod. */
+export const modded = (code: string): Key => ({ code, mod: true })
 
 /** One command: its keys, its label in the hints, and what it runs. */
 export interface Command {
@@ -98,9 +107,10 @@ export function keyText(key: Key, mac: boolean): string {
   const letter = key.code.startsWith('Key') ? key.code.slice(3) : null
   const name =
     letter ?? (key.code.startsWith('Digit') ? key.code.slice(5) : (GLYPHS[key.code] ?? key.code))
-  const plain = letter !== null && !key.shift && !key.mod && !key.ctrl
+  const bare = letter !== null && !key.shift && !key.mod && !key.ctrl
   const mod = key.mod ? (mac ? '⌘' : 'Ctrl+') : ''
-  return `${key.ctrl ? '⌃' : ''}${key.shift ? '⇧' : ''}${mod}${plain ? name.toLowerCase() : name}`
+  const ctrl = key.ctrl ? '⌃' : ''
+  return `${ctrl}${key.shift ? '⇧' : ''}${mod}${bare ? name.toLowerCase() : name}`
 }
 
 export const useKeyStore = defineStore('keys', () => {
@@ -132,14 +142,12 @@ export const useKeyStore = defineStore('keys', () => {
     ]
   })
 
-  const offered = (command: Command) => command.when?.() ?? true
-
   /** Run the first command the key reaches and return whether one ran. */
   function press(event: Press): boolean {
     // A field's own handler answered it, and stopped it there or marked it.
     if (event.defaultPrevented) return false
     const field = isField(event.target)
-    // D3: in a field, Esc leaves it; the overlay or the screen takes the next one.
+    // In a field, Esc leaves it; the overlay or the screen takes the next one.
     if (field && event.code === 'Escape') {
       event.preventDefault()
       ;(event.target as HTMLElement).blur?.()
@@ -149,7 +157,7 @@ export const useKeyStore = defineStore('keys', () => {
       for (const command of layer.commands) {
         if (field && !command.inField) continue
         if (!command.keys.some((key) => matches(key, event, mac.value))) continue
-        if (!offered(command)) continue
+        if (command.when && !command.when()) continue
         event.preventDefault()
         command.run()
         return true
@@ -166,10 +174,12 @@ export const useKeyStore = defineStore('keys', () => {
     }
   }
 
+  /* Every declared command, offered now or not: a `when` may read the page,
+     which is not reactive. */
   const entries = (scope: Scope) =>
     layers.value
       .filter((layer) => layer.scope === scope)
-      .flatMap((layer) => layer.commands.filter(offered).map(entry))
+      .flatMap((layer) => layer.commands.map(entry))
 
   /** The screen's commands, as its key bar lists them. */
   const bar = computed(() => entries('screen'))

@@ -327,7 +327,7 @@ Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`,
 |---|---|---|
 | J7·1 Home, the library | — | `…/` |
 | J7·2 its hub | ↵ on 2026-09-17 | `…/b/2026-09-17/hub` |
-| (the file dialog, as J1·2) | ⌥A Add sources… | same |
+| (the file dialog, as J1·2) | ⇧A Add sources… | same |
 | J7·3 the sheet without a name: one `already here`, one copied as `16_01-2.png`, one HEIC converted | Open; reading ends | same |
 | J7·4 two new rows, bare checkboxes | ⌘↵ Import 2 | same |
 
@@ -389,19 +389,18 @@ J7·1  LIBRARY · 4 batches · newest activity first                            
 
 Matched on `event.code`, the physical key, with the typed character suppressed, and declared once in
 the key store ([D25](../../docs/decisions.md#d25--shortcuts-match-the-physical-key)); `?` lists them. ⌘
-is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run; ⌥R and ⌥E do not fire inside a
-chip input.
+is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K run.
 
 | where | keys |
 |---|---|
 | everywhere | ⇧L the library · ⇧H Hub · ⇧R the queue's head · ⇧I Renders · ⇧S the session · ? the key list · ⌥← → flow · ⌥Space the cheatsheet · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
-| Home | ⌥N New batch · ↑↓ ↵ the library |
-| Hub | ↑↓←→ cells · space tick / untick, or a column for the selected rows · ⇧↑↓ select rows · ↵ the cell's action · ⌥A Add sources · ⌥R Render |
+| Home | ⇧N New batch · j k or ↓↑ ↵ the library |
+| Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
 | Review | ⌘Z ⇧⌘Z · ⌥↑↓ the queue · ⌘↵ Approve · autocomplete ↑↓ ↵ esc · ⌃↓ walk refusals · ⌥↵ take every suggested spelling · ⌥C photo and render, on a revision · ⌥↓ the collapsed caption |
-| Renders | ↑↓←→ images · space select · ↵ the large view · C compare, in the large view · `\` swap, in compare · ⌥E Revise |
+| Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
 | dialogs | ⌘↵ confirm · esc cancel |
 
-No key spends money: ⌥R opens the dialog, and only its ⌘↵ starts billing.
+No key spends money: ⇧G opens the dialog, and only its ⌘↵ starts billing.
 
 ## 8 · The job lifecycle and live state
 

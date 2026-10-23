@@ -116,7 +116,7 @@ def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
     digest = served.revised.digest
     page.goto(f"{served.url}/b/{REVISED}/renders/{digest}/{FLOW}/v1/7")
     expect(page.locator("[data-revise]")).to_be_visible()
-    page.keyboard.press("Alt+KeyE")
+    page.keyboard.press("e")
     confirm = page.locator("[data-revise-confirm]")
     expect(confirm).to_contain_text("copies v1 · prefills seed 7")
 

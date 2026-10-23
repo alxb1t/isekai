@@ -3,6 +3,10 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { thumbAt } from '../api'
+import KeyBar from '../components/KeyBar.vue'
+import KeyHint from '../components/KeyHint.vue'
+import { useKeys } from '../composables/useKeys'
+import { shifted } from '../stores/keys'
 import { alerting, clock, useLiveStore } from '../stores/live'
 
 /* The render session (design spec J4·2, J4·3), and the billing alert's way out
@@ -78,6 +82,18 @@ watch(
   { immediate: true },
 )
 
+/* ⇧I is the session's own batch here, which the route does not name. */
+useKeys('screen', [
+  {
+    id: 'renders',
+    keys: [shifted('KeyI')],
+    label: 'view in Renders',
+    run: () => {
+      if (job.value) void router.push({ name: 'renders', params: { batch: job.value.batch } })
+    },
+    when: () => Boolean(job.value) && !running.value,
+  },
+])
 </script>
 
 <template>
@@ -128,7 +144,7 @@ watch(
             class="btn btn-primary"
             data-renders
             :to="{ name: 'renders', params: { batch: job.batch } }"
-            >View in Renders<span class="appbar__key">⌥3</span></RouterLink
+            >View in Renders<KeyHint command="renders" /></RouterLink
           >
         </template>
       </footer>
@@ -145,5 +161,6 @@ watch(
       </p>
       <button class="btn btn-primary" type="button" @click="check">Check again</button>
     </div>
+    <KeyBar />
   </section>
 </template>

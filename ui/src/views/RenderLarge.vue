@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { imageAt, renderDetail } from '../api'
+import KeyBar from '../components/KeyBar.vue'
+import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
+import { useKeys } from '../composables/useKeys'
+import { plain } from '../stores/keys'
 import type { RenderDetail } from '../types'
 
 /* An image's large view (design spec J5·2): the image on `ground-media`, the
-   sheet it was rendered from beside it — filled fields only, read-only. ⌥E
-   revises it; C compares it with the newest older version of its seed (J5·8). */
+   sheet it was rendered from beside it — filled fields only, read-only. e
+   revises it; c compares it with the newest older version of its seed (J5·8). */
 const props = defineProps<{
   batch: string
   digest: string
@@ -50,30 +54,33 @@ const back = computed(() =>
     : { to: { name: 'renders', params: { batch: props.batch } }, label: 'Back to Renders' },
 )
 
-/* Matched on `event.code`: ⌥E types a character. */
-function onKey(event: KeyboardEvent): void {
-  if (revising.value) return
-  if (event.altKey && event.code === 'KeyE') {
-    event.preventDefault()
-    revising.value = true
-  } else if (
-    event.code === 'KeyC' &&
-    !event.altKey &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    detail.value?.compare
-  ) {
-    event.preventDefault()
-    compare()
-  } else if (event.key === 'Escape') {
-    event.preventDefault()
-    void router.push(back.value.to)
-  }
-}
+const free = () => !revising.value
 
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+useKeys('screen', [
+  {
+    id: 'revise',
+    keys: plain('KeyE'),
+    label: 'revise',
+    run: () => (revising.value = true),
+    when: free,
+  },
+  {
+    id: 'compare',
+    keys: plain('KeyC'),
+    label: 'compare',
+    run: compare,
+    when: () => free() && Boolean(detail.value?.compare),
+  },
+  {
+    id: 'back',
+    keys: plain('Escape'),
+    label: 'back',
+    run: () => void router.push(back.value.to),
+    when: free,
+  },
+])
+
 onMounted(async () => {
-  window.addEventListener('keydown', onKey)
   try {
     detail.value = await renderDetail(place.value)
   } catch (reason) {
@@ -114,7 +121,7 @@ onMounted(async () => {
       </dl>
       <div class="large__actions">
         <button class="btn btn-secondary" type="button" data-revise @click="revising = true">
-          Revise this image<span class="appbar__key">⌥E</span>
+          Revise this image<KeyHint command="revise" />
         </button>
         <button
           v-if="detail.compare"
@@ -123,12 +130,13 @@ onMounted(async () => {
           data-compare
           @click="compare"
         >
-          Compare with v{{ detail.compare }}<span class="appbar__key">C</span>
+          Compare with v{{ detail.compare }}<KeyHint command="compare" />
         </button>
         <RouterLink class="btn btn-secondary" :to="back.to"
-          >{{ back.label }}<span class="appbar__key">esc</span></RouterLink
+          >{{ back.label }}<KeyHint command="back" /></RouterLink
         >
       </div>
+      <KeyBar />
     </aside>
     <ReviseConfirm
       v-if="revising"

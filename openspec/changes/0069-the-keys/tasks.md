@@ -6,7 +6,7 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 ## Progress
 
 - [x] 1 — The registry
-- [ ] 2 — The screens
+- [x] 2 — The screens
 - [ ] 3 — Review
 - [ ] 4 — The dialogs
 
@@ -30,18 +30,18 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 
 ## 2 — The screens
 
-- [ ] 2.1 **HALT CHECK** — the hub listens for keys itself.
+- [x] 2.1 **HALT CHECK** — the hub listens for keys itself.
   Verify: `grep -c "addEventListener('keydown'" ui/src/views/Hub.vue` prints `1`.
-- [ ] 2.2 Add `ui/src/grid.ts`, the Renders movement of [D4](design.md#d4), bound to
+- [x] 2.2 Add `ui/src/grid.ts`, the Renders movement of [D4](design.md#d4), bound to
   `ui:keys:renders-moves-by-cell-and-by-image` in a new `ui/src/grid.test.ts`.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'renders-moves-by-cell-and-by-image' ui/src/grid.test.ts` prints `1`.
-- [ ] 2.3 Move `ui/src/views/Home.vue`, `ui/src/views/Hub.vue`, `ui/src/views/Renders.vue`, `ui/src/views/RenderLarge.vue`,
+- [x] 2.3 Move `ui/src/views/Home.vue`, `ui/src/views/Hub.vue`, `ui/src/views/Renders.vue`, `ui/src/views/RenderLarge.vue`,
   `ui/src/views/Compare.vue` and `ui/src/views/Session.vue` onto `useKeys` with the map of [D4](design.md#d4), each
   with `ui/src/components/KeyBar.vue`; their hints through `KeyHint`, `ui/src/components/RenderBar.vue`'s too.
   Verify: `grep -c "addEventListener('keydown'" ui/src/views/Home.vue ui/src/views/Hub.vue ui/src/views/Renders.vue ui/src/views/RenderLarge.vue ui/src/views/Compare.vue` prints `0` for each file, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 2.4 In `tests/e2e/test_render.py`, press `e` where it pressed `Alt+KeyE`; in `README.md`, Revise's key reads `e`.
+- [x] 2.4 In `tests/e2e/test_render.py`, press `e` where it pressed `Alt+KeyE`; in `README.md`, Revise's key reads `e`.
   Verify: `grep -c 'Alt+KeyE' tests/e2e/test_render.py` prints `0`, `grep -c '⌥E' README.md` prints `0`, and `uv run pytest -q tests/e2e` exits 0.
-- [ ] 2.5 Rewrite the *Home*, *Hub* and *Renders* rows of `ui/design/spec.md` §7 per [D4](design.md#d4).
+- [x] 2.5 Rewrite the *Home*, *Hub* and *Renders* rows of `ui/design/spec.md` §7 per [D4](design.md#d4).
   Verify: `grep -c '⌥A Add sources' ui/design/spec.md` prints `0`.
 
 ## 3 — Review

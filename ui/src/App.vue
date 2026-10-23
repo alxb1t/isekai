@@ -7,7 +7,7 @@ import KeyList from './components/KeyList.vue'
 import { useKeys } from './composables/useKeys'
 import { firstFlow, queue } from './composables/useQueue'
 import { useBatchStore } from './stores/batch'
-import { useKeyStore } from './stores/keys'
+import { shifted, useKeyStore } from './stores/keys'
 import { alerting, useLiveStore } from './stores/live'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
@@ -60,7 +60,6 @@ const head = computed(() => {
 const listing = ref(false)
 
 const onBatch = () => batch.value !== null
-const shifted = (code: string) => ({ code, shift: true })
 function open(name: string): void {
   void router.push({ name, params: batch.value ? { batch: batch.value } : {} })
 }
@@ -87,7 +86,12 @@ useKeys('everywhere', [
     when: onBatch,
   },
   { id: 'session', keys: [shifted('KeyS')], label: 'session', run: () => open('session') },
-  { id: 'keys', keys: [shifted('Slash')], label: 'the key list', run: () => (listing.value = true) },
+  {
+    id: 'keys',
+    keys: [shifted('Slash')],
+    label: 'the key list',
+    run: () => (listing.value = true),
+  },
 ])
 
 /* The page's one key listener: every command is a declaration in the key store. */

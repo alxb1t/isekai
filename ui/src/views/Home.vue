@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { noun } from '../words'
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { library, sourceThumbAt } from '../api'
 import ImportSheet from '../components/ImportSheet.vue'
+import KeyBar from '../components/KeyBar.vue'
+import KeyHint from '../components/KeyHint.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import { useKeys } from '../composables/useKeys'
+import { plain, shifted } from '../stores/keys'
 import type { LibraryRow } from '../types'
 
 /* Home: every folder of the library, batches by their newest file first, the
@@ -13,7 +17,8 @@ import type { LibraryRow } from '../types'
    the privacy line (J1·1). */
 const router = useRouter()
 const rows = ref<LibraryRow[] | null>(null)
-const batchCount = computed(() => rows.value?.filter((row) => row.batch).length ?? 0)
+const batches = computed(() => rows.value?.filter((row) => row.batch) ?? [])
+const batchCount = computed(() => batches.value.length)
 const refusal = ref<string | null>(null)
 const list = ref<HTMLElement | null>(null)
 const importing = ref(false)
@@ -21,14 +26,6 @@ const importing = ref(false)
 function imported(batch: string): void {
   importing.value = false
   void router.push({ name: 'hub', params: { batch } })
-}
-
-/* ⌥N New batch. Matched on `event.code`: Option types a character on macOS. */
-function onNew(event: KeyboardEvent): void {
-  if (event.altKey && event.code === 'KeyN' && !importing.value) {
-    event.preventDefault()
-    importing.value = true
-  }
 }
 
 /* Today's files read as a time, older ones as a date. */
@@ -45,19 +42,53 @@ function open(row: LibraryRow): void {
   if (row.batch) void router.push({ name: 'hub', params: { batch: row.name } })
 }
 
-/* ↑↓ walk the batches, ↵ opens the focused one. */
-function onKey(event: KeyboardEvent, row: LibraryRow): void {
-  const cards = [...(list.value?.querySelectorAll<HTMLElement>('[data-batch]') ?? [])]
-  const at = cards.indexOf(event.currentTarget as HTMLElement)
-  if (event.key === 'Enter') open(row)
-  else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-    event.preventDefault()
-    cards[Math.min(Math.max(at + (event.key === 'ArrowDown' ? 1 : -1), 0), cards.length - 1)]?.focus()
-  }
+/* The batch rows, and the one holding the focus, or -1. */
+function cards(): HTMLElement[] {
+  return [...(list.value?.querySelectorAll<HTMLElement>('[data-batch]') ?? [])]
+}
+const at = () => cards().indexOf(document.activeElement as HTMLElement)
+
+function walk(step: -1 | 1): void {
+  const held = cards()
+  held[Math.min(Math.max(at() + step, 0), held.length - 1)]?.focus()
 }
 
+const onRow = () => at() >= 0
+const idle = () => !importing.value
+
+/* j k or ↓ ↑ walk the batches, ↵ opens the focused one (D25). */
+useKeys('screen', [
+  {
+    id: 'new',
+    keys: [shifted('KeyN')],
+    label: 'new batch',
+    run: () => (importing.value = true),
+    when: idle,
+  },
+  {
+    id: 'next',
+    keys: plain('KeyJ', 'ArrowDown'),
+    label: 'next batch',
+    run: () => walk(1),
+    when: idle,
+  },
+  {
+    id: 'previous',
+    keys: plain('KeyK', 'ArrowUp'),
+    label: 'previous batch',
+    run: () => walk(-1),
+    when: idle,
+  },
+  {
+    id: 'open',
+    keys: plain('Enter'),
+    label: 'open the batch',
+    run: () => open(batches.value[at()]),
+    when: () => idle() && onRow(),
+  },
+])
+
 onMounted(async () => {
-  window.addEventListener('keydown', onNew)
   try {
     rows.value = (await library()).rows
   } catch (reason) {
@@ -67,8 +98,6 @@ onMounted(async () => {
   await nextTick()
   list.value?.querySelector<HTMLElement>('[data-batch]')?.focus()
 })
-
-onUnmounted(() => window.removeEventListener('keydown', onNew))
 </script>
 
 <template>
@@ -83,7 +112,7 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
         metadata stripped, held only in the GPU pod's memory, and gone when the pod is.
       </p>
       <button class="btn btn-primary" type="button" @click="importing = true">
-        New batch<span class="appbar__key">⌥N</span>
+        New batch<KeyHint command="new" />
       </button>
     </div>
     <template v-else>
@@ -93,7 +122,7 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
           first
         </p>
         <button class="btn btn-primary" type="button" @click="importing = true">
-          New batch<span class="appbar__key">⌥N</span>
+          New batch<KeyHint command="new" />
         </button>
       </div>
       <div ref="list" class="library">
@@ -104,7 +133,6 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
             data-batch
             tabindex="0"
             @click="open(row)"
-            @keydown="onKey($event, row)"
           >
             <span class="library__name">{{ row.name }}</span>
             <div class="library__sources">
@@ -148,5 +176,6 @@ onUnmounted(() => window.removeEventListener('keydown', onNew))
         </template>
       </div>
     </template>
+    <KeyBar />
   </section>
 </template>
