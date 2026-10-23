@@ -785,20 +785,33 @@ def test_an_upload_once_import_commits_is_refused_and_the_batch_is_unchanged(
     assert read_once.wait(10.0)
     real = importing.commit
     refused: list[str] = []
+    committing: list[str] = []
 
     def landing_mid_commit(
         folder: Path, into: Path, name: str, as_is: Iterable[str] = (), *, add: bool
     ) -> importing.Committed:
+        assert not committing, "a second commit of one import reached its folder"
+        committing.append(name)
+        # A second press of Import is refused, so it never unseals this commit.
+        with pytest.raises(Refusal, match="already committing"):
+            imports.commit(staged, "trip")
         try:
             reader.put("late.jpg", photo_jpeg((0, 0, 200)))
         except Refusal as one:
             refused.append(str(one))
-        return real(folder, into, name, as_is, add=add)
+        done = real(folder, into, name, as_is, add=add)
+        # The staging folder is gone and the reader not yet stopped.
+        try:
+            reader.put("later.jpg", photo_jpeg((0, 200, 200)))
+        except Refusal as one:
+            refused.append(str(one))
+        return done
 
     monkeypatch.setattr(importing, "commit", landing_mid_commit)
     imports.commit(staged, "trip")
 
-    assert len(refused) == 1
+    assert len(refused) == 2
     assert "late.jpg: " in refused[0]
-    assert "Add sources" in refused[0]
+    assert "later.jpg: " in refused[1]
+    assert all("Add sources" in one for one in refused)
     assert sorted(p.name for p in (library / "trip" / "sources").iterdir()) == ["a.jpg"]

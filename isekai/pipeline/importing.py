@@ -185,28 +185,33 @@ class Reader:
     def put(self, name: str, body: bytes) -> dict[str, Any]:
         """Hold an upload for reading; return its id, its name and `waiting`."""
         _refuse_name(name)
-        if self._stopped:
-            raise Refusal(
-                f"{name}: its import is closed; close the sheet and choose the "
-                "files again"
-            )
-        held = Path(tempfile.mkdtemp(dir=self._staging, prefix=".upload-")) / name
-        held.write_bytes(body)
         record = {"file": name, "state": "waiting"}
-        # Named and recorded under the lock `seal` takes: no upload lands once
-        # a commit has sealed the reader.
+        # Checked and named under the lock `seal` takes, before the disk is
+        # touched: no upload lands once a commit has sealed the reader, and one
+        # named before holds `seal` off as `waiting` until it is read.
         with self._lock:
-            sealed = self._sealed
-            if not sealed:
-                self._uploads += 1
-                upload = f"u{self._uploads}"
-                self._files[upload] = record
-        if sealed:
-            shutil.rmtree(held.parent, ignore_errors=True)
-            raise Refusal(
-                f"{name}: Import is already committing this import; once the "
-                "batch's hub opens, add it with Add sources"
-            )
+            if self._stopped:
+                raise _closed(name)
+            if self._sealed:
+                raise Refusal(
+                    f"{name}: Import is already committing this import; once the "
+                    "batch's hub opens, add it with Add sources"
+                )
+            self._uploads += 1
+            upload = f"u{self._uploads}"
+            self._files[upload] = record
+        try:
+            held = Path(tempfile.mkdtemp(dir=self._staging, prefix=".upload-")) / name
+            try:
+                held.write_bytes(body)
+            except BaseException:
+                shutil.rmtree(held.parent, ignore_errors=True)
+                raise
+        except OSError as failed:
+            # A folder a cancel deleted, or a full disk, refuses this upload alone.
+            refusal = str(_closed(name)) if self._stopped else _failed(name, failed)
+            self._set(upload, name, {"state": "refused", "refusal": refusal})
+            raise Refusal(refusal) from failed
         state = {"upload": upload, **record}
         self._publish(state)
         self._queue.put((upload, name, held))
@@ -218,8 +223,16 @@ class Reader:
             return {upload: dict(state) for upload, state in self._files.items()}
 
     def seal(self) -> None:
-        """Refuse while a file is unread, else refuse later uploads until `unseal`."""
+        """Refuse while sealed or a file is unread, else refuse uploads until `unseal`.
+
+        Refusing a second seal keeps a second commit of one import from running
+        beside the first, so only the commit that sealed the reader unseals it.
+        """
         with self._lock:
+            if self._sealed:
+                raise Refusal(
+                    "Import is already committing this import; wait for it to finish"
+                )
             states = self._files.values()
             unread = sum(one["state"] in _UNREAD for one in states)
             if unread:
@@ -236,7 +249,8 @@ class Reader:
 
     def halt(self) -> None:
         """Ask the thread to stop once the file being read is done."""
-        self._stopped = True
+        with self._lock:
+            self._stopped = True
         self._queue.put(None)
 
     def stop(self) -> None:
@@ -275,6 +289,13 @@ class Reader:
 
 # The states of a file the reader has not finished with.
 _UNREAD = frozenset({"waiting", "converting"})
+
+
+def _closed(name: str) -> Refusal:
+    """Return the refusal of an upload `name` to an import that is closed."""
+    return Refusal(
+        f"{name}: its import is closed; close the sheet and choose the files again"
+    )
 
 
 def _failed(name: str, failed: Exception) -> str:
