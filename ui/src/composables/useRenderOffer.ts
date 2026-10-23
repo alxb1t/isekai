@@ -1,7 +1,8 @@
 import { computed, ref, watch } from 'vue'
 import { renderOffer } from '../api'
 import type { RenderOffer } from '../types'
-import { useLive } from './useLive'
+import { storeToRefs } from 'pinia'
+import { useLiveStore } from '../stores/live'
 
 /* A batch's Render offer, for every screen that draws the Render bar: the images
    it lacks, why Render is disabled or null, why a count is refused or null, and
@@ -10,7 +11,7 @@ import { useLive } from './useLive'
    or a pod alert raised or cleared, changes the offer, so each reads it again.
    `rendering` is a render session running for this batch, not another's. */
 export function useRenderOffer(batch: string) {
-  const { job, billing, renderRunning } = useLive()
+  const { job, billing, renderRunning } = storeToRefs(useLiveStore())
   const rendering = computed(() => renderRunning.value && job.value?.batch === batch)
   const offer = ref<RenderOffer>({ disabled: null, images: 0, refused: null })
   const dialog = ref(false)

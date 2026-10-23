@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reasons } from '../bars'
-import { useLive } from '../composables/useLive'
+import { storeToRefs } from 'pinia'
+import { useLiveStore } from '../stores/live'
 import { noun } from '../words'
 
 /* The Render bar (design spec J2): the images short of their count, with Render,
@@ -16,7 +17,9 @@ defineProps<{
 }>()
 defineEmits<{ open: [] }>()
 
-const { job, renderTotals } = useLive()
+const live = useLiveStore()
+const { job } = storeToRefs(live)
+const { renderTotals } = live
 </script>
 
 <template>

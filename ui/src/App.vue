@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useLive } from './composables/useLive'
+import { storeToRefs } from 'pinia'
+import { alerting, useLiveStore } from './stores/live'
 
 /* The shell: the AppBar, the BillingBanner's slot, the route's screen and the
    JobStrip (design spec §3). Review is keyed by batch and flow, so moving to
    another run keeps the view and its autosave; another flow is a new view. */
 const route = useRoute()
 const router = useRouter()
-const { job, billing, alerting, connect, prepareTotals, renderTotals } = useLive()
+const live = useLiveStore()
+const { job, billing } = storeToRefs(live)
+const { connect, prepareTotals, renderTotals } = live
 
 const alert = computed(() => alerting(billing.value))
 const running = computed(() => job.value?.state === 'running')

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { bar } from '../bars'
 import { renders, sourceAt, sourceThumbAt, thumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
@@ -8,7 +9,7 @@ import RefusalPage from '../components/RefusalPage.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
-import { useLive } from '../composables/useLive'
+import { useLiveStore } from '../stores/live'
 import { useRenderOffer } from '../composables/useRenderOffer'
 import { noun } from '../words'
 import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
@@ -29,7 +30,7 @@ const selected = ref(new Set<string>())
 const revising = ref(false)
 /* The source open in the viewer, by name, or null. */
 const viewing = ref<string | null>(null)
-const { job } = useLive()
+const { job } = storeToRefs(useLiveStore())
 const {
   offer,
   dialog,

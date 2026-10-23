@@ -2,17 +2,18 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { bar as barOf, dismiss, failed } from '../bars'
 import { action, clicks, targets } from '../cells'
-import { assign, hub, prepare, sourceAt, sourceThumbAt, stopJob } from '../api'
+import { assign, hub, prepare, sourceAt, sourceThumbAt } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
 import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
-import { useLive } from '../composables/useLive'
 import { useRenderOffer } from '../composables/useRenderOffer'
 import { firstFlow, queue } from '../composables/useQueue'
+import { useLiveStore } from '../stores/live'
 import type { CellEvent, HubCell, HubInfo, HubSource, Stage } from '../types'
 
 /* A batch's hub: its sources by the offered flows, each cell's stage read from
@@ -38,7 +39,9 @@ function openRender(): void {
 const selected = ref<Set<number>>(new Set())
 /* The job slot is the shell's live state; this stream brings cells. A render
    holds the one slot, so Prepare waits while it is `blocked`. */
-const { job, renderRunning: blocked, prepareTotals } = useLive()
+const live = useLiveStore()
+const { job, renderRunning: blocked } = storeToRefs(live)
+const { prepareTotals } = live
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 /* Each cell's refusal from a tick or from the job, by `source|flow`. */
@@ -255,7 +258,7 @@ async function runPrepare(): Promise<void> {
 
 async function stop(): Promise<void> {
   try {
-    await stopJob()
+    await live.stop()
   } catch (reason) {
     barRefusal.value = (reason as Error).message
   }

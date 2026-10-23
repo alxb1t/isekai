@@ -5,19 +5,19 @@ Every new pytest test carries `@pytest.mark.spec`, and every new vitest test `sp
 
 ## Progress
 
-- [ ] 1 — The live store
+- [x] 1 — The live store
 - [ ] 2 — One stream
 - [ ] 3 — The batch store
 - [ ] 4 — The upload id and the cards
 
 ## 1 — The live store
 
-- [ ] 1.1 **HALT CHECK** — no store library is installed.
+- [x] 1.1 **HALT CHECK** — no store library is installed.
   Verify: `grep -c 'pinia' ui/package.json` prints `0`.
-- [ ] 1.2 Run `npm install --save-exact pinia@4.1.0 @vue/devtools-api@8.2.1` in `ui/`, and install `createPinia()` in
+- [x] 1.2 Run `npm install --save-exact pinia@4.1.0 @vue/devtools-api@8.2.1` in `ui/`, and install `createPinia()` in
   `ui/src/main.ts`, per [D1](design.md#d1).
   Verify: `grep -c -E '"(pinia": "4\.1\.0|@vue/devtools-api": "8\.2\.1)"' ui/package.json` prints `2`, and `grep -c 'createPinia' ui/src/main.ts` prints `1`.
-- [ ] 1.3 Add `ui/src/stores/live.ts` per [D2](design.md#d2), still opening a bare `/events`; move `App.vue`,
+- [x] 1.3 Add `ui/src/stores/live.ts` per [D2](design.md#d2), still opening a bare `/events`; move `App.vue`,
   `Session.vue`, `RenderBar.vue`, `RenderDialog.vue`, `Hub.vue`, `Renders.vue` and `useRenderOffer.ts` onto it; delete
   `ui/src/composables/useLive.ts`.
   Verify: `test -e ui/src/composables/useLive.ts` exits 1, `grep -rc 'stopJob()' ui/src/views` prints `0` for each file, and `uv run python -m tools.typecheck_ui` exits 0.
