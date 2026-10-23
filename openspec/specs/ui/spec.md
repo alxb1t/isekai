@@ -550,7 +550,8 @@ The system SHALL list as a batch every folder in the library that holds `sources
 not a batch and open none of it, and SHALL list no dot-folder. Each batch's row SHALL carry its name, its source
 count, for each flow the surface offers that is present the counts approved and rendered out of the sources that have
 that flow, the count of sources with no flow, and the time and kind of the newest file written in it. Batches SHALL be
-ordered by that time, newest first, and folders that are not batches after them.
+ordered by that time, newest first, and folders that are not batches after them. Count labels on the surface SHALL
+use a singular noun at one and a plural noun otherwise.
 
 A folder is a batch by its layout alone, so no marker file can disagree with what is on disk, and the row is a
 listing read on every request. A folder that is not a batch is shown rather than hidden so the screen matches the
@@ -594,6 +595,12 @@ approved from another's sheet stays the CLI's.
 - **Layers:** unit
 - **WHEN** a batch's runs hold a tracked flow the configuration does not offer
 - **THEN** its row carries no count for that flow
+
+#### Scenario: count labels use singular at one
+- **Key:** `ui:batch-folder:count-labels-use-singular-at-one`
+- **Layers:** unit
+- **WHEN** a count label is drawn for zero, one and several items
+- **THEN** one uses the singular noun and the other counts use the plural noun
 
 ### Requirement: Every screen has a URL naming its batch and its run
 
@@ -695,7 +702,7 @@ stage read from that run's directory — no flow, assigned, tagged, sheet, draft
 ignore any other flow's directory. A cell whose run file cannot be read SHALL show that it is unreadable, with the
 refusal the pipeline raised, and the rest of the grid SHALL still be shown. Reading the hub SHALL write nothing; a
 tick SHALL write only through the assigning verb, and an untick only while the cell is assigned. A source imported
-as it is, still carrying metadata, SHALL be marked on its row.
+as it is, still carrying metadata, SHALL be marked on its row. The header SHALL leave a 12 px gap between items.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a
 tick survives a reload. The mark is read from the source itself, so no file records it.
@@ -731,6 +738,7 @@ tick survives a reload. The mark is read from the source itself, so no file reco
 - **WHEN** an unassigned cell is ticked
 - **THEN** the cell reads assigned
 - **AND** it still reads assigned after a reload
+- **AND** the header keeps a 12 px gap between its items
 
 #### Scenario: a prepared cell's tick stays
 - **Key:** `ui:hub:a-prepared-tick-stays`
@@ -748,8 +756,8 @@ tick survives a reload. The mark is read from the source itself, so no file reco
 
 The system SHALL take sources through the browser's file dialog, sending each file in its own request, and SHALL show
 for each its upload's progress, then its reading, then whether it is ready, converted, refused or not cleaned, with
-the reason, and a preview of each file read. Import SHALL stay disabled, with its reason, until every chosen file is
-read, and SHALL commit only the ready files and those the operator chose to import as they are.
+the reason. Import SHALL stay disabled, with its reason, until every chosen file is read, and SHALL commit only the
+ready files and those the operator chose to import as they are.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns.
 
@@ -799,7 +807,9 @@ and sheet stages, each one invocation of the pipeline's own verb over that flow'
 time; a job SHALL keep running when its page closes; Stop SHALL interrupt the current stage and start no other;
 stopping the surface SHALL interrupt a running job; and a stage that fails having reported nothing SHALL end the job
 as failed, naming the batch's log, and start no other. Before any stage starts, the surface SHALL check that the
-local model server answers, and SHALL refuse with its message, starting nothing, when it does not.
+local model server answers, and SHALL refuse with its message, starting nothing, when it does not. While Prepare
+runs, the job strip and Prepare bar SHALL show completed cells out of the accepted total and elapsed time; the total
+SHALL stay fixed, a cell SHALL count as completed only at sheet, and elapsed time SHALL tick every second.
 
 The pipeline's verb is the one path, so Prepare is exactly what the verbs do. A refusal before the start leaves every
 cell assigned, so pressing Prepare again is the whole fix.
@@ -810,6 +820,7 @@ cell assigned, so pressing Prepare again is the whole fix.
 - **WHEN** Prepare is pressed with cells assigned
 - **THEN** each cell reaches sheet
 - **AND** no cell outside the assignment changes
+- **AND** while it runs, the strip and bar show matching totals and ticking elapsed time across a reload
 
 #### Scenario: a second job is refused while one runs
 - **Key:** `ui:prepare:one-job-at-a-time`
@@ -838,10 +849,19 @@ cell assigned, so pressing Prepare again is the whole fix.
 - **THEN** the job ends as failed, naming the batch's log
 - **AND** no later stage starts
 
+#### Scenario: totals count cells rather than stage reports
+- **Key:** `ui:prepare:totals-count-cells-not-stages`
+- **Layers:** unit
+- **WHEN** assigned cells report tagging, reading, sheet completion and a refusal
+- **THEN** each cell counts once in the fixed total and only cells reaching sheet count as completed
+- **AND** a repeated completion never increments the count again
+
 ### Requirement: The page is told of a job as it runs
 
 The system SHALL serve an event stream that, on every connection, sends a snapshot of the job slot and, when a batch
-is named, that batch's hub, and then sends each change as the job's stages report it.
+is named, that batch's hub, and then sends each change as the job's stages report it. A running Prepare snapshot
+SHALL carry its accepted total, completed count and start time. When the surface stops, its streams SHALL end before
+the server's graceful wait expires, without cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
 
 A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it.
 
@@ -857,6 +877,19 @@ A reload or a second tab gets the whole truth at once; a job's progress reaches 
 - **WHEN** a running stage reports an item done
 - **THEN** the stream sends that cell's new stage
 
+#### Scenario: a reconnect keeps Prepare progress
+- **Key:** `ui:events:a-reconnect-keeps-prepare-progress`
+- **Layers:** unit
+- **WHEN** a connection is opened while Prepare has completed part of its work
+- **THEN** its snapshot carries the same fixed total, completed count and start time as the running job
+
+#### Scenario: stopping ends open streams quietly
+- **Key:** `ui:events:stopping-ends-open-streams-quietly`
+- **Layers:** unit
+- **WHEN** the surface receives a terminal interrupt with event streams open
+- **THEN** the streams end within the graceful wait and the surface exits with status 130 without cancellation errors
+- **AND** a running job is interrupted and its cleanup and recovery messages remain visible
+
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
 The system SHALL open, for a batch, a dialog listing per offered flow the images that will render and what is left
@@ -868,8 +901,9 @@ Render SHALL be disabled, with its reason, when nothing is short of its count, w
 be billing, and when no RunPod key is in the surface's environment.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
-not a guess. A reload never reopens a confirmation that spends, and an approval made while the dialog is open never
-renders what the operator did not see, even where the limit already sits at its floor or its cap.
+not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
+a fresh confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals
+is outside that comparison.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -911,8 +945,9 @@ window's opening SHALL render nothing and raise the volume alert; a failed close
 cannot be started SHALL end failed, naming the batch's log, and still close the window. Stop SHALL interrupt the
 rendering verb, which tears its pod down. The surface stopping SHALL do the same, and SHALL wait for the pod's
 teardown and the window's close before it exits, for at most the teardown's estimate and one volume verb, saying so
-on its terminal as the wait begins; a wait that runs out with the window not closed SHALL name the command that
-closes it. An interrupt at the surface's terminal SHALL reach no child of the job.
+on its terminal as the wait begins. After that wait, a window not kept whose close has failed or remains unfinished
+SHALL cause the terminal to name the command that closes it, even when the worker has ended; kept and successfully
+closed windows SHALL need no close remedy. An interrupt at the surface's terminal SHALL reach no child of the job.
 
 The volume is the job's to open and to close, so no step depends on the operator remembering one, and a surface that
 exits mid-render leaves no window billing that was not kept. The wait is bounded so a hung verb cannot hold the
@@ -943,7 +978,7 @@ open.
 #### Scenario: a stop that outlasts its wait names the fix
 - **Key:** `ui:render-job:an-outlasted-stop-names-the-fix`
 - **Layers:** unit
-- **WHEN** the surface stops mid-render and the pod's teardown outlasts the wait
+- **WHEN** the surface stops mid-render with its window not kept and teardown outlasts the wait
 - **THEN** the surface names the command that closes the window
 
 #### Scenario: a verb that cannot start fails the job
@@ -952,6 +987,18 @@ open.
 - **WHEN** the rendering verb cannot be started after the window opens
 - **THEN** the job ends failed, naming the batch's log
 - **AND** the window is closed
+
+#### Scenario: a failed close at stop names the fix
+- **Key:** `ui:render-job:a-failed-close-at-stop-names-the-fix`
+- **Layers:** unit
+- **WHEN** the surface stops mid-render and the window close fails before the wait ends
+- **THEN** the terminal names the command that closes the window even though its worker has ended
+
+#### Scenario: a kept window needs no close remedy
+- **Key:** `ui:render-job:a-kept-window-needs-no-close-remedy`
+- **Layers:** unit
+- **WHEN** the surface stops mid-render with the window kept
+- **THEN** the pod is torn down and the window is left open without a close-remedy warning
 
 ### Requirement: Billing state is read from gpunit's own records
 

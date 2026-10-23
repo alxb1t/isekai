@@ -9,6 +9,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
+
+Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s
+
 ### Fixed
 
 - End event streams before the server’s shutdown wait and return quietly on Ctrl-C after cleanup;
