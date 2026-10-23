@@ -2,11 +2,16 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { assign, hub, prepare, renderOffer, stopJob } from '../api'
+import { bar as barOf, dismiss, failed } from '../bars'
+import { action, clicks, targets } from '../cells'
+import { assign, hub, prepare, sourceAt, sourceThumbAt, stopJob } from '../api'
+import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
+import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useLive } from '../composables/useLive'
+import { useRenderOffer } from '../composables/useRenderOffer'
 import { firstFlow, queue } from '../composables/useQueue'
 import type { CellEvent, HubCell, HubInfo, HubSource, Stage } from '../types'
 
@@ -21,26 +26,19 @@ const refusal = ref<string | null>(null)
 const grid = ref<HTMLElement | null>(null)
 const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 const adding = ref(false)
-/* The Render dialog is up; it has no URL of its own (design spec §1 rule 8). */
-const rendering = ref(false)
-/* Why Render is disabled, from the server's quote; null while it is offered. */
-const renderBlocked = ref<string | null>(null)
+/* The source open in the viewer, or null. */
+const viewing = ref<HubSource | null>(null)
+const { offer, dialog, rendering, check: checkRender, open, close } = useRenderOffer(props.batch)
 
-async function checkRender(): Promise<void> {
-  try {
-    renderBlocked.value = (await renderOffer(props.batch)).disabled
-  } catch (reason) {
-    renderBlocked.value = (reason as Error).message
-  }
-}
-
+/* Render opens only from its own bar: while changes wait, Prepare holds it. */
 function openRender(): void {
-  if (renderBlocked.value === null) rendering.value = true
+  if (shown.value === 'render') open()
 }
 /* The rows selected with ⇧↑↓; a column is ticked for all of them at once. */
 const selected = ref<Set<number>>(new Set())
-/* The job slot and billing are the shell's live state; this stream brings cells. */
-const { job, billing, prepareTotals } = useLive()
+/* The job slot is the shell's live state; this stream brings cells. A render
+   holds the one slot, so Prepare waits while it is `blocked`. */
+const { job, renderRunning: blocked, prepareTotals } = useLive()
 /* The Prepare bar's refusal, the CLI's own text (J8a). */
 const barRefusal = ref<string | null>(null)
 /* Each cell's refusal from a tick or from the job, by `source|flow`. */
@@ -77,8 +75,6 @@ const RUNNING: Record<string, { segment: number; word: string }> = {
 const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
-/* A render holds the one slot: Prepare waits, with its reason. */
-const blocked = computed(() => job.value?.state === 'running' && job.value.kind === 'render')
 
 /* Review next: the first unapproved sheet of the first flow that has any. */
 const next = computed(() => {
@@ -98,11 +94,26 @@ const changes = computed(() =>
       .map((flow) => ({ source, flow })),
   ),
 )
-const bar = computed(() => busy.value || changes.value.length > 0 || barRefusal.value !== null)
+/* The one bar the hub shows: Prepare first, then Render, then none. */
+const shown = computed(() =>
+  barOf({
+    changes: changes.value.length,
+    preparing: busy.value || barRefusal.value !== null,
+    images: offer.value.images,
+    refused: offer.value.refused !== null,
+    rendering: rendering.value,
+  }),
+)
 
 /* A cell's key in the maps of refusals and running stages. */
 function at(name: string, flow: string): string {
   return `${name}|${flow}`
+}
+
+/* A source's display name: its file's name without the extension. */
+function stem(name: string): string {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(0, dot) : name
 }
 
 function key(source: HubSource, flow: string): string {
@@ -110,7 +121,9 @@ function key(source: HubSource, flow: string): string {
 }
 
 function cell(source: HubSource, flow: string): HubCell {
-  return source.cells[flow] ?? { stage: null, renders: 0, refusal: null, status: null }
+  return (
+    source.cells[flow] ?? { stage: null, renders: 0, refusal: null, status: null, newest: null }
+  )
 }
 
 function pending(found: HubCell): boolean {
@@ -141,12 +154,49 @@ function reviewable(source: HubSource, flow: string): boolean {
   return source.digest !== null && cell(source, flow).status !== null
 }
 
+/* The focused cell's action hint, or null where it offers none here. */
+function hint(source: HubSource, flow: string): string | null {
+  const found = action(cell(source, flow))
+  if (found.action === 'review' || found.action === 'sheet')
+    return reviewable(source, flow) ? found.hint : null
+  return found.hint
+}
+
 function review(source: HubSource, flow: string): void {
   if (reviewable(source, flow))
     void router.push({
       name: 'review',
       params: { batch: props.batch, digest: source.digest, flow },
     })
+}
+
+/* The large view of a cell's newest image; Esc there comes back here. */
+function view(source: HubSource, flow: string): void {
+  const newest = cell(source, flow).newest
+  if (source.digest === null || newest === null) return
+  void router.push({
+    name: 'render',
+    params: {
+      batch: props.batch,
+      digest: source.digest,
+      flow,
+      version: `v${newest.version}`,
+      seed: newest.seed,
+    },
+    state: { from: 'hub' },
+  })
+}
+
+/* A click or ↵ on a cell: whatever its stage offers. A click ticks its own cell
+   alone; ↵, as space, the selected rows. */
+function act(row: number, column: number, pointer = false): void {
+  const source = sources.value[row]
+  const flow = flows.value[column]
+  if (!source || !flow) return
+  const kind = action(cell(source, flow)).action
+  if (kind === 'tick') toggle(row, column, pointer)
+  else if (kind === 'review' || kind === 'sheet') review(source, flow)
+  else if (kind === 'view') view(source, flow)
 }
 
 function apply(name: string, flow: string, found: HubCell): void {
@@ -172,21 +222,25 @@ async function tick(targets: HubSource[], flow: string, remove: boolean): Promis
 }
 
 /* Space on a cell: tick it, or untick it while it is only assigned. With rows
-   selected, the focused column is ticked for every one of them. */
-function toggle(row: number, column: number): void {
+   selected, the focused column is ticked for every one of them; a pointer's
+   click ticks its own cell alone. */
+function toggle(row: number, column: number, pointer = false): void {
   const flow = flows.value[column]
   if (!flow) return
-  if (selected.value.size > 0) {
-    const rows = [...selected.value].map((index) => sources.value[index]).filter(Boolean)
-    const unticked = rows.some((one) => cell(one, flow).stage === null)
-    void tick(rows, flow, !unticked)
-    return
-  }
-  const source = sources.value[row]
-  if (!source) return
-  const found = cell(source, flow)
-  if (locked(found)) return
-  void tick([source], flow, found.stage === 'assigned')
+  const rows = targets(selected.value, row, pointer)
+    .map((index) => sources.value[index])
+    .filter((one): one is HubSource => one !== undefined)
+  if (rows.length === 0) return
+  const unticked = rows.some((one) => cell(one, flow).stage === null)
+  void tick(rows, flow, !unticked)
+}
+
+/* A pointer's click on a cell; one on its refusal, or ending a text selection,
+   leaves it as it is. */
+function clicked(event: MouseEvent, row: number, column: number): void {
+  place(row, column)
+  if (clicks(event.target as Element | null, window.getSelection()?.toString() ?? ''))
+    act(row, column, true)
 }
 
 async function runPrepare(): Promise<void> {
@@ -207,9 +261,11 @@ async function stop(): Promise<void> {
   }
 }
 
-/* Discard unticks every pending cell that holds no work yet. */
+/* Discard unticks every pending cell that holds no work yet, and dismisses this
+   batch's failed Prepare, so a hub opened again in this page does not show it. */
 function discard(): void {
   barRefusal.value = null
+  dismiss(job.value, props.batch)
   for (const flow of flows.value) {
     const rows = sources.value.filter((one) => cell(one, flow).stage === 'assigned')
     if (rows.length) void tick(rows, flow, true)
@@ -245,11 +301,11 @@ function select(step: number): void {
   place(target, column)
 }
 
-/* ↑↓←→ move between cells, space ticks, ⇧↑↓ selects rows, ↵ opens the focused
-   cell's Review, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
+/* ↑↓←→ move between cells, space ticks, ⇧↑↓ selects rows, ↵ runs the focused
+   cell's action, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
    selection. Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
-  if (adding.value || rendering.value) return
+  if (adding.value || dialog.value || viewing.value) return
   const { row, column } = focus.value
   if (event.altKey && event.code === 'Digit2') {
     event.preventDefault()
@@ -293,8 +349,7 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.key === 'Escape') {
     selected.value = new Set()
   } else if (event.key === 'Enter') {
-    const here = sources.value[row]
-    if (here) review(here, flows.value[column])
+    act(row, column)
   }
 }
 
@@ -316,21 +371,27 @@ function listen(): void {
   })
 }
 
-/* A job that ends changes the cells and what Render offers. */
+/* A failed Prepare is shown, the one that ended before this hub opened too. */
+watch(
+  job,
+  (slot) => {
+    const message = failed(slot, props.batch)
+    if (message !== null) barRefusal.value = message
+  },
+  { immediate: true },
+)
+
+/* A job that ends changes the cells. */
 watch(job, (slot, before) => {
-  if (slot?.state === 'failed' && slot.kind === 'prepare') barRefusal.value = slot.message
   if (before?.state === 'running' && slot?.state !== 'running') {
     running.value = {}
     void hub(props.batch).then((read) => (info.value = read))
-    void checkRender()
   }
 })
 
-/* A pod alert raised or cleared changes what Render offers. */
-watch(billing, () => void checkRender())
-
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
+  void checkRender()
   try {
     info.value = await hub(props.batch)
   } catch (reason) {
@@ -338,7 +399,6 @@ onMounted(async () => {
     return
   }
   listen()
-  void checkRender()
   place(0, 0)
 })
 
@@ -352,11 +412,15 @@ onUnmounted(() => {
   <RefusalPage v-if="refusal" :refusal="refusal" />
   <section v-else-if="info" class="hub">
     <ImportSheet v-if="adding" :batch="batch" @close="adding = false" @imported="added" />
-    <RenderDialog
-      v-if="rendering"
-      :batch="batch"
-      @close="(rendering = false), void checkRender()"
+    <ImageViewer
+      v-if="viewing"
+      :src="sourceAt(batch, viewing.name)"
+      :name="viewing.name"
+      :width="viewing.width"
+      :height="viewing.height"
+      @close="viewing = null"
     />
+    <RenderDialog v-if="dialog" :batch="batch" @close="close" />
     <div class="hub__head">
       <span class="mono">
         {{ sources.length }} {{ noun(sources.length, 'source') }} ×
@@ -368,23 +432,13 @@ onUnmounted(() => {
       <button
         v-if="next"
         class="btn"
-        :class="bar ? 'btn-secondary' : 'btn-primary'"
+        :class="shown ? 'btn-secondary' : 'btn-primary'"
         type="button"
         @click="reviewNext"
       >
         Review next · {{ next.source.name }} {{ next.flow }}<span class="appbar__key">⌥2</span>
       </button>
       <span v-else class="hub__reason">nothing left to review</span>
-      <span v-if="renderBlocked" class="hub__reason" data-render-reason>{{ renderBlocked }}</span>
-      <button
-        class="btn btn-secondary"
-        type="button"
-        data-render
-        :disabled="renderBlocked !== null"
-        @click="openRender"
-      >
-        Render…<span class="appbar__key">⌥R</span>
-      </button>
     </div>
     <div
       ref="grid"
@@ -404,20 +458,30 @@ onUnmounted(() => {
       </button>
       <template v-for="(source, row) in sources" :key="source.name">
         <div class="hub__source" :class="{ 'hub__source--selected': selected.has(row) }">
-          <span class="hub__name mono">
-            <input
-              v-if="selected.size > 0"
-              class="hub__tick"
-              type="checkbox"
-              :checked="selected.has(row)"
-              :aria-label="`select ${source.name}`"
-              @change="selected.has(row) ? selected.delete(row) : selected.add(row)"
-            />{{ source.name }}
+          <button
+            class="hub__thumb"
+            type="button"
+            :aria-label="`view ${source.name}`"
+            @click="viewing = source"
+          >
+            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+          </button>
+          <span class="hub__about">
+            <span class="hub__name mono">
+              <input
+                v-if="selected.size > 0"
+                class="hub__tick"
+                type="checkbox"
+                :checked="selected.has(row)"
+                :aria-label="`select ${source.name}`"
+                @change="selected.has(row) ? selected.delete(row) : selected.add(row)"
+              />{{ stem(source.name) }}
+            </span>
+            <span class="hub__file mono">
+              {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
+            </span>
+            <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
           </span>
-          <span class="hub__file mono">
-            {{ source.name }}<template v-if="source.width"> · {{ source.width }}×{{ source.height }}</template>
-          </span>
-          <span v-if="source.carries.length" class="hub__warn mono">⚠ not cleaned</span>
         </div>
         <div
           v-for="(flow, column) in flows"
@@ -430,8 +494,7 @@ onUnmounted(() => {
           :data-flow="flow"
           :data-stage="cell(source, flow).stage ?? 'none'"
           tabindex="-1"
-          @click="place(row, column)"
-          @dblclick="review(source, flow)"
+          @click="clicked($event, row, column)"
         >
           <input
             class="hub__tick"
@@ -440,7 +503,7 @@ onUnmounted(() => {
             :checked="cell(source, flow).stage !== null"
             :disabled="locked(cell(source, flow))"
             :aria-label="`${source.name} × ${flow}`"
-            @click.prevent="toggle(row, column)"
+            @click.prevent.stop="place(row, column), toggle(row, column, true)"
           />
           <template v-if="cell(source, flow).stage !== null">
             <span class="hub__track">
@@ -462,9 +525,9 @@ onUnmounted(() => {
               >prepared · the tick stays</span
             >
             <span
-              v-if="focus.row === row && focus.column === column && reviewable(source, flow)"
+              v-if="focus.row === row && focus.column === column && hint(source, flow)"
               class="hub__action mono"
-              >↵ review</span
+              >{{ hint(source, flow) }}</span
             >
             <p v-if="cell(source, flow).refusal" class="hub__refusal">
               <span class="refusal__mark" />{{ cell(source, flow).refusal }}
@@ -477,10 +540,18 @@ onUnmounted(() => {
       </template>
     </div>
     <p class="hub__keys mono">
-      ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's review · ⌥A add sources ·
+      ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources ·
       ⌥2 review next · ⌥R render · ⌥0 library
     </p>
-    <div v-if="bar" class="prepare-bar">
+    <RenderBar
+      v-if="shown === 'render'"
+      :images="offer.images"
+      :disabled="offer.disabled"
+      :refused="offer.refused"
+      :rendering="rendering"
+      @open="openRender"
+    />
+    <div v-else-if="shown === 'prepare'" class="prepare-bar" :class="{ running: busy }">
       <template v-if="busy">
         <span class="prepare-bar__cells mono">
           Prepare · {{ prepareTotals(job) }}

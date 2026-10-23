@@ -95,7 +95,7 @@ from isekai.shared.image import THUMB_SIDE  # noqa: E402
 from isekai.shared.vocabulary import Vocabulary  # noqa: E402
 from tests.conftest import snapshot  # noqa: E402
 from tests.fakes import FakeComfyClient  # noqa: E402
-from tests.images import jpeg_bytes, photo_jpeg  # noqa: E402
+from tests.images import jpeg_bytes, photo_jpeg, png_bytes  # noqa: E402
 from tests.stages import (  # noqa: E402
     FIELD_MAP,
     NO_GPUNIT,
@@ -1378,6 +1378,29 @@ def test_a_cells_approvals_are_listed_newest_first_with_their_images(
     ]
 
 
+@pytest.mark.spec("ui:renders:a-cell-counts-what-is-ready")
+def test_a_cell_counts_the_images_its_newest_approval_lacks(
+    wired: Wiring,
+    made: Run,
+    tmp_path: Path,
+    schema: Schema,
+    vocabulary: Vocabulary,
+) -> None:
+    _source(made)
+    _rendered_twice(made, schema, vocabulary)
+    _approved_again(made, schema, vocabulary, {"count": 3, "seeds": [22]})
+    flow = load_flow(FLOW)
+    prepare(made, {FLOW: flow})
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+    render(made, flow, comfy, seeds=[22], poll=0)
+    client = _client(wired, made, tmp_path, drafted=False)
+
+    body = client.get(f"/api/b/{BATCH}/renders").json()
+
+    (source,) = body["sources"]
+    assert source["ready"] == {FLOW: 2, "conjure-anime-wai": 0}
+
+
 @pytest.mark.spec("ui:renders:a-thumbnail-is-made-once")
 def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     wired: Wiring,
@@ -1412,6 +1435,75 @@ def test_a_thumbnail_asked_for_twice_is_read_from_the_cache_the_second_time(
     assert thumb_file.read_bytes() == first.content
 
 
+@pytest.mark.spec("ui:renders:a-source-thumbnail-is-upright")
+def test_a_source_thumbnail_is_turned_upright_and_read_from_the_cache_again(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from PIL import Image
+
+    # Orientation 6 turns a wide file a quarter turn: upright, it is tall.
+    turned = Image.Exif()
+    turned[0x0112] = 6
+    sources = tmp_path / "lib" / BATCH / "sources"
+    (sources / "turned.jpg").write_bytes(
+        photo_jpeg((30, 60, 90), (800, 400), exif=turned.tobytes())
+    )
+    made: list[Path] = []
+    upright = library._upright
+
+    def counted(source: Path) -> bytes:
+        made.append(source)
+        return upright(source)
+
+    monkeypatch.setattr(library, "_upright", counted)
+    thumb = f"/api/b/{BATCH}/sources/turned.jpg/thumb"
+
+    first = client.get(thumb)
+    second = client.get(thumb)
+
+    assert first.status_code == second.status_code == 200
+    assert first.headers["content-type"] == "image/jpeg"
+    with Image.open(io.BytesIO(first.content)) as shown:
+        width, height = shown.size
+    assert height > width
+    assert second.content == first.content
+    assert len(made) == 1
+    whole = client.get(f"/api/b/{BATCH}/sources/turned.jpg")
+    assert whole.content == (sources / "turned.jpg").read_bytes()
+    assert client.get(f"/api/b/{BATCH}/sources/absent.jpg/thumb").status_code == 409
+
+
+@pytest.mark.spec("ui:renders:a-photograph-is-served-as-its-bytes")
+def test_a_source_named_as_a_page_is_served_as_the_image_it_is(
+    client: TestClient, made: Run, tmp_path: Path
+) -> None:
+    sources = tmp_path / "lib" / BATCH / "sources"
+    (sources / "portrait.html").write_bytes(png_bytes(40, 30))
+
+    whole = client.get(f"/api/b/{BATCH}/sources/portrait.html")
+    photo = client.get(_at(made, "/photo"))
+
+    assert whole.status_code == 200
+    assert whole.headers["content-type"] == "image/png"
+    assert whole.headers["x-content-type-options"] == "nosniff"
+    assert photo.headers["content-type"] == "image/jpeg"
+    assert photo.headers["x-content-type-options"] == "nosniff"
+    # A source in a format the render does not read, placed by hand, is served as
+    # an upright JPEG of it, so the viewer shows what its thumbnail does.
+    from PIL import Image
+
+    held, turned = io.BytesIO(), Image.Exif()
+    turned[0x0112] = 6
+    Image.new("RGB", (40, 30), (30, 60, 90)).save(held, "WEBP", exif=turned.tobytes())
+    (sources / "pose.webp").write_bytes(held.getvalue())
+    other = client.get(f"/api/b/{BATCH}/sources/pose.webp")
+    assert other.status_code == 200
+    assert other.headers["content-type"] == "image/jpeg"
+    assert other.headers["x-content-type-options"] == "nosniff"
+    with Image.open(io.BytesIO(other.content)) as shown:
+        assert (shown.format, shown.size) == ("JPEG", (30, 40))
+
+
 @pytest.mark.spec("ui:renders:a-damaged-approval-marks-its-version")
 def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     wired: Wiring,
@@ -1435,6 +1527,10 @@ def test_a_damaged_approval_marks_its_own_version_and_the_rest_are_shown(
     assert (newer["version"], newer["rendered"], newer["damaged"]) == (2, ["22"], None)
     assert (damaged["version"], damaged["rendered"]) == (1, ["11"])
     assert older.name in damaged["damaged"]
+    # Its image's large view is headed damaged too, naming the file, not counted.
+    large = client.get(f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}/v1/11").json()
+    assert older.name in large["damaged"]
+    assert large["count"] is None
 
 
 def _approved_again(
@@ -1460,19 +1556,32 @@ def test_a_version_is_headed_a_revision_or_a_re_roll_of_the_one_it_came_from(
     schema: Schema,
     vocabulary: Vocabulary,
 ) -> None:
+    flow = load_flow(FLOW)
+    comfy = FakeComfyClient(view_bytes=photo_jpeg((90, 60, 30), (640, 800)))
+
+    def rendered(seed: int) -> None:
+        prepare(made, {FLOW: flow})
+        render(made, flow, comfy, seeds=[seed], poll=0)
+
     _source(made)
     review(made, FLOW)
     approve(made, FLOW, schema, vocabulary)
+    rendered(7)
     _approved_again(made, schema, vocabulary, clothes=["collared shirt"])
+    rendered(7)
     _approved_again(made, schema, vocabulary, {"count": 1, "seeds": [5]})
+    rendered(5)
     client = _client(wired, made, tmp_path, drafted=False)
+    large = f"/api/b/{BATCH}/renders/{made.digest}/{FLOW}"
 
-    body = client.get(f"/api/b/{BATCH}/renders").json()
+    views = [client.get(f"{large}/{at}").json() for at in ("v3/5", "v2/7", "v1/7")]
 
-    (source,) = body["sources"]
-    assert [
-        (one["version"], one["came_from"], one["kind"]) for one in source["cells"][FLOW]
-    ] == [(3, 2, "re-roll"), (2, 1, "revision"), (1, None, None)]
+    assert [(one["version"], one["came_from"], one["kind"]) for one in views] == [
+        (3, 2, "re-roll"),
+        (2, 1, "revision"),
+        (1, None, None),
+    ]
+    assert (views[0]["count"], views[0]["seeds"]) == (1, ["5"])
 
 
 @pytest.mark.spec("ui:compare:a-seed-pairs-with-its-newest-older-version")

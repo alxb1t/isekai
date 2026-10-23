@@ -31,6 +31,8 @@ export interface LibraryRow {
   name: string
   batch: boolean
   sources: number
+  /* The first sources' names, in the hub's order: the row's thumbnails. */
+  thumbs: string[]
   flows: FlowCount[]
   without_flow: number
   newest: number | null
@@ -57,6 +59,8 @@ export interface HubCell {
   refusal: string | null
   /* Where stage ③ stands, where the cell has a sheet; null otherwise. */
   status: InputStatus | null
+  /* The last-written image of the newest version holding any; its seed a decimal string. */
+  newest: { version: number; seed: string } | null
 }
 
 export interface HubSource {
@@ -270,7 +274,21 @@ export interface RenderVersion {
 
 export interface RendersInfo {
   flows: string[]
-  sources: { name: string; digest: string | null; cells: Record<string, RenderVersion[]> }[]
+  sources: {
+    name: string
+    digest: string | null
+    /* How many images each flow's newest approval lacks, as the render stage counts. */
+    ready: Record<string, number>
+    cells: Record<string, RenderVersion[]>
+  }[]
+}
+
+/* A batch's Render offer: the images it lacks, why Render is disabled, and why
+   an approval's count is refused, each null when there is none. */
+export interface RenderOffer {
+  disabled: string | null
+  images: number
+  refused: string | null
 }
 
 /* An image's large view: the approval it was rendered from, filled fields only. */
@@ -280,6 +298,14 @@ export interface RenderDetail {
   seed: string
   fields: Record<string, string[]>
   approved_at: number | null
+  /* The version this one was copied from and what changed, as `RenderVersion`'s. */
+  came_from: number | null
+  kind: 'revision' | 're-roll' | null
+  /* Null where the approval is damaged. */
+  count: number | null
+  seeds: string[]
+  /* Why the approval's `renders` is refused, naming the file, or null. */
+  damaged: string | null
   /* The newest older version that rendered this seed, or null. */
   compare: number | null
 }

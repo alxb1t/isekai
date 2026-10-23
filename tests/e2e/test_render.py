@@ -10,7 +10,15 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e.conftest import COMPARED, FLOW, RENDER, REVISED, SHOWN, Served
+from tests.e2e.conftest import (
+    COMPARED,
+    DAMAGED,
+    FLOW,
+    RENDER,
+    REVISED,
+    SHOWN,
+    Served,
+)
 
 
 @pytest.mark.spec("ui:render:the-confirmation-starts-the-render")
@@ -34,7 +42,7 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     page: Page, served: Served
 ) -> None:
     page.goto(f"{served.url}/b/{SHOWN}/renders")
-    tile = page.locator("[data-version='1'] [data-seed='7']")
+    tile = page.locator("[data-version='1'][data-seed='7']")
     expect(tile.locator("img")).to_have_js_property("complete", True)
 
     tile.click()
@@ -50,6 +58,55 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     expect(tile).to_have_class(re.compile("renders__image--focused"))
     page.keyboard.press("Enter")
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
+
+
+@pytest.mark.spec("ui:renders:a-source-opens-in-the-viewer")
+def test_a_source_opens_in_the_viewer(page: Page, served: Served) -> None:
+    grid = f"{served.url}/b/{SHOWN}/renders"
+    page.goto(grid)
+
+    page.locator("[data-source-thumb]").click()
+
+    viewer = page.locator("dialog[data-viewer]")
+    expect(viewer).to_be_visible()
+    expect(viewer).to_contain_text("hal.jpg")
+    box, size = viewer.bounding_box(), page.viewport_size
+    assert box is not None and size is not None
+    assert box["width"] <= size["width"] and box["height"] <= size["height"]
+    page.keyboard.press("Escape")
+    expect(viewer).to_have_count(0)
+    expect(page).to_have_url(grid)
+
+
+@pytest.mark.spec("ui:renders:a-damaged-versions-images-are-drawn")
+def test_a_damaged_versions_images_are_drawn_and_hold_the_focus(
+    page: Page, served: Served
+) -> None:
+    page.goto(f"{served.url}/b/{DAMAGED}/renders")
+
+    expect(page.locator("[data-damaged]")).to_be_visible()
+    image = page.locator("[data-version='1'][data-seed='7']")
+    expect(image.locator("img")).to_have_js_property("complete", True)
+    expect(image).to_have_class(re.compile("renders__image--focused"))
+    # Its count refuses, so the Render bar stays, disabled, with that reason.
+    bar = page.locator("[data-render-bar]")
+    expect(bar.locator("[data-render-reason]")).to_contain_text("restore it in")
+    expect(bar.locator("[data-render]")).to_be_disabled()
+
+
+@pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")
+def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
+    page.goto(served.hub_of(SHOWN))
+    rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
+
+    rendered.click()
+
+    expect(page).to_have_url(
+        f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+    )
+    expect(page.locator("[data-sheet]")).to_contain_text("v1")
+    page.keyboard.press("Escape")
+    expect(page).to_have_url(served.hub_of(SHOWN))
 
 
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")

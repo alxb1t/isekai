@@ -17,7 +17,8 @@ Vue 3 single-file components, plain CSS, no component library — the stack `ui/
    short (`00003`, `16_01`).
 3. **One accent-outlined action per screen**: the next forward action, or none. Everything else is outlined
    grey.
-4. **A disabled button has its reason beside it**, never in a tooltip.
+4. **A disabled button has its reason beside it**, never in a tooltip, where the screen does not already show why.
+   An action with nothing to do is absent, not disabled.
 5. **A refusal** is a 7×7 accent square, the reason in `ink`, then the fix in `ink-2`. A command or an offered value
    inside the fix is mono, `accent-ink`.
 6. **One job slot**, Prepare or Render. While a job runs, only actions that would start another job are
@@ -148,7 +149,7 @@ J1·4  ┌ New batch   6 files chosen · 5 sources · 1 refused                 
 | J2·4 done: no bar, the accent on Review next | the last cell finishes | same |
 
 ```
-6 sources × 2 flows         [ Add sources… ⌥A ]  [ Review next · 16_01 conjure ⌥2 ]  [ Render 2 ⌥R ]
+6 sources × 2 flows                          [ Add sources… ⌥A ]  [ Review next · 16_01 conjure ⌥2 ]
 SOURCE                 │ summon-anime-wai                 │ conjure-anime-wai
 [▣] 00003              │ ☑ ▰▰▰▰▰▰ rendered ×1      ↵ view │ ☑ ▰▰▰▰▰▱ approved
     00003.png · 832×1216│                                  │
@@ -157,6 +158,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources · ⌥R render
 
         ┌ IMG_0430 × summon · …                 [ Discard ]  [ 3 changes · Prepare ⌘↵ ] ┐   PrepareBar
+        ┌ 2 images ready to render                                        [ Render ⌥R ] ┐   RenderBar
 ```
 
 - **The hub header** leaves a 12 px gap between its items. Add sources keeps its right alignment.
@@ -166,16 +168,30 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
   `tagging…`, `captioning…`, `sheet`, `draft`, `approved`, `rendered ×n`. Running words are `accent-ink`.
 - **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
   the tick stays`).
-- **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`).
+- **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`
+  or `↵ view`).
+- **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
+  sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
+  cell holding images opens its newest image's large view (`↵ view`). The checkbox's own click only ticks.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
 - **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
   cells named in mono 11, Discard, primary `n changes · Prepare ⌘↵`. Running: `Prepare · 1 of 3 cells done · 01:47`,
   Stop. The accepted-cell total stays fixed; the sheet-completed count and ticking elapsed time match JobStrip,
-  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a). Disabled: its reason (`A render is running ·
-  06:41`). There is no done state: the receipt goes to the job strip, the accent to Review next.
+  including across a reload. Finished cells stay done, the rest stay assigned. Refused: the CLI's refusal (J8a), on a
+  hub opened after the failure too. Disabled: its reason (`A render is running · 06:41`). There is no done state: the
+  receipt goes to the job strip, the accent to Review next. Running, a 2 px `accent` line slides along the bar's top
+  edge, as on a running RenderBar, and a running segment pulses `accent-dim` ↔ `accent`; under
+  `prefers-reduced-motion` both stand still, as the import bar's fill does, and the clocks still tick.
+- **The RenderBar** takes the PrepareBar's place, on the hub and on Renders, once no change waits: `n images ready
+  to render`, the render stage's own count, and primary `Render ⌥R`, disabled with its reason. With nothing short it
+  is absent; while a render runs it shows the job strip's totals, `image 1 of 2 · 06:41 of ≤10:30`, and
+  `Session ⌥4`.
 - **The grid:** columns `250px 1fr 1fr…`, full width, no sidebar. Rows at least 84px. The source cell is a
-  44×60 thumbnail, the mono 13 name and mono 11 `file · dims`; a row checkbox appears in selection mode.
+  96×128 thumbnail, a render tile's size, upright, that opens the viewer, the file's stem in mono 13 and mono 11
+  `file · dims`, the size read from the file; a row checkbox appears in selection mode.
+- **The viewer** is a dialog over the page, its URL unchanged: the image fitted, a click for 1:1 pixels, `Esc` or a
+  click outside to close, titled with the name, the dimensions and `fit n%` or `1:1`.
 
 ### J3 · Review and approve
 
@@ -184,7 +200,7 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 | J3·1 the first sheet in summon's queue | ⌥2 Review next | `…/b/2026-10-19/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J3·2 a field edited, the empties marked, Count 2 | edit · Mark 6 empty fields intentional · count + | same |
 | J3·3 the next unapproved sheet in summon | ⌘↵ Approve | `…/review/<16_01's run>/summon-anime-wai` |
-| J3·4 the hub, `Render 3` takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
+| J3·4 the hub, the Render bar, `3 images ready to render`, takes the accent | ⌘↵ Approve on the last one | `…/b/2026-10-19/hub` |
 
 ```
 rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empty · drafted 13:59:30    28 / 77 tokens
@@ -209,7 +225,7 @@ rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empt
 
 | frame | trigger | URL |
 |---|---|---|
-| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⌥R Render 3 | `…/b/2026-10-19/hub` — the dialog has none |
+| J4·1 the Render dialog: 4 images, 9 min, limit 13 min 30 s, about $0.06 | ⌥R Render | `…/b/2026-10-19/hub` — the dialog has none |
 | J4·2 the session, image 2 of 4 | ⌘↵ Render · about $0.06 | `…/session` |
 | J4·3 done: `Nothing is billing.` | the last image lands; teardown and volume down confirm | `…/session` |
 | J4·4 Renders with the four new images | ⌥3 View in Renders | `…/b/2026-10-19/renders` |
@@ -257,9 +273,9 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·3 the Revise confirm over it | ⌥E Revise this image | same |
 | J5·4 Review of the revision: the render beside the photograph, the seed prefilled | ⌘↵ Write 1 draft and review | `…/b/2026-09-17/review/0d4b7e6fb2a8/summon-anime-wai` |
 | J5·5 eye_colour edited | × `light` in eye_colour | same |
-| J5·6 the hub, `Render 1` takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
+| J5·6 the hub, the Render bar, `1 image ready to render`, takes the accent | ⌘↵ Approve — Revise's queue ends | `…/b/2026-09-17/hub` |
 | (J4·1–J4·3 for 1 image, 6 min, about $0.04) | ⌥R · ⌘↵ | `…/session` |
-| J5·7 Renders: v2 above v1, both labelled `⇄ 1840266731` | ⌥3 View in Renders | `…/b/2026-09-17/renders` |
+| J5·7 Renders: v2 after v1, both marked `⇄` | ⌥3 View in Renders | `…/b/2026-09-17/renders` |
 | J5·8 the large view of v2, with `Compare with v1  C` | ↵ on v2 | `…/v2/1840266731` |
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
 
@@ -277,11 +293,15 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       \ swap in place · ← → next revised image · esc back                  [ Revise again ⌥E ]
 ```
 
-- **Renders** is a grid of sources × flows. In each cell, versions newest first; the header line gives the version,
-  `revision of v1` or `re-roll of v1`, the approval time, the Count and the seeds. A seed shared across versions is
-  labelled `⇄ seed` in `accent-ink`.
+- **Renders** is a grid of sources × flows, each source its upright thumbnail, opening the viewer, and its name. A
+  cell is one wrapped row of thumbnails, versions oldest to newest, each with a `vN` badge and `⇄` in `accent-ink` when its
+  seed is shared across versions. A damaged version is a striped tile before its images, its refusal under the
+  cell. Last comes the ready tile, `ready · n images`, while the newest version lacks images of its Count, the render
+  stage's own count. The Render bar offers them. The version's heading — `revision of v1` or `re-roll of v1`, the
+  approval time, the Count and the seeds — is in the large view.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
-  (filled fields only, read-only), the photograph a key away (⌥C). `Compare with v1  C` appears when another version
+  (filled fields only, read-only), the photograph a key away (⌥C). `Esc` and its back button go back to
+  where it was opened: the hub, or else Renders. `Compare with v1  C` appears when another version
   of the same source × flow shares the seed; with several, it compares with the newest older one.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised
@@ -297,7 +317,7 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
 | (the large view of 00003 · conjure v1, as J5·2; the confirm, as J5·3) | ↵ · ⌥E · ⌘↵ | `…/renders/0d4b7e6fb2a8/conjure-anime-wai/v1/2216093514` |
 | J6·1 Review: the seed cleared, Count 3, the tags untouched | × the seed · count + + | `…/review/0d4b7e6fb2a8/conjure-anime-wai` |
 | (J4 for 3 images, 8 min, about $0.05) | ⌘↵ Approve · ⌥R · ⌘↵ | `…/session` |
-| J6·2 Renders: three new images above v1, no pair | ⌥3 | `…/b/2026-09-17/renders` |
+| J6·2 Renders: three new images after v1, no pair | ⌥3 | `…/b/2026-09-17/renders` |
 
 Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`, `was 1840266731 · cleared`.
 
@@ -312,8 +332,7 @@ Changes in ④ are marked like changed fields: the gutter dot and `was 1 in v1`,
 | J7·4 two new rows, bare checkboxes | ⌘↵ Import 2 | same |
 
 ```
-J7·1  [ New batch ⌥N ]
-      LIBRARY · 4 batches · newest activity first
+J7·1  LIBRARY · 4 batches · newest activity first                              [ New batch ⌥N ]
       BATCH            SOURCES  ▢▢▢▢▢▢▢+5  FLOWS                                         LAST ACTIVITY ↓
       2026-09-17       6 sources [thumbs]  [summon-anime-wai 2/5 approved · 1/5 rendered]
                                            [conjure-anime-wai 1/2 approved · 0/2 rendered]  today 15:31
@@ -322,9 +341,9 @@ J7·1  [ New batch ⌥N ]
                          to clear this row.                                                  can't be opened
 ```
 
-- **Home's row**: the name, `n sources`, up to seven 28×38 thumbnails then `+n`, one chip per flow present
-  (its denominator the sources that have it; chips wrap), `n sources without a flow`, and last activity — the time
-  and kind of the newest file written in the batch. Sorted by last activity; a folder without `sources/`
+- **Home's row**: the name, `n sources`, up to seven 84×114 thumbnails then `+n`, wrapping in a narrow window, one
+  chip per flow present (its denominator the sources that have it; chips wrap), `n sources without a flow`, and last
+  activity — the time and kind of the newest file written in the batch. Sorted by last activity; a folder without `sources/`
   sorts last, striped and inert; dot-folders, `.staging` among them, are not listed.
 - **A running render's row** has an accent left edge (`inset 2px 0 0`), background `#1b1c2c`,
   `● render running · 06:41` and `image 1 of 2`.
@@ -361,8 +380,8 @@ J7·1  [ New batch ⌥N ]
 | Hub | Add sources, nothing new | Import disabled `Nothing new to add` |
 | Hub | the batch is gone | a full-page refusal, `Back to the library ⌥0` |
 | Render | refused before billing | the CLI's refusal: no GPU free, no key in `.env`; `nothing billed` when true |
-| Render | disabled | `Every approved source × flow already has its Count of images.` · `Prepare is running · 01:42` · `A pod may still be billing.` |
-| Renders | empty | the count of approvals short of their Count, with Render; with nothing approved, Review next |
+| Render | disabled | `Prepare is running · 01:42` · `A pod may still be billing.` |
+| Renders | empty | each short cell's ready tile and the Render bar; with nothing approved, Review next |
 | Renders | a missing image | `its record is there, its image is gone`, the path in the fix |
 | Renders | Revise disabled | `No image selected` · `Prepare is running · 01:42` |
 

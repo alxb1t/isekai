@@ -39,6 +39,7 @@ POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
 POST /api/b/{batch}/revise              {images: [{digest, flow, version, seed}]}
 GET  /api/b/{batch}/renders   ·   GET …/renders/{digest}/{flow}/{version}/{seed}
      and its /image, /thumb and /compare
+GET  /api/b/{batch}/sources/{name}   and its /thumb
 GET  /api/tags   ·   GET /api/fields?flow=
 GET  anything else                                 the bundle's index.html
 ```
@@ -67,7 +68,6 @@ from isekai.foundation.artifacts import (
     CAPTION_FILE,
     DRAFT_FILE,
     ONE_RENDER,
-    SEED_RANGE,
     TAGS_FILE,
     WD14_FILE,
     Renders,
@@ -83,6 +83,7 @@ from isekai.foundation.run import (
     CAPTIONS,
     REVIEW,
     SHEETS,
+    SIGNATURE_BYTES,
     TAGS,
     WD14,
     Run,
@@ -90,8 +91,10 @@ from isekai.foundation.run import (
     approved_versions,
     assign,
     find_run,
+    is_seed,
     is_version,
     latest_artifact,
+    media_type,
     open_run,
     stage_command,
 )
@@ -101,7 +104,7 @@ from isekai.interface.ui.billing import Billing
 from isekai.interface.ui.jobs import Jobs, plan
 from isekai.interface.wiring import Wiring
 from isekai.pipeline import importing
-from isekai.pipeline.generate import image_of
+from isekai.pipeline.generate import image_of, shortfall
 from isekai.pipeline.review import (
     ENCODER_WINDOW,
     Revision,
@@ -339,7 +342,7 @@ def create_app(
                 if run is not None:
                     assign(run, flow, remove=remove)
                 cell = library.stage(run, flow, suffix) if run else library.Cell(None)
-                cells[name] = asdict(cell)
+                cells[name] = _cell_out(cell)
             except Refusal as one:
                 refused[name] = str(one)
         return {"cells": cells, "refused": refused}
@@ -448,13 +451,17 @@ def create_app(
 
     @app.get("/api/b/{batch}/render")
     def read_render_offer(batch: str) -> dict[str, Any]:
-        """Return why Render is disabled for the batch, or null; it prices nothing."""
-        held = _held()
-        if held is not None:
-            return {"disabled": held}
+        """Return how many images the batch lacks, and why Render is disabled, or null.
+
+        It prices nothing; the count is the render stage's own. `refused` is why an
+        approval's count cannot be read, or null: the bar shows it with none short.
+        """
         runs = folder(batch) / library.RUNS
+        short = render.short(runs, render.run_ids(runs), wire(runs))
         return {
-            "disabled": render.short(runs, render.run_ids(runs), wire(runs)).blocked
+            "disabled": _held() or short.blocked,
+            "images": sum(short.images.values()),
+            "refused": short.refused[0] if short.refused else None,
         }
 
     @app.post("/api/b/{batch}/render/quote")
@@ -643,9 +650,9 @@ def create_app(
         }
 
     @app.get("/api/b/{batch}/review/{digest}/{flow}/photo")
-    def read_photo(batch: str, digest: str, flow: str) -> FileResponse:
+    def read_photo(batch: str, digest: str, flow: str) -> Response:
         """Serve the photograph's bytes, whole. `image.py` reads headers, not pixels."""
-        return FileResponse(held(batch, digest, flow).run.photo)
+        return _photograph(held(batch, digest, flow).run.photo)
 
     @app.put("/api/b/{batch}/review/{digest}/{flow}/draft")
     def put_draft(
@@ -770,7 +777,11 @@ def create_app(
 
     @app.get("/api/b/{batch}/renders")
     def read_renders(batch: str) -> dict[str, Any]:
-        """Return each source's images by offered flow, approvals newest first."""
+        """Return each source's images by offered flow, approvals newest first.
+
+        `ready` is how many images each flow's newest approval lacks, as the
+        render stage counts them.
+        """
         suffixes = {flow: offered(flow).output_suffix for flow in flows}
         return {
             "flows": list(flows),
@@ -778,6 +789,7 @@ def create_app(
                 {
                     "name": one.name,
                     "digest": one.digest,
+                    "ready": {flow: _ready(one.run, offered(flow)) for flow in flows},
                     "cells": {
                         flow: [
                             _version_out(version)
@@ -815,17 +827,40 @@ def create_app(
     def read_render(
         batch: str, digest: str, flow: str, version: str, seed: int
     ) -> dict[str, Any]:
-        """Return one render's large view: the approval's filled fields beside it."""
+        """Return one render's large view: the approval's filled fields beside it.
+
+        It is headed by what the version was: the one it came from, a revision or
+        a re-roll, and its count and seeds; or, where its `renders` no render
+        takes, damaged, naming the file, with no count.
+        """
         run, _, approval = rendered(batch, digest, flow, version, seed)
         _, fields = _approved(approval)
         number = _version(version)
         suffix = offered(flow).output_suffix
+        held = next(
+            (
+                one
+                for one in library.versions(run, flow, suffix)
+                if one.version == number
+            ),
+            None,
+        )
+        if held is None:
+            raise Refusal(
+                f"{approval.name}: it was gone when its version was listed; reload "
+                "the page"
+            )
         return {
             "flow": flow,
             "version": number,
             "seed": str(seed),
             "fields": {name: tags for name, tags in fields.items() if tags},
             "approved_at": _saved(approval),
+            "came_from": held.came_from,
+            "kind": held.kind,
+            "count": held.count,
+            "seeds": _decimal(held.seeds),
+            "damaged": held.damaged,
             # The newest older version that rendered this seed, or null.
             "compare": library.paired(run, flow, number, seed, suffix),
         }
@@ -872,6 +907,24 @@ def create_app(
         run, image, _ = rendered(batch, digest, flow, version, seed)
         return FileResponse(
             library.thumbnail(root, run, image), media_type="image/jpeg"
+        )
+
+    @app.get("/api/b/{batch}/sources/{name}")
+    def read_source(batch: str, name: str) -> Response:
+        """Serve a source's bytes, whole, with or without a run.
+
+        One in a format the render does not read, placed by hand, is served as an
+        upright JPEG of it, so the viewer shows what its thumbnail does.
+        """
+        source = library.source_files(folder(batch))(name)
+        return _photograph(source, other=library.source_jpeg)
+
+    @app.get("/api/b/{batch}/sources/{name}/thumb")
+    def read_source_thumb(batch: str, name: str) -> FileResponse:
+        """Serve a source's thumbnail, upright, made in the library's cache once."""
+        source = library.source_files(folder(batch))(name)
+        return FileResponse(
+            library.source_thumbnail(root, source), media_type="image/jpeg"
         )
 
     @app.get("/api/{rest:path}")
@@ -965,7 +1018,7 @@ def cell_event(
             "stage": line.get("stage"),
             "state": line.get("state"),
             "message": line.get("message"),
-            "cell": asdict(library.stage(run, flow, suffixes[flow])),
+            "cell": _cell_out(library.stage(run, flow, suffixes[flow])),
         }
 
     return cell
@@ -1044,7 +1097,7 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
             and isinstance(image.get("flow"), str)
             and _numbered(image.get("version"))
             and isinstance(image.get("seed"), str)
-            and _seed_of(image["seed"])
+            and is_seed(image["seed"])
         ):
             raise Refusal(f"the revision's image {image!r} is not one; {fix}")
         named.append(
@@ -1056,6 +1109,20 @@ def _images(payload: Mapping[str, Any]) -> list[tuple[str, str, int, int]]:
 def _image_out(digest: str, flow: str, version: int, seed: int) -> dict[str, Any]:
     """Describe an image of a revision, its seed a decimal string."""
     return {"digest": digest, "flow": flow, "version": version, "seed": str(seed)}
+
+
+def _ready(run: Run | None, flow: Flow) -> int:
+    """Return how many images `flow`'s newest approval in `run` lacks, or 0.
+
+    An unapproved flow lacks none, and a damaged approval is already marked on
+    its own version, so neither refuses the page.
+    """
+    if run is None:
+        return 0
+    try:
+        return shortfall(run, flow)
+    except Refusal:
+        return 0
 
 
 def _version_out(version: library.Version) -> dict[str, Any]:
@@ -1078,22 +1145,6 @@ def _numbered(value: object) -> TypeGuard[int]:
     e.g. 2 -> True, 1000 -> False
     """
     return _whole(value) and is_version(value)
-
-
-# The most digits a seed is spelled in, so a longer one is refused unread.
-_SEED_DIGITS = len(str(SEED_RANGE[-1]))
-
-
-def _seed_of(text: str) -> bool:
-    """Return whether a request's text is a decimal seed a render can draw.
-
-    e.g. "1840266731" -> True, "9" * 300 -> False
-    """
-    return (
-        len(text) <= _SEED_DIGITS
-        and _DECIMAL.fullmatch(text) is not None
-        and int(text) in SEED_RANGE
-    )
 
 
 def _whole(value: object) -> TypeGuard[int]:
@@ -1169,6 +1220,28 @@ def _quote(
     }
 
 
+def _photograph(
+    path: Path, *, other: Callable[[Path], bytes] | None = None
+) -> Response:
+    """Serve the photograph at `path` as the image its bytes are, never its name's.
+
+    A source keeps the name it arrived with, and one ending `.html` served by its
+    suffix would run as a page on this surface's own origin; `nosniff` keeps the
+    browser from guessing past the declared type. Bytes neither JPEG nor PNG are
+    refused, or served as the JPEG `other` makes of them.
+    """
+    headers = {"X-Content-Type-Options": "nosniff"}
+    with path.open("rb") as handle:
+        head = handle.read(SIGNATURE_BYTES)
+    try:
+        kind, _ = media_type(head)
+    except Refusal:
+        if other is None:
+            raise
+        return Response(other(path), media_type="image/jpeg", headers=headers)
+    return FileResponse(path, media_type=kind, headers=headers)
+
+
 def _hub(grid: library.Hub) -> dict[str, Any]:
     """Describe a batch's grid as the page draws it."""
     return {
@@ -1178,12 +1251,24 @@ def _hub(grid: library.Hub) -> dict[str, Any]:
             {
                 "name": one.name,
                 "digest": one.digest,
-                **_size(one.run),
-                "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
+                "width": one.size[0] if one.size else None,
+                "height": one.size[1] if one.size else None,
+                "cells": {flow: _cell_out(cell) for flow, cell in one.cells.items()},
                 "carries": list(one.carries),
             }
             for one in grid.sources
         ],
+    }
+
+
+def _cell_out(cell: library.Cell) -> dict[str, Any]:
+    """Describe a hub cell, its newest image's seed a decimal string."""
+    newest = cell.newest
+    return {
+        **asdict(cell),
+        "newest": None
+        if newest is None
+        else {"version": newest.version, "seed": str(newest.seed)},
     }
 
 
@@ -1205,17 +1290,6 @@ def _dimensions(run: Run) -> tuple[int, int]:
         "the page reads the photograph's own header to size itself and there is "
         "nothing to fall back to -- re-export it as a JPEG or PNG",
     )
-
-
-def _size(run: Run | None) -> dict[str, int | None]:
-    """Return a source's size for the hub, or nulls where it has no readable run."""
-    if run is None:
-        return {"width": None, "height": None}
-    try:
-        width, height = _dimensions(run)
-    except Refusal:
-        return {"width": None, "height": None}
-    return {"width": width, "height": height}
 
 
 def _wd14(one: Held) -> list[dict[str, Any]] | None:

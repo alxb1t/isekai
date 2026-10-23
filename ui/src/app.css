@@ -7,6 +7,10 @@
      for the autocomplete: the post count is read by digit count, which only
      works if the digits align. */
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* One image's tile on the hub and on Renders: a source's thumbnail and a
+     render's are drawn the same size, so a row reads across at one scale. */
+  --tile-width: 96px;
+  --tile-height: 128px;
 }
 
 html,
@@ -338,12 +342,6 @@ body {
   outline: 2px solid var(--accent);
 }
 
-.renders__pair {
-  display: block;
-  font-size: 10.5px;
-  color: var(--accent-ink);
-}
-
 .renders__bar {
   display: flex;
   align-items: center;
@@ -412,14 +410,60 @@ body {
   font-size: 13px;
 }
 
-.renders__version {
+.renders__source {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 10px;
+  align-items: flex-start;
 }
 
-.renders__head {
+.renders__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.renders__badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 1px 4px;
+  font-size: 10.5px;
+  color: var(--ink-1b);
+  background: var(--ground-deep);
+  border-radius: 3px;
+}
+
+.renders__shared {
+  color: var(--accent-ink);
+}
+
+.renders__image--damaged,
+.renders__image--ready {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.renders__image--ready {
+  font-size: 11px;
+  color: var(--ink-2);
+  border-style: dashed;
+}
+
+.renders__refusal {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.renders__refusal .refusal__mark {
+  margin-top: 4px;
+}
+
+.large__head {
   font-size: 11px;
   color: var(--ink-2);
 }
@@ -431,12 +475,13 @@ body {
 }
 
 .renders__image {
-  width: 96px;
-  height: 128px;
+  position: relative;
+  width: var(--tile-width);
+  height: var(--tile-height);
   padding: 0;
   border: 1px solid var(--line-control);
   border-radius: 3px;
-  background: repeating-linear-gradient(135deg, #1f2030 0 5px, #26273b 5px 10px);
+  background: var(--placeholder);
   cursor: pointer;
 }
 
@@ -612,7 +657,7 @@ body {
 
 .library__row {
   display: grid;
-  grid-template-columns: 220px 120px 1fr 200px;
+  grid-template-columns: 220px minmax(260px, max-content) 1fr 200px;
   gap: 16px;
   align-items: start;
   padding: 14px 8px;
@@ -640,6 +685,27 @@ body {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--ink-2);
+}
+
+.library__sources {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.library__thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.library__thumb {
+  width: 84px;
+  height: 114px;
+  object-fit: cover;
+  background: var(--placeholder);
+  border-radius: 3px;
 }
 
 .library__chips {
@@ -1403,6 +1469,48 @@ body {
   color: var(--color-neutral-500);
 }
 
+/* — the image viewer — */
+
+.viewer {
+  max-width: 100vw;
+  max-height: 100vh;
+  padding: 16px 24px 24px;
+  color: var(--ink);
+  background: var(--ground-media);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sheet);
+}
+
+.viewer::backdrop {
+  background: var(--scrim);
+}
+
+.viewer__title {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.viewer__frame {
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+}
+
+.viewer__image {
+  display: block;
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 96px);
+  cursor: zoom-in;
+}
+
+.viewer--actual .viewer__image {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
 /* — the hub — */
 
 .hub {
@@ -1457,8 +1565,34 @@ body {
 
 .hub__source {
   display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.hub__thumb {
+  flex: none;
+  width: var(--tile-width);
+  height: var(--tile-height);
+  padding: 0;
+  overflow: hidden;
+  background: var(--placeholder);
+  border: none;
+  border-radius: 3px;
+  cursor: zoom-in;
+}
+
+.hub__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hub__about {
+  display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .hub__name {
@@ -1725,8 +1859,8 @@ body {
 .home__head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
-  margin-bottom: 12px;
 }
 
 .hub__add {
@@ -1757,6 +1891,13 @@ body {
 
 .hub__segment--running {
   background: var(--accent-dim);
+  animation: segment-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes segment-pulse {
+  to {
+    background: var(--accent);
+  }
 }
 
 .hub__word--running {
@@ -1786,6 +1927,22 @@ body {
   box-shadow: var(--shadow-bar);
 }
 
+/* A running bar: a 2 px accent line slides along its top edge. */
+.prepare-bar.running {
+  overflow: hidden;
+}
+
+.prepare-bar.running::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 2px;
+  background: var(--accent);
+  animation: import-running 1.6s ease-in-out infinite;
+}
+
 .prepare-bar__cells {
   flex: 1;
   overflow: hidden;
@@ -1802,4 +1959,14 @@ body {
   margin: 0;
   font-size: 12px;
   color: var(--ink);
+}
+
+/* Reduced motion stops every running signal; the clocks still tick. It stays last, so it follows
+   every rule that starts one. */
+@media (prefers-reduced-motion: reduce) {
+  .prepare-bar.running::before,
+  .hub__segment--running,
+  .import__bar--running .import__fill {
+    animation: none;
+  }
 }

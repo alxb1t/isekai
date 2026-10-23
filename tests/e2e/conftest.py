@@ -6,6 +6,7 @@ points it at a library under `tmp_path`, and `ISEKAI_WIRING` swaps the seams for
 `tests/e2e/wiring.py`'s doubles (D41): no GPU, no Ollama.
 """
 
+import json
 import os
 import socket
 import subprocess
@@ -21,7 +22,7 @@ import pytest
 
 from isekai.foundation.artifacts import DRAFT_FILE, read
 from isekai.foundation.flow import load_flow
-from isekai.foundation.run import Run, open_run
+from isekai.foundation.run import Run, approval_of, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
 from isekai.pipeline.review import approve, review, save_draft
@@ -45,7 +46,7 @@ QUEUES: dict[str, tuple[tuple[str, tuple[int, int]], ...]] = {
 # A batch per hub test, so every test owns the cells it ticks and prepares. Its
 # sources are photographs with no run, except those `ASSIGNED` names.
 FRESH: dict[str, tuple[str, ...]] = {
-    "hub-tick": ("tick",),
+    "hub-tick": ("aside", "beside", "tick"),
     "hub-prepare": ("pick", "skip"),
 }
 
@@ -61,6 +62,9 @@ REVISED = "revised"
 # The batch Compare reads: one source with seed 7 rendered under v1 and under v2,
 # which changes `clothes`.
 COMPARED = "compared"
+# The batch whose one approval is damaged: a source rendered at seed 7 under an
+# approval holding a count no render takes.
+DAMAGED = "damaged"
 
 # A first start may build the bundle, which `bundle.BUILD_TIMEOUT` bounds.
 STARTUP = 300
@@ -181,6 +185,10 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     save_draft(compared, FLOW, {**fields, "clothes": ["collared shirt"]})
     approve(compared, FLOW, load_flow(FLOW).schema, VOCABULARY)
     _render_seven(compared)
+    damaged = _rendered_at_seven(lib / DAMAGED, "kim", (790, 1000))
+    approval = approval_of(damaged, FLOW, 1)
+    body = json.loads(approval.read_text())
+    approval.write_text(json.dumps({**body, "renders": {"count": 0}}))
 
     port = _free_port()
     url = f"http://127.0.0.1:{port}"

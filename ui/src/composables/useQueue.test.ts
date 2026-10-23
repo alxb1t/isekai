@@ -13,7 +13,7 @@ function source(name: string, status: InputStatus) {
     digest: name,
     width: 1,
     height: 1,
-    cells: { f: { stage: null, renders: 0, refusal: null, status } },
+    cells: { f: { stage: null, renders: 0, refusal: null, status, newest: null } },
     carries: [],
   }
 }

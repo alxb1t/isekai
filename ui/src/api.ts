@@ -17,6 +17,7 @@ import type {
   LibraryInfo,
   Quote,
   RenderDetail,
+  RenderOffer,
   Renders,
   RendersInfo,
   ReviseRefused,
@@ -100,8 +101,9 @@ export function stopJob(): Promise<{ job: JobSlot | null }> {
   return send('/api/job/stop', 'POST', {})
 }
 
-/* Why Render is disabled for a batch, or null; it prices nothing. */
-export function renderOffer(batch: string): Promise<{ disabled: string | null }> {
+/* How many images a batch lacks, why Render is disabled or null, and why a count
+   is refused or null; it prices nothing. */
+export function renderOffer(batch: string): Promise<RenderOffer> {
   return get(`/api/b/${encodeURIComponent(batch)}/render`)
 }
 
@@ -219,6 +221,16 @@ export function commitStaging(
 /* A staged file's preview, by the name it is staged as. */
 export function stagedThumbAt(id: string, name: string): string {
   return `/api/staging/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}/thumb`
+}
+
+/* A source under a batch's `sources/`, by its file's name, with or without a run. */
+export function sourceAt(batch: string, name: string): string {
+  return `/api/b/${encodeURIComponent(batch)}/sources/${encodeURIComponent(name)}`
+}
+
+/* The source's thumbnail, upright. */
+export function sourceThumbAt(batch: string, name: string): string {
+  return `${sourceAt(batch, name)}/thumb`
 }
 
 export function renders(batch: string): Promise<RendersInfo> {

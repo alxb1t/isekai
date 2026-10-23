@@ -548,15 +548,17 @@ photographs, so the rule that keeps a runs root out of what git tracks holds for
 
 The system SHALL list as a batch every folder in the library that holds `sources/`, SHALL list any other folder as
 not a batch and open none of it, and SHALL list no dot-folder. Each batch's row SHALL carry its name, its source
-count, for each flow the surface offers that is present the counts approved and rendered out of the sources that have
-that flow, the count of sources with no flow, and the time and kind of the newest file written in it. Batches SHALL be
-ordered by that time, newest first, and folders that are not batches after them. Count labels on the surface SHALL
-use a singular noun at one and a plural noun otherwise.
+count, the names of its first seven sources, whose thumbnails it shows, for each flow the surface offers that is
+present the counts approved and rendered out of the sources that have that flow, the count of sources with no flow,
+and the time and kind of the newest file written in it. Batches SHALL be ordered by that time, newest first, and
+folders that are not batches after them. Home SHALL carry New batch at the right of the library's header row, and on
+an empty library below the privacy line. Count labels on the surface SHALL use a singular noun at one and a plural
+noun otherwise.
 
 A folder is a batch by its layout alone, so no marker file can disagree with what is on disk, and the row is a
 listing read on every request. A folder that is not a batch is shown rather than hidden so the screen matches the
 folder, and nothing in the app writes into it. The flows the surface offers are named in its configuration; a flow
-approved from another's sheet stays the CLI's.
+approved from another's sheet stays the CLI's. On first start the privacy line is read before the first import.
 
 #### Scenario: a folder with `sources/` is a batch
 - **Key:** `ui:batch-folder:a-folder-with-sources-is-a-batch`
@@ -601,6 +603,19 @@ approved from another's sheet stays the CLI's.
 - **Layers:** unit
 - **WHEN** a count label is drawn for zero, one and several items
 - **THEN** one uses the singular noun and the other counts use the plural noun
+
+#### Scenario: a row names its first sources
+- **Key:** `ui:batch-folder:a-row-names-its-first-sources`
+- **Layers:** unit
+- **WHEN** a batch holds nine sources
+- **THEN** its row names the first seven in the hub's order
+- **AND** its source count is nine
+
+#### Scenario: first start shows New batch under the privacy line
+- **Key:** `ui:batch-folder:first-start-shows-new-batch-under-the-privacy-line`
+- **Layers:** e2e
+- **WHEN** Home opens on an empty library
+- **THEN** New batch sits below the privacy line
 
 ### Requirement: Every screen has a URL naming its batch and its run
 
@@ -702,10 +717,16 @@ stage read from that run's directory — no flow, assigned, tagged, sheet, draft
 ignore any other flow's directory. A cell whose run file cannot be read SHALL show that it is unreadable, with the
 refusal the pipeline raised, and the rest of the grid SHALL still be shown. Reading the hub SHALL write nothing; a
 tick SHALL write only through the assigning verb, and an untick only while the cell is assigned. A source imported
-as it is, still carrying metadata, SHALL be marked on its row. The header SHALL leave a 12 px gap between items.
+as it is, still carrying metadata, SHALL be marked on its row. Each source SHALL show its thumbnail and the size read
+from its own file, with or without a run. A cell SHALL name its newest image — the newest version holding images,
+then its last-written image — and a click or `↵` SHALL follow the cell's stage: tick while unassigned or assigned,
+open Review on a sheet or a draft, open the sheet read-only on an approval with no image, and open the newest
+image's large view where the cell holds images; a tagged or unreadable cell SHALL do nothing. The header SHALL leave
+a 12 px gap between items.
 
 A stage is a directory listing, the rule every stage already follows, so the grid cannot drift from the disk, and a
-tick survives a reload. The mark is read from the source itself, so no file records it.
+tick survives a reload. The mark and the size are read from the source itself, so no file records them. An approved
+cell can hold an older version's images, so its newest image is named by the server rather than guessed by the page.
 
 #### Scenario: a cell's stage comes from its run's directory
 - **Key:** `ui:hub:a-cells-stage-comes-from-its-run`
@@ -751,6 +772,32 @@ tick survives a reload. The mark is read from the source itself, so no file reco
 - **Layers:** unit
 - **WHEN** a source still carries metadata
 - **THEN** its row is marked not cleaned
+
+#### Scenario: a source is sized from its file
+- **Key:** `ui:hub:a-source-is-sized-from-its-file`
+- **Layers:** unit
+- **WHEN** the hub is read for a source that has no run
+- **THEN** its row carries the width and height of its file
+
+#### Scenario: a cell names its newest image
+- **Key:** `ui:hub:a-cell-names-its-newest-image`
+- **Layers:** unit
+- **WHEN** an approved cell holds images only under an older version
+- **THEN** it names that version and its last-written image
+
+#### Scenario: a click follows the cell's stage
+- **Key:** `ui:hub:a-click-follows-the-cells-stage`
+- **Layers:** unit
+- **WHEN** a cell is clicked at each stage
+- **THEN** it ticks up to assigned, opens Review on a sheet, a draft or an unrendered approval, and opens an image
+- **AND** a tagged or an unreadable cell does nothing
+
+#### Scenario: a rendered cell opens its newest image
+- **Key:** `ui:hub:a-rendered-cell-opens-its-newest-image`
+- **Layers:** e2e
+- **WHEN** a rendered cell is clicked
+- **THEN** its newest image's large view opens
+- **AND** `Esc` returns to the hub
 
 ### Requirement: Sources are chosen in the file dialog, and each shows its own upload
 
@@ -860,10 +907,13 @@ cell assigned, so pressing Prepare again is the whole fix.
 
 The system SHALL serve an event stream that, on every connection, sends a snapshot of the job slot and, when a batch
 is named, that batch's hub, and then sends each change as the job's stages report it. A running Prepare snapshot
-SHALL carry its accepted total, completed count and start time. When the surface stops, its streams SHALL end before
-the server's graceful wait expires, without cancellation errors; a terminal interrupt SHALL exit quietly after cleanup.
+SHALL carry its accepted total, completed count and start time. A hub opened while the slot holds its batch's failed
+Prepare SHALL show that job's message until Discard on that batch's hub dismisses it in that page. When the surface
+stops, its streams SHALL end before the server's graceful wait expires, without cancellation errors; a terminal
+interrupt SHALL exit quietly after cleanup.
 
-A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it.
+A reload or a second tab gets the whole truth at once; a job's progress reaches the page as the verbs report it. A
+job outlives its page, so a failure that happened while no page was open is still told.
 
 #### Scenario: a connection starts with a snapshot
 - **Key:** `ui:events:a-connection-starts-with-a-snapshot`
@@ -890,20 +940,30 @@ A reload or a second tab gets the whole truth at once; a job's progress reaches 
 - **THEN** the streams end within the graceful wait and the surface exits with status 130 without cancellation errors
 - **AND** a running job is interrupted and its cleanup and recovery messages remain visible
 
+#### Scenario: a hub opened after a failure shows it
+- **Key:** `ui:events:a-hub-opened-after-a-failure-shows-it`
+- **Layers:** unit
+- **WHEN** a hub opens while the slot holds its batch's failed Prepare
+- **THEN** the Prepare bar shows the job's message
+- **AND** once Discard dismisses it, a hub opened again in that page does not
+
 ### Requirement: Render is confirmed in a dialog that quotes what renders, its limit and its price at most
 
-The system SHALL open, for a batch, a dialog listing per offered flow the images that will render and what is left
-out, with the reason, the session's estimate and limit, and its price at most — the limit at the hourly maximum
-`gpunit.toml` names, with the volume at its configured rate. Its confirmation SHALL be the only act that rents; the
-dialog SHALL hold no URL. The confirmation SHALL carry the limit and the number of images the dialog showed, and SHALL
-be refused, starting nothing, when the batch's quote taken again has a longer limit or another number of images.
-Render SHALL be disabled, with its reason, when nothing is short of its count, when a job runs, when a pod may still
-be billing, and when no RunPod key is in the surface's environment.
+The system SHALL offer Render from a bar on a batch's hub and its Renders view that counts the images short of their
+approvals' counts, and SHALL show no such bar when none is short and no count is refused, nor on the hub while changes
+wait for Prepare. The bar SHALL be disabled, with its reason, when a job runs, when a pod may still be billing, when
+no RunPod key is in the surface's environment, and when an approval's count is refused. It SHALL open a dialog
+listing per offered flow the images that will render and what is left out, with the reason, the session's estimate
+and limit, and its price at most — the limit at the hourly maximum `gpunit.toml` names, with the volume at its
+configured rate. Its confirmation SHALL be the only act that rents; the dialog SHALL hold no URL. The confirmation
+SHALL carry the limit and the number of images the dialog showed, and SHALL be refused, starting nothing, when the
+batch's quote taken again has a longer limit or another number of images.
 
 The quote is what the operator agrees to; gpunit refuses a card above the hourly maximum, so the price is a bound and
 not a guess. A reload never reopens a confirmation that spends; a changed image total or longer limit requires
 a fresh confirmation, even where the limit sits at its floor or cap. An equal-total change of sources or approvals
-is outside that comparison.
+is outside that comparison. A bar that is absent needs no reason, and one forward action holds the screen's accent;
+a refused count keeps the bar, so the refusal is never silent.
 
 #### Scenario: the dialog lists what renders per flow
 - **Key:** `ui:render:the-dialog-lists-what-renders`
@@ -922,7 +982,22 @@ is outside that comparison.
 - **Key:** `ui:render:nothing-short-disables-render`
 - **Layers:** unit
 - **WHEN** every approval in a batch already has its count of images
-- **THEN** Render is disabled, naming why
+- **THEN** the batch's Render offer counts no image
+- **AND** it names why
+
+#### Scenario: Prepare takes the bar first
+- **Key:** `ui:render:prepare-takes-the-bar-first`
+- **Layers:** unit
+- **WHEN** a hub has images short and changes waiting for Prepare
+- **THEN** the Prepare bar shows and the Render bar does not
+- **AND** with nothing waiting the Render bar shows, and with nothing short neither does
+
+#### Scenario: a refused count is shown
+- **Key:** `ui:render:a-refused-count-is-shown`
+- **Layers:** unit
+- **WHEN** a batch's only approval short of its count holds a count no render takes
+- **THEN** its Render offer counts no image and carries the refusal, naming the file
+- **AND** the Render bar shows, disabled, with its reason
 
 #### Scenario: the confirmation starts the render
 - **Key:** `ui:render:the-confirmation-starts-the-render`
@@ -1031,15 +1106,23 @@ reaches nothing.
 
 ### Requirement: The Renders view shows each source's images by flow and version
 
-The system SHALL show a batch's images as a grid of sources by offered flows, each cell's approval versions newest
-first with their images, and open an image's large view, with the sheet it was rendered from, from any of them. It
-SHALL mark an approval it cannot read as damaged, naming the file, and show every other image; and SHALL refuse an
-address whose version is not `v` and ASCII digits. It SHALL serve each image's thumbnail from a cache in the library's
-`.cache/`, made on first request and named by the image's own bytes.
+The system SHALL list a batch's images by source and offered flow, each cell's approval versions newest first, and
+SHALL show them as a grid of sources by flows, each cell one row of its images, its versions oldest to newest, each
+image marked with its version, and open an image's large view, with the sheet it was rendered from, from any of them.
+A cell whose newest approval lacks images of its count SHALL carry the number it lacks, as the render stage counts it.
+Each source SHALL show its photograph's thumbnail, upright, opening the photograph in a viewer. `Esc` on a large view
+SHALL return to the screen it was opened from. It SHALL mark an approval it cannot read as damaged, naming the file,
+and show every image, that version's own among them; and SHALL refuse an address whose version is not `v` and ASCII
+digits. It SHALL serve each thumbnail, a render's or a source's, from a cache in the library's `.cache/`, made on
+first request and named by the image's own bytes. It SHALL serve a photograph, a source or a run's copy, as the image
+its bytes are, whatever its name ends in, and a source in a format the render does not read as an upright JPEG of it.
 
-The images come back to where the sheets were decided; a cache the library can lose costs only its rebuild. Two
-batches can hold one source rendered at one seed, so only the bytes say which image a thumbnail shows. One damaged
-file costs only its own version, never the batch's page.
+The images come back to where the sheets were decided, version by version in the order they were approved; a cache the
+library can lose costs only its rebuild. Two batches can hold one source rendered at one seed, so only the bytes say
+which image a thumbnail shows. One damaged file costs only its own version, never the batch's page. The count a cell
+lacks is the render stage's own, so the page and the render agree on what is ready. A source keeps the name it arrived
+with, and one ending `.html` served by its name would run as a page on the surface's own origin; one placed by hand in
+another format is still shown, as its thumbnail is.
 
 #### Scenario: versions are listed newest first
 - **Key:** `ui:renders:versions-newest-first`
@@ -1072,11 +1155,46 @@ file costs only its own version, never the batch's page.
 - **WHEN** two batches hold different images of one source, flow, version and seed
 - **THEN** each image's thumbnail is made from that image
 
+#### Scenario: a source's thumbnail is upright
+- **Key:** `ui:renders:a-source-thumbnail-is-upright`
+- **Layers:** unit
+- **WHEN** a source's thumbnail is asked for and its file declares a turning orientation
+- **THEN** the thumbnail is drawn upright
+- **AND** a second request reads it from `.cache/`
+
+#### Scenario: a cell counts what is ready
+- **Key:** `ui:renders:a-cell-counts-what-is-ready`
+- **Layers:** unit
+- **WHEN** a cell's newest approval holds fewer images than its count
+- **THEN** the cell carries the number of images it lacks
+
 #### Scenario: the large view shows its sheet
 - **Key:** `ui:renders:the-large-view-shows-its-sheet`
 - **Layers:** e2e
 - **WHEN** an image is opened from the grid
 - **THEN** its large view shows the approval it was rendered from
+
+#### Scenario: a source opens in the viewer
+- **Key:** `ui:renders:a-source-opens-in-the-viewer`
+- **Layers:** e2e
+- **WHEN** a source's thumbnail is clicked in the Renders view
+- **THEN** its photograph opens in a dialog, fitted to the window
+- **AND** `Esc` closes the dialog and leaves the address unchanged
+
+#### Scenario: a damaged version's images are drawn
+- **Key:** `ui:renders:a-damaged-versions-images-are-drawn`
+- **Layers:** e2e
+- **WHEN** the Renders view opens on a cell whose one approval is damaged
+- **THEN** that version's images are drawn beside its damaged mark
+- **AND** the first of them holds the focus
+
+#### Scenario: a photograph is served as the image its bytes are
+- **Key:** `ui:renders:a-photograph-is-served-as-its-bytes`
+- **Layers:** unit
+- **WHEN** a source whose name ends `.html` holds a PNG and is asked for whole
+- **THEN** it is served as `image/png`, and the browser is told not to guess another type
+- **AND** a run's photograph is served the same way
+- **AND** a source in another format is served as an upright JPEG of it
 
 ### Requirement: Revise starts from an image, and opens its drafts as a queue
 
@@ -1119,19 +1237,20 @@ deletes the operator's edits, so one click never does.
 
 ### Requirement: A version says what it was, and Compare shows a seed's two versions
 
-The system SHALL head each approval version in the Renders view with the version it came from, read from its producer,
-naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds do. A large
-view whose seed is rendered under an older version of the same source and flow SHALL offer Compare with the newest
-such version, showing both images at equal size, the fields that changed, what changed in the count and seeds, and the
-tokens before and after.
+The system SHALL head each image's large view with its approval version, the version it came from, read from its
+producer, naming it a revision when its fields differ from that version's and a re-roll when only its count or seeds
+do, and the approval's time, count and seeds. A large view whose seed is rendered under an older version of the same
+source and flow SHALL offer Compare with the newest such version, showing both images at equal size, the fields that
+changed, what changed in the count and seeds, and the tokens before and after.
 
-The origin is already on disk, so nothing new records it. Same seed, same composition: the difference left is the edit.
+The origin is already on disk, so nothing new records it. Same seed, same composition: the difference left is the
+edit. The grid carries the images; the large view, which carries the sheet, carries what the version was.
 
 #### Scenario: a version is named a revision or a re-roll
 - **Key:** `ui:compare:a-version-is-named-by-what-changed`
 - **Layers:** unit
 - **WHEN** one version changes a field of the version it came from and another changes only its seeds
-- **THEN** the first is headed a revision and the second a re-roll
+- **THEN** the first's large view is headed a revision and the second's a re-roll
 
 #### Scenario: Compare pairs a seed with its newest older version
 - **Key:** `ui:compare:a-seed-pairs-with-its-newest-older-version`

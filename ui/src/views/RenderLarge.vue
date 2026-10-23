@@ -29,11 +29,28 @@ const place = computed(() => ({
   seed: props.seed,
 }))
 
+const clock = (at: number) =>
+  new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
+
+/* Compare carries where this view was opened from, so its esc returns here
+   with the same way back. */
 function compare(): void {
-  void router.push({ name: 'compare', params: { ...props } })
+  void router.push({
+    name: 'compare',
+    params: { ...props },
+    state: { from: window.history.state?.from ?? null },
+  })
 }
 
-/* esc goes back to Renders. Matched on `event.code`: ⌥E types a character. */
+/* Where esc and the back button go: the hub when it opened this view, else
+   Renders, which holds every image. A pasted address carries no state. */
+const back = computed(() =>
+  window.history.state?.from === 'hub'
+    ? { to: { name: 'hub', params: { batch: props.batch } }, label: 'Back to Hub' }
+    : { to: { name: 'renders', params: { batch: props.batch } }, label: 'Back to Renders' },
+)
+
+/* Matched on `event.code`: ⌥E types a character. */
 function onKey(event: KeyboardEvent): void {
   if (revising.value) return
   if (event.altKey && event.code === 'KeyE') {
@@ -50,7 +67,7 @@ function onKey(event: KeyboardEvent): void {
     compare()
   } else if (event.key === 'Escape') {
     event.preventDefault()
-    void router.push({ name: 'renders', params: { batch: props.batch } })
+    void router.push(back.value.to)
   }
 }
 
@@ -75,6 +92,20 @@ onMounted(async () => {
       <span class="section-label">
         {{ detail.flow }} · v{{ detail.version }} · seed {{ detail.seed }}
       </span>
+      <span class="large__head mono" data-heading>
+        v{{ detail.version }}<template v-if="detail.kind">
+          · {{ detail.kind }} of v{{ detail.came_from }}</template
+        ><template v-if="detail.approved_at !== null">
+          · approved {{ clock(detail.approved_at) }}</template
+        ><template v-if="detail.damaged === null">
+          · count {{ detail.count }}<template v-if="detail.seeds.length">
+            · seeds {{ detail.seeds.join(', ') }}</template
+          ></template
+        ><template v-else> · damaged</template>
+      </span>
+      <p v-if="detail.damaged" class="renders__refusal">
+        <span class="refusal__mark" />{{ detail.damaged }}
+      </p>
       <dl class="large__fields">
         <template v-for="(tags, name) in detail.fields" :key="name">
           <dt class="mono">{{ name }}</dt>
@@ -94,8 +125,8 @@ onMounted(async () => {
         >
           Compare with v{{ detail.compare }}<span class="appbar__key">C</span>
         </button>
-        <RouterLink class="btn btn-secondary" :to="{ name: 'renders', params: { batch } }"
-          >Back to Renders<span class="appbar__key">esc</span></RouterLink
+        <RouterLink class="btn btn-secondary" :to="back.to"
+          >{{ back.label }}<span class="appbar__key">esc</span></RouterLink
         >
       </div>
     </aside>

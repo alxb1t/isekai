@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { renders, thumbAt } from '../api'
+import { bar } from '../bars'
+import { renders, sourceAt, sourceThumbAt, thumbAt } from '../api'
+import ImageViewer from '../components/ImageViewer.vue'
 import RefusalPage from '../components/RefusalPage.vue'
+import RenderBar from '../components/RenderBar.vue'
+import RenderDialog from '../components/RenderDialog.vue'
 import ReviseConfirm from '../components/ReviseConfirm.vue'
+import { useLive } from '../composables/useLive'
+import { useRenderOffer } from '../composables/useRenderOffer'
+import { noun } from '../words'
 import type { RenderVersion, RendersInfo, RevisedImage } from '../types'
 
-/* Renders: a grid of sources by flows, each cell's approvals newest first with
-   their images (design spec J5·1). ←→ move along a source's images, ↑↓ between
-   sources, and ↵ or a click opens an image's large view; space selects, and ⌥E
-   revises the selection (§7). A seed rendered under two versions is labelled ⇄. */
+/* Renders: a grid of sources by flows, each cell one row of its images from
+   oldest to newest, each marked with its version (design spec J5·1). ←→ move
+   along a source's images, ↑↓ between sources, and ↵ or a click opens an image's
+   large view; space selects, and ⌥E revises the selection (§7). A seed rendered
+   under two versions is marked ⇄. The Render bar offers what the newest
+   approvals lack, ⌥R; a source's thumbnail opens it in the viewer. */
 const props = defineProps<{ batch: string }>()
 const router = useRouter()
 const info = ref<RendersInfo | null>(null)
@@ -18,6 +27,26 @@ const focus = ref<{ row: number; column: number }>({ row: 0, column: 0 })
 /* The selected images, each as `key` spells it. */
 const selected = ref(new Set<string>())
 const revising = ref(false)
+/* The source open in the viewer, by name, or null. */
+const viewing = ref<string | null>(null)
+const { job } = useLive()
+const {
+  offer,
+  dialog,
+  rendering,
+  check: checkRender,
+  open: openRender,
+  close,
+} = useRenderOffer(props.batch)
+const shown = computed(() =>
+  bar({
+    changes: 0,
+    preparing: false,
+    images: offer.value.images,
+    refused: offer.value.refused !== null,
+    rendering: rendering.value,
+  }),
+)
 
 interface Spot {
   digest: string
@@ -26,15 +55,25 @@ interface Spot {
   seed: string
 }
 
-/* Each source's images in the order they are drawn: flow, newest version, seed. */
+/* Each cell's versions as they are drawn, oldest first, by source row then flow.
+   The payload lists them newest first, which a living scenario holds. */
+const oldest = computed<Record<string, RenderVersion[]>[]>(() =>
+  (info.value?.sources ?? []).map((source) =>
+    Object.fromEntries(
+      (info.value?.flows ?? []).map((flow) => [flow, [...(source.cells[flow] ?? [])].reverse()]),
+    ),
+  ),
+)
+
+/* Each source's images in the order they are drawn: flow, oldest version, seed. */
 const rows = computed<Spot[][]>(() => {
   const held = info.value
   if (!held) return []
-  return held.sources.map((source) =>
+  return held.sources.map((source, row) =>
     source.digest === null
       ? []
       : held.flows.flatMap((flow) =>
-          (source.cells[flow] ?? []).flatMap((version) =>
+          oldest.value[row][flow].flatMap((version) =>
             version.rendered.map((seed) => ({
               digest: source.digest as string,
               flow,
@@ -102,11 +141,16 @@ function move(rowStep: number, columnStep: number): void {
 }
 
 function onKey(event: KeyboardEvent): void {
-  if (revising.value) return
+  if (revising.value || dialog.value || viewing.value) return
   // Matched on `event.code`: ⌥E types a character.
   if (event.altKey && event.code === 'KeyE') {
     event.preventDefault()
     if (chosen.value.length) revising.value = true
+    return
+  }
+  if (event.altKey && event.code === 'KeyR') {
+    event.preventDefault()
+    openRender()
     return
   }
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -137,9 +181,6 @@ function onKey(event: KeyboardEvent): void {
   }
 }
 
-const clock = (at: number) =>
-  new Date(at * 1000).toLocaleTimeString('en-GB', { hour12: false })
-
 function thumb(digest: string, flow: string, version: number, seed: string): string {
   return thumbAt({ batch: props.batch, digest, flow, version, seed })
 }
@@ -151,8 +192,15 @@ function open(digest: string, flow: string, version: number, seed: string): void
   })
 }
 
+/* A job that ends changes the images. */
+watch(job, (slot, before) => {
+  if (before?.state === 'running' && slot?.state !== 'running')
+    void renders(props.batch).then((read) => (info.value = read))
+})
+
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
+  void checkRender()
   try {
     info.value = await renders(props.batch)
   } catch (reason) {
@@ -187,27 +235,31 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <span class="section-label">source</span>
       <span v-for="flow in info.flows" :key="flow" class="section-label">{{ flow }}</span>
       <template v-for="(source, row) in info.sources" :key="source.name">
-        <span class="renders__name mono">{{ source.name }}</span>
-        <div v-for="flow in info.flows" :key="flow" class="renders__cell">
-          <div
-            v-for="version in source.cells[flow] ?? []"
-            :key="version.version"
-            class="renders__version"
-            :data-version="version.version"
+        <div class="renders__source">
+          <button
+            class="hub__thumb"
+            type="button"
+            :aria-label="`view ${source.name}`"
+            data-source-thumb
+            @click="viewing = source.name"
           >
-            <span v-if="version.damaged" class="renders__head mono" data-damaged>
-              v{{ version.version }} · {{ version.damaged }}
-            </span>
-            <span v-else class="renders__head mono">
-              v{{ version.version }}<template v-if="version.kind">
-                · {{ version.kind }} of v{{ version.came_from }}</template
+            <img :src="sourceThumbAt(batch, source.name)" alt="" loading="lazy" />
+          </button>
+          <span class="renders__name mono">{{ source.name }}</span>
+        </div>
+        <div v-for="flow in info.flows" :key="flow" class="renders__cell">
+          <span class="renders__images">
+            <!-- A damaged version's striped tile leads its images, which stay drawn
+                 because `rows` moves the focus across them. -->
+            <template v-for="version in oldest[row][flow]" :key="version.version">
+              <span
+                v-if="version.damaged"
+                class="renders__image renders__image--damaged"
+                :data-version="version.version"
+                data-damaged
               >
-              · approved {{ clock(version.at) }} · count
-              {{ version.count }}<template v-if="version.seeds.length">
-                · seeds {{ version.seeds.join(', ') }}</template
-              >
-            </span>
-            <span class="renders__images">
+                <span class="renders__badge mono">v{{ version.version }}</span>
+              </span>
               <button
                 v-for="seed in version.rendered"
                 :key="seed"
@@ -221,6 +273,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                     ),
                 }"
                 type="button"
+                :data-version="version.version"
                 :data-seed="seed"
                 @click="source.digest && open(source.digest, flow, version.version, seed)"
               >
@@ -229,22 +282,54 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                   :src="thumb(source.digest, flow, version.version, seed)"
                   :alt="`${source.name} ${flow} v${version.version} seed ${seed}`"
                 />
-                <span
-                  v-if="shared.get(`${source.digest}|${flow}`)?.has(seed)"
-                  class="renders__pair mono"
-                  >⇄ {{ seed }}</span
+                <span class="renders__badge mono"
+                  >v{{ version.version }}
+                  <span
+                    v-if="shared.get(`${source.digest}|${flow}`)?.has(seed)"
+                    class="renders__shared"
+                    data-shared
+                    >⇄</span
+                  ></span
                 >
               </button>
-            </span>
-          </div>
+            </template>
+            <span
+              v-if="(source.ready[flow] ?? 0) > 0"
+              class="renders__image renders__image--ready mono"
+              data-ready
+              >ready · {{ source.ready[flow] }} {{ noun(source.ready[flow], 'image') }}</span
+            >
+          </span>
+          <p
+            v-for="version in oldest[row][flow].filter((one) => one.damaged)"
+            :key="version.version"
+            class="renders__refusal"
+          >
+            <span class="refusal__mark" />v{{ version.version }} · {{ version.damaged }}
+          </p>
         </div>
       </template>
     </div>
+    <ImageViewer
+      v-if="viewing"
+      :src="sourceAt(batch, viewing)"
+      :name="viewing"
+      @close="viewing = null"
+    />
     <ReviseConfirm
       v-if="revising"
       :batch="batch"
       :images="chosen"
       @close="revising = false"
     />
+    <RenderBar
+      v-if="shown === 'render'"
+      :images="offer.images"
+      :disabled="offer.disabled"
+      :refused="offer.refused"
+      :rendering="rendering"
+      @open="openRender"
+    />
+    <RenderDialog v-if="dialog" :batch="batch" @close="close" />
   </section>
 </template>

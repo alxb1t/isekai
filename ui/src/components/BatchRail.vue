@@ -7,9 +7,9 @@ import StatusMark from './StatusMark.vue'
    operator recognises an input, so a square crop would take that away. */
 const props = defineProps<{
   inputs: BatchInput[]
-  /* The server's own count of inputs holding an approved artifact, the same
-     number `AppHeader` is given. Computing a second answer here from the status
-     strings would be one number with two derivations, kept in step by prose. */
+  /* `useQueue`'s count of inputs holding an approved artifact, read from the
+     hub's statuses: the same number `AppHeader` is given, so it has one
+     derivation. */
   approved: number
   /* Every sheet in the flow, the count `approved` is out of; the rail lists
      only the queue and the open sheet. */

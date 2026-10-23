@@ -9,6 +9,46 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-23 · 0067-hub-and-renders
+
+Gate: local 0m37s · CI 7m25s (build-image at 801ffec) · 0.40.1: local 0m35s · CI 7m25s
+
+### Added
+
+- The hub shows each source's thumbnail, upright, and its size read from its own file, run or none; the
+  thumbnail opens the source in a viewer dialog, fitted, a click for 1:1 (0067 D1, D2, D3).
+
+- Home's row shows its first sources' thumbnails, then `+n`, and *New batch* sits in the library's header
+  row, or under the privacy line on a first start (0067 D3, D10).
+
+- A Render bar on the hub and Renders counts the images ready to render, the render stage's own count, and
+  replaces the header's Render button; a hub opened after a failed Prepare shows its message (0067 D6, D10).
+
+- A running Prepare or Render bar draws a sliding accent line and its running segment pulses; reduced motion
+  stops both and the import bar's fill (0067 D9).
+
+### Changed
+
+- A hub cell does its one thing on a click or `↵`: tick, open Review, or open its newest image's large view,
+  whose `Esc` returns to the hub; the double-click is gone (0067 D4, D5).
+
+- The Renders grid reads oldest to newest, a row per cell with `vN` badges and a ready tile counting what the
+  newest approval lacks; each version's heading moves to its large view (0067 D7, D8).
+
+- A source's thumbnail on the hub and on Renders is a render tile's size, declared once; Home's are three times
+  larger, wrapping in a narrow window (0067 D3).
+
+### Fixed
+
+- A damaged version's images stay drawn beside its striped tile, as the grid's focus moves across them; a hub read
+  survives an oddly named or vanished render; a photograph is served as its bytes' image type, `nosniff` (0067 D8).
+
+- A click ticks its own hub cell, a discarded Prepare failure stays dismissed, a refused count keeps the Render bar
+  with its reason, a damaged large view says so, and a padded render name is no render (0067 D4, D6, D8, D10).
+
+- A checkbox click ticks its own cell alone; Discard dismisses only its own batch's failure, in that page; one
+  seed predicate names a render for the stage, `revise` and the app alike (0067 D4, D10).
+
 ## [0.40.1] - 2026-10-23 · 0066-the-quick-patch
 
 Gate: local 0m35s · CI 7m25s (build-image at 801ffec) · 0.40.0: local 0m34s · CI 1m12s

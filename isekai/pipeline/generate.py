@@ -72,6 +72,7 @@ from isekai.foundation.run import (
     artifact_name,
     check_budget,
     group_of,
+    is_seed,
     record_failure,
     stage_command,
 )
@@ -295,12 +296,12 @@ def prepare(run: Run, flows: Mapping[str, Flow]) -> tuple[dict[str, Path], list[
 
 def is_render(path: Path, suffix: str) -> bool:
     """Return whether `path` is a render a flow producing `suffix` wrote."""
-    return path.suffix == suffix and path.stem.isdigit()
+    return path.suffix == suffix and is_seed(path.stem)
 
 
 def is_sidecar(path: Path) -> bool:
     """Return whether `path` is a render's sidecar."""
-    return path.name.endswith(SIDECAR) and path.name.removesuffix(SIDECAR).isdigit()
+    return path.name.endswith(SIDECAR) and is_seed(path.name.removesuffix(SIDECAR))
 
 
 def rendered_seeds(directory: Path, suffix: str) -> list[int]:

@@ -15,6 +15,7 @@ are the flows `config/ui.json` offers.
 No web framework, so the whole of it is tested with no server involved.
 """
 
+import contextlib
 import json
 import os
 from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -56,11 +57,17 @@ from isekai.foundation.run import (
     latest_artifact,
 )
 from isekai.interface.wiring import trackable
-from isekai.pipeline.generate import rendered_seeds
+from isekai.pipeline.generate import is_render, rendered_seeds
 from isekai.pipeline.importing import SOURCES, UI_CONFIG
 from isekai.pipeline.review import Status, came_from, current_draft
 from isekai.pipeline.review import state as review_state
-from isekai.shared.image import metadata_in, thumbnail_jpeg
+from isekai.shared.image import (
+    dimensions_or_refuse,
+    metadata_in,
+    thumbnail_jpeg,
+    upright_jpeg,
+    upright_thumbnail,
+)
 
 VARIABLE = "ISEKAI_LIBRARY"
 DEFAULT = Path("~/isekai")
@@ -80,10 +87,14 @@ _KINDS: Mapping[str, str] = {
     OUTPUTS: "render",
 }
 
-# A source's digest, and what it carries, by what its file's stat says: reading
-# every photograph on every listing would read the whole library each time.
+# How many of a batch's sources Home's row shows as thumbnails, before `+n`.
+ROW_THUMBS = 7
+
+# A source's digest, what it carries and its size, by what its file's stat says:
+# reading every photograph on every listing would read the whole library each time.
 _DIGESTS: dict[tuple[str, int, int, int], str] = {}
 _CARRIES: dict[tuple[str, int, int, int], tuple[str, ...]] = {}
+_SIZES: dict[tuple[str, int, int, int], tuple[int, int] | None] = {}
 
 
 def root(environ: Mapping[str, str] = os.environ) -> Path:
@@ -127,15 +138,27 @@ class FlowCount:
 
 @dataclass(frozen=True)
 class Row:
-    """One folder of the library, as Home lists it."""
+    """One folder of the library, as Home lists it.
+
+    `thumbs` names its first `ROW_THUMBS` sources, in the hub's order.
+    """
 
     name: str
     batch: bool
     sources: int = 0
+    thumbs: tuple[str, ...] = ()
     flows: tuple[FlowCount, ...] = ()
     without_flow: int = 0
     newest: float | None = None
     kind: str | None = None
+
+
+@dataclass(frozen=True)
+class Rendered:
+    """One rendered image of a cell: its approval's number and its seed."""
+
+    version: int
+    seed: int
 
 
 @dataclass(frozen=True)
@@ -145,13 +168,15 @@ class Cell:
     `stage` is None where the run holds no directory for the flow, or there is no
     run. `refusal` is set, and `stage` is `unreadable`, where the file that decides
     the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
-    answer, wherever the cell has a sheet.
+    answer, wherever the cell has a sheet. `newest` is the last-written image of
+    the newest version holding any, or None.
     """
 
     stage: str | None
     renders: int = 0
     refusal: str | None = None
     status: Status | None = None
+    newest: Rendered | None = None
 
 
 @dataclass(frozen=True)
@@ -159,13 +184,15 @@ class Source:
     """One file under `sources/`, its run if it has one, and a cell per flow.
 
     `carries` names what the file holds beyond its pixels and orientation: a
-    source imported as it is, which the hub marks not cleaned.
+    source imported as it is, which the hub marks not cleaned. `size` is the
+    file's width and height, upright, or None where its header cannot be read.
     """
 
     name: str
     run: Run | None
     cells: Mapping[str, Cell] = field(default_factory=dict)
     carries: tuple[str, ...] = ()
+    size: tuple[int, int] | None = None
 
     @property
     def digest(self) -> str | None:
@@ -396,10 +423,54 @@ def _shrunk(image: Path) -> bytes:
     try:
         with Image.open(image) as opened:
             return thumbnail_jpeg(opened)
-    except OSError as unread:
+    except (OSError, Image.DecompressionBombError) as unread:
         raise Refusal(
             f"{image.name}: is not an image this build can read ({unread}); delete "
             f"{image} and its .render.json, then render it again"
+        ) from unread
+
+
+def source_thumbnail(library: Path, source: Path) -> Path:
+    """Return a source's thumbnail in the library's cache, upright, made once only.
+
+    Named by the source's digest, which is also the folder its run would take.
+    e.g. `sources/ada.jpg` -> `.cache/0d4b…/sources/0d4b….jpg`
+    """
+    digest = _digest(source)
+    cached = library / CACHE / digest / SOURCES / f"{digest}.jpg"
+    if cached.is_file():
+        return cached
+    write_atomically(cached, _upright(source))
+    return cached
+
+
+def _upright(source: Path) -> bytes:
+    """Return `source` turned as its orientation says, at most `THUMB_SIDE` a side."""
+    from PIL.Image import DecompressionBombError
+
+    try:
+        return upright_thumbnail(source)
+    except (OSError, DecompressionBombError) as unread:
+        raise Refusal(
+            f"{source.name}: is not an image this build can read ({unread}); "
+            f"delete {source} and import it again"
+        ) from unread
+
+
+def source_jpeg(source: Path) -> bytes:
+    """Return `source` turned as its orientation says, as a JPEG at its full size.
+
+    For a source in a format the render does not read, placed by hand: the viewer
+    shows it as its thumbnail does.
+    """
+    from PIL.Image import DecompressionBombError
+
+    try:
+        return upright_jpeg(source)
+    except (OSError, DecompressionBombError) as unread:
+        raise Refusal(
+            f"{source.name}: is not an image this build can read ({unread}); "
+            f"delete {source} and import it again"
         ) from unread
 
 
@@ -429,7 +500,8 @@ def _suffixes(flows: Sequence[str], flows_dir: Path) -> dict[str, str]:
 def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> Hub:
     """Return batch `folder`'s grid over the flows `suffixes` names.
 
-    Without `marks`, no source is read for its not-cleaned mark: Home shows none.
+    Without `marks`, no source is read for its not-cleaned mark or its size: Home
+    shows neither.
     """
     runs = _runs(folder / RUNS)
     sources = tuple(
@@ -439,12 +511,13 @@ def _grid(folder: Path, suffixes: Mapping[str, str], *, marks: bool = True) -> H
     return Hub(folder.name, tuple(suffixes), sources)
 
 
-def stage(run: Run, flow: str, suffix: str) -> Cell:
+def stage(run: Run, flow: str, suffix: str, *, newest: bool = True) -> Cell:
     """Return `run`'s stage in `flow`, the furthest its directory holds.
 
     rendered ×n > approved > draft > sheet > tagged > assigned > no flow. The
     file that decides it is read, so a format this build does not know marks
-    the cell rather than the batch.
+    the cell rather than the batch. Without `newest`, no image's time is read
+    and the cell names no newest image: Home shows none.
     """
     if not run.directory(flow).is_dir():
         return Cell(None)
@@ -454,12 +527,17 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
     try:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
-            renders = rendered_seeds(
-                run.directory(flow, OUTPUTS, f"{approved[-1]:03d}"), suffix
-            )
+            group = group_of(run, flow, approved[-1])
+            named: Rendered | None = None
+            if newest:
+                written = _written(group, suffix)
+                renders = len(written)
+                named = _newest_image(run, flow, approved, suffix, written)
+            else:
+                renders = len(rendered_seeds(group, suffix))
             if renders:
-                return Cell("rendered", len(renders), status=status)
-            return Cell("approved", status=status)
+                return Cell("rendered", renders, status=status, newest=named)
+            return Cell("approved", status=status, newest=named)
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
             return Cell("draft", status=status)
@@ -472,6 +550,45 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
     except Refusal as refused:
         return Cell("unreadable", refusal=str(refused))
     return Cell("assigned")
+
+
+def _newest_image(
+    run: Run,
+    flow: str,
+    approved: Sequence[int],
+    suffix: str,
+    top: Mapping[int, float],
+) -> Rendered | None:
+    """Return the last-written image of the newest version holding any, or None.
+
+    `top` is the newest version's own, already listed, so no group is listed twice.
+    e.g. v2 rendered nothing, v1 holds 7 then 9 -> Rendered(1, 9)
+    """
+    for version in reversed(approved):
+        written = (
+            top
+            if version == approved[-1]
+            else _written(group_of(run, flow, version), suffix)
+        )
+        if written:
+            return Rendered(version, max(written, key=written.__getitem__))
+    return None
+
+
+def _written(group: Path, suffix: str) -> dict[int, float]:
+    """Return when each render in `group` was written, by seed.
+
+    The time is the listed file's own, never one of a name rebuilt from its seed.
+    A file deleted after the listing is no longer an image, so it is left out.
+    """
+    if not group.is_dir():
+        return {}
+    written: dict[int, float] = {}
+    for path in group.iterdir():
+        if is_render(path, suffix):
+            with contextlib.suppress(FileNotFoundError):
+                written[int(path.stem)] = path.stat().st_mtime
+    return written
 
 
 def _check(path: Path | None, kind: Artifact[Any]) -> None:
@@ -516,6 +633,20 @@ def _carries(path: Path) -> tuple[str, ...]:
     return _CARRIES[key]
 
 
+def _size(path: Path) -> tuple[int, int] | None:
+    """Return a source's width and height from its header, or None where unreadable.
+
+    e.g. a 1200×900 JPEG whose orientation turns it -> (900, 1200)
+    """
+    key = _key(path)
+    if key not in _SIZES:
+        try:
+            _SIZES[key] = dimensions_or_refuse(path, "")
+        except Refusal:
+            _SIZES[key] = None
+    return _SIZES[key]
+
+
 def _runs(runs: Path) -> dict[str, Run]:
     """Return the runs under `runs` that hold a frame, by their identifier's digest."""
     if not runs.is_dir():
@@ -533,10 +664,12 @@ def _source(
 ) -> Source:
     """Return one source, with its cell in every offered flow."""
     cells = {
-        flow: stage(run, flow, suffix) if run else Cell(None)
+        flow: stage(run, flow, suffix, newest=marks) if run else Cell(None)
         for flow, suffix in suffixes.items()
     }
-    return Source(path.name, run, cells, _carries(path) if marks else ())
+    if not marks:
+        return Source(path.name, run, cells)
+    return Source(path.name, run, cells, _carries(path), _size(path))
 
 
 def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
@@ -551,6 +684,7 @@ def _row(folder: Path, suffixes: Mapping[str, str]) -> Row:
         folder.name,
         True,
         sources=len(grid.sources),
+        thumbs=tuple(one.name for one in grid.sources[:ROW_THUMBS]),
         flows=tuple(count for count in counts if count.of),
         without_flow=len(bare),
         newest=newest,

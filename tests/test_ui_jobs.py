@@ -28,7 +28,7 @@ from isekai.boundary import gpu, ollama  # noqa: E402
 from isekai.boundary.gpu import Seams, Volume  # noqa: E402
 from isekai.foundation.flow import FLOWS_DIR, Schema, load_flow  # noqa: E402
 from isekai.foundation.refusal import Refusal  # noqa: E402
-from isekai.foundation.run import Run, open_run  # noqa: E402
+from isekai.foundation.run import Run, approval_of, open_run  # noqa: E402
 from isekai.interface.render import LOST_EXIT  # noqa: E402
 from isekai.interface.ui import HOST, events, library  # noqa: E402
 from isekai.interface.ui import app as app_module  # noqa: E402
@@ -772,6 +772,24 @@ def test_with_every_count_rendered_render_is_disabled_naming_why(
     offer = client.get("/api/b/b/render").json()
 
     assert "already has its Count" in offer["disabled"]
+    assert offer["images"] == 0
+
+
+@pytest.mark.spec("ui:render:a-refused-count-is-shown")
+def test_an_offer_whose_only_short_approval_is_damaged_carries_its_refusal(
+    tmp_path: Path, schema: Schema, vocabulary: Vocabulary
+) -> None:
+    folder, client = _quoting(tmp_path, vocabulary, {"RUNPOD_API_KEY": "k"})
+    run = _approved(folder, "ada.jpg", FLOW, schema, vocabulary)
+    approval = approval_of(run, FLOW, 1)
+    body = json.loads(approval.read_text())
+    approval.write_text(json.dumps({**body, "renders": {"count": 0}}))
+
+    offer = client.get("/api/b/b/render").json()
+
+    assert offer["images"] == 0
+    assert approval.name in offer["refused"]
+    assert offer["disabled"] == offer["refused"]
 
 
 @pytest.mark.spec("ui:render:a-grown-quote-is-refused")

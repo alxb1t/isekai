@@ -2,6 +2,8 @@
 
 import json
 import os
+import struct
+import zlib
 from pathlib import Path
 
 import pytest
@@ -11,11 +13,11 @@ from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, REVIEW, Run, open_run
 from isekai.interface.ui import library
-from isekai.interface.ui.library import Cell, FlowCount
+from isekai.interface.ui.library import Cell, FlowCount, Rendered
 from isekai.pipeline.review import approve, review
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
-from tests.images import jpeg_bytes, photo_jpeg
+from tests.images import jpeg_bytes, jpeg_with_header, photo_jpeg
 from tests.stages import sheet, write_wd14
 
 REPO = Path(__file__).resolve().parent.parent
@@ -116,6 +118,21 @@ def test_a_flows_counts_are_out_of_the_sources_that_have_it(
     assert row.without_flow == 2
 
 
+@pytest.mark.spec("ui:batch-folder:a-row-names-its-first-sources")
+def test_a_row_names_its_first_seven_sources_in_the_hubs_order(
+    tmp_path: Path,
+) -> None:
+    names = [f"{letter}.jpg" for letter in "ihgfedcba"]
+    folder = _batch(tmp_path, "b", *names)
+
+    (row,) = library.rows(tmp_path, OFFERED, FLOWS_DIR)
+
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+    assert row.thumbs == tuple(one.name for one in grid.sources[:7])
+    assert row.thumbs == ("a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg", "f.jpg", "g.jpg")
+    assert row.sources == 9
+
+
 @pytest.mark.spec("ui:batch-folder:batches-are-ordered-by-their-newest-file")
 def test_batches_are_ordered_by_their_newest_file(tmp_path: Path) -> None:
     old = _batch(tmp_path, "a-old", "ada.jpg")
@@ -177,12 +194,55 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     rendered.mkdir(parents=True)
     for seed in (7, 8):
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
-    assert now() == Cell("rendered", 2, status="approved")
+    newest = Rendered(1, 8)
+    assert now() == Cell("rendered", 2, status="approved", newest=newest)
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
     (source,) = grid.sources
-    assert source.cells[SUMMON] == Cell("rendered", 2, status="approved")
+    assert source.cells[SUMMON] == Cell("rendered", 2, status="approved", newest=newest)
     assert source.digest == run.digest
+
+
+@pytest.mark.spec("ui:hub:a-cell-names-its-newest-image")
+def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    suffix = load_flow(SUMMON).output_suffix
+    _approved(run, vocabulary)
+    older = run.directory(SUMMON, OUTPUTS, "001")
+    older.mkdir(parents=True)
+    # Seed 5 is written last, though 9 is the highest.
+    for seed, at in ((3, 1_000), (9, 2_000), (5, 3_000)):
+        image = older / f"{seed}{suffix}"
+        image.write_bytes(b"png")
+        os.utime(image, (at, at))
+    review(run, SUMMON, new_version=True)
+    approve(run, SUMMON, load_flow(SUMMON).schema, vocabulary)
+
+    cell = library.stage(run, SUMMON, suffix)
+
+    assert cell.stage == "approved"
+    assert cell.renders == 0
+    assert cell.newest == Rendered(1, 5)
+    # A zero-padded name lists as seed 42, though no `42` file exists.
+    padded = older / f"0042{suffix}"
+    padded.write_bytes(b"png")
+    os.utime(padded, (500, 500))
+    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    # Written last, a padded name or one of digits outside ASCII is still no
+    # render: no image of seed 42 is where a large view looks for it.
+    os.utime(padded, (4_000, 4_000))
+    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    superscript = older / f"²{suffix}"
+    superscript.write_bytes(b"png")
+    os.utime(superscript, (5_000, 5_000))
+    assert library.stage(run, SUMMON, suffix).newest == Rendered(1, 5)
+    # Home reads no image's time: it shows no newest image.
+    assert library.stage(run, SUMMON, suffix, newest=False) == Cell(
+        "approved", status="approved"
+    )
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")
@@ -241,6 +301,25 @@ def test_a_source_still_carrying_metadata_is_marked_not_cleaned(
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
 
     assert {one.name: one.carries for one in grid.sources}["banner.jpg"] == ()
+
+
+@pytest.mark.spec("ui:hub:a-source-is-sized-from-its-file")
+def test_a_source_with_no_run_is_sized_from_its_own_file(tmp_path: Path) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    (folder / "sources" / "turned.jpg").write_bytes(
+        jpeg_with_header(1200, 900, orientation=6)
+    )
+    (folder / "sources" / "broken.jpg").write_bytes(b"not an image")
+
+    grid = library.hub(folder, OFFERED, FLOWS_DIR)
+
+    assert not (folder / "runs").exists()
+    sizes = {one.name: one.size for one in grid.sources}
+    assert sizes == {
+        "ada.jpg": (600, 800),
+        "turned.jpg": (900, 1200),
+        "broken.jpg": None,
+    }
 
 
 @pytest.mark.spec("ui:hub:an-unreadable-file-marks-its-cell")
@@ -314,3 +393,23 @@ def test_one_source_at_one_seed_in_two_batches_has_two_thumbnails(
             pixel = made.convert("RGB").getpixel((10, 10))
         assert isinstance(pixel, tuple)
         assert (pixel[0] > pixel[2]) == (colour[0] > colour[2])
+
+
+@pytest.mark.spec_exempt("twin: a file past Pillow's bound refuses as an unread one")
+@pytest.mark.parametrize("read", ["_upright", "source_jpeg", "_shrunk"])
+def test_an_image_past_pillows_pixel_bound_is_refused_naming_it(
+    read: str, tmp_path: Path
+) -> None:
+    # A PNG header declaring more pixels than Pillow opens, and no pixels at all.
+    def chunk(kind: bytes, body: bytes) -> bytes:
+        size, check = struct.pack(">I", len(body)), zlib.crc32(kind + body)
+        return size + kind + body + struct.pack(">I", check)
+
+    header = struct.pack(">IIBBBBB", 20000, 10000, 8, 2, 0, 0, 0)
+    huge = tmp_path / "huge.png"
+    huge.write_bytes(
+        b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IEND", b"")
+    )
+
+    with pytest.raises(Refusal, match="huge.png: is not an image this build can read"):
+        getattr(library, read)(huge)

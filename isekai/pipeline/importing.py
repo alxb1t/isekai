@@ -30,11 +30,10 @@ from isekai.foundation.atomic_write import write_atomically
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import REPOSITORY
 from isekai.shared.image import (
-    THUMB_SIDE,
     metadata_in,
     photo_resolution,
     strip_metadata,
-    thumbnail_jpeg,
+    upright_thumbnail,
 )
 
 if TYPE_CHECKING:
@@ -341,21 +340,16 @@ class Imports:
 
 
 def preview(staging: Path, name: str) -> bytes:
-    """Return a staged file upright, as `thumbnail_jpeg` makes it.
+    """Return a staged file upright, as `upright_thumbnail` makes it.
 
     Made from the file each time and kept nowhere: it goes with its staging folder.
     """
-    from PIL import Image, ImageOps
-
     _refuse_name(name)
     staged = staging / name
     if not staged.is_file():
         raise Refusal(f"{name}: not staged in this import; choose it again")
     try:
-        with Image.open(staged) as opened:
-            # A JPEG decodes at the smallest scale that still covers the side.
-            opened.draft("RGB", (THUMB_SIDE, THUMB_SIDE))
-            return thumbnail_jpeg(ImageOps.exif_transpose(opened))
+        return upright_thumbnail(staged)
     except OSError as unread:
         raise Refusal(
             f"{name}: its preview cannot be made ({unread}); choose it again"
