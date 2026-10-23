@@ -1,5 +1,5 @@
 ---
-version: v0.41
+version: v0.41.0
 backlog: [0062·R12, 0064·R6, 0061·R18]
 ---
 
