@@ -9,6 +9,12 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-23 · 0070-review
+
+Gate: local 0m40s · CI 7m25s (build-image at 801ffec) · 0.43.0: local 0m39s · CI 7m25s
+
+### Changed
+
 - A batch's Review has its own address, `/b/<batch>/review`, which opens its head; the Review tab counts the
   unapproved sheets, and the hub's *Review next* is gone. Each hub cell carries what its approval lacks (0070 D1, D2).
 
