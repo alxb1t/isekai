@@ -30,12 +30,18 @@ afterEach(() => {
 })
 
 spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
-  // Two runs hold an approved artifact in `f`: `a` approved and short, `b`
-  // re-opened over its approved one. `c` holds a draft alone.
+  // Two of the rail's runs hold an approved artifact in `f`: `a` approved and
+  // short, `b` re-opened over its approved one. `c` holds a draft alone, and `d`
+  // is approved with all its images, so the rail leaves it out.
   hub = {
     batch: 'b',
     flows: ['f'],
-    sources: [source('a', 'approved', 1), source('b', 're-opened'), source('c', 'draft')],
+    sources: [
+      source('a', 'approved', 1),
+      source('b', 're-opened'),
+      source('c', 'draft'),
+      source('d', 'approved', 0),
+    ],
   }
   const held = 2
   const queue = useQueue('b', 'f', () => 'c')
@@ -44,6 +50,7 @@ spec('ui:approval:a-re-opened-input-is-not-counted-approved', async () => {
 
   const reopened = queue.inputs.value.find((input) => input.id === 'b')
   expect(reopened?.status).toBe('re-opened')
+  expect(queue.inputs.value.map((input) => input.id)).toEqual(['a', 'b', 'c'])
   expect(queue.approved.value).toBe(held)
 })
 

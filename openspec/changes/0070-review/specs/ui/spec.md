@@ -195,6 +195,64 @@ edit, not another tab's.
 - **WHEN** Approve is pressed while a save is unanswered
 - **THEN** the approval is sent once that save answers, stating the draft it wrote
 
+### Requirement: An approved input is read-only on the surface until it is re-opened
+
+The system SHALL present an input whose flow has an approved artifact and no later draft as not editable,
+SHALL refuse a draft update against such an input, and SHALL state on the page that the input is approved
+and name the artifact that holds it. Where a draft numbered above the approved artifact's `approved_from`
+exists, the system SHALL present the input as **re-opened**: editable, with its approved artifact still
+named.
+
+`review --flow F --new-version` writes a new numbered draft from the approved copy, and the surface shows that
+state as its own rather than as something it is not: re-opened is a third status, and the approved artifact is
+never edited in place in either case. The library counts every approval the run directories hold; Review's rail
+lists only the sheets not yet rendered, so its footer counts the approved among them.
+
+#### Scenario: a draft update against an approved input is refused
+- **Key:** `ui:approval:approved-input-refuses-a-draft-update`
+- **Layers:** unit
+- **WHEN** a draft update is submitted for an input whose flow is approved and holds no later draft
+- **THEN** it is refused
+- **AND** no file in the run directory is created, changed or removed
+
+#### Scenario: an input approved in an earlier sitting opens read-only
+- **Key:** `ui:approval:approved-input-opens-read-only`
+- **Layers:** unit
+- **WHEN** the surface serves an input whose flow has an approved artifact and no draft
+- **THEN** the sheet it shows is the approved artifact's
+- **AND** the input is presented as not editable
+
+#### Scenario: an input re-opened with a new version is editable again
+- **Key:** `ui:approval:a-re-opened-input-is-editable`
+- **Layers:** unit
+- **WHEN** the surface serves an input whose flow has an approved artifact and a draft numbered above the
+  version that artifact records as its origin
+- **THEN** the sheet it shows is the draft's
+- **AND** the input is presented as editable
+- **AND** a draft update against it is accepted
+
+#### Scenario: a re-opened input is not counted as approved
+- **Key:** `ui:approval:a-re-opened-input-is-not-counted-approved`
+- **Layers:** unit
+- **WHEN** the batch is read while one of its inputs is re-opened
+- **THEN** that input's reported status is neither approved nor a plain draft
+- **AND** the batch's approved count agrees with what the run directories hold
+- **AND** Review's footer counts the approved among the rail's sheets, the re-opened one included
+
+#### Scenario: a stale lower draft does not re-open an approved input
+- **Key:** `ui:approval:a-stale-lower-draft-does-not-reopen`
+- **Layers:** unit
+- **WHEN** the surface serves an input whose flow has an approved artifact and a draft numbered below it
+- **THEN** the sheet it shows is the approved artifact's
+- **AND** the input is presented as not editable, naming no draft
+
+#### Scenario: an update that overlaps an approval is refused
+- **Key:** `ui:approval:an-update-overlapping-an-approval-is-refused`
+- **Layers:** unit
+- **WHEN** a draft update is in flight while the same input is approved
+- **THEN** the update is refused once the approval has written
+- **AND** the approved artifact is the one the approval wrote
+
 ## REMOVED Requirements
 
 ### Requirement: Review is a queue of unapproved sheets, and opening one writes its draft

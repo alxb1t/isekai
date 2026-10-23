@@ -117,18 +117,27 @@ export function useSheet(scope: Omit<Place, 'digest'>) {
      read-only sheet answers -- nothing was written, so nothing may be built
      from it. A sheet with no edit pending sends nothing.
 
-     **It waits for every save of this input still in flight**, and answers
-     with the newest: an approval pressed inside a save's round trip must state
-     the draft that save wrote, not the one before it. */
+     **It waits for every save of this input still in flight before it sends
+     a pending edit**, and answers with the newest: an approval pressed inside a
+     save's round trip must state the draft that save wrote, and a pending edit
+     sent beside it would state the same stale `saved` and be refused as another
+     tab's. */
   async function flush(): Promise<boolean> {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (detail.value === null || detail.value.readonly) return false
-    if (dirty) send()
     const id = current
-    const mine = [...inFlight.values()].filter((save) => save.id === id)
-    const answers = await Promise.all(mine.map((save) => save.landed))
-    return answers.at(-1) ?? true
+    // Sent at once when nothing is in flight: a leaving page has no turn to wait.
+    const earlier = landed(id)
+    const before = earlier.length > 0 ? await Promise.all(earlier) : []
+    if (dirty && current === id) send()
+    const answers = await Promise.all(landed(id))
+    return answers.at(-1) ?? before.at(-1) ?? true
+  }
+
+  /* The answers of every save of input `id` still in flight, in the order they started. */
+  function landed(id: string): Promise<boolean>[] {
+    return [...inFlight.values()].filter((save) => save.id === id).map((save) => save.landed)
   }
 
   /* Start one save of the whole draft, held in `inFlight` until it answers. */

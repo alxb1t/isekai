@@ -123,6 +123,8 @@ spec('ui:save:an-approval-waits-for-a-save-in-flight', async () => {
   await opened
   sheet.commit('hair', 'brown hair', null)
   void sheet.flush()
+  // A second tag inside the first save's round trip: pending when Approve is pressed.
+  sheet.commit('hair', 'short hair', null)
 
   // Review's Approve: the draft on disk first, then the approval stating it.
   const approving = (async () => {
@@ -131,11 +133,19 @@ spec('ui:save:an-approval-waits-for-a-save-in-flight', async () => {
   await vi.runAllTimersAsync()
   expect(calls.map((call) => call.url)).toEqual(['/api/b/b/review/a/f/draft'])
 
+  // The pending edit is sent once the first save answers, stating the draft it wrote.
   await answer('/api/b/b/review/a/f/draft', receipt(11))
+  const [second] = calls
+  expect(second.url).toBe('/api/b/b/review/a/f/draft')
+  const sent = JSON.parse(String(second.init?.body))
+  expect(sent.saved).toBe(11)
+  expect(sent.fields.hair).toEqual(['long hair', 'brown hair', 'short hair'])
+
+  await answer('/api/b/b/review/a/f/draft', receipt(12))
   const [post] = calls
   expect(post.url).toBe('/api/b/b/review/a/f/approve')
-  expect(JSON.parse(String(post.init?.body))).toEqual({ saved: 11 })
-  await answer('/api/b/b/review/a/f/approve', { approved: '001.approved.json', warnings: [], at: 12 })
+  expect(JSON.parse(String(post.init?.body))).toEqual({ saved: 12 })
+  await answer('/api/b/b/review/a/f/approve', { approved: '001.approved.json', warnings: [], at: 13 })
   await approving
-  expect(approval.at.value).toBe(12)
+  expect(approval.at.value).toBe(13)
 })
