@@ -32,7 +32,7 @@ GET  /api/b/{batch}/render   ·   POST …/render{/quote,}   {keep_open, limit_s
 POST /api/billing/check
 POST /api/staging   ·   PUT …/{id}/files/{name}, and GET its /thumb
 DELETE /api/staging/{id}   ·   POST …/{id}/commit   {batch, as_is, add}
-GET  /events[?batch=|?staging=]                    Server-Sent Events
+GET  /events[?batch=&staging=], either or both    Server-Sent Events
 GET  /api/b/{batch}/review/{digest}/{flow}         and /photo
 PUT  /api/b/{batch}/review/{digest}/{flow}/draft
 POST /api/b/{batch}/review/{digest}/{flow}/approve   ·   POST …/discard
@@ -527,14 +527,27 @@ def create_app(
     ) -> StreamingResponse:
         """Stream the job slot, `batch`'s hub and `staging`'s files, then each change.
 
-        A reload or a second tab gets the whole truth at once.
+        A reload or a second tab gets the whole truth at once. A batch or an import
+        it cannot read is left out of the snapshot, never refused.
         """
-        held = imports.reader(staging) if staging is not None else None
+        # An import it no longer holds is left out rather than refused: the page's
+        # one stream would never open again after a refused connect.
+        try:
+            held = imports.reader(staging) if staging is not None else None
+        except Refusal:
+            held = None
 
         def snapshot() -> dict[str, Any]:
             found = {"job": jobs.slot(), "billing": billing.state()}
             if batch is not None:
-                found["hub"] = _hub(library.hub(folder(batch), flows, wired.flows_dir))
+                # A batch it cannot read is left out: the screen's own read of it
+                # shows the refusal, and the page keeps its stream.
+                try:
+                    grid = library.hub(folder(batch), flows, wired.flows_dir)
+                except Refusal:
+                    pass
+                else:
+                    found["hub"] = _hub(grid)
             if held is not None:
                 found["files"] = held.files()
             return found

@@ -16,7 +16,7 @@ import urllib.error
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 import pytest
 
@@ -200,34 +200,46 @@ def test_a_stream_opened_for_a_batch_starts_with_the_slot_and_its_hub(
     dist = tmp_path / "dist"
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html>")
-    app = create_app(
-        folder.parent,
-        wired,
-        flows=OFFERED,
-        bundle=dist,
-        wire=lambda runs: replace(wired, runs_root=runs),
-        host=HOST,
-        port=PORT,
-    )
-    broadcast: events.Broadcast = app.state.broadcast
 
-    def close_once_open() -> None:
-        deadline = time.monotonic() + WAIT
-        while not broadcast._queues and time.monotonic() < deadline:
-            time.sleep(0.01)
-        broadcast.close()
+    def first_frame(url: str) -> dict[str, Any]:
+        # Each stream is read on its own app: closing one ends its every stream.
+        app = create_app(
+            folder.parent,
+            wired,
+            flows=OFFERED,
+            bundle=dist,
+            wire=lambda runs: replace(wired, runs_root=runs),
+            host=HOST,
+            port=PORT,
+        )
+        broadcast: events.Broadcast = app.state.broadcast
 
-    threading.Thread(target=close_once_open, daemon=True).start()
-    body = TestClient(app, base_url=f"http://{HOST}:{PORT}").get("/events?batch=b")
+        def close_once_open() -> None:
+            deadline = time.monotonic() + WAIT
+            while not broadcast._queues and time.monotonic() < deadline:
+                time.sleep(0.01)
+            broadcast.close()
 
-    assert body.headers["content-type"].startswith("text/event-stream")
-    kind, data = body.text.split("\n")[:2]
-    assert kind == "event: snapshot"
-    first = json.loads(data.removeprefix("data: "))
+        threading.Thread(target=close_once_open, daemon=True).start()
+        body = TestClient(app, base_url=f"http://{HOST}:{PORT}").get(url)
+        assert body.status_code == 200
+        assert body.headers["content-type"].startswith("text/event-stream")
+        kind, data = body.text.split("\n")[:2]
+        assert kind == "event: snapshot"
+        return json.loads(data.removeprefix("data: "))
+
+    first = first_frame("/events?batch=b")
     assert first["job"] is None
     assert first["hub"]["batch"] == "b"
     assert first["hub"]["sources"][0]["cells"][FLOW]["stage"] == "assigned"
     assert first["hub"]["sources"][0]["digest"] == run.digest
+
+    # A batch or an import it cannot read is left out, and the stream still opens:
+    # it is the page's only one, and a refused connect would end it for good.
+    missing = first_frame("/events?batch=gone")
+    assert (missing["job"], "hub" in missing) == (None, False)
+    closed = first_frame("/events?batch=b&staging=0123")
+    assert (closed["hub"]["batch"], "files" in closed) == ("b", False)
 
 
 @pytest.mark.spec("ui:events:a-stages-report-reaches-the-stream")

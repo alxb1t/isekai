@@ -742,6 +742,35 @@ def test_a_read_that_raises_refuses_its_file_and_the_next_is_read(
     assert reader.files()[again]["state"] == "ready"
     reader.seal()
 
+    # An upload that cannot be held on disk is refused alone, never left waiting.
+    held = importing.Reader(stage(tmp_path / "held"), LIMIT, lambda event: None)
+    holding = importing.tempfile.mkdtemp
+
+    def full(**kwargs: object) -> str:
+        monkeypatch.setattr(importing.tempfile, "mkdtemp", holding)
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(importing.tempfile, "mkdtemp", full)
+    with pytest.raises(Refusal, match="c.jpg: .*No space left on device"):
+        held.put("c.jpg", photo_jpeg((0, 0, 200)))
+    assert [one["state"] for one in held.files().values()] == ["refused"]
+    held.seal()
+    held.stop()
+
+    # One whose folder a cancel deleted as it was held names the closed import.
+    gone = importing.Reader(stage(tmp_path / "gone"), LIMIT, lambda event: None)
+
+    def cancelled(**kwargs: object) -> str:
+        monkeypatch.setattr(importing.tempfile, "mkdtemp", holding)
+        gone.halt()
+        raise FileNotFoundError(2, "No such file or directory")
+
+    monkeypatch.setattr(importing.tempfile, "mkdtemp", cancelled)
+    with pytest.raises(Refusal, match="d.jpg: its import is closed"):
+        gone.put("d.jpg", photo_jpeg((0, 200, 200)))
+    assert [one["state"] for one in gone.files().values()] == ["refused"]
+    gone.seal()
+
 
 @pytest.mark.spec("ui:sheet:two-uploads-of-one-name-keep-their-own-states")
 def test_two_uploads_of_one_name_keep_their_own_states(tmp_path: Path) -> None:

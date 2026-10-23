@@ -36,7 +36,8 @@ hub ─ Render ─▶ quote ─▶ confirm ─▶ volume up ─▶ render ─▶
   open, and on Check again.
 - **`/events`** (`events.py`) streams a snapshot of the job slot, billing, the batch's hub and the import's
   files on every connect, then a `cell` event per progress line, the cell's stage read again from disk. A page
-  holds one stream, naming its batch and its open import, and it opens again when either changes.
+  holds one stream, naming its batch and its open import, and it opens again when either changes. A batch or
+  an import it cannot read is left out of the snapshot, so the stream still opens.
 
 The columns are the flows `config/ui.json` offers. The render's confirmation is the one act that
 spends money, and only as the CLI's own verb

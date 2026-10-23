@@ -7,7 +7,7 @@ import type { StagedFile } from '../types'
 
 /* The New batch and Add sources sheet (design spec J1, J7): files chosen in the
    browser's dialog, each sent in its own request with its own bar, then read and
-   cleaned by the server one at a time, each step reported on the import's stream,
+   cleaned by the server one at a time, each step reported on the page's stream,
    then imported in one move. With `batch`, the files join that batch; without
    it, the sheet names a new one. */
 const props = defineProps<{ batch?: string }>()
@@ -62,11 +62,19 @@ const staging = ref<string | null>(null)
 const tiles = ref<Tile[]>([])
 const name = ref(new Date().toISOString().slice(0, 10))
 const refusal = ref<string | null>(null)
+/* Import's commit is in flight: no file is added, nor Import pressed again. */
+const committing = ref(false)
 let committed = false
+/* The sheet is gone: an import that opens after it is cancelled, never followed. */
+let closed = false
 let counter = 0
 const live = useLiveStore()
 const opening = openStaging().then(
   (opened) => {
+    if (closed) {
+      void cancelStaging(opened.id).catch(() => undefined)
+      return null
+    }
     staging.value = opened.id
     live.follow({ staging: opened.id })
     return opened.id
@@ -94,6 +102,7 @@ const shown = computed(() => tiles.value.filter((one) => one.phase !== 'refused'
 
 /* Import's reason for being disabled, or null when it is not (rule 4). */
 const disabled = computed(() => {
+  if (committing.value) return 'Importing'
   if (tiles.value.length === 0) return 'Choose files to import'
   if (reading.value) return `Reading ${read.value.length} of ${tiles.value.length}`
   if (ready.value.length === 0)
@@ -203,12 +212,15 @@ async function importAll(): Promise<void> {
   const asIs = tiles.value
     .filter((one) => one.result?.state === 'not cleaned' && one.asIs)
     .map((one) => one.result?.name ?? '')
+  committing.value = true
   try {
     const done = await commitStaging(staging.value, target, asIs, adding.value)
     committed = true
     emit('imported', done.batch)
   } catch (reason) {
     refusal.value = (reason as Error).message
+  } finally {
+    committing.value = false
   }
 }
 
@@ -238,6 +250,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  closed = true
   window.removeEventListener('keydown', onKey)
   live.follow({ staging: null })
   if (staging.value !== null && !committed) void cancelStaging(staging.value).catch(() => undefined)
@@ -256,7 +269,12 @@ onUnmounted(() => {
           {{ tiles.length }} {{ noun(tiles.length, 'file') }} chosen ·
           {{ ready.length }} {{ noun(ready.length, 'source') }} · {{ refused.length }} refused
         </span>
-        <button class="btn btn-secondary import__add" type="button" @click="picker?.click()">
+        <button
+          class="btn btn-secondary import__add"
+          type="button"
+          :disabled="committing"
+          @click="picker?.click()"
+        >
           Add files…
         </button>
         <input

@@ -161,10 +161,18 @@ def test_importing_a_new_batch_opens_its_hub_with_every_source_unassigned(
         _jpeg(tmp_path / "second.jpg", (0, 100, 0)),
     ]
 
+    committing: list[Route] = []
+    page.route("**/commit", lambda route: committing.append(route))
+
     _choose(page, served, files)
     expect(page.locator(".import__count")).to_contain_text("2 sources")
     page.get_by_label("Batch name").fill("e2e-imported")
     page.locator(".import__foot .btn-primary").click()
+    # While the commit runs, no file can be added: the seal would refuse it unseen.
+    held = _sent(page, committing)
+    expect(page.get_by_role("button", name="Add files…")).to_be_disabled()
+    expect(page.locator(".import__foot .btn-primary")).to_be_disabled()
+    held.continue_()
 
     expect(page).to_have_url(served.hub_of("e2e-imported"))
     expect(page.locator(".hub__name")).to_have_count(2)
