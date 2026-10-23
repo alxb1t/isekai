@@ -6,6 +6,7 @@ import AppHeader from '../components/AppHeader.vue'
 import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
+import KeyBar from '../components/KeyBar.vue'
 import LoadingSkeleton from '../components/LoadingSkeleton.vue'
 import PhotoOverlay from '../components/PhotoOverlay.vue'
 import RefusalPage from '../components/RefusalPage.vue'
@@ -14,8 +15,11 @@ import SheetForm from '../components/SheetForm.vue'
 import SourcePanel from '../components/SourcePanel.vue'
 import TagInput from '../components/TagInput.vue'
 import { useApproval } from '../composables/useApproval'
+import { useKeys } from '../composables/useKeys'
 import { after, queue, queued, reviewQueue, useQueue } from '../composables/useQueue'
 import { useSheet } from '../composables/useSheet'
+import { nextPane, type Pane } from '../panes'
+import { modded, plain, shifted } from '../stores/keys'
 import type { FieldCandidates } from '../types'
 
 /* Review: one batch in one flow, the run in the URL. It shows the loading state
@@ -68,17 +72,8 @@ function stepBatch(direction: -1 | 1): void {
   select(inputs[(at + direction + inputs.length) % inputs.length].id)
 }
 
-/* Three panes, left to right: the rail, the photograph and its caption, the
-   sheet. `Alt+←/→` moves between them and `Alt+↑/↓` moves through the batch;
-   inside a pane the plain arrows do that pane's own thing — scroll the caption,
-   walk the rows, change the input.
-
-   The rail is a vertical list, so vertical is the batch, and horizontal is
-   getting to the caption to read it, and back to the field being typed. */
-type Pane = 'rail' | 'source' | 'sheet'
-
-const PANES: Pane[] = ['rail', 'source', 'sheet']
-
+/* The panes are `panes.ts`'s. Inside a pane `j` `k` or the vertical arrows do
+   that pane's own thing — change the input, scroll the caption, walk the rows. */
 const focused = ref<string | null>(null)
 /* Where the sheet was left. `focused` is cleared on blur, because the row
    highlight must not survive the operator leaving it -- but coming back from
@@ -267,37 +262,53 @@ function step(direction: -1 | 1): void {
   else selectedChip.value = (at + direction + count) % count
 }
 
-/* Which pane holds the focus, read from the document rather than remembered:
-   the operator can click into any of them, and a remembered answer would send
-   the next `Alt+→` from somewhere they are not. */
-function paneNow(): Pane {
-  const active = document.activeElement
-  if (active instanceof HTMLElement) {
-    if (active.closest('.rail')) return 'rail'
-    if (active.closest('.source')) return 'source'
-    if (active.closest('.form')) return 'sheet'
-  }
-  return pane
+/* The pane an element sits in, or null. ④ sits inside the sheet's form. */
+function paneOf(element: Element | null): Pane | null {
+  if (!element) return null
+  if (element.closest('.rail')) return 'rail'
+  if (element.closest('.source')) return 'source'
+  if (element.closest('.renders-block')) return 'renders'
+  if (element.closest('.form')) return 'sheet'
+  return null
 }
 
+/* Which pane holds the focus, read from the document rather than remembered:
+   the operator can click into any of them, and a remembered answer would send
+   the next `l` from somewhere they are not. Out of every pane, such as after
+   `Esc` leaves a field, it is the pane last entered. */
+function paneNow(): Pane {
+  return paneOf(document.activeElement) ?? pane
+}
+
+function remember(event: FocusEvent): void {
+  pane = paneOf(event.target as Element | null) ?? pane
+}
+
+/* The element a pane gives the focus to, or null when it holds none. */
+function entry(next: Pane): HTMLElement | null {
+  if (next === 'rail') return document.querySelector<HTMLElement>('.rail__card--current')
+  if (next === 'source') return document.querySelector<HTMLElement>('.source')
+  if (next === 'renders') {
+    const block = document.querySelector<HTMLElement>('.renders-block')
+    return block?.querySelector<HTMLElement>('button:not(:disabled), input') ?? block
+  }
+  const field = lastField.value ?? schema.value[0]
+  return field
+    ? document.querySelector<HTMLInputElement>(`input.fragment[data-field="${field}"]`)
+    : null
+}
+
+/* A pane with nothing to focus still takes the next key: the focus leaves the
+   pane it was in, and `pane` answers for it. */
 function enter(next: Pane): void {
   pane = next
-  if (next === 'rail') {
-    document
-      .querySelector<HTMLElement>('.rail__card--current')
-      ?.focus()
-  } else if (next === 'source') {
-    source.value?.focus()
-  } else {
-    const order = schema.value
-    const field = lastField.value ?? order[0]
-    if (field) document.querySelector<HTMLInputElement>(`input.fragment[data-field="${field}"]`)?.focus()
-  }
+  const target = entry(next)
+  if (target) target.focus()
+  else if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
 }
 
 function movePane(direction: -1 | 1): void {
-  const at = PANES.indexOf(paneNow())
-  enter(PANES[Math.min(Math.max(at + direction, 0), PANES.length - 1)])
+  enter(nextPane(paneNow(), direction))
 }
 
 /* Walk the sheet with the vertical keys, clamped at both ends. A 16-row list
@@ -305,7 +316,8 @@ function movePane(direction: -1 | 1): void {
    place rather than move it, which is the same reason the dropdown overlays. */
 function moveRow(direction: -1 | 1): void {
   const order = schema.value
-  const at = focused.value ? order.indexOf(focused.value) : -1
+  const from = focused.value ?? lastField.value
+  const at = from ? order.indexOf(from) : -1
   if (at < 0) return
   const next = order[Math.min(Math.max(at + direction, 0), order.length - 1)]
   document
@@ -354,71 +366,81 @@ function toggleLens(which: Lens): void {
   else void openLens(which)
 }
 
-function onKey(event: KeyboardEvent): void {
-  const meta = event.metaKey || event.ctrlKey
-  /* **Option is a character-producing modifier on macOS**, so both of these match
-     `event.code` and both call `preventDefault()`. `Option+Space` emits U+00A0 and
-     `Option+F` emits `ƒ`; an `event.key` branch would let the character through
-     into a tag field, which is the silent dead end this feature exists to remove.
-     `preventDefault()` is load-bearing a second time because Space is the native
-     activation key of a focused `<button>`, and this app focuses one on mount. */
-  if (event.altKey && event.code === 'Space') {
-    event.preventDefault()
-    toggleLens('cheatsheet')
-    return
-  }
-  if (event.altKey && event.code === 'KeyF') {
-    event.preventDefault()
-    if (lens.value === 'photo' || sheet.detail.value) toggleLens('photo')
-    return
-  }
-  /* **Both properties, because `Cmd+Z` produces no character.** Either test
-     alone is partial: under a Cyrillic layout `event.key` is `'я'`, and under
-     Dvorak `code: 'KeyZ'` is the key printed `;` while the key printed `Z`
-     reports `code: 'Slash'`. This is not the Option case above -- Option emits a
-     character, so `event.key` there is unusable and only the physical key will
-     do; a meta-modified Z emits nothing, so accepting both swallows no text. */
-  if (meta && (event.key.toLowerCase() === 'z' || event.code === 'KeyZ')) {
-    event.preventDefault()
-    if (event.shiftKey) sheet.redo()
-    else sheet.undo()
-  } else if (event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
-    // The rail is a vertical list, so vertical is the batch.
-    event.preventDefault()
-    stepBatch(event.key === 'ArrowUp' ? -1 : 1)
-  } else if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-    event.preventDefault()
-    movePane(event.key === 'ArrowLeft' ? -1 : 1)
-  } else if (
-    !event.altKey &&
-    !meta &&
-    (event.key === 'ArrowUp' || event.key === 'ArrowDown')
-  ) {
+const scrollSource = (direction: -1 | 1) => () =>
+  source.value?.scrollBy({ top: direction * 120 })
+
+/* `j` `k` or ↓ ↑: the rail changes the input, the source pane scrolls, and the
+   sheet walks its rows from the field last left. */
+function vertical(direction: -1 | 1): () => void {
+  return () => {
     const here = paneNow()
-    if (here === 'rail') {
-      // A list answers its own arrows.
-      event.preventDefault()
-      stepBatch(event.key === 'ArrowUp' ? -1 : 1)
-    } else if (here === 'source') {
-      event.preventDefault()
-      source.value?.scrollBy({ top: event.key === 'ArrowUp' ? -120 : 120 })
-    }
-  } else if (meta && event.key === 'Enter') {
-    event.preventDefault()
-    void approve()
-  } else if (event.key === 'Escape' && suspended.value) {
-    event.preventDefault()
-    closeLens()
-  } else if (
-    lens.value === 'photo' &&
-    (event.key === 'ArrowLeft' || event.key === 'ArrowRight')
-  ) {
-    // Arrow keys still move through the batch, so the overlay doubles as a way
-    // to compare inputs without closing it.
-    event.preventDefault()
-    stepBatch(event.key === 'ArrowLeft' ? -1 : 1)
+    if (here === 'rail') stepBatch(direction)
+    else if (here === 'source') scrollSource(direction)()
+    else if (here === 'sheet') moveRow(direction)
   }
 }
+
+/* The keys that cross components, so no component owns two of them (D25). Mod+K,
+   Mod+↵ and Mod+Z reach into a field: they are what the operator presses mid-edit. */
+useKeys('screen', [
+  {
+    id: 'approve',
+    keys: [modded('Enter')],
+    label: 'approve',
+    run: () => void approve(),
+    inField: true,
+  },
+  { id: 'undo', keys: [modded('KeyZ')], label: 'undo', run: () => sheet.undo(), inField: true },
+  {
+    id: 'redo',
+    keys: [{ code: 'KeyZ', shift: true, mod: true }],
+    label: 'redo',
+    run: () => sheet.redo(),
+    inField: true,
+  },
+  {
+    id: 'cheatsheet',
+    keys: [modded('KeyK')],
+    label: 'the tag cheatsheet',
+    run: () => toggleLens('cheatsheet'),
+    inField: true,
+  },
+  {
+    id: 'next-sheet',
+    keys: [shifted('KeyJ'), shifted('ArrowDown')],
+    label: 'next sheet',
+    run: () => stepBatch(1),
+  },
+  {
+    id: 'previous-sheet',
+    keys: [shifted('KeyK'), shifted('ArrowUp')],
+    label: 'previous sheet',
+    run: () => stepBatch(-1),
+  },
+  { id: 'left', keys: plain('KeyH', 'ArrowLeft'), label: 'pane left', run: () => movePane(-1) },
+  { id: 'right', keys: plain('KeyL', 'ArrowRight'), label: 'pane right', run: () => movePane(1) },
+  { id: 'down', keys: plain('KeyJ', 'ArrowDown'), label: 'down', run: vertical(1) },
+  { id: 'up', keys: plain('KeyK', 'ArrowUp'), label: 'up', run: vertical(-1) },
+  {
+    id: 'scroll-down',
+    keys: [{ code: 'KeyE', ctrl: true }],
+    label: 'scroll the photograph',
+    run: scrollSource(1),
+  },
+  {
+    id: 'scroll-up',
+    keys: [{ code: 'KeyY', ctrl: true }],
+    label: 'scroll back',
+    run: scrollSource(-1),
+  },
+  {
+    id: 'photo',
+    keys: plain('Enter'),
+    label: 'the photograph',
+    run: () => void openLens('photo'),
+    when: () => paneNow() === 'source' && sheet.detail.value !== null,
+  },
+])
 
 // The draft is flushed as the tab goes; the PUT is kept alive past the page.
 const onLeave = () => void sheet.flush()
@@ -429,7 +451,6 @@ onBeforeRouteLeave(async () => {
 })
 
 onMounted(async () => {
-  window.addEventListener('keydown', onKey)
   window.addEventListener('beforeunload', onLeave)
   // Independent reads: the sheet needs only the route's digest.
   const [read] = await Promise.allSettled([batch.load(), sheet.open(current.value)])
@@ -442,10 +463,7 @@ onMounted(async () => {
   enter('rail')
 })
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', onKey)
-  window.removeEventListener('beforeunload', onLeave)
-})
+onUnmounted(() => window.removeEventListener('beforeunload', onLeave))
 
 watch(current, (id) => {
   if (!id) return
@@ -494,7 +512,7 @@ watch(current, (id) => {
         </span>
       </template>
     </AppHeader>
-    <div v-if="batch.info.value" class="work">
+    <div v-if="batch.info.value" class="work" @focusin="remember">
       <BatchRail
         :inputs="batch.inputs.value"
         :approved="batch.approved.value"
@@ -598,6 +616,7 @@ watch(current, (id) => {
       :photo="photoUrl(sheet.detail.value.id)"
       :caption="sheet.detail.value.caption"
       @close="closeLens"
+      @step="stepBatch"
     />
 
     <CheatsheetOverlay
@@ -606,5 +625,6 @@ watch(current, (id) => {
       :field="lastField"
       @close="closeLens"
     />
+    <KeyBar />
   </div>
 </template>

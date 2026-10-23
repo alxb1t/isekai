@@ -7,7 +7,7 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 
 - [x] 1 — The registry
 - [x] 2 — The screens
-- [ ] 3 — Review
+- [x] 3 — Review
 - [ ] 4 — The dialogs
 
 ## 1 — The registry
@@ -46,19 +46,19 @@ The registry, the screens, Review, then the dialogs, per [design](design.md). Ev
 
 ## 3 — Review
 
-- [ ] 3.1 **HALT CHECK** — Review has three panes.
+- [x] 3.1 **HALT CHECK** — Review has three panes.
   Verify: `grep -c "PANES: Pane\[\] = \['rail', 'source', 'sheet'\]" ui/src/views/Review.vue` prints `1`.
-- [ ] 3.2 Add `ui/src/panes.ts` per [D5](design.md#d5), bound to `ui:keys:review-moves-between-its-panes` in a new
+- [x] 3.2 Add `ui/src/panes.ts` per [D5](design.md#d5), bound to `ui:keys:review-moves-between-its-panes` in a new
   `ui/src/panes.test.ts`.
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c 'review-moves-between-its-panes' ui/src/panes.test.ts` prints `1`.
-- [ ] 3.3 Move `ui/src/views/Review.vue` onto `useKeys` per [D4](design.md#d4) and [D5](design.md#d5), with a
+- [x] 3.3 Move `ui/src/views/Review.vue` onto `useKeys` per [D4](design.md#d4) and [D5](design.md#d5), with a
   `KeyBar`; the tag cheatsheet on `Mod+K`; the hints in `ui/src/components/SourcePanel.vue`,
   `ui/src/components/PhotoOverlay.vue` and `ui/src/components/CheatsheetOverlay.vue` through `KeyHint`.
   Verify: `grep -c 'altKey' ui/src/views/Review.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.4 In `tests/e2e/test_review.py`, open the tag cheatsheet with `ControlOrMeta+KeyK`, the test renamed
+- [x] 3.4 In `tests/e2e/test_review.py`, open the tag cheatsheet with `ControlOrMeta+KeyK`, the test renamed
   `test_mod_k_opens_the_cheatsheet`; add `test_a_command_waits_until_the_field_is_left`, bound to its `ui:keys:` key.
   Verify: `grep -c 'Alt+Space' tests/e2e/test_review.py` prints `0`, and `uv run pytest -q tests/e2e/test_review.py` exits 0.
-- [ ] 3.5 Rewrite the *Review* row of `ui/design/spec.md` §7 per [D4](design.md#d4) and [D5](design.md#d5).
+- [x] 3.5 Rewrite the *Review* row of `ui/design/spec.md` §7 per [D4](design.md#d4) and [D5](design.md#d5).
   Verify: `grep -c '⌥Space' ui/design/spec.md` prints `0`.
 
 ## 4 — The dialogs

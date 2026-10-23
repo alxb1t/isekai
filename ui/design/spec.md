@@ -65,7 +65,7 @@ timer mono 40px/500.
 ## 3 · The shell
 
 ```
-┌ isekai  2026-09-17   Hub ⌥1  Review ⌥2  Renders ⌥3      flow [all|summon|conjure] ⌥←→  ⌥Space keys ┐ AppBar 40
+┌ isekai  2026-09-17   Hub ⇧H  Review ⇧R  Renders ⇧I      flow [all|summon|conjure] ⇧F   ? keys      ┐ AppBar 40
 ├─ BillingBanner (only when something may be billing; filled accent, cannot be dismissed) ───────────┤
 │                                                                                                     │
 │                                   <the route's screen>                                              │
@@ -393,10 +393,10 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 
 | where | keys |
 |---|---|
-| everywhere | ⇧L the library · ⇧H Hub · ⇧R the queue's head · ⇧I Renders · ⇧S the session · ? the key list · ⌥← → flow · ⌥Space the cheatsheet · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
+| everywhere | ⇧L the library · ⇧H Hub · ⇧R the queue's head · ⇧I Renders · ⇧S the session · ? the key list · ⌘↵ the outlined action · esc leaves a field, then closes an overlay, never a billing alert |
 | Home | ⇧N New batch · j k or ↓↑ ↵ the library |
 | Hub | h j k l or ←↓↑→ cells · space tick / untick, or a column for the selected rows · ⇧J ⇧K or ⇧↓↑ select rows · ↵ the cell's action · ⌘↵ Prepare · ⇧A Add sources · ⇧G Render · esc clears the selection |
-| Review | ⌘Z ⇧⌘Z · ⌥↑↓ the queue · ⌘↵ Approve · autocomplete ↑↓ ↵ esc · ⌃↓ walk refusals · ⌥↵ take every suggested spelling · ⌥C photo and render, on a revision · ⌥↓ the collapsed caption |
+| Review | h l or ←→ the panes: the rail, the photograph, the sheet, ④ · j k or ↓↑ in each: the input, a scroll, the rows · ⇧J ⇧K or ⇧↓↑ the queue · ⌃E ⌃Y scroll the photograph · ↵ on the photograph fills the window · ⌘↵ Approve · ⌘Z ⇧⌘Z · ⌘K the tag cheatsheet · autocomplete ↑↓ ↵ esc · ⇧F the next flow, ⇧E revise and ⌘↓ walk refusals, when built · ⇧↵ take every suggested spelling · ⇧C photo and render, on a revision · the collapsed caption, its key named when built |
 | Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
 | dialogs | ⌘↵ confirm · esc cancel |
 

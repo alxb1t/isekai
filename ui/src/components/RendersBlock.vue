@@ -40,7 +40,7 @@ const draws = computed(() => {
 </script>
 
 <template>
-  <section class="renders-block">
+  <section class="renders-block" tabindex="-1">
     <div class="renders-block__row">
       <span class="section-label">④ Renders</span>
       <span class="renders-block__label">count</span>
@@ -83,7 +83,7 @@ const draws = computed(() => {
           inputmode="numeric"
           placeholder="+ seed"
           aria-label="add a seed"
-          @keydown.enter.prevent="addSeed"
+          @keydown.enter.exact.prevent="addSeed"
           @keydown.esc="typed = ''"
         />
       </span>

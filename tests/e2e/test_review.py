@@ -58,12 +58,30 @@ def test_an_approved_input_opens_read_only(page: Page, served: Served) -> None:
 
 
 @pytest.mark.spec("ui:cheatsheet:every-declared-criterion-is-answered")
-def test_option_space_opens_the_cheatsheet(page: Page, served: Served) -> None:
+def test_mod_k_opens_the_cheatsheet(page: Page, served: Served) -> None:
     _open(page, served, served.draft)
     expect(page.locator("input.fragment").first).to_be_visible()
-    page.keyboard.press("Alt+Space")
+    page.keyboard.press("ControlOrMeta+KeyK")
     groups = page.locator(".cheatsheet__group")
     expect(groups).to_have_count(len(load_flow(FLOW).schema.names))
     expect(page.locator(".overlay__foot")).to_contain_text(
         re.compile(r"\d+ tags shown")
     )
+
+
+@pytest.mark.spec("ui:keys:a-command-waits-until-the-field-is-left")
+def test_a_command_waits_until_the_field_is_left(page: Page, served: Served) -> None:
+    _open(page, served, served.draft)
+    field = page.locator("input.fragment").first
+    field.click()
+    field.press("Shift+KeyH")
+    # The list the letter opens is the field's own, and the first Esc closes it.
+    expect(page.locator(".drop__row").first).to_be_visible()
+    field.press("Escape")
+    expect(page.locator(".drop__row")).to_have_count(0)
+    expect(field).to_have_value("H")
+    expect(page).to_have_url(re.compile("/review/"))
+
+    page.keyboard.press("Escape")
+    page.keyboard.press("Shift+KeyH")
+    expect(page).to_have_url(served.hub)
