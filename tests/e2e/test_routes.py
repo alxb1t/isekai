@@ -31,10 +31,7 @@ def test_a_reload_lands_on_the_same_hub_and_the_same_review(
     expect(page.locator(".approve-bar__fact")).to_contain_text("Approved")
 
     page.goto(served.hub)
-    sheet = page.locator('.hub__cell[data-row="0"][data-stage="draft"]')
-    sheet.click()
-    expect(sheet).to_contain_text("↵ review")
-    page.keyboard.press("Enter")
+    page.locator('.hub__cell[data-row="0"][data-stage="draft"]').click()
     expect(page).to_have_url(served.review(served.draft))
     expect(page.locator(".rail__card--current")).to_contain_text("ada.jpg")
 

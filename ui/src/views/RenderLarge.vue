@@ -33,7 +33,15 @@ function compare(): void {
   void router.push({ name: 'compare', params: { ...props } })
 }
 
-/* esc goes back to Renders. Matched on `event.code`: ⌥E types a character. */
+/* Where esc and the back button go: the hub when it opened this view, else
+   Renders, which holds every image. A pasted address carries no state. */
+const back = computed(() =>
+  window.history.state?.from === 'hub'
+    ? { to: { name: 'hub', params: { batch: props.batch } }, label: 'Back to Hub' }
+    : { to: { name: 'renders', params: { batch: props.batch } }, label: 'Back to Renders' },
+)
+
+/* Matched on `event.code`: ⌥E types a character. */
 function onKey(event: KeyboardEvent): void {
   if (revising.value) return
   if (event.altKey && event.code === 'KeyE') {
@@ -50,7 +58,7 @@ function onKey(event: KeyboardEvent): void {
     compare()
   } else if (event.key === 'Escape') {
     event.preventDefault()
-    void router.push({ name: 'renders', params: { batch: props.batch } })
+    void router.push(back.value.to)
   }
 }
 
@@ -94,8 +102,8 @@ onMounted(async () => {
         >
           Compare with v{{ detail.compare }}<span class="appbar__key">C</span>
         </button>
-        <RouterLink class="btn btn-secondary" :to="{ name: 'renders', params: { batch } }"
-          >Back to Renders<span class="appbar__key">esc</span></RouterLink
+        <RouterLink class="btn btn-secondary" :to="back.to"
+          >{{ back.label }}<span class="appbar__key">esc</span></RouterLink
         >
       </div>
     </aside>

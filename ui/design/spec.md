@@ -167,6 +167,9 @@ SOURCE                 │ summon-anime-wai                 │ conjure-anime-wa
 - **The tick:** accent fill is assigned and can be unticked; `tick-locked` is prepared and stays (`prepared ·
   the tick stays`).
 - **Focus** is `raised-2` with an inset 1px `focus` ring, and the cell's one action shows only on focus (`↵ review`).
+- **A click or ↵ follows the stage**: unassigned or assigned ticks and unticks; tagged or unreadable does nothing; a
+  sheet or a draft opens Review (`↵ review`); an approval with no image opens its sheet read-only (`↵ review`); a
+  cell holding images opens its newest image's large view (`↵ view`). The checkbox's own click only ticks.
 - **A cell's refusal** sits inside the cell with its fix; the cell returns to assigned, so the next Prepare retries
   it.
 - **The PrepareBar** floats centred, bottom 50, 940 wide, `raised-2`, 1px `line-control`, radius 8. Pending: the
@@ -284,7 +287,8 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   `revision of v1` or `re-roll of v1`, the approval time, the Count and the seeds. A seed shared across versions is
   labelled `⇄ seed` in `accent-ink`.
 - **↵ always opens the large view**: the image on `ground-media`, the sheet it was rendered from beside it
-  (filled fields only, read-only), the photograph a key away (⌥C). `Compare with v1  C` appears when another version
+  (filled fields only, read-only), the photograph a key away (⌥C). `Esc` and its back button go back to
+  where it was opened: the hub, or else Renders. `Compare with v1  C` appears when another version
   of the same source × flow shares the seed; with several, it compares with the newest older one.
 - **Revise** (the verb `isekai revise`): the confirm lists each image — source × flow × seed, the version it copies,
   the seed it prefills. All or nothing: a refusal lists every selected image, those that could be revised

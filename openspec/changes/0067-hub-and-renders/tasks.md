@@ -7,7 +7,7 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 - [x] 1 — Source images and the viewer
 - [x] 2 — Home
-- [ ] 3 — Cell actions
+- [x] 3 — Cell actions
 - [ ] 4 — The Render bar
 - [ ] 5 — The Renders grid
 - [ ] 6 — Motion
@@ -47,28 +47,28 @@ new pytest test carries `@pytest.mark.spec`, and every new vitest test `spec("�
 
 ## 3 — Cell actions
 
-- [ ] 3.1 **HALT CHECK** — a cell opens Review on a double-click.
+- [x] 3.1 **HALT CHECK** — a cell opens Review on a double-click.
   Verify: `grep -c '@dblclick' ui/src/views/Hub.vue` prints `1`.
-- [ ] 3.2 Add `newest` to `Cell` in `isekai/interface/ui/library.py` and `HubCell` in `ui/src/types.ts` per [D4](design.md#d4),
+- [x] 3.2 Add `newest` to `Cell` in `isekai/interface/ui/library.py` and `HubCell` in `ui/src/types.ts` per [D4](design.md#d4),
   and to the rendered cells of `test_a_cells_stage_is_the_furthest_its_run_directory_holds` and `source` in
   `ui/src/composables/useQueue.test.ts`. Bind `ui:hub:a-cell-names-its-newest-image` in `tests/test_ui_library.py`.
   Verify: `uv run pytest -q tests/test_ui_library.py` exits 0, `uv run python -m tools.typecheck_ui` exits 0, and `grep -c 'ui:hub:a-cell-names-its-newest-image' tests/test_ui_library.py` prints `1`.
-- [ ] 3.3 Add `action` to a new `ui/src/cells.ts`, bound to `ui:hub:a-click-follows-the-cells-stage` in a new
+- [x] 3.3 Add `action` to a new `ui/src/cells.ts`, bound to `ui:hub:a-click-follows-the-cells-stage` in a new
   `ui/src/cells.test.ts`; run it on a click and `↵` in `ui/src/views/Hub.vue`, per [D4](design.md#d4).
   Verify: `uv run python -m tools.test_ui` exits 0, and `grep -c '@dblclick' ui/src/views/Hub.vue` prints `0`.
-- [ ] 3.4 Push the large view with `state: { from: 'hub' }` from `ui/src/views/Hub.vue`, and send `Esc` and the back
+- [x] 3.4 Push the large view with `state: { from: 'hub' }` from `ui/src/views/Hub.vue`, and send `Esc` and the back
   button to it in `ui/src/views/RenderLarge.vue`, per [D5](design.md#d5).
   Verify: `uv run python -m tools.typecheck_ui` exits 0, and `grep -c 'Back to Hub' ui/src/views/RenderLarge.vue` prints a number of at least `1`.
-- [ ] 3.5 Add `test_a_rendered_cell_opens_its_newest_image` to `tests/e2e/test_render.py`, on the `SHOWN` batch's
+- [x] 3.5 Add `test_a_rendered_cell_opens_its_newest_image` to `tests/e2e/test_render.py`, on the `SHOWN` batch's
   hub, bound to `ui:hub:a-rendered-cell-opens-its-newest-image`.
   Verify: `uv run pytest -q tests/e2e/test_render.py` exits 0, and `grep -c 'ui:hub:a-rendered-cell-opens-its-newest-image' tests/e2e/test_render.py` prints `1`.
-- [ ] 3.6 In `test_a_reload_lands_on_the_same_hub_and_the_same_review` in `tests/e2e/test_routes.py`, replace the
+- [x] 3.6 In `test_a_reload_lands_on_the_same_hub_and_the_same_review` in `tests/e2e/test_routes.py`, replace the
   draft cell's click, `↵ review` and `Enter` with one click that opens its Review.
   Verify: `grep -c 'press("Enter")' tests/e2e/test_routes.py` prints `1`, and `uv run pytest -q tests/e2e/test_routes.py` exits 0.
-- [ ] 3.7 Rewrite the `approved` comment in `ui/src/components/BatchRail.vue` to name `useQueue`'s count, read
+- [x] 3.7 Rewrite the `approved` comment in `ui/src/components/BatchRail.vue` to name `useQueue`'s count, read
   from the hub's statuses, per [D10](design.md#d10).
   Verify: `grep -c "server's own count" ui/src/components/BatchRail.vue` prints `0`.
-- [ ] 3.8 In `ui/design/spec.md`, say in J2 that a click follows the stage, per [D4](design.md#d4)'s table, and in
+- [x] 3.8 In `ui/design/spec.md`, say in J2 that a click follows the stage, per [D4](design.md#d4)'s table, and in
   J5 that `Esc` goes back to where the large view was opened.
   Verify: `grep -c 'follows the stage' ui/design/spec.md` prints a number of at least `1`, and `grep -c 'where it was opened' ui/design/spec.md` prints a number of at least `1`.
 

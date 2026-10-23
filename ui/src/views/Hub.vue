@@ -2,6 +2,7 @@
 import { noun } from '../words'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { action } from '../cells'
 import { assign, hub, prepare, renderOffer, sourceAt, sourceThumbAt, stopJob } from '../api'
 import ImageViewer from '../components/ImageViewer.vue'
 import ImportSheet from '../components/ImportSheet.vue'
@@ -119,7 +120,9 @@ function key(source: HubSource, flow: string): string {
 }
 
 function cell(source: HubSource, flow: string): HubCell {
-  return source.cells[flow] ?? { stage: null, renders: 0, refusal: null, status: null }
+  return (
+    source.cells[flow] ?? { stage: null, renders: 0, refusal: null, status: null, newest: null }
+  )
 }
 
 function pending(found: HubCell): boolean {
@@ -150,12 +153,48 @@ function reviewable(source: HubSource, flow: string): boolean {
   return source.digest !== null && cell(source, flow).status !== null
 }
 
+/* The focused cell's action hint, or null where it offers none here. */
+function hint(source: HubSource, flow: string): string | null {
+  const found = action(cell(source, flow))
+  if (found.action === 'review' || found.action === 'sheet')
+    return reviewable(source, flow) ? found.hint : null
+  return found.hint
+}
+
 function review(source: HubSource, flow: string): void {
   if (reviewable(source, flow))
     void router.push({
       name: 'review',
       params: { batch: props.batch, digest: source.digest, flow },
     })
+}
+
+/* The large view of a cell's newest image; Esc there comes back here. */
+function view(source: HubSource, flow: string): void {
+  const newest = cell(source, flow).newest
+  if (source.digest === null || newest === null) return
+  void router.push({
+    name: 'render',
+    params: {
+      batch: props.batch,
+      digest: source.digest,
+      flow,
+      version: `v${newest.version}`,
+      seed: newest.seed,
+    },
+    state: { from: 'hub' },
+  })
+}
+
+/* A click or ↵ on a cell: whatever its stage offers. */
+function act(row: number, column: number): void {
+  const source = sources.value[row]
+  const flow = flows.value[column]
+  if (!source || !flow) return
+  const kind = action(cell(source, flow)).action
+  if (kind === 'tick') toggle(row, column)
+  else if (kind === 'review' || kind === 'sheet') review(source, flow)
+  else if (kind === 'view') view(source, flow)
 }
 
 function apply(name: string, flow: string, found: HubCell): void {
@@ -254,8 +293,8 @@ function select(step: number): void {
   place(target, column)
 }
 
-/* ↑↓←→ move between cells, space ticks, ⇧↑↓ selects rows, ↵ opens the focused
-   cell's Review, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
+/* ↑↓←→ move between cells, space ticks, ⇧↑↓ selects rows, ↵ runs the focused
+   cell's action, ⌘↵ Prepare, ⌥2 Review next, ⌥A Add sources, esc clears the
    selection. Matched on `event.code`, because Option types a character on macOS. */
 function onKey(event: KeyboardEvent): void {
   if (adding.value || rendering.value || viewing.value) return
@@ -302,8 +341,7 @@ function onKey(event: KeyboardEvent): void {
   } else if (event.key === 'Escape') {
     selected.value = new Set()
   } else if (event.key === 'Enter') {
-    const here = sources.value[row]
-    if (here) review(here, flows.value[column])
+    act(row, column)
   }
 }
 
@@ -457,8 +495,7 @@ onUnmounted(() => {
           :data-flow="flow"
           :data-stage="cell(source, flow).stage ?? 'none'"
           tabindex="-1"
-          @click="place(row, column)"
-          @dblclick="review(source, flow)"
+          @click="place(row, column), act(row, column)"
         >
           <input
             class="hub__tick"
@@ -467,7 +504,7 @@ onUnmounted(() => {
             :checked="cell(source, flow).stage !== null"
             :disabled="locked(cell(source, flow))"
             :aria-label="`${source.name} × ${flow}`"
-            @click.prevent="toggle(row, column)"
+            @click.prevent.stop="place(row, column), toggle(row, column)"
           />
           <template v-if="cell(source, flow).stage !== null">
             <span class="hub__track">
@@ -489,9 +526,9 @@ onUnmounted(() => {
               >prepared · the tick stays</span
             >
             <span
-              v-if="focus.row === row && focus.column === column && reviewable(source, flow)"
+              v-if="focus.row === row && focus.column === column && hint(source, flow)"
               class="hub__action mono"
-              >↵ review</span
+              >{{ hint(source, flow) }}</span
             >
             <p v-if="cell(source, flow).refusal" class="hub__refusal">
               <span class="refusal__mark" />{{ cell(source, flow).refusal }}
@@ -504,7 +541,7 @@ onUnmounted(() => {
       </template>
     </div>
     <p class="hub__keys mono">
-      ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's review · ⌥A add sources ·
+      ↑↓←→ move · space tick / untick · ⇧↑↓ select rows · ↵ the cell's action · ⌥A add sources ·
       ⌥2 review next · ⌥R render · ⌥0 library
     </p>
     <div v-if="bar" class="prepare-bar">

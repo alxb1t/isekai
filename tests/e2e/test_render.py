@@ -52,6 +52,21 @@ def test_an_image_opened_from_the_grid_shows_the_approval_it_came_from(
     expect(page.locator("[data-sheet]")).to_contain_text("v1")
 
 
+@pytest.mark.spec("ui:hub:a-rendered-cell-opens-its-newest-image")
+def test_a_rendered_cell_opens_its_newest_image(page: Page, served: Served) -> None:
+    page.goto(served.hub_of(SHOWN))
+    rendered = page.locator(f'.hub__cell[data-flow="{FLOW}"][data-stage="rendered"]')
+
+    rendered.click()
+
+    expect(page).to_have_url(
+        f"{served.url}/b/{SHOWN}/renders/{served.shown.digest}/{FLOW}/v1/7"
+    )
+    expect(page.locator("[data-sheet]")).to_contain_text("v1")
+    page.keyboard.press("Escape")
+    expect(page).to_have_url(served.hub_of(SHOWN))
+
+
 @pytest.mark.spec("ui:revise:revise-opens-review-on-the-revision")
 def test_revise_opens_review_on_the_revision_and_approving_it_ends_at_the_hub(
     page: Page, served: Served

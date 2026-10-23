@@ -340,7 +340,7 @@ def create_app(
                 if run is not None:
                     assign(run, flow, remove=remove)
                 cell = library.stage(run, flow, suffix) if run else library.Cell(None)
-                cells[name] = asdict(cell)
+                cells[name] = _cell_out(cell)
             except Refusal as one:
                 refused[name] = str(one)
         return {"cells": cells, "refused": refused}
@@ -979,7 +979,7 @@ def cell_event(
             "stage": line.get("stage"),
             "state": line.get("state"),
             "message": line.get("message"),
-            "cell": asdict(library.stage(run, flow, suffixes[flow])),
+            "cell": _cell_out(library.stage(run, flow, suffixes[flow])),
         }
 
     return cell
@@ -1194,11 +1194,22 @@ def _hub(grid: library.Hub) -> dict[str, Any]:
                 "digest": one.digest,
                 "width": one.size[0] if one.size else None,
                 "height": one.size[1] if one.size else None,
-                "cells": {flow: asdict(cell) for flow, cell in one.cells.items()},
+                "cells": {flow: _cell_out(cell) for flow, cell in one.cells.items()},
                 "carries": list(one.carries),
             }
             for one in grid.sources
         ],
+    }
+
+
+def _cell_out(cell: library.Cell) -> dict[str, Any]:
+    """Describe a hub cell, its newest image's seed a decimal string."""
+    newest = cell.newest
+    return {
+        **asdict(cell),
+        "newest": None
+        if newest is None
+        else {"version": newest.version, "seed": str(newest.seed)},
     }
 
 

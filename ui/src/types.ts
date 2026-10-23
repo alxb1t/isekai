@@ -59,6 +59,8 @@ export interface HubCell {
   refusal: string | null
   /* Where stage ③ stands, where the cell has a sheet; null otherwise. */
   status: InputStatus | null
+  /* The last-written image of the newest version holding any; its seed a decimal string. */
+  newest: { version: number; seed: string } | null
 }
 
 export interface HubSource {

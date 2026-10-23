@@ -147,19 +147,29 @@ class Row:
 
 
 @dataclass(frozen=True)
+class Rendered:
+    """One rendered image of a cell: its approval's number and its seed."""
+
+    version: int
+    seed: int
+
+
+@dataclass(frozen=True)
 class Cell:
     """One source in one flow: its stage, read from the run's directory.
 
     `stage` is None where the run holds no directory for the flow, or there is no
     run. `refusal` is set, and `stage` is `unreadable`, where the file that decides
     the stage cannot be read. `status` is where stage ③ stands, `review.state`'s
-    answer, wherever the cell has a sheet.
+    answer, wherever the cell has a sheet. `newest` is the last-written image of
+    the newest version holding any, or None.
     """
 
     stage: str | None
     renders: int = 0
     refusal: str | None = None
     status: Status | None = None
+    newest: Rendered | None = None
 
 
 @dataclass(frozen=True)
@@ -490,27 +500,44 @@ def stage(run: Run, flow: str, suffix: str) -> Cell:
     review = run.directory(flow, REVIEW)
     approved = approved_versions(review)
     status = review_state(review)
+    newest = _newest_image(run, flow, approved, suffix)
     try:
         if approved:
             _check(latest_artifact(review, APPROVED), APPROVED_FILE)
-            renders = rendered_seeds(
-                run.directory(flow, OUTPUTS, f"{approved[-1]:03d}"), suffix
-            )
+            renders = rendered_seeds(group_of(run, flow, approved[-1]), suffix)
             if renders:
-                return Cell("rendered", len(renders), status=status)
-            return Cell("approved", status=status)
+                return Cell("rendered", len(renders), status=status, newest=newest)
+            return Cell("approved", status=status, newest=newest)
         if (draft := current_draft(review)) is not None:
             _check(draft, DRAFT_FILE)
-            return Cell("draft", status=status)
+            return Cell("draft", status=status, newest=newest)
         if (sheet := latest_artifact(run.directory(flow, SHEETS))) is not None:
             _check(sheet, SHEET_FILE)
-            return Cell("sheet", status=status)
+            return Cell("sheet", status=status, newest=newest)
         if (tags := latest_artifact(run.directory(flow, WD14))) is not None:
             _check(tags, WD14_FILE)
             return Cell("tagged")
     except Refusal as refused:
         return Cell("unreadable", refusal=str(refused))
     return Cell("assigned")
+
+
+def _newest_image(
+    run: Run, flow: str, approved: Sequence[int], suffix: str
+) -> Rendered | None:
+    """Return the last-written image of the newest version holding any, or None.
+
+    e.g. v2 rendered nothing, v1 holds 7 then 9 -> Rendered(1, 9)
+    """
+    for version in reversed(approved):
+        group = group_of(run, flow, version)
+        seeds = rendered_seeds(group, suffix)
+        if seeds:
+            last = max(
+                seeds, key=lambda seed: (group / f"{seed}{suffix}").stat().st_mtime
+            )
+            return Rendered(version, last)
+    return None
 
 
 def _check(path: Path | None, kind: Artifact[Any]) -> None:

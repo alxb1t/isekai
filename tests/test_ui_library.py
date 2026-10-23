@@ -11,7 +11,7 @@ from isekai.foundation.flow import FLOWS_DIR, load_flow
 from isekai.foundation.refusal import Refusal
 from isekai.foundation.run import OUTPUTS, REVIEW, Run, open_run
 from isekai.interface.ui import library
-from isekai.interface.ui.library import Cell, FlowCount
+from isekai.interface.ui.library import Cell, FlowCount, Rendered
 from isekai.pipeline.review import approve, review
 from isekai.shared.vocabulary import Vocabulary
 from tests.conftest import tree
@@ -192,12 +192,38 @@ def test_a_cells_stage_is_the_furthest_its_run_directory_holds(
     rendered.mkdir(parents=True)
     for seed in (7, 8):
         (rendered / f"{seed}{suffix}").write_bytes(b"png")
-    assert now() == Cell("rendered", 2, status="approved")
+    newest = Rendered(1, 8)
+    assert now() == Cell("rendered", 2, status="approved", newest=newest)
 
     grid = library.hub(folder, OFFERED, FLOWS_DIR)
     (source,) = grid.sources
-    assert source.cells[SUMMON] == Cell("rendered", 2, status="approved")
+    assert source.cells[SUMMON] == Cell("rendered", 2, status="approved", newest=newest)
     assert source.digest == run.digest
+
+
+@pytest.mark.spec("ui:hub:a-cell-names-its-newest-image")
+def test_an_approved_cell_names_the_last_image_of_its_newest_rendered_version(
+    tmp_path: Path, vocabulary: Vocabulary
+) -> None:
+    folder = _batch(tmp_path, "b", "ada.jpg")
+    run = _run(folder, "ada.jpg")
+    suffix = load_flow(SUMMON).output_suffix
+    _approved(run, vocabulary)
+    older = run.directory(SUMMON, OUTPUTS, "001")
+    older.mkdir(parents=True)
+    # Seed 5 is written last, though 9 is the highest.
+    for seed, at in ((3, 1_000), (9, 2_000), (5, 3_000)):
+        image = older / f"{seed}{suffix}"
+        image.write_bytes(b"png")
+        os.utime(image, (at, at))
+    review(run, SUMMON, new_version=True)
+    approve(run, SUMMON, load_flow(SUMMON).schema, vocabulary)
+
+    cell = library.stage(run, SUMMON, suffix)
+
+    assert cell.stage == "approved"
+    assert cell.renders == 0
+    assert cell.newest == Rendered(1, 5)
 
 
 @pytest.mark.spec("ui:hub:an-untracked-flow-is-ignored")
