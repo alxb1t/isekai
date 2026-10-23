@@ -7,7 +7,7 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 - [x] 1 — The address
 - [x] 2 — The rail and Approve
-- [ ] 3 — The layout
+- [x] 3 — The layout
 - [ ] 4 — ④ as slots
 - [ ] 5 — The dialogs
 
@@ -53,18 +53,18 @@ carries `@pytest.mark.spec`, and every new vitest test `spec("…")`, with the k
 
 ## 3 — The layout
 
-- [ ] 3.1 **HALT CHECK** — the old header stands.
+- [x] 3.1 **HALT CHECK** — the old header stands.
   Verify: `test -e ui/src/components/AppHeader.vue` exits 0.
-- [ ] 3.2 Move the receipts into `ui/src/components/SheetHeader.vue`'s kicker and every refusal into
+- [x] 3.2 Move the receipts into `ui/src/components/SheetHeader.vue`'s kicker and every refusal into
   `ui/src/components/ApproveBar.vue` per [D5](design.md#d5); drop SheetHeader's "schema order" line; delete `AppHeader.vue`.
   Verify: `test -e ui/src/components/AppHeader.vue` exits 1, `grep -c 'schema order' ui/src/components/SheetHeader.vue` prints `0`, and `uv run python -m tools.typecheck_ui` exits 0.
-- [ ] 3.3 Draw the revision's header row and pair in `ui/src/components/SourcePanel.vue` per [D6](design.md#d6), and
+- [x] 3.3 Draw the revision's header row and pair in `ui/src/components/SourcePanel.vue` per [D6](design.md#d6), and
   Discard in `ApproveBar.vue`.
   Verify: `grep -c 'fill window' ui/src/components/SourcePanel.vue` prints `0`, and `grep -c 'data-discard' ui/src/components/ApproveBar.vue` prints a number of at least `1`.
-- [ ] 3.4 Move Discard's ask out of `test_revise_opens_review_on_the_revision` into a new
+- [x] 3.4 Move Discard's ask out of `test_revise_opens_review_on_the_revision` into a new
   `test_discard_asks_before_it_deletes` in `tests/e2e/test_render.py`, bound to `ui:revise:discard-asks-before-it-deletes`.
   Verify: `grep -c 'discard-asks-before-it-deletes' tests/e2e/test_render.py` prints `1`, and `uv run pytest -q tests/e2e` exits 0.
-- [ ] 3.5 Redraw J5·4 in `ui/design/spec.md` per [D6](design.md#d6), and say *Discard draft* asks, then deletes.
+- [x] 3.5 Redraw J5·4 in `ui/design/spec.md` per [D6](design.md#d6), and say *Discard draft* asks, then deletes.
   Verify: `grep -c 'Discard revision' ui/design/spec.md` prints `0`.
 
 ## 4 — ④ as slots

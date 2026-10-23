@@ -1,32 +1,30 @@
 <script setup lang="ts">
-import { noun } from '../words'
 import type { Budget } from '../types'
 import TokenBudget from './TokenBudget.vue'
 
-/* The kicker states which of stage ③'s three readings this is, and the line
-   below it counts the fields. Frame delta 5: the design's `none marked
-   intentional` goes with the empties gate -- an empty field is legal and
-   nothing insists on a claim, so nothing counts unclaimed ones either. */
+/* The kicker states which of stage ③'s readings this is, and its receipt: the
+   draft's save, or the approval's time inside `kicker`. No path, no count. */
 defineProps<{
   kicker: string
-  fields: number
-  filled: number
   budget: Budget | null
-  loading?: boolean
+  saving?: boolean
+  saved?: string | null
 }>()
 </script>
 
 <template>
   <header class="sheet-header">
-    <div>
-      <span class="kicker">③ sheet — {{ kicker }}</span>
-      <p class="sheet-header__line">
-        {{ fields }} {{ noun(fields, 'field') }}, schema order.
-        <template v-if="!loading">
-          {{ filled }} filled · {{ fields - filled }} empty.
-        </template>
-      </p>
-    </div>
+    <span class="kicker"
+      >③ sheet — {{ kicker
+      }}<!-- Fixed width, so the kicker does not shift when the spinner gives way
+           to the time it was waiting for. --><span
+        v-if="saving || saved"
+        class="receipt__when"
+      >
+        <span v-if="saving" class="spinner" aria-label="saving" />
+        <template v-else>· saved {{ saved }}</template>
+      </span></span
+    >
     <TokenBudget :budget="budget" />
   </header>
 </template>

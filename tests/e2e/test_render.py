@@ -1,8 +1,9 @@
 """Render from the browser: the dialog, the session, the large view, Revise, Compare.
 
-A revision and a comparison each own a batch, so neither leans on the other's
-draft. The server renders on the e2e doubles: a session that rents nothing and a
-transport that answers at once. Each step waits on the page's own state.
+A revision, a discard and a comparison each own a batch, so none leans on
+another's draft. The server renders on the e2e doubles: a session that rents
+nothing and a transport that answers at once. Each step waits on the page's own
+state.
 """
 
 import re
@@ -10,9 +11,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+from isekai.foundation.run import REVIEW
+from isekai.pipeline.review import current_draft
 from tests.e2e.conftest import (
     COMPARED,
     DAMAGED,
+    DISCARDED,
     FLOW,
     RENDER,
     REVISED,
@@ -128,15 +132,27 @@ def test_revise_opens_review_on_the_revision(page: Page, served: Served) -> None
     row = page.locator(".row", has_text="hair_colour")
     row.locator(".chip__x").first.click()
     expect(page.locator("[data-changed='hair_colour']")).to_contain_text("was")
-    page.locator("[data-discard]").click()
-    asking = page.locator("[data-discard-confirm]")
-    expect(asking).to_contain_text("Delete this draft and its edits?")
-    asking.get_by_role("button", name="Keep").click()
-    expect(asking).to_have_count(0)
     page.get_by_role("button", name="Approve sheet").click()
     expect(page.locator(".form")).to_contain_text("approved")
     expect(page.locator("input.fragment")).to_have_count(0)
     expect(page).to_have_url(review)
+
+
+@pytest.mark.spec("ui:revise:discard-asks-before-it-deletes")
+def test_discard_asks_before_it_deletes(page: Page, served: Served) -> None:
+    review = served.review(served.discarded, DISCARDED)
+    page.goto(review)
+    expect(page.locator("[data-revised] img")).to_have_js_property("complete", True)
+
+    page.locator("[data-discard]").click()
+    asking = page.locator("[data-discard-confirm]")
+    expect(asking).to_contain_text("Delete this draft and its edits?")
+    asking.get_by_role("button", name="Keep").click()
+
+    expect(asking).to_have_count(0)
+    expect(page.locator("[data-discard]")).to_be_visible()
+    expect(page).to_have_url(review)
+    assert current_draft(served.discarded.directory(FLOW, REVIEW)) is not None
 
 
 @pytest.mark.spec("ui:compare:compare-shows-the-pair-and-the-change")

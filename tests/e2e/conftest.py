@@ -25,7 +25,7 @@ from isekai.foundation.flow import load_flow
 from isekai.foundation.run import Run, approval_of, open_run
 from isekai.pipeline.caption import FakeReader
 from isekai.pipeline.generate import prepare
-from isekai.pipeline.review import approve, review, save_draft
+from isekai.pipeline.review import approve, review, revise, save_draft
 from tests.e2e.wiring import VOCABULARY
 from tests.fakes import FakeComfyClient
 from tests.images import jpeg_bytes, photo_jpeg
@@ -58,6 +58,9 @@ RENDER = "render"
 SHOWN = "shown"
 # The batch a revision is written in: one source rendered once at seed 7.
 REVISED = "revised"
+# The batch a discard is asked in: one source rendered at seed 7, its render's
+# revision drafted.
+DISCARDED = "discarded"
 # The batch Compare reads: one source with seed 7 rendered under v1 and under v2,
 # which changes `clothes`.
 COMPARED = "compared"
@@ -81,6 +84,7 @@ class Served:
     rendered: Run
     shown: Run
     revised: Run
+    discarded: Run
     compared: Run
     prepare_release: Path
 
@@ -177,6 +181,8 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
     approve(rendered, FLOW, load_flow(FLOW).schema, VOCABULARY)
     shown = _rendered_at_seven(lib / SHOWN, "hal", (750, 1000))
     revised = _rendered_at_seven(lib / REVISED, "ida", (770, 1000))
+    discarded = _rendered_at_seven(lib / DISCARDED, "ivy", (775, 1000))
+    revise(discarded, FLOW, 1, 7)
     compared = _rendered_at_seven(lib / COMPARED, "jo", (780, 1000))
     again = review(compared, FLOW, new_version=True)
     assert again is not None
@@ -213,6 +219,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Served]:
             rendered,
             shown,
             revised,
+            discarded,
             compared,
             lib / "hub-prepare" / ".prepare-release",
         )

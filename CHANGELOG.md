@@ -16,6 +16,10 @@ no figure, file:line reference or pod id; a re-pinned flow's bullet names its ne
   sheet not yet rendered. Revise opens its first draft, the rest in the rail. An approval waits for a save in
   flight (0070 D3, D4, D9).
 
+- Review's old header is gone: the save and approval times sit in ③'s kicker, every refusal in the approve bar,
+  and no file name shows. A revision's photograph and render share one header row at one height; Discard asks
+  from the approve bar (0070 D5, D6, D9).
+
 ## [0.43.0] - 2026-10-23 · 0069-the-keys
 
 Gate: local 0m39s · CI 7m25s (build-image at 801ffec) · 0.42.0: local 0m36s · CI 7m25s

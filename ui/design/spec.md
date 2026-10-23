@@ -207,7 +207,7 @@ h j k l move · space tick / untick · ⇧J ⇧K select rows · ↵ the cell's a
 | J3·4 the next sheet in the rail | ⇧J | `…/review/<16_01's run>/summon-anime-wai` |
 
 ```
-rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empty · drafted 13:59:30    28 / 77 tokens
+rail │ ① PHOTOGRAPH              │ ③ SHEET — DRAFT · saved 13:59                             28 / 77 tokens
 ●    │ [photograph]              │ hair_colour   [blonde hair ×]
 ◐    │ ② CAPTION  231 words      │ eye_colour    [blue eyes ×]
 ○    │ one sentence a block …    │ …16 fields, 34px rows
@@ -217,7 +217,7 @@ rail │ ① SOURCE                  │ ③ SHEET — DRAFT  9 filled · 7 empt
 ```
 
 - The surface is today's review surface inside the shell: rail, ① source and ② caption, ③ sheet, approve bar. The
-  sheet header carries counts and a time, never a path.
+  sheet's kicker carries its receipt, never a path; there is no other header.
 - **④ Renders**: Count (a stepper, default 1, never below the number of seeds listed) and Seeds (a list,
   default empty). Listed seeds render first; the rest of Count are drawn. Both are approved with the sheet. The line
   `THE NEXT RENDER DRAWS …` states the result.
@@ -285,12 +285,14 @@ J4·2  RENDER SESSION · STARTED 15:21:12 · 4 SHEETS
 | J5·9 before / after | C | `…/v2/1840266731/compare` |
 
 ```
-J5·4  ① SOURCE  [photograph] │ RENDER BEING REVISED [render, accent hairline]
+J5·4  ① PHOTOGRAPH · 1073×1406   RENDER BEING REVISED · seed 1840266731
+      [photograph]               [render, accent hairline]       one height, top-aligned
       ② CAPTION  collapsed on a revision
-      ③ SHEET — REVISION OF RENDER 1840266731   1 field changed · saved 15:52:04
+      ③ SHEET — REVISION OF RENDER 1840266731 · saved 15:52
       eye_colour  • [blue eyes ×]      was light · blue eyes
       ④ RENDERS  count [− 1 +]   seeds prefilled [1840266731 ×] [ + seed ]
                  THE NEXT RENDER DRAWS 1 image · seed 1840266731
+                                        [ Discard draft ]  [ Approve sheet ⌘↵ ]
 
 J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
       [render, equal size, top-aligned]      [render]
@@ -313,7 +315,11 @@ J5·9  BEFORE · v1 · approved 14:12:40        AFTER · v2 · approved 15:52:10
   too, and offers `Deselect those 2 and revise 1 ⇧↵`; it has no primary button.
 - **The revision's sheet** marks changed rows with an accent gutter dot and a `was` line against the rendered sheet.
 - **Approve refuses an unchanged revision** — neither fields nor ④ changed — naming the image it would reproduce
- . *Discard revision* deletes this unapproved draft, through `review --discard`.
+ . *Discard draft*, 12 px left of Approve, asks, then deletes this unapproved draft, through `review --discard`;
+  the sheet stays open.
+- **One header row** names the photograph and its size, and the render and its seed, over the pair; no how-to
+  text. Every receipt sits in ③'s kicker, `· saved 15:52` or `APPROVED 14:12:40`, and every refusal in the
+  approve bar.
 
 ### J6 · Re-roll
 

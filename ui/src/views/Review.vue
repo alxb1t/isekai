@@ -2,7 +2,6 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { discardDraft, fieldCandidates, imageAt, photoUrl as photoAt } from '../api'
-import AppHeader from '../components/AppHeader.vue'
 import ApproveBar from '../components/ApproveBar.vue'
 import BatchRail from '../components/BatchRail.vue'
 import CheatsheetOverlay from '../components/CheatsheetOverlay.vue'
@@ -53,8 +52,6 @@ const revised = computed(() => {
   return { src: imageAt({ ...props, version: held.version, seed: held.seed }), seed: held.seed }
 })
 const discarding = ref<string | null>(null)
-/* Discard deletes the operator's edits, so it asks once before it does. */
-const confirmingDiscard = ref(false)
 const vocabulary = computed(() => sheet.detail.value?.vocabulary ?? 0)
 
 /* The URL is the state: choosing another sheet is a navigation. */
@@ -103,8 +100,7 @@ const clock = (at: number | null) =>
 
 /* The draft's time to the minute. It is rewritten every few seconds while the
    operator types, and a seconds field that ticks under the eye is noise; the
-   approved time keeps its seconds, because it is written once and is the
-   receipt someone might quote. */
+   approved time keeps its seconds, because it is written once. */
 const minute = (at: number | null) =>
   at === null
     ? null
@@ -116,40 +112,13 @@ const minute = (at: number | null) =>
 
 const flow = computed(() => props.flow)
 
-/* The draft receipt outlives the draft file, within one sitting.
+/* When the sheet was approved: in this sitting, else as the server read it. */
+const approvedAt = computed(() => clock(approval.at.value ?? sheet.detail.value?.approved_at ?? null))
 
-   `approve()` unlinks the draft, so after approving there is nothing on disk for
-   the review payload to report -- but the pairing is the whole of "saving is
-   not approving", stated without words: two files, two acts, two timestamps
-   seconds apart. So what was saved is remembered here and kept beside the
-   approved line. An input approved in an earlier sitting shows the approved
-   receipt alone, which is the truth about it. */
-const lastDraft = ref<{ name: string; saved: number | null } | null>(null)
-
-// The payload, not the draft's name: every input's draft is `001.draft.json`,
-// so watching the name fires on the first load and never again.
-watch(sheet.detail, (body) => {
-  if (body?.draft) lastDraft.value = { name: body.draft, saved: body.saved }
-})
-
-// Autosave moves the time without changing the payload. `null` is not a time:
-// after approval the draft is gone and `saved` goes null, but the moment it was
-// last written is exactly what the pairing exists to state.
-watch(
-  () => sheet.saved.value,
-  (at) => {
-    if (at !== null && lastDraft.value) lastDraft.value = { ...lastDraft.value, saved: at }
-  },
-)
-
-const receipt = computed(() =>
-  lastDraft.value ? `${flow.value}/review/${lastDraft.value.name}` : null,
-)
-
-const approvedReceipt = computed(() =>
-  sheet.detail.value?.approved
-    ? `${flow.value}/review/${sheet.detail.value.approved}`
-    : null,
+/* Every refusal the page meets, in the approve bar. */
+const refusal = computed(
+  () =>
+    approval.refusal.value ?? sheet.refusal.value ?? afterApproval.value ?? discarding.value,
 )
 
 /* `③ sheet — approved` once it is, which is also when the fields go read-only.
@@ -162,7 +131,7 @@ const kicker = computed(() => {
   // arrived -- `readonly` defaults to true while `detail` is null, so testing
   // it first would call an unloaded sheet approved.
   if (!sheet.detail.value?.approved) return 'draft from the tagger'
-  if (sheet.readonly.value) return 'approved'
+  if (sheet.readonly.value) return approvedAt.value ? `approved ${approvedAt.value}` : 'approved'
   const held = revision.value
   if (held?.seed) return `revision of render ${held.seed}`
   return held ? `revision of v${held.version}` : 're-opened'
@@ -181,7 +150,6 @@ async function reread(id: string): Promise<void> {
    still in flight lands first, so the discard states the draft it moved to
    rather than racing it. */
 async function discard(): Promise<void> {
-  confirmingDiscard.value = false
   if (!(await sheet.flush())) return
   try {
     await discardDraft(
@@ -192,7 +160,6 @@ async function discard(): Promise<void> {
     discarding.value = (reason as Error).message
     return
   }
-  lastDraft.value = null
   await reread(current.value)
 }
 
@@ -456,9 +423,7 @@ watch(current, (id) => {
   approval.forget()
   afterApproval.value = null
   discarding.value = null
-  confirmingDiscard.value = false
   lastField.value = null
-  lastDraft.value = null
   void sheet.open(id).then(() => enter(paneNow()))
 })
 </script>
@@ -466,25 +431,12 @@ watch(current, (id) => {
 <template>
   <RefusalPage v-if="failure" :refusal="failure" />
   <div v-else class="review">
-    <AppHeader
-      :flow="flow"
-      :inputs="batch.inputs.value.length"
-      :approved="batch.approved.value"
-      :draft="receipt"
-      :saved="minute(lastDraft?.saved ?? null)"
-      :saving="sheet.saving.value"
-      :approved-name="approvedReceipt"
-      :approved-at="clock(approval.at.value)"
-      :refusal="approval.refusal.value ?? sheet.refusal.value"
-    >
-      <template #status>
-        <LoadingSkeleton
-          v-if="batch.loading.value || sheet.loading.value"
-          :reading="batch.loading.value ? null : current"
-          :vocabulary="vocabulary"
-        />
-      </template>
-    </AppHeader>
+    <LoadingSkeleton
+      v-if="batch.loading.value || sheet.loading.value"
+      class="review__reading"
+      :reading="batch.loading.value ? null : current"
+      :vocabulary="vocabulary"
+    />
     <div v-if="batch.info.value" class="work" @focusin="remember">
       <BatchRail
         :flow="flow"
@@ -521,6 +473,8 @@ watch(current, (id) => {
         :selected="selectedChip"
         :loading="sheet.loading.value"
         :kicker="kicker"
+        :saving="sheet.saving.value"
+        :saved="sheet.readonly.value ? null : minute(sheet.saved.value)"
         :previous="revision?.fields ?? null"
         @remove="(field, index) => (sheet.remove(field, index), batch.markEdited(current))"
       >
@@ -548,34 +502,15 @@ watch(current, (id) => {
             :readonly="sheet.readonly.value"
             @change="sheet.setRenders"
           />
-          <p v-if="revision" class="approve-bar__note mono">
-            <span v-if="discarding" class="approve-bar__refusal"
-              ><span class="refusal__mark" />{{ discarding }}</span
-            >
-            <span v-if="confirmingDiscard" data-discard-confirm>
-              Delete this draft and its edits?
-              <button class="btn btn-secondary" type="button" @click="confirmingDiscard = false">
-                Keep
-              </button>
-              <button class="btn btn-secondary" type="button" @click="discard">Delete</button>
-            </span>
-            <button
-              v-else
-              class="btn btn-secondary"
-              type="button"
-              data-discard
-              @click="confirmingDiscard = true"
-            >
-              Discard draft
-            </button>
-          </p>
           <ApproveBar
+            :key="current"
             :approved="sheet.readonly.value"
-            :at="clock(approval.at.value)"
-            :file="approvedReceipt"
+            :at="approvedAt"
             :working="approval.working.value"
-            :refusal="afterApproval"
+            :refusal="refusal"
+            :discardable="revision !== null"
             @approve="approve"
+            @discard="discard"
           />
         </template>
       </SheetForm>
