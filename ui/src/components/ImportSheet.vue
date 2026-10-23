@@ -236,16 +236,15 @@ async function cancel(): Promise<void> {
   emit('close')
 }
 
-/* While a commit is in flight Esc is held, not passed below: a cancel then would
-   delete the folder the commit is moving. */
+/* While a commit is in flight Esc does nothing: a cancel then would delete the
+   folder the commit is moving. */
 useKeys('overlay', [
   {
     id: 'cancel',
     keys: plain('Escape'),
     label: 'cancel',
-    run: () => {
-      if (!committing.value) void cancel()
-    },
+    run: () => void cancel(),
+    when: () => !committing.value,
   },
   {
     id: 'import',

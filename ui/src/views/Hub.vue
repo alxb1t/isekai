@@ -14,7 +14,7 @@ import RenderBar from '../components/RenderBar.vue'
 import RenderDialog from '../components/RenderDialog.vue'
 import RefusalPage from '../components/RefusalPage.vue'
 import { useKeys } from '../composables/useKeys'
-import { firstFlow, queue } from '../composables/useQueue'
+import { head } from '../composables/useQueue'
 import { at, useBatchStore } from '../stores/batch'
 import { modded, plain, shifted } from '../stores/keys'
 import { useLiveStore } from '../stores/live'
@@ -79,14 +79,11 @@ const flows = computed(() => info.value?.flows ?? [])
 const sources = computed(() => info.value?.sources ?? [])
 const busy = computed(() => job.value?.state === 'running' && job.value.kind === 'prepare')
 
-/* Review next: the first unapproved sheet of the first flow that has any. */
+/* Review next: the queue's head, which ⇧R opens from every screen. */
 const next = computed(() => {
-  const held = info.value
-  const flow = held ? firstFlow(held) : null
-  if (!held || !flow) return null
-  const digest = queue(held, flow)[0]
-  const source = held.sources.find((one) => one.digest === digest)
-  return source ? { source, flow } : null
+  const at = info.value ? head(info.value) : null
+  const source = at && info.value?.sources.find((one) => one.digest === at.digest)
+  return at && source ? { source, flow: at.flow } : null
 })
 
 /* What Prepare would run: every assigned cell with no sheet. */

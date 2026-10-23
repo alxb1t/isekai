@@ -366,8 +366,7 @@ function toggleLens(which: Lens): void {
   else void openLens(which)
 }
 
-const scrollSource = (direction: -1 | 1) => () =>
-  source.value?.scrollBy({ top: direction * 120 })
+const scrollSource = (direction: -1 | 1) => source.value?.scrollBy({ top: direction * 120 })
 
 /* `j` `k` or ↓ ↑: the rail changes the input, the source pane scrolls, and the
    sheet walks its rows from the field last left. */
@@ -375,7 +374,7 @@ function vertical(direction: -1 | 1): () => void {
   return () => {
     const here = paneNow()
     if (here === 'rail') stepBatch(direction)
-    else if (here === 'source') scrollSource(direction)()
+    else if (here === 'source') scrollSource(direction)
     else if (here === 'sheet') moveRow(direction)
   }
 }
@@ -425,13 +424,13 @@ useKeys('screen', [
     id: 'scroll-down',
     keys: [{ code: 'KeyE', ctrl: true }],
     label: 'scroll the photograph',
-    run: scrollSource(1),
+    run: () => scrollSource(1),
   },
   {
     id: 'scroll-up',
     keys: [{ code: 'KeyY', ctrl: true }],
     label: 'scroll back',
-    run: scrollSource(-1),
+    run: () => scrollSource(-1),
   },
   {
     id: 'photo',

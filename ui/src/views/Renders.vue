@@ -123,20 +123,15 @@ function repeated(versions: RenderVersion[]): Set<string> {
   return new Set([...seen].filter(([, count]) => count > 1).map(([seed]) => seed))
 }
 
-/* Each cell's image count, by source row then flow, as `moved` reads the grid. */
+/* Each cell's image count, by source row then flow, counted from `rows`. */
 const cells = computed(() =>
-  (info.value?.sources ?? []).map((source, row) =>
-    source.digest === null
-      ? []
-      : (info.value?.flows ?? []).map((flow) =>
-          oldest.value[row][flow].reduce((sum, version) => sum + version.rendered.length, 0),
-        ),
+  rows.value.map((spots) =>
+    (info.value?.flows ?? []).map((flow) => spots.filter((one) => one.flow === flow).length),
   ),
 )
 
 function go(move: Move): () => void {
   return () => {
-    if (!rows.value.some((one) => one.length)) return
     focus.value = moved(cells.value, focus.value, move)
     void nextTick(() =>
       document
@@ -160,25 +155,25 @@ useKeys('screen', [
     id: 'select',
     keys: plain('Space'),
     label: 'select',
-    run: () => {
-      const at = here()
-      if (at) toggle(at)
-    },
+    run: () => toggle(here() as Spot),
+    when: () => here() !== undefined,
   },
   {
     id: 'open',
     keys: plain('Enter'),
     label: 'the large view',
     run: () => {
-      const at = here()
-      if (at) open(at.digest, at.flow, at.version, at.seed)
+      const at = here() as Spot
+      open(at.digest, at.flow, at.version, at.seed)
     },
+    when: () => here() !== undefined,
   },
   {
     id: 'revise',
     keys: plain('KeyE'),
     label: 'revise',
-    run: () => (revising.value = chosen.value.length > 0),
+    run: () => (revising.value = true),
+    when: () => chosen.value.length > 0,
   },
   { id: 'render', keys: [shifted('KeyG')], label: 'render', run: () => store.openDialog() },
 ])

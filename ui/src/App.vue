@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia'
 import KeyHint from './components/KeyHint.vue'
 import KeyList from './components/KeyList.vue'
 import { useKeys } from './composables/useKeys'
-import { firstFlow, queue } from './composables/useQueue'
+import { head } from './composables/useQueue'
 import { useBatchStore } from './stores/batch'
 import { shifted, useKeyStore } from './stores/keys'
 import { alerting, useLiveStore } from './stores/live'
@@ -50,13 +50,7 @@ const key = computed(() =>
   route.name === 'review' ? `${route.params.batch}/${route.params.flow}` : route.path,
 )
 
-/* The queue's head: the first unapproved sheet of the first flow that has any. */
-const head = computed(() => {
-  const held = batchStore.hub
-  const flow = held ? firstFlow(held) : null
-  const digest = held && flow ? queue(held, flow)[0] : undefined
-  return digest && flow ? { digest, flow } : null
-})
+const queued = computed(() => (batchStore.hub ? head(batchStore.hub) : null))
 const listing = ref(false)
 
 const onBatch = () => batch.value !== null
@@ -73,10 +67,10 @@ useKeys('everywhere', [
     keys: [shifted('KeyR')],
     label: "review the queue's head",
     run: () => {
-      if (head.value && batch.value)
-        void router.push({ name: 'review', params: { batch: batch.value, ...head.value } })
+      if (queued.value && batch.value)
+        void router.push({ name: 'review', params: { batch: batch.value, ...queued.value } })
     },
-    when: () => head.value !== null,
+    when: () => queued.value !== null,
   },
   {
     id: 'renders',

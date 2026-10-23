@@ -54,7 +54,6 @@ const confidence = (value: number): string => value.toFixed(2)
 const element = ref<HTMLElement | null>(null)
 
 defineExpose({
-  focus: () => element.value?.focus(),
   scrollBy: (options: ScrollToOptions) => element.value?.scrollBy(options),
 })
 </script>

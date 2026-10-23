@@ -36,6 +36,7 @@ const total = (counts: number[]) => startOf(counts, counts.length)
  */
 export function moved(cells: number[][], at: Focus, move: Move): Focus {
   const counts = cells[at.row] ?? []
+  if (total(counts) === 0) return at
   const here = cellOf(counts, at.column)
   const step = move.endsWith('+') ? 1 : -1
   if (move.startsWith('image')) {
@@ -48,8 +49,8 @@ export function moved(cells: number[][], at: Focus, move: Move): Focus {
     return at
   }
   for (let row = at.row + step; row >= 0 && row < cells.length; row += step) {
-    if (total(cells[row]) === 0) continue
-    return { row, column: clamp(at.column, total(cells[row]) - 1) }
+    const images = total(cells[row])
+    if (images > 0) return { row, column: clamp(at.column, images - 1) }
   }
   return at
 }

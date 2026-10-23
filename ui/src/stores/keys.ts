@@ -185,7 +185,7 @@ export const useKeyStore = defineStore('keys', () => {
   const bar = computed(() => entries('screen'))
 
   /** Everywhere's commands and the screen's, as the key list shows them. */
-  const listed = computed(() => [...entries('everywhere'), ...entries('screen')])
+  const listed = computed(() => [...entries('everywhere'), ...bar.value])
 
   /** Return a command's keys by its id, from the newest layer that declares it, or null. */
   function hint(id: string): string | null {
@@ -196,5 +196,5 @@ export const useKeyStore = defineStore('keys', () => {
     return null
   }
 
-  return { mac, layers, declare, drop, press, bar, listed, hint }
+  return { mac, declare, drop, press, bar, listed, hint }
 })

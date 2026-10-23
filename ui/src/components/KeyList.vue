@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useKeys } from '../composables/useKeys'
-import { useKeyStore } from '../stores/keys'
+import { plain, shifted, useKeyStore } from '../stores/keys'
+import KeyHint from './KeyHint.vue'
 
 /* Every key this screen answers, everywhere's first, read from their declarations. */
 const emit = defineEmits<{ close: [] }>()
@@ -10,7 +11,7 @@ const { listed } = storeToRefs(useKeyStore())
 useKeys('overlay', [
   {
     id: 'close',
-    keys: [{ code: 'Escape' }, { code: 'Slash', shift: true }],
+    keys: [...plain('Escape'), shifted('Slash')],
     label: 'close',
     run: () => emit('close'),
   },
@@ -23,7 +24,7 @@ useKeys('overlay', [
       <div class="overlay__side" @click.stop>
         <div class="overlay__controls">
           <span class="kicker">keys</span>
-          <span class="overlay__exit mono">esc · ? · click anywhere</span>
+          <span class="overlay__exit mono"><KeyHint command="close" /> · click anywhere</span>
         </div>
         <dl class="keylist mono">
           <template v-for="(one, index) in listed" :key="index">
