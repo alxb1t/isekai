@@ -400,7 +400,7 @@ is Ctrl off macOS. Inside a text field only esc, ⌘↵, ⌘Z, ⇧⌘Z and ⌘K 
 | Renders | h l cells · j k or ↓↑ sources · ←→ images · space select · ↵ the large view · e Revise · ⇧G Render · in the large view, e Revise, c compare, esc back · in compare, `\` swap, esc back |
 | dialogs | ⌘↵ confirm · ⇧↵ the secondary confirm · esc cancel, held while an import commits |
 
-No key spends money: ⇧G opens the dialog, and only its ⌘↵ starts billing.
+No key spends money but the Render dialog's ⌘↵, which confirms the price it quotes: ⇧G only opens the dialog.
 
 ## 8 · The job lifecycle and live state
 

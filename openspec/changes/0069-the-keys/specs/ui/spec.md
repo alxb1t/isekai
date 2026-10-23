@@ -9,7 +9,8 @@ macOS and `Ctrl` elsewhere. An open overlay SHALL take every key before the scre
 the keys offered everywhere. While focus is in a text field, no command SHALL fire but `Esc`, `Mod+↵`, `Mod+Z`,
 `⇧Mod+Z` and `Mod+K`, and the field SHALL keep its own editing keys. `Esc` SHALL close an open suggestion list first,
 then leave the field, then close the top overlay, then go back on the screen, and SHALL never close a billing alert.
-No key SHALL spend money.
+No key SHALL spend money but the Render dialog's `Mod+↵`, which confirms the price it
+quotes.
 
 A key typed into a field is text, never a command; a list drawn from the declarations cannot disagree with the keys.
 Option is the window manager's on Linux and types characters on macOS, and a layout moves letters but not keys.
@@ -87,7 +88,7 @@ the reason. Import SHALL stay disabled, with its reason, until every chosen file
 ready files and those the operator chose to import as they are. Each upload SHALL keep its own state, whatever its
 name; an upload SHALL be refused once Import begins committing; and a file whose reading fails SHALL be refused
 alone, the next file still read. While Import commits, the sheet SHALL take no file, no second Import and no
-cancel, by button or by `Esc`.
+cancel, by button, by `Esc` or by leaving the screen.
 
 Each file's bar answers which one is slow; each reason sits on the file it concerns, so two files of one name are
 two uploads. A file that lands while the folder is committed would be dropped from the batch unseen, and a cancel
@@ -159,3 +160,9 @@ then would delete the folder the commit is moving.
 - **WHEN** Import's commit is in flight
 - **THEN** Add files…, Import and Cancel are disabled
 - **AND** `Esc` leaves the sheet open
+
+#### Scenario: leaving the screen mid-commit keeps the staged folder
+- **Key:** `ui:sheet:leaving-mid-commit-keeps-the-folder`
+- **Layers:** unit
+- **WHEN** the sheet closes while Import's commit is in flight
+- **THEN** its staging folder is not cancelled

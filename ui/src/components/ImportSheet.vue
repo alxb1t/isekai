@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { cancelStaging, commitStaging, openStaging, stagedThumbAt } from '../api'
 import { useKeys } from '../composables/useKeys'
 import { modded, plain } from '../stores/keys'
+import { discards } from '../staging'
 import { useLiveStore } from '../stores/live'
 import KeyHint from './KeyHint.vue'
 import type { StagedFile } from '../types'
@@ -260,7 +261,8 @@ onMounted(() => picker.value?.click())
 onUnmounted(() => {
   closed = true
   live.follow({ staging: null })
-  if (staging.value !== null && !committed) void cancelStaging(staging.value).catch(() => undefined)
+  if (discards(staging.value, committing.value, committed))
+    void cancelStaging(staging.value).catch(() => undefined)
 })
 </script>
 
